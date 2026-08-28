@@ -4,11 +4,11 @@
 > **Last reconciled:** 2026-08-28
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
-> **Latest signed/published checkpoint:** Internal.28 / `1.0.0-internal.28` / MSI `1.0.0.28` / FD-049 (Founder installation pending; Internal.27 remains latest installed)
-> **Protected release source:** `d104da72dcfb7950df0b437ce279377b28e7df4b` / PR #333
-> **Reviewed release head:** `d48cd1cf26110743b44a72dff734dd7f4bcbc637`
-> **Signed publication run:** `33136814065` — success
-> **Current next outcome:** FD-049 installed Founder campaign — the Founder applies the in-place Internal.28 update, executes the retained #306 real-phone rows plus applicable #316/#317 native rows, evidence is reconciled into the ledger, then FRC-2–5 resume
+> **Latest signed/published checkpoint:** Internal.29 / `1.0.0-internal.29` / MSI `1.0.0.29` / FD-050 (Founder installation pending; Internal.28 remains latest installed)
+> **Protected release source:** `a34917e582c4806aee35ad5aca12aaea82a0ddcf` / PR #344
+> **Reviewed release head:** `dd4888d6366cf48ccca05563bedb7e502e5662ce`
+> **Signed publication run:** `33212648778` — success
+> **Current next outcome:** FD-050 installed Founder campaign — the Founder applies the in-place Internal.29 update, re-verifies the FRC-2 repair rows plus the retained #306 real-phone rows and the applicable FRC-2 matrix rows, evidence is reconciled into the ledgers, then FRC-3 resumes
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
@@ -30,34 +30,40 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Current protected and signed truth
 
-Protected `main` at reconciliation is `d104da72dcfb7950df0b437ce279377b28e7df4b` after release PR #333; no open PR existed immediately after #333. Revalidate live state before every write/merge.
+Protected `main` at reconciliation is `a34917e582c4806aee35ad5aca12aaea82a0ddcf` after release PR #344; no open PR existed immediately after #344. Revalidate live state before every write/merge.
 
-Internal.28 is the latest real signed/published offline package:
+Internal.29 is the latest real signed/published offline package:
 
-- app `1.0.0-internal.28`;
-- MSI `1.0.0.28`;
-- authority FD-049;
+- app `1.0.0-internal.29`;
+- MSI `1.0.0.29`;
+- authority FD-050;
 - mode `founder-offline-only`;
-- release PR #333 / reviewed release head `d48cd1cf26110743b44a72dff734dd7f4bcbc637`;
-- all 21 Required checks succeeded (0 failed); exact-head review had zero unresolved threads;
-- dispatcher `33136807451` — success;
-- signed updater/publication `33136814065` and release observer `33136822222` — success;
-- release tag `sahelflow-v1.0.0-internal.28-d104da72dcfb7950df0b437ce279377b28e7df4b`;
-- MSI digest `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64`.
+- release PR #344 / reviewed release head `dd4888d6366cf48ccca05563bedb7e502e5662ce`;
+- the full Required battery passed on the exact head (two CI load-flake failures — sf-verify demo-seeding timeouts and an AI-workspace Prisma transaction timeout — re-ran green with zero code deltas);
+- certification cited corpus head `4921f34eb87369384d7cd09d92064a69b11cbac9` (CI `33207445430`, Phase 5 `33207445134`, Phase 6-7 `33207445070`), the last product-tree change before the documentation-only #343;
+- dispatcher `33212635887` — success;
+- signed updater/publication `33212648778` and release observer `33212661580` — success;
+- release tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`;
+- MSI digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`.
 
-The Founder has **not yet installed** Internal.28. The latest Founder-installed checkpoint remains Internal.27 (FD-047, dispatcher `32913436865`, signed run `32913445791`, tag `sahelflow-v1.0.0-internal.27-4e395b0149da447daab37ad2d01be5c8bf1d6bce`, MSI digest `sha256:64865032b4a59b8cf4f36d1e6b23e6251e817044c90f78ee3bc673822b803756`); preserve that installation state until the in-place update and campaign.
+The Founder has **not yet installed** Internal.29. The latest Founder-installed checkpoint remains Internal.28 (FD-049, installed in place during its campaign: text/image/video send, automatic no-refresh inbound and reopen verified; three regressions — document→zip, quoted-reply 409 on received messages, voice button opening the file dialog — were reproduced, repaired on protected main as #335/#336/#337, and extended by #338/#339). Retained Internal.28 publication facts: dispatcher `33136807451`, signed run `33136814065`, tag `sahelflow-v1.0.0-internal.28-d104da72dcfb7950df0b437ce279377b28e7df4b`, MSI digest `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64`.
 
 The signed workflow proved exact protected-source and reviewed-tree binding, Required PR success, signed MSI/updater build, staged runtime readiness, local signature verification, signed install/launch/reopen, authenticated hydrated WebView twice, deterministic rewrites, evidence manifest, `latest.json`, exact tag and publication.
 
 ## Product line now packaged
 
-Internal.28 retains the completed product/security line through Internal.27 and adds:
+Internal.29 retains the completed product/security line through Internal.28 and adds:
 
-- #315 — response CSP aligned with Tauri's loopback-only ephemeral-port policy, durable-projection fallback and socket retry for the demonstrated live-push root;
-- #319 — #316 Class-AAA durable Notification Center and WhatsApp attention routing;
-- #324/#325/#327/#329 — durable outbound image, MP4 video, document and voice/PTT sending with encrypted staging, canonical Message authority and deterministic account-bound receipts;
-- #331 — professional Inbox interaction parity: durable quoted replies, safe message copy, upload progress with in-flight cancellation, JPEG thumbnails with fail-closed fallback, and paste/drop composition;
-- #333 — Internal.28 / FD-049 release authority only.
+- #335 — quoted replies resolve both provider/message id spaces with a persisted canonical target, confining ambiguous provider ids to the quoting conversation (repairs the received-message 409);
+- #336 — OOXML documents dispatch under their declared Office mimetype across the sealed attachment, effect payload, sidecar allowlist and authenticated reads (repairs real PDF/Word arriving as zip);
+- #337 — in-composer voice recording: bounded MediaRecorder take through the same durable outbound voice/PTT path with WebView2 media browser args (repairs the voice button opening the file dialog);
+- #338 — permanent multi-select chat deletion;
+- #339 — compacted composer attach menu with a bottom-anchored history closing message-list dead space;
+- #340 — installed-e2e evidence MSI injection preserves checked-in browser args;
+- #342/#343 — FRC-2 freeze: `frc2-1.0.0` extraction corpus (40 cases, 56/56 tests) reconciled into `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`;
+- #344 — Internal.29 / FD-050 release authority only.
+
+Internal.28's direct package (#315 CSP/loopback repair, #319 Notification Center, #324/#325/#327/#329 outbound image/video/document/voice, #331 interaction parity, #333 authority) remains inside Internal.29.
 
 Internal.27 had added #312 provenance-bound individual `numeric@lid` replies, Arabic empty-composer RTL, governed status control and reviewed thread-header extraction, plus #313 release authority; that line remains inside Internal.28.
 

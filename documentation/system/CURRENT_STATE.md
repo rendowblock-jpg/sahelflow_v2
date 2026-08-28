@@ -3,47 +3,54 @@
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
 > **Last assessed:** 2026-08-28
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at reconciliation `d104da72dcfb7950df0b437ce279377b28e7df4b` after release PR #333
-> **Current signed release:** Internal.28 / `1.0.0-internal.28` / MSI `1.0.0.28` / FD-049 (published; Founder installation pending)
-> **Reviewed release head:** `d48cd1cf26110743b44a72dff734dd7f4bcbc637`
-> **Signed publication run:** `33136814065` — success
-> **Current execution:** FD-049 installed Founder campaign — the Founder applies the in-place Internal.28 update, executes the retained #306 real-phone rows plus applicable #316/#317 native rows, evidence is reconciled, then FRC-2–5 resume
+> **Live protected main:** resolve from GitHub before every action; at reconciliation `a34917e582c4806aee35ad5aca12aaea82a0ddcf` after release PR #344
+> **Current signed release:** Internal.29 / `1.0.0-internal.29` / MSI `1.0.0.29` / FD-050 (published; Founder installation pending)
+> **Reviewed release head:** `dd4888d6366cf48ccca05563bedb7e502e5662ce`
+> **Signed publication run:** `33212648778` — success
+> **Current execution:** FD-050 installed Founder campaign — the Founder applies the in-place Internal.29 update, re-verifies the FRC-2 repair rows plus the retained #306 real-phone rows and the applicable FRC-2 matrix rows, evidence is reconciled, then FRC-3 resumes
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
 ## 1. Exact release authority
 
-Internal.28 is the latest signed/published artifact:
+Internal.29 is the latest signed/published artifact:
 
-- protected release source `d104da72dcfb7950df0b437ce279377b28e7df4b` / release PR #333 (equals protected `main`);
-- app `1.0.0-internal.28`;
-- MSI `1.0.0.28`;
+- protected release source `a34917e582c4806aee35ad5aca12aaea82a0ddcf` / release PR #344 (equals protected `main`);
+- app `1.0.0-internal.29`;
+- MSI `1.0.0.29`;
 - channel `internal`;
-- authority FD-049;
+- authority FD-050;
 - mode `founder-offline-only`;
 - owned host suffix `null`;
 - customer-online licensing disabled.
 
-PR #333 reviewed head `d48cd1cf26110743b44a72dff734dd7f4bcbc637` passed all 21 Required checks with zero failed and zero unresolved review threads. Its release tree packages the product source through #331 from protected source; the certified product head is `9ed2fa15c2a9571d8a7f0c1f02e39052f18a0f80` (CI `33132059574`, Phase 5 `33132059464`, Phase 6-7 `33132059457`), product-tree-equivalent to the pre-release protected main.
+PR #344 reviewed head `dd4888d6366cf48ccca05563bedb7e502e5662ce` passed the full Required battery (CI/Quality Gate, Phase 5, Phase 6-7, native source contract, evidence MSI, Rust release parity) with two confirmed CI load-flake failures re-run green on the identical tree and zero code deltas. Certification cited corpus head `4921f34eb87369384d7cd09d92064a69b11cbac9` — the last product-tree change since Internal.28 (CI `33207445430`, Phase 5 `33207445134`, Phase 6-7 `33207445070`); #343 is documentation-only, so the packaged product tree is identical.
 
-After expected-head merge, dispatcher `33136807451`, signed updater/publication run `33136814065` and release observer `33136822222` succeeded on exact protected main. The release was published at tag `sahelflow-v1.0.0-internal.28-d104da72dcfb7950df0b437ce279377b28e7df4b`.
+After expected-head merge, dispatcher `33212635887`, signed updater/publication run `33212648778` and release observer `33212661580` succeeded on exact protected main. The release was published at tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`.
 
 Published MSI:
 
-- `SahelFlow_1.0.0-internal.28_x64_en-US.msi`;
-- digest `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64`.
+- `SahelFlow_1.0.0-internal.29_x64_en-US.msi`;
+- digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`.
 
-The Founder has **not yet installed** Internal.28; the latest Founder-installed checkpoint remains Internal.27 (dispatcher `32913436865`, signed run `32913445791`, tag `sahelflow-v1.0.0-internal.27-4e395b0149da447daab37ad2d01be5c8bf1d6bce`, MSI digest `sha256:64865032b4a59b8cf4f36d1e6b23e6251e817044c90f78ee3bc673822b803756`). Preserve that installation state until the in-place update and campaign.
+The Founder has **not yet installed** Internal.29; the latest Founder-installed checkpoint remains Internal.28 (FD-049, installed in place during its campaign — text/image/video send, automatic no-refresh inbound and reopen verified; the three reproduced regressions were repaired as #335/#336/#337 and extended by #338/#339, all packaged here). Retained Internal.28 publication facts: dispatcher `33136807451`, signed run `33136814065`, tag `sahelflow-v1.0.0-internal.28-d104da72dcfb7950df0b437ce279377b28e7df4b`, MSI digest `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64`. Preserve the installed state through the Internal.29 in-place update and campaign.
 
-## 2. Product/security line packaged in Internal.28
+## 2. Product/security line packaged in Internal.29
 
-Internal.28 retains the accepted Internal.24 product line and the Internal.25/26/27 security/provider/product foundation. Its direct package includes:
+Internal.29 retains the accepted Internal.24 product line, the Internal.25/26/27 security/provider/product foundation and the complete Internal.28 package. Its direct additions are:
 
-- **#315** — response CSP aligned with Tauri's loopback-only ephemeral-port policy, durable-projection fallback and socket retry for the demonstrated live-push root;
-- **#319** — #316 Class-AAA durable Notification Center and WhatsApp attention routing;
-- **#324/#325/#327/#329** — durable outbound image, MP4 video, document and voice/PTT sending with encrypted staging, canonical Message/outbox authority and deterministic account-bound receipts;
-- **#331** — professional Inbox interaction parity: durable quoted replies with queue-time provenance resolution, safe message copy, upload progress with in-flight cancellation, JPEG thumbnails with fail-closed fallback, and paste/drop composition;
-- **#333** — version/release/licensing authority only for Internal.28 / FD-049.
+- **#335** — quoted replies resolve both provider/message id spaces with a persisted canonical target, confining ambiguous provider ids to the quoting conversation (repairs the received-message 409);
+- **#336** — OOXML documents dispatch under their declared Office mimetype across the sealed attachment, effect payload, sidecar allowlist and authenticated reads (repairs real PDF/Word arriving as zip);
+- **#337** — in-composer voice recording: bounded MediaRecorder take through the durable outbound voice/PTT path with WebView2 media browser args (repairs the voice button opening the file dialog);
+- **#338** — permanent multi-select chat deletion;
+- **#339** — compacted composer attach menu with a bottom-anchored history closing message-list dead space;
+- **#340** — installed-e2e evidence MSI injection preserves checked-in browser args;
+- **#342/#343** — FRC-2 freeze: `frc2-1.0.0` extraction corpus plus the AI capability evidence ledger;
+- **#344** — version/release/licensing authority only for Internal.29 / FD-050.
+
+## 2b. Product/security line packaged in Internal.28 (retained history)
+
+Internal.28's direct package — #315 response CSP/loopback repair, #319 Notification Center, #324/#325/#327/#329 outbound image/video/document/voice sending, #331 Inbox interaction parity, #333 release authority — remains inside Internal.29.
 
 ## 2a. Product/security line packaged in Internal.27 (retained history)
 
@@ -99,7 +106,7 @@ freeze one combined protected-main candidate. A new signed successor and one
 preserved in-place Founder update require separate release authority and happen
 only after that source frontier is assembled.
 
-FD-049 (2026-08-27) supersedes FD-048's timing for the next checkpoint: once #317 completes on protected `main`, one signed successor (Internal.28) is authorized for Founder-installed testing before FRC-2–5 resume.
+FD-049 (2026-08-27) superseded FD-048's timing for one checkpoint: once #317 completed on protected `main`, one signed successor (Internal.28) was authorized for Founder-installed testing before FRC-2–5 resume. FD-050 (2026-08-28) then authorized one signed successor (Internal.29) once the FRC-2 source frontier completed — satisfied and published through PR #344.
 
 FD-048 does not close #306, convert source evidence into live certification,
 authorize a release/customer/Beta/Stable, or weaken #230. It reduces repeated
@@ -199,8 +206,7 @@ minimization for live and replayed tool results, and the frozen
 56-test contract suite. Remaining rows are external-blocked (seller-owned live
 key, installed observation, T470 runs). Open findings are recorded in the ledger
 (extraction route license gate question, stale quota comments, legacy tool body
-note). Per FD-050 the next checkpoint is one signed successor (Internal.29)
-before FRC-3.
+note). Per FD-050 the frozen frontier was packaged and published as one signed successor (Internal.29, PR #344, exact main `a34917e582c4806aee35ad5aca12aaea82a0ddcf`); the Founder in-place install and campaign are the current gate before FRC-3.
 
 ## 8. Complete-product assurance boundary — FRC-3
 
@@ -245,7 +251,7 @@ If authoritative access is unavailable, the affected integration/action remains 
 - Beta is not established.
 - Stable is not established.
 
-SahelFlow is **not yet a commercially certified Stable release**. Internal.28 is the current Internal Founder-offline checkpoint (published, not yet Founder-installed); Internal.27 remains a retained prior checkpoint.
+SahelFlow is **not yet a commercially certified Stable release**. Internal.29 is the current Internal Founder-offline checkpoint (published, not yet Founder-installed); Internal.28 (Founder-installed during its campaign) and Internal.27 remain retained prior checkpoints.
 
 ## 12. Historical continuity required by active authority
 

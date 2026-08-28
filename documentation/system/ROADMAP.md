@@ -3,9 +3,9 @@
 > **Status:** Active dependency/completion program
 > **Last reconciled:** 2026-08-28
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before action; at reconciliation `d104da72dcfb7950df0b437ce279377b28e7df4b`
-> **Current signed checkpoint:** Internal.28 / FD-049 (published; Founder installation pending)
-> **Current execution mode:** FRC-2 source frontier frozen; one signed successor (Internal.29) authorized by FD-050 before FRC-3
+> **Live protected main:** resolve from GitHub before action; at reconciliation `a34917e582c4806aee35ad5aca12aaea82a0ddcf`
+> **Current signed checkpoint:** Internal.29 / FD-050 (published; Founder installation pending)
+> **Current execution mode:** Internal.29 published — Founder in-place install, FD-050 campaign and ledger reconciliation, then FRC-3
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 
@@ -27,12 +27,12 @@ completed product/experience reconstruction
 → #317 professional WhatsApp Inbox parity/certification ledger
 → #324/#325/#327/#329 durable outbound image/video/document/voice-PTT merges
 → #331 Inbox interaction parity merge (quotes, copy, progress/cancel, thumbnails, paste/drop)
-→ FD-049 Internal.28 signed publication ← current (awaiting Founder in-place install + real-phone campaign)
-→ FRC-2 AI/tools/order-extraction evidence matrix frozen (capability ledger + corpus frc2-1.0.0) ← current source frontier
+→ FD-049 Internal.28 signed publication + Founder-installed campaign (regressions: document→zip, received-message quote 409, voice button; repaired as #335/#336/#337, extended by #338/#339)
+→ FRC-2 AI/tools/order-extraction evidence matrix frozen (capability ledger + corpus frc2-1.0.0, #342/#343)
+→ FD-050 Internal.29 signed publication ← current (awaiting Founder in-place install + FD-050 campaign)
 → FRC-3 Required capability/journey assurance ledger and demonstrated repairs
 → FRC-4 commerce official dev/test certification work
 → FRC-5 courier contract/sandbox or authorized-account certification work
-→ Internal.28 (FD-049) published as the separately authorized successor; its installed/live campaign is the current gate
 → close only exact FRC-1–5 evidence actually observed
 → FRC-6 certified first paid assisted deployment decision
 → #230 customer-online/network closure
@@ -73,15 +73,18 @@ Completion confidence means:
 
 ## FRC-1 — real-phone WhatsApp installed/provider proof
 
-Owner: issue #306. Retained installed evidence: signed Internal.27. Published
-candidate: Internal.28 / FD-049 — already authorized, signed and published;
-the remaining work is the Founder in-place update and the real-phone campaign.
+Owner: issue #306. Retained installed evidence: Internal.27 plus the
+Founder-installed Internal.28 campaign (text/image/video send, automatic
+no-refresh inbound and reopen verified; three reproduced regressions repaired
+on main). Published candidate: Internal.29 / FD-050 — already authorized,
+signed and published; the remaining work is the Founder in-place update and
+the re-verification campaign.
 
 Required sequence:
 
 1. retain Internal.27 QR/link/reopen, exact LID outbound and durable inbound evidence;
-2. treat #315 through #331 as packaged inside published Internal.28;
-3. verify exact protected main `d104da72dcfb7950df0b437ce279377b28e7df4b` and update in place through the normal updater;
+2. treat #315 through #341 as packaged inside published Internal.28/Internal.29;
+3. verify exact protected main `a34917e582c4806aee35ad5aca12aaea82a0ddcf` and update in place through the normal updater;
 4. preserve AppData, install/registry identity, keys and shop databases;
 5. verify exact installed version, normal launch and reopen;
 6. prove automatic no-refresh inbound, durable exact-once persistence and reopen;
@@ -115,8 +118,10 @@ registry, the proposal/approval authority, the streaming/failure matrix,
 #305 field-aware privacy minimization and the `frc2-1.0.0` synthetic/redacted
 AR/FR/EN/Darija/mixed extraction corpus with its contract suite. Remaining
 matrix rows are external-blocked: seller-owned live key proof, installed
-Windows observation and T470 reference-floor runs. Per FD-050 the next
-checkpoint is one signed successor (Internal.29) before FRC-3.
+Windows observation and T470 reference-floor runs. Per FD-050 the frozen
+frontier was packaged and published as one signed successor (Internal.29,
+PR #344); the Founder campaign and ledger reconciliation are the gate before
+FRC-3.
 
 ## FRC-3 — Required complete-product assurance
 
@@ -213,7 +218,7 @@ A `workers.dev` endpoint can support development but does not satisfy the sole p
 
 ## Phase 9 — release certification and launch readiness
 
-Internal.25 / FD-044 is a historical Internal Founder-offline checkpoint, not Beta or Stable. Internal.27 / FD-047 is the latest Founder-installed checkpoint and Internal.28 / FD-049 is the current signed/published checkpoint (Founder installation pending); neither is Beta or Stable.
+Internal.25 / FD-044 is a historical Internal Founder-offline checkpoint, not Beta or Stable. Internal.28 / FD-049 is the latest Founder-installed checkpoint and Internal.29 / FD-050 is the current signed/published checkpoint (Founder installation pending); neither is Beta or Stable.
 
 Stable still requires:
 
@@ -252,4 +257,4 @@ No force merge, waiver, protection bypass, updater-key weakening, Rust `--locked
 - Historical retained evidence set: issues #201, #214, #221, #226 and #230.
 - PR #250, PR #251 and `agent/internal-16-wave-4` remain history.
 - Internal.24 / FD-043 is the Founder-accepted installed checkpoint.
-- Internal.25 / FD-044 is the historical provider/security checkpoint superseded for current signed/published authority by Internal.28 / FD-049; Internal.27 / FD-047 remains the latest Founder-installed checkpoint.
+- Internal.25 / FD-044 is the historical provider/security checkpoint superseded for current signed/published authority by Internal.29 / FD-050; Internal.28 / FD-049 is the latest Founder-installed checkpoint and Internal.27 / FD-047 remains retained history.

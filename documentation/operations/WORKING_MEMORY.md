@@ -7,23 +7,37 @@
 
 ## Current truth
 
-- Protected `main` at handoff: `d104da72dcfb7950df0b437ce279377b28e7df4b` (after release PR #333); live GitHub wins if moved. Internal.27 release source `4e395b0149da447daab37ad2d01be5c8bf1d6bce` remains retained history.
-- Latest signed/published checkpoint: **Internal.28**. The latest **Founder-installed** checkpoint remains Internal.27 until the Founder applies the in-place update.
-- App `1.0.0-internal.28`; MSI `1.0.0.28`; authority **FD-049**; mode `founder-offline-only`.
-- Release PR #333; reviewed release head `d48cd1cf26110743b44a72dff734dd7f4bcbc637`; all 21 Required checks succeeded (0 failed) with zero unresolved review threads. Internal.27's #312/#313 path remains retained history.
-- Dispatcher `33136807451`; signed updater/publication `33136814065`; release observer `33136822222` — all success. Internal.27's `32913436865`/`32913445791` remain retained evidence.
-- Internal.28 MSI digest `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64`; release tag `sahelflow-v1.0.0-internal.28-d104da72dcfb7950df0b437ce279377b28e7df4b`; Internal.27 digest retained.
+- Protected `main` at handoff: `a34917e582c4806aee35ad5aca12aaea82a0ddcf` (after release PR #344); live GitHub wins if moved.
+- Latest signed/published checkpoint: **Internal.29**. The latest **Founder-installed** checkpoint remains Internal.28 (installed in place during the FD-049 campaign; its observations drove the FRC-2 repair cycle) until the Founder applies the Internal.29 in-place update.
+- App `1.0.0-internal.29`; MSI `1.0.0.29`; authority **FD-050**; mode `founder-offline-only`.
+- Release PR #344; reviewed release head `dd4888d6366cf48ccca05563bedb7e502e5662ce`; the full Required battery passed on the exact head — two CI load-flake failures (sf-verify demo-seeding timeouts, AI-workspace Prisma transaction timeout) re-ran green with zero code deltas.
+- Certification cited corpus head `4921f34eb87369384d7cd09d92064a69b11cbac9` (CI `33207445430`, Phase 5 `33207445134`, Phase 6-7 `33207445070`), the last product-tree change before the documentation-only #343.
+- Dispatcher `33212635887`; signed updater/publication `33212648778`; release observer `33212661580` — all success. Internal.28's `33136807451`/`33136814065`/`33136822222` remain retained evidence.
+- Internal.29 MSI digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`; release tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`; Internal.28 digest `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64` retained.
 - #221 closed/completed after Founder acceptance of installed Internal.24.
 - #226 closed/completed; retain its budgets.
-- #306 open — real-phone WhatsApp installed/provider certification; the FD-049 candidate is published and awaiting the in-place update.
-- #316 open — Class-AAA durable Notification Center and WhatsApp attention routing is source-complete (PR #319) and packaged in published Internal.28; installed/native/real-phone evidence is pending.
-- #317 open — professional WhatsApp Inbox parity is source-complete (#324/#325/#327/#329/#331) and packaged in published Internal.28; installed/real-phone evidence is pending.
+- #306 open — real-phone WhatsApp installed/provider certification; the FD-050 candidate is published and awaiting the in-place update.
+- #316 open — Class-AAA durable Notification Center (PR #319) is packaged in published Internal.29; installed/native/real-phone evidence is pending.
+- #317 open — professional WhatsApp Inbox parity is source-complete and packaged in published Internal.29; installed/real-phone evidence is pending.
 - #230 open/reopened P1 — customer-online trial/network blocker; no owned production domain.
-- PR #315 through #331 are packaged inside published Internal.28; no open PR existed immediately after #333 merged.
-- Current sequencing decision: **FD-050** — the FRC-2 source frontier is frozen (capability ledger + corpus `frc2-1.0.0`); one signed successor (Internal.29) is authorized for Founder-installed re-verification before FRC-3 resumes.
-- Exact next outcome: **the Founder applies the in-place Internal.28 update with state preserved, executes the retained #306 real-phone rows plus applicable #316/#317 native rows, evidence is reconciled into the ledger, then FRC-2–5 resume**.
+- FRC-2 is source-complete: capability ledger + frozen corpus `frc2-1.0.0` (#342/#343) merged; live-key, installed-observation and T470 rows remain external-blocked in the AI ledger. No open PR existed immediately after #344 merged.
+- Current sequencing decision: **FD-050 satisfied in publication** — Internal.29 packages the Internal.28 campaign repairs/extensions (#335–#341) plus the FRC-2 freeze.
+- Exact next outcome: **the Founder applies the in-place Internal.29 update with state preserved, re-verifies the FRC-2 repair rows plus the retained #306 real-phone rows and the applicable FRC-2 matrix rows, evidence is reconciled into the ledgers, then FRC-3 resumes**.
 
-## What Internal.28 adds
+## What Internal.29 adds
+
+- #335 — quoted replies resolve both provider/message id spaces with a persisted canonical target, confining ambiguous provider ids to the quoting conversation (repairs the received-message 409).
+- #336 — OOXML documents dispatch under their declared Office mimetype across attachment/payload/sidecar/read layers (repairs real PDF/Word arriving as zip).
+- #337 — in-composer voice recording: bounded MediaRecorder take through the durable outbound voice/PTT path with WebView2 media browser args (repairs the voice button opening the file dialog).
+- #338 — permanent multi-select chat deletion.
+- #339 — compacted composer attach menu with a bottom-anchored history closing message-list dead space.
+- #340 — installed-e2e evidence MSI injection preserves checked-in browser args.
+- #342/#343 — FRC-2 freeze: `frc2-1.0.0` extraction corpus (40 cases, 56/56 tests) reconciled into `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`.
+- #344 — Internal.29 / FD-050 release authority only.
+
+Internal.29 retains the complete prior product/security line, including Internal.28's #315/#319/#324/#325/#327/#329/#331 package, #312, #309/#310/#311 and #300/#304/#305/#307. Do not restart #273–#295 programs without direct regression evidence.
+
+## What Internal.28 adds (retained history; Founder-installed)
 
 - #315 — response CSP aligned with Tauri's loopback-only ephemeral-port policy, three-second durable-projection fallback and real socket retry for the demonstrated live-push root.
 - #319 — #316 Class-AAA durable Notification Center and WhatsApp attention routing.
@@ -31,9 +45,7 @@
 - #331 — professional Inbox interaction parity: durable quoted replies with queue-time provenance resolution, safe message copy, truthful upload progress with in-flight cancellation, JPEG thumbnails with fail-closed fallback, and paste/drop composition.
 - #333 — Internal.28 / FD-049 release authority only.
 
-Internal.28 retains the complete prior product/security line, including #312 and #309/#310/#311 and #300/#304/#305/#307. Do not restart #273–#295 programs without direct regression evidence.
-
-## What Internal.27 adds
+## What Internal.27 adds (retained history)
 
 - #312 — provenance-bound individual WhatsApp `numeric@lid` replies, Arabic empty-composer RTL with automatic entered-content direction, direct governed status control and reviewed AI order extraction from the thread header.
 - #313 — Internal.27 / FD-047 release authority only.
@@ -82,39 +94,37 @@ Binding rules:
 - **Remove demo data** temporarily appeared frozen before completing. That is a
   separate demonstrated UI defect and is not silently treated as WhatsApp failure.
 - Do not logout, reset AppData or clear protected auth before the published
-  Internal.28 is installed in place and proves automatic inbound and the remaining
-  FRC-1 rows.
+  Internal.29 is installed in place and re-proves automatic inbound and the
+  remaining FRC-1 rows.
 
-## Exact next-session order — FRC-2 freeze and the FD-050 Internal.29 successor
+## Exact next-session order — Internal.29 installed campaign and FRC-3 entry
 
-1. Re-resolve protected `main`, open PRs and #306/#316/#317/#230; confirm the
-   FRC-2 packages (corpus `test/frc2-extraction-corpus` head `4921f34e` and
-   `docs/frc2-ai-capability-ledger`) merge through the required gates with
-   expected-head discipline.
-2. Open the separately authorized release package for one signed successor:
-   Internal.29 / FD-050, packaging exactly the protected-main frontier at freeze
-   time (Internal.28 campaign fixes #335–#341 plus the FRC-2 freeze).
-3. The Founder applies the in-place Internal.29 update through the normal
+1. Re-resolve protected `main`, open PRs and #306/#316/#317/#230; confirm
+   Internal.29 is published (tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`)
+   and that no repair PR is open. Expect no source work before the campaign.
+2. The Founder applies the in-place Internal.29 update through the normal
    updater, preserving installation, shop and WhatsApp state (no logout, no
    AppData reset).
-4. On the installed candidate, re-verify the Internal.28 campaign rows: quoted
-   replies to received AND sent messages, real PDF/Word document delivery,
-   voice recording send/PTT, permanent multi-select chat delete, compacted
-   composer EN/AR, plus the retained #306 rows (automatic no-refresh inbound,
-   reopen persistence, governed status, logout last).
-5. Exercise the applicable FRC-2 matrix rows the Founder can perform: key
+3. On the installed candidate, re-verify the FRC-2 repair rows: quoted replies
+   to received AND sent messages, real PDF/Word document delivery, voice
+   recording send/PTT, permanent multi-select chat delete, compacted composer
+   EN/AR; plus the retained #306 rows (automatic no-refresh inbound, reopen
+   persistence, governed status, logout last).
+4. Exercise the applicable FRC-2 matrix rows the Founder can perform: key
    lifecycle in Settings → AI (test/save/rotate/disconnect), one reviewed
    extraction from the thread header through exactly-one canonical order, one
    proposal approval/replay observation.
-6. Record results in `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`,
+5. Record results in `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`,
    `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` and current-state
    documentation; convert rows only where installed evidence exists.
+6. Any reproduced failure opens exactly one bounded repair root plus affected
+   siblings per the audit/review/merge discipline; nothing else moves.
 7. Resume FRC-3 (Required capability/journey assurance ledger) in dependency
    order; preserve external blockers.
 
 ## Following FRC packages
 
-- **FRC-2 (frozen 2026-08-28):** `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md` freezes the 30-tool registry, proposal/approval authority, failure matrix, #305 privacy minimization and the `frc2-1.0.0` AR/FR/EN/Darija/mixed corpus; live-key, installed-observation and T470 rows remain external-blocked.
+- **FRC-2 (frozen 2026-08-28, packaged in published Internal.29):** `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md` freezes the 30-tool registry, proposal/approval authority, failure matrix, #305 privacy minimization and the `frc2-1.0.0` AR/FR/EN/Darija/mixed corpus; live-key, installed-observation and T470 rows remain external-blocked. The Founder-performable rows are step 4 of the campaign above.
 - **FRC-3:** finite ledger mapping Product Stable capabilities, 27 Required journeys, page-completion and architecture invariants to source/test/installed/Founder/external evidence.
 - **FRC-4:** Shopify/YouCan official development environments and controlled WooCommerce live contract/reconciliation evidence.
 - **FRC-5:** capability-specific courier certification from provider-issued contract plus sandbox/demo or protected authorized real-account evidence.
@@ -127,8 +137,8 @@ Binding rules:
 ## Current hard blockers and dependencies
 
 - WhatsApp FRC-1 requires the Founder’s retained real phone/account/session.
-  The exact signed successor (Internal.28) is published; it must now be
-  installed in place with state preserved to prove automatic live push and the
+  The exact signed successor (Internal.29) is published; it must now be
+  installed in place with state preserved to re-verify the repair rows and the
   remaining FRC-1 rows.
 - Real Gemini minimal inference requires a seller-owned key; free-tier work uses synthetic/redacted inputs only.
 - Commerce requires development/test environments and HTTPS ingress for webhook tests.
@@ -170,17 +180,20 @@ Never weaken:
 - No branch-only signed release or hidden product change in release authority.
 - No live-provider claim from source, mock, wrapper or test count.
 - No credential in chat/source/test/issues/evidence.
-- No customer-online/Beta/Stable claim from Founder-offline Internal.28 or any internal checkpoint.
+- No customer-online/Beta/Stable claim from Founder-offline Internal.29 or any internal checkpoint.
 - No first customer as an undisclosed experiment.
 - Use selected Level 1/2/3 gates and expected-head merge for any repair.
 
 ## Hard non-claims
 
-- Internal.28 is signed/published but not yet Founder-installed. Internal.27's
-  installed `@lid` reply and durable inbound are retained, but WhatsApp
-  certification remains open until the installed Internal.28 campaign passes
-  automatic Inbox live push and the remaining #306 rows.
-- Complete AI/tools/order-extraction certification is open.
+- Internal.29 is signed/published but not yet Founder-installed. Internal.28's
+  installed campaign verified text/image/video send, automatic no-refresh
+  inbound and reopen, but reproduced three regressions repaired as #335/#336/#337;
+  WhatsApp certification remains open until the installed Internal.29 campaign
+  re-verifies the repair rows and the remaining #306 rows.
+- Complete AI/tools/order-extraction certification is open; the FRC-2 source
+  frontier is frozen and packaged, while live-key, installed-observation and
+  T470 rows remain external-blocked.
 - Class-AAA Notifications and professional WhatsApp message/media parity are open.
 - Public commerce/courier live certification is not established by adapter source alone.
 - Customer-online trial readiness remains open under #230.

@@ -5,13 +5,13 @@
 > AI actions and the message → extraction → human-review → canonical-order chain in
 > the Founder-offline desktop product
 > **Snapshot date:** 2026-08-28
-> **Source baseline:** protected `main` `e7c15724` plus the FRC-2 corpus package
-> `test/frc2-extraction-corpus` head `4921f34e` (frozen corpus `frc2-1.0.0`)
-> **Signed/installed baseline:** Internal.27 / FD-047 (latest Founder-installed)
-> **Latest signed/published:** Internal.28 / FD-049 (tag
-> `sahelflow-v1.0.0-internal.28-d104da72dcfb7950df0b437ce279377b28e7df4b`; Founder
-> in-place update done; the two installed-campaign regressions are fixed on main
-> and await Founder re-verification on the next candidate)
+> **Source baseline:** protected `main` `a34917e582c4806aee35ad5aca12aaea82a0ddcf` (frozen corpus `frc2-1.0.0`
+> merged through #342)
+> **Signed/installed baseline:** Internal.28 / FD-049 (latest Founder-installed)
+> **Latest signed/published:** Internal.29 / FD-050 (tag
+> `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`; the frozen FRC-2 frontier and the
+> Internal.28 campaign repairs are packaged; the installed-campaign matrix rows
+> await Founder re-verification on the installed Internal.29 candidate)
 
 This ledger is the FRC-2 required deliverable. It separates what the AI source can
 do from automated, signed/installed, founder-observed and live-provider evidence.
