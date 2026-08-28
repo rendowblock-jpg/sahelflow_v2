@@ -16,6 +16,7 @@ import {
   Mic,
   PanelRight,
   Paperclip,
+  Plus,
   RefreshCw,
   Reply,
   Send,
@@ -41,6 +42,12 @@ import { MessageStatus } from "@/components/inbox/message-status";
 import { WhatsAppPairingDialog } from "@/components/inbox/whatsapp-pairing-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
@@ -823,7 +830,16 @@ export function InboxV3Thread({
         </div>
       </header>
 
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea
+        className={cn(
+          "min-h-0 flex-1",
+          // Short conversations anchor to the composer like WhatsApp — the
+          // dead space between the last message and the composer is closed.
+          messages.length > 0 &&
+            !loadingMessages &&
+            "[&_[data-slot=scroll-area-viewport]>div]:flex [&_[data-slot=scroll-area-viewport]>div]:min-h-full [&_[data-slot=scroll-area-viewport]>div]:flex-col [&_[data-slot=scroll-area-viewport]>div]:justify-end",
+        )}
+      >
         <div
           ref={messagesInnerRef}
           className="mx-auto w-full max-w-[56rem] space-y-3 px-3 py-5 sm:px-6 lg:px-8"
@@ -885,7 +901,7 @@ export function InboxV3Thread({
         </div>
       </ScrollArea>
 
-      <footer className="border-t border-border/60 bg-background/98 px-3 py-2.5 sm:px-4">
+      <footer className="border-t border-border/60 bg-background/98 px-3 py-2 sm:px-4">
         {canCompose ? (
           <div className="mx-auto max-w-[56rem]">
             {!canSend ? (
@@ -1171,56 +1187,49 @@ export function InboxV3Thread({
               />
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={sending || !canSend}
-                    aria-label={copy("mediaImage")}
-                    data-inbox-image-picker="true"
-                    onClick={() => imageInputRef.current?.click()}
-                  >
-                    <ImageIcon className="size-4" aria-hidden="true" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={sending || !canSend}
+                        aria-label={copy("attachMenu")}
+                        data-inbox-attach-menu="true"
+                      >
+                        <Plus className="size-4" aria-hidden="true" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="top" align="start" sideOffset={8}>
+                      <DropdownMenuItem
+                        data-inbox-image-picker="true"
+                        disabled={sending || !canSend}
+                        onClick={() => imageInputRef.current?.click()}
+                      >
+                        <ImageIcon className="size-4" aria-hidden="true" />
+                        {copy("mediaImage")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        data-inbox-video-picker="true"
+                        disabled={sending || !canSend}
+                        onClick={() => videoInputRef.current?.click()}
+                      >
+                        <Video className="size-4" aria-hidden="true" />
+                        {copy("mediaVideo")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        data-inbox-document-picker="true"
+                        disabled={sending || !canSend}
+                        onClick={() => documentInputRef.current?.click()}
+                      >
+                        <FileText className="size-4" aria-hidden="true" />
+                        {copy("mediaDocument")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={6}>
-                  {copy("mediaImage")}
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={sending || !canSend}
-                    aria-label={copy("mediaVideo")}
-                    data-inbox-video-picker="true"
-                    onClick={() => videoInputRef.current?.click()}
-                  >
-                    <Video className="size-4" aria-hidden="true" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" sideOffset={6}>
-                  {copy("mediaVideo")}
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={sending || !canSend}
-                    aria-label={copy("mediaDocument")}
-                    data-inbox-document-picker="true"
-                    onClick={() => documentInputRef.current?.click()}
-                  >
-                    <FileText className="size-4" aria-hidden="true" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" sideOffset={6}>
-                  {copy("mediaDocument")}
+                  {copy("attachMenu")}
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
@@ -1297,9 +1306,6 @@ export function InboxV3Thread({
               </div>
               )}
             </div>
-            <p className="mt-1.5 px-1 text-[10px] text-muted-foreground">
-              {copy("composerShortcut")}
-            </p>
           </div>
         ) : (
           <div className="mx-auto flex max-w-[56rem] items-center gap-2 rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5 text-sm text-muted-foreground">
