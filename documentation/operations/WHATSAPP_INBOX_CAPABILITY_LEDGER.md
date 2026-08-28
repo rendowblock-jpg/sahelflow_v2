@@ -2,8 +2,8 @@
 
 > **Status:** Active FD-048 / issue #317 evidence ledger
 > **Scope:** Individual WhatsApp conversations in the Founder-offline desktop product
-> **Snapshot date:** 2026-08-27
-> **Source baseline:** protected `main` `de0252f0d4b7` after merged PR #327 (durable outbound document sending)
+> **Snapshot date:** 2026-08-28
+> **Source baseline:** protected `main` `357f448046da` after merged PR #329 (durable outbound voice/PTT sending)
 > **Signed/installed baseline:** Internal.27 / FD-047
 
 This ledger is the first required deliverable for issue #317. It separates what
@@ -66,7 +66,7 @@ pass. “Not applicable” is used only where a function has no provider effect.
 | Image sending | implemented-unproven | Merged PR #324 owns the image picker → bounded multipart route → encrypted `.sfmedia` authority → canonical Message/outbox effect → account-bound deterministic receipt journal → Baileys image dispatch; retries authenticate local bytes before provider-effect start and preview/download stays Message-bound | Exact-head Quality, Phase 5, Phase 6–7, protected-storage Windows, database/standalone/contained launcher and ephemeral installed gates passed before guarded merge | Ephemeral installed evidence exists, but no signed/Founder-installed successor after Internal.27 | None | Carry into the separately authorized signed candidate, then one representative real-phone image send/receipt/reopen exercise |
 | Video sending | implemented-unproven | Merged PR #325 owns the MP4-only outbound video action: 64 MiB request/object ceilings, authenticated video-track metadata, positive-or-truthful-null duration (silent video-only containers), encrypted staging, canonical video Message/outbox, dedicated provider lease, deterministic account-bound sidecar receipt, guarded staged-object reclamation and Message-only local playback | Exact-head Quality/review and required gates passed before guarded merge | No signed/Founder-installed successor after Internal.27 | None | Carry into the FD-049 signed candidate, then one representative real-phone video send/receipt/reopen exercise |
 | Document sending | implemented-unproven | Merged PR #327 owns the bounded business-document outbound action: PDF/Word/Excel/text/CSV declarations under the 64 MiB object ceiling, sniffed-content authentication (PDF/zip/OLE-storage/text), encrypted staging, canonical document Message/outbox, dedicated provider lease, deterministic account-bound sidecar receipt with a required safe file name, guarded staged-object reclamation and Message-bound document reads/downloads that preserve document file-name extensions | Exact-head Quality/review and required gates passed before guarded merge | No signed/Founder-installed successor after Internal.27 | None | Carry into the FD-049 signed candidate, then one representative real-phone document send/receipt/reopen exercise |
-| Voice/PTT sending | missing | No outbound provider action is exposed for voice/audio media kinds | None | None | None | Extend the proven media-send pattern for voice/audio with capability-specific limits/evidence |
+| Voice/PTT sending | implemented-unproven | Merged PR #329 owns the bounded outbound voice/PTT action: Opus-in-OGG audio (PTT flag only for OGG/Opus, canonical `audio/ogg; codecs=opus` MIME) under a 32 MiB request/object ceiling, `music-metadata` audio authentication that rejects non-Opus OGG and video-bearing containers with a truthful-null duration fallback, encrypted staging, canonical voice Message/outbox with no caption/file-name surface, dedicated provider lease, deterministic account-bound sidecar receipt, guarded staged-object reclamation and Message-only local playback | Programmatic OGG/Opus/Vorbis/WAV fixture integration tests (7) plus the 6-part voice source contract among 197 passing WhatsApp/inbox tests; exact-head required gates passed before guarded merge | No signed/Founder-installed successor after Internal.27 | None | Carry into the FD-049 signed candidate, then one representative real-phone voice/PTT send/receipt/reopen exercise |
 | Upload progress and pre-effect cancellation | missing | Image upload is bounded and staged durably, but no truthful byte-progress UI or post-selection cancellation command exists | Bounded request/source contracts only | None | None | Add a durable staged-upload/progress/cancel authority only when cancellation semantics can be guaranteed |
 | Quoted replies with visible context | missing | No quote model, composer state or provider context binding exists | None | None | None | Source, replay and real-provider quoted-reply evidence |
 | Persisted protected drafts | implemented-unproven | Protected per-conversation draft and debounced idempotent replacement are merged source | Targeted API/UI/crypto tests | No signed successor after Internal.27 | Not applicable | Eventual signed reopen/switch observation |
@@ -135,10 +135,16 @@ The remaining gate is therefore split deliberately:
    provider-lease, canonical projection and Message-bound document read/download
    contracts. It is protected source plus automated evidence, not signed/installed
    or live-certified.
-6. **Still missing:** bounded thumbnail generation/cache authority, outbound
-   voice/PTT, truthful upload progress/cancellation, and the remaining
-   conversation-native work in issue #317.
-7. **Still higher-evidence work:** a separately authorized signed Windows candidate
+6. **Merged outbound-voice/PTT authority:** the Opus-in-OGG voice extension
+   (#329) adds its own authenticated audio metadata (non-Opus OGG and
+   video-bearing containers rejected; truthful-null duration), 32 MiB ceiling,
+   PTT-only flag semantics, provider-lease, canonical projection and
+   Message-bound local playback contracts. It is protected source plus automated
+   evidence, not signed/installed or live-certified.
+7. **Still missing:** bounded thumbnail generation/cache authority, truthful
+   upload progress/cancellation, and the remaining conversation-native work in
+   issue #317.
+8. **Still higher-evidence work:** a separately authorized signed Windows candidate
    and exact representative real-phone/provider media matrix before any public
    certified-media claim.
 
