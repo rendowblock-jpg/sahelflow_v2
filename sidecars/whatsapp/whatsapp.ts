@@ -575,11 +575,13 @@ export class WhatsAppManager {
     if (!this.sock || this.status !== "connected") {
       throw new Error(`Not connected (status=${this.status})`);
     }
-    // The media type is the authenticated sniffed classification from the
-    // encrypted storage authority; the title is the bounded safe file name.
+    // The media type is the authenticated classification resolved by the
+    // app's encrypted storage authority; OOXML documents are ZIP containers
+    // and arrive already resolved to their declared Office mimetype so the
+    // recipient's phone renders the real document, never a raw .zip.
     const normalizedType = mimetype.toLowerCase();
     if (
-      !/^(application\/(?:pdf|zip|x-ole-storage)|text\/plain)$/.test(
+      !/^(application\/(?:pdf|zip|x-ole-storage|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document|vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|vnd\.ms-excel)|text\/(?:plain|csv))$/.test(
         normalizedType,
       ) ||
       document.byteLength <= 0 ||

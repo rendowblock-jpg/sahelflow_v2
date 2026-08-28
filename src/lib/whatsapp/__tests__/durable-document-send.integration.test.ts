@@ -46,6 +46,15 @@ function pdfDocument(): Buffer {
   ]);
 }
 
+function docxDocument(): Buffer {
+  // Real .docx/.xlsx files start with the ZIP local-file-header magic —
+  // OOXML IS a ZIP container, which is exactly what the storage sniffer sees.
+  return Buffer.concat([
+    Buffer.from([0x50, 0x4b, 0x03, 0x04]),
+    Buffer.from("durable-outbound-ooxml-payload\n", "utf8"),
+  ]);
+}
+
 function stream(bytes: Buffer): ReadableStream<Uint8Array> {
   const copy = new Uint8Array(bytes.length);
   copy.set(bytes);
@@ -257,6 +266,77 @@ describe("durable WhatsApp outbound document send", () => {
       expect(opened.mediaType).toBe("application/pdf");
       expect(opened.fileName).toBe("invoice-2026-02.pdf");
       expect(opened.bytes.equals(bytes)).toBe(true);
+    } finally {
+      opened.bytes.fill(0);
+    }
+  });
+
+  it("dispatches real OOXML documents under their declared Office mimetype, never a generic zip", async () => {
+    // Internal.28 founder-installed campaign: a real Word file sniffs as
+    // application/zip (OOXML is a ZIP container). The recipient-facing
+    // attachment and provider dispatch must carry the declared OOXML type so
+    // the phone renders the document instead of an unusable .zip.
+    const bytes = docxDocument();
+    const ooxmlMime =
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const queued = await queueWhatsAppDocument(context, {
+      clientMessageId: MESSAGE_ID,
+      to: "0555000111",
+      caption: "Bon de commande",
+      fileName: "bon-de-commande.docx",
+      declaredMime: ooxmlMime,
+      declaredSize: bytes.length,
+      source: stream(bytes),
+    });
+
+    const message = await db.message.findUniqueOrThrow({
+      where: { id: MESSAGE_ID },
+    });
+    const attachment = await openWhatsAppMessageAttachment(
+      context,
+      MESSAGE_ID,
+      message.attachments,
+    );
+    expect(attachment).toMatchObject({
+      kind: "document",
+      mimeType: ooxmlMime,
+      fileName: "bon-de-commande.docx",
+      sizeBytes: bytes.length,
+    });
+
+    const documentSender = vi.fn(
+      async (
+        _to: string,
+        document: Buffer,
+        mediaType: string,
+        fileName: string,
+      ) => {
+        expect(mediaType).toBe(ooxmlMime);
+        expect(fileName).toBe("bon-de-commande.docx");
+        expect(document.equals(bytes)).toBe(true);
+        return { ok: true, id: "WA-DOCUMENT-OOXML", status: "sent" };
+      },
+    );
+    await expect(
+      processWhatsAppEffect(
+        context,
+        queued.effectKey,
+        vi.fn(async () => ({ ok: true, id: "X", status: "sent" })),
+        vi.fn(async () => null),
+        vi.fn(async () => ({ ok: true, id: "X", status: "sent" })),
+        vi.fn(async () => ({ ok: true, id: "X", status: "sent" })),
+        documentSender,
+      ),
+    ).resolves.toMatchObject({
+      state: "succeeded",
+      providerMessageId: "WA-DOCUMENT-OOXML",
+    });
+
+    // The staged bytes stay readable and byte-exact for local preview.
+    const opened = await openInboxWhatsAppMedia(context, MESSAGE_ID);
+    try {
+      expect(opened.bytes.equals(bytes)).toBe(true);
+      expect(opened.fileName).toBe("bon-de-commande.docx");
     } finally {
       opened.bytes.fill(0);
     }

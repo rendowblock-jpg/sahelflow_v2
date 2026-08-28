@@ -94,6 +94,29 @@ function integrityFailure(): SahelFlowError {
   );
 }
 
+const OOXML_DOCUMENT_MIMES = new Set([
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
+
+/**
+ * OOXML documents are ZIP containers: the encrypted store truthfully
+ * classifies the bytes as application/zip while the recipient-facing
+ * attachment resolves to the declared Office mimetype (so the recipient's
+ * phone renders the document, never a raw .zip). Both views of the same
+ * container are consistent for the authenticated read path.
+ */
+function attachmentMatchesReceiptMimeType(
+  attachmentMimeType: string,
+  receiptMediaType: string,
+): boolean {
+  const attachment = attachmentMimeType.split(";", 1)[0]?.trim().toLowerCase();
+  const receipt = receiptMediaType.trim().toLowerCase();
+  if (!attachment || !receipt) return false;
+  if (attachment === receipt) return true;
+  return receipt === "application/zip" && OOXML_DOCUMENT_MIMES.has(attachment);
+}
+
 function requestAborted(): SahelFlowError {
   return new SahelFlowError(
     "WhatsApp media request was canceled",
@@ -360,8 +383,7 @@ export async function prepareInboxWhatsAppMedia(
     if (
       (attachment.sizeBytes !== null && attachment.sizeBytes !== receipt.sizeBytes) ||
       (attachment.mimeType !== null &&
-        attachment.mimeType.split(";", 1)[0]?.trim().toLowerCase() !==
-          receipt.mediaType.toLowerCase())
+        !attachmentMatchesReceiptMimeType(attachment.mimeType, receipt.mediaType))
     ) {
       throw integrityFailure();
     }

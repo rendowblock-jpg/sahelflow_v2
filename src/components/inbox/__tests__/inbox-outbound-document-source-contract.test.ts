@@ -57,12 +57,43 @@ describe("WhatsApp outbound document source boundary", () => {
     expect(queue.indexOf("await writeWhatsAppMediaObject(context")).toBeLessThan(
       queue.indexOf("createWhatsAppEffectAuthority"),
     );
-    expect(queue).toContain("documentFallbackName(media.mediaType)");
+    expect(queue).toContain("documentFallbackName(attachmentMimeType)");
+    expect(queue).toContain("outboundAttachmentMimeType(");
+    expect(queue).toContain("mimeType: attachmentMimeType");
     expect(queue).toContain("await discardStagedMediaIfUnreferenced(context, clientMessageId)");
     expect(queue).toContain("attachmentKey.fill(0)");
     expect(durable).toContain('messageType: "document"');
     expect(durable).toContain("effectType: WHATSAPP_DOCUMENT_EFFECT_TYPE");
     expect(durable).toContain('"whatsapp.document.send.v1"');
+    expect(durable).toContain(
+      "documentPayload.attachmentMimeType ?? documentPayload.media.mediaType",
+    );
+  });
+
+  it("dispatches OOXML documents under their declared Office mimetype, never the zip container", () => {
+    const durable = source("src/lib/whatsapp/durable-send.ts");
+    const sidecar = source("sidecars/whatsapp/index.ts");
+    const wa = source("sidecars/whatsapp/whatsapp.ts");
+
+    // The encrypted store classifies OOXML truthfully as a ZIP container; the
+    // recipient-facing attachment must resolve to the declared Office type.
+    expect(durable).toContain("OOXML_DOCUMENT_MIMES");
+    expect(durable).toContain(
+      '"application/vnd.openxmlformats-officedocument.wordprocessingml.document"',
+    );
+    expect(durable).toContain(
+      '"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"',
+    );
+    expect(sidecar).toContain(
+      '"application/vnd.openxmlformats-officedocument.wordprocessingml.document"',
+    );
+    expect(sidecar).toContain(
+      '"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"',
+    );
+    expect(wa).toContain(
+      "vnd\\.openxmlformats-officedocument\\.wordprocessingml\\.document",
+    );
+    expect(wa).toContain("text\\/(?:plain|csv)");
   });
 
   it("bounds both multipart hops before form-data materialization", () => {
