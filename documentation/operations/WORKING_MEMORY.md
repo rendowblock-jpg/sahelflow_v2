@@ -20,7 +20,7 @@
 - #317 open — professional WhatsApp Inbox parity is source-complete (#324/#325/#327/#329/#331) and packaged in published Internal.28; installed/real-phone evidence is pending.
 - #230 open/reopened P1 — customer-online trial/network blocker; no owned production domain.
 - PR #315 through #331 are packaged inside published Internal.28; no open PR existed immediately after #333 merged.
-- Current sequencing decision: **FD-049 executed** — one combined signed successor (Internal.28) is published for Founder-installed testing before FRC-2–5 resume.
+- Current sequencing decision: **FD-050** — the FRC-2 source frontier is frozen (capability ledger + corpus `frc2-1.0.0`); one signed successor (Internal.29) is authorized for Founder-installed re-verification before FRC-3 resumes.
 - Exact next outcome: **the Founder applies the in-place Internal.28 update with state preserved, executes the retained #306 real-phone rows plus applicable #316/#317 native rows, evidence is reconciled into the ledger, then FRC-2–5 resume**.
 
 ## What Internal.28 adds
@@ -85,28 +85,36 @@ Binding rules:
   Internal.28 is installed in place and proves automatic inbound and the remaining
   FRC-1 rows.
 
-## Exact next-session order — FD-049 installed campaign
+## Exact next-session order — FRC-2 freeze and the FD-050 Internal.29 successor
 
-1. Re-resolve protected `main`, open PRs, #306/#316/#317 and #230; confirm this
-   documentation package is merged and Internal.28 remains latest published.
-2. The Founder applies the in-place Internal.28 update through the normal updater
-   at exact app `1.0.0-internal.28` / MSI `1.0.0.28`, preserving installation,
-   shop and WhatsApp state (no logout, no AppData reset).
-3. On the installed candidate, execute the retained #306 rows: automatic
-   no-refresh inbound arrival, close/reopen persistence, EN/AR observation,
-   governed conversation status, reviewed AI order extraction, logout last.
-4. Add representative #316/#317 exercises the Founder can perform: notification
-   attention on inbound, one image/video/document/voice-PTT send with receipt,
-   one quoted reply, one safe copy, one in-flight cancel, thumbnail and
-   paste/drop observations.
-5. Record results in `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` and
-   current-state documentation; convert rows only where evidence exists.
-6. Resume FRC-2 through FRC-5 source/contract/sandbox work in dependency order
-   after the installed observation; preserve external blockers.
+1. Re-resolve protected `main`, open PRs and #306/#316/#317/#230; confirm the
+   FRC-2 packages (corpus `test/frc2-extraction-corpus` head `4921f34e` and
+   `docs/frc2-ai-capability-ledger`) merge through the required gates with
+   expected-head discipline.
+2. Open the separately authorized release package for one signed successor:
+   Internal.29 / FD-050, packaging exactly the protected-main frontier at freeze
+   time (Internal.28 campaign fixes #335–#341 plus the FRC-2 freeze).
+3. The Founder applies the in-place Internal.29 update through the normal
+   updater, preserving installation, shop and WhatsApp state (no logout, no
+   AppData reset).
+4. On the installed candidate, re-verify the Internal.28 campaign rows: quoted
+   replies to received AND sent messages, real PDF/Word document delivery,
+   voice recording send/PTT, permanent multi-select chat delete, compacted
+   composer EN/AR, plus the retained #306 rows (automatic no-refresh inbound,
+   reopen persistence, governed status, logout last).
+5. Exercise the applicable FRC-2 matrix rows the Founder can perform: key
+   lifecycle in Settings → AI (test/save/rotate/disconnect), one reviewed
+   extraction from the thread header through exactly-one canonical order, one
+   proposal approval/replay observation.
+6. Record results in `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`,
+   `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` and current-state
+   documentation; convert rows only where installed evidence exists.
+7. Resume FRC-3 (Required capability/journey assurance ledger) in dependency
+   order; preserve external blockers.
 
 ## Following FRC packages
 
-- **FRC-2:** seller-owned Gemini key, every exposed tool, privacy, proposal/permission/current-state authority, failures and AR/FR/EN/Darija/mixed extraction corpus through exactly-one reviewed order creation.
+- **FRC-2 (frozen 2026-08-28):** `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md` freezes the 30-tool registry, proposal/approval authority, failure matrix, #305 privacy minimization and the `frc2-1.0.0` AR/FR/EN/Darija/mixed corpus; live-key, installed-observation and T470 rows remain external-blocked.
 - **FRC-3:** finite ledger mapping Product Stable capabilities, 27 Required journeys, page-completion and architecture invariants to source/test/installed/Founder/external evidence.
 - **FRC-4:** Shopify/YouCan official development environments and controlled WooCommerce live contract/reconciliation evidence.
 - **FRC-5:** capability-specific courier certification from provider-issued contract plus sandbox/demo or protected authorized real-account evidence.

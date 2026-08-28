@@ -820,6 +820,30 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is created.
   #230 and the zero-budget boundary are unaffected.
 
+## FD-050 — One signed successor (Internal.29) after FRC-2, before FRC-3
+
+The Founder's 2026-08-28 instruction ("let's go on and start FRC-2 professionally
+and when it's completed fully we make the internal.29 and test everything")
+supersedes the FD-048/FD-049 sequencing for the checkpoint that follows the FRC-2
+AI/tools/order-extraction source frontier: once FRC-2's evidence matrix and its
+source packages are complete on protected `main`, one combined signed successor
+(Internal.29) is authorized so the Founder can install in place, re-verify the
+Internal.28 campaign fixes and exercise the FRC-2 rows before FRC-3 resumes.
+
+Binding boundaries:
+
+- The successor packages exactly the protected-main frontier that exists when
+  FRC-2 completes; no speculative FRC-3+ work is bundled.
+- FD-045 evidence rules are unchanged: release-authority PR, exact-head review,
+  required gates, expected-head merge, signed run, in-place preserved install.
+- The Internal.29 installed campaign re-verifies the Internal.28 fixes (quoted
+  replies to received and sent messages, real PDF/Word document delivery, voice
+  recording, permanent multi-select chat delete, compacted composer EN/AR) and
+  the applicable FRC-2 matrix rows (key lifecycle, reviewed extraction,
+  proposal approval/replay).
+- No customer-online, Beta, Stable or paid-deployment authority is created.
+  #230 and the zero-budget boundary are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

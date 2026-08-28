@@ -5,7 +5,7 @@
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** resolve from GitHub before action; at reconciliation `d104da72dcfb7950df0b437ce279377b28e7df4b`
 > **Current signed checkpoint:** Internal.28 / FD-049 (published; Founder installation pending)
-> **Current execution mode:** FD-049 installed Founder campaign before FRC-2–5 resume
+> **Current execution mode:** FRC-2 source frontier frozen; one signed successor (Internal.29) authorized by FD-050 before FRC-3
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 
@@ -28,7 +28,7 @@ completed product/experience reconstruction
 → #324/#325/#327/#329 durable outbound image/video/document/voice-PTT merges
 → #331 Inbox interaction parity merge (quotes, copy, progress/cancel, thumbnails, paste/drop)
 → FD-049 Internal.28 signed publication ← current (awaiting Founder in-place install + real-phone campaign)
-→ FRC-2 AI/tools/order extraction source/evidence matrix
+→ FRC-2 AI/tools/order-extraction evidence matrix frozen (capability ledger + corpus frc2-1.0.0) ← current source frontier
 → FRC-3 Required capability/journey assurance ledger and demonstrated repairs
 → FRC-4 commerce official dev/test certification work
 → FRC-5 courier contract/sandbox or authorized-account certification work
@@ -108,6 +108,15 @@ Freeze one evidence matrix covering:
 - T470/floor latency/resource evidence where applicable.
 
 Free-tier testing uses synthetic/redacted data. Core non-AI work remains fully functional when Gemini is absent.
+
+**Status (2026-08-28):** the FRC-2 source/evidence frontier is frozen.
+`operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md` freezes the 30-tool
+registry, the proposal/approval authority, the streaming/failure matrix,
+#305 field-aware privacy minimization and the `frc2-1.0.0` synthetic/redacted
+AR/FR/EN/Darija/mixed extraction corpus with its contract suite. Remaining
+matrix rows are external-blocked: seller-owned live key proof, installed
+Windows observation and T470 reference-floor runs. Per FD-050 the next
+checkpoint is one signed successor (Internal.29) before FRC-3.
 
 ## FRC-3 — Required complete-product assurance
 

@@ -190,6 +190,18 @@ Protected source includes seller-owned Gemini, proposal-bound actions, determini
 
 Free-tier testing never authorizes silent real-client PII processing.
 
+**FRC-2 source frontier frozen (2026-08-28).** The required evidence matrix now
+lives in `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`: the 30-tool
+registry with exact schema/permission/commit authority, the proposal-bound
+approval/replay chain, the streaming/failure matrix, #305 field-aware privacy
+minimization for live and replayed tool results, and the frozen
+`frc2-1.0.0` synthetic/redacted AR/FR/EN/Darija/mixed extraction corpus with its
+56-test contract suite. Remaining rows are external-blocked (seller-owned live
+key, installed observation, T470 runs). Open findings are recorded in the ledger
+(extraction route license gate question, stale quota comments, legacy tool body
+note). Per FD-050 the next checkpoint is one signed successor (Internal.29)
+before FRC-3.
+
 ## 8. Complete-product assurance boundary — FRC-3
 
 FRC-3 is not a generic codebase audit. It is a finite evidence ledger mapping:
