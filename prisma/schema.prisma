@@ -319,10 +319,15 @@ model Message {
   activityType       String?
   // Attachments (JSON array of {url, type, name, size})
   attachments        String?
+  // Quoted replies (#317): canonical Message this outbound message quotes.
+  // Integrity (same conversation, provider-confirmed target) is enforced at
+  // queue time by the durable-send authority, not by a cross-row constraint.
+  quotedMessageId    String?
   createdAt          DateTime     @default(now())
 
   @@index([conversationId, timestamp])
   @@index([deliveryStatus])
+  @@index([quotedMessageId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

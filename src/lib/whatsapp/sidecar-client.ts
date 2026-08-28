@@ -12,6 +12,7 @@ import type {
   SidecarChat,
   SidecarStatus,
 } from "./types";
+import type { WhatsAppQuotedContext } from "./durable-send";
 
 const SIDECAR_URL = env.whatsappSidecarUrl ?? "http://localhost:3001";
 const SIDECAR_TOKEN_FILE =
@@ -232,15 +233,17 @@ export const sidecar = {
     text: string,
     effectKey?: string,
     requestBinding?: string,
+    quoted?: WhatsAppQuotedContext | null,
   ) =>
     sidecarFetch<{ ok: boolean; id: string; status: string }>("/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(
-        effectKey && requestBinding
-          ? { to, text, effectKey, requestBinding }
-          : { to, text },
-      ),
+      body: JSON.stringify({
+        to,
+        text,
+        ...(effectKey && requestBinding ? { effectKey, requestBinding } : {}),
+        ...(quoted ? { quoted } : {}),
+      }),
     }),
 
   /**
@@ -256,12 +259,14 @@ export const sidecar = {
     caption: string,
     effectKey: string,
     requestBinding: string,
+    quoted: WhatsAppQuotedContext | null = null,
   ) => {
     const form = new FormData();
     form.set("to", to);
     form.set("effectKey", effectKey);
     form.set("requestBinding", requestBinding);
     form.set("caption", caption);
+    if (quoted) form.set("quoted", JSON.stringify(quoted));
     form.set(
       "image",
       new Blob([new Uint8Array(image)], { type: mediaType }),
@@ -282,12 +287,14 @@ export const sidecar = {
     caption: string,
     effectKey: string,
     requestBinding: string,
+    quoted: WhatsAppQuotedContext | null = null,
   ) => {
     const form = new FormData();
     form.set("to", to);
     form.set("effectKey", effectKey);
     form.set("requestBinding", requestBinding);
     form.set("caption", caption);
+    if (quoted) form.set("quoted", JSON.stringify(quoted));
     form.set(
       "video",
       new Blob([new Uint8Array(video)], { type: mediaType }),
@@ -313,6 +320,7 @@ export const sidecar = {
     caption: string,
     effectKey: string,
     requestBinding: string,
+    quoted: WhatsAppQuotedContext | null = null,
   ) => {
     const form = new FormData();
     form.set("to", to);
@@ -320,6 +328,7 @@ export const sidecar = {
     form.set("requestBinding", requestBinding);
     form.set("caption", caption);
     form.set("fileName", fileName);
+    if (quoted) form.set("quoted", JSON.stringify(quoted));
     form.set(
       "document",
       new Blob([new Uint8Array(document)], { type: mediaType }),
@@ -346,6 +355,7 @@ export const sidecar = {
     durationSeconds: number | null,
     effectKey: string,
     requestBinding: string,
+    quoted: WhatsAppQuotedContext | null = null,
   ) => {
     const form = new FormData();
     form.set("to", to);
@@ -353,6 +363,7 @@ export const sidecar = {
     form.set("requestBinding", requestBinding);
     form.set("voiceMessage", voiceMessage ? "true" : "false");
     form.set("seconds", durationSeconds ? String(durationSeconds) : "");
+    if (quoted) form.set("quoted", JSON.stringify(quoted));
     form.set(
       "audio",
       new Blob([new Uint8Array(audio)], { type: mediaType }),

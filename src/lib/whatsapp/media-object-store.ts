@@ -615,3 +615,270 @@ export async function removeWhatsAppMediaObject(
     envelopeKey.fill(0);
   }
 }
+
+// ─── Thumbnail variant authority (#317) ─────────────────────────────────────
+// A thumbnail is a derived, shop-scoped, independently encrypted object bound
+// to the same canonical Message identity. It never replaces the canonical
+// object: reads stay Message-bound, the byte ceiling is far tighter, and the
+// id derivation uses a dedicated purpose so canonical object IDs are stable.
+
+const THUMBNAIL_ID_PURPOSE = "sahelflow/whatsapp/media-object-thumb-id/v1";
+
+export const WHATSAPP_THUMBNAIL_BYTE_CEILING = 256 * 1024;
+
+function deriveThumbnailObjectId(
+  context: ServiceContext,
+  messageId: string,
+  envelopeKey: Buffer,
+): string {
+  return createHmac("sha256", envelopeKey)
+    .update(THUMBNAIL_ID_PURPOSE, "utf8")
+    .update("\0")
+    .update(exactShopScope(context), "utf8")
+    .update("\0")
+    .update(messageId, "utf8")
+    .digest("hex");
+}
+
+function inspectExistingThumbnail(
+  context: ServiceContext,
+  messageId: string,
+  envelopeKey: Buffer,
+): WhatsAppMediaObjectReceipt | null {
+  const objectId = deriveThumbnailObjectId(context, messageId, envelopeKey);
+  const target = objectPath(context, objectId);
+  if (!existsSync(target)) return null;
+  const objectKey = deriveObjectKey(objectId, envelopeKey);
+  try {
+    const stats = inspectObjectBytes(
+      readFileSync(target),
+      objectId,
+      "image",
+      objectKey,
+    );
+    return { formatVersion: 1, objectId, ...stats };
+  } finally {
+    objectKey.fill(0);
+  }
+}
+
+async function readBoundedThumbnailSource(
+  source: ReadableStream<Uint8Array>,
+): Promise<Buffer> {
+  const reader = source.getReader();
+  const chunks: Buffer[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      total += next.value.byteLength;
+      if (total > WHATSAPP_THUMBNAIL_BYTE_CEILING) {
+        throw new WhatsAppMediaObjectError(
+          "WhatsApp media thumbnail exceeds the bounded byte ceiling",
+          "MEDIA_SIZE_LIMIT",
+        );
+      }
+      chunks.push(Buffer.from(next.value));
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+  if (total === 0) {
+    throw new WhatsAppMediaObjectError(
+      "WhatsApp media thumbnail has no bytes",
+      "MEDIA_OBJECT_CORRUPT",
+    );
+  }
+  return Buffer.concat(chunks);
+}
+
+function bufferToStream(buffer: Buffer): ReadableStream<Uint8Array> {
+  let enqueued = false;
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (enqueued) {
+        controller.close();
+        return;
+      }
+      enqueued = true;
+      controller.enqueue(new Uint8Array(buffer));
+    },
+  });
+}
+
+/**
+ * Stage one derived bounded thumbnail for a canonical media object. The bytes
+ * must already be the generator's bounded JPEG output; the store enforces the
+ * ceiling again so no caller can persist an oversized variant. A deterministic
+ * object already bound to this message is reused when its authenticated
+ * receipt matches the incoming bytes (idempotent replay) and treated as a
+ * conflict otherwise.
+ */
+export async function writeWhatsAppMediaObjectThumbnail(
+  context: ServiceContext,
+  input: { messageId: string; source: ReadableStream<Uint8Array> },
+): Promise<WhatsAppMediaObjectReceipt> {
+  const envelopeKey = await getBusinessEnvelopeKey(context);
+  let descriptor: number | null = null;
+  let temporary: string | null = null;
+  try {
+    assertMediaWriteAllowed(context);
+    const objectId = deriveThumbnailObjectId(
+      context,
+      input.messageId,
+      envelopeKey,
+    );
+    const target = objectPath(context, objectId);
+    const existing = inspectExistingThumbnail(context, input.messageId, envelopeKey);
+    const bounded = await readBoundedThumbnailSource(input.source);
+    if (existing) {
+      if (
+        existing.sizeBytes !== bounded.length ||
+        existing.mediaType !== "image/jpeg"
+      ) {
+        throw new WhatsAppMediaObjectError(
+          "Media thumbnail identity is already bound to different content",
+          "MEDIA_OBJECT_CONFLICT",
+        );
+      }
+      return existing;
+    }
+    assertMediaWriteAllowed(context);
+    const objectKey = deriveObjectKey(objectId, envelopeKey);
+    const directory = scopeDirectory(context);
+    ensureDirectory(directory);
+    temporary = resolve(
+      directory,
+      `.${objectId}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`,
+    );
+    descriptor = openSync(temporary, "wx", 0o600);
+    const header = Buffer.alloc(HEADER_BYTES);
+    OBJECT_MAGIC.copy(header, 0);
+    header.writeUInt8(OBJECT_FORMAT_VERSION, 4);
+    header.writeUInt32LE(OBJECT_CHUNK_BYTES, 5);
+    writeAll(descriptor, header);
+    const stats = await writeEncryptedChunks(
+      descriptor,
+      objectId,
+      "image",
+      objectKey,
+      bufferToStream(bounded),
+      bounded.length,
+      "image/jpeg",
+    );
+    fsyncSync(descriptor);
+    closeSync(descriptor);
+    descriptor = null;
+    assertMediaWriteAllowed(context);
+    // Publish with a no-clobber hard link: exactly one contender wins and a
+    // racing loser reuses the identical authenticated bytes.
+    try {
+      linkSync(temporary, target);
+      rmSync(temporary, { force: true });
+      temporary = null;
+    } catch (error) {
+      if (!isAlreadyExistsError(error)) throw error;
+      rmSync(temporary, { force: true });
+      temporary = null;
+      const winner = inspectExistingThumbnail(context, input.messageId, envelopeKey);
+      if (
+        !winner ||
+        winner.sizeBytes !== stats.sizeBytes ||
+        winner.sha256 !== stats.sha256
+      ) {
+        throw new WhatsAppMediaObjectError(
+          "Media thumbnail identity is already bound to different content",
+          "MEDIA_OBJECT_CONFLICT",
+        );
+      }
+      return winner;
+    }
+    syncDirectory(directory);
+    return { formatVersion: 1, objectId, ...stats };
+  } catch (error) {
+    if (descriptor !== null) {
+      try {
+        closeSync(descriptor);
+      } catch {
+        // already closed
+      }
+    }
+    if (temporary) {
+      rmSync(temporary, { force: true });
+    }
+    throw error instanceof WhatsAppMediaObjectError
+      ? error
+      : new WhatsAppMediaObjectError(
+          "WhatsApp media thumbnail could not be committed",
+          "MEDIA_OBJECT_IO_FAILED",
+        );
+  } finally {
+    envelopeKey.fill(0);
+  }
+}
+
+/**
+ * Open the derived thumbnail for one canonical media object. The small
+ * variant is decrypted fully in bounded memory and GCM-authenticated before
+ * any byte leaves the authority.
+ */
+export async function readWhatsAppMediaObjectThumbnail(
+  context: ServiceContext,
+  messageId: string,
+): Promise<{ receipt: WhatsAppMediaObjectReceipt; bytes: Buffer }> {
+  const envelopeKey = await getBusinessEnvelopeKey(context);
+  try {
+    const objectId = deriveThumbnailObjectId(context, messageId, envelopeKey);
+    const target = objectPath(context, objectId);
+    if (!existsSync(target)) {
+      throw new WhatsAppMediaObjectError(
+        "WhatsApp media thumbnail is not available",
+        "MEDIA_OBJECT_NOT_FOUND",
+      );
+    }
+    const objectKey = deriveObjectKey(objectId, envelopeKey);
+    try {
+      const raw = readFileSync(target);
+      const stats = inspectObjectBytes(raw, objectId, "image", objectKey);
+      let offset = HEADER_BYTES;
+      const chunks: Buffer[] = [];
+      while (offset < raw.length) {
+        const plaintextBytes = raw.readUInt32LE(offset);
+        const nonce = raw.subarray(offset + 4, offset + 16);
+        const tag = raw.subarray(offset + 16, offset + 32);
+        const ciphertextStart = offset + 32;
+        const ciphertextEnd = ciphertextStart + plaintextBytes;
+        const decipher = createDecipheriv("aes-256-gcm", objectKey, nonce);
+        decipher.setAAD(chunkAad(objectId, "image", chunks.length, plaintextBytes));
+        decipher.setAuthTag(tag);
+        chunks.push(
+          Buffer.concat([
+            decipher.update(raw.subarray(ciphertextStart, ciphertextEnd)),
+            decipher.final(),
+          ]),
+        );
+        offset = ciphertextEnd;
+      }
+      return { receipt: { formatVersion: 1, objectId, ...stats }, bytes: Buffer.concat(chunks) };
+    } finally {
+      objectKey.fill(0);
+    }
+  } finally {
+    envelopeKey.fill(0);
+  }
+}
+
+/** Best-effort removal of one derived thumbnail variant. */
+export async function removeWhatsAppMediaObjectThumbnail(
+  context: ServiceContext,
+  messageId: string,
+): Promise<void> {
+  const envelopeKey = await getBusinessEnvelopeKey(context);
+  try {
+    const objectId = deriveThumbnailObjectId(context, messageId, envelopeKey);
+    rmSync(objectPath(context, objectId), { force: true });
+  } finally {
+    envelopeKey.fill(0);
+  }
+}

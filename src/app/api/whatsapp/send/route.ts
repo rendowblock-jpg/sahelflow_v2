@@ -19,6 +19,10 @@ const sendSchema = z.object({
   clientMessageId: z.string().uuid(),
   to: z.string().min(1).max(256),
   text: z.string().trim().min(1).max(4000),
+  quotedMessageId: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{6,64}$/)
+    .optional(),
 });
 
 /**

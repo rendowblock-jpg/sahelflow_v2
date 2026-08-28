@@ -31,6 +31,10 @@ const metaSchema = z.object({
   clientMessageId: z.string().uuid(),
   to: z.string().min(1).max(256),
   caption: z.string().max(4000).default(""),
+  quotedMessageId: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{6,64}$/)
+    .optional(),
 });
 
 function normalizeRecipient(value: string): string {
@@ -172,6 +176,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     clientMessageId: form.get("clientMessageId"),
     to: form.get("to"),
     caption: form.get("caption") ?? "",
+    quotedMessageId: form.get("quotedMessageId") || undefined,
   });
   const jid = normalizeRecipient(input.to);
 

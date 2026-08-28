@@ -15,10 +15,10 @@ describe("WhatsApp outbound image source boundary", () => {
     expect(thread).toContain('accept="image/jpeg,image/png,image/webp"');
     expect(thread).toContain('data-inbox-image-picker="true"');
     expect(thread).toContain('aria-label={copy("mediaImage")}');
-    expect(thread).toContain("void sendImage(file)");
+    expect(thread).toContain("void sendImage(file, quotedId)");
     expect(thread).toContain("disabled={sending || !canSend}");
     expect(workspace).toContain("MAX_OUTBOUND_IMAGE_BYTES = 20 * 1024 * 1024");
-    expect(workspace).toContain('fetch("/api/whatsapp/send-image"');
+    expect(workspace).toContain('"/api/whatsapp/send-image"');
     expect(workspace).toContain('form.set("image", file');
     expect(workspace).toContain("void monitorWhatsAppEffect(");
     expect(workspace).toContain("await loadMessages(chat, { background: true })");
@@ -53,8 +53,13 @@ describe("WhatsApp outbound image source boundary", () => {
       "current.filter((message) => message.id !== tempId)",
     );
     expect(sendImage).toContain("await loadMessages(chat, { background: true })");
+    // Pre-effect cancellation removes the optimistic image before the known
+    // effect reconciliation; the generic fallback filter stays last.
+    expect(sendImage.indexOf('"AbortError"')).toBeLessThan(
+      sendImage.indexOf("if (knownEffectKey)"),
+    );
     expect(sendImage.indexOf("if (knownEffectKey)")).toBeLessThan(
-      sendImage.indexOf("current.filter((message) => message.id !== tempId)"),
+      sendImage.lastIndexOf("current.filter((message) => message.id !== tempId)"),
     );
   });
 
@@ -107,9 +112,13 @@ describe("WhatsApp outbound image source boundary", () => {
 
     expect(route).toContain('requireTrustedAction("conversations.reply")');
     expect(route).toContain('"customers.contact.read"');
-    expect(route).toContain("source: image.stream()");
+    expect(route).toContain("source: new Blob([imageBytes]).stream()");
     expect(route).toContain("queueWhatsAppImage(context");
     expect(route).toContain("processWhatsAppEffect(context, queued.effectKey)");
+    // Derived bounded thumbnail staging is best-effort and never blocks the
+    // durable send (#317).
+    expect(route).toContain("deriveWhatsAppThumbnail(imageBytes)");
+    expect(route).toContain("writeWhatsAppMediaObjectThumbnail(context, {");
 
     const queueImage = durable.indexOf("export async function queueWhatsAppImage");
     const stageBytes = durable.indexOf("await writeWhatsAppMediaObject", queueImage);

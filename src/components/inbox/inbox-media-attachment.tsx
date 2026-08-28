@@ -342,6 +342,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
     projection: InboxLocalMediaProjection;
   } | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
 
   useEffect(() => {
@@ -440,6 +441,12 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
     );
   }
 
+  // Derived bounded thumbnail (#317): used for inline image previews and as
+  // the video poster frame; any failure falls back to the full canonical read.
+  const thumbnailUrl =
+    !thumbnailFailed && local.thumbnailUrl ? local.thumbnailUrl : null;
+  const inlineImageSrc = thumbnailUrl ?? readUrl;
+
   const showInlinePreview = !previewFailed;
 
   return (
@@ -460,11 +467,17 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
           {/* The authenticated endpoint is dynamic and intentionally bypasses Next image optimization. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={readUrl}
+            src={inlineImageSrc}
             alt={label}
             loading="lazy"
             decoding="async"
-            onError={() => setPreviewFailed(true)}
+            onError={() => {
+              if (inlineImageSrc === thumbnailUrl) {
+                setThumbnailFailed(true);
+              } else {
+                setPreviewFailed(true);
+              }
+            }}
             width={attachment.width ?? (message.messageType === "sticker" ? 192 : 640)}
             height={attachment.height ?? (message.messageType === "sticker" ? 192 : 480)}
             className={cn(
@@ -478,6 +491,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
       {showInlinePreview && message.messageType === "video" ? (
         <video
           src={readUrl}
+          poster={thumbnailUrl ?? undefined}
           controls
           playsInline
           preload="metadata"

@@ -7,6 +7,7 @@ import {
   requireTrustedAction,
 } from "@/lib/identity/authorization";
 import {
+  openInboxWhatsAppThumbnail,
   openPreparedInboxWhatsAppMedia,
   prepareInboxWhatsAppMedia,
 } from "@/lib/whatsapp/media-read-service";
@@ -86,6 +87,30 @@ export const GET = withErrorHandler(
     }
 
     const context = { prisma: db, shop: shopContext };
+
+    // Derived bounded thumbnail variant (#317): no ranges, no download form,
+    // a tight image/jpeg response and the same no-store discipline as the
+    // canonical read path. Absent thumbnails 404 so the UI falls back.
+    if (request.nextUrl.searchParams.get("variant") === "thumbnail") {
+      const opened = await openInboxWhatsAppThumbnail(context, messageId);
+      try {
+        const responseBody = Uint8Array.from(opened.bytes);
+        return new NextResponse(responseBody, {
+          status: 200,
+          headers: new Headers({
+            "Cache-Control": "private, no-store, max-age=0",
+            "Content-Length": String(responseBody.byteLength),
+            "Content-Type": "image/jpeg",
+            "Cross-Origin-Resource-Policy": "same-origin",
+            Pragma: "no-cache",
+            "X-Content-Type-Options": "nosniff",
+          }),
+        });
+      } finally {
+        opened.bytes.fill(0);
+      }
+    }
+
     const prepared = await prepareInboxWhatsAppMedia(context, messageId);
     const range = parseRange(request.headers.get("range"), prepared.sizeBytes);
     if (range === "invalid") return invalidRange(prepared.sizeBytes);

@@ -18,6 +18,7 @@ export function projectInboxLocalMedia(
       statusUrl,
       readUrl: `/api/inbox/media/${encoded}`,
       downloadUrl: `/api/inbox/media/${encoded}?download=1`,
+      thumbnailUrl: `/api/inbox/media/${encoded}?variant=thumbnail`,
     };
   }
   if (status === "dead_letter" || status === "failed") {

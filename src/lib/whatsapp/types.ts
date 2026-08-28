@@ -23,6 +23,8 @@ export interface InboxLocalMediaProjection {
   statusUrl?: string;
   readUrl?: string;
   downloadUrl?: string;
+  /** Derived bounded JPEG variant (#317); may 404 when none was generated. */
+  thumbnailUrl?: string;
 }
 
 export type ProjectedWhatsAppAttachment =

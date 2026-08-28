@@ -26,6 +26,7 @@ import {
   WhatsAppMediaObjectError,
   type WhatsAppMediaObjectReceipt,
   whatsAppMediaRoot,
+  readWhatsAppMediaObjectThumbnail,
 } from "./media-object-store";
 import {
   readWhatsAppMediaObject,
@@ -513,4 +514,53 @@ export async function openInboxWhatsAppMedia(
 ): Promise<OpenedInboxWhatsAppMedia> {
   const prepared = await prepareInboxWhatsAppMedia(context, messageId);
   return openPreparedInboxWhatsAppMedia(context, prepared);
+}
+
+export interface OpenedInboxWhatsAppThumbnail {
+  bytes: Buffer;
+  mediaType: string;
+}
+
+/**
+ * Open the derived bounded thumbnail for an image/sticker message (#317).
+ * Guarded by the same canonical-message and erase-epoch authority as full
+ * reads; the canonical object is never touched and an absent thumbnail fails
+ * closed with 404 so the UI falls back to the authenticated full read.
+ */
+export async function openInboxWhatsAppThumbnail(
+  context: ServiceContext,
+  messageId: string,
+): Promise<OpenedInboxWhatsAppThumbnail> {
+  const scopeRoot = whatsAppMediaRoot(context);
+  const eraseEpoch = readEpoch(scopeRoot);
+  const message = await context.prisma.message.findUnique({
+    where: { id: messageId },
+    select: { id: true, messageType: true },
+  });
+  if (
+    !message ||
+    (message.messageType !== "image" && message.messageType !== "sticker")
+  ) {
+    throw unavailable();
+  }
+  let opened: Awaited<ReturnType<typeof readWhatsAppMediaObjectThumbnail>>;
+  try {
+    opened = await readWhatsAppMediaObjectThumbnail(context, messageId);
+  } catch (error) {
+    if (
+      error instanceof WhatsAppMediaObjectError &&
+      error.code === "MEDIA_OBJECT_NOT_FOUND"
+    ) {
+      throw unavailable();
+    }
+    if (error instanceof WhatsAppMediaObjectError) throw integrityFailure();
+    throw error;
+  }
+  try {
+    assertSameReadableEpoch(scopeRoot, eraseEpoch);
+    return { bytes: opened.bytes, mediaType: opened.receipt.mediaType };
+  } catch (error) {
+    opened.bytes.fill(0);
+    throw error;
+  }
 }

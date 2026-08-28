@@ -125,6 +125,7 @@ describe("durable WhatsApp text send", () => {
       "LID reply",
       queued.effectKey,
       expect.stringMatching(/^[0-9a-f]{64}$/),
+      null,
     );
     await expect(
       db.conversation.findUniqueOrThrow({

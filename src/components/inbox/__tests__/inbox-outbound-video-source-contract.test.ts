@@ -15,9 +15,9 @@ describe("WhatsApp outbound video source boundary", () => {
     expect(thread).toContain('accept="video/mp4"');
     expect(thread).toContain('data-inbox-video-picker="true"');
     expect(thread).toContain('aria-label={copy("mediaVideo")}');
-    expect(thread).toContain("void sendVideo(file)");
+    expect(thread).toContain("void sendVideo(file, quotedId)");
     expect(workspace).toContain("MAX_OUTBOUND_VIDEO_BYTES = 64 * 1024 * 1024");
-    expect(workspace).toContain('fetch("/api/whatsapp/send-video"');
+    expect(workspace).toContain('"/api/whatsapp/send-video"');
     expect(workspace).toContain('form.set("video", file');
     expect(workspace).toContain("void monitorWhatsAppEffect(");
   });

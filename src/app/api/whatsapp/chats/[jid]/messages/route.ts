@@ -65,6 +65,7 @@ export const GET = withErrorHandler(
             deliveryStatus: true,
             messageType: true,
             attachments: true,
+            quotedMessageId: true,
           },
         },
       },
@@ -72,6 +73,58 @@ export const GET = withErrorHandler(
 
     const rows = conversation?.messages ?? [];
     const messageIds = rows.map((message) => message.id);
+
+    // Quoted-reply previews (#317): resolve quote targets that are outside the
+    // fetched window so the thread always renders honest visible context.
+    const quotedPreviewById = new Map<
+      string,
+      { fromMe: boolean; preview: string; messageType: string | null }
+    >();
+    const inWindowIds = new Set(messageIds);
+    const missingQuotedIds = Array.from(
+      new Set(
+        rows
+          .map((message) => message.quotedMessageId)
+          .filter(
+            (id): id is string =>
+              Boolean(id) && !inWindowIds.has(id as string),
+          ),
+      ),
+    ).slice(0, 100);
+    if (missingQuotedIds.length) {
+      const quotedRows = await db.message.findMany({
+        where: { id: { in: missingQuotedIds } },
+        select: {
+          id: true,
+          body: true,
+          direction: true,
+          messageType: true,
+        },
+      });
+      for (const row of quotedRows) {
+        quotedPreviewById.set(row.id, {
+          fromMe: isOutboundDirection(row.direction),
+          preview: Array.from(row.body).slice(0, 200).join(""),
+          messageType: row.messageType,
+        });
+      }
+    }
+    for (const row of rows) {
+      if (!row.quotedMessageId || quotedPreviewById.has(row.quotedMessageId)) {
+        continue;
+      }
+      const target = rows.find(
+        (message) => message.id === row.quotedMessageId,
+      );
+      if (target) {
+        quotedPreviewById.set(row.quotedMessageId, {
+          fromMe: isOutboundDirection(target.direction),
+          preview: Array.from(target.body).slice(0, 200).join(""),
+          messageType: target.messageType,
+        });
+      }
+    }
+
     const outboundIds = rows
       .filter((message) => isOutboundDirection(message.direction))
       .map((message) => message.id);
@@ -207,6 +260,10 @@ export const GET = withErrorHandler(
           effectKey: effect?.effectKey,
           effectState: effectState as IncomingMessage["effectState"],
           attachment,
+          quotedMessageId: message.quotedMessageId,
+          quoted: message.quotedMessageId
+            ? quotedPreviewById.get(message.quotedMessageId) ?? null
+            : null,
         };
       });
     } finally {

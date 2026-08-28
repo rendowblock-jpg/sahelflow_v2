@@ -33,6 +33,10 @@ const SAFE_VOICE_TYPES = new Set([
 const metaSchema = z.object({
   clientMessageId: z.string().uuid(),
   to: z.string().min(1).max(256),
+  quotedMessageId: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{6,64}$/)
+    .optional(),
 });
 
 function normalizeRecipient(value: string): string {
@@ -174,6 +178,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const input = metaSchema.parse({
     clientMessageId: form.get("clientMessageId"),
     to: form.get("to"),
+    quotedMessageId: form.get("quotedMessageId") || undefined,
   });
   const jid = normalizeRecipient(input.to);
 

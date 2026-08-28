@@ -1,9 +1,11 @@
 "use client";
 
-import { Fragment, useRef } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
+  Check,
+  Copy,
   FileText,
   ImageIcon,
   Info,
@@ -15,11 +17,13 @@ import {
   PanelRight,
   Paperclip,
   RefreshCw,
+  Reply,
   Send,
   Sparkles,
   UserRound,
   Video,
   WifiOff,
+  X,
 } from "lucide-react";
 
 import { CannedResponsePicker } from "@/components/inbox/canned-response-picker";
@@ -138,6 +142,91 @@ function formatBytes(value: number, locale: "ar" | "fr" | "en"): string {
   return `${formatter.format(value / (1_024 * 1_024))} MB`;
 }
 
+const DOCUMENT_DROP_PATTERN = /\.(pdf|docx?|xlsx?|txt|csv)$/i;
+
+/**
+ * Permission-preserving clipboard write with an in-memory fallback. Returns
+ * false only when the browser refused both paths so the UI can show a
+ * truthful failure state (#317 safe message copy).
+ */
+async function writeClipboardText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Fall through to the legacy in-memory path.
+  }
+  try {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "true");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.append(area);
+    area.select();
+    const ok = document.execCommand("copy");
+    area.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+function CopyMessageButton({
+  text,
+  copy,
+}: {
+  text: string;
+  copy: ReturnType<typeof useInboxWorkspace>["copy"];
+}) {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    },
+    [],
+  );
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void writeClipboardText(text).then((ok) => {
+          setState(ok ? "copied" : "failed");
+          if (timerRef.current) window.clearTimeout(timerRef.current);
+          timerRef.current = window.setTimeout(() => setState("idle"), 2_000);
+        });
+      }}
+      aria-live="polite"
+      className={cn(
+        "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
+        state === "failed"
+          ? "text-destructive opacity-100"
+          : state === "copied"
+            ? "text-primary opacity-100"
+            : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",
+      )}
+    >
+      {state === "copied" ? (
+        <Check className="size-3" aria-hidden="true" />
+      ) : state === "failed" ? (
+        <X className="size-3" aria-hidden="true" />
+      ) : (
+        <Copy className="size-3" aria-hidden="true" />
+      )}
+      {state === "copied"
+        ? copy("messageCopied")
+        : state === "failed"
+          ? copy("messageCopyFailed")
+          : copy("copyMessage")}
+    </button>
+  );
+}
+
 function MessageBubble({
   message,
   locale,
@@ -146,6 +235,10 @@ function MessageBubble({
   candidate,
   onChooseCandidate,
   onRetry,
+  onReply,
+  canInteract,
+  upload,
+  onCancelUpload,
 }: {
   message: InboxMessage;
   locale: "ar" | "fr" | "en";
@@ -154,6 +247,10 @@ function MessageBubble({
   candidate: boolean;
   onChooseCandidate: () => void;
   onRetry: (message: InboxMessage) => void;
+  onReply: (message: InboxMessage) => void;
+  canInteract: boolean;
+  upload?: { progress: number; cancellable: boolean };
+  onCancelUpload: (messageId: string) => void;
 }) {
   if (message.messageType === "activity" || message.direction === "system") {
     return <ActivityMessage body={message.body} timestamp={message.timestamp} />;
@@ -180,6 +277,21 @@ function MessageBubble({
               : "rounded-ee-md border-primary/20 bg-primary/10 text-foreground",
           )}
         >
+          {message.quoted || message.quotedMessageId ? (
+            <div className="mb-2 rounded-lg border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5">
+              <div className="flex items-center gap-1 text-[10px] font-medium text-primary">
+                <Reply className="size-3" aria-hidden="true" />
+                <span>{copy("replyingTo")}</span>
+              </div>
+              <p
+                className="mt-0.5 line-clamp-2 break-words text-[11px] leading-4 text-muted-foreground"
+                dir="auto"
+              >
+                {message.quoted?.preview || "…"}
+              </p>
+            </div>
+          ) : null}
+
           {media ? (
             <div
               className={cn(
@@ -255,6 +367,36 @@ function MessageBubble({
             </p>
           ) : null}
 
+          {!inbound && upload ? (
+            <div
+              className="mt-2"
+              role="status"
+              aria-label={copy("uploadProgress", { percent: upload.progress })}
+            >
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary transition-[width]"
+                  style={{ width: `${upload.progress}%` }}
+                />
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] tabular-nums text-muted-foreground">
+                  {copy("uploadProgress", { percent: upload.progress })}
+                </span>
+                {upload.cancellable ? (
+                  <button
+                    type="button"
+                    onClick={() => onCancelUpload(message.id)}
+                    className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-[11px] font-medium text-destructive outline-none transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <X className="size-3" aria-hidden="true" />
+                    {copy("cancelUpload")}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-1 flex items-center justify-end gap-1 text-[10px] tabular-nums text-muted-foreground">
             <span>{messageTime(message.timestamp, locale)}</span>
             {!inbound ? (
@@ -263,6 +405,31 @@ function MessageBubble({
           </div>
         </div>
       </div>
+
+      {message.body.trim() || message.attachment?.fileName ? (
+        <div
+          className={cn(
+            "flex gap-1",
+            inbound ? "justify-start" : "justify-end",
+          )}
+        >
+          {canInteract ? (
+            <button
+              type="button"
+              onClick={() => onReply(message)}
+              aria-label={copy("replyToMessage")}
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100"
+            >
+              <Reply className="size-3 icon-rtl-flip" aria-hidden="true" />
+              {copy("replyToMessage")}
+            </button>
+          ) : null}
+          <CopyMessageButton
+            text={message.body.trim() || message.attachment?.fileName || ""}
+            copy={copy}
+          />
+        </div>
+      ) : null}
 
       {canExtract ? (
         <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
@@ -336,6 +503,8 @@ export function InboxV3Thread({
     sendVideo,
     sendDocument,
     sendVoice,
+    uploads,
+    cancelUpload,
     retryFailedMessage,
     canReply,
     canUpdateConversation,
@@ -343,6 +512,26 @@ export function InboxV3Thread({
     refreshChats,
     markUnread,
   } = workspace;
+
+  const [replySelection, setReplySelection] = useState<{
+    key: string | null;
+    message: InboxMessage | null;
+  }>({ key: null, message: null });
+  const [dragSession, setDragSession] = useState<{
+    key: string | null;
+    active: boolean;
+  }>({ key: null, active: false });
+  const activeConversationKey = activeChat?.conversationId ?? null;
+  // Quote/drag state is conversation-scoped: deriving from the active key
+  // clears both automatically on conversation switches without an effect.
+  const replyTarget =
+    replySelection.key === activeConversationKey ? replySelection.message : null;
+  const dragActive =
+    dragSession.key === activeConversationKey && dragSession.active;
+  const setReplyTarget = (message: InboxMessage | null) =>
+    setReplySelection({ key: activeConversationKey, message });
+  const setDragActive = (active: boolean) =>
+    setDragSession({ key: activeConversationKey, active });
 
   if (!activeChat) {
     return (
@@ -372,6 +561,45 @@ export function InboxV3Thread({
   const isWhatsAppConversation = activeChat.channel === "whatsapp";
   const canCompose = isWhatsAppConversation && canReply;
   const canSend = canCompose && transport.status === "connected";
+
+  /**
+   * Paste/drop ingestion (#317): route one dropped or pasted file into the
+   * exact same validated send paths as the pickers — limits and permissions
+   * are enforced by the hooks, never bypassed here.
+   */
+  const ingestSharedFile = (file: File) => {
+    if (!canSend) return;
+    const quotedId = replyTarget?.id ?? null;
+    const type = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+    if (type.startsWith("image/")) {
+      setReplyTarget(null);
+      void sendImage(file, quotedId);
+      return;
+    }
+    if (type === "video/mp4") {
+      setReplyTarget(null);
+      void sendVideo(file, quotedId);
+      return;
+    }
+    if (type.startsWith("audio/")) {
+      setReplyTarget(null);
+      void sendVoice(file, quotedId);
+      return;
+    }
+    if (
+      type === "application/pdf" ||
+      DOCUMENT_DROP_PATTERN.test(file.name)
+    ) {
+      setReplyTarget(null);
+      void sendDocument(file, quotedId);
+    }
+  };
+
+  const dispatchReply = () => {
+    const quotedId = replyTarget?.id ?? null;
+    setReplyTarget(null);
+    void sendReply(quotedId);
+  };
 
   const renderContextPanel = () => (
     <InboxCustomerWorkPanel
@@ -604,6 +832,10 @@ export function InboxV3Thread({
                     candidate={selectedCandidate?.id === message.id}
                     onChooseCandidate={() => onSelectCandidate(message.id)}
                     onRetry={(entry) => void retryFailedMessage(entry)}
+                    onReply={(entry) => setReplyTarget(entry)}
+                    canInteract={canSend}
+                    upload={uploads[message.id]}
+                    onCancelUpload={cancelUpload}
                   />
                 </Fragment>
               );
@@ -627,7 +859,66 @@ export function InboxV3Thread({
               </div>
             ) : null}
 
-            <div className="flex items-end gap-2 rounded-2xl border border-border/75 bg-muted/15 p-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/15">
+            <div
+              className="rounded-2xl border border-border/75 bg-muted/15 p-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/15 data-[drag-active=true]:border-primary data-[drag-active=true]:bg-primary/5"
+              data-drag-active={dragActive ? "true" : "false"}
+              onDragOver={(event) => {
+                if (!canSend) return;
+                event.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={(event) => {
+                if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+                setDragActive(false);
+              }}
+              onDrop={(event) => {
+                if (!canSend) return;
+                event.preventDefault();
+                setDragActive(false);
+                const file = event.dataTransfer?.files?.[0];
+                if (file) ingestSharedFile(file);
+              }}
+              onPaste={(event) => {
+                const file = event.clipboardData?.files?.[0];
+                if (file && canSend) {
+                  event.preventDefault();
+                  ingestSharedFile(file);
+                }
+              }}
+            >
+              {replyTarget ? (
+                <div
+                  className="flex w-full items-start gap-2 rounded-xl border border-border/70 bg-background/80 px-2.5 py-1.5"
+                  data-inbox-reply-chip="true"
+                >
+                  <Reply
+                    className="mt-0.5 size-3.5 shrink-0 text-primary icon-rtl-flip"
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-medium text-primary">
+                      {copy("replyingTo")}
+                    </p>
+                    <p
+                      className="truncate text-[11px] leading-4 text-muted-foreground"
+                      dir="auto"
+                    >
+                      {replyTarget.body.trim() ||
+                        replyTarget.attachment?.fileName ||
+                        "…"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReplyTarget(null)}
+                    aria-label={t("common.cancel")}
+                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <X className="size-3.5" aria-hidden="true" />
+                  </button>
+                </div>
+              ) : null}
+              <div className="flex items-end gap-2">
               <input
                 ref={imageInputRef}
                 type="file"
@@ -640,13 +931,15 @@ export function InboxV3Thread({
                   const file = event.currentTarget.files?.[0] ?? null;
                   event.currentTarget.value = "";
                   if (!file) return;
+                  const quotedId = replyTarget?.id ?? null;
+                  setReplyTarget(null);
                   const declaredType =
                     file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
                   if (
                     declaredType &&
                     declaredType !== "application/octet-stream"
                   ) {
-                    void sendImage(file);
+                    void sendImage(file, quotedId);
                     return;
                   }
                   void file
@@ -682,7 +975,7 @@ export function InboxV3Thread({
                         sniffedType = "image/webp";
                       }
                       if (!sniffedType) {
-                        void sendImage(file);
+                        void sendImage(file, quotedId);
                         return;
                       }
                       void sendImage(
@@ -690,9 +983,10 @@ export function InboxV3Thread({
                           type: sniffedType,
                           lastModified: file.lastModified,
                         }),
+                        quotedId,
                       );
                     })
-                    .catch(() => void sendImage(file));
+                    .catch(() => void sendImage(file, quotedId));
                 }}
               />
               <input
@@ -707,13 +1001,15 @@ export function InboxV3Thread({
                   const file = event.currentTarget.files?.[0] ?? null;
                   event.currentTarget.value = "";
                   if (!file) return;
+                  const quotedId = replyTarget?.id ?? null;
+                  setReplyTarget(null);
                   const declaredType =
                     file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
                   if (
                     declaredType &&
                     declaredType !== "application/octet-stream"
                   ) {
-                    void sendVideo(file);
+                    void sendVideo(file, quotedId);
                     return;
                   }
                   void file
@@ -723,7 +1019,7 @@ export function InboxV3Thread({
                       const bytes = new Uint8Array(buffer);
                       const fileType = String.fromCharCode(...bytes.slice(4, 8));
                       if (bytes.length < 12 || fileType !== "ftyp") {
-                        void sendVideo(file);
+                        void sendVideo(file, quotedId);
                         return;
                       }
                       void sendVideo(
@@ -731,9 +1027,10 @@ export function InboxV3Thread({
                           type: "video/mp4",
                           lastModified: file.lastModified,
                         }),
+                        quotedId,
                       );
                     })
-                    .catch(() => void sendVideo(file));
+                    .catch(() => void sendVideo(file, quotedId));
                 }}
               />
               <input
@@ -748,7 +1045,9 @@ export function InboxV3Thread({
                   const file = event.currentTarget.files?.[0] ?? null;
                   event.currentTarget.value = "";
                   if (!file) return;
-                  void sendDocument(file);
+                  const quotedId = replyTarget?.id ?? null;
+                  setReplyTarget(null);
+                  void sendDocument(file, quotedId);
                 }}
               />
               <input
@@ -763,7 +1062,9 @@ export function InboxV3Thread({
                   const file = event.currentTarget.files?.[0] ?? null;
                   event.currentTarget.value = "";
                   if (!file) return;
-                  void sendVoice(file);
+                  const quotedId = replyTarget?.id ?? null;
+                  setReplyTarget(null);
+                  void sendVoice(file, quotedId);
                 }}
               />
               <Tooltip>
@@ -859,7 +1160,7 @@ export function InboxV3Thread({
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey && canSend) {
                     event.preventDefault();
-                    void sendReply();
+                    dispatchReply();
                   }
                 }}
                 aria-label={t("inbox.replyPlaceholder")}
@@ -871,7 +1172,7 @@ export function InboxV3Thread({
               <Button
                 type="button"
                 size="icon"
-                onClick={() => void sendReply()}
+                onClick={dispatchReply}
                 disabled={sending || !canSend || !replyText.trim()}
                 aria-label={t("inbox.send")}
               >
@@ -887,6 +1188,7 @@ export function InboxV3Thread({
                   />
                 )}
               </Button>
+              </div>
             </div>
             <p className="mt-1.5 px-1 text-[10px] text-muted-foreground">
               {copy("composerShortcut")}

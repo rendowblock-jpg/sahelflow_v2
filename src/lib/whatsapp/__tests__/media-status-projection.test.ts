@@ -16,6 +16,7 @@ describe("Inbox local WhatsApp media status projection", () => {
       statusUrl: "/api/inbox/media/message%2F1/status",
       readUrl: "/api/inbox/media/message%2F1",
       downloadUrl: "/api/inbox/media/message%2F1?download=1",
+      thumbnailUrl: "/api/inbox/media/message%2F1?variant=thumbnail",
     });
   });
 
