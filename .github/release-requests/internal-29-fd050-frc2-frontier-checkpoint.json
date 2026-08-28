@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.29 FD-050 FRC-2 frontier checkpoint publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.29",
+  "windowsMsiVersion": "1.0.0.29",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-050",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "4921f34eb87369384d7cd09d92064a69b11cbac9",
+    "phase5RunId": 33207445134,
+    "phase67RunId": 33207445070,
+    "ciRunId": 33207445430
+  },
+  "reason": "Founder explicitly authorized one combined signed successor under FD-050 (2026-08-28) once FRC-2's evidence matrix and source packages are complete on protected main, so the FRC-2 repair cycle and the AI/tools/order-extraction source frontier can be installed in place and re-verified on the real phone before FRC-3 resumes. Publish the exact protected product tree carrying everything merged since Internal.28: #335 quoted-reply resolution across both provider/message id spaces with persisted canonical targets; #336 OOXML document dispatch under the declared Office mimetype so real PDF/Word files arrive as documents instead of zip; #337 in-composer voice recording for WhatsApp voice notes through the same durable outbound path; #338 permanent multi-select chat deletion; #339 compacted composer with bottom-anchored history closing message-list dead space; #340 installed-e2e evidence MSI injection preserving checked-in browser args; and #342 the frozen frc2-1.0.0 synthetic/redacted AR/FR/EN/Darija/mixed order-extraction corpus (40 cases, reserved non-operator phone family, ExtractedOrderSchema parity for all regex/Gemini/few-shot expectations, mocked Gemini round-trips and smart-router rows, 56/56 corpus tests) reconciled by #343 into the AI_ORDER_EXTRACTION_CAPABILITY_LEDGER evidence matrix with FD-050 recorded. The validated corpus head 4921f34eb87369384d7cd09d92064a69b11cbac9 carries the last product-tree change since Internal.28 and passed exact-head CI 33207445430, Phase 5 33207445134 and Phase 6-7 33207445070 with zero failed checks; the subsequent #343 ledger merge is documentation-only, so the product tree packaged by this authority is identical. This authority PR adds version and release-request files only, with no product changes. This request remains founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim. Internal.29 is the Founder-installed observation candidate for the FRC-2 repair rows (quoted replies to received and sent messages, real PDF/Word document delivery, voice recording send, permanent multi-select chat delete, compacted composer EN/AR) and the applicable FRC-2 matrix rows (key lifecycle, reviewed extraction to exactly-one canonical order, proposal approval/replay); it does not prove live outbound delivery, WebSocket push health or complete FRC-1, and #230 remains independently blocked until an owned domain exists."
+}
