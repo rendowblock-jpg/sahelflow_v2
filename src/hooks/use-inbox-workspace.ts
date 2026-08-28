@@ -2366,6 +2366,7 @@ export function useInboxWorkspace() {
     setReplyText,
     sending,
     sendError,
+    setSendError,
     sendReply,
     sendImage,
     sendVideo,

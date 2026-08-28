@@ -24,6 +24,36 @@ describe("WhatsApp outbound voice source boundary", () => {
     expect(workspace).toContain("void monitorWhatsAppEffect(");
   });
 
+  it("records voice notes in the composer and hands them to the durable send path", () => {
+    const recorder = source("src/components/inbox/use-voice-recorder.ts");
+    const thread = source("src/components/inbox/inbox-v3-thread.tsx");
+    const config = source("src-tauri/tauri.conf.json");
+
+    // The recorder produces WhatsApp voice-note truth (OGG/Opus) or fails
+    // closed with an honest message — it never uploads a foreign container.
+    expect(recorder).toContain("VOICE_RECORDING_MIME_CANDIDATES");
+    expect(recorder).toContain('"audio/ogg;codecs=opus"');
+    expect(recorder).toContain("MediaRecorder.isTypeSupported");
+    expect(recorder).toContain("getUserMedia");
+    expect(recorder).toContain("MAX_RECORDING_MS");
+    expect(recorder).toContain("voiceNoteFileName");
+    expect(thread).toContain("void voiceRecorder.start()");
+    expect(thread).toContain("onClick={voiceRecorder.stopAndSend}");
+    expect(thread).toContain("onClick={voiceRecorder.cancel}");
+    expect(thread).toContain('data-inbox-voice-recorder={voiceRecorder.state}');
+    expect(thread).toContain('data-inbox-voice-send="true"');
+    expect(thread).toContain('data-inbox-voice-cancel="true"');
+    // The mic button starts the recorder; it no longer opens the file dialog.
+    expect(thread).toContain("void voiceRecorder.start();");
+    expect(thread).not.toContain(
+      "data-inbox-audio-picker=\"true\"\n                    onClick={() => audioInputRef.current?.click()}",
+    );
+    // WebView2 must auto-grant the microphone permission request for the
+    // in-composer recorder; the flag set extends the wry defaults.
+    expect(config).toContain("--use-fake-ui-for-media-stream");
+    expect(config).toContain("--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection");
+  });
+
   it("allows only the bounded authenticated audio declaration set", () => {
     const route = source("src/app/api/whatsapp/send-voice/route.ts");
     const workspace = source("src/hooks/use-inbox-workspace.ts");
