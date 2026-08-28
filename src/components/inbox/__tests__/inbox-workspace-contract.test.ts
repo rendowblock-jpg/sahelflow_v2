@@ -229,6 +229,21 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(thread).toContain("text-start");
   });
 
+  it("compacts the v3 composer into one attach menu and closes the message-list dead space", () => {
+    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
+    // One bounded attach entry point instead of a wide icon row.
+    expect(thread).toContain('data-inbox-attach-menu="true"');
+    expect(thread).toContain('data-inbox-image-picker="true"');
+    expect(thread).toContain('data-inbox-video-picker="true"');
+    expect(thread).toContain('data-inbox-document-picker="true"');
+    // No standalone shortcut hint line under the composer.
+    expect(thread).not.toContain('copy("composerShortcut")');
+    // Short conversations anchor to the composer (no dead space below).
+    expect(thread).toContain(
+      "[&_[data-slot=scroll-area-viewport]>div]:justify-end",
+    );
+  });
+
   it("makes status and reviewed AI extraction first-class thread-header actions", () => {
     const thread = read("src/components/inbox/inbox-v3-thread.tsx");
     expect(thread).toContain("<StatusControl");
