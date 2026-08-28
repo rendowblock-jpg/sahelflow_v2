@@ -46,6 +46,22 @@ export interface InboxMessage {
     | "ambiguous"
     | "dead_letter";
   attachment?: IncomingMessage["attachment"];
+  /** Canonical message this message quotes (#317 quoted replies). */
+  quotedMessageId?: string | null;
+  /** Server-resolved visible context for the quoted target, when known. */
+  quoted?: {
+    fromMe: boolean;
+    preview: string;
+    messageType?: string | null;
+  } | null;
+}
+
+/** Transient client-side upload state for one in-flight media send. */
+export interface InboxUploadState {
+  /** 0-100 byte progress while the browser request is still in flight. */
+  progress: number;
+  /** True only while cancellation can still guarantee a pre-effect abort. */
+  cancellable: boolean;
 }
 
 export interface InboxTransportState {

@@ -16,7 +16,12 @@ import {
   findDurableSendReceipt,
   recordDurableSendReceipt,
 } from "./send-receipts";
-import { wa, type IncomingMessage, type SidecarEvent } from "./whatsapp";
+import {
+  parseWhatsAppQuotedContext,
+  wa,
+  type IncomingMessage,
+  type SidecarEvent,
+} from "./whatsapp";
 
 const configuredPort = Number.parseInt(process.env.SIDECAR_PORT ?? "3001", 10);
 if (!Number.isInteger(configuredPort) || configuredPort < 1 || configuredPort > 65535) {
@@ -546,11 +551,12 @@ app.post("/send-receipt", async (context) => {
 
 app.post("/send", async (context) => {
   const body = await context.req.json().catch(() => ({}));
-  const { to, text, effectKey, requestBinding } = body as {
+  const { to, text, effectKey, requestBinding, quoted } = body as {
     to?: string;
     text?: string;
     effectKey?: string;
     requestBinding?: string;
+    quoted?: unknown;
   };
 
   if (!to || !text) {
@@ -558,6 +564,23 @@ app.post("/send", async (context) => {
       {
         error: "Missing recipient or text",
         code: "INVALID_SEND_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
+  }
+  let quotedContext: ReturnType<typeof parseWhatsAppQuotedContext>;
+  try {
+    quotedContext = parseWhatsAppQuotedContext(quoted);
+  } catch (error) {
+    return context.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Invalid WhatsApp quoted context",
+        code: "INVALID_QUOTED_CONTEXT",
         retryable: false,
         ambiguous: false,
       },
@@ -630,12 +653,17 @@ app.post("/send", async (context) => {
       return context.json({
         ok: true,
         ...(await executeDurableSend(effectKey, requestBinding!, () =>
-          wa.sendMessage(to, text, deterministicWhatsAppMessageId(effectKey)),
+          wa.sendMessage(
+            to,
+            text,
+            deterministicWhatsAppMessageId(effectKey),
+            quotedContext,
+          ),
         )),
       });
     }
 
-    const result = await wa.sendMessage(to, text);
+    const result = await wa.sendMessage(to, text, undefined, quotedContext);
     return context.json({ ok: true, ...result, replayed: false, durable: false });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Send failed";
@@ -692,6 +720,23 @@ app.post("/send-image", async (context) => {
   const effectKey = form?.get("effectKey");
   const requestBinding = form?.get("requestBinding");
   const image = form?.get("image");
+  let quotedContext: ReturnType<typeof parseWhatsAppQuotedContext>;
+  try {
+    quotedContext = parseWhatsAppQuotedContext(form?.get("quoted"));
+  } catch (error) {
+    return context.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Invalid WhatsApp quoted context",
+        code: "INVALID_QUOTED_CONTEXT",
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
+  }
   if (
     typeof to !== "string" ||
     !to ||
@@ -767,6 +812,7 @@ app.post("/send-image", async (context) => {
           image.type,
           caption,
           deterministicWhatsAppMessageId(effectKey),
+          quotedContext,
         ),
       )),
     });
@@ -827,6 +873,23 @@ app.post("/send-video", async (context) => {
   const effectKey = form?.get("effectKey");
   const requestBinding = form?.get("requestBinding");
   const video = form?.get("video");
+  let quotedContext: ReturnType<typeof parseWhatsAppQuotedContext>;
+  try {
+    quotedContext = parseWhatsAppQuotedContext(form?.get("quoted"));
+  } catch (error) {
+    return context.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Invalid WhatsApp quoted context",
+        code: "INVALID_QUOTED_CONTEXT",
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
+  }
   if (
     typeof to !== "string" ||
     !to ||
@@ -902,6 +965,7 @@ app.post("/send-video", async (context) => {
           video.type,
           caption,
           deterministicWhatsAppMessageId(effectKey),
+          quotedContext,
         ),
       )),
     });
@@ -963,6 +1027,23 @@ app.post("/send-document", async (context) => {
   const requestBinding = form?.get("requestBinding");
   const fileName = form?.get("fileName");
   const document = form?.get("document");
+  let quotedContext: ReturnType<typeof parseWhatsAppQuotedContext>;
+  try {
+    quotedContext = parseWhatsAppQuotedContext(form?.get("quoted"));
+  } catch (error) {
+    return context.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Invalid WhatsApp quoted context",
+        code: "INVALID_QUOTED_CONTEXT",
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
+  }
   if (
     typeof to !== "string" ||
     !to ||
@@ -1044,6 +1125,7 @@ app.post("/send-document", async (context) => {
           fileName,
           caption,
           deterministicWhatsAppMessageId(effectKey),
+          quotedContext,
         ),
       )),
     });
@@ -1106,6 +1188,23 @@ app.post("/send-voice", async (context) => {
   const voiceMessage = form?.get("voiceMessage");
   const seconds = form?.get("seconds");
   const audio = form?.get("audio");
+  let quotedContext: ReturnType<typeof parseWhatsAppQuotedContext>;
+  try {
+    quotedContext = parseWhatsAppQuotedContext(form?.get("quoted"));
+  } catch (error) {
+    return context.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Invalid WhatsApp quoted context",
+        code: "INVALID_QUOTED_CONTEXT",
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
+  }
   // The authenticated duration is optional; when present it is a positive
   // integer second count derived from the staged bytes.
   const secondsAbsent = seconds === null || seconds === "";
@@ -1193,6 +1292,7 @@ app.post("/send-voice", async (context) => {
           voiceMessage === "true",
           authenticatedSeconds,
           deterministicWhatsAppMessageId(effectKey),
+          quotedContext,
         ),
       )),
     });

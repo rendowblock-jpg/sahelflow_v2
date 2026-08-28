@@ -10,6 +10,8 @@ import {
 } from "@/lib/identity/authorization";
 import { processWhatsAppEffect } from "@/lib/whatsapp/durable-send";
 import { queueWhatsAppImage } from "@/lib/whatsapp/outbound-image-queue";
+import { writeWhatsAppMediaObjectThumbnail } from "@/lib/whatsapp/media-object-store";
+import { deriveWhatsAppThumbnail } from "@/lib/whatsapp/media-thumbnail";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
 import { normalizeWhatsAppJid } from "@/lib/whatsapp/types";
 import { SahelFlowError } from "@/types/errors";
@@ -23,6 +25,10 @@ const metaSchema = z.object({
   clientMessageId: z.string().uuid(),
   to: z.string().min(1).max(256),
   caption: z.string().max(4000).default(""),
+  quotedMessageId: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{6,64}$/)
+    .optional(),
 });
 
 function normalizeRecipient(value: string): string {
@@ -174,6 +180,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     clientMessageId: form.get("clientMessageId"),
     to: form.get("to"),
     caption: form.get("caption") ?? "",
+    quotedMessageId: form.get("quotedMessageId") || undefined,
   });
   const jid = normalizeRecipient(input.to);
 
@@ -207,14 +214,30 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     shop: actorContext.shop,
     businessPrincipal: businessPrincipalFromTrustedActor(actorContext),
   };
+  const imageBytes = Buffer.from(await image.arrayBuffer());
   const queued = await queueWhatsAppImage(context, {
     ...input,
     to: jid,
     fileName: image.name,
     declaredMime: mediaType,
     declaredSize: image.size,
-    source: image.stream(),
+    source: new Blob([imageBytes]).stream(),
   });
+  // Best-effort derived thumbnail (#317): staging never blocks or fails the
+  // durable send, and an idempotent replay reuses the identical object.
+  try {
+    const thumbnail = await deriveWhatsAppThumbnail(imageBytes);
+    if (thumbnail) {
+      await writeWhatsAppMediaObjectThumbnail(context, {
+        messageId: queued.messageId,
+        source: new Blob([new Uint8Array(thumbnail)]).stream(),
+      });
+      thumbnail.fill(0);
+    }
+  } catch {
+    // Thumbnail derivation/staging is a local preview optimization only.
+  }
+  imageBytes.fill(0);
   const effect = await processWhatsAppEffect(context, queued.effectKey);
   const accepted =
     effect.state === "queued" ||

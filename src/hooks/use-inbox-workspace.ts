@@ -8,6 +8,7 @@ import type {
   InboxMessage,
   InboxQueueFilter,
   InboxTransportState,
+  InboxUploadState,
 } from "@/components/inbox/inbox-workspace-types";
 import type { ConversationWorkflowState } from "@/components/inbox/conversation-controls";
 import { useI18n } from "@/hooks/use-i18n";
@@ -32,6 +33,53 @@ const DRAFT_LOAD_ATTEMPTS = 3;
 const DRAFT_LOAD_RETRY_MS = 500;
 const DRAFT_WRITE_ATTEMPTS = 3;
 const MAX_DEEP_LINK_ID_LENGTH = 160;
+
+type MediaSendResponse = {
+  ok: boolean;
+  accepted?: boolean;
+  id?: string | null;
+  effectKey?: string;
+  state?: InboxMessage["outboxState"];
+  requiresDuplicateConfirmation?: boolean;
+};
+
+/**
+ * Upload one bounded multipart media send with truthful byte progress and a
+ * registered pre-response abort handle (#317 upload progress/cancellation).
+ * The abort is only honoured while the browser request is in flight: once the
+ * final byte is written the durable queue may already be committing, so the
+ * caller flips its cancellable flag off at 100%.
+ */
+function postFormWithUploadProgress(
+  url: string,
+  form: FormData,
+  onProgress: (percent: number) => void,
+  registerCancel: (abort: () => void) => void,
+): Promise<{ status: number; data: MediaSendResponse }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && event.total > 0) {
+        onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+      }
+    };
+    xhr.onload = () => {
+      try {
+        const data = (xhr.responseText ? JSON.parse(xhr.responseText) : {}) as MediaSendResponse;
+        resolve({ status: xhr.status, data });
+      } catch {
+        reject(new Error("invalid-media-send-response"));
+      }
+    };
+    xhr.onerror = () => reject(new TypeError("media-send-network-error"));
+    xhr.onabort = () => reject(new DOMException("media-send-aborted", "AbortError"));
+    xhr.ontimeout = () => reject(new TypeError("media-send-timeout"));
+    registerCancel(() => xhr.abort());
+    xhr.send(form);
+  });
+}
+
 const MAX_OUTBOUND_IMAGE_BYTES = 20 * 1024 * 1024;
 const SAFE_OUTBOUND_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -234,6 +282,7 @@ export function useInboxWorkspace() {
   const [replyText, setReplyTextState] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [uploads, setUploads] = useState<Record<string, InboxUploadState>>({});
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [qrKey, setQrKey] = useState(0);
 
@@ -260,6 +309,35 @@ export function useInboxWorkspace() {
   const draftReadyConversationRef = useRef<string | null>(null);
   const draftWriteQueueRef = useRef(new Map<string, Promise<boolean>>());
   const draftRevisionRef = useRef(new Map<string, number>());
+  const uploadCancelRef = useRef(new Map<string, () => void>());
+
+  const markUploadProgress = useCallback(
+    (messageId: string, progress: number) => {
+      setUploads((current) => ({
+        ...current,
+        [messageId]: { progress, cancellable: progress < 100 },
+      }));
+    },
+    [],
+  );
+
+  const clearUploadState = useCallback((messageId: string) => {
+    uploadCancelRef.current.delete(messageId);
+    setUploads((current) => {
+      if (!(messageId in current)) return current;
+      const next = { ...current };
+      delete next[messageId];
+      return next;
+    });
+  }, []);
+
+  const cancelUpload = useCallback(
+    (messageId: string) => {
+      const abort = uploadCancelRef.current.get(messageId);
+      if (abort) abort();
+    },
+    [],
+  );
 
   const setReplyText = useCallback(
     (value: string | ((current: string) => string)) => {
@@ -1264,7 +1342,8 @@ export function useInboxWorkspace() {
     wsOpen,
   };
 
-  const sendReply = useCallback(async () => {
+  const sendReply = useCallback(
+    async (quotedMessageId?: string | null) => {
     const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
     if (
       !chat ||
@@ -1278,6 +1357,10 @@ export function useInboxWorkspace() {
       return;
     }
 
+    const trimmedQuotedId = quotedMessageId?.trim() || null;
+    const quotedTarget = trimmedQuotedId
+      ? messagesRef.current.find((message) => message.id === trimmedQuotedId) ?? null
+      : null;
     const tempId = crypto.randomUUID();
     const body = replyText.trim();
     const clearAcceptedDraft = () => {
@@ -1297,6 +1380,18 @@ export function useInboxWorkspace() {
         direction: "outbound",
         timestamp: Date.now(),
         deliveryStatus: "sending",
+        ...(trimmedQuotedId
+          ? {
+              quotedMessageId: trimmedQuotedId,
+              quoted: quotedTarget
+                ? {
+                    fromMe: quotedTarget.direction === "outbound",
+                    preview: Array.from(quotedTarget.body).slice(0, 200).join(""),
+                    messageType: quotedTarget.messageType ?? null,
+                  }
+                : null,
+            }
+          : {}),
       },
     ]);
 
@@ -1308,6 +1403,7 @@ export function useInboxWorkspace() {
           clientMessageId: tempId,
           to: chat.transportId,
           text: body,
+          ...(trimmedQuotedId ? { quotedMessageId: trimmedQuotedId } : {}),
         }),
       });
       const data = (await response.json()) as {
@@ -1398,7 +1494,7 @@ export function useInboxWorkspace() {
   ]);
 
   const sendImage = useCallback(
-    async (file: File) => {
+    async (file: File, quotedMessageId?: string | null) => {
       const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
       const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
       if (
@@ -1420,6 +1516,10 @@ export function useInboxWorkspace() {
         return;
       }
 
+      const trimmedQuotedId = quotedMessageId?.trim() || null;
+      const quotedTarget = trimmedQuotedId
+        ? messagesRef.current.find((message) => message.id === trimmedQuotedId) ?? null
+        : null;
       const tempId = crypto.randomUUID();
       const caption = replyText.trim();
       let knownEffectKey: string | null = null;
@@ -1441,6 +1541,18 @@ export function useInboxWorkspace() {
           timestamp: Date.now(),
           messageType: "image",
           deliveryStatus: "sending",
+          ...(trimmedQuotedId
+            ? {
+                quotedMessageId: trimmedQuotedId,
+                quoted: quotedTarget
+                  ? {
+                      fromMe: quotedTarget.direction === "outbound",
+                      preview: Array.from(quotedTarget.body).slice(0, 200).join(""),
+                      messageType: quotedTarget.messageType ?? null,
+                    }
+                  : null,
+              }
+            : {}),
           attachment: {
             formatVersion: 1,
             kind: "image",
@@ -1464,22 +1576,18 @@ export function useInboxWorkspace() {
         form.set("clientMessageId", tempId);
         form.set("to", chat.transportId);
         form.set("caption", caption);
+        if (trimmedQuotedId) form.set("quotedMessageId", trimmedQuotedId);
         form.set("image", file, file.name || "image");
-        const response = await fetch("/api/whatsapp/send-image", {
-          method: "POST",
-          body: form,
-        });
-        const data = (await response.json()) as {
-          ok: boolean;
-          accepted?: boolean;
-          id?: string | null;
-          effectKey?: string;
-          state?: InboxMessage["outboxState"];
-          requiresDuplicateConfirmation?: boolean;
-        };
+        const { status: responseStatus, data } = await postFormWithUploadProgress(
+          "/api/whatsapp/send-image",
+          form,
+          (percent) => markUploadProgress(tempId, percent),
+          (abort) => uploadCancelRef.current.set(tempId, abort),
+        );
         knownEffectKey = data.effectKey ?? null;
+        clearUploadState(tempId);
 
-        if (response.status === 202 && data.accepted && data.effectKey) {
+        if (responseStatus === 202 && data.accepted && data.effectKey) {
           clearAcceptedDraft();
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
@@ -1502,7 +1610,7 @@ export function useInboxWorkspace() {
           return;
         }
 
-        if (!response.ok || !data.ok) {
+        if (!(responseStatus >= 200 && responseStatus < 300) || !data.ok) {
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
               message.id === tempId
@@ -1536,6 +1644,15 @@ export function useInboxWorkspace() {
         await loadMessages(chat, { background: true });
         void loadChats();
       } catch (error) {
+        clearUploadState(tempId);
+        if (error instanceof DOMException && error.name === "AbortError") {
+          // Pre-effect cancellation (#317): the request never completed, so
+          // no durable intent can exist. Drop only the optimistic message.
+          mutateMessages(chat.conversationId, (current) =>
+            current.filter((message) => message.id !== tempId),
+          );
+          return;
+        }
         if (knownEffectKey) {
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
@@ -1564,9 +1681,11 @@ export function useInboxWorkspace() {
       activeChatId,
       canReply,
       chats,
+      clearUploadState,
       effectiveStatus,
       loadChats,
       loadMessages,
+      markUploadProgress,
       monitorWhatsAppEffect,
       mutateMessages,
       persistDraft,
@@ -1577,7 +1696,7 @@ export function useInboxWorkspace() {
   );
 
   const sendVideo = useCallback(
-    async (file: File) => {
+    async (file: File, quotedMessageId?: string | null) => {
       const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
       const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
       if (
@@ -1599,6 +1718,10 @@ export function useInboxWorkspace() {
         return;
       }
 
+      const trimmedQuotedId = quotedMessageId?.trim() || null;
+      const quotedTarget = trimmedQuotedId
+        ? messagesRef.current.find((message) => message.id === trimmedQuotedId) ?? null
+        : null;
       const tempId = crypto.randomUUID();
       const caption = replyText.trim();
       let knownEffectKey: string | null = null;
@@ -1620,6 +1743,18 @@ export function useInboxWorkspace() {
           timestamp: Date.now(),
           messageType: "video",
           deliveryStatus: "sending",
+          ...(trimmedQuotedId
+            ? {
+                quotedMessageId: trimmedQuotedId,
+                quoted: quotedTarget
+                  ? {
+                      fromMe: quotedTarget.direction === "outbound",
+                      preview: Array.from(quotedTarget.body).slice(0, 200).join(""),
+                      messageType: quotedTarget.messageType ?? null,
+                    }
+                  : null,
+              }
+            : {}),
           attachment: {
             formatVersion: 1,
             kind: "video",
@@ -1643,22 +1778,18 @@ export function useInboxWorkspace() {
         form.set("clientMessageId", tempId);
         form.set("to", chat.transportId);
         form.set("caption", caption);
+        if (trimmedQuotedId) form.set("quotedMessageId", trimmedQuotedId);
         form.set("video", file, file.name || "video.mp4");
-        const response = await fetch("/api/whatsapp/send-video", {
-          method: "POST",
-          body: form,
-        });
-        const data = (await response.json()) as {
-          ok: boolean;
-          accepted?: boolean;
-          id?: string | null;
-          effectKey?: string;
-          state?: InboxMessage["outboxState"];
-          requiresDuplicateConfirmation?: boolean;
-        };
+        const { status: responseStatus, data } = await postFormWithUploadProgress(
+          "/api/whatsapp/send-video",
+          form,
+          (percent) => markUploadProgress(tempId, percent),
+          (abort) => uploadCancelRef.current.set(tempId, abort),
+        );
         knownEffectKey = data.effectKey ?? null;
+        clearUploadState(tempId);
 
-        if (response.status === 202 && data.accepted && data.effectKey) {
+        if (responseStatus === 202 && data.accepted && data.effectKey) {
           clearAcceptedDraft();
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
@@ -1681,7 +1812,7 @@ export function useInboxWorkspace() {
           return;
         }
 
-        if (!response.ok || !data.ok) {
+        if (!(responseStatus >= 200 && responseStatus < 300) || !data.ok) {
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
               message.id === tempId
@@ -1715,6 +1846,15 @@ export function useInboxWorkspace() {
         await loadMessages(chat, { background: true });
         void loadChats();
       } catch (error) {
+        clearUploadState(tempId);
+        if (error instanceof DOMException && error.name === "AbortError") {
+          // Pre-effect cancellation (#317): the request never completed, so
+          // no durable intent can exist. Drop only the optimistic message.
+          mutateMessages(chat.conversationId, (current) =>
+            current.filter((message) => message.id !== tempId),
+          );
+          return;
+        }
         if (knownEffectKey) {
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
@@ -1743,9 +1883,11 @@ export function useInboxWorkspace() {
       activeChatId,
       canReply,
       chats,
+      clearUploadState,
       effectiveStatus,
       loadChats,
       loadMessages,
+      markUploadProgress,
       monitorWhatsAppEffect,
       mutateMessages,
       persistDraft,
@@ -1756,7 +1898,7 @@ export function useInboxWorkspace() {
   );
 
   const sendDocument = useCallback(
-    async (file: File) => {
+    async (file: File, quotedMessageId?: string | null) => {
       const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
       const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
       if (
@@ -1778,6 +1920,10 @@ export function useInboxWorkspace() {
         return;
       }
 
+      const trimmedQuotedId = quotedMessageId?.trim() || null;
+      const quotedTarget = trimmedQuotedId
+        ? messagesRef.current.find((message) => message.id === trimmedQuotedId) ?? null
+        : null;
       const tempId = crypto.randomUUID();
       const caption = replyText.trim();
       let knownEffectKey: string | null = null;
@@ -1799,6 +1945,18 @@ export function useInboxWorkspace() {
           timestamp: Date.now(),
           messageType: "document",
           deliveryStatus: "sending",
+          ...(trimmedQuotedId
+            ? {
+                quotedMessageId: trimmedQuotedId,
+                quoted: quotedTarget
+                  ? {
+                      fromMe: quotedTarget.direction === "outbound",
+                      preview: Array.from(quotedTarget.body).slice(0, 200).join(""),
+                      messageType: quotedTarget.messageType ?? null,
+                    }
+                  : null,
+              }
+            : {}),
           attachment: {
             formatVersion: 1,
             kind: "document",
@@ -1822,22 +1980,18 @@ export function useInboxWorkspace() {
         form.set("clientMessageId", tempId);
         form.set("to", chat.transportId);
         form.set("caption", caption);
+        if (trimmedQuotedId) form.set("quotedMessageId", trimmedQuotedId);
         form.set("document", file, file.name || "document");
-        const response = await fetch("/api/whatsapp/send-document", {
-          method: "POST",
-          body: form,
-        });
-        const data = (await response.json()) as {
-          ok: boolean;
-          accepted?: boolean;
-          id?: string | null;
-          effectKey?: string;
-          state?: InboxMessage["outboxState"];
-          requiresDuplicateConfirmation?: boolean;
-        };
+        const { status: responseStatus, data } = await postFormWithUploadProgress(
+          "/api/whatsapp/send-document",
+          form,
+          (percent) => markUploadProgress(tempId, percent),
+          (abort) => uploadCancelRef.current.set(tempId, abort),
+        );
         knownEffectKey = data.effectKey ?? null;
+        clearUploadState(tempId);
 
-        if (response.status === 202 && data.accepted && data.effectKey) {
+        if (responseStatus === 202 && data.accepted && data.effectKey) {
           clearAcceptedDraft();
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
@@ -1860,7 +2014,7 @@ export function useInboxWorkspace() {
           return;
         }
 
-        if (!response.ok || !data.ok) {
+        if (!(responseStatus >= 200 && responseStatus < 300) || !data.ok) {
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
               message.id === tempId
@@ -1894,6 +2048,15 @@ export function useInboxWorkspace() {
         await loadMessages(chat, { background: true });
         void loadChats();
       } catch (error) {
+        clearUploadState(tempId);
+        if (error instanceof DOMException && error.name === "AbortError") {
+          // Pre-effect cancellation (#317): the request never completed, so
+          // no durable intent can exist. Drop only the optimistic message.
+          mutateMessages(chat.conversationId, (current) =>
+            current.filter((message) => message.id !== tempId),
+          );
+          return;
+        }
         if (knownEffectKey) {
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
@@ -1922,9 +2085,11 @@ export function useInboxWorkspace() {
       activeChatId,
       canReply,
       chats,
+      clearUploadState,
       effectiveStatus,
       loadChats,
       loadMessages,
+      markUploadProgress,
       monitorWhatsAppEffect,
       mutateMessages,
       persistDraft,
@@ -1935,7 +2100,7 @@ export function useInboxWorkspace() {
   );
 
   const sendVoice = useCallback(
-    async (file: File) => {
+    async (file: File, quotedMessageId?: string | null) => {
       const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
       const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
       if (
@@ -1957,6 +2122,10 @@ export function useInboxWorkspace() {
         return;
       }
 
+      const trimmedQuotedId = quotedMessageId?.trim() || null;
+      const quotedTarget = trimmedQuotedId
+        ? messagesRef.current.find((message) => message.id === trimmedQuotedId) ?? null
+        : null;
       const tempId = crypto.randomUUID();
       let knownEffectKey: string | null = null;
       sendingRef.current = true;
@@ -1973,6 +2142,18 @@ export function useInboxWorkspace() {
           timestamp: Date.now(),
           messageType: "audio",
           deliveryStatus: "sending",
+          ...(trimmedQuotedId
+            ? {
+                quotedMessageId: trimmedQuotedId,
+                quoted: quotedTarget
+                  ? {
+                      fromMe: quotedTarget.direction === "outbound",
+                      preview: Array.from(quotedTarget.body).slice(0, 200).join(""),
+                      messageType: quotedTarget.messageType ?? null,
+                    }
+                  : null,
+              }
+            : {}),
           attachment: {
             formatVersion: 1,
             kind: "audio",
@@ -1995,22 +2176,18 @@ export function useInboxWorkspace() {
         const form = new FormData();
         form.set("clientMessageId", tempId);
         form.set("to", chat.transportId);
+        if (trimmedQuotedId) form.set("quotedMessageId", trimmedQuotedId);
         form.set("audio", file, file.name || "audio");
-        const response = await fetch("/api/whatsapp/send-voice", {
-          method: "POST",
-          body: form,
-        });
-        const data = (await response.json()) as {
-          ok: boolean;
-          accepted?: boolean;
-          id?: string | null;
-          effectKey?: string;
-          state?: InboxMessage["outboxState"];
-          requiresDuplicateConfirmation?: boolean;
-        };
+        const { status: responseStatus, data } = await postFormWithUploadProgress(
+          "/api/whatsapp/send-voice",
+          form,
+          (percent) => markUploadProgress(tempId, percent),
+          (abort) => uploadCancelRef.current.set(tempId, abort),
+        );
         knownEffectKey = data.effectKey ?? null;
+        clearUploadState(tempId);
 
-        if (response.status === 202 && data.accepted && data.effectKey) {
+        if (responseStatus === 202 && data.accepted && data.effectKey) {
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
               message.id === tempId
@@ -2032,7 +2209,7 @@ export function useInboxWorkspace() {
           return;
         }
 
-        if (!response.ok || !data.ok) {
+        if (!(responseStatus >= 200 && responseStatus < 300) || !data.ok) {
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
               message.id === tempId
@@ -2065,6 +2242,15 @@ export function useInboxWorkspace() {
         await loadMessages(chat, { background: true });
         void loadChats();
       } catch (error) {
+        clearUploadState(tempId);
+        if (error instanceof DOMException && error.name === "AbortError") {
+          // Pre-effect cancellation (#317): the request never completed, so
+          // no durable intent can exist. Drop only the optimistic message.
+          mutateMessages(chat.conversationId, (current) =>
+            current.filter((message) => message.id !== tempId),
+          );
+          return;
+        }
         if (knownEffectKey) {
           mutateMessages(chat.conversationId, (current) =>
             current.map((message) =>
@@ -2093,9 +2279,11 @@ export function useInboxWorkspace() {
       activeChatId,
       canReply,
       chats,
+      clearUploadState,
       effectiveStatus,
       loadChats,
       loadMessages,
+      markUploadProgress,
       monitorWhatsAppEffect,
       mutateMessages,
       t,
@@ -2183,6 +2371,8 @@ export function useInboxWorkspace() {
     sendVideo,
     sendDocument,
     sendVoice,
+    uploads,
+    cancelUpload,
     retryFailedMessage,
     markUnread,
     canUpdateConversation,

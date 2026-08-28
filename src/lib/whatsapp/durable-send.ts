@@ -94,11 +94,36 @@ const voiceMediaReceiptSchema = mediaReceiptBaseSchema.extend({
   ]),
 });
 
+/**
+ * Provider-side quoted-reply context (#317). The stanza ID plus sender
+ * identity let WhatsApp anchor the quote to the exact provider message, and
+ * the single-type stub is only the honest fallback rendered when the
+ * recipient's client cannot resolve that message locally.
+ */
+export const quotedContextSchema = z.object({
+  stanzaId: z
+    .string()
+    .min(8)
+    .max(128)
+    .regex(/^[A-Za-z0-9+/=_-]+$/),
+  fromMe: z.boolean(),
+  participant: z
+    .string()
+    .max(256)
+    .regex(/^[^@\s]{1,128}@[A-Za-z0-9.-]{1,120}$/)
+    .optional(),
+  stubKind: z.enum(["text", "image", "video", "audio", "document"]),
+  stubText: z.string().max(2048).optional(),
+});
+
+export type WhatsAppQuotedContext = z.infer<typeof quotedContextSchema>;
+
 const queuedTextPayloadSchema = z.object({
   messageId: z.string().uuid(),
   to: z.string().min(1).max(256),
   text: z.string().min(1).max(4000),
   requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
+  quoted: quotedContextSchema.optional(),
 });
 
 const queuedImagePayloadSchema = z.object({
@@ -108,6 +133,7 @@ const queuedImagePayloadSchema = z.object({
   fileName: z.string().max(180).nullable(),
   media: imageMediaReceiptSchema,
   requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
+  quoted: quotedContextSchema.optional(),
 });
 
 const queuedVideoPayloadSchema = z.object({
@@ -120,6 +146,7 @@ const queuedVideoPayloadSchema = z.object({
   durationSeconds: z.number().int().positive().safe().nullable(),
   media: videoMediaReceiptSchema,
   requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
+  quoted: quotedContextSchema.optional(),
 });
 
 const queuedDocumentPayloadSchema = z.object({
@@ -131,6 +158,7 @@ const queuedDocumentPayloadSchema = z.object({
   fileName: z.string().min(1).max(180),
   media: documentMediaReceiptSchema,
   requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
+  quoted: quotedContextSchema.optional(),
 });
 
 const queuedVoicePayloadSchema = z.object({
@@ -146,6 +174,7 @@ const queuedVoicePayloadSchema = z.object({
   voiceMessage: z.boolean(),
   media: voiceMediaReceiptSchema,
   requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
+  quoted: quotedContextSchema.optional(),
 });
 
 type QueuedTextPayload = z.infer<typeof queuedTextPayloadSchema>;
@@ -168,6 +197,7 @@ export interface QueueWhatsAppTextInput {
   clientMessageId: string;
   to: string;
   text: string;
+  quotedMessageId?: string | null;
 }
 
 export interface QueueWhatsAppImageInput {
@@ -178,6 +208,7 @@ export interface QueueWhatsAppImageInput {
   declaredMime: string | null;
   declaredSize: number;
   source: ReadableStream<Uint8Array>;
+  quotedMessageId?: string | null;
 }
 
 export interface QueueWhatsAppVideoInput {
@@ -188,6 +219,7 @@ export interface QueueWhatsAppVideoInput {
   declaredMime: string | null;
   declaredSize: number;
   source: ReadableStream<Uint8Array>;
+  quotedMessageId?: string | null;
 }
 
 export interface QueueWhatsAppDocumentInput {
@@ -198,6 +230,7 @@ export interface QueueWhatsAppDocumentInput {
   declaredMime: string | null;
   declaredSize: number;
   source: ReadableStream<Uint8Array>;
+  quotedMessageId?: string | null;
 }
 
 export interface QueueWhatsAppVoiceInput {
@@ -206,6 +239,7 @@ export interface QueueWhatsAppVoiceInput {
   declaredMime: string | null;
   declaredSize: number;
   source: ReadableStream<Uint8Array>;
+  quotedMessageId?: string | null;
 }
 
 interface OutboxRow {
@@ -257,6 +291,7 @@ export type WhatsAppEffectSender = (
   text: string,
   effectKey: string,
   requestBinding: string,
+  quoted: WhatsAppQuotedContext | null,
 ) => Promise<SendReceipt>;
 
 export type WhatsAppImageEffectSender = (
@@ -266,6 +301,7 @@ export type WhatsAppImageEffectSender = (
   caption: string,
   effectKey: string,
   requestBinding: string,
+  quoted: WhatsAppQuotedContext | null,
 ) => Promise<SendReceipt>;
 
 export type WhatsAppVideoEffectSender = (
@@ -275,6 +311,7 @@ export type WhatsAppVideoEffectSender = (
   caption: string,
   effectKey: string,
   requestBinding: string,
+  quoted: WhatsAppQuotedContext | null,
 ) => Promise<SendReceipt>;
 
 export type WhatsAppDocumentEffectSender = (
@@ -285,6 +322,7 @@ export type WhatsAppDocumentEffectSender = (
   caption: string,
   effectKey: string,
   requestBinding: string,
+  quoted: WhatsAppQuotedContext | null,
 ) => Promise<SendReceipt>;
 
 export type WhatsAppVoiceEffectSender = (
@@ -295,6 +333,7 @@ export type WhatsAppVoiceEffectSender = (
   durationSeconds: number | null,
   effectKey: string,
   requestBinding: string,
+  quoted: WhatsAppQuotedContext | null,
 ) => Promise<SendReceipt>;
 
 export type WhatsAppEffectReceiptLookup = (
@@ -474,6 +513,117 @@ function safeOutboundFileName(value: string | null | undefined): string | null {
   return candidate ? candidate.slice(0, 180) : null;
 }
 
+function quotedStubKind(messageType: string): WhatsAppQuotedContext["stubKind"] {
+  switch (messageType) {
+    case "image":
+    case "sticker":
+      return "image";
+    case "video":
+      return "video";
+    case "audio":
+      return "audio";
+    case "document":
+      return "document";
+    default:
+      return "text";
+  }
+}
+
+function quotedStubText(body: string): string | undefined {
+  const bounded = Array.from(body).slice(0, 2048).join("");
+  return bounded || undefined;
+}
+
+const QUOTED_TARGET_ID_PATTERN = /^[A-Za-z0-9_-]{6,64}$/;
+
+/**
+ * Resolve the provider-side quoted-reply context from a canonical message in
+ * the same conversation (#317). Inbound targets anchor to their applied
+ * provider ingress event; outbound targets must already carry a confirmed
+ * provider message ID, because quoting an intent that WhatsApp has not
+ * acknowledged cannot render truthfully on the recipient.
+ */
+async function resolveQuotedReplyContext(
+  context: TrustedWhatsAppCommandContext,
+  jid: string,
+  quotedMessageId: string | null | undefined,
+): Promise<WhatsAppQuotedContext | null> {
+  const id = (quotedMessageId ?? "").trim();
+  if (!id) return null;
+  if (!QUOTED_TARGET_ID_PATTERN.test(id)) {
+    throw new SahelFlowError(
+      "Quoted reply target has an invalid identifier",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+  const target = await context.prisma.message.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      direction: true,
+      body: true,
+      messageType: true,
+      conversation: { select: { sourceId: true } },
+    },
+  });
+  if (!target || target.conversation.sourceId !== jid) {
+    throw new SahelFlowError(
+      "Quoted reply target must be a message in the same conversation",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+  if (
+    target.direction === "system" ||
+    target.messageType === "activity" ||
+    target.messageType === "template"
+  ) {
+    throw new SahelFlowError(
+      "This message kind cannot be quoted",
+      "VALIDATION_ERROR",
+      400,
+    );
+  }
+  if (target.direction === "inbound") {
+    const applied = await context.prisma.providerIngressEvent.findFirst({
+      where: { messageId: target.id, status: "applied" },
+      select: { providerEventId: true },
+    });
+    if (!applied?.providerEventId) {
+      throw new SahelFlowError(
+        "Quoted message has no confirmed WhatsApp provenance yet",
+        "CONFLICT",
+        409,
+      );
+    }
+    return {
+      stanzaId: applied.providerEventId,
+      fromMe: false,
+      participant: jid,
+      stubKind: quotedStubKind(target.messageType),
+      stubText: quotedStubText(target.body),
+    };
+  }
+  const effect = await context.prisma.whatsAppOutboundEffect.findUnique({
+    where: { messageId: target.id },
+    select: { providerMessageId: true },
+  });
+  if (!effect?.providerMessageId) {
+    throw new SahelFlowError(
+      "Quoted reply target is not yet confirmed by WhatsApp",
+      "CONFLICT",
+      409,
+    );
+  }
+  return {
+    stanzaId: effect.providerMessageId,
+    fromMe: true,
+    stubKind: quotedStubKind(target.messageType),
+    stubText: quotedStubText(target.body),
+  };
+}
+
 export async function queueWhatsAppText(
   context: TrustedWhatsAppCommandContext,
   input: QueueWhatsAppTextInput,
@@ -481,16 +631,29 @@ export async function queueWhatsAppText(
   const clientMessageId = z.string().uuid().parse(input.clientMessageId);
   const text = z.string().trim().min(1).max(4000).parse(input.text);
   const jid = normalizeRecipient(input.to);
+  const quoted = await resolveQuotedReplyContext(context, jid, input.quotedMessageId);
 
+  // The quote target is part of the request identity: two sends that differ
+  // only in what they quote must never share one authority or effect key.
+  const contentBinding = quoted
+    ? JSON.stringify({ text, quotedStanzaId: quoted.stanzaId })
+    : text;
   const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
     context,
     "text",
     clientMessageId,
     jid,
-    text,
+    contentBinding,
   );
   const phone = jid.slice(0, jid.indexOf("@"));
   const now = new Date();
+  const payload = {
+    messageId: clientMessageId,
+    to: jid,
+    text,
+    requestBinding,
+    ...(quoted ? { quoted } : {}),
+  } satisfies QueuedTextPayload;
 
   const execution = await executeBusinessCommand(
     context,
@@ -504,7 +667,7 @@ export async function queueWhatsAppText(
       },
       actor: context.businessPrincipal.auditActor,
       correlationId: clientMessageId,
-      payload: { messageId: clientMessageId, to: jid, text, requestBinding },
+      payload,
     },
     async ({ tx }) => {
       const conversationKey = {
@@ -555,6 +718,7 @@ export async function queueWhatsAppText(
           direction: "outbound",
           timestamp: now,
           deliveryStatus: "sending",
+          quotedMessageId: input.quotedMessageId?.trim() || null,
         },
       });
       await tx.whatsAppOutboundEffect.create({
@@ -579,7 +743,7 @@ export async function queueWhatsAppText(
           {
             effectKey,
             effectType: WHATSAPP_TEXT_EFFECT_TYPE,
-            payload: { messageId: clientMessageId, to: jid, text, requestBinding },
+            payload,
           },
         ],
         projectionInvalidations: [`conversation:${conversation.id}`, "inbox"],
@@ -636,6 +800,8 @@ export async function queueWhatsAppImage(
     .parse(input.declaredMime?.split(";", 1)[0]?.trim().toLowerCase());
   const fileName = safeOutboundFileName(input.fileName);
   const jid = normalizeRecipient(input.to);
+  // Resolved before staging: an invalid quote must never leave staged media.
+  const quoted = await resolveQuotedReplyContext(context, jid, input.quotedMessageId);
 
   let media: z.infer<typeof imageMediaReceiptSchema>;
   try {
@@ -666,6 +832,7 @@ export async function queueWhatsAppImage(
     sha256: media.sha256,
     sizeBytes: media.sizeBytes,
     mediaType: media.mediaType,
+    ...(quoted ? { quotedStanzaId: quoted.stanzaId } : {}),
   });
   const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
     context,
@@ -712,6 +879,7 @@ export async function queueWhatsAppImage(
     fileName,
     media,
     requestBinding,
+    ...(quoted ? { quoted } : {}),
   } satisfies QueuedImagePayload;
 
   const execution = await executeBusinessCommand(
@@ -778,6 +946,7 @@ export async function queueWhatsAppImage(
           timestamp: now,
           deliveryStatus: "sending",
           messageType: "image",
+          quotedMessageId: input.quotedMessageId?.trim() || null,
           attachments: protectedAttachment,
         },
       });
@@ -875,6 +1044,8 @@ export async function queueWhatsAppVideo(
   );
   const fileName = safeOutboundFileName(input.fileName);
   const jid = normalizeRecipient(input.to);
+  // Resolved before staging: an invalid quote must never leave staged media.
+  const quoted = await resolveQuotedReplyContext(context, jid, input.quotedMessageId);
 
   // Parse duration from the same bounded byte stream that will be encrypted.
   // The storage branch is not consumed until metadata succeeds, so rejected
@@ -922,6 +1093,7 @@ export async function queueWhatsAppVideo(
     sha256: media.sha256,
     sizeBytes: media.sizeBytes,
     mediaType: media.mediaType,
+    ...(quoted ? { quotedStanzaId: quoted.stanzaId } : {}),
   });
   const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
     context,
@@ -969,6 +1141,7 @@ export async function queueWhatsAppVideo(
     durationSeconds,
     media,
     requestBinding,
+    ...(quoted ? { quoted } : {}),
   } satisfies QueuedVideoPayload;
 
   const execution = await executeBusinessCommand(
@@ -1035,6 +1208,7 @@ export async function queueWhatsAppVideo(
           timestamp: now,
           deliveryStatus: "sending",
           messageType: "video",
+          quotedMessageId: input.quotedMessageId?.trim() || null,
           attachments: protectedAttachment,
         },
       });
@@ -1111,6 +1285,8 @@ export async function queueWhatsAppDocument(
     .parse(input.declaredMime?.split(";", 1)[0]?.trim().toLowerCase());
   const fileName = safeOutboundFileName(input.fileName);
   const jid = normalizeRecipient(input.to);
+  // Resolved before staging: an invalid quote must never leave staged media.
+  const quoted = await resolveQuotedReplyContext(context, jid, input.quotedMessageId);
 
   let media: z.infer<typeof documentMediaReceiptSchema>;
   try {
@@ -1145,6 +1321,7 @@ export async function queueWhatsAppDocument(
     sha256: media.sha256,
     sizeBytes: media.sizeBytes,
     mediaType: media.mediaType,
+    ...(quoted ? { quotedStanzaId: quoted.stanzaId } : {}),
   });
   const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
     context,
@@ -1191,6 +1368,7 @@ export async function queueWhatsAppDocument(
     fileName: outboundFileName,
     media,
     requestBinding,
+    ...(quoted ? { quoted } : {}),
   } satisfies QueuedDocumentPayload;
 
   const execution = await executeBusinessCommand(
@@ -1257,6 +1435,7 @@ export async function queueWhatsAppDocument(
           timestamp: now,
           deliveryStatus: "sending",
           messageType: "document",
+          quotedMessageId: input.quotedMessageId?.trim() || null,
           attachments: protectedAttachment,
         },
       });
@@ -1396,6 +1575,8 @@ export async function queueWhatsAppVoice(
     ])
     .parse(input.declaredMime?.split(";", 1)[0]?.trim().toLowerCase() ?? null);
   const jid = normalizeRecipient(input.to);
+  // Resolved before staging: an invalid quote must never leave staged media.
+  const quoted = await resolveQuotedReplyContext(context, jid, input.quotedMessageId);
 
   // Parse metadata from the same bounded byte stream that will be encrypted.
   // The storage branch is not consumed until metadata succeeds, so rejected
@@ -1445,6 +1626,7 @@ export async function queueWhatsAppVoice(
     sha256: media.sha256,
     sizeBytes: media.sizeBytes,
     mediaType: media.mediaType,
+    ...(quoted ? { quotedStanzaId: quoted.stanzaId } : {}),
   });
   const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
     context,
@@ -1491,6 +1673,7 @@ export async function queueWhatsAppVoice(
     voiceMessage: outboundMetadata.voiceMessage,
     media,
     requestBinding,
+    ...(quoted ? { quoted } : {}),
   } satisfies QueuedVoicePayload;
 
   const execution = await executeBusinessCommand(
@@ -1557,6 +1740,7 @@ export async function queueWhatsAppVoice(
           timestamp: now,
           deliveryStatus: "sending",
           messageType: "audio",
+          quotedMessageId: input.quotedMessageId?.trim() || null,
           attachments: protectedAttachment,
         },
       });
@@ -2132,6 +2316,7 @@ async function executeClaimed(
 
   try {
     let receipt: SendReceipt;
+    const quoted = payload.quoted ?? null;
     if (started.effectType === WHATSAPP_IMAGE_EFFECT_TYPE) {
       const imagePayload = payload as QueuedImagePayload;
       receipt = await imageSender(
@@ -2141,6 +2326,7 @@ async function executeClaimed(
         imagePayload.caption,
         started.effectKey,
         imagePayload.requestBinding,
+        quoted,
       );
     } else if (started.effectType === WHATSAPP_VIDEO_EFFECT_TYPE) {
       const videoPayload = payload as QueuedVideoPayload;
@@ -2151,6 +2337,7 @@ async function executeClaimed(
         videoPayload.caption,
         started.effectKey,
         videoPayload.requestBinding,
+        quoted,
       );
     } else if (started.effectType === WHATSAPP_DOCUMENT_EFFECT_TYPE) {
       const documentPayload = payload as QueuedDocumentPayload;
@@ -2162,6 +2349,7 @@ async function executeClaimed(
         documentPayload.caption,
         started.effectKey,
         documentPayload.requestBinding,
+        quoted,
       );
     } else if (started.effectType === WHATSAPP_VOICE_EFFECT_TYPE) {
       const voicePayload = payload as QueuedVoicePayload;
@@ -2173,6 +2361,7 @@ async function executeClaimed(
         voicePayload.durationSeconds,
         started.effectKey,
         voicePayload.requestBinding,
+        quoted,
       );
     } else {
       const textPayload = payload as QueuedTextPayload;
@@ -2181,6 +2370,7 @@ async function executeClaimed(
         textPayload.text,
         started.effectKey,
         textPayload.requestBinding,
+        quoted,
       );
     }
     return markSucceeded(context, started, payload, receipt);

@@ -72,6 +72,93 @@ function mapBaileysStatus(status: unknown): string | null {
   return null;
 }
 
+/** Provider-side quoted-reply context crossed the loopback boundary (#317). */
+export interface SidecarQuotedContext {
+  stanzaId: string;
+  fromMe: boolean;
+  participant?: string;
+  stubKind: "text" | "image" | "video" | "audio" | "document";
+  stubText?: string;
+}
+
+const QUOTED_STANZA_ID_PATTERN = /^[A-Za-z0-9+/=_-]{8,128}$/;
+const QUOTED_PARTICIPANT_PATTERN = /^[^@\s]{1,128}@[A-Za-z0-9.-]{1,120}$/;
+
+/** Validate an untrusted quoted context; throws on any bounded-shape breach. */
+export function parseWhatsAppQuotedContext(value: unknown): SidecarQuotedContext | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Invalid WhatsApp quoted context");
+  }
+  const candidate = value as Record<string, unknown>;
+  const stanzaId = candidate.stanzaId;
+  if (typeof stanzaId !== "string" || !QUOTED_STANZA_ID_PATTERN.test(stanzaId)) {
+    throw new Error("Invalid WhatsApp quoted stanza ID");
+  }
+  const fromMe = candidate.fromMe === true;
+  const stubKind = candidate.stubKind;
+  if (
+    stubKind !== "text" &&
+    stubKind !== "image" &&
+    stubKind !== "video" &&
+    stubKind !== "audio" &&
+    stubKind !== "document"
+  ) {
+    throw new Error("Invalid WhatsApp quoted stub kind");
+  }
+  let participant: string | undefined;
+  if (!fromMe && typeof candidate.participant === "string" && candidate.participant) {
+    if (
+      candidate.participant.length > 256 ||
+      !QUOTED_PARTICIPANT_PATTERN.test(candidate.participant)
+    ) {
+      throw new Error("Invalid WhatsApp quoted participant");
+    }
+    participant = candidate.participant;
+  }
+  let stubText: string | undefined;
+  if (typeof candidate.stubText === "string" && candidate.stubText) {
+    stubText = Array.from(candidate.stubText).slice(0, 2048).join("");
+  }
+  return { stanzaId, fromMe, ...(participant ? { participant } : {}), stubKind, ...(stubText ? { stubText } : {}) };
+}
+
+/**
+ * Build the Baileys `quoted` send option. Baileys derives the provider
+ * contextInfo from the quoted key (stanza ID + participant; the seller's own
+ * JID is resolved from the connected account for fromMe quotes) and embeds the
+ * single-type stub as the honest fallback quote body.
+ */
+function baileysQuotedOption(
+  jid: string,
+  quoted: SidecarQuotedContext | null | undefined,
+): proto.IWebMessageInfo | undefined {
+  if (!quoted) return undefined;
+  const stub: proto.IMessage = (() => {
+    switch (quoted.stubKind) {
+      case "image":
+        return { imageMessage: quoted.stubText ? { caption: quoted.stubText } : {} };
+      case "video":
+        return { videoMessage: quoted.stubText ? { caption: quoted.stubText } : {} };
+      case "audio":
+        return { audioMessage: {} };
+      case "document":
+        return { documentMessage: quoted.stubText ? { caption: quoted.stubText } : {} };
+      default:
+        return { conversation: quoted.stubText ?? "" };
+    }
+  })();
+  return {
+    key: {
+      remoteJid: jid,
+      fromMe: quoted.fromMe,
+      id: quoted.stanzaId,
+      ...(quoted.participant ? { participant: quoted.participant } : {}),
+    },
+    message: stub,
+  };
+}
+
 async function postMessageStatus(payload: {
   waMessageId: string;
   jid: string;
@@ -386,15 +473,21 @@ export class WhatsAppManager {
     to: string,
     text: string,
     messageId?: string,
+    quoted?: SidecarQuotedContext | null,
   ): Promise<{ id: string; status: string }> {
     if (!this.sock || this.status !== "connected") {
       throw new Error(`Not connected (status=${this.status})`);
     }
     const jid = this.toJid(to);
+    const baileysQuoted = baileysQuotedOption(jid, quoted);
+    const options = {
+      ...(messageId ? { messageId } : {}),
+      ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
+    };
     const sent = await this.sock.sendMessage(
       jid,
       { text },
-      messageId ? { messageId } : undefined,
+      Object.keys(options).length ? options : undefined,
     );
     return {
       id: sent?.key?.id ?? "",
@@ -408,6 +501,7 @@ export class WhatsAppManager {
     mimetype: string,
     caption: string,
     messageId?: string,
+    quoted?: SidecarQuotedContext | null,
   ): Promise<{ id: string; status: string }> {
     if (!this.sock || this.status !== "connected") {
       throw new Error(`Not connected (status=${this.status})`);
@@ -416,6 +510,7 @@ export class WhatsAppManager {
       throw new Error("Image send requires bounded JPEG, PNG or WebP bytes");
     }
     const jid = this.toJid(to);
+    const baileysQuoted = baileysQuotedOption(jid, quoted);
     const sent = await this.sock.sendMessage(
       jid,
       {
@@ -423,7 +518,10 @@ export class WhatsAppManager {
         mimetype: mimetype.toLowerCase(),
         ...(caption ? { caption } : {}),
       },
-      messageId ? { messageId } : undefined,
+      {
+        ...(messageId ? { messageId } : {}),
+        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
+      },
     );
     return {
       id: sent?.key?.id ?? "",
@@ -437,6 +535,7 @@ export class WhatsAppManager {
     mimetype: string,
     caption: string,
     messageId?: string,
+    quoted?: SidecarQuotedContext | null,
   ): Promise<{ id: string; status: string }> {
     if (!this.sock || this.status !== "connected") {
       throw new Error(`Not connected (status=${this.status})`);
@@ -445,6 +544,7 @@ export class WhatsAppManager {
       throw new Error("Video send requires bounded MP4 bytes");
     }
     const jid = this.toJid(to);
+    const baileysQuoted = baileysQuotedOption(jid, quoted);
     const sent = await this.sock.sendMessage(
       jid,
       {
@@ -452,7 +552,10 @@ export class WhatsAppManager {
         mimetype: "video/mp4",
         ...(caption ? { caption } : {}),
       },
-      messageId ? { messageId } : undefined,
+      {
+        ...(messageId ? { messageId } : {}),
+        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
+      },
     );
     return {
       id: sent?.key?.id ?? "",
@@ -467,6 +570,7 @@ export class WhatsAppManager {
     fileName: string,
     caption: string,
     messageId?: string,
+    quoted?: SidecarQuotedContext | null,
   ): Promise<{ id: string; status: string }> {
     if (!this.sock || this.status !== "connected") {
       throw new Error(`Not connected (status=${this.status})`);
@@ -485,6 +589,7 @@ export class WhatsAppManager {
       throw new Error("Document send requires bounded classified bytes and a file name");
     }
     const jid = this.toJid(to);
+    const baileysQuoted = baileysQuotedOption(jid, quoted);
     const sent = await this.sock.sendMessage(
       jid,
       {
@@ -497,7 +602,10 @@ export class WhatsAppManager {
         fileName,
         ...(caption ? { caption } : {}),
       },
-      messageId ? { messageId } : undefined,
+      {
+        ...(messageId ? { messageId } : {}),
+        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
+      },
     );
     return {
       id: sent?.key?.id ?? "",
@@ -512,6 +620,7 @@ export class WhatsAppManager {
     voiceMessage: boolean,
     durationSeconds: number | null,
     messageId?: string,
+    quoted?: SidecarQuotedContext | null,
   ): Promise<{ id: string; status: string }> {
     if (!this.sock || this.status !== "connected") {
       throw new Error(`Not connected (status=${this.status})`);
@@ -532,6 +641,7 @@ export class WhatsAppManager {
       throw new Error("WhatsApp voice notes require authenticated OGG/Opus audio");
     }
     const jid = this.toJid(to);
+    const baileysQuoted = baileysQuotedOption(jid, quoted);
     const sent = await this.sock.sendMessage(
       jid,
       {
@@ -543,7 +653,10 @@ export class WhatsAppManager {
         // duration display truthful.
         ...(durationSeconds ? { seconds: durationSeconds } : {}),
       },
-      messageId ? { messageId } : undefined,
+      {
+        ...(messageId ? { messageId } : {}),
+        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
+      },
     );
     return {
       id: sent?.key?.id ?? "",

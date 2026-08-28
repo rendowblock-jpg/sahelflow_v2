@@ -15,11 +15,11 @@ describe("WhatsApp outbound voice source boundary", () => {
     expect(thread).toContain('data-inbox-audio-picker="true"');
     expect(thread).toContain('data-inbox-audio-input="true"');
     expect(thread).toContain('aria-label={copy("mediaAudio")}');
-    expect(thread).toContain("void sendVoice(file)");
+    expect(thread).toContain("void sendVoice(file, quotedId)");
     expect(workspace).toContain(
       "MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024",
     );
-    expect(workspace).toContain('fetch("/api/whatsapp/send-voice"');
+    expect(workspace).toContain('"/api/whatsapp/send-voice"');
     expect(workspace).toContain('form.set("audio", file');
     expect(workspace).toContain("void monitorWhatsAppEffect(");
   });

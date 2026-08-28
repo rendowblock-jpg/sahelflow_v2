@@ -16,11 +16,11 @@ describe("WhatsApp outbound document source boundary", () => {
     expect(thread).toContain('data-inbox-document-picker="true"');
     expect(thread).toContain('data-inbox-document-input="true"');
     expect(thread).toContain('aria-label={copy("mediaDocument")}');
-    expect(thread).toContain("void sendDocument(file)");
+    expect(thread).toContain("void sendDocument(file, quotedId)");
     expect(workspace).toContain(
       "MAX_OUTBOUND_DOCUMENT_BYTES = 64 * 1024 * 1024",
     );
-    expect(workspace).toContain('fetch("/api/whatsapp/send-document"');
+    expect(workspace).toContain('"/api/whatsapp/send-document"');
     expect(workspace).toContain('form.set("document", file');
     expect(workspace).toContain("void monitorWhatsAppEffect(");
   });
