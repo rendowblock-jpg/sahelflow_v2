@@ -192,6 +192,7 @@ const requiredFiles = [
   "documentation/operations/WORKFLOW.md",
   "documentation/operations/WORKING_MEMORY.md",
   "documentation/operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md",
+  "documentation/operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md",
   "documentation/research/RESEARCH.md",
   ".github/phase-checkpoints/phase3-durable-effects.json",
   ".github/phase-checkpoints/phase3-surface-inventory.json",
@@ -254,11 +255,11 @@ const markdownFiles = walkMarkdown(repoRoot);
 const activeDocumentationFiles = walkMarkdown(
   resolve(repoRoot, "documentation"),
 );
-if (activeDocumentationFiles.length !== 11) {
+if (activeDocumentationFiles.length !== 12) {
   report(
     "drift",
     "documentation/",
-    `expected 11 active Markdown files, found ${activeDocumentationFiles.length}`,
+    `expected 12 active Markdown files, found ${activeDocumentationFiles.length}`,
   );
 }
 

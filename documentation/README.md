@@ -19,11 +19,12 @@ This directory is the active documentation authority for SahelFlow. `documentati
 3. `operations/WORKFLOW.md` — research, implementation, review, CI, installed/provider evidence and release process.
 4. `operations/WORKING_MEMORY.md` — single compact resumable frontier.
 5. `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` — active issue #317 message/media evidence ledger when Inbox or provider work is in scope.
-6. `product/PRODUCT.md` — product promise, seller jobs, commercial boundaries and entitlements.
-7. `product/EXPERIENCE.md` — Class-AAA experience, capabilities and Required journeys.
-8. `product/DECISIONS.md` — consolidated Founder decisions, including FD-045 First Revenue Certification.
-9. `system/ARCHITECTURE.md` — canonical authority, provider, AI, native, security and recovery invariants.
-10. `research/RESEARCH.md` plus privacy/security inventories when relevant.
+6. `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md` — active FRC-2 AI/tools/order-extraction evidence ledger when AI work is in scope.
+7. `product/PRODUCT.md` — product promise, seller jobs, commercial boundaries and entitlements.
+8. `product/EXPERIENCE.md` — Class-AAA experience, capabilities and Required journeys.
+9. `product/DECISIONS.md` — consolidated Founder decisions, including FD-045 First Revenue Certification.
+10. `system/ARCHITECTURE.md` — canonical authority, provider, AI, native, security and recovery invariants.
+11. `research/RESEARCH.md` plus privacy/security inventories when relevant.
 
 Reading order does not change authority precedence. A newer explicit Founder decision outranks lower execution documents for the choice it changes. Protected GitHub source, exact Actions evidence and signed releases outrank stale chat summaries.
 
