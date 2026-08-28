@@ -534,22 +534,101 @@ function quotedStubText(body: string): string | undefined {
   return bounded || undefined;
 }
 
-const QUOTED_TARGET_ID_PATTERN = /^[A-Za-z0-9_-]{6,64}$/;
+const QUOTED_TARGET_ID_PATTERN = /^[A-Za-z0-9_-]{6,96}$/;
+
+const QUOTED_TARGET_SELECT = {
+  id: true,
+  direction: true,
+  body: true,
+  messageType: true,
+  conversation: { select: { sourceId: true } },
+} as const;
+
+type QuotedTargetMessage = {
+  id: string;
+  direction: string;
+  body: string;
+  messageType: string;
+  conversation: { sourceId: string | null };
+};
+
+interface ResolvedQuotedReply {
+  context: WhatsAppQuotedContext | null;
+  /** Canonical Message.id persisted on the reply row for local quote previews. */
+  canonicalTargetId: string | null;
+}
 
 /**
- * Resolve the provider-side quoted-reply context from a canonical message in
- * the same conversation (#317). Inbound targets anchor to their applied
- * provider ingress event; outbound targets must already carry a confirmed
- * provider message ID, because quoting an intent that WhatsApp has not
- * acknowledged cannot render truthfully on the recipient.
+ * Canonical target lookup across both id spaces the composer can quote
+ * (#317). The inbox projection surfaces messages under their provider stanza
+ * IDs (WAMIDs) once WhatsApp provenance exists, so a quote arrives either as
+ * the canonical Message id, the applied inbound provider event id of a
+ * received message, or the confirmed provider message id of a sent message.
+ * Ambiguous provider ids only resolve when exactly one candidate matches the
+ * quoting conversation.
+ */
+async function findQuotedTargetMessage(
+  context: TrustedWhatsAppCommandContext,
+  id: string,
+  jid: string,
+): Promise<QuotedTargetMessage | null> {
+  const direct = await context.prisma.message.findUnique({
+    where: { id },
+    select: QUOTED_TARGET_SELECT,
+  });
+  if (direct) return direct;
+
+  const [inboundEvents, outboundEffects] = await Promise.all([
+    context.prisma.providerIngressEvent.findMany({
+      where: {
+        providerEventId: id,
+        status: "applied",
+        messageId: { not: null },
+      },
+      select: { messageId: true },
+      take: 5,
+    }),
+    context.prisma.whatsAppOutboundEffect.findMany({
+      where: { providerMessageId: id },
+      select: { messageId: true },
+      take: 5,
+    }),
+  ]);
+  const candidateIds = [
+    ...new Set([
+      ...inboundEvents.flatMap((event) =>
+        event.messageId ? [event.messageId] : [],
+      ),
+      ...outboundEffects.map((effect) => effect.messageId),
+    ]),
+  ];
+  if (candidateIds.length === 0) return null;
+  const candidates = await context.prisma.message.findMany({
+    where: { id: { in: candidateIds } },
+    select: QUOTED_TARGET_SELECT,
+  });
+  const [soleCandidate] = candidates;
+  if (candidates.length === 1 && soleCandidate) return soleCandidate;
+  return (
+    candidates.find((message) => message.conversation.sourceId === jid) ??
+    null
+  );
+}
+
+/**
+ * Resolve the provider-side quoted-reply context from a message in the same
+ * conversation (#317). Inbound targets anchor to their applied provider
+ * ingress event; outbound targets must already carry a confirmed provider
+ * message ID, because quoting an intent that WhatsApp has not acknowledged
+ * cannot render truthfully on the recipient.
  */
 async function resolveQuotedReplyContext(
   context: TrustedWhatsAppCommandContext,
   jid: string,
   quotedMessageId: string | null | undefined,
-): Promise<WhatsAppQuotedContext | null> {
+): Promise<ResolvedQuotedReply> {
   const id = (quotedMessageId ?? "").trim();
-  if (!id) return null;
+  if (!id) return { context: null, canonicalTargetId: null };
   if (!QUOTED_TARGET_ID_PATTERN.test(id)) {
     throw new SahelFlowError(
       "Quoted reply target has an invalid identifier",
@@ -557,16 +636,7 @@ async function resolveQuotedReplyContext(
       400,
     );
   }
-  const target = await context.prisma.message.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      direction: true,
-      body: true,
-      messageType: true,
-      conversation: { select: { sourceId: true } },
-    },
-  });
+  const target = await findQuotedTargetMessage(context, id, jid);
   if (!target || target.conversation.sourceId !== jid) {
     throw new SahelFlowError(
       "Quoted reply target must be a message in the same conversation",
@@ -598,11 +668,14 @@ async function resolveQuotedReplyContext(
       );
     }
     return {
-      stanzaId: applied.providerEventId,
-      fromMe: false,
-      participant: jid,
-      stubKind: quotedStubKind(target.messageType),
-      stubText: quotedStubText(target.body),
+      context: {
+        stanzaId: applied.providerEventId,
+        fromMe: false,
+        participant: jid,
+        stubKind: quotedStubKind(target.messageType),
+        stubText: quotedStubText(target.body),
+      },
+      canonicalTargetId: target.id,
     };
   }
   const effect = await context.prisma.whatsAppOutboundEffect.findUnique({
@@ -617,10 +690,13 @@ async function resolveQuotedReplyContext(
     );
   }
   return {
-    stanzaId: effect.providerMessageId,
-    fromMe: true,
-    stubKind: quotedStubKind(target.messageType),
-    stubText: quotedStubText(target.body),
+    context: {
+      stanzaId: effect.providerMessageId,
+      fromMe: true,
+      stubKind: quotedStubKind(target.messageType),
+      stubText: quotedStubText(target.body),
+    },
+    canonicalTargetId: target.id,
   };
 }
 
@@ -635,8 +711,8 @@ export async function queueWhatsAppText(
 
   // The quote target is part of the request identity: two sends that differ
   // only in what they quote must never share one authority or effect key.
-  const contentBinding = quoted
-    ? JSON.stringify({ text, quotedStanzaId: quoted.stanzaId })
+  const contentBinding = quoted.context
+    ? JSON.stringify({ text, quotedStanzaId: quoted.context.stanzaId })
     : text;
   const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
     context,
@@ -652,7 +728,7 @@ export async function queueWhatsAppText(
     to: jid,
     text,
     requestBinding,
-    ...(quoted ? { quoted } : {}),
+    ...(quoted.context ? { quoted: quoted.context } : {}),
   } satisfies QueuedTextPayload;
 
   const execution = await executeBusinessCommand(
@@ -718,7 +794,7 @@ export async function queueWhatsAppText(
           direction: "outbound",
           timestamp: now,
           deliveryStatus: "sending",
-          quotedMessageId: input.quotedMessageId?.trim() || null,
+          quotedMessageId: quoted.canonicalTargetId,
         },
       });
       await tx.whatsAppOutboundEffect.create({
@@ -832,7 +908,9 @@ export async function queueWhatsAppImage(
     sha256: media.sha256,
     sizeBytes: media.sizeBytes,
     mediaType: media.mediaType,
-    ...(quoted ? { quotedStanzaId: quoted.stanzaId } : {}),
+    ...(quoted.context
+      ? { quotedStanzaId: quoted.context.stanzaId }
+      : {}),
   });
   const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
     context,
@@ -879,7 +957,7 @@ export async function queueWhatsAppImage(
     fileName,
     media,
     requestBinding,
-    ...(quoted ? { quoted } : {}),
+    ...(quoted.context ? { quoted: quoted.context } : {}),
   } satisfies QueuedImagePayload;
 
   const execution = await executeBusinessCommand(
@@ -946,7 +1024,7 @@ export async function queueWhatsAppImage(
           timestamp: now,
           deliveryStatus: "sending",
           messageType: "image",
-          quotedMessageId: input.quotedMessageId?.trim() || null,
+          quotedMessageId: quoted.canonicalTargetId,
           attachments: protectedAttachment,
         },
       });
@@ -1093,7 +1171,9 @@ export async function queueWhatsAppVideo(
     sha256: media.sha256,
     sizeBytes: media.sizeBytes,
     mediaType: media.mediaType,
-    ...(quoted ? { quotedStanzaId: quoted.stanzaId } : {}),
+    ...(quoted.context
+      ? { quotedStanzaId: quoted.context.stanzaId }
+      : {}),
   });
   const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
     context,
@@ -1141,7 +1221,7 @@ export async function queueWhatsAppVideo(
     durationSeconds,
     media,
     requestBinding,
-    ...(quoted ? { quoted } : {}),
+    ...(quoted.context ? { quoted: quoted.context } : {}),
   } satisfies QueuedVideoPayload;
 
   const execution = await executeBusinessCommand(
@@ -1208,7 +1288,7 @@ export async function queueWhatsAppVideo(
           timestamp: now,
           deliveryStatus: "sending",
           messageType: "video",
-          quotedMessageId: input.quotedMessageId?.trim() || null,
+          quotedMessageId: quoted.canonicalTargetId,
           attachments: protectedAttachment,
         },
       });
@@ -1321,7 +1401,9 @@ export async function queueWhatsAppDocument(
     sha256: media.sha256,
     sizeBytes: media.sizeBytes,
     mediaType: media.mediaType,
-    ...(quoted ? { quotedStanzaId: quoted.stanzaId } : {}),
+    ...(quoted.context
+      ? { quotedStanzaId: quoted.context.stanzaId }
+      : {}),
   });
   const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
     context,
@@ -1368,7 +1450,7 @@ export async function queueWhatsAppDocument(
     fileName: outboundFileName,
     media,
     requestBinding,
-    ...(quoted ? { quoted } : {}),
+    ...(quoted.context ? { quoted: quoted.context } : {}),
   } satisfies QueuedDocumentPayload;
 
   const execution = await executeBusinessCommand(
@@ -1435,7 +1517,7 @@ export async function queueWhatsAppDocument(
           timestamp: now,
           deliveryStatus: "sending",
           messageType: "document",
-          quotedMessageId: input.quotedMessageId?.trim() || null,
+          quotedMessageId: quoted.canonicalTargetId,
           attachments: protectedAttachment,
         },
       });
@@ -1626,7 +1708,9 @@ export async function queueWhatsAppVoice(
     sha256: media.sha256,
     sizeBytes: media.sizeBytes,
     mediaType: media.mediaType,
-    ...(quoted ? { quotedStanzaId: quoted.stanzaId } : {}),
+    ...(quoted.context
+      ? { quotedStanzaId: quoted.context.stanzaId }
+      : {}),
   });
   const { effectKey, requestBinding } = await createWhatsAppEffectAuthority(
     context,
@@ -1673,7 +1757,7 @@ export async function queueWhatsAppVoice(
     voiceMessage: outboundMetadata.voiceMessage,
     media,
     requestBinding,
-    ...(quoted ? { quoted } : {}),
+    ...(quoted.context ? { quoted: quoted.context } : {}),
   } satisfies QueuedVoicePayload;
 
   const execution = await executeBusinessCommand(
@@ -1740,7 +1824,7 @@ export async function queueWhatsAppVoice(
           timestamp: now,
           deliveryStatus: "sending",
           messageType: "audio",
-          quotedMessageId: input.quotedMessageId?.trim() || null,
+          quotedMessageId: quoted.canonicalTargetId,
           attachments: protectedAttachment,
         },
       });

@@ -21,7 +21,7 @@ const sendSchema = z.object({
   text: z.string().trim().min(1).max(4000),
   quotedMessageId: z
     .string()
-    .regex(/^[A-Za-z0-9_-]{6,64}$/)
+    .regex(/^[A-Za-z0-9_-]{6,96}$/)
     .optional(),
 });
 

@@ -73,6 +73,36 @@ async function seedInboundTarget(providerEventId: string): Promise<string> {
   return message.id;
 }
 
+async function seedConfirmedOutboundTarget(
+  providerMessageId: string,
+): Promise<string> {
+  const conversation = await db.conversation.create({
+    data: {
+      channel: "whatsapp",
+      contactName: "Quoted customer",
+      sourceId: jid,
+      lastMessageAt: new Date(0),
+    },
+  });
+  const message = await db.message.create({
+    data: {
+      conversationId: conversation.id,
+      body: "Outbound catalog answer",
+      direction: "outbound",
+      timestamp: new Date(0),
+      messageType: "text",
+    },
+  });
+  await db.whatsAppOutboundEffect.create({
+    data: {
+      effectKey: `effect-${providerMessageId}`,
+      messageId: message.id,
+      providerMessageId,
+    },
+  });
+  return message.id;
+}
+
 describe("durable WhatsApp quoted replies", () => {
   it("binds the provider quote context and persists the reply projection", async () => {
     const targetId = await seedInboundTarget("WASTANZA0001");
@@ -110,6 +140,89 @@ describe("durable WhatsApp quoted replies", () => {
         where: { id: "22222222-2222-4222-8222-222222222222" },
       }),
     ).resolves.toMatchObject({ quotedMessageId: targetId });
+  });
+
+  it("resolves a received message quoted by its provider stanza ID", async () => {
+    // The inbox projection (#317) hands the composer the WAMID, not the
+    // canonical row id — the quote contract must accept that id space.
+    const targetId = await seedInboundTarget("WASTANZA0002");
+    const queued = await queueWhatsAppText(context, {
+      clientMessageId: "66666666-6666-4666-8666-666666666666",
+      to: jid,
+      text: "Reply quoted by WAMID",
+      quotedMessageId: "WASTANZA0002",
+    });
+    const sender = vi.fn(async () => ({
+      ok: true,
+      id: "WA-QUOTED-WAMID-RECEIPT",
+      status: "sent",
+    }));
+    await expect(
+      processAndAssert(queued.effectKey, sender),
+    ).resolves.toBeUndefined();
+    expect(sender).toHaveBeenCalledWith(
+      jid,
+      "Reply quoted by WAMID",
+      queued.effectKey,
+      expect.stringMatching(/^[0-9a-f]{64}$/),
+      expect.objectContaining({
+        stanzaId: "WASTANZA0002",
+        fromMe: false,
+        participant: jid,
+      }),
+    );
+    // The reply row stores the canonical target id so local quote previews
+    // keep resolving against canonical Message rows.
+    await expect(
+      db.message.findUniqueOrThrow({
+        where: { id: "66666666-6666-4666-8666-666666666666" },
+      }),
+    ).resolves.toMatchObject({ quotedMessageId: targetId });
+  });
+
+  it("resolves a sent message quoted by its confirmed provider message ID", async () => {
+    const targetId = await seedConfirmedOutboundTarget("WAOUTCONFIRM0001");
+    const queued = await queueWhatsAppText(context, {
+      clientMessageId: "77777777-7777-4777-8777-777777777777",
+      to: jid,
+      text: "Follow-up quoted by provider id",
+      quotedMessageId: "WAOUTCONFIRM0001",
+    });
+    const sender = vi.fn(async () => ({
+      ok: true,
+      id: "WA-QUOTED-OUT-RECEIPT",
+      status: "sent",
+    }));
+    await expect(
+      processAndAssert(queued.effectKey, sender),
+    ).resolves.toBeUndefined();
+    expect(sender).toHaveBeenCalledWith(
+      jid,
+      "Follow-up quoted by provider id",
+      queued.effectKey,
+      expect.stringMatching(/^[0-9a-f]{64}$/),
+      expect.objectContaining({
+        stanzaId: "WAOUTCONFIRM0001",
+        fromMe: true,
+      }),
+    );
+    await expect(
+      db.message.findUniqueOrThrow({
+        where: { id: "77777777-7777-4777-8777-777777777777" },
+      }),
+    ).resolves.toMatchObject({ quotedMessageId: targetId });
+  });
+
+  it("refuses a provider ID quoted inside a different conversation", async () => {
+    await seedInboundTarget("WASTANZA0003");
+    await expect(
+      queueWhatsAppText(context, {
+        clientMessageId: "88888888-8888-4888-8888-888888888888",
+        to: normalizeWhatsAppJid("0555000222"),
+        text: "Cross-conversation WAMID quote",
+        quotedMessageId: "WASTANZA0003",
+      }),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", statusCode: 400 });
   });
 
   it("rejects quoting a message from a different conversation", async () => {

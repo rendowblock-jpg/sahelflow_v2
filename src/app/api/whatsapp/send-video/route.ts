@@ -24,7 +24,7 @@ const metaSchema = z.object({
   caption: z.string().max(4000).default(""),
   quotedMessageId: z
     .string()
-    .regex(/^[A-Za-z0-9_-]{6,64}$/)
+    .regex(/^[A-Za-z0-9_-]{6,96}$/)
     .optional(),
 });
 
