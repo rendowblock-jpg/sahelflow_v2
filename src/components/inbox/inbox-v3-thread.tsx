@@ -20,6 +20,7 @@ import {
   Reply,
   Send,
   Sparkles,
+  Trash2,
   UserRound,
   Video,
   WifiOff,
@@ -58,6 +59,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { useMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { useVoiceRecorder } from "@/components/inbox/use-voice-recorder";
 
 function localeCode(locale: "ar" | "fr" | "en"): string {
   return locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
@@ -469,6 +471,13 @@ function MessageBubble({
   );
 }
 
+function formatRecordingElapsed(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 export function InboxV3Thread({
   workspace,
   selectedCandidate,
@@ -498,6 +507,7 @@ export function InboxV3Thread({
     setReplyText,
     sending,
     sendError,
+    setSendError,
     sendReply,
     sendImage,
     sendVideo,
@@ -532,6 +542,36 @@ export function InboxV3Thread({
     setReplySelection({ key: activeConversationKey, message });
   const setDragActive = (active: boolean) =>
     setDragSession({ key: activeConversationKey, active });
+
+  /**
+   * In-composer voice recording (founder-installed Internal.28 campaign):
+   * the mic button starts a bounded MediaRecorder take and hands the OGG/Opus
+   * file to the same durable `sendVoice` path as the pickers (#329).
+   */
+  const voiceRecorder = useVoiceRecorder({
+    enabled:
+      activeChat?.channel === "whatsapp" &&
+      canReply &&
+      transport.status === "connected" &&
+      !sending,
+    onComplete: (file) => {
+      const quotedId = replyTarget?.id ?? null;
+      setReplyTarget(null);
+      void sendVoice(file, quotedId);
+    },
+    onError: (message) => setSendError(message),
+    copy: {
+      micUnavailable: copy("voiceMicUnavailable"),
+      recordingUnsupported: copy("voiceRecordingUnsupported"),
+    },
+  });
+
+  // Conversation switches (and unmounts) must never leave a live take open:
+  // the cleanup discards the recording and releases the microphone.
+  const { dispose: disposeVoiceTake } = voiceRecorder;
+  useEffect(() => {
+    return () => disposeVoiceTake();
+  }, [activeConversationKey, disposeVoiceTake]);
 
   if (!activeChat) {
     return (
@@ -568,7 +608,7 @@ export function InboxV3Thread({
    * are enforced by the hooks, never bypassed here.
    */
   const ingestSharedFile = (file: File) => {
-    if (!canSend) return;
+    if (!canSend || voiceRecorder.state !== "idle") return;
     const quotedId = replyTarget?.id ?? null;
     const type = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
     if (type.startsWith("image/")) {
@@ -918,6 +958,68 @@ export function InboxV3Thread({
                   </button>
                 </div>
               ) : null}
+              {voiceRecorder.state !== "idle" ? (
+                <div
+                  className="flex items-center gap-2 px-1 py-1"
+                  data-inbox-voice-recorder={voiceRecorder.state}
+                  role="status"
+                  aria-label={copy("voiceRecording")}
+                >
+                  {voiceRecorder.state === "starting" ? (
+                    <Loader2
+                      className="size-4 shrink-0 animate-spin text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <span className="relative flex size-2.5 shrink-0">
+                      <span
+                        className="absolute inline-flex size-full animate-ping rounded-full bg-destructive/60"
+                        aria-hidden="true"
+                      />
+                      <span
+                        className="relative inline-flex size-2.5 rounded-full bg-destructive"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  )}
+                  <span
+                    className="shrink-0 text-[13px] font-medium tabular-nums"
+                    dir="ltr"
+                  >
+                    {formatRecordingElapsed(voiceRecorder.elapsedMs)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[12px] text-muted-foreground">
+                    {copy("voiceRecording")}
+                  </span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={copy("voiceCancelRecording")}
+                        data-inbox-voice-cancel="true"
+                        onClick={voiceRecorder.cancel}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={6}>
+                      {copy("voiceCancelRecording")}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Button
+                    type="button"
+                    size="icon"
+                    aria-label={copy("voiceStopAndSend")}
+                    data-inbox-voice-send="true"
+                    disabled={voiceRecorder.state !== "recording"}
+                    onClick={voiceRecorder.stopAndSend}
+                  >
+                    <Check className="size-4" aria-hidden="true" />
+                  </Button>
+                </div>
+              ) : (
               <div className="flex items-end gap-2">
               <input
                 ref={imageInputRef}
@@ -1127,16 +1229,20 @@ export function InboxV3Thread({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    disabled={sending || !canSend}
-                    aria-label={copy("mediaAudio")}
+                    disabled={
+                      sending || !canSend || voiceRecorder.state !== "idle"
+                    }
+                    aria-label={copy("voiceRecord")}
                     data-inbox-audio-picker="true"
-                    onClick={() => audioInputRef.current?.click()}
+                    onClick={() => {
+                      void voiceRecorder.start();
+                    }}
                   >
                     <Mic className="size-4" aria-hidden="true" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={6}>
-                  {copy("mediaAudio")}
+                  {copy("voiceRecord")}
                 </TooltipContent>
               </Tooltip>
               <CannedResponsePicker
@@ -1189,6 +1295,7 @@ export function InboxV3Thread({
                 )}
               </Button>
               </div>
+              )}
             </div>
             <p className="mt-1.5 px-1 text-[10px] text-muted-foreground">
               {copy("composerShortcut")}
