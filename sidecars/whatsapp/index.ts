@@ -54,7 +54,12 @@ const SAFE_OUTBOUND_DOCUMENT_TYPES = new Set([
   "application/pdf",
   "application/zip",
   "application/x-ole-storage",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
   "text/plain",
+  "text/csv",
 ]);
 const MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024;
 const MAX_OUTBOUND_VOICE_FORM_BYTES = MAX_OUTBOUND_VOICE_BYTES + 256 * 1024;

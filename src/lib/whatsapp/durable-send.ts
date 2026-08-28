@@ -157,6 +157,15 @@ const queuedDocumentPayloadSchema = z.object({
   // the recipient-visible document title and the provider call requires it.
   fileName: z.string().min(1).max(180),
   media: documentMediaReceiptSchema,
+  // Recipient-facing mimetype resolved at queue time: OOXML documents are
+  // ZIP containers, so the sniffed receipt mediaType (application/zip) is
+  // resolved to the declared Office mimetype before dispatch. Optional for
+  // in-flight intents queued by older builds, which fall back to media.mediaType.
+  attachmentMimeType: z
+    .string()
+    .max(128)
+    .regex(/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/)
+    .optional(),
   requestBinding: z.string().regex(/^[0-9a-f]{64}$/),
   quoted: quotedContextSchema.optional(),
 });
@@ -1345,6 +1354,33 @@ function documentFallbackName(mediaType: string): string {
   }
 }
 
+const OOXML_DOCUMENT_MIMES = new Set([
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
+
+/**
+ * The encrypted store classifies content truthfully at the container level:
+ * every OOXML document IS a ZIP container, so the sniffed receipt mediaType
+ * of a real Word/Excel file reads "application/zip". The recipient-facing
+ * attachment must carry the declared OOXML type instead — WhatsApp renders
+ * the received file by that mimetype, and the generic zip classification
+ * made real documents arrive on the recipient's phone as unusable .zip
+ * attachments (Internal.28 founder-installed campaign).
+ */
+function outboundAttachmentMimeType(
+  sniffedMediaType: string,
+  declaredMime: string,
+): string {
+  if (
+    sniffedMediaType === "application/zip" &&
+    OOXML_DOCUMENT_MIMES.has(declaredMime)
+  ) {
+    return declaredMime;
+  }
+  return sniffedMediaType;
+}
+
 export async function queueWhatsAppDocument(
   context: TrustedWhatsAppCommandContext,
   input: QueueWhatsAppDocumentInput,
@@ -1393,14 +1429,18 @@ export async function queueWhatsAppDocument(
   }
   // Documents are presented to the recipient by name; a missing or generic
   // browser name falls back to the authenticated content classification.
-  const outboundFileName = fileName ?? documentFallbackName(media.mediaType);
+  const attachmentMimeType = outboundAttachmentMimeType(
+    media.mediaType,
+    declaredMime,
+  );
+  const outboundFileName = fileName ?? documentFallbackName(attachmentMimeType);
 
   const contentBinding = JSON.stringify({
     caption,
     fileName: outboundFileName,
     sha256: media.sha256,
     sizeBytes: media.sizeBytes,
-    mediaType: media.mediaType,
+    mediaType: attachmentMimeType,
     ...(quoted.context
       ? { quotedStanzaId: quoted.context.stanzaId }
       : {}),
@@ -1421,7 +1461,7 @@ export async function queueWhatsAppDocument(
         formatVersion: 1,
         kind: "document",
         state: "ready",
-        mimeType: media.mediaType,
+        mimeType: attachmentMimeType,
         fileName: outboundFileName,
         sizeBytes: media.sizeBytes,
         durationSeconds: null,
@@ -1449,6 +1489,7 @@ export async function queueWhatsAppDocument(
     caption,
     fileName: outboundFileName,
     media,
+    attachmentMimeType,
     requestBinding,
     ...(quoted.context ? { quoted: quoted.context } : {}),
   } satisfies QueuedDocumentPayload;
@@ -1533,7 +1574,7 @@ export async function queueWhatsAppDocument(
           metadata: {
             effectKey,
             conversationId: conversation.id,
-            mediaType: media.mediaType,
+            mediaType: attachmentMimeType,
             sizeBytes: media.sizeBytes,
             fileName: outboundFileName,
             sha256: media.sha256,
@@ -2428,7 +2469,7 @@ async function executeClaimed(
       receipt = await documentSender(
         documentPayload.to,
         mediaBytes!,
-        documentPayload.media.mediaType,
+        documentPayload.attachmentMimeType ?? documentPayload.media.mediaType,
         documentPayload.fileName,
         documentPayload.caption,
         started.effectKey,
