@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.28 FD-049 founder inbox/media parity checkpoint publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.28",
+  "windowsMsiVersion": "1.0.0.28",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-049",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "9ed2fa15c2a9571d8a7f0c1f02e39052f18a0f80",
+    "phase5RunId": 33132059464,
+    "phase67RunId": 33132059457,
+    "ciRunId": 33132059574
+  },
+  "reason": "Founder explicitly authorized one combined signed successor under FD-049 so the retained Inbox/media work can be installed and tested in place on the real phone before FRC-2 resumes. Publish the exact protected product tree carrying everything merged since Internal.27: #315 response CSP alignment with Tauri's loopback-only ephemeral-port policy; #316 Class-AAA durable Notification Center and WhatsApp attention routing through #319; durable outbound image sending (#324), MP4 video sending (#325), document sending (#327) and voice/PTT sending (#329), each with encrypted staging, canonical Message authority and deterministic account-bound receipts; and #331 professional Inbox interaction parity adding durable quoted replies with queue-time provenance resolution, safe message copy, resumable upload progress with in-flight cancellation, JPEG thumbnails with fail-closed fallback, and paste/drop composition, all reconciled into the capability ledger by #326/#328/#330/#332. The validated #331 head 9ed2fa15c2a9571d8a7f0c1f02e39052f18a0f80 is product-tree-equivalent to protected main 4cc950f381308fc44eb0d2d89d24ac041af9e493 (only the #332 ledger documentation differs) and passed exact-head CI 33132059574, Phase 5 33132059464 and Phase 6-7 33132059457 with zero failed checks; this authority PR adds version and release-request files only, with no product changes. This request remains founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim. Internal.28 is the Founder-installed observation candidate for the retained #306 real-phone rows (automatic no-refresh inbound, reopen, EN/AR observation, governed status, reviewed extraction, logout last) plus applicable #316/#317 native rows; it does not prove live outbound delivery, WebSocket push health or complete FRC-1, and #230 remains independently blocked until an owned domain exists."
+}
