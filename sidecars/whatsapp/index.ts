@@ -51,6 +51,17 @@ const SAFE_OUTBOUND_DOCUMENT_TYPES = new Set([
   "application/x-ole-storage",
   "text/plain",
 ]);
+const MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024;
+const MAX_OUTBOUND_VOICE_FORM_BYTES = MAX_OUTBOUND_VOICE_BYTES + 256 * 1024;
+// Voice media types are the sniffed classifications from the encrypted
+// storage authority. AMR is excluded: it cannot be metadata-authenticated.
+const SAFE_OUTBOUND_VOICE_TYPES = new Set([
+  "audio/ogg",
+  "audio/wav",
+  "audio/mpeg",
+  "audio/aac",
+  "audio/mp4",
+]);
 
 function resolveSidecarToken(): string {
   const fromEnv = process.env.SIDECAR_TOKEN;
@@ -117,6 +128,10 @@ function videoEffectKey(value: string): boolean {
 
 function documentEffectKey(value: string): boolean {
   return /:document:[A-Za-z0-9_-]{1,80}$/.test(value) && Boolean(getWhatsAppEffectAccountHash(value));
+}
+
+function voiceEffectKey(value: string): boolean {
+  return /:voice:[A-Za-z0-9_-]{1,80}$/.test(value) && Boolean(getWhatsAppEffectAccountHash(value));
 }
 
 async function readBoundedImageForm(
@@ -219,6 +234,47 @@ async function readBoundedDocumentForm(
       if (
         offset + next.value.byteLength >
         MAX_OUTBOUND_DOCUMENT_FORM_BYTES
+      ) {
+        await reader.cancel().catch(() => undefined);
+        return "too_large";
+      }
+      bounded.set(next.value, offset);
+      offset += next.value.byteLength;
+    }
+  } catch {
+    await reader.cancel().catch(() => undefined);
+    return null;
+  } finally {
+    reader.releaseLock();
+  }
+
+  try {
+    return await new Response(bounded.subarray(0, offset), {
+      headers: { "Content-Type": contentType },
+    }).formData();
+  } catch {
+    return null;
+  }
+}
+
+async function readBoundedVoiceForm(
+  request: Request,
+): Promise<FormData | "too_large" | null> {
+  const contentType = request.headers.get("content-type")?.trim() ?? "";
+  if (!/^multipart\/form-data(?:;|$)/i.test(contentType) || !request.body) {
+    return null;
+  }
+
+  const reader = request.body.getReader();
+  const bounded = new Uint8Array(MAX_OUTBOUND_VOICE_FORM_BYTES);
+  let offset = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      if (
+        offset + next.value.byteLength >
+        MAX_OUTBOUND_VOICE_FORM_BYTES
       ) {
         await reader.cancel().catch(() => undefined);
         return "too_large";
@@ -1001,6 +1057,155 @@ app.post("/send-document", async (context) => {
         error: conflict
           ? message
           : "WhatsApp document send outcome requires reconciliation",
+        code: conflict ? "EFFECT_KEY_CONFLICT" : "WHATSAPP_SEND_AMBIGUOUS",
+        retryable: false,
+        ambiguous: !conflict,
+      },
+      conflict ? 409 : 502,
+    );
+  } finally {
+    bytes.fill(0);
+  }
+});
+
+app.post("/send-voice", async (context) => {
+  const declaredLength = Number.parseInt(
+    context.req.header("content-length") ?? "0",
+    10,
+  );
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > MAX_OUTBOUND_VOICE_FORM_BYTES
+  ) {
+    return context.json(
+      {
+        error: "Voice send request is too large",
+        code: "INVALID_VOICE_SEND_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      413,
+    );
+  }
+
+  const form = await readBoundedVoiceForm(context.req.raw);
+  if (form === "too_large") {
+    return context.json(
+      {
+        error: "Voice send request is too large",
+        code: "INVALID_VOICE_SEND_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      413,
+    );
+  }
+  const to = form?.get("to");
+  const effectKey = form?.get("effectKey");
+  const requestBinding = form?.get("requestBinding");
+  const voiceMessage = form?.get("voiceMessage");
+  const seconds = form?.get("seconds");
+  const audio = form?.get("audio");
+  // The authenticated duration is optional; when present it is a positive
+  // integer second count derived from the staged bytes.
+  const secondsAbsent = seconds === null || seconds === "";
+  const secondsValid =
+    secondsAbsent ||
+    (typeof seconds === "string" && /^[1-9][0-9]{0,4}$/.test(seconds));
+  if (
+    typeof to !== "string" ||
+    !to ||
+    to.length > 256 ||
+    typeof effectKey !== "string" ||
+    !voiceEffectKey(effectKey) ||
+    typeof requestBinding !== "string" ||
+    !/^[0-9a-f]{64}$/.test(requestBinding) ||
+    typeof voiceMessage !== "string" ||
+    !/^(true|false)$/.test(voiceMessage) ||
+    !secondsValid ||
+    !(audio instanceof File) ||
+    audio.size <= 0 ||
+    audio.size > MAX_OUTBOUND_VOICE_BYTES ||
+    !SAFE_OUTBOUND_VOICE_TYPES.has(audio.type.toLowerCase())
+  ) {
+    return context.json(
+      {
+        error: "Invalid durable voice send request",
+        code: "INVALID_VOICE_SEND_REQUEST",
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
+  }
+
+  const status = wa.getStatus();
+  if (status.status !== "connected") {
+    return context.json(
+      {
+        ok: false,
+        error: "WhatsApp is not connected",
+        code: "WHATSAPP_NOT_CONNECTED",
+        retryable: true,
+        ambiguous: false,
+      },
+      503,
+    );
+  }
+  if (!status.user?.id) {
+    return context.json(
+      {
+        ok: false,
+        error: "WhatsApp account identity is unavailable",
+        code: "WHATSAPP_ACCOUNT_UNAVAILABLE",
+        retryable: true,
+        ambiguous: false,
+      },
+      503,
+    );
+  }
+  if (!effectKeyMatchesWhatsAppAccount(effectKey, status.user.id)) {
+    return context.json(
+      {
+        ok: false,
+        error: "The paired WhatsApp account changed after this send was queued",
+        code: "WHATSAPP_ACCOUNT_CHANGED",
+        retryable: false,
+        ambiguous: false,
+      },
+      409,
+    );
+  }
+
+  const bytes = Buffer.from(await audio.arrayBuffer());
+  const authenticatedSeconds =
+    typeof seconds === "string" && seconds
+      ? Number.parseInt(seconds, 10)
+      : null;
+  try {
+    return context.json({
+      ok: true,
+      ...(await executeDurableSend(effectKey, requestBinding, () =>
+        wa.sendVoice(
+          to,
+          bytes,
+          audio.type,
+          voiceMessage === "true",
+          authenticatedSeconds,
+          deterministicWhatsAppMessageId(effectKey),
+        ),
+      )),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Voice send failed";
+    const conflict = /already bound to different content/i.test(message);
+    return context.json(
+      {
+        ok: false,
+        error: conflict
+          ? message
+          : "WhatsApp voice send outcome requires reconciliation",
         code: conflict ? "EFFECT_KEY_CONFLICT" : "WHATSAPP_SEND_AMBIGUOUS",
         retryable: false,
         ambiguous: !conflict,

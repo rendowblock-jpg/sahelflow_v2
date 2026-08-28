@@ -10,6 +10,7 @@ import {
   openQueuedWhatsAppDocumentReceipt,
   openQueuedWhatsAppImageReceipt,
   openQueuedWhatsAppVideoReceipt,
+  openQueuedWhatsAppVoiceReceipt,
 } from "./durable-send";
 import {
   whatsAppMediaEraseEpoch,
@@ -327,7 +328,12 @@ export async function prepareInboxWhatsAppMedia(
   }
 
   if (message.direction === "outbound") {
-    if (kind !== "image" && kind !== "video" && kind !== "document") {
+    if (
+      kind !== "image" &&
+      kind !== "video" &&
+      kind !== "document" &&
+      kind !== "audio"
+    ) {
       throw unavailable();
     }
     const effect = await context.prisma.whatsAppOutboundEffect.findUnique({
@@ -343,7 +349,9 @@ export async function prepareInboxWhatsAppMedia(
           ? await openQueuedWhatsAppImageReceipt(context, effect.effectKey)
           : kind === "video"
             ? await openQueuedWhatsAppVideoReceipt(context, effect.effectKey)
-            : await openQueuedWhatsAppDocumentReceipt(context, effect.effectKey),
+            : kind === "document"
+              ? await openQueuedWhatsAppDocumentReceipt(context, effect.effectKey)
+              : await openQueuedWhatsAppVoiceReceipt(context, effect.effectKey),
       );
     } catch {
       throw integrityFailure();

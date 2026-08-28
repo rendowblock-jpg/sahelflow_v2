@@ -106,6 +106,6 @@ describe("WhatsApp outbound document source boundary", () => {
 
     expect(mediaRead).toContain("DOCUMENT_NAME_EXTENSIONS");
     expect(mediaRead).toContain('attachment.kind === "document"');
-    expect(mediaRead).toContain('kind !== "image" && kind !== "video" && kind !== "document"');
+    expect(mediaRead).toContain('kind !== "document" &&\n      kind !== "audio"');
   });
 });

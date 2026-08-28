@@ -317,6 +317,7 @@ export function InboxV3Thread({
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const audioInputRef = useRef<HTMLInputElement | null>(null);
   const {
     activeChat,
     messages,
@@ -334,6 +335,7 @@ export function InboxV3Thread({
     sendImage,
     sendVideo,
     sendDocument,
+    sendVoice,
     retryFailedMessage,
     canReply,
     canUpdateConversation,
@@ -749,6 +751,21 @@ export function InboxV3Thread({
                   void sendDocument(file);
                 }}
               />
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept="audio/ogg,audio/opus,audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/x-wav,.ogg,.oga,.opus,.mp3,.m4a,.aac,.wav"
+                aria-label={copy("mediaAudio")}
+                className="sr-only"
+                tabIndex={-1}
+                data-inbox-audio-input="true"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0] ?? null;
+                  event.currentTarget.value = "";
+                  if (!file) return;
+                  void sendVoice(file);
+                }}
+              />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -801,6 +818,24 @@ export function InboxV3Thread({
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={6}>
                   {copy("mediaDocument")}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={sending || !canSend}
+                    aria-label={copy("mediaAudio")}
+                    data-inbox-audio-picker="true"
+                    onClick={() => audioInputRef.current?.click()}
+                  >
+                    <Mic className="size-4" aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={6}>
+                  {copy("mediaAudio")}
                 </TooltipContent>
               </Tooltip>
               <CannedResponsePicker
