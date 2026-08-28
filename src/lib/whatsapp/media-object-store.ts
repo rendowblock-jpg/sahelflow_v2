@@ -56,7 +56,8 @@ export class WhatsAppMediaObjectError extends Error {
       | "MEDIA_CONTENT_TYPE_MISMATCH"
       | "MEDIA_OBJECT_CONFLICT"
       | "MEDIA_OBJECT_CORRUPT"
-      | "MEDIA_OBJECT_IO_FAILED",
+      | "MEDIA_OBJECT_IO_FAILED"
+      | "MEDIA_OBJECT_NOT_FOUND",
   ) {
     super(message);
     this.name = "WhatsAppMediaObjectError";
@@ -779,8 +780,11 @@ export async function writeWhatsAppMediaObjectThumbnail(
       temporary = null;
     } catch (error) {
       if (!isAlreadyExistsError(error)) throw error;
-      rmSync(temporary, { force: true });
-      temporary = null;
+      const leftover = temporary;
+      if (leftover) {
+        rmSync(leftover, { force: true });
+        temporary = null;
+      }
       const winner = inspectExistingThumbnail(context, input.messageId, envelopeKey);
       if (
         !winner ||

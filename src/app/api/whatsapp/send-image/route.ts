@@ -230,7 +230,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     if (thumbnail) {
       await writeWhatsAppMediaObjectThumbnail(context, {
         messageId: queued.messageId,
-        source: new Blob([thumbnail]).stream(),
+        source: new Blob([new Uint8Array(thumbnail)]).stream(),
       });
       thumbnail.fill(0);
     }

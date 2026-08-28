@@ -132,9 +132,9 @@ export function parseWhatsAppQuotedContext(value: unknown): SidecarQuotedContext
 function baileysQuotedOption(
   jid: string,
   quoted: SidecarQuotedContext | null | undefined,
-): Record<string, unknown> | undefined {
+): proto.IWebMessageInfo | undefined {
   if (!quoted) return undefined;
-  const stub = (() => {
+  const stub: proto.IMessage = (() => {
     switch (quoted.stubKind) {
       case "image":
         return { imageMessage: quoted.stubText ? { caption: quoted.stubText } : {} };
