@@ -1,5 +1,7 @@
 import "server-only";
 
+import { logger } from "@/lib/logger";
+
 export const GEMINI_MODELS = [
   "gemini-3.5-flash",
   "gemini-3.6-flash",
@@ -175,11 +177,20 @@ export async function requestGemini(
 
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       let response: Response;
+      const startedAt = Date.now();
       try {
         response = await fetchAttempt(url, apiKey, options.body, timeoutMs);
       } catch (error) {
         if (!(error instanceof GeminiProviderError)) throw error;
         lastError = error;
+        // Per-attempt diagnostics: the only installed-build evidence for why
+        // a verify/extract failed. Never logs the key, headers or URL.
+        logger.warn("ai.gemini.request_failed", {
+          model,
+          attempt: attempt + 1,
+          durationMs: Date.now() - startedAt,
+          code: error.code,
+        });
         if (
           (error.code === "GEMINI_TIMEOUT" ||
             error.code === "GEMINI_NETWORK_ERROR") &&
@@ -191,12 +202,26 @@ export async function requestGemini(
         break;
       }
 
-      if (response.ok) return { response, model };
+      if (response.ok) {
+        logger.debug("ai.gemini.request_ok", {
+          model,
+          attempt: attempt + 1,
+          durationMs: Date.now() - startedAt,
+        });
+        return { response, model };
+      }
       const errorBody = (await response
         .json()
         .catch(() => ({}))) as GeminiErrorBody;
       const error = providerError(response.status, errorBody);
       lastError = error;
+      logger.warn("ai.gemini.request_rejected", {
+        model,
+        attempt: attempt + 1,
+        durationMs: Date.now() - startedAt,
+        status: response.status,
+        code: error.code,
+      });
 
       if (error.code === "GEMINI_MODEL_UNAVAILABLE") break;
       if (TRANSIENT_STATUS.has(response.status) && attempt < attempts - 1) {
