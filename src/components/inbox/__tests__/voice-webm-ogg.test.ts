@@ -254,15 +254,24 @@ describe("remuxWebmOpusToOgg", () => {
 describe("opus TOC accounting", () => {
   it("counts frames and durations per RFC 6716", () => {
     expect(opusFrameCount(new Uint8Array([0x08]))).toBe(1); // code 0
-    expect(opusFrameCount(new Uint8Array([0x09]))).toBe(2); // code 1
-    expect(opusFrameCount(new Uint8Array([0x0a]))).toBe(1); // code 2
-    expect(opusFrameCount(new Uint8Array([0x0b, 0x02]))).toBe(3); // code 3 count byte
+    expect(opusFrameCount(new Uint8Array([0x09]))).toBe(2); // code 1: 2 equal-size frames
+    expect(opusFrameCount(new Uint8Array([0x0a]))).toBe(2); // code 2: 2 frames, different sizes (§3.1)
+    expect(opusFrameCount(new Uint8Array([0x0b, 0x02]))).toBe(2); // code 3: M=2 directly (§3.2.5, "M MUST NOT be zero")
+    expect(() => opusFrameCount(new Uint8Array([0x0b, 0x00]))).toThrow(); // M=0 is invalid
     expect(opusFrameDurationMs(0x08)).toBe(20); // config 1 → SILK NB 20 ms
     expect(opusFrameDurationMs(0x00)).toBe(10); // config 0 → 10 ms
     expect(opusFrameDurationMs(0x18)).toBe(60); // config 3 & 3 → 60 ms
     expect(opusFrameDurationMs(0x60)).toBe(10); // config 12 → hybrid 10 ms
     expect(opusFrameDurationMs(0x68)).toBe(20); // config 13 → hybrid 20 ms
+    // CELT configs 16–31: [2.5, 5, 10, 20] ms by config & 3 (Table 2).
+    expect(opusFrameDurationMs(0x80)).toBe(2.5); // config 16 → CELT 2.5 ms
+    expect(opusFrameDurationMs(0x88)).toBe(5); // config 17 → CELT 5 ms
+    expect(opusFrameDurationMs(0x90)).toBe(10); // config 18 → CELT 10 ms
+    expect(opusFrameDurationMs(0x98)).toBe(20); // config 19 → CELT 20 ms
     expect(opusPacketSamples48k(OPUS_PACKET_20MS)).toBe(960);
+    // Granule math for multi-frame codes: 2 frames × 20 ms × 48 kHz.
+    expect(opusPacketSamples48k(new Uint8Array([0x0a]))).toBe(1920);
+    expect(opusPacketSamples48k(new Uint8Array([0x0b, 0x02]))).toBe(1920);
   });
 
   it("verifies the writer CRC against the independent implementation", () => {
