@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-26
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.29 / FD-050 is latest signed/published (Founder installation pending; Internal.28 remains latest installed); the FRC-2 source frontier is frozen and packaged; next is the in-place Internal.29 update, the FD-050 campaign and ledger reconciliation, then FRC-3 resume
+> **Current checkpoint:** Internal.29 / FD-050 is installed (the campaign reproduced defects B1–B5 and D1); all six were root-caused and repaired on protected main (#346–#353, adversarially audited, `b1b5a033`) but are unreleased; next is campaign evidence reconciliation into the ledgers, a separately authorized signed successor packaging the repair line, Founder re-verification on that successor, then FRC-3 resume
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -30,7 +30,7 @@ resolve protected main + open PR/issues + current signed release
 → perform installed/human/provider/external evidence that automation cannot prove
 ```
 
-At the current frontier, no product rewrite is authorized. Internal.27 passed the exact-once real `@lid` outbound and durable new-number inbound; its demonstrated live-push root is repaired by PR #315 (dynamic-loopback CSP, bounded polling/retry, durable receipt/identity reconciliation). #316 and #317 completed in source through #319/#324/#325/#327/#329/#331. The Founder-installed Internal.28 campaign verified text/image/video send, automatic no-refresh inbound and reopen, and reproduced three regressions that were repaired on protected main (#335 quoted-reply id spaces, #336 OOXML document mimetype, #337 in-composer voice recording) and extended by #338/#339. The FRC-2 source frontier is frozen (#342/#343) and everything is packaged inside published Internal.29 (FD-050). The next implementation-level action is not source: it is the Founder's in-place Internal.29 update, the FD-050 campaign over the retained #306 rows, the FRC-2 repair rows and applicable matrix rows, evidence reconciliation, and only then FRC-3 source/evidence work.
+At the current frontier, no product rewrite is authorized. Internal.27 passed the exact-once real `@lid` outbound and durable new-number inbound; its demonstrated live-push root is repaired by PR #315 (dynamic-loopback CSP, bounded polling/retry, durable receipt/identity reconciliation). #316 and #317 completed in source through #319/#324/#325/#327/#329/#331. The Founder-installed Internal.28 campaign verified text/image/video send, automatic no-refresh inbound and reopen, and reproduced three regressions that were repaired on protected main (#335 quoted-reply id spaces, #336 OOXML document mimetype, #337 in-composer voice recording) and extended by #338/#339. The FRC-2 source frontier is frozen (#342/#343) and everything is packaged inside published Internal.29 (FD-050), which the Founder has now installed. The FD-050 campaign reproduced six defects (B1/B2 quote chips, B3 document spinner, B4 voice fail-closed, B5 chat-delete resurrection, D1 AI-key flow); all were root-caused and repaired on protected main through the audited series #346–#353 (`b1b5a033`), which also includes the #350 status-enum truth and #352 C1 resilience hardening found by deep audit. These repairs are NOT in the signed Internal.29 artifact. The next implementation-level actions are: reconcile campaign evidence into the ledgers, obtain separate release authority for one signed successor packaging the repair line, Founder re-verification on that successor (the repaired rows plus the retained #306 rows and applicable FRC-2 matrix rows), and only then FRC-3 source/evidence work.
 
 Do not restart generic repository reconnaissance when a bounded current outcome is known. Do not rerun an unchanged passing exact head. Do not retry deterministic failures until they turn green without identifying/fixing the cause.
 
@@ -59,7 +59,7 @@ Operational rules:
 - issue bodies can retain evidence/work queues but do not replace active documentation authority;
 - source, signed artifact, hosted CI install, Founder install, live-provider evidence, representative beta and Stable are distinct truth levels.
 
-Current signed authority is Internal.29 / `1.0.0-internal.29` / MSI `1.0.0.29` / FD-050 / `founder-offline-only` (published; Founder installation pending). FD-045/FD-050 change execution strategy and timing only; they do not create customer-online, Beta or Stable authority.
+Current signed authority is Internal.29 / `1.0.0-internal.29` / MSI `1.0.0.29` / FD-050 / `founder-offline-only` (published and Founder-installed; the FD-050 campaign repair line #346–#353 on main `b1b5a033` is unreleased). FD-045/FD-050 change execution strategy and timing only; they do not create customer-online, Beta or Stable authority.
 
 ## 3. Complete phase/package audit
 

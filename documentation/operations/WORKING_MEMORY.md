@@ -1,14 +1,14 @@
 # SahelFlow — Working Memory
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
-> **Last updated:** 2026-08-28
+> **Last updated:** 2026-08-29
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
 ## Current truth
 
-- Protected `main` at handoff: `a34917e582c4806aee35ad5aca12aaea82a0ddcf` (after release PR #344); live GitHub wins if moved.
-- Latest signed/published checkpoint: **Internal.29**. The latest **Founder-installed** checkpoint remains Internal.28 (installed in place during the FD-049 campaign; its observations drove the FRC-2 repair cycle) until the Founder applies the Internal.29 in-place update.
+- Protected `main` at handoff: `b1b5a03382` (after the FD-050 installed-campaign repair series #346–#353); live GitHub wins if moved.
+- Latest signed/published checkpoint: **Internal.29** — now **Founder-installed** (the FD-050 campaign ran on it and reproduced defects B1–B5 and D1). All six are repaired on protected main but are NOT inside the signed Internal.29 artifact; a successor release requires separate Founder authority.
 - App `1.0.0-internal.29`; MSI `1.0.0.29`; authority **FD-050**; mode `founder-offline-only`.
 - Release PR #344; reviewed release head `dd4888d6366cf48ccca05563bedb7e502e5662ce`; the full Required battery passed on the exact head — two CI load-flake failures (sf-verify demo-seeding timeouts, AI-workspace Prisma transaction timeout) re-ran green with zero code deltas.
 - Certification cited corpus head `4921f34eb87369384d7cd09d92064a69b11cbac9` (CI `33207445430`, Phase 5 `33207445134`, Phase 6-7 `33207445070`), the last product-tree change before the documentation-only #343.
@@ -22,7 +22,8 @@
 - #230 open/reopened P1 — customer-online trial/network blocker; no owned production domain.
 - FRC-2 is source-complete: capability ledger + frozen corpus `frc2-1.0.0` (#342/#343) merged; live-key, installed-observation and T470 rows remain external-blocked in the AI ledger. No open PR existed immediately after #344 merged.
 - Current sequencing decision: **FD-050 satisfied in publication** — Internal.29 packages the Internal.28 campaign repairs/extensions (#335–#341) plus the FRC-2 freeze.
-- Exact next outcome: **the Founder applies the in-place Internal.29 update with state preserved, re-verifies the FRC-2 repair rows plus the retained #306 real-phone rows and the applicable FRC-2 matrix rows, evidence is reconciled into the ledgers, then FRC-3 resumes**.
+- Exact next outcome: **reconcile the FD-050 campaign evidence into the ledgers (the six reproduced defects and their #346–#353 repairs are already merged on main), obtain separate release authority for one signed successor that packages the repair line, the Founder re-verifies the repaired rows (B1–B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive) plus the retained FRC-2 repair rows, the #306 real-phone rows and the applicable matrix rows on that successor — then FRC-3 resumes**.
+- FD-050 campaign repair line on main (all adversarially audited, all unreleased): #346 `7d97a69f` voice-note WebM→OGG remux (B4); #347 `4ffc06a9` chat-delete ingress tombstone (B5); #350 `d67f3d0c` Baileys status-enum truth (audit); #348 `baf33711` AI-key PIN resume + coded errors (D1); #353 `547c5ded` RFC 6716 Opus TOC exactness (audit repair of #346); #352 `4cc9573b` auto-receive watchdog + 1:1 JID scope (C1 audit); #351 `5114c1c5` quote-chip persistence (B1/B2); #349 `b1b5a033` document/audio local-ready projection + outbox error codes (B3).
 
 ## What Internal.29 adds
 
