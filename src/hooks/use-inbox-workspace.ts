@@ -18,6 +18,7 @@ import {
   reconcileInboxProviderMessage,
 } from "@/lib/inbox/message-projection";
 import { toast } from "@/lib/toast";
+import { mapBaileysStatusUpdate } from "../../sidecars/whatsapp/delivery-status";
 import {
   messageText,
   type IncomingMessage,
@@ -216,21 +217,9 @@ function mapConversationProjection(
 function mapDeliveryStatus(
   update: Record<string, unknown>,
 ): InboxMessage["deliveryStatus"] | null {
-  const status = update.status;
-  if (status === undefined || status === null) return null;
-  const normalized =
-    typeof status === "number" ? status : String(status).toUpperCase();
-  if (normalized === 0 || normalized === "PENDING") return "sending";
-  if (normalized === 1 || normalized === "SENT") return "sent";
-  if (
-    normalized === 2 ||
-    normalized === "DELIVERY" ||
-    normalized === "DELIVERED"
-  ) {
-    return "delivered";
-  }
-  if (normalized === 3 || normalized === "READ") return "read";
-  return null;
+  // Canonical enum-truthful projection (sidecars/whatsapp/delivery-status.ts):
+  // SERVER_ACK→sent, DELIVERY_ACK→delivered, ERROR→failed, PLAYED→read.
+  return mapBaileysStatusUpdate(update);
 }
 
 function inboxMessagesEqual(
@@ -1157,76 +1146,89 @@ export function useInboxWorkspace() {
       effectKey: string,
       localMessageId: string,
     ) => {
-      for (let attempt = 0; attempt < 120; attempt += 1) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, attempt === 0 ? 1_000 : 3_000),
+      // Applies one outbox poll to the local projection. Returns true when the
+      // effect reached a terminal state and monitoring can stop.
+      const applyOutboxPoll = async (): Promise<boolean> => {
+        const response = await fetch(
+          `/api/whatsapp/outbox?effectKey=${encodeURIComponent(effectKey)}`,
         );
-        try {
-          const response = await fetch(
-            `/api/whatsapp/outbox?effectKey=${encodeURIComponent(effectKey)}`,
-          );
-          if (!response.ok) continue;
-          const data = (await response.json()) as {
-            effect: {
-              state: InboxMessage["outboxState"];
-              providerMessageId: string | null;
-            };
+        if (!response.ok) return false;
+        const data = (await response.json()) as {
+          effect: {
+            state: InboxMessage["outboxState"];
+            providerMessageId: string | null;
           };
-          const state = data.effect.state;
-          if (state === "succeeded") {
-            mutateMessages(conversationId, (current) =>
-              reconcileInboxProviderMessage(
-                current,
-                localMessageId,
-                data.effect.providerMessageId,
-                {
-                  deliveryStatus: "sent",
-                  outboxEffectKey: effectKey,
-                  outboxState: state,
-                },
-              ),
-            );
-            const active = activeChatRef.current;
-            if (active?.conversationId === conversationId) {
-              void loadMessages(active, { background: true });
-            }
-            return;
-          }
-          if (state === "ambiguous" || state === "dead_letter") {
-            mutateMessages(conversationId, (current) =>
-              reconcileInboxProviderMessage(
-                current,
-                localMessageId,
-                data.effect.providerMessageId,
-                {
-                  deliveryStatus: "failed",
-                  outboxEffectKey: effectKey,
-                  outboxState: state,
-                },
-              ),
-            );
-            if (activeChatRef.current?.conversationId === conversationId) {
-              setSendError(
-                state === "ambiguous"
-                  ? t("inbox.whatsappAmbiguous")
-                  : t("inbox.sendFailed"),
-              );
-            }
-            return;
-          }
+        };
+        const state = data.effect.state;
+        if (state === "succeeded") {
           mutateMessages(conversationId, (current) =>
             reconcileInboxProviderMessage(
               current,
               localMessageId,
               data.effect.providerMessageId,
               {
+                deliveryStatus: "sent",
                 outboxEffectKey: effectKey,
                 outboxState: state,
               },
             ),
           );
+          const active = activeChatRef.current;
+          if (active?.conversationId === conversationId) {
+            void loadMessages(active, { background: true });
+          }
+          return true;
+        }
+        if (state === "ambiguous" || state === "dead_letter") {
+          mutateMessages(conversationId, (current) =>
+            reconcileInboxProviderMessage(
+              current,
+              localMessageId,
+              data.effect.providerMessageId,
+              {
+                deliveryStatus: "failed",
+                outboxEffectKey: effectKey,
+                outboxState: state,
+              },
+            ),
+          );
+          if (activeChatRef.current?.conversationId === conversationId) {
+            setSendError(
+              state === "ambiguous"
+                ? t("inbox.whatsappAmbiguous")
+                : t("inbox.sendFailed"),
+            );
+          }
+          return true;
+        }
+        mutateMessages(conversationId, (current) =>
+          reconcileInboxProviderMessage(
+            current,
+            localMessageId,
+            data.effect.providerMessageId,
+            {
+              outboxEffectKey: effectKey,
+              outboxState: state,
+            },
+          ),
+        );
+        return false;
+      };
+      for (let attempt = 0; attempt < 120; attempt += 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, attempt === 0 ? 1_000 : 3_000),
+        );
+        try {
+          if (await applyOutboxPoll()) return;
         } catch {
         }
+      }
+      // Budget exhausted (≈6 min): without a final reconcile the bubble could
+      // keep its optimistic "sending" clock even after the durable effect
+      // later resolved server-side (worker backoff can outlive the monitor).
+      try {
+        await applyOutboxPoll();
+      } catch {
       }
     },
     [loadMessages, mutateMessages, t],
