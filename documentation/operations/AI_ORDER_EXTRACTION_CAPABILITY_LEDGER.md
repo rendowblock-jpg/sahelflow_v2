@@ -4,7 +4,7 @@
 > **Scope:** Seller-owned Gemini AI, the model-exposed tool surface, proposal-bound
 > AI actions and the message → extraction → human-review → canonical-order chain in
 > the Founder-offline desktop product
-> **Snapshot date:** 2026-08-28
+> **Snapshot date:** 2026-08-29
 > **Source baseline:** protected `main` `a34917e582c4806aee35ad5aca12aaea82a0ddcf` (frozen corpus `frc2-1.0.0`
 > merged through #342)
 > **Signed/installed baseline:** Internal.28 / FD-049 (latest Founder-installed)
@@ -44,7 +44,7 @@ authorizes silent real-client PII processing.
 | A1 | Key creation wizard guides Google AI Studio key creation, restrictions and privacy acknowledgement (AR/FR/EN) | `src/components/onboarding/onboarding-wizard.tsx` step 2; `src/components/settings/ai-key-panel.tsx`; FD-015 | implemented-unproven (installed AR/FR/EN observation pending) |
 | A2 | Key stored encrypted (AES-256-GCM sealed envelope, purpose-separated protected key, per-shop DB, never returned to client) | `src/lib/secrets/index.ts` `getSecret/setSecret/deleteSecret`; `Secret` model `prisma/schema.prisma:497`; `src/lib/secrets/__tests__/index.test.ts` | source+tests |
 | A3 | Key test before save = minimal real inference ("Reply with exactly OK", `maxOutputTokens: 8`) with `AIza` shape pre-check | `verifyGeminiKey` `src/lib/ai/gemini/provider.ts:284` | implemented-unproven (needs seller key for live proof) |
-| A4 | Rotation = authenticated replace (test-then-save), disconnection = delete with confirm; both gated by `integrations.manage` + `requireRecentReauthentication` + audit | `src/app/api/secrets/gemini-key/route.ts` GET/POST/DELETE; `src/components/settings/ai-key-panel.tsx` | source+tests (reauth boundary); rotation live proof pending |
+| A4 | Rotation = authenticated replace (test-then-save), disconnection = delete with confirm; both gated by `integrations.manage` + `requireRecentReauthentication` + audit | `src/app/api/secrets/gemini-key/route.ts` GET/POST/DELETE; `src/components/settings/ai-key-panel.tsx`; #348 repairs FD-050 campaign row D1 on top (interrupted action resumes after successful PIN; coded rejections localized AR/FR/EN; per-attempt secret-free provider logging) | source+tests (reauth boundary); rotation live proof pending; D1 repair unreleased on main `b1b5a033` |
 | A5 | Informed-consent gate (`gemini_consent_accepted`) blocks chat and extraction with 403 `consent_required` before any message leaves the device | `src/app/api/__tests__/ai-consent-gate.test.ts`; settings consent checkbox | source+tests |
 | A6 | Key absent/invalid → degraded mode: chat returns localized no-key copy, extraction falls back to regex-only, core work continues | `agent.ts:172-188`; `smart-router.ts:44-47`; localized copy | source+tests |
 

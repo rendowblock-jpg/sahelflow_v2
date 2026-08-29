@@ -1,13 +1,13 @@
 # SahelFlow — Current State
 
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
-> **Last assessed:** 2026-08-28
+> **Last assessed:** 2026-08-29
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at reconciliation `a34917e582c4806aee35ad5aca12aaea82a0ddcf` after release PR #344
-> **Current signed release:** Internal.29 / `1.0.0-internal.29` / MSI `1.0.0.29` / FD-050 (published; Founder installation pending)
+> **Live protected main:** resolve from GitHub before every action; at reconciliation `b1b5a03382` after the FD-050 installed-campaign repair series (#346–#353)
+> **Current signed release:** Internal.29 / `1.0.0-internal.29` / MSI `1.0.0.29` / FD-050 (published; **installed by the Founder — the campaign reproduced defects B1–B5 and D1**; all six were root-caused and repaired on protected main but are **not** inside the signed Internal.29 artifact)
 > **Reviewed release head:** `dd4888d6366cf48ccca05563bedb7e502e5662ce`
 > **Signed publication run:** `33212648778` — success
-> **Current execution:** FD-050 installed Founder campaign — the Founder applies the in-place Internal.29 update, re-verifies the FRC-2 repair rows plus the retained #306 real-phone rows and the applicable FRC-2 matrix rows, evidence is reconciled, then FRC-3 resumes
+> **Current execution:** FD-050 installed Founder campaign is under way on the installed Internal.29; the reproduced defects (B1/B2 quote chips, B3 document spinner, B4 voice recording fail-closed, B5 chat-delete resurrection, D1 AI-key flow) are repaired on protected main (#346–#353, adversarially audited); remaining work is campaign evidence reconciliation into the ledgers, the rest of the campaign matrix (FRC-2 repair rows, retained #306 real-phone rows), and a separately authorized signed successor that packages the repairs — then FRC-3 resumes
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
@@ -47,6 +47,28 @@ Internal.29 retains the accepted Internal.24 product line, the Internal.25/26/27
 - **#340** — installed-e2e evidence MSI injection preserves checked-in browser args;
 - **#342/#343** — FRC-2 freeze: `frc2-1.0.0` extraction corpus plus the AI capability evidence ledger;
 - **#344** — version/release/licensing authority only for Internal.29 / FD-050.
+
+## 2c. FD-050 installed-campaign repair line (protected source, **unreleased**)
+
+The Founder installed Internal.29 in place and the FD-050 campaign reproduced
+six defects. Each was root-caused and repaired on protected main
+(`a34917e5` → `b1b5a033`, eight guarded squash merges, every PR
+adversarially audited before merge). None of these commits are inside the
+signed Internal.29 artifact; packaging them requires a separately authorized
+signed successor under the FD-048/FD-050 release discipline.
+
+Campaign-observed defects:
+
+- **B1/B2 quote chips** — quote chips vanished on chat switch/refresh/restart: `loadMessages` dropped `quotedMessageId`/`quoted` in the history mapping (**#351**, `5114c1c5`);
+- **B3 document spinner** — outbound document/audio bubbles spun on `جارٍ حفظ الوسائط بشكل آمن…` forever even after delivery: the thread projection force-readied `localMedia` for image/video only (**#349**, `b1b5a033`, plus `OutboxIntent.lastErrorCode` surfaced to the retry UI);
+- **B4 voice recording fail-closed** — WebView2/MediaRecorder never supports OGG/Opus (Chromium only offers `audio/webm;codecs=opus`), so the mic button always showed the unsupported strip: takes are now recorded WebM/Opus and remuxed to OGG/Opus in the renderer (**#346**, `7d97a69f`; RFC 6716 TOC accounting made spec-exact by **#353**, `547c5ded`);
+- **B5 chat-delete resurrection** — hard-deleting `ProviderIngressEvent` rows destroyed the `ingressKey` replay barrier, so a sidecar retry re-created the deleted chat; and every server rejection collapsed to a silent `false` (**#347**, `4ffc06a9`: ingress events tombstoned, not deleted; coded delete failures surfaced);
+- **D1 AI-key flow** — the 10-minute reauthentication window dropped the pending action after PIN, coded rejections reached the merchant untranslated, and failing verifies left no per-attempt log record (**#348**, `baf33711`: action resume after PIN, EN/FR/AR localized coded errors, secret-free provider logging).
+
+Deep-audit repairs (not campaign-observed rows):
+
+- **Delivery-receipt enum truth** — the installed Baileys 6.17.16 status enum is `{ERROR:0,PENDING:1,SERVER_ACK:2,DELIVERY_ACK:3,READ:4,PLAYED:5}`; the two legacy mappers built on the pre-6.7 layout lied on every outbound bubble (SERVER_ACK rendered "delivered", DELIVERY_ACK rendered "read", ERROR rendered "sending" forever). One canonical mapper pinned at runtime against the installed proto (**#350**, `d67f3d0c`). This **undermines the Internal.27 "delivery observed" certification**: what was observed as delivery was SERVER_ACK. The inbox ledger row is corrected accordingly and must be re-proven on an installed candidate.
+- **C1 auto-receive resilience** — the sidecar gave up reconnecting permanently after ~40s and status/group broadcasts could pollute the queue: a 60s background watchdog (guarded, cleared on logout) and a pre-spool 1:1 JID scope filter (**#352**, `4cc9573b`).
 
 ## 2b. Product/security line packaged in Internal.28 (retained history)
 
