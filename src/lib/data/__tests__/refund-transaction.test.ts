@@ -61,12 +61,23 @@ async function seedDeliveredOrder() {
 describe("refund transaction facts", () => {
   it("applies every direct partial refund and reverses by refund identity", async () => {
     const { customer, product, order } = await seedDeliveredOrder();
+    // Golden COD truth (7-b P2): the FIRST partial refund (2000 of 5000) is a
+    // money-only movement — no status flip, no stock restoration, no
+    // orderCount change. Stock is not made available before a physical return.
     const first = await createRefund({ prisma: db as never }, {
       orderId: order.id,
       amount: 2000,
       method: "cash",
       idempotencyKey: "refund-partial-1",
     });
+    expect(await db.customer.findUnique({ where: { id: customer.id } }))
+      .toMatchObject({ orderCount: 1, totalSpent: 3000 });
+    expect((await db.product.findUnique({ where: { id: product.id } }))?.stock).toBe(98);
+    expect((await db.order.findUnique({ where: { id: order.id } }))?.status).toBe("delivered");
+
+    // The SECOND refund settles the full receivable (2000 + 3000 = 5000) and
+    // performs the legacy delivered→returned physical-return transition with
+    // its variant-aware stock restoration.
     const second = await createRefund({ prisma: db as never }, {
       orderId: order.id,
       amount: 3000,
@@ -82,16 +93,20 @@ describe("refund transaction facts", () => {
     expect(await db.customer.findUnique({ where: { id: customer.id } }))
       .toMatchObject({ orderCount: 0, totalSpent: 0 });
     expect((await db.product.findUnique({ where: { id: product.id } }))?.stock).toBe(100);
+    expect((await db.order.findUnique({ where: { id: order.id } }))?.status).toBe("returned");
 
-    await expect(reverseRefund({ prisma: db as never }, first.id))
+    // Identity-bound reversal: the full-settling refund cannot be reversed
+    // while the money-only refund is still active; reverse the money-only one
+    // first (its facts carry no return transition, so it is safely undoable).
+    await expect(reverseRefund({ prisma: db as never }, second.id))
       .rejects.toThrow(/other active refunds/i);
-    await reverseRefund({ prisma: db as never }, second.id);
+    await reverseRefund({ prisma: db as never }, first.id);
     expect(await db.customer.findUnique({ where: { id: customer.id } }))
-      .toMatchObject({ orderCount: 0, totalSpent: 3000 });
+      .toMatchObject({ orderCount: 0, totalSpent: 2000 });
     expect((await db.order.findUnique({ where: { id: order.id } }))?.status).toBe("returned");
     expect((await db.product.findUnique({ where: { id: product.id } }))?.stock).toBe(100);
 
-    await reverseRefund({ prisma: db as never }, first.id);
+    await reverseRefund({ prisma: db as never }, second.id);
     expect(await db.customer.findUnique({ where: { id: customer.id } }))
       .toMatchObject({ orderCount: 1, totalSpent: 5000 });
     expect((await db.order.findUnique({ where: { id: order.id } }))?.status).toBe("delivered");

@@ -11,6 +11,13 @@
  * mistake. Reversal marks the Refund row `reversed: true` (kept for audit),
  * re-applies customer stats, re-deducts restored stock, and writes an
  * OrderChange entry (actionType: "refund_reversed").
+ *
+ * Golden COD truth (7-b P2, ARCHITECTURE.md §8.6): a PARTIAL refund on a
+ * delivered order is a money-only movement — stock stays outbound, the order
+ * stays delivered and no delivery truth is rewritten. Only the refund that
+ * settles the full receivable performs the legacy delivered→returned
+ * physical-return transition, with variant-aware stock restoration. Reversal
+ * compensation mirrors the restoration exactly.
  */
 import "server-only";
 import type { ServiceContext } from "@/lib/data/service-base";
@@ -66,6 +73,88 @@ async function returnTransitionRefundId(
     return payload.refundId;
   }
   throw new Error("Cannot safely refund returned order: return transition fact is missing");
+}
+
+/**
+ * Variant-aware stock restoration for the full-settling legacy refund's
+ * delivered→returned transition (7-b P2). Mirrors the legacy confirmation
+ * release path in order-service: variant items restore the variant row and
+ * re-derive the product's denormalized stock from active variant stock; plain
+ * items restore the product row directly.
+ */
+async function restoreDeliveredStockForFullRefund(
+  tx: OrderChangeTransactionClient,
+  orderId: string,
+): Promise<void> {
+  const items = await tx.orderItem.findMany({
+    where: { orderId, productId: { not: null } },
+    select: { productId: true, productVariantId: true, quantity: true },
+  });
+  for (const item of items) {
+    if (!item.productId) continue;
+    if (item.productVariantId) {
+      const restored = await tx.productVariant.updateMany({
+        where: { id: item.productVariantId, productId: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+      if (restored.count !== 1) {
+        throw new Error(
+          `Variant '${item.productVariantId}' is missing or belongs to another product`,
+        );
+      }
+      const available = await tx.productVariant.aggregate({
+        where: { productId: item.productId, isActive: true },
+        _sum: { stock: true },
+      });
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: available._sum.stock ?? 0 },
+      });
+    } else {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+  }
+}
+
+/** Exact compensation of `restoreDeliveredStockForFullRefund` on reversal. */
+async function deductRestoredStockOnReversal(
+  tx: OrderChangeTransactionClient,
+  orderId: string,
+): Promise<void> {
+  const items = await tx.orderItem.findMany({
+    where: { orderId, productId: { not: null } },
+    select: { productId: true, productVariantId: true, quantity: true },
+  });
+  for (const item of items) {
+    if (!item.productId) continue;
+    if (item.productVariantId) {
+      const deducted = await tx.productVariant.updateMany({
+        where: { id: item.productVariantId, productId: item.productId },
+        data: { stock: { decrement: item.quantity } },
+      });
+      if (deducted.count !== 1) {
+        throw new Error(
+          `Variant '${item.productVariantId}' is missing or belongs to another product`,
+        );
+      }
+      const available = await tx.productVariant.aggregate({
+        where: { productId: item.productId, isActive: true },
+        _sum: { stock: true },
+      });
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: available._sum.stock ?? 0 },
+      });
+    } else {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { decrement: item.quantity } },
+      });
+    }
+  }
 }
 
 export async function createRefund(context: ServiceContext, input: CreateRefundInput) {
@@ -140,10 +229,20 @@ export async function createRefund(context: ServiceContext, input: CreateRefundI
       totalSpentAdjusted = transitionRefundId !== null;
     }
 
+    // Golden COD rules (ARCHITECTURE.md §8.6, 7-b P2): a PARTIAL refund on a
+    // delivered order is a money-only movement. Stock is NOT made available
+    // before a physical return, and no delivery truth is rewritten. Only the
+    // refund that settles the full receivable performs the legacy
+    // delivered→returned physical-return transition — and that restoration is
+    // variant-aware (see restoreDeliveredStockForFullRefund below).
+    const settlesFullReceivable =
+      alreadyRefunded + input.amount >= order.totalPrice;
+    const performsPhysicalReturn = order.status === "delivered" && settlesFullReceivable;
+
     const facts: RefundMutationFacts = {
-      statusChanged: order.status === "delivered",
-      stockRestored: order.status === "delivered",
-      orderCountAdjusted: order.status === "delivered",
+      statusChanged: performsPhysicalReturn,
+      stockRestored: performsPhysicalReturn,
+      orderCountAdjusted: performsPhysicalReturn,
       totalSpentAdjusted,
     };
 
@@ -168,18 +267,7 @@ export async function createRefund(context: ServiceContext, input: CreateRefundI
         data: { status: "returned" },
       });
 
-      const items = await tx.orderItem.findMany({
-        where: { orderId: input.orderId, productId: { not: null } },
-        select: { productId: true, quantity: true },
-      });
-      for (const item of items) {
-        if (item.productId) {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { increment: item.quantity } },
-          });
-        }
-      }
+      await restoreDeliveredStockForFullRefund(tx, input.orderId);
 
       await tx.customer.update({
         where: { id: order.customerId },
@@ -369,18 +457,7 @@ export async function reverseRefund(
     });
 
     if (facts.stockRestored) {
-      const items = await tx.orderItem.findMany({
-        where: { orderId: refund.orderId, productId: { not: null } },
-        select: { productId: true, quantity: true },
-      });
-      for (const item of items) {
-        if (item.productId) {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { decrement: item.quantity } },
-          });
-        }
-      }
+      await deductRestoredStockOnReversal(tx, refund.orderId);
     }
 
     if (facts.orderCountAdjusted) {
