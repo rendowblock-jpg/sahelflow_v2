@@ -31,8 +31,12 @@ describe("WhatsApp outbound voice source boundary", () => {
 
     // The recorder produces WhatsApp voice-note truth (OGG/Opus) or fails
     // closed with an honest message — it never uploads a foreign container.
+    // Evergreen Chromium/WebView2 cannot record OGG, so WebM/Opus takes are
+    // remuxed to RFC 7845 Ogg Opus before the durable send path.
     expect(recorder).toContain("VOICE_RECORDING_MIME_CANDIDATES");
     expect(recorder).toContain('"audio/ogg;codecs=opus"');
+    expect(recorder).toContain('"audio/webm;codecs=opus"');
+    expect(recorder).toContain("remuxWebmOpusToOgg");
     expect(recorder).toContain("MediaRecorder.isTypeSupported");
     expect(recorder).toContain("getUserMedia");
     expect(recorder).toContain("MAX_RECORDING_MS");
