@@ -45,6 +45,18 @@ type MediaSendResponse = {
 };
 
 /**
+ * Truthful outcome for permanent multi-select chat deletion. `errorCode`
+ * carries the server's coded rejection (LICENSE_*, DEMO_MUTATION_BLOCKED,
+ * VALIDATION_ERROR, …) or an `HTTP_<status>` fallback so the confirm dialog
+ * can show the operator why the store refused the deletion instead of
+ * silently doing nothing.
+ */
+export interface DeleteChatsOutcome {
+  ok: boolean;
+  errorCode: string | null;
+}
+
+/**
  * Upload one bounded multipart media send with truthful byte progress and a
  * registered pre-response abort handle (#317 upload progress/cancellation).
  * The abort is only honoured while the browser request is in flight: once the
@@ -999,18 +1011,41 @@ export function useInboxWorkspace() {
    * Permanent multi-select chat deletion (founder-confirmed contract).
    * Server removes messages, effects, ingress events and local media; the
    * queue refreshes and an open deleted chat is dropped without persisting
-   * its draft back to the now-deleted conversation.
+   * its draft back to the now-deleted conversation. Failures return a
+   * coded outcome instead of a bare boolean so the confirm dialog can
+   * surface the server's rejection reason.
    */
   const deleteChats = useCallback(
-    async (conversationIds: string[]): Promise<boolean> => {
-      if (!canDeleteChats || conversationIds.length === 0) return false;
+    async (conversationIds: string[]): Promise<DeleteChatsOutcome> => {
+      if (!canDeleteChats || conversationIds.length === 0) {
+        return { ok: false, errorCode: null };
+      }
       try {
         const response = await fetch("/api/whatsapp/chats/delete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ids: conversationIds }),
         });
-        if (!response.ok) return false;
+        if (!response.ok) {
+          let errorCode: string | null = null;
+          try {
+            const body: unknown = await response.json();
+            if (
+              body &&
+              typeof body === "object" &&
+              typeof (body as { code?: unknown }).code === "string"
+            ) {
+              errorCode = (body as { code: string }).code;
+            }
+          } catch {
+            // Non-JSON failure body (e.g. a bare middleware 401): fall back
+            // to the numeric status below.
+          }
+          return {
+            ok: false,
+            errorCode: errorCode ?? `HTTP_${response.status}`,
+          };
+        }
         const active = activeChatRef.current;
         if (active && conversationIds.includes(active.conversationId)) {
           messageSelectionGenerationRef.current += 1;
@@ -1023,9 +1058,9 @@ export function useInboxWorkspace() {
           setReplyText("");
         }
         await loadChats();
-        return true;
+        return { ok: true, errorCode: null };
       } catch {
-        return false;
+        return { ok: false, errorCode: null };
       }
     },
     [canDeleteChats, loadChats, replaceMessages, setReplyText],
