@@ -9,6 +9,7 @@ import "server-only";
 
 
 import type { ServiceContext } from "@/lib/data/service-base";
+import { resolveWilayaProfileKey } from "./canonicalize";
 
 export interface WilayaRisk {
   wilaya: string;
@@ -68,7 +69,14 @@ export async function getWilayaRisk(
   context: ServiceContext,
   wilaya: string,
 ): Promise<WilayaRisk | null> {
-  const row = await context.prisma.wilayaRiskProfile.findUnique({ where: { wilaya } });
+  // 7-b P2: Arabic / unnormalized wilaya spellings must score, not silently
+  // fall back to the default level. Exact key first (canonical seed rows),
+  // then the canonicalization authority.
+  const row =
+    (await context.prisma.wilayaRiskProfile.findUnique({ where: { wilaya } })) ??
+    (await context.prisma.wilayaRiskProfile.findUnique({
+      where: { wilaya: await resolveWilayaProfileKey(wilaya) },
+    }));
   if (!row) return null;
   return {
     wilaya: row.wilaya,

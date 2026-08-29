@@ -12,6 +12,7 @@ import "server-only";
 
 import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { resolveWilayaProfileKey } from "@/lib/wilaya-risk/canonicalize";
 import { normalizeRiskConfig } from "./config-normalization";
 import {
   DEFAULT_RISK_CONFIG,
@@ -212,7 +213,7 @@ export async function buildAssessmentInputFromOrder(
 
   // Wilaya risk profile
   const wilayaRiskRow = await db.wilayaRiskProfile.findUnique({
-    where: { wilaya: order.wilaya },
+    where: { wilaya: await resolveWilayaProfileKey(order.wilaya) },
   });
 
   return {
@@ -368,7 +369,7 @@ export async function buildAssessmentInputFromOrderData(
   // Wilaya risk profile (may not exist for all wilayas — that's fine, the
   // scoring engine treats a missing profile as no wilaya-risk contribution).
   const wilayaRiskRow = await db.wilayaRiskProfile.findUnique({
-    where: { wilaya: orderData.wilaya },
+    where: { wilaya: await resolveWilayaProfileKey(orderData.wilaya) },
   });
 
   return {
