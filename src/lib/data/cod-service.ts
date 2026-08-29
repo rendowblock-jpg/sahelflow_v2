@@ -10,6 +10,7 @@
  * orders (reconciled), and uncollected orders (delivery failed/returned).
  */
 import "server-only";
+import type { Prisma } from "@prisma/client";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { recordOrderChangeInTx } from "./order-change-service";
 import { logAudit } from "@/lib/audit";
@@ -22,7 +23,29 @@ import { logAudit } from "@/lib/audit";
  * / cancelled / refused orders cannot have COD collected (no money changed
  * hands). Draft orders haven't been fulfilled yet.
  */
-const COD_COLLECTIBLE_STATUSES = ["shipped", "delivered"] as const;
+export const COD_COLLECTIBLE_STATUSES = ["shipped", "delivered"] as const;
+
+/**
+ * COD quarantine (7-b P2): cash that was marked collected on an order whose
+ * lifecycle ended without a collectable receivable — returned / refused /
+ * cancelled (void) outcomes, or a soft-deleted (voided) order row — is
+ * isolated out of the COD ledger. It is surfaced separately as quarantined
+ * accounting, never as collectable or pending-remittance money.
+ */
+const COD_QUARANTINED_STATUSES = ["returned", "refused", "cancelled"] as const;
+
+const COD_LEDGER_WHERE: Prisma.OrderWhereInput = {
+  status: { in: [...COD_COLLECTIBLE_STATUSES] },
+  deletedAt: null,
+};
+
+const COD_QUARANTINE_WHERE: Prisma.OrderWhereInput = {
+  codCollected: true,
+  OR: [
+    { status: { in: [...COD_QUARANTINED_STATUSES] } },
+    { deletedAt: { not: null } },
+  ],
+};
 
 /** Mark an order's COD as collected (courier picked up the cash). */
 export async function markCodCollected(
@@ -199,12 +222,15 @@ export async function bulkMarkCodRemitted(
 ) {
   const db = context.prisma;
   const updated = await db.$transaction(async (tx) => {
+    // 7-b P2 COD quarantine: bulk remittance claims collectable-pipeline
+    // orders only — cash isolated on returned/refused/cancelled/voided orders
+    // can never be remitted back into the ledger through the bulk path.
     const candidates = await tx.order.findMany({
       where: {
         id: { in: orderIds },
         codCollected: true,
         codRemitted: { not: true },
-        deletedAt: null,
+        ...COD_LEDGER_WHERE,
       },
       select: { id: true },
     });
@@ -217,7 +243,7 @@ export async function bulkMarkCodRemitted(
           id: order.id,
           codCollected: true,
           codRemitted: { not: true },
-          deletedAt: null,
+          ...COD_LEDGER_WHERE,
         },
         data: {
           codRemitted: true,
@@ -249,24 +275,34 @@ export async function bulkMarkCodRemitted(
 /** Get COD reconciliation summary (for the accounting page). */
 export async function getCodReconciliationSummary(context: ServiceContext) {
   const db = context.prisma;
-  const [delivered, collected, remitted, uncollected] = await Promise.all([
-    db.order.count({ where: { status: "delivered", deletedAt: null } }),
-    db.order.count({ where: { codCollected: true, deletedAt: null } }),
-    db.order.count({ where: { codRemitted: true, deletedAt: null } }),
-    db.order.count({ where: { status: "delivered", codCollected: false, deletedAt: null } }),
-  ]);
+  const [delivered, collected, remitted, uncollected, quarantinedCount, quarantinedAmount] =
+    await Promise.all([
+      db.order.count({ where: { status: "delivered", deletedAt: null } }),
+      // 7-b P2 COD quarantine: the collectable ledger only counts cash on
+      // orders that are still inside the COD pipeline (shipped/delivered).
+      db.order.count({ where: { codCollected: true, ...COD_LEDGER_WHERE } }),
+      db.order.count({ where: { codRemitted: true, ...COD_LEDGER_WHERE } }),
+      db.order.count({ where: { status: "delivered", codCollected: false, deletedAt: null } }),
+      db.order.count({ where: COD_QUARANTINE_WHERE }),
+      db.order.aggregate({
+        where: COD_QUARANTINE_WHERE,
+        _sum: { totalPrice: true },
+      }),
+    ]);
 
   const [collectedNotRemitted, totalCollectedAmount, totalRemittedAmount] = await Promise.all([
     db.order.findMany({
-      where: { codCollected: true, codRemitted: { not: true }, deletedAt: null },
+      where: { codCollected: true, codRemitted: { not: true }, ...COD_LEDGER_WHERE },
       select: { id: true, orderNumber: true, totalPrice: true, codCollectedAt: true, customer: { select: { name: true } } },
       orderBy: { codCollectedAt: "asc" },
       // Raised from 200 to 500 (S2-5). Totals are separate aggregates (always
       // correct); this list is display-only. Full pagination is a follow-up.
       take: 500,
     }),
-    db.order.aggregate({ where: { codCollected: true, deletedAt: null }, _sum: { totalPrice: true } }),
-    db.order.aggregate({ where: { codRemitted: true, deletedAt: null }, _sum: { totalPrice: true } }),
+    // Ledger-scoped aggregates: cash on quarantined/void orders never posts
+    // here as collectable (it is surfaced through `quarantined` instead).
+    db.order.aggregate({ where: { codCollected: true, ...COD_LEDGER_WHERE }, _sum: { totalPrice: true } }),
+    db.order.aggregate({ where: { codRemitted: true, ...COD_LEDGER_WHERE }, _sum: { totalPrice: true } }),
   ]);
 
   return {
@@ -275,5 +311,11 @@ export async function getCodReconciliationSummary(context: ServiceContext) {
     totalCollectedAmount: totalCollectedAmount._sum.totalPrice ?? 0,
     totalRemittedAmount: totalRemittedAmount._sum.totalPrice ?? 0,
     pendingAmount: (totalCollectedAmount._sum.totalPrice ?? 0) - (totalRemittedAmount._sum.totalPrice ?? 0),
+    // Isolated cash: collected marks on returned/refused/cancelled or
+    // voided (soft-deleted) orders. Never collectable, never bulk-remittable.
+    quarantined: {
+      count: quarantinedCount,
+      amount: quarantinedAmount._sum.totalPrice ?? 0,
+    },
   };
 }
