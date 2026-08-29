@@ -20,6 +20,7 @@ import {
   type WhatsAppStatus,
   type WhatsAppUser,
 } from "@/lib/whatsapp/types";
+import { mapBaileysStatusUpdate } from "../../../sidecars/whatsapp/delivery-status";
 import {
   MessageCircle,
   MessageSquare,
@@ -279,17 +280,12 @@ export function InboxLive() {
   );
 
   // Session 31 (AUDIT-6 I4): map Baileys message-update status to our
-  // deliveryStatus enum. Baileys sends status as a string ("SENT","DELIVERY",
-  // "READ",...) or a proto number (0=PENDING,1=SENT,2=DELIVERY,3=READ,4=PLAYED).
+  // deliveryStatus enum. Mapping is canonical (sidecars/whatsapp/
+  // delivery-status.ts): the installed Baileys emits WebMessageInfo.Status as
+  // {ERROR:0, PENDING:1, SERVER_ACK:2, DELIVERY_ACK:3, READ:4, PLAYED:5} —
+  // SERVER_ACK is "sent", DELIVERY_ACK is "delivered", ERROR is "failed".
   function mapBaileysStatus(update: Record<string, unknown>): NormalizedMessage["deliveryStatus"] | null {
-    const status = update.status;
-    if (status === undefined || status === null) return null;
-    const s = typeof status === "number" ? status : String(status).toUpperCase();
-    if (s === 0 || s === "PENDING") return "sending";
-    if (s === 1 || s === "SENT") return "sent";
-    if (s === 2 || s === "DELIVERY" || s === "DELIVERED") return "delivered";
-    if (s === 3 || s === "READ") return "read";
-    return null;
+    return mapBaileysStatusUpdate(update);
   }
 
   // Session 31 (AUDIT-6 I4): handle delivery/read receipts from the sidecar.

@@ -27,6 +27,10 @@ import {
   clearProtectedWhatsAppAuthState,
   useProtectedWhatsAppAuthState,
 } from "./protected-auth-state";
+import {
+  baileysFailureText,
+  mapBaileysStatusUpdate,
+} from "./delivery-status";
 
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
 // Voice/audio outbound shares the 32 MiB encrypted-storage audio ceiling.
@@ -57,23 +61,6 @@ function getSidecarToken(): string | undefined {
     // only best-effort status persistence is skipped until the token exists.
   }
   return undefined;
-}
-
-function mapBaileysStatus(status: unknown): string | null {
-  if (status === undefined || status === null) return null;
-  const s = typeof status === "number" ? status : String(status).toUpperCase();
-  if (s === 0 || s === "PENDING") return "sending";
-  if (s === 1 || s === "SENT") return "sent";
-  if (
-    s === 2 ||
-    s === "DELIVERY" ||
-    s === "DELIVERY_ACK" ||
-    s === "DELIVERED"
-  ) {
-    return "delivered";
-  }
-  if (s === 3 || s === "READ" || s === 4 || s === "PLAYED") return "read";
-  return null;
 }
 
 /** Provider-side quoted-reply context crossed the loopback boundary (#317). */
@@ -457,18 +444,21 @@ export class WhatsAppManager {
       for (const u of updates) {
         if (!u.key.fromMe) continue;
         const upd = (u.update ?? {}) as Record<string, unknown>;
-        const providerError = upd.error;
-        const hasError = providerError !== undefined && providerError !== null;
-        const mappedStatus = mapBaileysStatus(upd.status);
-        if (hasError) {
+        // Canonical enum-truthful mapping (delivery-status.ts): SERVER_ACK is
+        // "sent", DELIVERY_ACK is "delivered", ERROR is "failed" — including
+        // device-failure receipts that carry only messageStubParameters.
+        const mappedStatus = mapBaileysStatusUpdate(upd);
+        if (!mappedStatus) continue;
+        if (mappedStatus === "failed") {
+          const failureText = baileysFailureText(upd);
           void postMessageStatus({
             waMessageId: u.key.id ?? "",
             jid: u.key.remoteJid ?? "",
             fromMe: true,
             deliveryStatus: "failed",
-            error: String(providerError),
+            ...(failureText ? { error: failureText } : {}),
           });
-        } else if (mappedStatus) {
+        } else {
           void postMessageStatus({
             waMessageId: u.key.id ?? "",
             jid: u.key.remoteJid ?? "",

@@ -32,7 +32,8 @@ export type WhatsAppIngressProcessingState =
   | "retrying"
   | "applied"
   | "quarantined"
-  | "dead_letter";
+  | "dead_letter"
+  | "chat_deleted";
 
 export interface WhatsAppIngressProcessingResult {
   ingressEventId: string;
@@ -206,7 +207,15 @@ async function claimIngress(
     }
 
     const current = row as IngressRow;
-    if (["applied", "quarantined", "dead_letter"].includes(current.status)) {
+    if (
+      ["applied", "quarantined", "dead_letter", "chat_deleted"].includes(
+        current.status,
+      )
+    ) {
+      // "chat_deleted" is a tombstone left by permanent chat deletion. Its
+      // ingressKey must keep deduplicating provider replays, but the event
+      // must never be claimed again — re-applying it would resurrect the
+      // deleted conversation.
       return current;
     }
 
@@ -630,7 +639,11 @@ export async function processWhatsAppInbound(
   ingressEventId: string,
 ): Promise<WhatsAppIngressProcessingResult> {
   const current = await readIngress(context, ingressEventId);
-  if (["applied", "quarantined", "dead_letter"].includes(current.status)) {
+  if (
+    ["applied", "quarantined", "dead_letter", "chat_deleted"].includes(
+      current.status,
+    )
+  ) {
     return publicResult(current);
   }
 
