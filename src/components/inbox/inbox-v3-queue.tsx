@@ -37,6 +37,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread"];
@@ -467,10 +468,17 @@ export function InboxV3Queue({
     if (effectiveSelected.length === 0) return;
     setDeleting(true);
     setDeleteError(null);
-    const ok = await deleteChats([...effectiveSelected]);
+    const outcome = await deleteChats([...effectiveSelected]);
     setDeleting(false);
-    if (!ok) {
-      setDeleteError(copy("deleteChatsFailed"));
+    if (!outcome.ok) {
+      // Truthful failure surfacing: the coded server rejection is shown
+      // inside the open confirm dialog AND toasted, so a rejection is never
+      // indistinguishable from a dead button (FD-050 campaign row B5).
+      const message = outcome.errorCode
+        ? copy("deleteChatsFailedWithCode", { code: outcome.errorCode })
+        : copy("deleteChatsFailed");
+      setDeleteError(message);
+      toast.error(message);
       return;
     }
     exitSelectMode();
@@ -720,7 +728,9 @@ export function InboxV3Queue({
         onOpenChange={(open) => {
           if (deleting) return;
           setDeleteDialogOpen(open);
-          if (!open) setDeleteError(null);
+          // deleteError is intentionally kept when the dialog closes: it
+          // renders in the select toolbar so the failure stays visible after
+          // the operator dismisses the confirm dialog.
         }}
       >
         <AlertDialogContent>
@@ -732,6 +742,11 @@ export function InboxV3Queue({
               {copy("deleteChatsDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deleteError ? (
+            <p role="alert" className="text-[13px] text-destructive">
+              {deleteError}
+            </p>
+          ) : null}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>
               {t("common.cancel")}
