@@ -164,7 +164,30 @@ export const createProductSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export const updateProductSchema = createProductSchema.partial();
+/**
+ * updateProductSchema deliberately does NOT use `createProductSchema.partial()`
+ * alone. In zod v4, `.partial()` PRESERVES create-time `.default()` backfill:
+ *
+ *   createProductSchema.partial().parse({ name: "x" })
+ *   → { name: "x", stock: 0, lowStockThreshold: 5, isActive: true }
+ *
+ * Every absent field silently came back as its create default, and update
+ * routes write the parsed object straight into Prisma — so a PATCH that only
+ * renamed a product reset its stock to 0, force-republished it (isActive:
+ * true), restored the default low-stock threshold, and falsely tripped the
+ * `data.stock !== undefined` canonical-catalog gate and low-stock dispatch in
+ * product-service.update. Update semantics require "absent in the request
+ * body" = "do not touch": the three default-carrying fields are overridden
+ * with default-free optionals. Variant-level defaults inside an explicitly
+ * provided `variants` array are unchanged — variant edits are full-set
+ * replacement (missing variant ids are deleted), so those defaults are
+ * intended (pinned by src/lib/validation/__tests__/update-schemas.test.ts).
+ */
+export const updateProductSchema = createProductSchema.partial().extend({
+  stock: z.number().int().optional(), // can be negative (backorders), like create
+  lowStockThreshold: nonNegInt.optional(),
+  isActive: z.boolean().optional(),
+});
 
 // ─── Category ─────────────────────────────────────────────────────────────────
 
