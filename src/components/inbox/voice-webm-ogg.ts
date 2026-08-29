@@ -220,29 +220,50 @@ function parseTracks(bytes: Uint8Array, start: number, end: number): OpusTrackIn
   return found;
 }
 
-/** Opus TOC: frame duration in ms for the packet's configuration. */
+/**
+ * Opus TOC: frame duration in ms for the packet's configuration
+ * (RFC 6716 §3.1, Table 2).
+ *
+ * - configs 0–11: SILK NB/MB/WB — [10, 20, 40, 60] ms by `config & 3`;
+ * - configs 12–15: Hybrid SWB/FB — 10/20 ms by `config & 1`;
+ * - configs 16–31: CELT NB/MB/WB/FB — [2.5, 5, 10, 20] ms by `config & 3`.
+ */
 function opusFrameDurationMs(toc: number): number {
   const config = toc >> 3;
   if (config < 12) return [10, 20, 40, 60][config & 3] ?? 20;
-  return (config & 1) === 0 ? 10 : 20;
+  if (config < 16) return (config & 1) === 0 ? 10 : 20;
+  return [2.5, 5, 10, 20][config & 3] ?? 20;
 }
 
-/** Opus TOC: number of frames carried by the packet. */
+/**
+ * Opus TOC: number of frames carried by the packet (RFC 6716 §3.1).
+ *
+ * - code 0: 1 frame;
+ * - code 1: 2 frames, equal compressed size;
+ * - code 2: 2 frames, different compressed sizes;
+ * - code 3: M frames, read from the frame count byte (§3.2.5) whose
+ *   low 6 bits carry M directly — "M MUST NOT be zero" — with the VBR
+ *   flag in the most significant bit and the Opus-padding flag next to it.
+ */
 function opusFrameCount(packet: Uint8Array): number {
   const toc = packet[0];
   if (toc === undefined) {
     throw new Error("Voice take has a truncated Opus packet");
   }
   const code = toc & 0x03;
-  if (code === 0 || code === 2) return 1;
-  if (code === 1) return 2;
-  // Code 3: one frame-count byte follows the TOC (bit 7 is padding flag).
+  if (code === 0) return 1;
+  if (code === 1 || code === 2) return 2;
+  // Code 3: one frame-count byte follows the TOC.
   if (packet.length < 2) throw new Error("Voice take has a truncated Opus packet");
   const countByte = packet[1];
   if (countByte === undefined) {
     throw new Error("Voice take has a truncated Opus packet");
   }
-  return (countByte & 0x3f) + 1;
+  const frameCount = countByte & 0x3f;
+  if (frameCount === 0) {
+    throw new Error("Voice take has an invalid Opus frame count");
+  }
+  return frameCount;
 }
 
 function opusPacketSamples48k(packet: Uint8Array): number {
