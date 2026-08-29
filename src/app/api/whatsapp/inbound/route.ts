@@ -20,6 +20,9 @@ const ingressStatusSchema = z.enum([
   "applied",
   "quarantined",
   "dead_letter",
+  // Terminal tombstone written by permanent chat deletion; kept queryable so
+  // operators can audit why an event will never apply.
+  "chat_deleted",
 ]);
 
 /** Operator-visible ingress history. Encrypted raw payloads are never returned. */

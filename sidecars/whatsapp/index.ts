@@ -17,6 +17,7 @@ import {
   recordDurableSendReceipt,
 } from "./send-receipts";
 import {
+  isIndividualInboundJid,
   parseWhatsAppQuotedContext,
   wa,
   type IncomingMessage,
@@ -1366,6 +1367,15 @@ const inboundSpool = new WhatsAppInboundSpool({
 wa.subscribe((event) => {
   if (event.type !== "message" || !event.message || event.message.key.fromMe) {
     broadcast(event);
+    return;
+  }
+  // C1 ingress scope: group/status/broadcast surfaces are intentionally
+  // unsupported (ledger #317). Skip them before the spool so they can never
+  // loop against the app or appear as phantom conversations.
+  if (!isIndividualInboundJid(event.message.key.remoteJid)) {
+    console.warn(
+      `[sahelflow-whatsapp-sidecar] skipping non-individual inbound jid ${event.message.key.remoteJid ?? "<empty>"}`,
+    );
     return;
   }
   const status = wa.getStatus();

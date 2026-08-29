@@ -136,6 +136,14 @@ export function withErrorHandler<T extends RouteHandler>(
       if (err instanceof SahelFlowError) {
         if (err.statusCode >= 500) {
           logger.error(`api.${logPath}`, err, { code: err.code });
+        } else {
+          // Coded 4xx rejections stay invisible otherwise; the app log line
+          // with the exact code is the primary installed-build diagnostic
+          // (e.g. LICENSE_*, DEMO_MUTATION_BLOCKED, PROTECTED_DATA_*).
+          logger.warn(`api.${logPath}`, {
+            code: err.code,
+            statusCode: err.statusCode,
+          });
         }
         return NextResponse.json(
           { error: err.message, code: err.code },
