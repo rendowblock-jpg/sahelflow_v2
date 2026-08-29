@@ -53,7 +53,14 @@ export async function retryWhatsAppInbound(
         404,
       );
     }
-    if (event.status === "applied" || event.messageId || event.conversationId) {
+    if (
+      event.status === "applied" ||
+      // Terminal chat-deletion tombstone: the conversation is gone and the
+      // event must stay unapplied, so no operator recovery may resurrect it.
+      event.status === "chat_deleted" ||
+      event.messageId ||
+      event.conversationId
+    ) {
       throw new ConflictError(
         "An applied WhatsApp ingress event cannot be replayed",
       );
