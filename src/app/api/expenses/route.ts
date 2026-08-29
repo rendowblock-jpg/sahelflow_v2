@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, shopContext } from "@/lib/db";
 import { createExpenseSchema } from "@/lib/validation";
+import { readReplayRequestId, withReplayGuard } from "@/lib/api/replay-guard";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 
@@ -55,21 +56,31 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
  *
  * Body: { category, amount (positive int DZD), date (ISO datetime string),
  *         notes? }
+ *
+ * Replay protection (audit 7-a F5): with an `x-request-id` header, the first
+ * response is remembered and retries receive the stored response instead of a
+ * duplicate expense row.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   await requireAuth("accounting.update");
-  const body = await req.json();
-  const data = createExpenseSchema.parse(body);
-  const context = { prisma: db, shop: shopContext };
+  const requestId = readReplayRequestId(req);
 
-  const expense = await context.prisma.expense.create({
-    data: {
-      category: data.category,
-      amount: data.amount,
-      date: new Date(data.date),
-      notes: data.notes ?? null,
-    },
-  });
+  const execute = async (): Promise<NextResponse> => {
+    const body = await req.json();
+    const data = createExpenseSchema.parse(body);
+    const context = { prisma: db, shop: shopContext };
 
-  return NextResponse.json({ expense }, { status: 201 });
+    const expense = await context.prisma.expense.create({
+      data: {
+        category: data.category,
+        amount: data.amount,
+        date: new Date(data.date),
+        notes: data.notes ?? null,
+      },
+    });
+
+    return NextResponse.json({ expense }, { status: 201 });
+  };
+
+  return withReplayGuard(shopContext.shopId, requestId, execute);
 }, "POST /api/expenses");

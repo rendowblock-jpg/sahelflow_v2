@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { readReplayRequestId, withReplayGuard } from "@/lib/api/replay-guard";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db, shopContext } from "@/lib/db";
 import {
@@ -22,7 +23,7 @@ const createReturnSchema = z.object({
 });
 
 /** GET /api/returns — canonical permission-aware returns workbench. */
-export async function GET(req: NextRequest) {
+export const GET = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("orders.read");
   const searchParams = req.nextUrl.searchParams;
   return NextResponse.json(
@@ -32,39 +33,50 @@ export async function GET(req: NextRequest) {
       q: searchParams.get("q") ?? undefined,
     }),
   );
-}
+}, "GET /api/returns");
 
-/** POST /api/returns — create a return / exchange request for an order. */
+/** POST /api/returns — create a return / exchange request for an order.
+ *
+ * Replay protection (audit 7-a F5): with an `x-request-id` header, the first
+ * response is remembered and retries receive the stored response instead of a
+ * duplicate return row.
+ */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("orders.update");
   assertTrustedAction(actorContext, "customers.contact.read");
-  const input = createReturnSchema.parse(await req.json());
-  const context = { prisma: db, shop: shopContext };
-  const order = await db.order.findUnique({
-    where: { id: input.orderId },
-    select: {
-      id: true,
-      orderNumber: true,
-      status: true,
-      source: true,
-      sourceMetadata: true,
-    },
-  });
-  if (!order) throw new NotFoundError("Order", input.orderId);
-  assertLegacyOrderFollowupAllowed(order.source, order.sourceMetadata);
+  const requestId = readReplayRequestId(req);
 
-  const notesParts: string[] = [];
-  if (input.itemCount) notesParts.push(`Items returned: ${input.itemCount}`);
-  if (input.notes) notesParts.push(input.notes);
-  const record = await context.prisma.return.create({
-    data: {
-      orderId: input.orderId,
-      reason: input.reason,
-      type: input.type ?? "return",
-      status: "requested",
-      notes: notesParts.length > 0 ? notesParts.join("\n") : null,
-    },
-    include: { order: { select: { orderNumber: true } } },
-  });
-  return NextResponse.json({ return: record }, { status: 201 });
+  const execute = async (): Promise<NextResponse> => {
+    const input = createReturnSchema.parse(await req.json());
+    const context = { prisma: db, shop: shopContext };
+    const order = await db.order.findUnique({
+      where: { id: input.orderId },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        source: true,
+        sourceMetadata: true,
+      },
+    });
+    if (!order) throw new NotFoundError("Order", input.orderId);
+    assertLegacyOrderFollowupAllowed(order.source, order.sourceMetadata);
+
+    const notesParts: string[] = [];
+    if (input.itemCount) notesParts.push(`Items returned: ${input.itemCount}`);
+    if (input.notes) notesParts.push(input.notes);
+    const record = await context.prisma.return.create({
+      data: {
+        orderId: input.orderId,
+        reason: input.reason,
+        type: input.type ?? "return",
+        status: "requested",
+        notes: notesParts.length > 0 ? notesParts.join("\n") : null,
+      },
+      include: { order: { select: { orderNumber: true } } },
+    });
+    return NextResponse.json({ return: record }, { status: 201 });
+  };
+
+  return withReplayGuard(shopContext.shopId, requestId, execute);
 }, "POST /api/returns");

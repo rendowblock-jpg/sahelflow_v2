@@ -30,8 +30,10 @@ const syncSchema = z.object({
  *
  * If platform is omitted, syncs all platforms that have credentials configured.
  *
- * Auth: requires x-cron-secret header (same as /api/reports/daily) OR can be
- * called from the Settings UI (future). For now, cron-secret only.
+ * Auth: durable trusted-actor session via requireAuth — the caller must hold
+ * any of the listed Phase 2 actions (integrations.manage, data.import, order
+ * intake/customer-contact, or order-financials authority). The stale
+ * "x-cron-secret" contract no longer applies to this route.
  */
 export const POST = withErrorHandler(
   async (req: NextRequest): Promise<NextResponse> => {
@@ -74,7 +76,7 @@ export const POST = withErrorHandler(
 /**
  * GET /api/integrations/sync — returns the last sync status for each platform.
  */
-export async function GET(): Promise<NextResponse> {
+export const GET = withErrorHandler(async (): Promise<NextResponse> => {
   await requireAuth("integrations.read");
   const integrations = await db.integration.findMany({
     where: {
@@ -123,4 +125,4 @@ export async function GET(): Promise<NextResponse> {
   });
 
   return NextResponse.json({ statuses, runs });
-}
+}, "GET /api/integrations/sync");

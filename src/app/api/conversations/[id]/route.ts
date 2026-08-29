@@ -16,6 +16,14 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
+ * Bounded message window (audit 7-a F6): the nested include previously loaded
+ * the entire message history of the conversation. The chat surface only needs
+ * the most recent window — the same 500-message ceiling the WhatsApp message
+ * route enforces.
+ */
+const CONVERSATION_MESSAGE_HISTORY_LIMIT = 500;
+
+/**
  * GET /api/conversations/[id] — exact-shop workflow and persisted message
  * projection. This read never creates a live-JID row or clears unread state;
  * those are explicit authorized mutations.
@@ -34,7 +42,12 @@ export const GET = withErrorHandler(
     }
     const conversation = await db.conversation.findUnique({
       where: { id: conversationId },
-      include: { messages: { orderBy: { timestamp: "asc" } } },
+      include: {
+        messages: {
+          orderBy: { timestamp: "desc" },
+          take: CONVERSATION_MESSAGE_HISTORY_LIMIT,
+        },
+      },
     });
     if (!conversation) {
       return NextResponse.json(
@@ -42,6 +55,8 @@ export const GET = withErrorHandler(
         { status: 404 },
       );
     }
+    // The bounded window is fetched newest-first; restore chronological order.
+    conversation.messages.reverse();
 
     const projected = projectConversationForTrustedActor(
       conversation,

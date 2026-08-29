@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
 import {
+  MAX_IMPORT_FILE_BYTES,
   parseFile,
   mapRows,
   validateRows,
   batchInsert,
   autoDetectMapping,
 } from "@/lib/import/engine";
+import { SahelFlowError } from "@/types/errors";
 import { EXPENSE_FIELDS, parseNumber } from "@/lib/import/fields";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
@@ -38,6 +40,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   if (!file) {
     return NextResponse.json({ error: t("import.missingFile") }, { status: 400 });
+  }
+  // Import bounds (audit 7-a F4): reject oversized uploads before reading.
+  if (file.size > MAX_IMPORT_FILE_BYTES) {
+    throw new SahelFlowError(t("import.fileTooLarge"), "IMPORT_FILE_TOO_LARGE", 413);
   }
 
   const buffer = await file.arrayBuffer();

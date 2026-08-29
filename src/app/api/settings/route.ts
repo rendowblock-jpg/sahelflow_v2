@@ -27,11 +27,11 @@ const SETTINGS_TRANSACTION_OPTIONS = {
  * middleware protects it, but defense-in-depth requires the route itself
  * to enforce auth.
  */
-export async function GET(): Promise<NextResponse> {
+export const GET = withErrorHandler(async (): Promise<NextResponse> => {
   await requireAuth("settings.read");
   const settings = await getAllSettings({ prisma: db, shop: shopContext });
   return NextResponse.json({ settings });
-}
+}, "GET /api/settings");
 
 const updateSchema = z.object({
   settings: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),

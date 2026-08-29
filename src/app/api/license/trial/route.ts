@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db, shopContext } from "@/lib/db";
+import { requireTrustedAction } from "@/lib/identity/authorization";
 import { refreshConnectedEnrollmentIfConfigured } from "@/lib/connected-platform/runtime";
 import {
   activateSignedEntitlement,
@@ -28,6 +29,10 @@ function isRestoreEvidenceIssuer(): boolean {
 }
 
 export const POST = withErrorHandler(async () => {
+  // Trusted-actor parity (audit 7-a F2): activating an online trial is a
+  // consequential commercial mutation and must never be reachable with only
+  // the proxy HMAC cookie. license.manage is reserved to the owner preset.
+  await requireTrustedAction("license.manage");
   if (!process.env.SF_LICENSE_SERVICE_URL?.trim()) {
     throw new SahelFlowError(
       "Online trial is intentionally disabled for this Founder-only checkpoint",

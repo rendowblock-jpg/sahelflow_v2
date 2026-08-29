@@ -59,9 +59,27 @@ export const GET = withErrorHandler(async () => {
     where: { deletedAt: null },
     orderBy: { createdAt: "desc" },
   });
-  const latestRuns = automations.length
+  // Aggregate latest-run lookup (audit 7-a F6): the previous query scanned the
+  // full AutomationRun history for every automation and discarded all but one
+  // row per automation in JS. groupBy resolves each automation's newest run
+  // timestamp in SQL, then only those rows are fetched — bounded by the number
+  // of automations instead of the number of runs.
+  const automationIds = automations.map((automation) => automation.id);
+  const latestRunMarkers = automationIds.length
+    ? await db.automationRun.groupBy({
+        by: ["automationId"],
+        where: { automationId: { in: automationIds } },
+        _max: { createdAt: true },
+      })
+    : [];
+  const latestRuns = latestRunMarkers.length
     ? await db.automationRun.findMany({
-        where: { automationId: { in: automations.map((automation) => automation.id) } },
+        where: {
+          OR: latestRunMarkers.map((marker) => ({
+            automationId: marker.automationId,
+            createdAt: marker._max.createdAt ?? new Date(0),
+          })),
+        },
         orderBy: { createdAt: "desc" },
         select: {
           id: true,

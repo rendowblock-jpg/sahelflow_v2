@@ -27,6 +27,19 @@ import Papa from "papaparse";
 import * as XLSX from "@e965/xlsx";
 import { z } from "zod";
 
+import { SahelFlowError } from "@/types/errors";
+
+/**
+ * Import bounds (audit 7-a F4).
+ *
+ * Files are untrusted: without caps a multi-gigabyte upload or a zip-bomb
+ * workbook can exhaust the server process. File-size and row caps are enforced
+ * BEFORE/AT parse time, and magic-byte sniffing rejects binary payloads that
+ * masquerade as a supported extension.
+ */
+export const MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+export const MAX_IMPORT_ROWS = 10_000;
+
 export interface ParsedFile {
   headers: string[];
   rows: Record<string, string>[];
@@ -52,21 +65,76 @@ export interface BatchInsertResult {
   errors: Array<{ rowIndex: number; error: string }>;
 }
 
+type ContainerMagic = "zip" | "ole2" | "gzip";
+
+/**
+ * Identify well-known binary container signatures from the leading bytes.
+ * Returns null for text-like payloads (CSV/TXT, including UTF-8 BOM).
+ */
+function sniffContainerMagic(data: ArrayBuffer): ContainerMagic | null {
+  const head = new Uint8Array(data, 0, Math.min(8, data.byteLength));
+  if (
+    head.length >= 4 &&
+    head[0] === 0x50 &&
+    head[1] === 0x4b &&
+    (head[2] === 0x03 || head[2] === 0x05 || head[2] === 0x07) &&
+    (head[3] === 0x04 || head[3] === 0x06 || head[3] === 0x08)
+  ) {
+    return "zip";
+  }
+  if (
+    head.length >= 4 &&
+    head[0] === 0xd0 &&
+    head[1] === 0xcf &&
+    head[2] === 0x11 &&
+    head[3] === 0xe0
+  ) {
+    return "ole2";
+  }
+  if (head.length >= 2 && head[0] === 0x1f && head[1] === 0x8b) {
+    return "gzip";
+  }
+  return null;
+}
+
+function rowLimitError(): SahelFlowError {
+  return new SahelFlowError(
+    `The import file exceeds the maximum of ${MAX_IMPORT_ROWS} data rows`,
+    "IMPORT_ROW_LIMIT_EXCEEDED",
+    400,
+  );
+}
+
 /** Parse a CSV or XLSX file (as ArrayBuffer) into rows. */
 export function parseFile(
   data: ArrayBuffer,
   filename: string,
 ): ParsedFile {
   const ext = filename.toLowerCase().split(".").pop();
+  const magic = sniffContainerMagic(data);
 
   if (ext === "csv" || ext === "txt") {
+    // Magic-byte sniffing: a declared CSV/TXT that actually carries a binary
+    // container signature is a masquerading upload — reject before parsing.
+    if (magic) {
+      throw new SahelFlowError(
+        "The file content does not match its extension. Upload a real CSV or XLSX file",
+        "IMPORT_FILE_TYPE_MISMATCH",
+        415,
+      );
+    }
     const text = new TextDecoder().decode(data);
+    // preview caps the parse itself (memory bound), +1 sentinel detects overflow
     const result = Papa.parse<Record<string, string>>(text, {
       header: true,
       skipEmptyLines: true,
       dynamicTyping: false,
       transformHeader: (h) => h.trim(),
+      preview: MAX_IMPORT_ROWS + 1,
     });
+    if (result.data.length > MAX_IMPORT_ROWS) {
+      throw rowLimitError();
+    }
     return {
       headers: result.meta.fields ?? [],
       rows: result.data,
@@ -74,7 +142,18 @@ export function parseFile(
   }
 
   if (ext === "xlsx" || ext === "xls") {
-    const workbook = XLSX.read(data, { type: "array" });
+    // XLSX is a ZIP container; legacy .xls is OLE2 (BIFF). A declared XLSX
+    // without either signature is a masquerading upload — reject before the
+    // parser touches it (zip-bomb / polyglot defense).
+    if (magic !== "zip" && magic !== "ole2") {
+      throw new SahelFlowError(
+        "The file content does not match its extension. Upload a real CSV or XLSX file",
+        "IMPORT_FILE_TYPE_MISMATCH",
+        415,
+      );
+    }
+    // sheetRows caps the parse itself (memory bound), +1 sentinel detects overflow
+    const workbook = XLSX.read(data, { type: "array", sheetRows: MAX_IMPORT_ROWS + 1 });
     const sheetName = workbook.SheetNames[0];
     if (!sheetName) {
       throw new Error("Le fichier XLSX ne contient aucune feuille.");
@@ -86,6 +165,9 @@ export function parseFile(
     const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
       defval: "",
     });
+    if (json.length > MAX_IMPORT_ROWS) {
+      throw rowLimitError();
+    }
     if (json.length === 0) {
       return { headers: [], rows: [] };
     }

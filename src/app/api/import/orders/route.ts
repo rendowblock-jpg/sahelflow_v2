@@ -10,11 +10,13 @@ import {
 import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
 import { db } from "@/lib/db";
 import {
+  MAX_IMPORT_FILE_BYTES,
   autoDetectMapping,
   mapRows,
   parseFile,
   validateRows,
 } from "@/lib/import/engine";
+import { SahelFlowError } from "@/types/errors";
 import { ORDER_FIELDS, parseNumber } from "@/lib/import/fields";
 import { assertTrustedAction } from "@/lib/identity/authorization";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
@@ -84,6 +86,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "Missing import file" }, { status: 400 });
+  }
+  // Import bounds (audit 7-a F4): reject oversized uploads before reading.
+  if (file.size > MAX_IMPORT_FILE_BYTES) {
+    throw new SahelFlowError(
+      "The import file exceeds the 10 MB upload limit",
+      "IMPORT_FILE_TOO_LARGE",
+      413,
+    );
   }
 
   const buffer = await file.arrayBuffer();

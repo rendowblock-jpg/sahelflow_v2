@@ -8,11 +8,11 @@ import { db, shopContext } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 /** GET /api/risk/config — load the risk engine configuration */
-export async function GET() {
+export const GET = withErrorHandler(async () => {
   await requireAuth("risk.read");
   const config = await getRiskConfig({ prisma: db, shop: shopContext });
   return NextResponse.json({ config });
-}
+}, "GET /api/risk/config");
 
 /** PUT /api/risk/config — update the risk engine configuration */
 export const PUT = withErrorHandler(async (req: NextRequest) => {

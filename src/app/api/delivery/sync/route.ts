@@ -12,7 +12,11 @@ import {
 } from "@/lib/integrations/delivery";
 import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
 import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
-import { ConflictError, InvalidTransitionError } from "@/types/errors";
+import {
+  ConflictError,
+  InvalidTransitionError,
+  SahelFlowError,
+} from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -44,13 +48,17 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         })
       : null;
 
+  // Coded errors (audit 7-a F10): the French uncoded 400/404 strings become
+  // coded SahelFlowErrors. The French message is kept verbatim so the client
+  // substring translation contract keeps working; the code is machine-readable.
   if (!delivery) {
-    return NextResponse.json({ error: "Delivery not found" }, { status: 404 });
+    throw new SahelFlowError("Delivery not found", "DELIVERY_NOT_FOUND", 404);
   }
   if (!delivery.trackingNumber) {
-    return NextResponse.json(
-      { error: "Pas de numéro de suivi pour cette expédition" },
-      { status: 400 },
+    throw new SahelFlowError(
+      "Pas de numéro de suivi pour cette expédition",
+      "DELIVERY_NO_TRACKING_NUMBER",
+      400,
     );
   }
 
@@ -231,13 +239,15 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   }
 
   const delivery = await db.delivery.findUnique({ where: { id: deliveryId } });
+  // Coded errors (audit 7-a F10) — same contract as the POST handler.
   if (!delivery) {
-    return NextResponse.json({ error: "Delivery not found" }, { status: 404 });
+    throw new SahelFlowError("Delivery not found", "DELIVERY_NOT_FOUND", 404);
   }
   if (!delivery.trackingNumber) {
-    return NextResponse.json(
-      { error: "Pas de numéro de suivi" },
-      { status: 400 },
+    throw new SahelFlowError(
+      "Pas de numéro de suivi",
+      "DELIVERY_NO_TRACKING_NUMBER",
+      400,
     );
   }
 
