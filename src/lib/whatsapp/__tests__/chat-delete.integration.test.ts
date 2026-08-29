@@ -14,12 +14,19 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { testAuthenticatedOwnerBusinessPrincipal } from "@/lib/business-truth/principal";
 import { db, shopContext } from "@/lib/db";
+import { ConflictError } from "@/types/errors";
 import { deleteWhatsAppChats } from "../chat-delete";
 import { queueWhatsAppDocument } from "../durable-send";
 import {
   removeWhatsAppMediaRoot,
   whatsAppMediaRoot,
 } from "../media-object-store";
+import {
+  persistWhatsAppInbound,
+  type WhatsAppInboundEnvelope,
+} from "../inbound-ingress";
+import { processWhatsAppInbound } from "../inbound-processor";
+import { retryWhatsAppInbound } from "../inbound-recovery";
 import { normalizeWhatsAppJid } from "../types";
 
 const context = {
@@ -30,6 +37,26 @@ const context = {
   ),
   whatsAppProviderAccountId: "213555999000:12@s.whatsapp.net",
 };
+
+// Distinct provider identity so the tombstone-replay tests below cannot
+// collide with other integration files sharing the shop database.
+function replayEnvelope(): WhatsAppInboundEnvelope {
+  return {
+    spoolId: "d".repeat(64),
+    accountId: "213555999000:12@s.whatsapp.net",
+    receivedAt: "2026-08-03T12:00:00.000Z",
+    message: {
+      key: {
+        remoteJid: "213555000777@s.whatsapp.net",
+        fromMe: false,
+        id: "WAMIDCHATDELETEREPLAY1",
+      },
+      message: { conversation: "Resurrection probe" },
+      messageTimestamp: 1_786_010_000,
+      pushName: "Resurrection Probe",
+    },
+  };
+}
 
 let mediaTestRoot = "";
 
@@ -167,12 +194,28 @@ describe("permanent WhatsApp chat deletion", () => {
     ).toEqual([survivor.id]);
     // Messages cascade with the conversation.
     expect(await db.message.count()).toBe(2);
-    // Outbound effects, ingress events, attempts and outbox intents of the
-    // deleted chat are gone; pending sends can never resurrect the chat.
+    // Outbound effects and outbox intents of the deleted chat are gone;
+    // pending sends can never resurrect the chat. Ingress events are NOT
+    // deleted — they are tombstoned ("chat_deleted") so their ingressKey
+    // keeps deduplicating provider replays — and their attempts survive as
+    // append-only audit.
     expect(await db.whatsAppOutboundEffect.count()).toBe(1);
-    expect(await db.providerIngressEvent.count()).toBe(1);
-    expect(await db.providerIngressAttempt.count()).toBe(1);
+    expect(await db.providerIngressEvent.count()).toBe(2);
+    expect(await db.providerIngressAttempt.count()).toBe(2);
     expect(await db.outboxIntent.count()).toBe(1);
+    const tombstoned = await db.providerIngressEvent.findUnique({
+      where: { id: "evt-1" },
+    });
+    expect(tombstoned?.status).toBe("chat_deleted");
+    expect(tombstoned?.lastErrorCode).toBe("CHAT_DELETED");
+    expect(tombstoned?.nextAttemptAt).toBeNull();
+    expect(tombstoned?.lockedAt).toBeNull();
+    expect(tombstoned?.leaseToken).toBeNull();
+    // The survivor chat's ingress history keeps its applied truth.
+    const survivorEvent = await db.providerIngressEvent.findUnique({
+      where: { id: "evt-2" },
+    });
+    expect(survivorEvent?.status).toBe("applied");
     // Append-only business-command audit history survives the deletion —
     // including the deleted chat's own command records.
     expect(await db.businessCommand.count()).toBe(2);
@@ -184,7 +227,7 @@ describe("permanent WhatsApp chat deletion", () => {
     ).not.toBeNull();
   });
 
-  it("also removes not-yet-applied inbound events for the chat's source", async () => {
+  it("tombs not-yet-applied inbound events for the chat's source", async () => {
     const chat = await seedChat(3);
     if (!chat.sourceId) throw new Error("seed conversation missing sourceId");
     await db.providerIngressEvent.create({
@@ -205,7 +248,77 @@ describe("permanent WhatsApp chat deletion", () => {
 
     await deleteWhatsAppChats(context, [chat.id]);
 
-    expect(await db.providerIngressEvent.count()).toBe(0);
+    const pending = await db.providerIngressEvent.findUnique({
+      where: { id: "evt-pending" },
+    });
+    expect(pending?.status).toBe("chat_deleted");
+    expect(await db.conversation.count()).toBe(0);
+  });
+
+  it("a provider replay of a deleted chat's event cannot resurrect it", async () => {
+    const persisted = await persistWhatsAppInbound(context, replayEnvelope());
+    expect(persisted.replayed).toBe(false);
+    const applied = await processWhatsAppInbound(
+      context,
+      persisted.ingressEventId,
+    );
+    expect(applied.state).toBe("applied");
+    const conversationId = applied.conversationId;
+    if (!conversationId) {
+      throw new Error("applied ingress missing conversationId");
+    }
+    expect(await db.conversation.count()).toBe(1);
+
+    await deleteWhatsAppChats(context, [conversationId]);
+    expect(await db.conversation.count()).toBe(0);
+    expect(await db.message.count()).toBe(0);
+
+    // Sidecar re-delivery of the same provider event (spool retry after an
+    // unacknowledged POST, or reconnect re-notification) must dedup against
+    // the tombstoned row and stay terminal — never re-apply into a fresh
+    // conversation. This is the resurrection barrier the old hard delete
+    // destroyed.
+    const replay = await persistWhatsAppInbound(context, replayEnvelope());
+    expect(replay.replayed).toBe(true);
+    expect(replay.status).toBe("chat_deleted");
+    const processed = await processWhatsAppInbound(
+      context,
+      replay.ingressEventId,
+    );
+    expect(processed.state).toBe("chat_deleted");
+    expect(processed.publish).toBe(false);
+    expect(await db.conversation.count()).toBe(0);
+    expect(await db.message.count()).toBe(0);
+  });
+
+  it("operator recovery refuses to retry a tombstoned event", async () => {
+    const chat = await seedChat(5);
+    if (!chat.sourceId) throw new Error("seed conversation missing sourceId");
+    await db.providerIngressEvent.create({
+      data: {
+        id: "evt-retry-tombstone",
+        ingressKey: "ingress-key-retry-tombstone",
+        provider: "whatsapp",
+        environment: "test",
+        providerAccountHash: "0".repeat(64),
+        eventType: "message",
+        sourceId: chat.sourceId,
+        providerEventId: "WAMIDRETRYTOMB00001",
+        payloadJson: "{}",
+        payloadHash: "0".repeat(64),
+        status: "received",
+      },
+    });
+
+    await deleteWhatsAppChats(context, [chat.id]);
+
+    await expect(
+      retryWhatsAppInbound(context, {
+        ingressEventId: "evt-retry-tombstone",
+        auditActor: "recovery-test",
+        reason: "attempting to resurrect a deleted chat",
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
     expect(await db.conversation.count()).toBe(0);
   });
 
