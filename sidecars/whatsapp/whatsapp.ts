@@ -31,6 +31,10 @@ import {
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
 // Voice/audio outbound shares the 32 MiB encrypted-storage audio ceiling.
 const MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024;
+// C1 watchdog: after the bounded fast reconnects give up (5 attempts), keep
+// auto-receive alive with a slow background reconnect cadence instead of
+// requiring a manual "connect" after every sleep or network outage.
+const RECONNECT_WATCHDOG_INTERVAL_MS = 60_000;
 
 const logger = P({ level: process.env.SF_LOG_LEVEL ?? "warn", name: "wa" });
 
@@ -229,6 +233,19 @@ export interface SidecarEvent {
   message?: IncomingMessage;
 }
 
+/**
+ * C1 ingress scope: SahelFlow projects 1:1 WhatsApp conversations only
+ * (canonical PN and LID addresses; ledger #317 marks group/status/provider
+ * broadcast surfaces intentionally unsupported). Anything else —
+ * `status@broadcast`, `@g.us` groups, `@newsletter` — is skipped at the
+ * sidecar boundary with a log line instead of polluting the inbox queue with
+ * conversations the app cannot govern.
+ */
+export function isIndividualInboundJid(remoteJid: string | undefined): boolean {
+  if (!remoteJid) return false;
+  return remoteJid.endsWith("@s.whatsapp.net") || remoteJid.endsWith("@lid");
+}
+
 type Subscriber = (event: SidecarEvent) => void;
 
 export class WhatsAppManager {
@@ -240,6 +257,7 @@ export class WhatsAppManager {
   private subscribers = new Set<Subscriber>();
   private connecting = false;
   private reconnectAttempts = 0;
+  private reconnectWatchdog: ReturnType<typeof setInterval> | null = null;
 
   subscribe(fn: Subscriber): () => void {
     this.subscribers.add(fn);
@@ -353,6 +371,7 @@ export class WhatsAppManager {
         this.currentQr = null;
         this.status = "connected";
         this.reconnectAttempts = 0;
+        this.clearReconnectWatchdog();
         const u = this.sock?.user;
         this.user = u
           ? { id: u.id ?? "", name: u.name ?? undefined }
@@ -375,6 +394,7 @@ export class WhatsAppManager {
         this.sock = null;
         if (code === DisconnectReason.loggedOut || code === 401) {
           this.clearAuth();
+          this.clearReconnectWatchdog();
           this.status = "disconnected";
           this.user = null;
           this.emit({ type: "status", status: "disconnected" });
@@ -388,11 +408,23 @@ export class WhatsAppManager {
             { code, attempt: this.reconnectAttempts, delay },
             "reconnecting",
           );
-          setTimeout(() => void this.connect(), delay);
+          setTimeout(() => {
+            this.connect().catch((error) => {
+              // An unhandled rejection here previously both crashed-or-stalled
+              // the loop and left the UI stuck on "connecting". Fail
+              // truthfully and let the watchdog take over.
+              logger.error({ err: error }, "reconnect attempt failed");
+              this.sock = null;
+              this.status = "disconnected";
+              this.emit({ type: "status", status: "disconnected" });
+              this.scheduleReconnectWatchdog();
+            });
+          }, delay);
         } else {
           this.status = "disconnected";
           this.emit({ type: "status", status: "disconnected" });
-          logger.error({ code }, "gave up reconnecting");
+          logger.error({ code }, "gave up reconnecting — watchdog will keep retrying in the background");
+          this.scheduleReconnectWatchdog();
         }
       }
     });
@@ -733,6 +765,7 @@ export class WhatsAppManager {
   }
 
   async logout(): Promise<void> {
+    this.clearReconnectWatchdog();
     if (this.sock) {
       try {
         await this.sock.logout();
@@ -754,6 +787,36 @@ export class WhatsAppManager {
     } catch {
       // best effort
     }
+  }
+
+  /**
+   * C1 watchdog: a slow background reconnect cadence after the bounded
+   * fast-reconnect budget gives up (sleep/network outage longer than ~40s).
+   * Without it, the sidecar stayed disconnected until a manual "connect"
+   * press and every message sent meanwhile was lost to the inbox.
+   */
+  private scheduleReconnectWatchdog(): void {
+    if (this.reconnectWatchdog) return;
+    const timer = setInterval(() => {
+      if (this.sock || this.connecting || this.status !== "disconnected") {
+        return;
+      }
+      logger.info("reconnect watchdog: attempting background reconnect");
+      this.connect().catch((error) => {
+        logger.warn({ err: error }, "reconnect watchdog attempt failed");
+        this.sock = null;
+        this.status = "disconnected";
+        this.emit({ type: "status", status: "disconnected" });
+      });
+    }, RECONNECT_WATCHDOG_INTERVAL_MS);
+    timer.unref?.();
+    this.reconnectWatchdog = timer;
+  }
+
+  private clearReconnectWatchdog(): void {
+    if (!this.reconnectWatchdog) return;
+    clearInterval(this.reconnectWatchdog);
+    this.reconnectWatchdog = null;
   }
 
   private toJid(input: string): string {

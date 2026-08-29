@@ -215,10 +215,38 @@ export function useWhatsAppSocket(
       };
     };
 
+    // C1 resilience: the reconnect budget exists to stop a tight failure loop
+    // while the machine sleeps or the network is down. Once the user RETURNS
+    // to the app the old budget must not keep the inbox push dead (it never
+    // self-recovered before). Give the socket a fresh budget whenever the
+    // document becomes visible or the window regains focus without an open
+    // transport.
+    const recoverOnVisibility = () => {
+      if (closed) return;
+      if (document.visibilityState !== "visible") return;
+      if (
+        activeSocket &&
+        (activeSocket.readyState === WebSocket.OPEN ||
+          activeSocket.readyState === WebSocket.CONNECTING)
+      ) {
+        return;
+      }
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+      reconnectAttempt.current = 0;
+      void open(false);
+    };
+    document.addEventListener("visibilitychange", recoverOnVisibility);
+    window.addEventListener("focus", recoverOnVisibility);
+
     void open(false);
     return () => {
       closed = true;
       clearRenewal();
+      document.removeEventListener("visibilitychange", recoverOnVisibility);
+      window.removeEventListener("focus", recoverOnVisibility);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       try {
         activeSocket?.close();
