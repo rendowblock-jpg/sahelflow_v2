@@ -10,6 +10,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -191,6 +192,24 @@ function parseJson(path: string): unknown {
   }
 }
 
+/**
+ * Best-effort durability barrier after an atomic rename: the rename is only
+ * guaranteed across a crash once the containing directory entry itself has
+ * been flushed. Some platforms/filesystems refuse directory fsync — the
+ * barrier degrades to a no-op there instead of blocking registry writes.
+ */
+function fsyncDirectory(directory: string): void {
+  let handle: number | undefined;
+  try {
+    handle = openSync(directory, "r");
+    fsyncSync(handle);
+  } catch {
+    // Best-effort only.
+  } finally {
+    if (handle !== undefined) closeSync(handle);
+  }
+}
+
 function writeRegistryFile(registry: ShopRegistry): void {
   mkdirSync(dirname(registryPath), { recursive: true });
   const tempPath = `${registryPath}.${process.pid}.${randomUUID()}.tmp`;
@@ -203,26 +222,141 @@ function writeRegistryFile(registry: ShopRegistry): void {
   }
   try {
     renameSync(tempPath, registryPath);
+    fsyncDirectory(dirname(registryPath));
   } catch (error) {
     rmSync(tempPath, { force: true });
     throw error;
   }
 }
 
+const REGISTRY_LOCK_STALE_MS = 60_000;
+
+interface RegistryLockEvidence {
+  pid: number;
+  acquiredAt: string;
+}
+
+function readRegistryLockEvidence(
+  lockPath: string,
+): RegistryLockEvidence | null {
+  try {
+    const parsed = JSON.parse(readFileSync(lockPath, "utf8")) as Partial<RegistryLockEvidence>;
+    if (
+      typeof parsed.pid !== "number" ||
+      !Number.isSafeInteger(parsed.pid) ||
+      typeof parsed.acquiredAt !== "string"
+    ) {
+      return null;
+    }
+    return { pid: parsed.pid, acquiredAt: parsed.acquiredAt };
+  } catch {
+    return null;
+  }
+}
+
+/** ESRCH → provably dead; EPERM → alive but owned by another session. */
+function processIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+interface RegistryLockSnapshot {
+  pid: number | null;
+  acquiredAt: string | null;
+  mtimeMs: number;
+}
+
+function registryLockSnapshot(lockPath: string): RegistryLockSnapshot | null {
+  try {
+    const stats = statSync(lockPath);
+    const evidence = readRegistryLockEvidence(lockPath);
+    return {
+      mtimeMs: stats.mtimeMs,
+      pid: evidence?.pid ?? null,
+      acquiredAt: evidence?.acquiredAt ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Remove the lock only when its owner is provably gone: the file is older
+ * than the staleness window OR the recorded pid is dead. The snapshot is
+ * re-read immediately before the unlink so a live winner that replaced the
+ * stale lock in between is never broken.
+ */
+function tryBreakStaleRegistryLock(lockPath: string): boolean {
+  const snapshot = registryLockSnapshot(lockPath);
+  if (!snapshot) return false;
+  const expired = Date.now() - snapshot.mtimeMs > REGISTRY_LOCK_STALE_MS;
+  const ownerDead = snapshot.pid !== null && !processIsAlive(snapshot.pid);
+  if (!expired && !ownerDead) return false;
+
+  const current = registryLockSnapshot(lockPath);
+  if (
+    !current ||
+    current.mtimeMs !== snapshot.mtimeMs ||
+    current.pid !== snapshot.pid ||
+    current.acquiredAt !== snapshot.acquiredAt
+  ) {
+    return false;
+  }
+  try {
+    unlinkSync(lockPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function withRegistryLock<T>(operation: () => T): T {
   mkdirSync(dirname(registryPath), { recursive: true });
   const lockPath = `${registryPath}.lock`;
-  let lock: number;
+  const evidence: RegistryLockEvidence = {
+    pid: process.pid,
+    acquiredAt: new Date().toISOString(),
+  };
+  const evidenceJson = `${JSON.stringify(evidence)}\n`;
+  let acquired = false;
   try {
-    lock = openSync(lockPath, "wx", 0o600);
-  } catch {
-    throw new ShopRegistryError("Shop registry is busy", "REGISTRY_LOCKED");
-  }
-  try {
+    try {
+      writeFileSync(lockPath, evidenceJson, { flag: "wx", mode: 0o600 });
+      acquired = true;
+    } catch {
+      // Contended: recover only from a provably stale lock so a crashed
+      // process cannot wedge shop provisioning forever.
+      if (!tryBreakStaleRegistryLock(lockPath)) {
+        throw new ShopRegistryError("Shop registry is busy", "REGISTRY_LOCKED");
+      }
+      try {
+        writeFileSync(lockPath, evidenceJson, { flag: "wx", mode: 0o600 });
+        acquired = true;
+      } catch {
+        throw new ShopRegistryError("Shop registry is busy", "REGISTRY_LOCKED");
+      }
+    }
     return operation();
   } finally {
-    closeSync(lock);
-    unlinkSync(lockPath);
+    // Re-check the recorded pid before unlinking: after a stale takeover this
+    // process must not delete a successor's live lock.
+    if (acquired) {
+      const current = readRegistryLockEvidence(lockPath);
+      if (
+        current?.pid === evidence.pid &&
+        current?.acquiredAt === evidence.acquiredAt
+      ) {
+        try {
+          unlinkSync(lockPath);
+        } catch {
+          // Already removed or replaced by a successor.
+        }
+      }
+    }
   }
 }
 
@@ -429,6 +563,7 @@ export function createShop(input: { name: string; icon?: string | null }): Shop 
     const staging = `${target}.${randomUUID()}.provisioning`;
     provisionDatabase(staging);
     renameSync(staging, target);
+    fsyncDirectory(dirname(target));
 
     registry.shops.push(shop);
     registry.activeShopId ??= id;
@@ -465,6 +600,7 @@ export function deleteShop(shopId: string): void {
     const quarantined = join(quarantineDir, `${shop.id}-${Date.now()}.db`);
     invalidateShopClient(source);
     renameSync(source, quarantined);
+    fsyncDirectory(dirname(quarantined));
     registry.shops = registry.shops.filter((candidate) => candidate.id !== shopId);
     if (registry.activeShopId === shopId) registry.activeShopId = registry.shops[0]?.id ?? null;
     registry.revision += 1;
@@ -472,6 +608,7 @@ export function deleteShop(shopId: string): void {
       writeRegistryFile(validateRegistry(registry));
     } catch (error) {
       renameSync(quarantined, source);
+      fsyncDirectory(dirname(source));
       throw error;
     }
   });

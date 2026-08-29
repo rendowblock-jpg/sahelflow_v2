@@ -20,16 +20,22 @@ describe("Phase 4 live blind-index search authority", () => {
     }
   });
 
-  it("does not derive installation-root candidates for direct customer phone lookups", () => {
+  it("derives dual-generation candidates for direct customer phone lookups", () => {
     const source = read("src/lib/crypto/protected-pii.ts");
     const start = source.indexOf("async function customerPhoneIndexes");
     const end = source.indexOf("async function decryptNested", start);
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
     const lookupAuthority = source.slice(start, end);
+    // The canonical purpose-separated authority is still consulted.
     expect(lookupAuthority).toContain("blindKeyIfPresent");
-    expect(lookupAuthority).not.toContain("deriveBlindIndex");
-    expect(lookupAuthority).not.toContain("legacyRoot");
+    // Canonical index stays FIRST (unshifted ahead of the legacy candidate) so
+    // creates target the converging generation.
+    expect(lookupAuthority).toContain("unshift");
+    // The legacy installation-root candidate is byte-exact with the retired
+    // generator (field-crypto deriveBlindIndex under getMasterKey()).
+    expect(lookupAuthority).toContain("deriveBlindIndex");
+    expect(lookupAuthority).toContain("legacyRoot");
   });
 
   it("converges legacy reputation hashes before runtime readiness", () => {

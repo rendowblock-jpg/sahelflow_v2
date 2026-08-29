@@ -292,6 +292,8 @@ model Conversation {
 
   @@index([channel])
   @@index([lastMessageAt])
+  // Audit 7-d P3-7: inbox channel filter + recency sort in one composite.
+  @@index([channel, lastMessageAt])
   @@index([status])
   @@index([assigneeId])
   @@index([priority])
@@ -326,6 +328,8 @@ model Message {
   createdAt          DateTime     @default(now())
 
   @@index([conversationId, timestamp])
+  // Audit 7-d P3-7: per-conversation timeline scan by direction + order.
+  @@index([conversationId, direction, timestamp])
   @@index([deliveryStatus])
   @@index([quotedMessageId])
 }
