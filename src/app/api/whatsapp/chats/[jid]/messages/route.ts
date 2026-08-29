@@ -182,7 +182,12 @@ export const GET = withErrorHandler(
     const intents = effectKeys.length
       ? await db.outboxIntent.findMany({
           where: { effectKey: { in: effectKeys } },
-          select: { effectKey: true, status: true, outcomeState: true },
+          select: {
+            effectKey: true,
+            status: true,
+            outcomeState: true,
+            lastErrorCode: true,
+          },
         })
       : [];
     const intentByKey = new Map(
@@ -203,6 +208,7 @@ export const GET = withErrorHandler(
             ? "ambiguous"
             : intent.status
           : undefined;
+        const effectErrorCode = intent?.lastErrorCode ?? null;
         const openedAttachment =
           attachmentKey && message.attachments
             ? openWhatsAppMessageAttachmentWithKey(
@@ -216,11 +222,17 @@ export const GET = withErrorHandler(
           if (
             fromMe &&
             (openedAttachment.kind === "image" ||
-              openedAttachment.kind === "video")
+              openedAttachment.kind === "video" ||
+              openedAttachment.kind === "document" ||
+              openedAttachment.kind === "audio")
           ) {
             // Outbound media bytes are already canonical encrypted local state
-            // before provider dispatch, so local preview/download stays truthful
-            // even while delivery is queued, retrying or failed.
+            // before provider dispatch, and the local read service serves
+            // image/video, documents (zip↔OOXML tolerant receipt) and audio
+            // for outbound rows — so the bubble's local projection must be
+            // "ready" for every outbound binary kind. Without it the document
+            // card spun on "جارٍ حفظ الوسائط بشكل آمن" forever even when the
+            // file was delivered (FD-050 row B3).
             attachment = {
               ...openedAttachment,
               localMedia: projectInboxLocalMedia(
@@ -259,6 +271,7 @@ export const GET = withErrorHandler(
             : undefined,
           effectKey: effect?.effectKey,
           effectState: effectState as IncomingMessage["effectState"],
+          effectErrorCode,
           attachment,
           quotedMessageId: message.quotedMessageId,
           quoted: message.quotedMessageId

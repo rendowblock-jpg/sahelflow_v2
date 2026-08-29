@@ -48,6 +48,8 @@ export interface IncomingMessage {
   /** Local durable effect identity/state; never supplied by the provider. */
   effectKey?: string;
   effectState?: "queued" | "processing" | "retrying" | "succeeded" | "ambiguous" | "dead_letter";
+  /** Coded outbox rejection (OutboxIntent.lastErrorCode); never provider prose. */
+  effectErrorCode?: string | null;
   /** Protected canonical attachment projection supplied by the app, never raw provider paths. */
   attachment?: ProjectedWhatsAppAttachment | null;
   /** Canonical persisted message this message quotes (#317 quoted replies). */

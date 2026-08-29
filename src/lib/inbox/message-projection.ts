@@ -22,6 +22,7 @@ export function toInboxMessageFromWhatsApp(
     deliveryStatus: message.deliveryStatus,
     outboxEffectKey: message.effectKey,
     outboxState: message.effectState,
+    outboxErrorCode: message.effectErrorCode ?? null,
     attachment: message.attachment,
     quotedMessageId: message.quotedMessageId,
     quoted: message.quoted,
