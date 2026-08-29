@@ -45,6 +45,8 @@ export interface InboxMessage {
     | "succeeded"
     | "ambiguous"
     | "dead_letter";
+  /** Coded outbox rejection (OutboxIntent.lastErrorCode), for truthful retry affordances. */
+  outboxErrorCode?: string | null;
   attachment?: IncomingMessage["attachment"];
   /** Canonical message this message quotes (#317 quoted replies). */
   quotedMessageId?: string | null;

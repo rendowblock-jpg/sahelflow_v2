@@ -462,7 +462,7 @@ function MessageBubble({
       {!inbound &&
       message.deliveryStatus === "failed" &&
       message.outboxEffectKey ? (
-        <div className="flex justify-end">
+        <div className="flex flex-col items-end gap-1">
           <Button
             type="button"
             variant="outline"
@@ -472,6 +472,11 @@ function MessageBubble({
             <RefreshCw className="size-3.5" aria-hidden="true" />
             {t("inbox.retry")}
           </Button>
+          {message.outboxErrorCode ? (
+            <span className="font-mono text-[10px] text-muted-foreground">
+              {message.outboxErrorCode}
+            </span>
+          ) : null}
         </div>
       ) : null}
     </div>

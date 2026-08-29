@@ -625,6 +625,7 @@ export function useInboxWorkspace() {
                 deliveryStatus: message.deliveryStatus,
                 outboxEffectKey: message.effectKey,
                 outboxState: message.effectState,
+                outboxErrorCode: message.effectErrorCode ?? null,
                 attachment: message.attachment,
               }),
             );
@@ -845,6 +846,7 @@ export function useInboxWorkspace() {
               deliveryStatus: message.deliveryStatus,
               outboxEffectKey: message.effectKey,
               outboxState: message.effectState,
+              outboxErrorCode: message.effectErrorCode ?? null,
             },
           ];
         });
@@ -1170,6 +1172,7 @@ export function useInboxWorkspace() {
             effect: {
               state: InboxMessage["outboxState"];
               providerMessageId: string | null;
+              errorCode?: string | null;
             };
           };
           const state = data.effect.state;
@@ -1183,6 +1186,7 @@ export function useInboxWorkspace() {
                   deliveryStatus: "sent",
                   outboxEffectKey: effectKey,
                   outboxState: state,
+                  outboxErrorCode: null,
                 },
               ),
             );
@@ -1202,6 +1206,7 @@ export function useInboxWorkspace() {
                   deliveryStatus: "failed",
                   outboxEffectKey: effectKey,
                   outboxState: state,
+                  outboxErrorCode: data.effect.errorCode ?? null,
                 },
               ),
             );
