@@ -64,7 +64,7 @@ Thumbs.db
 *.swo
 
 # TypeScript build info
-tsconfig.tsbuildinfo
+*.tsbuildinfo
 
 # App metadata (per-machine shop registry)
 data/app-meta.json

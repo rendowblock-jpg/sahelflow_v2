@@ -16,8 +16,10 @@ import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import {
   mergeInboxMessageProjection,
   reconcileInboxProviderMessage,
+  toInboxMessageFromWhatsApp,
 } from "@/lib/inbox/message-projection";
 import { toast } from "@/lib/toast";
+import { mapBaileysStatusUpdate } from "../../sidecars/whatsapp/delivery-status";
 import {
   messageText,
   type IncomingMessage,
@@ -42,6 +44,18 @@ type MediaSendResponse = {
   state?: InboxMessage["outboxState"];
   requiresDuplicateConfirmation?: boolean;
 };
+
+/**
+ * Truthful outcome for permanent multi-select chat deletion. `errorCode`
+ * carries the server's coded rejection (LICENSE_*, DEMO_MUTATION_BLOCKED,
+ * VALIDATION_ERROR, …) or an `HTTP_<status>` fallback so the confirm dialog
+ * can show the operator why the store refused the deletion instead of
+ * silently doing nothing.
+ */
+export interface DeleteChatsOutcome {
+  ok: boolean;
+  errorCode: string | null;
+}
 
 /**
  * Upload one bounded multipart media send with truthful byte progress and a
@@ -216,21 +230,9 @@ function mapConversationProjection(
 function mapDeliveryStatus(
   update: Record<string, unknown>,
 ): InboxMessage["deliveryStatus"] | null {
-  const status = update.status;
-  if (status === undefined || status === null) return null;
-  const normalized =
-    typeof status === "number" ? status : String(status).toUpperCase();
-  if (normalized === 0 || normalized === "PENDING") return "sending";
-  if (normalized === 1 || normalized === "SENT") return "sent";
-  if (
-    normalized === 2 ||
-    normalized === "DELIVERY" ||
-    normalized === "DELIVERED"
-  ) {
-    return "delivered";
-  }
-  if (normalized === 3 || normalized === "READ") return "read";
-  return null;
+  // Canonical enum-truthful projection (sidecars/whatsapp/delivery-status.ts):
+  // SERVER_ACK→sent, DELIVERY_ACK→delivered, ERROR→failed, PLAYED→read.
+  return mapBaileysStatusUpdate(update);
 }
 
 function inboxMessagesEqual(
@@ -615,19 +617,10 @@ export function useInboxWorkspace() {
             const data = (await response.json()) as {
               messages: Array<IncomingMessage & { messageType?: string }>;
             };
+            // toInboxMessageFromWhatsApp preserves the quoted-reply context
+            // (#317 B1/B2) so quote chips survive chat switches and restarts.
             const loadedMessages: InboxMessage[] = data.messages.map(
-              (message) => ({
-                id: message.key.id,
-                body: messageText(message.message),
-                direction: message.key.fromMe ? "outbound" : "inbound",
-                timestamp: message.messageTimestamp * 1000,
-                messageType: message.messageType,
-                deliveryStatus: message.deliveryStatus,
-                outboxEffectKey: message.effectKey,
-                outboxState: message.effectState,
-                outboxErrorCode: message.effectErrorCode ?? null,
-                attachment: message.attachment,
-              }),
+              toInboxMessageFromWhatsApp,
             );
             if (!applyLoadedProjection(loadedMessages)) return;
             void markRead(chat);
@@ -1012,18 +1005,41 @@ export function useInboxWorkspace() {
    * Permanent multi-select chat deletion (founder-confirmed contract).
    * Server removes messages, effects, ingress events and local media; the
    * queue refreshes and an open deleted chat is dropped without persisting
-   * its draft back to the now-deleted conversation.
+   * its draft back to the now-deleted conversation. Failures return a
+   * coded outcome instead of a bare boolean so the confirm dialog can
+   * surface the server's rejection reason.
    */
   const deleteChats = useCallback(
-    async (conversationIds: string[]): Promise<boolean> => {
-      if (!canDeleteChats || conversationIds.length === 0) return false;
+    async (conversationIds: string[]): Promise<DeleteChatsOutcome> => {
+      if (!canDeleteChats || conversationIds.length === 0) {
+        return { ok: false, errorCode: null };
+      }
       try {
         const response = await fetch("/api/whatsapp/chats/delete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ids: conversationIds }),
         });
-        if (!response.ok) return false;
+        if (!response.ok) {
+          let errorCode: string | null = null;
+          try {
+            const body: unknown = await response.json();
+            if (
+              body &&
+              typeof body === "object" &&
+              typeof (body as { code?: unknown }).code === "string"
+            ) {
+              errorCode = (body as { code: string }).code;
+            }
+          } catch {
+            // Non-JSON failure body (e.g. a bare middleware 401): fall back
+            // to the numeric status below.
+          }
+          return {
+            ok: false,
+            errorCode: errorCode ?? `HTTP_${response.status}`,
+          };
+        }
         const active = activeChatRef.current;
         if (active && conversationIds.includes(active.conversationId)) {
           messageSelectionGenerationRef.current += 1;
@@ -1036,9 +1052,9 @@ export function useInboxWorkspace() {
           setReplyText("");
         }
         await loadChats();
-        return true;
+        return { ok: true, errorCode: null };
       } catch {
-        return false;
+        return { ok: false, errorCode: null };
       }
     },
     [canDeleteChats, loadChats, replaceMessages, setReplyText],
@@ -1159,79 +1175,92 @@ export function useInboxWorkspace() {
       effectKey: string,
       localMessageId: string,
     ) => {
-      for (let attempt = 0; attempt < 120; attempt += 1) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, attempt === 0 ? 1_000 : 3_000),
+      // Applies one outbox poll to the local projection. Returns true when the
+      // effect reached a terminal state and monitoring can stop.
+      const applyOutboxPoll = async (): Promise<boolean> => {
+        const response = await fetch(
+          `/api/whatsapp/outbox?effectKey=${encodeURIComponent(effectKey)}`,
         );
-        try {
-          const response = await fetch(
-            `/api/whatsapp/outbox?effectKey=${encodeURIComponent(effectKey)}`,
-          );
-          if (!response.ok) continue;
-          const data = (await response.json()) as {
-            effect: {
-              state: InboxMessage["outboxState"];
-              providerMessageId: string | null;
-              errorCode?: string | null;
-            };
+        if (!response.ok) return false;
+        const data = (await response.json()) as {
+          effect: {
+            state: InboxMessage["outboxState"];
+            providerMessageId: string | null;
+            errorCode?: string | null;
           };
-          const state = data.effect.state;
-          if (state === "succeeded") {
-            mutateMessages(conversationId, (current) =>
-              reconcileInboxProviderMessage(
-                current,
-                localMessageId,
-                data.effect.providerMessageId,
-                {
-                  deliveryStatus: "sent",
-                  outboxEffectKey: effectKey,
-                  outboxState: state,
-                  outboxErrorCode: null,
-                },
-              ),
-            );
-            const active = activeChatRef.current;
-            if (active?.conversationId === conversationId) {
-              void loadMessages(active, { background: true });
-            }
-            return;
-          }
-          if (state === "ambiguous" || state === "dead_letter") {
-            mutateMessages(conversationId, (current) =>
-              reconcileInboxProviderMessage(
-                current,
-                localMessageId,
-                data.effect.providerMessageId,
-                {
-                  deliveryStatus: "failed",
-                  outboxEffectKey: effectKey,
-                  outboxState: state,
-                  outboxErrorCode: data.effect.errorCode ?? null,
-                },
-              ),
-            );
-            if (activeChatRef.current?.conversationId === conversationId) {
-              setSendError(
-                state === "ambiguous"
-                  ? t("inbox.whatsappAmbiguous")
-                  : t("inbox.sendFailed"),
-              );
-            }
-            return;
-          }
+        };
+        const state = data.effect.state;
+        if (state === "succeeded") {
           mutateMessages(conversationId, (current) =>
             reconcileInboxProviderMessage(
               current,
               localMessageId,
               data.effect.providerMessageId,
               {
+                deliveryStatus: "sent",
                 outboxEffectKey: effectKey,
                 outboxState: state,
+                outboxErrorCode: null,
               },
             ),
           );
+          const active = activeChatRef.current;
+          if (active?.conversationId === conversationId) {
+            void loadMessages(active, { background: true });
+          }
+          return true;
+        }
+        if (state === "ambiguous" || state === "dead_letter") {
+          mutateMessages(conversationId, (current) =>
+            reconcileInboxProviderMessage(
+              current,
+              localMessageId,
+              data.effect.providerMessageId,
+              {
+                deliveryStatus: "failed",
+                outboxEffectKey: effectKey,
+                outboxState: state,
+                outboxErrorCode: data.effect.errorCode ?? null,
+              },
+            ),
+          );
+          if (activeChatRef.current?.conversationId === conversationId) {
+            setSendError(
+              state === "ambiguous"
+                ? t("inbox.whatsappAmbiguous")
+                : t("inbox.sendFailed"),
+            );
+          }
+          return true;
+        }
+        mutateMessages(conversationId, (current) =>
+          reconcileInboxProviderMessage(
+            current,
+            localMessageId,
+            data.effect.providerMessageId,
+            {
+              outboxEffectKey: effectKey,
+              outboxState: state,
+            },
+          ),
+        );
+        return false;
+      };
+      for (let attempt = 0; attempt < 120; attempt += 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, attempt === 0 ? 1_000 : 3_000),
+        );
+        try {
+          if (await applyOutboxPoll()) return;
         } catch {
         }
+      }
+      // Budget exhausted (≈6 min): without a final reconcile the bubble could
+      // keep its optimistic "sending" clock even after the durable effect
+      // later resolved server-side (worker backoff can outlive the monitor).
+      try {
+        await applyOutboxPoll();
+      } catch {
       }
     },
     [loadMessages, mutateMessages, t],

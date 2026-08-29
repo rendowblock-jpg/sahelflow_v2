@@ -575,6 +575,7 @@ export function InboxV3Thread({
     copy: {
       micUnavailable: copy("voiceMicUnavailable"),
       recordingUnsupported: copy("voiceRecordingUnsupported"),
+      processingFailed: copy("voiceProcessingFailed"),
     },
   });
 

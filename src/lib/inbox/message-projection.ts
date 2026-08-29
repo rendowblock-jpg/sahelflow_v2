@@ -1,4 +1,33 @@
+import { messageText, type IncomingMessage } from "@/lib/whatsapp/types";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
+
+/**
+ * Projects one persisted WhatsApp message from the history API
+ * (`/api/whatsapp/chats/[jid]/messages`) into the renderer's InboxMessage.
+ *
+ * The quoted-reply fields MUST survive this projection: the composer renders
+ * the quote chip from them, so dropping them here makes every quote chip
+ * vanish on chat switch, background refresh, or app restart even though the
+ * send itself (and the quote on the recipient's phone) is intact (#317 B1/B2).
+ */
+export function toInboxMessageFromWhatsApp(
+  message: IncomingMessage & { messageType?: string },
+): InboxMessage {
+  return {
+    id: message.key.id,
+    body: messageText(message.message),
+    direction: message.key.fromMe ? "outbound" : "inbound",
+    timestamp: message.messageTimestamp * 1000,
+    messageType: message.messageType,
+    deliveryStatus: message.deliveryStatus,
+    outboxEffectKey: message.effectKey,
+    outboxState: message.effectState,
+    outboxErrorCode: message.effectErrorCode ?? null,
+    attachment: message.attachment,
+    quotedMessageId: message.quotedMessageId,
+    quoted: message.quoted,
+  };
+}
 
 const DELIVERY_STATUS_RANK: Partial<
   Record<NonNullable<InboxMessage["deliveryStatus"]>, number>

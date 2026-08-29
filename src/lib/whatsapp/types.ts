@@ -52,6 +52,14 @@ export interface IncomingMessage {
   effectErrorCode?: string | null;
   /** Protected canonical attachment projection supplied by the app, never raw provider paths. */
   attachment?: ProjectedWhatsAppAttachment | null;
+  /** Canonical persisted message this message quotes (#317 quoted replies). */
+  quotedMessageId?: string | null;
+  /** Server-resolved visible context for the quoted target, when known. */
+  quoted?: {
+    fromMe: boolean;
+    preview: string;
+    messageType?: string | null;
+  } | null;
 }
 
 export interface SidecarChat {
