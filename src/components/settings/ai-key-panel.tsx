@@ -58,6 +58,22 @@ function requiresReauthentication(response: Response, body: SaveResult): boolean
   return response.status === 403 && body.code === "REAUTHENTICATION_REQUIRED";
 }
 
+/**
+ * Localized product copy for coded rejections. GEMINI_* codes already arrive
+ * with locale-native copy from the API route; everything else gets bounded
+ * product copy here so raw English server messages (license gates, demo
+ * read-only mode, protected-key authority mismatches) never reach a merchant.
+ */
+function rejectionCopy(data: SaveResult, t: (key: string) => string): string {
+  const code = data.code ?? "";
+  if (code === "DEMO_MUTATION_BLOCKED") return t("aiKey.errorDemo");
+  if (code.startsWith("LICENSE_")) return t("aiKey.errorLicense");
+  if (code.startsWith("PROTECTED_DATA_")) {
+    return t("aiKey.errorSecretAuthority");
+  }
+  return data.error ?? t("aiKey.error");
+}
+
 export function AiKeyPanel({
   canManageKey,
   canManageConsent,
@@ -84,6 +100,9 @@ export function AiKeyPanel({
   const [pin, setPin] = useState("");
   const [reauthBusy, setReauthBusy] = useState(false);
   const [reauthError, setReauthError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    "save" | "delete" | null
+  >(null);
 
   const loadKeyStatus = useCallback(async () => {
     if (!canManageKey) return;
@@ -151,11 +170,27 @@ export function AiKeyPanel({
       });
       const body = (await response.json().catch(() => ({}))) as SaveResult;
       if (!response.ok) {
-        setReauthError(body.error ?? copy("verificationDescription"));
+        setReauthError(
+          response.status === 401
+            ? t("aiKey.pinIncorrect")
+            : response.status === 429
+              ? t("aiKey.pinLocked")
+              : body.error ?? copy("verificationDescription"),
+        );
         return;
       }
       setPin("");
       await loadKeyStatus();
+      // The PIN loop used to dead-end the interrupted action: the operator
+      // had to find and re-trigger it manually. Resume exactly what they
+      // asked for before the reauthentication gate intercepted it.
+      const action = pendingAction;
+      setPendingAction(null);
+      if (action === "save") {
+        await handleSave();
+      } else if (action === "delete") {
+        await performDelete();
+      }
     } catch {
       setReauthError(copy("unavailableDescription"));
     } finally {
@@ -214,6 +249,11 @@ export function AiKeyPanel({
       const data = (await response.json().catch(() => ({}))) as SaveResult;
       if (requiresReauthentication(response, data)) {
         setAuthorityState("verification-required");
+        setPendingAction("save");
+        return;
+      }
+      if (!response.ok || !data.ok) {
+        setResult({ ok: false, code: data.code, error: rejectionCopy(data, t) });
         return;
       }
       setResult(data);
@@ -240,22 +280,24 @@ export function AiKeyPanel({
       });
       const data = (await response.json().catch(() => ({}))) as SaveResult;
       if (requiresReauthentication(response, data)) {
+        // Close the confirm dialog so the resumed deletion after the PIN
+        // loop runs without a stale overlay above it.
+        setDeleteConfirmOpen(false);
         setAuthorityState("verification-required");
+        setPendingAction("delete");
         return;
       }
       if (!response.ok || !data.ok) {
-        throw new Error(data.error ?? t("aiKey.errorDelete"));
+        setResult({ ok: false, code: data.code, error: rejectionCopy(data, t) });
+        return;
       }
       setConfigured(false);
       setEditing(false);
       setActiveModel(null);
       setResult(null);
       setAuthorityState("ready");
-    } catch (error) {
-      setResult({
-        ok: false,
-        error: error instanceof Error ? error.message : t("aiKey.errorDelete"),
-      });
+    } catch {
+      setResult({ ok: false, error: t("aiKey.errorDelete") });
     } finally {
       setDeleting(false);
     }
