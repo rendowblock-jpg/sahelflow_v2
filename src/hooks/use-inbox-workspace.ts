@@ -16,6 +16,7 @@ import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import {
   mergeInboxMessageProjection,
   reconcileInboxProviderMessage,
+  toInboxMessageFromWhatsApp,
 } from "@/lib/inbox/message-projection";
 import { toast } from "@/lib/toast";
 import {
@@ -615,18 +616,10 @@ export function useInboxWorkspace() {
             const data = (await response.json()) as {
               messages: Array<IncomingMessage & { messageType?: string }>;
             };
+            // toInboxMessageFromWhatsApp preserves the quoted-reply context
+            // (#317 B1/B2) so quote chips survive chat switches and restarts.
             const loadedMessages: InboxMessage[] = data.messages.map(
-              (message) => ({
-                id: message.key.id,
-                body: messageText(message.message),
-                direction: message.key.fromMe ? "outbound" : "inbound",
-                timestamp: message.messageTimestamp * 1000,
-                messageType: message.messageType,
-                deliveryStatus: message.deliveryStatus,
-                outboxEffectKey: message.effectKey,
-                outboxState: message.effectState,
-                attachment: message.attachment,
-              }),
+              toInboxMessageFromWhatsApp,
             );
             if (!applyLoadedProjection(loadedMessages)) return;
             void markRead(chat);

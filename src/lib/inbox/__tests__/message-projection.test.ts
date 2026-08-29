@@ -4,6 +4,7 @@ import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import {
   mergeInboxMessageProjection,
   reconcileInboxProviderMessage,
+  toInboxMessageFromWhatsApp,
 } from "@/lib/inbox/message-projection";
 
 function message(
@@ -463,5 +464,71 @@ describe("Inbox live message projection reconciliation", () => {
         outboxState: "ambiguous",
       }),
     ]);
+  });
+});
+
+describe("WhatsApp history projection fidelity (#317 B1/B2)", () => {
+  it("preserves the quoted-reply context so quote chips survive reloads", () => {
+    const projected = toInboxMessageFromWhatsApp({
+      key: { remoteJid: "213555010203@s.whatsapp.net", fromMe: true, id: "wam-1" },
+      message: { conversation: "order confirmed" },
+      messageTimestamp: 1_700_000_000,
+      deliveryStatus: "delivered",
+      effectKey: "effect-1",
+      effectState: "succeeded",
+      messageType: "text",
+      quotedMessageId: "msg-target-1",
+      quoted: {
+        fromMe: false,
+        preview: "please confirm my order",
+        messageType: "text",
+      },
+    });
+
+    expect(projected).toMatchObject({
+      id: "wam-1",
+      body: "order confirmed",
+      direction: "outbound",
+      timestamp: 1_700_000_000_000,
+      deliveryStatus: "delivered",
+      outboxEffectKey: "effect-1",
+      outboxState: "succeeded",
+      quotedMessageId: "msg-target-1",
+      quoted: {
+        fromMe: false,
+        preview: "please confirm my order",
+        messageType: "text",
+      },
+    });
+  });
+
+  it("keeps an explicit null quoted context as null, and absent fields absent", () => {
+    const explicitNull = toInboxMessageFromWhatsApp({
+      key: { remoteJid: "213555010203@s.whatsapp.net", fromMe: false, id: "wam-2" },
+      message: { conversation: "hello" },
+      messageTimestamp: 1_700_000_001,
+      quotedMessageId: null,
+      quoted: null,
+    });
+    expect(explicitNull.quotedMessageId).toBeNull();
+    expect(explicitNull.quoted).toBeNull();
+
+    const absent = toInboxMessageFromWhatsApp({
+      key: { remoteJid: "213555010203@s.whatsapp.net", fromMe: false, id: "wam-3" },
+      message: { conversation: "hi" },
+      messageTimestamp: 1_700_000_002,
+    });
+    expect(absent.quotedMessageId).toBeUndefined();
+    expect(absent.quoted).toBeUndefined();
+    expect(absent.direction).toBe("inbound");
+  });
+
+  it("projects bodies through messageText including media captions", () => {
+    const captioned = toInboxMessageFromWhatsApp({
+      key: { remoteJid: "213555010203@s.whatsapp.net", fromMe: false, id: "wam-4" },
+      message: { imageMessage: { caption: "catalog photo" } },
+      messageTimestamp: 1_700_000_003,
+    });
+    expect(captioned.body).toBe("catalog photo");
   });
 });
