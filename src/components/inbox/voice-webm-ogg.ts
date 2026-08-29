@@ -37,7 +37,11 @@ const CRC32_TABLE = (() => {
 function oggCrc32(bytes: Uint8Array): number {
   let crc = 0;
   for (let index = 0; index < bytes.length; index += 1) {
-    crc = ((crc << 8) ^ CRC32_TABLE[(crc >>> 24) ^ bytes[index]] >>> 0) >>> 0;
+    const byte = bytes[index];
+    if (byte === undefined) break;
+    const entry = CRC32_TABLE[(crc >>> 24) ^ byte];
+    if (entry === undefined) break;
+    crc = ((crc << 8) ^ (entry >>> 0)) >>> 0;
   }
   return crc >>> 0;
 }
@@ -87,7 +91,7 @@ interface ParsedElement {
 function readVint(bytes: Uint8Array, offset: number): { value: number; length: number } | null {
   if (offset >= bytes.length) return null;
   const first = bytes[offset];
-  if (first === 0) return null;
+  if (first === undefined || first === 0) return null;
   let length = 1;
   let mask = 0x80;
   while (length <= 8 && (first & mask) === 0) {
@@ -97,7 +101,9 @@ function readVint(bytes: Uint8Array, offset: number): { value: number; length: n
   if (length > 8 || offset + length > bytes.length) return null;
   let value = first & (mask - 1);
   for (let index = 1; index < length; index += 1) {
-    value = value * 256 + bytes[offset + index];
+    const byte = bytes[offset + index];
+    if (byte === undefined) return null;
+    value = value * 256 + byte;
   }
   return { value, length };
 }
@@ -111,15 +117,19 @@ function parseElementHeader(bytes: Uint8Array, offset: number, limit: number): P
   const idVint = readVint(bytes, offset);
   if (!idVint) return null;
   // Re-derive the full ID value with the marker bit set.
+  const idFirst = bytes[offset];
+  if (idFirst === undefined) return null;
   let idLength = 1;
   let idMask = 0x80;
-  while (idMask !== 0 && (bytes[offset] & idMask) === 0) {
+  while (idMask !== 0 && (idFirst & idMask) === 0) {
     idMask >>= 1;
     idLength += 1;
   }
   let id = 0;
   for (let index = 0; index < idLength; index += 1) {
-    id = id * 256 + bytes[offset + index];
+    const byte = bytes[offset + index];
+    if (byte === undefined) return null;
+    id = id * 256 + byte;
   }
   const sizeOffset = offset + idLength;
   const sizeVint = readVint(bytes, sizeOffset);
@@ -165,9 +175,13 @@ function parseTrackEntry(bytes: Uint8Array, start: number, end: number): OpusTra
     const element = parseElementHeader(bytes, offset, end);
     if (!element || element.dataSize === null) return null;
     if (element.id === EBML_ID_TRACK_NUMBER) {
-      trackNumber = bytes[element.dataOffset];
+      const first = bytes[element.dataOffset];
+      if (first === undefined) return null;
+      trackNumber = first;
       for (let index = 1; index < element.dataSize; index += 1) {
-        trackNumber = trackNumber * 256 + bytes[element.dataOffset + index];
+        const byte = bytes[element.dataOffset + index];
+        if (byte === undefined) return null;
+        trackNumber = trackNumber * 256 + byte;
       }
     } else if (element.id === EBML_ID_CODEC_ID) {
       codecId = String.fromCharCode(...bytes.subarray(element.dataOffset, element.dataOffset + element.dataSize));
@@ -209,22 +223,34 @@ function parseTracks(bytes: Uint8Array, start: number, end: number): OpusTrackIn
 /** Opus TOC: frame duration in ms for the packet's configuration. */
 function opusFrameDurationMs(toc: number): number {
   const config = toc >> 3;
-  if (config < 12) return [10, 20, 40, 60][config & 3];
+  if (config < 12) return [10, 20, 40, 60][config & 3] ?? 20;
   return (config & 1) === 0 ? 10 : 20;
 }
 
 /** Opus TOC: number of frames carried by the packet. */
 function opusFrameCount(packet: Uint8Array): number {
-  const code = packet[0] & 0x03;
+  const toc = packet[0];
+  if (toc === undefined) {
+    throw new Error("Voice take has a truncated Opus packet");
+  }
+  const code = toc & 0x03;
   if (code === 0 || code === 2) return 1;
   if (code === 1) return 2;
   // Code 3: one frame-count byte follows the TOC (bit 7 is padding flag).
   if (packet.length < 2) throw new Error("Voice take has a truncated Opus packet");
-  return (packet[1] & 0x3f) + 1;
+  const countByte = packet[1];
+  if (countByte === undefined) {
+    throw new Error("Voice take has a truncated Opus packet");
+  }
+  return (countByte & 0x3f) + 1;
 }
 
 function opusPacketSamples48k(packet: Uint8Array): number {
-  return opusFrameCount(packet) * opusFrameDurationMs(packet[0]) * 48;
+  const toc = packet[0];
+  if (toc === undefined) {
+    throw new Error("Voice take has a truncated Opus packet");
+  }
+  return opusFrameCount(packet) * opusFrameDurationMs(toc) * 48;
 }
 
 function parseBlockPayload(
@@ -241,6 +267,7 @@ function parseBlockPayload(
   let cursor = start + trackVint.length;
   // int16 relative timecode + flags — parsed for bounds, not needed for muxing.
   const flags = bytes[cursor + 2];
+  if (flags === undefined) throw new Error("Voice take has a truncated block header");
   cursor += 3;
   const lacing = (flags >> 1) & 0x03;
   if (trackNumber !== opusTrackNumber) return;
@@ -251,7 +278,11 @@ function parseBlockPayload(
   }
   if (lacing === 3) throw new Error("Voice take uses unsupported EBML lacing");
   if (cursor >= end) throw new Error("Voice take has an empty Opus block");
-  const frameCount = bytes[cursor] + 1;
+  const frameCountByte = bytes[cursor];
+  if (frameCountByte === undefined) {
+    throw new Error("Voice take has a truncated laced block");
+  }
+  const frameCount = frameCountByte + 1;
   cursor += 1;
   const sizes: number[] = [];
   if (lacing === 1) {
@@ -260,6 +291,9 @@ function parseBlockPayload(
       let size = 0;
       while (cursor < end) {
         const byte = bytes[cursor];
+        if (byte === undefined) {
+          throw new Error("Voice take has a truncated laced block");
+        }
         cursor += 1;
         size += byte;
         if (byte !== 255) break;
@@ -274,7 +308,9 @@ function parseBlockPayload(
   }
   for (let index = 0; index < frameCount; index += 1) {
     const size = index === frameCount - 1 ? end - cursor : sizes[index];
-    if (size <= 0 || cursor + size > end) throw new Error("Voice take has a truncated laced block");
+    if (size === undefined || size <= 0 || cursor + size > end) {
+      throw new Error("Voice take has a truncated laced block");
+    }
     packets.push(bytes.slice(cursor, cursor + size));
     cursor += size;
   }
@@ -420,7 +456,9 @@ function writeOggPage(
   view.setUint32(22, 0, true); // CRC placeholder
   page[26] = lacingTable.length;
   for (let index = 0; index < lacingTable.length; index += 1) {
-    page[27 + index] = lacingTable[index];
+    const entry = lacingTable[index];
+    if (entry === undefined) break;
+    page[27 + index] = entry;
   }
   page.set(body, 27 + lacingTable.length);
   view.setUint32(22, oggCrc32(page), true);
@@ -462,9 +500,14 @@ function buildOpusTags(): Uint8Array {
  * Opus-in-WebM; the composer surfaces that as an honest failure instead of
  * uploading a foreign container.
  */
-export function remuxWebmOpusToOgg(webm: Uint8Array): Uint8Array {
+export function remuxWebmOpusToOgg(webm: Uint8Array): Uint8Array<ArrayBuffer> {
   const { opus, packets } = parseWebmOpus(webm);
-  const preSkip = opus.codecPrivate[10] | (opus.codecPrivate[11] << 8);
+  const preSkipLow = opus.codecPrivate[10];
+  const preSkipHigh = opus.codecPrivate[11];
+  if (preSkipLow === undefined || preSkipHigh === undefined) {
+    throw new Error("Voice take has an incomplete OpusHead");
+  }
+  const preSkip = preSkipLow | (preSkipHigh << 8);
   const pages: Uint8Array[] = [];
 
   appendPacket(pages, 0, PAGE_HEADER_TYPE_BOS, 0, buildOpusHead(opus.codecPrivate));
@@ -482,10 +525,13 @@ export function remuxWebmOpusToOgg(webm: Uint8Array): Uint8Array {
     // Mark the final page EOS, then re-commit its CRC over the patched
     // header — the flag participates in the Ogg checksum.
     const last = pages[pages.length - 1];
-    last[5] = (last[5] | PAGE_HEADER_TYPE_EOS) & 0xff;
-    const lastView = new DataView(last.buffer);
-    lastView.setUint32(22, 0, true);
-    lastView.setUint32(22, oggCrc32(last), true);
+    if (last) {
+      const headerFlags = last[5] ?? 0;
+      last[5] = (headerFlags | PAGE_HEADER_TYPE_EOS) & 0xff;
+      const lastView = new DataView(last.buffer);
+      lastView.setUint32(22, 0, true);
+      lastView.setUint32(22, oggCrc32(last), true);
+    }
   }
 
   const total = pages.reduce((sum, page) => sum + page.length, 0);

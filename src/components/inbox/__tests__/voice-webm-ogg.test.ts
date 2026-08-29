@@ -27,7 +27,8 @@ function independentOggCrc(bytes: Uint8Array): number {
   }
   let crc = 0;
   for (const byte of bytes) {
-    crc = (((crc << 8) >>> 0) ^ table[(((crc >>> 24) ^ byte) & 0xff)]) >>> 0;
+    const entry = table[(((crc >>> 24) ^ byte) & 0xff)];
+    crc = (((crc << 8) >>> 0) ^ (entry ?? 0)) >>> 0;
   }
   return crc >>> 0;
 }
@@ -166,7 +167,7 @@ describe("remuxWebmOpusToOgg", () => {
       expect(output[offset + 3]).toBe(0x53);
       const view = new DataView(output.buffer, offset);
       const storedCrc = view.getUint32(22, true);
-      const segmentCount = output[offset + 26];
+      const segmentCount = output[offset + 26] ?? 0;
       const lacing = output.subarray(offset + 27, offset + 27 + segmentCount);
       const bodyLength = lacing.reduce((sum, value) => sum + value, 0);
       const pageLength = 27 + segmentCount + bodyLength;
@@ -174,7 +175,7 @@ describe("remuxWebmOpusToOgg", () => {
       zeroed.fill(0, 22, 26);
       expect(independentOggCrc(zeroed)).toBe(storedCrc);
       pages.push({
-        headerType: output[offset + 5],
+        headerType: output[offset + 5] ?? 0,
         granule: view.getUint32(6, true) + view.getUint32(10, true) * 0x100000000,
         sequence: view.getUint32(18, true),
         bodyLength,
@@ -185,13 +186,13 @@ describe("remuxWebmOpusToOgg", () => {
 
     // page 0: BOS OpusHead; page 1: OpusTags; 6 audio pages; EOS on the last.
     expect(pages).toHaveLength(8);
-    expect(pages[0].headerType).toBe(0x02);
-    expect(pages[0].granule).toBe(0);
-    expect(pages[1].headerType).toBe(0x00);
-    expect(pages[pages.length - 1].headerType & 0x04).toBe(0x04);
+    expect(pages[0]?.headerType).toBe(0x02);
+    expect(pages[0]?.granule).toBe(0);
+    expect(pages[1]?.headerType).toBe(0x00);
+    expect((pages[pages.length - 1]?.headerType ?? 0) & 0x04).toBe(0x04);
     pages.forEach((page, index) => expect(page.sequence).toBe(index));
     pages.slice(2).forEach((page) => expect(page.bodyLength).toBe(OPUS_PACKET_20MS.length));
-    expect(pages[pages.length - 1].granule).toBe(312 + 6 * SAMPLES_PER_PACKET);
+    expect(pages[pages.length - 1]?.granule).toBe(312 + 6 * SAMPLES_PER_PACKET);
   });
 
   it("survives streaming containers: unknown-size Segment and Cluster", () => {
@@ -219,7 +220,7 @@ describe("remuxWebmOpusToOgg", () => {
     const head = output.slice(27 + 1, 27 + 1 + 19);
     expect(String.fromCharCode(...head.subarray(0, 8))).toBe("OpusHead");
     expect(head[9]).toBe(1);
-    expect(head[10] | (head[11] << 8)).toBe(600);
+    expect((head[10] ?? 0) | ((head[11] ?? 0) << 8)).toBe(600);
   });
 
   it("fails closed on foreign or damaged takes", () => {
