@@ -54,6 +54,11 @@ const DIRECT_ROUTE_TEST_AUTH_VALUE = "vitest-business-routes";
 const IDENTITY_AUTHORITY_FOOTPRINT_KEY = "identity_authority_initialized_v1";
 const IDENTITY_AUTHORITY_FOOTPRINT_VERSION = 1 as const;
 const authContext = { prisma: db, shop: shopContext } satisfies ServiceContext;
+// The sealed-value helpers need the key-authority delegate; the shop-authority
+// extension preserves it at runtime — single-point cast mirrors the
+// secrets/index.ts authorityClient pattern.
+type AuthKeyAuthorityClient = Parameters<typeof sealAuthSecretValue>[0];
+const authKeyAuthority = authContext.prisma as unknown as AuthKeyAuthorityClient;
 
 let migrationDone = false;
 async function migrateAuthSecretsIfNeeded(): Promise<void> {
@@ -76,7 +81,7 @@ async function migrateAuthSecretsIfNeeded(): Promise<void> {
         id: "default",
         secret: legacySecret.value,
         pinHash: await sealAuthSecretValue(
-          authContext.prisma,
+          authKeyAuthority,
           "pinHash",
           legacyPin.value,
         ),
@@ -119,7 +124,7 @@ export const getAuthSecret = cache(async (): Promise<string | null> => {
 export async function setupAuth(pin: string): Promise<{ secret: string }> {
   const secret = generateSecret();
   const pinHash = await sealAuthSecretValue(
-    authContext.prisma,
+    authKeyAuthority,
     "pinHash",
     await hashPin(pin),
   );
@@ -140,7 +145,7 @@ export async function verifyAuthPinAndMaybeRehash(
   });
   if (!row?.pinHash) return { valid: false, rehashed: false };
   const storedPinHash = await openAuthSecretValue(
-    authContext.prisma,
+    authKeyAuthority,
     "pinHash",
     row.pinHash,
   );
@@ -149,7 +154,7 @@ export async function verifyAuthPinAndMaybeRehash(
   if (result.needsRehash) {
     try {
       const newHash = await sealAuthSecretValue(
-        authContext.prisma,
+        authKeyAuthority,
         "pinHash",
         await hashPin(pin, CURRENT_PBKDF2_ITERATIONS),
       );
@@ -172,7 +177,7 @@ export async function verifyAuthPin(pin: string): Promise<boolean> {
   });
   if (!row?.pinHash) return false;
   const storedPinHash = await openAuthSecretValue(
-    authContext.prisma,
+    authKeyAuthority,
     "pinHash",
     row.pinHash,
   );
@@ -641,7 +646,7 @@ export async function changeAuthPin(
   }
 
   const newHash = await sealAuthSecretValue(
-    authContext.prisma,
+    authKeyAuthority,
     "pinHash",
     await hashPin(newPin),
   );

@@ -195,7 +195,9 @@ export function startLogRetentionWorker(): void {
     state.running = true;
     try {
       const { db } = await import("@/lib/db");
-      const result = await runLogRetention(db);
+      // The shop-authority extension preserves every delegate at runtime;
+      // single-point cast mirrors the secrets/index.ts authorityClient pattern.
+      const result = await runLogRetention(db as unknown as PrismaClient);
       if (result.ran) {
         const summary = Object.entries(result.deleted)
           .map(([table, count]) => `${table}=${count}`)
@@ -210,7 +212,9 @@ export function startLogRetentionWorker(): void {
       // surfacing seller payload or PII into logs.
       logger.warn(
         "maintenance.log_retention.sweep_failed",
-        error instanceof Error ? error : undefined,
+        error instanceof Error
+          ? { name: error.name, message: error.message }
+          : undefined,
       );
     } finally {
       state.running = false;
