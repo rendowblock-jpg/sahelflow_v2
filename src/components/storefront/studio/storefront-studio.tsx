@@ -786,6 +786,8 @@ function ContactPanel({
       </div>
       <Field label={t("storefront.builder.phone")}>
         <input
+          type="tel"
+          inputMode="tel"
           dir="ltr"
           value={contact.phone}
           maxLength={64}
@@ -794,6 +796,8 @@ function ContactPanel({
       </Field>
       <Field label={t("storefront.builder.whatsapp")}>
         <input
+          type="tel"
+          inputMode="tel"
           dir="ltr"
           value={contact.whatsapp}
           maxLength={64}

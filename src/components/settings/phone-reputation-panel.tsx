@@ -13,6 +13,10 @@ import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
+import {
+  DZ_PHONE_PLACEHOLDER,
+  formatDZPhone,
+} from "@/lib/validation/phone";
 
 interface BadPhone {
   phone: string;
@@ -87,11 +91,18 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
               <Label htmlFor="phone-reputation-phone" className="text-xs">
                 {t("phoneReputation.phoneLabel")}
               </Label>
+              {/* Blocklist entry: LTR tel semantics + canonical mask;
+                  autofill off (this is a customer's number, not the
+                  seller's own). */}
               <Input
                 id="phone-reputation-phone"
+                type="tel"
+                inputMode="tel"
+                dir="ltr"
+                autoComplete="off"
                 value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                placeholder="0X XX XX XX XX"
+                onChange={(event) => setPhone(formatDZPhone(event.target.value))}
+                placeholder={DZ_PHONE_PLACEHOLDER}
               />
             </div>
             <div className="space-y-1.5">

@@ -16,7 +16,12 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import type { ExtractedOrder } from "@/lib/ai/extraction";
-import { dzPhone } from "@/lib/validation";
+import {
+  DZ_PHONE_PLACEHOLDER,
+  formatDZPhone,
+  isValidDZMobilePhone,
+  normalizeDZPhone,
+} from "@/lib/validation/phone";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
 
@@ -96,7 +101,7 @@ export function MessageExtraction({
       }
       const data = (await res.json()) as { result: ExtractionResult };
       setResult(data.result);
-      setPhone(data.result?.order?.phone || knownPhone || "");
+      setPhone(formatDZPhone(data.result?.order?.phone || knownPhone || ""));
       setPhoneTouched(false);
     } catch (caught) {
       setError(
@@ -110,13 +115,15 @@ export function MessageExtraction({
   async function handleCreateOrder() {
     if (!result?.order || result.method === "none") return;
     setPhoneTouched(true);
-    const phoneCheck = dzPhone.safeParse(phone.trim());
-    if (!phoneCheck.success) {
+    // Canonical validation (src/lib/validation/phone.ts) — accepts the masked
+    // display value and yields the digits-only form the API expects.
+    const normalizedPhone = normalizeDZPhone(phone);
+    if (!isValidDZMobilePhone(normalizedPhone)) {
       setError(t("inbox.invalidPhoneFormat"));
       return;
     }
     const sourceConversationId =
-      conversationId ?? algerianPhoneToWhatsAppJid(phoneCheck.data);
+      conversationId ?? algerianPhoneToWhatsAppJid(normalizedPhone);
 
     setCreating(true);
     setError(null);
@@ -132,7 +139,7 @@ export function MessageExtraction({
           customer: {
             name:
               result.order.customerName || t("inbox.customerDefaultName"),
-            phone: phoneCheck.data,
+            phone: normalizedPhone,
             wilaya: result.order.wilaya || "",
             commune: result.order.commune || "",
             address: result.order.address || "",
@@ -161,6 +168,8 @@ export function MessageExtraction({
       setCreating(false);
     }
   }
+
+  const phoneIsValid = isValidDZMobilePhone(phone);
 
   return (
     <div className="space-y-3">
@@ -292,24 +301,36 @@ export function MessageExtraction({
                   {t("inbox.phoneRequired")} {" "}
                   <span className="text-destructive">*</span>
                 </Label>
+                {/* Phone digits are technical LTR content — the tel
+                    attributes keep the "05 55 12 34 56" groups from
+                    reordering in the Arabic UI. */}
                 <Input
                   id={`phone-${messageId}`}
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  onBlur={() => setPhoneTouched(true)}
-                  placeholder="0[5-7]XXXXXXXX"
-                  className="font-mono h-8"
-                  aria-invalid={
-                    phoneTouched && !dzPhone.safeParse(phone.trim()).success
-                  }
+                  type="tel"
                   inputMode="tel"
+                  dir="ltr"
+                  autoComplete="tel-national"
+                  value={phone}
+                  onChange={(event) => setPhone(formatDZPhone(event.target.value))}
+                  onBlur={() => setPhoneTouched(true)}
+                  placeholder={DZ_PHONE_PLACEHOLDER}
+                  className="font-mono h-8"
+                  aria-invalid={phoneTouched && !phoneIsValid}
+                  aria-describedby={
+                    phoneTouched && !phoneIsValid
+                      ? `phone-error-${messageId}`
+                      : undefined
+                  }
                 />
-                {phoneTouched &&
-                  !dzPhone.safeParse(phone.trim()).success && (
-                    <p className="text-xs text-destructive" role="alert">
-                      {t("inbox.invalidFormatExpected")}
-                    </p>
-                  )}
+                {phoneTouched && !phoneIsValid && (
+                  <p
+                    id={`phone-error-${messageId}`}
+                    className="text-xs text-destructive"
+                    role="alert"
+                  >
+                    {t("inbox.invalidFormatExpected")}
+                  </p>
+                )}
               </div>
             )}
 
@@ -317,9 +338,7 @@ export function MessageExtraction({
               <Button
                 size="sm"
                 onClick={handleCreateOrder}
-                disabled={
-                  creating || !dzPhone.safeParse(phone.trim()).success
-                }
+                disabled={creating || !phoneIsValid}
               >
                 {creating ? (
                   <>

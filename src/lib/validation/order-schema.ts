@@ -9,6 +9,7 @@
  */
 import { z } from "zod";
 
+import { dzPhoneSchema } from "@/lib/validation/phone";
 export const orderItemSchema = z
   .object({
     productId: z.string().min(1, "Product is required"),
@@ -38,10 +39,7 @@ export const orderFormSchema = z.object({
   wilaya: z.string().min(1, "Wilaya is required"),
   commune: z.string().min(1, "Commune is required"),
   address: z.string().min(1, "Address is required"),
-  phone: z.string().min(1, "Phone is required").refine(
-    (v) => v.replace(/\D/g, "").length >= 9,
-    "Invalid phone number",
-  ),
+  phone: dzPhoneSchema,
   // Items
   items: z.array(orderItemSchema).min(1, "At least one item is required"),
   // Pricing

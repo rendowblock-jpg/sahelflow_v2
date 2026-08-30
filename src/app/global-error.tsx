@@ -18,6 +18,13 @@
  * from the document.cookie ('sf_locale=ar|fr|en') or navigator.language,
  * falling back to English.
  *
+ * Branding: the inline colors below are the verbatim OKLCH VALUES of the
+ * design-system tokens (sahel dark surface-0/surface-2, foreground, border and
+ * the sahel dark primary pair from theme-preset-system.css / product-system.css).
+ * They are duplicated as literals on purpose — this boundary renders without
+ * the app shell, so var(--…) references would resolve to nothing. Keep them in
+ * sync with the token authority when it changes.
+ *
  * Sentry: only reports UNEXPECTED errors. Expected errors (4xx-style, e.g.
  * "Unauthorized") are swallowed — they shouldn't pollute the error report.
  */
@@ -104,11 +111,15 @@ export default function GlobalError({
       <body
         style={{
           margin: 0,
+          // Standard product stack: Inter first (matches layout.tsx), then the
+          // system faces; Arabic uses the Noto Sans Arabic-led workbench stack.
           fontFamily: isRtl
-            ? "'Amiri', 'Segoe UI', system-ui, sans-serif"
-            : "system-ui, -apple-system, 'Segoe UI', sans-serif",
-          background: "#fafafa",
-          color: "#18181b",
+            ? "'Noto Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif"
+            : "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
+          // oklch(0.145 0.004 260) — dark surface-0 (sahel dark canvas)
+          background: "oklch(0.145 0.004 260)",
+          // oklch(0.955 0.006 90) — dark foreground
+          color: "oklch(0.955 0.006 90)",
           minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
@@ -125,15 +136,17 @@ export default function GlobalError({
               width: 64,
               height: 64,
               borderRadius: 16,
-              background: "linear-gradient(135deg, rgba(239,68,68,0.12), rgba(239,68,68,0.04))",
-              border: "1px solid rgba(239,68,68,0.2)",
+              background:
+                "linear-gradient(135deg, oklch(0.704 0.191 22.216 / 0.12), oklch(0.704 0.191 22.216 / 0.04))",
+              border: "1px solid oklch(0.704 0.191 22.216 / 0.2)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
             aria-hidden
           >
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {/* oklch(0.704 0.191 22.216) — dark destructive token */}
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="oklch(0.704 0.191 22.216)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
               <path d="M12 9v4" />
               <path d="M12 17h.01" />
@@ -142,13 +155,14 @@ export default function GlobalError({
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: 0 }}>{s.title}</h1>
-            <p style={{ fontSize: "0.95rem", color: "#71717a", margin: 0, lineHeight: 1.6, maxWidth: 420 }}>
+            {/* oklch(0.72 0.01 90) — dark muted-foreground */}
+            <p style={{ fontSize: "0.95rem", color: "oklch(0.72 0.01 90)", margin: 0, lineHeight: 1.6, maxWidth: 420 }}>
               {error.message && !expected ? error.message : s.message}
             </p>
           </div>
 
           {!expected && (
-            <p style={{ fontSize: "0.8rem", color: "#a1a1aa", margin: 0 }}>{s.reported}</p>
+            <p style={{ fontSize: "0.8rem", color: "oklch(0.72 0.01 90 / 0.75)", margin: 0 }}>{s.reported}</p>
           )}
 
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
@@ -157,9 +171,11 @@ export default function GlobalError({
               style={{
                 padding: "0.6rem 1.25rem",
                 borderRadius: 8,
-                border: "1px solid #e4e4e7",
-                background: "#fff",
-                color: "#18181b",
+                // oklch(0.94 0.006 90 / 0.16) / oklch(0.215 0.005 260) / oklch(0.955 0.006 90)
+                // — dark input border, surface-2 and foreground tokens
+                border: "1px solid oklch(0.94 0.006 90 / 0.16)",
+                background: "oklch(0.215 0.005 260)",
+                color: "oklch(0.955 0.006 90)",
                 fontSize: "0.9rem",
                 fontWeight: 600,
                 cursor: "pointer",
@@ -173,8 +189,10 @@ export default function GlobalError({
                 padding: "0.6rem 1.25rem",
                 borderRadius: 8,
                 border: "none",
-                background: "#0d9488",
-                color: "#fff",
+                // oklch(0.70 0.16 150) / oklch(0.13 0.018 150) — sahel dark
+                // primary + primary-foreground (theme-preset-system.css)
+                background: "oklch(0.70 0.16 150)",
+                color: "oklch(0.13 0.018 150)",
                 fontSize: "0.9rem",
                 fontWeight: 600,
                 cursor: "pointer",

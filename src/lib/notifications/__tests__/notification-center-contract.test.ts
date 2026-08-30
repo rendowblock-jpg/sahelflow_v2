@@ -98,17 +98,45 @@ describe("FRC notification center source contract", () => {
     }
   });
 
-  it("retains legacy operational alerts and hidden-window recovery", () => {
+  it("retains legacy operational alerts and a single SWR polling authority", () => {
     const route = source("src/app/api/notifications/route.ts");
     const hook = source("src/hooks/use-notification-center.ts");
     const native = source("src/lib/notifications/notification-center.ts");
     const topbar = source("src/components/layout/topbar.tsx");
+    const taxonomy = source(
+      "src/components/notifications/notification-taxonomy.tsx",
+    );
+    const workspace = source(
+      "src/components/notifications/notification-center-workspace.tsx",
+    );
 
     expect(route).toContain("listLegacyOperationalNotifications");
-    expect(hook).toContain(
-      "const interval = window.setInterval(() => {\n      void reload();",
-    );
+    // One interval-driven query (refreshInterval on the live SWR key) feeds
+    // the topbar bell and the workspace — the former dual 3s pollers are gone.
+    expect(hook).toContain("refreshInterval: NOTIFICATION_POLL_MS");
+    expect(hook).toContain("LIVE_QUERY_KEY");
+    expect(hook).not.toContain("setInterval");
     expect(native).toContain("sanitizeNativePreview");
-    expect(topbar).toContain("DEFAULT_NOTIFICATION_PRESENTATION");
+    expect(topbar).toContain("getNotificationPresentation");
+    expect(topbar).toContain("NotificationAnnouncer");
+
+    // Typed taxonomy: every notification type renders a distinct icon (no
+    // shared Bell, no universal inbox badge).
+    for (const icon of [
+      "ShoppingBag",
+      "Truck",
+      "Package",
+      "Undo2",
+      "ShieldAlert",
+      "MessageSquare",
+      "Info",
+    ]) {
+      expect(taxonomy).toContain(icon);
+    }
+
+    // Workspace: day grouping plus surfaced fetch failures with a retry.
+    expect(workspace).toContain("groupNotificationsByDay");
+    expect(workspace).toContain("notifications.loadFailed");
+    expect(workspace).toContain('t("common.retry")');
   });
 });

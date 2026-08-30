@@ -15,7 +15,7 @@
  * (keeps the 197KB communes.json out of the client bundle — T-019).
  */
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useId, useState, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
@@ -64,6 +64,10 @@ interface WilayaCommuneSelectProps {
   disabled?: boolean;
   /** Required field markers */
   required?: boolean;
+  /** aria-describedby for the wilaya trigger (e.g. a parent-rendered field error id) */
+  wilayaAriaDescribedby?: string;
+  /** aria-describedby for the commune trigger (e.g. a parent-rendered field error id) */
+  communeAriaDescribedby?: string;
   /** Size variant — default matches order form */
   size?: "default" | "sm";
 }
@@ -79,9 +83,15 @@ export function WilayaCommuneSelect({
   communeLabel,
   disabled = false,
   required = false,
+  wilayaAriaDescribedby,
+  communeAriaDescribedby,
   size = "default",
 }: WilayaCommuneSelectProps) {
   const { t, locale } = useI18n();
+  // Stable per-instance ids so the Labels associate with their triggers
+  // (the pair can render several times on one page).
+  const wilayaTriggerId = useId();
+  const communeTriggerId = useId();
   const wilayas = wilayasData as Wilaya[];
 
   const [communes, setCommunes] = useState<Commune[]>([]);
@@ -141,7 +151,7 @@ export function WilayaCommuneSelect({
     <div className={containerClass}>
       <div className="space-y-1.5">
         {showLabels && (
-          <Label className={labelClass}>
+          <Label className={labelClass} htmlFor={wilayaTriggerId}>
             {wilayaLabel ?? t("orders.wilaya")}
             {required && <span className="text-destructive ms-0.5">*</span>}
           </Label>
@@ -151,7 +161,11 @@ export function WilayaCommuneSelect({
           onValueChange={handleWilayaChange}
           disabled={disabled}
         >
-          <SelectTrigger className={triggerClass}>
+          <SelectTrigger
+            className={triggerClass}
+            id={wilayaTriggerId}
+            aria-describedby={wilayaAriaDescribedby}
+          >
             <SelectValue placeholder={t("orders.form.wilayaPlaceholder")} />
           </SelectTrigger>
           <SelectContent className="max-h-60">
@@ -166,7 +180,7 @@ export function WilayaCommuneSelect({
 
       <div className="space-y-1.5">
         {showLabels && (
-          <Label className={labelClass}>
+          <Label className={labelClass} htmlFor={communeTriggerId}>
             {communeLabel ?? t("orders.commune")}
             {required && <span className="text-destructive ms-0.5">*</span>}
           </Label>
@@ -176,7 +190,11 @@ export function WilayaCommuneSelect({
           onValueChange={onCommuneChange}
           disabled={disabled || !wilaya}
         >
-          <SelectTrigger className={triggerClass}>
+          <SelectTrigger
+            className={triggerClass}
+            id={communeTriggerId}
+            aria-describedby={communeAriaDescribedby}
+          >
             <SelectValue
               placeholder={
                 wilaya

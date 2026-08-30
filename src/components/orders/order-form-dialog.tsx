@@ -35,7 +35,7 @@ import { formatDZD } from "@/lib/utils";
 import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
 import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
 import { useI18n } from "@/hooks/use-i18n";
-import { usePhoneMask } from "@/hooks/form/use-phone-mask";
+import { DZ_PHONE_PLACEHOLDER, formatDZPhone } from "@/lib/validation/phone";
 import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { useFormDraft, clearFormDraft } from "@/hooks/form/use-form-draft";
 import { toast } from "@/lib/toast";
@@ -67,7 +67,6 @@ const COMMAND_KEY = "sf-order-create-command";
 export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const router = useRouter();
   const { t, locale } = useI18n();
-  const { format: formatPhone } = usePhoneMask();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   // W3-4 (task 2-g): HIGH-risk confirmation state. When non-null, an
@@ -173,7 +172,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
       form.setValue("wilaya", customer.wilaya ?? "", { shouldDirty: true });
       form.setValue("commune", customer.commune ?? "", { shouldDirty: true });
       form.setValue("address", customer.address ?? "", { shouldDirty: true });
-      form.setValue("phone", formatPhone(customer.phone), { shouldDirty: true });
+      form.setValue("phone", formatDZPhone(customer.phone), { shouldDirty: true });
     }
   }
 
@@ -346,9 +345,9 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const isNewCustomerMode = watchValues.isNewCustomer;
   const error = form.formState.errors.root?.message;
 
-  // Format phone on change
+  // Format phone on change (canonical "0X XX XX XX XX" mask)
   const onPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value);
+    const formatted = formatDZPhone(e.target.value);
     form.setValue("phone", formatted, { shouldDirty: true, shouldValidate: true });
   };
 
@@ -379,19 +378,46 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
             {/* Customer selection */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>{t("orders.customer")}</Label>
+                <Label
+                  htmlFor={
+                    isNewCustomerMode
+                      ? "order-form-new-customer-name"
+                      : "order-form-customer-select"
+                  }
+                >
+                  {t("orders.customer")}
+                </Label>
                 <Button type="button" variant="ghost" size="sm" onClick={toggleNewCustomerMode} className="text-xs h-7">
                   {isNewCustomerMode ? t("orders.form.chooseExistingCustomer") : t("orders.form.createNewCustomer")}
                 </Button>
               </div>
               {isNewCustomerMode ? (
                 <Input
+                  id="order-form-new-customer-name"
                   {...form.register("newCustomerName")}
                   placeholder={t("orders.form.newCustomerNamePlaceholder")}
+                  aria-invalid={Boolean(form.formState.errors.newCustomerName)}
+                  aria-describedby={
+                    form.formState.errors.newCustomerName
+                      ? "order-form-customer-error"
+                      : watchValues.customerId || isNewCustomerMode
+                        ? "order-form-customer-hint"
+                        : undefined
+                  }
                 />
               ) : (
                 <Select value={watchValues.customerId} onValueChange={selectCustomer}>
-                  <SelectTrigger>
+                  <SelectTrigger
+                    id="order-form-customer-select"
+                    aria-invalid={Boolean(form.formState.errors.customerId)}
+                    aria-describedby={
+                      form.formState.errors.customerId
+                        ? "order-form-customer-error"
+                        : watchValues.customerId || isNewCustomerMode
+                          ? "order-form-customer-hint"
+                          : undefined
+                    }
+                  >
                     <SelectValue placeholder={t("orders.form.selectCustomerPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -403,20 +429,29 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                   </SelectContent>
                 </Select>
               )}
-              {form.formState.errors.customerId && (
-                <p className="text-xs text-destructive">{form.formState.errors.customerId.message}</p>
+              {(form.formState.errors.customerId ||
+                form.formState.errors.newCustomerName) && (
+                <p id="order-form-customer-error" className="text-xs text-destructive">
+                  {form.formState.errors.customerId?.message ??
+                    form.formState.errors.newCustomerName?.message}
+                </p>
               )}
               {(watchValues.customerId || isNewCustomerMode) && (
-                <p className="text-xs text-muted-foreground">{t("orders.form.customerDeliveryHint")}</p>
+                <p id="order-form-customer-hint" className="text-xs text-muted-foreground">
+                  {t("orders.form.customerDeliveryHint")}
+                </p>
               )}
             </div>
 
             {/* Products */}
             <div className="space-y-3">
-              <Label>{t("orders.items")}</Label>
+              <Label htmlFor="order-form-add-product">{t("orders.items")}</Label>
               {activeProducts.length > 0 && (
                 <Select onValueChange={addProduct}>
-                  <SelectTrigger>
+                  <SelectTrigger
+                    id="order-form-add-product"
+                    aria-describedby={form.formState.errors.items ? "order-form-items-error" : undefined}
+                  >
                     <SelectValue placeholder={t("orders.form.addProductPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -490,6 +525,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                           <Input
                             type="number"
                             min="1"
+                            aria-label={`${item.productName} — ${t("orders.quantity")}`}
                             value={item.quantity}
                             onChange={(e) => updateQuantity(i, parseInt(e.target.value) || 1)}
                             className="w-16 text-center"
@@ -519,7 +555,9 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                 </p>
               )}
               {form.formState.errors.items && (
-                <p className="text-xs text-destructive">{form.formState.errors.items.message}</p>
+                <p id="order-form-items-error" className="text-xs text-destructive">
+                  {form.formState.errors.items.message}
+                </p>
               )}
             </div>
 
@@ -527,43 +565,75 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
             {/* Delivery info */}
             <div className="space-y-4">
-              <Label className="text-base">{t("orders.form.delivery")}</Label>
+              <p className="text-base font-medium">{t("orders.form.delivery")}</p>
               <WilayaCommuneSelect
                 wilaya={watchValues.wilaya}
                 commune={watchValues.commune}
                 onWilayaChange={(v) => form.setValue("wilaya", v, { shouldDirty: true, shouldValidate: true })}
                 onCommuneChange={(v) => form.setValue("commune", v, { shouldDirty: true, shouldValidate: true })}
+                wilayaAriaDescribedby={form.formState.errors.wilaya ? "order-form-wilaya-error" : undefined}
+                communeAriaDescribedby={form.formState.errors.commune ? "order-form-commune-error" : undefined}
                 required
               />
               {form.formState.errors.wilaya && (
-                <p className="text-xs text-destructive">{form.formState.errors.wilaya.message}</p>
+                <p id="order-form-wilaya-error" className="text-xs text-destructive">
+                  {form.formState.errors.wilaya.message}
+                </p>
+              )}
+              {form.formState.errors.commune && (
+                <p id="order-form-commune-error" className="text-xs text-destructive">
+                  {form.formState.errors.commune.message}
+                </p>
               )}
               <div className="space-y-1.5">
-                <Label className="text-xs">{t("orders.form.address")}</Label>
+                <Label className="text-xs" htmlFor="order-form-address">
+                  {t("orders.form.address")}
+                </Label>
                 <Input
+                  id="order-form-address"
                   value={watchValues.address}
                   onChange={(e) => form.setValue("address", e.target.value, { shouldDirty: true, shouldValidate: true })}
                   placeholder={t("orders.form.addressPlaceholder")}
+                  aria-invalid={Boolean(form.formState.errors.address)}
+                  aria-describedby={form.formState.errors.address ? "order-form-address-error" : undefined}
                 />
                 {form.formState.errors.address && (
-                  <p className="text-xs text-destructive">{form.formState.errors.address.message}</p>
+                  <p id="order-form-address-error" className="text-xs text-destructive">
+                    {form.formState.errors.address.message}
+                  </p>
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{t("orders.phone")}</Label>
+                  <Label className="text-xs" htmlFor="order-form-phone">
+                    {t("orders.phone")}
+                  </Label>
+                  {/* Phone digits are technical LTR content — type/inputMode/dir
+                      keep the "05 55 12 34 56" groups from reordering in RTL. */}
                   <Input
+                    id="order-form-phone"
+                    type="tel"
+                    inputMode="tel"
+                    dir="ltr"
+                    autoComplete="tel-national"
                     value={watchValues.phone}
                     onChange={onPhoneChange}
-                    placeholder="0X XX XX XX XX"
+                    placeholder={DZ_PHONE_PLACEHOLDER}
+                    aria-invalid={Boolean(form.formState.errors.phone)}
+                    aria-describedby={form.formState.errors.phone ? "order-form-phone-error" : undefined}
                   />
                   {form.formState.errors.phone && (
-                    <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
+                    <p id="order-form-phone-error" className="text-xs text-destructive">
+                      {form.formState.errors.phone.message}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{t("orders.form.deliveryCostLabel")}</Label>
+                  <Label className="text-xs" htmlFor="order-form-delivery-cost">
+                    {t("orders.form.deliveryCostLabel")}
+                  </Label>
                   <Input
+                    id="order-form-delivery-cost"
                     type="number"
                     value={watchValues.deliveryCost}
                     onChange={(e) => form.setValue("deliveryCost", parseInt(e.target.value) || 0, { shouldDirty: true })}

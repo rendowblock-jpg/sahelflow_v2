@@ -20,7 +20,12 @@ describe("Settings Class-AAA visual system", () => {
     expect(layout).not.toContain('import "./settings-system.css"');
     expect(existsSync(legacyCss)).toBe(false);
     expect(css).toContain('data-settings-generation="class-aaa"');
-    expect(css).toContain("15.625rem");
+    // The 15.625rem settings-nav rail is tokenized: the module consumes
+    // --rail-xl and globals.css (the geometry authority) defines it.
+    expect(css).toContain("var(--rail-xl)");
+    expect(readFileSync(new URL("../../../app/globals.css", import.meta.url), "utf8")).toContain(
+      "--rail-xl: 15.625rem;",
+    );
     expect(css).toContain('grid-template-areas: "settings-nav settings-panel"');
     expect(css).toContain('grid-template-areas: "settings-panel settings-nav"');
     expect(css).toContain("direction: ltr");

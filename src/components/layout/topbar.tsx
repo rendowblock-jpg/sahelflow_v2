@@ -18,6 +18,10 @@ import {
   User,
 } from "lucide-react";
 
+import {
+  getNotificationPresentation,
+  NotificationAnnouncer,
+} from "@/components/notifications/notification-taxonomy";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,10 +37,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/hooks/use-i18n";
-import {
-  useNotificationCenter,
-  type NotificationCenterItem,
-} from "@/hooks/use-notification-center";
+import { useNotificationCenter } from "@/hooks/use-notification-center";
 import type { Locale } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import { logoutAndRedirect } from "@/lib/auth/logout-client";
@@ -55,20 +56,6 @@ interface TopbarProps {
   serverLocale: Locale;
   serverDir: "ltr" | "rtl";
 }
-
-const NOTIFICATION_PRESENTATION: Partial<Record<
-  NotificationCenterItem["type"],
-  {
-    icon: typeof Bell;
-    className: string;
-  }
->> = {
-  info: { icon: Bell, className: "bg-muted text-muted-foreground" },
-};
-const DEFAULT_NOTIFICATION_PRESENTATION = {
-  icon: Bell,
-  className: "bg-muted text-muted-foreground",
-};
 
 /**
  * Phase 5 application command/title bar.
@@ -310,6 +297,8 @@ export function Topbar({
 
         <ThemeToggle />
 
+        <NotificationAnnouncer notifications={notifications} />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -350,8 +339,7 @@ export function Topbar({
               ) : (
                 notifications.slice(0, 6).map((notification) => {
                   const presentation =
-                    NOTIFICATION_PRESENTATION[notification.type] ??
-                    DEFAULT_NOTIFICATION_PRESENTATION;
+                    getNotificationPresentation(notification);
                   const Icon = presentation.icon;
                   const content = (
                     <>

@@ -25,6 +25,12 @@ import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
 import { useI18n } from "@/hooks/use-i18n";
 import type { StorefrontConfig } from "@/lib/storefront/service";
 import { createStorefrontStudioDraft } from "@/lib/storefront/studio-draft";
+import {
+  DZ_PHONE_PLACEHOLDER,
+  formatDZPhone,
+  isValidDZMobilePhone,
+  normalizeDZPhone,
+} from "@/lib/validation/phone";
 import { formatDZD } from "@/lib/utils";
 import wilayasData from "../../../data/wilayas.json";
 
@@ -236,12 +242,14 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
     event.preventDefault();
     if (cart.length === 0) return;
 
-    const phone = form.phone.replace(/\s/g, "");
+    // Canonical DZ mobile rule (src/lib/validation/phone.ts) — tolerant of
+    // the masked display value, strict about the 0[5-7] prefix.
+    const phone = normalizeDZPhone(form.phone);
     if (!form.name.trim()) {
       setResult({ ok: false, message: t("storefront.view.error.nameRequired") });
       return;
     }
-    if (!/^0[5-7]\d{8}$/.test(phone)) {
+    if (!isValidDZMobilePhone(phone)) {
       setResult({ ok: false, message: t("storefront.view.error.phoneInvalid") });
       return;
     }
@@ -412,7 +420,20 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="phone">{t("storefront.view.phone")} *</Label>
-                <Input id="phone" required type="tel" value={form.phone} onChange={(event) => changeForm("phone", event.target.value)} placeholder="0XXXXXXXXX" />
+                {/* Buyer-facing checkout: phone digits are technical LTR
+                    content — type/inputMode/dir keep the "05 55 12 34 56"
+                    groups from reordering in the Arabic storefront. */}
+                <Input
+                  id="phone"
+                  required
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  autoComplete="tel-national"
+                  value={form.phone}
+                  onChange={(event) => changeForm("phone", formatDZPhone(event.target.value))}
+                  placeholder={DZ_PHONE_PLACEHOLDER}
+                />
               </div>
               <WilayaCommuneSelect
                 wilaya={form.wilaya}

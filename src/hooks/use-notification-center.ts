@@ -1,15 +1,34 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
 
 import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
 import {
   listenForDesktopNotificationActions,
   sendDesktopNotification,
 } from "@/lib/notifications/native-client";
+import { fetcher } from "@/lib/swr/fetcher";
+import { mutatePrefix } from "@/lib/swr/mutate";
 
-const RECOVERY_POLL_MS = 3_000;
+/**
+ * Single polling authority for the notification center.
+ *
+ * One SWR query (the live key below, `refreshInterval`-driven) feeds BOTH the
+ * topbar bell and the notifications workspace default view, replacing the
+ * former dual cadence (one interval timer in this hook plus an independent
+ * fetch stream in the workspace). Secondary filter views in the workspace use
+ * non-polling queries that share the same SWR cache and are revalidated by the
+ * socket bridge and by lifecycle mutations via `mutatePrefix`, so there is
+ * exactly one interval-driven network cadence app-wide.
+ */
+const NOTIFICATION_POLL_MS = 3_000;
+const NOTIFICATIONS_SWR_PREFIX = "/api/notifications";
+const NOTIFICATION_PAGE_LIMIT = 20;
+const LIVE_QUERY_KEY = `${NOTIFICATIONS_SWR_PREFIX}?state=active&limit=${NOTIFICATION_PAGE_LIMIT}`;
+
+export type NotificationFeedState = "active" | "unread" | "read" | "archived";
 
 export interface NotificationCenterItem {
   id: string;
@@ -45,6 +64,19 @@ interface NotificationCenterResponse {
   preference: NotificationCenterPreference;
 }
 
+/**
+ * Shared fetcher for every notification query: recover durable event markers
+ * into this actor's projection, then read it. Network-level failures (and
+ * non-OK list responses via `fetcher`) propagate to the SWR error object so
+ * surfaces surface them instead of silently swallowing them.
+ */
+async function notificationsFetcher(
+  url: string,
+): Promise<NotificationCenterResponse> {
+  await fetch(`${NOTIFICATIONS_SWR_PREFIX}/sync`, { method: "POST" });
+  return fetcher<NotificationCenterResponse>(url);
+}
+
 async function lifecycle(id: string, action: "read" | "archive" | "recover") {
   return fetch(`/api/notifications/${encodeURIComponent(id)}`, {
     method: "PATCH",
@@ -53,24 +85,35 @@ async function lifecycle(id: string, action: "read" | "archive" | "recover") {
   });
 }
 
+/** Revalidate every mounted notification query (live + filter views). */
+function revalidateNotifications(): Promise<void> {
+  return mutatePrefix(NOTIFICATIONS_SWR_PREFIX);
+}
+
+/**
+ * Live notification center authority for the application shell (topbar).
+ *
+ * Owns the single polling query, the sidecar push bridge and the native
+ * claim → deliver → complete lifecycle. The native lifecycle is untouched:
+ * claims are exclusive per attempt, foreground focus suppresses delivery,
+ * and every terminal state (sent/denied/failed/suppressed) is completed with
+ * its reason code.
+ */
 export function useNotificationCenter() {
   const router = useRouter();
-  const [state, setState] = useState<NotificationCenterResponse>({
-    notifications: [],
-    unreadCount: 0,
-    nextCursor: null,
-    preference: {
-      inboxEnabled: true,
-      nativeEnabled: false,
-      soundEnabled: false,
-      previewEnabled: false,
-      quietStartMinute: null,
-      quietEndMinute: null,
-      mutedUntil: null,
-      retentionDays: 90,
+  const { data, error, mutate } = useSWR<NotificationCenterResponse>(
+    LIVE_QUERY_KEY,
+    notificationsFetcher,
+    {
+      refreshInterval: NOTIFICATION_POLL_MS,
+      revalidateOnFocus: true,
+      dedupingInterval: 1_000,
     },
-  });
-  const loadingRef = useRef(false);
+  );
+
+  const notifications = data?.notifications ?? [];
+  const unreadCount = data?.unreadCount ?? 0;
+
   const nativeInFlightRef = useRef(new Set<string>());
 
   const completeNative = useCallback(
@@ -82,7 +125,11 @@ export function useNotificationCenter() {
       await fetch(`/api/notifications/${encodeURIComponent(id)}/native`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "complete", state: deliveryState, reasonCode }),
+        body: JSON.stringify({
+          action: "complete",
+          state: deliveryState,
+          reasonCode,
+        }),
       });
     },
     [],
@@ -137,49 +184,23 @@ export function useNotificationCenter() {
     [completeNative],
   );
 
-  const reload = useCallback(async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    try {
-      await fetch("/api/notifications/sync", { method: "POST" });
-      const response = await fetch("/api/notifications?limit=12&state=active", {
-        cache: "no-store",
-      });
-      if (!response.ok) return;
-      const payload = (await response.json()) as NotificationCenterResponse;
-      setState(payload);
-      for (const notification of payload.notifications) {
-        if (notification.nativePending) void deliverNative(notification);
-      }
-    } finally {
-      loadingRef.current = false;
+  // Native delivery follows the polled live projection exactly as before: any
+  // still-pending native notification is claimed once per poll cycle.
+  useEffect(() => {
+    if (!data) return;
+    for (const notification of data.notifications) {
+      if (notification.nativePending) void deliverNative(notification);
     }
-  }, [deliverNative]);
+  }, [data, deliverNative]);
 
   // The sidecar push is the live signal; the durable API remains authority.
   useWhatsAppSocket({
     onMessage: (message) => {
-      if (!message.key.fromMe) window.setTimeout(() => void reload(), 250);
+      if (!message.key.fromMe) {
+        window.setTimeout(() => void revalidateNotifications(), 250);
+      }
     },
   });
-
-  useEffect(() => {
-    const initial = window.setTimeout(() => void reload(), 0);
-    const interval = window.setInterval(() => {
-      void reload();
-    }, RECOVERY_POLL_MS);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void reload();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
-    return () => {
-      window.clearTimeout(initial);
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
-    };
-  }, [reload]);
 
   useEffect(() => {
     let dispose: () => void = () => undefined;
@@ -194,17 +215,57 @@ export function useNotificationCenter() {
   const applyLifecycle = useCallback(
     async (id: string, action: "read" | "archive" | "recover") => {
       const response = await lifecycle(id, action);
-      if (response.ok) await reload();
+      if (response.ok) await revalidateNotifications();
       return response.ok;
     },
-    [reload],
+    [],
   );
 
   const readAll = useCallback(async () => {
-    const response = await fetch("/api/notifications/read-all", { method: "POST" });
-    if (response.ok) await reload();
+    const response = await fetch("/api/notifications/read-all", {
+      method: "POST",
+    });
+    if (response.ok) await revalidateNotifications();
     return response.ok;
-  }, [reload]);
+  }, []);
 
-  return { ...state, reload, applyLifecycle, readAll };
+  return {
+    notifications,
+    unreadCount,
+    preference: data?.preference ?? null,
+    error,
+    mutate,
+    applyLifecycle,
+    readAll,
+  };
+}
+
+/**
+ * Pure, non-polling notification query for workspace filter views.
+ *
+ * Shares the SWR cache (and, for the default `active` view, the exact live
+ * query key) with the topbar authority, so switching filters never starts a
+ * second network cadence: freshness comes from the live poll, the sidecar
+ * socket bridge and lifecycle revalidation.
+ */
+export function useNotificationFeed(state: NotificationFeedState) {
+  const key = `${NOTIFICATIONS_SWR_PREFIX}?state=${state}&limit=${NOTIFICATION_PAGE_LIMIT}`;
+  const { data, error, isLoading, isValidating, mutate } =
+    useSWR<NotificationCenterResponse>(key, notificationsFetcher, {
+      revalidateOnFocus: true,
+      dedupingInterval: 1_000,
+      keepPreviousData: true,
+    });
+
+  return {
+    key,
+    notifications: data?.notifications ?? [],
+    unreadCount: data?.unreadCount ?? 0,
+    preference: data?.preference ?? null,
+    nextCursor: data?.nextCursor ?? null,
+    error,
+    isLoading,
+    isValidating,
+    mutate,
+  };
 }

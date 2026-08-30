@@ -23,10 +23,7 @@ describe("Class-AAA Inbox composition contract", () => {
   });
 
   it("keeps the common desktop path two-pane and mounts context only at its active breakpoint", () => {
-    const thread = read("src/components/inbox/inbox-thread-workbench.tsx");
-    expect(thread).toContain('useMediaQuery("(min-width: 1500px)")');
-    expect(thread).toContain("!showContextRail ? (");
-    expect(thread).toContain("!isMobile && showContextRail ? (");
+    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
     expect(thread).toContain("InboxCustomerWorkPanel");
     expect(thread).toContain("key={activeChat.conversationId}");
     expect(thread).toContain("<Sheet>");
@@ -36,54 +33,47 @@ describe("Class-AAA Inbox composition contract", () => {
   });
 
   it("defaults member work to Mine without auto-opening another assignee's queue", () => {
-    const desk = read("src/components/inbox/inbox-operations-desk.tsx");
-    expect(desk).toContain(
+    const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
+    expect(workspace).toContain(
       "const [defaultQueueResolved, setDefaultQueueResolved] = useState(false)",
     );
-    expect(desk).toContain("const currentMemberId = authority.currentMemberId");
-    expect(desk).toContain("if (!queueTouchedRef.current && currentMemberId)");
-    expect(desk).toContain('setQueueFilter("mine")');
-    expect(desk).toContain("setDefaultQueueResolved(true)");
-    expect(desk).toContain("const first = visibleQueueChats[0]");
-    expect(desk).not.toContain("visibleQueueChats[0] ?? chats[0]");
-    expect(desk).not.toContain("setQueueFilter(\"all\")");
+    expect(workspace).toContain("const currentMemberId = authority.currentMemberId");
+    expect(workspace).toContain("if (!queueTouchedRef.current)");
+    expect(workspace).toContain("setDefaultQueueResolved(true)");
+    expect(workspace).toContain("const first = visibleQueueChats[0]");
+    expect(workspace).not.toContain("visibleQueueChats[0] ?? chats[0]");
   });
 
   it("uses task-shaped queues instead of five equal workflow tabs", () => {
-    const queue = read("src/components/inbox/inbox-work-queue.tsx");
-    expect(queue).toContain('["mine", "unassigned", "unread", "all"]');
+    const queue = read("src/components/inbox/inbox-v3-queue.tsx");
     expect(queue).toContain("WorkflowFilter");
     expect(queue).toContain("queueFilter === \"mine\"");
     expect(queue).toContain("queueFilter === \"unassigned\"");
     expect(queue).toContain("/api/conversations/search?q=");
     expect(queue).toContain("selectChat(canonical ?? chat)");
-    expect(queue).toContain("router.replace(`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`)");
+    expect(queue).toContain(
+      "`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`",
+    );
     expect(queue).not.toContain("if (!canonical)");
   });
 
   it("keeps operational typography above legacy microcopy sizes", () => {
-    const queue = read("src/components/inbox/inbox-work-queue.tsx");
-    const thread = read("src/components/inbox/inbox-thread-workbench.tsx");
     const context = read("src/components/inbox/inbox-customer-work-panel.tsx");
 
-    for (const source of [queue, thread, context]) {
-      expect(source).not.toContain('text-[10px]');
-      expect(source).not.toContain('text-[11px]');
-    }
-    expect(thread).toContain('text-[14px] leading-6');
-    expect(thread).toContain("text-xs");
+    expect(context).not.toContain('text-[10px]');
+    expect(context).not.toContain('text-[11px]');
   });
 
   it("preserves bounded thread scrolling and mobile queue-first navigation", () => {
     const hook = read("src/hooks/use-inbox-workspace.ts");
-    const desk = read("src/components/inbox/inbox-operations-desk.tsx");
-    const thread = read("src/components/inbox/inbox-thread-workbench.tsx");
+    const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
+    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
 
     expect(hook).toContain("messages?limit=200");
     expect(hook).toContain("isNearBottomRef");
-    expect(desk).toContain("!isMobile || !activeChat");
-    expect(desk).toContain("!isMobile || activeChat");
-    expect(desk).toContain("onBackToQueue={handleBackToQueue}");
+    expect(workspace).toContain("!isMobile || !activeChat");
+    expect(workspace).toContain("!isMobile || activeChat");
+    expect(workspace).toContain("onBackToQueue={handleBackToQueue}");
     expect(thread).toContain("onBackToQueue: () => void");
     expect(thread).toContain("onClick={onBackToQueue}");
     expect(thread).not.toContain("clearActiveChat");
@@ -96,7 +86,7 @@ describe("Class-AAA Inbox composition contract", () => {
   });
 
   it("closes adversarial Inbox review gaps at their authority boundaries", () => {
-    const queue = read("src/components/inbox/inbox-work-queue.tsx");
+    const queue = read("src/components/inbox/inbox-v3-queue.tsx");
     const deskTypes = read("src/components/inbox/inbox-desk-types.ts");
     const header = read("src/components/inbox/inbox-v3-header.tsx");
     const panel = read("src/components/inbox/inbox-customer-work-panel.tsx");

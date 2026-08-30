@@ -287,11 +287,27 @@ export function StorefrontStudioBootstrap({ products }: Props) {
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <div className="space-y-1.5">
                   <Label htmlFor="studio-phone">{t("storefront.builder.phone")}</Label>
-                  <Input id="studio-phone" dir="ltr" value={phone} onChange={(event) => setPhone(event.target.value)} maxLength={64} />
+                  <Input
+                  id="studio-phone"
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  maxLength={64}
+                />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="studio-whatsapp">{t("storefront.builder.whatsapp")}</Label>
-                  <Input id="studio-whatsapp" dir="ltr" value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} maxLength={64} />
+                  <Input
+                  id="studio-whatsapp"
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  value={whatsapp}
+                  onChange={(event) => setWhatsapp(event.target.value)}
+                  maxLength={64}
+                />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="studio-email">{t("storefront.builder.email")}</Label>
