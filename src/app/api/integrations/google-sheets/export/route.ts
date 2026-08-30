@@ -3,6 +3,8 @@ import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { logAudit } from "@/lib/audit";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { prepareSheetForExport, writeOrdersBatch } from "@/lib/integrations/google-sheets";
 
 const ExportSchema = z.object({
@@ -23,7 +25,7 @@ const DB_BATCH_SIZE = 500;
 const MAX_BATCHES = 200;
 
 export const POST = withErrorHandler(async (req: Request) => {
-  await requireAuth([
+  const actorContext = await requireAuth([
     "integrations.manage",
     "data.export",
     "orders.read",
@@ -39,6 +41,18 @@ export const POST = withErrorHandler(async (req: Request) => {
     );
   }
   const context = { prisma: db, shop: shopContext };
+
+  // A1: writing the full order book (customer names, phones, wilayas,
+  // financials) to a third-party Google Sheet is a data-egress authority
+  // event — audited exactly like the CSV/XLSX export siblings, before any
+  // data leaves the process. The destination spreadsheet id is the audit
+  // payload's whole point: where did the data go.
+  await logAudit(context, {
+    action: "export.orders",
+    entity: "orders",
+    actor: trustedActorAuditIdentity(actorContext.actor),
+    after: { format: "google-sheets", spreadsheetId: parsed.data.spreadsheetId },
+  });
 
   // 1. W3-6: prepare the sheet ONCE — writes headers + clears any existing
   //    data range (so we don't append duplicates or leave stale rows).

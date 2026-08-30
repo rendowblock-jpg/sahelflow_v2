@@ -382,6 +382,46 @@ describe("GET / PUT /api/risk/config — risk engine config", () => {
     expect(res.status).toBe(401);
   });
 
+  it("PUT rejects garbage config with 400 and persists nothing (A3)", async () => {
+    // Wrong value type inside a known section + an unknown top-level key:
+    // the legacy bare cast persisted and echoed both.
+    const res = await PUTConfig(
+      mockPut("http://localhost/api/risk/config", {
+        weights: { customerHistory: "high" },
+        unknownTopLevelKey: true,
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(
+      await rawDb.setting.findUnique({ where: { key: "risk_engine_config" } }),
+    ).toBeNull();
+  });
+
+  it("PUT rejects non-ascending thresholds with 400 and persists nothing (A3)", async () => {
+    const res = await PUTConfig(
+      mockPut("http://localhost/api/risk/config", { thresholds: { low: 80 } }),
+    );
+    expect(res.status).toBe(400);
+    expect(
+      await rawDb.setting.findUnique({ where: { key: "risk_engine_config" } }),
+    ).toBeNull();
+  });
+
+  it("PUT writes a risk.config.update audit row with before/after digests (A2)", async () => {
+    const res = await PUTConfig(
+      mockPut("http://localhost/api/risk/config", { autoBlacklistReturnRate: 0.4 }),
+    );
+    expect(res.status).toBe(200);
+    const audits = await rawDb.auditLog.findMany({ where: { action: "risk.config.update" } });
+    expect(audits).toHaveLength(1);
+    expect(audits[0]!.actor).toBe(`person:${"1".repeat(32)}`);
+    const beforeDigest = (JSON.parse(audits[0]!.before!) as { digest: string }).digest;
+    const afterDigest = (JSON.parse(audits[0]!.after!) as { digest: string }).digest;
+    expect(beforeDigest).toMatch(/^[0-9a-f]{64}$/);
+    expect(afterDigest).toMatch(/^[0-9a-f]{64}$/);
+    expect(beforeDigest).not.toBe(afterDigest);
+  });
+
   // No GET 401 test — bare GET handler (see file header note).
 });
 
@@ -439,6 +479,34 @@ describe("GET / PUT /api/risk/rules — risk rules", () => {
     const persisted = JSON.parse(row!.value) as Array<{ id: string }>;
     expect(persisted).toHaveLength(1);
     expect(persisted[0]!.id).toBe("custom_rule_1");
+  });
+
+  it("PUT writes a risk.rules.replace audit row with before/after digests (A2)", async () => {
+    await GETRules();
+    const res = await PUTRules(
+      mockPut("http://localhost/api/risk/rules", {
+        rules: [
+          {
+            id: "custom_rule_audit",
+            labelKey: "risk.rules.custom",
+            enabled: true,
+            condition: { type: "customer_is_blacklisted" },
+            effect: { type: "set_action", action: "hold" },
+            triggerCount: 0,
+          },
+        ],
+      }),
+    );
+    expect(res.status).toBe(200);
+    const audits = await rawDb.auditLog.findMany({ where: { action: "risk.rules.replace" } });
+    expect(audits).toHaveLength(1);
+    expect(audits[0]!.actor).toBe(`person:${"1".repeat(32)}`);
+    const before = JSON.parse(audits[0]!.before!) as { count: number; digest: string };
+    const after = JSON.parse(audits[0]!.after!) as { count: number; digest: string };
+    expect(before.count).toBeGreaterThanOrEqual(1);
+    expect(after.count).toBe(1);
+    expect(before.digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(after.digest).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("PUT returns 400 on invalid input (missing rules array)", async () => {
