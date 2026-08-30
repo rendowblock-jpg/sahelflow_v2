@@ -88,6 +88,12 @@ vi.mock("next/headers", () => ({
     set: () => undefined,
     delete: () => undefined,
   })),
+  // getI18n() also reads the request's Accept-Language header (R5-c
+  // seller-side locale truth); scenario #12 drives locale through the
+  // cookie only, so the header store resolves nothing.
+  headers: vi.fn(async () => ({
+    get: () => undefined,
+  })),
 }));
 
 // Action-aware notification and confirmation-queue reads require a durable
