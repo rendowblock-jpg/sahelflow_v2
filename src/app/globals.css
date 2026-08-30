@@ -98,10 +98,15 @@
   --primary-hover: color-mix(in oklch, var(--primary) 88%, black);
 
   --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.55 0.2 145);
+  /* Feedback semantics are calibrated for their RENDERED role — colored text
+     on canvas/card tints (bg-success/10 chips, text-success, ...) — at WCAG AA
+     (>= 4.5:1). Solid -foreground pairs are gated too where they pass; the
+     light warning solid pair never renders (warning surfaces carry dark text
+     on tinted fills only) — see contrast-contract.test.ts. */
+  --success: oklch(0.52 0.2 145);
   --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.75 0.18 80);
-  --warning-foreground: oklch(0.18 0 0);  /* warning is light — needs dark text */
+  --warning: oklch(0.55 0.16 72);
+  --warning-foreground: oklch(0.18 0 0);  /* deep amber stays light enough to need dark text */
   --info: oklch(0.52 0.18 240);
   --info-foreground: oklch(0.985 0 0);  /* Was 150 (emerald) — moved to blue for distinction */
 
@@ -149,7 +154,7 @@
   --warning: oklch(0.78 0.16 80);
   --warning-foreground: oklch(0.18 0 0);
   --info: oklch(0.68 0.19 240);
-  --info-foreground: oklch(0.985 0 0);  /* Was 150 (emerald) — moved to blue */
+  --info-foreground: oklch(0.16 0.03 240);  /* light accent + dark text, like success/warning */
 
   /* ── Named shadow system (dark mode) ── */
   --shadow-btn-rested:

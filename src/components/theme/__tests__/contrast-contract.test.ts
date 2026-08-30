@@ -26,15 +26,26 @@ import { normalizeChartColor } from "../../charts/chart-color";
  * naive-clamped and gamut-mapped results. That floor is conservative across
  * engines and absorbs the "rendering variance" the remediation margin targets.
  *
- * Not gated here (documented in the R5-b worklog, owned elsewhere):
- *   - hover:bg-primary/90 (button.tsx) lifts each light primary toward the
- *     near-white card and lands at 3.90-4.40:1 even after the fix — a
- *     component-level alpha treatment, not a token.
- *   - --success/--info foreground token pairs (globals.css) measure below AA
- *     but currently have zero consumers.
+ * Not gated here (documented, owned elsewhere):
  *   - White on SOLID dark --destructive measures 2.89:1, but every rendered
  *     dark button/badge uses bg-destructive/60 (5.95:1+); dark --destructive
  *     is asserted for its real role: colored text on dark surfaces.
+ *   - Light --warning's latent solid pair (dark --warning-foreground text on
+ *     solid amber) measures 3.76:1 but never renders: every warning surface in
+ *     the app is text-warning / bg-warning tints (dots carry no text). Asserted
+ *     for its real role below: warning-as-text on every canvas/card.
+ *
+ * GATED HERE since the Wave 6 preflight (previously excluded by R5-b):
+ *   - --primary-hover (color-mix 88% primary / 12% black) replaces the old
+ *     alpha hovers (hover:bg-primary/90) that lifted light primaries toward
+ *     the near-white card and landed at 3.90-4.40:1. Darkening toward black
+ *     can only increase white-on-primary contrast — asserted per preset,
+ *     per mode, plus the no-preset dark fallback.
+ *   - --success/--warning/--info semantics in their rendered role (colored
+ *     text on canvas/card tints) and the solid -foreground pairs that render
+ *     or are latent-but-passing: light success/info solid, dark success/
+ *     warning/info solid (dark info now follows the light-accent + dark-text
+ *     pattern instead of the old 2.62:1 white-on-info).
  */
 
 const AA_NORMAL_TEXT = 4.5;
@@ -273,6 +284,15 @@ function hueDistance(a: number, b: number): number {
 /** button.tsx renders destructive buttons as literal `text-white`. */
 const BUTTON_WHITE: Oklch = { l: 1, c: 0, h: 0 };
 
+/**
+ * color-mix(in oklch, var(--primary) 88%, black) at unit alphas reduces to
+ * straight interpolation toward black: L and chroma scale by 0.88, hue rides
+ * the chromatic endpoint (black carries no hue of its own).
+ */
+function primaryHoverMix(primary: Oklch): Oklch {
+  return { l: primary.l * 0.88, c: primary.c * 0.88, h: primary.h };
+}
+
 describe("design-token contrast contract (WCAG AA)", () => {
   it("parses the live token authority and pins the R5-b calibrated primaries", () => {
     // Sync-check: the contract reads the CSS directly, and the recalibrated
@@ -457,5 +477,147 @@ describe("design-token contrast contract (WCAG AA)", () => {
       contrast(darkDestructive, darkCard),
       "dark: --destructive as text on --card",
     ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+  });
+
+  it("pins the feedback semantic calibration and keeps their rendered text roles AA", () => {
+    // Sync-check: rendered roles are colored text on tinted fills (see
+    // consumers: operational-state, notification-taxonomy, status badges,
+    // attention-center, command palette). Calibrated in the Wave 6 preflight.
+    expect(resolveToken([globalsLightRoot], "--success")).toBe(
+      "oklch(0.52 0.2 145)",
+    );
+    expect(resolveToken([globalsLightRoot], "--warning")).toBe(
+      "oklch(0.55 0.16 72)",
+    );
+    expect(resolveToken([globalsLightRoot], "--info")).toBe(
+      "oklch(0.52 0.18 240)",
+    );
+    expect(resolveToken([globalsDark], "--info-foreground")).toBe(
+      "oklch(0.16 0.03 240)",
+    );
+
+    const pairs: Array<[string, Oklch]> = [
+      ["--success", colorToken([globalsLightRoot], "--success")],
+      ["--warning", colorToken([globalsLightRoot], "--warning")],
+      ["--info", colorToken([globalsLightRoot], "--info")],
+    ];
+    for (const preset of PRESETS) {
+      const cascade = lightCascade(preset);
+      for (const [name, color] of pairs) {
+        expect(
+          contrast(color, colorToken(cascade, "--background")),
+          `${preset} light: ${name} as text on --background`,
+        ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+        expect(
+          contrast(color, colorToken(cascade, "--card")),
+          `${preset} light: ${name} as text on --card`,
+        ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      }
+    }
+
+    const darkPairs: Array<[string, Oklch]> = [
+      ["--success", colorToken([globalsDark], "--success")],
+      ["--warning", colorToken([globalsDark], "--warning")],
+      ["--info", colorToken([globalsDark], "--info")],
+    ];
+    const darkBackground = colorToken(darkCascade("sahel"), "--background");
+    const darkCard = colorToken(darkCascade("sahel"), "--card");
+    for (const [name, color] of darkPairs) {
+      expect(
+        contrast(color, darkBackground),
+        `dark: ${name} as text on --background`,
+      ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      expect(
+        contrast(color, darkCard),
+        `dark: ${name} as text on --card`,
+      ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    }
+  });
+
+  it("keeps the solid feedback foreground pairs AA where they render or pass", () => {
+    // Light: success/info solid chips carry near-white foreground text.
+    expect(
+      contrast(
+        colorToken([globalsLightRoot], "--success-foreground"),
+        colorToken([globalsLightRoot], "--success"),
+      ),
+      "light: --success-foreground on --success",
+    ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    expect(
+      contrast(
+        colorToken([globalsLightRoot], "--info-foreground"),
+        colorToken([globalsLightRoot], "--info"),
+      ),
+      "light: --info-foreground on --info",
+    ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+
+    // Dark: every feedback accent is a light color carrying dark text
+    // (success/warning always did; info joined them in the Wave 6 preflight).
+    for (const name of ["--success", "--warning", "--info"] as const) {
+      expect(
+        contrast(
+          colorToken([globalsDark], `${name}-foreground`),
+          colorToken([globalsDark], name),
+        ),
+        `dark: ${name}-foreground on ${name}`,
+      ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    }
+  });
+
+  it("keeps --primary-hover AA in every preset, mode and the dark fallback", () => {
+    // The hover authority is a color-mix TOWARD BLACK, so white-on-primary
+    // contrast can only improve — but dark presets darken a LIGHT primary
+    // under dark text, which reduces contrast. Both directions are gated.
+    expect(resolveToken([globalsLightRoot], "--primary-hover")).toBe(
+      "color-mix(in oklch, var(--primary) 88%, black)",
+    );
+
+    for (const preset of PRESETS) {
+      const light = lightCascade(preset);
+      expect(
+        contrast(
+          colorToken(light, "--primary-foreground"),
+          primaryHoverMix(colorToken(light, "--primary")),
+        ),
+        `${preset} light: --primary-foreground on --primary-hover`,
+      ).toBeGreaterThanOrEqual(AA_PRIMARY_FLOOR);
+
+      const dark = darkCascade(preset);
+      expect(
+        contrast(
+          colorToken(dark, "--primary-foreground"),
+          primaryHoverMix(colorToken(dark, "--primary")),
+        ),
+        `${preset} dark: --primary-foreground on --primary-hover`,
+      ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    }
+
+    const fallback = darkCascade("fallback");
+    expect(
+      contrast(
+        colorToken(fallback, "--primary-foreground"),
+        primaryHoverMix(colorToken(fallback, "--primary")),
+      ),
+      "fallback dark: --primary-foreground on --primary-hover",
+    ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+  });
+
+  it("source-contract: interactive primaries hover with the token, not alpha", () => {
+    // Alpha hovers (hover:bg-primary/90) lift light primaries toward the
+    // near-white card and drop below AA — the exclusion R5-b documented and
+    // the preflight closed. The primitives must consume the token.
+    const button = source("../../ui/button.tsx");
+    const badge = source("../../ui/badge.tsx");
+    for (const [file, body] of [
+      ["button.tsx", button],
+      ["badge.tsx", badge],
+    ] as const) {
+      expect(body, `${file} uses the hover token`).toContain(
+        "hover:bg-primary-hover",
+      );
+      expect(body, `${file} must not alpha-hover the primary`).not.toContain(
+        "hover:bg-primary/90",
+      );
+    }
   });
 });
