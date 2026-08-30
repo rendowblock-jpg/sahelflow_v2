@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
   Circle,
+  EllipsisVertical,
   Loader2,
   PlugZap,
   QrCode,
@@ -15,7 +17,20 @@ import { WhatsAppIngressRecoveryDock } from "@/components/inbox/whatsapp-ingress
 import { WhatsAppPairingDialog } from "@/components/inbox/whatsapp-pairing-dialog";
 import type { InboxTransportState } from "@/components/inbox/inbox-workspace-types";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
+import {
+  playNewMessageChime,
+  readNewMessageSoundEnabled,
+  readNewMessageToastEnabled,
+  writeNewMessageSoundEnabled,
+  writeNewMessageToastEnabled,
+} from "@/hooks/use-new-message-alerts";
 import { cn } from "@/lib/utils";
 
 function ConnectionState({
@@ -113,6 +128,74 @@ function ConnectionState({
   );
 }
 
+/**
+ * Global new-message alert preferences (R4-a liveness).
+ *
+ * Toast defaults ON, sound defaults OFF; both persist per device in
+ * localStorage (sf_inbox_* keys). The sidebar alert hook reads the stored
+ * value at alert time, so a toggle here takes effect on the very next
+ * message without any cross-component state bridge. Enabling the sound plays
+ * a preview so the seller knows exactly what they opted into.
+ */
+function AlertPreferencesMenu({
+  t,
+}: {
+  t: ReturnType<typeof useInboxWorkspace>["t"];
+}) {
+  const [toastEnabled, setToastEnabled] = useState(() =>
+    readNewMessageToastEnabled(),
+  );
+  const [soundEnabled, setSoundEnabled] = useState(() =>
+    readNewMessageSoundEnabled(),
+  );
+
+  return (
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (!open) return;
+        // Re-read on open so the menu always reflects stored truth, even if
+        // another window or a data migration changed it since mount.
+        setToastEnabled(readNewMessageToastEnabled());
+        setSoundEnabled(readNewMessageSoundEnabled());
+      }}
+    >
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("inbox.liveness.alertsMenu")}
+        >
+          <EllipsisVertical className="size-3.5" aria-hidden="true" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-52">
+        <DropdownMenuCheckboxItem
+          checked={toastEnabled}
+          onCheckedChange={(checked) => {
+            writeNewMessageToastEnabled(checked);
+            setToastEnabled(checked);
+          }}
+          onSelect={(event) => event.preventDefault()}
+        >
+          {t("inbox.liveness.toastToggle")}
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={soundEnabled}
+          onCheckedChange={(checked) => {
+            writeNewMessageSoundEnabled(checked);
+            setSoundEnabled(checked);
+            if (checked) void playNewMessageChime();
+          }}
+          onSelect={(event) => event.preventDefault()}
+        >
+          {t("inbox.liveness.soundToggle")}
+        </DropdownMenuCheckboxItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function InboxV3Header({
   workspace,
   canViewIngress,
@@ -185,6 +268,7 @@ export function InboxV3Header({
               <PlugZap className="size-3.5" aria-hidden="true" />
             </Button>
           ) : null}
+          <AlertPreferencesMenu t={t} />
         </div>
       </header>
 

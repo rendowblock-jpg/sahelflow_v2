@@ -92,6 +92,82 @@ function messageDayLabel(value: number, locale: "ar" | "fr" | "en"): string {
   }).format(new Date(value));
 }
 
+/** "Active …" hint appears only after the thread has been idle this long. */
+const LAST_ACTIVE_MIN_IDLE_MS = 5 * 60_000;
+const LAST_ACTIVE_REFRESH_MS = 30_000;
+
+function relativeLastActive(
+  value: number,
+  now: number,
+  locale: "ar" | "fr" | "en",
+): string {
+  const diff = Math.max(0, now - value);
+  const rtf = new Intl.RelativeTimeFormat(localeCode(locale), {
+    numeric: "auto",
+  });
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 60) return rtf.format(-minutes, "minute");
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return rtf.format(-hours, "hour");
+  const days = Math.floor(hours / 24);
+  if (days < 7) return rtf.format(-days, "day");
+  return new Intl.DateTimeFormat(localeCode(locale), {
+    day: "numeric",
+    month: "short",
+  }).format(new Date(value));
+}
+
+/**
+ * Last-seen fallback (R4-a liveness). The WhatsApp sidecar emits no
+ * presence/typing events (SidecarEvent is status/qr/message/message-update
+ * only), so the thread header leans on persisted `lastMessageAt` instead of
+ * live presence: an obviously-live conversation stays quiet, and once the
+ * thread has been idle for 5+ minutes a muted "Active 12 minutes ago" hint
+ * appears and refreshes on a slow 30s cadence.
+ */
+function ThreadLastActive({
+  lastMessageAt,
+  locale,
+  t,
+}: {
+  lastMessageAt: number | undefined;
+  locale: "ar" | "fr" | "en";
+  t: ReturnType<typeof useInboxWorkspace>["t"];
+}) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!lastMessageAt) return;
+    const idleMs = Date.now() - lastMessageAt;
+    // Self-scheduling wake-up: sleep until the indicator becomes visible,
+    // then refresh on a slow cadence — never a busy interval.
+    const delay =
+      idleMs < LAST_ACTIVE_MIN_IDLE_MS
+        ? LAST_ACTIVE_MIN_IDLE_MS - idleMs + 1_000
+        : LAST_ACTIVE_REFRESH_MS;
+    const timer = window.setTimeout(() => setNow(Date.now()), delay);
+    return () => window.clearTimeout(timer);
+  }, [lastMessageAt, now]);
+
+  if (!lastMessageAt) return null;
+  if (now - lastMessageAt < LAST_ACTIVE_MIN_IDLE_MS) return null;
+
+  return (
+    <>
+      <span aria-hidden="true">·</span>
+      <span
+        dir="auto"
+        data-inbox-last-active="true"
+        className="shrink-0 truncate"
+      >
+        {t("inbox.liveness.lastActive", {
+          time: relativeLastActive(lastMessageAt, now, locale),
+        })}
+      </span>
+    </>
+  );
+}
+
 function MediaIcon({ type }: { type: string | undefined }) {
   switch (type) {
     case "image":
@@ -722,6 +798,11 @@ export function InboxV3Thread({
               <span className="truncate">
                 {isWhatsAppConversation ? "WhatsApp" : copy("savedHistory")}
               </span>
+              <ThreadLastActive
+                lastMessageAt={activeChat.lastMessageAt}
+                locale={locale}
+                t={t}
+              />
             </div>
           </div>
         </div>

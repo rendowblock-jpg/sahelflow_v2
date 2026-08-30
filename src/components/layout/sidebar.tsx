@@ -6,6 +6,8 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { SahelFlowMark } from "@/components/brand/sahelflow-mark";
 import { useI18n } from "@/hooks/use-i18n";
+import { useInboxUnread } from "@/hooks/use-inbox-unread";
+import { useNewMessageAlerts } from "@/hooks/use-new-message-alerts";
 import { useUIStore } from "@/stores/ui-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,6 +39,10 @@ interface SidebarLinkProps {
   collapsed: boolean;
   isRtl: boolean;
   nested?: boolean;
+  /** Live unread count for items flagged `unreadBadge` in the registry. */
+  unreadCount?: number;
+  /** Localized "Unread messages: n" label for assistive technology. */
+  unreadLabel?: string;
 }
 
 function SidebarLink({
@@ -47,8 +53,30 @@ function SidebarLink({
   collapsed,
   isRtl,
   nested = false,
+  unreadCount,
+  unreadLabel,
 }: SidebarLinkProps) {
   const Icon = item.icon;
+  const showUnreadBadge = unreadCount !== undefined && unreadCount > 0;
+  const unreadBadge = showUnreadBadge ? (
+    <span
+      // Rail mode has no visible label, so the badge carries the destination
+      // name too — the accessible link name stays "Inbox, Unread messages: 5".
+      aria-label={
+        collapsed && unreadLabel ? `${label} — ${unreadLabel}` : unreadLabel
+      }
+      data-inbox-unread-badge="true"
+      className={
+        collapsed
+          ? // Rail mode: compact corner bubble on the icon (logical corner
+            // flips with RTL).
+            "absolute end-1 top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-4 tabular-nums text-primary-foreground"
+          : "inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold leading-5 tabular-nums text-primary-foreground"
+      }
+    >
+      {unreadCount > 99 ? "99+" : unreadCount}
+    </span>
+  ) : null;
 
   const link = (
     <Link
@@ -87,6 +115,7 @@ function SidebarLink({
         aria-hidden="true"
       />
       {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
+      {unreadBadge}
     </Link>
   );
 
@@ -120,6 +149,16 @@ export function Sidebar({
   const isRtl = serverDir === "rtl";
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
   const activeHref = navigationItemForPathname(pathname)?.href ?? null;
+
+  // Inbox liveness (R4-a): the sidebar is the persistent shell surface, so it
+  // owns the shared unread-summary poll (15s, focus-revalidated, paused while
+  // hidden) and the global new-message toast/sound. Both hooks share one SWR
+  // key — a single network cadence feeds the badge and the alerts.
+  const { total: inboxUnreadTotal } = useInboxUnread();
+  useNewMessageAlerts();
+  const inboxUnreadLabel = t("inbox.liveness.unreadMessages", {
+    count: inboxUnreadTotal,
+  });
 
   return (
     <aside
@@ -180,6 +219,10 @@ export function Sidebar({
                     collapsed={collapsed}
                     isRtl={isRtl}
                     nested={item.sidebarNested}
+                    unreadCount={item.unreadBadge ? inboxUnreadTotal : undefined}
+                    unreadLabel={
+                      item.unreadBadge ? inboxUnreadLabel : undefined
+                    }
                   />
                 </div>
               );
@@ -202,6 +245,10 @@ export function Sidebar({
                   current={selected}
                   collapsed={collapsed}
                   isRtl={isRtl}
+                  unreadCount={item.unreadBadge ? inboxUnreadTotal : undefined}
+                  unreadLabel={
+                    item.unreadBadge ? inboxUnreadLabel : undefined
+                  }
                 />
               );
             })}

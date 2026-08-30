@@ -4,7 +4,9 @@ import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
 import { getDeliveriesRuntimeTranslation } from "@/lib/i18n/deliveries-runtime";
 import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
+import { getInboxLivenessRuntimeTranslation } from "@/lib/i18n/inbox-liveness-runtime";
 import { getNotificationsRuntimeTranslation } from "@/lib/i18n/notifications-runtime";
+import { getOnboardingRuntimeTranslation } from "@/lib/i18n/onboarding-runtime";
 import { getOrderActionsRuntimeTranslation } from "@/lib/i18n/order-actions-runtime";
 import { getOrderFormRuntimeTranslation } from "@/lib/i18n/order-form-runtime";
 import { getOrderLifecycleRuntimeTranslation } from "@/lib/i18n/order-lifecycle-runtime";
@@ -137,7 +139,9 @@ export function getRuntimeTranslation(
     getConfirmationQueueRuntimeTranslation(locale, key) ??
     getDeliveriesRuntimeTranslation(locale, key) ??
     getEntityDetailRuntimeTranslation(locale, key) ??
+    getInboxLivenessRuntimeTranslation(locale, key) ??
     getNotificationsRuntimeTranslation(locale, key) ??
+    getOnboardingRuntimeTranslation(locale, key) ??
     getOrderActionsRuntimeTranslation(locale, key) ??
     getOrderFormRuntimeTranslation(locale, key) ??
     getOrderLifecycleRuntimeTranslation(locale, key) ??
