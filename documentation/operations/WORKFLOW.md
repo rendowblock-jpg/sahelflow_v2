@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-26
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.29 / FD-050 is installed (the campaign reproduced defects B1–B5 and D1); all six were root-caused and repaired on protected main (#346–#353, adversarially audited, `b1b5a033`) and the deep-audit remediation register is merged on top (#355, `14c059b7`, every Actions gate green at head) — both lines are unreleased; next is a separately authorized signed successor packaging both lines, Founder re-verification on that successor, then FRC-3 resume
+> **Current checkpoint:** Internal.30 / FD-051 is the latest signed/published (Founder installation pending) — it packages the FD-050 campaign repair line (#346–#353) and the deep-audit remediation register (#355); next is the Founder's in-place Internal.30 update, the re-verification campaign over the FD-050 rows, register-affected rows, retained #306 rows and applicable matrix rows, evidence reconciliation, then FRC-3 resume; the parallel frontend/UI stream becomes the next candidate after that re-verification
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -59,7 +59,7 @@ Operational rules:
 - issue bodies can retain evidence/work queues but do not replace active documentation authority;
 - source, signed artifact, hosted CI install, Founder install, live-provider evidence, representative beta and Stable are distinct truth levels.
 
-Current signed authority is Internal.29 / `1.0.0-internal.29` / MSI `1.0.0.29` / FD-050 / `founder-offline-only` (published and Founder-installed; the FD-050 campaign repair line #346–#353 and the deep-audit remediation register #355 on main `14c059b7` are unreleased). FD-045/FD-050 change execution strategy and timing only; they do not create customer-online, Beta or Stable authority.
+Current signed authority is Internal.30 / `1.0.0-internal.30` / MSI `1.0.0.30` / FD-051 / `founder-offline-only` (published; Founder installation pending — it packages the FD-050 campaign repair line #346–#353 and the deep-audit remediation register #355). FD-045/FD-050 change execution strategy and timing only; they do not create customer-online, Beta or Stable authority.
 
 ## 3. Complete phase/package audit
 
