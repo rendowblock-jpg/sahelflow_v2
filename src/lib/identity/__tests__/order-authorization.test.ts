@@ -103,6 +103,8 @@ describe("order update field authorization", () => {
       ),
     ).toThrow(/orders\.financials\.read/);
 
+    // B7-1: totalPrice is server-derived, so item mutations are the
+    // price-bearing surface that exercises the financials.update authority.
     expect(() =>
       assertOrderUpdateFieldAuthority(
         context([
@@ -110,7 +112,11 @@ describe("order update field authorization", () => {
           "orders.update",
           "orders.financials.read",
         ]),
-        { totalPrice: 4_200 },
+        {
+          items: [
+            { productName: "Item", quantity: 1, unitPrice: 4_200, total: 4_200 },
+          ],
+        },
       ),
     ).toThrow(/orders\.financials\.update/);
   });
@@ -136,7 +142,12 @@ describe("order update field authorization", () => {
           "orders.financials.read",
           "orders.financials.update",
         ]),
-        { deliveryCost: 700, totalPrice: 4_900 },
+        {
+          deliveryCost: 700,
+          items: [
+            { productName: "Item", quantity: 1, unitPrice: 4_900, total: 4_900 },
+          ],
+        },
       ),
     ).not.toThrow();
   });

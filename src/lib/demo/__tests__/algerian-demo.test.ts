@@ -59,7 +59,10 @@ afterEach(async () => {
 });
 
 describe("Algerian demo data", () => {
-  it("seeds the rich recent story, annualizes it deterministically, and cleans up", async () => {
+  // Heavy deterministic seeding: the rich story exercises thousands of rows
+  // in one go. The shared 15s default is enough on warm local machines but
+  // not on cold hosted runners under parallel-lane load (observed flake).
+  it("seeds the rich recent story, annualizes it deterministically, and cleans up", { timeout: 90_000 }, async () => {
     const initial = await getAlgerianDemoStatus(demoClient());
     expect(initial).toMatchObject({
       loaded: false,

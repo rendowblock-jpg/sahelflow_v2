@@ -224,7 +224,7 @@ describe("refund transaction facts", () => {
         where: { orderId: order.id, actionType: "refund" },
         orderBy: { createdAt: "desc" },
       });
-      const payload = JSON.parse(change!.payload) as Record<string, unknown>;
+      const payload = JSON.parse(change!.payload!) as Record<string, unknown>;
       expect(payload).toMatchObject({
         statusChanged: false,
         stockRestored: false,
