@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.30 FD-051 repair-lines successor publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.30",
+  "windowsMsiVersion": "1.0.0.30",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-051",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "40f5386095e3a11b5f586673d3f6d0cc99956a66",
+    "phase5RunId": 33287186245,
+    "phase67RunId": 33287186170,
+    "ciRunId": 33287186297
+  },
+  "reason": "Founder explicitly authorized one combined signed successor under FD-051 (2026-08-30, instruction 'Cut the successor') packaging the two audited-but-unreleased repair lines on protected main, so the FD-050 installed-campaign rows and the deep-audit register's audit-affected rows can be re-verified in place before FRC-3 resumes and before the parallel frontend/UI stream lands. Publish the exact protected product tree carrying everything merged since Internal.29: the FD-050 installed-campaign repair line #346-#353 (B1/B2 quote-chip persistence #351; B3 document/audio local-ready projection + outbox error codes #349; B4 voice-note WebM-to-OGG remux #346 with RFC 6716 TOC exactness #353; B5 chat-delete ingress tombstone + coded delete failures #347; D1 AI-key PIN resume + localized coded errors #348; Baileys status-enum truth #350; C1 auto-receive watchdog + 1:1 JID scope #352) and the deep-audit remediation register #355 (zod .partial() default-backfill data-loss repair; Batch A F1-F15 route guards; Batch D PII OrThrow sealing, dual blind-index, pinHash at-rest, registry fsync, log retention; Batch B order PATCH server-derived money + post-confirmation edit lock, refund revenue truth, return completion refund fact, partitioned per-product stock model, timeline coded errors, single-order COD remittance quarantine, Order.returnState/refundState schema drift, partial-refund money-only stock truth, COD quarantine on returned/refused/cancelled/voided orders, wilaya canonicalization, automation outbox-marker bridge; storefront poison-receipt intake contract; Sheets export + risk config/rules audit + strict risk-config zod; remote worker classified failure logs + escalation, inbox connect/logout error surfacing; Unix process-group containment, RegFlushKey license-clock anchors, orphan-recovery quarantine/unblocking; redaction authority kept strict on the machine-code suffix convention). The packaged product tree at 14c059b7621d08a041830a626d5b3f2fb6fd75e6 (squash of PR #355) is tree-identical to the audited branch head 40f5386095e3a11b5f586673d3f6d0cc99956a66 (git diff empty), which passed exact-head CI 33287186297, Phase 5 33287186245 and Phase 6-7 33287186170 with zero failed checks; the subsequent #356 merge is documentation-only. This authority PR adds version, release-request and register files only, with no product changes. This request remains founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim. Internal.30 is the Founder-installed re-verification candidate for the FD-050 campaign rows (B1-B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive), the deep-audit register's audit-affected rows, the retained FRC-2 repair rows, the #306 real-phone rows and the applicable matrix rows; the parallel frontend/UI stream is explicitly NOT bundled and becomes the next candidate; it does not prove live outbound delivery, WebSocket push health or complete FRC-1, and #230 remains independently blocked until an owned domain exists."
+}
