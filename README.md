@@ -6,21 +6,36 @@ The active documentation entry point is [`documentation/README.md`](documentatio
 
 ## Current repository truth
 
-- Resolve protected `main` before every write, review, merge, package or evidence claim. At the 2026-08-28 reconciliation it is `d104da72dcfb7950df0b437ce279377b28e7df4b` after release PR #333.
-- Latest signed/published package: **Internal.28** — app `1.0.0-internal.28`, MSI `1.0.0.28`, FD-049, `founder-offline-only`. The latest **Founder-installed** checkpoint remains Internal.27 until the Founder applies the in-place Internal.28 update.
-- Internal.28 release authority is PR #333; protected release source `d104da72dcfb7950df0b437ce279377b28e7df4b`; reviewed release head `d48cd1cf26110743b44a72dff734dd7f4bcbc637`. Internal.27 release authority remains PR #313 (`4e395b0149da447daab37ad2d01be5c8bf1d6bce`, reviewed head `ef6a06c3a1b24127eea9e635796c42818f4c7d4e`).
-- Signed dispatcher `33136807451`, signed updater/publication run `33136814065` and release observer `33136822222` completed successfully; Internal.27's `32913445791` remains retained evidence.
-- Published Internal.28 MSI digest: `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64` (Internal.27 digest `sha256:64865032b4a59b8cf4f36d1e6b23e6251e817044c90f78ee3bc673822b803756` retained).
+- Resolve protected `main` before every write, review, merge, package or evidence claim. At the 2026-08-30 reconciliation it is `2eb8a33749118e233240019bf2df9a47d586a04d` after release PR #357 (docs-only #356/#358 reconcile on top; the packaged product tree is unchanged).
+- Latest signed/published package: **Internal.30** — app `1.0.0-internal.30`, MSI `1.0.0.30`, FD-051, `founder-offline-only`. The latest **Founder-installed** checkpoint remains Internal.29 until the Founder applies the in-place Internal.30 update.
+- Internal.30 release authority is PR #357; protected release source `2eb8a33749118e233240019bf2df9a47d586a04d`; reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`. Internal.29 release authority remains PR #344 (`a34917e582c4806aee35ad5aca12aaea82a0ddcf`).
+- Signed dispatcher `33292273959`, signed updater/publication run `33292278832` and release observer `33292285084` completed successfully; Internal.29's `33212635887`/`33212648778`/`33212661580` remain retained evidence.
+- Published Internal.30 MSI digest: `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`, tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d` (Internal.29 digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f` retained).
+- The FD-050 installed-campaign defects (B1–B5, D1) are repaired on protected main (#346–#353) and the deep-audit remediation register (#355) is merged; both lines are packaged inside published Internal.30.
 - Issue #221 is **closed/completed**: the Founder accepted installed Internal.24 for its retained whole-product human gate.
-- Issue #306 is **open**: Internal.27 passed real `@lid` outbound and durable new-number inbound, but automatic Inbox arrival required manual refresh. PR #315's repair is packaged in published Internal.28; installed automatic-arrival proof still requires the Founder in-place update and real-phone campaign.
-- Issues #316 and #317 are **open for installed/real-phone evidence only**: their source is complete (#319, #324, #325, #327, #329, #331) and packaged in published Internal.28.
+- Issue #306 is **open**: real-phone WhatsApp installed/provider certification. The published Internal.30 candidate awaits the Founder in-place update and re-verification campaign (FD-050 rows, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive, retained #306 rows).
+- Issues #316 and #317 are **open for installed/real-phone evidence only**: their source is complete (#319, #324, #325, #327, #329, #331 plus the FD-050 repair line) and packaged in published Internal.30.
 - Issue #230 is **open/reopened P1**: customer-online trial/network readiness remains blocked until owned production-domain and representative-network evidence exist.
-- No open PR existed immediately after release PR #333 merged.
-- Internal.28 and newer protected source do not authorize customer-online, Beta or Stable.
+- Draft PR #359 (frontend Class-AAA remediation) is **parked by Founder freeze** — do not merge it whole; if anything from it is needed after the Internal.30 re-verification, extract the phone-bidi / contrast / dead-code pieces as separate PRs.
+- Internal.30 and newer protected source do not authorize customer-online, Beta or Stable.
 
-## What Internal.28 adds
+## What Internal.30 adds
 
-Internal.28 retains the completed product/security line through Internal.27 and adds:
+Internal.30 retains the completed product/security line through Internal.29 and packages the two previously unreleased repair lines:
+
+- **FD-050 installed-campaign repair line (#346–#353)** — quote-chip persistence across chat switches/restarts (B1/B2, #351), outbound document/audio projected locally ready with outbox error codes (B3, #349), WebM→OGG voice remux with RFC 6716-exact Opus TOC (B4, #346/#353), chat-delete ingress tombstones with coded delete failures (B5, #347), AI-key action resume after PIN with localized coded rejections (D1, #348), canonical Baileys delivery-receipt status-enum mapping (#350) and the 60s auto-receive watchdog with 1:1 JID ingress scoping (C1, #352);
+- **Deep-audit remediation register (#355)** — zod `.partial()` default-backfill data-loss repair, Batch A F1–F15 route guards, Batch D crypto/data truth, Batch B domain truth (order PATCH money lock, refund/stock/COD truth, wilaya canonicalization), storefront poison-receipt contract, audit/risk-config validation, worker/inbox failure visibility, native R1–R3 and strict redaction authority.
+
+## What Internal.29 adds (retained history)
+
+- #335 — quoted replies resolve both provider/message id spaces with a persisted canonical target (repairs the received-message 409);
+- #336 — OOXML documents dispatch under their declared Office mimetype (repairs real PDF/Word arriving as zip);
+- #337 — in-composer voice recording through the durable outbound voice/PTT path (repairs the voice button opening the file dialog);
+- #338/#339 — permanent multi-select chat deletion and the compacted composer attach menu;
+- #342/#343 — FRC-2 freeze: `frc2-1.0.0` extraction corpus plus the AI capability evidence ledger;
+- #344 — Internal.29 / FD-050 release authority only.
+
+## What Internal.28 adds (retained history)
 
 - #315 — response CSP aligned with Tauri's loopback-only ephemeral-port policy, durable-projection fallback and socket retry for the demonstrated live-push root;
 - #319 — #316 Class-AAA durable Notification Center and WhatsApp attention routing;
@@ -28,32 +43,30 @@ Internal.28 retains the completed product/security line through Internal.27 and 
 - #331 — professional Inbox interaction parity: durable quoted replies, safe message copy, upload progress with in-flight cancellation, JPEG thumbnails with fail-closed fallback, and paste/drop composition;
 - #333 — Internal.28 / FD-049 release authority only.
 
-## What Internal.27 adds
-
-Internal.27 retains the completed product/security line through Internal.26 and adds:
+## What Internal.27 adds (retained history)
 
 - #312 — provenance-bound individual WhatsApp `numeric@lid` replies, Arabic empty-composer RTL with automatic entered-content direction, direct governed status control and reviewed AI order extraction from the thread header;
 - #313 — Internal.27 / FD-047 release authority only.
 
 #309/#310/#311 remain the retained Internal.26 callback, resizable-Inbox and release foundation; #300/#304/#305/#307 remain the earlier security/provider foundation.
 
-The signed workflows proved exact protected-source binding, reviewed-tree equality, Required PR evidence, signed MSI/updater construction, staged runtime readiness, signature verification, signed install/launch/reopen, authenticated hydrated UI twice, deterministic source rewrites, evidence manifest, `latest.json`, exact tag and publication — now for Internal.28 as well, with Internal.27's evidence retained.
+The signed workflows proved exact protected-source binding, reviewed-tree equality, Required PR evidence, signed MSI/updater construction, staged runtime readiness, signature verification, signed install/launch/reopen, authenticated hydrated UI twice, deterministic source rewrites, evidence manifest, `latest.json`, exact tag and publication — now for Internal.30 as well, with Internal.29's and Internal.28's evidence retained.
 
-That is strong source/package/runtime evidence. PR #315 through #331 are inside published Internal.28, but the Founder has not yet installed it. Neither publication nor source proves automatic live push on the installed successor, complete message/media parity on the real phone, live commerce/courier certification, customer-online readiness, Beta or Stable.
+That is strong source/package/runtime evidence. PR #315 through #331, the FD-050 repair line and the deep-audit register are inside published Internal.30, but the Founder has not yet installed it. Neither publication nor source proves automatic live push on the installed successor, complete message/media parity on the real phone, live commerce/courier certification, customer-online readiness, Beta or Stable.
 
 ## First Revenue Certification
 
-The current execution program is **First Revenue Certification (FRC)** under FD-045, with FD-049 owning the immediate installed-campaign step (superseding FD-048's batching for this checkpoint's timing). The commercial objective is fast, honest first revenue with no paid infrastructure before revenue, without lowering correctness, privacy, provider or launch evidence.
+The current execution program is **First Revenue Certification (FRC)** under FD-045, with FD-051 owning the immediate installed-campaign step (superseding FD-048/FD-049/FD-050 batching for this checkpoint's timing). The commercial objective is fast, honest first revenue with no paid infrastructure before revenue, without lowering correctness, privacy, provider or launch evidence.
 
 “99.99% sure” means every defined Required matrix was executed at the applicable layer, the exact candidate has zero known P0/P1, and residual external risks are disclosed. It is not a mathematical warranty against unknown defects or future third-party changes.
 
 Execute in this order:
 
-1. **#316 — Notifications:** source-complete through PR #319 and packaged in published Internal.28; installed/real-phone rows remain.
-2. **#317 — professional Inbox:** source-complete through #324/#325/#327/#329/#331 and packaged in published Internal.28; installed/real-phone rows remain.
-3. **FD-049 installed Founder campaign (current):** the Founder applies the in-place Internal.28 update with state preserved, then executes the retained #306 automatic-arrival/persistence/UI/extraction/logout rows plus applicable #316/#317 native and real-phone rows and every applicable live-provider matrix.
-4. **Evidence reconciliation:** record the installed campaign into the capability ledger and current-state documentation; only then resume FRC-2–5.
-5. **FRC-2 through FRC-5 source/evidence preparation:** complete AI/tools/order-extraction, Required capability/journey, commerce and courier contracts plus mocks and official development/sandbox evidence available before their certification.
+1. **#316 — Notifications:** source-complete through PR #319 and packaged in published Internal.30; installed/real-phone rows remain.
+2. **#317 — professional Inbox:** source-complete through #324/#325/#327/#329/#331 and packaged in published Internal.30; installed/real-phone rows remain.
+3. **FD-051 installed Founder campaign (current):** the Founder applies the in-place Internal.30 update with state preserved, then re-verifies the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive), the deep-audit register's audit-affected rows, the retained #306 automatic-arrival/persistence/UI/extraction/logout rows plus applicable #316/#317 native and real-phone rows and every applicable live-provider matrix.
+4. **Evidence reconciliation:** record the installed campaign into the capability ledger and current-state documentation; only then resume FRC-3.
+5. **FRC-3 through FRC-5 source/evidence preparation:** the FRC-2 source frontier is frozen (`frc2-1.0.0` corpus plus the AI capability ledger; live-key/installed-observation rows external-blocked); complete Required capability/journey, commerce and courier contracts plus mocks and official development/sandbox evidence available before their certification.
 6. **FRC-6 — first customer:** expose only the exact provider/action combination that is live-certified. The first paid assisted deployment is not authorized until its scope passes the applicable gates and customer-online authority is separately satisfied or a newer explicit Founder decision creates a bounded exception.
 
 Unverified integrations remain hidden, disabled or explicitly conditional. A provider can be certified for one action while other actions remain unsupported.
