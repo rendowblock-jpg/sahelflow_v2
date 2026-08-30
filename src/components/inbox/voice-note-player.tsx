@@ -322,7 +322,7 @@ export function VoiceNotePlayer({ src, label, locale }: VoiceNotePlayerProps) {
             aria-pressed={playing}
             data-inbox-voice-play={playing ? "playing" : "paused"}
             disabled={mediaStatus === "loading" && duration <= 0}
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground outline-none transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-50"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground outline-none transition-colors hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:opacity-50"
           >
             {playing ? (
               <Pause className="size-4" aria-hidden="true" />

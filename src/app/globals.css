@@ -44,6 +44,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -91,13 +92,17 @@
    feedback/status semantics, named shadows and the elevation scale. */
 :root {
   --radius: 0.625rem;
+  /* Hover authority: darkens the active preset's primary lazily (resolves
+     per-preset, per-mode at use site). White text stays AA because darkening
+     never reduces contrast against white. */
+  --primary-hover: color-mix(in oklch, var(--primary) 88%, black);
 
   --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.65 0.2 145);
+  --success: oklch(0.55 0.2 145);
   --success-foreground: oklch(0.985 0 0);
   --warning: oklch(0.75 0.18 80);
   --warning-foreground: oklch(0.18 0 0);  /* warning is light — needs dark text */
-  --info: oklch(0.55 0.18 240);
+  --info: oklch(0.52 0.18 240);
   --info-foreground: oklch(0.985 0 0);  /* Was 150 (emerald) — moved to blue for distinction */
 
   /* ── Named shadow system (Cal.com pattern) ── */
@@ -140,7 +145,7 @@
 .dark {
   --destructive: oklch(0.704 0.191 22.216);
   --success: oklch(0.72 0.19 145);
-  --success-foreground: oklch(0.985 0 0);
+  --success-foreground: oklch(0.16 0.02 145);
   --warning: oklch(0.78 0.16 80);
   --warning-foreground: oklch(0.18 0 0);
   --info: oklch(0.68 0.19 240);
@@ -160,7 +165,7 @@
     inset 0px 0px 2px 1px oklch(0 0 0 / 0.30);
   --shadow-btn-focused:
     0 0 0 2px var(--background),
-    0 0 0 4px oklch(0.68 0.19 150 / 0.5);
+    0 0 0 4px color-mix(in oklch, var(--primary) 50%, transparent);
   --shadow-dropdown:
     0px 5px 20px 0px oklch(0 0 0 / 0.50),
     0px 10px 40px 0px oklch(0 0 0 / 0.20);
@@ -329,13 +334,21 @@
 
   /* Gradient text */
   .text-gradient {
-    background: linear-gradient(135deg, oklch(0.55 0.18 150), oklch(0.65 0.2 145));
+    background: linear-gradient(
+      135deg,
+      var(--primary),
+      color-mix(in oklch, var(--primary) 55%, var(--success))
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .dark .text-gradient {
-    background: linear-gradient(135deg, oklch(0.70 0.2 150), oklch(0.72 0.19 145));
+    background: linear-gradient(
+      135deg,
+      var(--primary),
+      color-mix(in oklch, var(--primary) 55%, var(--success))
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

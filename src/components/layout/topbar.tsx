@@ -309,7 +309,7 @@ export function Topbar({
             >
               <Bell className="size-4" aria-hidden="true" />
               {unreadCount > 0 ? (
-                <span className="absolute end-0 top-0 flex min-w-3.5 -translate-y-0.5 translate-x-0.5 items-center justify-center rounded-full bg-destructive px-1 text-2xs font-bold leading-3.5 text-white rtl:-translate-x-0.5">
+                <span className="absolute end-0 top-0 flex min-w-3.5 -translate-y-0.5 translate-x-0.5 items-center justify-center rounded-full bg-background px-1 text-2xs font-bold leading-3.5 text-destructive ring-1 ring-destructive rtl:-translate-x-0.5">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               ) : null}

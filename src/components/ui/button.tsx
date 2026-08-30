@@ -11,7 +11,7 @@ const buttonVariants = cva(
       variant: {
         default: cn(
           "bg-primary text-primary-foreground",
-          "shadow-[var(--shadow-btn-rested)] hover:bg-primary/90 hover:shadow-[var(--shadow-btn-hover)]",
+          "shadow-[var(--shadow-btn-rested)] hover:bg-primary-hover hover:shadow-[var(--shadow-btn-hover)]",
           "active:bg-primary active:shadow-[var(--shadow-btn-active)] active:translate-y-px",
           "focus-visible:shadow-[var(--shadow-btn-focused)]",
         ),
