@@ -31,10 +31,25 @@ export interface RiskListProjection {
   score: number;
 }
 
+/**
+ * Server-applied list filters echoed back to the client so URL state and server
+ * truth stay comparable (a stale RSC fallback is only reused when the URL
+ * filters still match what the server actually applied).
+ */
+export interface OrdersWorkbenchAppliedFilters {
+  q?: string | null;
+  wilaya?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  minTotal?: number | null;
+  maxTotal?: number | null;
+}
+
 export interface OrdersWorkbenchResponse {
   orders: OrderListItem[];
   riskData?: Record<string, RiskListProjection>;
   fieldAccess: WorkbenchFieldAccess;
+  appliedFilters?: OrdersWorkbenchAppliedFilters;
   total: number;
   hasNextPage: boolean;
   page: number;
@@ -94,6 +109,8 @@ export interface CustomerWorkbenchItem {
 export interface CustomersWorkbenchResponse {
   customers: CustomerWorkbenchItem[];
   fieldAccess: CustomerWorkbenchFieldAccess;
+  /** Echo of the free-text search actually applied server-side. */
+  appliedFilters?: { q?: string | null };
   total: number;
   hasNextPage: boolean;
   page: number;
@@ -136,6 +153,8 @@ export interface ProductWorkbenchItem {
 export interface ProductsWorkbenchResponse {
   products: ProductWorkbenchItem[];
   fieldAccess: ProductWorkbenchFieldAccess;
+  /** Echo of the free-text search actually applied server-side. */
+  appliedFilters?: { q?: string | null };
   total: number;
   hasNextPage: boolean;
   page: number;

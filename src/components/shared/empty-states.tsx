@@ -1,5 +1,7 @@
 "use client";
 
+import type * as React from "react";
+
 /**
  * Empty state catalog (Phase 10 — R-2 gold-standard pattern).
  *
@@ -21,16 +23,44 @@ import { EmptyState } from "./empty-state";
 import { useI18n } from "@/hooks/use-i18n";
 import {
   Package, Users, ShoppingCart, Truck, RotateCcw, MessageCircle,
-  Zap, BarChart3, ShieldAlert, Store, Upload,
+  Zap, BarChart3, ShieldAlert, Store, Upload, SearchX,
 } from "lucide-react";
 
 interface EmptyStateProps {
   onCreate?: () => void;
   onImport?: () => void;
+  /**
+   * Filtered-empty: the active search/filters matched nothing. Distinct from
+   * first use — the primary action clears the scope instead of teaching.
+   */
+  filtered?: boolean;
+  /** Clears the active filters; rendered as the filtered-empty CTA. */
+  onClearFilters?: () => void;
+  /**
+   * Explicit create-action node for the first-use state (e.g. a form dialog
+   * trigger), overriding the plain actionLabel button.
+   */
+  createAction?: React.ReactNode;
 }
 
-export function OrdersEmptyState({ onCreate }: EmptyStateProps) {
+export function OrdersEmptyState({
+  onCreate,
+  filtered,
+  onClearFilters,
+  createAction,
+}: EmptyStateProps) {
   const { t } = useI18n();
+  if (filtered) {
+    return (
+      <EmptyState
+        icon={SearchX}
+        title={t("orders.filteredEmpty.title")}
+        description={t("orders.filteredEmpty.description")}
+        actionLabel={onClearFilters ? t("common.clearFilters") : undefined}
+        onAction={onClearFilters}
+      />
+    );
+  }
   return (
     <EmptyState
       icon={ShoppingCart}
@@ -38,12 +68,28 @@ export function OrdersEmptyState({ onCreate }: EmptyStateProps) {
       description={t("orders.empty.description")}
       actionLabel={t("orders.createOrder")}
       onAction={onCreate}
+      action={createAction}
     />
   );
 }
 
-export function CustomersEmptyState({ onCreate }: EmptyStateProps) {
+export function CustomersEmptyState({
+  onCreate,
+  filtered,
+  onClearFilters,
+}: EmptyStateProps) {
   const { t } = useI18n();
+  if (filtered) {
+    return (
+      <EmptyState
+        icon={SearchX}
+        title={t("customers.filteredEmpty.title")}
+        description={t("customers.filteredEmpty.description")}
+        actionLabel={onClearFilters ? t("common.clearFilters") : undefined}
+        onAction={onClearFilters}
+      />
+    );
+  }
   return (
     <EmptyState
       icon={Users}
@@ -55,8 +101,23 @@ export function CustomersEmptyState({ onCreate }: EmptyStateProps) {
   );
 }
 
-export function ProductsEmptyState({ onCreate }: EmptyStateProps) {
+export function ProductsEmptyState({
+  onCreate,
+  filtered,
+  onClearFilters,
+}: EmptyStateProps) {
   const { t } = useI18n();
+  if (filtered) {
+    return (
+      <EmptyState
+        icon={SearchX}
+        title={t("products.filteredEmpty.title")}
+        description={t("products.filteredEmpty.description")}
+        actionLabel={onClearFilters ? t("common.clearFilters") : undefined}
+        onAction={onClearFilters}
+      />
+    );
+  }
   return (
     <EmptyState
       icon={Package}

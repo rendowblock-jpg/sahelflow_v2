@@ -34,6 +34,10 @@ export function useConfirmationQueue({
       fallbackData,
       revalidateOnFocus: false,
       dedupingInterval: 5000,
+      // New pending orders should appear without a manual refresh: the queue
+      // is the shop's incoming work and confirmation freshness is the whole
+      // point of the surface (60-minute SLA).
+      refreshInterval: 30_000,
     },
   );
   const response = data ?? fallbackData;

@@ -18,24 +18,32 @@ import { formatDZD } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 type CustomersPageProps = {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string }>;
 };
 
 export default async function CustomersPage({ searchParams }: CustomersPageProps) {
   const { t, locale } = await getI18n();
   const actorContext = await requireTrustedAction("customers.read");
   const access = resolveCustomerWorkbenchAccess(actorContext);
-  const requestedPage = Number.parseInt((await searchParams).page ?? "1", 10);
+  const { page: pageRaw, q: qRaw } = await searchParams;
+  const requestedPage = Number.parseInt(pageRaw ?? "1", 10);
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0
     ? requestedPage
     : 1;
+  const q = qRaw?.trim() || undefined;
 
   const [fallback, summary] = await Promise.all([
-    getCustomersWorkbenchPage(actorContext, { page, pageSize: 25 }),
+    getCustomersWorkbenchPage(actorContext, { page, pageSize: 25, q }),
     getCustomerWorkbenchSummary(actorContext),
   ]);
   const lastPage = Math.max(1, Math.ceil(fallback.total / fallback.pageSize));
-  if (page > lastPage) redirect(`/customers?page=${lastPage}`);
+  if (page > lastPage) {
+    redirect(
+      q
+        ? `/customers?page=${lastPage}&q=${encodeURIComponent(q)}`
+        : `/customers?page=${lastPage}`,
+    );
+  }
 
   const activePct = summary.total > 0
     ? Math.round((summary.active / summary.total) * 100)

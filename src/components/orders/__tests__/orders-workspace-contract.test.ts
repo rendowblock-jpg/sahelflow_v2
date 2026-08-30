@@ -113,15 +113,22 @@ describe("Orders operational workspace contract", () => {
     );
   });
 
-  it("keeps the confirmation queue review-first instead of mutating orders inline", () => {
+  it("keeps inline queue decisions authority-dispatched with the review fallback", () => {
     const queuePath = "src/components/orders/confirmation-queue-table.tsx";
     const queueText = read(queuePath);
     const queueSource = parse(queuePath);
 
+    // The queue owns its compact inline fast path; the detail page's
+    // OrderStatusActions control is not reused wholesale (R2-b).
     expect(importsBinding(queueSource, "OrderStatusActions")).toBe(false);
+    expect(importsBinding(queueSource, "dispatchQueueDecision")).toBe(true);
+    expect(importsBinding(queueSource, "selectColumn")).toBe(true);
     expect(queueText).toContain('t("orders.workspace.confirmation.review")');
-    expect(queueText).toContain('href={`/orders/${order.id}`}');
+    expect(queueText).toContain('href={`/orders/${row.original.id}`}');
     expect(queueText).toMatch(/<OrderStatusBadge[\s\S]*?\sdisabled\s*\/>/);
+    expect(queueText).toContain('data-testid="queue-row-confirm"');
+    expect(queueText).toContain('data-testid="queue-row-reject"');
+    expect(queueText).toContain("bulkActions");
   });
 
   it("surfaces the pending confirmation queue from the main Orders workspace", () => {

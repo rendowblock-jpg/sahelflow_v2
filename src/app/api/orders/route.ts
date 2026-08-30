@@ -40,9 +40,19 @@ export async function GET(req: NextRequest) {
     rawStatus && orderStatusSchema.safeParse(rawStatus).success
       ? (rawStatus as OrderStatus)
       : undefined;
+  const q = searchParams.get("q") ?? undefined;
+  const wilayaCode = Number.parseInt(searchParams.get("wilaya") ?? "", 10);
+  const minTotal = Number.parseInt(searchParams.get("minTotal") ?? "", 10);
+  const maxTotal = Number.parseInt(searchParams.get("maxTotal") ?? "", 10);
 
   const result = await getOrdersWorkbenchPage(actorContext, {
     status,
+    q,
+    wilayaCode: Number.isSafeInteger(wilayaCode) ? wilayaCode : undefined,
+    dateFrom: searchParams.get("dateFrom") ?? undefined,
+    dateTo: searchParams.get("dateTo") ?? undefined,
+    minTotal: Number.isSafeInteger(minTotal) ? minTotal : undefined,
+    maxTotal: Number.isSafeInteger(maxTotal) ? maxTotal : undefined,
     page: Number.parseInt(searchParams.get("page") ?? "1", 10),
     pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
     sort: searchParams.get("sort"),

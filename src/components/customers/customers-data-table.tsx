@@ -11,6 +11,7 @@ import {
   EntityPreview,
 } from "@/components/entities/entity-context";
 import { TechnicalValue } from "@/components/i18n/technical-value";
+import { ListSearchInput } from "@/components/shared/list-search-input";
 import { CustomersEmptyState } from "@/components/shared/empty-states";
 import { StateSurface } from "@/components/shared/state-surface";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ import {
   type CustomersResponse,
 } from "@/hooks/swr/use-customers";
 import { useI18n } from "@/hooks/use-i18n";
+import { useListSearchScope } from "@/hooks/use-list-search-scope";
 import type { Locale } from "@/lib/i18n";
 import { formatDZD, formatDate } from "@/lib/utils";
 
@@ -32,6 +34,7 @@ interface CustomersDataTableProps {
 export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps) {
   const { t } = useI18n();
   const router = useRouter();
+  const { hasActiveFilters, clearFilters } = useListSearchScope();
   const { data, error, isLoading, pagination } = useCustomers({ fallback });
 
   const columns: ColumnDef<CustomerListItem, unknown>[] = [
@@ -172,14 +175,26 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
   }
 
   return (
-    <DataTable
-      columns={columns}
-      data={data?.customers ?? []}
-      isLoading={isLoading}
-      pagination={pagination}
-      onRowClick={(row) => router.push(`/customers/${row.id}`)}
-      getRowId={(row) => row.id}
-      emptyState={<CustomersEmptyState />}
-    />
+    <div className="space-y-3">
+      <ListSearchInput
+        className="max-w-sm"
+        placeholder={t("customers.searchPlaceholder")}
+      />
+      <DataTable
+        columns={columns}
+        data={data?.customers ?? []}
+        isLoading={isLoading}
+        pagination={pagination}
+        onRowClick={(row) => router.push(`/customers/${row.id}`)}
+        getRowId={(row) => row.id}
+        emptyState={
+          hasActiveFilters ? (
+            <CustomersEmptyState filtered onClearFilters={clearFilters} />
+          ) : (
+            <CustomersEmptyState />
+          )
+        }
+      />
+    </div>
   );
 }

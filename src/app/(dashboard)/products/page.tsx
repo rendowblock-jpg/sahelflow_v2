@@ -20,24 +20,32 @@ import { formatDZD } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 type ProductsPageProps = {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string }>;
 };
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const { t, locale } = await getI18n();
   const actorContext = await requireTrustedAction("products.read");
-  const requestedPage = Number.parseInt((await searchParams).page ?? "1", 10);
+  const { page: pageRaw, q: qRaw } = await searchParams;
+  const requestedPage = Number.parseInt(pageRaw ?? "1", 10);
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0
     ? requestedPage
     : 1;
+  const q = qRaw?.trim() || undefined;
 
   const [fallback, summary, categories] = await Promise.all([
-    getProductsWorkbenchPage(actorContext, { page, pageSize: 25 }),
+    getProductsWorkbenchPage(actorContext, { page, pageSize: 25, q }),
     getProductWorkbenchSummary(actorContext),
     productService.listCategories({ prisma: db, shop: shopContext }),
   ]);
   const lastPage = Math.max(1, Math.ceil(fallback.total / fallback.pageSize));
-  if (page > lastPage) redirect(`/products?page=${lastPage}`);
+  if (page > lastPage) {
+    redirect(
+      q
+        ? `/products?page=${lastPage}&q=${encodeURIComponent(q)}`
+        : `/products?page=${lastPage}`,
+    );
+  }
 
   const access = fallback.fieldAccess;
   const canCreate = access.manage && access.cost && access.costUpdate;

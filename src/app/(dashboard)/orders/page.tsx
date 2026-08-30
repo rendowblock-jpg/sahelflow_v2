@@ -25,6 +25,7 @@ import {
 } from "@/lib/identity/authorization";
 import {
   getOrdersWorkbenchPage,
+  getOrdersWorkbenchStatusCounts,
   resolveOrdersWorkbenchAccess,
 } from "@/lib/orders/order-list-workbench";
 import { formatDZD } from "@/lib/utils";
@@ -36,6 +37,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
   return { title: t("metadata.title.orders") };
 }
+
+/**
+ * R2-c: server-passed seed rows for the create-order comboboxes. The
+ * searchable pickers query /api/customers/search and /api/products for
+ * the rest of the catalog, so the page no longer serializes the entire
+ * customer base and active catalog into the dialog trigger button.
+ */
+const ORDER_FORM_INITIAL_SLICE = 50;
 
 const STATUS_FILTERS: Array<{ value: "all" | OrderStatus; labelKey: string }> = [
   { value: "all", labelKey: "common.all" },
@@ -55,6 +64,32 @@ function localDayBounds(now = new Date()): { start: Date; end: Date } {
   return { start, end };
 }
 
+/**
+ * Status tabs are real links so the scope stays shareable: switching a tab
+ * keeps the active search/wilaya/date/sort context and restarts at page 1.
+ */
+function buildOrdersHref(
+  status: "all" | OrderStatus,
+  scope: {
+    statusFilter?: OrderStatus;
+    q?: string;
+    wilayaCode?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    sortRaw?: string;
+  },
+): string {
+  const params = new URLSearchParams();
+  if (status !== "all") params.set("status", status);
+  if (scope.q) params.set("q", scope.q);
+  if (scope.wilayaCode) params.set("wilaya", String(scope.wilayaCode));
+  if (scope.dateFrom) params.set("from", scope.dateFrom);
+  if (scope.dateTo) params.set("to", scope.dateTo);
+  if (scope.sortRaw) params.set("sort", scope.sortRaw);
+  const query = params.toString();
+  return query ? `/orders?${query}` : "/orders";
+}
+
 export default async function OrdersPage({
   searchParams,
 }: {
@@ -63,6 +98,10 @@ export default async function OrdersPage({
     risk?: string;
     page?: string;
     sort?: string;
+    q?: string;
+    wilaya?: string;
+    from?: string;
+    to?: string;
   }>;
 }) {
   const actorContext = await requireTrustedAction("orders.read");
@@ -72,6 +111,10 @@ export default async function OrdersPage({
     risk: riskFilter,
     page: pageRaw,
     sort: sortRaw,
+    q: qRaw,
+    wilaya: wilayaRaw,
+    from: fromRaw,
+    to: toRaw,
   } = await searchParams;
 
   if (riskFilter === "high") redirect("/risk");
@@ -83,6 +126,18 @@ export default async function OrdersPage({
         : undefined
       : undefined;
   const page = Math.max(1, Number.parseInt(pageRaw ?? "1", 10) || 1);
+
+  // URL-driven scope (q / wilaya / date range) shared by the SSR fallback, the
+  // filtered status-tab counts and the filtered export.
+  const q = qRaw?.trim() || undefined;
+  const wilayaCodeRaw = Number.parseInt(wilayaRaw ?? "", 10);
+  const wilayaCode =
+    Number.isSafeInteger(wilayaCodeRaw) && wilayaCodeRaw > 0
+      ? wilayaCodeRaw
+      : undefined;
+  const dateFrom = fromRaw?.trim() || undefined;
+  const dateTo = toRaw?.trim() || undefined;
+  const hasListFilters = Boolean(q || wilayaCode || dateFrom || dateTo);
   const resource = { shopId: actorContext.shop.shopId };
   const can = (action: Parameters<typeof trustedActionAllowed>[1]) =>
     trustedActionAllowed(actorContext, action, resource);
@@ -118,12 +173,17 @@ export default async function OrdersPage({
     fallback,
     statusGroups,
     totalCount,
+    filteredStatusCounts,
     deliveredTodayCount,
     deliveredRevenue,
     creationData,
   ] = await Promise.all([
     getOrdersWorkbenchPage(actorContext, {
       status: statusFilter,
+      q,
+      wilayaCode,
+      dateFrom,
+      dateTo,
       page,
       pageSize: 25,
       sort: sortRaw,
@@ -134,6 +194,14 @@ export default async function OrdersPage({
       _count: { _all: true },
     }),
     db.order.count({ where: { deletedAt: null } }),
+    hasListFilters
+      ? getOrdersWorkbenchStatusCounts(actorContext, {
+          q,
+          wilayaCode,
+          dateFrom,
+          dateTo,
+        })
+      : Promise.resolve(null),
     db.order.count({ where: deliveredWhere }),
     fieldAccess.financials
       ? db.order.aggregate({
@@ -143,9 +211,13 @@ export default async function OrdersPage({
       : Promise.resolve(null),
     canCreateOrder
       ? Promise.all([
+          // R2-c: the create dialog renders a capped most-recent seed slice
+          // only - its comboboxes search the live catalog on demand instead
+          // of the page shipping every customer/product into the DOM.
           db.customer.findMany({
             where: { deletedAt: null },
             orderBy: { createdAt: "desc" },
+            take: ORDER_FORM_INITIAL_SLICE,
             select: {
               id: true,
               name: true,
@@ -158,12 +230,15 @@ export default async function OrdersPage({
           }),
           db.product.findMany({
             where: { isActive: true, deletedAt: null },
-            orderBy: { name: "asc" },
+            orderBy: { createdAt: "desc" },
+            take: ORDER_FORM_INITIAL_SLICE,
             select: {
               id: true,
               name: true,
+              sku: true,
               price: true,
               stock: true,
+              lowStockThreshold: true,
               isActive: true,
               productVariants: {
                 orderBy: { sortOrder: "asc" },
@@ -186,13 +261,20 @@ export default async function OrdersPage({
   if (page > lastPage) {
     const params = new URLSearchParams();
     if (statusFilter) params.set("status", statusFilter);
+    if (q) params.set("q", q);
+    if (wilayaCode) params.set("wilaya", String(wilayaCode));
+    if (dateFrom) params.set("from", dateFrom);
+    if (dateTo) params.set("to", dateTo);
     params.set("sort", fallback.sort);
     params.set("page", String(lastPage));
     redirect(`/orders?${params.toString()}`);
   }
 
+  // Global counts keep the confirmation-queue badge and KPI cards shop-wide;
+  // the status tab badges switch to the filtered truth while a scope is active.
   const counts: Record<string, number> = { all: totalCount };
   for (const group of statusGroups) counts[group.status] = group._count._all;
+  const tabCounts = filteredStatusCounts?.counts ?? counts;
 
   const activeOrders = computeActiveOrderCount(statusGroups);
   const pendingCount = counts.pending ?? 0;
@@ -201,6 +283,8 @@ export default async function OrdersPage({
     : null;
   const customers = creationData?.[0] ?? [];
   const products = creationData?.[1] ?? [];
+  const statusTabHref = (status: "all" | OrderStatus) =>
+    buildOrdersHref(status, { q, wilayaCode, dateFrom, dateTo, sortRaw });
 
   return (
     <div className="app-content page-sections">
@@ -225,6 +309,7 @@ export default async function OrdersPage({
                 <ImportExportButtons
                   exportRoute={canExport ? "/api/export/orders" : undefined}
                   importRoute={canImport ? "/api/import/orders" : undefined}
+                  filterParams={["q", "wilaya", "from", "to", "status", "sort"]}
                 />
               ) : null}
               {canCreateOrder ? (
@@ -264,17 +349,13 @@ export default async function OrdersPage({
             {STATUS_FILTERS.map((filter) => (
               <TabsTrigger key={filter.value} value={filter.value} asChild>
                 <Link
-                  href={
-                    filter.value === "all"
-                      ? "/orders"
-                      : `/orders?status=${filter.value}`
-                  }
+                  href={statusTabHref(filter.value)}
                   className="flex max-w-full !flex-none items-center gap-1.5"
                 >
                   {t(filter.labelKey)}
-                  {counts[filter.value] !== undefined ? (
+                  {tabCounts[filter.value] !== undefined ? (
                     <Badge variant="secondary" className="px-1.5 py-0 text-xs">
-                      {counts[filter.value]}
+                      {tabCounts[filter.value]}
                     </Badge>
                   ) : null}
                 </Link>
@@ -298,6 +379,9 @@ export default async function OrdersPage({
         fallback={fallback}
         locale={locale}
         statusFilter={statusFilter ?? "all"}
+        canCreateOrder={canCreateOrder}
+        customers={canCreateOrder ? customers : undefined}
+        products={canCreateOrder ? products : undefined}
       />
     </div>
   );

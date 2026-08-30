@@ -10,6 +10,7 @@ import {
 import { ConfirmationQueueTable } from "@/components/orders/confirmation-queue-table";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
+import { Badge } from "@/components/ui/badge";
 import { getI18n } from "@/lib/i18n-server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { getConfirmationWorkbenchPage } from "@/lib/orders/confirmation-workbench";
@@ -46,6 +47,19 @@ export default async function ConfirmationQueuePage({
       <PageHeader
         title={t("confirmationQueue.title")}
         description={t("confirmationQueue.description")}
+        actions={
+          <Badge
+            variant="outline"
+            data-testid="confirmation-queue-count"
+            aria-label={t("confirmationQueue.header.pendingCount", {
+              count: fallback.total,
+            })}
+          >
+            {t("confirmationQueue.header.pendingCount", {
+              count: fallback.total,
+            })}
+          </Badge>
+        }
       />
 
       <div className="card-grid-4">

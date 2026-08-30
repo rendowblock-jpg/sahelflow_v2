@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 
 import { db, shopContext } from "@/lib/db";
+import { deriveExistingShopBlindIndex } from "@/lib/crypto/protected-record";
 import {
   assertTrustedAction,
   trustedActionAllowed,
@@ -16,9 +17,11 @@ import { batchAssessOrdersForWorkbench } from "@/lib/orders/order-risk-workbench
 import type { OrderStatus } from "@/types/domain";
 import type {
   MutationAuthority,
+  OrdersWorkbenchAppliedFilters,
   OrdersWorkbenchResponse,
   WorkbenchFieldAccess,
 } from "@/types/workbench";
+import wilayasData from "../../../data/wilayas.json";
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -31,8 +34,30 @@ export type OrdersWorkbenchSort =
   | "totalPrice.desc"
   | "totalPrice.asc";
 
-export interface OrdersWorkbenchQuery {
+/**
+ * Operational list filters shared by the RSC first paint, /api/orders GET and
+ * the filtered CSV/XLSX export. `q` reuses the command-palette search
+ * semantics: OR-contains across order number plus (contact-gated) wilaya,
+ * phone blind index and customer-name blind index, with a plaintext fallback
+ * under NODE_ENV=test.
+ */
+export interface OrdersWorkbenchFilters {
   status?: OrderStatus;
+  /** Free text: order number, customer name, phone, wilaya. */
+  q?: string | null;
+  /** Algerian wilaya code (1-58) resolved to the stored English wilaya name. */
+  wilayaCode?: number | null;
+  /** Inclusive createdAt lower bound. Date-only strings cover the whole UTC day. */
+  dateFrom?: string | null;
+  /** Inclusive createdAt upper bound. Date-only strings cover the whole UTC day. */
+  dateTo?: string | null;
+  /** Total-price floor. Ignored without orders.financials.read. */
+  minTotal?: number | null;
+  /** Total-price ceiling. Ignored without orders.financials.read. */
+  maxTotal?: number | null;
+}
+
+export interface OrdersWorkbenchQuery extends OrdersWorkbenchFilters {
   page?: number;
   pageSize?: number;
   sort?: string | null;
@@ -128,6 +153,193 @@ function orderByFor(
   return [{ createdAt: direction }, { id: direction }];
 }
 
+/** Resolve a raw sort string into the deterministic server order-by clause. */
+export function ordersWorkbenchOrderBy(
+  raw: string | null | undefined,
+  canReadFinancials: boolean,
+): Prisma.OrderOrderByWithRelationInput[] {
+  return orderByFor(normalizedSort(raw, canReadFinancials));
+}
+
+type BlindIndexClient = Parameters<typeof deriveExistingShopBlindIndex>[0];
+
+const WILAYA_NAMES_BY_CODE = new Map<number, string>(
+  (wilayasData as Array<{ code: number; name: string }>).map((wilaya) => [
+    wilaya.code,
+    wilaya.name,
+  ]),
+);
+
+async function orderSearchIndexes(q: string) {
+  const [phoneIndex, nameIndex] = await Promise.all([
+    deriveExistingShopBlindIndex(
+      db as unknown as BlindIndexClient,
+      q,
+      { recordType: "Order", field: "phone" },
+      { shopContext },
+    ),
+    deriveExistingShopBlindIndex(
+      db as unknown as BlindIndexClient,
+      q.toLowerCase(),
+      { recordType: "Customer", field: "name" },
+      { shopContext },
+    ),
+  ]);
+  return {
+    phoneIndexes: phoneIndex ? [phoneIndex] : [],
+    nameIndexes: nameIndex ? [nameIndex] : [],
+  };
+}
+
+/**
+ * Parse a date filter bound. Date-only values (yyyy-mm-dd) resolve to UTC day
+ * bounds: start-of-day for the lower edge and exclusive next-day for the upper
+ * edge so a seller filtering "to 2026-08-29" keeps that entire day. Full ISO
+ * timestamps are used as-is.
+ */
+function parseDateBound(
+  raw: string | null | undefined,
+  edge: "start" | "end",
+): Date | null {
+  const trimmed = raw?.trim();
+  if (!trimmed) return null;
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(trimmed);
+  const parsed = dateOnly
+    ? new Date(`${trimmed}T00:00:00.000Z`)
+    : new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return null;
+  if (!dateOnly || edge === "start") return parsed;
+  return new Date(parsed.getTime() + 24 * 60 * 60 * 1000);
+}
+
+function normalizeAmount(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
+}
+
+/**
+ * Compose the operational list `where` clause from the shared filter contract.
+ * Contact-gated branches (wilaya, phone, customer name) only apply when the
+ * actor may read contact data, and total bounds only apply with financials
+ * read, so a restricted actor can never confirm protected values through
+ * filter behaviour or counts.
+ */
+export async function buildOrdersWorkbenchWhere(
+  access: Pick<WorkbenchFieldAccess, "contact" | "financials">,
+  filters: OrdersWorkbenchFilters,
+): Promise<Prisma.OrderWhereInput> {
+  const where: Prisma.OrderWhereInput = { deletedAt: null };
+  if (filters.status) {
+    where.status = filters.status;
+  }
+
+  const q = filters.q?.trim() ?? "";
+  if (q) {
+    const { phoneIndexes, nameIndexes } = await orderSearchIndexes(q);
+    const plaintextFallback = process.env.NODE_ENV === "test";
+    const branches: Prisma.OrderWhereInput[] = [
+      { orderNumber: { contains: q } },
+    ];
+    if (access.contact) {
+      branches.push(
+        { wilaya: { contains: q } },
+        { phoneBlindIndex: { in: phoneIndexes } },
+        { customer: { nameBlindIndex: { in: nameIndexes } } },
+      );
+      if (plaintextFallback) {
+        branches.push(
+          { phone: { contains: q } },
+          { customer: { name: { contains: q } } },
+        );
+      }
+    }
+    const existingAnd = Array.isArray(where.AND) ? where.AND : [];
+    where.AND = [...existingAnd, { OR: branches }];
+  }
+
+  if (filters.wilayaCode != null && Number.isFinite(filters.wilayaCode)) {
+    const wilayaName = WILAYA_NAMES_BY_CODE.get(filters.wilayaCode);
+    if (wilayaName) {
+      where.wilaya = wilayaName;
+    }
+  }
+
+  const dateFrom = parseDateBound(filters.dateFrom, "start");
+  const dateTo = parseDateBound(filters.dateTo, "end");
+  if (dateFrom || dateTo) {
+    where.createdAt = {
+      ...(dateFrom ? { gte: dateFrom } : {}),
+      ...(dateTo ? { lt: dateTo } : {}),
+    };
+  }
+
+  if (access.financials) {
+    const minTotal = normalizeAmount(filters.minTotal);
+    const maxTotal = normalizeAmount(filters.maxTotal);
+    if (minTotal != null || maxTotal != null) {
+      where.totalPrice = {
+        ...(minTotal != null ? { gte: minTotal } : {}),
+        ...(maxTotal != null ? { lte: maxTotal } : {}),
+      };
+    }
+  }
+
+  return where;
+}
+
+/**
+ * Echo applied filters in the normalized form the client compares with URL
+ * state. Total bounds echo as null when the actor lacks financials read — the
+ * server never applied them, so the echo must not claim it did.
+ */
+function echoAppliedFilters(
+  access: Pick<WorkbenchFieldAccess, "contact" | "financials">,
+  filters: OrdersWorkbenchFilters,
+): OrdersWorkbenchAppliedFilters {
+  return {
+    q: filters.q?.trim() || null,
+    wilaya:
+      filters.wilayaCode != null && Number.isFinite(filters.wilayaCode)
+        ? String(filters.wilayaCode)
+        : null,
+    dateFrom: filters.dateFrom?.trim() || null,
+    dateTo: filters.dateTo?.trim() || null,
+    minTotal: access.financials ? normalizeAmount(filters.minTotal) : null,
+    maxTotal: access.financials ? normalizeAmount(filters.maxTotal) : null,
+  };
+}
+
+/**
+ * Live per-status counts for the status tabs, respecting the active list
+ * filters so the badges stay truthful while a seller drills into a scoped
+ * view. `all` is the filtered total (sum of groups, since status is
+ * non-nullable).
+ */
+export async function getOrdersWorkbenchStatusCounts(
+  actorContext: TrustedActorContext,
+  filters: OrdersWorkbenchFilters = {},
+): Promise<{ counts: Record<string, number>; total: number }> {
+  const access = resolveOrdersWorkbenchAccess(actorContext);
+  const where = await buildOrdersWorkbenchWhere(access, {
+    ...filters,
+    status: undefined,
+  });
+  const groups = await db.order.groupBy({
+    by: ["status"],
+    where,
+    _count: { _all: true },
+  });
+  const counts: Record<string, number> = {};
+  let total = 0;
+  for (const group of groups) {
+    counts[group.status] = group._count._all;
+    total += group._count._all;
+  }
+  counts.all = total;
+  return { counts, total };
+}
+
 function mutationAuthority(
   source: unknown,
   sourceMetadata: unknown,
@@ -149,10 +361,7 @@ export async function getOrdersWorkbenchPage(
   const page = clampPage(query.page);
   const pageSize = clampPageSize(query.pageSize);
   const sort = normalizedSort(query.sort, access.financials);
-  const where = {
-    deletedAt: null,
-    ...(query.status ? { status: query.status } : {}),
-  } as const;
+  const where = await buildOrdersWorkbenchWhere(access, query);
 
   const [sourceRows, total] = await Promise.all([
     db.order.findMany({
@@ -216,6 +425,7 @@ export async function getOrdersWorkbenchPage(
     orders,
     ...(riskData ? { riskData } : {}),
     fieldAccess: access,
+    appliedFilters: echoAppliedFilters(access, query),
     total,
     hasNextPage: page * pageSize < total,
     page,
