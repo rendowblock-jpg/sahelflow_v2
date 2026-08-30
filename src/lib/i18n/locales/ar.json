@@ -2014,6 +2014,7 @@
   "returns.waitingTrend": "تحتاج معالجة",
   "returns.willAppear": "ستظهر المرتجعات والتبديلات هنا.",
   "returns.workflowControl": "التحكم في سير العمل",
+  "returns.errors.completionRequiresRefundFact": "إكمال الإرجاع لطلبية تم توصيلها يتطلب تنفيذ مسار الاسترداد أولاً — يسجّل الاسترداد التعويض وينفّذ الإرجاع الفعلي.",
   "risk.action.auto_confirm": "تأكيد تلقائي",
   "risk.action.blacklisted": "عميل في القائمة السوداء",
   "risk.action.call_first": "اتصل قبل الشحن",

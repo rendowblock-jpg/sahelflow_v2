@@ -13,6 +13,7 @@ import {
 import { Check, ChevronDown, Loader2 } from "lucide-react";
 
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -70,7 +71,13 @@ export function ReturnStatusBadge({
         await mutatePrefix("/api/returns");
         router.refresh();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : t("returns.updateFailed"));
+        toast.error(
+          translateServerError(
+            error instanceof Error ? error.message : "",
+            t,
+            t("returns.updateFailed"),
+          ),
+        );
       }
     });
   }

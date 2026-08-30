@@ -2014,6 +2014,7 @@
   "returns.waitingTrend": "Needs action",
   "returns.willAppear": "Returns and exchanges will appear here.",
   "returns.workflowControl": "Workflow Control",
+  "returns.errors.completionRequiresRefundFact": "Completing a return on a delivered order requires the refund flow to run first — the refund records the compensation and performs the physical return.",
   "risk.action.auto_confirm": "Auto-confirm",
   "risk.action.blacklisted": "Blacklisted customer",
   "risk.action.call_first": "Call before shipping",

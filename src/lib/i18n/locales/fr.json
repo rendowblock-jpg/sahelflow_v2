@@ -2014,6 +2014,7 @@
   "returns.waitingTrend": "À traiter",
   "returns.willAppear": "Les retours et échanges apparaîtront ici.",
   "returns.workflowControl": "Contrôle du flux de travail",
+  "returns.errors.completionRequiresRefundFact": "Terminer un retour sur une commande livrée exige d'abord le flux de remboursement — le remboursement enregistre la compensation et effectue le retour physique.",
   "risk.action.auto_confirm": "Confirmation automatique",
   "risk.action.blacklisted": "Client sur liste noire",
   "risk.action.call_first": "Appeler avant expédition",
