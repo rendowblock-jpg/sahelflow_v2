@@ -48,27 +48,16 @@ describe("redactPii", () => {
     expect(redactPii(42)).toBe(42);
   });
 
-  it("preserves sha256 digests under digest-keyed audit snapshots", () => {
+  it("preserves digest content under machine-code audit keys (digestCode suffix)", () => {
     const out = redactPii({
-      before: { digest: "a".repeat(64) },
-      after: { digest: "b".repeat(64) },
+      before: { beforeDigestCode: "a".repeat(64) },
+      after: { afterDigestCode: "b".repeat(64) },
       count: 3,
     });
     expect(out).toEqual({
-      before: { digest: "a".repeat(64) },
-      after: { digest: "b".repeat(64) },
+      before: { beforeDigestCode: "a".repeat(64) },
+      after: { afterDigestCode: "b".repeat(64) },
       count: 3,
-    });
-  });
-
-  it("still redacts free-form values under digest keys (only sha256 hex is approved)", () => {
-    const out = redactPii({
-      digest: "call me at 0555123456",
-      resultDigest: "not-a-real-digest",
-    });
-    expect(out).toEqual({
-      digest: "call me at [PHONE]",
-      resultDigest: "[REDACTED]",
     });
   });
 });

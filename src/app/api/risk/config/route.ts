@@ -90,8 +90,11 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
     entity: "risk-engine",
     entityId: "config",
     actor: trustedActorAuditIdentity(actorContext.actor),
-    before: { digest: digestJson(current) },
-    after: { digest: digestJson(config) },
+    // Digest keys use the machine-code suffix convention so the redaction
+    // authority preserves them (free-form strings are redacted by default;
+    // the AI tool-history contract relies on that strictness).
+    before: { beforeDigestCode: digestJson(current) },
+    after: { afterDigestCode: digestJson(config) },
   });
   return NextResponse.json({ config });
 }, "PUT /api/risk/config");

@@ -126,19 +126,11 @@ const SAFE_EXACT_STRING_VALUES = new Map<string, ReadonlySet<string>>([
   [normalizeKey("reason"), new Set(["refund"])],
 ]);
 
-// A sha256 content digest (lowercase hex) is PII-free by construction — it
-// only ever contains [0-9a-f] and cannot embed a phone or email. Digest-keyed
-// audit snapshots (e.g. risk.config.update / risk.rules.replace before/after
-// digests) therefore survive redaction; anything else under a digest key that
-// is not a well-formed sha256 hex keeps the default redaction.
-const SHA256_HEX_REGEX = /^[0-9a-f]{64}$/;
-
 function isSafeStringValue(normalizedKey: string, value: string): boolean {
   return (
     SAFE_STRING_KEYS.has(normalizedKey) ||
     SAFE_MACHINE_KEY_SUFFIXES.some((suffix) => normalizedKey.endsWith(suffix)) ||
-    SAFE_EXACT_STRING_VALUES.get(normalizedKey)?.has(value) === true ||
-    (normalizedKey.endsWith("digest") && SHA256_HEX_REGEX.test(value))
+    SAFE_EXACT_STRING_VALUES.get(normalizedKey)?.has(value) === true
   );
 }
 

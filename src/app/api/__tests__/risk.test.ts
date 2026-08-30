@@ -415,8 +415,8 @@ describe("GET / PUT /api/risk/config — risk engine config", () => {
     const audits = await rawDb.auditLog.findMany({ where: { action: "risk.config.update" } });
     expect(audits).toHaveLength(1);
     expect(audits[0]!.actor).toBe(`person:${"1".repeat(32)}`);
-    const beforeDigest = (JSON.parse(audits[0]!.before!) as { digest: string }).digest;
-    const afterDigest = (JSON.parse(audits[0]!.after!) as { digest: string }).digest;
+    const beforeDigest = (JSON.parse(audits[0]!.before!) as { beforeDigestCode: string }).beforeDigestCode;
+    const afterDigest = (JSON.parse(audits[0]!.after!) as { afterDigestCode: string }).afterDigestCode;
     expect(beforeDigest).toMatch(/^[0-9a-f]{64}$/);
     expect(afterDigest).toMatch(/^[0-9a-f]{64}$/);
     expect(beforeDigest).not.toBe(afterDigest);
@@ -501,12 +501,12 @@ describe("GET / PUT /api/risk/rules — risk rules", () => {
     const audits = await rawDb.auditLog.findMany({ where: { action: "risk.rules.replace" } });
     expect(audits).toHaveLength(1);
     expect(audits[0]!.actor).toBe(`person:${"1".repeat(32)}`);
-    const before = JSON.parse(audits[0]!.before!) as { count: number; digest: string };
-    const after = JSON.parse(audits[0]!.after!) as { count: number; digest: string };
+    const before = JSON.parse(audits[0]!.before!) as { count: number; beforeDigestCode: string };
+    const after = JSON.parse(audits[0]!.after!) as { count: number; afterDigestCode: string };
     expect(before.count).toBeGreaterThanOrEqual(1);
     expect(after.count).toBe(1);
-    expect(before.digest).toMatch(/^[0-9a-f]{64}$/);
-    expect(after.digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(before.beforeDigestCode).toMatch(/^[0-9a-f]{64}$/);
+    expect(after.afterDigestCode).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("PUT returns 400 on invalid input (missing rules array)", async () => {

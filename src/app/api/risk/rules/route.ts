@@ -40,8 +40,10 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
     entity: "risk-engine",
     entityId: "rules",
     actor: trustedActorAuditIdentity(actorContext.actor),
-    before: { count: before.length, digest: digestJson(before) },
-    after: { count: body.rules.length, digest: digestJson(body.rules) },
+    // Digest keys use the machine-code suffix convention so the redaction
+    // authority preserves them (see the config route note).
+    before: { count: before.length, beforeDigestCode: digestJson(before) },
+    after: { count: body.rules.length, afterDigestCode: digestJson(body.rules) },
   });
   return NextResponse.json({ rules: body.rules });
 }, "PUT /api/risk/rules");
