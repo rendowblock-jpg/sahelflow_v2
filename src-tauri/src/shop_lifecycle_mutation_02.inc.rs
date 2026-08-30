@@ -134,7 +134,18 @@ impl AcceptedMutation {
                     Ok(())
                 })();
                 if let Err(error) = media_restore {
-                    let _ = remove_sqlite_file_set(&live_database);
+                    // R3: a silently-ignored removal failure used to strand
+                    // the recovered database at the live path, wedging every
+                    // future recovery behind "target already exists" with the
+                    // real cause swallowed. Quarantine-rename keeps the path
+                    // unblocked; if even quarantine fails, surface it.
+                    if let Err(cleanup_error) =
+                        quarantine_or_remove_sqlite_file_set(&live_database)
+                    {
+                        return Err(MutationAuthorityError::InvalidRegistry(format!(
+                            "recovery cleanup failed and the recovered database may be stranded at {}: {cleanup_error}; original media failure: {error}"
+                        )));
+                    }
                     return Err(error);
                 }
 
