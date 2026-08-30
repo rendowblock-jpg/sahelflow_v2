@@ -1,41 +1,49 @@
 # SahelFlow — Current State
 
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
-> **Last assessed:** 2026-08-29
+> **Last assessed:** 2026-08-30
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at reconciliation `b1b5a03382` after the FD-050 installed-campaign repair series (#346–#353)
-> **Current signed release:** Internal.29 / `1.0.0-internal.29` / MSI `1.0.0.29` / FD-050 (published; **installed by the Founder — the campaign reproduced defects B1–B5 and D1**; all six were root-caused and repaired on protected main but are **not** inside the signed Internal.29 artifact)
-> **Reviewed release head:** `dd4888d6366cf48ccca05563bedb7e502e5662ce`
-> **Signed publication run:** `33212648778` — success
-> **Current execution:** FD-050 installed Founder campaign is under way on the installed Internal.29; the reproduced defects (B1/B2 quote chips, B3 document spinner, B4 voice recording fail-closed, B5 chat-delete resurrection, D1 AI-key flow) are repaired on protected main (#346–#353, adversarially audited); remaining work is campaign evidence reconciliation into the ledgers, the rest of the campaign matrix (FRC-2 repair rows, retained #306 real-phone rows), and a separately authorized signed successor that packages the repairs — then FRC-3 resumes
+> **Live protected main:** resolve from GitHub before every action; at reconciliation `2eb8a33749118e233240019bf2df9a47d586a04d` after release PR #357
+> **Current signed release:** Internal.30 / `1.0.0-internal.30` / MSI `1.0.0.30` / FD-051 (published; Founder installation pending)
+> **Reviewed release head:** `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`
+> **Signed publication run:** `33292278832` — success
+> **Current execution:** FD-051 successor published — the Founder applies the in-place Internal.30 update with state preserved, re-verifies the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive) plus the deep-audit register's audit-affected rows, the retained FRC-2 repair rows, the #306 real-phone rows and the applicable matrix rows, evidence is reconciled, then FRC-3 resumes; the parallel frontend/UI stream becomes the next candidate after Founder re-verification
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
 ## 1. Exact release authority
 
-Internal.29 is the latest signed/published artifact:
+Internal.30 is the latest signed/published artifact:
 
-- protected release source `a34917e582c4806aee35ad5aca12aaea82a0ddcf` / release PR #344 (equals protected `main`);
-- app `1.0.0-internal.29`;
-- MSI `1.0.0.29`;
+- protected release source `2eb8a33749118e233240019bf2df9a47d586a04d` / release PR #357 (equals protected `main`);
+- app `1.0.0-internal.30`;
+- MSI `1.0.0.30`;
 - channel `internal`;
-- authority FD-050;
+- authority FD-051;
 - mode `founder-offline-only`;
 - owned host suffix `null`;
 - customer-online licensing disabled.
 
-PR #344 reviewed head `dd4888d6366cf48ccca05563bedb7e502e5662ce` passed the full Required battery (CI/Quality Gate, Phase 5, Phase 6-7, native source contract, evidence MSI, Rust release parity) with two confirmed CI load-flake failures re-run green on the identical tree and zero code deltas. Certification cited corpus head `4921f34eb87369384d7cd09d92064a69b11cbac9` — the last product-tree change since Internal.28 (CI `33207445430`, Phase 5 `33207445134`, Phase 6-7 `33207445070`); #343 is documentation-only, so the packaged product tree is identical.
+PR #357 reviewed head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c` passed the full Required battery (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence, native source contract and Windows Rust release parity) with zero code deltas on the release-authority files. Certification cited product head `40f5386095e3a11b5f586673d3f6d0cc99956a66` — tree-identical to the #355 squash `14c059b7621d08a041830a626d5b3f2fb6fd75e6` (CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`); #356 is documentation-only, so the packaged product tree is identical.
 
-After expected-head merge, dispatcher `33212635887`, signed updater/publication run `33212648778` and release observer `33212661580` succeeded on exact protected main. The release was published at tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`.
+After expected-head merge, dispatcher `33292273959`, signed updater/publication run `33292278832` and release observer `33292285084` succeeded on exact protected main. The release was published at tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`.
 
 Published MSI:
 
-- `SahelFlow_1.0.0-internal.29_x64_en-US.msi`;
-- digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`.
+- `SahelFlow_1.0.0-internal.30_x64_en-US.msi`;
+- digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`.
 
-The Founder has **not yet installed** Internal.29; the latest Founder-installed checkpoint remains Internal.28 (FD-049, installed in place during its campaign — text/image/video send, automatic no-refresh inbound and reopen verified; the three reproduced regressions were repaired as #335/#336/#337 and extended by #338/#339, all packaged here). Retained Internal.28 publication facts: dispatcher `33136807451`, signed run `33136814065`, tag `sahelflow-v1.0.0-internal.28-d104da72dcfb7950df0b437ce279377b28e7df4b`, MSI digest `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64`. Preserve the installed state through the Internal.29 in-place update and campaign.
+The Founder has **not yet installed** Internal.30; the latest Founder-installed checkpoint remains Internal.29 (FD-050, installed in place during its campaign — the campaign reproduced defects B1–B5 and D1, all repaired as #346–#353 and packaged here together with the deep-audit remediation register #355). Retained Internal.29 publication facts: dispatcher `33212635887`, signed run `33212648778`, observer `33212661580`, tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`, MSI digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`. Preserve the installed state through the Internal.30 in-place update and campaign. The parallel frontend/UI stream is explicitly not bundled (FD-051) and becomes the next candidate after Founder re-verification.
 
-## 2. Product/security line packaged in Internal.29
+## 2. Product/security line packaged in Internal.30
+
+Internal.30 retains the accepted product line through Internal.29. Its direct
+additions are the two previously unreleased repair lines, now packaged:
+
+- **2c — FD-050 installed-campaign repair line** (#346–#353): the six campaign defects B1–B5 and D1 plus the #350 delivery-receipt enum truth and the #352 C1 auto-receive resilience hardening;
+- **2d — deep-audit remediation register** (#355): zod `.partial()` data-loss repair, Batch A F1–F15 route guards, Batch D crypto/data truth, Batch B domain truth, storefront poison-receipt contract, audit/risk-config validation, worker/inbox failure visibility, native R1–R3, strict redaction authority.
+
+## 2e. Product/security line packaged in Internal.29 (retained history)
 
 Internal.29 retains the accepted Internal.24 product line, the Internal.25/26/27 security/provider/product foundation and the complete Internal.28 package. Its direct additions are:
 
@@ -48,14 +56,14 @@ Internal.29 retains the accepted Internal.24 product line, the Internal.25/26/27
 - **#342/#343** — FRC-2 freeze: `frc2-1.0.0` extraction corpus plus the AI capability evidence ledger;
 - **#344** — version/release/licensing authority only for Internal.29 / FD-050.
 
-## 2c. FD-050 installed-campaign repair line (protected source, **unreleased**)
+## 2c. FD-050 installed-campaign repair line (**packaged in published Internal.30**)
 
 The Founder installed Internal.29 in place and the FD-050 campaign reproduced
 six defects. Each was root-caused and repaired on protected main
 (`a34917e5` → `b1b5a033`, eight guarded squash merges, every PR
-adversarially audited before merge). None of these commits are inside the
-signed Internal.29 artifact; packaging them requires a separately authorized
-signed successor under the FD-048/FD-050 release discipline.
+adversarially audited before merge). These commits were outside the signed
+Internal.29 artifact and are now packaged inside the signed Internal.30
+successor under FD-051.
 
 Campaign-observed defects:
 
@@ -69,6 +77,27 @@ Deep-audit repairs (not campaign-observed rows):
 
 - **Delivery-receipt enum truth** — the installed Baileys 6.17.16 status enum is `{ERROR:0,PENDING:1,SERVER_ACK:2,DELIVERY_ACK:3,READ:4,PLAYED:5}`; the two legacy mappers built on the pre-6.7 layout lied on every outbound bubble (SERVER_ACK rendered "delivered", DELIVERY_ACK rendered "read", ERROR rendered "sending" forever). One canonical mapper pinned at runtime against the installed proto (**#350**, `d67f3d0c`). This **undermines the Internal.27 "delivery observed" certification**: what was observed as delivery was SERVER_ACK. The inbox ledger row is corrected accordingly and must be re-proven on an installed candidate.
 - **C1 auto-receive resilience** — the sidecar gave up reconnecting permanently after ~40s and status/group broadcasts could pollute the queue: a 60s background watchdog (guarded, cleared on logout) and a pre-spool 1:1 JID scope filter (**#352**, `4cc9573b`).
+
+## 2d. Deep-audit remediation register (**packaged in published Internal.30**)
+
+The adversarial deep audit that followed the FD-050 repair line produced a full
+remediation register (batches A, D and B plus a native Rust batch). It was
+executed on `agent/deep-audit-remediation`, every Actions gate green at head
+`40f53860` (21 checks: 20 success / 1 skipped / 0 failures), and squash-merged
+into protected main as **#355, `14c059b7`** with explicit Founder merge
+authority. The register was outside the signed Internal.29 artifact and is
+now packaged inside the signed Internal.30 successor under FD-051 together
+with the 2c repair line.
+
+- **zod `.partial()` data-loss repair (P1)** — `updateCustomerSchema`/`updateProductSchema`/`updateExpenseSchema` no longer backfill create-time defaults over omitted PATCH fields; update schemas are explicit optionals with defaults preserved, contract-pinned in tests;
+- **Batch A (F1–F15)** — route-surface guard/coded-error/idempotency/bounds remediation;
+- **Batch D (crypto/data)** — PII OrThrow sealing, dual blind-index identity lookup, pinHash at-rest, registry fsync, log retention; key-authority client cast repaired at the seal/open sites;
+- **Batch B (domain truth)** — legacy order PATCH money truth: item totals validated against `unitPrice × quantity`, order total server-derived, money-bearing edits on legacy orders past draft/pending refused with coded `ORDER_EDIT_LOCKED_POST_CONFIRMATION` (B7-1); refund `totalSpentAdjusted` derived from revenue truth so refunds on pending/confirmed/shipped/refused orders stay money-only (B7-2); refund-type return completion on a delivered order refused with coded `RETURN_COMPLETION_REQUIRES_REFUND_FACT` (B7-3); partitioned per-product stock transitions wired through refund restore/reversal, ending variantless clobber (B7-4); timeline read failures surface coded errors (B7-5); single-order COD remittance honors the quarantine (B7-6); `Order.returnState`/`refundState` schema drift reconciled into the prisma Order model; partial refunds are money-only with variant-aware full-settlement stock truth and explicit-only idempotency keys; COD cash collected on returned/refused/cancelled/voided orders is quarantined out of the legacy COD ledger; Arabic/diacritic/spacing/alias wilaya spellings resolve onto the seeded risk profiles; canonical lifecycle outbox markers drain into durable automation trigger intents;
+- **C1 storefront ingestion truth** — poison receipts are classified (malformed / shop-mismatch / integrity / customer_payload / item_authority), rejected best-effort, the page cursor always advances and delegation is released only with full parsed items; whole-page decrypt failure is a systemic refusal with no data loss; the sync worker's silent catches became classified warnings;
+- **A1–A3 (audit + validation truth)** — Sheets export and risk config/rules PUTs are audited (`export.orders` + destination id, `risk.config.update`, `risk.rules.replace`); the risk config PUT body is strictly zod-validated (weights 0–2, thresholds 0–100, ascending invariant);
+- **C2/B1 (failure visibility)** — remote command/projection workers log classified failures with escalation after persistent failure streaks (12×5s commands, 3×8min projections) and per-device projection warnings; inbox connect/logout check `res.ok` and surface localized coded errors via `translateServerError` + toast;
+- **Batch R (native)** — Unix child process-tree containment (`process_group(0)` + `killpg(SIGKILL)`, bounded group drain); `RegFlushKey` after both license-clock anchor writes so the offline license clock survives hard power loss; SQLite orphan-recovery cleanup replaces fire-and-forget removal with quarantine-or-coded-error so recovery cannot be silently blocked;
+- **Redaction authority** — the strict redaction contract is re-affirmed: the `redact-pii` sha256-digest widening was refused and audit-trail digests ride the machine-code suffix convention (`beforeDigestCode`/`afterDigestCode`).
 
 ## 2b. Product/security line packaged in Internal.28 (retained history)
 

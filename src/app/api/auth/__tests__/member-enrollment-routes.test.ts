@@ -28,6 +28,9 @@ vi.mock("@/lib/auth/rate-limit", () => ({
   recordLoginAttempt: harness.recordAttempt,
   recordLoginFailure: harness.recordFailure,
   recordLoginSuccess: harness.recordSuccess,
+  // Batch A (audit 7-a F14) added this limiter-bucket key to the login route;
+  // the route imports it unconditionally, so the mock must provide it.
+  getLoginLimiterKey: vi.fn(() => "test-login-limiter-key"),
 }));
 
 vi.mock("@/lib/identity/team-directory", () => ({

@@ -1,8 +1,14 @@
 import "server-only";
 
+import { logger } from "@/lib/logger";
+
 const WORKER_KEY = Symbol.for("sahelflow.connected-projection-worker.v1");
 const REFRESH_INTERVAL_MS = 8 * 60 * 1000;
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
+// C2: escalate to error-level logging after ~24 minutes of continuously
+// failing ticks (3 × 8min refresh cadence) — persistent projection failures
+// mean desktop dashboards silently drift from server truth.
+const ESCALATE_AFTER_CONSECUTIVE_FAILURES = 3;
 
 type WorkerState = { running: boolean; timer: ReturnType<typeof setTimeout> | null };
 type WorkerGlobal = typeof globalThis & { [WORKER_KEY]?: WorkerState };
@@ -23,6 +29,7 @@ export function startConnectedProjectionWorker(): void {
   if (workerGlobal[WORKER_KEY]) return;
   const state: WorkerState = { running: false, timer: null };
   workerGlobal[WORKER_KEY] = state;
+  let consecutiveFailures = 0;
 
   const schedule = () => {
     state.timer = setTimeout(() => void tick(), REFRESH_INTERVAL_MS);
@@ -65,7 +72,15 @@ export function startConnectedProjectionWorker(): void {
             actorContext,
             deviceId: device.deviceId,
           });
-        } catch {
+        } catch (deviceError) {
+          // C2: a device-scoped publish failure was invisible. The policy
+          // invalidation below stays fail-closed; the warn keeps the affected
+          // device identifiable in the log.
+          logger.warn("connected.projection_worker.device_failed", {
+            deviceId: device.deviceId,
+            memberId: device.memberId,
+            reason: deviceError instanceof Error ? deviceError.message : String(deviceError),
+          });
           try {
             await runtime.client.invalidateMemberCommandPolicies(
               shopContext.workspaceId,
@@ -76,8 +91,22 @@ export function startConnectedProjectionWorker(): void {
           }
         }
       }
-    } catch {
-      // Connected operation is optional for permanent local work; next tick retries.
+      consecutiveFailures = 0;
+    } catch (error) {
+      // C2: the silent catch made projection drift invisible. Connected
+      // operation stays optional for permanent local work and the next tick
+      // retries; the classified log keeps persistent failures visible.
+      consecutiveFailures += 1;
+      const detail = {
+        name: error instanceof Error ? error.name : undefined,
+        message: error instanceof Error ? error.message : String(error),
+        consecutiveFailures,
+      };
+      if (consecutiveFailures >= ESCALATE_AFTER_CONSECUTIVE_FAILURES) {
+        logger.error("connected.projection_worker.tick_failed_repeatedly", error, detail);
+      } else {
+        logger.warn("connected.projection_worker.tick_failed", detail);
+      }
     } finally {
       state.running = false;
       schedule();

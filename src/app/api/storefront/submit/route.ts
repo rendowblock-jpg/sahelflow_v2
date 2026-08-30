@@ -122,8 +122,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   const rateLimit = checkRateLimit(ip);
   if (!rateLimit.allowed) {
+    // Coded lockout (audit 7-a F15): the 429 carries a machine-readable code
+    // alongside the message, matching the withErrorHandler { error, code }
+    // contract so clients can branch without string matching.
     return NextResponse.json(
-      { error: "Too many orders. Please try again later." },
+      {
+        error: "Too many orders. Please try again later.",
+        code: "STOREFRONT_RATE_LIMITED",
+      },
       {
         status: 429,
         headers: {

@@ -5,6 +5,7 @@ import { db, shopContext } from "@/lib/db";
 import { ensureConversationForJid } from "@/lib/data/conversation-service";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { projectConversationForTrustedActor } from "@/lib/identity/conversation-projection";
+import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
@@ -22,9 +23,16 @@ export const PATCH = withErrorHandler(
       where: { id, unreadCount: 0 },
       data: { unreadCount: { increment: 1 } },
     });
-    const conversation = await db.conversation.findUniqueOrThrow({
-      where: { id },
-    });
+    // Explicit coded 404 instead of findUniqueOrThrow: the missing row must be
+    // an addressed outcome, and the protected-data read path stays canonical.
+    const conversation = await db.conversation.findUnique({ where: { id } });
+    if (!conversation) {
+      throw new SahelFlowError(
+        "Conversation not found",
+        "CONVERSATION_NOT_FOUND",
+        404,
+      );
+    }
     return NextResponse.json({
       conversation: projectConversationForTrustedActor(
         conversation,

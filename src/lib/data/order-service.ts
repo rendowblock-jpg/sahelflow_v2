@@ -10,7 +10,6 @@
  */
 import type { Order, OrderStatus } from "@/types/domain";
 import {
-  ConflictError,
   NotFoundError,
   SahelFlowError,
   ValidationError,
@@ -30,6 +29,10 @@ import {
   type OrderChangeTransactionClient,
 } from "@/lib/data/order-change-service";
 import { withServiceError, nextOrderNumber } from "./service-base";
+import {
+  deductOrderItemStock,
+  restoreOrderItemStock,
+} from "./product-stock-model";
 import {
   dispatchTrigger,
   detectLowStock,
@@ -115,87 +118,23 @@ async function updateStatusInTransaction(
 
   const lowStockProducts: LowStockProduct[] = [];
 
+  // B7-4: stock transitions are partitioned per product (variant rollup +
+  // variantless remainder) and write product.stock exactly once per product,
+  // so mixed variant/variantless orders can no longer clobber the rollup
+  // depending on item order.
   if (triggersStockDeduction(from, to)) {
-    for (const item of order.items) {
-      if (item.productId) {
-        if (item.productVariantId) {
-          const updated = await tx.productVariant.updateMany({
-            where: {
-              id: item.productVariantId,
-              productId: item.productId,
-              isActive: true,
-              stock: { gte: item.quantity },
-            },
-            data: { stock: { decrement: item.quantity } },
-          });
-          if (updated.count !== 1) {
-            throw new ConflictError(
-              `Insufficient available stock for variant '${item.productVariantId}'`,
-            );
-          }
-          const available = await tx.productVariant.aggregate({
-            where: { productId: item.productId, isActive: true },
-            _sum: { stock: true },
-          });
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: available._sum.stock ?? 0 },
-          });
-        } else {
-          const updated = await tx.product.updateMany({
-            where: {
-              id: item.productId,
-              isActive: true,
-              deletedAt: null,
-              stock: { gte: item.quantity },
-            },
-            data: { stock: { decrement: item.quantity } },
-          });
-          if (updated.count !== 1) {
-            throw new ConflictError(
-              `Insufficient available stock for product '${item.productId}'`,
-            );
-          }
-        }
-        const lowStockInfo = await detectLowStock(tx, item.productId);
-        if (lowStockInfo) lowStockProducts.push(lowStockInfo);
-      }
+    const affectedProducts = await deductOrderItemStock(tx, order.items);
+    for (const productId of affectedProducts) {
+      const lowStockInfo = await detectLowStock(tx, productId);
+      if (lowStockInfo) lowStockProducts.push(lowStockInfo);
     }
   }
 
   if (triggersStockRestoration(from, to)) {
-    for (const item of order.items) {
-      if (item.productId) {
-        if (item.productVariantId) {
-          const restored = await tx.productVariant.updateMany({
-            where: {
-              id: item.productVariantId,
-              productId: item.productId,
-            },
-            data: { stock: { increment: item.quantity } },
-          });
-          if (restored.count !== 1) {
-            throw new ConflictError(
-              `Variant '${item.productVariantId}' is missing or belongs to another product`,
-            );
-          }
-          const available = await tx.productVariant.aggregate({
-            where: { productId: item.productId, isActive: true },
-            _sum: { stock: true },
-          });
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: available._sum.stock ?? 0 },
-          });
-        } else {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { increment: item.quantity } },
-          });
-        }
-        const lowStockInfo = await detectLowStock(tx, item.productId);
-        if (lowStockInfo) lowStockProducts.push(lowStockInfo);
-      }
+    const affectedProducts = await restoreOrderItemStock(tx, order.items);
+    for (const productId of affectedProducts) {
+      const lowStockInfo = await detectLowStock(tx, productId);
+      if (lowStockInfo) lowStockProducts.push(lowStockInfo);
     }
   }
 
@@ -488,7 +427,12 @@ export const orderService = {
       const updated = await ctx.prisma.$transaction(async (tx) => {
         const authority = await tx.order.findFirst({
           where: { id, deletedAt: null },
-          select: { source: true, sourceMetadata: true },
+          select: {
+            source: true,
+            sourceMetadata: true,
+            status: true,
+            deliveryCost: true,
+          },
         });
         if (!authority) throw new NotFoundError("Order", id);
         if (
@@ -504,6 +448,30 @@ export const orderService = {
           );
         }
 
+        // B7-1: money-bearing edits are locked once confirmation has reserved
+        // stock (and downstream customer stats + COD positions were computed
+        // from totalPrice). Before this guard, item add/remove/quantity edits
+        // on a confirmed legacy order desynced stock with no restore path and
+        // re-priced an order whose money already fed stats and COD ledgers.
+        // Contact-only edits stay editable (pre-delivery address/phone fixes).
+        const priceBearingEdit =
+          data.items !== undefined || data.deliveryCost !== undefined;
+        const status = authority.status as OrderStatus;
+        if (priceBearingEdit && status !== "draft" && status !== "pending") {
+          throw new SahelFlowError(
+            "Products and prices are locked after order confirmation; use the governed return and refund commands",
+            "ORDER_EDIT_LOCKED_POST_CONFIRMATION",
+            409,
+          );
+        }
+
+        // B7-1 money truth (mirrors create): item total = unitPrice ×
+        // quantity, order totalPrice = Σ item totals + effective delivery
+        // cost. Client-sent totals are validated against the recompute, never
+        // persisted verbatim. totalPrice is only recomputed when a money-
+        // bearing field is actually present, so contact-only edits (and
+        // unrelated legacy drift) never silently rewrite stored money.
+        let recomputedTotalPrice: number | undefined;
         if (data.items) {
           const existing = await tx.orderItem.findMany({ where: { orderId: id } });
           const incomingIds = data.items.filter((item) => item.id).map((item) => item.id);
@@ -516,6 +484,13 @@ export const orderService = {
               tx.orderItem.delete({ where: { id: itemId } }),
             ),
             ...data.items.map((item) => {
+              const total = item.unitPrice * item.quantity;
+              if (item.total !== total) {
+                throw new ValidationError(
+                  `Item total mismatch for '${item.productName}': expected ${total}`,
+                  "items",
+                );
+              }
               const payload = {
                 productName: item.productName,
                 productVariantName: item.productVariantName ?? null,
@@ -523,7 +498,7 @@ export const orderService = {
                 productVariantId: item.productVariantId ?? null,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                total: item.total,
+                total,
               };
               if (item.id) {
                 return tx.orderItem.update({ where: { id: item.id }, data: payload });
@@ -533,6 +508,23 @@ export const orderService = {
               });
             }),
           ]);
+
+          const effectiveDeliveryCost =
+            data.deliveryCost !== undefined
+              ? (data.deliveryCost ?? 0)
+              : (authority.deliveryCost ?? 0);
+          recomputedTotalPrice =
+            data.items.reduce(
+              (sum, item) => sum + item.unitPrice * item.quantity,
+              0,
+            ) + effectiveDeliveryCost;
+        } else if (data.deliveryCost !== undefined) {
+          const existing = await tx.orderItem.findMany({ where: { orderId: id } });
+          recomputedTotalPrice =
+            existing.reduce(
+              (sum, item) => sum + item.unitPrice * item.quantity,
+              0,
+            ) + (data.deliveryCost ?? 0);
         }
 
         const row = await tx.order.update({
@@ -544,14 +536,21 @@ export const orderService = {
             wilaya: data.wilaya,
             commune: data.commune,
             phone: data.phone,
-            totalPrice: data.totalPrice,
+            ...(recomputedTotalPrice !== undefined
+              ? { totalPrice: recomputedTotalPrice }
+              : {}),
           },
           include: { items: true },
         });
         await recordOrderChangeInTx(tx, {
           orderId: id,
           actionType: "edit",
-          payload: { fields: Object.keys(data) },
+          payload: {
+            fields: Object.keys(data),
+            ...(recomputedTotalPrice !== undefined
+              ? { totalPrice: recomputedTotalPrice }
+              : {}),
+          },
         });
         return toDomain(row as unknown as Record<string, unknown>);
       });

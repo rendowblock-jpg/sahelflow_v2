@@ -844,6 +844,32 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is created.
   #230 and the zero-budget boundary are unaffected.
 
+## FD-051 — One signed successor (Internal.30) packaging the two repair lines, before FRC-3
+
+The Founder's 2026-08-30 instruction ("Cut the successor") authorizes exactly
+one combined signed successor (Internal.30) packaging the protected-main
+frontier that exists at cutting time: the FD-050 installed-campaign repair
+line (#346–#353, `b1b5a033`) and the deep-audit remediation register (#355,
+`14c059b7`), reconciled into the active documentation (#354/#356). It is cut
+from the quiet post-reconciliation frontier (`720d697a`) so the audited repair
+lines ship without coupling to the parallel frontend/UI work stream, which
+becomes the next candidate after this successor.
+
+Binding boundaries:
+
+- The successor packages exactly the protected-main frontier at the release
+  head; the parallel frontend/UI stream is NOT bundled and no speculative
+  work is included.
+- FD-045 evidence rules are unchanged: release-authority PR, exact-head review,
+  required gates, expected-head merge, signed run, in-place preserved install.
+- The Internal.30 installed campaign re-verifies the FD-050 campaign rows
+  (B1–B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake
+  auto-receive) plus the deep-audit register's audit-affected rows, the
+  retained FRC-2 repair rows, the #306 real-phone rows and the applicable
+  matrix rows.
+- No customer-online, Beta, Stable or paid-deployment authority is created.
+  #230 and the zero-budget boundary are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

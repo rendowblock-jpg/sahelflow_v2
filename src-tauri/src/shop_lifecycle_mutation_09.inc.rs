@@ -29,9 +29,21 @@ fn copy_database_exact(source: &Path, target: &Path) -> Result<(), MutationAutho
         sync_parent(target)?;
         preflight_database(target)
     })();
-    if outcome.is_err() {
-        let _ = remove_sqlite_file_set(&staged);
-        let _ = remove_sqlite_file_set(target);
+    if let Err(failure) = &outcome {
+        // R3: the legacy `let _ =` cleanup silently ignored removal
+        // failures — an orphan database stranded at the live target path
+        // wedged all future recoveries behind "shop database target already
+        // exists" with the real cause swallowed. Quarantine-rename keeps
+        // the recovery path unblocked; if even quarantine fails, surface it.
+        if let Err(cleanup_error) = quarantine_or_remove_sqlite_file_set(&staged)
+            .and_then(|()| quarantine_or_remove_sqlite_file_set(target))
+        {
+            return Err(MutationAuthorityError::InvalidRegistry(format!(
+                "recovery cleanup failed and a database file set may be stranded at {} or {}: {cleanup_error}; original failure: {failure}",
+                staged.display(),
+                target.display()
+            )));
+        }
     }
     outcome
 }

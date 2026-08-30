@@ -168,6 +168,12 @@ model Order {
   deliveryState    String?
   inventoryState   String?
   codState         String?
+  // Canonical return/refund lifecycle projections (columns created by the
+  // 20260730070000_phase1_delivery_return_compensation migration, whose CHECK
+  // triggers enforce the value vocabularies). The single authority for these
+  // values is RETURN_STATES / REFUND_STATES in src/lib/business-truth/contracts.ts.
+  returnState      String?
+  refundState      String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   delivery        Delivery?
@@ -201,6 +207,8 @@ model Order {
   @@index([fulfillmentState])
   @@index([deliveryState])
   @@index([codState])
+  @@index([returnState])
+  @@index([refundState])
   // W3-9 (Session 39): composite indexes for high-traffic query paths.
   // These cover the orders-page list filter (status + time window + soft-delete),
   // the customer-detail order history, and the multi-source isolation filter.
@@ -292,6 +300,8 @@ model Conversation {
 
   @@index([channel])
   @@index([lastMessageAt])
+  // Audit 7-d P3-7: inbox channel filter + recency sort in one composite.
+  @@index([channel, lastMessageAt])
   @@index([status])
   @@index([assigneeId])
   @@index([priority])
@@ -326,6 +336,8 @@ model Message {
   createdAt          DateTime     @default(now())
 
   @@index([conversationId, timestamp])
+  // Audit 7-d P3-7: per-conversation timeline scan by direction + order.
+  @@index([conversationId, direction, timestamp])
   @@index([deliveryStatus])
   @@index([quotedMessageId])
 }

@@ -6,6 +6,7 @@ import type { PrismaClient } from "@prisma/client";
 
 import {
   decryptString,
+  deriveBlindIndex,
   isEncryptedPayload,
   type EncryptedPayload,
 } from "@/lib/crypto/field-crypto";
@@ -531,16 +532,29 @@ export function createProtectedPiiCodec(
     return output;
   }
 
+  /**
+   * Dual-generation phone blind-index candidates for the protected-data
+   * migration window. The canonical purpose-separated per-shop index stays
+   * FIRST so creates target the converging generation; the legacy
+   * installation-root candidate is byte-exact with the retired generator
+   * (customer-encryption.ts used field-crypto.ts deriveBlindIndex =
+   * HMAC-SHA256(rootKey, value.trim().toLowerCase()).hex with rootKey =
+   * getMasterKey(), the same root this codec already resolves as `legacyRoot`
+   * to open legacy envelopes). Callers search all candidates with `in`.
+   */
   async function customerPhoneIndexes(value: string): Promise<string[]> {
+    const candidates = [deriveBlindIndex(value, legacyRoot)];
     const current = await blindKeyIfPresent();
-    if (!current) return [];
-    return [
-      await indexWithAuthority(
-        value,
-        { recordType: "Customer", field: "phone" },
-        current,
-      ),
-    ];
+    if (current) {
+      candidates.unshift(
+        await indexWithAuthority(
+          value,
+          { recordType: "Customer", field: "phone" },
+          current,
+        ),
+      );
+    }
+    return candidates;
   }
 
   async function decryptNested(value: unknown): Promise<unknown> {
@@ -562,6 +576,14 @@ export function createProtectedPiiCodec(
         "Order",
       );
       output.order = await decryptNested(output.order);
+    }
+    if (output.message && typeof output.message === "object") {
+      output.message = await decryptFields(
+        output.message as Record<string, unknown>,
+        MESSAGE_PROTECTED_FIELDS,
+        "Message",
+      );
+      output.message = await decryptNested(output.message);
     }
     if (output.conversation && typeof output.conversation === "object") {
       output.conversation = await decryptFields(

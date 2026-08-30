@@ -1,29 +1,31 @@
 /**
- * Regression test for Phase 1 bug 1.1 — Return + Refund double-counting.
+ * Regression test for Phase 1 bug 1.1 (Return + Refund double-counting) and
+ * the B7-3 repair (return completion money fact).
  *
  * Scenario (the standard Algerian COD return+refund flow):
  *   1. Create + confirm + ship + deliver an order (product stock 10 → 5,
  *      customer.orderCount 0 → 1, customer.totalSpent 0 → 5000).
- *   2. Complete a Return on the order via PATCH /api/returns/[id].
- *   3. Issue a Refund on the same order via createRefund.
+ *   2. Issue the full-settling Refund via createRefund — it pairs the
+ *      compensation money fact with the delivered→returned physical
+ *      transition (variant-aware stock restore + stats reversal).
+ *   3. Complete the Return row afterwards — a no-op transition that only
+ *      records the physical fact.
  *
- * Before the fix:
- *   - The Return flow restored stock + decremented totalSpent INLINE without
- *     flipping order.status to "returned".
- *   - The Refund flow then saw status === "delivered" and re-applied the same
- *     side effects → stock restored 2× + totalSpent decremented 2×.
+ * Before B7-3:
+ *   - Completing a Return on a delivered order reversed full revenue stats
+ *     and restored all stock with NO compensation money fact (INV-023 gap),
+ *     and after a partial refund it could push totalSpent negative.
  *
- * After the fix:
- *   - The Return flow routes through orderService.updateStatus("returned")
- *     (single source of truth): stock restored once, customer stats reversed
- *     once, order.status = "returned".
- *   - The Refund flow sees status === "returned" and SKIPS the inline
- *     transition + step 8 totalSpent decrement (the Return flow already did
- *     them). It only creates the Refund row.
+ * After B7-3:
+ *   - Refund-type return completion on a delivered order is refused with
+ *     RETURN_COMPLETION_REQUIRES_REFUND_FACT; the governed refund flow is
+ *     the only delivered→returned path. Pre-delivery completions (shipped/
+ *     confirmed) keep their stock-only semantics, and exchanges ride the
+ *     replacement order as their compensation fact.
  *
  * Assertions: stock restored EXACTLY once (back to 10), totalSpent decremented
- * EXACTLY once (5000 → 0, not -5000), order.status = "returned", Refund row
- * exists.
+ * EXACTLY once (5000 → 0, never negative), order.status = "returned", Refund
+ * row exists, Return row completes.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
@@ -72,7 +74,7 @@ vi.mock("@/lib/automations/engine", () => ({
 }));
 
 import { PATCH as patchReturn } from "@/app/api/returns/[id]/route";
-import { mockPost } from "@/app/api/__tests__/helpers";
+import { getJson, mockPost } from "@/app/api/__tests__/helpers";
 
 let db: PrismaClient;
 
@@ -122,7 +124,7 @@ async function seedDeliveredOrder() {
 }
 
 describe("Return + Refund integrity (Phase 1 bug 1.1)", () => {
-  it("does NOT double-count stock + totalSpent when Return is completed first then Refund is issued", async () => {
+  it("full-settling refund performs the physical return with the money fact; Return completion afterwards records the physical fact without double effects (B7-3)", async () => {
     const { order, customer, product } = await seedDeliveredOrder();
 
     // Sanity: stock was deducted at confirm (10 → 5), customer stats
@@ -133,7 +135,28 @@ describe("Return + Refund integrity (Phase 1 bug 1.1)", () => {
     expect(customerAfterDeliver!.orderCount).toBe(1);
     expect(customerAfterDeliver!.totalSpent).toBe(5000);
 
-    // Create a Return row in "requested" status, then complete it via the API.
+    // B7-3 flow: the governed refund runs FIRST — the full-settling refund
+    // pairs the compensation money fact with the delivered→returned
+    // physical transition (variant-aware stock restoration + stats).
+    const refund = await createRefund({ prisma: db as never }, {
+      orderId: order.id,
+      amount: 5000,
+      method: "cash",
+      reason: "Full refund with physical return",
+      actor: "user",
+    });
+    expect(refund.amount).toBe(5000);
+
+    const orderAfterRefund = await db.order.findUnique({ where: { id: order.id } });
+    expect(orderAfterRefund!.status).toBe("returned");
+    const productAfterRefund = await db.product.findUnique({ where: { id: product.id } });
+    expect(productAfterRefund!.stock).toBe(10); // restored EXACTLY once
+    const customerAfterRefund = await db.customer.findUnique({ where: { id: customer.id } });
+    expect(customerAfterRefund!.orderCount).toBe(0);
+    expect(customerAfterRefund!.totalSpent).toBe(0); // decremented EXACTLY once
+
+    // The Return row completes afterwards: the order is already returned,
+    // so the transition is a no-op that only records the physical fact.
     const ret = await db.return.create({
       data: {
         orderId: order.id,
@@ -142,60 +165,24 @@ describe("Return + Refund integrity (Phase 1 bug 1.1)", () => {
         type: "refund",
       },
     });
-
     const res = await patchReturn(
       mockPost(`http://localhost/api/returns/${ret.id}`, { status: "completed" }),
       { params: Promise.resolve({ id: ret.id }) },
     );
     expect(res.status).toBe(200);
 
-    // After Return: order.status = "returned", stock restored once (5 → 10),
-    // customer stats reversed once (1/5000 → 0/0).
-    const orderAfterReturn = await db.order.findUnique({ where: { id: order.id } });
-    expect(orderAfterReturn!.status).toBe("returned");
+    // CRITICAL: nothing double-applied — stock restored once, stats
+    // decremented once, no extra status flip.
+    expect((await db.order.findUnique({ where: { id: order.id } }))!.status).toBe("returned");
+    expect((await db.product.findUnique({ where: { id: product.id } }))!.stock).toBe(10);
+    expect(await db.customer.findUnique({ where: { id: customer.id } }))
+      .toMatchObject({ orderCount: 0, totalSpent: 0 });
 
-    const productAfterReturn = await db.product.findUnique({ where: { id: product.id } });
-    expect(productAfterReturn!.stock).toBe(10); // restored EXACTLY once
-
-    const customerAfterReturn = await db.customer.findUnique({ where: { id: customer.id } });
-    expect(customerAfterReturn!.orderCount).toBe(0);
-    expect(customerAfterReturn!.totalSpent).toBe(0); // decremented EXACTLY once
-
-    // Now issue a full Refund on the same order.
-    const refund = await createRefund({ prisma: db as never }, {
-      orderId: order.id,
-      amount: 5000,
-      method: "cash",
-      reason: "Full refund after return",
-      returnId: ret.id,
-      actor: "user",
-    });
-    expect(refund).toBeTruthy();
-    expect(refund.amount).toBe(5000);
-
-    // The Refund row exists.
+    // Money fact + physical fact both recorded.
     const refunds = await db.refund.findMany({ where: { orderId: order.id } });
     expect(refunds).toHaveLength(1);
     expect(refunds[0]!.amount).toBe(5000);
-
-    // CRITICAL: stock + totalSpent should NOT have changed (no second restore
-    // or decrement). Before the fix, stock would be 15 (2× restore) and
-    // totalSpent would be -5000 (2× decrement by 5000).
-    const productAfterRefund = await db.product.findUnique({ where: { id: product.id } });
-    expect(productAfterRefund!.stock).toBe(10); // still restored EXACTLY once
-
-    const customerAfterRefund = await db.customer.findUnique({ where: { id: customer.id } });
-    expect(customerAfterRefund!.orderCount).toBe(0); // unchanged
-    expect(customerAfterRefund!.totalSpent).toBe(0); // still decremented EXACTLY once
-
-    // Order is still "returned" (Refund flow didn't re-flip it).
-    const orderAfterRefund = await db.order.findUnique({ where: { id: order.id } });
-    expect(orderAfterRefund!.status).toBe("returned");
-
-    // Refund total = 5000 (only one Refund row).
-    const refundsForOrder = await db.refund.findMany({ where: { orderId: order.id } });
-    const totalRefunded = refundsForOrder.reduce((s, r) => s + r.amount, 0);
-    expect(totalRefunded).toBe(5000);
+    expect((await db.return.findUnique({ where: { id: ret.id } }))?.status).toBe("completed");
   });
 
   it("direct refund on a delivered order (no Return flow) still decrements totalSpent by refund amount", async () => {
@@ -221,10 +208,24 @@ describe("Return + Refund integrity (Phase 1 bug 1.1)", () => {
     expect(updatedCustomer!.totalSpent).toBe(0);
   });
 
-  it("partial refund after Return does not push totalSpent negative", async () => {
+  it("return completion after a partial refund is refused — totalSpent cannot be pushed negative (B7-3)", async () => {
     const { order, customer, product } = await seedDeliveredOrder();
 
-    // Complete a Return first.
+    // Partial refund on the delivered order: money-only (2000 of 5000),
+    // stats 5000 → 3000, stock stays outbound.
+    await createRefund({ prisma: db as never }, {
+      orderId: order.id,
+      amount: 2000,
+      method: "cash",
+      reason: "Partial refund",
+      actor: "user",
+    });
+    expect((await db.customer.findUnique({ where: { id: customer.id } }))!.totalSpent).toBe(3000);
+
+    // Completing a refund-type return now would reverse the FULL revenue
+    // stats (−5000) on top of the partial refund → totalSpent −2000. The
+    // B7-3 gate refuses it: the remaining 3000 must go through the refund
+    // flow (which settles the receivable and performs the physical return).
     const ret = await db.return.create({
       data: {
         orderId: order.id,
@@ -233,36 +234,20 @@ describe("Return + Refund integrity (Phase 1 bug 1.1)", () => {
         type: "refund",
       },
     });
-    await patchReturn(
+    const res = await patchReturn(
       mockPost(`http://localhost/api/returns/${ret.id}`, { status: "completed" }),
       { params: Promise.resolve({ id: ret.id }) },
     );
+    const body = await getJson(res);
+    expect(res.status).toBe(409);
+    expect(body.code).toBe("RETURN_COMPLETION_REQUIRES_REFUND_FACT");
 
-    // After Return: totalSpent = 0 (decremented by order.totalPrice = 5000).
-    const customerAfterReturn = await db.customer.findUnique({ where: { id: customer.id } });
-    expect(customerAfterReturn!.totalSpent).toBe(0);
-
-    // Issue a partial refund of 2000.
-    await createRefund({ prisma: db as never }, {
-      orderId: order.id,
-      amount: 2000,
-      method: "cash",
-      reason: "Partial refund",
-      returnId: ret.id,
-      actor: "user",
-    });
-
-    // totalSpent should NOT be decremented again (would be -2000 before fix).
-    const customerAfterRefund = await db.customer.findUnique({ where: { id: customer.id } });
-    expect(customerAfterRefund!.totalSpent).toBe(0);
-
-    // Stock should still be 10 (only restored once via Return flow).
-    const productAfterRefund = await db.product.findUnique({ where: { id: product.id } });
-    expect(productAfterRefund!.stock).toBe(10);
-
-    // Refund row records the partial amount.
-    const refunds = await db.refund.findMany({ where: { orderId: order.id } });
-    expect(refunds).toHaveLength(1);
-    expect(refunds[0]!.amount).toBe(2000);
+    // Nothing moved: totalSpent stays 3000 (not negative), stock still
+    // outbound (5), order still delivered, return row still approved.
+    expect(await db.customer.findUnique({ where: { id: customer.id } }))
+      .toMatchObject({ orderCount: 1, totalSpent: 3000 });
+    expect((await db.product.findUnique({ where: { id: product.id } }))!.stock).toBe(5);
+    expect((await db.order.findUnique({ where: { id: order.id } }))!.status).toBe("delivered");
+    expect((await db.return.findUnique({ where: { id: ret.id } }))?.status).toBe("approved");
   });
 });

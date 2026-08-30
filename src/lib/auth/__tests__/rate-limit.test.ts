@@ -5,6 +5,7 @@ import {
   recordLoginFailure,
   recordLoginSuccess,
   getClientIp,
+  getLoginLimiterKey,
   _resetRateLimitForTests,
   type RateLimitResult,
 } from "../rate-limit";
@@ -164,6 +165,35 @@ describe("login rate limiter (SEC-001)", () => {
     it("trims whitespace around the IP", () => {
       const headers = new Headers({ "x-forwarded-for": "  1.2.3.4  " });
       expect(getClientIp(headers)).toBe("1.2.3.4");
+    });
+  });
+
+  describe("getLoginLimiterKey (SEC-022 / audit 7-a F14)", () => {
+    it("returns a stable loopback key that ignores spoofable headers", () => {
+      const spoofed = new Headers({
+        "x-forwarded-for": "1.2.3.4",
+        "x-real-ip": "5.6.7.8",
+        "cf-connecting-ip": "9.9.9.9",
+      });
+      const clean = new Headers();
+      expect(getLoginLimiterKey(spoofed)).toBe(getLoginLimiterKey(clean));
+    });
+
+    it("does not let header rotation create fresh buckets", () => {
+      // Simulate the route contract: bucket ops keyed via getLoginLimiterKey.
+      for (let i = 0; i < 5; i++) {
+        const headers = new Headers({ "x-forwarded-for": `10.0.0.${i}` });
+        const key = getLoginLimiterKey(headers);
+        expect(checkLoginRateLimit(key).allowed).toBe(true);
+        recordLoginAttempt(key);
+      }
+      // The 6th attempt — even with yet another rotated header — is denied.
+      const rotated = getLoginLimiterKey(
+        new Headers({ "x-forwarded-for": "10.0.0.99" }),
+      );
+      const result = checkLoginRateLimit(rotated);
+      expect(result.allowed).toBe(false);
+      expect(result.locked).toBe(false);
     });
   });
 

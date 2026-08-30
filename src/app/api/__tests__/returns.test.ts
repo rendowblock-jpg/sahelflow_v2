@@ -6,9 +6,13 @@
  *   - PATCH /api/returns/[id] — update return status (requested → approved →
  *                                completed/rejected)
  *
- * The PATCH /api/returns/[id] "completed" path also exercises Phase 1 bug
- * 1.1's canonical transition in the same transaction as Return completion,
- * stock restore, customer stats reversal, and the OrderChange ledger.
+ * The PATCH /api/returns/[id] "completed" path also exercises the canonical
+ * transition in the same transaction as Return completion, stock restore,
+ * customer stats reversal, and the OrderChange ledger. Since B7-3 (INV-023),
+ * completing a refund-type return on a delivered order is refused
+ * (RETURN_COMPLETION_REQUIRES_REFUND_FACT) — the governed refund flow pairs
+ * the money fact with the physical return; pre-delivery and exchange
+ * completions keep their semantics.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { rawDb, cleanDb, mockPost, getJson, seedProduct } from "@/app/api/__tests__/helpers";
@@ -259,8 +263,35 @@ describe("PATCH /api/returns/[id] — update return status", () => {
     expect(notes[0]!.body).toBe("OK to process");
   });
 
-  it("transitions approved → completed (200) + flips order to 'returned' + restores stock + reverses customer stats", async () => {
+  it("refuses completion of a refund-type return on a delivered order (B7-3 INV-023 money fact)", async () => {
     const { ret, order, product, customer } = await seedReturnAtStatus("approved");
+
+    const res = await PATCHReturn(
+      mockPost(`http://localhost/api/returns/${ret.id}`, { status: "completed" }),
+      { params: Promise.resolve({ id: ret.id }) },
+    );
+    const body = await getJson(res);
+
+    // The governed refund flow is the only delivered→returned path that
+    // pairs the physical return with the full-settling money fact.
+    expect(res.status).toBe(409);
+    expect(body.code).toBe("RETURN_COMPLETION_REQUIRES_REFUND_FACT");
+
+    // Nothing moved: order, stock, and customer stats untouched.
+    const updatedOrder = await rawDb.order.findUnique({ where: { id: order.id } });
+    expect(updatedOrder!.status).toBe("delivered");
+    const updatedProduct = await rawDb.product.findUnique({ where: { id: product.id } });
+    expect(updatedProduct!.stock).toBe(98);
+    const updatedCustomer = await rawDb.customer.findUnique({ where: { id: customer.id } });
+    expect(updatedCustomer!.orderCount).toBe(1);
+    expect(updatedCustomer!.totalSpent).toBe(5000);
+    // The return row stays approved for the refund-first flow.
+    expect((await rawDb.return.findUnique({ where: { id: ret.id } }))?.status).toBe("approved");
+  });
+
+  it("still completes an exchange-type return on a delivered order (compensation = exchange order)", async () => {
+    const { ret, order, product, customer } = await seedReturnAtStatus("approved");
+    await rawDb.return.update({ where: { id: ret.id }, data: { type: "exchange" } });
 
     const res = await PATCHReturn(
       mockPost(`http://localhost/api/returns/${ret.id}`, { status: "completed" }),
@@ -268,24 +299,39 @@ describe("PATCH /api/returns/[id] — update return status", () => {
     );
     expect(res.status).toBe(200);
 
-    // Order transitioned to "returned" via orderService.updateStatus (Phase 1 bug 1.1)
     const updatedOrder = await rawDb.order.findUnique({ where: { id: order.id } });
     expect(updatedOrder!.status).toBe("returned");
-
-    // Stock restored (was 98 after confirm, +2 = 100)
     const updatedProduct = await rawDb.product.findUnique({ where: { id: product.id } });
     expect(updatedProduct!.stock).toBe(100);
-
-    // Customer stats reversed (was orderCount=1, totalSpent=5000; now 0/0)
     const updatedCustomer = await rawDb.customer.findUnique({ where: { id: customer.id } });
     expect(updatedCustomer!.orderCount).toBe(0);
     expect(updatedCustomer!.totalSpent).toBe(0);
+  });
 
-    // OrderChange ledger entry exists for the returned transition
-    const ledger = await rawDb.orderChange.findMany({
-      where: { orderId: order.id, actionType: "status_change" },
+  it("completes a refund-type return on a shipped order (pre-delivery: stock-only, no money fact needed)", async () => {
+    const { ret, order, product, customer } = await seedReturnAtStatus("approved");
+    await rawDb.order.update({ where: { id: order.id }, data: { status: "shipped" } });
+    // Reset stats to the pre-delivery truth (no revenue recognized yet).
+    await rawDb.customer.update({
+      where: { id: customer.id },
+      data: { orderCount: 0, totalSpent: 0 },
     });
-    expect(ledger.length).toBeGreaterThanOrEqual(1);
+
+    const res = await PATCHReturn(
+      mockPost(`http://localhost/api/returns/${ret.id}`, { status: "completed" }),
+      { params: Promise.resolve({ id: ret.id }) },
+    );
+    expect(res.status).toBe(200);
+
+    const updatedOrder = await rawDb.order.findUnique({ where: { id: order.id } });
+    expect(updatedOrder!.status).toBe("returned");
+    // Stock restored exactly once (was 98 after confirm).
+    const updatedProduct = await rawDb.product.findUnique({ where: { id: product.id } });
+    expect(updatedProduct!.stock).toBe(100);
+    // No revenue was recognized pre-delivery, so stats stay at zero.
+    const updatedCustomer = await rawDb.customer.findUnique({ where: { id: customer.id } });
+    expect(updatedCustomer!.orderCount).toBe(0);
+    expect(updatedCustomer!.totalSpent).toBe(0);
   });
 
   it("returns 409 when the transition is invalid (e.g. requested → completed)", async () => {
@@ -317,6 +363,14 @@ describe("PATCH /api/returns/[id] — update return status", () => {
 
   it("rolls back completion and all order effects when the strict ledger fails", async () => {
     const { ret, order, product, customer } = await seedReturnAtStatus("approved");
+    // B7-3: completion is gated on delivered orders, so the ledger-failure
+    // path is exercised from "shipped" (pre-delivery, stock-only restore).
+    await rawDb.order.update({ where: { id: order.id }, data: { status: "shipped" } });
+    // Pre-delivery truth: no revenue recognized yet.
+    await rawDb.customer.update({
+      where: { id: customer.id },
+      data: { orderCount: 0, totalSpent: 0 },
+    });
     await rawDb.$executeRawUnsafe(`
       CREATE TRIGGER "fail_return_status_ledger"
       BEFORE INSERT ON "OrderChange"
@@ -336,10 +390,10 @@ describe("PATCH /api/returns/[id] — update return status", () => {
     expect(res.status).toBe(500);
 
     expect((await rawDb.return.findUnique({ where: { id: ret.id } }))?.status).toBe("approved");
-    expect((await rawDb.order.findUnique({ where: { id: order.id } }))?.status).toBe("delivered");
+    expect((await rawDb.order.findUnique({ where: { id: order.id } }))?.status).toBe("shipped");
     expect((await rawDb.product.findUnique({ where: { id: product.id } }))?.stock).toBe(98);
     expect(await rawDb.customer.findUnique({ where: { id: customer.id } }))
-      .toMatchObject({ orderCount: 1, totalSpent: 5000 });
+      .toMatchObject({ orderCount: 0, totalSpent: 0 });
     expect(await rawDb.returnNote.count({ where: { returnId: ret.id } })).toBe(0);
   });
 

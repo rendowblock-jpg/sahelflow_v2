@@ -10,6 +10,7 @@ import {
 import {
   checkLoginRateLimit,
   getClientIp,
+  getLoginLimiterKey,
   recordLoginAttempt,
   recordLoginFailure,
   recordLoginSuccess,
@@ -32,8 +33,12 @@ const LoginSchema = z
   .strict();
 
 export async function POST(request: Request) {
+  // Audit metadata only (client-controlled): kept for session/audit records.
   const ip = getClientIp(request.headers);
-  const limit = checkLoginRateLimit(ip);
+  // Limiter bucket key (audit 7-a F14): loopback-consistent, not spoofable,
+  // so replayed x-forwarded-for values cannot rotate the bucket.
+  const limiterKey = getLoginLimiterKey(request.headers);
+  const limit = checkLoginRateLimit(limiterKey);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Too many attempts. Please try again later." },
@@ -46,7 +51,7 @@ export async function POST(request: Request) {
 
   const parsed = LoginSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
-    recordLoginAttempt(ip);
+    recordLoginAttempt(limiterKey);
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Invalid request" },
       { status: 400 },
@@ -60,7 +65,7 @@ export async function POST(request: Request) {
     );
   }
 
-  recordLoginAttempt(ip);
+  recordLoginAttempt(limiterKey);
 
   if (parsed.data.loginId) {
     const grant = await createActiveTeamLoginSession(
@@ -69,7 +74,7 @@ export async function POST(request: Request) {
       shopContext,
     );
     if (!grant) {
-      const failure = recordLoginFailure(ip);
+      const failure = recordLoginFailure(limiterKey);
       void auditLog("auth.login.failed", { reason: "member_credentials" }, ip);
       if (!failure.allowed && failure.locked) {
         return NextResponse.json(
@@ -91,7 +96,7 @@ export async function POST(request: Request) {
       shop: shopContext,
     });
     await establishTeamSession(grant.sessionId, ip);
-    recordLoginSuccess(ip);
+    recordLoginSuccess(limiterKey);
     void auditLog(
       "auth.login.success",
       {
@@ -114,7 +119,7 @@ export async function POST(request: Request) {
 
   const { valid } = await verifyAuthPinAndMaybeRehash(parsed.data.pin);
   if (!valid) {
-    const failure = recordLoginFailure(ip);
+    const failure = recordLoginFailure(limiterKey);
     void auditLog("auth.login.failed", { reason: "wrong_pin" }, ip);
     if (!failure.allowed && failure.locked) {
       return NextResponse.json(
@@ -130,7 +135,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Incorrect PIN" }, { status: 401 });
   }
 
-  recordLoginSuccess(ip);
+  recordLoginSuccess(limiterKey);
   await createSession(ip);
   void auditLog("auth.login.success", { role: "owner" }, ip);
   return NextResponse.json({ success: true, owner: true });

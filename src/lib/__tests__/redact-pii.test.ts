@@ -47,4 +47,17 @@ describe("redactPii", () => {
     expect(redactPii("hello")).toBe("hello");
     expect(redactPii(42)).toBe(42);
   });
+
+  it("preserves digest content under machine-code audit keys (digestCode suffix)", () => {
+    const out = redactPii({
+      before: { beforeDigestCode: "a".repeat(64) },
+      after: { afterDigestCode: "b".repeat(64) },
+      count: 3,
+    });
+    expect(out).toEqual({
+      before: { beforeDigestCode: "a".repeat(64) },
+      after: { afterDigestCode: "b".repeat(64) },
+      count: 3,
+    });
+  });
 });

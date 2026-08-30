@@ -3,9 +3,9 @@
 > **Status:** Active dependency/completion program
 > **Last reconciled:** 2026-08-28
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before action; at reconciliation `a34917e582c4806aee35ad5aca12aaea82a0ddcf`
-> **Current signed checkpoint:** Internal.29 / FD-050 (published; Founder installation pending)
-> **Current execution mode:** Internal.29 published — Founder in-place install, FD-050 campaign and ledger reconciliation, then FRC-3
+> **Live protected main:** resolve from GitHub before action; at reconciliation `2eb8a33749118e233240019bf2df9a47d586a04d`
+> **Current signed checkpoint:** Internal.30 / FD-051 (published; Founder installation pending)
+> **Current execution mode:** Internal.30 published — Founder in-place install, re-verification campaign over the FD-050 rows, register-affected rows and retained matrix rows, then FRC-3; the parallel frontend/UI stream is the next candidate after that re-verification
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 
@@ -218,7 +218,7 @@ A `workers.dev` endpoint can support development but does not satisfy the sole p
 
 ## Phase 9 — release certification and launch readiness
 
-Internal.25 / FD-044 is a historical Internal Founder-offline checkpoint, not Beta or Stable. Internal.28 / FD-049 is the latest Founder-installed checkpoint and Internal.29 / FD-050 is the current signed/published checkpoint (Founder installation pending); neither is Beta or Stable.
+Internal.25 / FD-044 is a historical Internal Founder-offline checkpoint, not Beta or Stable. Internal.29 / FD-050 is the latest Founder-installed checkpoint and Internal.30 / FD-051 is the current signed/published checkpoint (Founder installation pending); neither is Beta or Stable.
 
 Stable still requires:
 

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { logger } from "@/lib/logger";
+
 const WORKER_KEY = Symbol.for("sahelflow.storefront-receipt-worker.v1");
 const POLL_INTERVAL_MS = 5_000;
 const CURSOR_KEY_PREFIX = "connected.storefront.receipt.cursor.v1";
@@ -59,8 +61,16 @@ export function startStorefrontReceiptWorker(): void {
           update: { value: String(result.nextCursor) },
         });
       }
-    } catch {
-      // Cursor and canonical order idempotency retain durable retry authority.
+    } catch (error) {
+      // C1: the silent catch hid relay stalls (poison receipts, broken
+      // decryption enrollment, relay outages) behind a permanently frozen
+      // cursor. The cursor and canonical order idempotency retain their
+      // durable retry authority; the classified warn keeps every repeated
+      // tick failure operator-visible.
+      logger.warn("storefront.receipt_worker.tick_failed", {
+        name: error instanceof Error ? error.name : undefined,
+        message: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       state.running = false;
       schedule();

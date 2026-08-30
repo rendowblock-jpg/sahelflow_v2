@@ -14,6 +14,7 @@
 import "server-only";
 import type { DbClient } from "@/lib/db";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { withServiceError } from "./service-base";
 import { redactPii } from "@/lib/redact-pii";
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { openBusinessPayloadWithKey } from "@/lib/business-truth/payload-codec";
@@ -64,7 +65,11 @@ export async function getOrderTimeline(
   orderId: string,
   limit = 50,
 ) {
-  try {
+  // B7-5: a ledger read failure must surface as a coded error, never
+  // masquerade as an order with "no history" (a silent lie on the order
+  // detail timeline). Only the decryption enrichment degrades gracefully —
+  // the timeline stays readable without exposing sealed values.
+  return withServiceError(async () => {
     const entries = await context.prisma.orderChange.findMany({
       where: { orderId },
       orderBy: { createdAt: "desc" },
@@ -86,9 +91,7 @@ export async function getOrderTimeline(
       ...entry,
       payload: materializeRejectionReason(entry.payload, envelopeKey),
     }));
-  } catch {
-    return [];
-  }
+  }, "OrderChange");
 }
 
 function materializeRejectionReason(

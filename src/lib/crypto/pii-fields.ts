@@ -1,6 +1,13 @@
 /**
  * Generic in-place field encryption for non-searchable PII (ADR-003).
  *
+ * STATUS (audit 7-d P3-9): scripts-only compatibility module. No production
+ * `src/` importer remains; it stays type-checked solely for the ADR-003
+ * legacy-generation migration toolchain (scripts/db.ts,
+ * scripts/migrate-pii-encryption.ts). Do not wire this into new Prisma
+ * extensions — the canonical protected-data authority is
+ * protected-pii.ts / with-protected-pii.ts.
+ *
  * Used by Order (phone, address, notes) and Conversation (contactName,
  * contactPhone). For searchable PII (Customer.phone), use customer-encryption.ts
  * which implements the blind-index + companion-ciphertext pattern.
@@ -117,8 +124,9 @@ export function encryptPiiFields(
  * - Skips fields that are absent (partial selects are safe).
  * - Skips fields that are null or undefined.
  * - Skips fields that are already plaintext (not an encrypted payload).
- * - Tampered ciphertext → decrypt fails silently (raw value preserved, no crash).
- *   This makes corruption visible without taking down the whole list view.
+ * - Fail closed (audit 7-d P3-9): a tampered or wrong-key legacy payload
+ *   propagates the ProtectedDataCorruptionError from field-crypto.ts instead
+ *   of silently substituting raw ciphertext as if it were seller plaintext.
  *
  * @param row    The raw DB row.
  * @param fields The PII field names to decrypt.
@@ -138,12 +146,9 @@ export function decryptPiiRow(
     if (value === null || value === undefined) continue;
     if (typeof value !== "string") continue;
     if (!isEncryptedPayload(value)) continue; // already plaintext
-    try {
-      out[field] = decryptString(jsonToPayload(value), masterKey);
-    } catch {
-      // Tampered or wrong key — leave the raw value so corruption is visible.
-      // Better than crashing the whole list.
-    }
+    // No try/catch: an unauthentic legacy payload must fail closed with the
+    // ProtectedDataCorruptionError, matching field-crypto.ts semantics.
+    out[field] = decryptString(jsonToPayload(value), masterKey);
   }
 
   return out;

@@ -18,6 +18,7 @@ import type { ServiceContext } from "@/lib/data/service-base";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
 import { parseStorefrontReleaseItemKey } from "@/lib/storefront/release-artifact";
 import { NotFoundError, ValidationError } from "@/types/errors";
+import { logger } from "@/lib/logger";
 import type { ConnectedPlatformClient, StorefrontReceipt } from "./client";
 import { releaseRejectedStorefrontReceiptDelegation } from "./storefront-receipt-delegation";
 
@@ -64,9 +65,13 @@ function receiptDigest(receipt: StorefrontReceipt, orderId: string): string {
     .digest("hex");
 }
 
-function rejectionDigest(receipt: StorefrontReceipt, code: string): string {
+function rejectionDigest(
+  receiptId: string,
+  requestDigest: string | null,
+  code: string,
+): string {
   return createHash("sha256")
-    .update(`${receipt.receiptId}\n${receipt.requestDigest}\nrejected\n${code}`, "utf8")
+    .update(`${receiptId}\n${requestDigest ?? "unknown"}\nrejected\n${code}`, "utf8")
     .digest("hex");
 }
 
@@ -145,6 +150,133 @@ export function decryptStorefrontReceiptCustomer(
   }
 }
 
+/**
+ * C1 poison-receipt classification. A receipt that fails any intake check is
+ * receipt-scoped corruption: it must be marked rejected on the relay and the
+ * page must continue — the legacy loop threw past the governed rejection
+ * handler, so one malformed hosted receipt aborted the whole page, the
+ * silent worker catch hid the failure, and the cursor never advanced again
+ * (permanent silent stall of storefront ingestion).
+ *
+ * Customer-decryption failures are the one exception: they can also mean the
+ * desktop enrollment key is broken (systemic). The page-level heuristic in
+ * importHostedStorefrontReceipts rejects isolated decrypt failures but
+ * refuses a page where EVERY receipt failed decryption, preserving the
+ * durable retry instead of poison-rejecting importable orders.
+ */
+type PoisonReceiptCode =
+  | "malformed_receipt"
+  | "shop_authority_mismatch"
+  | "receipt_integrity"
+  | "customer_payload"
+  | "item_authority";
+
+interface ParsedReceiptLine {
+  productId: string;
+  productVariantId: string | null;
+  quantity: number;
+  unitPrice: number;
+}
+
+type ReceiptIntake = Readonly<
+  | {
+      ok: true;
+      receipt: z.infer<typeof receiptSchema>;
+      customer: z.infer<typeof customerSchema>;
+      items: ParsedReceiptLine[];
+    }
+  | {
+      ok: false;
+      code: PoisonReceiptCode;
+      receipt: z.infer<typeof receiptSchema> | null;
+      items: ParsedReceiptLine[] | null;
+    }
+>;
+
+function intakeStorefrontReceipt(
+  rawReceipt: StorefrontReceipt,
+  shopId: string,
+  encryptionPrivateKeyPkcs8: string,
+): ReceiptIntake {
+  const parsed = receiptSchema.safeParse(rawReceipt);
+  if (!parsed.success) {
+    return Object.freeze({ ok: false, code: "malformed_receipt", receipt: null, items: null });
+  }
+  const receipt = parsed.data;
+  if (receipt.shopId !== shopId) {
+    return Object.freeze({ ok: false, code: "shop_authority_mismatch", receipt, items: null });
+  }
+  const items: ParsedReceiptLine[] = [];
+  for (const line of receipt.lines) {
+    const authority = parseStorefrontReleaseItemKey(line.itemKey);
+    if (!authority) {
+      return Object.freeze({ ok: false, code: "item_authority", receipt, items: null });
+    }
+    items.push({
+      productId: authority.productId,
+      productVariantId: authority.variantId,
+      quantity: line.quantity,
+      unitPrice: line.unitPriceDzd,
+    });
+  }
+  try {
+    validateReceiptTotals(receipt);
+  } catch {
+    return Object.freeze({ ok: false, code: "receipt_integrity", receipt, items });
+  }
+  try {
+    const customer = decryptStorefrontReceiptCustomer(receipt, encryptionPrivateKeyPkcs8);
+    return Object.freeze({ ok: true, receipt, customer, items });
+  } catch {
+    return Object.freeze({ ok: false, code: "customer_payload", receipt, items });
+  }
+}
+
+/**
+ * Best-effort rejection marking for a poison receipt. A receipt whose shape
+ * is too broken to yield an addressable id, or one the relay refuses (e.g.
+ * delivered under another shop's authority), is warn-logged and skipped —
+ * the page cursor still advances past it, so ingestion can never stall.
+ */
+async function rejectPoisonStorefrontReceipt(
+  client: ConnectedPlatformClient,
+  workspaceId: string,
+  shopId: string,
+  receipt: z.infer<typeof receiptSchema> | null,
+  code: PoisonReceiptCode,
+  fallbackReceiptId?: unknown,
+  fallbackRequestDigest?: unknown,
+): Promise<void> {
+  const receiptId = typeof receipt?.receiptId === "string"
+    ? receipt.receiptId
+    : typeof fallbackReceiptId === "string"
+      ? fallbackReceiptId
+      : null;
+  const requestDigest = typeof receipt?.requestDigest === "string"
+    ? receipt.requestDigest
+    : typeof fallbackRequestDigest === "string"
+      ? fallbackRequestDigest
+      : null;
+  if (receiptId === null || !ID.test(receiptId)) {
+    logger.warn("storefront.receipt.poison_unaddressable", { code });
+    return;
+  }
+  try {
+    await client.completeStorefrontReceipt(receiptId, {
+      workspaceId,
+      shopId,
+      state: "rejected",
+      resultDigest: rejectionDigest(receiptId, requestDigest, code),
+    });
+  } catch (error) {
+    logger.warn("storefront.receipt.poison_reject_refused", {
+      receiptId,
+      code,
+      reason: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export async function importHostedStorefrontReceipts(input: Readonly<{
   client: ConnectedPlatformClient;
   context: ServiceContext;
@@ -169,25 +301,77 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
   if (!Number.isSafeInteger(page.nextCursor) || page.nextCursor < input.after) {
     throw new Error("Storefront receipt cursor is invalid");
   }
+  // Fail fast on an unusable enrollment key: a broken key is a systemic
+  // authority failure, never a receipt-scoped poison signal.
+  createPrivateKey({
+    key: Buffer.from(input.encryptionPrivateKeyPkcs8, "base64"),
+    format: "der",
+    type: "pkcs8",
+  });
+
+  // Classify every receipt in the page before importing anything, so the
+  // decryption-authority heuristic can distinguish isolated corruption from
+  // a broken enrollment key.
+  const intakes = page.receipts.map((rawReceipt) => ({
+    rawReceipt,
+    intake: intakeStorefrontReceipt(rawReceipt, shop.shopId, input.encryptionPrivateKeyPkcs8),
+  }));
+  const decryptFailures = intakes.filter(
+    (entry) => !entry.intake.ok && entry.intake.code === "customer_payload",
+  );
+  if (decryptFailures.length > 0 && decryptFailures.length === intakes.length) {
+    throw new Error(
+      `Storefront receipt decryption failed for all ${decryptFailures.length} receipts in the page — enrollment key or storefront binding authority is broken`,
+    );
+  }
+
   let imported = 0;
   let replayed = 0;
-  for (const rawReceipt of page.receipts) {
-    const receipt = receiptSchema.parse(rawReceipt);
-    if (receipt.shopId !== shop.shopId) {
-      throw new Error("Storefront receipt targets another shop authority");
+  for (const entry of intakes) {
+    if (!entry.intake.ok) {
+      const { code, receipt, items } = entry.intake;
+      // Release the checkout delegation only when the full item list parsed
+      // and the receipt is under this shop's authority. Release failure is
+      // warn-logged and never blocks the rejection marking: the relay-side
+      // delegation expiry covers what we cannot release here.
+      if (receipt && items) {
+        const businessContext = {
+          ...input.context,
+          businessPrincipal: sourceBusinessPrincipal("storefront", receipt.storefrontSlug),
+        };
+        try {
+          await releaseRejectedStorefrontReceiptDelegation(businessContext, {
+            receiptId: receipt.receiptId,
+            releaseId: receipt.releaseId,
+            items: items.map((item) => ({
+              productId: item.productId,
+              productVariantId: item.productVariantId,
+              quantity: item.quantity,
+            })),
+          });
+        } catch (releaseError) {
+          logger.warn(
+            "storefront.receipt.poison_release_failed",
+            {
+              receiptId: receipt.receiptId,
+              code,
+              reason: releaseError instanceof Error ? releaseError.message : String(releaseError),
+            },
+          );
+        }
+      }
+      await rejectPoisonStorefrontReceipt(
+        input.client,
+        input.workspaceId,
+        shop.shopId,
+        receipt,
+        code,
+        entry.rawReceipt.receiptId,
+        entry.rawReceipt.requestDigest,
+      );
+      continue;
     }
-    validateReceiptTotals(receipt);
-    const customer = decryptStorefrontReceiptCustomer(receipt, input.encryptionPrivateKeyPkcs8);
-    const items = receipt.lines.map((line) => {
-      const authority = parseStorefrontReleaseItemKey(line.itemKey);
-      if (!authority) throw new Error("Storefront receipt item authority is invalid");
-      return {
-        productId: authority.productId,
-        productVariantId: authority.variantId,
-        quantity: line.quantity,
-        unitPrice: line.unitPriceDzd,
-      };
-    });
+    const { receipt, customer, items } = entry.intake;
     const businessContext = {
       ...input.context,
       businessPrincipal: sourceBusinessPrincipal("storefront", receipt.storefrontSlug),
@@ -241,7 +425,7 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
           workspaceId: input.workspaceId,
           shopId: shop.shopId,
           state: "rejected",
-          resultDigest: rejectionDigest(receipt, "catalog_conflict"),
+          resultDigest: rejectionDigest(receipt.receiptId, receipt.requestDigest, "catalog_conflict"),
         });
         continue;
       }

@@ -32,7 +32,7 @@ const context = { prisma: db, shop: shopContext };
  * used for the RSC first paint, so later pages cannot silently lose customer or
  * risk truth.
  */
-export async function GET(req: NextRequest) {
+export const GET = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("orders.read");
   const searchParams = req.nextUrl.searchParams;
   const rawStatus = searchParams.get("status");
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json(result);
-}
+}, "GET /api/orders");
 
 /** POST /api/orders — governed manual intake or compatibility intake. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
