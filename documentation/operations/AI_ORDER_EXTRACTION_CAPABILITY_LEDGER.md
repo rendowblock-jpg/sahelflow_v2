@@ -4,9 +4,8 @@
 > **Scope:** Seller-owned Gemini AI, the model-exposed tool surface, proposal-bound
 > AI actions and the message → extraction → human-review → canonical-order chain in
 > the Founder-offline desktop product
-> **Snapshot date:** 2026-08-29
-> **Source baseline:** protected `main` `a34917e582c4806aee35ad5aca12aaea82a0ddcf` (frozen corpus `frc2-1.0.0`
-> merged through #342)
+> **Snapshot date:** 2026-08-30
+> **Source baseline:** protected `main` `14c059b7` after the deep-audit remediation register PR #355 (contains the FD-050 repair series #346–#353; frozen corpus `frc2-1.0.0` merged through #342)
 > **Signed/installed baseline:** Internal.28 / FD-049 (latest Founder-installed)
 > **Latest signed/published:** Internal.29 / FD-050 (tag
 > `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`; the frozen FRC-2 frontier and the
@@ -44,7 +43,7 @@ authorizes silent real-client PII processing.
 | A1 | Key creation wizard guides Google AI Studio key creation, restrictions and privacy acknowledgement (AR/FR/EN) | `src/components/onboarding/onboarding-wizard.tsx` step 2; `src/components/settings/ai-key-panel.tsx`; FD-015 | implemented-unproven (installed AR/FR/EN observation pending) |
 | A2 | Key stored encrypted (AES-256-GCM sealed envelope, purpose-separated protected key, per-shop DB, never returned to client) | `src/lib/secrets/index.ts` `getSecret/setSecret/deleteSecret`; `Secret` model `prisma/schema.prisma:497`; `src/lib/secrets/__tests__/index.test.ts` | source+tests |
 | A3 | Key test before save = minimal real inference ("Reply with exactly OK", `maxOutputTokens: 8`) with `AIza` shape pre-check | `verifyGeminiKey` `src/lib/ai/gemini/provider.ts:284` | implemented-unproven (needs seller key for live proof) |
-| A4 | Rotation = authenticated replace (test-then-save), disconnection = delete with confirm; both gated by `integrations.manage` + `requireRecentReauthentication` + audit | `src/app/api/secrets/gemini-key/route.ts` GET/POST/DELETE; `src/components/settings/ai-key-panel.tsx`; #348 repairs FD-050 campaign row D1 on top (interrupted action resumes after successful PIN; coded rejections localized AR/FR/EN; per-attempt secret-free provider logging) | source+tests (reauth boundary); rotation live proof pending; D1 repair unreleased on main `b1b5a033` |
+| A4 | Rotation = authenticated replace (test-then-save), disconnection = delete with confirm; both gated by `integrations.manage` + `requireRecentReauthentication` + audit | `src/app/api/secrets/gemini-key/route.ts` GET/POST/DELETE; `src/components/settings/ai-key-panel.tsx`; #348 repairs FD-050 campaign row D1 on top (interrupted action resumes after successful PIN; coded rejections localized AR/FR/EN; per-attempt secret-free provider logging) | source+tests (reauth boundary); rotation live proof pending; D1 repair unreleased on protected main (repair line `b1b5a033`, now inside `14c059b7` #355) |
 | A5 | Informed-consent gate (`gemini_consent_accepted`) blocks chat and extraction with 403 `consent_required` before any message leaves the device | `src/app/api/__tests__/ai-consent-gate.test.ts`; settings consent checkbox | source+tests |
 | A6 | Key absent/invalid → degraded mode: chat returns localized no-key copy, extraction falls back to regex-only, core work continues | `agent.ts:172-188`; `smart-router.ts:44-47`; localized copy | source+tests |
 
@@ -134,7 +133,7 @@ Founder-visible approval/replay evidence on the installed app: pending.
 | Row | Capability | Evidence | State |
 |---|---|---|---|
 | F1 | Fail-closed remote serialization: unknown tool → `null`; tool-aware allowlisted projections; reviewed conservative fallback for generic tools | `redact.ts:368-404,406-603,684-726` | source+tests |
-| F2 | Phones → last-2 digits; names → first name + initial with phone/email-shape rejection; addresses/notes withheld; conversation bodies → fixed intent/color/size tags; proposal digests never cross | `redact.ts:87-98,285-359,605-672` | source+tests |
+| F2 | Phones → last-2 digits; names → first name + initial with phone/email-shape rejection; addresses/notes withheld; conversation bodies → fixed intent/color/size tags; proposal digests never cross; #355 re-affirms the authority strict — the `redact-pii` sha256-digest widening was refused and audit digests ride the machine-code suffix keys `beforeDigestCode`/`afterDigestCode` | `redact.ts:87-98,285-359,605-672` | source+tests |
 | F3 | Minimization applies to live function responses AND replayed history rendering | `agent.ts:87-98,100-122,246,449`; pinned by `agent-remote-pii.test.ts` | source+tests |
 | F4 | Persisted `AiChatMessage.toolCalls` redacted separately | `redact-pii.ts`; messages/stream routes | source+tests |
 | F5 | Live-capture proof that no raw PII reaches Google on the installed app | — | external-blocked (seller key + capture) |
@@ -223,3 +222,4 @@ shapes the smart router delegates to Gemini and the human review sheet guards.
 | Date | Event |
 |---|---|
 | 2026-08-28 | Ledger created; tool registry, proposal authority, failure matrix, privacy minimization and the `frc2-1.0.0` corpus frozen at source baseline `e7c15724` + `4921f34e` |
+| 2026-08-30 | Deep-audit remediation register merged (#355, squash `14c059b7`); privacy-minimization authority re-affirmed strict (F2 audit-digest keys ride the machine-code suffix convention); source baseline updated to `14c059b7` |
