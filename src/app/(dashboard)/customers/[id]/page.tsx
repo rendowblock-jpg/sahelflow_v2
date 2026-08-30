@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { BlacklistToggle } from "@/components/customers/blacklist-toggle";
+import { OrderWhatsAppButton } from "@/components/orders/order-whatsapp-button";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -112,12 +113,20 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             </span>
           </span>
         }
-        actions={riskBadge && riskScore !== null ? (
-          <div className="flex items-center gap-2">
-            <Badge variant={riskBadge.variant}>
-              <AlertTriangle className="size-3.5" aria-hidden="true" />
-              {riskBadge.label} · {riskScore}
-            </Badge>
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {/* R3-b: generic WhatsApp deep link (no order context). */}
+            <OrderWhatsAppButton
+              phone={customer.phone}
+              customerName={customer.name}
+              testId="customer-header-whatsapp"
+            />
+            {riskBadge && riskScore !== null ? (
+              <Badge variant={riskBadge.variant}>
+                <AlertTriangle className="size-3.5" aria-hidden="true" />
+                {riskBadge.label} · {riskScore}
+              </Badge>
+            ) : null}
             {canManageRisk ? (
               <BlacklistToggle
                 customerId={customer.id}
@@ -126,7 +135,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               />
             ) : null}
           </div>
-        ) : undefined}
+        }
       />
 
       {customer.fieldAccess.risk && customer.isBlacklisted === true ? (

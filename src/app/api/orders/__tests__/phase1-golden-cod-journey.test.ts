@@ -531,11 +531,14 @@ describe("Phase 1 representative Golden COD journey", () => {
       ).size,
     ).toBe(3);
 
+    // R3-a: the order-detail lifecycle rail owns the governed fulfillment
+    // controls; the shared dispatcher carries the /fulfillment command routing.
     const fulfillmentSource = await readFile(
-      join(
-        process.cwd(),
-        "src/components/orders/canonical-fulfillment-actions.tsx",
-      ),
+      join(process.cwd(), "src/components/orders/order-lifecycle-rail.tsx"),
+      "utf8",
+    );
+    const fulfillmentDispatchSource = await readFile(
+      join(process.cwd(), "src/lib/orders/order-action-dispatch.ts"),
       "utf8",
     );
     const codSource = await readFile(
@@ -556,7 +559,8 @@ describe("Phase 1 representative Golden COD journey", () => {
     expect(fulfillmentSource).toContain(
       '"orders.workspace.fulfillment.heading"',
     );
-    expect(fulfillmentSource).toContain("/fulfillment");
+    expect(fulfillmentDispatchSource).toContain("/fulfillment");
+    expect(fulfillmentDispatchSource).toContain("/decision");
     expect(codSource).toContain("/cod/collection");
     expect(codSource).toContain("/accounting/cod-reconciliation");
     expect(returnSource).toContain("/customer-return");

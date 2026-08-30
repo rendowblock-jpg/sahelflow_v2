@@ -19,7 +19,12 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { OrderStatusActions } from "@/components/orders/order-status-actions";
+import { OrderLifecycleRail } from "@/components/orders/order-lifecycle-rail";
+import { OrderWhatsAppButton } from "@/components/orders/order-whatsapp-button";
+import {
+  DeliverySlipPrintButton,
+  type DeliverySlipData,
+} from "@/components/orders/delivery-slip";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { OrderEditPanel } from "@/components/orders/order-edit-panel";
 import { OrderDeleteButton } from "@/components/orders/order-delete-button";
@@ -49,7 +54,10 @@ import {
 } from "@/lib/data/refund-service";
 import { OrderTimeline } from "@/components/orders/order-timeline";
 import { RefundDialog } from "@/components/orders/refund-dialog";
-import { CanonicalFulfillmentActions } from "@/components/orders/canonical-fulfillment-actions";
+import { CanonicalCodActions } from "@/components/orders/canonical-cod-actions";
+import { CanonicalCourierActions } from "@/components/orders/canonical-courier-actions";
+import { CanonicalCustomerReturnActions } from "@/components/orders/canonical-customer-return-actions";
+import { CanonicalOrderRecoveryActions } from "@/components/orders/canonical-order-recovery-actions";
 import {
   isImportPendingOrderAuthority,
   isTrustedManualOrderAuthority,
@@ -100,6 +108,27 @@ export default async function OrderDetailPage({
       : "legacy_compatibility";
   const isConfirmationReview = order.status === "pending";
 
+  // Governed delivered orders surface the COD collection/remit controls when
+  // cash is actually expected (parity with the former fulfillment card).
+  const showCodAuthority =
+    order.status === "delivered" &&
+    order.deliveryState === "delivered" &&
+    order.codState !== null &&
+    order.codState !== "not_expected";
+
+  // Latest milestone timestamp, for the lifecycle rail's "Updated" line.
+  const lastChangeAt = [
+    order.createdAt,
+    order.confirmedAt,
+    order.packedAt,
+    order.shippedAt,
+    order.deliveredAt,
+  ].reduce<Date | null>(
+    (latest, current) =>
+      current && (!latest || current > latest) ? current : latest,
+    null,
+  );
+
   // Fetch customer + delivery + risk assessment + timeline + refunds.
   const [
     customer,
@@ -119,6 +148,30 @@ export default async function OrderDetailPage({
 
   const itemsTotal = order.items.reduce((sum, item) => sum + item.total, 0);
   const deliveryCost = order.deliveryCost ?? 0;
+  // R3-b: bon de livraison payload — server-resolved so the slip carries the
+  // customer name and the live courier tracking even before any API round-trip.
+  const slipData: DeliverySlipData = {
+    orderNumber: order.orderNumber,
+    createdAt: order.createdAt.toISOString(),
+    customerName: customer?.name ?? null,
+    phone: order.phone,
+    wilaya: order.wilaya,
+    commune: order.commune,
+    address: order.address,
+    items: order.items.map((item) => ({
+      name: item.productName,
+      variant: item.productVariantName ?? null,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      total: item.total,
+    })),
+    itemsTotal,
+    deliveryCost: order.deliveryCost,
+    total: order.totalPrice,
+    provider: delivery?.provider ?? null,
+    trackingNumber: delivery?.trackingNumber ?? null,
+    notes: order.notes,
+  };
   const triggeredRuleLabelKeys =
     riskAssessment?.triggeredRules
       .map(getOrderRiskRuleLabelKey)
@@ -216,11 +269,20 @@ export default async function OrderDetailPage({
             </CardHeader>
           ) : null}
           <CardContent className={isConfirmationReview ? undefined : "pt-6"}>
-            <OrderStatusActions
+            {/* R3-a: one lifecycle rail replaces the former dual action cards
+                (legacy free transitions vs canonical governed commands). */}
+            <OrderLifecycleRail
               orderId={order.id}
-              currentStatus={order.status}
-              currentVersion={order.version}
+              orderNumber={order.orderNumber}
+              status={order.status}
+              version={order.version}
               mutationAuthority={mutationAuthority}
+              fulfillmentState={order.fulfillmentState}
+              deliveryState={order.deliveryState}
+              inventoryState={order.inventoryState}
+              codState={order.codState}
+              packedAt={order.packedAt ? order.packedAt.toISOString() : null}
+              lastChangeAt={lastChangeAt ? lastChangeAt.toISOString() : null}
             />
           </CardContent>
         </Card>
@@ -228,16 +290,20 @@ export default async function OrderDetailPage({
           order.status !== "pending" &&
           order.status !== "cancelled" && (
             <Card>
-              <CardContent className="pt-6">
-                <CanonicalFulfillmentActions
-                  orderId={order.id}
-                  currentStatus={order.status}
-                  currentVersion={order.version}
-                  fulfillmentState={order.fulfillmentState}
-                  deliveryState={order.deliveryState}
-                  inventoryState={order.inventoryState}
-                  codState={order.codState}
-                />
+              <CardHeader>
+                <CardTitle className="text-base">
+                  {t("orderLifecycle.aux.heading")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <CanonicalCourierActions orderId={order.id} />
+                {showCodAuthority ? (
+                  <div className="border-t pt-5">
+                    <CanonicalCodActions orderId={order.id} />
+                  </div>
+                ) : null}
+                <CanonicalOrderRecoveryActions orderId={order.id} />
+                <CanonicalCustomerReturnActions orderId={order.id} />
               </CardContent>
             </Card>
           )}
@@ -520,6 +586,16 @@ export default async function OrderDetailPage({
                   {t("orders.detail.customerNotFound")}
                 </p>
               )}
+              <div className="grid grid-cols-2 gap-2">
+                <OrderWhatsAppButton
+                  phone={order.phone ?? customer?.phone ?? null}
+                  customerName={customer?.name ?? null}
+                  orderNumber={order.orderNumber}
+                  total={order.totalPrice}
+                  className="w-full"
+                />
+                <DeliverySlipPrintButton slips={[slipData]} className="w-full" />
+              </div>
             </CardContent>
           </Card>
 
@@ -539,7 +615,7 @@ export default async function OrderDetailPage({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="order-tracking">
             <CardHeader>
               <CardTitle className="text-base">
                 {t("orders.detail.tracking")}

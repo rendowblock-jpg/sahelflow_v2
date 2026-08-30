@@ -3,7 +3,9 @@ import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
 import { getNotificationsRuntimeTranslation } from "@/lib/i18n/notifications-runtime";
+import { getOrderActionsRuntimeTranslation } from "@/lib/i18n/order-actions-runtime";
 import { getOrderFormRuntimeTranslation } from "@/lib/i18n/order-form-runtime";
+import { getOrderLifecycleRuntimeTranslation } from "@/lib/i18n/order-lifecycle-runtime";
 import { getOrdersWorkspaceTranslation } from "@/lib/i18n/orders-workspace";
 import { getPhase5RuntimeTranslation } from "@/lib/i18n/phase5-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
@@ -132,7 +134,9 @@ export function getRuntimeTranslation(
     getCommerceRuntimeTranslation(locale, key) ??
     getConfirmationQueueRuntimeTranslation(locale, key) ??
     getNotificationsRuntimeTranslation(locale, key) ??
+    getOrderActionsRuntimeTranslation(locale, key) ??
     getOrderFormRuntimeTranslation(locale, key) ??
+    getOrderLifecycleRuntimeTranslation(locale, key) ??
     getOrdersWorkspaceTranslation(locale, key) ??
     getPhase5RuntimeTranslation(locale, key) ??
     getWhatsAppRecoveryTranslation(locale, key) ??

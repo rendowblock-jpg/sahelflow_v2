@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Printer, XCircle } from "lucide-react";
 
 import { DataTable, type BulkAction } from "@/components/data-table/data-table";
 import { OrdersEmptyState } from "@/components/shared/empty-states";
@@ -17,6 +17,10 @@ import { mutatePrefix } from "@/lib/swr/mutate";
 import { toast } from "@/lib/toast";
 import type { OrderStatus } from "@/types/domain";
 import type { OrdersWorkbenchResponse } from "@/types/workbench";
+import {
+  loadDeliverySlipsForOrders,
+  useDeliverySlipPrinting,
+} from "./delivery-slip";
 import { OrdersFilterBar } from "./orders-filter-bar";
 import { OrderFormDialog } from "./order-form-dialog";
 import { useOrdersColumns } from "./orders-columns";
@@ -95,11 +99,47 @@ export function OrdersDataTable({
   const fieldAccess = data?.fieldAccess ?? fallback.fieldAccess;
   const canOpenDetail = fieldAccess.contact && fieldAccess.financials;
 
+  // R3-b: bon de livraison printing — one slip per order, details fetched
+  // lazily through the permission-governed order endpoints.
+  const {
+    print: printSlips,
+    isPreparing: isPreparingSlips,
+    printRoot: slipPrintRoot,
+  } = useDeliverySlipPrinting();
+
+  const handlePrintSlips = useCallback(
+    (orderIds: string[]) => {
+      const rows = (data?.orders ?? []).filter((order) =>
+        orderIds.includes(order.id),
+      );
+      if (rows.length === 0) return;
+      void printSlips(async () => {
+        const { slips, failed } = await loadDeliverySlipsForOrders(
+          rows.map((row) => ({
+            id: row.id,
+            customerName: row.customer?.name ?? null,
+          })),
+        );
+        if (failed.length > 0) {
+          toast.warning(
+            t("orders.slip.partialLoad", {
+              ok: String(slips.length),
+              total: String(rows.length),
+            }),
+          );
+        }
+        return slips;
+      });
+    },
+    [data, printSlips, t],
+  );
+
   const columns = useOrdersColumns({
     locale,
     fieldAccess,
     riskData: data?.riskData,
     onDelete: (id) => deleteOrder(id),
+    onPrintSlip: (order) => handlePrintSlips([order.id]),
   });
 
   const bulkMutation = useApiMutation({
@@ -168,6 +208,18 @@ export function OrdersDataTable({
       icon: XCircle,
       disabled: bulkMutation.isSubmitting,
     },
+    // R3-b: print one bon de livraison per selected order (contact-gated —
+    // a slip without the delivery address is not worth paper).
+    ...(fieldAccess.contact
+      ? [
+          {
+            label: t("orders.slip.printSelected"),
+            onClick: (ids: string[]) => handlePrintSlips(ids),
+            icon: Printer,
+            disabled: isPreparingSlips,
+          },
+        ]
+      : []),
   ];
 
   if (error && !data) {
@@ -210,6 +262,7 @@ export function OrdersDataTable({
         getRowId={(row) => row.id}
         emptyState={emptyState}
       />
+      {slipPrintRoot}
     </div>
   );
 }

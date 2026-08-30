@@ -16,9 +16,9 @@
  *                             endpoint accepts them.
  *
  * Idempotency keys mirror the detail-page decision flow
- * (order-status-actions.tsx): a stable key per order+version+decision is kept in
- * localStorage so a retried confirm replays the same governed command instead
- * of double-committing.
+ * (order-action-dispatch.ts, previously order-status-actions.tsx): a stable key
+ * per order+version+decision is kept in localStorage so a retried confirm
+ * replays the same governed command instead of double-committing.
  */
 import type { Locale } from "@/lib/i18n";
 import { translateManualOrderError } from "@/lib/orders/manual-order-error";
@@ -107,7 +107,12 @@ export function releaseDecisionIdempotencyKey(
   window.localStorage.removeItem(decisionStorageKey(orderId, version, decision));
 }
 
-function extractErrorMessage(body: unknown): string | undefined {
+/**
+ * Extract a human-readable message from an untrusted API error body.
+ * Shared with the order-detail lifecycle rail (R3-a) so every order surface
+ * reads server failures the same way.
+ */
+export function extractApiErrorMessage(body: unknown): string | undefined {
   if (!body || typeof body !== "object") return undefined;
   const error = (body as { error?: unknown }).error;
   if (typeof error === "string") return error;
@@ -119,7 +124,12 @@ function extractErrorMessage(body: unknown): string | undefined {
   return typeof message === "string" ? message : undefined;
 }
 
-function extractErrorCode(body: unknown): string | undefined {
+/**
+ * Extract a machine error code from an untrusted API error body ("CONFLICT",
+ * "VALIDATION_ERROR", ...) for coded-error translation. Shared with the
+ * order-detail lifecycle rail (R3-a).
+ */
+export function extractApiErrorCode(body: unknown): string | undefined {
   if (!body || typeof body !== "object") return undefined;
   const error = (body as { error?: unknown }).error;
   if (error && typeof error === "object") {
@@ -156,13 +166,13 @@ async function dispatchGovernedDecision(
     });
     const body: unknown = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const rawMessage = extractErrorMessage(body);
+      const rawMessage = extractApiErrorMessage(body);
       return {
         orderId: target.id,
         ok: false,
         message:
           translateManualOrderError(
-            extractErrorCode(body),
+            extractApiErrorCode(body),
             rawMessage,
             options.locale,
             rawMessage ?? options.fallbackMessage,
@@ -197,7 +207,7 @@ async function dispatchLegacyDecision(
       return {
         orderId: target.id,
         ok: false,
-        message: extractErrorMessage(body) ?? options.fallbackMessage,
+        message: extractApiErrorMessage(body) ?? options.fallbackMessage,
       };
     }
     return { orderId: target.id, ok: true };

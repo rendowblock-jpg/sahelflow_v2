@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Loader2,
   Phone,
+  Printer,
   X,
   XCircle,
 } from "lucide-react";
@@ -21,6 +22,11 @@ import {
 } from "@/components/data-table/data-table";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { OrderWhatsAppButton } from "@/components/orders/order-whatsapp-button";
+import {
+  loadDeliverySlipsForOrders,
+  useDeliverySlipPrinting,
+} from "@/components/orders/delivery-slip";
 import { StateSurface } from "@/components/shared/state-surface";
 import { Button } from "@/components/ui/button";
 import {
@@ -188,6 +194,16 @@ function QueueRowActions({
 
   return (
     <div className="flex items-center justify-end gap-1">
+      {/* R3-b: WhatsApp confirmation deep link — the queue's fastest contact
+          channel next to the governed confirm/reject actions. */}
+      <OrderWhatsAppButton
+        phone={order.phone}
+        customerName={order.customerName}
+        orderNumber={order.orderNumber}
+        total={order.totalPrice}
+        iconOnly
+        testId="queue-row-whatsapp"
+      />
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -265,6 +281,37 @@ export function ConfirmationQueueTable({
   const [rejectOrderId, setRejectOrderId] = useState<string | null>(null);
   const [bulkRejectIds, setBulkRejectIds] = useState<string[] | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+
+  // R3-b: bon de livraison printing for the courier run.
+  const {
+    print: printSlips,
+    isPreparing: isPreparingSlips,
+    printRoot: slipPrintRoot,
+  } = useDeliverySlipPrinting();
+
+  const handlePrintSlips = (orderIds: string[]) => {
+    const targets = orderIds
+      .map((id) => rowsById.get(id))
+      .filter((row): row is ConfirmationQueueItem => row !== undefined);
+    if (targets.length === 0) return;
+    void printSlips(async () => {
+      const { slips, failed } = await loadDeliverySlipsForOrders(
+        targets.map((row) => ({
+          id: row.id,
+          customerName: row.customerName,
+        })),
+      );
+      if (failed.length > 0) {
+        toast.warning(
+          t("orders.slip.partialLoad", {
+            ok: String(slips.length),
+            total: String(targets.length),
+          }),
+        );
+      }
+      return slips;
+    });
+  };
 
   const actionableRows = queue.filter(
     (row) => row.canUpdate && isQueueDecisionActionable(row),
@@ -398,6 +445,13 @@ export function ConfirmationQueueTable({
       variant: "destructive",
       icon: XCircle,
       disabled: bulkBusyWithRow,
+    },
+    // R3-b: print one bon de livraison per selected order for the courier run.
+    {
+      label: t("orders.slip.printSelected"),
+      onClick: (ids) => handlePrintSlips(ids),
+      icon: Printer,
+      disabled: bulkBusyWithRow || isPreparingSlips,
     },
   ];
 
@@ -616,6 +670,8 @@ export function ConfirmationQueueTable({
           />
         </PopoverContent>
       </Popover>
+
+      {slipPrintRoot}
 
       <DataTable
         columns={columns}

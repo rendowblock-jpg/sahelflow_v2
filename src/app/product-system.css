@@ -380,3 +380,11 @@ html[dir="rtl"] [data-slot="chart-legend"] {
     animation-duration: 1.2s !important;
   }
 }
+
+/* ── R3-b delivery-slip printing ─────────────────────────────────────────────
+   The slip portal (.sf-print-root, portalled onto <body> by delivery-slip.tsx)
+   is the ONLY print-visible node while a slip print is active; the print
+   choreography toggles the body's `sf-printing` class around window.print(). */
+@media print {
+  body.sf-printing > *:not(.sf-print-root) { display: none !important; }
+}
