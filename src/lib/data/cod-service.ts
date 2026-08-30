@@ -14,6 +14,7 @@ import type { Prisma } from "@prisma/client";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { recordOrderChangeInTx } from "./order-change-service";
 import { logAudit } from "@/lib/audit";
+import { SahelFlowError } from "@/types/errors";
 
 /**
  * SV-M4: order statuses that legitimately allow COD collection. The courier
@@ -166,12 +167,9 @@ export async function markCodRemitted(
     if (!existing.codCollected) {
       throw new Error("Cannot mark COD as remitted before it is collected");
     }
-    // SV-M4: same status check — must be shipped/delivered to remit. A
-    // returned/cancelled order with codCollected=true (edge case: collected
-    // then returned) can still be remitted (the courier has the cash), so
-    // we DON'T re-check status here — only check codCollected.
     if (existing.codRemitted) {
-      // Already remitted — no-op (idempotent)
+      // Already remitted — no-op (idempotent, also for historical remittances
+      // that predate the 7-b P2 quarantine).
       return {
         id: orderId,
         orderNumber: existing.orderNumber,
@@ -180,6 +178,25 @@ export async function markCodRemitted(
         codRemittedAt: existing.codRemittedAt,
         codRemittanceRef: existing.codRemittanceRef,
       };
+    }
+
+    // B7-6: mirror the bulk path's 7-b P2 quarantine. The previous SV-M4
+    // stance deliberately remitted collected-then-returned cash ("the courier
+    // has the cash"), but the quarantine later isolated that cash out of the
+    // legacy COD ledger — yet this single-order path could still remit what
+    // the bulk path bars. Quarantined cash (returned/refused/cancelled
+    // outcomes) is surfaced as quarantined accounting, never as remittance
+    // money, on every path.
+    if (
+      !COD_COLLECTIBLE_STATUSES.includes(
+        existing.status as (typeof COD_COLLECTIBLE_STATUSES)[number],
+      )
+    ) {
+      throw new SahelFlowError(
+        "This order's collected cash is quarantined (returned/refused/cancelled) and cannot be remitted",
+        "COD_REMITTANCE_QUARANTINED",
+        409,
+      );
     }
 
     const order = await tx.order.update({

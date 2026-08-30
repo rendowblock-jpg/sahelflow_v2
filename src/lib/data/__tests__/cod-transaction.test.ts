@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { PrismaClient } from "@prisma/client";
-import { bulkMarkCodRemitted } from "@/lib/data/cod-service";
+import { bulkMarkCodRemitted, markCodRemitted } from "@/lib/data/cod-service";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -113,5 +113,51 @@ describe("bulk COD transaction", () => {
     expect(orders.every((order) => order.codRemitted === false)).toBe(true);
     expect(orders.every((order) => order.codRemittanceRef === null)).toBe(true);
     expect(await db.orderChange.count({ where: { actionType: "cod_remitted" } })).toBe(0);
+  });
+
+  it("rejects the single-order path when collected cash is quarantined", async () => {
+    // Seed a delivered collected order, then return it (the 7-b P2
+    // quarantine outcome). The cash is isolated out of the ledger.
+    const order = await seedCollectedOrder("ORD-COD-000010", 4400);
+    await db.order.update({
+      where: { id: order.id },
+      data: { status: "returned" },
+    });
+
+    await expect(
+      markCodRemitted({ prisma: db as never }, order.id, "REM-Q1"),
+    ).rejects.toMatchObject({ code: "COD_REMITTANCE_QUARANTINED" });
+
+    expect((await db.order.findUnique({ where: { id: order.id } }))).toMatchObject({
+      codRemitted: false,
+      codRemittanceRef: null,
+    });
+    expect(await db.orderChange.count({ where: { actionType: "cod_remitted" } })).toBe(0);
+  });
+
+  it("keeps historical remittances idempotent even after the order is quarantined", async () => {
+    const order = await seedCollectedOrder("ORD-COD-000011", 4100);
+    const remittedAt = new Date("2026-07-01T10:00:00.000Z");
+    await db.order.update({
+      where: { id: order.id },
+      data: { codRemitted: true, codRemittedAt: remittedAt, codRemittanceRef: "REM-OLD" },
+    });
+    await db.order.update({
+      where: { id: order.id },
+      data: { status: "returned" },
+    });
+
+    const result = await markCodRemitted({ prisma: db as never }, order.id, "REM-NEW");
+    expect(result).toMatchObject({ id: order.id, codRemitted: true, codRemittanceRef: "REM-OLD" });
+    // No new ledger entry for the no-op.
+    expect(await db.orderChange.count({ where: { actionType: "cod_remitted" } })).toBe(0);
+  });
+
+  it("remits collected cash on a delivered order through the single-order path", async () => {
+    const order = await seedCollectedOrder("ORD-COD-000012", 4600);
+
+    const result = await markCodRemitted({ prisma: db as never }, order.id, "REM-OK");
+    expect(result).toMatchObject({ id: order.id, codRemitted: true, codRemittanceRef: "REM-OK" });
+    expect(await db.orderChange.count({ where: { actionType: "cod_remitted" } })).toBe(1);
   });
 });
