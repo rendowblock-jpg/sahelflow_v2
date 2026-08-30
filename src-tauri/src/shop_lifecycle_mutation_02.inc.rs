@@ -143,7 +143,8 @@ impl AcceptedMutation {
                         quarantine_or_remove_sqlite_file_set(&live_database)
                     {
                         return Err(MutationAuthorityError::InvalidRegistry(format!(
-                            "recovery cleanup failed and the recovered database may be stranded at {}: {cleanup_error}; original media failure: {error}"
+                            "recovery cleanup failed and the recovered database may be stranded at {}: {cleanup_error}; original media failure: {error}",
+                            live_database.display()
                         )));
                     }
                     return Err(error);

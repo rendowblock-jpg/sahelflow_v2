@@ -1264,7 +1264,7 @@ mod platform {
             // never touched. ESRCH (group already empty) is success.
             match kill_process_group(self.inner.pid) {
                 Ok(()) => {}
-                Err(error) if child.try_wait()?.is_some() => return Ok(()),
+                Err(_error) if child.try_wait()?.is_some() => return Ok(()),
                 Err(error) => return Err(error),
             }
             drop(child);
