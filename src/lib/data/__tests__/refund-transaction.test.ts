@@ -163,4 +163,91 @@ describe("refund transaction facts", () => {
     expect(await db.customer.findUnique({ where: { id: customer.id } }))
       .toMatchObject({ orderCount: 1, totalSpent: 5000 });
   });
+
+  // ── B7-2: refunds on never-delivered orders must not debit totalSpent ────
+
+  async function seedPreDeliveryOrder(
+    status: "pending" | "confirmed" | "shipped" | "refused",
+  ) {
+    const customer = await seedCustomer(db);
+    const product = await seedProduct(db, { stock: 10 });
+    const order = await db.order.create({
+      data: {
+        orderNumber: `ORD-REFUND-PRE-${status}`,
+        status,
+        customerId: customer.id,
+        totalPrice: 5000,
+        wilaya: "Alger",
+        commune: "Alger",
+        address: "Test",
+        phone: customer.phone,
+        source: "manual",
+        items: {
+          create: [{
+            productId: product.id,
+            productName: product.name,
+            quantity: 2,
+            unitPrice: 2500,
+            total: 5000,
+          }],
+        },
+      },
+    });
+    return { customer, product, order };
+  }
+
+  it.each(["pending", "confirmed", "shipped", "refused"] as const)(
+    "records a %s-order refund as money-only without debiting totalSpent (B7-2)",
+    async (status) => {
+      const { customer, product, order } = await seedPreDeliveryOrder(status);
+
+      const refund = await createRefund({ prisma: db as never }, {
+        orderId: order.id,
+        amount: 2000,
+        method: "courier_deduction",
+        idempotencyKey: `refund-pre-${status}`,
+      });
+      expect(refund.amount).toBe(2000);
+
+      // Money movement recorded...
+      expect(await db.refund.count({ where: { orderId: order.id } })).toBe(1);
+      // ...but stats were never incremented for a non-delivered order, so
+      // they must not be debited either (before the fix: totalSpent -2000).
+      expect(await db.customer.findUnique({ where: { id: customer.id } }))
+        .toMatchObject({ orderCount: 0, totalSpent: 0 });
+      expect((await db.order.findUnique({ where: { id: order.id } }))?.status)
+        .toBe(status);
+      expect((await db.product.findUnique({ where: { id: product.id } }))?.stock)
+        .toBe(10);
+
+      const change = await db.orderChange.findFirst({
+        where: { orderId: order.id, actionType: "refund" },
+        orderBy: { createdAt: "desc" },
+      });
+      const payload = JSON.parse(change!.payload) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        statusChanged: false,
+        stockRestored: false,
+        orderCountAdjusted: false,
+        totalSpentAdjusted: false,
+      });
+    },
+  );
+
+  it("reverses a pre-delivery refund without re-crediting totalSpent (B7-2)", async () => {
+    const { customer, order } = await seedPreDeliveryOrder("confirmed");
+
+    const refund = await createRefund({ prisma: db as never }, {
+      orderId: order.id,
+      amount: 2000,
+      method: "cash",
+      idempotencyKey: "refund-pre-reversal",
+    });
+    await reverseRefund({ prisma: db as never }, refund.id, { reason: "mistake" });
+
+    expect(await db.customer.findUnique({ where: { id: customer.id } }))
+      .toMatchObject({ orderCount: 0, totalSpent: 0 });
+    expect((await db.order.findUnique({ where: { id: order.id } }))?.status)
+      .toBe("confirmed");
+  });
 });

@@ -208,7 +208,18 @@ export async function createRefund(context: ServiceContext, input: CreateRefundI
       );
     }
 
-    let totalSpentAdjusted = true;
+    // B7-2: customer stats (orderCount + totalSpent) are incremented only
+    // when an order reaches "delivered" (order-transitions.ts). A refund on
+    // an order that never delivered — pending/confirmed/shipped/refused —
+    // previously defaulted totalSpentAdjusted=true and debited stats that
+    // were never credited, corrupting customer lifetime value and the
+    // legacy profitability net-revenue subtraction. The refund itself stays
+    // a recorded money movement for every refundable status; only the
+    // revenue-reversal stats follow revenue truth. For "returned" the
+    // transition-refund check below refines this: orders returned through
+    // the legacy Return flow already had their stats fully reversed there.
+    let totalSpentAdjusted =
+      order.status === "delivered" || order.status === "returned";
     if (order.status === "returned") {
       const transitionRefundId = await returnTransitionRefundId(tx, input.orderId);
       if (transitionRefundId) {
