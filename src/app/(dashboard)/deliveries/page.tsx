@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AlertCircle, Banknote, PackageCheck, Truck } from "lucide-react";
 
+import { DeliveriesBulkSyncToolbar } from "@/components/deliveries/deliveries-bulk-sync";
 import { DeliveriesDataTable } from "@/components/deliveries/deliveries-data-table";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
@@ -137,6 +138,10 @@ export default async function DeliveriesPage({
           ))}
         </TabsList>
       </Tabs>
+
+      {/* R3-d: manual bulk tracking sync — client-side batching over the
+          permission-governed list API + per-delivery sync route. */}
+      <DeliveriesBulkSyncToolbar canManage={access.manage} locale={locale} />
 
       <DeliveriesDataTable
         fallback={{

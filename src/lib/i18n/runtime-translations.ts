@@ -2,6 +2,8 @@ import type { Locale } from "@/lib/i18n";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
+import { getDeliveriesRuntimeTranslation } from "@/lib/i18n/deliveries-runtime";
+import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
 import { getNotificationsRuntimeTranslation } from "@/lib/i18n/notifications-runtime";
 import { getOrderActionsRuntimeTranslation } from "@/lib/i18n/order-actions-runtime";
 import { getOrderFormRuntimeTranslation } from "@/lib/i18n/order-form-runtime";
@@ -133,6 +135,8 @@ export function getRuntimeTranslation(
     getAutomationRuntimeTranslation(locale, key) ??
     getCommerceRuntimeTranslation(locale, key) ??
     getConfirmationQueueRuntimeTranslation(locale, key) ??
+    getDeliveriesRuntimeTranslation(locale, key) ??
+    getEntityDetailRuntimeTranslation(locale, key) ??
     getNotificationsRuntimeTranslation(locale, key) ??
     getOrderActionsRuntimeTranslation(locale, key) ??
     getOrderFormRuntimeTranslation(locale, key) ??

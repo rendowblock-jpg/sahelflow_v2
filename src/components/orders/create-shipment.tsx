@@ -29,7 +29,15 @@ import {
 import { useRouter } from "next/navigation";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { useI18n } from "@/hooks/use-i18n";
+import { getBrandIcon } from "@/components/brand/brand-icons";
+import { useDeliveryFeeQuote } from "@/components/deliveries/use-delivery-fee-quote";
 import { deliveryProviderConfig } from "@/lib/shared";
+// Registry-driven provider list (R3-d): DELIVERY_PROVIDERS is the canonical
+// union that keys the server-side adapter REGISTRY. The registry index module
+// is `server-only`, so the client imports the same const from the shared
+// types module — one authority, no hardcoded provider list.
+import { DELIVERY_PROVIDERS } from "@/lib/integrations/delivery/types";
+import { formatDZD } from "@/lib/utils";
 
 interface CreateShipmentProps {
   orderId: string;
@@ -47,14 +55,24 @@ interface CreateShipmentProps {
 
 export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmentProps) {
   const router = useRouter();
-  const { t } = useI18n();
-  const [provider, setProvider] = useState<string>("yalidine");
+  const { t, locale } = useI18n();
+  const [provider, setProvider] = useState<string>(DELIVERY_PROVIDERS[0]);
   const [creating, setCreating] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
 
   const canCreate = orderStatus === "confirmed" && !delivery?.trackingNumber;
+
+  // Per-wilaya fee preview (d4 fix #8): the estimate is fetched only while the
+  // courier select is visible. Provider-capability certification ("fees") is
+  // enforced server-side by /api/delivery/estimate — an uncertified provider
+  // simply yields no preview and never blocks booking.
+  const feeQuote = useDeliveryFeeQuote({
+    orderId,
+    provider,
+    enabled: canCreate,
+  });
 
   async function handleCreate() {
     setCreating(true);
@@ -134,15 +152,39 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="yalidine">Yalidine</SelectItem>
-                      <SelectItem value="maystro">Maystro Delivery</SelectItem>
-                      <SelectItem value="zrexpress">ZR Express</SelectItem>
-                      <SelectItem value="ecotrack">EcoTrack Pro</SelectItem>
+                      {DELIVERY_PROVIDERS.map((registryProvider) => {
+                        const BrandIcon = getBrandIcon(registryProvider);
+                        return (
+                          <SelectItem key={registryProvider} value={registryProvider}>
+                            <span className="inline-flex items-center gap-1.5">
+                              {BrandIcon ? (
+                                <BrandIcon
+                                  className="size-4 text-muted-foreground"
+                                  aria-hidden="true"
+                                />
+                              ) : null}
+                              {deliveryProviderConfig[registryProvider]?.label ??
+                                registryProvider}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     {t("orders.shipment.configureCredentialsHint")}
                   </p>
+                  {feeQuote.fee !== null && feeQuote.wilaya ? (
+                    <p
+                      className="text-xs text-muted-foreground"
+                      data-delivery-fee-estimate
+                    >
+                      {t("deliveries.fee.estimate", {
+                        wilaya: feeQuote.wilaya,
+                        fee: formatDZD(feeQuote.fee, locale),
+                      })}
+                    </p>
+                  ) : null}
                 </div>
                 <Button onClick={handleCreate} disabled={creating}>
                   {creating ? (
