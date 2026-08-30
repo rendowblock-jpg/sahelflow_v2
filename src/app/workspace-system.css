@@ -37,36 +37,8 @@
     0 0 0 1px var(--sf-surface-highlight) inset;
 }
 
-/* Metadata must remain genuinely readable on a 1366×768 installed workbench.
- * Internal.16 used 9–11px labels heavily in the two flagship products, which
- * survived automated reflow but failed human SaaS-density acceptance. */
-[data-inbox-workspace="v2"] :where(
-    [class~="text-[9px]"],
-    [class~="text-[10px]"],
-    [class~="text-[11px]"]
-  ),
-[data-ai-workspace="v2"] :where(
-    [class~="text-[9px]"],
-    [class~="text-[10px]"],
-    [class~="text-[11px]"]
-  ) {
-  font-size: 0.75rem;
-  line-height: 1rem;
-}
-
-html[dir="rtl"] [data-inbox-workspace="v2"] :where(
-    [class~="text-[9px]"],
-    [class~="text-[10px]"],
-    [class~="text-[11px]"]
-  ),
-html[dir="rtl"] [data-ai-workspace="v2"] :where(
-    [class~="text-[9px]"],
-    [class~="text-[10px]"],
-    [class~="text-[11px]"]
-  ) {
-  font-size: 0.8125rem;
-  line-height: 1.2rem;
-}
+/* Metadata sizes are owned by the text-2xs token (11px; 12px under the Arabic
+ * reading floor in arabic-system.css) — no per-surface size overrides here. */
 
 /* ── Inbox ─────────────────────────────────────────────────────────────── */
 [data-inbox-workspace="v2"] > header,

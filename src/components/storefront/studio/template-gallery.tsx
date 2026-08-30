@@ -128,7 +128,7 @@ export function TemplateGallery({
             <span className="mt-2.5 flex items-start gap-2">
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold">{t(nameKey)}</span>
-                <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">
+                <span className="mt-0.5 block text-2xs leading-4 text-muted-foreground">
                   {t(roleKey)}
                 </span>
               </span>

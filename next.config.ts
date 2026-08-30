@@ -53,6 +53,19 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // The standalone server resolves seller dashboard dictionaries at RUNTIME
+  // from `resolve(process.cwd(), "src/lib/i18n/locales/<locale>.json")`
+  // (src/lib/i18n-server.ts). The generated standalone server.js chdir()s to
+  // its own directory at boot, so that path resolves inside the packaged
+  // standalone root — but a dynamic fs read cannot be traced automatically.
+  // Explicitly include the locale JSONs in every server route trace so
+  // `.next/standalone/src/lib/i18n/locales/*.json` always exists at the exact
+  // path the runtime reads. `src-tauri/build-frontend.ts` additionally copies
+  // the same directory as a deterministic belt-and-suspenders layer.
+  // (Route-glob key syntax per the bundled Next 16 docs: `'/*'` = all routes.)
+  outputFileTracingIncludes: {
+    "/*": ["./src/lib/i18n/locales/*.json"],
+  },
   // Type-checking + linting run via sf-verify (NOT during `next build`).
   //
   // Rationale: `next build` spawns a separate worker for `tsc` + eslint.

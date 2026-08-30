@@ -227,12 +227,12 @@ export function InboxV3Header({
               {t("nav.inbox")}
             </h2>
             {queueCounts.unread > 0 ? (
-              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-[11px] font-bold leading-5 tabular-nums text-primary">
+              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-2xs font-bold leading-5 tabular-nums text-primary">
                 {queueCounts.unread > 99 ? "99+" : queueCounts.unread}
               </span>
             ) : null}
           </div>
-          <p className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground">
+          <p className="mt-0.5 truncate text-2xs leading-4 text-muted-foreground">
             {t("inbox.subtitle")}
           </p>
         </div>

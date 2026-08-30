@@ -70,7 +70,7 @@ type ResultRow = UniversalSearchCandidate & {
 };
 
 const GROUP_HEADING_STYLES =
-  "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-1 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.08em]";
+  "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-1 [&_[cmdk-group-heading]]:text-2xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.08em]";
 
 interface SearchResponse {
   query: string;
@@ -441,20 +441,20 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           )}
           {result.sublabel ? (
             hasTechnicalSublabel(result.kind, result.sublabel) ? (
-              <TechnicalValue className="mt-0.5 block truncate text-start text-[11px] leading-4 text-muted-foreground">
+              <TechnicalValue className="mt-0.5 block truncate text-start text-2xs leading-4 text-muted-foreground">
                 {result.sublabel}
               </TechnicalValue>
             ) : (
               <bdi
                 dir="auto"
-                className="mt-0.5 block truncate text-start text-[11px] leading-4 text-muted-foreground [unicode-bidi:plaintext]"
+                className="mt-0.5 block truncate text-start text-2xs leading-4 text-muted-foreground [unicode-bidi:plaintext]"
               >
                 {result.sublabel}
               </bdi>
             )
           ) : null}
         </span>
-        <span className="ms-2 shrink-0 rounded-full border border-border/55 bg-muted/25 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <span className="ms-2 shrink-0 rounded-full border border-border/55 bg-muted/25 px-2 py-0.5 text-2xs font-medium text-muted-foreground">
           {copy(KIND_COPY[result.kind])}
         </span>
         <ArrowUpRight
@@ -548,10 +548,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
                 <div className="flex items-end justify-between gap-4 px-3 pb-1.5 pt-0.5">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    <p className="text-2xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                       {copy("quickAccess")}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground/75">
+                    <p className="mt-0.5 text-2xs text-muted-foreground/75">
                       {copy("quickHint")}
                     </p>
                   </div>
@@ -575,7 +575,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                             <span className="block truncate text-start text-[13px] font-semibold">
                               {item.label}
                             </span>
-                            <span className="mt-0.5 block text-start text-[10px] text-muted-foreground">
+                            <span className="mt-0.5 block text-start text-2xs text-muted-foreground">
                               {copy("open")}
                             </span>
                           </span>
@@ -619,7 +619,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
             {partiallyDegraded ? (
               <div
-                className="mx-1 mb-2 flex items-start gap-2 rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 text-[11px] leading-5 text-warning"
+                className="mx-1 mb-2 flex items-start gap-2 rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 text-2xs leading-5 text-warning"
                 role="status"
               >
                 <AlertTriangle
@@ -719,7 +719,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             ) : null}
           </CommandList>
 
-          <div className="flex min-h-11 items-center gap-2 border-t border-border/60 bg-muted/10 px-3.5 text-[10px] text-muted-foreground">
+          <div className="flex min-h-11 items-center gap-2 border-t border-border/60 bg-muted/10 px-3.5 text-2xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <kbd className="rounded-md border border-border/65 bg-background/80 px-1.5 py-0.5 font-mono shadow-sm">
                 ↑↓

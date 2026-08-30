@@ -607,7 +607,7 @@ export function AssigneeControl({
                     <span className="truncate">
                       {member.displayName ?? copy.owner}
                     </span>
-                    <span className="ms-2 text-[11px] text-muted-foreground">
+                    <span className="ms-2 text-2xs text-muted-foreground">
                       {member.role === "owner"
                         ? copy.owner
                         : member.role === "manager"

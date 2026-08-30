@@ -70,8 +70,8 @@ function SidebarLink({
         collapsed
           ? // Rail mode: compact corner bubble on the icon (logical corner
             // flips with RTL).
-            "absolute end-1 top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-4 tabular-nums text-primary-foreground"
-          : "inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold leading-5 tabular-nums text-primary-foreground"
+            "absolute end-1 top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-2xs font-bold leading-4 tabular-nums text-primary-foreground"
+          : "inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-bold leading-5 tabular-nums text-primary-foreground"
       }
     >
       {unreadCount > 99 ? "99+" : unreadCount}

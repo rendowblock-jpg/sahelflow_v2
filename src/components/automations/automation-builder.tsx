@@ -1115,13 +1115,13 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                       dir="ltr"
                                       disabled={loading}
                                       onClick={() => insertVariable(index, variable)}
-                                      className="rounded-md border border-border/70 bg-muted/40 px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+                                      className="rounded-md border border-border/70 bg-muted/40 px-2 py-1 font-mono text-2xs text-muted-foreground transition-colors hover:text-foreground"
                                     >
                                       {`{{${variable}}}`}
                                     </button>
                                   ))}
                                 </div>
-                                <p className="text-[11px] text-muted-foreground">
+                                <p className="text-2xs text-muted-foreground">
                                   {c("builder.variablesHint")}
                                 </p>
                               </div>
@@ -1172,7 +1172,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                     dir="ltr"
                                     disabled={loading}
                                     onClick={() => insertVariable(index, variable)}
-                                    className="rounded-md border border-border/70 bg-muted/40 px-2 py-1 font-mono text-[11px] text-muted-foreground hover:text-foreground"
+                                    className="rounded-md border border-border/70 bg-muted/40 px-2 py-1 font-mono text-2xs text-muted-foreground hover:text-foreground"
                                   >
                                     {`{{${variable}}}`}
                                   </button>
@@ -1456,7 +1456,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                 ].map(([label, value], index) => (
                   <div key={String(label)} className="relative rounded-xl border border-border/70 bg-background p-3">
                     <div className="mb-1 flex items-center gap-2">
-                      <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                      <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-2xs font-semibold text-primary">
                         {index + 1}
                       </span>
                       <span className="text-xs font-medium text-muted-foreground">

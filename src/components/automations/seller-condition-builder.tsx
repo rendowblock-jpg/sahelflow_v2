@@ -262,7 +262,7 @@ export function SellerConditionBuilder({
                         }
                       />
                       {(operator === "in" || operator === "not_in") && (
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-2xs text-muted-foreground">
                           {c("condition.arrayHint")}
                         </p>
                       )}

@@ -23,55 +23,9 @@ type HistoryResponse = Readonly<{
   error?: string;
 }>;
 
-const COPY = {
-  en: {
-    title: "Release history",
-    description: "Every publish is immutable. Rollback creates a new release from a verified historical version.",
-    current: "Current",
-    rollback: "Rollback",
-    rollingBack: "Rolling back…",
-    confirm: "Publish a new live release from this historical version? Your private Studio draft will stay unchanged.",
-    empty: "No published releases yet.",
-    loading: "Loading release history…",
-    loadFailed: "Could not load release history.",
-    rollbackFailed: "Rollback failed. The current live release was kept.",
-    rolledBack: "Rollback published as a new immutable release.",
-    products: "items",
-  },
-  fr: {
-    title: "Historique des versions",
-    description: "Chaque publication est immuable. Le retour arrière crée une nouvelle version depuis une version historique vérifiée.",
-    current: "Actuelle",
-    rollback: "Restaurer",
-    rollingBack: "Restauration…",
-    confirm: "Publier une nouvelle version active depuis cette version historique ? Votre brouillon Studio privé restera inchangé.",
-    empty: "Aucune version publiée pour le moment.",
-    loading: "Chargement de l’historique…",
-    loadFailed: "Impossible de charger l’historique des versions.",
-    rollbackFailed: "La restauration a échoué. La version active actuelle a été conservée.",
-    rolledBack: "La restauration a été publiée comme une nouvelle version immuable.",
-    products: "articles",
-  },
-  ar: {
-    title: "سجل الإصدارات",
-    description: "كل نشر غير قابل للتعديل. الاسترجاع ينشئ إصدارًا جديدًا من نسخة تاريخية موثّقة.",
-    current: "الحالي",
-    rollback: "استرجاع",
-    rollingBack: "جارٍ الاسترجاع…",
-    confirm: "هل تريد نشر إصدار حي جديد من هذه النسخة التاريخية؟ ستبقى مسودة Studio الخاصة بك دون تغيير.",
-    empty: "لا توجد إصدارات منشورة بعد.",
-    loading: "جارٍ تحميل سجل الإصدارات…",
-    loadFailed: "تعذر تحميل سجل الإصدارات.",
-    rollbackFailed: "فشل الاسترجاع. تم الإبقاء على الإصدار الحي الحالي.",
-    rolledBack: "تم نشر الاسترجاع كإصدار جديد غير قابل للتعديل.",
-    products: "عناصر",
-  },
-} as const;
 
 export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: string }) {
-  const { locale, dir } = useI18n();
-  const language = locale.startsWith("fr") ? "fr" : locale.startsWith("en") ? "en" : "ar";
-  const copy = COPY[language];
+  const { t, locale, dir } = useI18n();
   const [releases, setReleases] = useState<readonly Release[]>([]);
   const [loading, setLoading] = useState(true);
   const [rollingBack, setRollingBack] = useState<string | null>(null);
@@ -89,11 +43,11 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
       setReleases(body.history.releases);
       setMessage(null);
     } catch {
-      setMessage(copy.loadFailed);
+      setMessage(t("storefront.releaseHistory.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [copy.loadFailed, storefrontId]);
+  }, [t, storefrontId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -115,19 +69,19 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
       })
       .catch(() => {
         if (controller.signal.aborted) return;
-        setMessage(copy.loadFailed);
+        setMessage(t("storefront.releaseHistory.loadFailed"));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [copy.loadFailed, storefrontId]);
+  }, [t, storefrontId]);
 
   const active = useMemo(() => releases.find((release) => release.isActive) ?? null, [releases]);
 
   const rollback = useCallback(async (source: Release) => {
     if (!active || source.isActive || rollingBack) return;
-    if (!window.confirm(copy.confirm)) return;
+    if (!window.confirm(t("storefront.releaseHistory.confirm"))) return;
     setRollingBack(source.releaseId);
     setMessage(null);
     try {
@@ -145,23 +99,23 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
       const body = await response.json() as { error?: string };
       if (!response.ok) throw new Error(body.error ?? "rollback_failed");
       await load();
-      setMessage(copy.rolledBack);
+      setMessage(t("storefront.releaseHistory.rolledBack"));
     } catch {
-      setMessage(copy.rollbackFailed);
+      setMessage(t("storefront.releaseHistory.rollbackFailed"));
     } finally {
       setRollingBack(null);
     }
-  }, [active, copy.confirm, copy.rollbackFailed, copy.rolledBack, load, rollingBack, storefrontId]);
+  }, [active, load, rollingBack, storefrontId, t]);
 
   return (
-    <section className="rounded-2xl border bg-background p-4" dir={dir} aria-label={copy.title}>
+    <section className="rounded-2xl border bg-background p-4" dir={dir} aria-label={t("storefront.releaseHistory.title")}>
       <div className="flex flex-wrap items-start gap-3">
         <div className="rounded-xl border bg-muted/40 p-2.5 text-primary">
           <History className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold">{copy.title}</h2>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">{copy.description}</p>
+          <h2 className="text-sm font-semibold">{t("storefront.releaseHistory.title")}</h2>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">{t("storefront.releaseHistory.description")}</p>
         </div>
         <button
           type="button"
@@ -170,7 +124,7 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
           className="rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <History className="h-3.5 w-3.5" aria-hidden="true" />}
-          <span className="sr-only">{copy.title}</span>
+          <span className="sr-only">{t("storefront.releaseHistory.title")}</span>
         </button>
       </div>
 
@@ -178,10 +132,10 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
       {loading ? (
         <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          {copy.loading}
+          {t("storefront.releaseHistory.loading")}
         </div>
       ) : releases.length === 0 ? (
-        <p className="mt-3 text-xs text-muted-foreground">{copy.empty}</p>
+        <p className="mt-3 text-xs text-muted-foreground">{t("storefront.releaseHistory.empty")}</p>
       ) : (
         <div className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
           {releases.slice(0, 12).map((release) => {
@@ -195,20 +149,20 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
                 <div className="flex items-center gap-2">
                   {release.isActive ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> : <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />}
                   <span className="text-xs font-semibold capitalize">{release.templateId}</span>
-                  <span className="text-[10px] uppercase text-muted-foreground">{release.locale}</span>
-                  {release.isActive ? <span className="ms-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{copy.current}</span> : null}
+                  <span className="text-2xs uppercase text-muted-foreground">{release.locale}</span>
+                  {release.isActive ? <span className="ms-auto rounded-full bg-primary/10 px-2 py-0.5 text-2xs font-semibold text-primary">{t("storefront.releaseHistory.current")}</span> : null}
                 </div>
-                <p className="mt-2 text-[11px] text-muted-foreground">{dateLabel}</p>
-                <p className="mt-1 font-mono text-[10px] text-muted-foreground">{release.artifactDigest.slice(0, 12)}… · {release.catalog.length} {copy.products}</p>
+                <p className="mt-2 text-2xs text-muted-foreground">{dateLabel}</p>
+                <p className="mt-1 font-mono text-2xs text-muted-foreground">{release.artifactDigest.slice(0, 12)}… · {release.catalog.length} {t("storefront.releaseHistory.products")}</p>
                 {!release.isActive && active ? (
                   <button
                     type="button"
                     disabled={rollingBack !== null}
                     onClick={() => void rollback(release)}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold hover:bg-background disabled:opacity-50"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-2xs font-semibold hover:bg-background disabled:opacity-50"
                   >
                     {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                    {busy ? copy.rollingBack : copy.rollback}
+                    {busy ? t("storefront.releaseHistory.rollingBack") : t("storefront.releaseHistory.rollback")}
                   </button>
                 ) : null}
               </article>

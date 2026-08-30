@@ -148,7 +148,7 @@ export function OrdersDataTable({
       const succeeded = payload.succeeded?.length ?? 0;
       const failed = payload.failed?.length ?? 0;
       if (failed === 0) {
-        toast.success(t("orders.bulkSuccess", { n: String(succeeded) }));
+        toast.success(t("orders.bulkSuccess", { count: succeeded }));
       } else {
         toast.warning(
           t("orders.bulkPartial", {

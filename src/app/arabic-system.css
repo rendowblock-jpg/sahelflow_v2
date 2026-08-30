@@ -33,11 +33,7 @@ html[dir="rtl"] [data-sahelflow-shell="desktop"] .text-xs {
   line-height: 1.25rem;
 }
 
-html[dir="rtl"] [data-sahelflow-shell="desktop"] :is(
-  [class~="text-[9px]"],
-  [class~="text-[10px]"],
-  [class~="text-[11px]"]
-) {
+html[dir="rtl"] [data-sahelflow-shell="desktop"] .text-2xs {
   font-size: 0.75rem;
   line-height: 1.05rem;
 }

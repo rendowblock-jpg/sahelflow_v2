@@ -33,6 +33,13 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
+    // Pin the browser language so first-visit (no locale cookie) renders are
+    // deterministic under seller-side Accept-Language detection
+    // (i18n-server resolveSellerLocale): the suite was authored against the
+    // French default, and fr-DZ also matches the product's target market.
+    // Without this pin Chromium would advertise en-US and first-run pages
+    // would render English before each spec sets an explicit locale cookie.
+    locale: "fr-DZ",
     extraHTTPHeaders: {
       "x-requested-with": "sahelflow", // CSRF header
     },

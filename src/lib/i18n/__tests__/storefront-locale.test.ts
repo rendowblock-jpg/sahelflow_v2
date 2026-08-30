@@ -227,7 +227,15 @@ describe("Buyer storefront locale resolution (R4-c)", () => {
       const message = t("storefront.view.orderSuccessMessage");
       expect(message).toContain(success[locale]);
       // Count interpolation keeps the same contract as the dashboard t.
-      expect(t("storefront.view.cart", { count: 2 })).toContain("2");
+      // R5-a: Arabic now resolves the buyer cart through real plural
+      // agreement (dual "عنصران" for 2) from plurals-runtime, so the digit
+      // expectation only holds for the Latin locales.
+      const cartLabel = t("storefront.view.cart", { count: 2 });
+      if (locale === "ar") {
+        expect(cartLabel).toBe("سلة التسوق (عنصران)");
+      } else {
+        expect(cartLabel).toContain("2");
+      }
       // Missing keys fall back to the raw key (never an empty string).
       // Arabic stabilizes the Latin key with bidi isolates — strip them
       // before comparing so the fallback contract itself is asserted.

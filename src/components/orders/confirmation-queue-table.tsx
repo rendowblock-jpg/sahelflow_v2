@@ -402,7 +402,7 @@ export function ConfirmationQueueTable({
       });
       if (result.failed.length === 0) {
         toast.success(
-          t("orders.bulkSuccess", { n: String(result.succeeded.length) }),
+          t("orders.bulkSuccess", { count: result.succeeded.length }),
         );
       } else {
         toast.warning(

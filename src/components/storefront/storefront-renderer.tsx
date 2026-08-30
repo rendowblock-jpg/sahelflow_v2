@@ -110,7 +110,7 @@ export function StorefrontRenderer({
             {...props}
             className={sectionClass(
               section,
-              "mb-4 rounded-lg px-3 py-2 text-center text-[11px] font-medium text-white",
+              "mb-4 rounded-lg px-3 py-2 text-center text-2xs font-medium text-white",
             )}
             style={{
               background:
@@ -162,7 +162,7 @@ export function StorefrontRenderer({
             }
           >
             <span
-              className="text-[10px] font-bold uppercase tracking-widest"
+              className="text-2xs font-bold uppercase tracking-widest"
               style={
                 theme.template === "oasis"
                   ? undefined
@@ -210,7 +210,7 @@ export function StorefrontRenderer({
             {...props}
             className={sectionClass(
               section,
-              "grid grid-cols-2 gap-2 py-5 text-[10px] sm:grid-cols-4",
+              "grid grid-cols-2 gap-2 py-5 text-2xs sm:grid-cols-4",
             )}
           >
             {theme.trust.showCodBadge ? (
@@ -368,7 +368,7 @@ export function StorefrontRenderer({
                 {eyebrow ? (
                   <p
                     dir="auto"
-                    className="text-[10px] font-bold uppercase tracking-wider"
+                    className="text-2xs font-bold uppercase tracking-wider"
                     style={{ color: theme.primaryColor }}
                   >
                     {eyebrow}
@@ -542,7 +542,7 @@ export function StorefrontRenderer({
             {...props}
             className={sectionClass(
               section,
-              "mt-6 border-t pt-5 text-center text-[11px] opacity-60",
+              "mt-6 border-t pt-5 text-center text-2xs opacity-60",
             )}
           >
             <span>{t("storefront.studio.footerBrand", { name: draft.name })}</span>
@@ -628,7 +628,7 @@ function ProductGrid({
             <div className="space-y-2 p-3">
               <div className="text-sm font-semibold">{product.name}</div>
               {theme.catalog.showSku && product.sku ? (
-                <div className="text-[10px] opacity-50">{product.sku}</div>
+                <div className="text-2xs opacity-50">{product.sku}</div>
               ) : null}
               {theme.showPrices ? (
                 <div
@@ -639,7 +639,7 @@ function ProductGrid({
                 </div>
               ) : null}
               {theme.showStock ? (
-                <div className="text-[10px] opacity-60">
+                <div className="text-2xs opacity-60">
                   {t("storefront.studio.stockCount", { count: product.stock })}
                 </div>
               ) : null}

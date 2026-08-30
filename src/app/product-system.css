@@ -21,7 +21,11 @@
   --card-foreground: var(--foreground);
   --popover: oklch(0.997 0.004 105);
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.55 0.18 150);
+  /* Primary lightness is AA-contracted (R5-b): 0.55 rendered white-on-primary
+     at 4.20:1 (4.33 gamut-mapped). 0.528 is the smallest drop that clears
+     4.5:1 with margin for both the button pair and primary-as-text links —
+     enforced by theme/__tests__/contrast-contract.test.ts. Hue stays 150. */
+  --primary: oklch(0.528 0.18 150);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.965 0.008 120);
   --secondary-foreground: oklch(0.22 0.012 110);
@@ -123,7 +127,10 @@ html[data-theme-preset="oasis"] {
   --muted: oklch(0.952 0.011 205);
   --border: oklch(0.89 0.017 205);
   --input: oklch(0.87 0.019 205);
-  --primary: oklch(0.53 0.135 205);
+  /* AA-contracted (R5-b): 0.53 held the button pair at 4.56:1 but links on
+     background measured 4.46:1. 0.525 clears 4.5:1 with margin for both —
+     enforced by theme/__tests__/contrast-contract.test.ts. Hue stays 205. */
+  --primary: oklch(0.525 0.135 205);
   --primary-foreground: oklch(0.99 0.004 205);
   --accent: oklch(0.95 0.03 205);
   --accent-foreground: oklch(0.25 0.065 205);

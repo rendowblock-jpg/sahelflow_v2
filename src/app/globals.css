@@ -71,9 +71,9 @@
 }
 
 @theme {
-  /* Typography — sub-xs operational microcopy floor (11px) for the upcoming
-     text-[9/10/11px] codemod. The workspace/arabic-system patch selectors keep
-     enforcing their 12px+ floors until that codemod lands. */
+  /* Typography — sub-xs operational microcopy floor (11px). The R5-f codemod
+     replaced every text-[9/10/11px] utility with this token; arabic-system.css
+     raises it to 12px under the Arabic reading floor. */
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1rem;
 

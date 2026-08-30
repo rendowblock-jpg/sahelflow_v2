@@ -217,7 +217,7 @@ function ConversationRow({
           </bdi>
           <span
             className={cn(
-              "shrink-0 text-[11px] tabular-nums",
+              "shrink-0 text-2xs tabular-nums",
               chat.unread > 0 ? "font-medium text-primary" : "text-muted-foreground",
             )}
           >
@@ -256,14 +256,14 @@ function ConversationRow({
           ) : null}
 
           {chat.unread > 0 ? (
-            <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold leading-5 tabular-nums text-primary-foreground">
+            <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-bold leading-5 tabular-nums text-primary-foreground">
               {chat.unread > 99 ? "99+" : chat.unread}
             </span>
           ) : null}
         </span>
 
         {hasOperationalMeta ? (
-          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden text-[10px] leading-4 text-muted-foreground">
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden text-2xs leading-4 text-muted-foreground">
             {status !== "open" ? (
               <span className="truncate">{statusLabel(status, t)}</span>
             ) : null}
@@ -520,7 +520,7 @@ export function InboxV3Queue({
             className="mt-2 flex flex-wrap items-center gap-1.5"
             data-inbox-select-toolbar="true"
           >
-            <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-foreground">
+            <span className="min-w-0 flex-1 truncate text-2xs font-medium text-foreground">
               {copy("selectedCount", { count: effectiveSelected.length })}
             </span>
             <Button
@@ -567,7 +567,7 @@ export function InboxV3Queue({
               <X className="size-4" aria-hidden="true" />
             </Button>
             {deleteError ? (
-              <p className="w-full text-[11px] text-destructive">{deleteError}</p>
+              <p className="w-full text-2xs text-destructive">{deleteError}</p>
             ) : null}
           </div>
         ) : (
@@ -587,7 +587,7 @@ export function InboxV3Queue({
                   aria-pressed={selected}
                   onClick={() => onQueueFilterChange(filter)}
                   className={cn(
-                    "inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-1.5 text-[10px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    "inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-1.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                     selected
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -647,7 +647,7 @@ export function InboxV3Queue({
           }
           aria-label={copy("status")}
           title={copy("status")}
-          className="mt-2 h-8 w-full rounded-lg border border-border/65 bg-background px-2 text-[11px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="mt-2 h-8 w-full rounded-lg border border-border/65 bg-background px-2 text-2xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {WORKFLOW_FILTERS.map((filter) => (
             <option key={filter} value={filter}>
@@ -698,7 +698,7 @@ export function InboxV3Queue({
             {normalizedQuery &&
             searchState.query === normalizedQuery &&
             searchState.results.length > 0 ? (
-              <div className="border-b border-border/55 bg-muted/15 px-3 py-1.5 text-[11px] text-muted-foreground">
+              <div className="border-b border-border/55 bg-muted/15 px-3 py-1.5 text-2xs text-muted-foreground">
                 {copy("searchResults", { count: rows.length })}
               </div>
             ) : null}

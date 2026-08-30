@@ -92,13 +92,16 @@ describe("Inbox final review invariants", () => {
 
   it("localizes recent order status instead of rendering raw provider values", () => {
     const panel = source("src/components/inbox/inbox-customer-work-panel.tsx");
+    const runtime = source("src/lib/i18n/inbox-order-status-runtime.ts");
 
-    expect(panel).toContain("const ORDER_STATUS_COPY");
+    // R5-d: the inline ORDER_STATUS_COPY dictionary migrated verbatim into
+    // the runtime translation chain (inbox.orderStatus.* keys).
+    expect(panel).not.toContain("const ORDER_STATUS_COPY");
     expect(panel).toContain("function orderStatusLabel(");
-    expect(panel).toContain("orderStatusLabel(order.status, locale)");
-    expect(panel).toContain('refused: "Refused"');
-    expect(panel).toContain('refused: "Refusée"');
-    expect(panel).toContain('refused: "مرفوض"');
+    expect(panel).toContain("orderStatusLabel(order.status, t)");
+    expect(runtime).toContain('"inbox.orderStatus.refused": "Refused"');
+    expect(runtime).toContain('"inbox.orderStatus.refused": "Refusée"');
+    expect(runtime).toContain('"inbox.orderStatus.refused": "مرفوض"');
     expect(panel).not.toContain("{order.status}");
   });
 

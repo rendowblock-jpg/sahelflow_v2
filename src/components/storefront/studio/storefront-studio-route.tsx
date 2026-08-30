@@ -61,7 +61,7 @@ export async function StorefrontStudioRoute({ id }: { id: string }) {
           <p className="truncate text-xs font-semibold text-foreground">
             {config.name}
           </p>
-          <p className="truncate text-[10px] text-muted-foreground">
+          <p className="truncate text-2xs text-muted-foreground">
             {t("metadata.title.storefrontEdit")}
           </p>
         </div>

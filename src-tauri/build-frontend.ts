@@ -137,6 +137,31 @@ if (existsSync(publicDir)) {
   ok("Copied public → standalone");
 }
 
+// Copy src/lib/i18n/locales → .next/standalone/src/lib/i18n/locales.
+//
+// i18n-server.ts resolves the seller dictionaries at runtime via
+// `resolve(process.cwd(), "src/lib/i18n/locales", "<locale>.json")` and the
+// standalone server.js chdir()s to the standalone root at boot, so the
+// packaged artifact must carry the JSONs at that exact relative path.
+// `outputFileTracingIncludes` in next.config.ts normally places them through
+// route tracing; this copy is the deterministic belt-and-suspenders so the
+// installed server can never depend on tracing heuristics alone. A missing
+// source directory is a broken checkout — fail the build closed instead of
+// shipping an artifact whose server components would render dotted keys.
+const localesDir = resolve(ROOT, "src", "lib", "i18n", "locales");
+const requiredLocales = ["ar.json", "en.json", "fr.json"] as const;
+for (const localeFile of requiredLocales) {
+  if (!existsSync(resolve(localesDir, localeFile))) {
+    throw new Error(
+      `Server locale dictionary is missing from the checkout: ${resolve(localesDir, localeFile)}`,
+    );
+  }
+}
+const standaloneLocalesDir = resolve(standaloneDir, "src", "lib", "i18n", "locales");
+mkdirSync(standaloneLocalesDir, { recursive: true });
+cpSync(localesDir, standaloneLocalesDir, { recursive: true });
+ok("Copied src/lib/i18n/locales → standalone");
+
 // The installed desktop intentionally gives the mandatory server a tiny,
 // deterministic environment with no user-profile variables. Next telemetry
 // otherwise tries to discover profile state that is irrelevant to this local

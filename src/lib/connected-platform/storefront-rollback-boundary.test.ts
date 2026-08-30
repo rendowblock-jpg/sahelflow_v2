@@ -41,11 +41,17 @@ describe("storefront immutable rollback surface", () => {
     const control = source(
       "src/components/storefront/studio/storefront-release-history.tsx",
     );
+    // R5-d: the inline COPY dictionary migrated verbatim into the runtime
+    // translation chain (storefront.releaseHistory.* keys in storefront-runtime).
+    const runtime = source("src/lib/i18n/storefront-runtime.ts");
     expect(page).toContain("StorefrontReleaseHistory");
     expect(page).toContain("/studio");
-    expect(control).toContain("Release history");
-    expect(control).toContain("Historique des versions");
-    expect(control).toContain("سجل الإصدارات");
+    expect(runtime).toContain('"storefront.releaseHistory.title": "Release history"');
+    expect(runtime).toContain(
+      '"storefront.releaseHistory.title": "Historique des versions"',
+    );
+    expect(runtime).toContain('"storefront.releaseHistory.title": "سجل الإصدارات"');
+    expect(control).toContain('t("storefront.releaseHistory.title")');
     expect(control).toContain("expectedActiveReleaseId");
     expect(control).toContain("sourceReleaseId");
   });
