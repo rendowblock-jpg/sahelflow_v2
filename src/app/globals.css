@@ -825,6 +825,25 @@ html[dir="rtl"] body {
   line-height: 1.4;  /* headings need slightly less, but still more than Latin 1.2 */
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   Buyer storefront locale boundary (R4-c)
+   ═══════════════════════════════════════════════════════════════════════
+   The public storefront resolves its OWN buyer locale (?lang= >
+   sf-storefront-locale cookie > Accept-Language), which can disagree with
+   the seller cookie that drives <html dir> at SSR time — a nested route
+   cannot change <html> attributes. Arabic typography must therefore not
+   depend on the document-level attribute on that route: the storefront
+   wrapper carries data-storefront-locale and mirrors the Arabic font stack
+   + letter-spacing reset locally, from first paint, until hydration aligns
+   <html dir> with the buyer locale. */
+[data-storefront-locale="ar"] {
+  font-family: var(--font-arabic), "Amiri", serif;
+  line-height: 1.65;  /* Arabic needs more line-height than Latin (1.5) */
+}
+[data-storefront-locale="ar"] :where(:dir(rtl)) {
+  letter-spacing: normal !important;
+}
+
 /* Recharts geometry uses a stable LTR coordinate system. Translated legends
    and tooltips restore the document direction at their own boundary. */
 [data-slot="chart"] {

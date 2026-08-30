@@ -26,6 +26,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useI18n } from "@/hooks/use-i18n";
+import type { Locale } from "@/lib/i18n";
+import {
+  createStorefrontTranslator,
+  type StorefrontTranslator,
+} from "@/lib/i18n/storefront-locale";
 import wilayasData from "../../../data/wilayas.json";
 
 interface Wilaya {
@@ -70,9 +75,54 @@ interface WilayaCommuneSelectProps {
   communeAriaDescribedby?: string;
   /** Size variant — default matches order form */
   size?: "default" | "sm";
+  /**
+   * Explicit locale override for buyer-facing surfaces (public storefront).
+   * When set, wilaya/commune names AND dropdown copy follow this locale and
+   * the dashboard locale transaction is never mounted — its document
+   * lang/dir effect would fight the storefront buyer locale. Dashboard
+   * callers omit it and keep the cookie-driven locale untouched (R4-c).
+   */
+  locale?: Locale;
 }
 
 export function WilayaCommuneSelect({
+  locale: localeOverride,
+  ...rest
+}: WilayaCommuneSelectProps) {
+  // The buyer storefront passes an explicit locale so wilaya/commune names
+  // and placeholder copy follow the BUYER language without mounting the
+  // dashboard locale transaction (whose document lang/dir effect would fight
+  // the storefront direction). The early return happens before any hook, so
+  // the rules of hooks stay intact for both branches.
+  if (localeOverride) {
+    return (
+      <BuyerLocaleWilayaCommuneSelect locale={localeOverride} {...rest} />
+    );
+  }
+  return <DashboardWilayaCommuneSelect {...rest} />;
+}
+
+type WilayaCommuneSelectCoreProps = Omit<WilayaCommuneSelectProps, "locale"> & {
+  t: StorefrontTranslator;
+  locale: Locale;
+};
+
+function DashboardWilayaCommuneSelect(
+  props: Omit<WilayaCommuneSelectProps, "locale">,
+) {
+  const { t, locale } = useI18n();
+  return <WilayaCommuneSelectCore t={t} locale={locale} {...props} />;
+}
+
+function BuyerLocaleWilayaCommuneSelect({
+  locale,
+  ...rest
+}: Omit<WilayaCommuneSelectProps, "locale"> & { locale: Locale }) {
+  const t = useMemo(() => createStorefrontTranslator(locale), [locale]);
+  return <WilayaCommuneSelectCore t={t} locale={locale} {...rest} />;
+}
+
+function WilayaCommuneSelectCore({
   wilaya,
   commune,
   onWilayaChange,
@@ -86,8 +136,9 @@ export function WilayaCommuneSelect({
   wilayaAriaDescribedby,
   communeAriaDescribedby,
   size = "default",
-}: WilayaCommuneSelectProps) {
-  const { t, locale } = useI18n();
+  t,
+  locale,
+}: WilayaCommuneSelectCoreProps) {
   // Stable per-instance ids so the Labels associate with their triggers
   // (the pair can render several times on one page).
   const wilayaTriggerId = useId();

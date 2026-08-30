@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { AlertTriangle, Boxes, DollarSign, Package } from "lucide-react";
 
-import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { ProductsDataTable } from "@/components/products/products-data-table";
+import { CreateParamDialog } from "@/components/shared/create-param-dialog";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
 import { StateSurface } from "@/components/shared/state-surface";
@@ -20,7 +20,7 @@ import { formatDZD } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 type ProductsPageProps = {
-  searchParams: Promise<{ page?: string; q?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; create?: string }>;
 };
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
@@ -77,7 +77,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 importRoute={access.import ? "/api/import/products" : undefined}
               />
             ) : null}
-            {canCreate ? <ProductFormDialog categories={categories} /> : null}
+            {canCreate ? (
+              <CreateParamDialog kind="product" categories={categories} />
+            ) : null}
           </div>
         ) : undefined}
       />

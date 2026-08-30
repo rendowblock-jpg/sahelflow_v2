@@ -10,7 +10,7 @@ import {
   PhoneCall,
 } from "lucide-react";
 
-import { useI18n } from "@/hooks/use-i18n";
+import { useStorefrontI18n } from "@/components/storefront/storefront-locale-provider";
 import type { StorefrontContactInfo } from "@/lib/storefront/presentation-types";
 import type {
   StorefrontBlock,
@@ -61,7 +61,7 @@ export function StorefrontRenderer({
   renderSupport,
   emptyCatalog,
 }: StorefrontRendererProps) {
-  const { t } = useI18n();
+  const { t } = useStorefrontI18n();
   const theme = draft.theme;
   const productMap = new Map(products.map((product) => [product.id, product]));
   const selectedProducts = draft.selectedProductIds
@@ -587,7 +587,7 @@ function ProductGrid({
   draft: StorefrontPreviewProps["draft"];
   renderProductFooter?: (product: StorefrontStudioProduct) => React.ReactNode;
 }) {
-  const { t, locale } = useI18n();
+  const { t, locale } = useStorefrontI18n();
   const theme = draft.theme;
   return (
     <div
@@ -675,7 +675,7 @@ function StorefrontContactBlock({
 }: {
   contact: StorefrontContactInfo;
 }) {
-  const { t } = useI18n();
+  const { t } = useStorefrontI18n();
   return (
     <div
       className="rounded-xl border p-4 text-sm"

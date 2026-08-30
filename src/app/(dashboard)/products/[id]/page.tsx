@@ -12,6 +12,7 @@ import {
 
 import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { RecentRecordTracker } from "@/components/shared/recent-record-tracker";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +89,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   return (
     <div className="app-content page-sections">
+      {/* R4-f: journal this visit for the command palette's Recent section. */}
+      <RecentRecordTracker
+        kind="product"
+        id={product.id}
+        label={product.name}
+        href={`/products/${product.id}`}
+      />
       <Breadcrumbs
         items={[
           { label: t("products.title"), href: "/products" },

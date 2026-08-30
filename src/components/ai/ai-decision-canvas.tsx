@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { AiActionProposalCard } from "@/components/ai/ai-action-proposal-card";
+import { AiMarkdown } from "@/components/ai/markdown/ai-markdown";
 import { AiReviewEvidence } from "@/components/ai/ai-review-evidence";
 import { AiToolResultCard } from "@/components/ai/ai-tool-result-card";
 import type {
@@ -38,7 +39,9 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
+import { useI18n } from "@/hooks/use-i18n";
 import { getAiDecisionCopy } from "@/lib/i18n/ai-decision-workspace";
+import type { AiWorkspaceCopyKey } from "@/lib/i18n/ai-workspace";
 import { cn } from "@/lib/utils";
 
 function errorMessage(
@@ -198,12 +201,22 @@ function ErrorNotice({
   );
 }
 
-function MessageBubble({
+type AiCopyFn = (
+  key: AiWorkspaceCopyKey,
+  params?: Record<string, string | number>,
+) => string;
+
+/**
+ * One chat bubble. Memoized on (message, copy): during streaming, only the
+ * message currently receiving deltas re-renders — completed messages keep
+ * their parsed markdown cached inside <AiMarkdown>.
+ */
+const MessageBubble = memo(function MessageBubble({
   message,
-  workspace,
+  copy,
 }: {
   message: AiMessageView;
-  workspace: ReturnType<typeof useAiWorkspace>;
+  copy: AiCopyFn;
 }) {
   const assistant = message.role === "assistant";
 
@@ -227,16 +240,23 @@ function MessageBubble({
           )}
         >
           {message.content ? (
-            <p dir="auto" className="whitespace-pre-wrap break-words">
-              {message.content}
-            </p>
+            assistant ? (
+              // Assistant output is model-emitted markdown: rendered through
+              // the token-tree renderer — raw HTML can only become text.
+              <AiMarkdown content={message.content} />
+            ) : (
+              // Seller input is echoed verbatim — no markdown interpretation.
+              <p dir="auto" className="whitespace-pre-wrap break-words">
+                {message.content}
+              </p>
+            )
           ) : message.streaming ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              {workspace.copy("working")}
+              {copy("working")}
             </div>
           ) : message.interrupted ? (
-            <p className="text-xs text-muted-foreground">{workspace.copy("stopped")}</p>
+            <p className="text-xs text-muted-foreground">{copy("stopped")}</p>
           ) : null}
         </div>
 
@@ -257,10 +277,10 @@ function MessageBubble({
               />
               <div>
                 <p className="text-sm font-semibold">
-                  {workspace.copy("responseNotPersisted")}
+                  {copy("responseNotPersisted")}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {workspace.copy("responseNotPersistedDescription")}
+                  {copy("responseNotPersistedDescription")}
                 </p>
               </div>
             </div>
@@ -269,7 +289,7 @@ function MessageBubble({
       </div>
     </article>
   );
-}
+});
 
 function StartSurface({
   workspace,
@@ -339,6 +359,7 @@ export function AiDecisionCanvas({
   wideReview,
   mobile,
   startingAnalysis,
+  initialDraft = "",
   onBack,
   onSend,
   onStart,
@@ -347,10 +368,13 @@ export function AiDecisionCanvas({
   wideReview: boolean;
   mobile: boolean;
   startingAnalysis: boolean;
+  /** Composer prefill from a /agents?q= deep link (record-surface "Ask AI"). */
+  initialDraft?: string;
   onBack: () => void;
   onSend: (message: string) => Promise<boolean>;
   onStart: (prompt: string) => Promise<boolean>;
 }) {
+  const { t } = useI18n();
   const {
     activeSession,
     messages,
@@ -359,8 +383,12 @@ export function AiDecisionCanvas({
     sending,
     setup,
     stop,
+    canRegenerate,
+    regenerate,
+    copy,
   } = workspace;
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(initialDraft);
+  const [prevInitialDraft, setPrevInitialDraft] = useState(initialDraft);
   const [reviewOpen, setReviewOpen] = useState(false);
   const scrollRootRef = useRef<HTMLDivElement | null>(null);
   const tailRef = useRef<HTMLDivElement | null>(null);
@@ -385,6 +413,16 @@ export function AiDecisionCanvas({
     followTailRef.current = true;
     tailRef.current?.scrollIntoView({ block: "end" });
   }, [activeSession?.id]);
+
+  // Deep-link prefill (?q=): a fresh prompt seeds the composer only while
+  // it is still empty — the seller's own typing always wins. (Render-phase
+  // adjust-state-on-prop-change recipe; no setState inside an effect.)
+  if (initialDraft !== prevInitialDraft) {
+    setPrevInitialDraft(initialDraft);
+    if (!draft) {
+      setDraft(initialDraft);
+    }
+  }
 
   useEffect(() => {
     if (!sending || !followTailRef.current) return;
@@ -471,8 +509,23 @@ export function AiDecisionCanvas({
             ) : (
               <div className="space-y-5">
                 {messages.map((message) => (
-                  <MessageBubble key={message.id} message={message} workspace={workspace} />
+                  <MessageBubble key={message.id} message={message} copy={copy} />
                 ))}
+
+                {canRegenerate ? (
+                  <div data-ai-regenerate="true" className="ms-11 flex">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs text-muted-foreground"
+                      onClick={() => void regenerate()}
+                    >
+                      <RotateCcw className="me-1.5 size-3.5" aria-hidden="true" />
+                      {t("ai.canvas.regenerate")}
+                    </Button>
+                  </div>
+                ) : null}
 
                 {proposals.length > 0 ? (
                   <section

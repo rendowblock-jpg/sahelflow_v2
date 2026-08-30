@@ -10,10 +10,15 @@ import { AiDecisionWorkspace } from "@/components/ai/ai-decision-workspace";
  * progressive review/evidence. The protected AI engine remains owned by the
  * existing workspace hook and server APIs.
  */
-export function AiWorkspaceShell() {
+export function AiWorkspaceShell({
+  initialPrompt = "",
+}: {
+  /** Composer prefill from a /agents?q= deep link (record-surface "Ask AI"). */
+  initialPrompt?: string;
+}) {
   return (
     <div className="h-full min-h-0 overflow-hidden">
-      <AiDecisionWorkspace />
+      <AiDecisionWorkspace initialPrompt={initialPrompt} />
     </div>
   );
 }

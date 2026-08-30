@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { AlertTriangle, TrendingUp, UserCheck, Users } from "lucide-react";
 
-import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import { CustomersDataTable } from "@/components/customers/customers-data-table";
+import { CreateParamDialog } from "@/components/shared/create-param-dialog";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -18,7 +18,7 @@ import { formatDZD } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 type CustomersPageProps = {
-  searchParams: Promise<{ page?: string; q?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; create?: string }>;
 };
 
 export default async function CustomersPage({ searchParams }: CustomersPageProps) {
@@ -71,7 +71,7 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
                 importRoute={access.import ? "/api/import/customers" : undefined}
               />
             ) : null}
-            {canCreate ? <CustomerFormDialog /> : null}
+            {canCreate ? <CreateParamDialog kind="customer" /> : null}
           </div>
         ) : undefined}
       />

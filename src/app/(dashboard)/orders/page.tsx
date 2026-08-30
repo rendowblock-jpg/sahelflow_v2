@@ -9,8 +9,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { OrderFormDialog } from "@/components/orders/order-form-dialog";
 import { OrdersDataTable } from "@/components/orders/orders-data-table";
+import { CreateParamDialog } from "@/components/shared/create-param-dialog";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -102,6 +102,8 @@ export default async function OrdersPage({
     wilaya?: string;
     from?: string;
     to?: string;
+    /** R4-f create deep-link (`/orders?create=1` opens the order form). */
+    create?: string;
   }>;
 }) {
   const actorContext = await requireTrustedAction("orders.read");
@@ -313,7 +315,11 @@ export default async function OrdersPage({
                 />
               ) : null}
               {canCreateOrder ? (
-                <OrderFormDialog customers={customers} products={products} />
+                <CreateParamDialog
+                  kind="order"
+                  customers={customers}
+                  products={products}
+                />
               ) : null}
             </div>
           ) : null

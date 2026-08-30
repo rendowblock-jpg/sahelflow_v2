@@ -41,7 +41,22 @@ interface ExtractionData {
 }
 
 export function ExtractionAnalytics() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  // Locale-owned number formatting (Intl, never .toFixed — the locale decimal
+  // separator and Eastern Arabic digits must follow the active language).
+  const localeTag =
+    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+  const percentFormatter = new Intl.NumberFormat(localeTag, {
+    style: "percent",
+    maximumFractionDigits: 1,
+  });
+  const percentCompactFormatter = new Intl.NumberFormat(localeTag, {
+    style: "percent",
+    maximumFractionDigits: 0,
+  });
+  const integerFormatter = new Intl.NumberFormat(localeTag, {
+    maximumFractionDigits: 0,
+  });
   const [data, setData] = useState<ExtractionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,17 +131,17 @@ export function ExtractionAnalytics() {
       <div className="card-grid-3">
         <StatCard
           label={t("analytics.extraction.total")}
-          value={data.total}
+          value={integerFormatter.format(data.total)}
           icon={<Zap />}
         />
         <StatCard
           label={t("analytics.extraction.completionRate")}
-          value={`${(data.completionRate * 100).toFixed(1)}%`}
+          value={percentFormatter.format(data.completionRate)}
           icon={<CheckCircle2 />}
         />
         <StatCard
           label={t("analytics.extraction.methods")}
-          value={data.byMethod.length}
+          value={integerFormatter.format(data.byMethod.length)}
           icon={<TrendingUp />}
         />
       </div>
@@ -151,10 +166,10 @@ export function ExtractionAnalytics() {
                   <TableCell className="font-medium">{method.method}</TableCell>
                   <TableCell className="text-end tabular-nums">{method.count}</TableCell>
                   <TableCell className="text-end tabular-nums">
-                    {(method.avgConfidence * 100).toFixed(0)}%
+                    {percentCompactFormatter.format(method.avgConfidence)}
                   </TableCell>
                   <TableCell className="text-end tabular-nums">
-                    {Math.round(method.avgLatencyMs)}
+                    {integerFormatter.format(method.avgLatencyMs)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -183,10 +198,10 @@ export function ExtractionAnalytics() {
                   <TableCell className="font-mono text-muted-foreground">{day.date}</TableCell>
                   <TableCell className="text-end tabular-nums">{day.count}</TableCell>
                   <TableCell className="text-end tabular-nums">
-                    {(day.avgConfidence * 100).toFixed(0)}%
+                    {percentCompactFormatter.format(day.avgConfidence)}
                   </TableCell>
                   <TableCell className="text-end tabular-nums">
-                    {(day.completeRate * 100).toFixed(0)}%
+                    {percentCompactFormatter.format(day.completeRate)}
                   </TableCell>
                 </TableRow>
               ))}

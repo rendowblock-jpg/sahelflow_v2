@@ -133,6 +133,8 @@ export function useAiWorkspace() {
   const [loadingConversation, setLoadingConversation] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [sending, setSending] = useState(false);
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [approvingProposalId, setApprovingProposalId] = useState<string | null>(null);
   const [error, setError] = useState<AiWorkspaceError | null>(null);
 
@@ -586,6 +588,96 @@ export function useAiWorkspace() {
     [activeSessionId, loadSessions, locale, sending, setup?.ready],
   );
 
+  const lastUserPrompt = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const message = messages[i];
+      if (message?.role === "user") return message.content;
+    }
+    return null;
+  }, [messages]);
+
+  const lastMessage = messages[messages.length - 1];
+  const canRegenerate =
+    lastMessage?.role === "assistant" &&
+    lastUserPrompt !== null &&
+    !sending &&
+    !loadingConversation &&
+    setup?.ready === true &&
+    activeSessionId !== null;
+
+  /**
+   * Re-send the last seller prompt as a new exchange: a fresh user turn plus
+   * a new streamed assistant reply append to the conversation (durable
+   * history keeps the earlier attempt intact).
+   */
+  const regenerate = useCallback(async () => {
+    if (!canRegenerate || !lastUserPrompt) return false;
+    return send(lastUserPrompt);
+  }, [canRegenerate, lastUserPrompt, send]);
+
+  const renameSession = useCallback(async (sessionId: string, title: string) => {
+    const trimmed = title.trim().slice(0, 160);
+    if (!trimmed) return false;
+    setRenamingSessionId(sessionId);
+    try {
+      const response = await fetch(
+        `/api/ai/sessions/${encodeURIComponent(sessionId)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: trimmed }),
+        },
+      );
+      if (!response.ok) throw new Error(`rename:${response.status}`);
+      const data = (await response.json()) as {
+        session?: { id: string; title: string | null };
+      };
+      const nextTitle = data.session?.title ?? trimmed;
+      setSessions((current) =>
+        current.map((session) =>
+          session.id === sessionId ? { ...session, title: nextTitle } : session,
+        ),
+      );
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setRenamingSessionId(null);
+    }
+  }, []);
+
+  const deleteSession = useCallback(
+    async (sessionId: string) => {
+      setDeletingSessionId(sessionId);
+      try {
+        const response = await fetch(
+          `/api/ai/sessions/${encodeURIComponent(sessionId)}`,
+          { method: "DELETE" },
+        );
+        if (!response.ok) throw new Error(`delete:${response.status}`);
+        setSessions((current) =>
+          current.filter((session) => session.id !== sessionId),
+        );
+        if (activeSessionId === sessionId) {
+          streamAbortRef.current?.abort();
+          setSending(false);
+          setMessages([]);
+          setProposals([]);
+          setActionHistoryError(false);
+          // Re-run the list authority so the next remaining session (if any)
+          // becomes active and its conversation loads.
+          await loadSessions({ preserveError: true });
+        }
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setDeletingSessionId(null);
+      }
+    },
+    [activeSessionId, loadSessions],
+  );
+
   const approveProposal = useCallback(
     async (handle: AiActionProposalHandle, reason?: string) => {
       if (approvingProposalId) return false;
@@ -662,11 +754,17 @@ export function useAiWorkspace() {
     creatingSession,
     sending,
     approvingProposalId,
+    renamingSessionId,
+    deletingSessionId,
     error,
+    canRegenerate,
     selectSession,
     createSession,
     send,
     stop,
+    regenerate,
+    renameSession,
+    deleteSession,
     approveProposal,
     retry,
     refreshSetup: loadSetup,

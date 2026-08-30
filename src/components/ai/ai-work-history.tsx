@@ -1,11 +1,23 @@
 "use client";
 
-import { Bot, Loader2, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  Bot,
+  Check,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
+import { useI18n } from "@/hooks/use-i18n";
 import {
   getAiDecisionCopy,
   type AiDecisionLocale,
@@ -55,6 +67,7 @@ export function AiWorkHistory({
   onOpenSession: (sessionId: string) => void;
   onNewAnalysis: () => void;
 }) {
+  const { t } = useI18n();
   const {
     sessions,
     activeSessionId,
@@ -63,12 +76,77 @@ export function AiWorkHistory({
     sending,
     proposals,
     locale,
+    renamingSessionId,
+    deletingSessionId,
+    renameSession,
+    deleteSession,
   } = workspace;
+  const [renaming, setRenaming] = useState<{
+    id: string;
+    value: string;
+  } | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmResetTimer, setConfirmResetTimer] = useState<number | null>(
+    null,
+  );
+
+  // Disarm a pending two-step delete when its row unmounts or re-arms.
+  useEffect(() => {
+    if (confirmResetTimer === null) return;
+    return () => window.clearTimeout(confirmResetTimer);
+  }, [confirmResetTimer]);
+
+  const clearConfirmTimer = () => {
+    if (confirmResetTimer !== null) {
+      window.clearTimeout(confirmResetTimer);
+    }
+    setConfirmResetTimer(null);
+  };
+
   const reviewCount = proposals.filter((entry) => {
     const state = entry.proposal.executionState ?? entry.proposal.status;
     return ["pending", "approved", "failed", "conflict"].includes(state);
   }).length;
   const groups = ["today", "yesterday", "earlier"] as const;
+  const rowActionsLocked =
+    navigationLocked ||
+    sending ||
+    renamingSessionId !== null ||
+    deletingSessionId !== null;
+
+  const saveRename = async () => {
+    if (!renaming) return;
+    const { id, value } = renaming;
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const ok = await renameSession(id, trimmed);
+    if (ok) {
+      setRenaming(null);
+    } else {
+      toast.error(t("ai.history.renameFailed"));
+    }
+  };
+
+  const armDelete = (sessionId: string) => {
+    clearConfirmTimer();
+    setConfirmDeleteId(sessionId);
+    // Two-step confirm: the armed state disarms itself after a short pause.
+    setConfirmResetTimer(
+      window.setTimeout(() => {
+        setConfirmDeleteId(null);
+        setConfirmResetTimer(null);
+      }, 4000),
+    );
+  };
+
+  const performDelete = async (sessionId: string) => {
+    clearConfirmTimer();
+    setConfirmDeleteId(null);
+    const ok = await deleteSession(sessionId);
+    if (!ok) {
+      toast.error(t("ai.history.deleteFailed"));
+    }
+  };
 
   return (
     <aside
@@ -127,47 +205,181 @@ export function AiWorkHistory({
                     {groupedSessions.map((session) => {
                       const active = session.id === activeSessionId;
                       const preview = session.messages?.[0]?.content?.trim();
+                      const renamingThis = renaming?.id === session.id;
+                      const deleteArmed = confirmDeleteId === session.id;
+                      const busy =
+                        renamingSessionId === session.id ||
+                        deletingSessionId === session.id;
+                      if (renamingThis && renaming) {
+                        return (
+                          <div
+                            key={session.id}
+                            data-ai-session-rename="true"
+                            className="flex items-center gap-1 rounded-lg border border-primary/15 bg-primary/[0.04] px-1.5 py-1"
+                          >
+                            <Input
+                              value={renaming.value}
+                              autoFocus
+                              dir="auto"
+                              maxLength={160}
+                              aria-label={t("ai.history.rename")}
+                              onChange={(event) =>
+                                setRenaming({
+                                  id: session.id,
+                                  value: event.target.value,
+                                })
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  void saveRename();
+                                }
+                                if (event.key === "Escape") {
+                                  event.preventDefault();
+                                  setRenaming(null);
+                                }
+                              }}
+                              className="h-8 border-0 bg-transparent px-1.5 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-7 shrink-0"
+                              aria-label={t("ai.history.renameSave")}
+                              disabled={
+                                !renaming.value.trim() ||
+                                renamingSessionId === session.id
+                              }
+                              onClick={() => void saveRename()}
+                            >
+                              {renamingSessionId === session.id ? (
+                                <Loader2
+                                  className="size-3.5 animate-spin"
+                                  aria-hidden="true"
+                                />
+                              ) : (
+                                <Check className="size-3.5" aria-hidden="true" />
+                              )}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-7 shrink-0"
+                              aria-label={t("ai.history.renameCancel")}
+                              disabled={renamingSessionId === session.id}
+                              onClick={() => setRenaming(null)}
+                            >
+                              <X className="size-3.5" aria-hidden="true" />
+                            </Button>
+                          </div>
+                        );
+                      }
                       return (
-                        <button
+                        <div
                           key={session.id}
-                          type="button"
-                          data-ai-session={session.id}
-                          aria-current={active ? "page" : undefined}
-                          disabled={navigationLocked}
-                          onClick={() => onOpenSession(session.id)}
-                          className={cn(
-                            "w-full rounded-lg border border-transparent px-3 py-2.5 text-start transition-colors",
-                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                            "disabled:cursor-not-allowed disabled:opacity-50",
-                            active
-                              ? "border-primary/15 bg-primary/[0.055]"
-                              : "hover:bg-muted/55",
-                          )}
+                          className="group relative rounded-lg"
                         >
-                          <span className="flex items-start justify-between gap-2">
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-semibold text-foreground">
-                                {session.title || workspace.copy("newSessionTitle")}
-                              </span>
-                              {preview ? (
-                                <span
-                                  dir="auto"
-                                  className="mt-1 block line-clamp-2 text-xs leading-5 text-muted-foreground"
-                                >
-                                  {preview}
+                          <button
+                            type="button"
+                            data-ai-session={session.id}
+                            aria-current={active ? "page" : undefined}
+                            disabled={navigationLocked}
+                            onClick={() => onOpenSession(session.id)}
+                            className={cn(
+                              "w-full rounded-lg border border-transparent px-3 py-2.5 text-start transition-colors",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                              "disabled:cursor-not-allowed disabled:opacity-50",
+                              active
+                                ? "border-primary/15 bg-primary/[0.055]"
+                                : "hover:bg-muted/55",
+                            )}
+                          >
+                            <span className="flex items-start justify-between gap-2">
+                              <span className="min-w-0 flex-1 pe-12">
+                                <span className="block truncate text-sm font-semibold text-foreground">
+                                  {session.title || workspace.copy("newSessionTitle")}
                                 </span>
+                                {preview ? (
+                                  <span
+                                    dir="auto"
+                                    className="mt-1 block line-clamp-2 text-xs leading-5 text-muted-foreground"
+                                  >
+                                    {preview}
+                                  </span>
+                                ) : null}
+                              </span>
+                              {active && reviewCount > 0 ? (
+                                <Badge variant="outline" className="shrink-0 text-xs">
+                                  {reviewCount}
+                                </Badge>
                               ) : null}
                             </span>
-                            {active && reviewCount > 0 ? (
-                              <Badge variant="outline" className="shrink-0 text-xs">
-                                {reviewCount}
-                              </Badge>
-                            ) : null}
-                          </span>
-                          <span className="mt-2 block text-xs tabular-nums text-muted-foreground">
-                            {sessionTime(session.updatedAt, locale)}
-                          </span>
-                        </button>
+                            <span className="mt-2 block text-xs tabular-nums text-muted-foreground">
+                              {sessionTime(session.updatedAt, locale)}
+                            </span>
+                          </button>
+
+                          {!busy ? (
+                            <div
+                              className={cn(
+                                "absolute end-1 top-1.5 flex items-center gap-0.5 rounded-md bg-background/85 p-0.5 backdrop-blur-sm transition-opacity",
+                                "opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100",
+                                active && "md:opacity-100",
+                              )}
+                            >
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="size-6"
+                                aria-label={t("ai.history.rename")}
+                                title={t("ai.history.rename")}
+                                disabled={rowActionsLocked}
+                                onClick={() =>
+                                  setRenaming({
+                                    id: session.id,
+                                    value: session.title ?? "",
+                                  })
+                                }
+                              >
+                                <Pencil className="size-3" aria-hidden="true" />
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="size-6"
+                                data-ai-session-delete={session.id}
+                                aria-label={
+                                  deleteArmed
+                                    ? t("ai.history.deleteConfirm")
+                                    : t("ai.history.delete")
+                                }
+                                title={
+                                  deleteArmed
+                                    ? t("ai.history.deleteConfirm")
+                                    : t("ai.history.delete")
+                                }
+                                disabled={rowActionsLocked}
+                                onClick={() =>
+                                  deleteArmed
+                                    ? void performDelete(session.id)
+                                    : armDelete(session.id)
+                                }
+                              >
+                                <Trash2
+                                  className={cn(
+                                    "size-3",
+                                    deleteArmed && "text-destructive",
+                                  )}
+                                  aria-hidden="true"
+                                />
+                              </Button>
+                            </div>
+                          ) : null}
+                        </div>
                       );
                     })}
                   </div>

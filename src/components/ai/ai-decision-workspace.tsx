@@ -16,7 +16,12 @@ type PendingPrompt = {
   sawConversationLoad: boolean;
 };
 
-export function AiDecisionWorkspace() {
+export function AiDecisionWorkspace({
+  initialPrompt = "",
+}: {
+  /** Composer prefill from a /agents?q= deep link (record-surface "Ask AI"). */
+  initialPrompt?: string;
+}) {
   const workspace = useAiWorkspace();
   const mobile = useMobile();
   const wideReview = useMediaQuery("(min-width: 1500px)");
@@ -128,6 +133,7 @@ export function AiDecisionWorkspace() {
             wideReview={false}
             mobile
             startingAnalysis={startingAnalysis}
+            initialDraft={initialPrompt}
             onBack={() => setMobilePane("history")}
             onSend={sendPrompt}
             onStart={startPrompt}
@@ -159,6 +165,7 @@ export function AiDecisionWorkspace() {
         wideReview={wideReview}
         mobile={false}
         startingAnalysis={startingAnalysis}
+        initialDraft={initialPrompt}
         onBack={() => undefined}
         onSend={sendPrompt}
         onStart={startPrompt}

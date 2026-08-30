@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import {
   assertTrustedAction,
   requireTrustedAction,
+  trustedActionAllowed,
 } from "@/lib/identity/authorization";
 import Link from "next/link";
 import {
@@ -33,6 +34,7 @@ import {
   RiskActionBadgeServer,
   RiskLevelBadgeServer,
 } from "@/components/risk/risk-badges";
+import { RecentRecordTracker } from "@/components/shared/recent-record-tracker";
 import { getI18n } from "@/lib/i18n-server";
 import {
   ArrowRight,
@@ -46,7 +48,9 @@ import {
   ShieldAlert,
   Clock,
   DollarSign,
+  Sparkles,
 } from "lucide-react";
+import { askAiHref } from "@/lib/ai/ask-ai-link";
 import { getOrderTimeline } from "@/lib/data/order-change-service";
 import {
   getRefundsForOrder,
@@ -107,6 +111,9 @@ export default async function OrderDetailPage({
       ? "confirmation_blocked"
       : "legacy_compatibility";
   const isConfirmationReview = order.status === "pending";
+  // R4-e: contextual "Ask AI" entry — permission-gated so sellers without
+  // ai.use never see a button that only bounces off /agents.
+  const canAskAi = trustedActionAllowed(actorContext, "ai.use");
 
   // Governed delivered orders surface the COD collection/remit controls when
   // cash is actually expected (parity with the former fulfillment card).
@@ -214,6 +221,13 @@ export default async function OrderDetailPage({
 
   return (
     <div className="app-content page-sections">
+      {/* R4-f: journal this visit for the command palette's Recent section. */}
+      <RecentRecordTracker
+        kind="order"
+        id={order.id}
+        label={order.orderNumber}
+        href={`/orders/${order.id}`}
+      />
       <div className="space-y-4">
         <Button variant="ghost" size="sm" asChild className="-ms-2">
           <Link href="/orders">
@@ -242,9 +256,29 @@ export default async function OrderDetailPage({
               {SOURCE_LABELS[order.source] ?? order.source}
             </p>
           </div>
-          {!canonicalManual && (
-            <OrderDeleteButton orderId={order.id} orderStatus={order.status} />
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {canAskAi ? (
+              /* R4-e deep link: order NUMBER only in the URL — the assistant
+                 resolves the full record through its permission-checked
+                 tools; no customer PII rides in the address bar. */
+              <Button variant="outline" size="sm" asChild>
+                <Link
+                  href={askAiHref(
+                    t("ai.ask.orderPrompt", {
+                      orderNumber: order.orderNumber,
+                    }),
+                  )}
+                  data-testid="order-header-ask-ai"
+                >
+                  <Sparkles className="me-1.5 size-4" aria-hidden="true" />
+                  {t("ai.ask.button")}
+                </Link>
+              </Button>
+            ) : null}
+            {!canonicalManual && (
+              <OrderDeleteButton orderId={order.id} orderStatus={order.status} />
+            )}
+          </div>
         </div>
 
         <Card className={isConfirmationReview ? "border-primary/30" : undefined}>

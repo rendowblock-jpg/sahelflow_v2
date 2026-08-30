@@ -9,6 +9,11 @@ const COPY = {
     bestMatches: "Best matches",
     recordResults: "Shop records",
     pageResults: "Pages & workspaces",
+    actionsSection: "Actions",
+    actionCreateOrder: "Create order",
+    actionCreateCustomer: "Create customer",
+    actionCreateProduct: "Create product",
+    recentSection: "Recent",
     startTitle: "Find anything in your shop",
     startHint:
       "Search by order number, customer, phone, product, tracking number, conversation, or page.",
@@ -32,6 +37,7 @@ const COPY = {
     typeDelivery: "Delivery",
     typeReturn: "Return",
     typePage: "Page",
+    typeAction: "Action",
   },
   fr: {
     title: "Rechercher dans SahelFlow",
@@ -41,6 +47,11 @@ const COPY = {
     bestMatches: "Meilleurs résultats",
     recordResults: "Données de la boutique",
     pageResults: "Pages et espaces de travail",
+    actionsSection: "Actions",
+    actionCreateOrder: "Créer une commande",
+    actionCreateCustomer: "Créer un client",
+    actionCreateProduct: "Créer un produit",
+    recentSection: "Récents",
     startTitle: "Retrouvez tout dans votre boutique",
     startHint:
       "Recherchez une commande, un client, un téléphone, un produit, un suivi, une conversation ou une page.",
@@ -65,6 +76,7 @@ const COPY = {
     typeDelivery: "Livraison",
     typeReturn: "Retour",
     typePage: "Page",
+    typeAction: "Action",
   },
   ar: {
     title: "البحث في SahelFlow",
@@ -74,6 +86,11 @@ const COPY = {
     bestMatches: "أفضل النتائج",
     recordResults: "بيانات المتجر",
     pageResults: "الصفحات ومساحات العمل",
+    actionsSection: "إجراءات",
+    actionCreateOrder: "إنشاء طلب",
+    actionCreateCustomer: "إنشاء عميل",
+    actionCreateProduct: "إنشاء منتج",
+    recentSection: "الأخيرة",
     startTitle: "اعثر على أي شيء في متجرك",
     startHint:
       "ابحث برقم الطلب أو اسم العميل أو الهاتف أو المنتج أو رقم التتبع أو المحادثة أو الصفحة.",
@@ -96,6 +113,7 @@ const COPY = {
     typeDelivery: "توصيل",
     typeReturn: "مرتجع",
     typePage: "صفحة",
+    typeAction: "إجراء",
   },
 } as const satisfies Record<Locale, Record<string, string>>;
 

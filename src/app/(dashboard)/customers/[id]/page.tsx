@@ -7,17 +7,21 @@ import {
   MapPin,
   Phone,
   ShoppingBag,
+  Sparkles,
   TrendingUp,
   Truck,
 } from "lucide-react";
+import { askAiHref } from "@/lib/ai/ask-ai-link";
 
 import { BlacklistToggle } from "@/components/customers/blacklist-toggle";
 import { CustomerRiskCard } from "@/components/customers/customer-risk-card";
 import { OrderWhatsAppButton } from "@/components/orders/order-whatsapp-button";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { RecentRecordTracker } from "@/components/shared/recent-record-tracker";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -102,9 +106,19 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         .map((order) => ({ value: order.totalPrice ?? 0 }))
     : [];
   const customerLabel = customer.name ?? t("inbox.restrictedContact");
+  // R4-e: contextual "Ask AI" entry — customer NAME only in the URL (no
+  // phone/address); the assistant resolves the record via its own tools.
+  const canAskAi = trustedActionAllowed(actorContext, "ai.use");
 
   return (
     <div className="app-content page-sections">
+      {/* R4-f: journal this visit for the command palette's Recent section. */}
+      <RecentRecordTracker
+        kind="customer"
+        id={customer.id}
+        label={customerLabel}
+        href={`/customers/${customer.id}`}
+      />
       <Breadcrumbs
         items={[
           { label: t("customers.title"), href: "/customers" },
@@ -142,6 +156,19 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {canAskAi && customer.name ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link
+                  href={askAiHref(
+                    t("ai.ask.customerPrompt", { name: customer.name }),
+                  )}
+                  data-testid="customer-header-ask-ai"
+                >
+                  <Sparkles className="me-1.5 size-4" aria-hidden="true" />
+                  {t("ai.ask.button")}
+                </Link>
+              </Button>
+            ) : null}
             {/* R3-b: generic WhatsApp deep link (no order context). */}
             <OrderWhatsAppButton
               phone={customer.phone}

@@ -60,15 +60,29 @@ import {
 interface OrderFormDialogProps {
   customers: OrderFormCustomer[];
   products: OrderFormProduct[];
+  /** R4-f: controlled open state (create deep-link `?create=1` host). */
+  open?: boolean;
+  /** Called when the dialog requests to open/close (controlled mode). */
+  onOpenChange?: (open: boolean) => void;
 }
 
 const DRAFT_KEY = "sf-order-create-draft";
 const COMMAND_KEY = "sf-order-create-command";
 
-export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
+export function OrderFormDialog({
+  customers,
+  products,
+  open: openProp,
+  onOpenChange,
+}: OrderFormDialogProps) {
   const router = useRouter();
   const { t, locale } = useI18n();
-  const [open, setOpen] = useState(false);
+  // Controlled mode mirrors CustomerFormDialog/ProductFormDialog so the
+  // create deep-link host can drive the dialog from the ?create=1 param.
+  const isControlled = openProp !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = isControlled ? (onOpenChange ?? (() => {})) : setInternalOpen;
   const [loading, setLoading] = useState(false);
   // W3-4 (task 2-g): HIGH-risk confirmation state. When non-null, an
   // AlertDialog renders with the assessment breakdown + Proceed/Cancel.

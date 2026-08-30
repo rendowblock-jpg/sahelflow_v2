@@ -17,12 +17,17 @@ import {
 } from "lucide-react";
 
 import { StorefrontRenderer } from "@/components/storefront/storefront-renderer";
+import { StorefrontLanguageSwitcher } from "@/components/storefront/storefront-language-switcher";
+import {
+  StorefrontLocaleProvider,
+  useStorefrontI18n,
+} from "@/components/storefront/storefront-locale-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
-import { useI18n } from "@/hooks/use-i18n";
+import type { Locale } from "@/lib/i18n";
 import type { StorefrontConfig } from "@/lib/storefront/service";
 import { createStorefrontStudioDraft } from "@/lib/storefront/studio-draft";
 import {
@@ -62,6 +67,17 @@ interface CartItem {
 interface StorefrontViewProps {
   config: StorefrontConfig;
   products: StorefrontProduct[];
+  /**
+   * Buyer locale resolved by the storefront RSC
+   * (?lang= > sf-storefront-locale cookie > Accept-Language > fr). The
+   * storefront never inherits the seller dashboard locale.
+   */
+  initialLocale: Locale;
+}
+
+interface StorefrontViewBodyProps {
+  config: StorefrontConfig;
+  products: StorefrontProduct[];
 }
 
 interface SubmitResult {
@@ -78,8 +94,27 @@ function itemPrice(item: Pick<CartItem, "product" | "variant">): number {
   return item.variant?.price ?? item.product.price;
 }
 
-export function StorefrontView({ config, products }: StorefrontViewProps) {
-  const { t, locale } = useI18n();
+export function StorefrontView({
+  config,
+  products,
+  initialLocale,
+}: StorefrontViewProps) {
+  return (
+    <StorefrontLocaleProvider initialLocale={initialLocale}>
+      {/*
+        Utility strip: the buyer language switcher stays reachable no matter
+        which sections the seller enabled in the storefront composition.
+      */}
+      <div className="flex justify-end px-4 pt-3">
+        <StorefrontLanguageSwitcher />
+      </div>
+      <StorefrontViewBody config={config} products={products} />
+    </StorefrontLocaleProvider>
+  );
+}
+
+function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
+  const { t, locale } = useStorefrontI18n();
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [addedKey, setAddedKey] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -309,9 +344,15 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
       }
 
       invalidateSubmission();
+      // The submit API answers with a fixed English string; the buyer-facing
+      // surface owns the localized confirmation and keeps the API message
+      // only as a missing-copy fallback (R4-c checkout locale integrity).
+      const localizedSuccess = t("storefront.view.orderSuccessMessage");
       setResult({
         ok: true,
-        message: data.message ?? t("storefront.view.orderSuccessMessage"),
+        message: localizedSuccess.includes("storefront.view.orderSuccessMessage")
+          ? data.message ?? localizedSuccess
+          : localizedSuccess,
         orderNumber: data.orderNumber,
       });
       setCart([]);
@@ -442,6 +483,7 @@ export function StorefrontView({ config, products }: StorefrontViewProps) {
                 onCommuneChange={(value) => changeForm("commune", value)}
                 wilayaLabel={`${t("storefront.view.wilaya")} *`}
                 communeLabel={`${t("storefront.view.commune")} *`}
+                locale={locale}
               />
               <div className="space-y-1">
                 <Label htmlFor="delivery-mode">{t("storefront.view.deliveryMode")}</Label>

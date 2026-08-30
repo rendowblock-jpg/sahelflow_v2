@@ -1,4 +1,6 @@
 import type { Locale } from "@/lib/i18n";
+import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
+import { getAnalyticsRuntimeTranslation } from "@/lib/i18n/analytics-runtime";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
@@ -12,6 +14,7 @@ import { getOrderFormRuntimeTranslation } from "@/lib/i18n/order-form-runtime";
 import { getOrderLifecycleRuntimeTranslation } from "@/lib/i18n/order-lifecycle-runtime";
 import { getOrdersWorkspaceTranslation } from "@/lib/i18n/orders-workspace";
 import { getPhase5RuntimeTranslation } from "@/lib/i18n/phase5-runtime";
+import { getStorefrontRuntimeTranslation } from "@/lib/i18n/storefront-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
 import { getWorkspacesRuntimeTranslation } from "@/lib/i18n/workspaces-runtime";
 
@@ -134,6 +137,8 @@ export function getRuntimeTranslation(
 ): string | undefined {
   return (
     (SHARED_RUNTIME_COPY[locale] as Readonly<Record<string, string>>)[key] ??
+    getAiCanvasRuntimeTranslation(locale, key) ??
+    getAnalyticsRuntimeTranslation(locale, key) ??
     getAutomationRuntimeTranslation(locale, key) ??
     getCommerceRuntimeTranslation(locale, key) ??
     getConfirmationQueueRuntimeTranslation(locale, key) ??
@@ -147,6 +152,7 @@ export function getRuntimeTranslation(
     getOrderLifecycleRuntimeTranslation(locale, key) ??
     getOrdersWorkspaceTranslation(locale, key) ??
     getPhase5RuntimeTranslation(locale, key) ??
+    getStorefrontRuntimeTranslation(locale, key) ??
     getWhatsAppRecoveryTranslation(locale, key) ??
     getWorkspacesRuntimeTranslation(locale, key)
   );
