@@ -423,7 +423,8 @@ fn observe_platform(
     use std::ptr::{null, null_mut};
     use windows_sys::Win32::Foundation::ERROR_SUCCESS;
     use windows_sys::Win32::System::Registry::{
-        RegCreateKeyExW, RegSetValueExW, HKEY, HKEY_CURRENT_USER, KEY_READ, KEY_WRITE, REG_BINARY,
+        RegCreateKeyExW, RegFlushKey, RegSetValueExW, HKEY, HKEY_CURRENT_USER, KEY_READ, KEY_WRITE,
+        REG_BINARY,
     };
 
     const SUBKEY: &str = "Software\\SahelFlow\\CommercialAuthority";
@@ -491,6 +492,14 @@ fn observe_platform(
         if written != ERROR_SUCCESS {
             return Ok(None);
         }
+        // R2: the anti-rollback anchor is only trustworthy once it reaches
+        // the hive. RegSetValueExW can sit in the lazy registry flush queue,
+        // and a power loss before the flush would roll the clock anchor
+        // backward — flush explicitly before treating the write as durable.
+        let flushed = unsafe { RegFlushKey(key) };
+        if flushed != ERROR_SUCCESS {
+            return Ok(None);
+        }
     }
     Ok(Some(anchor))
 }
@@ -504,7 +513,8 @@ fn advance_revocation_floor(
     use std::ptr::{null, null_mut};
     use windows_sys::Win32::Foundation::ERROR_SUCCESS;
     use windows_sys::Win32::System::Registry::{
-        RegCreateKeyExW, RegSetValueExW, HKEY, HKEY_CURRENT_USER, KEY_READ, KEY_WRITE, REG_BINARY,
+        RegCreateKeyExW, RegFlushKey, RegSetValueExW, HKEY, HKEY_CURRENT_USER, KEY_READ, KEY_WRITE,
+        REG_BINARY,
     };
 
     let device_digest = validate_device_binding(device_binding)?;
@@ -567,6 +577,12 @@ fn advance_revocation_floor(
     };
     if written != ERROR_SUCCESS {
         return Err("could not persist protected commercial revocation floor".to_owned());
+    }
+    // R2: the revocation floor must be durable before it is trusted — an
+    // unflushed write can be lost to power loss and roll the floor backward.
+    let flushed = unsafe { RegFlushKey(key) };
+    if flushed != ERROR_SUCCESS {
+        return Err("could not flush the protected commercial revocation floor to disk".to_owned());
     }
     Ok(anchor)
 }

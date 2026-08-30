@@ -5,6 +5,11 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { logAudit } from "@/lib/audit";
+import {
+  openAuthSecretValue,
+  sealAuthSecretValue,
+} from "@/lib/crypto/auth-secret-seal";
+import { ProtectedDataCorruptionError } from "@/lib/crypto/protected-data-error";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { db, shopContext } from "@/lib/db";
 import type { Phase2Action } from "@/lib/identity/permissions";
@@ -49,6 +54,11 @@ const DIRECT_ROUTE_TEST_AUTH_VALUE = "vitest-business-routes";
 const IDENTITY_AUTHORITY_FOOTPRINT_KEY = "identity_authority_initialized_v1";
 const IDENTITY_AUTHORITY_FOOTPRINT_VERSION = 1 as const;
 const authContext = { prisma: db, shop: shopContext } satisfies ServiceContext;
+// The sealed-value helpers need the key-authority delegate; the shop-authority
+// extension preserves it at runtime — single-point cast mirrors the
+// secrets/index.ts authorityClient pattern.
+type AuthKeyAuthorityClient = Parameters<typeof sealAuthSecretValue>[0];
+const authKeyAuthority = authContext.prisma as unknown as AuthKeyAuthorityClient;
 
 let migrationDone = false;
 async function migrateAuthSecretsIfNeeded(): Promise<void> {
@@ -70,7 +80,11 @@ async function migrateAuthSecretsIfNeeded(): Promise<void> {
       data: {
         id: "default",
         secret: legacySecret.value,
-        pinHash: legacyPin.value,
+        pinHash: await sealAuthSecretValue(
+          authKeyAuthority,
+          "pinHash",
+          legacyPin.value,
+        ),
       },
     });
     await authContext.prisma.setting.deleteMany({
@@ -90,7 +104,10 @@ export const getAuthSecret = cache(async (): Promise<string | null> => {
       where: { id: "default" },
     });
     if (row?.secret) return row.secret;
-  } catch {
+  } catch (error) {
+    // A corrupted protected value must never degrade into the legacy Setting
+    // row: callers would silently run on a stale signing secret.
+    if (error instanceof ProtectedDataCorruptionError) throw error;
     // Database authority is interpreted below rather than as setup success.
   }
   try {
@@ -106,7 +123,11 @@ export const getAuthSecret = cache(async (): Promise<string | null> => {
 
 export async function setupAuth(pin: string): Promise<{ secret: string }> {
   const secret = generateSecret();
-  const pinHash = await hashPin(pin);
+  const pinHash = await sealAuthSecretValue(
+    authKeyAuthority,
+    "pinHash",
+    await hashPin(pin),
+  );
   await authContext.prisma.authSecret.upsert({
     where: { id: "default" },
     create: { id: "default", secret, pinHash },
@@ -123,11 +144,20 @@ export async function verifyAuthPinAndMaybeRehash(
     where: { id: "default" },
   });
   if (!row?.pinHash) return { valid: false, rehashed: false };
-  const result = await verifyPinDetailed(pin, row.pinHash);
+  const storedPinHash = await openAuthSecretValue(
+    authKeyAuthority,
+    "pinHash",
+    row.pinHash,
+  );
+  const result = await verifyPinDetailed(pin, storedPinHash);
   if (!result.valid) return { valid: false, rehashed: false };
   if (result.needsRehash) {
     try {
-      const newHash = await hashPin(pin, CURRENT_PBKDF2_ITERATIONS);
+      const newHash = await sealAuthSecretValue(
+        authKeyAuthority,
+        "pinHash",
+        await hashPin(pin, CURRENT_PBKDF2_ITERATIONS),
+      );
       await authContext.prisma.authSecret.update({
         where: { id: "default" },
         data: { pinHash: newHash },
@@ -146,7 +176,12 @@ export async function verifyAuthPin(pin: string): Promise<boolean> {
     where: { id: "default" },
   });
   if (!row?.pinHash) return false;
-  return verifyPin(pin, row.pinHash);
+  const storedPinHash = await openAuthSecretValue(
+    authKeyAuthority,
+    "pinHash",
+    row.pinHash,
+  );
+  return verifyPin(pin, storedPinHash);
 }
 
 export async function isAuthSetup(): Promise<boolean> {
@@ -610,7 +645,11 @@ export async function changeAuthPin(
     );
   }
 
-  const newHash = await hashPin(newPin);
+  const newHash = await sealAuthSecretValue(
+    authKeyAuthority,
+    "pinHash",
+    await hashPin(newPin),
+  );
   const now = new Date();
   const newSession = await authContext.prisma.$transaction(async (tx) => {
     const currentRevoked = await tx.session.updateMany({

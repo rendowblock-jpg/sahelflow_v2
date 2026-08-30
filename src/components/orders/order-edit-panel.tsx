@@ -24,6 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { Pencil, Check, X, Loader2 } from "lucide-react";
 import { formatDZD } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { toast } from "@/lib/toast";
 
 interface OrderItem {
@@ -104,9 +105,8 @@ export function OrderEditPanel({
   async function saveEdit() {
     startTransition(async () => {
       try {
-        const itemsTotal = items.reduce((sum, i) => sum + i.total, 0);
-        const totalPrice = itemsTotal + (parseInt(deliveryCost) || 0);
-
+        // B7-1: totalPrice is server-derived money truth — the PATCH body
+        // sends only the inputs (items + deliveryCost) it is derived from.
         const res = await fetch(`/api/orders/${orderId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -126,7 +126,6 @@ export function OrderEditPanel({
             address,
             phone,
             notes: notes || null,
-            totalPrice,
           }),
         });
 
@@ -141,7 +140,13 @@ export function OrderEditPanel({
         // Invalidate SWR cache for /api/orders* so list/table views reflect the edit.
         void mutatePrefix("/api/orders");
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : t("orders.detail.editFailed"));
+        toast.error(
+          translateServerError(
+            err instanceof Error ? err.message : "",
+            t,
+            t("orders.detail.editFailed"),
+          ),
+        );
       }
     });
   }

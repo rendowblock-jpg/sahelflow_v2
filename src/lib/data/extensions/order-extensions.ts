@@ -2,6 +2,7 @@
  * Order service extensions — search + bulk operations.
  */
 import "server-only";
+import { codedRowError } from "@/lib/api/coded-row-error";
 import type { ServiceContext } from "../service-base";
 import type { Order, OrderStatus } from "@/types/domain";
 import { orderService } from "../order-service";
@@ -10,7 +11,11 @@ import { deriveExistingShopBlindIndex } from "@/lib/crypto/protected-record";
 
 export interface BulkResult {
   succeeded: string[];
-  failed: Array<{ id: string; error: string }>;
+  /**
+   * Per-row failures carry the coded error (audit 7-a F7): the raw driver
+   * message never reaches the response payload, only the app log.
+   */
+  failed: Array<{ id: string; error: string; code: string }>;
 }
 
 export type OrderSearchResult = Order & {
@@ -99,7 +104,7 @@ export const orderServiceExtensions = {
     to: OrderStatus,
   ): Promise<BulkResult> {
     const succeeded: string[] = [];
-    const failed: Array<{ id: string; error: string }> = [];
+    const failed: BulkResult["failed"] = [];
 
     for (const id of ids) {
       try {
@@ -115,12 +120,13 @@ export const orderServiceExtensions = {
         await orderService.updateStatus(ctx, id, to);
         succeeded.push(id);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        failed.push({ id, error: message });
+        const coded = codedRowError(error, "Order", id);
+        failed.push({ id, error: coded.message, code: coded.code });
         logger.warn("order.bulkUpdateStatus.failed", {
           id,
           to,
-          error: message,
+          code: coded.code,
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }

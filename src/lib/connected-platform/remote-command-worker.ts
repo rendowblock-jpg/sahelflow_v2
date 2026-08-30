@@ -1,8 +1,14 @@
 import "server-only";
 
+import { logger } from "@/lib/logger";
+
 const WORKER_KEY = Symbol.for("sahelflow.connected-command-worker.v1");
 const POLL_INTERVAL_MS = 5_000;
 const CURSOR_KEY_PREFIX = "connected.command.cursor.v1";
+// C2: escalate to error-level logging after ~1 minute of continuously failing
+// ticks (12 × 5s) — a persistent command-channel failure needs operator
+// attention, not one lost warn line among success noise.
+const ESCALATE_AFTER_CONSECUTIVE_FAILURES = 12;
 
 type WorkerState = { running: boolean; timer: ReturnType<typeof setTimeout> | null };
 type WorkerGlobal = typeof globalThis & { [WORKER_KEY]?: WorkerState };
@@ -12,6 +18,7 @@ export function startConnectedCommandWorker(): void {
   if (workerGlobal[WORKER_KEY]) return;
   const state: WorkerState = { running: false, timer: null };
   workerGlobal[WORKER_KEY] = state;
+  let consecutiveFailures = 0;
   const schedule = () => {
     state.timer = setTimeout(() => void tick(), POLL_INTERVAL_MS);
     state.timer.unref?.();
@@ -48,8 +55,23 @@ export function startConnectedCommandWorker(): void {
           update: { value: String(result.nextCursor) },
         });
       }
-    } catch {
-      // Exact command idempotency and the cursor retain durable retry authority.
+      consecutiveFailures = 0;
+    } catch (error) {
+      // C2: the silent catch made a dead command channel invisible. Exact
+      // command idempotency and the cursor retain durable retry authority;
+      // the classified log keeps every failure operator-visible and
+      // escalates once failures persist.
+      consecutiveFailures += 1;
+      const detail = {
+        name: error instanceof Error ? error.name : undefined,
+        message: error instanceof Error ? error.message : String(error),
+        consecutiveFailures,
+      };
+      if (consecutiveFailures >= ESCALATE_AFTER_CONSECUTIVE_FAILURES) {
+        logger.error("connected.command_worker.tick_failed_repeatedly", error, detail);
+      } else {
+        logger.warn("connected.command_worker.tick_failed", detail);
+      }
     } finally {
       state.running = false;
       schedule();

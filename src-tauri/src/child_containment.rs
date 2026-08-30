@@ -1110,6 +1110,7 @@ mod platform {
         OsString, Path, ProcessExit, SharedStderr, SpawnError,
     };
     use std::io::Write;
+    use std::os::unix::process::CommandExt;
     use std::process::{Child, Command, Stdio};
     use std::sync::{Arc, Mutex};
     use std::time::Instant;
@@ -1188,7 +1189,13 @@ mod platform {
             command
                 .args(args)
                 .env_clear()
-                .envs(environment.iter().cloned());
+                .envs(environment.iter().cloned())
+                // R1: the contained child gets a dedicated process group
+                // (pgid == child pid). Plain spawn left descendants in our
+                // own group, so the tree kill below could never reach them —
+                // orphaned sidecar grandchildren held the loopback port and
+                // crash-looped the supervisor.
+                .process_group(0);
             if let Some(directory) = current_directory {
                 command.current_dir(directory);
             }
@@ -1253,20 +1260,78 @@ mod platform {
                 .child
                 .lock()
                 .map_err(|_| IoError::other("contained process state is poisoned"))?;
-            match child.kill() {
+            // R1: the group kill reaches descendants the direct SIGKILL
+            // never touched. ESRCH (group already empty) is success.
+            match kill_process_group(self.inner.pid) {
                 Ok(()) => {}
                 Err(_error) if child.try_wait()?.is_some() => return Ok(()),
                 Err(error) => return Err(error),
             }
             drop(child);
-            wait_for_exit(&self.inner, timeout).map(|_| ())
+            wait_for_exit(&self.inner, timeout).map(|_| ())?;
+            // The direct child is reaped; drain whatever descendants remain
+            // in the dedicated group (mirrors the Windows job-empty wait).
+            wait_for_group_drain(self.inner.pid, timeout)
         }
 
         pub fn wait_for_exit_and_close_tree(
             &self,
-            _tree_timeout: Duration,
+            tree_timeout: Duration,
         ) -> Result<ProcessExit, IoError> {
-            wait_for_exit(&self.inner, Duration::MAX)
+            // R1: bounded tree completion. The legacy implementation waited
+            // Duration::MAX — the tree timeout was a no-op and descendants
+            // were never killed, so a sidecar that spawned helpers kept the
+            // supervisor hanging (or crash-looping on the held port).
+            let exit = wait_for_exit(&self.inner, tree_timeout)?;
+            // The direct child is reaped by wait_for_exit; killing the
+            // dedicated group makes the completion tree-complete (mirrors
+            // TerminateJobObject after the direct child exits).
+            kill_process_group(self.inner.pid)?;
+            wait_for_group_drain(self.inner.pid, tree_timeout)?;
+            Ok(exit)
+        }
+    }
+
+    /// R1: SIGKILL the dedicated process group created at spawn (pgid ==
+    /// child pid). ESRCH — no process left in the group — is success.
+    fn kill_process_group(pgid: u32) -> Result<(), IoError> {
+        // SAFETY: signal-only call; the group id is the pid of the child we
+        // spawned with process_group(0), so it always refers to our own
+        // containment group.
+        let result = unsafe { libc::killpg(pgid as libc::pid_t, libc::SIGKILL) };
+        if result == 0 {
+            return Ok(());
+        }
+        let error = IoError::last_os_error();
+        if error.kind() == std::io::ErrorKind::NotFound {
+            return Ok(());
+        }
+        Err(error)
+    }
+
+    /// R1: bounded wait until the containment group is empty. Signal 0
+    /// probes group existence without delivering a signal; the direct child
+    /// is reaped by the preceding wait_for_exit, so remaining members are
+    /// descendants only.
+    fn wait_for_group_drain(pgid: u32, timeout: Duration) -> Result<(), IoError> {
+        let started = Instant::now();
+        loop {
+            // SAFETY: signal-0 existence probe on our own containment group.
+            let result = unsafe { libc::killpg(pgid as libc::pid_t, 0) };
+            if result != 0 {
+                let error = IoError::last_os_error();
+                if error.kind() == std::io::ErrorKind::NotFound {
+                    return Ok(());
+                }
+                return Err(error);
+            }
+            if started.elapsed() >= timeout {
+                return Err(IoError::new(
+                    std::io::ErrorKind::TimedOut,
+                    "contained process tree did not drain before the deadline",
+                ));
+            }
+            std::thread::sleep(Duration::from_millis(10));
         }
     }
 

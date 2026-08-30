@@ -19,10 +19,11 @@ const refundSchema = z.object({
   method: z.enum(["cash", "credit", "bank", "courier_deduction"]),
   reason: z.string().optional(),
   returnId: z.string().optional(),
-  // Session 30 (AUDIT-2 A1): client-supplied idempotency key. If absent,
-  // server generates one from the request hash so double-clicks don't
-  // double-charge. The Refund.idempotencyKey @unique enforces no-op on retry.
-  idempotencyKey: z.string().min(8).optional(),
+  // Session 30 (AUDIT-2 A1) + 7-b P2: client-supplied idempotency key, used
+  // verbatim (replay returns the original refund; key bound to a different
+  // refund is rejected). No server-side derivation: partial refunds with the
+  // same amount/method are distinct money movements.
+  idempotencyKey: z.string().min(8).max(200).optional(),
   reference: z.string().optional(),
 });
 
@@ -47,14 +48,15 @@ export const POST = withErrorHandler(async (req: NextRequest, { params }: Ctx) =
   if (!order || order.deletedAt) throw new SahelFlowError("Order not found", "NOT_FOUND", 404);
   assertLegacyOrderFollowupAllowed(order.source, order.sourceMetadata);
 
-  // Session 30 (AUDIT-2 A1): idempotency key — use client-supplied, or
-  // derive one from order+amount+method so double-clicks collapse to one refund.
-  const idempotencyKey = parsed.idempotencyKey ?? `refund:${id}:${parsed.amount}:${parsed.method}`;
+  // Session 30 (AUDIT-2 A1) + 7-b P2: the idempotency key is caller intent and
+  // is used verbatim. The previous server-derived `order+amount+method` key
+  // silently swallowed a second, intentional partial refund with the same
+  // amount/method (each partial refund is a distinct money movement bounded by
+  // the over-refund guard), so keys are no longer synthesized here.
 
   const refund = await createRefund({ prisma: db, shop: shopContext }, {
     ...parsed,
     orderId: id,
-    idempotencyKey,
   });
   return NextResponse.json({ refund }, { status: 201 });
 }, "POST /api/orders/[id]/refund");

@@ -222,6 +222,12 @@ jobs:
       SF_DATA_DIR: /tmp/sahelflow-phase67-browser/data
       DATABASE_URL: file:/tmp/sahelflow-phase67-browser/data/shops/test.db
       AUTH_SECRET: dev-auth-secret-for-testing-only-not-production
+      # B7-batch follow-through: the audit 7-a F14 login limiter collapses all
+      # attempts onto one loopback bucket (5 per 60s), so per-test UI logins
+      # deterministically 429 partway through the suite. Authenticate once via
+      # the existing setup project and share the owner session through
+      # storageState — the same pattern the phase5 browser lane already uses.
+      SF_PHASE5_OWNER_STORAGE_STATE: /tmp/sahelflow-phase67-storage/owner-storage-state.json
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@v4

@@ -14,6 +14,7 @@ import type {
   FinancialMovementFact,
   InventoryMovementFact,
   InventoryReservationFact,
+  OutboxIntentFact,
 } from "@/lib/business-truth/contracts";
 import {
   providerBusinessPrincipal,
@@ -964,6 +965,7 @@ async function ingestCanonicalCourierTrackingEventForStoredProvider(
       const inventoryMovements: InventoryMovementFact[] = [];
       const financialMovements: FinancialMovementFact[] = [];
       let nextVersion = order.version;
+      const fromStatus = order.status;
       let orderStatus = order.status;
       let fulfillmentState = order.fulfillmentState;
       let deliveryState = order.deliveryState;
@@ -1133,8 +1135,45 @@ async function ingestCanonicalCourierTrackingEventForStoredProvider(
         deliveryState,
         outOfOrder,
       };
+      // Canonical lifecycle markers: the automation bridge (7-b P1) consumes
+      // these durable kernel events so courier shipped/delivered moments fire
+      // seller automations exactly like the manual fulfillment path.
+      const lifecycleOutbox: OutboxIntentFact[] = [];
+      if (orderChanged && !outOfOrder) {
+        if (fromStatus === "confirmed" && orderStatus === "shipped") {
+          lifecycleOutbox.push({
+            effectKey: `${commandId}:lifecycle`,
+            effectType: "order.fulfillment.shipped.v1",
+            payload: {
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              status: orderStatus,
+              orderVersion: nextVersion,
+              deliveryId: delivery.id,
+              provider: data.provider,
+              providerStatus: data.status,
+            },
+          });
+        } else if (fromStatus === "shipped" && orderStatus === "delivered") {
+          lifecycleOutbox.push({
+            effectKey: `${commandId}:lifecycle`,
+            effectType: "order.delivery.delivered.v1",
+            payload: {
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              status: orderStatus,
+              orderVersion: nextVersion,
+              deliveryId: delivery.id,
+              provider: data.provider,
+              providerStatus: data.status,
+            },
+          });
+        }
+      }
+
       return {
         result,
+        outbox: lifecycleOutbox,
         audit: {
           action: "courier.tracking.ingest.v1",
           entity: "delivery",

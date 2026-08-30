@@ -50,6 +50,30 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
       );
     }
 
+    // B7-3 (INV-023): completing a refund-type return on a delivered order
+    // used to reverse the full revenue stats (orderCount + totalSpent by
+    // order.totalPrice) and restore all stock with NO compensation money
+    // fact — and combined with a prior partial refund it could even push
+    // totalSpent negative. The governed refund flow is the only path that
+    // pairs the delivered→returned physical transition with the
+    // full-settling refund (golden COD truth, ARCHITECTURE.md §8.6): issue
+    // the refund first, then complete the return row (a no-op transition
+    // that records the physical fact). Exchange completions are exempt —
+    // their compensation fact is the replacement exchange order.
+    if (status === "completed" && existing.type !== "exchange") {
+      const target = await tx.order.findUnique({
+        where: { id: existing.orderId },
+        select: { status: true },
+      });
+      if (target?.status === "delivered") {
+        throw new SahelFlowError(
+          "Completing a return on a delivered order requires the governed refund flow to run first — the refund records the compensation and performs the physical return",
+          "RETURN_COMPLETION_REQUIRES_REFUND_FACT",
+          409,
+        );
+      }
+    }
+
     const updated = await tx.return.update({ where: { id }, data: { status } });
 
     if (notes) {

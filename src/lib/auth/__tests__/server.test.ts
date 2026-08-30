@@ -43,8 +43,15 @@ delete process.env.AUTH_SECRET;
 delete process.env.SF_DIRECT_ROUTE_TEST_AUTHORITY;
 
 import { dbRaw } from "@/lib/db";
+import {
+  isSealedAuthSecretValue,
+} from "@/lib/crypto/auth-secret-seal";
 import { SahelFlowError } from "@/types/errors";
 import { AUTH_COOKIE, SENSITIVE_REAUTH_WINDOW_MS } from "../config";
+import {
+  hashPin,
+  LEGACY_PBKDF2_ITERATIONS,
+} from "../crypto";
 import {
   auditLog,
   changeAuthPin,
@@ -59,6 +66,7 @@ import {
   requireRecentReauthentication,
   setupAuth,
   verifyAuthPin,
+  verifyAuthPinAndMaybeRehash,
 } from "../server";
 
 async function cleanAuthDb(): Promise<void> {
@@ -117,6 +125,46 @@ describe("verifyAuthPin", () => {
 
   it("rejects PIN proof before setup", async () => {
     await expect(verifyAuthPin("12345678")).resolves.toBe(false);
+  });
+
+  it("seals the stored pinHash at rest and verifies PINs through the envelope", async () => {
+    await setupAuth("12345678");
+    const row = await dbRaw.authSecret.findUniqueOrThrow({
+      where: { id: "default" },
+    });
+    expect(isSealedAuthSecretValue("pinHash", row.pinHash)).toBe(true);
+    // The at-rest value is an authenticated envelope, not a brute-forceable
+    // PBKDF2 string.
+    expect(row.pinHash).not.toContain("pbkdf2_sha256$");
+    await expect(verifyAuthPin("12345678")).resolves.toBe(true);
+    await expect(verifyAuthPin("00000000")).resolves.toBe(false);
+  });
+
+  it("verifies a legacy plaintext pinHash and re-seals it during rehash", async () => {
+    await setupAuth("12345678");
+    // Simulate a pre-sealing row: the stored hash is legacy-iteration
+    // PBKDF2 plaintext (PBKDF2 semantics untouched for that format).
+    const legacyHash = await hashPin("12345678", LEGACY_PBKDF2_ITERATIONS);
+    await dbRaw.authSecret.update({
+      where: { id: "default" },
+      data: { pinHash: legacyHash },
+    });
+    expect(
+      isSealedAuthSecretValue("pinHash", legacyHash),
+    ).toBe(false);
+    await expect(verifyAuthPin("12345678")).resolves.toBe(true);
+
+    await expect(verifyAuthPinAndMaybeRehash("12345678")).resolves.toEqual({
+      valid: true,
+      rehashed: true,
+    });
+
+    const row = await dbRaw.authSecret.findUniqueOrThrow({
+      where: { id: "default" },
+    });
+    expect(isSealedAuthSecretValue("pinHash", row.pinHash)).toBe(true);
+    await expect(verifyAuthPin("12345678")).resolves.toBe(true);
+    await expect(verifyAuthPin("00000000")).resolves.toBe(false);
   });
 });
 

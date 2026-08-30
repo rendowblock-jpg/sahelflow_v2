@@ -34,17 +34,25 @@ export function startAutomationWorker(): void {
       const [
         { db, shopContext },
         { requireLicenseEntitlement },
+        { drainDueLifecycleTriggerBridges },
         { drainDueAutomationTriggers },
         { drainDueAutomationRuns },
       ] = await Promise.all([
         import("@/lib/db"),
         import("@/lib/license/license-authority"),
+        import("@/lib/automations/lifecycle-bridge"),
         import("@/lib/automations/trigger-processor"),
         import("@/lib/automations/run-processor"),
       ]);
       // The process DB and immutable ShopContext belong to the exact active
       // native runtime. Inactive-shop work remains durable and is not drained.
       await requireLicenseEntitlement(undefined, shopContext);
+      // Canonical lifecycle markers first: they enqueue automation.trigger.v1
+      // intents that the trigger processor materializes below in this tick.
+      await drainDueLifecycleTriggerBridges(
+        { prisma: db, shop: shopContext },
+        10,
+      );
       await drainDueAutomationTriggers({ prisma: db, shop: shopContext }, 10);
       await drainDueAutomationRuns({ prisma: db, shop: shopContext }, 10);
     } catch {

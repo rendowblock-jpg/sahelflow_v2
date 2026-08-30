@@ -59,6 +59,8 @@ const RULES: readonly ErrorRule[] = [
 
   // Orders / delivery / risk
   { match: "order not found", key: "orders.errors.notFound" },
+  { match: "locked after order confirmation", key: "orders.errors.postConfirmationEditLocked" },
+  { match: "requires the governed refund flow", key: "returns.errors.completionRequiresRefundFact" },
   { match: "delivery not found", key: "deliveries.errors.notFound" },
   { match: "must be confirmed before shipping", key: "deliveries.errors.mustBeConfirmed" },
   { match: "pas de numéro de suivi", key: "deliveries.errors.noTrackingNumber" },

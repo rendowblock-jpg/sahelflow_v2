@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
 import { customerService } from "@/lib/data";
 import {
+  MAX_IMPORT_FILE_BYTES,
   parseFile,
   mapRows,
   validateRows,
@@ -13,6 +14,7 @@ import { CUSTOMER_FIELDS, normalizePhone } from "@/lib/import/fields";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
 import { requireAuth } from "@/lib/auth/server";
+import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   if (!file) {
     return NextResponse.json({ error: t("import.missingFile") }, { status: 400 });
+  }
+  // Import bounds (audit 7-a F4): reject oversized uploads before reading.
+  if (file.size > MAX_IMPORT_FILE_BYTES) {
+    throw new SahelFlowError(t("import.fileTooLarge"), "IMPORT_FILE_TOO_LARGE", 413);
   }
 
   const parsed = parseFile(await file.arrayBuffer(), file.name);

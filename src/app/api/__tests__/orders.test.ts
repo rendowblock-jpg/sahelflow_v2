@@ -387,6 +387,50 @@ describe("PATCH /api/orders/[id] — governed compatibility edit", () => {
       (body.order as { items: Array<{ unitPrice: number | null }> }).items[0],
     ).toMatchObject({ unitPrice: null });
   });
+
+  it("locks money-bearing edits on legacy orders once they are confirmed (B7-1)", async () => {
+    const product = await seedProduct({ price: 2_500, stock: 100 });
+    const customer = await seedCustomer();
+    const order = await rawDb.order.create({
+      data: {
+        orderNumber: `ORD-EDIT-${customerCounter}`,
+        status: "confirmed",
+        customerId: customer.id,
+        totalPrice: 3_000,
+        deliveryCost: 500,
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "Original address",
+        phone: "0555000001",
+        source: "manual",
+        items: {
+          create: [{
+            productId: product.id,
+            productName: product.name,
+            quantity: 1,
+            unitPrice: product.price,
+            total: product.price,
+          }],
+        },
+      },
+    });
+
+    const response = await PATCHOrder(
+      mockPatch(`http://localhost/api/orders/${order.id}`, {
+        deliveryCost: 900,
+      }),
+      { params: Promise.resolve({ id: order.id }) },
+    );
+    const body = await getJson(response);
+
+    expect(response.status).toBe(409);
+    expect(body.code).toBe("ORDER_EDIT_LOCKED_POST_CONFIRMATION");
+    // Money and delivery cost are untouched by the rejected edit.
+    expect(await rawDb.order.findUnique({ where: { id: order.id } })).toMatchObject({
+      deliveryCost: 500,
+      totalPrice: 3_000,
+    });
+  });
 });
 
 describe("PATCH /api/orders/[id]/status — transition status", () => {

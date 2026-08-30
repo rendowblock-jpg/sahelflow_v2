@@ -263,6 +263,13 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
               )) as never)
             : null;
         },
+        async findUniqueOrThrow({ args, query }) {
+          args.where = (await customerUniqueWhere(args.where)) as never;
+          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
+          return (await decryptCustomer(
+            (await query(args)) as unknown as Record<string, unknown>,
+          )) as never;
+        },
         async findFirst({ args, query }) {
           args.where = (await customerManyWhere(args.where)) as never;
           prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
@@ -272,6 +279,13 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
                 row as unknown as Record<string, unknown>,
               )) as never)
             : null;
+        },
+        async findFirstOrThrow({ args, query }) {
+          args.where = (await customerManyWhere(args.where)) as never;
+          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
+          return (await decryptCustomer(
+            (await query(args)) as unknown as Record<string, unknown>,
+          )) as never;
         },
         async count({ args, query }) {
           args.where = (await customerManyWhere(args.where)) as never;
@@ -398,6 +412,12 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
               )) as never)
             : null;
         },
+        async findUniqueOrThrow({ args, query }) {
+          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
+          return (await decryptOrder(
+            (await query(args)) as unknown as Record<string, unknown>,
+          )) as never;
+        },
         async findFirst({ args, query }) {
           prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
           const row = await query(args);
@@ -406,6 +426,12 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
                 row as unknown as Record<string, unknown>,
               )) as never)
             : null;
+        },
+        async findFirstOrThrow({ args, query }) {
+          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
+          return (await decryptOrder(
+            (await query(args)) as unknown as Record<string, unknown>,
+          )) as never;
         },
         async delete({ args, query }) {
           prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
@@ -537,6 +563,15 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
               )) as never)
             : null;
         },
+        async findUniqueOrThrow({ args, query }) {
+          prepareProtectedSelection(
+            args as unknown as Record<string, unknown>,
+            "Conversation",
+          );
+          return (await decryptConversation(
+            (await query(args)) as unknown as Record<string, unknown>,
+          )) as never;
+        },
         async findFirst({ args, query }) {
           prepareProtectedSelection(
             args as unknown as Record<string, unknown>,
@@ -548,6 +583,15 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
                 row as unknown as Record<string, unknown>,
               )) as never)
             : null;
+        },
+        async findFirstOrThrow({ args, query }) {
+          prepareProtectedSelection(
+            args as unknown as Record<string, unknown>,
+            "Conversation",
+          );
+          return (await decryptConversation(
+            (await query(args)) as unknown as Record<string, unknown>,
+          )) as never;
         },
         async delete({ args, query }) {
           prepareProtectedSelection(
@@ -659,6 +703,12 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
               )) as never)
             : null;
         },
+        async findUniqueOrThrow({ args, query }) {
+          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
+          return (await decryptMessage(
+            (await query(args)) as unknown as Record<string, unknown>,
+          )) as never;
+        },
         async findFirst({ args, query }) {
           prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
           const row = await query(args);
@@ -667,6 +717,12 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
                 row as unknown as Record<string, unknown>,
               )) as never)
             : null;
+        },
+        async findFirstOrThrow({ args, query }) {
+          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
+          return (await decryptMessage(
+            (await query(args)) as unknown as Record<string, unknown>,
+          )) as never;
         },
         async delete({ args, query }) {
           prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
@@ -687,10 +743,18 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
           const row = await query(args);
           return row ? ((await codec.decryptNested(row)) as never) : null;
         },
+        async findUniqueOrThrow({ args, query }) {
+          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          return (await codec.decryptNested(await query(args))) as never;
+        },
         async findFirst({ args, query }) {
           prepareProtectedSelection(args as unknown as Record<string, unknown>);
           const row = await query(args);
           return row ? ((await codec.decryptNested(row)) as never) : null;
+        },
+        async findFirstOrThrow({ args, query }) {
+          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          return (await codec.decryptNested(await query(args))) as never;
         },
       },
 
@@ -705,10 +769,18 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
           const row = await query(args);
           return row ? ((await codec.decryptNested(row)) as never) : null;
         },
+        async findUniqueOrThrow({ args, query }) {
+          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          return (await codec.decryptNested(await query(args))) as never;
+        },
         async findFirst({ args, query }) {
           prepareProtectedSelection(args as unknown as Record<string, unknown>);
           const row = await query(args);
           return row ? ((await codec.decryptNested(row)) as never) : null;
+        },
+        async findFirstOrThrow({ args, query }) {
+          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          return (await codec.decryptNested(await query(args))) as never;
         },
       },
     },

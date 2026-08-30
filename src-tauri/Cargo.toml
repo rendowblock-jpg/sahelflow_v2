@@ -48,5 +48,9 @@ windows-sys = { version = "0.59", features = [
   "Win32_UI_Shell",
 ] }
 
+# R1: process-group/tree containment for Unix child processes (killpg).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [features]
 custom-protocol = ["tauri/custom-protocol"]

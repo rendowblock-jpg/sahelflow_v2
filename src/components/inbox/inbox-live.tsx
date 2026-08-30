@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
 import { MessageStatus } from "@/components/inbox/message-status";
 import { useI18n } from "@/hooks/use-i18n";
+import { toast } from "@/lib/toast";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useWhatsAppSocket } from "@/hooks/use-whatsapp-socket";
 import {
@@ -557,10 +559,19 @@ export function InboxLive() {
 
   async function handleConnect() {
     try {
-      await fetch("/api/whatsapp/connect", { method: "POST" });
+      const res = await fetch("/api/whatsapp/connect", { method: "POST" });
+      // B1: the connect request result used to be discarded — a failed
+      // connect (session authority, sidecar down) silently looked like a
+      // normal start. Surface the server's classified error, or the
+      // localized fallback for network-level failures.
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as { error?: unknown } | null;
+        toast.error(translateServerError(payload?.error, t, t("inbox.connectFailed")));
+        return;
+      }
       reconnect();
     } catch {
-      /* ignore */
+      toast.error(t("inbox.connectFailed"));
     }
   }
 
@@ -570,10 +581,17 @@ export function InboxLive() {
 
   async function performLogout() {
     try {
-      await fetch("/api/whatsapp/logout", { method: "DELETE" });
+      const res = await fetch("/api/whatsapp/logout", { method: "DELETE" });
+      // B1: same discarded-result hazard — a failed logout must not present
+      // as a successful disconnect while the session is still live.
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as { error?: unknown } | null;
+        toast.error(translateServerError(payload?.error, t, t("inbox.logoutFailed")));
+        return;
+      }
       reconnect();
     } catch {
-      /* ignore */
+      toast.error(t("inbox.logoutFailed"));
     }
   }
 

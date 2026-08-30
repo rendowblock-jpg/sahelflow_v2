@@ -183,6 +183,52 @@ fn remove_file_if_present(path: &Path) -> Result<(), IoError> {
     }
 }
 
+/// R3: a failed shop-recovery cleanup must never strand an orphan database
+/// at the live target path — the next recovery attempt would refuse with
+/// "shop database target already exists", the real cause swallowed, and all
+/// future recoveries wedged behind it. Removal is attempted first; if
+/// removal fails, the whole SQLite file set is quarantine-renamed out of
+/// the live namespace so the recovery path stays unblocked and the orphan
+/// remains inspectable for diagnosis.
+fn quarantine_or_remove_sqlite_file_set(path: &Path) -> Result<(), MutationAuthorityError> {
+    if remove_sqlite_file_set(path).is_ok() {
+        return Ok(());
+    }
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_millis());
+    let quarantine_prefix = format!(".orphan-{stamp}-{}", random_hex(8)?);
+    let mut last_error: Option<IoError> = None;
+    let mut rename_or_record = |source: &Path, quarantined_name: String| {
+        if let Err(error) = rename_file_if_present(source, &quarantined_name) {
+            last_error = Some(error);
+        }
+    };
+    rename_or_record(path, format!("{quarantine_prefix}.db"));
+    for suffix in ["-wal", "-shm", "-journal"] {
+        let mut sidecar = path.as_os_str().to_os_string();
+        sidecar.push(suffix);
+        rename_or_record(PathBuf::from(sidecar).as_path(), format!("{quarantine_prefix}{suffix}"));
+    }
+    if let Some(error) = last_error {
+        return Err(MutationAuthorityError::InvalidRegistry(format!(
+            "recovery cleanup could neither remove nor quarantine the orphan database file set at {}: {}",
+            path.display(),
+            error
+        )));
+    }
+    sync_parent(path)?;
+    Ok(())
+}
+
+fn rename_file_if_present(path: &Path, quarantine_name: &str) -> Result<(), IoError> {
+    match fs::rename(path, path.with_file_name(quarantine_name)) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
+}
+
 fn sync_file(path: &Path) -> Result<(), IoError> {
     OpenOptions::new().read(true).write(true).open(path)?.sync_all()
 }

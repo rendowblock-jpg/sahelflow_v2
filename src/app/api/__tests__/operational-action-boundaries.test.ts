@@ -20,7 +20,6 @@ const ROUTES = [
   "src/app/api/whatsapp/connect/route.ts",
   "src/app/api/whatsapp/logout/route.ts",
   "src/app/api/whatsapp/outbox/route.ts",
-  "src/app/api/whatsapp/qr/route.ts",
   "src/app/api/whatsapp/qr-image/route.ts",
   "src/app/api/whatsapp/send/route.ts",
   "src/app/api/whatsapp/status/route.ts",

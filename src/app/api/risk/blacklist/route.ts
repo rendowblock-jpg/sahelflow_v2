@@ -21,11 +21,11 @@ const BLACKLIST_WRITE_ACTIONS = [
 ] as const;
 
 /** GET /api/risk/blacklist — list blacklisted customers */
-export async function GET() {
+export const GET = withErrorHandler(async () => {
   await requireAuth(BLACKLIST_READ_ACTIONS);
   const customers = await listBlacklistedCustomers({ prisma: db, shop: shopContext });
   return NextResponse.json({ customers });
-}
+}, "GET /api/risk/blacklist");
 
 /** POST /api/risk/blacklist — add a customer to the blacklist */
 export const POST = withErrorHandler(async (req: NextRequest) => {

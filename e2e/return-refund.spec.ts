@@ -1,18 +1,22 @@
 /**
- * E2E: Return + refund — no double-counting (Phase 1 bug 1.1 regression guard).
+ * E2E: Return + refund — money fact + no double-counting (Phase 1 bug 1.1
+ * regression guard + B7-3 return-completion gate).
  *
  * Tests the post-delivery COD return scenario: deliver an order, create a
- * return, complete it (order → "returned"), then issue a refund. The Phase 1
- * bug 1.1 fix ensures stock is restored EXACTLY once + customer.totalSpent is
- * decremented EXACTLY once — not double-applied by both the Return flow and
- * the Refund flow.
+ * return request, issue the full-settling refund (which pairs the compensation
+ * money fact with the delivered→returned physical transition), then complete
+ * the Return row (a no-op transition that records the physical fact).
+ *
+ * Stock is restored EXACTLY once + customer.totalSpent is decremented
+ * EXACTLY once — never double-applied, and never reversed without a money
+ * fact (INV-023, B7-3: refund-type return completion on a delivered order is
+ * refused with RETURN_COMPLETION_REQUIRES_REFUND_FACT).
  *
  * Pattern: page.request fast-seeds a product (stock=10) + customer + order,
  * transitions it to delivered (stock → 8, customer.totalSpent → 5000). Then
- * the API creates + completes a Return (stock → 10, customer.totalSpent → 0,
- * order.status → "returned"). Then the API issues a Refund (no further stock
- * or stat changes — the Refund is just a paper trail once the order is
- * already "returned"). The /returns + /orders/[id] pages are visited to
+ * the API creates + approves a Return, issues the full refund (stock → 10,
+ * customer.totalSpent → 0, order.status → "returned"), and completes the
+ * Return row (no-op). The /returns + /orders/[id] pages are visited to
  * verify the UI reflects the correct state.
  *
  * Auth: page.request is authenticated via the login cookie.
@@ -47,7 +51,7 @@ test.describe("Return + refund — no double-count", () => {
     await login(page);
   });
 
-  test("deliver → return → refund: stock + stats correct", async ({ page }) => {
+  test("deliver → refund → return-completion: stock + stats correct", async ({ page }) => {
     // ── 1. Fast-seed: product (stock=10, price=5000) + customer + order ────
     const phoneSuffix = Date.now().toString().slice(-6);
 
@@ -121,7 +125,7 @@ test.describe("Return + refund — no double-count", () => {
     if (!productAfterDeliver) throw new Error("product not found — unreachable after expect");
     expect(productAfterDeliver.stock).toBe(8); // 10 − 2 confirmed
 
-    // ── 3. Create a Return via API ─────────────────────────────────────────
+    // ── 3. Create + approve a Return via API ─────────────────────────────
     const returnRes = await page.request.post("/api/returns", {
       data: {
         orderId: order.id,
@@ -134,15 +138,37 @@ test.describe("Return + refund — no double-count", () => {
     const returnRecord = (await returnRes.json()).return as { id: string; status: string };
     expect(returnRecord.status).toBe("requested");
 
-    // ── 4. Complete the Return (order.status → "returned") via API ─────────
-    const completeRes = await page.request.patch(`/api/returns/${returnRecord.id}`, {
-      data: { status: "completed", notes: "E2E test completion" },
+    const approveRes = await page.request.patch(`/api/returns/${returnRecord.id}`, {
+      data: { status: "approved" },
     });
-    expect(completeRes.ok()).toBeTruthy();
+    expect(approveRes.ok()).toBeTruthy();
 
-    // ── 5. Verify stock restored EXACTLY once (back to 10) + customer stats ─
-    // The Return completion routed through orderService.updateStatus("returned"),
-    // which restores stock + reverses customer.totalSpent.
+    // ── 4. B7-3 gate: completing a refund-type return on a delivered order
+    // is refused — the money fact must come first (INV-023) ─────────────
+    const prematureCompleteRes = await page.request.patch(`/api/returns/${returnRecord.id}`, {
+      data: { status: "completed" },
+    });
+    expect(prematureCompleteRes.status()).toBe(409);
+    expect(((await prematureCompleteRes.json()) as { code: string }).code).toBe(
+      "RETURN_COMPLETION_REQUIRES_REFUND_FACT",
+    );
+
+    // ── 5. Issue the full-settling refund via API — the governed
+    // delivered→returned path with the compensation money fact ──────────
+    const refundRes = await page.request.post(`/api/orders/${order.id}/refund`, {
+      data: {
+        amount: 10000,
+        method: "cash",
+        reason: "Full refund for returned order",
+      },
+    });
+    expect(refundRes.ok()).toBeTruthy();
+    const refund = (await refundRes.json()).refund as { id: string; amount: number };
+    expect(refund.amount).toBe(10000);
+
+    // ── 6. Verify stock restored EXACTLY once (back to 10) + customer stats
+    // The refund's physical-return transition restored stock + reversed
+    // customer.totalSpent (identity-bound facts).
     const prodAfterReturn = (await (await page.request.get(`/api/products`)).json()).products as Array<{
       id: string;
       stock: number;
@@ -159,26 +185,17 @@ test.describe("Return + refund — no double-count", () => {
       orderCount: number;
     };
     // customer.totalSpent was incremented by 10000 (2×5000) at delivery, then
-    // reversed by 10000 at return → 0. NOT -10000 (which would be the double-count bug).
+    // reversed by the full-settling refund → 0. NOT -10000.
     expect(custAfterReturn.totalSpent).toBe(0);
 
-    // ── 6. Issue a Refund via API (must NOT double-count) ──────────────────
-    // After Phase 1 bug 1.1 fix, the refund-service sees order.status="returned"
-    // and skips the inline stock restore + totalSpent-by-refund-amount decrement
-    // (the Return flow already did both). The Refund row is still created for
-    // the paper trail.
-    const refundRes = await page.request.post(`/api/orders/${order.id}/refund`, {
-      data: {
-        amount: 10000,
-        method: "cash",
-        reason: "Full refund for returned order",
-      },
+    // ── 7. Complete the Return row — order is already "returned", so the
+    // transition is a no-op that records the physical fact ──────────────
+    const completeRes = await page.request.patch(`/api/returns/${returnRecord.id}`, {
+      data: { status: "completed", notes: "E2E test completion" },
     });
-    expect(refundRes.ok()).toBeTruthy();
-    const refund = (await refundRes.json()).refund as { id: string; amount: number };
-    expect(refund.amount).toBe(10000);
+    expect(completeRes.ok()).toBeTruthy();
 
-    // ── 7. Verify stock + stats STILL unchanged after refund (no double-count)
+    // ── 8. Verify stock + stats STILL unchanged after completion (no double-count)
     const prodAfterRefund = (await (await page.request.get(`/api/products`)).json()).products as Array<{
       id: string;
       stock: number;
@@ -186,19 +203,19 @@ test.describe("Return + refund — no double-count", () => {
     const productAfterRefund = prodAfterRefund.find((p) => p.id === product.id);
     expect(productAfterRefund).toBeDefined();
     if (!productAfterRefund) throw new Error("product not found — unreachable after expect");
-    expect(productAfterRefund.stock).toBe(10); // unchanged from after-return
+    expect(productAfterRefund.stock).toBe(10); // unchanged from after-refund
 
     const custAfterRefund = (
       await (await page.request.get(`/api/customers/${customer.id}`)).json()
     ).customer as { totalSpent: number; orderCount: number };
-    expect(custAfterRefund.totalSpent).toBe(0); // unchanged — refund didn't re-decrement
+    expect(custAfterRefund.totalSpent).toBe(0); // unchanged — completion didn't re-reverse
 
-    // ── 8. UI: /returns page shows the return entry ────────────────────────
+    // ── 9. UI: /returns page shows the return entry ────────────────────
     await page.goto("/returns");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 10_000 });
 
-    // ── 9. UI: /orders/[id] shows "returned" status ────────────────────────
+    // ── 10. UI: /orders/[id] shows "returned" status ───────────────────
     await page.goto(`/orders/${order.id}`);
     await page.waitForLoadState("networkidle");
     await expect(page.locator("h1").filter({ hasText: order.orderNumber })).toBeVisible({

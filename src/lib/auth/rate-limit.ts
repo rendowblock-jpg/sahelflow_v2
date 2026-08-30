@@ -16,12 +16,17 @@
  * (one Next.js process per machine). For a future multi-instance Cloudflare
  * Pages deployment, swap the Map for a Redis/Durable-Object backend.
  *
- * NOTE (SEC-022): IP is derived from x-forwarded-for / x-real-ip, which are
- * client-controlled. For the Tauri local-first deployment this is fine
- * (localhost, no proxy spoofing). For Cloudflare Pages, the gateway sets
- * CF-Connecting-IP — the PR that addresses SEC-022 will route through that.
- * For now, this rate limiter raises the bar substantially against the
- * pre-existing zero-protection state.
+ * NOTE (SEC-022, resolved for the local-first deployment — audit 7-a F14):
+ * the limiter bucket key is deliberately NOT derived from client-controlled
+ * headers. Keying on x-forwarded-for / x-real-ip let an attacker rotate the
+ * bucket on every request by replaying a fresh header value, defeating both
+ * the sliding window and the progressive lockout. getLoginLimiterKey collapses
+ * every local attempt onto one stable loopback identity (the deployment has a
+ * single Next.js process per machine, so all login traffic shares one bucket);
+ * the spoofable header values remain available via getClientIp for audit
+ * metadata only. A future multi-tenant gateway deployment must key on a
+ * gateway-ATTESTED address (e.g. an edge-overwritten CF-Connecting-IP behind
+ * a verified Cloudflare deployment), never on a client-supplied header.
  */
 
 export interface RateLimitResult {
@@ -165,7 +170,27 @@ export function recordLoginSuccess(ip: string): void {
   }
 }
 
-/** Extract a best-effort client IP from request headers. */
+/**
+ * Loopback-consistent limiter identity (audit 7-a F14).
+ *
+ * The bucket key must never be rotatable by the client. In the local-first
+ * Tauri/standalone deployment every login attempt originates from the same
+ * machine, so all attempts share one stable key regardless of the headers
+ * they carry. The headers parameter is reserved for a future gateway-attested
+ * identity seam (edge-overwritten CF-Connecting-IP behind a verified proxy);
+ * client-supplied headers are deliberately not read here.
+ */
+const LOOPBACK_LIMITER_KEY = "loopback";
+
+export function getLoginLimiterKey(_headers: Headers): string {
+  return LOOPBACK_LIMITER_KEY;
+}
+
+/**
+ * Extract a best-effort client IP from request headers. AUDIT METADATA ONLY —
+ * this value is client-controlled and must never be used as a limiter bucket
+ * key (see getLoginLimiterKey).
+ */
 export function getClientIp(headers: Headers): string {
   return (
     headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??

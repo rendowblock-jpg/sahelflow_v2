@@ -51,13 +51,13 @@ const DEMO_MUTATION_ALLOWLIST = [
   /^\/api\/updates?(?:\/|$)/,
 ] as const;
 
+// Audit 7-a F9: the dead /api/payment and /api/support entries were removed —
+// no such routes exist, so the allowlist no longer admits their path prefix.
 const LICENSE_LOCKOUT_ALLOWLIST = [
   /^\/api\/auth\/(?:login|logout|reauthenticate|setup|status)$/,
   /^\/api\/health(?:\/|$)/,
   /^\/api\/internal\/runtime-ready(?:\/|$)/,
   /^\/api\/license(?:\/|$)/,
-  /^\/api\/payment(?:\/|$)/,
-  /^\/api\/support(?:\/|$)/,
 ] as const;
 
 function resolveRequestMethod(req: NextRequest | undefined, label?: string): string {

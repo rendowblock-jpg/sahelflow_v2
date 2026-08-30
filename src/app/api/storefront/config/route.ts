@@ -19,6 +19,10 @@ export const dynamic = "force-dynamic";
  *   No query params → list all storefronts (seller management view, includes inactive).
  *   ?slug=...       → public storefront config + products (for the public storefront page).
  *                    Only returns active storefronts.
+ *
+ * The slug branch is a public-safe projection (audit 7-a F3): it never exposes
+ * internal product fields such as sku or stock — availability decisions belong
+ * to the storefront submit command, not the public payload.
  */
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const slug = req.nextUrl.searchParams.get("slug");
@@ -36,7 +40,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     const products = config.productIds.length > 0
       ? await db.product.findMany({
           where: { id: { in: config.productIds }, isActive: true, deletedAt: null },
-          select: { id: true, name: true, price: true, sku: true, images: true, stock: true },
+          select: { id: true, name: true, price: true, images: true },
         })
       : [];
 
