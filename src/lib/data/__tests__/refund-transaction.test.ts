@@ -113,6 +113,76 @@ describe("refund transaction facts", () => {
     expect((await db.product.findUnique({ where: { id: product.id } }))?.stock).toBe(98);
   });
 
+  it("restores mixed variant+variantless stock on the full-settling refund and reverses exactly (B7-4)", async () => {
+    // Mixed counter product: stock 95 = active variant rollup 90 + variantless
+    // remainder 5. The legacy refund restore loop recomputed product.stock
+    // from the variant aggregate after every variant line, clobbering the
+    // variantless component of the restoration; the reversal loop clobbered
+    // it the same way.
+    const customer = await seedCustomer(db);
+    await db.customer.update({
+      where: { id: customer.id },
+      data: { orderCount: 1, totalSpent: 5000 },
+    });
+    const product = await seedProduct(db, { stock: 95 });
+    const variant = await db.productVariant.create({
+      data: { productId: product.id, name: "Rouge", stock: 90 },
+    });
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-REFUND-TX-MIXED",
+        status: "delivered",
+        customerId: customer.id,
+        totalPrice: 5000,
+        wilaya: "Alger",
+        commune: "Alger",
+        address: "Test",
+        phone: customer.phone,
+        source: "manual",
+        deliveredAt: new Date(),
+        items: {
+          create: [
+            {
+              productId: product.id,
+              productVariantId: variant.id,
+              productName: product.name,
+              quantity: 3,
+              unitPrice: 1000,
+              total: 3000,
+            },
+            {
+              productId: product.id,
+              productName: product.name,
+              quantity: 2,
+              unitPrice: 1000,
+              total: 2000,
+            },
+          ],
+        },
+      },
+    });
+
+    // Full-settling refund → delivered→returned physical return with the
+    // partitioned restore: variant 90 + 3 = 93; product = rollup 93 + remainder
+    // (95 - 90 = 5) + 2 variantless = 100.
+    const refund = await createRefund({ prisma: db as never }, {
+      orderId: order.id,
+      amount: 5000,
+      method: "cash",
+      idempotencyKey: "refund-mixed-full",
+    });
+    expect((await db.order.findUnique({ where: { id: order.id } }))?.status).toBe("returned");
+    expect((await db.productVariant.findUnique({ where: { id: variant.id } }))?.stock).toBe(93);
+    expect((await db.product.findUnique({ where: { id: product.id } }))?.stock).toBe(100);
+
+    // Reversal compensates exactly: variant 90, product back to 95 — the
+    // variantless component survives both directions now.
+    await reverseRefund({ prisma: db as never }, refund.id, { reason: "mistake" });
+    expect((await db.order.findUnique({ where: { id: order.id } }))?.status).toBe("delivered");
+    expect((await db.productVariant.findUnique({ where: { id: variant.id } }))?.stock).toBe(90);
+    expect((await db.product.findUnique({ where: { id: product.id } }))?.stock).toBe(95);
+  });
+
   it("rolls back refund, status, stock, and projections when the ledger fails", async () => {
     const { customer, product, order } = await seedDeliveredOrder();
     await db.$executeRawUnsafe(`

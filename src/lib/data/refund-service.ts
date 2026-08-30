@@ -28,6 +28,10 @@ import {
   type RefundMutationFacts,
 } from "./order-change-service";
 import { logAudit } from "@/lib/audit";
+import {
+  deductOrderItemStock,
+  restoreOrderItemStock,
+} from "./product-stock-model";
 
 export interface CreateRefundInput {
   orderId: string;
@@ -77,10 +81,11 @@ async function returnTransitionRefundId(
 
 /**
  * Variant-aware stock restoration for the full-settling legacy refund's
- * delivered→returned transition (7-b P2). Mirrors the legacy confirmation
- * release path in order-service: variant items restore the variant row and
- * re-derive the product's denormalized stock from active variant stock; plain
- * items restore the product row directly.
+ * delivered→returned transition (7-b P2). Delegates to the partitioned
+ * B7-4 stock model: product.stock is written exactly once per product as
+ * the fresh active-variant rollup plus the variantless remainder, so mixed
+ * variant/variantless orders no longer lose the variantless component
+ * depending on item order.
  */
 async function restoreDeliveredStockForFullRefund(
   tx: OrderChangeTransactionClient,
@@ -90,33 +95,7 @@ async function restoreDeliveredStockForFullRefund(
     where: { orderId, productId: { not: null } },
     select: { productId: true, productVariantId: true, quantity: true },
   });
-  for (const item of items) {
-    if (!item.productId) continue;
-    if (item.productVariantId) {
-      const restored = await tx.productVariant.updateMany({
-        where: { id: item.productVariantId, productId: item.productId },
-        data: { stock: { increment: item.quantity } },
-      });
-      if (restored.count !== 1) {
-        throw new Error(
-          `Variant '${item.productVariantId}' is missing or belongs to another product`,
-        );
-      }
-      const available = await tx.productVariant.aggregate({
-        where: { productId: item.productId, isActive: true },
-        _sum: { stock: true },
-      });
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: available._sum.stock ?? 0 },
-      });
-    } else {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { increment: item.quantity } },
-      });
-    }
-  }
+  await restoreOrderItemStock(tx, items);
 }
 
 /** Exact compensation of `restoreDeliveredStockForFullRefund` on reversal. */
@@ -128,33 +107,9 @@ async function deductRestoredStockOnReversal(
     where: { orderId, productId: { not: null } },
     select: { productId: true, productVariantId: true, quantity: true },
   });
-  for (const item of items) {
-    if (!item.productId) continue;
-    if (item.productVariantId) {
-      const deducted = await tx.productVariant.updateMany({
-        where: { id: item.productVariantId, productId: item.productId },
-        data: { stock: { decrement: item.quantity } },
-      });
-      if (deducted.count !== 1) {
-        throw new Error(
-          `Variant '${item.productVariantId}' is missing or belongs to another product`,
-        );
-      }
-      const available = await tx.productVariant.aggregate({
-        where: { productId: item.productId, isActive: true },
-        _sum: { stock: true },
-      });
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: available._sum.stock ?? 0 },
-      });
-    } else {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { decrement: item.quantity } },
-      });
-    }
-  }
+  // Reversal compensation must mirror what the restore did even if stock
+  // moved since: plain decrements, no availability guards.
+  await deductOrderItemStock(tx, items, { requireAvailability: false });
 }
 
 export async function createRefund(context: ServiceContext, input: CreateRefundInput) {

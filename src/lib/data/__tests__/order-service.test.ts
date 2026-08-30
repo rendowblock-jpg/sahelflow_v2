@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { orderService } from "../order-service";
 import { createTestPrisma, disconnectTestPrisma, seedCustomer, seedProduct } from "./helpers";
-import { NotFoundError, InvalidTransitionError, ValidationError } from "@/types/errors";
+import { ConflictError, NotFoundError, InvalidTransitionError, ValidationError } from "@/types/errors";
 
 let db: PrismaClient;
 
@@ -545,5 +545,129 @@ describe("orderService.listToday", () => {
     const result = await orderService.listToday({ prisma: db as never });
     expect(result).toHaveLength(1);
     expect(result[0]!.orderNumber).toBe("ORD-0002");
+  });
+});
+
+// ── B7-4 mixed variant/variantless stock model ─────────────────────────────
+
+describe("orderService.updateStatus stock (B7-4 mixed stock model)", () => {
+  // Mixed counter product: stock 30 = active variant rollup 10 + variantless
+  // remainder 20. The legacy per-item loop recomputed product.stock from the
+  // variant aggregate after EVERY variant line, so the variantless delta
+  // applied earlier in the same transition was clobbered — the final
+  // product.stock depended on the order of the order's items.
+  async function seedMixedProduct() {
+    const customer = await seedCustomer(db);
+    const product = await seedProduct(db, { stock: 30 });
+    const variant = await db.productVariant.create({
+      data: { productId: product.id, name: "Rouge", stock: 10 },
+    });
+    return { customer, product, variant };
+  }
+
+  function mixedOrderItems(
+    productId: string,
+    variantId: string,
+    variantFirst: boolean,
+  ) {
+    const variantItem = {
+      productId,
+      productVariantId: variantId,
+      productName: "Test variant",
+      quantity: 3,
+      unitPrice: 1000,
+      total: 3000,
+    };
+    const plainItem = {
+      productId,
+      productName: "Test plain",
+      quantity: 2,
+      unitPrice: 1000,
+      total: 2000,
+    };
+    return variantFirst ? [variantItem, plainItem] : [plainItem, variantItem];
+  }
+
+  it("deducts mixed lines preserving the variantless remainder (variantless line first)", async () => {
+    const { customer, product, variant } = await seedMixedProduct();
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "pending", customerId: customer.id,
+        totalPrice: 5000, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+        items: { create: mixedOrderItems(product.id, variant.id, false) },
+      },
+      include: { items: true },
+    });
+
+    await orderService.updateStatus({ prisma: db as never }, order.id, "confirmed");
+
+    // variant 10 - 3 = 7; product = fresh rollup 7 + remainder (30 - 10 = 20)
+    // - 2 variantless = 25. The legacy loop clobbered the remainder (would
+    // have ended at the bare rollup 7).
+    expect((await db.productVariant.findUnique({ where: { id: variant.id } }))!.stock).toBe(7);
+    expect((await db.product.findUnique({ where: { id: product.id } }))!.stock).toBe(25);
+  });
+
+  it("writes the same product.stock regardless of item order (variant line first)", async () => {
+    const { customer, product, variant } = await seedMixedProduct();
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "pending", customerId: customer.id,
+        totalPrice: 5000, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+        items: { create: mixedOrderItems(product.id, variant.id, true) },
+      },
+      include: { items: true },
+    });
+
+    await orderService.updateStatus({ prisma: db as never }, order.id, "confirmed");
+
+    // Same partition math as the reversed item order — product.stock must be
+    // order-independent (the legacy loop drifted here: rollup 7 first, then
+    // 7 - 2 = 5, losing the remainder).
+    expect((await db.productVariant.findUnique({ where: { id: variant.id } }))!.stock).toBe(7);
+    expect((await db.product.findUnique({ where: { id: product.id } }))!.stock).toBe(25);
+  });
+
+  it("restores mixed lines symmetrically on cancelled from confirmed", async () => {
+    const { customer, product, variant } = await seedMixedProduct();
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "confirmed", customerId: customer.id,
+        totalPrice: 5000, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+        items: { create: mixedOrderItems(product.id, variant.id, false) },
+      },
+      include: { items: true },
+    });
+    // Pre-seed the post-confirmation stock state (as the deduct left it):
+    // variant 10 - 3 = 7, product 30 - 5 = 25 (rollup 7 + remainder 20 - 2).
+    await db.productVariant.update({ where: { id: variant.id }, data: { stock: 7 } });
+    await db.product.update({ where: { id: product.id }, data: { stock: 25 } });
+
+    await orderService.updateStatus({ prisma: db as never }, order.id, "cancelled");
+
+    // Restored to the exact pre-deduction mixed state.
+    expect((await db.productVariant.findUnique({ where: { id: variant.id } }))!.stock).toBe(10);
+    expect((await db.product.findUnique({ where: { id: product.id } }))!.stock).toBe(30);
+  });
+
+  it("refuses variantless deduction beyond the remainder and persists nothing", async () => {
+    const { customer, product, variant } = await seedMixedProduct();
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "pending", customerId: customer.id,
+        totalPrice: 5000, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+        items: { create: [{ productId: product.id, productName: "Test plain", quantity: 25, unitPrice: 200, total: 5000 }] },
+      },
+      include: { items: true },
+    });
+
+    await expect(
+      orderService.updateStatus({ prisma: db as never }, order.id, "confirmed"),
+    ).rejects.toThrow(ConflictError);
+
+    // Transaction aborted: no stock movement, no status flip.
+    expect((await db.product.findUnique({ where: { id: product.id } }))!.stock).toBe(30);
+    expect((await db.productVariant.findUnique({ where: { id: variant.id } }))!.stock).toBe(10);
+    expect((await db.order.findUnique({ where: { id: order.id } }))!.status).toBe("pending");
   });
 });
