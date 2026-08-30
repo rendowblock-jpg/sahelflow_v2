@@ -1,13 +1,13 @@
 # SahelFlow — Current State
 
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
-> **Last assessed:** 2026-08-29
+> **Last assessed:** 2026-08-30
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at reconciliation `b1b5a03382` after the FD-050 installed-campaign repair series (#346–#353)
+> **Live protected main:** resolve from GitHub before every action; at reconciliation `14c059b7` after the deep-audit remediation register PR #355 (contains the FD-050 installed-campaign repair series #346–#353)
 > **Current signed release:** Internal.29 / `1.0.0-internal.29` / MSI `1.0.0.29` / FD-050 (published; **installed by the Founder — the campaign reproduced defects B1–B5 and D1**; all six were root-caused and repaired on protected main but are **not** inside the signed Internal.29 artifact)
 > **Reviewed release head:** `dd4888d6366cf48ccca05563bedb7e502e5662ce`
 > **Signed publication run:** `33212648778` — success
-> **Current execution:** FD-050 installed Founder campaign is under way on the installed Internal.29; the reproduced defects (B1/B2 quote chips, B3 document spinner, B4 voice recording fail-closed, B5 chat-delete resurrection, D1 AI-key flow) are repaired on protected main (#346–#353, adversarially audited); remaining work is campaign evidence reconciliation into the ledgers, the rest of the campaign matrix (FRC-2 repair rows, retained #306 real-phone rows), and a separately authorized signed successor that packages the repairs — then FRC-3 resumes
+> **Current execution:** FD-050 installed Founder campaign is under way on the installed Internal.29; the reproduced defects (B1/B2 quote chips, B3 document spinner, B4 voice recording fail-closed, B5 chat-delete resurrection, D1 AI-key flow) are repaired on protected main (#346–#353, adversarially audited) and the follow-on deep-audit remediation register is merged on top (#355, `14c059b7`, every Actions gate green at head); campaign evidence reconciliation into the ledgers is complete (#354 plus this reconciliation); remaining work is the rest of the campaign matrix (FRC-2 repair rows, retained #306 real-phone rows) and a separately authorized signed successor that packages the FD-050 repair line AND the deep-audit register — then FRC-3 resumes
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
@@ -69,6 +69,27 @@ Deep-audit repairs (not campaign-observed rows):
 
 - **Delivery-receipt enum truth** — the installed Baileys 6.17.16 status enum is `{ERROR:0,PENDING:1,SERVER_ACK:2,DELIVERY_ACK:3,READ:4,PLAYED:5}`; the two legacy mappers built on the pre-6.7 layout lied on every outbound bubble (SERVER_ACK rendered "delivered", DELIVERY_ACK rendered "read", ERROR rendered "sending" forever). One canonical mapper pinned at runtime against the installed proto (**#350**, `d67f3d0c`). This **undermines the Internal.27 "delivery observed" certification**: what was observed as delivery was SERVER_ACK. The inbox ledger row is corrected accordingly and must be re-proven on an installed candidate.
 - **C1 auto-receive resilience** — the sidecar gave up reconnecting permanently after ~40s and status/group broadcasts could pollute the queue: a 60s background watchdog (guarded, cleared on logout) and a pre-spool 1:1 JID scope filter (**#352**, `4cc9573b`).
+
+## 2d. Deep-audit remediation register (protected source, **unreleased**)
+
+The adversarial deep audit that followed the FD-050 repair line produced a full
+remediation register (batches A, D and B plus a native Rust batch). It was
+executed on `agent/deep-audit-remediation`, every Actions gate green at head
+`40f53860` (21 checks: 20 success / 1 skipped / 0 failures), and squash-merged
+into protected main as **#355, `14c059b7`** with explicit Founder merge
+authority. None of this work is inside the signed Internal.29 artifact; it
+ships only inside a separately authorized signed successor together with the
+2c repair line, under the FD-048/FD-050 release discipline.
+
+- **zod `.partial()` data-loss repair (P1)** — `updateCustomerSchema`/`updateProductSchema`/`updateExpenseSchema` no longer backfill create-time defaults over omitted PATCH fields; update schemas are explicit optionals with defaults preserved, contract-pinned in tests;
+- **Batch A (F1–F15)** — route-surface guard/coded-error/idempotency/bounds remediation;
+- **Batch D (crypto/data)** — PII OrThrow sealing, dual blind-index identity lookup, pinHash at-rest, registry fsync, log retention; key-authority client cast repaired at the seal/open sites;
+- **Batch B (domain truth)** — legacy order PATCH money truth: item totals validated against `unitPrice × quantity`, order total server-derived, money-bearing edits on legacy orders past draft/pending refused with coded `ORDER_EDIT_LOCKED_POST_CONFIRMATION` (B7-1); refund `totalSpentAdjusted` derived from revenue truth so refunds on pending/confirmed/shipped/refused orders stay money-only (B7-2); refund-type return completion on a delivered order refused with coded `RETURN_COMPLETION_REQUIRES_REFUND_FACT` (B7-3); partitioned per-product stock transitions wired through refund restore/reversal, ending variantless clobber (B7-4); timeline read failures surface coded errors (B7-5); single-order COD remittance honors the quarantine (B7-6); `Order.returnState`/`refundState` schema drift reconciled into the prisma Order model; partial refunds are money-only with variant-aware full-settlement stock truth and explicit-only idempotency keys; COD cash collected on returned/refused/cancelled/voided orders is quarantined out of the legacy COD ledger; Arabic/diacritic/spacing/alias wilaya spellings resolve onto the seeded risk profiles; canonical lifecycle outbox markers drain into durable automation trigger intents;
+- **C1 storefront ingestion truth** — poison receipts are classified (malformed / shop-mismatch / integrity / customer_payload / item_authority), rejected best-effort, the page cursor always advances and delegation is released only with full parsed items; whole-page decrypt failure is a systemic refusal with no data loss; the sync worker's silent catches became classified warnings;
+- **A1–A3 (audit + validation truth)** — Sheets export and risk config/rules PUTs are audited (`export.orders` + destination id, `risk.config.update`, `risk.rules.replace`); the risk config PUT body is strictly zod-validated (weights 0–2, thresholds 0–100, ascending invariant);
+- **C2/B1 (failure visibility)** — remote command/projection workers log classified failures with escalation after persistent failure streaks (12×5s commands, 3×8min projections) and per-device projection warnings; inbox connect/logout check `res.ok` and surface localized coded errors via `translateServerError` + toast;
+- **Batch R (native)** — Unix child process-tree containment (`process_group(0)` + `killpg(SIGKILL)`, bounded group drain); `RegFlushKey` after both license-clock anchor writes so the offline license clock survives hard power loss; SQLite orphan-recovery cleanup replaces fire-and-forget removal with quarantine-or-coded-error so recovery cannot be silently blocked;
+- **Redaction authority** — the strict redaction contract is re-affirmed: the `redact-pii` sha256-digest widening was refused and audit-trail digests ride the machine-code suffix convention (`beforeDigestCode`/`afterDigestCode`).
 
 ## 2b. Product/security line packaged in Internal.28 (retained history)
 
