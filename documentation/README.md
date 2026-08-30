@@ -1,14 +1,14 @@
 # SahelFlow documentation authority
 
 > **Status:** Active non-archive documentation entry point
-> **Last reconciled:** 2026-08-28
+> **Last reconciled:** 2026-08-30
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
-> **Latest signed/published checkpoint:** Internal.29 / `1.0.0-internal.29` / MSI `1.0.0.29` / FD-050 (Founder installation pending; Internal.28 remains latest installed)
-> **Protected release source:** `a34917e582c4806aee35ad5aca12aaea82a0ddcf` / PR #344
-> **Reviewed release head:** `dd4888d6366cf48ccca05563bedb7e502e5662ce`
-> **Signed publication run:** `33212648778` — success
-> **Current next outcome:** FD-050 installed Founder campaign — the Founder applies the in-place Internal.29 update, re-verifies the FRC-2 repair rows plus the retained #306 real-phone rows and the applicable FRC-2 matrix rows, evidence is reconciled into the ledgers, then FRC-3 resumes
+> **Latest signed/published checkpoint:** Internal.30 / `1.0.0-internal.30` / MSI `1.0.0.30` / FD-051 (Founder installation pending; Internal.29 remains latest installed)
+> **Protected release source:** `2eb8a33749118e233240019bf2df9a47d586a04d` / PR #357
+> **Reviewed release head:** `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`
+> **Signed publication run:** `33292278832` — success
+> **Current next outcome:** the Founder applies the in-place Internal.30 update with state preserved, re-verifies the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth, C1 sleep/wake auto-receive) plus the deep-audit register's audit-affected rows, the retained FRC-2 repair rows, the #306 real-phone rows and the applicable matrix rows, evidence is reconciled, then FRC-3 resumes; the parallel frontend/UI stream becomes the next candidate after that re-verification
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
@@ -30,23 +30,24 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Current protected and signed truth
 
-Protected `main` at reconciliation is `a34917e582c4806aee35ad5aca12aaea82a0ddcf` after release PR #344; no open PR existed immediately after #344. Revalidate live state before every write/merge.
+Protected `main` at reconciliation is `2eb8a33749118e233240019bf2df9a47d586a04d` after release PR #357; no open PR existed immediately after #357. Revalidate live state before every write/merge.
 
-Internal.29 is the latest real signed/published offline package:
+Internal.30 is the latest real signed/published offline package:
 
-- app `1.0.0-internal.29`;
-- MSI `1.0.0.29`;
-- authority FD-050;
+- app `1.0.0-internal.30`;
+- MSI `1.0.0.30`;
+- authority FD-051 (Founder instruction 2026-08-30: "Cut the successor");
 - mode `founder-offline-only`;
-- release PR #344 / reviewed release head `dd4888d6366cf48ccca05563bedb7e502e5662ce`;
-- the full Required battery passed on the exact head (two CI load-flake failures — sf-verify demo-seeding timeouts and an AI-workspace Prisma transaction timeout — re-ran green with zero code deltas);
-- certification cited corpus head `4921f34eb87369384d7cd09d92064a69b11cbac9` (CI `33207445430`, Phase 5 `33207445134`, Phase 6-7 `33207445070`), the last product-tree change before the documentation-only #343;
-- dispatcher `33212635887` — success;
-- signed updater/publication `33212648778` and release observer `33212661580` — success;
-- release tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`;
-- MSI digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`.
+- release PR #357 / reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`;
+- the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence);
+- certification cited product head `40f5386095e3a11b5f586673d3f6d0cc99956a66` — tree-identical to the #355 squash `14c059b7621d08a041830a626d5b3f2fb6fd75e6` (CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`); #356 is documentation-only;
+- packages the FD-050 installed-campaign repair line (#346–#353) AND the deep-audit remediation register (#355); the parallel frontend/UI stream is explicitly NOT bundled;
+- dispatcher `33292273959` — success;
+- signed updater/publication `33292278832` and release observer `33292285084` — success;
+- release tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`;
+- MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`.
 
-The Founder has **not yet installed** Internal.29. The latest Founder-installed checkpoint remains Internal.28 (FD-049, installed in place during its campaign: text/image/video send, automatic no-refresh inbound and reopen verified; three regressions — document→zip, quoted-reply 409 on received messages, voice button opening the file dialog — were reproduced, repaired on protected main as #335/#336/#337, and extended by #338/#339). Retained Internal.28 publication facts: dispatcher `33136807451`, signed run `33136814065`, tag `sahelflow-v1.0.0-internal.28-d104da72dcfb7950df0b437ce279377b28e7df4b`, MSI digest `sha256:004ce6e3ebdde04f268cbc09d17f7787741ed877e65e61c1aa59d04d9edb1a64`.
+The Founder has **not yet installed** Internal.30. The latest Founder-installed checkpoint remains Internal.29 (FD-050, installed in place during its campaign — it reproduced defects B1–B5 and D1, all repaired as #346–#353 and packaged inside Internal.30 together with the deep-audit remediation register #355). Retained Internal.29 publication facts: dispatcher `33212635887`, signed run `33212648778`, observer `33212661580`, tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`, MSI digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`.
 
 The signed workflow proved exact protected-source and reviewed-tree binding, Required PR success, signed MSI/updater build, staged runtime readiness, local signature verification, signed install/launch/reopen, authenticated hydrated WebView twice, deterministic rewrites, evidence manifest, `latest.json`, exact tag and publication.
 
