@@ -30,9 +30,11 @@ const CONTACT_FIELDS = new Set<keyof UpdateOrderInput>([
   "commune",
   "phone",
 ]);
+// B7-1: `totalPrice` is server-derived money truth (Σ unitPrice×quantity +
+// deliveryCost, mirroring create) and is no longer a PATCH-able field —
+// exercising price authority happens through `deliveryCost` and `items`.
 const FINANCIAL_FIELDS = new Set<keyof UpdateOrderInput>([
   "deliveryCost",
-  "totalPrice",
   "items",
 ]);
 

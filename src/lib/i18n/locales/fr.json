@@ -1553,6 +1553,7 @@
   "orders.empty.highRiskTitle": "Aucune commande à risque",
   "orders.empty.title": "Aucune commande pour le moment",
   "orders.errors.notFound": "Commande introuvable.",
+  "orders.errors.postConfirmationEditLocked": "Les produits et les prix sont verrouillés après la confirmation de la commande. Utilisez les flux de retour et de remboursement gouvernés.",
   "orders.exportCSV": "Exporter CSV",
   "orders.form.addProductPlaceholder": "Ajouter un produit...",
   "orders.form.address": "Adresse",

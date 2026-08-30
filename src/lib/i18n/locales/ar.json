@@ -1553,6 +1553,7 @@
   "orders.empty.highRiskTitle": "لا توجد طلبات عالية المخاطر",
   "orders.empty.title": "لا توجد طلبات بعد",
   "orders.errors.notFound": "الطلب غير موجود.",
+  "orders.errors.postConfirmationEditLocked": "المنتجات والأسعار مقفلة بعد تأكيد الطلبية. استخدم مسارات الإرجاع والاسترداد المعتمدة.",
   "orders.exportCSV": "تصدير CSV",
   "orders.form.addProductPlaceholder": "أضف منتجاً...",
   "orders.form.address": "العنوان",

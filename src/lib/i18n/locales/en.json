@@ -1553,6 +1553,7 @@
   "orders.empty.highRiskTitle": "No high-risk orders",
   "orders.empty.title": "No orders yet",
   "orders.errors.notFound": "Order not found.",
+  "orders.errors.postConfirmationEditLocked": "Products and prices are locked after order confirmation. Use the governed return and refund flows.",
   "orders.exportCSV": "Export CSV",
   "orders.form.addProductPlaceholder": "Add a product...",
   "orders.form.address": "Address",

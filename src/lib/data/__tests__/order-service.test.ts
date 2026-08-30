@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { orderService } from "../order-service";
 import { createTestPrisma, disconnectTestPrisma, seedCustomer, seedProduct } from "./helpers";
-import { NotFoundError, InvalidTransitionError } from "@/types/errors";
+import { NotFoundError, InvalidTransitionError, ValidationError } from "@/types/errors";
 
 let db: PrismaClient;
 
@@ -368,6 +368,142 @@ describe("orderService.update", () => {
     });
     const updated = await orderService.update({ prisma: db as never }, order.id, { deliveryCost: 500 });
     expect(updated.deliveryCost).toBe(500);
+  });
+
+  // ── B7-1: server-derived money truth + post-confirmation lock ─────────────
+
+  it("recomputes totalPrice from items + deliveryCost, never trusting the client", async () => {
+    const customer = await seedCustomer(db);
+    const product = await seedProduct(db);
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "pending", customerId: customer.id,
+        // Bogus legacy stored money — the recompute must replace it.
+        totalPrice: 1, deliveryCost: 500, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+        items: { create: [{ productId: product.id, productName: "Test", quantity: 2, unitPrice: 1000, total: 2000 }] },
+      },
+      include: { items: true },
+    });
+
+    const updated = await orderService.update({ prisma: db as never }, order.id, {
+      items: [{
+        id: order.items[0]!.id,
+        productId: product.id,
+        productName: "Test",
+        quantity: 3,
+        unitPrice: 1000,
+        total: 3000,
+      }],
+      deliveryCost: 500,
+    });
+
+    expect(updated.items[0]!.total).toBe(3000);
+    expect(updated.totalPrice).toBe(3500); // 3×1000 + 500, not client-asserted money
+  });
+
+  it("rejects item totals that disagree with unitPrice × quantity", async () => {
+    const customer = await seedCustomer(db);
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "pending", customerId: customer.id,
+        totalPrice: 2000, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+        items: { create: [{ productName: "Test", quantity: 2, unitPrice: 1000, total: 2000 }] },
+      },
+    });
+
+    await expect(
+      orderService.update({ prisma: db as never }, order.id, {
+        items: [{ productName: "Test", quantity: 2, unitPrice: 1000, total: 9999 }],
+      }),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it("recomputes totalPrice when only deliveryCost changes", async () => {
+    const customer = await seedCustomer(db);
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "pending", customerId: customer.id,
+        totalPrice: 2000, deliveryCost: 0, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+        items: { create: [{ productName: "Test", quantity: 2, unitPrice: 1000, total: 2000 }] },
+      },
+    });
+
+    const updated = await orderService.update({ prisma: db as never }, order.id, { deliveryCost: 500 });
+
+    expect(updated.deliveryCost).toBe(500);
+    expect(updated.totalPrice).toBe(2500); // existing items (2×1000) + 500
+  });
+
+  it("does not rewrite totalPrice on contact-only edits", async () => {
+    const customer = await seedCustomer(db);
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "pending", customerId: customer.id,
+        totalPrice: 7777, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+      },
+    });
+
+    const updated = await orderService.update({ prisma: db as never }, order.id, { notes: "Call first" });
+
+    expect(updated.notes).toBe("Call first");
+    expect(updated.totalPrice).toBe(7777);
+  });
+
+  it("blocks money-bearing edits on confirmed legacy orders (stock already reserved)", async () => {
+    const customer = await seedCustomer(db);
+    const product = await seedProduct(db);
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "confirmed", customerId: customer.id,
+        totalPrice: 5000, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+        items: { create: [{ productId: product.id, productName: "Test", quantity: 5, unitPrice: 1000, total: 5000 }] },
+      },
+    });
+
+    await expect(
+      orderService.update({ prisma: db as never }, order.id, {
+        items: [{ productId: product.id, productName: "Test", quantity: 1, unitPrice: 1000, total: 1000 }],
+      }),
+    ).rejects.toMatchObject({ code: "ORDER_EDIT_LOCKED_POST_CONFIRMATION" });
+
+    // Item set unchanged by the rejected edit.
+    const reloaded = await db.order.findUnique({ where: { id: order.id }, include: { items: true } });
+    expect(reloaded!.items).toHaveLength(1);
+    expect(reloaded!.items[0]!.quantity).toBe(5);
+  });
+
+  it("blocks deliveryCost edits on delivered legacy orders (money already fed stats)", async () => {
+    const customer = await seedCustomer(db);
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "delivered", customerId: customer.id,
+        totalPrice: 5000, deliveryCost: 500, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+      },
+    });
+
+    await expect(
+      orderService.update({ prisma: db as never }, order.id, { deliveryCost: 900 }),
+    ).rejects.toMatchObject({ code: "ORDER_EDIT_LOCKED_POST_CONFIRMATION" });
+    expect(order.totalPrice).toBe(5000);
+  });
+
+  it("still allows contact-only edits on confirmed legacy orders", async () => {
+    const customer = await seedCustomer(db);
+    const order = await db.order.create({
+      data: {
+        orderNumber: "ORD-0001", status: "confirmed", customerId: customer.id,
+        totalPrice: 5000, wilaya: "A", commune: "B", address: "C", phone: "0555123456", source: "manual",
+      },
+    });
+
+    const updated = await orderService.update({ prisma: db as never }, order.id, {
+      phone: "0555987654",
+      notes: "Leave at door",
+    });
+
+    expect(updated.phone).toBe("0555987654");
+    expect(updated.notes).toBe("Leave at door");
+    expect(updated.totalPrice).toBe(5000);
   });
 });
 

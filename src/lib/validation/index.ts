@@ -95,11 +95,16 @@ export const updateOrderStatusSchema = z.object({
 });
 
 /**
- * Schema for `orderService.update` — only notes / deliveryCost / address
- * are updatable via this method (items + status have their own dedicated
- * methods: `updateStatus`, item add/remove). Strict validation prevents
- * callers from passing arbitrary keys (which would be silently ignored
- * by Prisma's strict `data` shape — confusing for the caller).
+ * Schema for `orderService.update` — the legacy compatibility PATCH surface.
+ *
+ * B7-1 money-truth rule: `totalPrice` is NOT an accepted input. It is derived
+ * server-side (Σ unitPrice×quantity + deliveryCost, mirroring create) and only
+ * recomputed when a money-bearing field (`items` / `deliveryCost`) is actually
+ * present — so contact-only edits never rewrite money. Item-level `total` is
+ * still required and validated against unitPrice×quantity in the service, but
+ * the persisted value is the server-derived one. Status authority: money-bearing
+ * fields are rejected on orders past confirmation (stock already reserved);
+ * contact fields stay editable — see orderService.update.
  */
 export const updateOrderItemSchema = z.object({
   id: z.string().optional(),
@@ -121,7 +126,6 @@ export const updateOrderSchema = z.object({
   wilaya: nonEmptyString.optional(),
   commune: nonEmptyString.optional(),
   phone: dzPhone.optional(),
-  totalPrice: nonNegInt.optional(),
   items: z.array(updateOrderItemSchema).optional(),
 });
 
