@@ -291,6 +291,55 @@ describe("permanent WhatsApp chat deletion", () => {
     expect(await db.message.count()).toBe(0);
   });
 
+  it("deletes a conversation whose source is a provider @lid identity", async () => {
+    // Some WhatsApp accounts converse in the LID identity space
+    // (`numeric@lid`, Internal.27 #312). Deletion must stay JID-shape-agnostic
+    // and tombstone that source's ingress history identically (campaign B5).
+    const lidConversation = await db.conversation.create({
+      data: {
+        channel: "whatsapp",
+        contactName: "LID chat",
+        sourceId: "123456789012345678@lid",
+        lastMessageAt: new Date(0),
+      },
+    });
+    await db.message.create({
+      data: {
+        conversationId: lidConversation.id,
+        body: "LID inbound",
+        direction: "inbound",
+        timestamp: new Date(0),
+      },
+    });
+    await db.providerIngressEvent.create({
+      data: {
+        id: "evt-lid",
+        ingressKey: "ingress-key-lid",
+        provider: "whatsapp",
+        environment: "test",
+        providerAccountHash: "0".repeat(64),
+        eventType: "message",
+        sourceId: "123456789012345678@lid",
+        providerEventId: "WAMIDLID0000001",
+        payloadJson: "{}",
+        payloadHash: "0".repeat(64),
+        status: "applied",
+        conversationId: lidConversation.id,
+      },
+    });
+
+    const result = await deleteWhatsAppChats(context, [lidConversation.id]);
+
+    expect(result.deletedConversationIds).toEqual([lidConversation.id]);
+    expect(await db.conversation.count()).toBe(0);
+    expect(await db.message.count()).toBe(0);
+    const tombstoned = await db.providerIngressEvent.findUnique({
+      where: { id: "evt-lid" },
+    });
+    expect(tombstoned?.status).toBe("chat_deleted");
+    expect(tombstoned?.lastErrorCode).toBe("CHAT_DELETED");
+  });
+
   it("operator recovery refuses to retry a tombstoned event", async () => {
     const chat = await seedChat(5);
     if (!chat.sourceId) throw new Error("seed conversation missing sourceId");
