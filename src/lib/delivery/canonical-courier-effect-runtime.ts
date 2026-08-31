@@ -23,6 +23,7 @@ import {
 } from "@/lib/business-truth/principal";
 import type { ServiceContext } from "@/lib/data/service-base";
 import {
+  assertNonDemoCourierIdentity,
   getDeliveryAdapter,
   loadDeliveryCredentials,
 } from "@/lib/integrations/delivery";
@@ -1224,6 +1225,8 @@ export async function synchronizeCanonicalCourierTracking(
   position: CourierPosition;
   events: Array<Record<string, unknown>>;
 }> {
+  // FD-052 option A (coexist): demo-tagged orders never query a real courier.
+  assertNonDemoCourierIdentity("order", orderId);
   const position = await getCanonicalCourierPosition(context, orderId);
   const delivery = position.delivery;
   if (!delivery?.trackingNumber) {

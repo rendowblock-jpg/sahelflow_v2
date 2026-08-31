@@ -8,7 +8,6 @@ import {
 } from "@/lib/demo/algerian-demo-lifecycle";
 import { ALGERIAN_DEMO_WORKSPACE_VERSION } from "@/lib/demo/algerian-demo-year";
 import {
-  assertDemoAllowsDailyReportSettings,
   withDemoPolicyLock,
 } from "@/lib/demo/algerian-demo-policy";
 import { setSetting, SETTING_KEYS } from "@/lib/settings";
@@ -234,25 +233,18 @@ describe("Algerian demo workspace lifecycle", () => {
     expect(await prisma.order.count()).toBe(0);
   });
 
-  it("prevents configuring an effectful daily report after the demo is loaded", async () => {
+  it("accepts effectful daily-report settings while the demo is loaded (FD-052 A coexist)", async () => {
     await loadAlgerianDemoWorkspace(client());
 
+    // The former DEMO_REPORT_CONFIGURATION_BLOCKED guard is gone: real shop
+    // configuration flows while demo rows contribute to reports until removed.
     await expect(
-      assertDemoAllowsDailyReportSettings(client(), {
-        [SETTING_KEYS.dailyReportEnabled]: true,
-        [SETTING_KEYS.dailyReportPhone]: "0550009999",
-      }),
-    ).rejects.toMatchObject({
-      code: "DEMO_REPORT_CONFIGURATION_BLOCKED",
-      statusCode: 409,
-    });
-
-    await expect(
-      assertDemoAllowsDailyReportSettings(client(), {
-        [SETTING_KEYS.dailyReportEnabled]: false,
-        [SETTING_KEYS.dailyReportPhone]: "",
-      }),
+      setSetting(context(), SETTING_KEYS.dailyReportEnabled, "true"),
     ).resolves.toBeUndefined();
+    await expect(
+      setSetting(context(), SETTING_KEYS.dailyReportPhone, "0550009999"),
+    ).resolves.toBeUndefined();
+    expect(await prisma.setting.count()).toBeGreaterThan(0);
   });
 
   it("protects demo lifecycle markers from the general settings service", async () => {

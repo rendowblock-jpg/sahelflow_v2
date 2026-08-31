@@ -123,8 +123,10 @@ describe("Algerian Founder demo contract", () => {
     expect(policy).toContain("let demoPolicyTail: Promise<void>");
     expect(policy).toContain("export async function withDemoPolicyLock");
     expect(policy).toContain("dailyReportWouldBeEffectful");
-    expect(policy).toContain("assertDemoAllowsDailyReportSettings");
-    expect(policy).toContain('"DEMO_REPORT_CONFIGURATION_BLOCKED"');
+    // FD-052 option A (coexist): the read-only report-settings guard was
+    // removed together with its coded rejection.
+    expect(policy).not.toContain("assertDemoAllowsDailyReportSettings");
+    expect(policy).not.toContain('"DEMO_REPORT_CONFIGURATION_BLOCKED"');
 
     expect(settingsService).toContain("const RESERVED_SETTING_KEYS = new Set([");
     expect(settingsService).toContain('"demo_seed_version"');
@@ -160,24 +162,18 @@ describe("Algerian Founder demo contract", () => {
 
     expect(settingsRoute).toContain("await withDemoPolicyLock(() =>");
     expect(settingsRoute).toContain("db.$transaction(async (transaction) =>");
-    expect(settingsRoute).toContain(
-      "await assertDemoAllowsDailyReportSettings(prisma, effectiveAfter)",
-    );
-    expect(
-      settingsRoute.indexOf("assertDemoAllowsDailyReportSettings"),
-    ).toBeLessThan(
-      settingsRoute.indexOf("await setSetting(context, key, value)"),
-    );
+    // FD-052 option A (coexist): effectful daily-report settings are accepted
+    // while the demo workspace is loaded.
+    expect(settingsRoute).not.toContain("assertDemoAllowsDailyReportSettings");
 
     expect(reportRoute).toContain(
       "return withDemoPolicyLock(() => executeReport(trigger))",
     );
-    expect(reportRoute).toContain("if (await isAlgerianDemoLoaded(db))");
-    expect(reportRoute).toContain('code: "DEMO_REPORT_SEND_BLOCKED"');
+    // FD-052 option A (coexist): daily reports run while the demo is loaded;
+    // demo rows are Founder-accepted contributors to the aggregates.
+    expect(reportRoute).not.toContain("isAlgerianDemoLoaded");
+    expect(reportRoute).not.toContain('"DEMO_REPORT_SEND_BLOCKED"');
     expect(reportRoute).not.toContain("sidecar.send(");
-    expect(reportRoute.indexOf("isAlgerianDemoLoaded(db)")).toBeLessThan(
-      reportRoute.indexOf("queueDailyWhatsAppReport(context"),
-    );
 
     expect(resetRoute).toContain('executeShopEraseWithMedia("business-reset")');
     expect(mediaErase).toContain("stageWhatsAppMediaErase");
@@ -207,28 +203,45 @@ describe("Algerian Founder demo contract", () => {
     ).toBeLessThan(privacyLifecycle.indexOf("product.deleteMany"));
   });
 
-  it("keeps demo browsing available while ordinary mutations stay blocked", () => {
+  it("keeps demo browsing and real operations coexisting while demo-tagged courier effects stay blocked (FD-052 A)", () => {
     const storefront = read("src/lib/storefront/service.ts");
     const delivery = read("src/lib/integrations/delivery/index.ts");
     const apiWrapper = read("src/lib/api/with-error-handler.ts");
+    const deliveryCreate = read("src/app/api/delivery/create/route.ts");
+    const deliverySync = read("src/app/api/delivery/sync/route.ts");
+    const bookingAuthority = read(
+      "src/lib/delivery/canonical-courier-booking-authority.ts",
+    );
+    const effectRuntime = read(
+      "src/lib/delivery/canonical-courier-effect-runtime.ts",
+    );
     const storefrontSubmit = read("src/app/api/storefront/submit/route.ts");
 
     expect(storefront).toContain("isActive: row.isActive");
     expect(storefront).not.toContain('row.id.startsWith("demo-") ? false');
     expect(storefrontSubmit).toContain("withErrorHandler");
-    expect(apiWrapper).toContain("const MUTATING_METHODS");
-    expect(apiWrapper).toContain("const DEMO_MUTATION_ALLOWLIST");
-    expect(apiWrapper).toContain('"DEMO_MUTATION_BLOCKED"');
-    expect(apiWrapper).toContain("await isAlgerianDemoLoaded(db)");
-    expect(apiWrapper.indexOf("DEMO_MUTATION_BLOCKED")).toBeLessThan(
-      apiWrapper.indexOf("const response = await handler(...args)"),
-    );
 
-    expect(delivery).toContain("ALGERIAN_DEMO_MARKER_KEY");
-    expect(delivery).toContain("ALGERIAN_DEMO_VERSION");
+    // The blanket mutation freeze is gone: ordinary commerce, inbox and
+    // provider mutations flow while the demo workspace is loaded.
+    expect(apiWrapper).not.toContain("DEMO_MUTATION_ALLOWLIST");
+    expect(apiWrapper).not.toContain('"DEMO_MUTATION_BLOCKED"');
+    expect(apiWrapper).not.toContain("isAlgerianDemoLoaded");
+
+    // Courier credentials no longer carry a blanket demo block; the boundary
+    // moved onto demo-tagged identities at the external-effect entries.
+    expect(delivery).not.toContain("assertProviderEffectsAllowed");
+    expect(delivery).not.toContain("ALGERIAN_DEMO_MARKER_KEY");
+    expect(delivery).toContain("assertNonDemoCourierIdentity");
     expect(delivery).toContain('"DEMO_PROVIDER_EFFECT_BLOCKED"');
-    expect(delivery.indexOf("DEMO_PROVIDER_EFFECT_BLOCKED")).toBeLessThan(
-      delivery.indexOf("const keys = deliverySecretKeys(provider)"),
+
+    expect(deliveryCreate).toContain('assertNonDemoCourierIdentity("order"');
+    expect(deliverySync.match(/assertNonDemoCourierIdentity\("delivery"/g))
+      .toHaveLength(2);
+    expect(bookingAuthority).toContain(
+      'assertNonDemoCourierIdentity("order", data.orderId)',
+    );
+    expect(effectRuntime).toContain(
+      'assertNonDemoCourierIdentity("order", orderId)',
     );
   });
 

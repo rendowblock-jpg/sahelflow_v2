@@ -47,10 +47,9 @@ type MediaSendResponse = {
 
 /**
  * Truthful outcome for permanent multi-select chat deletion. `errorCode`
- * carries the server's coded rejection (LICENSE_*, DEMO_MUTATION_BLOCKED,
- * VALIDATION_ERROR, …) or an `HTTP_<status>` fallback so the confirm dialog
- * can show the operator why the store refused the deletion instead of
- * silently doing nothing.
+ * carries the server's coded rejection (LICENSE_*, VALIDATION_ERROR, …) or an
+ * `HTTP_<status>` fallback so the confirm dialog can show the operator why the
+ * store refused the deletion instead of silently doing nothing.
  */
 export interface DeleteChatsOutcome {
   ok: boolean;

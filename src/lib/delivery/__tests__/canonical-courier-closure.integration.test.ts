@@ -492,6 +492,10 @@ describe("canonical courier public boundary", () => {
       ),
       resolve(
         process.cwd(),
+        "src/lib/__tests__/algerian-demo-contract.test.ts",
+      ),
+      resolve(
+        process.cwd(),
         "src/lib/integrations/delivery/__tests__/provider-authority-source-contract.test.ts",
       ),
       resolve(

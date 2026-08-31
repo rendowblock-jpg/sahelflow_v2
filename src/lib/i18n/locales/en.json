@@ -112,7 +112,6 @@
   "aiKey.encryptionHelp": "Your key is encrypted (AES-256-GCM) before being saved locally. It is never sent anywhere but Google.",
   "aiKey.error": "Error",
   "aiKey.errorDelete": "Failed to delete.",
-  "aiKey.errorDemo": "The Algerian demo workspace is read-only. Remove or reset the demo before configuring AI.",
   "aiKey.errorEmpty": "Please enter a key.",
   "aiKey.errorLicense": "Your license does not include AI features right now. Reconnect SahelFlow to the license authority and try again.",
   "aiKey.errorSecretAuthority": "The local encryption authority refused to store the key. Restart SahelFlow and try again.",

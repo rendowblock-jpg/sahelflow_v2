@@ -17,11 +17,30 @@ import { zrExpressAdapter } from "./zr-express";
 import { ecoTrackAdapter } from "./ecotrack";
 import { getSecret } from "@/lib/secrets";
 import type { ServiceContext } from "@/lib/data/service-base";
-import {
-  ALGERIAN_DEMO_MARKER_KEY,
-  ALGERIAN_DEMO_VERSION,
-} from "@/lib/demo/algerian-demo-policy";
 import { SahelFlowError } from "@/types/errors";
+
+/**
+ * FD-052 option A (coexist) boundary for real-world courier effects.
+ *
+ * The demo workspace no longer freezes ordinary commerce (credentials can be
+ * configured, real orders book real couriers while demo data is loaded), but
+ * demo-tagged orders/shipments must never reach a real courier provider: a
+ * booking, tracking sync or label request for a `demo-` entity is a real
+ * external action driven by fictional data. Every external-effect entry point
+ * that holds an order/delivery identity asserts this with the same code.
+ */
+export function assertNonDemoCourierIdentity(
+  kind: "order" | "delivery",
+  id: string,
+): void {
+  if (id.startsWith("demo-")) {
+    throw new SahelFlowError(
+      `Demo-tagged ${kind} records cannot be sent to real courier providers. Remove the demo workspace or choose seller-owned records.`,
+      "DEMO_PROVIDER_EFFECT_BLOCKED",
+      409,
+    );
+  }
+}
 
 const REGISTRY: Record<DeliveryProvider, DeliveryAdapter> = {
   yalidine: yalidineAdapter,
@@ -42,22 +61,6 @@ export function getDeliveryAdapter(provider: string): DeliveryAdapter {
 
 export function listDeliveryAdapters(): DeliveryAdapter[] {
   return Object.values(REGISTRY);
-}
-
-async function assertProviderEffectsAllowed(
-  context: ServiceContext,
-): Promise<void> {
-  const demoMarker = await context.prisma.setting.findUnique({
-    where: { key: ALGERIAN_DEMO_MARKER_KEY },
-    select: { value: true },
-  });
-  if (demoMarker?.value === ALGERIAN_DEMO_VERSION) {
-    throw new SahelFlowError(
-      "Courier provider actions are disabled while the Algerian demo workspace is loaded.",
-      "DEMO_PROVIDER_EFFECT_BLOCKED",
-      409,
-    );
-  }
 }
 
 async function readCredentialKeys(
@@ -91,7 +94,6 @@ export async function loadDeliveryCredentials(
   context: ServiceContext,
   rawProvider: string,
 ): Promise<DeliveryCredentials> {
-  await assertProviderEffectsAllowed(context);
   const provider = normalizeDeliveryProvider(rawProvider);
   if (!provider) {
     throw new Error(`Unknown delivery provider: "${rawProvider}".`);

@@ -6,10 +6,7 @@ import { requireAuth } from "@/lib/auth/server";
 import { logAudit } from "@/lib/audit";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { db, shopContext, type DbClient } from "@/lib/db";
-import {
-  assertDemoAllowsDailyReportSettings,
-  withDemoPolicyLock,
-} from "@/lib/demo/algerian-demo-policy";
+import { withDemoPolicyLock } from "@/lib/demo/algerian-demo-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -47,11 +44,10 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const input = updateSchema.parse(body);
 
-  // Serialize with demo load/remove and report generation, then keep the
-  // effective-state check and every settings write in one SQLite transaction.
-  // This closes the check-then-write race: either the demo transaction commits
-  // first and this update is rejected, or these settings commit first and demo
-  // loading observes the effectful state and refuses to seed.
+  // Serialize with demo load/remove and report generation, then keep every
+  // settings write in one SQLite transaction. FD-052 option A (coexist):
+  // effectful daily-report settings are accepted while the demo is loaded —
+  // demo rows are Founder-accepted contributors to reports until removed.
   const { before, settings } = await withDemoPolicyLock(() =>
     db.$transaction(async (transaction) => {
       const prisma = transaction as unknown as DbClient;
@@ -59,15 +55,6 @@ export const PUT = withErrorHandler(async (req: NextRequest) => {
 
       // W2-5: capture before-state (all non-reserved settings) for audit.
       const beforeState = await getAllSettings(context);
-      const effectiveAfter = {
-        ...beforeState,
-        ...input.settings,
-      } as Record<string, unknown>;
-
-      // Demo orders are intentionally realistic but may never be delivered to a
-      // real WhatsApp destination. Check the complete effective after-state so
-      // a partial update cannot retain an existing phone or enabled schedule.
-      await assertDemoAllowsDailyReportSettings(prisma, effectiveAfter);
 
       // `setSetting` also rejects lifecycle marker keys. Because this runs inside
       // the transaction, a request mixing a reserved key with ordinary settings
