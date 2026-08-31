@@ -722,11 +722,14 @@ test.describe.serial("Orders governed seller journey", () => {
     await page.goto(`/orders/${orderId}`, { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
 
+    // The lifecycle rail commits the governed confirm directly from the
+    // "Confirm order" button (single-click authority with optimistic in-flight
+    // state). The former AlertDialog double-confirmation was removed by the
+    // Class-AAA UX remediation; the rail's action contract is pinned by
+    // src/components/orders/__tests__/order-lifecycle-rail.test.ts, so the
+    // browser evidence asserts the post-commit fulfillment surface instead of
+    // the deleted dialog.
     await page.getByRole("button", { name: "Confirm order" }).click();
-    const dialog = page.getByRole("alertdialog");
-    await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText("Confirm this order?");
-    await dialog.getByRole("button", { name: "Commit decision" }).click();
 
     await expect(page.getByText("Fulfillment and delivery")).toBeVisible({
       timeout: 30_000,
@@ -736,5 +739,66 @@ test.describe.serial("Orders governed seller journey", () => {
     await expect(page.locator("body")).toContainText(orderNumber);
     await assertContained(page, `/orders/${orderId}`);
     await assertNoLeakedTranslationKeys(page, `/orders/${orderId}`);
+  });
+});
+
+const FIRST_RUN_METADATA_DESCRIPTION = {
+  ar: "نظام مكتبي ذكي للبائعين الجزائريين عند الدفع عند الاستلام",
+  fr: "Back-office intelligent pour les vendeurs algériens en paiement à la livraison",
+} as const;
+
+test.describe("First-run server locale detection", () => {
+  // The seller-side i18n runtime resolves the first-run locale from the
+  // Accept-Language header when no sahelflow-locale cookie exists, and the
+  // root layout renders the dictionary copy into <meta name="description">
+  // plus the detected lang/dir on <html>. This is the render-level proof of
+  // the packaged server dictionary path: the installed gate proves the
+  // artifact carries the dictionaries at the exact runtime-resolved path
+  // (scripts/verify-installed-windows-ui.ps1), because the installed runtime
+  // session-rejects anonymous page fetches by design and an out-of-process
+  // probe can never observe the rendered HTML there.
+  test.describe("arabic first run", () => {
+    test.use({ locale: "ar-DZ" });
+
+    test("renders Arabic metadata copy and RTL direction before any locale cookie", async ({
+      page,
+      context,
+    }) => {
+      // The shared owner storageState deliberately carries a sahelflow-locale
+      // cookie; clearing cookies reproduces the true first boot of a fresh
+      // installation: no session and no locale preference, so the login
+      // surface renders through the root layout with the locale resolved from
+      // the Accept-Language header alone.
+      await context.clearCookies();
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+
+      await expect(page).toHaveURL(/\/login/);
+      await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+        "content",
+        FIRST_RUN_METADATA_DESCRIPTION.ar,
+      );
+    });
+  });
+
+  test.describe("french first run", () => {
+    test.use({ locale: "fr-DZ" });
+
+    test("renders French metadata copy from the suite-default first-run locale", async ({
+      page,
+      context,
+    }) => {
+      await context.clearCookies();
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+
+      await expect(page).toHaveURL(/\/login/);
+      await expect(page.locator("html")).toHaveAttribute("lang", "fr");
+      await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
+      await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+        "content",
+        FIRST_RUN_METADATA_DESCRIPTION.fr,
+      );
+    });
   });
 });

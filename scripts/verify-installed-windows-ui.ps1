@@ -359,64 +359,90 @@ function Wait-ForCompleteStartupTrace {
     throw "${Phase}: startup trace did not settle within 5 seconds. Missing stages: [$missingSummary]."
 }
 
-function Assert-ServerRenderedLocaleText {
-    param(
-        [Parameter(Mandatory = $true)][string]$PageUrl,
-        [Parameter(Mandatory = $true)][string]$Phase
-    )
-
-    # The packaged server renders <meta name="description"> through the seller
-    # i18n runtime loader (root layout generateMetadata -> getI18n -> runtime
-    # read of src/lib/i18n/locales/<locale>.json inside the standalone root).
-    # This is the installed-text proof of the packaged server dictionary path:
-    # if the standalone artifact lost the locale JSONs, the metadata would
-    # render the raw dotted key "metadata.description" instead of localized
-    # copy while every window-title/beacon assertion still passed.
-    $frenchLocaleJson = Get-Content -LiteralPath $frenchLocaleFile -Raw |
-        ConvertFrom-Json
-    $arabicLocaleJson = Get-Content -LiteralPath $arabicLocaleFile -Raw |
-        ConvertFrom-Json
-    $frenchDescription = [string]$frenchLocaleJson."metadata.description"
-    $arabicDescription = [string]$arabicLocaleJson."metadata.description"
-    if ([string]::IsNullOrWhiteSpace($frenchDescription) -or
-        [string]::IsNullOrWhiteSpace($arabicDescription)) {
-        throw "${Phase}: installed UI verification could not read the expected locale metadata strings."
+function Assert-InstalledServerLocaleDictionaries {
+    # The packaged standalone server resolves seller dictionaries at runtime via
+    # resolve(process.cwd(), "src/lib/i18n/locales", "<locale>.json") with the
+    # server cwd at the standalone root, so the MSI-installed tree must carry
+    # the JSONs at <installRoot>\standalone\src\lib\i18n\locales\<locale>.json.
+    # If the installed artifact lost the locale JSONs, the server would render
+    # the raw dotted key "metadata.description" instead of localized copy while
+    # every window-title/beacon assertion still passed.
+    #
+    # BOUNDARY TRUTH: this proof is intentionally filesystem-level. The original
+    # design fetched uiReady.pageUrl over HTTP to observe server-rendered locale
+    # metadata, but the installed runtime deliberately rejects every anonymous
+    # page request behind the launch-cookie boundary (src/proxy.ts answers 401
+    # RUNTIME_SESSION_REQUIRED whenever SF_RUNTIME_APP_TOKEN is set, and the
+    # single-consumption /api/internal/runtime-bootstrap handshake cannot be
+    # replayed from outside the app because the WebView consumes it at launch).
+    # No out-of-process probe can authenticate, so an installed HTTP probe can
+    # never observe the rendered page. The dictionary path is therefore proven
+    # here against the exact runtime-resolved location, and the server-render
+    # first-run Accept-Language proof lives in the phase 6-7 browser lane
+    # (e2e/phase6-7-completion.spec.ts), which legitimately controls the
+    # Accept-Language header on its own server.
+    $standaloneRoot = Join-Path $installRoot "standalone"
+    $installedManifest = Join-Path $standaloneRoot "sahelflow-standalone-manifest.json"
+    $installedServer = Join-Path $standaloneRoot "server.js"
+    if (-not (Test-Path -LiteralPath $installedManifest -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $installedServer -PathType Leaf)) {
+        throw "installed standalone root is incomplete: missing manifest or server.js under $standaloneRoot"
     }
 
-    # First run (no locale cookie) with a French Accept-Language request must
-    # render the French dictionary copy server-side. Invoke-WebRequest keeps no
-    # cookie session between probes, and detection never persists a cookie, so
-    # each probe observes an independent first-run render.
-    $frenchResponse = Invoke-WebRequest -Uri $PageUrl -UseBasicParsing `
-        -Headers @{ "Accept-Language" = "fr-DZ,fr;q=0.9" } -TimeoutSec 30
-    $frenchHtml = [string]$frenchResponse.Content
-    if (-not $frenchHtml.Contains($frenchDescription)) {
-        throw "${Phase}: packaged server did not render the French metadata description (server locale dictionaries missing from the standalone artifact)."
-    }
-    if ($frenchHtml.Contains('content="metadata.description"')) {
-        throw "${Phase}: packaged server rendered the raw dotted key for the metadata description."
+    # The checked-out source is the expected-copy authority: the workflow builds
+    # the MSI from this exact head, so the installed dictionaries must equal the
+    # repository dictionaries byte-for-byte.
+    $expected = @{
+        ar = Get-Content -LiteralPath $arabicLocaleFile -Raw | ConvertFrom-Json
+        en = Get-Content -LiteralPath (Join-Path $repositoryRoot "src/lib/i18n/locales/en.json") -Raw | ConvertFrom-Json
+        fr = Get-Content -LiteralPath $frenchLocaleFile -Raw | ConvertFrom-Json
     }
 
-    # First run with an Arabic Accept-Language request must render the Arabic
-    # dictionary copy AND adopt the detected locale for the document direction,
-    # proving seller-side first-run locale detection in the installed product.
-    $arabicResponse = Invoke-WebRequest -Uri $PageUrl -UseBasicParsing `
-        -Headers @{ "Accept-Language" = "ar-DZ,ar;q=0.9" } -TimeoutSec 30
-    $arabicHtml = [string]$arabicResponse.Content
-    if (-not $arabicHtml.Contains($arabicDescription)) {
-        throw "${Phase}: packaged server did not render the Arabic metadata description for an Arabic Accept-Language first-run request."
+    $localeOutcomes = [ordered]@{}
+    foreach ($locale in @("ar", "en", "fr")) {
+        $installedFile = Join-Path `
+            (Join-Path $standaloneRoot "src\lib\i18n\locales") `
+            "$locale.json"
+        if (-not (Test-Path -LiteralPath $installedFile -PathType Leaf)) {
+            throw "installed standalone artifact is missing the server dictionary: $installedFile"
+        }
+        $installed = Get-Content -LiteralPath $installedFile -Raw | ConvertFrom-Json
+        $installedDescription = [string]$installed."metadata.description"
+        $expectedDescription = [string]$expected[$locale]."metadata.description"
+        if ([string]::IsNullOrWhiteSpace($expectedDescription)) {
+            throw "repository dictionary has no metadata.description copy for locale '$locale'."
+        }
+        if ([string]::IsNullOrWhiteSpace($installedDescription)) {
+            throw "installed '$locale' dictionary rendered field metadata.description is empty."
+        }
+        if ($installedDescription -eq 'metadata.description') {
+            throw "installed '$locale' dictionary carries the raw dotted key for metadata.description."
+        }
+        if ($installedDescription -cne $expectedDescription) {
+            throw "installed '$locale' metadata.description does not match the exact-head repository dictionary."
+        }
+        $localeOutcomes[$locale] = [pscustomobject]@{
+            installedPath = $installedFile
+            descriptionMatchesRepository = $true
+        }
     }
-    if (-not $arabicHtml.Contains('lang="ar"') -or
-        -not $arabicHtml.Contains('dir="rtl"')) {
-        throw "${Phase}: packaged server did not adopt the detected Arabic locale for the document language and direction on first paint."
+
+    $arabicDescription = [string]((Get-Content -LiteralPath (Join-Path `
+        (Join-Path $standaloneRoot "src\lib\i18n\locales") "ar.json") -Raw |
+        ConvertFrom-Json)."metadata.description")
+    if ($arabicDescription -notmatch '[\u0600-\u06FF]') {
+        throw "installed Arabic dictionary metadata.description carries no Arabic script."
+    }
+    if ([string]$expected.fr."metadata.description" -ceq [string]$expected.en."metadata.description") {
+        throw "French and English repository dictionaries share one metadata.description copy; locale identity is not provable."
     }
 
     return [pscustomobject]@{
-        phase = $Phase
-        pageUrl = $PageUrl
-        frenchDescriptionRendered = $true
-        arabicDescriptionRendered = $true
-        arabicFirstPaintDirection = "rtl"
+        standaloneRoot = $standaloneRoot
+        runtimeResolvedRelativePath = "src/lib/i18n/locales"
+        locales = $localeOutcomes
+        arabicScriptVerified = $true
+        frenchEnglishDistinct = $true
     }
 }
 
@@ -590,14 +616,12 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     ) {
         throw "ui-launch-$attempt did not retain matching successful UI-ready diagnostics."
     }
-    $serverRenderedLocaleText = Assert-ServerRenderedLocaleText `
-        -PageUrl ([string]$launch.uiReady.pageUrl) `
-        -Phase "ui-launch-$attempt"
+    $serverLocaleDictionaries = Assert-InstalledServerLocaleDictionaries
     $launch | Add-Member -NotePropertyName runtimePreparationMilliseconds `
         -NotePropertyValue $runtimePrepareMilliseconds
     $launch | Add-Member -NotePropertyName startupTrace -NotePropertyValue $startupTrace
-    $launch | Add-Member -NotePropertyName serverRenderedLocaleText `
-        -NotePropertyValue $serverRenderedLocaleText
+    $launch | Add-Member -NotePropertyName serverLocaleDictionaries `
+        -NotePropertyValue $serverLocaleDictionaries
 
     $endpointEvidence = Join-Path $evidenceRoot "runtime-endpoint-ui-launch-$attempt.json"
     $uiEvidence = Join-Path $evidenceRoot "runtime-ui-ready-launch-$attempt.json"
