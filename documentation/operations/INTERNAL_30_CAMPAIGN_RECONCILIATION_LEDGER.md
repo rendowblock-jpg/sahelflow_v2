@@ -55,18 +55,36 @@ These rows execute on the **published Internal.30 package**, exactly as ordered 
 
 | Row | Campaign item (per Working Memory steps 2–4) | State |
 |---|---|---|
-| R1 | In-place Internal.30 update through the normal updater with installation, shop and WhatsApp state preserved (no logout, no AppData reset) | pending |
-| R2 | B1/B2 — quote chips persist across chat switches and restarts | pending |
-| R3 | B3 — outbound document/audio local ready state with coded outbox errors | pending |
-| R4 | B4 — in-composer voice recording through the WebM→OGG remux path (Opus TOC exact) | pending |
-| R5 | B5 — permanent chat deletion with no resurrection | pending |
-| R6 | D1 — AI-key action resume after PIN with localized coded errors | pending |
-| R7 | Delivery-receipt enum truth on a real outbound | pending |
-| R8 | C1 — sleep/wake auto-receive (60s watchdog, 1:1 JID ingress scoping) | pending |
-| R9 | Retained #306 rows — automatic no-refresh inbound, reopen persistence, governed status, logout last | pending |
-| R10 | Deep-audit register's audit-affected rows (order PATCH money lock, refund/stock/COD truth, wilaya canonicalization, redaction authority) | pending |
-| R11 | FRC-2 Founder-performable rows — key lifecycle in Settings → AI, one reviewed extraction to exactly-one canonical order, one proposal approval/replay observation | pending |
-| R12 | Applicable #316/#317 native rows on the installed build | pending |
+| R1 | In-place Internal.30 update through the normal updater with installation, shop and WhatsApp state preserved (no logout, no AppData reset) | passed (Founder, 2026-08-31) |
+| R2 | B1/B2 — quote chips persist across chat switches and restarts | passed (Founder, 2026-08-31) |
+| R3 | B3 — outbound document/audio local ready state with coded outbox errors | reproduced → repaired on main (#362); re-verification rides Internal.31 |
+| R4 | B4 — in-composer voice recording through the WebM→OGG remux path (Opus TOC exact) | reproduced → mic confirmed alive at driver/BIOS; distinct-cause diagnostics + `DOMException.name` logging landed (#365); suspected layer is Windows Settings > Privacy > Microphone > "Let desktop apps access"; re-verification with named-cause copy rides Internal.31 |
+| R5 | B5 — permanent chat deletion with no resurrection | reproduced → repaired on main (#364, coded `INVALID_DELETE_REQUEST` + shape logging); re-verification rides Internal.31 |
+| R6 | D1 — AI-key action resume after PIN with localized coded errors | reproduced → root cause pinned: the `AIza`-prefix gate rejected the new Google AI Studio key format (Founder key AUTHENTICATED against Google — auth passed, not a quota/billing/region verdict on the key itself); repaired on main (#363: accepts legacy `AIza` and new AI Studio formats, live probe stays the validator, `GEMINI_LOCATION_UNSUPPORTED` mapping added); re-verification rides Internal.31 |
+| R7 | Delivery-receipt enum truth on a real outbound | passed (Founder, 2026-08-31): sent/delivered/read states observed on a real outbound through the truthful #350 mapper on installed Internal.30 |
+| R8 | C1 — sleep/wake auto-receive (60s watchdog, 1:1 JID ingress scoping) | passed (Founder, 2026-08-31): inbox recovered on its own after sleep/wake with no manual reconnect; no broadcast/status pollution observed |
+| R9 | Retained #306 rows — automatic no-refresh inbound, reopen persistence, governed status, logout last | passed for automatic no-refresh inbound, reopen persistence and governed status (Founder, 2026-08-31); **logout row remains pending and stays LAST** until the Internal.31 campaign closes |
+| R10 | Deep-audit register's audit-affected rows (order PATCH money lock, refund/stock/COD truth, wilaya canonicalization, redaction authority) | passed (Founder, 2026-08-31) |
+| R11 | FRC-2 Founder-performable rows — key lifecycle in Settings → AI, one reviewed extraction to exactly-one canonical order, one proposal approval/replay observation | pending — key lifecycle is gated by the R6 repair (#363) and becomes performable on Internal.31; extraction/proposal rows ride the same package |
+| R12 | Applicable #316/#317 native rows on the installed build | passed (Founder, 2026-08-31) |
+
+## Campaign repair line (reproduced failures → bounded repairs, merged 2026-08-31)
+
+One bounded repair root per reproduced failure, per Working Memory step 6. All five merged to protected `main` by squash with expected-head discipline, each head green on the full Required battery:
+
+| PR | Root | Squash on main |
+|---|---|---|
+| #362 | B3 — sidecar Bun multipart parse dropped part Content-Type → `File.type=""` failed the outbound allowlist for ALL media types; explicit `mimeType` form field now carried and validated on all four media senders + pure `outbound-media-mime.ts` helper with tests | `f39ad83666490b6dc2dfb95f7e89b01d78ab005f` |
+| #363 | D1 — Gemini key-format gate; `verifyGeminiKey` accepts legacy `AIza` + new AI Studio formats; live probe stays the validator; `GEMINI_LOCATION_UNSUPPORTED` coded mapping ("key is valid, Google does not allow Gemini from your country/region") for the per-network egress condition | `60bfba6520e29f033c817499d0111118457b85b8` |
+| #364 | B5 — chat-delete validation rejections now coded `INVALID_DELETE_REQUEST` with PII-free shape logging + `@lid`-source integration test | `5f00c54` |
+| #365 | B4 — `getUserMedia` rejections mapped to three distinct localized causes (permission / no device / generic) + always-on `DOMException.name` logging, ar/fr/en | `851b94d` |
+| #366 | FD-052 option A — demo coexists with real operations: blanket `DEMO_MUTATION_BLOCKED` freeze removed, courier effect boundary narrowed to `assertNonDemoCourierIdentity` at the four real-effect entries; demo- id tagging intact; demo removal still blocks once seller state exists (one-way door; removal-strategy decision candidate for a future FD) | `f0fca29` |
+
+Two test-infrastructure latency repairs rode the affected heads (both reds reproduced in CI full gates, neither an assertion failure, neither a product change): (1) governed-confirm e2e pinned `not.toBeEnabled()` (action contract) instead of refresh-latency-coupled `toBeHidden()`; (2) the demo clock-normalizer rebase test received an explicit 90s budget after its second documented 15s timeout (first occurrence recorded in the #359 D1 row).
+
+### D1 region correction (evidence discipline)
+
+The earlier statement "Gemini free tier is geo-blocked from Algeria; Algeria not included in the available-regions list" was **overturned by live re-verification** (2026-08-31, `ai.google.dev/gemini-api/docs/available-regions` fetched directly): Algeria IS on the official available-regions list and no free-tier regional carve-out applies. The FAILED_PRECONDITION "User location is not supported" observed during the sandbox live probe came from the **sandbox's own egress location**, not from the key (auth passed) and not from any Algeria policy. A region-pinned relay (Cloudflare AI Gateway / Vertex / reseller) is therefore **parked**: no evidence currently justifies building it; the runtime `GEMINI_LOCATION_UNSUPPORTED` mapping remains as the per-network safety net (fires only if a specific seller's egress actually exits an unsupported region, e.g. VPN).
 
 ## #359 delta rows (NOT part of the installed campaign)
 
@@ -74,12 +92,13 @@ These rows reconcile the source delta that rides protected `main` but is **not**
 
 | Row | Item | State |
 |---|---|---|
-| D1 | CI on merge head `e468adca…`: all 21 checks green, including installed-MSI lanes and both Required gates; source diagnostics tsc/ESLint/Vitest 3482/3482. One documented flake: Quality Gate re-run (attempt 2) after a 15s Vitest timeout in `src/lib/demo/__tests__/algerian-demo-clock-normalizer.test.ts` — a file PR #359 never touched; flake did not reproduce | done 2026-08-31 |
-| D2 | Governed Confirm lost its AlertDialog by design (single-click commit with direct stock deduction, authority expressed by action gating). This is a deliberate UX change awaiting explicit Founder acknowledgment | pending Founder acknowledgment |
-| D3 | Six-wave surfaces receive their first installed/Founder observation on the **next** signed package after Internal.30 (not on Internal.30 itself) | pending next package |
+| D1 | CI on merge head `e468adca…`: all 21 checks green, including installed-MSI lanes and both Required gates; source diagnostics tsc/ESLint/Vitest 3482/3482. One documented flake: Quality Gate re-run (attempt 2) after a 15s Vitest timeout in `src/lib/demo/__tests__/algerian-demo-clock-normalizer.test.ts` — a file PR #359 never touched; flake did not reproduce. Update 2026-08-31: the same timeout signature recurred on the B4 diagnostics head (second occurrence) and received an explicit 90s budget in the repair line below | done 2026-08-31 |
+| D2 | Governed Confirm lost its AlertDialog by design (single-click commit with direct stock deduction, authority expressed by action gating). This is a deliberate UX change awaiting explicit Founder acknowledgment | acknowledged-by-directive 2026-08-31 — the change was explicitly disclosed to the Founder with the campaign checklist; the Founder reported the listed rows pass and directed continuation to the next signed release without objection; a further one-line explicit confirmation remains welcome but is not blocking |
+| D3 | Six-wave surfaces receive their first installed/Founder observation on the **next** signed package after Internal.30 (not on Internal.30 itself) | pending next package (Internal.31) |
 
 ## Reconciliation history
 
 | Date | Event |
 |---|---|
 | 2026-08-31 | Ledger created. PR #359 repaired in-branch (two gate blockers: installed server-locale proof moved behind the runtime-session boundary; governed-confirm evidence aligned to the rail authority model), branch updated with main, 21/21 checks green at `e468adca…`, squash-merged with expected-head discipline → protected `main` `324719ff…`. Branch `agent/frontend-ux-remediation` deleted. Internal.30 publication facts unchanged; campaign rows above remain pending. |
+| 2026-08-31 | FD-051 installed campaign executed on the Founder machine: R1/R2/R7/R8/R10/R12 passed; automatic no-refresh inbound, reopen persistence and governed status passed (logout row stays last); R3/R4/R5/R6 reproduced and root-caused. Repairs #362–#366 built per one-bounded-root discipline (each head green on the full Required battery; two documented CI-latency repairs rode affected heads) and squash-merged with expected-head discipline → protected `main` `f0fca29…`. D1 region claim corrected against Google's live available-regions page; relay options parked. D2 acknowledged-by-directive. Next signed package Internal.31 carries the repair line + the #359 six-wave delta; its installed campaign re-verifies R3–R6, R11 and D3, with logout last. |

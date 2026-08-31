@@ -7,7 +7,7 @@
 
 ## Current truth
 
-- Protected `main` at handoff: `324719ff999565967e2939a5eacc82539ae86cbc` (PR #359 frontend Class-AAA remediation squash-merge after docs-only #358/#360; release PR #357 source `2eb8a337…` is the published Internal.30 source); live GitHub wins if moved.
+- Protected `main` at handoff: `f0fca29…` — the FD-051 installed campaign repair line squashed on top of #361: #362 `f39ad836…` (B3 sidecar media MIME), #363 `60bfba65…` (D1 Gemini key format + region mapping), #364 `5f00c54…` (B5 coded delete errors), #365 `851b94d…` (B4 mic-failure diagnostics), #366 `f0fca29…` (FD-052 demo coexist). Live GitHub wins if moved.
 - Latest signed/published checkpoint: **Internal.30** — published (Founder installation pending). It packages the FD-050 installed-campaign repair line (#346–#353) AND the deep-audit remediation register (#355) under **FD-051** (Founder instruction 2026-08-30: "Cut the successor"); the frontend/UI stream PR #359 was merged to protected `main` on the Founder's 2026-08-31 directive (option B: repair its two gate blockers in-branch, land green, merge) and is explicitly NOT part of the published package — its six waves ride `main` ahead of the next signed package (`operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` holds the exact delta).
 - App `1.0.0-internal.30`; MSI `1.0.0.30`; authority **FD-051**; mode `founder-offline-only`.
 - Release PR #357; reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`; the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence) — certification cited product head `40f53860` (tree-identical to squash `14c059b7`; CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`).
@@ -21,8 +21,8 @@
 - #317 open — professional WhatsApp Inbox parity is source-complete and packaged in published Internal.30; installed/real-phone evidence is pending.
 - #230 open/reopened P1 — customer-online trial/network blocker; no owned production domain.
 - FRC-2 is source-complete: capability ledger + frozen corpus `frc2-1.0.0` (#342/#343) merged; live-key, installed-observation and T470 rows remain external-blocked in the AI ledger. No open PR existed immediately after #344 merged.
-- Current sequencing decision: **FD-051 satisfied in publication** — Internal.30 packages the FD-050 installed-campaign repair line (#346–#353) and the deep-audit remediation register (#355); Founder installation and re-verification come next, then FRC-3.
-- Exact next outcome: **the Founder applies the in-place Internal.30 update with state preserved, re-verifies the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive) plus the deep-audit register's audit-affected rows, the retained FRC-2 repair rows, the #306 real-phone rows and the applicable matrix rows on the installed Internal.30, evidence is reconciled into the ledgers, then FRC-3 resumes; the #359 six-wave delta rides `main` and receives its first installed/Founder observation on the next signed package (see `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`)**.
+- FD-051 installed campaign evidence (Founder, 2026-08-31): R1/R2/R7/R8/R10/R12 passed on installed Internal.30; automatic no-refresh inbound, reopen persistence and governed status passed (logout row stays LAST); R3/R4/R5/R6 reproduced → repaired by #362–#365 above; D1 region claim corrected (Algeria IS on Google's available-regions list; the probe error was the sandbox's own egress; relay parked); D2 acknowledged-by-directive; R11 (FRC-2 key lifecycle) gated on Internal.31 via #363. Exact rows: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`.
+- Current sequencing decision: **FD-052 recorded** (demo coexist, option A); the FD-051 campaign repair line + the #359 six-wave delta now ride protected `main` together and are packaged by the next signed successor **Internal.31** under FD-053; its installed campaign re-verifies R3–R6, R11 and D3, then logout last, then FRC-3 resumes.
 - FD-050 campaign repair line on main (all adversarially audited, packaged in published Internal.30): #346 `7d97a69f` voice-note WebM→OGG remux (B4); #347 `4ffc06a9` chat-delete ingress tombstone (B5); #350 `d67f3d0c` Baileys status-enum truth (audit); #348 `baf33711` AI-key PIN resume + coded errors (D1); #353 `547c5ded` RFC 6716 Opus TOC exactness (audit repair of #346); #352 `4cc9573b` auto-receive watchdog + 1:1 JID scope (C1 audit); #351 `5114c1c5` quote-chip persistence (B1/B2); #349 `b1b5a033` document/audio local-ready projection + outbox error codes (B3).
 - Deep-audit remediation register on main (PR #355, squash `14c059b7`, every Actions gate green at head `40f53860`, packaged in published Internal.30): zod `.partial()` default-backfill data-loss repair (P1, contract-pinned); Batch A route guard/coded-error/idempotency/bounds (F1–F15); Batch D PII OrThrow sealing, dual blind-index, pinHash at-rest, registry fsync, log retention; Batch B domain truth — order PATCH server-derived money + post-confirmation edit lock `ORDER_EDIT_LOCKED_POST_CONFIRMATION` (B7-1), refund stats revenue truth (B7-2), return completion requires the governed refund fact `RETURN_COMPLETION_REQUIRES_REFUND_FACT` (B7-3), partitioned per-product stock transitions (B7-4), timeline coded errors (B7-5), single-order COD remittance honors the quarantine (B7-6), `Order.returnState`/`refundState` schema-drift reconciliation, partial-refund money-only + full-settlement stock truth, COD quarantine on returned/refused/cancelled/voided orders, wilaya canonicalization, automation outbox-marker bridge; storefront poison-receipt intake contract (C1); Sheets export + risk config/rules audited + strict risk-config zod (A1–A3); remote worker classified failure logs + escalation and inbox connect/logout error surfacing (C2/B1); Unix process-group containment, `RegFlushKey` license-clock anchors, orphan-recovery quarantine/unblocking (R1–R3); redaction authority kept strict — audit digests ride the machine-code suffix convention.
 
@@ -99,35 +99,38 @@ Binding rules:
   Internal.30 is installed in place and re-proves the FD-050 rows and the
   remaining FRC-1 rows.
 
-## Exact next-session order — Internal.30 installed campaign and FRC-3 entry
+## Exact next-session order — Internal.31 release and its installed campaign
 
-1. Re-resolve protected `main`, open PRs and #306/#316/#317/#230; confirm Internal.30 is published (tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`)
-   and that no repair PR is open. PR #359 (frontend Class-AAA remediation, six waves)
-   was merged at `324719ff…` on the Founder's 2026-08-31 directive (option B); it is NOT inside the
-   published Internal.30 package — `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` is the
-   exact delta ledger and holds the campaign rows. The campaign below runs on the **published
-   Internal.30 package**; no further source work before the campaign.
-2. The Founder applies the in-place Internal.30 update through the normal
+1. Re-resolve protected `main`, open PRs and #306/#316/#317/#230. The FD-051
+   installed campaign on Internal.30 is closed except the logout row: R1/R2/
+   R7/R8/R10/R12 and the retained #306 rows passed (Founder, 2026-08-31);
+   R3/R4/R5/R6 reproduced and are repaired on main (#362–#365); FD-052 demo
+   coexist landed (#366). The Internal.31 release PR packages the repair line
+   AND the #359 six-wave delta (`operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`
+   holds the exact rows and squash SHAs).
+2. Cut Internal.31 under FD-053: release-authority PR with version files and
+   the release request (certification cites the green runs on the
+   tree-identical product head `569e921…` — CI `33368228685`, Phase 5
+   `33368228409`, Phase 6-7 `33368228448`); exact-head Required battery,
+   expected-head merge, dispatcher → signed publication → observer.
+3. The Founder applies the in-place Internal.31 update through the normal
    updater, preserving installation, shop and WhatsApp state (no logout, no
    AppData reset).
-3. On the installed candidate, re-verify the FD-050 campaign rows: B1–B5
-   (quote chips, document/audio ready state, voice recording, chat delete),
-   D1 (AI-key action resume after PIN with localized coded errors),
-   delivery-receipt enum truth on a real outbound, and C1 sleep/wake
-   auto-receive; plus the deep-audit register's audit-affected rows and the
-   retained #306 rows (automatic no-refresh inbound, reopen persistence,
-   governed status, logout last).
-4. Exercise the applicable FRC-2 matrix rows the Founder can perform: key
-   lifecycle in Settings → AI (test/save/rotate/disconnect), one reviewed
-   extraction from the thread header through exactly-one canonical order, one
-   proposal approval/replay observation.
+4. On the installed Internal.31, re-verify the repair rows: B3 (document/
+   audio ready state + coded outbox errors), B4 (voice recording with the
+   new named-cause copy; record the exact surfaced cause), B5 (permanent
+   delete), D1 (AI-key test/save with the new-format key; key lifecycle is
+   now performable end-to-end); plus the #359 six-wave first observations
+   (D3) and the applicable FRC-2 rows (R11: key lifecycle, one reviewed
+   extraction to exactly-one canonical order, one proposal approval/replay).
 5. Record results in `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`,
    `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` and current-state
    documentation; convert rows only where installed evidence exists.
 6. Any reproduced failure opens exactly one bounded repair root plus affected
    siblings per the audit/review/merge discipline; nothing else moves.
-7. Resume FRC-3 (Required capability/journey assurance ledger) in dependency
-   order; preserve external blockers.
+7. Execute the retained #306 logout row LAST (only after every other row is
+   green), then resume FRC-3 (Required capability/journey assurance ledger)
+   in dependency order; preserve external blockers.
 
 ## Following FRC packages
 
