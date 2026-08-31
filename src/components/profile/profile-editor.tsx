@@ -138,7 +138,7 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">{t("profile.phone")}</Label>
-            <Input id="phone" value={profile.phone ?? ""} readOnly={!canManage} onChange={(event) => setProfile((current) => ({ ...current, phone: event.target.value }))} placeholder="06 00 00 00 00" dir="ltr" />
+            <Input id="phone" type="tel" inputMode="tel" autoComplete="tel" value={profile.phone ?? ""} readOnly={!canManage} onChange={(event) => setProfile((current) => ({ ...current, phone: event.target.value }))} placeholder="06 00 00 00 00" dir="ltr" />
           </div>
         </div>
 

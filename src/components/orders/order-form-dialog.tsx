@@ -13,7 +13,7 @@
  *
  * The submit logic (create customer → create order → navigate) is preserved.
  */
-import { useState, useMemo, useRef } from "react";
+import { useCallback, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,15 +27,20 @@ import {
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { Plus, Trash2, ShoppingCart, Loader2, AlertTriangle } from "lucide-react";
 import { formatDZD } from "@/lib/utils";
 import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
-import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
+import { ProductVariantPicker } from "@/components/products/product-variant-picker";
+import {
+  OrderCustomerCombobox,
+  type OrderFormCustomer,
+} from "@/components/orders/order-customer-combobox";
+import {
+  OrderProductCombobox,
+  type OrderFormProduct,
+} from "@/components/orders/order-product-combobox";
 import { useI18n } from "@/hooks/use-i18n";
-import { usePhoneMask } from "@/hooks/form/use-phone-mask";
+import { DZ_PHONE_PLACEHOLDER, formatDZPhone } from "@/lib/validation/phone";
 import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { useFormDraft, clearFormDraft } from "@/hooks/form/use-form-draft";
 import { toast } from "@/lib/toast";
@@ -47,28 +52,37 @@ import {
   resolveManualOrderCommand,
 } from "@/lib/orders/manual-order-command-key";
 
-interface Customer {
-  id: string; name: string; phone: string;
-  wilaya: string | null; commune: string | null; address: string | null;
-}
-interface Product {
-  id: string; name: string; price: number; stock: number; isActive: boolean;
-  productVariants?: VariantOption[];
-}
-
+/**
+ * Customer/product rows come in as a capped most-recent slice (R2-c); the
+ * comboboxes query /api/customers/search and /api/products on demand for
+ * the rest of the catalog instead of rendering it all in the DOM.
+ */
 interface OrderFormDialogProps {
-  customers: Customer[];
-  products: Product[];
+  customers: OrderFormCustomer[];
+  products: OrderFormProduct[];
+  /** R4-f: controlled open state (create deep-link `?create=1` host). */
+  open?: boolean;
+  /** Called when the dialog requests to open/close (controlled mode). */
+  onOpenChange?: (open: boolean) => void;
 }
 
 const DRAFT_KEY = "sf-order-create-draft";
 const COMMAND_KEY = "sf-order-create-command";
 
-export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
+export function OrderFormDialog({
+  customers,
+  products,
+  open: openProp,
+  onOpenChange,
+}: OrderFormDialogProps) {
   const router = useRouter();
   const { t, locale } = useI18n();
-  const { format: formatPhone } = usePhoneMask();
-  const [open, setOpen] = useState(false);
+  // Controlled mode mirrors CustomerFormDialog/ProductFormDialog so the
+  // create deep-link host can drive the dialog from the ?create=1 param.
+  const isControlled = openProp !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = isControlled ? (onOpenChange ?? (() => {})) : setInternalOpen;
   const [loading, setLoading] = useState(false);
   // W3-4 (task 2-g): HIGH-risk confirmation state. When non-null, an
   // AlertDialog renders with the assessment breakdown + Proceed/Cancel.
@@ -103,7 +117,29 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   useFormDraft(form, DRAFT_KEY, open);
 
   const watchValues = form.watch();
-  const activeProducts = useMemo(() => products.filter((p) => p.isActive), [products]);
+
+  // R2-c: `products` is a capped initial slice. Every remote combobox result
+  // page is merged into this cache so variant-aware row logic (addProduct /
+  // updateVariant / the picker) keeps working for products outside the slice.
+  const [remoteProducts, setRemoteProducts] = useState<OrderFormProduct[]>([]);
+  const registerRemoteProducts = useCallback((fetched: OrderFormProduct[]) => {
+    setRemoteProducts((prev) => {
+      const seen = new Set(prev.map((p) => p.id));
+      const additions = fetched.filter((p) => !seen.has(p.id));
+      return additions.length ? [...prev, ...additions] : prev;
+    });
+  }, []);
+  const productCatalog = useMemo(() => {
+    const localIds = new Set(products.map((p) => p.id));
+    return [
+      ...products,
+      ...remoteProducts.filter((p) => !localIds.has(p.id)),
+    ];
+  }, [products, remoteProducts]);
+  const activeProducts = useMemo(
+    () => productCatalog.filter((p) => p.isActive),
+    [productCatalog],
+  );
 
   const total = useMemo(() => {
     const itemsTotal = (watchValues.items ?? []).reduce((sum, i) => sum + (i.unitPrice ?? 0) * (i.quantity ?? 0), 0);
@@ -111,21 +147,19 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
     return itemsTotal + delivery;
   }, [watchValues.items, watchValues.deliveryCost]);
 
-  function addProduct(productId: string) {
-    const product = activeProducts.find((p) => p.id === productId);
-    if (!product) return;
+  function addProduct(product: OrderFormProduct) {
     const variants = (product.productVariants ?? []).filter(
       (variant) => variant.isActive,
     );
     const selectedVariantIds = new Set(
       fields
-        .filter((field) => field.productId === productId)
+        .filter((field) => field.productId === product.id)
         .map((field) => field.productVariantId)
         .filter((variantId): variantId is string => Boolean(variantId)),
     );
     if (
       variants.length === 0 &&
-      fields.some((field) => field.productId === productId)
+      fields.some((field) => field.productId === product.id)
     ) {
       return;
     }
@@ -139,7 +173,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
       productVariantName: nextVariant?.name ?? null,
       requiresVariant: variants.length > 0,
       quantity: 1,
-      unitPrice: nextVariant?.price ?? product.price,
+      unitPrice: nextVariant?.price ?? product.price ?? 0,
     });
   }
 
@@ -156,7 +190,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
     const item = fields[index]!;
     const product = activeProducts.find((p) => p.id === item.productId);
     const variant = product?.productVariants?.find((v) => v.id === variantId) ?? null;
-    const variantPrice = variant?.price ?? product?.price ?? item.unitPrice;
+    const variantPrice = variant?.price ?? product?.price ?? item.unitPrice ?? 0;
     update(index, {
       ...item,
       productVariantId: variantId,
@@ -165,16 +199,26 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
     });
   }
 
-  function selectCustomer(id: string) {
-    form.setValue("customerId", id, { shouldDirty: true });
+  function selectCustomer(customer: OrderFormCustomer) {
+    form.setValue("customerId", customer.id, { shouldDirty: true });
     form.setValue("isNewCustomer", false);
-    const customer = customers.find((c) => c.id === id);
-    if (customer) {
-      form.setValue("wilaya", customer.wilaya ?? "", { shouldDirty: true });
-      form.setValue("commune", customer.commune ?? "", { shouldDirty: true });
-      form.setValue("address", customer.address ?? "", { shouldDirty: true });
-      form.setValue("phone", formatPhone(customer.phone), { shouldDirty: true });
-    }
+    form.setValue("wilaya", customer.wilaya ?? "", { shouldDirty: true });
+    form.setValue("commune", customer.commune ?? "", { shouldDirty: true });
+    form.setValue("address", customer.address ?? "", { shouldDirty: true });
+    form.setValue("phone", formatDZPhone(customer.phone), { shouldDirty: true });
+  }
+
+  /**
+   * "Create new customer" affordance from the combobox footer: switches to the
+   * new-customer flow (existing dialog path) and pre-fills the typed query as
+   * the customer name so the seller never retypes it.
+   */
+  function startNewCustomerFromQuery(name: string) {
+    if (!watchValues.isNewCustomer) toggleNewCustomerMode();
+    form.setValue("newCustomerName", name, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
   }
 
   function toggleNewCustomerMode() {
@@ -346,9 +390,9 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
   const isNewCustomerMode = watchValues.isNewCustomer;
   const error = form.formState.errors.root?.message;
 
-  // Format phone on change
+  // Format phone on change (canonical "0X XX XX XX XX" mask)
   const onPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value);
+    const formatted = formatDZPhone(e.target.value);
     form.setValue("phone", formatted, { shouldDirty: true, shouldValidate: true });
   };
 
@@ -379,79 +423,81 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
             {/* Customer selection */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>{t("orders.customer")}</Label>
+                <Label
+                  htmlFor={
+                    isNewCustomerMode
+                      ? "order-form-new-customer-name"
+                      : "order-form-customer-select"
+                  }
+                >
+                  {t("orders.customer")}
+                </Label>
                 <Button type="button" variant="ghost" size="sm" onClick={toggleNewCustomerMode} className="text-xs h-7">
                   {isNewCustomerMode ? t("orders.form.chooseExistingCustomer") : t("orders.form.createNewCustomer")}
                 </Button>
               </div>
               {isNewCustomerMode ? (
                 <Input
+                  id="order-form-new-customer-name"
                   {...form.register("newCustomerName")}
                   placeholder={t("orders.form.newCustomerNamePlaceholder")}
+                  aria-invalid={Boolean(form.formState.errors.newCustomerName)}
+                  aria-describedby={
+                    form.formState.errors.newCustomerName
+                      ? "order-form-customer-error"
+                      : watchValues.customerId || isNewCustomerMode
+                        ? "order-form-customer-hint"
+                        : undefined
+                  }
                 />
               ) : (
-                <Select value={watchValues.customerId} onValueChange={selectCustomer}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("orders.form.selectCustomerPlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name} — {c.phone}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <OrderCustomerCombobox
+                  id="order-form-customer-select"
+                  customers={customers}
+                  value={watchValues.customerId ?? ""}
+                  onSelect={selectCustomer}
+                  onCreateNew={startNewCustomerFromQuery}
+                  ariaInvalid={Boolean(form.formState.errors.customerId)}
+                  ariaDescribedBy={
+                    form.formState.errors.customerId
+                      ? "order-form-customer-error"
+                      : watchValues.customerId || isNewCustomerMode
+                        ? "order-form-customer-hint"
+                        : undefined
+                  }
+                />
               )}
-              {form.formState.errors.customerId && (
-                <p className="text-xs text-destructive">{form.formState.errors.customerId.message}</p>
+              {(form.formState.errors.customerId ||
+                form.formState.errors.newCustomerName) && (
+                <p id="order-form-customer-error" className="text-xs text-destructive">
+                  {form.formState.errors.customerId?.message ??
+                    form.formState.errors.newCustomerName?.message}
+                </p>
               )}
               {(watchValues.customerId || isNewCustomerMode) && (
-                <p className="text-xs text-muted-foreground">{t("orders.form.customerDeliveryHint")}</p>
+                <p id="order-form-customer-hint" className="text-xs text-muted-foreground">
+                  {t("orders.form.customerDeliveryHint")}
+                </p>
               )}
             </div>
 
             {/* Products */}
             <div className="space-y-3">
-              <Label>{t("orders.items")}</Label>
+              <Label htmlFor="order-form-add-product">{t("orders.items")}</Label>
               {activeProducts.length > 0 && (
-                <Select onValueChange={addProduct}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("orders.form.addProductPlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activeProducts
-                      .filter((product) => {
-                        const variants = (product.productVariants ?? []).filter(
-                          (variant) => variant.isActive,
-                        );
-                        if (variants.length === 0) {
-                          return !fields.some(
-                            (field) => field.productId === product.id,
-                          );
-                        }
-                        const selectedVariantIds = new Set(
-                          fields
-                            .filter(
-                              (field) => field.productId === product.id,
-                            )
-                            .map((field) => field.productVariantId)
-                            .filter(
-                              (variantId): variantId is string =>
-                                Boolean(variantId),
-                            ),
-                        );
-                        return variants.some(
-                          (variant) => !selectedVariantIds.has(variant.id),
-                        );
-                      })
-                      .map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name} — {formatDZD(p.price, locale)} ({t("common.stock")}: {p.stock})
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <OrderProductCombobox
+                  id="order-form-add-product"
+                  products={activeProducts}
+                  selectedFields={fields.map((field) => ({
+                    productId: field.productId,
+                    productVariantId: field.productVariantId ?? null,
+                  }))}
+                  onSelect={addProduct}
+                  onProductsLoaded={registerRemoteProducts}
+                  ariaDescribedBy={
+                    form.formState.errors.items ? "order-form-items-error" : undefined
+                  }
+                />
               )}
 
               {fields.length > 0 ? (
@@ -490,6 +536,7 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                           <Input
                             type="number"
                             min="1"
+                            aria-label={`${item.productName} — ${t("orders.quantity")}`}
                             value={item.quantity}
                             onChange={(e) => updateQuantity(i, parseInt(e.target.value) || 1)}
                             className="w-16 text-center"
@@ -519,7 +566,9 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
                 </p>
               )}
               {form.formState.errors.items && (
-                <p className="text-xs text-destructive">{form.formState.errors.items.message}</p>
+                <p id="order-form-items-error" className="text-xs text-destructive">
+                  {form.formState.errors.items.message}
+                </p>
               )}
             </div>
 
@@ -527,43 +576,75 @@ export function OrderFormDialog({ customers, products }: OrderFormDialogProps) {
 
             {/* Delivery info */}
             <div className="space-y-4">
-              <Label className="text-base">{t("orders.form.delivery")}</Label>
+              <p className="text-base font-medium">{t("orders.form.delivery")}</p>
               <WilayaCommuneSelect
                 wilaya={watchValues.wilaya}
                 commune={watchValues.commune}
                 onWilayaChange={(v) => form.setValue("wilaya", v, { shouldDirty: true, shouldValidate: true })}
                 onCommuneChange={(v) => form.setValue("commune", v, { shouldDirty: true, shouldValidate: true })}
+                wilayaAriaDescribedby={form.formState.errors.wilaya ? "order-form-wilaya-error" : undefined}
+                communeAriaDescribedby={form.formState.errors.commune ? "order-form-commune-error" : undefined}
                 required
               />
               {form.formState.errors.wilaya && (
-                <p className="text-xs text-destructive">{form.formState.errors.wilaya.message}</p>
+                <p id="order-form-wilaya-error" className="text-xs text-destructive">
+                  {form.formState.errors.wilaya.message}
+                </p>
+              )}
+              {form.formState.errors.commune && (
+                <p id="order-form-commune-error" className="text-xs text-destructive">
+                  {form.formState.errors.commune.message}
+                </p>
               )}
               <div className="space-y-1.5">
-                <Label className="text-xs">{t("orders.form.address")}</Label>
+                <Label className="text-xs" htmlFor="order-form-address">
+                  {t("orders.form.address")}
+                </Label>
                 <Input
+                  id="order-form-address"
                   value={watchValues.address}
                   onChange={(e) => form.setValue("address", e.target.value, { shouldDirty: true, shouldValidate: true })}
                   placeholder={t("orders.form.addressPlaceholder")}
+                  aria-invalid={Boolean(form.formState.errors.address)}
+                  aria-describedby={form.formState.errors.address ? "order-form-address-error" : undefined}
                 />
                 {form.formState.errors.address && (
-                  <p className="text-xs text-destructive">{form.formState.errors.address.message}</p>
+                  <p id="order-form-address-error" className="text-xs text-destructive">
+                    {form.formState.errors.address.message}
+                  </p>
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{t("orders.phone")}</Label>
+                  <Label className="text-xs" htmlFor="order-form-phone">
+                    {t("orders.phone")}
+                  </Label>
+                  {/* Phone digits are technical LTR content — type/inputMode/dir
+                      keep the "05 55 12 34 56" groups from reordering in RTL. */}
                   <Input
+                    id="order-form-phone"
+                    type="tel"
+                    inputMode="tel"
+                    dir="ltr"
+                    autoComplete="tel-national"
                     value={watchValues.phone}
                     onChange={onPhoneChange}
-                    placeholder="0X XX XX XX XX"
+                    placeholder={DZ_PHONE_PLACEHOLDER}
+                    aria-invalid={Boolean(form.formState.errors.phone)}
+                    aria-describedby={form.formState.errors.phone ? "order-form-phone-error" : undefined}
                   />
                   {form.formState.errors.phone && (
-                    <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
+                    <p id="order-form-phone-error" className="text-xs text-destructive">
+                      {form.formState.errors.phone.message}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{t("orders.form.deliveryCostLabel")}</Label>
+                  <Label className="text-xs" htmlFor="order-form-delivery-cost">
+                    {t("orders.form.deliveryCostLabel")}
+                  </Label>
                   <Input
+                    id="order-form-delivery-cost"
                     type="number"
                     value={watchValues.deliveryCost}
                     onChange={(e) => form.setValue("deliveryCost", parseInt(e.target.value) || 0, { shouldDirty: true })}

@@ -209,8 +209,14 @@ export function DailyReportPanel() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="report-phone">{t("reports.phoneLabel")}</Label>
+            {/* WhatsApp destination in international format — still LTR
+                technical content (bidi-safe), but NOT the local DZ mask. */}
             <Input
               id="report-phone"
+              type="tel"
+              inputMode="tel"
+              dir="ltr"
+              autoComplete="tel"
               value={settings.daily_report_phone}
               onChange={(event) =>
                 setSettings((current) => ({

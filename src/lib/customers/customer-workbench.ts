@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { Prisma } from "@prisma/client";
+
 import { db, shopContext } from "@/lib/db";
 import {
   assertTrustedAction,
@@ -63,14 +65,36 @@ function clampPageSize(value: number | undefined): number {
   return Math.min(value!, MAX_PAGE_SIZE);
 }
 
+/**
+ * Customer list scope. `q` is a free-text contains search across customer name
+ * and phone (both plaintext columns); the search only opens contact-gated
+ * branches when the actor may read contact data.
+ */
+export interface CustomersWorkbenchFilters {
+  q?: string | null;
+}
+
 export async function getCustomersWorkbenchPage(
   actorContext: TrustedActorContext,
-  query: { page?: number; pageSize?: number } = {},
+  query: { page?: number; pageSize?: number; q?: string | null } = {},
 ): Promise<CustomersWorkbenchResponse> {
   const access = resolveCustomerWorkbenchAccess(actorContext);
   const page = clampPage(query.page);
   const pageSize = clampPageSize(query.pageSize);
-  const where = { deletedAt: null } as const;
+  const q = query.q?.trim() ?? "";
+  const where: Prisma.CustomerWhereInput = { deletedAt: null };
+  if (q) {
+    if (access.contact) {
+      where.OR = [
+        { name: { contains: q } },
+        { phone: { contains: q } },
+      ];
+    } else {
+      // Without contact read authority the search cannot match anything —
+      // return an honest empty scope rather than leaking contact matches.
+      where.OR = [{ id: "__no-contact-access__" }];
+    }
+  }
 
   const [sourceRows, total] = await Promise.all([
     db.customer.findMany({
@@ -148,6 +172,7 @@ export async function getCustomersWorkbenchPage(
       createdAt: row.createdAt,
     })),
     fieldAccess: access,
+    appliedFilters: { q: query.q?.trim() || null },
     total,
     hasNextPage: page * pageSize < total,
     page,

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Inter, Noto_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 import "./phase5.css";
@@ -22,8 +22,8 @@ import {
 } from "@/components/theme-provider";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { UpdateChecker } from "@/components/updater/update-checker";
-import { getDirection, type Locale } from "@/lib/i18n";
-import { getI18n } from "@/lib/i18n-server";
+import { getDirection } from "@/lib/i18n";
+import { getI18n, resolveSellerLocale } from "@/lib/i18n-server";
 import { ServerLocaleProvider } from "@/lib/i18n/server-locale-context";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
@@ -94,12 +94,17 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const cookieStore = await cookies();
-  const localeCookie = cookieStore.get("sahelflow-locale")?.value;
-  const validLocales: readonly string[] = ["ar", "fr", "en"];
-  const locale: Locale =
-    localeCookie && validLocales.includes(localeCookie)
-      ? (localeCookie as Locale)
-      : "fr";
+  const headerStore = await headers();
+  // Locale precedence: explicit `sahelflow-locale` cookie > Accept-Language
+  // first-run detection (same q-weighted parser + ar > fr > en market
+  // priority as the buyer-facing storefront) > French default. Detection
+  // never persists a cookie — ServerLocaleProvider reconciles the client
+  // mirror to this resolved locale on every RSC commit, so the dashboard
+  // respects the detected language on first paint without a durable write.
+  const locale = resolveSellerLocale({
+    cookieValue: cookieStore.get("sahelflow-locale")?.value,
+    acceptLanguage: headerStore.get("accept-language"),
+  });
   const dir = getDirection(locale);
 
   const themeCookie = cookieStore.get("sahelflow-theme")?.value;

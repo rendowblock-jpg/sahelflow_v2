@@ -60,63 +60,11 @@ type ContextResponse = {
   };
 };
 
-const ORDER_STATUS_COPY = {
-  en: {
-    draft: "Draft",
-    pending: "Pending",
-    confirmed: "Confirmed",
-    processing: "Processing",
-    packed: "Packed",
-    shipped: "Shipped",
-    delivered: "Delivered",
-    completed: "Completed",
-    cancelled: "Cancelled",
-    canceled: "Cancelled",
-    refused: "Refused",
-    returned: "Returned",
-    return_completed: "Return completed",
-    failed: "Failed",
-  },
-  fr: {
-    draft: "Brouillon",
-    pending: "En attente",
-    confirmed: "Confirmée",
-    processing: "En préparation",
-    packed: "Emballée",
-    shipped: "Expédiée",
-    delivered: "Livrée",
-    completed: "Terminée",
-    cancelled: "Annulée",
-    canceled: "Annulée",
-    refused: "Refusée",
-    returned: "Retournée",
-    return_completed: "Retour terminé",
-    failed: "Échec",
-  },
-  ar: {
-    draft: "مسودة",
-    pending: "قيد الانتظار",
-    confirmed: "مؤكد",
-    processing: "قيد التحضير",
-    packed: "مجهز",
-    shipped: "تم الشحن",
-    delivered: "تم التسليم",
-    completed: "مكتمل",
-    cancelled: "ملغى",
-    canceled: "ملغى",
-    refused: "مرفوض",
-    returned: "مرتجع",
-    return_completed: "اكتمل الإرجاع",
-    failed: "فشل",
-  },
-} as const;
-
-function orderStatusLabel(status: string, locale: "ar" | "fr" | "en"): string {
+function orderStatusLabel(status: string, t: (key: string) => string): string {
   const normalized = status.trim().toLowerCase();
-  const known = ORDER_STATUS_COPY[locale][
-    normalized as keyof (typeof ORDER_STATUS_COPY)[typeof locale]
-  ];
-  if (known) return known;
+  const key = `inbox.orderStatus.${normalized}`;
+  const known = t(key);
+  if (known !== key) return known;
   return (
     normalized
       .split(/[_-]+/)
@@ -158,7 +106,7 @@ export function InboxCustomerWorkPanel({
   canUpdateConversation: boolean;
   refreshChats: () => Promise<void>;
 }) {
-  const { locale } = useI18n();
+  const { t, locale } = useI18n();
   const copy = useCallback(
     (
       key: Parameters<typeof getInboxWorkspaceCopy>[1],
@@ -385,7 +333,7 @@ export function InboxCustomerWorkPanel({
                             {order.orderNumber}
                           </span>
                           <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                            {orderStatusLabel(order.status, locale)}
+                            {orderStatusLabel(order.status, t)}
                             {order.totalPrice !== null
                               ? ` · ${formatMoney(order.totalPrice, locale)}`
                               : ""}

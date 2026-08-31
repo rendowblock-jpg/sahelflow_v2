@@ -174,7 +174,7 @@ function CannedResponsePickerBody({ onSelect, onPick }: CannedResponsePickerBody
                       {item.shortCode}
                     </span>
                     {item.description && (
-                      <span className="text-[10px] text-muted-foreground shrink-0">
+                      <span className="text-2xs text-muted-foreground shrink-0">
                         {item.description}
                       </span>
                     )}

@@ -287,11 +287,27 @@ export function StorefrontStudioBootstrap({ products }: Props) {
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <div className="space-y-1.5">
                   <Label htmlFor="studio-phone">{t("storefront.builder.phone")}</Label>
-                  <Input id="studio-phone" dir="ltr" value={phone} onChange={(event) => setPhone(event.target.value)} maxLength={64} />
+                  <Input
+                  id="studio-phone"
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  maxLength={64}
+                />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="studio-whatsapp">{t("storefront.builder.whatsapp")}</Label>
-                  <Input id="studio-whatsapp" dir="ltr" value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} maxLength={64} />
+                  <Input
+                  id="studio-whatsapp"
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  value={whatsapp}
+                  onChange={(event) => setWhatsapp(event.target.value)}
+                  maxLength={64}
+                />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="studio-email">{t("storefront.builder.email")}</Label>
@@ -375,7 +391,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                           {selected ? <Check className="size-3" aria-hidden="true" /> : null}
                         </span>
                         <span className="min-w-0 flex-1 truncate text-xs font-medium">{product.name}</span>
-                        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">{product.stock}</span>
+                        <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">{product.stock}</span>
                       </button>
                     );
                   })
@@ -390,7 +406,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
             <div className="flex items-center justify-between gap-3 border-b bg-background px-4 py-2.5">
               <div>
                 <p className="text-xs font-semibold">{t("storefront.studio.preview")}</p>
-                <p className="text-[10px] text-muted-foreground">{t("storefronts.newDesc")}</p>
+                <p className="text-2xs text-muted-foreground">{t("storefronts.newDesc")}</p>
               </div>
               <Badge variant="outline">{t(TEMPLATE_COPY[template].label)}</Badge>
             </div>

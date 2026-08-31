@@ -242,4 +242,63 @@ describe("universal command search contract", () => {
     expect(topbar).toContain(">Ctrl</span>");
     expect(topbar).not.toContain("<Command");
   });
+
+  it("exposes create actions and recents alongside search and navigation (R4-f)", () => {
+    const palette = source("../../command-palette.tsx");
+    const createParamDialog = source("../../shared/create-param-dialog.tsx");
+    const createParamHook = source("../../../hooks/use-create-param.ts");
+    const recentsHook = source("../../../hooks/use-recent-records.ts");
+    const tracker = source("../../shared/recent-record-tracker.tsx");
+    const orderFormDialog = source("../../orders/order-form-dialog.tsx");
+    const ordersPage = source("../../../../src/app/(dashboard)/orders/page.tsx");
+    const customersPage = source("../../../../src/app/(dashboard)/customers/page.tsx");
+    const productsPage = source("../../../../src/app/(dashboard)/products/page.tsx");
+    const orderDetail = source("../../../../src/app/(dashboard)/orders/[id]/page.tsx");
+    const customerDetail = source(
+      "../../../../src/app/(dashboard)/customers/[id]/page.tsx",
+    );
+    const productDetail = source(
+      "../../../../src/app/(dashboard)/products/[id]/page.tsx",
+    );
+
+    // Actions and recents are first-class cmdk items ranked by the shared
+    // authority (Arabic normalization included), not navigation-only chrome.
+    expect(palette).toContain('heading={copy("actionsSection")}');
+    expect(palette).toContain('heading={copy("recentSection")}');
+    expect(palette).toContain("CREATE_ACTIONS");
+    expect(palette).toContain('buildCreateHref("/orders")');
+    expect(palette).toContain('buildCreateHref("/customers")');
+    expect(palette).toContain('buildCreateHref("/products")');
+    expect(palette).toContain("useRecentRecords(open)");
+    expect(palette).toContain("RECENT_RECORDS_VISIBLE");
+    expect(palette).toContain("hasInstantMatches");
+    expect(palette).toContain('action: "typeAction"');
+    // Matching actions/recents count as results — "no result" stays truthful.
+    expect(palette).toContain("!degraded &&");
+    expect(palette).toContain("&& !hasInstantMatches");
+
+    // One create deep-link contract shared by the palette and all surfaces.
+    expect(createParamHook).toContain('export const CREATE_PARAM = "create"');
+    expect(createParamHook).toContain("router.replace");
+    expect(createParamDialog).toContain("useCreateParam()");
+    expect(createParamDialog).toContain("clearCreateParam");
+    expect(orderFormDialog).toContain("open?: boolean");
+    expect(orderFormDialog).toContain("onOpenChange?: (open: boolean) => void");
+    for (const page of [ordersPage, customersPage, productsPage]) {
+      expect(page).toContain("create?: string");
+      expect(page).toContain("CreateParamDialog");
+    }
+    expect(ordersPage).toContain('kind="order"');
+    expect(customersPage).toContain('kind="customer"');
+    expect(productsPage).toContain('kind="product"');
+
+    // Recents journal: detail pages write, the palette reads, storage caps.
+    expect(recentsHook).toContain("RECENT_RECORDS_MAX = 8");
+    expect(recentsHook).toContain("RECENT_RECORDS_VISIBLE = 5");
+    expect(recentsHook).toContain('"sf-recent-records-v1"');
+    expect(tracker).toContain("pushRecentRecord");
+    for (const page of [orderDetail, customerDetail, productDetail]) {
+      expect(page).toContain("RecentRecordTracker");
+    }
+  });
 });

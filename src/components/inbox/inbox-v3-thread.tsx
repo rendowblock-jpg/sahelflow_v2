@@ -92,6 +92,82 @@ function messageDayLabel(value: number, locale: "ar" | "fr" | "en"): string {
   }).format(new Date(value));
 }
 
+/** "Active …" hint appears only after the thread has been idle this long. */
+const LAST_ACTIVE_MIN_IDLE_MS = 5 * 60_000;
+const LAST_ACTIVE_REFRESH_MS = 30_000;
+
+function relativeLastActive(
+  value: number,
+  now: number,
+  locale: "ar" | "fr" | "en",
+): string {
+  const diff = Math.max(0, now - value);
+  const rtf = new Intl.RelativeTimeFormat(localeCode(locale), {
+    numeric: "auto",
+  });
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 60) return rtf.format(-minutes, "minute");
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return rtf.format(-hours, "hour");
+  const days = Math.floor(hours / 24);
+  if (days < 7) return rtf.format(-days, "day");
+  return new Intl.DateTimeFormat(localeCode(locale), {
+    day: "numeric",
+    month: "short",
+  }).format(new Date(value));
+}
+
+/**
+ * Last-seen fallback (R4-a liveness). The WhatsApp sidecar emits no
+ * presence/typing events (SidecarEvent is status/qr/message/message-update
+ * only), so the thread header leans on persisted `lastMessageAt` instead of
+ * live presence: an obviously-live conversation stays quiet, and once the
+ * thread has been idle for 5+ minutes a muted "Active 12 minutes ago" hint
+ * appears and refreshes on a slow 30s cadence.
+ */
+function ThreadLastActive({
+  lastMessageAt,
+  locale,
+  t,
+}: {
+  lastMessageAt: number | undefined;
+  locale: "ar" | "fr" | "en";
+  t: ReturnType<typeof useInboxWorkspace>["t"];
+}) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!lastMessageAt) return;
+    const idleMs = Date.now() - lastMessageAt;
+    // Self-scheduling wake-up: sleep until the indicator becomes visible,
+    // then refresh on a slow cadence — never a busy interval.
+    const delay =
+      idleMs < LAST_ACTIVE_MIN_IDLE_MS
+        ? LAST_ACTIVE_MIN_IDLE_MS - idleMs + 1_000
+        : LAST_ACTIVE_REFRESH_MS;
+    const timer = window.setTimeout(() => setNow(Date.now()), delay);
+    return () => window.clearTimeout(timer);
+  }, [lastMessageAt, now]);
+
+  if (!lastMessageAt) return null;
+  if (now - lastMessageAt < LAST_ACTIVE_MIN_IDLE_MS) return null;
+
+  return (
+    <>
+      <span aria-hidden="true">·</span>
+      <span
+        dir="auto"
+        data-inbox-last-active="true"
+        className="shrink-0 truncate"
+      >
+        {t("inbox.liveness.lastActive", {
+          time: relativeLastActive(lastMessageAt, now, locale),
+        })}
+      </span>
+    </>
+  );
+}
+
 function MediaIcon({ type }: { type: string | undefined }) {
   switch (type) {
     case "image":
@@ -212,7 +288,7 @@ function CopyMessageButton({
       }}
       aria-live="polite"
       className={cn(
-        "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
+        "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
         state === "failed"
           ? "text-destructive opacity-100"
           : state === "copied"
@@ -288,12 +364,12 @@ function MessageBubble({
         >
           {message.quoted || message.quotedMessageId ? (
             <div className="mb-2 rounded-lg border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5">
-              <div className="flex items-center gap-1 text-[10px] font-medium text-primary">
+              <div className="flex items-center gap-1 text-2xs font-medium text-primary">
                 <Reply className="size-3" aria-hidden="true" />
                 <span>{copy("replyingTo")}</span>
               </div>
               <p
-                className="mt-0.5 line-clamp-2 break-words text-[11px] leading-4 text-muted-foreground"
+                className="mt-0.5 line-clamp-2 break-words text-2xs leading-4 text-muted-foreground"
                 dir="auto"
               >
                 {message.quoted?.preview || "…"}
@@ -389,14 +465,14 @@ function MessageBubble({
                 />
               </div>
               <div className="mt-1 flex items-center justify-between gap-2">
-                <span className="text-[10px] tabular-nums text-muted-foreground">
+                <span className="text-2xs tabular-nums text-muted-foreground">
                   {copy("uploadProgress", { percent: upload.progress })}
                 </span>
                 {upload.cancellable ? (
                   <button
                     type="button"
                     onClick={() => onCancelUpload(message.id)}
-                    className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-[11px] font-medium text-destructive outline-none transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-2xs font-medium text-destructive outline-none transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <X className="size-3" aria-hidden="true" />
                     {copy("cancelUpload")}
@@ -406,7 +482,7 @@ function MessageBubble({
             </div>
           ) : null}
 
-          <div className="mt-1 flex items-center justify-end gap-1 text-[10px] tabular-nums text-muted-foreground">
+          <div className="mt-1 flex items-center justify-end gap-1 text-2xs tabular-nums text-muted-foreground">
             <span>{messageTime(message.timestamp, locale)}</span>
             {!inbound ? (
               <MessageStatus status={message.deliveryStatus ?? "sent"} />
@@ -427,7 +503,7 @@ function MessageBubble({
               type="button"
               onClick={() => onReply(message)}
               aria-label={copy("replyToMessage")}
-              className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100"
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100"
             >
               <Reply className="size-3 icon-rtl-flip" aria-hidden="true" />
               {copy("replyToMessage")}
@@ -447,7 +523,7 @@ function MessageBubble({
             onClick={onChooseCandidate}
             aria-pressed={candidate}
             className={cn(
-              "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
+              "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
               candidate
                 ? "bg-primary/9 text-primary"
                 : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",
@@ -473,7 +549,7 @@ function MessageBubble({
             {t("inbox.retry")}
           </Button>
           {message.outboxErrorCode ? (
-            <span className="font-mono text-[10px] text-muted-foreground">
+            <span className="font-mono text-2xs text-muted-foreground">
               {message.outboxErrorCode}
             </span>
           ) : null}
@@ -712,7 +788,7 @@ export function InboxV3Thread({
                 />
               )}
             </div>
-            <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+            <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-2xs text-muted-foreground">
               {activeChat.phone ? (
                 <span dir="ltr" className="truncate tabular-nums">
                   {activeChat.phone}
@@ -722,6 +798,11 @@ export function InboxV3Thread({
               <span className="truncate">
                 {isWhatsAppConversation ? "WhatsApp" : copy("savedHistory")}
               </span>
+              <ThreadLastActive
+                lastMessageAt={activeChat.lastMessageAt}
+                locale={locale}
+                t={t}
+              />
             </div>
           </div>
         </div>
@@ -879,7 +960,7 @@ export function InboxV3Thread({
                   {showDay ? (
                     <div
                       role="separator"
-                      className="flex items-center gap-3 py-2 text-[10px] font-medium text-muted-foreground"
+                      className="flex items-center gap-3 py-2 text-2xs font-medium text-muted-foreground"
                     >
                       <span className="h-px flex-1 bg-border/55" />
                       <span>{messageDayLabel(message.timestamp, locale)}</span>
@@ -958,11 +1039,11 @@ export function InboxV3Thread({
                     aria-hidden="true"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-medium text-primary">
+                    <p className="text-2xs font-medium text-primary">
                       {copy("replyingTo")}
                     </p>
                     <p
-                      className="truncate text-[11px] leading-4 text-muted-foreground"
+                      className="truncate text-2xs leading-4 text-muted-foreground"
                       dir="auto"
                     >
                       {replyTarget.body.trim() ||

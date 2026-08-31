@@ -1,7 +1,7 @@
 .controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) {
   direction: ltr;
   grid-template-areas: "settings-nav settings-panel";
-  grid-template-columns: 15.625rem minmax(0, 1fr) !important;
+  grid-template-columns: var(--rail-xl) minmax(0, 1fr) !important;
 }
 
 .controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) > aside {
@@ -14,7 +14,7 @@
 
 :global(html[dir="rtl"]) .controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) {
   grid-template-areas: "settings-panel settings-nav";
-  grid-template-columns: minmax(0, 1fr) 15.625rem !important;
+  grid-template-columns: minmax(0, 1fr) var(--rail-xl) !important;
 }
 
 :global(html[dir="rtl"]) .controlCenter[data-settings-workspace="v2"][data-settings-generation="class-aaa"] > :global(.grid) > :is(aside, section) {

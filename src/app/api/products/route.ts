@@ -27,12 +27,17 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const searchParams = req.nextUrl.searchParams;
   const activeOnly = searchParams.get("activeOnly") === "true";
   const pageParam = searchParams.get("page");
+  const q = searchParams.get("q") ?? undefined;
+  const page = pageParam ? Number.parseInt(pageParam, 10) : 1;
 
-  if (pageParam) {
+  // The paginated contract now also serves the scoped-catalog search (q); the
+  // legacy limit/offset slice stays reserved for existing pickers.
+  if (pageParam || q) {
     const result = await getProductsWorkbenchPage(actorContext, {
-      page: Number.parseInt(pageParam, 10),
+      page: Number.isSafeInteger(page) && page > 0 ? page : 1,
       pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
       activeOnly,
+      q,
     });
     return NextResponse.json(result);
   }

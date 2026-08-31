@@ -102,15 +102,32 @@ function projectRow(
   };
 }
 
+/**
+ * Catalog list scope. `q` is a free-text contains search across product name
+ * and SKU — the seller muscle-memory pattern from YouCan/Shopify catalogs.
+ */
+export interface ProductsWorkbenchFilters {
+  q?: string | null;
+}
+
 async function queryProducts(
   actorContext: TrustedActorContext,
-  opts: { take: number; skip: number; activeOnly?: boolean },
+  opts: {
+    take: number;
+    skip: number;
+    activeOnly?: boolean;
+    q?: string | null;
+  },
 ) {
   const access = resolveProductWorkbenchAccess(actorContext);
+  const q = opts.q?.trim() ?? "";
   const where = {
     deletedAt: null,
     ...(opts.activeOnly ? { isActive: true } : {}),
-  } as const;
+    ...(q
+      ? { OR: [{ name: { contains: q } }, { sku: { contains: q } }] }
+      : {}),
+  };
   const sourceRows = await db.product.findMany({
     where,
     select: {
@@ -148,7 +165,12 @@ async function queryProducts(
 
 export async function getProductsWorkbenchPage(
   actorContext: TrustedActorContext,
-  query: { page?: number; pageSize?: number; activeOnly?: boolean } = {},
+  query: {
+    page?: number;
+    pageSize?: number;
+    activeOnly?: boolean;
+    q?: string | null;
+  } = {},
 ): Promise<ProductsWorkbenchResponse> {
   const page = clampPage(query.page);
   const pageSize = clampPageSize(query.pageSize);
@@ -156,12 +178,14 @@ export async function getProductsWorkbenchPage(
     take: pageSize,
     skip: (page - 1) * pageSize,
     activeOnly: query.activeOnly,
+    q: query.q,
   });
   const total = await db.product.count({ where });
 
   return {
     products: rows.map((row) => projectRow(row, access)),
     fieldAccess: access,
+    appliedFilters: { q: query.q?.trim() || null },
     total,
     hasNextPage: page * pageSize < total,
     page,

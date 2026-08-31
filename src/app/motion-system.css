@@ -1,5 +1,5 @@
 /*
- * SahelFlow governed motion language.
+ * SahelFlow governed motion language — the single motion token authority.
  *
  * Motion is part of interaction feedback, not decoration. The previous
  * Internal.17 values started route surfaces almost fully opaque and moved them
@@ -7,9 +7,16 @@
  * installed desktop. This authority keeps motion restrained while making route,
  * workspace, selection and control feedback clearly perceivable. Reduced motion
  * remains absolute authority.
+ *
+ * The :root grammar below unifies the three historical generations:
+ *   globals.css   --animate-duration-fast/normal/slow (150/250/400ms) — deleted, zero consumers
+ *   product-system.css --motion-micro/fast/base/surface/slow (120–360ms) — mapped, tokens deleted
+ *   phase5.css    --sf-motion-fast/normal/slow (140/180/260ms) — mapped, tokens deleted
+ * Legacy names were not aliased because every consumer was a stylesheet under
+ * this consolidation and has been renamed to the tokens below.
  */
 
-[data-sahelflow-shell="desktop"] {
+:root {
   --sf-motion-micro: 110ms;
   --sf-motion-state: 160ms;
   --sf-motion-surface: 210ms;
@@ -20,6 +27,11 @@
   --sf-motion-row-nudge: 2px;
 }
 
+/* Logical-direction geometry flips for the entry/nudge tokens. The shell
+ * selector keeps the historical flip for in-shell consumers; the html selector
+ * preserves the old unscoped [dir="rtl"] flip used by product-system.css
+ * keyframes that can run outside the shell (e.g. storefront, login). */
+html[dir="rtl"],
 [data-sahelflow-shell="desktop"][dir="rtl"] {
   --sf-motion-inline-entry: 10px;
   --sf-motion-row-nudge: -2px;
@@ -45,37 +57,52 @@
   animation: sf-workspace-enter var(--sf-motion-page) var(--sf-motion-ease-out) both;
 }
 
-/* Existing adoption classes resolve to the same grammar. */
+/* Existing adoption classes resolve to the same grammar. The !important
+ * escalations that used to be required to defeat phase5.css's blanket-disable
+ * rules were removed together with those rules: normal cascade order (this
+ * file is imported last and scoped to the shell) now wins. */
 [data-sahelflow-shell="desktop"] .stagger-grid > * {
-  animation: sf-surface-enter var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
+  animation: sf-surface-enter var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
-[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(2) { animation-delay: 24ms !important; }
-[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(3) { animation-delay: 40ms !important; }
-[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(4) { animation-delay: 56ms !important; }
-[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(n + 5) { animation-delay: 68ms !important; }
+[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(2) { animation-delay: 24ms; }
+[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(3) { animation-delay: 40ms; }
+[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(4) { animation-delay: 56ms; }
+[data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(n + 5) { animation-delay: 68ms; }
 
 [data-sahelflow-shell="desktop"] .animate-fade-in {
-  animation: sf-surface-fade var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
+  animation: sf-surface-fade var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
 [data-sahelflow-shell="desktop"] .animate-fade-up {
-  animation: sf-surface-enter var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
+  animation: sf-surface-enter var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
 [data-sahelflow-shell="desktop"] .animate-scale-in {
-  animation: sf-surface-scale var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
+  animation: sf-surface-scale var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
 [data-sahelflow-shell="desktop"] :is(.animate-slide-right, .animate-slide-inline) {
-  animation: sf-surface-inline var(--sf-motion-surface) var(--sf-motion-ease-out) both !important;
+  animation: sf-surface-inline var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
 
-/* Hover is physical feedback, not a decorative floating-card effect. */
+/* Card feedback — hover is physical feedback, not a decorative floating-card
+ * effect. Touch pointers (the fallback absorbed from phase5.css) keep feedback
+ * to color/border/shadow only, with no geometry motion. */
+[data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover) {
+  transform: none;
+  transition-property: border-color, background-color, box-shadow;
+  transition-duration: var(--sf-motion-state);
+  transition-timing-function: var(--sf-motion-ease-state);
+}
+[data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover):hover {
+  transform: none;
+}
+
 @media (hover: hover) and (pointer: fine) {
   [data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover) {
-    transition-property: transform, border-color, background-color, box-shadow !important;
-    transition-duration: var(--sf-motion-state) !important;
-    transition-timing-function: var(--sf-motion-ease-state) !important;
+    transition-property: transform, border-color, background-color, box-shadow;
+    transition-duration: var(--sf-motion-state);
+    transition-timing-function: var(--sf-motion-ease-state);
   }
   [data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover):hover {
-    transform: translateY(-2px) !important;
+    transform: translateY(-2px);
   }
 
   /* Dense operational rows get a tiny logical-direction nudge so hover/selection

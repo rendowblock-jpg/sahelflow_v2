@@ -4,7 +4,10 @@ import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import {
+  matchPhysicalLetter,
+  useKeyboardShortcuts,
+} from "@/hooks/use-keyboard-shortcuts";
 import { useI18n } from "@/hooks/use-i18n";
 import { useUiDensity } from "@/hooks/use-ui-density";
 import { warmUniversalSearchClient } from "@/lib/search/universal-search-client";
@@ -93,7 +96,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      // Match the PHYSICAL K key so the palette chord works on Arabic layouts,
+      // where the physical K produces "ن" (audit d6 #4).
+      if ((event.metaKey || event.ctrlKey) && matchPhysicalLetter(event, "k")) {
         event.preventDefault();
         setCommandOpen((current) => !current);
       }

@@ -1,7 +1,9 @@
 .workspace {}
 
 .panes {
-  --inbox-queue-width: 20.25rem;
+  /* Single authority: the V3 resizable default (324px) lives in globals.css
+     as --pane-queue-base alongside the other queue-pane breakpoints. */
+  --inbox-queue-width: var(--pane-queue-base);
 }
 
 @media (min-width: 768px) {

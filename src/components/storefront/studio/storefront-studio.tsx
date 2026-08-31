@@ -341,14 +341,14 @@ export function StorefrontStudio({
       <header className="flex min-h-14 flex-wrap items-center gap-2 border-b bg-background px-3 py-2">
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold">{draft.name}</div>
-          <div className="truncate text-[11px] text-muted-foreground">
+          <div className="truncate text-2xs text-muted-foreground">
             {t("storefront.studio.homePage", {
               template: draft.theme.template,
             })}
           </div>
         </div>
 
-        <label className="inline-flex min-h-9 items-center gap-2 rounded-lg border px-2.5 text-[11px] font-medium">
+        <label className="inline-flex min-h-9 items-center gap-2 rounded-lg border px-2.5 text-2xs font-medium">
           <input
             type="checkbox"
             checked={draft.isActive}
@@ -490,7 +490,7 @@ export function StorefrontStudio({
                 aria-pressed={panel === item.id}
                 onClick={() => setPanel(item.id)}
                 className={cn(
-                  "min-h-9 rounded-lg px-2 text-start text-[11px] font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  "min-h-9 rounded-lg px-2 text-start text-2xs font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                   panel === item.id
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -651,13 +651,13 @@ function ShippingRulesPanel({
         <h2 className="text-xs font-semibold">
           {t("storefront.studio.shippingRules")}
         </h2>
-        <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+        <p className="mt-1 text-2xs leading-4 text-muted-foreground">
           {t("storefront.studio.checkoutGuidance")}
         </p>
       </div>
 
       {rules.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-3 text-[11px] text-muted-foreground">
+        <p className="rounded-lg border border-dashed p-3 text-2xs text-muted-foreground">
           {t("storefront.studio.shippingEmpty")}
         </p>
       ) : null}
@@ -734,7 +734,7 @@ function ShippingRulesPanel({
                 rules.filter((_, candidateIndex) => candidateIndex !== index),
               )
             }
-            className="text-[11px] font-medium text-destructive"
+            className="text-2xs font-medium text-destructive"
           >
             {t("storefront.studio.removeDeliveryRule")}
           </button>
@@ -780,12 +780,14 @@ function ContactPanel({
         <h2 className="text-xs font-semibold">
           {t("storefront.builder.contactInfo")}
         </h2>
-        <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+        <p className="mt-1 text-2xs leading-4 text-muted-foreground">
           {t("storefront.builder.contactInfoDesc")}
         </p>
       </div>
       <Field label={t("storefront.builder.phone")}>
         <input
+          type="tel"
+          inputMode="tel"
           dir="ltr"
           value={contact.phone}
           maxLength={64}
@@ -794,6 +796,8 @@ function ContactPanel({
       </Field>
       <Field label={t("storefront.builder.whatsapp")}>
         <input
+          type="tel"
+          inputMode="tel"
           dir="ltr"
           value={contact.whatsapp}
           maxLength={64}
@@ -948,7 +952,7 @@ function SectionInspector({
   return (
     <div className="space-y-5">
       <div className="border-b pb-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
           {t("storefront.studio.inspector")}
         </p>
         <h2 className="mt-1 text-sm font-semibold">
@@ -1116,7 +1120,7 @@ function SectionInspector({
               onChange={(event) => patchSection({ imageAlt: event.target.value })}
             />
           </Field>
-          <label className="block space-y-1 text-[11px] font-medium text-muted-foreground">
+          <label className="block space-y-1 text-2xs font-medium text-muted-foreground">
             <span>{c("mediaAlignment")}</span>
             <select
               value={sectionSetting("align") || "split"}
@@ -1143,7 +1147,7 @@ function SectionInspector({
             {section.blocks.map((block, index) => (
               <div key={block.id} className="space-y-2 rounded-xl border p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
+                  <span className="text-2xs font-semibold tabular-nums text-muted-foreground">
                     {index + 1}
                   </span>
                   <button
@@ -1245,7 +1249,7 @@ function SectionInspector({
             {section.blocks.map((block, index) => (
               <div key={block.id} className="space-y-2 rounded-xl border p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-semibold tabular-nums text-muted-foreground">
+                  <span className="text-2xs font-semibold tabular-nums text-muted-foreground">
                     {index + 1}
                   </span>
                   <button
@@ -1469,7 +1473,7 @@ function SeoPanel({
         checked={seo.noIndex}
         onChange={(noIndex) => setSeo({ noIndex })}
       />
-      <div className="rounded-lg border p-2 text-[11px] leading-4 text-muted-foreground">
+      <div className="rounded-lg border p-2 text-2xs leading-4 text-muted-foreground">
         <Cloud className="mb-1 size-4" />
         {t("storefront.studio.domainAuthority")}
       </div>
@@ -1508,7 +1512,7 @@ function ProductPicker({
             onChange={(event) => onChange(product.id, event.target.checked)}
           />
           <span className="min-w-0 flex-1 truncate">{product.name}</span>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-2xs text-muted-foreground">
             {t("storefront.studio.stockCount", { count: product.stock })}
           </span>
         </label>
@@ -1547,7 +1551,7 @@ function SaveStatus({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 text-[11px]",
+        "inline-flex items-center gap-1 text-2xs",
         state === "error" || state === "conflict"
           ? "text-destructive"
           : "text-muted-foreground",
@@ -1643,7 +1647,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block space-y-1 text-[11px] font-medium text-muted-foreground">
+    <label className="block space-y-1 text-2xs font-medium text-muted-foreground">
       <span>{label}</span>
       <div className="[&_input]:min-h-9 [&_input]:w-full [&_input]:rounded-lg [&_input]:border [&_input]:bg-background [&_input]:px-2.5 [&_input]:text-xs [&_input]:text-foreground [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:bg-background [&_textarea]:px-2.5 [&_textarea]:py-2 [&_textarea]:text-xs [&_textarea]:text-foreground">
         {children}
@@ -1662,7 +1666,7 @@ function ColorField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="space-y-1 text-[10px] font-medium text-muted-foreground">
+    <label className="space-y-1 text-2xs font-medium text-muted-foreground">
       <span>{label}</span>
       <span className="flex min-h-9 items-center gap-1 rounded-lg border p-1">
         <input
@@ -1672,7 +1676,7 @@ function ColorField({
           onChange={(event) => onChange(event.target.value.toUpperCase())}
           className="h-7 w-7 cursor-pointer border-0 bg-transparent"
         />
-        <span dir="ltr" className="truncate text-[10px] text-foreground">
+        <span dir="ltr" className="truncate text-2xs text-foreground">
           {value}
         </span>
       </span>
@@ -1714,7 +1718,7 @@ function SelectField({
 }) {
   const { t } = useI18n();
   return (
-    <label className="block space-y-1 text-[11px] font-medium text-muted-foreground">
+    <label className="block space-y-1 text-2xs font-medium text-muted-foreground">
       <span>{label}</span>
       <select
         value={value}

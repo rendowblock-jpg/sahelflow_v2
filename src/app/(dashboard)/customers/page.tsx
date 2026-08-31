@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { AlertTriangle, TrendingUp, UserCheck, Users } from "lucide-react";
 
-import { CustomerFormDialog } from "@/components/customers/customer-form-dialog";
 import { CustomersDataTable } from "@/components/customers/customers-data-table";
+import { CreateParamDialog } from "@/components/shared/create-param-dialog";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -18,24 +18,32 @@ import { formatDZD } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 type CustomersPageProps = {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; create?: string }>;
 };
 
 export default async function CustomersPage({ searchParams }: CustomersPageProps) {
   const { t, locale } = await getI18n();
   const actorContext = await requireTrustedAction("customers.read");
   const access = resolveCustomerWorkbenchAccess(actorContext);
-  const requestedPage = Number.parseInt((await searchParams).page ?? "1", 10);
+  const { page: pageRaw, q: qRaw } = await searchParams;
+  const requestedPage = Number.parseInt(pageRaw ?? "1", 10);
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0
     ? requestedPage
     : 1;
+  const q = qRaw?.trim() || undefined;
 
   const [fallback, summary] = await Promise.all([
-    getCustomersWorkbenchPage(actorContext, { page, pageSize: 25 }),
+    getCustomersWorkbenchPage(actorContext, { page, pageSize: 25, q }),
     getCustomerWorkbenchSummary(actorContext),
   ]);
   const lastPage = Math.max(1, Math.ceil(fallback.total / fallback.pageSize));
-  if (page > lastPage) redirect(`/customers?page=${lastPage}`);
+  if (page > lastPage) {
+    redirect(
+      q
+        ? `/customers?page=${lastPage}&q=${encodeURIComponent(q)}`
+        : `/customers?page=${lastPage}`,
+    );
+  }
 
   const activePct = summary.total > 0
     ? Math.round((summary.active / summary.total) * 100)
@@ -63,7 +71,7 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
                 importRoute={access.import ? "/api/import/customers" : undefined}
               />
             ) : null}
-            {canCreate ? <CustomerFormDialog /> : null}
+            {canCreate ? <CreateParamDialog kind="customer" /> : null}
           </div>
         ) : undefined}
       />

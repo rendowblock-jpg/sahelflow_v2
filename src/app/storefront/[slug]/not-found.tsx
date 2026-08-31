@@ -1,16 +1,35 @@
-import { getI18n } from "@/lib/i18n-server";
+import { cookies, headers } from "next/headers";
+
+import {
+  createStorefrontTranslator,
+  getStorefrontDirection,
+  resolveStorefrontLocale,
+  STOREFRONT_LOCALE_COOKIE,
+} from "@/lib/i18n/storefront-locale";
 
 /**
- * Storefront not-found page (UX-002).
- * Was: 100% hardcoded English. Now: localized via i18n.
- * The "Go to store" link goes to `/storefronts` (the seller's storefront list)
- * instead of `/` (which redirects to `/dashboard` — a private page customers
- * can't access).
+ * Storefront not-found page (UX-002 / R4-c).
+ * Buyer-facing: localized in the BUYER locale (sf-storefront-locale cookie >
+ * Accept-Language > fr) — never the seller dashboard cookie. The "Go to
+ * store" link goes to `/storefronts` (the seller's storefront list) instead
+ * of `/` (which redirects to `/dashboard` — a private page customers can't
+ * access). A not-found boundary has no search params, so `?lang=` cannot
+ * participate here.
  */
 export default async function StorefrontNotFound() {
-  const { t } = await getI18n();
+  const [cookieStore, headerList] = await Promise.all([cookies(), headers()]);
+  const { locale } = resolveStorefrontLocale({
+    cookieLocale: cookieStore.get(STOREFRONT_LOCALE_COOKIE)?.value ?? null,
+    acceptLanguage: headerList.get("accept-language"),
+  });
+  const t = createStorefrontTranslator(locale);
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+    <div
+      dir={getStorefrontDirection(locale)}
+      lang={locale}
+      data-storefront-locale={locale}
+      className="flex min-h-screen items-center justify-center bg-muted/30 p-4"
+    >
       <div className="max-w-md text-center">
         <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-muted">
           <svg className="h-8 w-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -21,7 +40,7 @@ export default async function StorefrontNotFound() {
         <p className="mt-2 text-sm text-muted-foreground">{t("storefront.notFound.message")}</p>
         <a
           href="/storefronts"
-          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
         >
           {t("storefront.notFound.goHome")}
         </a>

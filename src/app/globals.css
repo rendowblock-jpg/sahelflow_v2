@@ -44,6 +44,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -68,52 +69,46 @@
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
 
-  /* Animation durations */
-  --animate-duration-fast: 150ms;
-  --animate-duration-normal: 250ms;
-  --animate-duration-slow: 400ms;
-  --animate-easing: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── Light Theme ───────────────────────────────────────────────────────────── */
+@theme {
+  /* Typography — sub-xs operational microcopy floor (11px). The R5-f codemod
+     replaced every text-[9/10/11px] utility with this token; arabic-system.css
+     raises it to 12px under the Arabic reading floor. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  /* Founder-tuned tight tracking — the retired Foundation-v2 base layer used
+     -0.02em, overriding Tailwind's default -0.025em; registered here so the
+     computed value survives under one authority. */
+  --tracking-tight: -0.02em;
+}
+
+/* ── Light Theme ─────────────────────────────────────────────────────────────
+   Light surfaces, primary/accent, charts and sidebar tokens are owned by
+   product-system.css (imported after this file — its identical-specificity
+   :root block won the cascade, so the duplicates removed here were dead).
+   This block keeps only the primitives no later file redefines: radius,
+   feedback/status semantics, named shadows and the elevation scale. */
 :root {
   --radius: 0.625rem;
-
-  /* Surfaces — crisp white hierarchy */
-  --surface-0: oklch(1 0 0);
-  --surface-1: oklch(0.99 0 0);
-  --surface-2: oklch(0.97 0 0);
-  --surface-3: oklch(0.94 0 0);
-
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-
-  /* Primary — Sahel Emerald (on-brand, non-blue per design system) */
-  --primary: oklch(0.55 0.18 150);
-  --primary-foreground: oklch(0.985 0 0);
-
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.42 0 0);  /* Was 0.52 — fixed for WCAG AA 4.5:1 */
-  --accent: oklch(0.97 0.01 150);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Hover authority: darkens the active preset's primary lazily (resolves
+     per-preset, per-mode at use site). White text stays AA because darkening
+     never reduces contrast against white. */
+  --primary-hover: color-mix(in oklch, var(--primary) 88%, black);
 
   --destructive: oklch(0.577 0.245 27.325);
-  --success: oklch(0.65 0.2 145);
+  /* Feedback semantics are calibrated for their RENDERED role — colored text
+     on canvas/card tints (bg-success/10 chips, text-success, ...) — at WCAG AA
+     (>= 4.5:1). Solid -foreground pairs are gated too where they pass; the
+     light warning solid pair never renders (warning surfaces carry dark text
+     on tinted fills only) — see contrast-contract.test.ts. */
+  --success: oklch(0.52 0.2 145);
   --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.75 0.18 80);
-  --warning-foreground: oklch(0.18 0 0);  /* warning is light — needs dark text */
-  --info: oklch(0.55 0.18 240);
+  --warning: oklch(0.55 0.16 72);
+  --warning-foreground: oklch(0.18 0 0);  /* deep amber stays light enough to need dark text */
+  --info: oklch(0.52 0.18 240);
   --info-foreground: oklch(0.985 0 0);  /* Was 150 (emerald) — moved to blue for distinction */
-
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.55 0.18 150);
 
   /* ── Named shadow system (Cal.com pattern) ── */
   --shadow-btn-rested:
@@ -137,63 +132,29 @@
     0px 4px 16px 0px oklch(0 0 0 / 0.08),
     0px 8px 32px 0px oklch(0 0 0 / 0.04);
 
-  /* Charts — rotated away from emerald to avoid hue collision with primary.
-     chart-1 = blue, chart-2 = amber, chart-3 = magenta, chart-4 = green, chart-5 = cyan */
-  --chart-1: oklch(0.55 0.20 250);
-  --chart-2: oklch(0.70 0.18 60);
-  --chart-3: oklch(0.60 0.22 310);
-  --chart-4: oklch(0.65 0.18 145);
-  --chart-5: oklch(0.60 0.15 200);
-
-  /* Sidebar */
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.55 0.18 150);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0.01 150);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.55 0.18 150);
+  /* Elevation scale — one progressive shadow doctrine layered above the named
+     interaction shadows. --elevation-2 mirrors the live .shadow-dropdown /
+     .shadow-popover geometry owned by product-system.css. Additive tokens:
+     adoption is opt-in, nothing computed changes today. */
+  --elevation-1: 0 1px 2px oklch(0 0 0 / 0.05), 0 2px 8px oklch(0 0 0 / 0.06);
+  --elevation-2: 0 1px 2px oklch(0 0 0 / 0.10), 0 12px 34px oklch(0 0 0 / 0.16);
+  --elevation-3: 0 4px 16px oklch(0 0 0 / 0.12), 0 24px 56px oklch(0 0 0 / 0.18);
+  --elevation-4: 0 8px 28px oklch(0 0 0 / 0.16), 0 32px 72px oklch(0 0 0 / 0.22);
 }
 
-/* ── Dark Theme — Linear/Stripe/Vercel DNA ──────────────────────────────────── */
+/* ── Dark Theme ──────────────────────────────────────────────────────────────
+   Dark surfaces, accents, charts and sidebar tokens are owned by
+   theme-preset-system.css (neutral charcoal + accent identities), with
+   product-system.css .dark as the no-preset fallback. This block keeps the
+   mode-dependent primitives no later file redefines. */
 .dark {
-  /* Surfaces — softer luminance stacking (Linear/Vercel tier) */
-  --surface-0: oklch(0.16 0 0);       /* Canvas — softer, not pure black */
-  --surface-1: oklch(0.19 0 0);       /* Panel — cards, sidebar */
-  --surface-2: oklch(0.23 0.005 150); /* Inset — inputs, wells */
-  --surface-3: oklch(0.27 0.005 150); /* Elevated — hover, active */
-
-  --background: oklch(0.16 0 0);
-  --foreground: oklch(0.97 0 0);
-  --card: oklch(0.19 0 0);
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.19 0.005 150);
-  --popover-foreground: oklch(0.97 0 0);
-
-  /* Primary — Sahel Emerald (brighter for dark) */
-  --primary: oklch(0.68 0.19 150);
-  --primary-foreground: oklch(0.985 0 0);
-
-  --secondary: oklch(0.23 0.005 150);
-  --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.23 0.005 150);
-  --muted-foreground: oklch(0.70 0 0);  /* Was 0.60 — now readable */
-  --accent: oklch(0.25 0.015 150);
-  --accent-foreground: oklch(0.97 0 0);
-
   --destructive: oklch(0.704 0.191 22.216);
   --success: oklch(0.72 0.19 145);
-  --success-foreground: oklch(0.985 0 0);
+  --success-foreground: oklch(0.16 0.02 145);
   --warning: oklch(0.78 0.16 80);
   --warning-foreground: oklch(0.18 0 0);
   --info: oklch(0.68 0.19 240);
-  --info-foreground: oklch(0.985 0 0);  /* Was 150 (emerald) — moved to blue */
-
-  /* Borders — slightly more visible for structure */
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.68 0.19 150);
+  --info-foreground: oklch(0.16 0.03 240);  /* light accent + dark text, like success/warning */
 
   /* ── Named shadow system (dark mode) ── */
   --shadow-btn-rested:
@@ -209,7 +170,7 @@
     inset 0px 0px 2px 1px oklch(0 0 0 / 0.30);
   --shadow-btn-focused:
     0 0 0 2px var(--background),
-    0 0 0 4px oklch(0.68 0.19 150 / 0.5);
+    0 0 0 4px color-mix(in oklch, var(--primary) 50%, transparent);
   --shadow-dropdown:
     0px 5px 20px 0px oklch(0 0 0 / 0.50),
     0px 10px 40px 0px oklch(0 0 0 / 0.20);
@@ -217,22 +178,12 @@
     0px 4px 16px 0px oklch(0 0 0 / 0.40),
     0px 8px 32px 0px oklch(0 0 0 / 0.20);
 
-  /* Charts — rotated away from emerald (matches light-mode palette) */
-  --chart-1: oklch(0.68 0.19 250);
-  --chart-2: oklch(0.75 0.16 60);
-  --chart-3: oklch(0.70 0.22 310);
-  --chart-4: oklch(0.72 0.19 145);
-  --chart-5: oklch(0.68 0.15 200);
-
-  /* Sidebar — distinct from background for clear separation */
-  --sidebar: oklch(0.18 0 0);
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.68 0.19 150);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.25 0.015 150);
-  --sidebar-accent-foreground: oklch(0.97 0 0);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.68 0.19 150);
+  /* Elevation scale (dark) — deepens with the dark overlay doctrine;
+     --elevation-2 mirrors the live dark dropdown/popover geometry. */
+  --elevation-1: 0 1px 2px oklch(0 0 0 / 0.18), 0 2px 10px oklch(0 0 0 / 0.20);
+  --elevation-2: 0 8px 28px oklch(0 0 0 / 0.34), 0 24px 64px oklch(0 0 0 / 0.22);
+  --elevation-3: 0 12px 36px oklch(0 0 0 / 0.42), 0 32px 80px oklch(0 0 0 / 0.30);
+  --elevation-4: 0 16px 44px oklch(0 0 0 / 0.50), 0 40px 96px oklch(0 0 0 / 0.36);
 }
 
 /* ── Base Layer ─────────────────────────────────────────────────────────────── */
@@ -257,10 +208,8 @@
     -moz-osx-font-smoothing: grayscale;
     /* Prevent iOS auto-zoom on input focus (requires >=16px) */
     font-size: 16px;
-    /* Smaller on desktop for information density */
-  }
-  @media (min-width: 1024px) {
-    body { font-size: 15px; }
+    /* phase5.css owns the final body size (1rem, no desktop shrink) so
+       unclassified operational copy never drops to a 15px desktop body. */
   }
 
   /* Touch target safety — ensure interactive elements are >=44px on touch */
@@ -390,13 +339,21 @@
 
   /* Gradient text */
   .text-gradient {
-    background: linear-gradient(135deg, oklch(0.55 0.18 150), oklch(0.65 0.2 145));
+    background: linear-gradient(
+      135deg,
+      var(--primary),
+      color-mix(in oklch, var(--primary) 55%, var(--success))
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .dark .text-gradient {
-    background: linear-gradient(135deg, oklch(0.70 0.2 150), oklch(0.72 0.19 145));
+    background: linear-gradient(
+      135deg,
+      var(--primary),
+      color-mix(in oklch, var(--primary) 55%, var(--success))
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -604,11 +561,6 @@
   }
 }
 
-/* ── Chart Tooltip ──────────────────────────────────────────────────────────── */
-.recharts-tooltip-wrapper {
-  outline: none !important;
-}
-
 /* ── Status semantic colors (chart fills) ─────────────────────────────────────
    Used by donut/area/bar charts so each order status has a consistent,
    theme-aware color that matches its badge. Multiple :root/.dark rules
@@ -635,47 +587,21 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   SahelFlow Design System — Foundation v2 (Session 16)
-   Spacing scale, typography scale, RTL-first utilities
-   ════════════════════════════════════════════════════════════════════════════ */
-
+   Interaction, geometry and layering contracts
+   ════════════════════════════════════════════════════════════════════════════
+   Static SSR defaults. The former "Foundation v2" block re-declared Tailwind's
+   own scale tokens (spacing/type/leading/weight) with zero consumers — deleted.
+   The live contracts below guarantee floors exist before any JS runs; the
+   desktop shell (phase5.css) and the runtime layout effect refine density and
+   pointer values per session. */
 @layer base {
   :root {
-    /* Spacing scale — 4px base, consistent across all pages */
-    --space-1: 0.25rem;   /* 4px  */
-    --space-2: 0.5rem;    /* 8px  */
-    --space-3: 0.75rem;   /* 12px */
-    --space-4: 1rem;      /* 16px */
-    --space-5: 1.5rem;    /* 24px */
-    --space-6: 2rem;      /* 32px */
-    --space-7: 3rem;      /* 48px */
-    --space-8: 4rem;      /* 64px */
-
-    /* Typography scale — modular, 1.125 ratio */
-    --text-xs:   0.75rem;   /* 12px */
-    --text-sm:   0.875rem;  /* 14px */
-    --text-base: 1rem;      /* 16px */
-    --text-lg:   1.125rem;  /* 18px */
-    --text-xl:   1.25rem;   /* 20px */
-    --text-2xl:  1.5rem;    /* 24px */
-    --text-3xl:  1.875rem;  /* 30px */
-    --text-4xl:  2.25rem;   /* 36px */
-
-    /* Line heights */
-    --leading-tight: 1.25;
-    --leading-normal: 1.5;
-    --leading-relaxed: 1.625;
-
-    /* Font weights */
-    --weight-normal: 400;
-    --weight-medium: 500;
-    --weight-semibold: 600;
-    --weight-bold: 700;
-
-    /* Letter spacing */
-    --tracking-tight: -0.02em;
-    --tracking-normal: 0;
-    --tracking-wide: 0.025em;
+    /* Interaction/density floors */
+    --control-height: 2.25rem;
+    --touch-target: 2.75rem;
+    --sf-touch-target: 44px; /* SSR floor — matches the runtime coarse-pointer contract */
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
 
     /* Content max-widths */
     --content-sm: 640px;
@@ -684,11 +610,31 @@
     --content-xl: 1280px;
     --content-2xl: 1536px;
 
-    /* Shared interaction and density contracts. */
-    --control-height: 2.25rem;
-    --touch-target: 2.75rem;
-    --focus-ring-width: 2px;
-    --focus-ring-offset: 2px;
+    /* Rail widths — fixed navigation/inspector columns across workspaces */
+    --rail-sm: 13rem;      /* storefront studio controls */
+    --rail-md: 14rem;      /* AI sessions rail */
+    --rail-lg: 15rem;      /* settings navigation (legacy shell rule) */
+    --rail-xl: 15.625rem;  /* settings control-center navigation */
+    --rail-2xl: 16.5rem;   /* storefront studio inspector */
+    --rail-3xl: 17rem;     /* inbox context rail */
+    --rail-4xl: 18rem;     /* AI context rail */
+    --rail-5xl: 21rem;     /* storefront studio bootstrap setup */
+
+    /* Inbox queue pane widths across breakpoints */
+    --pane-queue-sm: 19rem;      /* ≥768px fixed queue */
+    --pane-queue-md: 20rem;      /* ≥1280px legacy fixed queue */
+    --pane-queue-base: 20.25rem; /* V3 resizable default (324px, JS-persisted) */
+    --pane-queue-lg: 20.5rem;    /* narrow-container fallback */
+    --pane-queue-xl: 22.5rem;    /* ≥1280px non-resizable queue */
+
+    /* Stacking layers — CSS-level authority. TSX keeps its Tailwind z-10/z-50
+       utilities; these tokens govern stylesheet-declared stacking order. */
+    --z-sticky: 30;
+    --z-dropdown: 40;
+    --z-overlay: 45;
+    --z-modal: 50;
+    --z-popover: 50;
+    --z-toast: 60;
   }
 }
 
@@ -772,18 +718,6 @@
 }
 
 
-/* UX-012: Respect prefers-reduced-motion (WCAG 2.3.3) — disables all animations
-   for users with vestibular disorders, motion sensitivity, ADHD. */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-
 /* ═══════════════════════════════════════════════════════════════════════
    Responsive polish — top-tier mobile experience
    ═══════════════════════════════════════════════════════════════════════ */
@@ -835,12 +769,18 @@ img { max-width: 100%; height: auto; }
 
 /* Smooth scrolling for in-page navigation */
 html { scroll-behavior: smooth; }
+
+/* UX-012: Respect prefers-reduced-motion (WCAG 2.3.3) — disables all animations
+   for users with vestibular disorders, motion sensitivity, ADHD. Single
+   authority for the universal kill switch (the duplicated block that used to
+   live above was removed); motion-system.css keeps the shell-scoped switch. */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -901,6 +841,25 @@ html[dir="rtl"] body {
 [dir="rtl"] h3,
 [dir="rtl"] h4 {
   line-height: 1.4;  /* headings need slightly less, but still more than Latin 1.2 */
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Buyer storefront locale boundary (R4-c)
+   ═══════════════════════════════════════════════════════════════════════
+   The public storefront resolves its OWN buyer locale (?lang= >
+   sf-storefront-locale cookie > Accept-Language), which can disagree with
+   the seller cookie that drives <html dir> at SSR time — a nested route
+   cannot change <html> attributes. Arabic typography must therefore not
+   depend on the document-level attribute on that route: the storefront
+   wrapper carries data-storefront-locale and mirrors the Arabic font stack
+   + letter-spacing reset locally, from first paint, until hydration aligns
+   <html dir> with the buyer locale. */
+[data-storefront-locale="ar"] {
+  font-family: var(--font-arabic), "Amiri", serif;
+  line-height: 1.65;  /* Arabic needs more line-height than Latin (1.5) */
+}
+[data-storefront-locale="ar"] :where(:dir(rtl)) {
+  letter-spacing: normal !important;
 }
 
 /* Recharts geometry uses a stable LTR coordinate system. Translated legends

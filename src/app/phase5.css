@@ -2,225 +2,21 @@
  * SahelFlow shared frontend-foundation normalization layer.
  *
  * `globals.css` still contains historical utilities used across the product. This
- * file is imported after it and owns the current cross-workspace appearance,
- * density, motion and authenticated workbench contracts while route families are
- * migrated. Do not add page-specific styling here.
+ * file is imported after it and owns the authenticated workbench density and
+ * geometry contracts while route families are migrated. Visual tokens live in
+ * product-system.css (light) / theme-preset-system.css (dark); the motion
+ * grammar lives in motion-system.css. Do not add page-specific styling here.
  */
 
-/* ── Foundation color surfaces ────────────────────────────────────────────────
- * Keep status colors semantic and independent. Theme presets coordinate subtle
- * surface temperature plus the product accent family; light/dark mode changes
- * luminance and depth without changing business-state meaning.
+/* ── Token authority note ─────────────────────────────────────────────────────
+ * The historical surface/preset token blocks that used to live here were dead
+ * cascade losers: product-system.css (same specificity, later import) owns the
+ * light surfaces and light preset families, and theme-preset-system.css
+ * (higher specificity) owns the dark neutral material and accent identities.
+ * Their winning values were preserved verbatim during consolidation; only the
+ * losing duplicates were deleted. This file now carries only the authenticated
+ * workbench density and motion-adoption contracts.
  */
-:root {
-  --surface-0: oklch(0.992 0.004 85);
-  --surface-1: oklch(0.982 0.006 85);
-  --surface-2: oklch(0.958 0.008 85);
-  --surface-3: oklch(0.928 0.01 85);
-
-  --background: oklch(0.982 0.006 85);
-  --foreground: oklch(0.18 0.012 75);
-  --card: oklch(0.997 0.003 85);
-  --card-foreground: var(--foreground);
-  --popover: oklch(0.997 0.003 85);
-  --popover-foreground: var(--foreground);
-  --secondary: oklch(0.952 0.009 85);
-  --secondary-foreground: oklch(0.24 0.012 75);
-  --muted: oklch(0.952 0.009 85);
-  --muted-foreground: oklch(0.44 0.014 75);
-  --border: oklch(0.89 0.012 85);
-  --input: oklch(0.87 0.014 85);
-
-  --primary: oklch(0.55 0.17 153);
-  --primary-foreground: oklch(0.99 0.003 85);
-  --accent: oklch(0.948 0.025 153);
-  --accent-foreground: oklch(0.25 0.05 153);
-  --ring: oklch(0.55 0.17 153);
-
-  --sidebar: oklch(0.972 0.008 85);
-  --sidebar-foreground: var(--foreground);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.94 0.025 153);
-  --sidebar-accent-foreground: oklch(0.23 0.045 153);
-  --sidebar-border: oklch(0.89 0.012 85);
-  --sidebar-ring: var(--ring);
-}
-
-.dark {
-  --surface-0: oklch(0.145 0.009 70);
-  --surface-1: oklch(0.18 0.011 70);
-  --surface-2: oklch(0.215 0.014 70);
-  --surface-3: oklch(0.255 0.016 70);
-
-  --background: oklch(0.145 0.009 70);
-  --foreground: oklch(0.94 0.008 80);
-  --card: oklch(0.18 0.011 70);
-  --card-foreground: var(--foreground);
-  --popover: oklch(0.195 0.012 70);
-  --popover-foreground: var(--foreground);
-  --secondary: oklch(0.215 0.014 70);
-  --secondary-foreground: oklch(0.93 0.008 80);
-  --muted: oklch(0.215 0.014 70);
-  --muted-foreground: oklch(0.71 0.012 80);
-  --border: oklch(0.95 0.01 80 / 11%);
-  --input: oklch(0.95 0.01 80 / 16%);
-
-  --primary: oklch(0.7 0.17 153);
-  --primary-foreground: oklch(0.14 0.025 153);
-  --accent: oklch(0.255 0.035 153);
-  --accent-foreground: oklch(0.94 0.018 153);
-  --ring: oklch(0.7 0.17 153);
-
-  --sidebar: oklch(0.165 0.011 70);
-  --sidebar-foreground: var(--foreground);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.245 0.035 153);
-  --sidebar-accent-foreground: oklch(0.94 0.018 153);
-  --sidebar-border: oklch(0.95 0.01 80 / 9%);
-  --sidebar-ring: var(--ring);
-}
-
-/* Coordinated theme families. They intentionally do not override success,
- * warning, destructive or order-status tokens, so color meaning does not drift. */
-:root[data-theme-preset="atlas"] {
-  --surface-0: oklch(0.992 0.004 286);
-  --surface-1: oklch(0.982 0.007 286);
-  --surface-2: oklch(0.958 0.012 286);
-  --surface-3: oklch(0.928 0.017 286);
-  --background: oklch(0.982 0.007 286);
-  --card: oklch(0.997 0.004 286);
-  --popover: oklch(0.997 0.004 286);
-  --secondary: oklch(0.952 0.012 286);
-  --muted: oklch(0.952 0.012 286);
-  --border: oklch(0.89 0.018 286);
-  --input: oklch(0.87 0.02 286);
-  --primary: oklch(0.54 0.2 286);
-  --primary-foreground: oklch(0.99 0.004 286);
-  --accent: oklch(0.95 0.03 286);
-  --accent-foreground: oklch(0.27 0.075 286);
-  --ring: oklch(0.54 0.2 286);
-  --sidebar: oklch(0.972 0.01 286);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.94 0.035 286);
-  --sidebar-accent-foreground: oklch(0.26 0.075 286);
-  --sidebar-border: oklch(0.89 0.018 286);
-  --sidebar-ring: var(--ring);
-}
-
-.dark[data-theme-preset="atlas"] {
-  --surface-0: oklch(0.145 0.012 286);
-  --surface-1: oklch(0.18 0.016 286);
-  --surface-2: oklch(0.215 0.022 286);
-  --surface-3: oklch(0.255 0.028 286);
-  --background: oklch(0.145 0.012 286);
-  --card: oklch(0.18 0.016 286);
-  --popover: oklch(0.195 0.019 286);
-  --secondary: oklch(0.215 0.022 286);
-  --muted: oklch(0.215 0.022 286);
-  --primary: oklch(0.72 0.16 286);
-  --primary-foreground: oklch(0.16 0.045 286);
-  --accent: oklch(0.27 0.045 286);
-  --accent-foreground: oklch(0.95 0.025 286);
-  --ring: oklch(0.72 0.16 286);
-  --sidebar: oklch(0.165 0.014 286);
-  --sidebar-accent: oklch(0.255 0.045 286);
-  --sidebar-accent-foreground: oklch(0.95 0.025 286);
-}
-
-:root[data-theme-preset="oasis"] {
-  --surface-0: oklch(0.992 0.004 205);
-  --surface-1: oklch(0.982 0.007 205);
-  --surface-2: oklch(0.958 0.011 205);
-  --surface-3: oklch(0.928 0.016 205);
-  --background: oklch(0.982 0.007 205);
-  --card: oklch(0.997 0.004 205);
-  --popover: oklch(0.997 0.004 205);
-  --secondary: oklch(0.952 0.011 205);
-  --muted: oklch(0.952 0.011 205);
-  --border: oklch(0.89 0.017 205);
-  --input: oklch(0.87 0.019 205);
-  --primary: oklch(0.53 0.135 205);
-  --primary-foreground: oklch(0.99 0.004 205);
-  --accent: oklch(0.95 0.03 205);
-  --accent-foreground: oklch(0.25 0.065 205);
-  --ring: oklch(0.53 0.135 205);
-  --sidebar: oklch(0.972 0.01 205);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.94 0.035 205);
-  --sidebar-accent-foreground: oklch(0.25 0.065 205);
-  --sidebar-border: oklch(0.89 0.017 205);
-  --sidebar-ring: var(--ring);
-}
-
-.dark[data-theme-preset="oasis"] {
-  --surface-0: oklch(0.145 0.011 205);
-  --surface-1: oklch(0.18 0.015 205);
-  --surface-2: oklch(0.215 0.02 205);
-  --surface-3: oklch(0.255 0.025 205);
-  --background: oklch(0.145 0.011 205);
-  --card: oklch(0.18 0.015 205);
-  --popover: oklch(0.195 0.018 205);
-  --secondary: oklch(0.215 0.02 205);
-  --muted: oklch(0.215 0.02 205);
-  --primary: oklch(0.72 0.13 205);
-  --primary-foreground: oklch(0.14 0.035 205);
-  --accent: oklch(0.265 0.04 205);
-  --accent-foreground: oklch(0.95 0.025 205);
-  --ring: oklch(0.72 0.13 205);
-  --sidebar: oklch(0.165 0.013 205);
-  --sidebar-accent: oklch(0.25 0.04 205);
-  --sidebar-accent-foreground: oklch(0.95 0.025 205);
-}
-
-:root[data-theme-preset="dune"] {
-  --surface-0: oklch(0.992 0.006 63);
-  --surface-1: oklch(0.982 0.009 63);
-  --surface-2: oklch(0.958 0.014 63);
-  --surface-3: oklch(0.928 0.019 63);
-  --background: oklch(0.982 0.009 63);
-  --card: oklch(0.997 0.005 63);
-  --popover: oklch(0.997 0.005 63);
-  --secondary: oklch(0.952 0.014 63);
-  --muted: oklch(0.952 0.014 63);
-  --border: oklch(0.89 0.019 63);
-  --input: oklch(0.87 0.021 63);
-  --primary: oklch(0.55 0.145 63);
-  --primary-foreground: oklch(0.99 0.004 63);
-  --accent: oklch(0.955 0.035 63);
-  --accent-foreground: oklch(0.28 0.075 63);
-  --ring: oklch(0.55 0.145 63);
-  --sidebar: oklch(0.972 0.012 63);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.945 0.04 63);
-  --sidebar-accent-foreground: oklch(0.28 0.075 63);
-  --sidebar-border: oklch(0.89 0.019 63);
-  --sidebar-ring: var(--ring);
-}
-
-.dark[data-theme-preset="dune"] {
-  --surface-0: oklch(0.145 0.012 63);
-  --surface-1: oklch(0.18 0.016 63);
-  --surface-2: oklch(0.215 0.022 63);
-  --surface-3: oklch(0.255 0.027 63);
-  --background: oklch(0.145 0.012 63);
-  --card: oklch(0.18 0.016 63);
-  --popover: oklch(0.195 0.019 63);
-  --secondary: oklch(0.215 0.022 63);
-  --muted: oklch(0.215 0.022 63);
-  --primary: oklch(0.74 0.145 63);
-  --primary-foreground: oklch(0.19 0.045 63);
-  --accent: oklch(0.275 0.04 63);
-  --accent-foreground: oklch(0.96 0.025 63);
-  --ring: oklch(0.74 0.145 63);
-  --sidebar: oklch(0.165 0.014 63);
-  --sidebar-accent: oklch(0.26 0.04 63);
-  --sidebar-accent-foreground: oklch(0.96 0.025 63);
-}
 
 /* Typography authority. Tailwind text utilities continue to own explicit sizes,
  * while unclassified operational copy no longer drops to a 15px desktop body. */
@@ -228,34 +24,12 @@ body {
   font-size: 1rem;
 }
 
-html[dir="rtl"] body {
-  font-family: var(--font-arabic), "Segoe UI", Tahoma, Arial, sans-serif;
-  line-height: 1.55;
-}
-
-html[dir="rtl"] :is(h1, h2, h3, h4) {
-  line-height: 1.35;
-}
-
-/* Mode/preset changes are one root snapshot transition, never dozens of
- * independently interpolating descendants. Older WebViews fall back to the
- * provider's immediate atomic commit. */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 180ms;
-  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-/* ── Authenticated workbench density and motion ────────────────────────────── */
+/* ── Authenticated workbench density and geometry ──────────────────────────── */
 [data-sahelflow-shell="desktop"] {
   --sf-workbench-inline: clamp(0.875rem, 1.35vw, 1.5rem);
   --sf-workbench-block: 1rem;
   --sf-section-gap: 1.125rem;
   --sf-panel-radius: 0.625rem;
-  --sf-motion-fast: 140ms;
-  --sf-motion-normal: 180ms;
-  --sf-motion-slow: 260ms;
-  --sf-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   /* Comfortable is the product default; compact is an explicit user choice. */
   --control-height: 2.5rem;
@@ -300,44 +74,13 @@ html[dir="rtl"] :is(h1, h2, h3, h4) {
   gap: 0.875rem;
 }
 
-/* Retire the old marketing-style stagger/lift language, but do not blanket-disable
- * framework/component continuity. Radix/Tailwind `animate-in` transitions remain
- * available so overlays and interactive state changes do not snap. */
-[data-sahelflow-shell="desktop"] :is(
-  .stagger-grid > *,
-  .animate-fade-up,
-  .animate-scale-in,
-  .animate-slide-right
-) {
-  animation: none !important;
-}
-
-/* Existing route-level fade markers become a restrained product transition. */
-[data-sahelflow-shell="desktop"] .animate-fade-in {
-  animation: sf-workspace-enter var(--sf-motion-normal) var(--sf-motion-ease) both;
-}
-
-@keyframes sf-workspace-enter {
-  from {
-    opacity: 0.88;
-    transform: translateY(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-[data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover) {
-  transform: none !important;
-  transition-property: border-color, background-color, box-shadow;
-  transition-duration: var(--sf-motion-fast);
-  transition-timing-function: var(--sf-motion-ease);
-}
-
-[data-sahelflow-shell="desktop"] :is(.card-lift, .card-hover):hover {
-  transform: none !important;
-}
+/* Motion: animation enable/disable, card feedback grammar and the
+ * reduced-motion kill switch for the authenticated shell are owned exclusively
+ * by motion-system.css (imported after this file). The marketing-style
+ * stagger/lift disabling rules that used to live here only forced that file
+ * into an !important arms race and were removed with zero computed change —
+ * motion-system.css already won every one of those declarations.
+ */
 
 /* The border/surface hierarchy carries ordinary grouping. Elevation remains for
  * overlays and genuinely floating controls rather than every dashboard card. */
@@ -387,17 +130,3 @@ html[dir="rtl"] :is(h1, h2, h3, h4) {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation-duration: 0.01ms !important;
-  }
-
-  [data-sahelflow-shell="desktop"] * {
-    scroll-behavior: auto !important;
-  }
-
-  [data-sahelflow-shell="desktop"] .animate-fade-in {
-    animation: none !important;
-  }
-}

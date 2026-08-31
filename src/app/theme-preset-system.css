@@ -66,9 +66,9 @@ html.dark[data-theme-preset="atlas"] {
   --sidebar-ring: var(--ring);
   --chart-1: oklch(0.72 0.15 285);
   --chart-2: oklch(0.70 0.13 245);
-  --chart-3: oklch(0.73 0.14 325);
-  --chart-4: oklch(0.70 0.13 160);
-  --chart-5: oklch(0.76 0.12 75);
+  --chart-3: oklch(0.73 0.14 345);
+  --chart-4: oklch(0.70 0.13 178);
+  --chart-5: oklch(0.76 0.12 55);
 }
 
 /* Oasis — teal identity without a cyan/green canvas. */
@@ -84,10 +84,10 @@ html.dark[data-theme-preset="oasis"] {
   --sidebar-accent-foreground: oklch(0.95 0.018 190);
   --sidebar-ring: var(--ring);
   --chart-1: oklch(0.71 0.13 205);
-  --chart-2: oklch(0.71 0.13 165);
+  --chart-2: oklch(0.71 0.13 178);
   --chart-3: oklch(0.72 0.14 260);
-  --chart-4: oklch(0.76 0.12 80);
-  --chart-5: oklch(0.72 0.14 325);
+  --chart-4: oklch(0.76 0.12 55);
+  --chart-5: oklch(0.72 0.14 345);
 }
 
 /* Dune — amber/copper identity without a brown canvas. */
@@ -102,9 +102,9 @@ html.dark[data-theme-preset="dune"] {
   --sidebar-accent: color-mix(in oklch, var(--primary) 13%, var(--surface-2));
   --sidebar-accent-foreground: oklch(0.96 0.018 72);
   --sidebar-ring: var(--ring);
-  --chart-1: oklch(0.76 0.13 70);
-  --chart-2: oklch(0.70 0.15 28);
-  --chart-3: oklch(0.72 0.14 320);
-  --chart-4: oklch(0.70 0.13 155);
+  --chart-1: oklch(0.76 0.13 55);
+  --chart-2: oklch(0.70 0.15 350);
+  --chart-3: oklch(0.72 0.14 268);
+  --chart-4: oklch(0.70 0.13 178);
   --chart-5: oklch(0.69 0.13 235);
 }

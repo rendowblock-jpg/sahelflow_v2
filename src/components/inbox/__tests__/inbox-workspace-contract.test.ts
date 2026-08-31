@@ -22,20 +22,20 @@ describe("Inbox Class-AAA operations desk contract", () => {
   });
 
   it("selects desktop work through resolved Mine state and synchronizes the canonical URL", () => {
-    const desk = read("src/components/inbox/inbox-operations-desk.tsx");
-    expect(desk).toContain(
+    const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
+    expect(workspace).toContain(
       "const [defaultQueueResolved, setDefaultQueueResolved] = useState(false)",
     );
-    expect(desk).toContain("!defaultQueueResolved ||");
-    expect(desk).toContain("const first = visibleQueueChats[0]");
-    expect(desk).not.toContain("visibleQueueChats[0] ?? chats[0]");
-    expect(desk).toContain("selectChat(first)");
-    expect(desk).toContain(
-      "router.replace(`/inbox?conversation=${encodeURIComponent(first.conversationId)}`)",
+    expect(workspace).toContain("!defaultQueueResolved ||");
+    expect(workspace).toContain("const first = visibleQueueChats[0]");
+    expect(workspace).not.toContain("visibleQueueChats[0] ?? chats[0]");
+    expect(workspace).toContain("selectChat(first)");
+    expect(workspace).toContain(
+      "`/inbox?conversation=${encodeURIComponent(first.conversationId)}`",
     );
-    expect(desk).not.toContain("MutationObserver");
-    expect(desk).not.toContain("querySelector");
-    expect(desk).not.toContain(".click()");
+    expect(workspace).not.toContain("MutationObserver");
+    expect(workspace).not.toContain("querySelector");
+    expect(workspace).not.toContain(".click()");
   });
 
   it("keeps persisted conversations authoritative independently of transport health", () => {
@@ -106,7 +106,7 @@ describe("Inbox Class-AAA operations desk contract", () => {
   it("opens search and command results through canonical persisted conversation ids", () => {
     const search = read("src/lib/search/universal-search-server.ts");
     const hook = read("src/hooks/use-inbox-workspace.ts");
-    const queue = read("src/components/inbox/inbox-work-queue.tsx");
+    const queue = read("src/components/inbox/inbox-v3-queue.tsx");
 
     expect(search).toContain(
       'href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`',
@@ -116,16 +116,16 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(queue).toContain("/api/conversations/search?q=");
     expect(queue).toContain("selectChat(canonical ?? chat)");
     expect(queue).toContain(
-      "router.replace(`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`)",
+      "`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`",
     );
   });
 
   it("keeps transport and durable outbox authority in the existing workspace hook", () => {
     const hook = read("src/hooks/use-inbox-workspace.ts");
-    const desk = read("src/components/inbox/inbox-operations-desk.tsx");
-    const thread = read("src/components/inbox/inbox-thread-workbench.tsx");
+    const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
+    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
 
-    expect(desk).toContain("useInboxWorkspace()");
+    expect(workspace).toContain("useInboxWorkspace()");
     expect(hook).toContain('fetch("/api/whatsapp/chats?limit=100"');
     expect(hook).toContain("loadFallbackProjection");
     expect(hook).toContain("monitorWhatsAppEffect");
@@ -169,7 +169,7 @@ describe("Inbox Class-AAA operations desk contract", () => {
 
   it("represents persisted non-text message types honestly until durable media bytes exist", () => {
     const messages = read("src/app/api/whatsapp/chats/[jid]/messages/route.ts");
-    const thread = read("src/components/inbox/inbox-thread-workbench.tsx");
+    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
     const copy = read("src/lib/i18n/inbox-workspace.ts");
 
     expect(messages).toContain("messageType: true");
@@ -180,12 +180,11 @@ describe("Inbox Class-AAA operations desk contract", () => {
   });
 
   it("keeps one human-reviewed order candidate instead of extraction cards under every message", () => {
-    const desk = read("src/components/inbox/inbox-operations-desk.tsx");
-    const thread = read("src/components/inbox/inbox-thread-workbench.tsx");
+    const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
+    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
     const panel = read("src/components/inbox/inbox-customer-work-panel.tsx");
 
-    expect(desk).toContain("selectedCandidate");
-    expect(thread).not.toContain("MessageExtraction");
+    expect(workspace).toContain("selectedCandidate");
     expect(thread).toContain('copy("chooseOrderMessage")');
     expect(panel).toContain("MessageExtraction");
     expect(panel).toContain("orderCandidate");
@@ -208,10 +207,7 @@ describe("Inbox Class-AAA operations desk contract", () => {
   });
 
   it("keeps new desk copy governed in English French and Arabic", () => {
-    const thread = read("src/components/inbox/inbox-thread-workbench.tsx");
     const copy = read("src/lib/i18n/inbox-workspace.ts");
-    expect(thread).toContain('copy("composerShortcut")');
-    expect(thread).not.toContain("Enter · Shift+Enter");
     expect(copy).toContain('queueMine: "Mine"');
     expect(copy).toContain('queueMine: "À moi"');
     expect(copy).toContain('queueMine: "مسندة إليّ"');

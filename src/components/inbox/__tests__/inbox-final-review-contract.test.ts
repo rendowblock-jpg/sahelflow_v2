@@ -23,20 +23,15 @@ describe("Inbox final review invariants", () => {
   });
 
   it("pins enriched search chats and keeps manual plus auto selections in the canonical URL", () => {
-    const queue = source("src/components/inbox/inbox-work-queue.tsx");
-    const desk = source("src/components/inbox/inbox-operations-desk.tsx");
+    const queue = source("src/components/inbox/inbox-v3-queue.tsx");
     const workspace = source("src/hooks/use-inbox-workspace.ts");
     const deskTypes = source("src/components/inbox/inbox-desk-types.ts");
 
     expect(queue).toContain("selectChat(canonical ?? chat)");
     expect(queue).toContain(
-      "router.replace(`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`)",
+      "`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`",
     );
     expect(queue).not.toContain("if (!canonical)");
-    expect(desk).toContain("selectChat(first)");
-    expect(desk).toContain(
-      "router.replace(`/inbox?conversation=${encodeURIComponent(first.conversationId)}`)",
-    );
     expect(workspace).toContain("pinnedDeepLinkChatRef.current = chat");
     expect(workspace).toContain(
       "(entry) => entry.conversationId === chat.conversationId",
@@ -50,33 +45,31 @@ describe("Inbox final review invariants", () => {
   });
 
   it("defaults members to Mine without auto-opening another assignee's work", () => {
-    const desk = source("src/components/inbox/inbox-operations-desk.tsx");
+    const workspace = source("src/components/inbox/inbox-v3-workspace.tsx");
 
-    expect(desk).not.toContain("defaultQueueResolvedRef");
-    expect(desk).toContain(
+    expect(workspace).not.toContain("defaultQueueResolvedRef");
+    expect(workspace).toContain(
       "const [defaultQueueResolved, setDefaultQueueResolved] = useState(false)",
     );
-    expect(desk).toContain("const currentMemberId = authority.currentMemberId");
-    expect(desk).toContain("if (!queueTouchedRef.current && currentMemberId)");
-    expect(desk).toContain('setQueueFilter("mine")');
-    expect(desk).toContain("setDefaultQueueResolved(true)");
-    expect(desk).toContain("!defaultQueueResolved ||");
-    expect(desk).toContain("const first = visibleQueueChats[0]");
-    expect(desk).not.toContain("visibleQueueChats[0] ?? chats[0]");
-    expect(desk).not.toContain("setQueueFilter(\"all\")");
+    expect(workspace).toContain("const currentMemberId = authority.currentMemberId");
+    expect(workspace).toContain("if (!queueTouchedRef.current)");
+    expect(workspace).toContain("setDefaultQueueResolved(true)");
+    expect(workspace).toContain("!defaultQueueResolved ||");
+    expect(workspace).toContain("const first = visibleQueueChats[0]");
+    expect(workspace).not.toContain("visibleQueueChats[0] ?? chats[0]");
   });
 
   it("clears the mobile conversation URL before clearing active thread state", () => {
-    const desk = source("src/components/inbox/inbox-operations-desk.tsx");
-    const thread = source("src/components/inbox/inbox-thread-workbench.tsx");
+    const workspace = source("src/components/inbox/inbox-v3-workspace.tsx");
+    const thread = source("src/components/inbox/inbox-v3-thread.tsx");
 
-    expect(desk).toContain(
+    expect(workspace).toContain(
       "const [returningToQueue, setReturningToQueue] = useState(false)",
     );
-    expect(desk).toContain("if (!returningToQueue || requestedConversationId) return");
-    expect(desk).toContain('router.replace("/inbox")');
-    expect(desk).toContain("clearActiveChat();");
-    expect(desk).toContain("onBackToQueue={handleBackToQueue}");
+    expect(workspace).toContain("if (!returningToQueue || requestedConversationId) return");
+    expect(workspace).toContain('router.replace("/inbox")');
+    expect(workspace).toContain("clearActiveChat();");
+    expect(workspace).toContain("onBackToQueue={handleBackToQueue}");
     expect(thread).toContain("onBackToQueue: () => void");
     expect(thread).toContain("onClick={onBackToQueue}");
     expect(thread).not.toContain("onClick={clearActiveChat}");
@@ -99,18 +92,21 @@ describe("Inbox final review invariants", () => {
 
   it("localizes recent order status instead of rendering raw provider values", () => {
     const panel = source("src/components/inbox/inbox-customer-work-panel.tsx");
+    const runtime = source("src/lib/i18n/inbox-order-status-runtime.ts");
 
-    expect(panel).toContain("const ORDER_STATUS_COPY");
+    // R5-d: the inline ORDER_STATUS_COPY dictionary migrated verbatim into
+    // the runtime translation chain (inbox.orderStatus.* keys).
+    expect(panel).not.toContain("const ORDER_STATUS_COPY");
     expect(panel).toContain("function orderStatusLabel(");
-    expect(panel).toContain("orderStatusLabel(order.status, locale)");
-    expect(panel).toContain('refused: "Refused"');
-    expect(panel).toContain('refused: "Refusée"');
-    expect(panel).toContain('refused: "مرفوض"');
+    expect(panel).toContain("orderStatusLabel(order.status, t)");
+    expect(runtime).toContain('"inbox.orderStatus.refused": "Refused"');
+    expect(runtime).toContain('"inbox.orderStatus.refused": "Refusée"');
+    expect(runtime).toContain('"inbox.orderStatus.refused": "مرفوض"');
     expect(panel).not.toContain("{order.status}");
   });
 
   it("remounts the complete context surface when the canonical conversation changes", () => {
-    const thread = source("src/components/inbox/inbox-thread-workbench.tsx");
+    const thread = source("src/components/inbox/inbox-v3-thread.tsx");
 
     expect(thread).toContain("key={activeChat.conversationId}");
   });

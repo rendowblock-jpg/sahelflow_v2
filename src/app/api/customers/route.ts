@@ -20,6 +20,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const result = await getCustomersWorkbenchPage(actorContext, {
     page: Number.parseInt(searchParams.get("page") ?? "1", 10),
     pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
+    q: searchParams.get("q") ?? undefined,
   });
   return NextResponse.json(result);
 }, "GET /api/customers");

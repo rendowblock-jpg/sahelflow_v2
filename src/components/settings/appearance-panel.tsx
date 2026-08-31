@@ -12,33 +12,41 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import { Check, Monitor, Moon, Sun } from "lucide-react";
 
+/**
+ * Dark-preset previews must represent the shipped doctrine exactly: dark mode
+ * keeps ONE neutral charcoal material system for every preset — presets express
+ * identity through accents and analytical colors only (theme-preset-system.css).
+ * canvas/rail therefore use the neutral surface-1/sidebar tokens verbatim, and
+ * only accent (preset primary) and secondary (preset chart-2 family) differ.
+ * Keep these literals in sync with the token authority when it changes.
+ */
 const PRESET_PREVIEW: Record<
   ThemePreset,
   { accent: string; secondary: string; canvas: string; rail: string }
 > = {
   sahel: {
-    accent: "oklch(0.70 0.18 150)",
-    secondary: "oklch(0.70 0.18 248)",
-    canvas: "oklch(0.178 0.012 145)",
-    rail: "oklch(0.235 0.030 150)",
+    accent: "oklch(0.70 0.16 150)",
+    secondary: "oklch(0.78 0.15 55)",
+    canvas: "oklch(0.178 0.004 260)",
+    rail: "oklch(0.158 0.004 260)",
   },
   atlas: {
-    accent: "oklch(0.72 0.17 285)",
-    secondary: "oklch(0.71 0.15 245)",
-    canvas: "oklch(0.178 0.022 280)",
-    rail: "oklch(0.245 0.055 285)",
+    accent: "oklch(0.72 0.15 285)",
+    secondary: "oklch(0.70 0.13 245)",
+    canvas: "oklch(0.178 0.004 260)",
+    rail: "oklch(0.158 0.004 260)",
   },
   oasis: {
-    accent: "oklch(0.74 0.14 190)",
-    secondary: "oklch(0.74 0.15 165)",
-    canvas: "oklch(0.178 0.022 190)",
-    rail: "oklch(0.245 0.050 190)",
+    accent: "oklch(0.72 0.125 190)",
+    secondary: "oklch(0.71 0.13 178)",
+    canvas: "oklch(0.178 0.004 260)",
+    rail: "oklch(0.158 0.004 260)",
   },
   dune: {
-    accent: "oklch(0.78 0.14 70)",
-    secondary: "oklch(0.73 0.17 28)",
-    canvas: "oklch(0.178 0.023 65)",
-    rail: "oklch(0.245 0.058 65)",
+    accent: "oklch(0.76 0.125 70)",
+    secondary: "oklch(0.70 0.15 350)",
+    canvas: "oklch(0.178 0.004 260)",
+    rail: "oklch(0.158 0.004 260)",
   },
 };
 

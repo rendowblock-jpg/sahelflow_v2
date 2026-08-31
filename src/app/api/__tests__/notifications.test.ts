@@ -68,6 +68,12 @@ vi.mock("next/headers", () => ({
     set: (name: string, value: string) => { cookieStore.set(name, value); },
     delete: (name: string) => { cookieStore.delete(name); },
   })),
+  // getI18n() reads Accept-Language (R5-c seller-side locale truth) — the
+  // feed tests drive locale through the cookie only, so the header store
+  // resolves nothing and the cookie keeps authority.
+  headers: vi.fn(async () => ({
+    get: () => undefined,
+  })),
 }));
 
 import { GET as GETNotifications } from "@/app/api/notifications/route";

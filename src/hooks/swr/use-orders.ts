@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { useQueryState } from "nuqs";
 
@@ -35,6 +35,12 @@ function normalizeClientSort(raw: string, canReadFinancials: boolean): string {
   }
 }
 
+/** Normalize a raw wilaya param to its canonical numeric string ("06" → "6"). */
+function normalizeWilayaParam(raw: string): string {
+  const code = Number.parseInt(raw, 10);
+  return Number.isSafeInteger(code) && code > 0 ? String(code) : "";
+}
+
 export function useOrders(opts: UseOrdersOptions = {}) {
   const [page, setPage] = useQueryState("page", {
     defaultValue: "1",
@@ -44,6 +50,13 @@ export function useOrders(opts: UseOrdersOptions = {}) {
     defaultValue: "createdAt.desc",
     shallow: true,
   });
+  const [q] = useQueryState("q", { defaultValue: "", shallow: true });
+  const [wilaya] = useQueryState("wilaya", {
+    defaultValue: "",
+    shallow: true,
+  });
+  const [from] = useQueryState("from", { defaultValue: "", shallow: true });
+  const [to] = useQueryState("to", { defaultValue: "", shallow: true });
   const { cache } = useSWRConfig();
   const currentPage = Number.parseInt(page, 10) || 1;
   const pageSize = opts.pageSize ?? 25;
@@ -51,15 +64,34 @@ export function useOrders(opts: UseOrdersOptions = {}) {
     sort,
     opts.fallback?.fieldAccess.financials ?? true,
   );
+  const trimmedQ = q.trim();
+  const wilayaCode = normalizeWilayaParam(wilaya);
+  const trimmedFrom = from.trim();
+  const trimmedTo = to.trim();
   const statusParam =
     opts.status && opts.status !== "all" ? `&status=${opts.status}` : "";
   const sortParam = `&sort=${encodeURIComponent(normalizedSort)}`;
-  const key = `/api/orders?page=${currentPage}&pageSize=${pageSize}${statusParam}${sortParam}`;
+  const qParam = trimmedQ ? `&q=${encodeURIComponent(trimmedQ)}` : "";
+  const wilayaParam = wilayaCode ? `&wilaya=${wilayaCode}` : "";
+  const fromParam = trimmedFrom ? `&dateFrom=${encodeURIComponent(trimmedFrom)}` : "";
+  const toParam = trimmedTo ? `&dateTo=${encodeURIComponent(trimmedTo)}` : "";
+  const key = `/api/orders?page=${currentPage}&pageSize=${pageSize}${statusParam}${sortParam}${qParam}${wilayaParam}${fromParam}${toParam}`;
+
+  // The RSC fallback is only authoritative while the URL filters still match
+  // what the server actually applied — after a shallow filter change the old
+  // first paint must not masquerade as the filtered result.
+  const applied = opts.fallback?.appliedFilters;
+  const filtersMatch =
+    (applied?.q ?? null) === (trimmedQ || null) &&
+    (applied?.wilaya ?? null) === (wilayaCode || null) &&
+    (applied?.dateFrom ?? null) === (trimmedFrom || null) &&
+    (applied?.dateTo ?? null) === (trimmedTo || null);
   const fallbackData =
     opts.fallback &&
     opts.fallback.page === currentPage &&
     opts.fallback.pageSize === pageSize &&
-    opts.fallback.sort === normalizedSort
+    opts.fallback.sort === normalizedSort &&
+    filtersMatch
       ? opts.fallback
       : undefined;
   const hasCachedData = cache.get(key)?.data !== undefined;
@@ -77,6 +109,18 @@ export function useOrders(opts: UseOrdersOptions = {}) {
   const response = data ?? fallbackData;
   const knownTotal = response?.total ?? opts.fallback?.total;
   const lastPage = Math.max(1, Math.ceil((knownTotal ?? 0) / pageSize));
+
+  // Changing the scope of a list must never keep the seller on a page that no
+  // longer exists: any filter change snaps back to page 1.
+  const filterKey = `${trimmedQ}\u0000${wilayaCode}\u0000${trimmedFrom}\u0000${trimmedTo}`;
+  const prevFilterKeyRef = useRef(filterKey);
+  useEffect(() => {
+    if (prevFilterKeyRef.current === filterKey) return;
+    prevFilterKeyRef.current = filterKey;
+    if (currentPage !== 1) {
+      void setPage("1");
+    }
+  }, [filterKey, currentPage, setPage]);
 
   useEffect(() => {
     if (knownTotal !== undefined && currentPage > lastPage) {

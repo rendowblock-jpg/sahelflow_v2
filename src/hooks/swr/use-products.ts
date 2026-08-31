@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import useSWR from "swr";
 import { useQueryState } from "nuqs";
 
@@ -20,11 +20,17 @@ export function useProducts(
     defaultValue: "1",
     shallow: true,
   });
+  const [q] = useQueryState("q", { defaultValue: "", shallow: true });
   const currentPage = Number.parseInt(page, 10) || 1;
   const pageSize = opts.pageSize ?? 25;
-  const key = `/api/products?page=${currentPage}&pageSize=${pageSize}`;
+  const trimmedQ = q.trim();
+  const qParam = trimmedQ ? `&q=${encodeURIComponent(trimmedQ)}` : "";
+  const key = `/api/products?page=${currentPage}&pageSize=${pageSize}${qParam}`;
+  const applied = opts.fallback?.appliedFilters;
+  const filtersMatch = (applied?.q ?? null) === (trimmedQ || null);
   const fallbackData =
     opts.fallback &&
+    filtersMatch &&
     opts.fallback.page === currentPage &&
     opts.fallback.pageSize === pageSize
       ? opts.fallback
@@ -44,6 +50,16 @@ export function useProducts(
       void setPage(String(lastPage));
     }
   }, [currentPage, knownTotal, lastPage, setPage]);
+
+  // A new search scope must restart from the first page.
+  const prevQRef = useRef(trimmedQ);
+  useEffect(() => {
+    if (prevQRef.current === trimmedQ) return;
+    prevQRef.current = trimmedQ;
+    if (currentPage !== 1) {
+      void setPage("1");
+    }
+  }, [trimmedQ, currentPage, setPage]);
 
   return {
     data: response,

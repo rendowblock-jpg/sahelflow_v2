@@ -9,6 +9,7 @@ import {
   Loader2,
   MessageSquare,
   Package,
+  Plus,
   RotateCcw,
   Search,
   SearchX,
@@ -26,7 +27,12 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { buildCreateHref } from "@/hooks/use-create-param";
 import { useI18n } from "@/hooks/use-i18n";
+import {
+  RECENT_RECORDS_VISIBLE,
+  useRecentRecords,
+} from "@/hooks/use-recent-records";
 import {
   searchCommandCopy,
   type SearchCommandCopyKey,
@@ -57,6 +63,14 @@ type VisibleResult = UniversalSearchCandidate & {
   score: number;
   icon: React.ComponentType<{ className?: string }>;
 };
+
+/** Row shape shared by record matches, create actions and recents. */
+type ResultRow = UniversalSearchCandidate & {
+  icon: React.ComponentType<{ className?: string }>;
+};
+
+const GROUP_HEADING_STYLES =
+  "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-1 [&_[cmdk-group-heading]]:text-2xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.08em]";
 
 interface SearchResponse {
   query: string;
@@ -108,9 +122,75 @@ const RECORD_ICONS = {
   React.ComponentType<{ className?: string }>
 >;
 
+/**
+ * R4-f create actions. Navigation-only palettes force the seller back to the
+ * list surface before any create flow can start (d5/d7-a); these three
+ * commands deep-link straight into the surface's create dialog via
+ * `?create=1`. Permissions stay server-side — each surface renders its create
+ * dialog only when the actor's authority allows it, so an action without
+ * permission lands on the plain list instead of a dead-end.
+ */
+interface PaletteCreateAction {
+  id: string;
+  labelKey: SearchCommandCopyKey;
+  href: string;
+  keywords: readonly string[];
+}
+
+const CREATE_ACTIONS: readonly PaletteCreateAction[] = [
+  {
+    id: "create-order",
+    labelKey: "actionCreateOrder",
+    href: buildCreateHref("/orders"),
+    keywords: [
+      "new order",
+      "create order",
+      "add order",
+      "nouvelle commande",
+      "créer commande",
+      "ajouter commande",
+      "طلب جديد",
+      "إنشاء طلب",
+      "إضافة طلب",
+    ],
+  },
+  {
+    id: "create-customer",
+    labelKey: "actionCreateCustomer",
+    href: buildCreateHref("/customers"),
+    keywords: [
+      "new customer",
+      "create customer",
+      "add customer",
+      "nouveau client",
+      "créer client",
+      "ajouter client",
+      "عميل جديد",
+      "إنشاء عميل",
+      "إضافة عميل",
+    ],
+  },
+  {
+    id: "create-product",
+    labelKey: "actionCreateProduct",
+    href: buildCreateHref("/products"),
+    keywords: [
+      "new product",
+      "create product",
+      "add product",
+      "nouveau produit",
+      "créer produit",
+      "ajouter produit",
+      "منتج جديد",
+      "إنشاء منتج",
+      "إضافة منتج",
+    ],
+  },
+];
+
 const KIND_COPY: Record<UniversalSearchKind, SearchCommandCopyKey> = {
   navigation: "typePage",
-  action: "typePage",
+  action: "typeAction",
   order: "typeOrder",
   customer: "typeCustomer",
   product: "typeProduct",
@@ -146,6 +226,61 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const normalizedQuery = normalizeSearchText(query);
   const technicalQuery =
     normalizedQuery.length > 0 && /^[0-9\s()+\-./]+$/u.test(normalizedQuery);
+
+  // R4-f recents: local-first journal written by record detail pages; re-read
+  // on every open so the newest visits appear without a remount.
+  const recents = useRecentRecords(open);
+
+  const createActionItems = React.useMemo<ResultRow[]>(
+    () =>
+      CREATE_ACTIONS.map((action) => ({
+        id: action.id,
+        kind: "action" as const,
+        label: copy(action.labelKey),
+        href: action.href,
+        keywords: action.keywords,
+        updatedAt: null,
+        icon: Plus,
+      })),
+    [copy],
+  );
+
+  // Actions and recents stay first-class cmdk items: the palette owns
+  // filtering (shouldFilter=false), so the shared ranking authority — Arabic
+  // normalization included — applies to them exactly like record matches.
+  const visibleActions = React.useMemo<ResultRow[]>(() => {
+    if (!normalizedQuery) return createActionItems;
+    return rankUniversalSearchCandidates(
+      normalizedQuery,
+      createActionItems,
+      createActionItems.length,
+    );
+  }, [createActionItems, normalizedQuery]);
+
+  const recentItems = React.useMemo<ResultRow[]>(
+    () =>
+      recents.slice(0, RECENT_RECORDS_VISIBLE).map((record) => ({
+        id: `${record.kind}:${record.id}`,
+        kind: record.kind,
+        label: record.label,
+        href: record.href,
+        updatedAt: record.viewedAt,
+        icon: RECORD_ICONS[record.kind],
+      })),
+    [recents],
+  );
+
+  const visibleRecent = React.useMemo<ResultRow[]>(() => {
+    if (!normalizedQuery) return recentItems;
+    return rankUniversalSearchCandidates(
+      normalizedQuery,
+      recentItems,
+      recentItems.length,
+    );
+  }, [recentItems, normalizedQuery]);
+
+  const hasInstantMatches =
+    visibleActions.length > 0 || visibleRecent.length > 0;
 
   const navigation = React.useMemo(
     () =>
@@ -279,7 +414,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     router.push(href);
   }
 
-  function renderResult(result: VisibleResult) {
+  function renderResult(result: ResultRow) {
     const Icon = result.icon;
     return (
       <CommandItem
@@ -306,20 +441,20 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           )}
           {result.sublabel ? (
             hasTechnicalSublabel(result.kind, result.sublabel) ? (
-              <TechnicalValue className="mt-0.5 block truncate text-start text-[11px] leading-4 text-muted-foreground">
+              <TechnicalValue className="mt-0.5 block truncate text-start text-2xs leading-4 text-muted-foreground">
                 {result.sublabel}
               </TechnicalValue>
             ) : (
               <bdi
                 dir="auto"
-                className="mt-0.5 block truncate text-start text-[11px] leading-4 text-muted-foreground [unicode-bidi:plaintext]"
+                className="mt-0.5 block truncate text-start text-2xs leading-4 text-muted-foreground [unicode-bidi:plaintext]"
               >
                 {result.sublabel}
               </bdi>
             )
           ) : null}
         </span>
-        <span className="ms-2 shrink-0 rounded-full border border-border/55 bg-muted/25 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <span className="ms-2 shrink-0 rounded-full border border-border/55 bg-muted/25 px-2 py-0.5 text-2xs font-medium text-muted-foreground">
           {copy(KIND_COPY[result.kind])}
         </span>
         <ArrowUpRight
@@ -348,7 +483,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     !searching &&
     !liveRecordState.failed &&
     !degraded &&
-    visibleResults.length === 0;
+    visibleResults.length === 0 &&
+    !hasInstantMatches;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -412,10 +548,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
                 <div className="flex items-end justify-between gap-4 px-3 pb-1.5 pt-0.5">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    <p className="text-2xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                       {copy("quickAccess")}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground/75">
+                    <p className="mt-0.5 text-2xs text-muted-foreground/75">
                       {copy("quickHint")}
                     </p>
                   </div>
@@ -439,7 +575,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                             <span className="block truncate text-start text-[13px] font-semibold">
                               {item.label}
                             </span>
-                            <span className="mt-0.5 block text-start text-[10px] text-muted-foreground">
+                            <span className="mt-0.5 block text-start text-2xs text-muted-foreground">
                               {copy("open")}
                             </span>
                           </span>
@@ -455,9 +591,35 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               </>
             ) : null}
 
+            {visibleActions.length > 0 ? (
+              <CommandGroup
+                heading={copy("actionsSection")}
+                className={GROUP_HEADING_STYLES}
+              >
+                <div className="space-y-0.5">
+                  {visibleActions.map(renderResult)}
+                </div>
+              </CommandGroup>
+            ) : null}
+
+            {visibleRecent.length > 0 ? (
+              <CommandGroup
+                heading={copy("recentSection")}
+                className={cn(
+                  "mt-1 border-t border-border/45 pt-1",
+                  GROUP_HEADING_STYLES,
+                  "[&_[cmdk-group-heading]]:pt-2",
+                )}
+              >
+                <div className="space-y-0.5">
+                  {visibleRecent.map(renderResult)}
+                </div>
+              </CommandGroup>
+            ) : null}
+
             {partiallyDegraded ? (
               <div
-                className="mx-1 mb-2 flex items-start gap-2 rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 text-[11px] leading-5 text-warning"
+                className="mx-1 mb-2 flex items-start gap-2 rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 text-2xs leading-5 text-warning"
                 role="status"
               >
                 <AlertTriangle
@@ -471,7 +633,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             {normalizedQuery && recordResults.length > 0 ? (
               <CommandGroup
                 heading={copy("recordResults")}
-                className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-1 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.08em]"
+                className={GROUP_HEADING_STYLES}
               >
                 <div className="space-y-0.5">
                   {recordResults.map(renderResult)}
@@ -482,13 +644,17 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             {normalizedQuery && pageResults.length > 0 ? (
               <CommandGroup
                 heading={copy("pageResults")}
-                className="mt-1 border-t border-border/45 pt-1 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.08em]"
+                className={cn(
+                  "mt-1 border-t border-border/45 pt-1",
+                  GROUP_HEADING_STYLES,
+                  "[&_[cmdk-group-heading]]:pt-2",
+                )}
               >
                 <div className="space-y-0.5">{pageResults.map(renderResult)}</div>
               </CommandGroup>
             ) : null}
 
-            {searching && visibleResults.length === 0 ? (
+            {searching && visibleResults.length === 0 && !hasInstantMatches ? (
               <div
                 className="flex min-h-36 flex-col items-center justify-center px-6 text-center"
                 role="status"
@@ -553,7 +719,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             ) : null}
           </CommandList>
 
-          <div className="flex min-h-11 items-center gap-2 border-t border-border/60 bg-muted/10 px-3.5 text-[10px] text-muted-foreground">
+          <div className="flex min-h-11 items-center gap-2 border-t border-border/60 bg-muted/10 px-3.5 text-2xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <kbd className="rounded-md border border-border/65 bg-background/80 px-1.5 py-0.5 font-mono shadow-sm">
                 ↑↓

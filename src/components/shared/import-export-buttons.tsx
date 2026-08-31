@@ -18,6 +18,12 @@ interface ImportExportButtonsProps {
   /** Import API route. Omit it when the actor has export-only authority. */
   importRoute?: string;
   size?: "default" | "sm";
+  /**
+   * URL param names forwarded from the current address to the export route at
+   * click time, so the download matches the seller's active list scope
+   * (search text, filters, status, sort) instead of exporting everything.
+   */
+  filterParams?: string[];
 }
 
 /**
@@ -31,13 +37,26 @@ export function ImportExportButtons({
   exportRoute,
   importRoute,
   size = "sm",
+  filterParams,
 }: ImportExportButtonsProps) {
   const { t } = useI18n();
   const importEntity = importRoute?.split("/").filter(Boolean).at(-1);
 
   function handleExport(format: "csv" | "xlsx") {
     if (!exportRoute) return;
-    window.open(`${exportRoute}?format=${format}`, "_blank", "noopener,noreferrer");
+    const params = new URLSearchParams({ format });
+    if (filterParams?.length) {
+      const current = new URLSearchParams(window.location.search);
+      for (const name of filterParams) {
+        const value = current.get(name);
+        if (value) params.set(name, value);
+      }
+    }
+    window.open(
+      `${exportRoute}?${params.toString()}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   }
 
   if (!exportRoute && !importRoute) return null;

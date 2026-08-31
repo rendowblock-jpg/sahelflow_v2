@@ -13,9 +13,14 @@ import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
 import {
   createCustomerSchema,
-  dzPhone,
   nonEmptyString,
 } from "@/lib/validation";
+import {
+  DZ_PHONE_PLACEHOLDER,
+  dzPhoneSchema,
+  formatDZPhone,
+  normalizeDZPhone,
+} from "@/lib/validation/phone";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -44,7 +49,10 @@ import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
  * stripped to `undefined` before posting to the API.
  */
 const formSchema = createCustomerSchema.extend({
-  phone2: z.union([dzPhone, z.literal("")]).optional(),
+  // Canonical phone rule (src/lib/validation/phone.ts): strict 0[5-7] + 8
+  // digits, tolerant of the masked display value "05 55 12 34 56".
+  phone: dzPhoneSchema,
+  phone2: z.union([dzPhoneSchema, z.literal("")]).optional(),
   wilaya: z.union([nonEmptyString, z.literal("")]).optional(),
   commune: z.union([nonEmptyString, z.literal("")]).optional(),
   address: z.string().optional(),
@@ -99,8 +107,9 @@ export function CustomerFormDialog({
 
   const buildDefaults = (c?: CustomerFormDialogCustomer): FormValues => ({
     name: c?.name ?? "",
-    phone: c?.phone ?? "",
-    phone2: c?.phone2 ?? "",
+    // Display phones in the canonical mask; submit normalizes to digits.
+    phone: c?.phone ? formatDZPhone(c.phone) : "",
+    phone2: c?.phone2 ? formatDZPhone(c.phone2) : "",
     wilaya: c?.wilaya ?? "",
     commune: c?.commune ?? "",
     address: c?.address ?? "",
@@ -135,6 +144,14 @@ export function CustomerFormDialog({
     const payload: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(values)) {
       payload[k] = v === "" ? undefined : v;
+    }
+    // The server schema (createCustomerSchema.dzPhone) accepts digits only —
+    // strip the display mask before posting.
+    if (typeof payload.phone === "string") {
+      payload.phone = normalizeDZPhone(payload.phone);
+    }
+    if (typeof payload.phone2 === "string") {
+      payload.phone2 = normalizeDZPhone(payload.phone2);
     }
 
     try {
@@ -237,11 +254,19 @@ export function CustomerFormDialog({
                 <FormItem>
                   <FormLabel>{t("customers.phone")}</FormLabel>
                   <FormControl>
+                    {/* Phone digits are technical LTR content — the tel
+                        attributes keep "05 55 12 34 56" groups from
+                        reordering in the Arabic UI. */}
                     <Input
-                      placeholder="0555 000 000"
+                      placeholder={DZ_PHONE_PLACEHOLDER}
+                      type="tel"
                       inputMode="tel"
-                      autoComplete="tel"
+                      dir="ltr"
+                      autoComplete="tel-national"
                       {...field}
+                      onChange={(event) =>
+                        field.onChange(formatDZPhone(event.target.value))
+                      }
                     />
                   </FormControl>
                   <FormDescription>
@@ -260,9 +285,17 @@ export function CustomerFormDialog({
                   <FormLabel>{t("customers.phone")} 2</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="0660 000 000"
+                      placeholder={DZ_PHONE_PLACEHOLDER}
+                      type="tel"
                       inputMode="tel"
+                      dir="ltr"
+                      // Secondary number: keep autofill off so browsers don't
+                      // duplicate the primary phone into the backup field.
+                      autoComplete="off"
                       {...field}
+                      onChange={(event) =>
+                        field.onChange(formatDZPhone(event.target.value))
+                      }
                     />
                   </FormControl>
                   <FormMessage />

@@ -7,96 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
 
-const COPY = {
-  en: {
-    title: "Security & sessions",
-    description:
-      "Review the exact installation, trusted device, and signed-in sessions. Revoking a session denies access immediately.",
-    workspace: "Workspace authority",
-    device: "Trusted device",
-    sessions: "Signed-in sessions",
-    current: "Current",
-    active: "Active",
-    revoked: "Revoked",
-    missing: "Database record missing",
-    policy: "Policy version",
-    lastSeen: "Last seen",
-    bound: "Signed in",
-    revoke: "Revoke session",
-    refreshing: "Refreshing…",
-    refresh: "Refresh",
-    loading: "Loading security authority…",
-    loadError: "Security authority could not be loaded.",
-    revokeError: "The session could not be revoked.",
-    reauthTitle: "Confirm with your PIN",
-    reauthDescription:
-      "Session administration is a high-risk action. Verify your PIN to continue.",
-    pinPlaceholder: "Enter PIN",
-    confirm: "Verify and revoke",
-    cancel: "Cancel",
-    incorrectPin: "The PIN could not be verified.",
-    noSessions: "No sessions are recorded for this installation.",
-  },
-  fr: {
-    title: "Sécurité et sessions",
-    description:
-      "Consultez l’installation exacte, l’appareil de confiance et les sessions connectées. La révocation bloque immédiatement l’accès.",
-    workspace: "Autorité de l’espace de travail",
-    device: "Appareil de confiance",
-    sessions: "Sessions connectées",
-    current: "Actuelle",
-    active: "Active",
-    revoked: "Révoquée",
-    missing: "Enregistrement local manquant",
-    policy: "Version de la politique",
-    lastSeen: "Dernière activité",
-    bound: "Connexion",
-    revoke: "Révoquer la session",
-    refreshing: "Actualisation…",
-    refresh: "Actualiser",
-    loading: "Chargement de l’autorité de sécurité…",
-    loadError: "Impossible de charger l’autorité de sécurité.",
-    revokeError: "Impossible de révoquer la session.",
-    reauthTitle: "Confirmez avec votre code PIN",
-    reauthDescription:
-      "L’administration des sessions est une action sensible. Vérifiez votre PIN pour continuer.",
-    pinPlaceholder: "Saisir le PIN",
-    confirm: "Vérifier et révoquer",
-    cancel: "Annuler",
-    incorrectPin: "Le PIN n’a pas pu être vérifié.",
-    noSessions: "Aucune session n’est enregistrée pour cette installation.",
-  },
-  ar: {
-    title: "الأمان والجلسات",
-    description:
-      "راجع التثبيت الحالي والجهاز الموثوق والجلسات المسجّلة. إلغاء الجلسة يمنع الوصول فورًا.",
-    workspace: "صلاحية مساحة العمل",
-    device: "الجهاز الموثوق",
-    sessions: "الجلسات المسجّلة",
-    current: "الحالية",
-    active: "نشطة",
-    revoked: "ملغاة",
-    missing: "سجل قاعدة البيانات مفقود",
-    policy: "إصدار سياسة الصلاحيات",
-    lastSeen: "آخر نشاط",
-    bound: "تاريخ تسجيل الدخول",
-    revoke: "إلغاء الجلسة",
-    refreshing: "جارٍ التحديث…",
-    refresh: "تحديث",
-    loading: "جارٍ تحميل صلاحيات الأمان…",
-    loadError: "تعذر تحميل صلاحيات الأمان.",
-    revokeError: "تعذر إلغاء الجلسة.",
-    reauthTitle: "أكد العملية بالرمز السري",
-    reauthDescription:
-      "إدارة الجلسات عملية حساسة. تحقق من الرمز السري للمتابعة.",
-    pinPlaceholder: "أدخل الرمز السري",
-    confirm: "تحقق ثم ألغِ الجلسة",
-    cancel: "إلغاء",
-    incorrectPin: "تعذر التحقق من الرمز السري.",
-    noSessions: "لا توجد جلسات مسجلة لهذا التثبيت.",
-  },
-} as const;
-
 type AuthorityResponse = {
   authority: {
     revision: number;
@@ -139,8 +49,7 @@ function shortId(value: string): string {
 }
 
 export function SecurityAuthorityPanel() {
-  const { locale } = useI18n();
-  const copy = COPY[locale];
+  const { t, locale } = useI18n();
   const [authority, setAuthority] = useState<AuthorityResponse["authority"] | null>(
     null,
   );
@@ -172,9 +81,9 @@ export function SecurityAuthorityPanel() {
   const requestAuthority = useCallback(async () => {
     const response = await fetch("/api/auth/authority", { cache: "no-store" });
     const body = (await response.json()) as AuthorityResponse & ApiError;
-    if (!response.ok) throw new Error(body.error ?? copy.loadError);
+    if (!response.ok) throw new Error(body.error ?? t("settings.security.loadError"));
     return body.authority;
-  }, [copy.loadError]);
+  }, [t]);
 
   const loadAuthority = useCallback(async () => {
     setLoading(true);
@@ -182,11 +91,11 @@ export function SecurityAuthorityPanel() {
     try {
       setAuthority(await requestAuthority());
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.loadError);
+      setError(caught instanceof Error ? caught.message : t("settings.security.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [copy.loadError, requestAuthority]);
+  }, [t, requestAuthority]);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,7 +106,7 @@ export function SecurityAuthorityPanel() {
         if (!cancelled) setAuthority(nextAuthority);
       } catch (caught) {
         if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : copy.loadError);
+          setError(caught instanceof Error ? caught.message : t("settings.security.loadError"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -208,7 +117,7 @@ export function SecurityAuthorityPanel() {
     return () => {
       cancelled = true;
     };
-  }, [copy.loadError, requestAuthority]);
+  }, [t, requestAuthority]);
 
   const revokeSession = useCallback(
     async (sessionId: string, proofAlreadyRefreshed = false) => {
@@ -230,17 +139,17 @@ export function SecurityAuthorityPanel() {
           setPinError(null);
           return;
         }
-        if (!response.ok) throw new Error(body.error ?? copy.revokeError);
+        if (!response.ok) throw new Error(body.error ?? t("settings.security.revokeError"));
         setReauthSessionId(null);
         setPin("");
         await loadAuthority();
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : copy.revokeError);
+        setError(caught instanceof Error ? caught.message : t("settings.security.revokeError"));
       } finally {
         setBusySessionId(null);
       }
     },
-    [copy.revokeError, loadAuthority],
+    [t, loadAuthority],
   );
 
   const verifyPinAndRevoke = useCallback(async () => {
@@ -255,7 +164,7 @@ export function SecurityAuthorityPanel() {
       });
       const body = (await response.json()) as ApiError;
       if (!response.ok) {
-        setPinError(body.error ?? copy.incorrectPin);
+        setPinError(body.error ?? t("settings.security.incorrectPin"));
         return;
       }
       const target = reauthSessionId;
@@ -263,11 +172,11 @@ export function SecurityAuthorityPanel() {
       setPin("");
       await revokeSession(target, true);
     } catch {
-      setPinError(copy.incorrectPin);
+      setPinError(t("settings.security.incorrectPin"));
     } finally {
       setBusySessionId(null);
     }
-  }, [copy.incorrectPin, pin, reauthSessionId, revokeSession]);
+  }, [t, pin, reauthSessionId, revokeSession]);
 
   return (
     <section className="space-y-5" aria-labelledby="security-authority-title">
@@ -276,11 +185,11 @@ export function SecurityAuthorityPanel() {
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" aria-hidden="true" />
             <h3 id="security-authority-title" className="text-base font-semibold">
-              {copy.title}
+              {t("settings.security.title")}
             </h3>
           </div>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            {copy.description}
+            {t("settings.security.description")}
           </p>
         </div>
         <Button
@@ -294,13 +203,13 @@ export function SecurityAuthorityPanel() {
             className={`me-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
             aria-hidden="true"
           />
-          {loading ? copy.refreshing : copy.refresh}
+          {loading ? t("settings.security.refreshing") : t("settings.security.refresh")}
         </Button>
       </div>
 
       {loading && !authority ? (
         <div className="rounded-lg border p-5 text-sm text-muted-foreground">
-          {copy.loading}
+          {t("settings.security.loading")}
         </div>
       ) : null}
 
@@ -314,7 +223,7 @@ export function SecurityAuthorityPanel() {
         <>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-lg border p-4">
-              <p className="text-sm font-medium">{copy.workspace}</p>
+              <p className="text-sm font-medium">{t("settings.security.workspace")}</p>
               <dl className="mt-3 space-y-2 text-sm">
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">ID</dt>
@@ -323,7 +232,7 @@ export function SecurityAuthorityPanel() {
                   </dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-muted-foreground">{copy.policy}</dt>
+                  <dt className="text-muted-foreground">{t("settings.security.policy")}</dt>
                   <dd>{authority.workspace.policyVersion}</dd>
                 </div>
               </dl>
@@ -332,7 +241,7 @@ export function SecurityAuthorityPanel() {
             <div className="rounded-lg border p-4">
               <div className="flex items-center gap-2">
                 <MonitorSmartphone className="h-4 w-4" aria-hidden="true" />
-                <p className="text-sm font-medium">{copy.device}</p>
+                <p className="text-sm font-medium">{t("settings.security.device")}</p>
               </div>
               {authority.devices.map((device) => (
                 <dl key={device.id} className="mt-3 space-y-2 text-sm">
@@ -343,7 +252,7 @@ export function SecurityAuthorityPanel() {
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-muted-foreground">{copy.lastSeen}</dt>
+                    <dt className="text-muted-foreground">{t("settings.security.lastSeen")}</dt>
                     <dd>{formatDate(device.lastSeenAt)}</dd>
                   </div>
                 </dl>
@@ -353,10 +262,10 @@ export function SecurityAuthorityPanel() {
 
           <div className="rounded-lg border">
             <div className="border-b px-4 py-3">
-              <h4 className="text-sm font-semibold">{copy.sessions}</h4>
+              <h4 className="text-sm font-semibold">{t("settings.security.sessions")}</h4>
             </div>
             {authority.sessions.length === 0 ? (
-              <p className="p-4 text-sm text-muted-foreground">{copy.noSessions}</p>
+              <p className="p-4 text-sm text-muted-foreground">{t("settings.security.noSessions")}</p>
             ) : (
               <ul className="divide-y">
                 {authority.sessions.map((session) => {
@@ -365,10 +274,10 @@ export function SecurityAuthorityPanel() {
                     session.databaseState === "revoked";
                   const status =
                     session.databaseState === "missing"
-                      ? copy.missing
+                      ? t("settings.security.missing")
                       : revoked
-                        ? copy.revoked
-                        : copy.active;
+                        ? t("settings.security.revoked")
+                        : t("settings.security.active");
                   return (
                     <li key={session.sessionId} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
@@ -378,7 +287,7 @@ export function SecurityAuthorityPanel() {
                           </span>
                           {session.current ? (
                             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                              {copy.current}
+                              {t("settings.security.current")}
                             </span>
                           ) : null}
                           <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
@@ -386,7 +295,7 @@ export function SecurityAuthorityPanel() {
                           </span>
                         </div>
                         <p className="mt-2 text-xs text-muted-foreground">
-                          {copy.bound}: {formatDate(session.databaseIssuedAt ?? session.boundAt)} · {copy.lastSeen}: {formatDate(session.databaseLastSeenAt)}
+                          {t("settings.security.bound")}: {formatDate(session.databaseIssuedAt ?? session.boundAt)} · {t("settings.security.lastSeen")}: {formatDate(session.databaseLastSeenAt)}
                         </p>
                       </div>
                       <Button
@@ -396,7 +305,7 @@ export function SecurityAuthorityPanel() {
                         disabled={session.current || revoked || busySessionId === session.sessionId}
                         onClick={() => void revokeSession(session.sessionId)}
                       >
-                        {copy.revoke}
+                        {t("settings.security.revoke")}
                       </Button>
                     </li>
                   );
@@ -412,11 +321,11 @@ export function SecurityAuthorityPanel() {
           <div className="flex items-center gap-2">
             <KeyRound className="h-4 w-4" aria-hidden="true" />
             <h4 id="session-reauth-title" className="text-sm font-semibold">
-              {copy.reauthTitle}
+              {t("settings.security.reauthTitle")}
             </h4>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {copy.reauthDescription}
+            {t("settings.security.reauthDescription")}
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <Input
@@ -425,8 +334,8 @@ export function SecurityAuthorityPanel() {
               autoComplete="current-password"
               value={pin}
               onChange={(event) => setPin(event.target.value)}
-              placeholder={copy.pinPlaceholder}
-              aria-label={copy.pinPlaceholder}
+              placeholder={t("settings.security.pinPlaceholder")}
+              aria-label={t("settings.security.pinPlaceholder")}
               onKeyDown={(event) => {
                 if (event.key === "Enter") void verifyPinAndRevoke();
               }}
@@ -436,7 +345,7 @@ export function SecurityAuthorityPanel() {
               onClick={() => void verifyPinAndRevoke()}
               disabled={!pin.trim() || busySessionId !== null}
             >
-              {copy.confirm}
+              {t("settings.security.confirm")}
             </Button>
             <Button
               type="button"
@@ -447,7 +356,7 @@ export function SecurityAuthorityPanel() {
                 setPinError(null);
               }}
             >
-              {copy.cancel}
+              {t("common.cancel")}
             </Button>
           </div>
           {pinError ? (

@@ -7,8 +7,10 @@ import {
   ArrowUp,
   ArrowUpDown,
   Eye,
+  MessageCircle,
   MoreVertical,
   Pencil,
+  Printer,
   Trash2,
 } from "lucide-react";
 
@@ -23,10 +25,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { OrderListItem } from "@/hooks/swr/use-orders";
 import { useI18n } from "@/hooks/use-i18n";
 import type { RiskLevel } from "@/lib/risk-engine/types";
 import { formatDate, formatDZD } from "@/lib/utils";
+import { buildOrderWhatsAppMessage } from "@/lib/i18n/order-actions-runtime";
+import { buildWhatsAppLink } from "@/lib/whatsapp/deep-link";
 import type { WorkbenchFieldAccess } from "@/types/workbench";
 import { OrderStatusBadge } from "./order-status-badge";
 
@@ -35,6 +44,8 @@ interface UseOrdersColumnsOptions {
   fieldAccess: WorkbenchFieldAccess;
   riskData?: Record<string, { level: string; score: number }>;
   onDelete?: (orderId: string) => void;
+  /** R3-b: print the bon de livraison for one order (detail is fetched lazily). */
+  onPrintSlip?: (order: OrderListItem) => void;
 }
 
 function SortIcon({ dir }: { dir: false | "asc" | "desc" }) {
@@ -52,7 +63,7 @@ export function useOrdersColumns(
   opts: UseOrdersColumnsOptions,
 ): ColumnDef<OrderListItem, unknown>[] {
   const { t } = useI18n();
-  const { locale, fieldAccess, riskData, onDelete } = opts;
+  const { locale, fieldAccess, riskData, onDelete, onPrintSlip } = opts;
   const canOpenDetail = fieldAccess.contact && fieldAccess.financials;
 
   const columns: ColumnDef<OrderListItem, unknown>[] = [
@@ -215,18 +226,64 @@ export function useOrdersColumns(
           canOpenDetail &&
           fieldAccess.update &&
           order.mutationAuthority !== "canonical_v1";
-        if (!canOpenDetail && !canDelete) {
+        const canPrintSlip = fieldAccess.contact && Boolean(onPrintSlip);
+        // WhatsApp confirmation deep link — contact-gated, financials decide
+        // whether the COD amount rides along in the prefilled message.
+        const waPhone = fieldAccess.contact
+          ? (order.customer?.phone ?? order.phone)
+          : null;
+        const waLink = waPhone
+          ? buildWhatsAppLink(
+              waPhone,
+              buildOrderWhatsAppMessage(locale, {
+                name: order.customer?.name ?? null,
+                fallbackName: t("orders.customer"),
+                orderNumber: order.orderNumber,
+                totalLabel:
+                  fieldAccess.financials && order.totalPrice != null
+                    ? formatDZD(order.totalPrice, locale)
+                    : null,
+              }),
+            )
+          : null;
+        if (!canOpenDetail && !canDelete && !waLink && !canPrintSlip) {
           return <span className="text-muted-foreground">—</span>;
         }
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" className="size-8">
-                <MoreVertical className="size-4" aria-hidden="true" />
-                <span className="sr-only">{t("orders.actions")}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="shadow-dropdown">
+          <div className="flex items-center justify-end gap-1">
+            {waLink ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-8 text-success hover:text-success"
+                    asChild
+                  >
+                    <a
+                      href={waLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-no-row-click
+                      aria-label={t("orders.whatsapp.confirm")}
+                      data-testid="orders-row-whatsapp"
+                    >
+                      <MessageCircle className="size-4" aria-hidden="true" />
+                    </a>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("orders.whatsapp.confirm")}</TooltipContent>
+              </Tooltip>
+            ) : null}
+            {canOpenDetail || canDelete ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" className="size-8">
+                    <MoreVertical className="size-4" aria-hidden="true" />
+                    <span className="sr-only">{t("orders.actions")}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="shadow-dropdown">
               {canOpenDetail ? (
                 <DropdownMenuItem asChild>
                   <Link href={`/orders/${order.id}`}>
@@ -243,9 +300,20 @@ export function useOrdersColumns(
                   </Link>
                 </DropdownMenuItem>
               ) : null}
+              {canPrintSlip ? (
+                <DropdownMenuItem
+                  onClick={() => onPrintSlip?.(order)}
+                  data-testid="orders-row-print-slip"
+                >
+                  <Printer className="me-2 size-4" aria-hidden="true" />
+                  {t("orders.slip.print")}
+                </DropdownMenuItem>
+              ) : null}
               {canDelete && onDelete ? (
                 <>
-                  {(canOpenDetail || canEdit) ? <DropdownMenuSeparator /> : null}
+                  {(canOpenDetail || canEdit || canPrintSlip) ? (
+                    <DropdownMenuSeparator />
+                  ) : null}
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"
                     onClick={() => onDelete(order.id)}
@@ -255,8 +323,10 @@ export function useOrdersColumns(
                   </DropdownMenuItem>
                 </>
               ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
         );
       },
       meta: { align: "end", width: "w-12" },

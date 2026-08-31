@@ -178,11 +178,18 @@ describe("Phase 5 experience foundation source contract", () => {
     expect(source).toContain('data-state-size={size}');
   });
 
-  it("scopes desktop density and motion overrides to the authenticated shell", () => {
+  it("scopes desktop density overrides to the shell and keeps motion in one authority", () => {
     const source = read("src/app/phase5.css");
+    const motion = read("src/app/motion-system.css");
     expect(source).toContain('[data-sahelflow-shell="desktop"]');
-    expect(source).toContain(".stagger-grid > *");
-    expect(source).toContain("animation: none !important");
+    // Workbench density/geometry stay shell-scoped in phase5.css…
+    expect(source).toContain("--control-height: 2.5rem");
+    // …while animation enable/disable lives solely in motion-system.css, which
+    // must no longer need !important to defeat phase5 blanket-disable rules.
+    expect(motion).toContain(".stagger-grid > *");
+    expect(motion).toContain(".animate-fade-up");
+    expect(source).not.toContain("animation: none !important");
+    expect(motion).not.toContain("animation: none !important");
   });
 
   it("governs chart regions and locale-aware formatter resolution", () => {

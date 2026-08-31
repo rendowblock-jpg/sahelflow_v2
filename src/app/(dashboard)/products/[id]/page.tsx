@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Boxes,
   DollarSign,
+  History,
   Package,
   ShoppingBag,
   TrendingUp,
@@ -11,6 +12,7 @@ import {
 
 import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { RecentRecordTracker } from "@/components/shared/recent-record-tracker";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +28,7 @@ import {
 import { getI18n } from "@/lib/i18n-server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { getProductDetailWorkbench } from "@/lib/products/product-detail-workbench";
-import { formatDZD, formatDate } from "@/lib/utils";
+import { cn, formatDZD, formatDate } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +42,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const workbench = await getProductDetailWorkbench(actorContext, id);
   if (!workbench) notFound();
 
-  const { product, recentItems, canReadOrders, canReadOrderFinancials } = workbench;
+  const { product, recentItems, stockHistory, canReadOrders, canReadOrderFinancials } =
+    workbench;
   const isLowStock = product.stock <= product.lowStockThreshold;
   const inventoryValue = product.price * Math.max(0, product.stock);
   const productVariants: VariantOption[] = product.productVariants.map((variant) => ({
@@ -86,6 +89,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   return (
     <div className="app-content page-sections">
+      {/* R4-f: journal this visit for the command palette's Recent section. */}
+      <RecentRecordTracker
+        kind="product"
+        id={product.id}
+        label={product.name}
+        href={`/products/${product.id}`}
+      />
       <Breadcrumbs
         items={[
           { label: t("products.title"), href: "/products" },
@@ -179,6 +189,75 @@ export default async function ProductDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card data-product-stock-history="audit-trail">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <History className="size-4" aria-hidden="true" />
+            {t("productStock.historyTitle")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {stockHistory.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("productStock.noHistory")}
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("common.date")}</TableHead>
+                    <TableHead className="text-end">{t("productStock.change")}</TableHead>
+                    <TableHead className="text-end">{t("productStock.newStock")}</TableHead>
+                    <TableHead>{t("productStock.source")}</TableHead>
+                    <TableHead>{t("productStock.reason")}</TableHead>
+                    <TableHead>{t("productStock.by")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stockHistory.map((event) => (
+                    <TableRow key={event.id}>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDate(event.createdAt, locale)}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "text-end font-medium tabular-nums",
+                          event.delta !== null && event.delta > 0 && "text-success",
+                          event.delta !== null && event.delta < 0 && "text-destructive",
+                        )}
+                      >
+                        {event.delta === null
+                          ? "—"
+                          : `${event.delta > 0 ? "+" : ""}${event.delta}`}
+                      </TableCell>
+                      <TableCell className="text-end tabular-nums">
+                        {event.toStock ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {t(`productStock.source.${event.source}`)}
+                      </TableCell>
+                      <TableCell className="max-w-48 truncate text-sm text-muted-foreground">
+                        {event.reason ?? "—"}
+                      </TableCell>
+                      <TableCell
+                        className="font-mono text-xs text-muted-foreground"
+                        title={event.actor ?? undefined}
+                      >
+                        {event.actor ?? "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t("productStock.coverageNote")}
+          </p>
+        </CardContent>
+      </Card>
 
       {canReadOrders ? (
         <Card>

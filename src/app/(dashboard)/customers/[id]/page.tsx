@@ -7,15 +7,21 @@ import {
   MapPin,
   Phone,
   ShoppingBag,
+  Sparkles,
   TrendingUp,
   Truck,
 } from "lucide-react";
+import { askAiHref } from "@/lib/ai/ask-ai-link";
 
 import { BlacklistToggle } from "@/components/customers/blacklist-toggle";
+import { CustomerRiskCard } from "@/components/customers/customer-risk-card";
+import { OrderWhatsAppButton } from "@/components/orders/order-whatsapp-button";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { RecentRecordTracker } from "@/components/shared/recent-record-tracker";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -26,11 +32,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getCustomerDetailWorkbench } from "@/lib/customers/customer-detail-workbench";
+import {
+  CUSTOMER_SIGNALS_SCALE,
+  getCustomerSignalsLevel,
+  type CustomerSignalsLevel,
+} from "@/lib/customers/customer-risk-scale";
+import { db, shopContext } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
+import {
+  assessOrderRisk,
+  getRiskConfig,
+  type RiskAction,
+  type RiskLevel,
+} from "@/lib/risk-engine";
 import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
 import { formatDZD, formatDate } from "@/lib/utils";
@@ -39,12 +57,6 @@ import type { OrderStatus } from "@/types/domain";
 export const dynamic = "force-dynamic";
 
 type PageProps = { params: Promise<{ id: string }> };
-
-function getRiskLevel(score: number): "low" | "medium" | "high" {
-  if (score >= 6) return "high";
-  if (score >= 3) return "medium";
-  return "low";
-}
 
 export default async function CustomerDetailPage({ params }: PageProps) {
   const { t, locale } = await getI18n();
@@ -58,8 +70,28 @@ export default async function CustomerDetailPage({ params }: PageProps) {
   const canManageRisk =
     customer.fieldAccess.risk &&
     trustedActionAllowed(actorContext, "risk.manage", resource);
+  // R3-c: the order risk engine (0-100, seller-configurable thresholds) is
+  // surfaced read-only on the customer profile — its verdict on the
+  // customer's LATEST order, next to the separate ~0-10 customer signals
+  // score. Two scales, explicit labels, no invented equivalence.
+  const canReadRisk = trustedActionAllowed(actorContext, "risk.read", resource);
+  const latestOrderRow = workbench.canReadOrders ? orders[0] : undefined;
+  const latestOrder = latestOrderRow
+    ? { id: latestOrderRow.id, orderNumber: latestOrderRow.orderNumber }
+    : null;
+  const [riskEngineConfig, latestOrderAssessment] = await Promise.all([
+    canReadRisk
+      ? getRiskConfig({ prisma: db, shop: shopContext })
+      : Promise.resolve(null),
+    canReadRisk && latestOrder
+      ? assessOrderRisk(
+          { prisma: db, shop: shopContext },
+          latestOrder.id,
+        ).catch(() => null)
+      : Promise.resolve(null),
+  ]);
   const riskScore = customer.riskScore;
-  const riskLevel = riskScore === null ? null : getRiskLevel(riskScore);
+  const riskLevel = riskScore === null ? null : getCustomerSignalsLevel(riskScore);
   const riskBadge = riskLevel
     ? {
         low: { variant: "secondary" as const, label: t("risk.lowRisk") },
@@ -74,9 +106,19 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         .map((order) => ({ value: order.totalPrice ?? 0 }))
     : [];
   const customerLabel = customer.name ?? t("inbox.restrictedContact");
+  // R4-e: contextual "Ask AI" entry — customer NAME only in the URL (no
+  // phone/address); the assistant resolves the record via its own tools.
+  const canAskAi = trustedActionAllowed(actorContext, "ai.use");
 
   return (
     <div className="app-content page-sections">
+      {/* R4-f: journal this visit for the command palette's Recent section. */}
+      <RecentRecordTracker
+        kind="customer"
+        id={customer.id}
+        label={customerLabel}
+        href={`/customers/${customer.id}`}
+      />
       <Breadcrumbs
         items={[
           { label: t("customers.title"), href: "/customers" },
@@ -112,12 +154,33 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             </span>
           </span>
         }
-        actions={riskBadge && riskScore !== null ? (
-          <div className="flex items-center gap-2">
-            <Badge variant={riskBadge.variant}>
-              <AlertTriangle className="size-3.5" aria-hidden="true" />
-              {riskBadge.label} · {riskScore}
-            </Badge>
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {canAskAi && customer.name ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link
+                  href={askAiHref(
+                    t("ai.ask.customerPrompt", { name: customer.name }),
+                  )}
+                  data-testid="customer-header-ask-ai"
+                >
+                  <Sparkles className="me-1.5 size-4" aria-hidden="true" />
+                  {t("ai.ask.button")}
+                </Link>
+              </Button>
+            ) : null}
+            {/* R3-b: generic WhatsApp deep link (no order context). */}
+            <OrderWhatsAppButton
+              phone={customer.phone}
+              customerName={customer.name}
+              testId="customer-header-whatsapp"
+            />
+            {riskBadge && riskScore !== null ? (
+              <Badge variant={riskBadge.variant}>
+                <AlertTriangle className="size-3.5" aria-hidden="true" />
+                {riskBadge.label} · {riskScore}
+              </Badge>
+            ) : null}
             {canManageRisk ? (
               <BlacklistToggle
                 customerId={customer.id}
@@ -126,7 +189,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               />
             ) : null}
           </div>
-        ) : undefined}
+        }
       />
 
       {customer.fieldAccess.risk && customer.isBlacklisted === true ? (
@@ -143,6 +206,50 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             ) : null}
           </div>
         </div>
+      ) : null}
+
+      {customer.fieldAccess.risk || canReadRisk ? (
+        <CustomerRiskCard
+          labels={{
+            title: t("customers.risk"),
+            engineLabel: t("customerRisk.engine.label"),
+            engineScaleHint: t("customerRisk.engine.scaleHint", {
+              low: riskEngineConfig?.thresholds.low ?? 0,
+              medium: riskEngineConfig?.thresholds.medium ?? 0,
+              high: riskEngineConfig?.thresholds.high ?? 0,
+            }),
+            engineLatestOrder: t("customerRisk.engine.latestOrder"),
+            engineNoOrders: t("customerRisk.engine.noOrders"),
+            engineUnavailable: t("customerRisk.engine.unavailable"),
+            engineActionCaption: t("risk.assessment.action"),
+            engineMeterAria: (score: number) =>
+              t("customerRisk.engine.meterAria", { score }),
+            engineLevelLabel: (level: RiskLevel) => t(`risk.level.${level}`),
+            engineActionLabel: (action: RiskAction) => t(`risk.action.${action}`),
+            signalsLabel: t("customerRisk.signals.label"),
+            signalsScaleHint: t("customerRisk.signals.scaleHint", {
+              medium: CUSTOMER_SIGNALS_SCALE.mediumThreshold,
+              high: CUSTOMER_SIGNALS_SCALE.highThreshold,
+            }),
+            signalsNoScore: t("customerRisk.signals.noScore"),
+            signalsMeterAria: (score: number) =>
+              t("customerRisk.signals.meterAria", { score }),
+            signalsLevelLabel: (level: CustomerSignalsLevel) =>
+              t(
+                level === "low"
+                  ? "risk.lowRisk"
+                  : level === "medium"
+                    ? "risk.mediumRisk"
+                    : "risk.highRisk",
+              ),
+            disagreeNote: t("customerRisk.disagreeNote"),
+          }}
+          showEngine={canReadRisk}
+          engineAssessment={latestOrderAssessment}
+          engineOrder={latestOrder}
+          engineThresholds={riskEngineConfig?.thresholds ?? null}
+          signalsScore={customer.fieldAccess.risk ? riskScore : null}
+        />
       ) : null}
 
       {stats ? (

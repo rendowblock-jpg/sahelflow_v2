@@ -159,7 +159,7 @@ export function SectionTree({
                   aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
                 >
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded bg-muted px-1 text-[10px] font-medium tabular-nums text-muted-foreground">
+                    <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded bg-muted px-1 text-2xs font-medium tabular-nums text-muted-foreground">
                       {index + 1}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-xs font-semibold">

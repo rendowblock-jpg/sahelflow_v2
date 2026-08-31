@@ -41,6 +41,13 @@ export interface NavigationItem {
    * sidebar destinations while remaining in the same canonical registry.
    */
   sidebarNested?: boolean;
+  /**
+   * Marks the destination as carrying a live unread signal (the WhatsApp
+   * inbox). The sidebar renders an unread badge on this item from the shared
+   * unread-summary poll; the registry stays the single authority for which
+   * route is live.
+   */
+  unreadBadge?: boolean;
 }
 
 export interface NavigationDomain extends NavigationItem {
@@ -153,6 +160,7 @@ export const navigationDomains: readonly NavigationDomain[] = [
     href: "/inbox",
     icon: MessageSquare,
     keywords: ["inbox", "whatsapp", "messages", "conversations"],
+    unreadBadge: true,
   },
   {
     id: "storefront",

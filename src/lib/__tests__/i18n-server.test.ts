@@ -1,11 +1,13 @@
 /**
  * i18n-server tests — T-AUTH-INFRA.
  *
- * Mocks next/headers cookies to control the locale returned by getI18n().
- * Verifies:
+ * Mocks next/headers cookies + headers to control the locale returned by
+ * getI18n(). Verifies:
  *   - Locale resolution from the `sahelflow-locale` cookie (ar/fr/en)
- *   - Default fallback to fr when no cookie is set
- *   - Default fallback to fr for an invalid cookie value
+ *   - Cookie beats Accept-Language detection (explicit choice is authority)
+ *   - First-run Accept-Language detection when no cookie exists (ar/fr/en)
+ *   - Default fallback to fr when no cookie and no usable header
+ *   - Default fallback to fr for an invalid cookie value (then detection)
  *   - dir = rtl for ar, ltr for fr/en
  *   - t() returns the correct translation per locale
  *   - t() falls back to the key when translation is missing
@@ -14,9 +16,10 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// ── Controllable locale cookie ───────────────────────────────────────────────
+// ── Controllable locale cookie + Accept-Language header ─────────────────────
 const localeState = vi.hoisted(() => ({
   cookieValue: undefined as string | undefined,
+  acceptLanguage: undefined as string | undefined,
 }));
 
 vi.mock("next/headers", () => ({
@@ -26,13 +29,20 @@ vi.mock("next/headers", () => ({
         ? { value: localeState.cookieValue }
         : undefined,
   })),
+  headers: vi.fn(async () => ({
+    get: (key: string) =>
+      key === "accept-language" && localeState.acceptLanguage !== undefined
+        ? localeState.acceptLanguage
+        : undefined,
+  })),
 }));
 
-import { getI18n, loadTranslationsSync } from "@/lib/i18n-server";
+import { getI18n, loadTranslationsSync, resolveSellerLocale } from "@/lib/i18n-server";
 import type { Locale } from "@/lib/i18n";
 
 beforeEach(() => {
   localeState.cookieValue = undefined;
+  localeState.acceptLanguage = undefined;
 });
 
 // ── locale resolution ────────────────────────────────────────────────────────
@@ -64,6 +74,90 @@ describe("getI18n — locale resolution", () => {
     localeState.cookieValue = "fr";
     const { locale } = await getI18n();
     expect(locale).toBe("fr");
+  });
+});
+
+// ── first-run Accept-Language detection (no cookie yet) ─────────────────────
+describe("getI18n — first-run Accept-Language detection", () => {
+  it("detects 'ar' from an Arabic Accept-Language header on first run", async () => {
+    localeState.acceptLanguage = "ar-DZ,ar;q=0.9,fr;q=0.8,en;q=0.7";
+    const { locale, dir } = await getI18n();
+    expect(locale).toBe("ar");
+    expect(dir).toBe("rtl");
+  });
+
+  it("detects 'fr' from a French Accept-Language header on first run", async () => {
+    localeState.acceptLanguage = "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7";
+    const { locale, dir } = await getI18n();
+    expect(locale).toBe("fr");
+    expect(dir).toBe("ltr");
+  });
+
+  it("detects 'en' from an English-only Accept-Language header on first run", async () => {
+    localeState.acceptLanguage = "en-US,en;q=0.9";
+    const { locale } = await getI18n();
+    expect(locale).toBe("en");
+  });
+
+  it("returns 'fr' when the header advertises only unsupported languages", async () => {
+    localeState.acceptLanguage = "es-ES,es;q=0.9,it;q=0.8";
+    const { locale } = await getI18n();
+    expect(locale).toBe("fr");
+  });
+
+  it("returns 'fr' when no cookie and no Accept-Language header exist", async () => {
+    const { locale } = await getI18n();
+    expect(locale).toBe("fr");
+  });
+
+  it("keeps the explicit cookie as authority over any header", async () => {
+    localeState.cookieValue = "fr";
+    localeState.acceptLanguage = "ar-DZ,ar;q=0.9";
+    const { locale } = await getI18n();
+    expect(locale).toBe("fr");
+  });
+
+  it("falls through an invalid cookie value to header detection", async () => {
+    localeState.cookieValue = "de";
+    localeState.acceptLanguage = "ar;q=0.9,fr;q=0.8";
+    const { locale } = await getI18n();
+    expect(locale).toBe("ar");
+  });
+
+  it("translates with the detected locale on first run", async () => {
+    localeState.acceptLanguage = "ar-DZ,ar;q=0.9";
+    const { t } = await getI18n();
+    expect(t("common.save")).toBe("حفظ");
+  });
+});
+
+// ── resolveSellerLocale — pure precedence contract ──────────────────────────
+describe("resolveSellerLocale", () => {
+  it("keeps an existing cookie untouched regardless of the header", () => {
+    expect(
+      resolveSellerLocale({ cookieValue: "en", acceptLanguage: "ar,fr;q=0.9" }),
+    ).toBe("en");
+    expect(
+      resolveSellerLocale({ cookieValue: "ar", acceptLanguage: "fr-FR,fr;q=0.9" }),
+    ).toBe("ar");
+  });
+
+  it("ignores empty/invalid cookie values and falls through to detection", () => {
+    expect(resolveSellerLocale({ cookieValue: "", acceptLanguage: "fr" })).toBe("fr");
+    expect(resolveSellerLocale({ cookieValue: "de", acceptLanguage: "ar" })).toBe("ar");
+  });
+
+  it("respects q-weighted header ordering before market priority", () => {
+    // ar wins the tie (Algeria market priority ar > fr > en)…
+    expect(resolveSellerLocale({ acceptLanguage: "fr,en" })).toBe("fr");
+    expect(resolveSellerLocale({ acceptLanguage: "ar,fr,en" })).toBe("ar");
+    // …but an explicit higher quality beats the priority order.
+    expect(resolveSellerLocale({ acceptLanguage: "ar;q=0.8,fr;q=0.9" })).toBe("fr");
+  });
+
+  it("defaults to fr with no cookie and no header", () => {
+    expect(resolveSellerLocale({})).toBe("fr");
+    expect(resolveSellerLocale({ cookieValue: null, acceptLanguage: null })).toBe("fr");
   });
 });
 

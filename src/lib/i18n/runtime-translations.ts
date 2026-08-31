@@ -1,9 +1,27 @@
 import type { Locale } from "@/lib/i18n";
+import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
+import { getAnalyticsRuntimeTranslation } from "@/lib/i18n/analytics-runtime";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
+import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
+import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
+import { getDeliveriesRuntimeTranslation } from "@/lib/i18n/deliveries-runtime";
+import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
+import { getInboxLivenessRuntimeTranslation } from "@/lib/i18n/inbox-liveness-runtime";
+import { getInboxOrderStatusRuntimeTranslation } from "@/lib/i18n/inbox-order-status-runtime";
+import { getInboxVoiceNoteRuntimeTranslation } from "@/lib/i18n/inbox-voice-note-runtime";
+import { getNotificationsRuntimeTranslation } from "@/lib/i18n/notifications-runtime";
+import { getOnboardingRuntimeTranslation } from "@/lib/i18n/onboarding-runtime";
+import { getOrderActionsRuntimeTranslation } from "@/lib/i18n/order-actions-runtime";
+import { getOrderFormRuntimeTranslation } from "@/lib/i18n/order-form-runtime";
+import { getOrderLifecycleRuntimeTranslation } from "@/lib/i18n/order-lifecycle-runtime";
 import { getOrdersWorkspaceTranslation } from "@/lib/i18n/orders-workspace";
 import { getPhase5RuntimeTranslation } from "@/lib/i18n/phase5-runtime";
+import { getPluralsRuntimeTranslation } from "@/lib/i18n/plurals-runtime";
+import { getSecurityRuntimeTranslation } from "@/lib/i18n/security-runtime";
+import { getStorefrontRuntimeTranslation } from "@/lib/i18n/storefront-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
+import { getWorkspacesRuntimeTranslation } from "@/lib/i18n/workspaces-runtime";
 
 const SHARED_RUNTIME_COPY = {
   en: {
@@ -124,10 +142,31 @@ export function getRuntimeTranslation(
 ): string | undefined {
   return (
     (SHARED_RUNTIME_COPY[locale] as Readonly<Record<string, string>>)[key] ??
+    getAiCanvasRuntimeTranslation(locale, key) ??
+    getAnalyticsRuntimeTranslation(locale, key) ??
     getAutomationRuntimeTranslation(locale, key) ??
+    getCodRuntimeTranslation(locale, key) ??
     getCommerceRuntimeTranslation(locale, key) ??
+    getConfirmationQueueRuntimeTranslation(locale, key) ??
+    getDeliveriesRuntimeTranslation(locale, key) ??
+    getEntityDetailRuntimeTranslation(locale, key) ??
+    getInboxLivenessRuntimeTranslation(locale, key) ??
+    getInboxOrderStatusRuntimeTranslation(locale, key) ??
+    getInboxVoiceNoteRuntimeTranslation(locale, key) ??
+    getNotificationsRuntimeTranslation(locale, key) ??
+    getOnboardingRuntimeTranslation(locale, key) ??
+    getOrderActionsRuntimeTranslation(locale, key) ??
+    getOrderFormRuntimeTranslation(locale, key) ??
+    getOrderLifecycleRuntimeTranslation(locale, key) ??
     getOrdersWorkspaceTranslation(locale, key) ??
     getPhase5RuntimeTranslation(locale, key) ??
-    getWhatsAppRecoveryTranslation(locale, key)
+    getSecurityRuntimeTranslation(locale, key) ??
+    getStorefrontRuntimeTranslation(locale, key) ??
+    getWhatsAppRecoveryTranslation(locale, key) ??
+    getWorkspacesRuntimeTranslation(locale, key) ??
+    // R5-a plural-agreement dictionary — last in the chain so every existing
+    // dictionary keeps precedence for its own keys; only plural-suffixed
+    // `${key}_${rule}` lookups (which no other dictionary defines) resolve here.
+    getPluralsRuntimeTranslation(locale, key)
   );
 }

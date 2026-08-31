@@ -13,6 +13,7 @@ import {
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { ProductRowActions } from "@/components/products/product-row-actions";
 import { ProductThumbnail } from "@/components/products/product-thumbnail";
+import { ListSearchInput } from "@/components/shared/list-search-input";
 import { ProductsEmptyState } from "@/components/shared/empty-states";
 import { StateSurface } from "@/components/shared/state-surface";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ import {
   type ProductsResponse,
 } from "@/hooks/swr/use-products";
 import { useI18n } from "@/hooks/use-i18n";
+import { useListSearchScope } from "@/hooks/use-list-search-scope";
 import { formatDZD } from "@/lib/utils";
 import type { Category } from "@/types/domain";
 
@@ -37,6 +39,7 @@ export function ProductsDataTable({
 }: ProductsDataTableProps) {
   const { t, locale } = useI18n();
   const router = useRouter();
+  const { hasActiveFilters, clearFilters } = useListSearchScope();
   const { data, error, isLoading, pagination } = useProducts({ fallback });
   const fieldAccess = data?.fieldAccess ?? fallback.fieldAccess;
   const categoryNames = new Map(
@@ -274,14 +277,26 @@ export function ProductsDataTable({
   }
 
   return (
-    <DataTable
-      columns={columns}
-      data={data?.products ?? []}
-      isLoading={isLoading}
-      pagination={pagination}
-      onRowClick={(row) => router.push(`/products/${row.id}`)}
-      getRowId={(row) => row.id}
-      emptyState={<ProductsEmptyState />}
-    />
+    <div className="space-y-3">
+      <ListSearchInput
+        className="max-w-sm"
+        placeholder={t("products.searchPlaceholder")}
+      />
+      <DataTable
+        columns={columns}
+        data={data?.products ?? []}
+        isLoading={isLoading}
+        pagination={pagination}
+        onRowClick={(row) => router.push(`/products/${row.id}`)}
+        getRowId={(row) => row.id}
+        emptyState={
+          hasActiveFilters ? (
+            <ProductsEmptyState filtered onClearFilters={clearFilters} />
+          ) : (
+            <ProductsEmptyState />
+          )
+        }
+      />
+    </div>
   );
 }

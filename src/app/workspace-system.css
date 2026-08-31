@@ -37,36 +37,8 @@
     0 0 0 1px var(--sf-surface-highlight) inset;
 }
 
-/* Metadata must remain genuinely readable on a 1366×768 installed workbench.
- * Internal.16 used 9–11px labels heavily in the two flagship products, which
- * survived automated reflow but failed human SaaS-density acceptance. */
-[data-inbox-workspace="v2"] :where(
-    [class~="text-[9px]"],
-    [class~="text-[10px]"],
-    [class~="text-[11px]"]
-  ),
-[data-ai-workspace="v2"] :where(
-    [class~="text-[9px]"],
-    [class~="text-[10px]"],
-    [class~="text-[11px]"]
-  ) {
-  font-size: 0.75rem;
-  line-height: 1rem;
-}
-
-html[dir="rtl"] [data-inbox-workspace="v2"] :where(
-    [class~="text-[9px]"],
-    [class~="text-[10px]"],
-    [class~="text-[11px]"]
-  ),
-html[dir="rtl"] [data-ai-workspace="v2"] :where(
-    [class~="text-[9px]"],
-    [class~="text-[10px]"],
-    [class~="text-[11px]"]
-  ) {
-  font-size: 0.8125rem;
-  line-height: 1.2rem;
-}
+/* Metadata sizes are owned by the text-2xs token (11px; 12px under the Arabic
+ * reading floor in arabic-system.css) — no per-surface size overrides here. */
 
 /* ── Inbox ─────────────────────────────────────────────────────────────── */
 [data-inbox-workspace="v2"] > header,
@@ -87,8 +59,8 @@ html[dir="rtl"] [data-ai-workspace="v2"] :where(
 
 [data-inbox-workspace="v2"] [data-inbox-conversation] {
   transition-property: background-color, border-color, transform, box-shadow;
-  transition-duration: var(--motion-fast);
-  transition-timing-function: var(--motion-ease-standard);
+  transition-duration: var(--sf-motion-state);
+  transition-timing-function: var(--sf-motion-ease-state);
 }
 
 [data-inbox-workspace="v2"] [data-inbox-conversation]:hover {
@@ -139,7 +111,7 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 
 [data-inbox-thread="active"] article,
 [data-inbox-thread="active"] [role="log"] > div {
-  animation: sf-workspace-item-in var(--motion-base) var(--motion-ease-emphasized) both;
+  animation: sf-workspace-item-in var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
 
 [data-inbox-context="true"] {
@@ -166,8 +138,8 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 [data-ai-session] {
   position: relative;
   transition-property: background-color, border-color, transform, box-shadow;
-  transition-duration: var(--motion-fast);
-  transition-timing-function: var(--motion-ease-standard);
+  transition-duration: var(--sf-motion-state);
+  transition-timing-function: var(--sf-motion-ease-state);
 }
 
 [data-ai-session]:hover {
@@ -192,7 +164,7 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 
 [data-ai-message="assistant"],
 [data-ai-message="user"] {
-  animation: sf-workspace-item-in var(--motion-base) var(--motion-ease-emphasized) both;
+  animation: sf-workspace-item-in var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
 
 [data-ai-message="assistant"] > div > div:first-child {
@@ -226,8 +198,8 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
     0 1px 2px oklch(0 0 0 / 0.06),
     0 10px 34px oklch(0 0 0 / 0.09);
   transition-property: border-color, box-shadow, background-color;
-  transition-duration: var(--motion-fast);
-  transition-timing-function: var(--motion-ease-standard);
+  transition-duration: var(--sf-motion-state);
+  transition-timing-function: var(--sf-motion-ease-state);
 }
 
 [data-ai-thread="true"] > div:last-child > div:focus-within {
@@ -240,8 +212,8 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 [data-ai-context="true"] section.rounded-xl,
 [data-inbox-context="true"] section {
   transition-property: border-color, background-color, box-shadow;
-  transition-duration: var(--motion-fast);
-  transition-timing-function: var(--motion-ease-standard);
+  transition-duration: var(--sf-motion-state);
+  transition-timing-function: var(--sf-motion-ease-state);
 }
 
 @keyframes sf-workspace-item-in {
@@ -260,8 +232,8 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
  * main panes collapse context into the existing Sheet affordance. */
 @container inbox-workspace (max-width: 64rem) {
   [data-inbox-queue="true"] {
-    width: 20.5rem !important;
-    min-width: 20.5rem !important;
+    width: var(--pane-queue-lg) !important;
+    min-width: var(--pane-queue-lg) !important;
   }
 
   aside:has(> [data-inbox-context="true"]) {
@@ -285,8 +257,8 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 
 @media (min-width: 1280px) {
   [data-inbox-workspace="v2"] [data-inbox-queue="true"] {
-    width: 22.5rem;
-    min-width: 22.5rem;
+    width: var(--pane-queue-xl);
+    min-width: var(--pane-queue-xl);
   }
 }
 

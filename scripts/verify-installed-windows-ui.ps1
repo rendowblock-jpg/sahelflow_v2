@@ -25,6 +25,8 @@ $installRoot = "C:\Program Files\SahelFlow"
 $exe = Join-Path $installRoot "sahelflow.exe"
 $resultPath = Join-Path $evidenceRoot "ui-result.json"
 $workspaceWindowTitle = "SahelFlow"
+$frenchLocaleFile = Join-Path $repositoryRoot "src/lib/i18n/locales/fr.json"
+$arabicLocaleFile = Join-Path $repositoryRoot "src/lib/i18n/locales/ar.json"
 $maxRuntimePrepareMilliseconds = 15000
 $maxAuthenticatedUiMilliseconds = 100000
 $authenticatedUiEvidenceGraceMilliseconds = 3000
@@ -357,6 +359,93 @@ function Wait-ForCompleteStartupTrace {
     throw "${Phase}: startup trace did not settle within 5 seconds. Missing stages: [$missingSummary]."
 }
 
+function Assert-InstalledServerLocaleDictionaries {
+    # The packaged standalone server resolves seller dictionaries at runtime via
+    # resolve(process.cwd(), "src/lib/i18n/locales", "<locale>.json") with the
+    # server cwd at the standalone root, so the MSI-installed tree must carry
+    # the JSONs at <installRoot>\standalone\src\lib\i18n\locales\<locale>.json.
+    # If the installed artifact lost the locale JSONs, the server would render
+    # the raw dotted key "metadata.description" instead of localized copy while
+    # every window-title/beacon assertion still passed.
+    #
+    # BOUNDARY TRUTH: this proof is intentionally filesystem-level. The original
+    # design fetched uiReady.pageUrl over HTTP to observe server-rendered locale
+    # metadata, but the installed runtime deliberately rejects every anonymous
+    # page request behind the launch-cookie boundary (src/proxy.ts answers 401
+    # RUNTIME_SESSION_REQUIRED whenever SF_RUNTIME_APP_TOKEN is set, and the
+    # single-consumption /api/internal/runtime-bootstrap handshake cannot be
+    # replayed from outside the app because the WebView consumes it at launch).
+    # No out-of-process probe can authenticate, so an installed HTTP probe can
+    # never observe the rendered page. The dictionary path is therefore proven
+    # here against the exact runtime-resolved location, and the server-render
+    # first-run Accept-Language proof lives in the phase 6-7 browser lane
+    # (e2e/phase6-7-completion.spec.ts), which legitimately controls the
+    # Accept-Language header on its own server.
+    $standaloneRoot = Join-Path $installRoot "standalone"
+    $installedManifest = Join-Path $standaloneRoot "sahelflow-standalone-manifest.json"
+    $installedServer = Join-Path $standaloneRoot "server.js"
+    if (-not (Test-Path -LiteralPath $installedManifest -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $installedServer -PathType Leaf)) {
+        throw "installed standalone root is incomplete: missing manifest or server.js under $standaloneRoot"
+    }
+
+    # The checked-out source is the expected-copy authority: the workflow builds
+    # the MSI from this exact head, so the installed dictionaries must equal the
+    # repository dictionaries byte-for-byte.
+    $expected = @{
+        ar = Get-Content -LiteralPath $arabicLocaleFile -Raw | ConvertFrom-Json
+        en = Get-Content -LiteralPath (Join-Path $repositoryRoot "src/lib/i18n/locales/en.json") -Raw | ConvertFrom-Json
+        fr = Get-Content -LiteralPath $frenchLocaleFile -Raw | ConvertFrom-Json
+    }
+
+    $localeOutcomes = [ordered]@{}
+    foreach ($locale in @("ar", "en", "fr")) {
+        $installedFile = Join-Path `
+            (Join-Path $standaloneRoot "src\lib\i18n\locales") `
+            "$locale.json"
+        if (-not (Test-Path -LiteralPath $installedFile -PathType Leaf)) {
+            throw "installed standalone artifact is missing the server dictionary: $installedFile"
+        }
+        $installed = Get-Content -LiteralPath $installedFile -Raw | ConvertFrom-Json
+        $installedDescription = [string]$installed."metadata.description"
+        $expectedDescription = [string]$expected[$locale]."metadata.description"
+        if ([string]::IsNullOrWhiteSpace($expectedDescription)) {
+            throw "repository dictionary has no metadata.description copy for locale '$locale'."
+        }
+        if ([string]::IsNullOrWhiteSpace($installedDescription)) {
+            throw "installed '$locale' dictionary rendered field metadata.description is empty."
+        }
+        if ($installedDescription -eq 'metadata.description') {
+            throw "installed '$locale' dictionary carries the raw dotted key for metadata.description."
+        }
+        if ($installedDescription -cne $expectedDescription) {
+            throw "installed '$locale' metadata.description does not match the exact-head repository dictionary."
+        }
+        $localeOutcomes[$locale] = [pscustomobject]@{
+            installedPath = $installedFile
+            descriptionMatchesRepository = $true
+        }
+    }
+
+    $arabicDescription = [string]((Get-Content -LiteralPath (Join-Path `
+        (Join-Path $standaloneRoot "src\lib\i18n\locales") "ar.json") -Raw |
+        ConvertFrom-Json)."metadata.description")
+    if ($arabicDescription -notmatch '[\u0600-\u06FF]') {
+        throw "installed Arabic dictionary metadata.description carries no Arabic script."
+    }
+    if ([string]$expected.fr."metadata.description" -ceq [string]$expected.en."metadata.description") {
+        throw "French and English repository dictionaries share one metadata.description copy; locale identity is not provable."
+    }
+
+    return [pscustomobject]@{
+        standaloneRoot = $standaloneRoot
+        runtimeResolvedRelativePath = "src/lib/i18n/locales"
+        locales = $localeOutcomes
+        arabicScriptVerified = $true
+        frenchEnglishDistinct = $true
+    }
+}
+
 function Wait-ForNodeCompileCache {
     param([Parameter(Mandatory = $true)][string]$Phase)
 
@@ -527,9 +616,12 @@ for ($attempt = 1; $attempt -le $lifecyclePasses; $attempt++) {
     ) {
         throw "ui-launch-$attempt did not retain matching successful UI-ready diagnostics."
     }
+    $serverLocaleDictionaries = Assert-InstalledServerLocaleDictionaries
     $launch | Add-Member -NotePropertyName runtimePreparationMilliseconds `
         -NotePropertyValue $runtimePrepareMilliseconds
     $launch | Add-Member -NotePropertyName startupTrace -NotePropertyValue $startupTrace
+    $launch | Add-Member -NotePropertyName serverLocaleDictionaries `
+        -NotePropertyValue $serverLocaleDictionaries
 
     $endpointEvidence = Join-Path $evidenceRoot "runtime-endpoint-ui-launch-$attempt.json"
     $uiEvidence = Join-Path $evidenceRoot "runtime-ui-ready-launch-$attempt.json"

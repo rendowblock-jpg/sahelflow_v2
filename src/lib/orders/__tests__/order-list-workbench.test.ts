@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   findMany: vi.fn(),
   count: vi.fn(),
+  groupBy: vi.fn(),
+  deriveExistingShopBlindIndex: vi.fn(),
   batchAssessOrdersForWorkbench: vi.fn(),
   isTrustedManualOrderAuthority: vi.fn(
     (source: unknown) => source === "canonical",
@@ -26,9 +28,14 @@ vi.mock("@/lib/db", () => ({
     order: {
       findMany: mocks.findMany,
       count: mocks.count,
+      groupBy: mocks.groupBy,
     },
   },
   shopContext: mocks.shop,
+}));
+
+vi.mock("@/lib/crypto/protected-record", () => ({
+  deriveExistingShopBlindIndex: mocks.deriveExistingShopBlindIndex,
 }));
 
 vi.mock("@/lib/orders/order-risk-workbench", () => ({
@@ -49,6 +56,7 @@ vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
 
 import {
   getOrdersWorkbenchPage,
+  getOrdersWorkbenchStatusCounts,
   resolveOrdersWorkbenchAccess,
 } from "../order-list-workbench";
 import type { Phase2Action } from "@/lib/identity/permissions";
@@ -100,7 +108,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.count.mockResolvedValue(0);
   mocks.findMany.mockResolvedValue([]);
+  mocks.groupBy.mockResolvedValue([]);
   mocks.batchAssessOrdersForWorkbench.mockResolvedValue(new Map());
+  mocks.deriveExistingShopBlindIndex.mockResolvedValue(null);
 });
 
 describe("Orders workbench", () => {
@@ -242,5 +252,142 @@ describe("Orders workbench", () => {
         context("operator", ["customers.contact.read"]),
       ),
     ).toThrow(/orders\.read/);
+  });
+
+  it("composes the free-text search across order number and contact-gated branches", async () => {
+    mocks.count.mockResolvedValue(2);
+    mocks.deriveExistingShopBlindIndex.mockImplementation(
+      async (_prisma, value, reference) =>
+        `idx:${reference.recordType}:${reference.field}:${value}`,
+    );
+
+    await getOrdersWorkbenchPage(context("owner"), { q: "ORD-1" });
+
+    const where = mocks.findMany.mock.calls[0]?.[0]?.where;
+    // NODE_ENV=test keeps the plaintext fallback branches that mirror the
+    // command-palette search contract (order-extensions).
+    expect(where).toMatchObject({
+      deletedAt: null,
+      AND: [
+        {
+          OR: [
+            { orderNumber: { contains: "ORD-1" } },
+            { wilaya: { contains: "ORD-1" } },
+            {
+              phoneBlindIndex: { in: ["idx:Order:phone:ORD-1"] },
+            },
+            {
+              customer: {
+                nameBlindIndex: { in: ["idx:Customer:name:ord-1"] },
+              },
+            },
+            { phone: { contains: "ORD-1" } },
+            { customer: { name: { contains: "ORD-1" } } },
+          ],
+        },
+      ],
+    });
+
+    // A viewer without contact read authority may still scope by order number,
+    // but never by wilaya, phone or customer name.
+    mocks.findMany.mockClear();
+    await getOrdersWorkbenchPage(context("viewer"), { q: "ORD-1" });
+    const viewerWhere = mocks.findMany.mock.calls[0]?.[0]?.where;
+    expect(viewerWhere?.AND?.[0]).toEqual({
+      OR: [{ orderNumber: { contains: "ORD-1" } }],
+    });
+  });
+
+  it("maps the wilaya code to the stored English wilaya name", async () => {
+    mocks.count.mockResolvedValue(1);
+
+    await getOrdersWorkbenchPage(context("owner"), { wilayaCode: 16 });
+
+    expect(mocks.findMany.mock.calls[0]?.[0]?.where).toMatchObject({
+      wilaya: "Alger",
+    });
+
+    // Unknown codes degrade to an unfiltered list rather than a dead end.
+    mocks.findMany.mockClear();
+    await getOrdersWorkbenchPage(context("owner"), { wilayaCode: 999 });
+    expect(mocks.findMany.mock.calls[0]?.[0]?.where).not.toHaveProperty(
+      "wilaya",
+    );
+  });
+
+  it("applies date-only bounds as inclusive whole UTC days", async () => {
+    mocks.count.mockResolvedValue(0);
+
+    await getOrdersWorkbenchPage(context("owner"), {
+      dateFrom: "2026-08-01",
+      dateTo: "2026-08-29",
+    });
+
+    expect(mocks.findMany.mock.calls[0]?.[0]?.where).toMatchObject({
+      createdAt: {
+        gte: new Date("2026-08-01T00:00:00.000Z"),
+        lt: new Date("2026-08-30T00:00:00.000Z"),
+      },
+    });
+
+    // Invalid date input is ignored instead of producing a dead range.
+    mocks.findMany.mockClear();
+    await getOrdersWorkbenchPage(context("owner"), { dateFrom: "not-a-date" });
+    expect(mocks.findMany.mock.calls[0]?.[0]?.where).not.toHaveProperty(
+      "createdAt",
+    );
+  });
+
+  it("keeps total bounds behind the financials authority and echoes applied filters", async () => {
+    mocks.count.mockResolvedValue(0);
+
+    const ownerResult = await getOrdersWorkbenchPage(context("owner"), {
+      q: "  ORD-9  ",
+      wilayaCode: 16,
+      dateFrom: "2026-08-01",
+      dateTo: "2026-08-29",
+      minTotal: 1_000,
+      maxTotal: 9_000,
+    });
+    expect(mocks.findMany.mock.calls[0]?.[0]?.where).toMatchObject({
+      totalPrice: { gte: 1_000, lte: 9_000 },
+    });
+    expect(ownerResult.appliedFilters).toEqual({
+      q: "ORD-9",
+      wilaya: "16",
+      dateFrom: "2026-08-01",
+      dateTo: "2026-08-29",
+      minTotal: 1_000,
+      maxTotal: 9_000,
+    });
+
+    // Without financials read the total bound must not filter (nor leak that
+    // any order falls inside the asked range).
+    mocks.findMany.mockClear();
+    const viewerResult = await getOrdersWorkbenchPage(context("viewer"), {
+      minTotal: 1_000,
+    });
+    expect(mocks.findMany.mock.calls[0]?.[0]?.where).not.toHaveProperty(
+      "totalPrice",
+    );
+    expect(viewerResult.appliedFilters).toMatchObject({ minTotal: null });
+  });
+
+  it("counts status groups through the active list filters", async () => {
+    mocks.groupBy.mockResolvedValue([
+      { status: "pending", _count: { _all: 3 } },
+      { status: "delivered", _count: { _all: 4 } },
+    ]);
+
+    const { counts, total } = await getOrdersWorkbenchStatusCounts(
+      context("owner"),
+      { q: "ORD", wilayaCode: 16 },
+    );
+
+    const where = mocks.groupBy.mock.calls[0]?.[0]?.where;
+    expect(where).toMatchObject({ wilaya: "Alger" });
+    expect(where).not.toHaveProperty("status");
+    expect(counts).toEqual({ all: 7, delivered: 4, pending: 3 });
+    expect(total).toBe(7);
   });
 });

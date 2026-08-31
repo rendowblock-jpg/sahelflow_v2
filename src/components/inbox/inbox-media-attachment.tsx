@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Download, FileText, ImageIcon, Loader2, Mic, Video } from "lucide-react";
 
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
+import { VoiceNotePlayer } from "@/components/inbox/voice-note-player";
 import { useI18n } from "@/hooks/use-i18n";
 import { getInboxMediaCopy } from "@/lib/i18n/inbox-media";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
@@ -502,14 +503,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
       ) : null}
 
       {showInlinePreview && message.messageType === "audio" ? (
-        <audio
-          src={readUrl}
-          controls
-          preload="metadata"
-          onError={() => setPreviewFailed(true)}
-          aria-label={label}
-          className="h-10 w-full min-w-[15rem] max-w-[30rem]"
-        />
+        <VoiceNotePlayer src={readUrl} label={label} locale={locale} />
       ) : null}
 
       {previewFailed ? (
@@ -542,7 +536,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
           }
           compact={message.messageType !== "document"}
         />
-        <span className="text-[11px] leading-4 text-muted-foreground">
+        <span className="text-2xs leading-4 text-muted-foreground">
           {getInboxMediaCopy(locale, "ready")}
         </span>
       </div>

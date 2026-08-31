@@ -15,7 +15,7 @@
  * (keeps the 197KB communes.json out of the client bundle — T-019).
  */
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useId, useState, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
@@ -26,6 +26,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useI18n } from "@/hooks/use-i18n";
+import type { Locale } from "@/lib/i18n";
+import {
+  createStorefrontTranslator,
+  type StorefrontTranslator,
+} from "@/lib/i18n/storefront-locale";
 import wilayasData from "../../../data/wilayas.json";
 
 interface Wilaya {
@@ -64,11 +69,60 @@ interface WilayaCommuneSelectProps {
   disabled?: boolean;
   /** Required field markers */
   required?: boolean;
+  /** aria-describedby for the wilaya trigger (e.g. a parent-rendered field error id) */
+  wilayaAriaDescribedby?: string;
+  /** aria-describedby for the commune trigger (e.g. a parent-rendered field error id) */
+  communeAriaDescribedby?: string;
   /** Size variant — default matches order form */
   size?: "default" | "sm";
+  /**
+   * Explicit locale override for buyer-facing surfaces (public storefront).
+   * When set, wilaya/commune names AND dropdown copy follow this locale and
+   * the dashboard locale transaction is never mounted — its document
+   * lang/dir effect would fight the storefront buyer locale. Dashboard
+   * callers omit it and keep the cookie-driven locale untouched (R4-c).
+   */
+  locale?: Locale;
 }
 
 export function WilayaCommuneSelect({
+  locale: localeOverride,
+  ...rest
+}: WilayaCommuneSelectProps) {
+  // The buyer storefront passes an explicit locale so wilaya/commune names
+  // and placeholder copy follow the BUYER language without mounting the
+  // dashboard locale transaction (whose document lang/dir effect would fight
+  // the storefront direction). The early return happens before any hook, so
+  // the rules of hooks stay intact for both branches.
+  if (localeOverride) {
+    return (
+      <BuyerLocaleWilayaCommuneSelect locale={localeOverride} {...rest} />
+    );
+  }
+  return <DashboardWilayaCommuneSelect {...rest} />;
+}
+
+type WilayaCommuneSelectCoreProps = Omit<WilayaCommuneSelectProps, "locale"> & {
+  t: StorefrontTranslator;
+  locale: Locale;
+};
+
+function DashboardWilayaCommuneSelect(
+  props: Omit<WilayaCommuneSelectProps, "locale">,
+) {
+  const { t, locale } = useI18n();
+  return <WilayaCommuneSelectCore t={t} locale={locale} {...props} />;
+}
+
+function BuyerLocaleWilayaCommuneSelect({
+  locale,
+  ...rest
+}: Omit<WilayaCommuneSelectProps, "locale"> & { locale: Locale }) {
+  const t = useMemo(() => createStorefrontTranslator(locale), [locale]);
+  return <WilayaCommuneSelectCore t={t} locale={locale} {...rest} />;
+}
+
+function WilayaCommuneSelectCore({
   wilaya,
   commune,
   onWilayaChange,
@@ -79,9 +133,16 @@ export function WilayaCommuneSelect({
   communeLabel,
   disabled = false,
   required = false,
+  wilayaAriaDescribedby,
+  communeAriaDescribedby,
   size = "default",
-}: WilayaCommuneSelectProps) {
-  const { t, locale } = useI18n();
+  t,
+  locale,
+}: WilayaCommuneSelectCoreProps) {
+  // Stable per-instance ids so the Labels associate with their triggers
+  // (the pair can render several times on one page).
+  const wilayaTriggerId = useId();
+  const communeTriggerId = useId();
   const wilayas = wilayasData as Wilaya[];
 
   const [communes, setCommunes] = useState<Commune[]>([]);
@@ -141,7 +202,7 @@ export function WilayaCommuneSelect({
     <div className={containerClass}>
       <div className="space-y-1.5">
         {showLabels && (
-          <Label className={labelClass}>
+          <Label className={labelClass} htmlFor={wilayaTriggerId}>
             {wilayaLabel ?? t("orders.wilaya")}
             {required && <span className="text-destructive ms-0.5">*</span>}
           </Label>
@@ -151,7 +212,11 @@ export function WilayaCommuneSelect({
           onValueChange={handleWilayaChange}
           disabled={disabled}
         >
-          <SelectTrigger className={triggerClass}>
+          <SelectTrigger
+            className={triggerClass}
+            id={wilayaTriggerId}
+            aria-describedby={wilayaAriaDescribedby}
+          >
             <SelectValue placeholder={t("orders.form.wilayaPlaceholder")} />
           </SelectTrigger>
           <SelectContent className="max-h-60">
@@ -166,7 +231,7 @@ export function WilayaCommuneSelect({
 
       <div className="space-y-1.5">
         {showLabels && (
-          <Label className={labelClass}>
+          <Label className={labelClass} htmlFor={communeTriggerId}>
             {communeLabel ?? t("orders.commune")}
             {required && <span className="text-destructive ms-0.5">*</span>}
           </Label>
@@ -176,7 +241,11 @@ export function WilayaCommuneSelect({
           onValueChange={onCommuneChange}
           disabled={disabled || !wilaya}
         >
-          <SelectTrigger className={triggerClass}>
+          <SelectTrigger
+            className={triggerClass}
+            id={communeTriggerId}
+            aria-describedby={communeAriaDescribedby}
+          >
             <SelectValue
               placeholder={
                 wilaya

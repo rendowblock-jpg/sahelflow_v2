@@ -146,7 +146,7 @@ describe("Phase 3 cross-package source closure", () => {
     );
     const storefrontSubmit = source("src/app/api/storefront/submit/route.ts");
     const automationEditor = source(
-      "src/components/automations/automation-editor.tsx",
+      "src/components/automations/automation-builder.tsx",
     );
 
     expect(inboundSpool).toContain("syncDirectory(this.directory)");

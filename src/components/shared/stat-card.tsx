@@ -241,7 +241,7 @@ export function StatCard({
           </div>
           {sparkContext ? (
             <div
-              className="mt-1 flex items-center justify-between gap-2 text-[11px] leading-4 text-muted-foreground/80"
+              className="mt-1 flex items-center justify-between gap-2 text-2xs leading-4 text-muted-foreground/80"
               data-stat-sparkline-context="true"
             >
               <span>{sparkContext}</span>

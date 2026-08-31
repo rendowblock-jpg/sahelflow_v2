@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import {
   Activity,
   ArrowDown,
@@ -18,6 +17,10 @@ import {
   Users,
 } from "lucide-react";
 
+import { AnalyticsExportButton } from "@/components/analytics/analytics-export-button";
+import { AnalyticsRangeControls } from "@/components/analytics/analytics-range-controls";
+import { CourierPerformanceSection } from "@/components/analytics/courier-performance-section";
+import { KpiDrillDownLink } from "@/components/analytics/kpi-drill-down-link";
 import { AreaTrendChart } from "@/components/charts/area-trend-chart";
 import {
   ChartCard,
@@ -37,18 +40,19 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ChartConfig } from "@/components/ui/chart";
-import { getAnalyticsReport } from "@/lib/data/analytics-data";
 import {
-  getLastNDays,
-  getPeriodComparison,
-  getPreviousPeriod,
-  getReturnRateByWilaya,
-  getSkuPnl,
-} from "@/lib/data/analytics-v2";
+  buildOrdersDrillDownUrl,
+  resolveAnalyticsRange,
+  resolvePreviousRange,
+} from "@/lib/analytics/range";
+import { getAnalyticsReportForRange } from "@/lib/analytics/report";
+import { getCourierPerformance } from "@/lib/analytics/courier-performance";
+import { getReturnRateByWilaya, getSkuPnl, getPeriodComparison } from "@/lib/data/analytics-v2";
 import { getI18n } from "@/lib/i18n-server";
 import {
   assertTrustedAction,
   requireTrustedAction,
+  trustedActionAllowed,
 } from "@/lib/identity/authorization";
 import {
   STATUS_CHART_COLORS,
@@ -63,33 +67,52 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const dynamic = "force-dynamic";
 
-const RANGES = [
-  { days: 7, labelKey: "analytics.last7Days" },
-  { days: 14, labelKey: "analytics.last14Days" },
-  { days: 30, labelKey: "analytics.last30Days" },
-  { days: 90, labelKey: "analytics.last90Days" },
-] as const;
-
 export default async function AnalyticsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ days?: string }>;
+  searchParams: Promise<{
+    range?: string;
+    from?: string;
+    to?: string;
+    days?: string;
+  }>;
 }) {
   const actorContext = await requireTrustedAction("analytics.read");
   assertTrustedAction(actorContext, "analytics.financials.read");
   const { t, locale } = await getI18n();
-  const { days: daysParam } = await searchParams;
-  const days = Number(daysParam);
-  const validDays = [7, 14, 30, 90].includes(days) ? days : 30;
+  const { range: rangeParam, from: fromParam, to: toParam, days: daysParam } =
+    await searchParams;
 
-  const report = await getAnalyticsReport(validDays);
-  const range = getLastNDays(validDays);
-  const prevRange = getPreviousPeriod(range);
-  const [returnRateByWilaya, skuPnl, comparison] = await Promise.all([
-    getReturnRateByWilaya(range),
-    getSkuPnl(range),
-    getPeriodComparison(range, prevRange),
-  ]);
+  // One shared range authority for every query on this page (R4-d):
+  // presets 7d/30d/90d + custom from/to, URL-persisted like the orders filters.
+  const range = resolveAnalyticsRange({
+    range: rangeParam,
+    from: fromParam,
+    to: toParam,
+    days: daysParam,
+  });
+  const prevRange = resolvePreviousRange(range);
+
+  // Fees are a financial field: they only leave the database when the actor
+  // holds analytics.financials.read (asserted above — kept as an explicit
+  // gate so the courier loader stays permission-shaped).
+  const includeFees = trustedActionAllowed(
+    actorContext,
+    "analytics.financials.read",
+  );
+
+  const currentWindow = { from: range.from, to: range.toExclusive };
+  const [report, returnRateByWilaya, skuPnl, comparison, courier] =
+    await Promise.all([
+      getAnalyticsReportForRange(range),
+      getReturnRateByWilaya(currentWindow),
+      getSkuPnl(currentWindow),
+      getPeriodComparison(currentWindow, {
+        from: prevRange.from,
+        to: range.from,
+      }),
+      getCourierPerformance(range, { includeFees }),
+    ]);
 
   const dateLocale =
     locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
@@ -118,6 +141,22 @@ export default async function AnalyticsPage({
   const fmtPercent = (value: number) => percentFormatter.format(value / 100);
   const fmtSignedPercent = (value: number) =>
     signedPercentFormatter.format(value / 100);
+
+  // Drill-down targets (R2-a orders URL contract: status / from / to).
+  const ordersRangeHref = buildOrdersDrillDownUrl({
+    fromIso: range.fromIso,
+    toIso: range.toIso,
+  });
+  const deliveredOrdersHref = buildOrdersDrillDownUrl({
+    fromIso: range.fromIso,
+    toIso: range.toIso,
+    status: "delivered",
+  });
+  const returnedOrdersHref = buildOrdersDrillDownUrl({
+    fromIso: range.fromIso,
+    toIso: range.toIso,
+    status: "returned",
+  });
 
   const returnRateData: RankedMetricDatum[] = returnRateByWilaya
     .slice(0, 10)
@@ -262,21 +301,21 @@ export default async function AnalyticsPage({
         title={t("nav.analytics")}
         description={t("analytics.depth")}
         actions={
-          <div className="flex items-center rounded-lg border bg-muted/40 p-0.5">
-            {RANGES.map((option) => (
-              <Link
-                key={option.days}
-                href={`/analytics?days=${option.days}`}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                  validDays === option.days
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {t(option.labelKey)}
-              </Link>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <AnalyticsRangeControls />
+            <AnalyticsExportButton
+              summary={{
+                totalRevenue: summary.totalRevenue,
+                totalOrders: summary.totalOrders,
+                avgOrderValue: summary.avgOrderValue,
+                deliveryRate: summary.deliveryRate,
+                returnRate:
+                  Math.round(comparison.current.returnRate * 10) / 10,
+              }}
+              couriers={courier.providers}
+              feesIncluded={courier.feesIncluded}
+              range={{ fromIso: range.fromIso, toIso: range.toIso }}
+            />
           </div>
         }
       />
@@ -292,6 +331,12 @@ export default async function AnalyticsPage({
           trend={summary.revenueDelta}
           trendDirectionOnly={false}
           trendLabel={t("analytics.vsPrevious")}
+          action={
+            <KpiDrillDownLink
+              href={ordersRangeHref}
+              label={t("analytics.courier.viewOrders")}
+            />
+          }
           style={{ animationDelay: "60ms" }}
         />
         <StatCard
@@ -301,6 +346,12 @@ export default async function AnalyticsPage({
           trend={summary.ordersDelta}
           trendDirectionOnly={false}
           trendLabel={t("analytics.vsPrevious")}
+          action={
+            <KpiDrillDownLink
+              href={ordersRangeHref}
+              label={t("analytics.courier.viewOrders")}
+            />
+          }
           style={{ animationDelay: "120ms" }}
         />
         <StatCard
@@ -310,12 +361,24 @@ export default async function AnalyticsPage({
           trend={summary.aovDelta}
           trendDirectionOnly={false}
           trendLabel={t("analytics.vsPrevious")}
+          action={
+            <KpiDrillDownLink
+              href={ordersRangeHref}
+              label={t("analytics.courier.viewOrders")}
+            />
+          }
           style={{ animationDelay: "180ms" }}
         />
         <StatCard
           label={t("analytics.deliveryRate")}
           value={fmtPercent(summary.deliveryRate)}
           icon={<Truck />}
+          action={
+            <KpiDrillDownLink
+              href={deliveredOrdersHref}
+              label={t("analytics.courier.viewDelivered")}
+            />
+          }
           style={{ animationDelay: "240ms" }}
         />
       </div>
@@ -411,6 +474,14 @@ export default async function AnalyticsPage({
           />
         </ChartCard>
       </section>
+
+      <CourierPerformanceSection
+        providers={courier.providers}
+        matrix={courier.matrix}
+        totalShipments={courier.totalShipments}
+        feesIncluded={courier.feesIncluded}
+        range={{ from: range.from, to: range.to }}
+      />
 
       <section data-analytics-section="rankings" className="card-grid-2">
         <ChartCard
@@ -547,6 +618,12 @@ export default async function AnalyticsPage({
           icon={<RotateCcw />}
           accent="bg-red-500/10 dark:bg-red-500/15"
           config={{}}
+          action={
+            <KpiDrillDownLink
+              href={returnedOrdersHref}
+              label={t("analytics.courier.viewReturns")}
+            />
+          }
         >
           {returnRateData.length > 0 ? (
             <RankedMetricList data={returnRateData} maxValue={100} />
@@ -561,7 +638,7 @@ export default async function AnalyticsPage({
           <CardTitle className="flex items-center gap-2 text-base">
             <TrendingDown className="size-4" aria-hidden="true" />
             {t("analytics.periodComparison", {
-              days: integerFormatter.format(validDays),
+              days: integerFormatter.format(range.days),
             })}
           </CardTitle>
         </CardHeader>

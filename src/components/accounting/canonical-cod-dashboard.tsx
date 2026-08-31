@@ -125,204 +125,6 @@ interface BatchLinePayload {
   isFinal: boolean;
 }
 
-const TEXT = {
-  en: {
-    authority: "Governed financial authority",
-    refresh: "Refresh",
-    expected: "Expected receivable",
-    collected: "Collected",
-    remitted: "Gross remitted",
-    fees: "Courier fees",
-    net: "Net received",
-    collectPending: "Awaiting collection",
-    remitPending: "Awaiting remittance",
-    reviewCount: "Review queue",
-    collectionTitle: "Record courier collection",
-    collectionHelp: "The expected amount comes from the immutable delivered receivable ledger.",
-    noCollection: "No canonical delivered order is awaiting an initial collection.",
-    settlementTitle: "Post a remittance batch",
-    settlementHelp: "One batch can contain matched orders from one courier plus an optional unmatched provider line.",
-    noRemittance: "No collected order is awaiting remittance.",
-    reviewTitle: "Reconcile discrepancies and unmatched lines",
-    reviewHelp: "Matching and corrections append new facts; existing financial records are never edited.",
-    noReview: "No COD line currently needs reconciliation.",
-    recentTitle: "Recent remittance batches",
-    noRecent: "No canonical remittance batch has been posted.",
-    order: "Order",
-    customer: "Customer",
-    provider: "Courier / provider",
-    amount: "Amount",
-    expectedAmount: "Expected",
-    outstanding: "Outstanding",
-    reference: "Reference",
-    date: "Date",
-    collect: "Record collection",
-    select: "Select",
-    gross: "Gross",
-    adjustment: "Adjustment",
-    final: "Final",
-    batchReference: "Batch reference",
-    evidenceName: "Evidence name (optional)",
-    evidenceHash: "Evidence SHA-256 (optional)",
-    addUnmatched: "Include unmatched provider line",
-    unmatchedReference: "Provider line reference",
-    postBatch: "Post batch",
-    selectedGross: "Selected gross",
-    unmatched: "Unmatched",
-    disputed: "Disputed",
-    matchOrder: "Match to order",
-    reason: "Reason code",
-    match: "Append match",
-    correction: "Append correction",
-    grossDelta: "Gross delta",
-    feeDelta: "Fee delta",
-    adjustmentDelta: "Adjustment delta",
-    discrepancyDelta: "Discrepancy delta",
-    collectionCorrection: "Correct collection",
-    collectionDelta: "Collection delta",
-    state: "State",
-    posted: "Posted",
-    needsReview: "Needs review",
-    lines: "lines",
-    success: "The governed COD command was committed.",
-    replayed: "The already committed command was recovered safely.",
-    failed: "The command was not committed. Refresh and retry.",
-    conflict: "The order or settlement changed. Refresh before retrying.",
-    invalid: "Review the required values and integer DZD amounts.",
-    mixedProvider: "Select orders from one courier only.",
-  },
-  fr: {
-    authority: "Autorité financière gouvernée",
-    refresh: "Actualiser",
-    expected: "Créance attendue",
-    collected: "Encaissé",
-    remitted: "Versement brut",
-    fees: "Frais transporteur",
-    net: "Net reçu",
-    collectPending: "À encaisser",
-    remitPending: "À verser",
-    reviewCount: "File de contrôle",
-    collectionTitle: "Enregistrer l'encaissement transporteur",
-    collectionHelp: "Le montant attendu provient du grand livre immuable de la livraison.",
-    noCollection: "Aucune commande canonique livrée n'attend un premier encaissement.",
-    settlementTitle: "Enregistrer un lot de versement",
-    settlementHelp: "Un lot peut contenir les commandes d'un transporteur et une ligne fournisseur non rapprochée facultative.",
-    noRemittance: "Aucune commande encaissée n'attend un versement.",
-    reviewTitle: "Rapprocher les écarts et lignes non associées",
-    reviewHelp: "Les rapprochements et corrections ajoutent des faits; les écritures existantes ne sont jamais modifiées.",
-    noReview: "Aucune ligne COD ne nécessite de rapprochement.",
-    recentTitle: "Lots de versement récents",
-    noRecent: "Aucun lot canonique n'a été enregistré.",
-    order: "Commande",
-    customer: "Client",
-    provider: "Transporteur / fournisseur",
-    amount: "Montant",
-    expectedAmount: "Attendu",
-    outstanding: "Restant",
-    reference: "Référence",
-    date: "Date",
-    collect: "Enregistrer l'encaissement",
-    select: "Sélectionner",
-    gross: "Brut",
-    adjustment: "Ajustement",
-    final: "Final",
-    batchReference: "Référence du lot",
-    evidenceName: "Nom de la preuve (facultatif)",
-    evidenceHash: "SHA-256 de la preuve (facultatif)",
-    addUnmatched: "Inclure une ligne fournisseur non rapprochée",
-    unmatchedReference: "Référence de ligne fournisseur",
-    postBatch: "Enregistrer le lot",
-    selectedGross: "Brut sélectionné",
-    unmatched: "Non rapprochée",
-    disputed: "En litige",
-    matchOrder: "Rattacher à une commande",
-    reason: "Code motif",
-    match: "Ajouter le rapprochement",
-    correction: "Ajouter la correction",
-    grossDelta: "Delta brut",
-    feeDelta: "Delta frais",
-    adjustmentDelta: "Delta ajustement",
-    discrepancyDelta: "Delta écart",
-    collectionCorrection: "Corriger l'encaissement",
-    collectionDelta: "Delta d'encaissement",
-    state: "État",
-    posted: "Enregistré",
-    needsReview: "À vérifier",
-    lines: "lignes",
-    success: "La commande COD gouvernée a été validée.",
-    replayed: "La commande déjà validée a été récupérée en sécurité.",
-    failed: "La commande n'a pas été validée. Actualisez puis réessayez.",
-    conflict: "La commande ou le règlement a changé. Actualisez avant de réessayer.",
-    invalid: "Vérifiez les valeurs requises et les montants DZD entiers.",
-    mixedProvider: "Sélectionnez les commandes d'un seul transporteur.",
-  },
-  ar: {
-    authority: "صلاحية مالية محكومة",
-    refresh: "تحديث",
-    expected: "المستحق المتوقع",
-    collected: "المحصّل",
-    remitted: "التحويل الإجمالي",
-    fees: "رسوم شركة التوصيل",
-    net: "الصافي المستلم",
-    collectPending: "بانتظار التحصيل",
-    remitPending: "بانتظار التحويل",
-    reviewCount: "قائمة المراجعة",
-    collectionTitle: "تسجيل تحصيل شركة التوصيل",
-    collectionHelp: "يأتي المبلغ المتوقع من سجل مستحق التسليم الثابت.",
-    noCollection: "لا توجد طلبية موثوقة مسلّمة بانتظار التحصيل الأول.",
-    settlementTitle: "تسجيل دفعة تحويل",
-    settlementHelp: "يمكن أن تحتوي الدفعة على طلبيات شركة واحدة وسطر مزوّد غير مطابق اختياري.",
-    noRemittance: "لا توجد طلبية محصّلة بانتظار التحويل.",
-    reviewTitle: "مطابقة الفروقات والأسطر غير المرتبطة",
-    reviewHelp: "تضيف المطابقة والتصحيحات حقائق جديدة ولا تعدّل القيود المالية السابقة.",
-    noReview: "لا يوجد سطر دفع عند الاستلام يحتاج إلى مطابقة.",
-    recentTitle: "دفعات التحويل الأخيرة",
-    noRecent: "لم تُسجّل أي دفعة تحويل موثوقة.",
-    order: "الطلبية",
-    customer: "الزبون",
-    provider: "شركة التوصيل / المزوّد",
-    amount: "المبلغ",
-    expectedAmount: "المتوقع",
-    outstanding: "المتبقي",
-    reference: "المرجع",
-    date: "التاريخ",
-    collect: "تسجيل التحصيل",
-    select: "اختيار",
-    gross: "الإجمالي",
-    adjustment: "التعديل",
-    final: "نهائي",
-    batchReference: "مرجع الدفعة",
-    evidenceName: "اسم الدليل (اختياري)",
-    evidenceHash: "بصمة SHA-256 للدليل (اختياري)",
-    addUnmatched: "إضافة سطر مزوّد غير مطابق",
-    unmatchedReference: "مرجع سطر المزوّد",
-    postBatch: "اعتماد الدفعة",
-    selectedGross: "الإجمالي المختار",
-    unmatched: "غير مطابق",
-    disputed: "متنازع عليه",
-    matchOrder: "ربطه بطلبية",
-    reason: "رمز السبب",
-    match: "إضافة المطابقة",
-    correction: "إضافة التصحيح",
-    grossDelta: "فرق الإجمالي",
-    feeDelta: "فرق الرسوم",
-    adjustmentDelta: "فرق التعديل",
-    discrepancyDelta: "فرق المطابقة",
-    collectionCorrection: "تصحيح التحصيل",
-    collectionDelta: "فرق التحصيل",
-    state: "الحالة",
-    posted: "معتمدة",
-    needsReview: "بحاجة إلى مراجعة",
-    lines: "أسطر",
-    success: "تم اعتماد أمر الدفع عند الاستلام الموثوق.",
-    replayed: "تمت استعادة الأمر المعتمد سابقًا بأمان.",
-    failed: "لم يتم اعتماد الأمر. حدّث الصفحة ثم أعد المحاولة.",
-    conflict: "تغيّرت الطلبية أو التسوية. حدّث الصفحة قبل إعادة المحاولة.",
-    invalid: "راجع القيم المطلوبة ومبالغ الدينار الصحيحة.",
-    mixedProvider: "اختر طلبيات شركة توصيل واحدة فقط.",
-  },
-} as const;
-
 function localDateTime(): string {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
@@ -377,8 +179,7 @@ export function CanonicalCodDashboard({
   summary: CanonicalCodDashboardSummary;
 }) {
   const router = useRouter();
-  const { locale } = useI18n();
-  const text = TEXT[locale as keyof typeof TEXT] ?? TEXT.en;
+  const { t, locale } = useI18n();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -504,18 +305,18 @@ export function CanonicalCodDashboard({
       if (!response.ok) {
         const message =
           payload.code === "CONFLICT"
-            ? text.conflict
+            ? t("codReconciliation.conflict")
             : payload.code === "VALIDATION_ERROR"
-              ? text.invalid
-              : payload.error || text.failed;
+              ? t("codReconciliation.invalid")
+              : payload.error || t("codReconciliation.failed");
         throw new Error(message);
       }
       window.localStorage.removeItem(storageKey);
-      setNotice(payload.command?.replayed ? text.replayed : text.success);
+      setNotice(payload.command?.replayed ? t("codReconciliation.replayed") : t("codReconciliation.commitSuccess"));
       router.refresh();
       return true;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : text.failed);
+      setError(caught instanceof Error ? caught.message : t("codReconciliation.failed"));
       return false;
     } finally {
       setBusy("");
@@ -524,7 +325,7 @@ export function CanonicalCodDashboard({
 
   function toggleOrder(item: CodPosition, checked: boolean): void {
     if (checked && selectedProvider && item.provider !== selectedProvider) {
-      setError(text.mixedProvider);
+      setError(t("codReconciliation.mixedProvider"));
       return;
     }
     setError(null);
@@ -559,7 +360,7 @@ export function CanonicalCodDashboard({
       });
     }
     if (!activeProvider || !batch.reference.trim() || lines.length === 0) {
-      setError(text.invalid);
+      setError(t("codReconciliation.invalid"));
       return;
     }
     const succeeded = await commit(
@@ -595,23 +396,23 @@ export function CanonicalCodDashboard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Badge variant="outline" className="gap-1.5">
           <Scale className="h-3.5 w-3.5" />
-          {text.authority}
+          {t("codReconciliation.authority")}
         </Badge>
         <Button variant="outline" size="sm" onClick={() => router.refresh()}>
           <RefreshCcw className="me-1.5 h-4 w-4" />
-          {text.refresh}
+          {t("codReconciliation.refresh")}
         </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label={text.expected} value={summary.totals.expectedReceivable} icon={CircleDollarSign} locale={locale} />
-        <SummaryCard label={text.collected} value={summary.totals.effectiveCollected} icon={CheckCircle2} locale={locale} />
-        <SummaryCard label={text.remitted} value={summary.totals.grossRemitted} icon={ReceiptText} locale={locale} />
-        <SummaryCard label={text.net} value={summary.totals.netReceived} icon={Scale} locale={locale} />
-        <SummaryCard label={text.fees} value={summary.totals.fees} icon={ReceiptText} locale={locale} />
-        <SummaryCard label={text.collectPending} value={summary.totals.outstandingCollection} icon={Clock3} locale={locale} />
-        <SummaryCard label={text.remitPending} value={summary.totals.outstandingRemittance} icon={Clock3} locale={locale} />
-        <SummaryCard label={text.reviewCount} value={summary.reviewLines.length + summary.disputed.length} icon={AlertTriangle} locale={locale} count />
+        <SummaryCard label={t("codReconciliation.expected")} value={summary.totals.expectedReceivable} icon={CircleDollarSign} locale={locale} />
+        <SummaryCard label={t("codReconciliation.collectedTotal")} value={summary.totals.effectiveCollected} icon={CheckCircle2} locale={locale} />
+        <SummaryCard label={t("codReconciliation.grossRemitted")} value={summary.totals.grossRemitted} icon={ReceiptText} locale={locale} />
+        <SummaryCard label={t("codReconciliation.net")} value={summary.totals.netReceived} icon={Scale} locale={locale} />
+        <SummaryCard label={t("codReconciliation.fees")} value={summary.totals.fees} icon={ReceiptText} locale={locale} />
+        <SummaryCard label={t("codReconciliation.collectPending")} value={summary.totals.outstandingCollection} icon={Clock3} locale={locale} />
+        <SummaryCard label={t("codReconciliation.remitPending")} value={summary.totals.outstandingRemittance} icon={Clock3} locale={locale} />
+        <SummaryCard label={t("codReconciliation.reviewCount")} value={summary.reviewLines.length + summary.disputed.length} icon={AlertTriangle} locale={locale} count />
       </div>
 
       {notice ? (
@@ -623,12 +424,12 @@ export function CanonicalCodDashboard({
 
       <Card>
         <CardHeader>
-          <CardTitle>{text.collectionTitle}</CardTitle>
-          <p className="text-sm text-muted-foreground">{text.collectionHelp}</p>
+          <CardTitle>{t("codReconciliation.collectionTitle")}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t("codReconciliation.collectionHelp")}</p>
         </CardHeader>
         <CardContent>
           {summary.awaitingCollection.length === 0 ? (
-            <EmptyState icon={CheckCircle2} title={text.noCollection} />
+            <EmptyState icon={CheckCircle2} title={t("codReconciliation.noCollection")} />
           ) : (
             <div className="space-y-4">
               {summary.awaitingCollection.map((item) => {
@@ -645,18 +446,18 @@ export function CanonicalCodDashboard({
                         <p className="font-mono text-sm font-semibold">{item.orderNumber}</p>
                         <p className="text-sm text-muted-foreground">{item.customerName}</p>
                       </div>
-                      <p className="text-sm">{text.expectedAmount}: <strong>{formatDZD(item.expectedReceivable, locale)}</strong></p>
+                      <p className="text-sm">{t("codReconciliation.expectedAmount")}: <strong>{formatDZD(item.expectedReceivable, locale)}</strong></p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <div className="space-y-1.5"><Label htmlFor={amountId}>{text.amount}</Label><Input id={amountId} inputMode="numeric" value={draft.amount} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, amount: event.target.value } }))} /></div>
-                      <div className="space-y-1.5"><Label htmlFor={providerId}>{text.provider}</Label><Input id={providerId} dir="auto" value={draft.provider} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, provider: event.target.value } }))} /></div>
-                      <div className="space-y-1.5"><Label htmlFor={referenceId}>{text.reference}</Label><Input id={referenceId} dir="auto" value={draft.reference} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, reference: event.target.value } }))} /></div>
-                      <div className="space-y-1.5"><Label htmlFor={dateId}>{text.date}</Label><Input id={dateId} type="datetime-local" value={draft.at} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, at: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label htmlFor={amountId}>{t("codReconciliation.amount")}</Label><Input id={amountId} inputMode="numeric" value={draft.amount} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, amount: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label htmlFor={providerId}>{t("codReconciliation.provider")}</Label><Input id={providerId} dir="auto" value={draft.provider} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, provider: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label htmlFor={referenceId}>{t("codReconciliation.reference")}</Label><Input id={referenceId} dir="auto" value={draft.reference} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, reference: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label htmlFor={dateId}>{t("codReconciliation.date")}</Label><Input id={dateId} type="datetime-local" value={draft.at} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, at: event.target.value } }))} /></div>
                     </div>
                     <div className="mt-4 flex justify-end">
                       <Button disabled={Boolean(busy) || integer(draft.amount) <= 0 || !draft.provider.trim()} onClick={() => void commit(operationKey, `/api/orders/${item.orderId}/cod/collection`, { expectedVersion: item.orderVersion, amount: integer(draft.amount), provider: draft.provider.trim(), reference: draft.reference.trim() || undefined, collectedAt: new Date(draft.at).toISOString() })}>
                         {busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}
-                        {text.collect}
+                        {t("codReconciliation.collect")}
                       </Button>
                     </div>
                   </div>
@@ -669,25 +470,25 @@ export function CanonicalCodDashboard({
 
       <Card>
         <CardHeader>
-          <CardTitle>{text.settlementTitle}</CardTitle>
-          <p className="text-sm text-muted-foreground">{text.settlementHelp}</p>
+          <CardTitle>{t("codReconciliation.settlementTitle")}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t("codReconciliation.settlementHelp")}</p>
         </CardHeader>
         <CardContent className="space-y-4">
           {summary.awaitingRemittance.length === 0 ? (
-            <EmptyState icon={CheckCircle2} title={text.noRemittance} />
+            <EmptyState icon={CheckCircle2} title={t("codReconciliation.noRemittance")} />
           ) : (
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full min-w-[900px] text-sm">
                 <thead className="border-b bg-muted/60 text-muted-foreground">
                   <tr>
-                    <th className="p-3 text-start">{text.select}</th>
-                    <th className="p-3 text-start">{text.order}</th>
-                    <th className="p-3 text-start">{text.provider}</th>
-                    <th className="p-3 text-end">{text.outstanding}</th>
-                    <th className="p-3 text-end">{text.gross}</th>
-                    <th className="p-3 text-end">{text.fees}</th>
-                    <th className="p-3 text-end">{text.adjustment}</th>
-                    <th className="p-3 text-center">{text.final}</th>
+                    <th className="p-3 text-start">{t("codReconciliation.select")}</th>
+                    <th className="p-3 text-start">{t("codReconciliation.order")}</th>
+                    <th className="p-3 text-start">{t("codReconciliation.provider")}</th>
+                    <th className="p-3 text-end">{t("codReconciliation.outstanding")}</th>
+                    <th className="p-3 text-end">{t("codReconciliation.gross")}</th>
+                    <th className="p-3 text-end">{t("codReconciliation.fees")}</th>
+                    <th className="p-3 text-end">{t("codReconciliation.adjustment")}</th>
+                    <th className="p-3 text-center">{t("codReconciliation.final")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -695,14 +496,14 @@ export function CanonicalCodDashboard({
                     const draft = settlementDraft(item);
                     return (
                       <tr key={item.orderId} className={draft.selected ? "bg-primary/5" : undefined}>
-                        <td className="p-3"><Checkbox checked={draft.selected} onCheckedChange={(value) => toggleOrder(item, value === true)} aria-label={`${text.select} ${item.orderNumber}`} /></td>
+                        <td className="p-3"><Checkbox checked={draft.selected} onCheckedChange={(value) => toggleOrder(item, value === true)} aria-label={`${t("codReconciliation.select")} ${item.orderNumber}`} /></td>
                         <td className="p-3"><p className="font-mono font-medium">{item.orderNumber}</p><p className="text-xs text-muted-foreground">{item.customerName}</p></td>
                         <td className="p-3" dir="auto">{item.provider}</td>
                         <td className="p-3 text-end tabular-nums">{formatDZD(item.outstandingRemittance, locale)}</td>
-                        <td className="p-3"><Input className="min-w-28 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${text.gross} ${item.orderNumber}`} value={draft.gross} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, gross: event.target.value } }))} /></td>
-                        <td className="p-3"><Input className="min-w-24 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${text.fees} ${item.orderNumber}`} value={draft.fee} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, fee: event.target.value } }))} /></td>
-                        <td className="p-3"><Input className="min-w-24 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${text.adjustment} ${item.orderNumber}`} value={draft.adjustment} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, adjustment: event.target.value } }))} /></td>
-                        <td className="p-3 text-center"><Checkbox disabled={!draft.selected} checked={draft.isFinal} onCheckedChange={(value) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, isFinal: value === true } }))} aria-label={`${text.final} ${item.orderNumber}`} /></td>
+                        <td className="p-3"><Input className="min-w-28 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${t("codReconciliation.gross")} ${item.orderNumber}`} value={draft.gross} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, gross: event.target.value } }))} /></td>
+                        <td className="p-3"><Input className="min-w-24 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${t("codReconciliation.fees")} ${item.orderNumber}`} value={draft.fee} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, fee: event.target.value } }))} /></td>
+                        <td className="p-3"><Input className="min-w-24 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${t("codReconciliation.adjustment")} ${item.orderNumber}`} value={draft.adjustment} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, adjustment: event.target.value } }))} /></td>
+                        <td className="p-3 text-center"><Checkbox disabled={!draft.selected} checked={draft.isFinal} onCheckedChange={(value) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, isFinal: value === true } }))} aria-label={`${t("codReconciliation.final")} ${item.orderNumber}`} /></td>
                       </tr>
                     );
                   })}
@@ -713,28 +514,28 @@ export function CanonicalCodDashboard({
 
           <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="space-y-1.5"><Label htmlFor="cod-batch-provider">{text.provider}</Label><Input id="cod-batch-provider" dir="auto" disabled={Boolean(selectedProvider)} value={selectedProvider ?? batch.provider} onChange={(event) => setBatch((current) => ({ ...current, provider: event.target.value }))} /></div>
-              <div className="space-y-1.5"><Label htmlFor="cod-batch-reference">{text.batchReference}</Label><Input id="cod-batch-reference" dir="auto" value={batch.reference} onChange={(event) => setBatch((current) => ({ ...current, reference: event.target.value }))} /></div>
-              <div className="space-y-1.5"><Label htmlFor="cod-batch-date">{text.date}</Label><Input id="cod-batch-date" type="datetime-local" value={batch.receivedAt} onChange={(event) => setBatch((current) => ({ ...current, receivedAt: event.target.value }))} /></div>
-              <div className="space-y-1.5"><Label htmlFor="cod-batch-evidence-name">{text.evidenceName}</Label><Input id="cod-batch-evidence-name" dir="auto" value={batch.evidenceName} onChange={(event) => setBatch((current) => ({ ...current, evidenceName: event.target.value }))} /></div>
-              <div className="space-y-1.5 md:col-span-2"><Label htmlFor="cod-batch-evidence-hash">{text.evidenceHash}</Label><Input id="cod-batch-evidence-hash" dir="ltr" value={batch.evidenceHash} onChange={(event) => setBatch((current) => ({ ...current, evidenceHash: event.target.value }))} /></div>
-              <div className="flex items-end gap-2"><Checkbox checked={batch.includeUnmatched} onCheckedChange={(value) => setBatch((current) => ({ ...current, includeUnmatched: value === true }))} aria-label={text.addUnmatched} /><Label>{text.addUnmatched}</Label></div>
+              <div className="space-y-1.5"><Label htmlFor="cod-batch-provider">{t("codReconciliation.provider")}</Label><Input id="cod-batch-provider" dir="auto" disabled={Boolean(selectedProvider)} value={selectedProvider ?? batch.provider} onChange={(event) => setBatch((current) => ({ ...current, provider: event.target.value }))} /></div>
+              <div className="space-y-1.5"><Label htmlFor="cod-batch-reference">{t("codReconciliation.batchReference")}</Label><Input id="cod-batch-reference" dir="auto" value={batch.reference} onChange={(event) => setBatch((current) => ({ ...current, reference: event.target.value }))} /></div>
+              <div className="space-y-1.5"><Label htmlFor="cod-batch-date">{t("codReconciliation.date")}</Label><Input id="cod-batch-date" type="datetime-local" value={batch.receivedAt} onChange={(event) => setBatch((current) => ({ ...current, receivedAt: event.target.value }))} /></div>
+              <div className="space-y-1.5"><Label htmlFor="cod-batch-evidence-name">{t("codReconciliation.evidenceName")}</Label><Input id="cod-batch-evidence-name" dir="auto" value={batch.evidenceName} onChange={(event) => setBatch((current) => ({ ...current, evidenceName: event.target.value }))} /></div>
+              <div className="space-y-1.5 md:col-span-2"><Label htmlFor="cod-batch-evidence-hash">{t("codReconciliation.evidenceHash")}</Label><Input id="cod-batch-evidence-hash" dir="ltr" value={batch.evidenceHash} onChange={(event) => setBatch((current) => ({ ...current, evidenceHash: event.target.value }))} /></div>
+              <div className="flex items-end gap-2"><Checkbox checked={batch.includeUnmatched} onCheckedChange={(value) => setBatch((current) => ({ ...current, includeUnmatched: value === true }))} aria-label={t("codReconciliation.addUnmatched")} /><Label>{t("codReconciliation.addUnmatched")}</Label></div>
             </div>
 
             {batch.includeUnmatched ? (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-reference">{text.unmatchedReference}</Label><Input id="cod-unmatched-reference" dir="auto" value={batch.unmatchedReference} onChange={(event) => setBatch((current) => ({ ...current, unmatchedReference: event.target.value }))} /></div>
-                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-gross">{text.gross}</Label><Input id="cod-unmatched-gross" inputMode="numeric" value={batch.unmatchedGross} onChange={(event) => setBatch((current) => ({ ...current, unmatchedGross: event.target.value }))} /></div>
-                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-fee">{text.fees}</Label><Input id="cod-unmatched-fee" inputMode="numeric" value={batch.unmatchedFee} onChange={(event) => setBatch((current) => ({ ...current, unmatchedFee: event.target.value }))} /></div>
-                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-adjustment">{text.adjustment}</Label><Input id="cod-unmatched-adjustment" inputMode="numeric" value={batch.unmatchedAdjustment} onChange={(event) => setBatch((current) => ({ ...current, unmatchedAdjustment: event.target.value }))} /></div>
+                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-reference">{t("codReconciliation.unmatchedReference")}</Label><Input id="cod-unmatched-reference" dir="auto" value={batch.unmatchedReference} onChange={(event) => setBatch((current) => ({ ...current, unmatchedReference: event.target.value }))} /></div>
+                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-gross">{t("codReconciliation.gross")}</Label><Input id="cod-unmatched-gross" inputMode="numeric" value={batch.unmatchedGross} onChange={(event) => setBatch((current) => ({ ...current, unmatchedGross: event.target.value }))} /></div>
+                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-fee">{t("codReconciliation.fees")}</Label><Input id="cod-unmatched-fee" inputMode="numeric" value={batch.unmatchedFee} onChange={(event) => setBatch((current) => ({ ...current, unmatchedFee: event.target.value }))} /></div>
+                <div className="space-y-1.5"><Label htmlFor="cod-unmatched-adjustment">{t("codReconciliation.adjustment")}</Label><Input id="cod-unmatched-adjustment" inputMode="numeric" value={batch.unmatchedAdjustment} onChange={(event) => setBatch((current) => ({ ...current, unmatchedAdjustment: event.target.value }))} /></div>
               </div>
             ) : null}
 
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">{text.selectedGross}: <strong className="text-foreground">{formatDZD(selectedGross + (batch.includeUnmatched ? integer(batch.unmatchedGross) : 0), locale)}</strong></p>
+              <p className="text-sm text-muted-foreground">{t("codReconciliation.selectedGross")}: <strong className="text-foreground">{formatDZD(selectedGross + (batch.includeUnmatched ? integer(batch.unmatchedGross) : 0), locale)}</strong></p>
               <Button disabled={Boolean(busy) || !activeProvider || !batch.reference.trim() || (selected.length === 0 && integer(batch.unmatchedGross) <= 0)} onClick={() => void postBatch()}>
                 {busy.startsWith("settlement:") ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}
-                {text.postBatch}
+                {t("codReconciliation.postBatch")}
               </Button>
             </div>
           </div>
@@ -743,12 +544,12 @@ export function CanonicalCodDashboard({
 
       <Card>
         <CardHeader>
-          <CardTitle>{text.reviewTitle}</CardTitle>
-          <p className="text-sm text-muted-foreground">{text.reviewHelp}</p>
+          <CardTitle>{t("codReconciliation.reviewTitle")}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t("codReconciliation.reviewHelp")}</p>
         </CardHeader>
         <CardContent>
           {summary.reviewLines.length === 0 && summary.disputed.length === 0 ? (
-            <EmptyState icon={CheckCircle2} title={text.noReview} />
+            <EmptyState icon={CheckCircle2} title={t("codReconciliation.noReview")} />
           ) : (
             <div className="space-y-4">
               {summary.reviewLines.map((line) => {
@@ -762,26 +563,26 @@ export function CanonicalCodDashboard({
                 return (
                   <div key={line.lineId} className="rounded-lg border p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div><Badge variant={line.unresolvedUnmatched ? "secondary" : "destructive"}>{line.unresolvedUnmatched ? text.unmatched : text.disputed}</Badge><p className="mt-2 font-mono text-sm">{line.externalReference}</p><p className="text-xs text-muted-foreground">{line.provider} · {formatDate(line.receivedAt, locale)}</p></div>
-                      <div className="text-end text-sm tabular-nums"><p>{text.gross}: {formatDZD(line.effectiveGross, locale)}</p><p>{text.fees}: {formatDZD(line.effectiveFee, locale)}</p><p className={line.effectiveDiscrepancy === 0 ? "" : "text-destructive"}>{text.reviewCount}: {formatDZD(line.effectiveDiscrepancy, locale)}</p></div>
+                      <div><Badge variant={line.unresolvedUnmatched ? "secondary" : "destructive"}>{line.unresolvedUnmatched ? t("codReconciliation.unmatched") : t("codReconciliation.disputed")}</Badge><p className="mt-2 font-mono text-sm">{line.externalReference}</p><p className="text-xs text-muted-foreground">{line.provider} · {formatDate(line.receivedAt, locale)}</p></div>
+                      <div className="text-end text-sm tabular-nums"><p>{t("codReconciliation.gross")}: {formatDZD(line.effectiveGross, locale)}</p><p>{t("codReconciliation.fees")}: {formatDZD(line.effectiveFee, locale)}</p><p className={line.effectiveDiscrepancy === 0 ? "" : "text-destructive"}>{t("codReconciliation.reviewCount")}: {formatDZD(line.effectiveDiscrepancy, locale)}</p></div>
                     </div>
 
                     {line.unresolvedUnmatched ? (
                       <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-                        <div className="space-y-1.5"><Label htmlFor={orderSelectId}>{text.matchOrder}</Label><select id={orderSelectId} className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={draft.orderId} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, orderId: event.target.value } }))}><option value="">—</option>{matchCandidates.filter((item) => item.provider === line.provider).map((item) => <option key={item.orderId} value={item.orderId}>{item.orderNumber} · {item.customerName} · {formatDZD(item.outstandingRemittance, locale)}</option>)}</select></div>
-                        <div className="space-y-1.5"><Label htmlFor={reasonId}>{text.reason}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
-                        <Button disabled={Boolean(busy) || !matchingOrder || !draft.reason.trim()} onClick={() => matchingOrder && void commit(operationKey, `/api/accounting/cod-settlements/lines/${line.lineId}/match`, { orderId: matchingOrder.orderId, expectedVersion: matchingOrder.orderVersion, reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{text.match}</Button>
+                        <div className="space-y-1.5"><Label htmlFor={orderSelectId}>{t("codReconciliation.matchOrder")}</Label><select id={orderSelectId} className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={draft.orderId} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, orderId: event.target.value } }))}><option value="">—</option>{matchCandidates.filter((item) => item.provider === line.provider).map((item) => <option key={item.orderId} value={item.orderId}>{item.orderNumber} · {item.customerName} · {formatDZD(item.outstandingRemittance, locale)}</option>)}</select></div>
+                        <div className="space-y-1.5"><Label htmlFor={reasonId}>{t("codReconciliation.reason")}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
+                        <Button disabled={Boolean(busy) || !matchingOrder || !draft.reason.trim()} onClick={() => matchingOrder && void commit(operationKey, `/api/accounting/cod-settlements/lines/${line.lineId}/match`, { orderId: matchingOrder.orderId, expectedVersion: matchingOrder.orderVersion, reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{t("codReconciliation.match")}</Button>
                       </div>
                     ) : (
                       <div className="mt-4 space-y-3">
                         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                          <div className="space-y-1.5"><Label htmlFor={`cod-gross-delta-${line.lineId}`}>{text.grossDelta}</Label><Input id={`cod-gross-delta-${line.lineId}`} inputMode="numeric" value={draft.grossDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, grossDelta: event.target.value } }))} /></div>
-                          <div className="space-y-1.5"><Label htmlFor={`cod-fee-delta-${line.lineId}`}>{text.feeDelta}</Label><Input id={`cod-fee-delta-${line.lineId}`} inputMode="numeric" value={draft.feeDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, feeDelta: event.target.value } }))} /></div>
-                          <div className="space-y-1.5"><Label htmlFor={`cod-adjustment-delta-${line.lineId}`}>{text.adjustmentDelta}</Label><Input id={`cod-adjustment-delta-${line.lineId}`} inputMode="numeric" value={draft.adjustmentDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, adjustmentDelta: event.target.value } }))} /></div>
-                          <div className="space-y-1.5"><Label htmlFor={`cod-discrepancy-delta-${line.lineId}`}>{text.discrepancyDelta}</Label><Input id={`cod-discrepancy-delta-${line.lineId}`} inputMode="numeric" value={draft.discrepancyDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, discrepancyDelta: event.target.value } }))} /></div>
-                          <div className="space-y-1.5"><Label htmlFor={reasonId}>{text.reason}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
+                          <div className="space-y-1.5"><Label htmlFor={`cod-gross-delta-${line.lineId}`}>{t("codReconciliation.grossDelta")}</Label><Input id={`cod-gross-delta-${line.lineId}`} inputMode="numeric" value={draft.grossDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, grossDelta: event.target.value } }))} /></div>
+                          <div className="space-y-1.5"><Label htmlFor={`cod-fee-delta-${line.lineId}`}>{t("codReconciliation.feeDelta")}</Label><Input id={`cod-fee-delta-${line.lineId}`} inputMode="numeric" value={draft.feeDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, feeDelta: event.target.value } }))} /></div>
+                          <div className="space-y-1.5"><Label htmlFor={`cod-adjustment-delta-${line.lineId}`}>{t("codReconciliation.adjustmentDelta")}</Label><Input id={`cod-adjustment-delta-${line.lineId}`} inputMode="numeric" value={draft.adjustmentDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, adjustmentDelta: event.target.value } }))} /></div>
+                          <div className="space-y-1.5"><Label htmlFor={`cod-discrepancy-delta-${line.lineId}`}>{t("codReconciliation.discrepancyDelta")}</Label><Input id={`cod-discrepancy-delta-${line.lineId}`} inputMode="numeric" value={draft.discrepancyDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, discrepancyDelta: event.target.value } }))} /></div>
+                          <div className="space-y-1.5"><Label htmlFor={reasonId}>{t("codReconciliation.reason")}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
                         </div>
-                        <div className="flex justify-end"><Button disabled={Boolean(busy) || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/accounting/cod-settlements/lines/${line.lineId}/correction`, { expectedVersion: line.orderVersion ?? undefined, grossDelta: integer(draft.grossDelta), feeDelta: integer(draft.feeDelta), adjustmentDelta: integer(draft.adjustmentDelta), discrepancyDelta: integer(draft.discrepancyDelta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{text.correction}</Button></div>
+                        <div className="flex justify-end"><Button disabled={Boolean(busy) || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/accounting/cod-settlements/lines/${line.lineId}/correction`, { expectedVersion: line.orderVersion ?? undefined, grossDelta: integer(draft.grossDelta), feeDelta: integer(draft.feeDelta), adjustmentDelta: integer(draft.adjustmentDelta), discrepancyDelta: integer(draft.discrepancyDelta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{t("codReconciliation.correction")}</Button></div>
                       </div>
                     )}
                   </div>
@@ -795,8 +596,8 @@ export function CanonicalCodDashboard({
                 const reasonId = `cod-collection-reason-${item.orderId}`;
                 return (
                   <div key={operationKey} className="rounded-lg border border-warning/40 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3"><div><Badge variant="outline">{text.collectionCorrection}</Badge><p className="mt-2 font-mono text-sm font-semibold">{item.orderNumber}</p><p className="text-sm text-muted-foreground">{item.customerName}</p></div><div className="text-end text-sm"><p>{text.expectedAmount}: {formatDZD(item.expectedReceivable, locale)}</p><p>{text.collected}: {formatDZD(item.effectiveCollected, locale)}</p><p className="text-destructive">{text.reviewCount}: {formatDZD(item.discrepancy, locale)}</p></div></div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end"><div className="space-y-1.5"><Label htmlFor={deltaId}>{text.collectionDelta}</Label><Input id={deltaId} inputMode="numeric" value={draft.delta} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, delta: event.target.value } }))} /></div><div className="space-y-1.5"><Label htmlFor={reasonId}>{text.reason}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, reason: event.target.value } }))} /></div><Button disabled={Boolean(busy) || integer(draft.delta) === 0 || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/orders/${item.orderId}/cod/collection/correction`, { expectedVersion: item.orderVersion, amountDelta: integer(draft.delta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{text.correction}</Button></div>
+                    <div className="flex flex-wrap items-start justify-between gap-3"><div><Badge variant="outline">{t("codReconciliation.collectionCorrection")}</Badge><p className="mt-2 font-mono text-sm font-semibold">{item.orderNumber}</p><p className="text-sm text-muted-foreground">{item.customerName}</p></div><div className="text-end text-sm"><p>{t("codReconciliation.expectedAmount")}: {formatDZD(item.expectedReceivable, locale)}</p><p>{t("codReconciliation.collectedTotal")}: {formatDZD(item.effectiveCollected, locale)}</p><p className="text-destructive">{t("codReconciliation.reviewCount")}: {formatDZD(item.discrepancy, locale)}</p></div></div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end"><div className="space-y-1.5"><Label htmlFor={deltaId}>{t("codReconciliation.collectionDelta")}</Label><Input id={deltaId} inputMode="numeric" value={draft.delta} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, delta: event.target.value } }))} /></div><div className="space-y-1.5"><Label htmlFor={reasonId}>{t("codReconciliation.reason")}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, reason: event.target.value } }))} /></div><Button disabled={Boolean(busy) || integer(draft.delta) === 0 || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/orders/${item.orderId}/cod/collection/correction`, { expectedVersion: item.orderVersion, amountDelta: integer(draft.delta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{t("codReconciliation.correction")}</Button></div>
                   </div>
                 );
               })}
@@ -806,15 +607,15 @@ export function CanonicalCodDashboard({
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>{text.recentTitle}</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t("codReconciliation.recentTitle")}</CardTitle></CardHeader>
         <CardContent>
           {summary.recentSettlements.length === 0 ? (
-            <EmptyState icon={ReceiptText} title={text.noRecent} />
+            <EmptyState icon={ReceiptText} title={t("codReconciliation.noRecent")} />
           ) : (
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full min-w-[760px] text-sm">
-                <thead className="border-b bg-muted/60 text-muted-foreground"><tr><th className="p-3 text-start">{text.reference}</th><th className="p-3 text-start">{text.provider}</th><th className="p-3 text-start">{text.state}</th><th className="p-3 text-end">{text.gross}</th><th className="p-3 text-end">{text.fees}</th><th className="p-3 text-end">{text.net}</th><th className="p-3 text-end">{text.reviewCount}</th></tr></thead>
-                <tbody className="divide-y">{summary.recentSettlements.map((item) => <tr key={item.settlementId}><td className="p-3"><p className="font-mono font-medium">{item.externalReference}</p><p className="text-xs text-muted-foreground">{formatDate(item.receivedAt, locale)} · {item.lineCount} {text.lines}</p></td><td className="p-3" dir="auto">{item.provider}</td><td className="p-3"><Badge variant={item.status === "posted" ? "outline" : "destructive"}>{item.status === "posted" ? text.posted : text.needsReview}</Badge></td><td className="p-3 text-end tabular-nums">{formatDZD(item.grossAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.feeAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.netAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.discrepancyAmount + item.unmatchedAmount, locale)}</td></tr>)}</tbody>
+                <thead className="border-b bg-muted/60 text-muted-foreground"><tr><th className="p-3 text-start">{t("codReconciliation.reference")}</th><th className="p-3 text-start">{t("codReconciliation.provider")}</th><th className="p-3 text-start">{t("codReconciliation.state")}</th><th className="p-3 text-end">{t("codReconciliation.gross")}</th><th className="p-3 text-end">{t("codReconciliation.fees")}</th><th className="p-3 text-end">{t("codReconciliation.net")}</th><th className="p-3 text-end">{t("codReconciliation.reviewCount")}</th></tr></thead>
+                <tbody className="divide-y">{summary.recentSettlements.map((item) => <tr key={item.settlementId}><td className="p-3"><p className="font-mono font-medium">{item.externalReference}</p><p className="text-xs text-muted-foreground">{formatDate(item.receivedAt, locale)} · {item.lineCount} {t("codReconciliation.lines")}</p></td><td className="p-3" dir="auto">{item.provider}</td><td className="p-3"><Badge variant={item.status === "posted" ? "outline" : "destructive"}>{item.status === "posted" ? t("codReconciliation.posted") : t("codReconciliation.needsReview")}</Badge></td><td className="p-3 text-end tabular-nums">{formatDZD(item.grossAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.feeAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.netAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.discrepancyAmount + item.unmatchedAmount, locale)}</td></tr>)}</tbody>
               </table>
             </div>
           )}

@@ -32,7 +32,7 @@ export interface VariantOption {
 interface ProductVariantPickerProps {
   variants: VariantOption[];
   /** Default product price (used when variant has no price override) */
-  defaultPrice: number;
+  defaultPrice: number | null;
   /** Called when a variant is selected */
   onChange?: (variantId: string | null) => void;
   /** Selected variant ID */
@@ -100,7 +100,7 @@ export function ProductVariantPicker({
     );
   }
 
-  const effectivePrice = selected?.price ?? selected?.price ?? defaultPrice;
+  const effectivePrice = selected?.price ?? defaultPrice ?? 0;
   const effectiveStock = selected?.stock ?? 0;
   const isLowStock = effectiveStock <= 5;
   const isOutOfStock = effectiveStock <= 0;
@@ -129,7 +129,7 @@ export function ProductVariantPicker({
                 <div className="flex items-center justify-between gap-3 w-full">
                   <span>{v.name}</span>
                   <span className="text-xs text-muted-foreground tabular-nums">
-                    {formatDZD(variantPrice, locale)} · {v.stock} {t("products.inStock")}
+                    {formatDZD(variantPrice ?? 0, locale)} · {v.stock} {t("products.inStock")}
                   </span>
                 </div>
               </SelectItem>

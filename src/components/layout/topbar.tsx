@@ -18,6 +18,10 @@ import {
   User,
 } from "lucide-react";
 
+import {
+  getNotificationPresentation,
+  NotificationAnnouncer,
+} from "@/components/notifications/notification-taxonomy";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,10 +37,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/hooks/use-i18n";
-import {
-  useNotificationCenter,
-  type NotificationCenterItem,
-} from "@/hooks/use-notification-center";
+import { useNotificationCenter } from "@/hooks/use-notification-center";
 import type { Locale } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import { logoutAndRedirect } from "@/lib/auth/logout-client";
@@ -55,20 +56,6 @@ interface TopbarProps {
   serverLocale: Locale;
   serverDir: "ltr" | "rtl";
 }
-
-const NOTIFICATION_PRESENTATION: Partial<Record<
-  NotificationCenterItem["type"],
-  {
-    icon: typeof Bell;
-    className: string;
-  }
->> = {
-  info: { icon: Bell, className: "bg-muted text-muted-foreground" },
-};
-const DEFAULT_NOTIFICATION_PRESENTATION = {
-  icon: Bell,
-  className: "bg-muted text-muted-foreground",
-};
 
 /**
  * Phase 5 application command/title bar.
@@ -252,7 +239,7 @@ export function Topbar({
         </span>
         <kbd
           dir="ltr"
-          className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-md border border-border/80 bg-background/80 px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-sm [unicode-bidi:isolate]"
+          className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-md border border-border/80 bg-background/80 px-1.5 font-mono text-2xs font-medium text-muted-foreground shadow-sm [unicode-bidi:isolate]"
         >
           <span aria-hidden="true">Ctrl</span>
           <span aria-hidden="true">K</span>
@@ -283,7 +270,7 @@ export function Topbar({
               disabled={isLocalePending}
             >
               <Globe className="size-4" aria-hidden="true" />
-              <span className="hidden text-[11px] font-semibold uppercase sm:inline">
+              <span className="hidden text-2xs font-semibold uppercase sm:inline">
                 {locale}
               </span>
             </Button>
@@ -310,6 +297,8 @@ export function Topbar({
 
         <ThemeToggle />
 
+        <NotificationAnnouncer notifications={notifications} />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -320,7 +309,7 @@ export function Topbar({
             >
               <Bell className="size-4" aria-hidden="true" />
               {unreadCount > 0 ? (
-                <span className="absolute end-0 top-0 flex min-w-3.5 -translate-y-0.5 translate-x-0.5 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-3.5 text-white rtl:-translate-x-0.5">
+                <span className="absolute end-0 top-0 flex min-w-3.5 -translate-y-0.5 translate-x-0.5 items-center justify-center rounded-full bg-background px-1 text-2xs font-bold leading-3.5 text-destructive ring-1 ring-destructive rtl:-translate-x-0.5">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               ) : null}
@@ -331,7 +320,7 @@ export function Topbar({
               <span>{t("common.notifications")}</span>
               {unreadCount > 0 ? (
                 <Badge variant="secondary" className="px-1.5 text-xs">
-                  {t("topbar.newNotifications", { n: String(unreadCount) })}
+                  {t("topbar.newNotifications", { count: unreadCount })}
                 </Badge>
               ) : null}
             </DropdownMenuLabel>
@@ -350,8 +339,7 @@ export function Topbar({
               ) : (
                 notifications.slice(0, 6).map((notification) => {
                   const presentation =
-                    NOTIFICATION_PRESENTATION[notification.type] ??
-                    DEFAULT_NOTIFICATION_PRESENTATION;
+                    getNotificationPresentation(notification);
                   const Icon = presentation.icon;
                   const content = (
                     <>
@@ -377,7 +365,7 @@ export function Topbar({
                             {notification.body}
                           </span>
                         ) : null}
-                        <span className="block text-[11px] text-muted-foreground/70">
+                        <span className="block text-2xs text-muted-foreground/70">
                           {notification.time}
                         </span>
                       </span>

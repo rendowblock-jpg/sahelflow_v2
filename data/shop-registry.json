@@ -1,0 +1,17 @@
+{
+  "formatVersion": 2,
+  "revision": 1,
+  "workspaceId": "48af89b071bf475586191e688c6762eb",
+  "installationId": "269ae1a0294c4b6985f7edd518b5f829",
+  "activeShopId": "default",
+  "shops": [
+    {
+      "id": "default",
+      "incarnationId": "e80152c937f64cf7b54de79dbbda0d4d",
+      "name": "Ma Boutique",
+      "databaseFile": "dev.db",
+      "icon": "🏪",
+      "createdAt": "2026-08-30T00:29:04.731Z"
+    }
+  ]
+}

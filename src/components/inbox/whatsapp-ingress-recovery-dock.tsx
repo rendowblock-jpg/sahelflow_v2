@@ -225,12 +225,12 @@ export function WhatsAppIngressRecoveryDock({
                         </strong>
                         <Badge
                           variant={event.status === "dead_letter" ? "destructive" : "outline"}
-                          className="text-[10px]"
+                          className="text-2xs"
                         >
                           {tr(event.status as WhatsAppIngressRecoveryKey)}
                         </Badge>
                       </div>
-                      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-2xs text-muted-foreground">
                         <span>{copy("attempts")}: {event.attemptCount}</span>
                         {event.lastErrorCode ? (
                           <span dir="ltr">{copy("lastError")}: {event.lastErrorCode}</span>
@@ -244,7 +244,7 @@ export function WhatsAppIngressRecoveryDock({
                       <History className="size-3.5" aria-hidden="true" />
                       {copy("history")}
                     </summary>
-                    <ol className="mt-2 space-y-1.5 ps-5 text-[11px] text-muted-foreground">
+                    <ol className="mt-2 space-y-1.5 ps-5 text-2xs text-muted-foreground">
                       {event.attempts.map((attempt) => (
                         <li key={attempt.id}>
                           <span dir="ltr">#{attempt.attemptNumber}</span>

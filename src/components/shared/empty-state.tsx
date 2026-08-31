@@ -11,6 +11,12 @@ interface EmptyStateProps {
   actionLabel?: string;
   actionHref?: string;
   onAction?: () => void;
+  /**
+   * Explicit action node. When provided it overrides the actionLabel/onAction/
+   * actionHref composition, letting a call site mount a richer CTA (for
+   * example a dialog trigger) as the first-use primary action.
+   */
+  action?: React.ReactNode;
   className?: string;
 }
 
@@ -30,9 +36,10 @@ export function EmptyState({
   actionLabel,
   actionHref,
   onAction,
+  action,
   className,
 }: EmptyStateProps) {
-  const action =
+  const composedAction =
     actionLabel && (actionHref || onAction) ? (
       actionHref ? (
         <Button asChild size="sm">
@@ -44,13 +51,14 @@ export function EmptyState({
         </Button>
       )
     ) : null;
+  const actionNode = action ?? composedAction;
 
   return (
     <StateSurface
       icon={icon}
       title={title}
       description={description}
-      actions={action}
+      actions={actionNode}
       size="panel"
       className={className}
     />
