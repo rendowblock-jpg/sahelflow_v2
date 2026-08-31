@@ -17,6 +17,7 @@ export type GeminiProviderErrorCode =
   | "GEMINI_KEY_INVALID"
   | "GEMINI_PERMISSION_DENIED"
   | "GEMINI_QUOTA_EXHAUSTED"
+  | "GEMINI_LOCATION_UNSUPPORTED"
   | "GEMINI_REGION_OR_BILLING_REQUIRED"
   | "GEMINI_MODEL_UNAVAILABLE"
   | "GEMINI_REQUEST_INVALID"
@@ -59,6 +60,20 @@ function providerError(
   if (status === 429 || providerStatus === "RESOURCE_EXHAUSTED") {
     return new GeminiProviderError(
       "GEMINI_QUOTA_EXHAUSTED",
+      message,
+      status,
+    );
+  }
+  // Google refuses Gemini API use from countries/regions outside its
+  // availability list (e.g. Algeria) with FAILED_PRECONDITION "User location
+  // is not supported for the API use." That is a seller-location verdict —
+  // auth already passed — and must not read as a key or billing problem.
+  if (
+    providerStatus === "FAILED_PRECONDITION" &&
+    /location is not supported|not supported for the api use/i.test(message)
+  ) {
+    return new GeminiProviderError(
+      "GEMINI_LOCATION_UNSUPPORTED",
       message,
       status,
     );
@@ -257,6 +272,8 @@ const ERROR_COPY: Record<
       "La clé Gemini n'a pas l'autorisation requise.",
     GEMINI_QUOTA_EXHAUSTED:
       "Le quota Gemini est atteint. Réessayez après réinitialisation du quota.",
+    GEMINI_LOCATION_UNSUPPORTED:
+      "La clé est valide, mais Google n'autorise pas l'API Gemini depuis votre pays ou région actuels.",
     GEMINI_REGION_OR_BILLING_REQUIRED:
       "Gemini nécessite une configuration de région ou de facturation pour ce projet.",
     GEMINI_MODEL_UNAVAILABLE:
@@ -270,6 +287,8 @@ const ERROR_COPY: Record<
     GEMINI_KEY_INVALID: "مفتاح Gemini غير صالح.",
     GEMINI_PERMISSION_DENIED: "مفتاح Gemini لا يملك الصلاحيات المطلوبة.",
     GEMINI_QUOTA_EXHAUSTED: "تم استهلاك حصة Gemini. أعد المحاولة بعد تجدد الحصة.",
+    GEMINI_LOCATION_UNSUPPORTED:
+      "المفتاح صالح، لكن Google لا يسمح باستخدام واجهة Gemini من بلدك أو منطقتك الحالية.",
     GEMINI_REGION_OR_BILLING_REQUIRED: "يتطلب Gemini إعداد المنطقة أو الفوترة لهذا المشروع.",
     GEMINI_MODEL_UNAVAILABLE: "لا يوجد نموذج Gemini إنتاجي مدعوم متاح لهذا المشروع.",
     GEMINI_REQUEST_INVALID: "رفض Gemini الطلب لأنه غير صالح.",
@@ -281,6 +300,8 @@ const ERROR_COPY: Record<
     GEMINI_KEY_INVALID: "The Gemini key is invalid.",
     GEMINI_PERMISSION_DENIED: "The Gemini key does not have the required permission.",
     GEMINI_QUOTA_EXHAUSTED: "The Gemini quota is exhausted. Retry after the quota resets.",
+    GEMINI_LOCATION_UNSUPPORTED:
+      "The key is valid, but Google does not allow the Gemini API from your current country or region.",
     GEMINI_REGION_OR_BILLING_REQUIRED: "Gemini requires region or billing setup for this project.",
     GEMINI_MODEL_UNAVAILABLE: "No supported production Gemini model is available for this project.",
     GEMINI_REQUEST_INVALID: "Gemini rejected the request as invalid.",

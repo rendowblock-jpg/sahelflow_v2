@@ -119,6 +119,28 @@ describe("verifyGeminiKey", () => {
     expect(result).toMatchObject({ ok: true, model: "gemini-3.5-flash" });
   });
 
+  it("reports Google's country/region block distinctly (valid key, unsupported location)", async () => {
+    // Live-probe evidence (campaign D1): Google answers a valid key from an
+    // unsupported country with FAILED_PRECONDITION "User location is not
+    // supported for the API use." Auth passed — the verdict is the location.
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: 400,
+            status: "FAILED_PRECONDITION",
+            message: "User location is not supported for the API use.",
+          },
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const result = await verifyGeminiKey("AQ.AbC123new-format-key");
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe("GEMINI_LOCATION_UNSUPPORTED");
+    expect(fetch).toHaveBeenCalled();
+  });
+
   it("requires real model output and reports the selected stable model", async () => {
     vi.mocked(fetch).mockResolvedValue(ok("OK"));
     const result = await verifyGeminiKey("AIza-valid-key");
