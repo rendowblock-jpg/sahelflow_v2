@@ -896,6 +896,33 @@ Binding boundaries:
 - Implemented through PR #366; campaign rows R3–R6 repairs (#362–#365) are
   unrelated to this decision and ride the same successor package.
 
+## FD-053 — One signed successor (Internal.31) packaging the campaign repair line and the six-wave stream
+
+The Founder's 2026-08-31 directive ("they do all work for now let's continue
+and make the next signed release"), issued after the FD-051 installed-campaign
+evidence report, authorizes exactly one combined signed successor (Internal.31)
+packaging the protected-main frontier at cutting time: the FD-051 installed-
+campaign repair line (#362–#365: B3 sidecar media MIME, D1 Gemini key-format
+acceptance + region mapping, B5 coded delete errors, B4 mic-failure
+diagnostics), the FD-052 demo-coexist implementation (#366), and the frontend
+Class-AAA six-wave stream (#359), which receives its first installed/Founder
+observation on this package (delta row D3).
+
+Binding boundaries:
+
+- The successor packages exactly the protected-main frontier at the release
+  head; certification cites the tree-identical product head (`569e921…`,
+  git-diff empty against squash `f0fca29…`) and its green CI/Phase 5/Phase 6-7
+  runs.
+- FD-045 evidence rules are unchanged: release-authority PR, exact-head review,
+  required gates, expected-head merge, signed run, in-place preserved install.
+- The Internal.31 installed campaign re-verifies R3–R6 (B3/B4/B5/D1 repairs),
+  R11 (FRC-2 key lifecycle, performable through the #363 gate fix) and D3
+  (six-wave first observations); the retained #306 logout row executes LAST,
+  after every other row is green.
+- No customer-online, Beta, Stable or paid-deployment authority is created.
+  #230 and the zero-budget boundary are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states
