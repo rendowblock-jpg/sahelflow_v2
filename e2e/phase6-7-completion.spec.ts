@@ -734,7 +734,14 @@ test.describe.serial("Orders governed seller journey", () => {
     await expect(page.getByText("Fulfillment and delivery")).toBeVisible({
       timeout: 30_000,
     });
-    await expect(page.getByText("Canonical fulfillment authority")).toBeVisible();
+    // The lifecycle rail replaced the former canonical-fulfillment card, so
+    // the authority badge string is gone by design ("one authority per
+    // concept"). Post-commit authority is now expressed by the action gate:
+    // the confirm action is consumed and the governed fulfillment command
+    // (Mark packed) becomes the available next action.
+    await expect(
+      page.getByRole("button", { name: "Confirm order" }),
+    ).toBeHidden();
     await expect(page.getByRole("button", { name: "Mark packed" })).toBeVisible();
     await expect(page.locator("body")).toContainText(orderNumber);
     await assertContained(page, `/orders/${orderId}`);
