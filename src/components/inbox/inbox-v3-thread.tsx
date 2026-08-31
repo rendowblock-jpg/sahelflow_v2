@@ -649,6 +649,8 @@ export function InboxV3Thread({
     },
     onError: (message) => setSendError(message),
     copy: {
+      micPermissionDenied: copy("voiceMicPermissionDenied"),
+      micDeviceNotFound: copy("voiceMicDeviceNotFound"),
       micUnavailable: copy("voiceMicUnavailable"),
       recordingUnsupported: copy("voiceRecordingUnsupported"),
       processingFailed: copy("voiceProcessingFailed"),

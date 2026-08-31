@@ -39,6 +39,8 @@ interface UseVoiceRecorderInput {
   onError: (message: string) => void;
   /** Localized copy strings resolved by the caller (i18n lives at the UI). */
   copy: {
+    micPermissionDenied: string;
+    micDeviceNotFound: string;
     micUnavailable: string;
     recordingUnsupported: string;
     processingFailed: string;
@@ -166,10 +168,29 @@ export function useVoiceRecorder({
       });
     } catch (error) {
       setState("idle");
-      if (process.env.NODE_ENV === "development") {
-        console.warn("voice recording microphone request failed", error);
+      // Name the failure cause (campaign row B4): Windows/WebView2 permission
+      // denial, missing device and insecure-context failures previously
+      // collapsed into one message, making installed-build diagnosis
+      // impossible. The raw error name is always logged.
+      const errorName =
+        error instanceof DOMException || error instanceof Error
+          ? error.name
+          : "UnknownError";
+      console.warn(
+        `[voice-recorder] microphone request failed: ${errorName}`,
+        error,
+      );
+      if (errorName === "NotAllowedError" || errorName === "SecurityError") {
+        onErrorRef.current(copyRef.current.micPermissionDenied);
+      } else if (
+        errorName === "NotFoundError" ||
+        errorName === "DevicesNotFoundError" ||
+        errorName === "OverconstrainedError"
+      ) {
+        onErrorRef.current(copyRef.current.micDeviceNotFound);
+      } else {
+        onErrorRef.current(copyRef.current.micUnavailable);
       }
-      onErrorRef.current(copyRef.current.micUnavailable);
       return;
     }
     const recorder = new MediaRecorder(stream, {
