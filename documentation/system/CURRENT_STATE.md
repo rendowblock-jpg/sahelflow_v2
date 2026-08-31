@@ -1,13 +1,13 @@
 # SahelFlow — Current State
 
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
-> **Last assessed:** 2026-08-30
+> **Last assessed:** 2026-08-31
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at reconciliation `2eb8a33749118e233240019bf2df9a47d586a04d` after release PR #357
+> **Live protected main:** resolve from GitHub before every action; at reconciliation `324719ff999565967e2939a5eacc82539ae86cbc` after PR #359 (frontend Class-AAA remediation, six waves)
 > **Current signed release:** Internal.30 / `1.0.0-internal.30` / MSI `1.0.0.30` / FD-051 (published; Founder installation pending)
 > **Reviewed release head:** `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`
 > **Signed publication run:** `33292278832` — success
-> **Current execution:** FD-051 successor published — the Founder applies the in-place Internal.30 update with state preserved, re-verifies the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive) plus the deep-audit register's audit-affected rows, the retained FRC-2 repair rows, the #306 real-phone rows and the applicable matrix rows, evidence is reconciled, then FRC-3 resumes; the parallel frontend/UI stream becomes the next candidate after Founder re-verification
+> **Current execution:** FD-051 successor published — the Founder applies the in-place Internal.30 update with state preserved, re-verifies the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive) plus the deep-audit register's audit-affected rows, the retained FRC-2 repair rows, the #306 real-phone rows and the applicable matrix rows, evidence is reconciled, then FRC-3 resumes; the merged PR #359 six-wave delta rides protected `main` ahead of the next signed package (delta: `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`)
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
@@ -15,7 +15,7 @@ This document distinguishes protected source, automated evidence, signed publica
 
 Internal.30 is the latest signed/published artifact:
 
-- protected release source `2eb8a33749118e233240019bf2df9a47d586a04d` / release PR #357 (equals protected `main`);
+- protected release source `2eb8a33749118e233240019bf2df9a47d586a04d` / release PR #357 (no longer equals protected `main`: PR #359 merged after publication — delta in `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`);
 - app `1.0.0-internal.30`;
 - MSI `1.0.0.30`;
 - channel `internal`;
@@ -24,7 +24,7 @@ Internal.30 is the latest signed/published artifact:
 - owned host suffix `null`;
 - customer-online licensing disabled.
 
-PR #357 reviewed head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c` passed the full Required battery (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence, native source contract and Windows Rust release parity) with zero code deltas on the release-authority files. Certification cited product head `40f5386095e3a11b5f586673d3f6d0cc99956a66` — tree-identical to the #355 squash `14c059b7621d08a041830a626d5b3f2fb6fd75e6` (CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`); #356 is documentation-only, so the packaged product tree is identical.
+PR #357 reviewed head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c` passed the full Required battery (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence, native source contract and Windows Rust release parity) with zero code deltas on the release-authority files. Certification cited product head `40f5386095e3a11b5f586673d3f6d0cc99956a66` — tree-identical to the #355 squash `14c059b7621d08a041830a626d5b3f2fb6fd75e6` (CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`); #356 is documentation-only, so the packaged product tree is identical. PR #359 (frontend Class-AAA remediation, six waves) was merged to protected `main` `324719ff…` on 2026-08-31 (Founder option-B directive) and is NOT part of this package.
 
 After expected-head merge, dispatcher `33292273959`, signed updater/publication run `33292278832` and release observer `33292285084` succeeded on exact protected main. The release was published at tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`.
 
@@ -33,7 +33,7 @@ Published MSI:
 - `SahelFlow_1.0.0-internal.30_x64_en-US.msi`;
 - digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`.
 
-The Founder has **not yet installed** Internal.30; the latest Founder-installed checkpoint remains Internal.29 (FD-050, installed in place during its campaign — the campaign reproduced defects B1–B5 and D1, all repaired as #346–#353 and packaged here together with the deep-audit remediation register #355). Retained Internal.29 publication facts: dispatcher `33212635887`, signed run `33212648778`, observer `33212661580`, tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`, MSI digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`. Preserve the installed state through the Internal.30 in-place update and campaign. The parallel frontend/UI stream is explicitly not bundled (FD-051) and becomes the next candidate after Founder re-verification.
+The Founder has **not yet installed** Internal.30; the latest Founder-installed checkpoint remains Internal.29 (FD-050, installed in place during its campaign — the campaign reproduced defects B1–B5 and D1, all repaired as #346–#353 and packaged here together with the deep-audit remediation register #355). Retained Internal.29 publication facts: dispatcher `33212635887`, signed run `33212648778`, observer `33212661580`, tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`, MSI digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`. Preserve the installed state through the Internal.30 in-place update and campaign. The frontend/UI stream PR #359 was not bundled (FD-051) and was merged to protected `main` `324719ff…` on 2026-08-31 after publication; its six waves receive their first installed/Founder observation on the next signed package.
 
 ## 2. Product/security line packaged in Internal.30
 

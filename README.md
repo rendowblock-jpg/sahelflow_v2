@@ -6,7 +6,7 @@ The active documentation entry point is [`documentation/README.md`](documentatio
 
 ## Current repository truth
 
-- Resolve protected `main` before every write, review, merge, package or evidence claim. At the 2026-08-30 reconciliation it is `2eb8a33749118e233240019bf2df9a47d586a04d` after release PR #357 (docs-only #356/#358 reconcile on top; the packaged product tree is unchanged).
+- Resolve protected `main` before every write, review, merge, package or evidence claim. At the 2026-08-31 reconciliation it is `324719ff999565967e2939a5eacc82539ae86cbc` after PR #359 (frontend Class-AAA remediation, six waves); docs-only #358/#360 sit between release PR #357 and #359. Protected `main` is now **ahead of** the published package — see `documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`.
 - Latest signed/published package: **Internal.30** — app `1.0.0-internal.30`, MSI `1.0.0.30`, FD-051, `founder-offline-only`. The latest **Founder-installed** checkpoint remains Internal.29 until the Founder applies the in-place Internal.30 update.
 - Internal.30 release authority is PR #357; protected release source `2eb8a33749118e233240019bf2df9a47d586a04d`; reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`. Internal.29 release authority remains PR #344 (`a34917e582c4806aee35ad5aca12aaea82a0ddcf`).
 - Signed dispatcher `33292273959`, signed updater/publication run `33292278832` and release observer `33292285084` completed successfully; Internal.29's `33212635887`/`33212648778`/`33212661580` remain retained evidence.
@@ -16,7 +16,7 @@ The active documentation entry point is [`documentation/README.md`](documentatio
 - Issue #306 is **open**: real-phone WhatsApp installed/provider certification. The published Internal.30 candidate awaits the Founder in-place update and re-verification campaign (FD-050 rows, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive, retained #306 rows).
 - Issues #316 and #317 are **open for installed/real-phone evidence only**: their source is complete (#319, #324, #325, #327, #329, #331 plus the FD-050 repair line) and packaged in published Internal.30.
 - Issue #230 is **open/reopened P1**: customer-online trial/network readiness remains blocked until owned production-domain and representative-network evidence exist.
-- Draft PR #359 (frontend Class-AAA remediation) is **parked by Founder freeze** — do not merge it whole; if anything from it is needed after the Internal.30 re-verification, extract the phone-bidi / contrast / dead-code pieces as separate PRs.
+- PR #359 (frontend Class-AAA remediation, six waves: phone bidi, CSS token authority, list UX, order lifecycle rail, onboarding/command palette, WCAG AA contrast contracts, voice player) was **merged** at `324719ff…` on the Founder's 2026-08-31 directive (option B: repair its two gate blockers in-branch, land green, merge). Its content is **NOT** inside published Internal.30; it rides protected `main` ahead of the next signed package and receives its first installed/Founder observation there.
 - Internal.30 and newer protected source do not authorize customer-online, Beta or Stable.
 
 ## What Internal.30 adds

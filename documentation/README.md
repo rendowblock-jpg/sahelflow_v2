@@ -8,7 +8,7 @@
 > **Protected release source:** `2eb8a33749118e233240019bf2df9a47d586a04d` / PR #357
 > **Reviewed release head:** `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`
 > **Signed publication run:** `33292278832` — success
-> **Current next outcome:** the Founder applies the in-place Internal.30 update with state preserved, re-verifies the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth, C1 sleep/wake auto-receive) plus the deep-audit register's audit-affected rows, the retained FRC-2 repair rows, the #306 real-phone rows and the applicable matrix rows, evidence is reconciled, then FRC-3 resumes; the parallel frontend/UI stream becomes the next candidate after that re-verification
+> **Current next outcome:** the Founder applies the in-place Internal.30 update with state preserved, re-verifies the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth, C1 sleep/wake auto-receive) plus the deep-audit register's audit-affected rows, the retained FRC-2 repair rows, the #306 real-phone rows and the applicable matrix rows, evidence is reconciled, then FRC-3 resumes; the merged PR #359 six-wave delta rides protected `main` and receives its first installed/Founder observation on the next signed package (delta: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`)
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
@@ -20,17 +20,18 @@ This directory is the active documentation authority for SahelFlow. `documentati
 4. `operations/WORKING_MEMORY.md` — single compact resumable frontier.
 5. `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` — active issue #317 message/media evidence ledger when Inbox or provider work is in scope.
 6. `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md` — active FRC-2 AI/tools/order-extraction evidence ledger when AI work is in scope.
-7. `product/PRODUCT.md` — product promise, seller jobs, commercial boundaries and entitlements.
-8. `product/EXPERIENCE.md` — Class-AAA experience, capabilities and Required journeys.
-9. `product/DECISIONS.md` — consolidated Founder decisions, including FD-045 First Revenue Certification.
-10. `system/ARCHITECTURE.md` — canonical authority, provider, AI, native, security and recovery invariants.
-11. `research/RESEARCH.md` plus privacy/security inventories when relevant.
+7. `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` — the exact Internal.30 ↔ protected-`main` reconciliation (PR #359 delta) and the FD-051 installed-campaign rows when packaging, releasing or executing the campaign.
+8. `product/PRODUCT.md` — product promise, seller jobs, commercial boundaries and entitlements.
+9. `product/EXPERIENCE.md` — Class-AAA experience, capabilities and Required journeys.
+10. `product/DECISIONS.md` — consolidated Founder decisions, including FD-045 First Revenue Certification.
+11. `system/ARCHITECTURE.md` — canonical authority, provider, AI, native, security and recovery invariants.
+12. `research/RESEARCH.md` plus privacy/security inventories when relevant.
 
 Reading order does not change authority precedence. A newer explicit Founder decision outranks lower execution documents for the choice it changes. Protected GitHub source, exact Actions evidence and signed releases outrank stale chat summaries.
 
 ## Current protected and signed truth
 
-Protected `main` at reconciliation is `2eb8a33749118e233240019bf2df9a47d586a04d` after release PR #357; no open PR existed immediately after #357. Revalidate live state before every write/merge.
+Protected `main` at reconciliation is `324719ff999565967e2939a5eacc82539ae86cbc` after PR #359 (frontend Class-AAA remediation, six waves); docs-only #358/#360 sit between release PR #357 and #359, and no open PR remains after the #359 merge. Revalidate live state before every write/merge.
 
 Internal.30 is the latest real signed/published offline package:
 
@@ -41,7 +42,7 @@ Internal.30 is the latest real signed/published offline package:
 - release PR #357 / reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`;
 - the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence);
 - certification cited product head `40f5386095e3a11b5f586673d3f6d0cc99956a66` — tree-identical to the #355 squash `14c059b7621d08a041830a626d5b3f2fb6fd75e6` (CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`); #356 is documentation-only;
-- packages the FD-050 installed-campaign repair line (#346–#353) AND the deep-audit remediation register (#355); the parallel frontend/UI stream is explicitly NOT bundled;
+- packages the FD-050 installed-campaign repair line (#346–#353) AND the deep-audit remediation register (#355); the frontend/UI stream PR #359 was NOT bundled at publication and was merged to protected `main` at `324719ff…` on 2026-08-31 (Founder option-B directive) — it rides `main` ahead of the next signed package (`operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`);
 - dispatcher `33292273959` — success;
 - signed updater/publication `33292278832` and release observer `33292285084` — success;
 - release tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`;
