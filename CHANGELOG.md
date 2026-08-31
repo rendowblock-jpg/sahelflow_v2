@@ -8,6 +8,13 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-08-31 — signed Internal.31 publication (FD-053)
+
+- Release PR #368 head `a1b4d56e5f723bbd3cacae104939ba668998e38b` passed the full Required battery on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence) and was squash-merged to protected `main` `38c95aa8f5e1f3d44326c727efd0d8fd54cba20a` under expected-head discipline. Certification cited product head `569e921…` (tree-identical to `f0fca29…`; CI `33368228685`, Phase 5 `33368228409`, Phase 6-7 `33368228448`).
+- Dispatcher `33373167723`, signed updater/publication run `33373176435` and release observer `33373187695` succeeded on exact protected main; published tag `sahelflow-v1.0.0-internal.31-38c95aa8f5e1f3d44326c727efd0d8fd54cba20a` with the signed Windows updater artifact (digest `sha256:f4e5abbd13c080080f7bdb88345df9b84ee1d7ee0bb1c7fce320fab490729297`).
+- App `1.0.0-internal.31`, MSI `1.0.0.31`, authority FD-053, mode `founder-offline-only`. The package carries the FD-051 repair line (#362–#366: B3/B5/D1/B4 + FD-052 demo coexist) and the #359 six-wave frontend remediation delta.
+- Internal.30 remains the latest Founder-installed checkpoint until the in-place Internal.31 update; its installed campaign then re-verifies R3–R6, R11 (FRC-2 key lifecycle) and the #359 six-wave first observations (D3), with the #306 logout row LAST. Customer-online, Beta and Stable remain unauthorized.
+
 ### 2026-08-31 — FD-051 installed campaign executed; repair line #362–#366 merged to protected main
 
 - The Founder ran the FD-051 installed campaign on Internal.30: R1/R2 (in-place update, quote chips), R7 (delivery-receipt enum truth — sent/delivered/read observed on a real outbound through the truthful #350 mapper), R8 (C1 sleep/wake auto-receive, watchdog recovery with no manual reconnect), R10 (deep-audit register rows), R12 (applicable native rows) and the retained #306 rows (automatic no-refresh inbound, reopen persistence, governed status) passed; the #306 logout row remains reserved LAST.
