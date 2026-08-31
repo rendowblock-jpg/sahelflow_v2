@@ -3,9 +3,9 @@
 > **Status:** Active dependency/completion program
 > **Last reconciled:** 2026-08-28
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before action; at reconciliation `2eb8a33749118e233240019bf2df9a47d586a04d`
+> **Live protected main:** resolve from GitHub before action; at reconciliation `324719ff999565967e2939a5eacc82539ae86cbc` (PR #359 six-wave merge)
 > **Current signed checkpoint:** Internal.30 / FD-051 (published; Founder installation pending)
-> **Current execution mode:** Internal.30 published — Founder in-place install, re-verification campaign over the FD-050 rows, register-affected rows and retained matrix rows, then FRC-3; the parallel frontend/UI stream is the next candidate after that re-verification
+> **Current execution mode:** Internal.30 published — Founder in-place install, re-verification campaign over the FD-050 rows, register-affected rows and retained matrix rows, then FRC-3; the merged PR #359 six-wave delta rides protected `main` and receives its first installed/Founder observation on the next signed package (delta: `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`)
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 

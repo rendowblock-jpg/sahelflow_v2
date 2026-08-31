@@ -33,12 +33,12 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-At the 2026-08-30 reconciliation:
+At the 2026-08-31 reconciliation:
 
-- protected `main`: `2eb8a33749118e233240019bf2df9a47d586a04d` / release PR #357 (docs-only #356/#358 reconcile on top); re-resolve live before acting;
+- protected `main`: `324719ff999565967e2939a5eacc82539ae86cbc` / PR #359 (frontend Class-AAA remediation, six waves) squash-merge after docs-only #358/#360; re-resolve live before acting;
 - latest signed/published checkpoint: **Internal.30** / **FD-051**, mode `founder-offline-only`; the latest **Founder-installed** checkpoint remains Internal.29 until the in-place Internal.30 update;
-- Internal.30 release source: `2eb8a33749118e233240019bf2df9a47d586a04d` (equals protected `main`); reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`; signed dispatcher `33292273959`, updater/publication run `33292278832`, release observer `33292285084`; MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`; tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`;
-- Internal.30 packages the FD-050 installed-campaign repair line (#346–#353: campaign defects B1–B5/D1, Baileys status-enum truth, C1 auto-receive resilience) and the deep-audit remediation register (#355); the parallel frontend/UI stream (draft PR #359) is explicitly NOT bundled and is parked by Founder freeze — do not merge it whole; extract the phone-bidi / contrast / dead-code pieces as separate PRs only if needed after the campaign;
+- Internal.30 release source: `2eb8a33749118e233240019bf2df9a47d586a04d` (no longer equals protected `main`: PR #359 merged after publication — see the reconciliation ledger); reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`; signed dispatcher `33292273959`, updater/publication run `33292278832`, release observer `33292285084`; MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`; tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`;
+- Internal.30 packages the FD-050 installed-campaign repair line (#346–#353: campaign defects B1–B5/D1, Baileys status-enum truth, C1 auto-receive resilience) and the deep-audit remediation register (#355); the frontend/UI stream PR #359 was merged to protected `main` at `324719ff…` on the Founder's 2026-08-31 directive (option B) and is explicitly NOT part of published Internal.30 — its six waves ride `main` ahead of the next signed package; the exact delta and campaign rows live in `documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`;
 - Internal.29 (installed in place during its FD-050 campaign) demonstrated the retained product rows but reproduced defects B1–B5 and D1, all repaired on protected main;
 - issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint;
 - issues #306 and #230 remain open for real-phone WhatsApp certification and customer-online readiness;

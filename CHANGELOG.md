@@ -8,6 +8,12 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-08-31 — PR #359 frontend Class-AAA remediation merged to protected main (Founder option-B directive)
+
+- PR #359 (frontend Class-AAA remediation, six waves) merged to protected `main` at `324719ff999565967e2939a5eacc82539ae86cbc` (squash of branch head `e468adca11df286907bf3b54895e657a213d6e2c`, 21/21 checks green including installed-MSI lanes and both Required gates; source diagnostics tsc/ESLint/Vitest 3482/3482). Wave 1: phone-number bidi isolation, CSS token authority, notification-center refactor and ~5,000-line dead-code removal (11 files). Wave 2: URL-persisted list filters, CSV export with formula-injection guard/RFC4180/BOM/server-side ≤5k cap, confirmation queue, async combobox. Wave 3: single order lifecycle rail (governed Confirm became single-click with direct stock deduction), A5 delivery note, wa.me deep links. Wave 4: onboarding wizard and keyboard command palette. Wave 5: `e.code` shortcuts, WCAG AA contrast contract tests, server-locale truth, voice-note player. Wave 6: hover tokens and feedback semantics.
+- Two PR-authored gate blockers repaired in-branch before merge: the installed server-locale proof moved behind the runtime-session boundary (`Assert-InstalledServerLocaleDictionaries`, filesystem-backed at the exact standalone runtime path), and the governed-confirm browser evidence aligned to the rail authority model. One documented CI flake (Quality Gate re-run attempt 2) after a 15s Vitest timeout in an untouched demo-clock test; it did not reproduce.
+- This content is NOT inside published Internal.30 (source `2eb8a337…`); it rides protected `main` ahead of the next signed package. Exact delta, gate-repair detail and campaign rows: `documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`. The FD-051 installed Founder campaign on the published Internal.30 package is unchanged and remains the next evidence action; FRC-3 still waits on it.
+
 ### 2026-08-28 — #316/#317 source completion and signed Internal.28 publication (FD-049)
 
 - #317 professional WhatsApp Inbox parity completed in source: PRs #324 (durable outbound images), #325 (MP4 video), #327 (documents), #329 (voice/PTT) and #331 (interaction parity: durable quoted replies, safe message copy, upload progress with in-flight cancellation, JPEG thumbnails with fail-closed fallback, paste/drop). Ledger reconciles #326/#328/#330/#332 kept `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` exact; after #332 no `missing` source rows remained.

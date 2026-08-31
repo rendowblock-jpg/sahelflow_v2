@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-26
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.30 / FD-051 is the latest signed/published (Founder installation pending) — it packages the FD-050 campaign repair line (#346–#353) and the deep-audit remediation register (#355); next is the Founder's in-place Internal.30 update, the re-verification campaign over the FD-050 rows, register-affected rows, retained #306 rows and applicable matrix rows, evidence reconciliation, then FRC-3 resume; the parallel frontend/UI stream becomes the next candidate after that re-verification
+> **Current checkpoint:** Internal.30 / FD-051 is the latest signed/published (Founder installation pending) — it packages the FD-050 campaign repair line (#346–#353) and the deep-audit remediation register (#355); next is the Founder's in-place Internal.30 update, the re-verification campaign over the FD-050 rows, register-affected rows, retained #306 rows and applicable matrix rows, evidence reconciliation, then FRC-3 resume; the merged PR #359 six-wave delta rides protected `main` and receives its first installed/Founder observation on the next signed package (delta: `INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`)
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 

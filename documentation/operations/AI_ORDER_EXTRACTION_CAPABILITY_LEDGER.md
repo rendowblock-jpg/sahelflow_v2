@@ -10,7 +10,7 @@
 > **Latest signed/published:** Internal.30 / FD-051 (tag
 > `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`, MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`; packages the FD-050 installed-campaign repair line #346–#353 AND the
 > deep-audit remediation register #355, pending Founder in-place installation; the installed-campaign matrix rows
-> await Founder re-verification on the installed Internal.29 candidate)
+> await Founder re-verification on the installed Internal.30 candidate)
 
 This ledger is the FRC-2 required deliverable. It separates what the AI source can
 do from automated, signed/installed, founder-observed and live-provider evidence.
