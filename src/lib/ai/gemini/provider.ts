@@ -315,7 +315,15 @@ export async function verifyGeminiKey(
   error?: string;
   code?: GeminiProviderErrorCode;
 }> {
-  if (!apiKey || !apiKey.startsWith("AIza")) {
+  // Google AI Studio issues keys in two formats: the legacy "AIza…" project
+  // keys and the newer "AQ." keys. Both travel the same x-goog-api-key
+  // header; the live probe below is the real validator (campaign row D1 —
+  // the stale AIza-only gate rejected valid new-format keys before any
+  // network activity).
+  const candidateKey = apiKey.trim();
+  const knownKeyFormat =
+    candidateKey.startsWith("AIza") || candidateKey.startsWith("AQ.");
+  if (!candidateKey || !knownKeyFormat) {
     return {
       ok: false,
       code: "GEMINI_KEY_INVALID",
@@ -324,7 +332,7 @@ export async function verifyGeminiKey(
   }
 
   try {
-    const { response, model } = await requestGemini(apiKey, {
+    const { response, model } = await requestGemini(candidateKey, {
       timeoutMs,
       maxAttemptsPerModel: 1,
       body: {

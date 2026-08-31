@@ -113,6 +113,12 @@ describe("verifyGeminiKey", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("accepts the newer Google AI Studio key format (AQ.)", async () => {
+    vi.mocked(fetch).mockResolvedValue(ok("OK"));
+    const result = await verifyGeminiKey("AQ.AbC123new-format-key");
+    expect(result).toMatchObject({ ok: true, model: "gemini-3.5-flash" });
+  });
+
   it("requires real model output and reports the selected stable model", async () => {
     vi.mocked(fetch).mockResolvedValue(ok("OK"));
     const result = await verifyGeminiKey("AIza-valid-key");
