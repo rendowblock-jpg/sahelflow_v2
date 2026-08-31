@@ -93,7 +93,7 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     available: "جاهزة للتحميل",
     unavailable: "المتجر يحتوي على بيانات حقيقية",
     unavailableDescription:
-      "لن يخلط SahelFlow البيانات التجريبية مع سجلات البائع. أنشئ متجرًا فارغًا أو استخدم متجرًا بدون عمليات.",
+      "لا يمكن تحميل البيانات التجريبية إلا في متجر فارغ. إذا كانت محمّلة فعليًا، يمكنك العمل عاديًا — تبقى سجلاتها محسوبة في الإحصائيات والتقارير حتى حذفها.",
     load: "تحميل المتجر التجريبي السنوي",
     loading: "جارٍ إنشاء سنة من البيانات...",
     remove: "حذف البيانات التجريبية",
@@ -113,7 +113,7 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     journey:
       "سجل أعمال يمتد سنة كاملة مع مواسم نشاط مختلفة ← رسالة واتساب حديثة من فاطمة الزهراء ← استخراج ومراجعة الطلب ← التأكيد ← الشحن مع Yalidine ← التسليم ← تحصيل وتحويل COD مع سجل واضح.",
     note:
-      "الأسماء والأرقام والطلبات خيالية ومخصصة للعرض. الأتمتة تعمل في وضع المحاكاة ولا تنفذ تأثيرات خارجية.",
+      "الأسماء والأرقام والطلبات خيالية ومخصصة للعرض. الأتمتة تعمل في وضع المحاكاة ولا تنفذ تأثيرات خارجية. أثناء بقاء البيانات التجريبية محمّلة تعمل عمليات المتجر الحقيقية عاديًا، ولا تُرسل الطلبات التجريبية أبدًا إلى شركات التوصيل الحقيقية.",
   },
   fr: {
     eyebrow: "Données de démonstration professionnelles",
@@ -126,7 +126,7 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     available: "Prête à charger",
     unavailable: "Cette boutique contient déjà des données",
     unavailableDescription:
-      "SahelFlow ne mélange jamais la démonstration avec les dossiers du vendeur. Utilisez une boutique vide pour l'évaluation.",
+      "Le jeu de démonstration ne peut être chargé que dans une boutique vide. S'il est déjà chargé, vous pouvez travailler normalement — ses lignes restent comptées dans les statistiques et les rapports jusqu'à sa suppression.",
     load: "Charger la démonstration annuelle",
     loading: "Création d'une année de données...",
     remove: "Supprimer la démonstration",
@@ -146,7 +146,7 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     journey:
       "Douze mois d'activité avec des rythmes saisonniers → message WhatsApp récent de Fatima Zohra → extraction et revue → confirmation → expédition Yalidine → livraison → collecte et remise COD avec historique explicite.",
     note:
-      "Les identités, téléphones et opérations sont fictifs. Les automatisations sont en simulation et n'exécutent aucun effet externe.",
+      "Les identités, téléphones et opérations sont fictifs. Les automatisations sont en simulation et n'exécutent aucun effet externe. Tant que la démonstration est chargée, les opérations réelles restent disponibles et les commandes de démonstration ne sont jamais envoyées à un transporteur réel.",
   },
   en: {
     eyebrow: "Professional sample data",
@@ -159,7 +159,7 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     available: "Ready to load",
     unavailable: "This shop already contains business data",
     unavailableDescription:
-      "SahelFlow never mixes sample records with seller records. Use an empty shop for evaluation.",
+      "The sample dataset can only be loaded into an empty shop. If it is already loaded you can keep working — its rows remain counted in stats and reports until removed.",
     load: "Load annual Algerian demo store",
     loading: "Creating one year of sample data...",
     remove: "Remove demo data",
@@ -179,7 +179,7 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     journey:
       "Twelve months of varied operating history → recent Fatima Zohra WhatsApp message → extraction and review → confirmation → Yalidine shipment → delivery → COD collection and remittance with a clear timeline.",
     note:
-      "Names, phone numbers, and operations are fictional. Automations run in dry-run mode and perform no external effects.",
+      "Names, phone numbers, and operations are fictional. Automations run in dry-run mode and perform no external effects. While the demo is loaded, real shop operations stay enabled, and demo-tagged orders are never dispatched to real courier providers.",
   },
 };
 

@@ -6,6 +6,7 @@ import { requireRouteAuth } from "@/lib/auth/route-authority";
 import { db, shopContext } from "@/lib/db";
 import { orderService } from "@/lib/data/order-service";
 import {
+  assertNonDemoCourierIdentity,
   getDeliveryAdapter,
   loadDeliveryCredentials,
 } from "@/lib/integrations/delivery";
@@ -47,6 +48,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   });
   const body = await req.json();
   const input = createSchema.parse(body);
+  // FD-052 option A (coexist): demo-tagged orders never reach a real courier.
+  assertNonDemoCourierIdentity("order", input.orderId);
   const context = { prisma: db, shop: shopContext };
   await assertProviderCapability(context, input.provider, "booking");
   const adapter = getDeliveryAdapter(input.provider);

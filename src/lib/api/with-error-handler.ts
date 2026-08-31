@@ -3,6 +3,14 @@
  * consistent error handling. Eliminates the ~700 lines of duplicated
  * try/catch boilerplate across 44 API routes (handoff T-005).
  *
+ * FD-052 option A (coexist): the Algerian demo workspace no longer freezes
+ * ordinary mutations. Real commerce/inbox/provider operations run while demo
+ * data is loaded; demo rows keep their `demo-` id tagging and are counted in
+ * stats and reports until removed (Founder-accepted mixing). The remaining
+ * demo boundary is narrow: demo-tagged orders/shipments must not generate
+ * real courier provider effects (DEMO_PROVIDER_EFFECT_BLOCKED at the booking,
+ * booking-sync, delivery-create and delivery-sync entries).
+ *
  * Usage:
  *   export const POST = withErrorHandler(async (req) => {
  *     const body = await req.json();
@@ -22,37 +30,17 @@ import { SahelFlowError } from "@/types/errors";
 import { logger } from "@/lib/logger";
 import { captureError } from "@/lib/monitoring/sentry";
 import { redactError } from "@/lib/redact-pii";
-import { db, shopContext } from "@/lib/db";
+import { shopContext } from "@/lib/db";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
-import { isAlgerianDemoLoaded } from "@/lib/demo/algerian-demo-policy";
 import { requireLicenseEntitlement } from "@/lib/license/license-authority";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteHandler = (...args: any[]) => Promise<NextResponse>;
 
-const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-
-/**
- * The demo workspace is a read-only evaluator surface. These routes are the
- * minimum control-plane exceptions required to authenticate, remove/reset the
- * demo, clear settings, prove runtime readiness, update the application, or
- * switch/create shops. All ordinary commerce/inbox/provider mutations fail
- * closed while the marker is loaded.
- */
-const DEMO_MUTATION_ALLOWLIST = [
-  /^\/api\/auth(?:\/|$)/,
-  /^\/api\/demo-data(?:\/|$)/,
-  /^\/api\/health(?:\/|$)/,
-  /^\/api\/internal(?:\/|$)/,
-  /^\/api\/license(?:\/|$)/,
-  /^\/api\/reports\/daily(?:\/|$)/,
-  /^\/api\/settings(?:\/|$)/,
-  /^\/api\/shops(?:\/|$)/,
-  /^\/api\/updates?(?:\/|$)/,
-] as const;
-
 // Audit 7-a F9: the dead /api/payment and /api/support entries were removed —
 // no such routes exist, so the allowlist no longer admits their path prefix.
+// The FD-052 option A coexist decision removed the former demo mutation
+// allowlist alongside the DEMO_MUTATION_BLOCKED gate it served.
 const LICENSE_LOCKOUT_ALLOWLIST = [
   /^\/api\/auth\/(?:login|logout|reauthenticate|setup|status)$/,
   /^\/api\/health(?:\/|$)/,
@@ -60,18 +48,10 @@ const LICENSE_LOCKOUT_ALLOWLIST = [
   /^\/api\/license(?:\/|$)/,
 ] as const;
 
-function resolveRequestMethod(req: NextRequest | undefined, label?: string): string {
-  return (req?.method ?? label?.trim().split(/\s+/, 1)[0] ?? "GET").toUpperCase();
-}
-
 function resolveRequestPath(req: NextRequest | undefined, label?: string): string {
   const pathname = req?.nextUrl?.pathname;
   if (pathname) return pathname;
   return label?.match(/(\/api\/[^\s?]+)/)?.[1] ?? "";
-}
-
-function isAllowedDemoMutation(pathname: string): boolean {
-  return DEMO_MUTATION_ALLOWLIST.some((pattern) => pattern.test(pathname));
 }
 
 function isAllowedDuringLicenseLockout(pathname: string): boolean {
@@ -90,7 +70,6 @@ export function withErrorHandler<T extends RouteHandler>(
         assertProcessShopAuthority(shopContext);
       }
 
-      const method = resolveRequestMethod(req, label);
       const pathname = resolveRequestPath(req, label);
       if (
         process.env.NODE_ENV === "production" &&
@@ -98,18 +77,6 @@ export function withErrorHandler<T extends RouteHandler>(
         !isAllowedDuringLicenseLockout(pathname)
       ) {
         await requireLicenseEntitlement();
-      }
-      if (
-        MUTATING_METHODS.has(method) &&
-        pathname.startsWith("/api/") &&
-        !isAllowedDemoMutation(pathname) &&
-        (await isAlgerianDemoLoaded(db))
-      ) {
-        throw new SahelFlowError(
-          "This Algerian demo workspace is read-only. Remove or reset the demo before creating or changing seller data.",
-          "DEMO_MUTATION_BLOCKED",
-          409,
-        );
       }
 
       const response = await handler(...args);
@@ -139,7 +106,7 @@ export function withErrorHandler<T extends RouteHandler>(
         } else {
           // Coded 4xx rejections stay invisible otherwise; the app log line
           // with the exact code is the primary installed-build diagnostic
-          // (e.g. LICENSE_*, DEMO_MUTATION_BLOCKED, PROTECTED_DATA_*).
+          // (e.g. LICENSE_*, DEMO_PROVIDER_EFFECT_BLOCKED, PROTECTED_DATA_*).
           logger.warn(`api.${logPath}`, {
             code: err.code,
             statusCode: err.statusCode,

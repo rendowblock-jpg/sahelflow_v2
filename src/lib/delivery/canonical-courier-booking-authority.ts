@@ -21,6 +21,7 @@ import {
 } from "@/lib/business-truth/principal";
 import type { ServiceContext } from "@/lib/data/service-base";
 import {
+  assertNonDemoCourierIdentity,
   getDeliveryAdapter,
   loadDeliveryCredentials,
 } from "@/lib/integrations/delivery";
@@ -239,6 +240,8 @@ export async function queueCanonicalCourierBooking(
   input: unknown,
 ): Promise<BusinessCommandResult<CourierBookingResult>> {
   const data = bookingSchema.parse(input);
+  // FD-052 option A (coexist): demo-tagged orders never reach a real courier.
+  assertNonDemoCourierIdentity("order", data.orderId);
   const aggregate = await bookingAggregate(context, data);
 
   return executeBusinessCommand(

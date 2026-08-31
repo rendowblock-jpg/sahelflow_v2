@@ -30,6 +30,7 @@ const mockAdapter = {
 };
 
 vi.mock("@/lib/integrations/delivery", () => ({
+  assertNonDemoCourierIdentity: vi.fn(),
   getDeliveryAdapter: vi.fn(() => mockAdapter),
   loadDeliveryCredentials: vi
     .fn()

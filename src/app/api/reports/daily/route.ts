@@ -8,10 +8,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { requireAuth } from "@/lib/auth/server";
 import { getI18n } from "@/lib/i18n-server";
-import {
-  isAlgerianDemoLoaded,
-  withDemoPolicyLock,
-} from "@/lib/demo/algerian-demo-policy";
+import { withDemoPolicyLock } from "@/lib/demo/algerian-demo-policy";
 
 /**
  * Projection of the last confirmed daily-report receipt. The durable WhatsApp
@@ -51,22 +48,17 @@ function reportProjection(
  * Generate and queue one exact shop/day report while the shared demo/effect
  * policy lock is held. A stable durable WhatsApp effect prevents duplicates
  * across response loss, worker restart or marker-persistence failure.
+ *
+ * FD-052 option A (coexist): while the demo workspace is loaded the report is
+ * generated normally and its aggregates include demo-tagged rows — the
+ * Founder-accepted mixing. The send destination remains the seller-configured
+ * phone; demo seeding itself still refuses effectful report settings, so a
+ * freshly seeded evaluation shop cannot silently message anyone.
  */
 async function executeReport(
   trigger: "cron" | "manual",
 ): Promise<NextResponse> {
   const context = { prisma: db, shop: shopContext };
-
-  if (await isAlgerianDemoLoaded(db)) {
-    return NextResponse.json(
-      {
-        ok: false,
-        reason: "demo workspace loaded",
-        code: "DEMO_REPORT_SEND_BLOCKED",
-      },
-      { status: 409, headers: { "Cache-Control": "no-store" } },
-    );
-  }
 
   const enabled = await getBool(
     context,

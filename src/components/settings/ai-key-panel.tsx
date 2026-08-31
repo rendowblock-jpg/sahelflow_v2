@@ -61,12 +61,11 @@ function requiresReauthentication(response: Response, body: SaveResult): boolean
 /**
  * Localized product copy for coded rejections. GEMINI_* codes already arrive
  * with locale-native copy from the API route; everything else gets bounded
- * product copy here so raw English server messages (license gates, demo
- * read-only mode, protected-key authority mismatches) never reach a merchant.
+ * product copy here so raw English server messages (license gates,
+ * protected-key authority mismatches) never reach a merchant.
  */
 function rejectionCopy(data: SaveResult, t: (key: string) => string): string {
   const code = data.code ?? "";
-  if (code === "DEMO_MUTATION_BLOCKED") return t("aiKey.errorDemo");
   if (code.startsWith("LICENSE_")) return t("aiKey.errorLicense");
   if (code.startsWith("PROTECTED_DATA_")) {
     return t("aiKey.errorSecretAuthority");

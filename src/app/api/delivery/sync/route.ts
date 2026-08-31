@@ -7,6 +7,7 @@ import { db, shopContext } from "@/lib/db";
 import { recordOrderChangeInTx } from "@/lib/data/order-change-service";
 import { orderService } from "@/lib/data/order-service";
 import {
+  assertNonDemoCourierIdentity,
   getDeliveryAdapter,
   loadDeliveryCredentials,
 } from "@/lib/integrations/delivery";
@@ -61,6 +62,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       400,
     );
   }
+  // FD-052 option A (coexist): demo-tagged shipments never query a real courier.
+  assertNonDemoCourierIdentity("delivery", delivery.id);
 
   const authority = await db.order.findFirst({
     where: { id: delivery.orderId, deletedAt: null },
@@ -250,6 +253,8 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       400,
     );
   }
+  // FD-052 option A (coexist): demo-tagged shipments never query a real courier.
+  assertNonDemoCourierIdentity("delivery", delivery.id);
 
   const context = { prisma: db, shop: shopContext };
   await assertProviderCapability(context, delivery.provider, "tracking");
