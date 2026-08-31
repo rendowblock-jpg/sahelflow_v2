@@ -150,6 +150,7 @@ const mockDeliveryAdapter = {
   syncTracking: vi.fn(),
 };
 vi.mock("@/lib/integrations/delivery", () => ({
+  assertNonDemoCourierIdentity: vi.fn(),
   getDeliveryAdapter: vi.fn(() => mockDeliveryAdapter),
   loadDeliveryCredentials: vi.fn().mockResolvedValue({ apiId: "x", apiToken: "y" }),
 }));
