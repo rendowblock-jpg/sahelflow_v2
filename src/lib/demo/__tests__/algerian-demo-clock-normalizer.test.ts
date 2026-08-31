@@ -45,6 +45,12 @@ afterEach(async () => {
 });
 
 describe("Algerian demo reference clock", () => {
+  // 90s explicit timeout: this single test seeds the full demo graph plus the
+  // annual history through a real SQLite database and clears it in
+  // beforeEach/afterEach, so it is the slowest test in the suite. The default
+  // 15s window has now timed out twice under CI load (documented on the #359
+  // merge head and on the B4 diagnostics head) without any assertion failure —
+  // a latency budget, not a correctness red.
   it("rebases the recent seed before annual history so frozen evidence has no future facts", async () => {
     await seedAlgerianDemoData(client());
     await finalizeAlgerianDemoStory(client());
@@ -107,5 +113,5 @@ describe("Algerian demo reference clock", () => {
     ]) {
       if (value) expect(value.getTime()).toBeLessThanOrEqual(reference.getTime());
     }
-  });
+  }, 90_000);
 });

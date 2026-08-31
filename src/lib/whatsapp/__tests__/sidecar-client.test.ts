@@ -111,9 +111,52 @@ describe("WhatsApp sidecar client", () => {
     expect(form.get("effectKey")).toBe(VIDEO_EFFECT_KEY);
     expect(form.get("requestBinding")).toBe(REQUEST_BINDING);
     expect(form.get("caption")).toBe("Demo");
+    // The declared media type rides an explicit form field — sidecar
+    // multipart parsing can drop the file-part Content-Type (campaign B3).
+    expect(form.get("mimeType")).toBe("video/mp4");
     const video = form.get("video");
     expect(video).toBeInstanceOf(Blob);
     expect((video as Blob).type).toBe("video/mp4");
+  });
+
+  it("declares the sniffed media type as an explicit form field for document and voice sends", async () => {
+    fetchMock.mockResolvedValue(
+      response(200, { ok: true, id: "WA-DOC-1", status: "sent" }),
+    );
+    await sidecar.sendDocument(
+      "213555000111",
+      Buffer.from("doc-bytes", "utf8"),
+      "application/pdf",
+      "facture.pdf",
+      "",
+      EFFECT_KEY,
+      REQUEST_BINDING,
+    );
+    const [documentUrl, documentInit] = fetchMock.mock.calls.at(
+      -1,
+    ) as [string, RequestInit];
+    expect(documentUrl).toBe(`${TEST_URL}/send-document`);
+    expect((documentInit.body as FormData).get("mimeType")).toBe(
+      "application/pdf",
+    );
+
+    fetchMock.mockResolvedValue(
+      response(200, { ok: true, id: "WA-VOICE-1", status: "sent" }),
+    );
+    await sidecar.sendVoice(
+      "213555000111",
+      Buffer.from("ogg-bytes", "utf8"),
+      "audio/ogg",
+      true,
+      12,
+      EFFECT_KEY,
+      REQUEST_BINDING,
+    );
+    const [voiceUrl, voiceInit] = fetchMock.mock.calls.at(
+      -1,
+    ) as [string, RequestInit];
+    expect(voiceUrl).toBe(`${TEST_URL}/send-voice`);
+    expect((voiceInit.body as FormData).get("mimeType")).toBe("audio/ogg");
   });
 
   it("reads a durable receipt without invoking another provider send", async () => {

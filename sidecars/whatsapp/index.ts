@@ -23,6 +23,7 @@ import {
   type IncomingMessage,
   type SidecarEvent,
 } from "./whatsapp";
+import { declaredOutboundMimeType } from "./outbound-media-mime";
 
 const configuredPort = Number.parseInt(process.env.SIDECAR_PORT ?? "3001", 10);
 if (!Number.isInteger(configuredPort) || configuredPort < 1 || configuredPort > 65535) {
@@ -73,6 +74,7 @@ const SAFE_OUTBOUND_VOICE_TYPES = new Set([
   "audio/aac",
   "audio/mp4",
 ]);
+const SAFE_OUTBOUND_VIDEO_TYPES = new Set(["video/mp4"]);
 
 function resolveSidecarToken(): string {
   const fromEnv = process.env.SIDECAR_TOKEN;
@@ -726,6 +728,13 @@ app.post("/send-image", async (context) => {
   const effectKey = form?.get("effectKey");
   const requestBinding = form?.get("requestBinding");
   const image = form?.get("image");
+  // The declared media type is the sniffed classification sent by the app as
+  // an explicit form field. The parsed file-part Content-Type is never
+  // trusted: sidecar multipart parsing can drop it (campaign row B3).
+  const declaredMime = declaredOutboundMimeType(
+    form?.get("mimeType"),
+    SAFE_OUTBOUND_IMAGE_TYPES,
+  );
   let quotedContext: ReturnType<typeof parseWhatsAppQuotedContext>;
   try {
     quotedContext = parseWhatsAppQuotedContext(form?.get("quoted"));
@@ -756,7 +765,7 @@ app.post("/send-image", async (context) => {
     !(image instanceof File) ||
     image.size <= 0 ||
     image.size > MAX_OUTBOUND_IMAGE_BYTES ||
-    !SAFE_OUTBOUND_IMAGE_TYPES.has(image.type.toLowerCase())
+    !declaredMime
   ) {
     return context.json(
       {
@@ -815,7 +824,7 @@ app.post("/send-image", async (context) => {
         wa.sendImage(
           to,
           bytes,
-          image.type,
+          declaredMime,
           caption,
           deterministicWhatsAppMessageId(effectKey),
           quotedContext,
@@ -879,6 +888,11 @@ app.post("/send-video", async (context) => {
   const effectKey = form?.get("effectKey");
   const requestBinding = form?.get("requestBinding");
   const video = form?.get("video");
+  // Declared media mimetype only — never the parsed file-part type (B3).
+  const declaredMime = declaredOutboundMimeType(
+    form?.get("mimeType"),
+    SAFE_OUTBOUND_VIDEO_TYPES,
+  );
   let quotedContext: ReturnType<typeof parseWhatsAppQuotedContext>;
   try {
     quotedContext = parseWhatsAppQuotedContext(form?.get("quoted"));
@@ -909,7 +923,7 @@ app.post("/send-video", async (context) => {
     !(video instanceof File) ||
     video.size <= 0 ||
     video.size > MAX_OUTBOUND_VIDEO_BYTES ||
-    video.type.toLowerCase() !== "video/mp4"
+    !declaredMime
   ) {
     return context.json(
       {
@@ -968,7 +982,7 @@ app.post("/send-video", async (context) => {
         wa.sendVideo(
           to,
           bytes,
-          video.type,
+          declaredMime,
           caption,
           deterministicWhatsAppMessageId(effectKey),
           quotedContext,
@@ -1033,6 +1047,11 @@ app.post("/send-document", async (context) => {
   const requestBinding = form?.get("requestBinding");
   const fileName = form?.get("fileName");
   const document = form?.get("document");
+  // Declared media mimetype only — never the parsed file-part type (B3).
+  const declaredMime = declaredOutboundMimeType(
+    form?.get("mimeType"),
+    SAFE_OUTBOUND_DOCUMENT_TYPES,
+  );
   let quotedContext: ReturnType<typeof parseWhatsAppQuotedContext>;
   try {
     quotedContext = parseWhatsAppQuotedContext(form?.get("quoted"));
@@ -1068,7 +1087,7 @@ app.post("/send-document", async (context) => {
     !(document instanceof File) ||
     document.size <= 0 ||
     document.size > MAX_OUTBOUND_DOCUMENT_BYTES ||
-    !SAFE_OUTBOUND_DOCUMENT_TYPES.has(document.type.toLowerCase())
+    !declaredMime
   ) {
     return context.json(
       {
@@ -1127,7 +1146,7 @@ app.post("/send-document", async (context) => {
         wa.sendDocument(
           to,
           bytes,
-          document.type,
+          declaredMime,
           fileName,
           caption,
           deterministicWhatsAppMessageId(effectKey),
@@ -1194,6 +1213,11 @@ app.post("/send-voice", async (context) => {
   const voiceMessage = form?.get("voiceMessage");
   const seconds = form?.get("seconds");
   const audio = form?.get("audio");
+  // Declared media mimetype only — never the parsed file-part type (B3).
+  const declaredMime = declaredOutboundMimeType(
+    form?.get("mimeType"),
+    SAFE_OUTBOUND_VOICE_TYPES,
+  );
   let quotedContext: ReturnType<typeof parseWhatsAppQuotedContext>;
   try {
     quotedContext = parseWhatsAppQuotedContext(form?.get("quoted"));
@@ -1231,7 +1255,7 @@ app.post("/send-voice", async (context) => {
     !(audio instanceof File) ||
     audio.size <= 0 ||
     audio.size > MAX_OUTBOUND_VOICE_BYTES ||
-    !SAFE_OUTBOUND_VOICE_TYPES.has(audio.type.toLowerCase())
+    !declaredMime
   ) {
     return context.json(
       {
@@ -1294,7 +1318,7 @@ app.post("/send-voice", async (context) => {
         wa.sendVoice(
           to,
           bytes,
-          audio.type,
+          declaredMime,
           voiceMessage === "true",
           authenticatedSeconds,
           deterministicWhatsAppMessageId(effectKey),

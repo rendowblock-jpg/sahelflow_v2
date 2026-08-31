@@ -267,6 +267,9 @@ export const sidecar = {
     form.set("requestBinding", requestBinding);
     form.set("caption", caption);
     if (quoted) form.set("quoted", JSON.stringify(quoted));
+    // Declared mimetype rides an explicit field: sidecar multipart parsing
+    // can drop the file-part Content-Type (campaign row B3).
+    form.set("mimeType", mediaType);
     form.set(
       "image",
       new Blob([new Uint8Array(image)], { type: mediaType }),
@@ -295,6 +298,9 @@ export const sidecar = {
     form.set("requestBinding", requestBinding);
     form.set("caption", caption);
     if (quoted) form.set("quoted", JSON.stringify(quoted));
+    // Declared mimetype rides an explicit field: sidecar multipart parsing
+    // can drop the file-part Content-Type (campaign row B3).
+    form.set("mimeType", mediaType);
     form.set(
       "video",
       new Blob([new Uint8Array(video)], { type: mediaType }),
@@ -329,6 +335,9 @@ export const sidecar = {
     form.set("caption", caption);
     form.set("fileName", fileName);
     if (quoted) form.set("quoted", JSON.stringify(quoted));
+    // Declared mimetype rides an explicit field: sidecar multipart parsing
+    // can drop the file-part Content-Type (campaign row B3).
+    form.set("mimeType", mediaType);
     form.set(
       "document",
       new Blob([new Uint8Array(document)], { type: mediaType }),
@@ -364,6 +373,9 @@ export const sidecar = {
     form.set("voiceMessage", voiceMessage ? "true" : "false");
     form.set("seconds", durationSeconds ? String(durationSeconds) : "");
     if (quoted) form.set("quoted", JSON.stringify(quoted));
+    // Declared mimetype rides an explicit field: sidecar multipart parsing
+    // can drop the file-part Content-Type (campaign row B3).
+    form.set("mimeType", mediaType);
     form.set(
       "audio",
       new Blob([new Uint8Array(audio)], { type: mediaType }),
