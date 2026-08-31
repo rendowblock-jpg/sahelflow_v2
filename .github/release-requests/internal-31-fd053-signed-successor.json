@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.31 FD-053 signed successor publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.31",
+  "windowsMsiVersion": "1.0.0.31",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-053",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "569e92172365a3c11906144b0d2f18252e2490b6",
+    "phase5RunId": 33368228409,
+    "phase67RunId": 33368228448,
+    "ciRunId": 33368228685
+  },
+  "reason": "Founder directive 2026-08-31 ('they do all work for now let's continue and make the next signed release') authorizes one combined signed successor under FD-053 packaging the exact protected-main frontier since Internal.30: the FD-051 installed-campaign repair line (PR #362 f39ad836 B3 sidecar media MIME carried and allowlist-validated on all four outbound senders; PR #363 60bfba65 D1 Gemini key-format acceptance for the new Google AI Studio format with the live probe as validator and the GEMINI_LOCATION_UNSUPPORTED per-network mapping; PR #364 5f00c54 B5 coded INVALID_DELETE_REQUEST with PII-free shape logging and @lid-source coverage; PR #365 851b94d B4 voice-recorder microphone failures mapped to three distinct localized causes with DOMException.name logging), the FD-052 demo-coexist implementation (PR #366 f0fca29: blanket DEMO_MUTATION_BLOCKED freeze removed, courier effect boundary narrowed to assertNonDemoCourierIdentity, demo- id tagging intact), and the frontend Class-AAA six-wave stream (PR #359) which receives its first installed/Founder observation on this package per delta row D3. The certified product head 569e92172365a3c11906144b0d2f18252e2490b6 is tree-identical to the protected-main squash f0fca29 (git diff empty) and passed CI 33368228685, Phase 5 33368228409 and Phase 6-7 33368228448 with zero failed checks; two documented CI-latency test repairs (governed-confirm e2e action-contract pin; demo clock-normalizer 90s budget) rode the affected PR heads and change no product surface. This authority PR adds version, release-request and register files only, with no product changes. The Internal.31 installed campaign re-verifies R3-R6 (B3/B4/B5/D1 repairs), R11 (FRC-2 key lifecycle now performable through the #363 gate fix) and D3 (six-wave first observations); the retained #306 logout row executes LAST after every other row is green. Founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim; #230 unaffected."
+}
