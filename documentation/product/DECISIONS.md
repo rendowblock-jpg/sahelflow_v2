@@ -870,6 +870,32 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is created.
   #230 and the zero-budget boundary are unaffected.
 
+## FD-052 — Demo data coexists with real operations (option A)
+
+Founder directive during the FD-051 installed campaign (2026-08-31). The
+blanket demo guard that made the workspace read-only while demo data was
+loaded (`DEMO_MUTATION_BLOCKED` on all non-allowlisted mutations, including
+real WhatsApp inbound) is removed. The Founder explicitly chose option A:
+demo data **coexists** with real usage and demo rows **mix into stats and
+reports** until removed.
+
+Binding boundaries:
+
+- Real traffic is never frozen while demo data is loaded; the courier
+  effect boundary narrows to `assertNonDemoCourierIdentity` at the four
+  real-effect entries so demo identities can never book or sync with real
+  courier providers.
+- Demo rows keep their `demo-` id tagging; isolation remains id-prefix
+  based (no separate shop, no boolean flag).
+- Demo removal still refuses (`DEMO_REMOVAL_REAL_DATA_PRESENT`) once real
+  seller state exists — coexistence is a one-way door per shop. A removal
+  strategy for cross-referenced state (e.g. real orders referencing demo
+  products) is a candidate for a future numbered decision.
+- The dashboards/reports mixing trade-off is accepted and disclosed in the
+  settings UI copy (ar/fr/en).
+- Implemented through PR #366; campaign rows R3–R6 repairs (#362–#365) are
+  unrelated to this decision and ride the same successor package.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states
