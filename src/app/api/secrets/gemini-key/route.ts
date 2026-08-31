@@ -25,6 +25,8 @@ const PROVIDER_ERROR_COPY: Record<
     GEMINI_KEY_INVALID: "مفتاح Gemini غير صالح.",
     GEMINI_PERMISSION_DENIED: "مفتاح Gemini لا يملك الصلاحيات المطلوبة.",
     GEMINI_QUOTA_EXHAUSTED: "تم استهلاك حصة Gemini. أعد المحاولة بعد تجدد الحصة.",
+    GEMINI_LOCATION_UNSUPPORTED:
+      "المفتاح صالح، لكن Google لا يسمح باستخدام واجهة Gemini من بلدك أو منطقتك الحالية.",
     GEMINI_REGION_OR_BILLING_REQUIRED:
       "يتطلب Gemini إعداد المنطقة أو الفوترة لهذا المشروع.",
     GEMINI_MODEL_UNAVAILABLE:
@@ -40,6 +42,8 @@ const PROVIDER_ERROR_COPY: Record<
       "La clé Gemini n'a pas l'autorisation requise.",
     GEMINI_QUOTA_EXHAUSTED:
       "Le quota Gemini est atteint. Réessayez après réinitialisation du quota.",
+    GEMINI_LOCATION_UNSUPPORTED:
+      "La clé est valide, mais Google n'autorise pas l'API Gemini depuis votre pays ou région actuels.",
     GEMINI_REGION_OR_BILLING_REQUIRED:
       "Gemini nécessite une configuration de région ou de facturation pour ce projet.",
     GEMINI_MODEL_UNAVAILABLE:
@@ -55,6 +59,8 @@ const PROVIDER_ERROR_COPY: Record<
       "The Gemini key does not have the required permission.",
     GEMINI_QUOTA_EXHAUSTED:
       "The Gemini quota is exhausted. Retry after the quota resets.",
+    GEMINI_LOCATION_UNSUPPORTED:
+      "The key is valid, but Google does not allow the Gemini API from your current country or region.",
     GEMINI_REGION_OR_BILLING_REQUIRED:
       "Gemini requires region or billing setup for this project.",
     GEMINI_MODEL_UNAVAILABLE:
