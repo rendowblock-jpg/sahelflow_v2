@@ -738,10 +738,14 @@ test.describe.serial("Orders governed seller journey", () => {
     // the authority badge string is gone by design ("one authority per
     // concept"). Post-commit authority is now expressed by the action gate:
     // the confirm action is consumed and the governed fulfillment command
-    // (Mark packed) becomes the available next action.
+    // (Mark packed) becomes the available next action. "Consumed" is pinned
+    // as not-enabled rather than hidden: between the commit and the
+    // router.refresh() propagation the rail keeps the confirm button rendered
+    // in its disabled busy state, so a hidden assertion would couple the
+    // authority evidence to refresh latency instead of the action contract.
     await expect(
       page.getByRole("button", { name: "Confirm order" }),
-    ).toBeHidden();
+    ).not.toBeEnabled();
     await expect(page.getByRole("button", { name: "Mark packed" })).toBeVisible();
     await expect(page.locator("body")).toContainText(orderNumber);
     await assertContained(page, `/orders/${orderId}`);
