@@ -33,30 +33,29 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-At the 2026-08-28 reconciliation:
+At the 2026-08-30 reconciliation:
 
-- protected `main`: `d104da72dcfb7950df0b437ce279377b28e7df4b` / release PR #333; re-resolve live before acting;
-- latest signed/published checkpoint: **Internal.28** / **FD-049**, mode `founder-offline-only`; the latest **Founder-installed** checkpoint remains Internal.27 until the in-place update;
-- Internal.28 release source: `d104da72dcfb7950df0b437ce279377b28e7df4b` (equals protected `main`); Internal.27 release source `4e395b0149da447daab37ad2d01be5c8bf1d6bce` remains retained history;
-- Internal.27 demonstrated exact-once real `@lid` outbound and durable new-number inbound, while automatic Inbox live-push still required manual refresh;
-- PR #315 through #319/#324/#325/#327/#329/#331 (live-push repair, Notification Center, image/video/document/voice-PTT sending, interaction parity) are packaged inside published Internal.28; installed proof is still pending;
+- protected `main`: `2eb8a33749118e233240019bf2df9a47d586a04d` / release PR #357 (docs-only #356/#358 reconcile on top); re-resolve live before acting;
+- latest signed/published checkpoint: **Internal.30** / **FD-051**, mode `founder-offline-only`; the latest **Founder-installed** checkpoint remains Internal.29 until the in-place Internal.30 update;
+- Internal.30 release source: `2eb8a33749118e233240019bf2df9a47d586a04d` (equals protected `main`); reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`; signed dispatcher `33292273959`, updater/publication run `33292278832`, release observer `33292285084`; MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`; tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`;
+- Internal.30 packages the FD-050 installed-campaign repair line (#346–#353: campaign defects B1–B5/D1, Baileys status-enum truth, C1 auto-receive resilience) and the deep-audit remediation register (#355); the parallel frontend/UI stream (draft PR #359) is explicitly NOT bundled and is parked by Founder freeze — do not merge it whole; extract the phone-bidi / contrast / dead-code pieces as separate PRs only if needed after the campaign;
+- Internal.29 (installed in place during its FD-050 campaign) demonstrated the retained product rows but reproduced defects B1–B5 and D1, all repaired on protected main;
 - issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint;
 - issues #306 and #230 remain open for real-phone WhatsApp certification and customer-online readiness;
-- issues #316 and #317 remain open only for installed/real-phone evidence; their source is complete and packaged in Internal.28;
-- no open PR existed immediately after release PR #333 merged.
+- issues #316 and #317 remain open only for installed/real-phone evidence; their source is complete and packaged in published Internal.30.
 
-Internal.28 is the signed/published authority; the Founder has not yet installed it. Do not describe Internal.28 or any source work as installed, live-provider-certified or Founder-accepted until the in-place update and real-phone campaign produce that evidence. Preserve the Founder's Internal.27 installation state until that campaign.
+Internal.30 is the signed/published authority; the Founder has not yet installed it. Do not describe Internal.30 or any source work as installed, live-provider-certified or Founder-accepted until the in-place update and real-phone campaign produce that evidence. Preserve the Founder's Internal.29 installation state until that campaign.
 
 ## Exact next outcome
 
-Execute the **FD-049 installed Founder campaign** while preserving every FD-045 evidence rule.
+Execute the **FD-051 installed Founder campaign** while preserving every FD-045 evidence rule.
 
 1. Re-resolve protected `main`, open PRs and issues #306/#316/#317/#230.
-2. Confirm Internal.28 / FD-049 remains the latest signed/published checkpoint (release PR #333, signed run `33136814065`) and that the Founder has not yet installed it.
-3. The Founder applies the in-place Internal.28 update through the normal updater without logging out, resetting AppData or clearing protected auth.
-4. On the installed Internal.28 candidate, execute the retained #306 real-phone rows (automatic no-refresh inbound, reopen persistence, EN/AR observation, governed status, reviewed extraction, logout last) plus applicable #316/#317 native rows and representative media/parity exercises.
-5. Reconcile the capability ledger and current-state documentation with the installed evidence; convert `implemented-unproven` rows only where the campaign actually proved them.
-6. Resume FRC-2 through FRC-5 source/contracts/mock/official-development-or-sandbox work after that installed Founder observation, in dependency order.
+2. Confirm Internal.30 / FD-051 remains the latest signed/published checkpoint (release PR #357, signed run `33292278832`) and that the Founder has not yet installed it.
+3. The Founder applies the in-place Internal.30 update through the normal updater without logging out, resetting AppData or clearing protected auth.
+4. On the installed Internal.30 candidate, re-verify the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive), the deep-audit register's audit-affected rows, the retained #306 real-phone rows (automatic no-refresh inbound, reopen persistence, EN/AR observation, governed status, reviewed extraction, logout last) plus applicable #316/#317 native rows and representative media/parity exercises.
+5. Reconcile the capability ledgers and current-state documentation with the installed evidence; convert `implemented-unproven` rows only where the campaign actually proved them.
+6. Resume FRC-3 (Required capability/journey assurance ledger) after that installed Founder observation, in dependency order; FRC-4/FRC-5 keep their external blockers.
 7. Publicly promise only exact live-certified provider/actions. Unverified providers stay hidden, disabled or conditional.
 8. Keep #306, #230, customer-online, paid deployment, Beta and Stable separate until their own evidence and authority close them.
 

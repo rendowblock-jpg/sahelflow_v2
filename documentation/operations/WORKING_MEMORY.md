@@ -96,22 +96,28 @@ Binding rules:
 - **Remove demo data** temporarily appeared frozen before completing. That is a
   separate demonstrated UI defect and is not silently treated as WhatsApp failure.
 - Do not logout, reset AppData or clear protected auth before the published
-  Internal.29 is installed in place and re-proves automatic inbound and the
+  Internal.30 is installed in place and re-proves the FD-050 rows and the
   remaining FRC-1 rows.
 
-## Exact next-session order — Internal.29 installed campaign and FRC-3 entry
+## Exact next-session order — Internal.30 installed campaign and FRC-3 entry
 
 1. Re-resolve protected `main`, open PRs and #306/#316/#317/#230; confirm
-   Internal.29 is published (tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`)
-   and that no repair PR is open. Expect no source work before the campaign.
-2. The Founder applies the in-place Internal.29 update through the normal
+   Internal.30 is published (tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`)
+   and that no repair PR is open. Draft PR #359 (frontend Class-AAA
+   remediation) is parked by Founder freeze: do not merge it whole; if
+   anything from it is needed after the campaign, extract the phone-bidi /
+   contrast / dead-code pieces as separate PRs. Expect no source work before
+   the campaign.
+2. The Founder applies the in-place Internal.30 update through the normal
    updater, preserving installation, shop and WhatsApp state (no logout, no
    AppData reset).
-3. On the installed candidate, re-verify the FRC-2 repair rows: quoted replies
-   to received AND sent messages, real PDF/Word document delivery, voice
-   recording send/PTT, permanent multi-select chat delete, compacted composer
-   EN/AR; plus the retained #306 rows (automatic no-refresh inbound, reopen
-   persistence, governed status, logout last).
+3. On the installed candidate, re-verify the FD-050 campaign rows: B1–B5
+   (quote chips, document/audio ready state, voice recording, chat delete),
+   D1 (AI-key action resume after PIN with localized coded errors),
+   delivery-receipt enum truth on a real outbound, and C1 sleep/wake
+   auto-receive; plus the deep-audit register's audit-affected rows and the
+   retained #306 rows (automatic no-refresh inbound, reopen persistence,
+   governed status, logout last).
 4. Exercise the applicable FRC-2 matrix rows the Founder can perform: key
    lifecycle in Settings → AI (test/save/rotate/disconnect), one reviewed
    extraction from the thread header through exactly-one canonical order, one
@@ -139,9 +145,9 @@ Binding rules:
 ## Current hard blockers and dependencies
 
 - WhatsApp FRC-1 requires the Founder’s retained real phone/account/session.
-  The exact signed successor (Internal.29) is published; it must now be
-  installed in place with state preserved to re-verify the repair rows and the
-  remaining FRC-1 rows.
+  The exact signed successor (Internal.30) is published; it must now be
+  installed in place with state preserved to re-verify the FD-050 repair
+  rows, the register-affected rows and the remaining FRC-1 rows.
 - Real Gemini minimal inference requires a seller-owned key; free-tier work uses synthetic/redacted inputs only.
 - Commerce requires development/test environments and HTTPS ingress for webhook tests.
 - Courier live certification requires provider sandbox/demo or authorized seller credentials.
@@ -182,17 +188,18 @@ Never weaken:
 - No branch-only signed release or hidden product change in release authority.
 - No live-provider claim from source, mock, wrapper or test count.
 - No credential in chat/source/test/issues/evidence.
-- No customer-online/Beta/Stable claim from Founder-offline Internal.29 or any internal checkpoint.
+- No customer-online/Beta/Stable claim from Founder-offline Internal.30 or any internal checkpoint.
 - No first customer as an undisclosed experiment.
 - Use selected Level 1/2/3 gates and expected-head merge for any repair.
 
 ## Hard non-claims
 
-- Internal.29 is signed/published but not yet Founder-installed. Internal.28's
-  installed campaign verified text/image/video send, automatic no-refresh
-  inbound and reopen, but reproduced three regressions repaired as #335/#336/#337;
-  WhatsApp certification remains open until the installed Internal.29 campaign
-  re-verifies the repair rows and the remaining #306 rows.
+- Internal.30 is signed/published but not yet Founder-installed. Internal.29
+  was installed in place during its FD-050 campaign and verified the retained
+  product rows, but reproduced the defects B1–B5 and D1, repaired on
+  protected main as #346–#353 and packaged in published Internal.30;
+  WhatsApp certification remains open until the installed Internal.30
+  campaign re-verifies those repair rows and the remaining #306 rows.
 - Complete AI/tools/order-extraction certification is open; the FRC-2 source
   frontier is frozen and packaged, while live-key, installed-observation and
   T470 rows remain external-blocked.
