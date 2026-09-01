@@ -2150,12 +2150,17 @@ function failureDisposition(error: unknown): {
   code: string;
   retryable: boolean;
   ambiguous: boolean;
+  /** Machine-readable failing-condition name from the sidecar's named
+   * rejections (campaign B3 round 3). Composed into lastErrorCode below so
+   * the installed build's message projection shows WHICH rule failed. */
+  reason: string | null;
 } {
   if (error instanceof SidecarRequestError) {
     return {
       code: error.code.slice(0, 100),
       retryable: error.retryable,
       ambiguous: error.ambiguous,
+      reason: error.reason,
     };
   }
   if (error instanceof SidecarUnavailableError) {
@@ -2163,9 +2168,10 @@ function failureDisposition(error: unknown): {
       code: error.ambiguous ? "SIDECAR_NETWORK_AMBIGUOUS" : "SIDECAR_UNAVAILABLE",
       retryable: !error.ambiguous,
       ambiguous: error.ambiguous,
+      reason: null,
     };
   }
-  return { code: "UNCLASSIFIED_PROVIDER_FAILURE", retryable: false, ambiguous: true };
+  return { code: "UNCLASSIFIED_PROVIDER_FAILURE", retryable: false, ambiguous: true, reason: null };
 }
 
 async function markFailure(
@@ -2186,6 +2192,14 @@ async function markFailure(
       )
     : null;
   const status = ambiguous ? "failed" : retrying ? "retrying" : "dead_letter";
+  // Campaign B3 round 3: keep the top-level code AND append the sidecar's
+  // named failing condition ("INVALID_DOCUMENT_SEND_REQUEST:file_name").
+  // Every lastErrorCode consumer renders the string verbatim (no equality
+  // matching), so the composed value is backward-compatible while making the
+  // installed build's failure self-diagnosing.
+  const recordedErrorCode = disposition.reason
+    ? `${disposition.code}:${disposition.reason}`.slice(0, 100)
+    : disposition.code;
 
   await context.prisma.$transaction(async (tx) => {
     const marked = await tx.outboxIntent.updateMany({
@@ -2193,7 +2207,7 @@ async function markFailure(
       data: {
         status,
         outcomeState: ambiguous ? "ambiguous" : "none",
-        lastErrorCode: disposition.code,
+        lastErrorCode: recordedErrorCode,
         nextAttemptAt,
         lockedAt: null,
         leaseToken: null,

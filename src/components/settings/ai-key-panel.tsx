@@ -46,12 +46,25 @@ type AuthorityState =
   | "unavailable";
 type ConsentState = "loading" | "ready" | "unavailable";
 
+type GeminiKeyDiagnostics = {
+  httpStatus?: number;
+  providerStatus?: string | null;
+  reason?: string | null;
+  keyShape: {
+    prefix: string;
+    length: number;
+    hasWhitespace: boolean;
+    hasNewline: boolean;
+  };
+};
+
 interface SaveResult {
   ok?: boolean;
   model?: string;
   error?: string;
   message?: string;
   code?: string;
+  diagnostics?: GeminiKeyDiagnostics | null;
 }
 
 function requiresReauthentication(response: Response, body: SaveResult): boolean {
@@ -252,7 +265,12 @@ export function AiKeyPanel({
         return;
       }
       if (!response.ok || !data.ok) {
-        setResult({ ok: false, code: data.code, error: rejectionCopy(data, t) });
+        setResult({
+          ok: false,
+          code: data.code,
+          error: rejectionCopy(data, t),
+          diagnostics: data.diagnostics ?? null,
+        });
         return;
       }
       setResult(data);
@@ -516,11 +534,36 @@ export function AiKeyPanel({
                   ) : (
                     <XCircle className="mt-0.5 size-4 shrink-0" />
                   )}
-                  <span>
-                    {result.ok
-                      ? result.message ?? t("aiKey.saved")
-                      : result.error ?? t("aiKey.error")}
-                  </span>
+                  <div className="min-w-0 space-y-1">
+                    <span>
+                      {result.ok
+                        ? result.message ?? t("aiKey.saved")
+                        : result.error ?? t("aiKey.error")}
+                    </span>
+                    {!result.ok && result.diagnostics ? (
+                      <p className="break-all font-mono text-xs opacity-80">
+                        {t("aiKey.probe.http", {
+                          http: result.diagnostics.httpStatus ?? "n/a",
+                        })}
+                        {result.diagnostics.providerStatus
+                          ? ` ${result.diagnostics.providerStatus}`
+                          : ""}
+                        {result.diagnostics.reason
+                          ? ` — ${result.diagnostics.reason}`
+                          : ""}
+                        {` — ${t("aiKey.probe.keyShape", {
+                          prefix: result.diagnostics.keyShape.prefix,
+                          length: result.diagnostics.keyShape.length,
+                        })}`}
+                        {result.diagnostics.keyShape.hasNewline
+                          ? ` · ${t("aiKey.probe.newlines")}`
+                          : ""}
+                        {result.diagnostics.keyShape.hasWhitespace
+                          ? ` · ${t("aiKey.probe.whitespace")}`
+                          : ""}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
 

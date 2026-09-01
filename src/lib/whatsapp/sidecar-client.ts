@@ -49,6 +49,11 @@ export class SidecarRequestError extends Error {
     public readonly retryable: boolean,
     public readonly ambiguous: boolean,
     public readonly status: number,
+    // Machine-readable failing-condition name from the sidecar's named
+    // rejections (campaign row B3 round 3): without it the durable effect
+    // record kept only the top-level code and the installed build could never
+    // show WHICH rule failed.
+    public readonly reason: string | null = null,
   ) {
     super(message);
     this.name = "SidecarRequestError";
@@ -97,6 +102,7 @@ async function requireSuccessfulResponse(response: Response): Promise<Response> 
     error?: string;
     message?: string;
     code?: string;
+    reason?: string;
     retryable?: boolean;
     ambiguous?: boolean;
   };
@@ -106,6 +112,9 @@ async function requireSuccessfulResponse(response: Response): Promise<Response> 
     body.retryable === true,
     body.ambiguous !== false,
     response.status,
+    typeof body.reason === "string" && body.reason
+      ? body.reason.slice(0, 60)
+      : null,
   );
 }
 
