@@ -542,19 +542,24 @@ export function AiKeyPanel({
                     </span>
                     {!result.ok && result.diagnostics ? (
                       <p className="break-all font-mono text-xs opacity-80">
-                        probe: HTTP {result.diagnostics.httpStatus ?? "n/a"}
+                        {t("aiKey.probe.http", {
+                          http: result.diagnostics.httpStatus ?? "n/a",
+                        })}
                         {result.diagnostics.providerStatus
                           ? ` ${result.diagnostics.providerStatus}`
                           : ""}
                         {result.diagnostics.reason
                           ? ` — ${result.diagnostics.reason}`
                           : ""}
-                        {` — key: ${result.diagnostics.keyShape.prefix}…, ${result.diagnostics.keyShape.length} chars`}
+                        {` — ${t("aiKey.probe.keyShape", {
+                          prefix: result.diagnostics.keyShape.prefix,
+                          length: result.diagnostics.keyShape.length,
+                        })}`}
                         {result.diagnostics.keyShape.hasNewline
-                          ? " · newlines in paste"
+                          ? ` · ${t("aiKey.probe.newlines")}`
                           : ""}
                         {result.diagnostics.keyShape.hasWhitespace
-                          ? " · stray whitespace"
+                          ? ` · ${t("aiKey.probe.whitespace")}`
                           : ""}
                       </p>
                     ) : null}
