@@ -124,8 +124,12 @@ function geminiAuthUrl(url: string, apiKey: string): string {
   // carriage on generativelanguage.googleapis.com; the parameter carriage
   // is universally accepted for both AIza and AQ. keys. The key never
   // reaches app logs: request logging records only model/attempt/status.
+  // Trim here as well: keys stored before the save-boundary trim (or written
+  // by an older build) must not travel with stray surrounding whitespace —
+  // the provider's own verify path already trims, so the call path must
+  // behave identically.
   const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}key=${encodeURIComponent(apiKey)}`;
+  return `${url}${separator}key=${encodeURIComponent(apiKey.trim())}`;
 }
 
 async function fetchAttempt(

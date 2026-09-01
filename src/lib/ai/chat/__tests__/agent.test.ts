@@ -142,6 +142,21 @@ describe("runAgent — text response", () => {
     const [url] = vi.mocked(fetch).mock.calls[0]!;
     expect(String(url)).toContain("key=test-key");
   });
+
+  it("never travels a whitespace-padded stored key in the auth parameter (D1 boundary trim)", async () => {
+    // Legacy stored keys (written before the save-boundary trim) may carry
+    // stray surrounding whitespace; the call path must trim identically to
+    // the verify path so verify and extraction can never disagree.
+    vi.mocked(getSecret).mockResolvedValue("  test-key\n");
+    vi.mocked(fetch).mockResolvedValue(geminiTextResponse("ok"));
+    await runAgent([], "Salut");
+    const [url] = vi.mocked(fetch).mock.calls[0]!;
+    const target = String(url);
+    expect(target).toContain("key=test-key");
+    expect(target).not.toContain("%0A");
+    expect(target).not.toContain("%20");
+    expect(target).not.toContain("test-key%0A");
+  });
 });
 
 describe("runAgent — tool calls", () => {
