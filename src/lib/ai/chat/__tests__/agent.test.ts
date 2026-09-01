@@ -137,8 +137,10 @@ describe("runAgent — text response", () => {
     expect(result.toolCalls).toEqual([]);
     expect(result.error).toBeUndefined();
     expect(fetch).toHaveBeenCalledTimes(1);
-    const [, init] = vi.mocked(fetch).mock.calls[0]!;
-    expect((init as RequestInit).headers).toMatchObject({ "x-goog-api-key": "test-key" });
+    // D1 round 3: auth carriage is the documented `?key=` query parameter
+    // (header carriage rejected valid new-format AQ. keys).
+    const [url] = vi.mocked(fetch).mock.calls[0]!;
+    expect(String(url)).toContain("key=test-key");
   });
 });
 

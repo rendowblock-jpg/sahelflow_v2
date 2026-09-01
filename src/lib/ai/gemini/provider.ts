@@ -114,6 +114,20 @@ async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function geminiAuthUrl(url: string, apiKey: string): string {
+  // Campaign row D1 (round 3): auth travels as the documented `?key=` query
+  // parameter — the carriage Google's own quickstarts use — NOT the
+  // `x-goog-api-key` header. Installed evidence: the Founder's browser
+  // probe (models list with ?key=) succeeded with the SAME AQ. key that
+  // this app's header-authenticated probe rejected as GEMINI_KEY_INVALID.
+  // New-format "AQ." keys are the demonstrated failure class for the header
+  // carriage on generativelanguage.googleapis.com; the parameter carriage
+  // is universally accepted for both AIza and AQ. keys. The key never
+  // reaches app logs: request logging records only model/attempt/status.
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}key=${encodeURIComponent(apiKey)}`;
+}
+
 async function fetchAttempt(
   url: string,
   apiKey: string,
@@ -123,11 +137,10 @@ async function fetchAttempt(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, {
+    return await fetch(geminiAuthUrl(url, apiKey), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
       },
       signal: controller.signal,
       body: JSON.stringify(body),
@@ -362,10 +375,11 @@ export async function verifyGeminiKey(
   diagnostics?: GeminiProbeDiagnostics;
 }> {
   // Google AI Studio issues keys in two formats: the legacy "AIza…" project
-  // keys and the newer "AQ." keys. Both travel the same x-goog-api-key
-  // header; the live probe below is the real validator (campaign row D1 —
+  // keys and the newer "AQ." keys. Both travel the same ?key= query
+  // parameter; the live probe below is the real validator (campaign row D1 —
   // the stale AIza-only gate rejected valid new-format keys before any
-  // network activity).
+  // network activity, and the header carriage rejected the parameter-valid
+  // AQ. keys at the auth layer).
   const candidateKey = apiKey.trim();
   const knownKeyFormat =
     candidateKey.startsWith("AIza") || candidateKey.startsWith("AQ.");
