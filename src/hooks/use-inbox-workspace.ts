@@ -53,11 +53,56 @@ type MediaSendResponse = {
  * refused the deletion instead of a bare status the operator cannot act on
  * (campaign row B5 round 2: "could not be deleted (HTTP_400)" with the server's
  * actual reason discarded made every rejection a dead end).
+ *
+ * Round 3: `rejectionSummary` carries the server's PII-free shape verdict
+ * (failing schema paths, id count/lengths, body size) — the installed
+ * runtime's logs are unreachable by design, so the dialog itself must name
+ * the exact failing condition for the next campaign observation.
  */
 export interface DeleteChatsOutcome {
   ok: boolean;
   errorCode: string | null;
   errorDetail: string | null;
+  rejectionSummary: string | null;
+}
+
+/** Server 400 shape from POST /api/whatsapp/chats/delete (B5 round 3). */
+export interface DeleteChatsRejection {
+  reason: string;
+  issues?: string[];
+  idCount?: number;
+  idLengths?: number[];
+  bodyLength?: number;
+}
+
+const DELETE_CONTRACT_MAX_IDS = 100;
+const DELETE_CONTRACT_MAX_ID_LENGTH = 64;
+
+/**
+ * Compact PII-free diagnostic summary of a delete rejection. Never includes
+ * id values — only shapes, lengths and schema paths.
+ */
+export function describeDeleteRejection(
+  rejection: DeleteChatsRejection | null | undefined,
+): string | null {
+  if (!rejection) return null;
+  if (rejection.reason === "malformed_json") {
+    return `malformed JSON body (${rejection.bodyLength ?? 0} bytes)`;
+  }
+  const parts: string[] = [];
+  if (rejection.issues && rejection.issues.length > 0) {
+    parts.push(`failing: ${rejection.issues.join(", ")}`);
+  }
+  if (typeof rejection.idCount === "number" && rejection.idCount >= 0) {
+    parts.push(`${rejection.idCount} id(s)`);
+  }
+  if (rejection.idLengths && rejection.idLengths.length > 0) {
+    parts.push(`lengths [${rejection.idLengths.join(", ")}]`);
+  }
+  if (typeof rejection.bodyLength === "number") {
+    parts.push(`body ${rejection.bodyLength}B`);
+  }
+  return parts.length > 0 ? parts.join(" — ") : rejection.reason;
 }
 
 /**
@@ -1015,7 +1060,27 @@ export function useInboxWorkspace() {
   const deleteChats = useCallback(
     async (conversationIds: string[]): Promise<DeleteChatsOutcome> => {
       if (!canDeleteChats || conversationIds.length === 0) {
-        return { ok: false, errorCode: null, errorDetail: null };
+        return { ok: false, errorCode: null, errorDetail: null, rejectionSummary: null };
+      }
+      // Round 3: pre-flight the exact server contract client-side. A doomed
+      // request (empty id, id longer than the 64-char canonical contract —
+      // e.g. a deep-link pinned row — or more than 100 ids) must fail HERE
+      // with the offending shape named instead of round-tripping to the same
+      // coded 400 with no further evidence.
+      const oversized = conversationIds.filter(
+        (id) => id.length < 1 || id.length > DELETE_CONTRACT_MAX_ID_LENGTH,
+      );
+      if (conversationIds.length > DELETE_CONTRACT_MAX_IDS || oversized.length > 0) {
+        return {
+          ok: false,
+          errorCode: "INVALID_DELETE_REQUEST",
+          errorDetail: "Invalid chat deletion request",
+          rejectionSummary:
+            `local contract violation — ${conversationIds.length} id(s)` +
+            (oversized.length > 0
+              ? `, offending lengths [${oversized.map((id) => id.length).join(", ")}] (max ${DELETE_CONTRACT_MAX_ID_LENGTH})`
+              : `, max ${DELETE_CONTRACT_MAX_IDS}`),
+        };
       }
       try {
         const response = await fetch("/api/whatsapp/chats/delete", {
@@ -1026,10 +1091,15 @@ export function useInboxWorkspace() {
         if (!response.ok) {
           let errorCode: string | null = null;
           let errorDetail: string | null = null;
+          let rejectionSummary: string | null = null;
           try {
             const body: unknown = await response.json();
             if (body && typeof body === "object") {
-              const candidate = body as { code?: unknown; error?: unknown };
+              const candidate = body as {
+                code?: unknown;
+                error?: unknown;
+                rejection?: unknown;
+              };
               if (typeof candidate.code === "string") {
                 errorCode = candidate.code;
               }
@@ -1038,6 +1108,40 @@ export function useInboxWorkspace() {
               // instead of leaving the operator with a bare HTTP status.
               if (typeof candidate.error === "string" && candidate.error) {
                 errorDetail = candidate.error;
+              }
+              // B5 round 3: the server's PII-free shape verdict — the only
+              // installed-build evidence of WHY the body failed validation.
+              if (candidate.rejection && typeof candidate.rejection === "object") {
+                const rejection = candidate.rejection as {
+                  reason?: unknown;
+                  issues?: unknown;
+                  idCount?: unknown;
+                  idLengths?: unknown;
+                  bodyLength?: unknown;
+                };
+                if (typeof rejection.reason === "string") {
+                  rejectionSummary = describeDeleteRejection({
+                    reason: rejection.reason,
+                    issues:
+                      Array.isArray(rejection.issues) &&
+                      rejection.issues.every((issue) => typeof issue === "string")
+                        ? (rejection.issues as string[])
+                        : undefined,
+                    idCount:
+                      typeof rejection.idCount === "number"
+                        ? rejection.idCount
+                        : undefined,
+                    idLengths:
+                      Array.isArray(rejection.idLengths) &&
+                      rejection.idLengths.every((length) => typeof length === "number")
+                        ? (rejection.idLengths as number[])
+                        : undefined,
+                    bodyLength:
+                      typeof rejection.bodyLength === "number"
+                        ? rejection.bodyLength
+                        : undefined,
+                  });
+                }
               }
             }
           } catch {
@@ -1048,6 +1152,7 @@ export function useInboxWorkspace() {
             ok: false,
             errorCode: errorCode ?? `HTTP_${response.status}`,
             errorDetail,
+            rejectionSummary,
           };
         }
         const active = activeChatRef.current;
@@ -1062,9 +1167,9 @@ export function useInboxWorkspace() {
           setReplyText("");
         }
         await loadChats();
-        return { ok: true, errorCode: null, errorDetail: null };
+        return { ok: true, errorCode: null, errorDetail: null, rejectionSummary: null };
       } catch {
-        return { ok: false, errorCode: null, errorDetail: null };
+        return { ok: false, errorCode: null, errorDetail: null, rejectionSummary: null };
       }
     },
     [canDeleteChats, loadChats, replaceMessages, setReplyText],
