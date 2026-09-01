@@ -114,8 +114,12 @@ describe("Algerian Founder demo contract", () => {
     expect(lifecycle).toContain("client.cannedResponse.count");
     expect(lifecycle).toContain("client.whatsAppTemplate.count");
     expect(lifecycle).toContain("client.integration.count");
-    expect(lifecycle).toContain('"DEMO_SHOP_NOT_EMPTY"');
-    expect(lifecycle).toContain('"DEMO_REMOVAL_REAL_DATA_PRESENT"');
+    // FD-054: seeding requires only that the demo is not already loaded;
+    // removal deletes only the demo graph and fails closed (coded 409) when
+    // real records reference demo records through enforced foreign keys.
+    expect(lifecycle).not.toContain('"DEMO_SHOP_NOT_EMPTY"');
+    expect(lifecycle).toContain('"DEMO_REMOVAL_BLOCKED_BY_REFERENCES"');
+    expect(lifecycle).toContain('"P2003"');
     expect(lifecycle).toContain("messageId: demoIdentity");
     expect(lifecycle).toContain("entityId: demoIdentity");
 

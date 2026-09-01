@@ -1,5 +1,7 @@
 import "server-only";
 
+import { Prisma } from "@prisma/client";
+
 import { BUSINESS_ENVELOPE_SECRET_KEY } from "@/lib/business-truth/envelope-key";
 import { db, type DbClient } from "@/lib/db";
 import {
@@ -282,10 +284,11 @@ async function safeStatus(client: DbClient): Promise<AlgerianDemoStatus> {
     ...status,
     version: ALGERIAN_DEMO_WORKSPACE_VERSION,
     loaded,
-    canSeed: !loaded && nonDemoState === 0,
-    // An interrupted or historical demo footprint is recoverable and must not
-    // masquerade as seller data. Only independently owned non-demo state blocks
-    // loading/removal of the sample workspace.
+    // FD-054: the only remaining seeding boundary is the demo itself — a
+    // shop with real seller data may load the demo workspace alongside it.
+    canSeed: !loaded,
+    // Informational: whether independently owned seller state exists (the
+    // settings panel uses this to disclose coexistence before loading).
     hasBusinessData: loaded || nonDemoState > 0,
   };
 }
@@ -301,6 +304,9 @@ export async function getAlgerianDemoWorkspaceStatus(
  * deterministic rolling annual workspace. The shared policy lock serializes this
  * operation with report-setting writes and report sends; the database transaction
  * gives rollback if any seed/finalizer write fails.
+ *
+ * FD-054: real seller data no longer blocks loading — the demo loads alongside
+ * it, keeping its `demo-` id tagging and the FD-052 stats-mixing disclosure.
  */
 export async function loadAlgerianDemoWorkspace(
   client: DbClient = db,
@@ -310,14 +316,6 @@ export async function loadAlgerianDemoWorkspace(
       const tx = transaction as unknown as DbClient;
       const status = await safeStatus(tx);
       if (status.loaded) return status;
-
-      if ((await countNonDemoSellerState(tx)) > 0) {
-        throw new SahelFlowError(
-          "Sample data can only be loaded into a shop with no seller-owned business records, sequence/analytics state, canonical command authority, current or legacy phone-risk data, storefronts, automations, integrations, reusable messaging configuration or effectful daily-report settings.",
-          "DEMO_SHOP_NOT_EMPTY",
-          409,
-        );
-      }
 
       // Recover a marker-less partial footprint or older v1 demo before starting
       // the atomic annual rebuild.
@@ -331,9 +329,16 @@ export async function loadAlgerianDemoWorkspace(
 }
 
 /**
- * Remove the complete demo graph atomically. Any independently owned seller
- * state blocks cleanup, including a non-demo storefront that references demo
- * products. The same policy lock prevents concurrent report configuration/send.
+ * Remove the complete demo graph atomically.
+ *
+ * FD-054 supersedes the FD-052 one-way door: removal no longer refuses when
+ * real seller state exists — it deletes ONLY the demo-tagged/derived graph.
+ * If real records still reference demo records through enforced foreign keys
+ * (for example a real order created for a demo customer), the delete fails
+ * closed at the database boundary: the transaction rolls back untouched and
+ * the seller receives `DEMO_REMOVAL_BLOCKED_BY_REFERENCES` naming the exact
+ * required action. Nothing real is ever deleted or reassigned automatically.
+ * The same policy lock prevents concurrent report configuration/send.
  */
 export async function removeAlgerianDemoWorkspace(
   client: DbClient = db,
@@ -341,16 +346,22 @@ export async function removeAlgerianDemoWorkspace(
   return withDemoPolicyLock(() =>
     client.$transaction(async (transaction) => {
       const tx = transaction as unknown as DbClient;
-      if ((await countNonDemoSellerState(tx)) > 0) {
-        throw new SahelFlowError(
-          "Demo removal is blocked because independently owned seller records, sequence/analytics state, canonical command authority, current or legacy phone-risk data, configuration or effectful daily-report settings now exist. Export or move that work before removing the sample workspace.",
-          "DEMO_REMOVAL_REAL_DATA_PRESENT",
-          409,
-        );
+      try {
+        await clearDemoDerivedRecords(tx);
+        await clearAlgerianDemoData(tx);
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2003"
+        ) {
+          throw new SahelFlowError(
+            "Demo removal is blocked because real records still reference demo records (for example a real order created for a demo customer). Reassign or remove those real records first, then remove the demo again. Nothing real was changed.",
+            "DEMO_REMOVAL_BLOCKED_BY_REFERENCES",
+            409,
+          );
+        }
+        throw error;
       }
-
-      await clearDemoDerivedRecords(tx);
-      await clearAlgerianDemoData(tx);
       return safeStatus(tx);
     }, TRANSACTION_OPTIONS),
   );

@@ -283,13 +283,13 @@ export async function seedAlgerianDemoData(
 ): Promise<AlgerianDemoStatus> {
   const initial = await getAlgerianDemoStatus(client);
   if (initial.loaded) return initial;
-  if (initial.hasBusinessData) {
-    throw new SahelFlowError(
-      "Sample data can only be loaded into an empty shop so it never mixes with seller records.",
-      "DEMO_SHOP_NOT_EMPTY",
-      409,
-    );
-  }
+
+  // FD-054: the Founder explicitly directed that the demo workspace loads
+  // "even if there is real data there". The former DEMO_SHOP_NOT_EMPTY gate
+  // (empty-shop-only seeding) is removed; every seeded row keeps its
+  // `demo-` id tagging and mixes into stats/reports per FD-052 until
+  // removed, and the courier effect boundary stays enforced at the four
+  // real-effect entries.
 
   try {
     await client.category.createMany({ data: CATEGORIES.map((category) => ({ ...category })) });
