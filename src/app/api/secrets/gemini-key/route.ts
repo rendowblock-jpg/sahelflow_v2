@@ -113,7 +113,19 @@ export const GET = withErrorHandler(async () => {
 }, "GET /api/secrets/gemini-key");
 
 const saveSchema = z.object({
-  key: z.string().min(10),
+  // Trim + bound at the boundary so verification and storage observe the
+  // SAME string. Installed-evidence defect: a pasted key carrying stray
+  // surrounding whitespace PASSED the provider verify (the provider trims
+  // before probing Google) and then crashed setSecret's no-whitespace
+  // invariant as a bare TypeError 500 — key unsaved despite the successful
+  // verification. Control bytes are rejected here for the same reason: the
+  // setSecret invariant can never resurface as an uncoded runtime error.
+  key: z
+    .string()
+    .trim()
+    .min(10)
+    .max(256)
+    .regex(/^[^\u0000-\u001f\u007f]+$/),
   test: z.boolean().default(true),
 });
 
@@ -139,6 +151,11 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           ok: false,
           code,
           error: PROVIDER_ERROR_COPY[locale][code],
+          // Campaign row D1 round 2: PII-free probe diagnostics (HTTP
+          // status, provider status, sanitized reason, received-key shape)
+          // so an installed build can say WHY Google refused instead of
+          // repeating an unverifiable banner. Never carries key material.
+          diagnostics: verification.diagnostics ?? null,
         },
         { status: 400 },
       );

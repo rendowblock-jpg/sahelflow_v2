@@ -19,9 +19,17 @@
  *   }, "POST /api/orders");
  *
  * Error mapping:
- *   - ZodError        → 400 { error: "Validation failed", details }
+ *   - ZodError        → 400 { error: "Validation failed", details,
+ *                            code: "REQUEST_VALIDATION_FAILED" }
+ *   - SyntaxError     → 400 { error: "Invalid JSON in request body",
+ *                            code: "INVALID_REQUEST_JSON" }
  *   - SahelFlowError  → err.statusCode { error, code }
  *   - everything else → 500 { error: "Internal server error" } + structured log
+ *
+ * Campaign row B5 (round 2): the two shape-level 400 branches above were
+ * anonymous — a malformed request died before the route's own coded
+ * rejections ran, and installed clients fell back to the generic HTTP_<status>
+ * label. Both branches now carry stable codes so every 400 is diagnosable.
  */
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
@@ -89,14 +97,21 @@ export function withErrorHandler<T extends RouteHandler>(
     } catch (err) {
       if (err instanceof z.ZodError) {
         return NextResponse.json(
-          { error: "Validation failed", details: err.issues },
+          {
+            error: "Validation failed",
+            details: err.issues,
+            code: "REQUEST_VALIDATION_FAILED",
+          },
           { status: 400 },
         );
       }
       // Malformed JSON body — return 400, not 500
       if (err instanceof SyntaxError) {
         return NextResponse.json(
-          { error: "Invalid JSON in request body" },
+          {
+            error: "Invalid JSON in request body",
+            code: "INVALID_REQUEST_JSON",
+          },
           { status: 400 },
         );
       }
