@@ -197,6 +197,48 @@ describe("WhatsApp sidecar client", () => {
     });
   });
 
+  it("carries the sidecar's named failing condition (campaign B3 round 3)", async () => {
+    fetchMock.mockResolvedValue(
+      response(400, {
+        error: "Invalid durable document send request",
+        code: "INVALID_DOCUMENT_SEND_REQUEST",
+        reason: "file_name",
+        retryable: false,
+        ambiguous: false,
+      }),
+    );
+    const error = await sidecar
+      .sendDocument(
+        "213555000111",
+        Buffer.from("probe"),
+        "application/pdf",
+        "contract.pdf",
+        "",
+        EFFECT_KEY,
+        REQUEST_BINDING,
+      )
+      .catch((caught) => caught);
+    expect(error).toBeInstanceOf(SidecarRequestError);
+    expect(error).toMatchObject({
+      code: "INVALID_DOCUMENT_SEND_REQUEST",
+      reason: "file_name",
+      retryable: false,
+      ambiguous: false,
+      status: 400,
+    });
+  });
+
+  it("keeps a null reason when the sidecar response has none", async () => {
+    fetchMock.mockResolvedValue(
+      response(400, { error: "bad request", code: "SOMETHING_ELSE" }),
+    );
+    const error = await sidecar
+      .send("213555000111", "Hello", EFFECT_KEY, REQUEST_BINDING)
+      .catch((caught) => caught);
+    expect(error).toBeInstanceOf(SidecarRequestError);
+    expect(error).toMatchObject({ code: "SOMETHING_ELSE", reason: null });
+  });
+
   it("classifies connection refusal as safely retryable before submit", async () => {
     const error = Object.assign(new TypeError("fetch failed"), {
       cause: { code: "ECONNREFUSED" },

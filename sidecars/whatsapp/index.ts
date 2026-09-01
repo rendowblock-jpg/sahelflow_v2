@@ -1010,6 +1010,24 @@ app.post("/send-video", async (context) => {
 });
 
 app.post("/send-document", async (context) => {
+  // Campaign row B3 (round 2): every malformed document-send shape used to
+  // collapse into ONE anonymous all-in-one 400, so an installed build could
+  // never say WHICH rule failed (the founder's .docx observation returned a
+  // bare INVALID_DOCUMENT_SEND_REQUEST with no cause). Each rule now names
+  // its own machine-readable `reason` under the same top-level code —
+  // backward-compatible for clients that map INVALID_DOCUMENT_SEND_REQUEST
+  // and for the generic HTTP_<status> fallback.
+  const documentRejection = (reason: string) =>
+    context.json(
+      {
+        error: "Invalid durable document send request",
+        code: "INVALID_DOCUMENT_SEND_REQUEST",
+        reason,
+        retryable: false,
+        ambiguous: false,
+      },
+      400,
+    );
   const declaredLength = Number.parseInt(
     context.req.header("content-length") ?? "0",
     10,
@@ -1022,6 +1040,7 @@ app.post("/send-document", async (context) => {
       {
         error: "Document send request is too large",
         code: "INVALID_DOCUMENT_SEND_REQUEST",
+        reason: "form_too_large",
         retryable: false,
         ambiguous: false,
       },
@@ -1035,11 +1054,15 @@ app.post("/send-document", async (context) => {
       {
         error: "Document send request is too large",
         code: "INVALID_DOCUMENT_SEND_REQUEST",
+        reason: "form_too_large",
         retryable: false,
         ambiguous: false,
       },
       413,
     );
+  }
+  if (form === null) {
+    return documentRejection("form_unreadable");
   }
   const to = form?.get("to");
   const caption = form?.get("caption");
@@ -1069,35 +1092,41 @@ app.post("/send-document", async (context) => {
       400,
     );
   }
+  if (typeof to !== "string" || !to || to.length > 256) {
+    return documentRejection("recipient");
+  }
+  if (typeof caption !== "string" || caption.length > 4000) {
+    return documentRejection("caption");
+  }
+  if (typeof effectKey !== "string" || !documentEffectKey(effectKey)) {
+    return documentRejection("effect_key");
+  }
   if (
-    typeof to !== "string" ||
-    !to ||
-    to.length > 256 ||
-    typeof caption !== "string" ||
-    caption.length > 4000 ||
-    typeof effectKey !== "string" ||
-    !documentEffectKey(effectKey) ||
     typeof requestBinding !== "string" ||
-    !/^[0-9a-f]{64}$/.test(requestBinding) ||
+    !/^[0-9a-f]{64}$/.test(requestBinding)
+  ) {
+    return documentRejection("request_binding");
+  }
+  if (
     typeof fileName !== "string" ||
     !fileName ||
     fileName.length > 180 ||
     // Reject path-like and control-character titles before any provider call.
-    /[\u0000-\u001f\u007f\\]/.test(fileName) ||
-    !(document instanceof File) ||
-    document.size <= 0 ||
-    document.size > MAX_OUTBOUND_DOCUMENT_BYTES ||
-    !declaredMime
+    /[\u0000-\u001f\u007f\\]/.test(fileName)
   ) {
-    return context.json(
-      {
-        error: "Invalid durable document send request",
-        code: "INVALID_DOCUMENT_SEND_REQUEST",
-        retryable: false,
-        ambiguous: false,
-      },
-      400,
-    );
+    return documentRejection("file_name");
+  }
+  if (!(document instanceof File)) {
+    return documentRejection("document_part");
+  }
+  if (document.size <= 0) {
+    return documentRejection("document_empty");
+  }
+  if (document.size > MAX_OUTBOUND_DOCUMENT_BYTES) {
+    return documentRejection("document_too_large");
+  }
+  if (!declaredMime) {
+    return documentRejection("document_type");
   }
 
   const status = wa.getStatus();
