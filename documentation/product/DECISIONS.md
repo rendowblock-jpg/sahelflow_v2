@@ -960,6 +960,34 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is created.
   #230 and the zero-budget boundary are unaffected.
 
+## FD-055 — One signed successor (Internal.32) packaging the round-2 campaign repair line
+
+The Founder's 2026-09-01 directive ("merge all PRs and make the update"),
+issued after the Internal.31 installed-campaign round-2 findings, authorizes
+exactly one combined signed successor (Internal.32) packaging the
+protected-main frontier at cutting time: the round-2 repair line #370 (R4 raw
+`DOMException.name` in voice banners), #371 (B5 coded shape-400s),
+#372 (B3 named sidecar rejections + `code:reason` propagation), #373 (D1
+rounds 2-4: probe diagnostics, the documented `?key=` carriage, the
+verify-then-store whitespace boundary), #374 (FD-054 demo coexist with real
+data) and #375 (B5 client reason surfacing).
+
+Binding boundaries:
+
+- The successor packages exactly the protected-main frontier at the release
+  head; certification cites the tree-identical product head and its green
+  CI/Phase 5/Phase 6-7 runs.
+- FD-045 evidence rules are unchanged: release-authority PR, exact-head
+  review, required gates, expected-head merge, signed run, in-place preserved
+  install.
+- The Internal.32 installed campaign re-verifies the round-2 rows (R3-R6
+  surfacing), R11 (FRC-2 key lifecycle — the Founder rotates the
+  screenshot-exposed Gemini key first) and D3 (six-wave first observations if
+  not yet recorded on Internal.31); the retained #306 logout row executes
+  LAST, after every other row is green.
+- No customer-online, Beta, Stable or paid-deployment authority is created.
+  #230 and the zero-budget boundary are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

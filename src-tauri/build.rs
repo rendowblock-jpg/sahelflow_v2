@@ -150,9 +150,10 @@ fn founder_offline_checkpoint(authority: &serde_json::Value) -> bool {
                         | (Some("1.0.0-internal.29"), Some("FD-050"))
                         | (Some("1.0.0-internal.30"), Some("FD-051"))
                         | (Some("1.0.0-internal.31"), Some("FD-053"))
+                        | (Some("1.0.0-internal.32"), Some("FD-055"))
                 );
             if !exact_checkpoint {
-                panic!("founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, FD-038/Internal.19, FD-039/Internal.20, FD-040/Internal.21, FD-041/Internal.22, FD-042/Internal.23, FD-043/Internal.24, FD-044/Internal.25, FD-046/Internal.26, FD-047/Internal.27, FD-049/Internal.28, FD-050/Internal.29, FD-051/Internal.30, or FD-053/Internal.31 on the internal channel with no owned host suffix");
+                panic!("founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, FD-038/Internal.19, FD-039/Internal.20, FD-040/Internal.21, FD-041/Internal.22, FD-042/Internal.23, FD-043/Internal.24, FD-044/Internal.25, FD-046/Internal.26, FD-047/Internal.27, FD-049/Internal.28, FD-050/Internal.29, FD-051/Internal.30, FD-053/Internal.31, or FD-055/Internal.32 on the internal channel with no owned host suffix");
             }
             true
         }
