@@ -172,6 +172,13 @@ export function useVoiceRecorder({
       // denial, missing device and insecure-context failures previously
       // collapsed into one message, making installed-build diagnosis
       // impossible. The raw error name is always logged.
+      //
+      // R4 round 2 (installed Internal.31): the Windows privacy toggles plus
+      // a full app restart did NOT clear the failure on the installed
+      // machine, so the named copy alone is no longer enough — the exact
+      // WebView2 DOMException name is now appended to the visible banner.
+      // The next installed observation is self-diagnosing instead of
+      // requiring devtools or another guess round-trip.
       const errorName =
         error instanceof DOMException || error instanceof Error
           ? error.name
@@ -181,15 +188,19 @@ export function useVoiceRecorder({
         error,
       );
       if (errorName === "NotAllowedError" || errorName === "SecurityError") {
-        onErrorRef.current(copyRef.current.micPermissionDenied);
+        onErrorRef.current(
+          `${copyRef.current.micPermissionDenied} (${errorName})`,
+        );
       } else if (
         errorName === "NotFoundError" ||
         errorName === "DevicesNotFoundError" ||
         errorName === "OverconstrainedError"
       ) {
-        onErrorRef.current(copyRef.current.micDeviceNotFound);
+        onErrorRef.current(
+          `${copyRef.current.micDeviceNotFound} (${errorName})`,
+        );
       } else {
-        onErrorRef.current(copyRef.current.micUnavailable);
+        onErrorRef.current(`${copyRef.current.micUnavailable} (${errorName})`);
       }
       return;
     }
