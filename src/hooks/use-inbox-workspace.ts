@@ -48,12 +48,16 @@ type MediaSendResponse = {
 /**
  * Truthful outcome for permanent multi-select chat deletion. `errorCode`
  * carries the server's coded rejection (LICENSE_*, VALIDATION_ERROR, …) or an
- * `HTTP_<status>` fallback so the confirm dialog can show the operator why the
- * store refused the deletion instead of silently doing nothing.
+ * `HTTP_<status>` fallback and `errorDetail` carries the server's human-readable
+ * `error` message, so the confirm dialog can show the operator why the store
+ * refused the deletion instead of a bare status the operator cannot act on
+ * (campaign row B5 round 2: "could not be deleted (HTTP_400)" with the server's
+ * actual reason discarded made every rejection a dead end).
  */
 export interface DeleteChatsOutcome {
   ok: boolean;
   errorCode: string | null;
+  errorDetail: string | null;
 }
 
 /**
@@ -1011,7 +1015,7 @@ export function useInboxWorkspace() {
   const deleteChats = useCallback(
     async (conversationIds: string[]): Promise<DeleteChatsOutcome> => {
       if (!canDeleteChats || conversationIds.length === 0) {
-        return { ok: false, errorCode: null };
+        return { ok: false, errorCode: null, errorDetail: null };
       }
       try {
         const response = await fetch("/api/whatsapp/chats/delete", {
@@ -1021,14 +1025,20 @@ export function useInboxWorkspace() {
         });
         if (!response.ok) {
           let errorCode: string | null = null;
+          let errorDetail: string | null = null;
           try {
             const body: unknown = await response.json();
-            if (
-              body &&
-              typeof body === "object" &&
-              typeof (body as { code?: unknown }).code === "string"
-            ) {
-              errorCode = (body as { code: string }).code;
+            if (body && typeof body === "object") {
+              const candidate = body as { code?: unknown; error?: unknown };
+              if (typeof candidate.code === "string") {
+                errorCode = candidate.code;
+              }
+              // Keep the server's own message: it names the exact failing
+              // condition ("Invalid chat deletion request", LICENSE_*, …)
+              // instead of leaving the operator with a bare HTTP status.
+              if (typeof candidate.error === "string" && candidate.error) {
+                errorDetail = candidate.error;
+              }
             }
           } catch {
             // Non-JSON failure body (e.g. a bare middleware 401): fall back
@@ -1037,6 +1047,7 @@ export function useInboxWorkspace() {
           return {
             ok: false,
             errorCode: errorCode ?? `HTTP_${response.status}`,
+            errorDetail,
           };
         }
         const active = activeChatRef.current;
@@ -1051,9 +1062,9 @@ export function useInboxWorkspace() {
           setReplyText("");
         }
         await loadChats();
-        return { ok: true, errorCode: null };
+        return { ok: true, errorCode: null, errorDetail: null };
       } catch {
-        return { ok: false, errorCode: null };
+        return { ok: false, errorCode: null, errorDetail: null };
       }
     },
     [canDeleteChats, loadChats, replaceMessages, setReplyText],

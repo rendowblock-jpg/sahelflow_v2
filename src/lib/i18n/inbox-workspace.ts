@@ -70,6 +70,7 @@ const COPY = {
     deleteChatsConfirm: "Delete permanently",
     deleteChatsFailed: "The chats could not be deleted. Try again.",
     deleteChatsFailedWithCode: "The chats could not be deleted ({{code}}). Try again.",
+    deleteChatsFailedReason: "The chats could not be deleted — {{reason}} ({{code}}). Try again.",
     selectConversation: "Select a conversation",
     selectConversationHint: "Choose a conversation from the work queue to handle the customer, workflow and order outcome.",
     messages: "Messages",
@@ -220,6 +221,8 @@ const COPY = {
     deleteChatsFailed: "Les discussions n’ont pas pu être supprimées. Réessayez.",
     deleteChatsFailedWithCode:
       "Les discussions n’ont pas pu être supprimées ({{code}}). Réessayez.",
+    deleteChatsFailedReason:
+      "Les discussions n’ont pas pu être supprimées — {{reason}} ({{code}}). Réessayez.",
     selectConversation: "Sélectionnez une conversation",
     selectConversationHint: "Choisissez une conversation dans la file de travail pour gérer le client, le flux et le résultat de commande.",
     messages: "Messages",
@@ -369,6 +372,7 @@ const COPY = {
     deleteChatsConfirm: "حذف نهائي",
     deleteChatsFailed: "تعذّر حذف المحادثات. أعد المحاولة.",
     deleteChatsFailedWithCode: "تعذّر حذف المحادثات ({{code}}). أعد المحاولة.",
+    deleteChatsFailedReason: "تعذّر حذف المحادثات — {{reason}} ({{code}}). أعد المحاولة.",
     selectConversation: "اختر محادثة",
     selectConversationHint: "اختر محادثة من قائمة العمل للتعامل مع العميل وسير العمل ونتيجة الطلب.",
     messages: "الرسائل",
