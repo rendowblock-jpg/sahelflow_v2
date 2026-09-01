@@ -120,6 +120,63 @@ behavior, R11 FRC-2 key lifecycle now performable end-to-end, D3 six-wave
 first observations if not yet recorded on Internal.31), with the retained
 #306 logout row LAST.
 
+## Internal.32 installed campaign — round 3 (2026-09-02)
+
+The Founder installed Internal.32 in place through the normal updater
+(preserving installation/shop/WhatsApp state) and executed its campaign,
+providing installed screenshots as evidence. Founder verdict: B3 and B4 now
+pass; B5 and D1 remain reproduced; the remaining re-verified rows behaved.
+The #306 logout row was correctly NOT executed (it stays LAST).
+
+| Row | Item | State (round 3) |
+|---|---|---|
+| R1 (equiv) | In-place Internal.32 update, state preserved | passed (Founder, 2026-09-02) |
+| R3 | B3 — document/audio local ready + named rejections | **passed**: outbound PDF shows the verified-before-open local-ready state; audio ready (Founder screenshot) |
+| R4 | B4 — voice recording through the WebM→OGG remux | **passed**: voice note recorded and playable in-thread (Founder screenshot) |
+| R5 | B5 — permanent chat deletion | **reproduced (round 3)**: server still rejects with `INVALID_DELETE_REQUEST`; the round-2 surfacing repair works (dialog + toast show the reason + code) — the remaining opacity is the SHAPE verdict (which schema path / id count / id lengths), which only reached a server log line that installed builds cannot show (runtime stderr suppressed by native containment) |
+| R6 | D1 — AI-key test/save | **reproduced (round 5 of the chain)**: valid-format `AQ.` key (53 chars) now passes the format gate and the `?key=` carriage reaches Google (auth layers fixed in rounds 1–4), but the probe answers «Gemini غير متاح مؤقتًا / فحص: HTTP n/a — المفتاح: AQ…، 53 حرفًا» — the no-visible-text branch of `verifyGeminiKey`: Google returned **200** and the thinking model spent the 8-token visible budget on internal thought (`finishReason: MAX_TOKENS`, empty visible parts), misread as "provider unavailable" |
+| R11 | FRC-2 Founder rows | pending — key lifecycle is gated by the D1 probe above; extraction/proposal rows ride the same package |
+| D3 | #359 six-wave first installed observations | passed per Founder verdict ("the others are good"); formal ledger rows recorded with this round |
+| R9 (logout) | Retained #306 logout row | still pending, stays LAST |
+
+Round-3 causal findings (both pinned to exact code paths this time, not
+surfacing-only):
+
+1. **D1 root**: `verifyGeminiKey` treated every 200 body without visible text
+   as `GEMINI_PROVIDER_UNAVAILABLE` with no HTTP status — the anonymous
+   «HTTP n/a» signature. A thinking-model response with a candidate
+   `finishReason` proves the key authenticated and the model generated; a
+   non-JSON 200 (intercepting middlebox) was equally indistinguishable; a
+   401 `UNAUTHENTICATED` verdict mapped to "provider unavailable"; and
+   transport failures discarded `error.cause` (DNS/TLS/proxy/reset named
+   only in Node internals).
+2. **B5 root (observability)**: the delete request contract is verifiably
+   correct for canonical conversation ids (client sends `{ids:[cuid]}`;
+   tests pass at domain and route level; the failure reproduced across
+   Internal.29/30/31/32). The decisive shape evidence (failing schema path,
+   id count/lengths) was written only to a log line that installed builds
+   suppress. Candidate root classes: a selection id violating the 1..64
+   contract (e.g. a deep-link pinned row carries ids up to 160 chars while
+   the server contract allows 64) or an environment-level body difference.
+
+Round-3 repair line (one bounded root per finding; branches opened for the
+campaign's audit/review/merge discipline):
+
+| Branch | Root |
+|---|---|
+| `fix/campaign-r3-d1-transport-named-causes` | D1 — probe verifies any 200 with a candidate `finishReason` (incl. MAX_TOKENS), names blockReason/jsonParseFailed shapes, maps 401 UNAUTHENTICATED to the key verdict, raises the probe budget 8→256, and carries a PII-free named transport cause (`error.cause` code + localized dns/tls/blocked/reset/timeout family) through diagnostics and the settings panel; per-attempt logs record `transportCode` |
+| `fix/campaign-r3-b5-self-diagnosing-delete` | B5 — the delete route's 400s carry the shape verdict (reason, schema paths, id count/lengths, body size) in the response body; the client pre-flights the exact contract (naming offending id lengths locally, e.g. the deep-link 160-vs-64 class) and renders the verdict in the dialog + toast (en/fr/ar) |
+
+Expected conversions on the next installed observation: D1's probe either
+verifies the founder's valid key outright (thinking-budget root) or names
+the exact transport/response cause; B5's dialog shows the exact failing
+schema condition (or the local contract violation names the offending id
+before any request). Either outcome closes its row or opens the next
+bounded micro-repair with the root named.
+
+Housekeeping remains open: rotate the Founder's Gemini key (screenshot-
+exposed per #373) — rotate BEFORE the next D1 verification.
+
 ## #359 delta rows (NOT part of the installed campaign)
 
 These rows reconcile the source delta that rides protected `main` but is **not** inside the published Internal.30 package. They do not block or change the campaign above.

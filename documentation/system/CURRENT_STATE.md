@@ -1,12 +1,12 @@
 # SahelFlow — Current State
 
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
-> **Last assessed:** 2026-09-01
+> **Last assessed:** 2026-09-02
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** resolve from GitHub before every action; at this reconciliation the round-2 campaign repair line #370–#375 is merged (see `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` round-2 section)
-> **Current signed release:** Internal.32 / `1.0.0-internal.32` / MSI `1.0.0.32` / FD-055 (published 2026-09-01; Founder installation pending)
-> **Latest Founder-installed checkpoint:** Internal.31 / FD-053 (installed in place 2026-09-01)
-> **Current execution:** the Internal.31 installed campaign produced the bounded round-2 findings; repairs #370–#375 merged to protected `main`; the **Internal.32 / FD-055** signed successor packages the round-2 line — release PR #377 (squash `677dc463…`), dispatcher `33497016855`, signed publication `33497028241`, observer `33497039759`, tag `sahelflow-v1.0.0-internal.32-677dc463f7d00a179cdfed090184818249523fd6`, MSI digest `sha256:34417299864cd449eb9c24832c1d715d3423ee37433495a18b1b3ff1ed4db9af`; its installed campaign re-verifies the affected rows (R3–R6 surfacing, R11 FRC-2 key lifecycle, D3 six-wave first observations) with the retained #306 logout row LAST
+> **Current signed release:** Internal.32 / `1.0.0-internal.32` / MSI `1.0.0.32` / FD-055 (published 2026-09-01; Founder-installed in place 2026-09-02)
+> **Latest Founder-installed checkpoint:** Internal.32 / FD-055 (installed in place 2026-09-02)
+> **Current execution:** the Internal.32 installed campaign (round 3) passed B3/B4 and the remaining rows (D3 six waves included, per Founder verdict) and reproduced B5 and D1 with the roots pinned to exact code paths; bounded round-3 repair branches are open (`fix/campaign-r3-d1-transport-named-causes`, `fix/campaign-r3-b5-self-diagnosing-delete`) plus the docs record (`docs/internal-32-round3-campaign-record`); the #306 logout row stays LAST. Exact rows: `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` round-3 section
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
