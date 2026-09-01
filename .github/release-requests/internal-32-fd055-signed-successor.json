@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.32 FD-055 signed successor publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.32",
+  "windowsMsiVersion": "1.0.0.32",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-055",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "3d8eb7d210632410625ab0af1404f025af6cdfb1",
+    "phase5RunId": 33491587990,
+    "phase67RunId": 33491587825,
+    "ciRunId": 33491588102
+  },
+  "reason": "Founder directive 2026-09-01 ('merge all PRs and make the update') authorizes exactly one combined signed successor (Internal.32) under FD-055 packaging the exact protected-main frontier since Internal.31: the round-2 campaign repair line — PR #370 d63660f (R4/B4: the raw mic DOMException.name is surfaced inside the named-cause voice banners), PR #371 401b5a8 (B5 round 2: the two anonymous shape-level 400 branches are coded REQUEST_VALIDATION_FAILED/INVALID_REQUEST_JSON so every 400 body carries both code and a readable message), PR #372 9e8b6d1 (B3 rounds 2-3: every document-send rejection names its own machine-readable reason; SidecarRequestError carries reason; failureDisposition composes code:reason into lastErrorCode; real-sidecar probe matrix proves every realistic composer shape passes validation), PR #373 (D1 rounds 2-4: PII-free probe diagnostics + truthful settings display; the documented ?key= query-parameter carriage replaces the x-goog-api-key header — new-format AQ. keys are the demonstrated header-failure class; the verify-then-store boundary trims/bounds/rejects control bytes so a pasted whitespace-padded key can never again pass verify then crash setSecret), PR #374 af6e070 (FD-054: demo workspace loads alongside real seller data; removal deletes only the demo-tagged/derived graph and fails closed with coded 409 DEMO_REMOVAL_BLOCKED_BY_REFERENCES on enforced real-to-demo foreign keys), and PR #375 (B5 round 2 client: DeleteChatsOutcome.errorDetail carries the server's human-readable rejection reason into the confirm dialog + toast in en/fr/ar). The certification product head 3d8eb7d is tree-identical to the protected-main squash of PR #375 (git diff empty) and passed CI, Phase 5 and Phase 6-7 with zero failed checks. The Internal.32 installed campaign re-verifies the round-2 rows (R3-R6 surfacing behavior), R11 (FRC-2 key lifecycle now performable end-to-end — the Founder rotates the screenshot-exposed Gemini key first) and D3 (six-wave first observations if not yet recorded on Internal.31); the retained #306 logout row executes LAST after every other row is green. Founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim; #230 unaffected."
+}
