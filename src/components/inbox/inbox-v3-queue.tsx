@@ -471,12 +471,19 @@ export function InboxV3Queue({
     const outcome = await deleteChats([...effectiveSelected]);
     setDeleting(false);
     if (!outcome.ok) {
-      // Truthful failure surfacing: the coded server rejection is shown
-      // inside the open confirm dialog AND toasted, so a rejection is never
-      // indistinguishable from a dead button (FD-050 campaign row B5).
-      const message = outcome.errorCode
-        ? copy("deleteChatsFailedWithCode", { code: outcome.errorCode })
-        : copy("deleteChatsFailed");
+      // Truthful failure surfacing: the server's own rejection reason is
+      // shown inside the open confirm dialog AND toasted, so a rejection is
+      // never indistinguishable from a dead button (FD-050 campaign row B5;
+      // round 2 additionally carries the server's human-readable error text
+      // instead of only a bare status code).
+      const message = outcome.errorDetail
+        ? copy("deleteChatsFailedReason", {
+            reason: outcome.errorDetail,
+            code: outcome.errorCode ?? "HTTP_ERROR",
+          })
+        : outcome.errorCode
+          ? copy("deleteChatsFailedWithCode", { code: outcome.errorCode })
+          : copy("deleteChatsFailed");
       setDeleteError(message);
       toast.error(message);
       return;
