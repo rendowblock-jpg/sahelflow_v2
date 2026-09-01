@@ -139,6 +139,11 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           ok: false,
           code,
           error: PROVIDER_ERROR_COPY[locale][code],
+          // Campaign row D1 round 2: PII-free probe diagnostics (HTTP
+          // status, provider status, sanitized reason, received-key shape)
+          // so an installed build can say WHY Google refused instead of
+          // repeating an unverifiable banner. Never carries key material.
+          diagnostics: verification.diagnostics ?? null,
         },
         { status: 400 },
       );

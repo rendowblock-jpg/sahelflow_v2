@@ -38,6 +38,7 @@ export class GeminiProviderError extends Error {
     public readonly code: GeminiProviderErrorCode,
     message: string,
     public readonly status?: number,
+    public readonly providerStatus?: string | null,
   ) {
     super(message);
     this.name = "GeminiProviderError";
@@ -50,19 +51,15 @@ function providerError(
 ): GeminiProviderError {
   const providerStatus = body.error?.status;
   const message = body.error?.message?.trim() || `Gemini HTTP ${status}`;
+  const withStatus = (
+    code: GeminiProviderErrorCode,
+  ): GeminiProviderError =>
+    new GeminiProviderError(code, message, status, providerStatus ?? null);
   if (status === 403 || providerStatus === "PERMISSION_DENIED") {
-    return new GeminiProviderError(
-      "GEMINI_PERMISSION_DENIED",
-      message,
-      status,
-    );
+    return withStatus("GEMINI_PERMISSION_DENIED");
   }
   if (status === 429 || providerStatus === "RESOURCE_EXHAUSTED") {
-    return new GeminiProviderError(
-      "GEMINI_QUOTA_EXHAUSTED",
-      message,
-      status,
-    );
+    return withStatus("GEMINI_QUOTA_EXHAUSTED");
   }
   // Google refuses Gemini API use from countries/regions outside its
   // availability list (e.g. Algeria) with FAILED_PRECONDITION "User location
@@ -72,39 +69,21 @@ function providerError(
     providerStatus === "FAILED_PRECONDITION" &&
     /location is not supported|not supported for the api use/i.test(message)
   ) {
-    return new GeminiProviderError(
-      "GEMINI_LOCATION_UNSUPPORTED",
-      message,
-      status,
-    );
+    return withStatus("GEMINI_LOCATION_UNSUPPORTED");
   }
   if (providerStatus === "FAILED_PRECONDITION") {
-    return new GeminiProviderError(
-      "GEMINI_REGION_OR_BILLING_REQUIRED",
-      message,
-      status,
-    );
+    return withStatus("GEMINI_REGION_OR_BILLING_REQUIRED");
   }
   if (status === 404 || providerStatus === "NOT_FOUND") {
-    return new GeminiProviderError(
-      "GEMINI_MODEL_UNAVAILABLE",
-      message,
-      status,
-    );
+    return withStatus("GEMINI_MODEL_UNAVAILABLE");
   }
   if (status === 400 || providerStatus === "INVALID_ARGUMENT") {
     const keyInvalid = /api.?key|key not valid|invalid key/i.test(message);
-    return new GeminiProviderError(
+    return withStatus(
       keyInvalid ? "GEMINI_KEY_INVALID" : "GEMINI_REQUEST_INVALID",
-      message,
-      status,
     );
   }
-  return new GeminiProviderError(
-    "GEMINI_PROVIDER_UNAVAILABLE",
-    message,
-    status,
-  );
+  return withStatus("GEMINI_PROVIDER_UNAVAILABLE");
 }
 
 /** Convert an error delivered inside a successful Gemini SSE response. */
@@ -327,6 +306,51 @@ type MinimalGeminiResponse = {
   }>;
 };
 
+/**
+ * PII-free installed-build diagnostics for a failed key verification
+ * (campaign row D1 round 2). The founder re-pasted a fresh key and the
+ * probe still failed, so the route must return WHAT Google actually said
+ * (HTTP status + provider status + sanitized reason) and the exact shape
+ * of the received key, without ever carrying key material.
+ */
+export type GeminiProbeDiagnostics = {
+  httpStatus?: number;
+  providerStatus?: string | null;
+  reason?: string | null;
+  keyShape: {
+    prefix: string;
+    length: number;
+    hasWhitespace: boolean;
+    hasNewline: boolean;
+  };
+};
+
+const KEY_LIKE_FRAGMENT = /(?:AIza|AQ\.)[0-9A-Za-z_-]{8,}/g;
+
+function sanitizedReason(message: string | undefined): string | null {
+  if (!message) return null;
+  const redacted = message.replace(KEY_LIKE_FRAGMENT, "[redacted]");
+  return redacted.length > 160 ? `${redacted.slice(0, 157)}...` : redacted;
+}
+
+function probeDiagnostics(
+  rawApiKey: string,
+  error?: GeminiProviderError,
+): GeminiProbeDiagnostics {
+  const trimmed = rawApiKey.trim();
+  return {
+    httpStatus: error?.status,
+    providerStatus: error?.providerStatus ?? null,
+    reason: sanitizedReason(error?.message),
+    keyShape: {
+      prefix: trimmed.startsWith("AIza") ? "AIza" : trimmed.slice(0, 3),
+      length: trimmed.length,
+      hasWhitespace: /\s/.test(rawApiKey),
+      hasNewline: /[\r\n]/.test(rawApiKey),
+    },
+  };
+}
+
 export async function verifyGeminiKey(
   apiKey: string,
   timeoutMs = 10_000,
@@ -335,6 +359,7 @@ export async function verifyGeminiKey(
   model?: GeminiModel;
   error?: string;
   code?: GeminiProviderErrorCode;
+  diagnostics?: GeminiProbeDiagnostics;
 }> {
   // Google AI Studio issues keys in two formats: the legacy "AIza…" project
   // keys and the newer "AQ." keys. Both travel the same x-goog-api-key
@@ -349,6 +374,7 @@ export async function verifyGeminiKey(
       ok: false,
       code: "GEMINI_KEY_INVALID",
       error: "Le format de la clé Gemini semble invalide.",
+      diagnostics: probeDiagnostics(apiKey),
     };
   }
 
@@ -376,6 +402,7 @@ export async function verifyGeminiKey(
         ok: false,
         code: "GEMINI_PROVIDER_UNAVAILABLE",
         error: "Gemini a répondu sans contenu vérifiable.",
+        diagnostics: probeDiagnostics(apiKey),
       };
     }
     return { ok: true, model };
@@ -387,6 +414,10 @@ export async function verifyGeminiKey(
           ? error.code
           : "GEMINI_PROVIDER_UNAVAILABLE",
       error: geminiErrorMessage(error, "fr"),
+      diagnostics: probeDiagnostics(
+        apiKey,
+        error instanceof GeminiProviderError ? error : undefined,
+      ),
     };
   }
 }
