@@ -48,7 +48,18 @@ const securityHeaders = [
   // production if the app is ever served over HTTPS (e.g. Cloudflare Pages).
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
   // Don't allow the webview to be framed by other origins (clickjacking).
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // Campaign row R4/B4 ROOT CAUSE: `microphone=()` disabled the app's OWN
+  // first-party microphone use. Chromium enforces the permissions policy
+  // BEFORE any OS toggle or WebView2 auto-grant switch, so every getUserMedia
+  // call rejected with NotAllowedError no matter what the operator changed in
+  // Windows privacy settings — the exact installed failure reproduced across
+  // Internal.28/.30/.31. `microphone=(self)` keeps third-party/embedded frames
+  // blocked while allowing the same-origin composer voice recorder the app
+  // itself ships (#329). Camera and geolocation stay fully denied.
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(self), geolocation=()",
+  },
 ];
 
 const nextConfig: NextConfig = {
