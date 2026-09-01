@@ -39,10 +39,88 @@ export class GeminiProviderError extends Error {
     message: string,
     public readonly status?: number,
     public readonly providerStatus?: string | null,
+    public readonly transport?: GeminiTransportCause | null,
   ) {
     super(message);
     this.name = "GeminiProviderError";
   }
+}
+
+/**
+ * PII-free named cause for a transport-level (no HTTP response) failure —
+ * campaign row D1 round 3. Node/undici fetch wraps the real network error in
+ * `TypeError: fetch failed` and moves the decisive code (DNS, TLS, connect,
+ * reset) into `error.cause`. Installed evidence (Internal.32 campaign, D1):
+ * the founder's browser probe authenticated the SAME AQ. key that this app's
+ * server-side probe reported as HTTP n/a, so the transport layer must now
+ * name its cause at the operator instead of discarding it.
+ */
+export type GeminiTransportCause = {
+  name: string;
+  code: string | null;
+};
+
+export type GeminiTransportClass =
+  | "dns"
+  | "tls"
+  | "blocked"
+  | "reset"
+  | "timeout";
+
+const DNS_CAUSE_PATTERN = /ENOTFOUND|EAI_AGAIN|ENOGETADDRINFO|ESERVFAIL/i;
+const TLS_CAUSE_PATTERN =
+  /CERT|SSL|TLS|UNABLE_TO_VERIFY_LEAF|SELF_SIGNED|CERTIFICATE/i;
+const BLOCKED_CAUSE_PATTERN =
+  /ECONNREFUSED|EACCES|EPERM|UND_ERR_CONNECT_TIMEOUT|ETIMEDOUT|HPE_|ENETUNREACH|EHOSTUNREACH/i;
+const RESET_CAUSE_PATTERN = /ECONNRESET|UND_ERR_SOCKET|EPIPE|UND_ERR_ABORTED/i;
+
+/** Classify a raw transport cause into a bounded, localizable family. */
+export function classifyTransportCause(
+  cause: GeminiTransportCause | null | undefined,
+): GeminiTransportClass | null {
+  if (!cause) return null;
+  const haystack = `${cause.code ?? ""} ${cause.name}`;
+  if (DNS_CAUSE_PATTERN.test(haystack)) return "dns";
+  if (TLS_CAUSE_PATTERN.test(haystack)) return "tls";
+  if (RESET_CAUSE_PATTERN.test(haystack)) return "reset";
+  if (BLOCKED_CAUSE_PATTERN.test(haystack)) return "blocked";
+  return null;
+}
+
+/**
+ * Walk the fetch error's `cause` chain (bounded depth) and return the first
+ * object carrying a usable name/code. Never includes message bodies — codes
+ * and class names only, so the value is safe for UI, logs and evidence.
+ */
+export function describeTransportCause(
+  error: unknown,
+): GeminiTransportCause | null {
+  let current: unknown = error;
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (!current || typeof current !== "object") break;
+    const candidate = current as { cause?: unknown; code?: unknown };
+    const nested = candidate.cause;
+    if (nested && typeof nested === "object") {
+      const nestedCandidate = nested as { name?: unknown; code?: unknown };
+      const name =
+        typeof nestedCandidate.name === "string" ? nestedCandidate.name : "";
+      const code =
+        typeof nestedCandidate.code === "string" ? nestedCandidate.code : null;
+      if (code || name) return { name: name || "Error", code };
+      current = nested;
+      continue;
+    }
+    break;
+  }
+  // No nested cause object: fall back to the error's own top-level identity.
+  if (error instanceof Error) {
+    const topLevel = error as Error & { code?: unknown };
+    return {
+      name: error.name,
+      code: typeof topLevel.code === "string" ? topLevel.code : null,
+    };
+  }
+  return null;
 }
 
 function providerError(
@@ -57,6 +135,17 @@ function providerError(
     new GeminiProviderError(code, message, status, providerStatus ?? null);
   if (status === 403 || providerStatus === "PERMISSION_DENIED") {
     return withStatus("GEMINI_PERMISSION_DENIED");
+  }
+  // D1 round 3: a 401 UNAUTHENTICATED verdict IS the key verdict — Google
+  // rejected the credential. Reporting it as "provider unavailable" sent the
+  // Internal.32 campaign chasing the wrong layer.
+  if (status === 401 || providerStatus === "UNAUTHENTICATED") {
+    const keyInvalid = /api.?key|key not valid|invalid key|unauthenticated/i.test(
+      message,
+    );
+    return withStatus(
+      keyInvalid ? "GEMINI_KEY_INVALID" : "GEMINI_PERMISSION_DENIED",
+    );
   }
   if (status === 429 || providerStatus === "RESOURCE_EXHAUSTED") {
     return withStatus("GEMINI_QUOTA_EXHAUSTED");
@@ -151,14 +240,23 @@ async function fetchAttempt(
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
+      // D1 round 3: the abort is our own timeout controller, so the named
+      // transport class is "timeout" — surfaced verbatim in probe
+      // diagnostics instead of collapsing into an anonymous HTTP n/a line.
       throw new GeminiProviderError(
         "GEMINI_TIMEOUT",
         "Gemini request timed out.",
+        undefined,
+        null,
+        { name: "AbortError", code: "SAHELFLOW_TIMEOUT" },
       );
     }
     throw new GeminiProviderError(
       "GEMINI_NETWORK_ERROR",
       error instanceof Error ? error.message : "Gemini network request failed.",
+      undefined,
+      null,
+      describeTransportCause(error),
     );
   } finally {
     clearTimeout(timeout);
@@ -201,6 +299,7 @@ export async function requestGemini(
           attempt: attempt + 1,
           durationMs: Date.now() - startedAt,
           code: error.code,
+          transportCode: error.transport?.code ?? null,
         });
         if (
           (error.code === "GEMINI_TIMEOUT" ||
@@ -320,7 +419,19 @@ export function geminiErrorMessage(
 type MinimalGeminiResponse = {
   candidates?: Array<{
     content?: { parts?: Array<{ text?: string }> };
+    finishReason?: string;
   }>;
+  promptFeedback?: {
+    blockReason?: string;
+  };
+};
+
+/** PII-free shape of a 200 response the probe could not verify by text. */
+type GeminiResponseShape = {
+  jsonParseFailed: boolean;
+  candidatesCount: number | null;
+  finishReason: string | null;
+  blockReason: string | null;
 };
 
 /**
@@ -334,6 +445,14 @@ export type GeminiProbeDiagnostics = {
   httpStatus?: number;
   providerStatus?: string | null;
   reason?: string | null;
+  // D1 round 3: named transport cause for failures with no HTTP response
+  // (the previous "HTTP n/a" dead end), plus a bounded localized family.
+  transport?: GeminiTransportCause | null;
+  transportClass?: GeminiTransportClass | null;
+  // D1 round 3: truthful shape of an HTTP-200 body that produced no visible
+  // text (the demonstrated Internal.32 failure: a thinking-model response
+  // with finishReason MAX_TOKENS and an empty visible-parts list).
+  responseShape?: GeminiResponseShape | null;
   keyShape: {
     prefix: string;
     length: number;
@@ -353,12 +472,17 @@ function sanitizedReason(message: string | undefined): string | null {
 function probeDiagnostics(
   rawApiKey: string,
   error?: GeminiProviderError,
+  responseShape?: GeminiResponseShape,
 ): GeminiProbeDiagnostics {
   const trimmed = rawApiKey.trim();
+  const transport = error?.transport ?? null;
   return {
     httpStatus: error?.status,
     providerStatus: error?.providerStatus ?? null,
     reason: sanitizedReason(error?.message),
+    transport,
+    transportClass: classifyTransportCause(transport),
+    responseShape: responseShape ?? null,
     keyShape: {
       prefix: trimmed.startsWith("AIza") ? "AIza" : trimmed.slice(0, 3),
       length: trimmed.length,
@@ -407,23 +531,73 @@ export async function verifyGeminiKey(
             parts: [{ text: "Reply with exactly OK." }],
           },
         ],
-        generationConfig: { maxOutputTokens: 8 },
+        // D1 round 3: thinking-enabled Gemini models spend generation output
+        // on internal thought before any visible text. The previous 8-token
+        // budget produced HTTP 200 responses with finishReason MAX_TOKENS and
+        // an empty visible-parts list on the installed Internal.32 campaign —
+        // read as "provider unavailable" even though the key had
+        // authenticated and the model had answered. A generous budget lets a
+        // benign probe answer in text.
+        generationConfig: { maxOutputTokens: 256 },
       },
     });
-    const data = (await response.json()) as MinimalGeminiResponse;
-    const text = data.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text ?? "")
-      .join("")
-      .trim();
-    if (!text) {
+    let data: MinimalGeminiResponse;
+    try {
+      data = (await response.json()) as MinimalGeminiResponse;
+    } catch {
+      // A 200 with a non-JSON body (captive portal, intercepting middlebox)
+      // used to collapse into the same anonymous failure as every other
+      // shape; the jsonParseFailed shape now names it.
       return {
         ok: false,
         code: "GEMINI_PROVIDER_UNAVAILABLE",
         error: "Gemini a répondu sans contenu vérifiable.",
-        diagnostics: probeDiagnostics(apiKey),
+        diagnostics: probeDiagnostics(apiKey, undefined, {
+          jsonParseFailed: true,
+          candidatesCount: null,
+          finishReason: null,
+          blockReason: null,
+        }),
       };
     }
-    return { ok: true, model };
+    const text = data.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text ?? "")
+      .join("")
+      .trim();
+    if (text) {
+      return { ok: true, model };
+    }
+    // No visible text: classify the 200 truthfully instead of calling the
+    // provider unavailable. A candidate with a finishReason proves the key
+    // authenticated AND the model generated (thinking models can spend the
+    // whole visible budget on thought) — that is a verified working key. A
+    // promptFeedback blockReason is a policy refusal over an authenticated
+    // key. Both convert to truthful coded outcomes; the remaining unknown
+    // shapes now carry their exact response shape.
+    const candidate = data.candidates?.[0];
+    const shape: GeminiResponseShape = {
+      jsonParseFailed: false,
+      candidatesCount: data.candidates?.length ?? 0,
+      finishReason: candidate?.finishReason ?? null,
+      blockReason: data.promptFeedback?.blockReason ?? null,
+    };
+    if (candidate?.finishReason) {
+      return { ok: true, model };
+    }
+    if (shape.blockReason) {
+      return {
+        ok: false,
+        code: "GEMINI_REQUEST_INVALID",
+        error: "Gemini a répondu sans contenu vérifiable.",
+        diagnostics: probeDiagnostics(apiKey, undefined, shape),
+      };
+    }
+    return {
+      ok: false,
+      code: "GEMINI_PROVIDER_UNAVAILABLE",
+      error: "Gemini a répondu sans contenu vérifiable.",
+      diagnostics: probeDiagnostics(apiKey, undefined, shape),
+    };
   } catch (error) {
     return {
       ok: false,

@@ -50,6 +50,20 @@ type GeminiKeyDiagnostics = {
   httpStatus?: number;
   providerStatus?: string | null;
   reason?: string | null;
+  transport?: { name: string; code: string | null } | null;
+  transportClass?:
+    | "dns"
+    | "tls"
+    | "blocked"
+    | "reset"
+    | "timeout"
+    | null;
+  responseShape?: {
+    jsonParseFailed: boolean;
+    candidatesCount: number | null;
+    finishReason: string | null;
+    blockReason: string | null;
+  } | null;
   keyShape: {
     prefix: string;
     length: number;
@@ -545,6 +559,41 @@ export function AiKeyPanel({
                         {t("aiKey.probe.http", {
                           http: result.diagnostics.httpStatus ?? "n/a",
                         })}
+                        {result.code ? ` · ${result.code}` : ""}
+                        {result.diagnostics.transport?.code ||
+                        result.diagnostics.transport?.name
+                          ? ` · ${t("aiKey.probe.transport")}: ${
+                              result.diagnostics.transport?.code ??
+                              result.diagnostics.transport?.name
+                            }${
+                              result.diagnostics.transportClass
+                                ? ` (${t(
+                                    `aiKey.probe.transportClass.${result.diagnostics.transportClass}`,
+                                  )})`
+                                : ""
+                            }`
+                          : ""}
+                        {result.diagnostics.responseShape?.finishReason
+                          ? ` · ${t("aiKey.probe.finishReason", {
+                              reason: result.diagnostics.responseShape.finishReason,
+                            })}`
+                          : ""}
+                        {result.diagnostics.responseShape?.candidatesCount !==
+                          null &&
+                        result.diagnostics.responseShape?.candidatesCount !==
+                          undefined
+                          ? ` · ${t("aiKey.probe.candidates", {
+                              count: result.diagnostics.responseShape.candidatesCount,
+                            })}`
+                          : ""}
+                        {result.diagnostics.responseShape?.jsonParseFailed
+                          ? ` · ${t("aiKey.probe.jsonParseFailed")}`
+                          : ""}
+                        {result.diagnostics.responseShape?.blockReason
+                          ? ` · ${t("aiKey.probe.blockReason", {
+                              reason: result.diagnostics.responseShape.blockReason,
+                            })}`
+                          : ""}
                         {result.diagnostics.providerStatus
                           ? ` ${result.diagnostics.providerStatus}`
                           : ""}
