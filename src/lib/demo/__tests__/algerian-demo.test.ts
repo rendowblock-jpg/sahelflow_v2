@@ -237,7 +237,7 @@ describe("Algerian demo data", () => {
     });
   });
 
-  it("refuses to mix the demo with existing seller business data", async () => {
+  it("mixes the demo alongside existing seller business data (FD-054)", async () => {
     await prisma.customer.create({
       data: {
         id: "real-customer-01",
@@ -246,14 +246,21 @@ describe("Algerian demo data", () => {
       },
     });
 
-    await expect(seedAlgerianDemoData(demoClient())).rejects.toMatchObject({
-      code: "DEMO_SHOP_NOT_EMPTY",
-      statusCode: 409,
-    });
+    // FD-054: the former DEMO_SHOP_NOT_EMPTY gate is gone — the founder
+    // directed that the demo loads "even if there is real data there".
+    // Demo rows are tagged and mix into stats (FD-052) until removed.
+    const seeded = await seedAlgerianDemoData(demoClient());
+    expect(seeded).toMatchObject({ loaded: true });
 
-    expect(await prisma.product.count()).toBe(0);
-    expect(await prisma.order.count()).toBe(0);
-    expect(await prisma.customer.count()).toBe(1);
+    // The seller's own record survives untouched next to the demo graph.
+    expect(await prisma.customer.count()).toBeGreaterThan(1);
+    expect(
+      await prisma.customer.findUnique({ where: { id: "real-customer-01" } }),
+    ).not.toBeNull();
+    expect(await prisma.order.count()).toBeGreaterThan(0);
+    expect(
+      await prisma.order.findFirst({ where: { id: { not: { startsWith: "demo-" } } } }),
+    ).toBeNull();
   });
 
   it("allows demo load and removal while preserving the internal wrapped key", async () => {
@@ -413,7 +420,7 @@ describe("Algerian demo data", () => {
     ).resolves.toMatchObject({ key: BUSINESS_ENVELOPE_SECRET_KEY });
   });
 
-  it("treats non-demo canonical authority as seller-owned state", async () => {
+  it("preserves non-demo canonical authority across demo removal (FD-054)", async () => {
     await loadAlgerianDemoWorkspace(demoClient());
 
     await executeBusinessCommand(
@@ -451,9 +458,21 @@ describe("Algerian demo data", () => {
       loaded: true,
       hasBusinessData: true,
     });
-    await expect(removeAlgerianDemoWorkspace(demoClient())).rejects.toMatchObject({
-      code: "DEMO_REMOVAL_REAL_DATA_PRESENT",
-      statusCode: 409,
+    // FD-054: removal proceeds and deletes only the demo-tagged command
+    // graph; the seller-owned aggregate command survives untouched.
+    await expect(removeAlgerianDemoWorkspace(demoClient())).resolves.toMatchObject({
+      loaded: false,
+      canSeed: true,
     });
+    expect(
+      await prisma.businessCommand.findFirst({
+        where: { aggregateId: "seller-owned-aggregate" },
+      }),
+    ).not.toBeNull();
+    expect(
+      await prisma.businessCommand.count({
+        where: { aggregateId: { startsWith: "demo-" } },
+      }),
+    ).toBe(0);
   });
 });

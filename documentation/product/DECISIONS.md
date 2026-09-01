@@ -923,6 +923,43 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is created.
   #230 and the zero-budget boundary are unaffected.
 
+## FD-054 — Demo data loads into a shop that already contains real data
+
+Founder directive during the Internal.31 installed campaign (2026-09-01):
+"yes i want the demo data even if there is real data there". This supersedes
+the empty-shop-only seeding boundary that FD-052 intentionally kept, and
+resolves the one-way-door removal question FD-052 deferred ("a removal
+strategy for cross-referenced state is a candidate for a future numbered
+decision").
+
+Binding boundaries:
+
+- Seeding requires only that the annual demo workspace is not already
+  loaded (`canSeed = !loaded`). Seller-owned state — records, sequence and
+  analytics traces, canonical command authority, phone-risk data,
+  configuration, effectful report settings — no longer blocks loading.
+- Demo rows keep their `demo-` id tagging; isolation remains id-prefix
+  based, and they mix into stats and reports until removed, exactly as
+  FD-052 already discloses.
+- Demo removal no longer refuses when real seller state exists. Removal
+  deletes ONLY the demo-tagged/derived graph. If real records reference
+  demo records through enforced foreign keys (e.g. a real order created
+  for a demo customer), removal fails closed at the database boundary:
+  the transaction rolls back untouched and the seller receives
+  `DEMO_REMOVAL_BLOCKED_BY_REFERENCES` naming the required action. Nothing
+  real is ever deleted, reassigned or rewritten automatically. JSON-level
+  references (e.g. a real storefront listing demo products) are tolerated
+  as dangling and are not FK-enforced.
+- The courier effect boundary is unchanged: demo identities can never
+  book or sync with real courier providers (`DEMO_PROVIDER_EFFECT_BLOCKED`).
+- The settings panel (ar/fr/en) discloses coexistence before loading into
+  a shop with real records and asks for confirmation; the empty-shop-only
+  copy is removed.
+- Implemented on the Internal.32 repair line; campaign evidence rows are
+  recorded only after the Founder verifies on the installed successor.
+- No customer-online, Beta, Stable or paid-deployment authority is created.
+  #230 and the zero-budget boundary are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

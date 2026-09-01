@@ -57,11 +57,13 @@ type Copy = {
   title: string;
   description: string;
   isolated: string;
-  emptyOnly: string;
+  coexistNote: string;
   loaded: string;
   available: string;
-  unavailable: string;
-  unavailableDescription: string;
+  withRealData: string;
+  withRealDataDescription: string;
+  confirmLoadTitle: string;
+  confirmLoad: string;
   load: string;
   loading: string;
   remove: string;
@@ -88,12 +90,15 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     description:
       "حمّل مساحة تجريبية غنية تمتد 365 يومًا حتى اليوم، مع منتجات وزبائن متكررين وطلبات وتوصيل وتحصيل COD ومرتجعات ومصاريف ومحادثات واتساب واقعية السياق بالعربية والفرنسية.",
     isolated: "لا يتم إرسال رسائل أو طلبات حقيقية إلى شركات التوصيل.",
-    emptyOnly: "يمكن إضافة البيانات فقط عندما يكون المتجر الحالي فارغًا.",
+    coexistNote: "تُضاف بجانب بياناتك الحقيقية — تُحذف السجلات التجريبية المُعلَّمة فقط.",
     loaded: "البيانات التجريبية السنوية محمّلة",
     available: "جاهزة للتحميل",
-    unavailable: "المتجر يحتوي على بيانات حقيقية",
-    unavailableDescription:
-      "لا يمكن تحميل البيانات التجريبية إلا في متجر فارغ. إذا كانت محمّلة فعليًا، يمكنك العمل عاديًا — تبقى سجلاتها محسوبة في الإحصائيات والتقارير حتى حذفها.",
+    withRealData: "يحتوي هذا المتجر على بيانات حقيقية",
+    withRealDataDescription:
+      "ستُضاف مساحة البيانات التجريبية بجانبها وتُحسب في الإحصائيات والتقارير حتى حذفها (تعايش FD-052). إذا أشارت سجلات حقيقية لاحقًا إلى سجلات تجريبية فسيتوقف الحذف ويُخبرك بذلك — لا يُحذف أي شيء حقيقي تلقائيًا أبدًا.",
+    confirmLoadTitle: "تحميل البيانات التجريبية بجانب البيانات الحقيقية؟",
+    confirmLoad:
+      "السجلات التجريبية مُعلَّمة ويمكن حذفها في أي وقت، وتُحسب في الإحصائيات والتقارير حتى حذفها. تبقى العمليات الحقيقية متاحة. المتابعة؟",
     load: "تحميل المتجر التجريبي السنوي",
     loading: "جارٍ إنشاء سنة من البيانات...",
     remove: "حذف البيانات التجريبية",
@@ -121,12 +126,17 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     description:
       "Chargez 365 jours d'activité jusqu'à aujourd'hui : produits, clients récurrents, commandes, livraison, collecte et remise COD, retours, dépenses et conversations WhatsApp en arabe et en français.",
     isolated: "Aucun message ni ordre réel n'est envoyé à un transporteur.",
-    emptyOnly: "Le jeu de données ne peut être ajouté qu'à une boutique vide.",
+    coexistNote:
+      "S'ajoute à vos données réelles — seules les lignes de démonstration sont jamais supprimées.",
     loaded: "Démonstration annuelle chargée",
     available: "Prête à charger",
-    unavailable: "Cette boutique contient déjà des données",
-    unavailableDescription:
-      "Le jeu de démonstration ne peut être chargé que dans une boutique vide. S'il est déjà chargé, vous pouvez travailler normalement — ses lignes restent comptées dans les statistiques et les rapports jusqu'à sa suppression.",
+    withRealData: "Cette boutique contient déjà des données réelles",
+    withRealDataDescription:
+      "L'espace de démonstration sera ajouté à côté et mélangé aux statistiques et rapports jusqu'à sa suppression (coexistence FD-052). Si des données réelles référencent plus tard des enregistrements de démonstration, la suppression s'arrêtera et les nommera — rien de réel n'est jamais supprimé automatiquement.",
+    confirmLoadTitle:
+      "Charger la démonstration à côté des données réelles ?",
+    confirmLoad:
+      "Les lignes de démonstration sont étiquetées et supprimables à tout moment, et elles entrent dans les statistiques et rapports jusqu'à leur suppression. Les opérations réelles restent disponibles. Continuer ?",
     load: "Charger la démonstration annuelle",
     loading: "Création d'une année de données...",
     remove: "Supprimer la démonstration",
@@ -154,12 +164,16 @@ const COPY: Record<"ar" | "fr" | "en", Copy> = {
     description:
       "Load a rolling 365-day workspace through today with products, repeat customers, orders, delivery, COD collection and remittance, returns, expenses, and Arabic/French WhatsApp conversations.",
     isolated: "No real message, shipment, or provider action is sent.",
-    emptyOnly: "The dataset can only be added to an empty shop.",
+    coexistNote:
+      "Loads alongside your real data — only demo-tagged rows are ever removed.",
     loaded: "Annual demo data loaded",
     available: "Ready to load",
-    unavailable: "This shop already contains business data",
-    unavailableDescription:
-      "The sample dataset can only be loaded into an empty shop. If it is already loaded you can keep working — its rows remain counted in stats and reports until removed.",
+    withRealData: "This shop already contains real records",
+    withRealDataDescription:
+      "The demo workspace will be added alongside them and mixed into stats and reports until removed (FD-052 coexistence). If real records later reference demo records, removal stops and names them — nothing real is ever deleted automatically.",
+    confirmLoadTitle: "Load demo data alongside real records?",
+    confirmLoad:
+      "Demo rows are tagged and removable at any time, and they mix into stats and reports until removed. Real operations stay enabled. Continue?",
     load: "Load annual Algerian demo store",
     loading: "Creating one year of sample data...",
     remove: "Remove demo data",
@@ -212,6 +226,7 @@ export function DemoDataPanel() {
   );
   const [error, setError] = useState<string | null>(null);
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
+  const [loadConfirmOpen, setLoadConfirmOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -306,10 +321,10 @@ export function DemoDataPanel() {
                 <Sparkles className="size-3.5" aria-hidden="true" />
                 {copy.available}
               </Badge>
-            ) : status ? (
-              <Badge variant="outline">{copy.unavailable}</Badge>
             ) : null}
-            <span className="text-xs text-muted-foreground">{copy.emptyOnly}</span>
+            <span className="text-xs text-muted-foreground">
+              {copy.coexistNote}
+            </span>
           </div>
 
           {status?.loaded ? (
@@ -333,11 +348,11 @@ export function DemoDataPanel() {
             </p>
           </div>
 
-          {status && !status.loaded && !status.canSeed ? (
-            <div className="rounded-md border border-warning/30 bg-warning/5 p-4 text-sm">
-              <p className="font-medium text-warning">{copy.unavailable}</p>
+          {status && !status.loaded && status.hasBusinessData ? (
+            <div className="rounded-md border bg-muted/20 p-4 text-sm">
+              <p className="font-medium">{copy.withRealData}</p>
               <p className="mt-1 text-muted-foreground">
-                {copy.unavailableDescription}
+                {copy.withRealDataDescription}
               </p>
             </div>
           ) : null}
@@ -356,7 +371,11 @@ export function DemoDataPanel() {
             {!status?.loaded ? (
               <Button
                 type="button"
-                onClick={() => void mutate("POST")}
+                onClick={() =>
+                  status?.hasBusinessData
+                    ? setLoadConfirmOpen(true)
+                    : void mutate("POST")
+                }
                 disabled={!status?.canSeed || busy !== null}
               >
                 {busy === "load" ? (
@@ -423,6 +442,15 @@ export function DemoDataPanel() {
         confirmLabel={copy.remove}
         destructive
         onConfirm={() => mutate("DELETE")}
+      />
+
+      <ConfirmDialog
+        open={loadConfirmOpen}
+        onOpenChange={setLoadConfirmOpen}
+        title={copy.confirmLoadTitle}
+        description={copy.confirmLoad}
+        confirmLabel={copy.load}
+        onConfirm={() => mutate("POST")}
       />
     </div>
   );

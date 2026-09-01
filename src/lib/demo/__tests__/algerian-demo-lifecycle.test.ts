@@ -114,7 +114,7 @@ describe("Algerian demo workspace lifecycle", () => {
     ).toBeNull();
   });
 
-  it("treats independent seller configuration as non-empty shop authority", async () => {
+  it("loads the demo alongside independent seller configuration (FD-054 coexist)", async () => {
     await prisma.storefrontConfig.create({
       data: {
         id: "seller-storefront",
@@ -129,20 +129,25 @@ describe("Algerian demo workspace lifecycle", () => {
     const status = await getAlgerianDemoWorkspaceStatus(client());
     expect(status).toMatchObject({
       loaded: false,
-      canSeed: false,
+      canSeed: true,
       hasBusinessData: true,
     });
-    await expect(loadAlgerianDemoWorkspace(client())).rejects.toMatchObject({
-      code: "DEMO_SHOP_NOT_EMPTY",
-      statusCode: 409,
-    });
-    expect(await prisma.order.count()).toBe(0);
+    // FD-054: seller configuration no longer blocks loading — the demo
+    // workspace loads alongside it with demo-tagged rows only.
+    const loaded = await loadAlgerianDemoWorkspace(client());
+    expect(loaded).toMatchObject({ loaded: true, version: ALGERIAN_DEMO_WORKSPACE_VERSION });
+
+    const removed = await removeAlgerianDemoWorkspace(client());
+    expect(removed).toMatchObject({ loaded: false, canSeed: true });
+    expect(
+      await prisma.storefrontConfig.findUnique({ where: { id: "seller-storefront" } }),
+    ).not.toBeNull();
   });
 
-  it("treats sequence and extraction analytics as seller-owned business traces", async () => {
+  it("treats sequence and extraction analytics as seller-owned business traces (informational under FD-054)", async () => {
     await prisma.counter.create({ data: { name: "ORD", value: 7 } });
     expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
-      canSeed: false,
+      canSeed: true,
       hasBusinessData: true,
     });
     await prisma.counter.deleteMany();
@@ -157,12 +162,12 @@ describe("Algerian demo workspace lifecycle", () => {
       },
     });
     expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
-      canSeed: false,
+      canSeed: true,
       hasBusinessData: true,
     });
   });
 
-  it("treats current and retained legacy phone reputation as non-empty operational data", async () => {
+  it("treats current and retained legacy phone reputation as seller-owned operational data (FD-054 coexist)", async () => {
     await prisma.phoneReputation.create({
       data: {
         id: "seller-phone-risk",
@@ -175,7 +180,7 @@ describe("Algerian demo workspace lifecycle", () => {
 
     expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
       loaded: false,
-      canSeed: false,
+      canSeed: true,
       hasBusinessData: true,
     });
     await prisma.phoneReputation.deleteMany();
@@ -190,17 +195,20 @@ describe("Algerian demo workspace lifecycle", () => {
     });
     expect(await getAlgerianDemoWorkspaceStatus(client())).toMatchObject({
       loaded: false,
-      canSeed: false,
+      canSeed: true,
       hasBusinessData: true,
     });
-    await expect(loadAlgerianDemoWorkspace(client())).rejects.toMatchObject({
-      code: "DEMO_SHOP_NOT_EMPTY",
-      statusCode: 409,
-    });
-    expect(await prisma.order.count()).toBe(0);
+    // FD-054: retained seller intelligence loads alongside the demo and
+    // must survive the load untouched.
+    await loadAlgerianDemoWorkspace(client());
+    expect(
+      await prisma.setting.findUnique({
+        where: { key: "phone_reputation_blacklist" },
+      }),
+    ).not.toBeNull();
   });
 
-  it("fails closed for malformed retained legacy phone-reputation data", async () => {
+  it("reports malformed retained legacy phone-reputation data as informational state (FD-054)", async () => {
     await prisma.setting.create({
       data: {
         key: "phone_reputation_blacklist",
@@ -209,10 +217,10 @@ describe("Algerian demo workspace lifecycle", () => {
     });
 
     const status = await getAlgerianDemoWorkspaceStatus(client());
-    expect(status).toMatchObject({ canSeed: false, hasBusinessData: true });
+    expect(status).toMatchObject({ canSeed: true, hasBusinessData: true });
   });
 
-  it("blocks seeding when daily-report settings could send demo-derived WhatsApp data", async () => {
+  it("loads the demo alongside effectful daily-report settings (FD-054 coexist)", async () => {
     await prisma.setting.createMany({
       data: [
         { key: "daily_report_enabled", value: "true" },
@@ -223,14 +231,16 @@ describe("Algerian demo workspace lifecycle", () => {
     const status = await getAlgerianDemoWorkspaceStatus(client());
     expect(status).toMatchObject({
       loaded: false,
-      canSeed: false,
+      canSeed: true,
       hasBusinessData: true,
     });
-    await expect(loadAlgerianDemoWorkspace(client())).rejects.toMatchObject({
-      code: "DEMO_SHOP_NOT_EMPTY",
-      statusCode: 409,
-    });
-    expect(await prisma.order.count()).toBe(0);
+    // FD-054: effectful report settings no longer block loading; demo rows
+    // contribute to the aggregates until removed (FD-052 mixing accepted).
+    const loaded = await loadAlgerianDemoWorkspace(client());
+    expect(loaded).toMatchObject({ loaded: true });
+    expect(
+      await prisma.setting.findUnique({ where: { key: "daily_report_phone" } }),
+    ).not.toBeNull();
   });
 
   it("accepts effectful daily-report settings while the demo is loaded (FD-052 A coexist)", async () => {
@@ -294,7 +304,7 @@ describe("Algerian demo workspace lifecycle", () => {
     ]);
   });
 
-  it("blocks destructive cleanup for a seller storefront and removes demo-derived analytics and audit rows", async () => {
+  it("removes the demo graph alongside a seller storefront and demo-derived analytics and audit rows (FD-054)", async () => {
     await loadAlgerianDemoWorkspace(client());
 
     await prisma.extractionMetric.create({
@@ -328,18 +338,14 @@ describe("Algerian demo workspace lifecycle", () => {
       },
     });
 
-    await expect(removeAlgerianDemoWorkspace(client())).rejects.toMatchObject({
-      code: "DEMO_REMOVAL_REAL_DATA_PRESENT",
-      statusCode: 409,
-    });
-    expect(await prisma.product.count()).toBe(16);
-
-    await prisma.storefrontConfig.delete({ where: { id: "seller-storefront" } });
+    // FD-054: removal no longer refuses when seller state exists — the
+    // storefront JSON reference is not FK-enforced, so removal deletes only
+    // the demo graph and leaves the seller storefront untouched.
     const cleared = await removeAlgerianDemoWorkspace(client());
     expect(cleared).toMatchObject({
       loaded: false,
       canSeed: true,
-      hasBusinessData: false,
+      hasBusinessData: true,
     });
     expect(
       await prisma.extractionMetric.findUnique({
@@ -349,5 +355,9 @@ describe("Algerian demo workspace lifecycle", () => {
     expect(
       await prisma.auditLog.findUnique({ where: { id: "generated-audit-row" } }),
     ).toBeNull();
+    expect(
+      await prisma.storefrontConfig.findUnique({ where: { id: "seller-storefront" } }),
+    ).not.toBeNull();
+    expect(await prisma.product.count()).toBe(0);
   });
 });
