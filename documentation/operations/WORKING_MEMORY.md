@@ -10,7 +10,7 @@
 - Protected `main` at handoff: the round-2 campaign repair line is merged — #372 `9e8b6d1…` (B3 named sidecar rejections + `code:reason` propagation), #373 `c8529fe…` (D1 `?key=` carriage + probe diagnostics + verify-then-store boundary), #374 `af6e070…` (FD-054 demo coexist with real data), #375 `43a2386…` (B5 client reason surfacing), on top of #370 `d63660f…` (R4 raw mic `DOMException.name`) and #371 `401b5a8…` (B5 coded shape-400s). Live GitHub wins if moved.
 - Internal.31 was **installed in place by the Founder** (2026-09-01); its campaign re-verified the FD-051 repairs and produced the bounded round-2 findings above. Exact rows: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` (round-2 section).
 - FD-054 recorded (demo data loads alongside real seller data; removal deletes only the demo-tagged graph and fails closed with `DEMO_REMOVAL_BLOCKED_BY_REFERENCES`). Housekeeping: rotate the Founder's Gemini key (visible in a screenshot URL bar per #373).
-- Current sequencing decision: **Internal.32 / FD-055** packages the round-2 line; its installed campaign re-verifies the affected rows (R3–R6 surfacing, R11 FRC-2 key lifecycle + reviewed extraction + proposal approval/replay, D3 six-wave first observations), then the retained #306 logout row LAST, then FRC-3 resumes.
+- Current sequencing decision: **Internal.32 / FD-055 published** — release PR #377 merged (squash `677dc463…`), dispatcher `33497016855`, signed publication `33497028241` (success, 36/36 steps), observer `33497039759` (success), release tag `sahelflow-v1.0.0-internal.32-677dc463f7d00a179cdfed090184818249523fd6`, published MSI `SahelFlow_1.0.0-internal.32_x64_en-US.msi` digest `sha256:34417299864cd449eb9c24832c1d715d3423ee37433495a18b1b3ff1ed4db9af`, `latest.json` published 2026-09-01T10:45:10Z. Certification cited product head `3d8eb7d…` (tree-identical to squash `43a2386…`; CI `33491588102`, Phase 5 `33491587990`, Phase 6-7 `33491587825`); the release-authority head passed the full Required battery (20 success / 1 skipped / 0 failed, incl. installed-MSI evidence) before the expected-head merge. The Founder has not yet installed Internal.32; its installed campaign re-verifies the affected rows (R3–R6 surfacing, R11 FRC-2 key lifecycle + reviewed extraction + proposal approval/replay, D3 six-wave first observations), then the retained #306 logout row LAST, then FRC-3 resumes.
 - App `1.0.0-internal.31`; MSI `1.0.0.31`; authority **FD-053**; mode `founder-offline-only`.
 - Release PR #368 (squash `38c95aa8…`); reviewed release head `a1b4d56e5f723bbd3cacae104939ba668998e38b`; the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence) — certification cited product head `569e921…` (tree-identical to `f0fca29…`; CI `33368228685`, Phase 5 `33368228409`, Phase 6-7 `33368228448`).
 - Release PR #357; reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`; the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence) — certification cited product head `40f53860` (tree-identical to squash `14c059b7`; CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`).
@@ -111,7 +111,8 @@ the signed run completes). Remaining order:
 
 1. Re-resolve protected `main`, open PRs and #306/#316/#317/#230. The
    Internal.31 installed campaign is closed except the logout row; Internal.32
-   is the current signed package.
+   / FD-055 is the current signed/published package (Founder installation
+   pending).
 2. The Founder applies the in-place Internal.32 update through the normal
    updater, preserving installation, shop and WhatsApp state (no logout, no
    AppData reset).
