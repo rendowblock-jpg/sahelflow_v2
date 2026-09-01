@@ -4,13 +4,11 @@
 > **Scope:** Seller-owned Gemini AI, the model-exposed tool surface, proposal-bound
 > AI actions and the message → extraction → human-review → canonical-order chain in
 > the Founder-offline desktop product
-> **Snapshot date:** 2026-08-30
-> **Source baseline:** protected `main` `14c059b7` after the deep-audit remediation register PR #355 (contains the FD-050 repair series #346–#353; frozen corpus `frc2-1.0.0` merged through #342)
-> **Signed/installed baseline:** Internal.28 / FD-049 (latest Founder-installed)
-> **Latest signed/published:** Internal.30 / FD-051 (tag
-> `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`, MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`; packages the FD-050 installed-campaign repair line #346–#353 AND the
-> deep-audit remediation register #355, pending Founder in-place installation; the installed-campaign matrix rows
-> await Founder re-verification on the installed Internal.30 candidate)
+> **Snapshot date:** 2026-09-01
+> **Source baseline:** protected `main` after the round-2 campaign repair line #370–#375 (contains #363/#373 D1 key acceptance, carriage and boundary work; frozen corpus `frc2-1.0.0` merged through #342)
+> **Signed/installed baseline:** Internal.31 / FD-053 (latest Founder-installed, 2026-09-01)
+> **Latest signed/published:** Internal.31 / FD-053 (tag
+> `sahelflow-v1.0.0-internal.31-38c95aa8f5e1f3d44326c727efd0d8fd54cba20a`; packages the FD-051 repair line #362–#366 AND the #359 six-wave stream, Founder-installed; the round-2 D1 repairs #370–#375 ride protected `main` and are packaged in the Internal.32 successor)
 
 This ledger is the FRC-2 required deliverable. It separates what the AI source can
 do from automated, signed/installed, founder-observed and live-provider evidence.
@@ -43,7 +41,7 @@ authorizes silent real-client PII processing.
 | A1 | Key creation wizard guides Google AI Studio key creation, restrictions and privacy acknowledgement (AR/FR/EN) | `src/components/onboarding/onboarding-wizard.tsx` step 2; `src/components/settings/ai-key-panel.tsx`; FD-015 | implemented-unproven (installed AR/FR/EN observation pending) |
 | A2 | Key stored encrypted (AES-256-GCM sealed envelope, purpose-separated protected key, per-shop DB, never returned to client) | `src/lib/secrets/index.ts` `getSecret/setSecret/deleteSecret`; `Secret` model `prisma/schema.prisma:497`; `src/lib/secrets/__tests__/index.test.ts` | source+tests |
 | A3 | Key test before save = minimal real inference ("Reply with exactly OK", `maxOutputTokens: 8`) with `AIza` shape pre-check | `verifyGeminiKey` `src/lib/ai/gemini/provider.ts:284` | implemented-unproven (needs seller key for live proof) |
-| A4 | Rotation = authenticated replace (test-then-save), disconnection = delete with confirm; both gated by `integrations.manage` + `requireRecentReauthentication` + audit | `src/app/api/secrets/gemini-key/route.ts` GET/POST/DELETE; `src/components/settings/ai-key-panel.tsx`; #348 repairs FD-050 campaign row D1 on top (interrupted action resumes after successful PIN; coded rejections localized AR/FR/EN; per-attempt secret-free provider logging) | source+tests (reauth boundary); rotation live proof pending; D1 repair unreleased on protected main (repair line `b1b5a033`, now inside `14c059b7` #355) |
+| A4 | Rotation = authenticated replace (test-then-save), disconnection = delete with confirm; both gated by `integrations.manage` + `requireRecentReauthentication` + audit | `src/app/api/secrets/gemini-key/route.ts` GET/POST/DELETE; `src/components/settings/ai-key-panel.tsx`; #348 repairs FD-050 campaign row D1 on top (interrupted action resumes after successful PIN; coded rejections localized AR/FR/EN; per-attempt secret-free provider logging); D1 rounds 2–4 on protected main (#373): PII-free probe diagnostics rendered by the settings panel, the documented `?key=` query-parameter carriage replaces the `x-goog-api-key` header (new-format `AQ.` keys are the demonstrated header-failure class), and the save schema trims/bounds/rejects control bytes so verify and storage observe the same clean string (whitespace-padded key can no longer pass verify then crash `setSecret`) | source+tests (reauth boundary; carriage + boundary pinned in agent tests); rotation live proof pending; final re-verification rides Internal.32 |
 | A5 | Informed-consent gate (`gemini_consent_accepted`) blocks chat and extraction with 403 `consent_required` before any message leaves the device | `src/app/api/__tests__/ai-consent-gate.test.ts`; settings consent checkbox | source+tests |
 | A6 | Key absent/invalid → degraded mode: chat returns localized no-key copy, extraction falls back to regex-only, core work continues | `agent.ts:172-188`; `smart-router.ts:44-47`; localized copy | source+tests |
 

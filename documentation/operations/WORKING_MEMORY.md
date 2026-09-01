@@ -1,14 +1,16 @@
 # SahelFlow — Working Memory
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
-> **Last updated:** 2026-08-31
+> **Last updated:** 2026-09-01
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
 ## Current truth
 
-- Protected `main` at handoff: `38c95aa8…` — the Internal.31 release-authority squash (#368) on top of docs reconciliation `2208d31…` (#367) and the FD-051 repair line: #362 `f39ad836…` (B3 sidecar media MIME), #363 `60bfba65…` (D1 Gemini key format + region mapping), #364 `5f00c54…` (B5 coded delete errors), #365 `851b94d…` (B4 mic-failure diagnostics), #366 `f0fca29…` (FD-052 demo coexist). Live GitHub wins if moved.
-- Latest signed/published checkpoint: **Internal.31** — published 2026-08-31 (Founder installation pending). It packages the FD-051 repair line (#362–#366) AND the #359 six-wave frontend remediation delta under **FD-053**; the exact delta and campaign rows: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`.
+- Protected `main` at handoff: the round-2 campaign repair line is merged — #372 `9e8b6d1…` (B3 named sidecar rejections + `code:reason` propagation), #373 `c8529fe…` (D1 `?key=` carriage + probe diagnostics + verify-then-store boundary), #374 `af6e070…` (FD-054 demo coexist with real data), #375 `43a2386…` (B5 client reason surfacing), on top of #370 `d63660f…` (R4 raw mic `DOMException.name`) and #371 `401b5a8…` (B5 coded shape-400s). Live GitHub wins if moved.
+- Internal.31 was **installed in place by the Founder** (2026-09-01); its campaign re-verified the FD-051 repairs and produced the bounded round-2 findings above. Exact rows: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` (round-2 section).
+- FD-054 recorded (demo data loads alongside real seller data; removal deletes only the demo-tagged graph and fails closed with `DEMO_REMOVAL_BLOCKED_BY_REFERENCES`). Housekeeping: rotate the Founder's Gemini key (visible in a screenshot URL bar per #373).
+- Current sequencing decision: **Internal.32 / FD-055** packages the round-2 line; its installed campaign re-verifies the affected rows (R3–R6 surfacing, R11 FRC-2 key lifecycle + reviewed extraction + proposal approval/replay, D3 six-wave first observations), then the retained #306 logout row LAST, then FRC-3 resumes.
 - App `1.0.0-internal.31`; MSI `1.0.0.31`; authority **FD-053**; mode `founder-offline-only`.
 - Release PR #368 (squash `38c95aa8…`); reviewed release head `a1b4d56e5f723bbd3cacae104939ba668998e38b`; the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence) — certification cited product head `569e921…` (tree-identical to `f0fca29…`; CI `33368228685`, Phase 5 `33368228409`, Phase 6-7 `33368228448`).
 - Release PR #357; reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`; the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence) — certification cited product head `40f53860` (tree-identical to squash `14c059b7`; CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`).
@@ -97,28 +99,32 @@ Binding rules:
 - **Remove demo data** temporarily appeared frozen before completing. That is a
   separate demonstrated UI defect and is not silently treated as WhatsApp failure.
 - Do not logout, reset AppData or clear protected auth before the published
-  Internal.31 is installed in place and re-proves the FD-051 repair rows
+  Internal.32 is installed in place and re-proves the round-2 repair rows
   (R3–R6), the applicable FRC-2 rows (R11) and the remaining FRC-1 rows.
 
-## Exact next-session order — Internal.31 installed campaign
+## Exact next-session order — Internal.32 installed campaign
 
-The Internal.31 release and signed publication completed 2026-08-31: release PR #368 merged (squash `38c95aa8…`), dispatcher `33373167723`, signed publication `33373176435`, observer `33373187695`, tag `sahelflow-v1.0.0-internal.31-38c95aa8f5e1f3d44326c727efd0d8fd54cba20a`, updater artifact digest `sha256:f4e5abbd13c080080f7bdb88345df9b84ee1d7ee0bb1c7fce320fab490729297`. Remaining order:
+The round-2 campaign repair line (#370–#375) is merged to protected `main` and
+the Internal.32 / FD-055 signed successor packages it (publication facts are
+recorded in the release PR and `documentation/system/CURRENT_STATE.md` once
+the signed run completes). Remaining order:
 
-1. Re-resolve protected `main`, open PRs and #306/#316/#317/#230. The FD-051
-   installed campaign on Internal.30 is closed except the logout row; the
-   Internal.31 package is published and awaiting the in-place update.
-2. The Founder applies the in-place Internal.31 update through the normal
+1. Re-resolve protected `main`, open PRs and #306/#316/#317/#230. The
+   Internal.31 installed campaign is closed except the logout row; Internal.32
+   is the current signed package.
+2. The Founder applies the in-place Internal.32 update through the normal
    updater, preserving installation, shop and WhatsApp state (no logout, no
    AppData reset).
-3. On the installed Internal.31, re-verify the repair rows: B3 (document/
-   audio ready state + coded outbox errors), B4 (voice recording with the
-   new named-cause copy; record the exact surfaced cause), B5 (permanent
-   delete), D1 (AI-key test/save with the new-format key; key lifecycle is
-   now performable end-to-end — and per the corrected D1 record Algeria IS
-   a supported region, so expect success from the seller's network); plus
-   the #359 six-wave first observations (D3) and the applicable FRC-2 rows
-   (R11: key lifecycle, one reviewed extraction to exactly-one canonical
-   order, one proposal approval/replay).
+3. On the installed Internal.32, re-verify: B3 (document/audio sends now name
+   the exact failing rule on any rejection), B4 (voice recording; the banner
+   now surfaces the raw `DOMException.name` when the mic layer fails), B5
+   (permanent delete; any rejection now shows the server reason + code), D1
+   (AI-key test/save with the `?key=` carriage — expect SUCCESS with a valid
+   AIza or AQ. key from the seller's network, and rotate the exposed key
+   first); plus the applicable FRC-2 rows (R11: key lifecycle, one reviewed
+   extraction to exactly-one canonical order, one proposal approval/replay)
+   and the #359 six-wave first observations (D3) if not yet recorded on
+   Internal.31.
 4. Record results in `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`,
    `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` and current-state
    documentation; convert rows only where installed evidence exists.
@@ -143,10 +149,10 @@ The Internal.31 release and signed publication completed 2026-08-31: release PR 
 ## Current hard blockers and dependencies
 
 - WhatsApp FRC-1 requires the Founder’s retained real phone/account/session.
-  The exact signed successor (Internal.31) is published; it must now be
-  installed in place with state preserved to re-verify the FD-051 repair
-  rows (R3–R6), the six-wave first observations (D3), the applicable FRC-2
-  rows (R11) and the remaining FRC-1 rows.
+  The exact signed successor (Internal.32) packages the round-2 repair line;
+  it must be installed in place with state preserved to re-verify the
+  affected rows (R3–R6), the six-wave first observations (D3), the applicable
+  FRC-2 rows (R11) and the remaining FRC-1 rows.
 - Real Gemini minimal inference requires a seller-owned key; free-tier work uses synthetic/redacted inputs only.
 - Commerce requires development/test environments and HTTPS ingress for webhook tests.
 - Courier live certification requires provider sandbox/demo or authorized seller credentials.
@@ -193,12 +199,13 @@ Never weaken:
 
 ## Hard non-claims
 
-- Internal.31 is signed/published but not yet Founder-installed. Internal.30
-  was installed in place during its FD-051 campaign and verified R1/R2/R7/
-  R8/R10/R12 and the retained #306 rows, but reproduced R3–R6 (B3/B4/B5/D1),
-  repaired on protected main as #362–#365 and packaged in published
-  Internal.31; WhatsApp certification remains open until the installed
-  Internal.31 campaign re-verifies those repair rows and the logout row
+- Internal.32 (FD-055) packages the round-2 repair line (#370–#375) for the
+  round-2 findings observed on the Founder-installed Internal.31; until its
+  signed publication and installed campaign complete, the round-2 repairs
+  remain source evidence only. Internal.30's FD-051 campaign rows R1/R2/R7/
+  R8/R10/R12 and the retained #306 rows passed; R3–R6 were repaired twice
+  (round 1 packaged in Internal.31, round 2 in Internal.32) and the final
+  rows convert only on the installed Internal.32 observation; the logout row
   executes LAST.
 - Complete AI/tools/order-extraction certification is open; the FRC-2 source
   frontier is frozen and packaged, while live-key, installed-observation and

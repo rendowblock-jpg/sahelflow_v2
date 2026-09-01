@@ -57,10 +57,10 @@ These rows execute on the **published Internal.30 package**, exactly as ordered 
 |---|---|---|
 | R1 | In-place Internal.30 update through the normal updater with installation, shop and WhatsApp state preserved (no logout, no AppData reset) | passed (Founder, 2026-08-31) |
 | R2 | B1/B2 — quote chips persist across chat switches and restarts | passed (Founder, 2026-08-31) |
-| R3 | B3 — outbound document/audio local ready state with coded outbox errors | reproduced → repaired on main (#362); re-verification rides Internal.31 |
-| R4 | B4 — in-composer voice recording through the WebM→OGG remux path (Opus TOC exact) | reproduced → mic confirmed alive at driver/BIOS; distinct-cause diagnostics + `DOMException.name` logging landed (#365); suspected layer is Windows Settings > Privacy > Microphone > "Let desktop apps access"; re-verification with named-cause copy rides Internal.31 |
-| R5 | B5 — permanent chat deletion with no resurrection | reproduced → repaired on main (#364, coded `INVALID_DELETE_REQUEST` + shape logging); re-verification rides Internal.31 |
-| R6 | D1 — AI-key action resume after PIN with localized coded errors | reproduced → root cause pinned: the `AIza`-prefix gate rejected the new Google AI Studio key format (Founder key AUTHENTICATED against Google — auth passed, not a quota/billing/region verdict on the key itself); repaired on main (#363: accepts legacy `AIza` and new AI Studio formats, live probe stays the validator, `GEMINI_LOCATION_UNSUPPORTED` mapping added); re-verification rides Internal.31 |
+| R3 | B3 — outbound document/audio local ready state with coded outbox errors | reproduced → repaired on main (#362); re-verified on installed Internal.31 (2026-09-01): the rejection SURFACING chain was still lossy — the sidecar's named failing rule and the durable-effect pipeline discarded the reason before display — repaired on main (#372); final re-verification rides Internal.32 |
+| R4 | B4 — in-composer voice recording through the WebM→OGG remux path (Opus TOC exact) | reproduced → mic confirmed alive at driver/BIOS; distinct-cause diagnostics landed (#365); re-verified on installed Internal.31 (2026-09-01): the raw `DOMException.name` was still dropped from the named-cause banner — repaired on main (#370); final re-verification rides Internal.32 |
+| R5 | B5 — permanent chat deletion with no resurrection | reproduced → repaired on main (#364, coded `INVALID_DELETE_REQUEST` + shape logging); re-verified on installed Internal.31 (2026-09-01): server-side shapes are now fully coded (#371) but the client still discarded the server's human-readable rejection reason (dead-end `(HTTP_400)` toast) — repaired on main (#375); final re-verification rides Internal.32 |
+| R6 | D1 — AI-key action resume after PIN with localized coded errors | reproduced → root cause pinned: the `AIza`-prefix gate rejected the new Google AI Studio key format (Founder key AUTHENTICATED against Google); repaired on main (#363); re-verified on installed Internal.31 (2026-09-01) as a FOUR-round causal chain, each round proven against the SAME valid key: (1) format gate (#363), (2) PII-free probe diagnostics + truthful settings display, (3) the `x-goog-api-key` header carriage rejected the new-format `AQ.` key that Google's own `?key=` parameter accepts → every Gemini call now carries the key as the URL-encoded `?key=` parameter (#373), (4) verify-then-store boundary: a whitespace-padded key passed verify then crashed `setSecret`'s no-whitespace invariant → the save schema now trims/bounds/rejects control bytes so verify and storage observe the same clean string (#373). Final re-verification rides Internal.32 |
 | R7 | Delivery-receipt enum truth on a real outbound | passed (Founder, 2026-08-31): sent/delivered/read states observed on a real outbound through the truthful #350 mapper on installed Internal.30 |
 | R8 | C1 — sleep/wake auto-receive (60s watchdog, 1:1 JID ingress scoping) | passed (Founder, 2026-08-31): inbox recovered on its own after sleep/wake with no manual reconnect; no broadcast/status pollution observed |
 | R9 | Retained #306 rows — automatic no-refresh inbound, reopen persistence, governed status, logout last | passed for automatic no-refresh inbound, reopen persistence and governed status (Founder, 2026-08-31); **logout row remains pending and stays LAST** until the Internal.31 campaign closes |
@@ -86,6 +86,40 @@ Two test-infrastructure latency repairs rode the affected heads (both reds repro
 
 The earlier statement "Gemini free tier is geo-blocked from Algeria; Algeria not included in the available-regions list" was **overturned by live re-verification** (2026-08-31, `ai.google.dev/gemini-api/docs/available-regions` fetched directly): Algeria IS on the official available-regions list and no free-tier regional carve-out applies. The FAILED_PRECONDITION "User location is not supported" observed during the sandbox live probe came from the **sandbox's own egress location**, not from the key (auth passed) and not from any Algeria policy. A region-pinned relay (Cloudflare AI Gateway / Vertex / reseller) is therefore **parked**: no evidence currently justifies building it; the runtime `GEMINI_LOCATION_UNSUPPORTED` mapping remains as the per-network safety net (fires only if a specific seller's egress actually exits an unsupported region, e.g. VPN).
 
+## Internal.31 installed campaign — round 2 (2026-09-01)
+
+The Founder installed Internal.31 in place through the normal updater
+(preserving installation/shop/WhatsApp state) and executed its campaign.
+The round-1 repairs packaged in Internal.31 behaved; the campaign exposed a
+bounded round-2 class: several failure paths still discarded the decisive
+diagnostic BEFORE the operator (the sidecar named its failing rule but the
+effect pipeline dropped it; the mic banner dropped the raw `DOMException.name`;
+the chat-delete client dropped the server's human-readable reason; the Gemini
+auth carriage rejected the valid new-format key that Google's own documented
+parameter accepts). One Founder product decision also landed.
+
+Round-2 repair line (one bounded root per finding, adversarially reviewed
+without the external Codex reviewer, every head green on the Required PR gate,
+squash-merged with expected-head discipline):
+
+| PR | Root | Squash on main |
+|---|---|---|
+| #370 | R4/B4 round 2 — raw mic `DOMException.name` surfaced in named-cause voice banners | `d63660f` |
+| #371 | B5 round 2 — the two anonymous shape-level 400 branches coded (`REQUEST_VALIDATION_FAILED` / `INVALID_REQUEST_JSON`) so every 400 body carries both `code` and a readable message | `401b5a8` |
+| #372 | B3 round 2+3 — every document-send rejection names its own machine-readable `reason` in the sidecar; `SidecarRequestError` carries `reason`; `failureDisposition` composes `code:reason` into `lastErrorCode` so the installed UI shows WHICH rule failed; real-sidecar probe matrix proves every realistic composer shape passes validation | `9e8b6d1` |
+| #373 | D1 rounds 2–4 — PII-free probe diagnostics + truthful settings display; the documented `?key=` query-parameter carriage replaces the header (new-format `AQ.` keys are the demonstrated header-failure class); verify-then-store boundary trims/bounds/rejects control bytes so a pasted whitespace-padded key can never again pass verify then crash `setSecret` | `c8529fe` |
+| #374 | FD-054 — Founder directive 2026-09-01 ("yes i want the demo data even if there is real data there"): demo workspace loads alongside real seller data; removal deletes only the demo-tagged/derived graph and fails closed with coded 409 `DEMO_REMOVAL_BLOCKED_BY_REFERENCES` on enforced real→demo foreign keys; supersedes FD-052's empty-shop-only boundary and resolves its deferred removal one-way-door | `af6e070` |
+| #375 | B5 round 2 (client) — `DeleteChatsOutcome` carries `errorDetail`; the confirm dialog + toast show the server reason + code in en/fr/ar | `43a2386` |
+
+Housekeeping recorded on #373: the Founder's Gemini key was visible in a
+screenshot URL bar — rotate it after verification.
+
+The Internal.32 signed successor (FD-055) packages this round-2 line. Its
+installed campaign re-verifies the affected rows (R3/R4/R5/R6 surfacing
+behavior, R11 FRC-2 key lifecycle now performable end-to-end, D3 six-wave
+first observations if not yet recorded on Internal.31), with the retained
+#306 logout row LAST.
+
 ## #359 delta rows (NOT part of the installed campaign)
 
 These rows reconcile the source delta that rides protected `main` but is **not** inside the published Internal.30 package. They do not block or change the campaign above.
@@ -102,3 +136,4 @@ These rows reconcile the source delta that rides protected `main` but is **not**
 |---|---|
 | 2026-08-31 | Ledger created. PR #359 repaired in-branch (two gate blockers: installed server-locale proof moved behind the runtime-session boundary; governed-confirm evidence aligned to the rail authority model), branch updated with main, 21/21 checks green at `e468adca…`, squash-merged with expected-head discipline → protected `main` `324719ff…`. Branch `agent/frontend-ux-remediation` deleted. Internal.30 publication facts unchanged; campaign rows above remain pending. |
 | 2026-08-31 | FD-051 installed campaign executed on the Founder machine: R1/R2/R7/R8/R10/R12 passed; automatic no-refresh inbound, reopen persistence and governed status passed (logout row stays last); R3/R4/R5/R6 reproduced and root-caused. Repairs #362–#366 built per one-bounded-root discipline (each head green on the full Required battery; two documented CI-latency repairs rode affected heads) and squash-merged with expected-head discipline → protected `main` `f0fca29…`. D1 region claim corrected against Google's live available-regions page; relay options parked. D2 acknowledged-by-directive. Next signed package Internal.31 carries the repair line + the #359 six-wave delta; its installed campaign re-verifies R3–R6, R11 and D3, with logout last. |
+| 2026-09-01 | Internal.31 installed in place by the Founder; its campaign produced the round-2 findings recorded above. Repairs #370–#375 merged to protected `main` per one-bounded-root discipline (adversarial review performed by the implementation agent without the external Codex reviewer; every head green on the Required PR gate; expected-head squash merges). FD-054 recorded in `documentation/product/DECISIONS.md` through #374. Next signed package Internal.32 / FD-055 carries the round-2 line; its installed campaign re-verifies the affected rows with logout LAST. |

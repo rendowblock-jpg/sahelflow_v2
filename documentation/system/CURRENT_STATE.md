@@ -1,13 +1,11 @@
 # SahelFlow — Current State
 
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
-> **Last assessed:** 2026-08-31
+> **Last assessed:** 2026-09-01
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at reconciliation `324719ff999565967e2939a5eacc82539ae86cbc` after PR #359 (frontend Class-AAA remediation, six waves)
-> **Current signed release:** Internal.30 / `1.0.0-internal.30` / MSI `1.0.0.30` / FD-051 (published; Founder installation pending)
-> **Reviewed release head:** `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`
-> **Signed publication run:** `33292278832` — success
-> **Current execution:** FD-051 successor published — the Founder applies the in-place Internal.30 update with state preserved, re-verifies the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive) plus the deep-audit register's audit-affected rows, the retained FRC-2 repair rows, the #306 real-phone rows and the applicable matrix rows, evidence is reconciled, then FRC-3 resumes; the merged PR #359 six-wave delta rides protected `main` ahead of the next signed package (delta: `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`)
+> **Live protected main:** resolve from GitHub before every action; at this reconciliation the round-2 campaign repair line #370–#375 is merged (see `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` round-2 section)
+> **Latest Founder-installed checkpoint:** Internal.31 / FD-053 (installed in place 2026-09-01)
+> **Current execution:** the Internal.31 installed campaign produced the bounded round-2 findings; repairs #370–#375 merged to protected `main`; the **Internal.32 / FD-055** signed successor packages the round-2 line, and its installed campaign re-verifies the affected rows (R3–R6 surfacing, R11 FRC-2 key lifecycle, D3 six-wave first observations) with the retained #306 logout row LAST
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 

@@ -1,11 +1,11 @@
 # SahelFlow — Final Roadmap
 
 > **Status:** Active dependency/completion program
-> **Last reconciled:** 2026-08-28
+> **Last reconciled:** 2026-09-01
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before action; at reconciliation `324719ff999565967e2939a5eacc82539ae86cbc` (PR #359 six-wave merge)
-> **Current signed checkpoint:** Internal.30 / FD-051 (published; Founder installation pending)
-> **Current execution mode:** Internal.30 published — Founder in-place install, re-verification campaign over the FD-050 rows, register-affected rows and retained matrix rows, then FRC-3; the merged PR #359 six-wave delta rides protected `main` and receives its first installed/Founder observation on the next signed package (delta: `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`)
+> **Live protected main:** resolve from GitHub before action; at this reconciliation the round-2 campaign repair line #370–#375 is merged
+> **Latest Founder-installed checkpoint:** Internal.31 / FD-053 (installed in place 2026-09-01)
+> **Current execution mode:** the Internal.31 installed campaign produced the round-2 findings; the Internal.32 / FD-055 signed successor packages the round-2 repair line (#370–#375), then its installed campaign re-verifies the affected rows (R3–R6 surfacing, R11, D3) with the #306 logout row LAST, then FRC-3 resumes (round-2 ledger: `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`)
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 
