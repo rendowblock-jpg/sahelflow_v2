@@ -91,6 +91,7 @@ describe("withErrorHandler", () => {
     const body = await bodyOf(res);
     expect(body.error).toBe("Validation failed");
     expect(body.details).toBeDefined();
+    expect(body.code).toBe("REQUEST_VALIDATION_FAILED");
   });
 
   it("maps NotFoundError → 404", async () => {
