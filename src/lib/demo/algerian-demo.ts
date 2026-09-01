@@ -1,7 +1,6 @@
 import "server-only";
 
 import { db, type DbClient } from "@/lib/db";
-import { SahelFlowError } from "@/types/errors";
 
 export const ALGERIAN_DEMO_VERSION = "algerian-cod-founder-v1";
 const DEMO_PREFIX = "demo-";
