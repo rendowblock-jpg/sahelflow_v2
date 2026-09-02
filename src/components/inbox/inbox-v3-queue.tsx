@@ -96,7 +96,11 @@ function workflowLabel(
 ): string {
   switch (filter) {
     case "all":
-      return copy("queueAll");
+      // Distinct from the desk-queue "الكل" pill: the workflow scope is over
+      // STATUSES. Two identical "All" buttons in one panel broke the
+      // Founder-visual e2e (strict-mode role/name resolution) and was
+      // genuinely ambiguous UX.
+      return copy("workflowAll");
     case "open":
       return copy("queueOpen");
     case "pending":
