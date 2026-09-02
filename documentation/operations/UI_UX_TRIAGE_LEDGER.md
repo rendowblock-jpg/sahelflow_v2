@@ -32,7 +32,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 |---|---|---|---|
 | INB-01 ||| **DONE (source, wave 2)** — media glyphs + "You:" + server projects lastMessage.type; ticks deferred (needs per-message status in projection) |
 | INB-02 ||| **DONE (source, wave 2)** — dependency-free picker: 8 categories, search, MRU recents |
-| INB-03 | Scroll-to-bottom FAB with missed count | `inbox-v3-thread.tsx` | OPEN |
+| INB-03 ||| **DONE (source, wave 1)** — scroll-to-latest FAB with missed-count badge (99+ cap), away-from-bottom gating |
 | INB-04 ||| **DONE (source, wave 1)** — divider + open-at-first-unread anchor, click-to-dismiss |
 | INB-05 ||| **DONE (source, wave 1)** — portal lightbox: Esc/backdrop, click-zoom, download, scroll-lock |
 | INB-06 ||| **DONE (source, wave 1)** — 2-minute same-direction clusters, tail on group-final bubble |
