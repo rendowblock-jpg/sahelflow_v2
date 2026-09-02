@@ -42,7 +42,24 @@ async function clean(): Promise<void> {
   await db.financialMovement.deleteMany();
   await db.inventoryMovement.deleteMany();
   await db.inventoryReservation.deleteMany();
-  await db.businessCommand.deleteMany();
+  // Bounded settle-retry: the sequential full suite has a pre-existing
+  // inter-file race where a fire-and-forget write from an earlier file can
+  // still be landing while this file's clean() runs (observed once as a
+  // transient `sqlite disk I/O error` mid-suite). The retry absorbs only
+  // that settle window — if rows persist, the error re-raises loudly.
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await db.businessCommand.deleteMany();
+      break;
+    } catch (error) {
+      if (attempt >= 3) throw error;
+      console.warn(
+        "durable-runtime clean: businessCommand blocked, settling before retry",
+        { attempt },
+      );
+      await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+    }
+  }
   await db.businessAggregateVersion.deleteMany();
   await db.automationLog.deleteMany();
   await db.automation.deleteMany();
