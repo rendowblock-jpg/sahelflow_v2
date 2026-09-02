@@ -23,6 +23,8 @@ import {
   Settings2,
   ShieldCheck,
   Square,
+  ThumbsDown,
+  ThumbsUp,
   X,
 } from "lucide-react";
 
@@ -301,11 +303,13 @@ const MessageBubble = memo(function MessageBubble({
   copy,
   locale,
   onEditMessage,
+  onFeedback,
 }: {
   message: AiMessageView;
   copy: AiCopyFn;
   locale: string;
   onEditMessage?: (messageId: string) => void;
+  onFeedback?: (messageId: string, value: "up" | "down" | "none") => void;
 }) {
   const assistant = message.role === "assistant";
   const [copied, setCopied] = useState(false);
@@ -406,6 +410,43 @@ const MessageBubble = memo(function MessageBubble({
                 </p>
               </div>
             </div>
+          </div>
+        ) : null}
+
+        {assistant && onFeedback && !message.streaming && message.content ? (
+          // Ledger AI-13: truthful thumbs — the opposite thumb overwrites,
+          // the active thumb clears; nothing auto-sends or decorates.
+          <div className="mt-1 flex items-center gap-1">
+            <button
+              type="button"
+              data-ai-feedback-up="true"
+              aria-pressed={message.feedback === "up"}
+              aria-label={copy("feedbackUp")}
+              title={copy("feedbackUp")}
+              disabled={message.feedback === "up"}
+              onClick={() => onFeedback(message.id, "up")}
+              className={cn(
+                "inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-2xs font-medium text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
+                message.feedback === "up" && "bg-primary/10 text-primary opacity-100",
+              )}
+            >
+              <ThumbsUp className="size-3" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              data-ai-feedback-down="true"
+              aria-pressed={message.feedback === "down"}
+              aria-label={copy("feedbackDown")}
+              title={copy("feedbackDown")}
+              disabled={message.feedback === "down"}
+              onClick={() => onFeedback(message.id, "down")}
+              className={cn(
+                "inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-2xs font-medium text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
+                message.feedback === "down" && "bg-destructive/10 text-destructive opacity-100",
+              )}
+            >
+              <ThumbsDown className="size-3" aria-hidden="true" />
+            </button>
           </div>
         ) : null}
 
@@ -602,6 +643,7 @@ export function AiDecisionCanvas({
     beginEditMessage,
     cancelEditMessage,
     editAndResend,
+    sendFeedback,
   } = workspace;
   const [draft, setDraft] = useState(initialDraft);
   const [prevInitialDraft, setPrevInitialDraft] = useState(initialDraft);
@@ -985,6 +1027,7 @@ export function AiDecisionCanvas({
                     copy={copy}
                     locale={workspace.locale}
                     onEditMessage={beginEditMessage}
+                    onFeedback={sendFeedback}
                   />
                 ))}
 

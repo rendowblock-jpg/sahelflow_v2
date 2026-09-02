@@ -452,6 +452,46 @@ export function useAiWorkspace() {
     );
   }, []);
 
+  // Ledger AI-13: one durable quality row per assistant answer. Optimistic
+  // on the live view; the opposite thumb overwrites, the active thumb
+  // deletes ("none"). Failures roll the optimistic state back honestly.
+  const sendFeedback = useCallback(
+    async (messageId: string, value: "up" | "down" | "none") => {
+      const sessionId = activeSessionId;
+      if (!sessionId) return false;
+      const previous = messages.find(
+        (message) => message.id === messageId,
+      )?.feedback;
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === messageId
+            ? { ...message, feedback: value === "none" ? null : value }
+            : message,
+        ),
+      );
+      try {
+        const response = await fetch(
+          `/api/ai/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/feedback`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ value }),
+          },
+        );
+        if (!response.ok) throw new Error(String(response.status));
+        return true;
+      } catch {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === messageId ? { ...message, feedback: previous ?? null } : message,
+          ),
+        );
+        return false;
+      }
+    },
+    [activeSessionId, messages],
+  );
+
   const send = useCallback(
     async (rawMessage: string) => {
       const userMessage = rawMessage.trim();
@@ -1064,6 +1104,7 @@ export function useAiWorkspace() {
     regenerate,
     renameSession,
     deleteSession,
+    sendFeedback,
     approveProposal,
     rejectProposal,
     retry,

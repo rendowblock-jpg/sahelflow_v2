@@ -480,11 +480,12 @@ model Integration {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model AiChatSession {
-  id        String         @id @default(cuid())
+  id        String             @id @default(cuid())
   title     String?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
   messages  AiChatMessage[]
+  feedbacks AiMessageFeedback[]
 }
 
 model AiChatMessage {
@@ -497,6 +498,22 @@ model AiChatMessage {
   createdAt DateTime      @default(now())
 
   @@index([sessionId, createdAt])
+}
+
+/// Ledger AI-13 — per-answer quality feedback. One row per assistant message
+/// (unique messageId): clicking the opposite thumb overwrites, clicking the
+/// active thumb again deletes. The table feeds the same quality-loop shape
+/// as ExtractionMetric (method/confidence analytics) instead of decorating
+/// the conversation with vanity counters.
+model AiMessageFeedback {
+  id        String        @id @default(cuid())
+  messageId String
+  message   AiChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  value     String // "up" | "down"
+  createdAt DateTime      @default(now())
+
+  @@unique([messageId])
+  @@index([value, createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

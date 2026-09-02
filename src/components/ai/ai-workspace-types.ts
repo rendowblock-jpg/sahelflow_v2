@@ -44,6 +44,10 @@ export interface AiMessageView {
   persistenceWarning?: boolean;
   interrupted?: boolean;
   signal?: AiTurnSignal;
+  /** Ledger AI-13: the live view's thumb state ("none" cleared). Durable
+   *  rows live in AiMessageFeedback for the quality loop; reloaded history
+   *  starts neutral rather than guessing a stored state. */
+  feedback?: "up" | "down" | null;
 }
 
 /** Defensive parse of the stream's done-event signal: anything that is not a
