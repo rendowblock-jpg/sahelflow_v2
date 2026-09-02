@@ -49,6 +49,8 @@ export type ConversationPriority = "urgent" | "high" | "medium" | "low";
 export interface ConversationWorkflowState {
   status: ConversationStatus;
   assigneeId: string | null;
+  /** Team-directory display name for the assignee (INB-20); null when unknown. */
+  assigneeName?: string | null;
   assignmentVersion: number;
   priority: ConversationPriority | null;
   labels: string[] | null;

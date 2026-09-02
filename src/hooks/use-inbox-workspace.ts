@@ -308,7 +308,12 @@ function inboxMessagesEqual(
       message.deliveryStatus === candidate.deliveryStatus &&
       message.outboxEffectKey === candidate.outboxEffectKey &&
       message.outboxState === candidate.outboxState &&
-      JSON.stringify(message.attachment) === JSON.stringify(candidate.attachment)
+      (message.attachment === candidate.attachment &&
+        message.attachment !== undefined) ||
+      (message.attachment !== undefined &&
+        candidate.attachment !== undefined &&
+        JSON.stringify(message.attachment) ===
+          JSON.stringify(candidate.attachment))
     );
   });
 }
@@ -330,6 +335,19 @@ export function useInboxWorkspace() {
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  // Ledger INB-11: honest older-history paging. The cursor is the opaque
+  // (timestampSeconds,rowId) composite served by the messages route; null
+  // means the locally loaded thread has reached its durable beginning.
+  const [historyHasMore, setHistoryHasMore] = useState(false);
+  const [historyCursor, setHistoryCursor] = useState<string | null>(null);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  // Ledger INB-29: ambiguous retry is a real decision — it uses an
+  // accessible AlertDialog instead of window.confirm.
+  const [ambiguousRetryMessage, setAmbiguousRetryMessage] =
+    useState<InboxMessage | null>(null);
+  const ambiguousRetryResolveRef = useRef<((confirmed: boolean) => void) | null>(
+    null,
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [queueFilter, setQueueFilter] = useState<InboxQueueFilter>("all");
   const [allowedActions, setAllowedActions] = useState<string[]>([]);
@@ -699,6 +717,8 @@ export function useInboxWorkspace() {
           if (response.ok) {
             const data = (await response.json()) as {
               messages: Array<IncomingMessage & { messageType?: string }>;
+              hasMore?: boolean;
+              olderCursor?: string | null;
             };
             // toInboxMessageFromWhatsApp preserves the quoted-reply context
             // (#317 B1/B2) so quote chips survive chat switches and restarts.
@@ -706,6 +726,8 @@ export function useInboxWorkspace() {
               toInboxMessageFromWhatsApp,
             );
             if (!applyLoadedProjection(loadedMessages)) return;
+            setHistoryHasMore(data.hasMore === true);
+            setHistoryCursor(data.olderCursor ?? null);
             void markRead(chat);
             return;
           }
@@ -735,6 +757,8 @@ export function useInboxWorkspace() {
           }),
         );
         if (!applyLoadedProjection(loadedMessages)) return;
+        setHistoryHasMore(false);
+        setHistoryCursor(null);
         void markRead(chat);
       } catch {
         if (
@@ -755,6 +779,58 @@ export function useInboxWorkspace() {
     },
     [markRead, replaceMessages],
   );
+
+  /**
+   * Ledger INB-11: prepend the next older page of durable history for the
+   * active chat. Strictly additive — the cursor page can never overlap the
+   * rows already held, so no merge is needed; in-flight optimistic mutations
+   * stay untouched (mutateMessages keeps their generation).
+   */
+  const loadOlderMessages = useCallback(async () => {
+    const chat = activeChatRef.current;
+    if (
+      !chat ||
+      loadingOlderMessages ||
+      !historyCursor ||
+      chat.channel !== "whatsapp" ||
+      !chat.transportId
+    ) {
+      return false;
+    }
+    const requestedConversationId = chat.conversationId;
+    setLoadingOlderMessages(true);
+    try {
+      const response = await fetch(
+        `/api/whatsapp/chats/${encodeURIComponent(chat.transportId)}/messages?limit=200&before=${encodeURIComponent(historyCursor)}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) return false;
+      const data = (await response.json()) as {
+        messages?: Array<IncomingMessage & { messageType?: string }>;
+        hasMore?: boolean;
+        olderCursor?: string | null;
+      };
+      const older: InboxMessage[] = (data.messages ?? []).map(
+        toInboxMessageFromWhatsApp,
+      );
+      if (activeChatRef.current?.conversationId !== requestedConversationId) {
+        return false;
+      }
+      if (older.length > 0) {
+        mutateMessages(requestedConversationId, (current) => [
+          ...older,
+          ...current,
+        ]);
+      }
+      setHistoryHasMore(data.hasMore === true);
+      setHistoryCursor(data.olderCursor ?? null);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  }, [historyCursor, loadingOlderMessages, mutateMessages]);
 
   const persistDraft = useCallback(
     async (conversationId: string, body: string) => {
@@ -1076,6 +1152,8 @@ export function useInboxWorkspace() {
       prevMessageCountRef.current = 0;
       setIsAwayFromBottom(true);
       setMissedMessageCount(0);
+      setHistoryHasMore(false);
+      setHistoryCursor(null);
       replaceMessages([]);
       draftReadyConversationRef.current = null;
       setReplyText("");
@@ -1100,6 +1178,8 @@ export function useInboxWorkspace() {
     initialUnreadScrollDoneRef.current = false;
     setIsAwayFromBottom(false);
     setMissedMessageCount(0);
+    setHistoryHasMore(false);
+    setHistoryCursor(null);
     setActiveChatId(null);
     replaceMessages([]);
     setReplyText("");
@@ -1516,15 +1596,27 @@ export function useInboxWorkspace() {
     [loadMessages, mutateMessages, t],
   );
 
+  const resolveAmbiguousRetry = useCallback((confirmed: boolean) => {
+    setAmbiguousRetryMessage(null);
+    ambiguousRetryResolveRef.current?.(confirmed);
+    ambiguousRetryResolveRef.current = null;
+  }, []);
+
   const retryFailedMessage = useCallback(
     async (message: InboxMessage) => {
       const conversationId = activeChatRef.current?.conversationId;
       if (!message.outboxEffectKey || !conversationId) return;
-      const confirmMayDuplicate =
-        message.outboxState === "ambiguous"
-          ? window.confirm(t("inbox.whatsappAmbiguousRetryWarning"))
-          : false;
-      if (message.outboxState === "ambiguous" && !confirmMayDuplicate) return;
+      let confirmMayDuplicate = false;
+      if (message.outboxState === "ambiguous") {
+        // Ledger INB-29: one dialog at a time; the answer arrives through the
+        // AlertDialog rendered by the thread surface.
+        if (ambiguousRetryResolveRef.current) return;
+        confirmMayDuplicate = await new Promise<boolean>((resolve) => {
+          ambiguousRetryResolveRef.current = resolve;
+          setAmbiguousRetryMessage(message);
+        });
+        if (!confirmMayDuplicate) return;
+      }
 
       mutateMessages(conversationId, (current) =>
         current.map((entry) =>
@@ -1595,7 +1687,7 @@ export function useInboxWorkspace() {
         }
       }
     },
-    [loadMessages, monitorWhatsAppEffect, mutateMessages, t],
+    [monitorWhatsAppEffect, mutateMessages, t],
   );
 
   const activeChat = useMemo(
@@ -2708,6 +2800,11 @@ export function useInboxWorkspace() {
     uploads,
     cancelUpload,
     retryFailedMessage,
+    ambiguousRetryMessage,
+    resolveAmbiguousRetry,
+    historyHasMore,
+    loadingOlderMessages,
+    loadOlderMessages,
     markUnread,
     canUpdateConversation,
     canReply,

@@ -51,12 +51,55 @@ export const GET = withErrorHandler(
       ? Math.max(1, Math.min(requested, 500))
       : 100;
 
+    // Ledger INB-11: honest "load older" cursor instead of a silent window.
+    // The cursor is the (timestampSeconds, rowId) composite of the oldest
+    // message the client already holds, opaque to the client — it echoes it
+    // back verbatim. Composite keeps same-second messages from being skipped.
+    const rawCursor = request.nextUrl.searchParams.get("before")?.trim() || null;
+    let cursorBefore: { timestamp: Date; id: string } | null = null;
+    if (rawCursor) {
+      const separator = rawCursor.indexOf(":");
+      const cursorSeconds = Number.parseInt(rawCursor.slice(0, separator), 10);
+      const cursorId = separator >= 0 ? rawCursor.slice(separator + 1) : "";
+      if (
+        Number.isFinite(cursorSeconds) &&
+        cursorSeconds > 0 &&
+        cursorId.length >= 1 &&
+        cursorId.length <= 64
+      ) {
+        const cursorRow = await db.message.findFirst({
+          where: {
+            id: cursorId,
+            conversation: {
+              channel: "whatsapp",
+              sourceId: jid,
+            },
+          },
+          select: { id: true, timestamp: true },
+        });
+        if (cursorRow) {
+          cursorBefore = { timestamp: cursorRow.timestamp, id: cursorRow.id };
+        }
+      }
+    }
+
     const conversation = await db.conversation.findUnique({
       where: { channel_sourceId: { channel: "whatsapp", sourceId: jid } },
       select: {
         messages: {
-          orderBy: { timestamp: "desc" },
-          take: limit,
+          orderBy: [{ timestamp: "desc" }, { id: "desc" }],
+          take: cursorBefore ? limit + 1 : limit,
+          where: cursorBefore
+            ? {
+                OR: [
+                  { timestamp: { lt: cursorBefore.timestamp } },
+                  {
+                    timestamp: cursorBefore.timestamp,
+                    id: { lt: cursorBefore.id },
+                  },
+                ],
+              }
+            : undefined,
           select: {
             id: true,
             body: true,
@@ -71,7 +114,10 @@ export const GET = withErrorHandler(
       },
     });
 
-    const rows = conversation?.messages ?? [];
+    let rows = conversation?.messages ?? [];
+    // hasMore is computed from the extra row before it is trimmed off.
+    const hasMore = rows.length > limit;
+    if (hasMore) rows = rows.slice(0, limit);
     const messageIds = rows.map((message) => message.id);
 
     // Quoted-reply previews (#317): resolve quote targets that are outside the
@@ -284,6 +330,14 @@ export const GET = withErrorHandler(
     }
     messages.reverse();
 
+    // Ledger INB-11: the client pages older history by echoing this opaque
+    // composite cursor; null means the local thread has reached its beginning.
+    const oldestRow = rows.length > 0 ? rows[0] : undefined;
+    const olderCursor =
+      hasMore && oldestRow
+        ? `${Math.floor(oldestRow.timestamp.getTime() / 1_000)}:${oldestRow.id}`
+        : null;
+
     let sidecarReachable = true;
     try {
       await sidecar.status();
@@ -297,7 +351,13 @@ export const GET = withErrorHandler(
       sidecarReachable = false;
     }
 
-    return NextResponse.json({ jid, messages, sidecarReachable });
+    return NextResponse.json({
+      jid,
+      messages,
+      sidecarReachable,
+      hasMore,
+      olderCursor,
+    });
   },
   "GET /api/whatsapp/chats/[jid]/messages",
 );

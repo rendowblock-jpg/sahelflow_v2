@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   ArrowDown,
@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 
 import { CannedResponsePicker } from "@/components/inbox/canned-response-picker";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmojiPicker } from "@/components/inbox/inbox-emoji-picker";
 import {
   ActivityMessage,
@@ -384,7 +385,7 @@ function CopyMessageButton({
   );
 }
 
-function MessageBubble({
+const MessageBubble = memo(function MessageBubble({
   message,
   locale,
   t,
@@ -408,7 +409,7 @@ function MessageBubble({
   t: ReturnType<typeof useInboxWorkspace>["t"];
   copy: ReturnType<typeof useInboxWorkspace>["copy"];
   candidate: boolean;
-  onChooseCandidate: () => void;
+  onChooseCandidate: (messageId: string) => void;
   onRetry: (message: InboxMessage) => void;
   onReply: (message: InboxMessage) => void;
   canInteract: boolean;
@@ -421,7 +422,7 @@ function MessageBubble({
   /** Momentary jump/search target highlight. */
   highlighted?: boolean;
   quotedJumpable?: boolean;
-  onJumpToQuoted?: () => void;
+  onJumpToQuoted?: (quotedMessageId: string) => void;
   searchQuery?: string;
 }) {
   if (message.messageType === "activity" || message.direction === "system") {
@@ -488,7 +489,10 @@ function MessageBubble({
             quotedJumpable && onJumpToQuoted ? (
               <button
                 type="button"
-                onClick={onJumpToQuoted}
+                onClick={() => {
+                  const quotedId = message.quotedMessageId;
+                  if (quotedId) onJumpToQuoted(quotedId);
+                }}
                 aria-label={copy("jumpToMessage")}
                 title={copy("jumpToMessage")}
                 className="mb-2 block w-full rounded-lg border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5 text-start outline-none transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring"
@@ -651,7 +655,7 @@ function MessageBubble({
         <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
           <button
             type="button"
-            onClick={onChooseCandidate}
+            onClick={() => onChooseCandidate(message.id)}
             aria-pressed={candidate}
             className={cn(
               "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
@@ -688,7 +692,7 @@ function MessageBubble({
       ) : null}
     </div>
   );
-}
+});
 
 function formatRecordingElapsed(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -745,6 +749,11 @@ export function InboxV3Thread({
     transport,
     refreshChats,
     markUnread,
+    historyHasMore,
+    loadingOlderMessages,
+    loadOlderMessages,
+    ambiguousRetryMessage,
+    resolveAmbiguousRetry,
   } = workspace;
 
   const [replySelection, setReplySelection] = useState<{
@@ -868,6 +877,88 @@ export function InboxV3Thread({
     },
     [messagesInnerRef],
   );
+
+  // Ledger INB-26: stable per-conversation callbacks so memoized bubbles skip
+  // re-render when unrelated state (queue chips, search, dialogs) changes.
+  const replyToMessage = useCallback(
+    (message: InboxMessage | null) => {
+      setReplySelection({ key: activeConversationKey, message });
+    },
+    [activeConversationKey],
+  );
+  const jumpToQuotedMessage = useCallback(
+    (quotedMessageId: string) => {
+      if (!jumpToMessage(quotedMessageId)) {
+        toast.warning(copy("quoteNotLoaded"));
+      }
+    },
+    [copy, jumpToMessage],
+  );
+
+  /**
+   * Ledger INB-25: one image file = one declared-or-sniffed type decision and
+   * one durable send effect. Extracted from the picker so multi-select can
+   * walk files sequentially without duplicating the sniffing rules.
+   */
+  const handleSelectedImageFile = useCallback(
+    async (file: File, quotedId: string | null) => {
+      const declaredType =
+        file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+      if (
+        declaredType &&
+        declaredType !== "application/octet-stream"
+      ) {
+        await sendImage(file, quotedId);
+        return;
+      }
+      try {
+        const buffer = await file.slice(0, 12).arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+        const ascii = (start: number, end: number) =>
+          String.fromCharCode(...bytes.slice(start, end));
+        let sniffedType = "";
+        if (
+          bytes.length >= 3 &&
+          bytes[0] === 0xff &&
+          bytes[1] === 0xd8 &&
+          bytes[2] === 0xff
+        ) {
+          sniffedType = "image/jpeg";
+        } else if (
+          bytes.length >= 8 &&
+          bytes[0] === 0x89 &&
+          ascii(1, 4) === "PNG" &&
+          bytes[4] === 0x0d &&
+          bytes[5] === 0x0a &&
+          bytes[6] === 0x1a &&
+          bytes[7] === 0x0a
+        ) {
+          sniffedType = "image/png";
+        } else if (
+          bytes.length >= 12 &&
+          ascii(0, 4) === "RIFF" &&
+          ascii(8, 12) === "WEBP"
+        ) {
+          sniffedType = "image/webp";
+        }
+        if (!sniffedType) {
+          await sendImage(file, quotedId);
+          return;
+        }
+        await sendImage(
+          new File([file], file.name, {
+            type: sniffedType,
+            lastModified: file.lastModified,
+          }),
+          quotedId,
+        );
+      } catch {
+        await sendImage(file, quotedId);
+      }
+    },
+    [sendImage],
+  );
+
 
   const gotoThreadMatch = (delta: number) => {
     if (threadMatchCount === 0) return;
@@ -1289,7 +1380,39 @@ export function InboxV3Thread({
               {t("inbox.noMessages")}
             </div>
           ) : (
-            messages.map((message, index) => {
+            <>
+              {historyHasMore && !loadingMessages ? (
+                <div
+                  className="flex justify-center py-2"
+                  data-inbox-load-older="true"
+                >
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    disabled={loadingOlderMessages}
+                    onClick={() => {
+                      void loadOlderMessages().then((ok) => {
+                        if (!ok) toast.warning(copy("loadEarlierFailed"));
+                      });
+                    }}
+                  >
+                    {loadingOlderMessages ? (
+                      <Loader2
+                        className="me-1.5 size-3.5 animate-spin"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <ChevronUp className="me-1.5 size-3.5" aria-hidden="true" />
+                    )}
+                    {loadingOlderMessages
+                      ? copy("loadingEarlier")
+                      : copy("loadEarlier")}
+                  </Button>
+                </div>
+              ) : null}
+              {messages.map((message, index) => {
               const previous = index > 0 ? messages[index - 1] : null;
               const next =
                 index < messages.length - 1 ? messages[index + 1] : null;
@@ -1355,9 +1478,9 @@ export function InboxV3Thread({
                     t={t}
                     copy={copy}
                     candidate={selectedCandidate?.id === message.id}
-                    onChooseCandidate={() => onSelectCandidate(message.id)}
-                    onRetry={(entry) => void retryFailedMessage(entry)}
-                    onReply={(entry) => setReplyTarget(entry)}
+                    onChooseCandidate={onSelectCandidate}
+                    onRetry={retryFailedMessage}
+                    onReply={replyToMessage}
                     canInteract={canSend}
                     upload={uploads[message.id]}
                     onCancelUpload={cancelUpload}
@@ -1368,13 +1491,7 @@ export function InboxV3Thread({
                       quotedId && messageIdSet.has(quotedId),
                     )}
                     onJumpToQuoted={
-                      quotedId
-                        ? () => {
-                            if (!jumpToMessage(quotedId)) {
-                              toast.warning(copy("quoteNotLoaded"));
-                            }
-                          }
-                        : undefined
+                      quotedId ? jumpToQuotedMessage : undefined
                     }
                     searchQuery={
                       threadSearchOpen ? threadSearchQuery : ""
@@ -1382,7 +1499,8 @@ export function InboxV3Thread({
                   />
                 </Fragment>
               );
-            })
+              })}
+            </>
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -1545,71 +1663,26 @@ export function InboxV3Thread({
               <input
                 ref={imageInputRef}
                 type="file"
+                multiple
                 accept="image/jpeg,image/png,image/webp"
                 aria-label={copy("mediaImage")}
                 className="sr-only"
                 tabIndex={-1}
                 data-inbox-image-input="true"
                 onChange={(event) => {
-                  const file = event.currentTarget.files?.[0] ?? null;
+                  const files = Array.from(event.currentTarget.files ?? []);
                   event.currentTarget.value = "";
-                  if (!file) return;
+                  if (files.length === 0) return;
                   const quotedId = replyTarget?.id ?? null;
                   setReplyTarget(null);
-                  const declaredType =
-                    file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
-                  if (
-                    declaredType &&
-                    declaredType !== "application/octet-stream"
-                  ) {
-                    void sendImage(file, quotedId);
-                    return;
-                  }
-                  void file
-                    .slice(0, 12)
-                    .arrayBuffer()
-                    .then((buffer) => {
-                      const bytes = new Uint8Array(buffer);
-                      const ascii = (start: number, end: number) =>
-                        String.fromCharCode(...bytes.slice(start, end));
-                      let sniffedType = "";
-                      if (
-                        bytes.length >= 3 &&
-                        bytes[0] === 0xff &&
-                        bytes[1] === 0xd8 &&
-                        bytes[2] === 0xff
-                      ) {
-                        sniffedType = "image/jpeg";
-                      } else if (
-                        bytes.length >= 8 &&
-                        bytes[0] === 0x89 &&
-                        ascii(1, 4) === "PNG" &&
-                        bytes[4] === 0x0d &&
-                        bytes[5] === 0x0a &&
-                        bytes[6] === 0x1a &&
-                        bytes[7] === 0x0a
-                      ) {
-                        sniffedType = "image/png";
-                      } else if (
-                        bytes.length >= 12 &&
-                        ascii(0, 4) === "RIFF" &&
-                        ascii(8, 12) === "WEBP"
-                      ) {
-                        sniffedType = "image/webp";
-                      }
-                      if (!sniffedType) {
-                        void sendImage(file, quotedId);
-                        return;
-                      }
-                      void sendImage(
-                        new File([file], file.name, {
-                          type: sniffedType,
-                          lastModified: file.lastModified,
-                        }),
-                        quotedId,
-                      );
-                    })
-                    .catch(() => void sendImage(file, quotedId));
+                  // Ledger INB-25: multi-image selection sends sequentially so
+                  // each file keeps its own durable outbox effect and upload
+                  // progress (WhatsApp-parity order guarantee).
+                  void (async () => {
+                    for (const file of files) {
+                      await handleSelectedImageFile(file, quotedId);
+                    }
+                  })();
                 }}
               />
               <input
@@ -1659,18 +1732,25 @@ export function InboxV3Thread({
               <input
                 ref={documentInputRef}
                 type="file"
+                multiple
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/plain,text/csv"
                 aria-label={copy("mediaDocument")}
                 className="sr-only"
                 tabIndex={-1}
                 data-inbox-document-input="true"
                 onChange={(event) => {
-                  const file = event.currentTarget.files?.[0] ?? null;
+                  const files = Array.from(event.currentTarget.files ?? []);
                   event.currentTarget.value = "";
-                  if (!file) return;
+                  if (files.length === 0) return;
                   const quotedId = replyTarget?.id ?? null;
                   setReplyTarget(null);
-                  void sendDocument(file, quotedId);
+                  // Ledger INB-25: sequential document sends, one durable
+                  // effect per file.
+                  void (async () => {
+                    for (const file of files) {
+                      await sendDocument(file, quotedId);
+                    }
+                  })();
                 }}
               />
               <input
@@ -1839,6 +1919,21 @@ export function InboxV3Thread({
           </div>
         ) : null}
       </footer>
+
+      {/* Ledger INB-29: ambiguous retry is a deliberate decision, surfaced as
+          an accessible AlertDialog instead of window.confirm. */}
+      <ConfirmDialog
+        open={ambiguousRetryMessage !== null}
+        onOpenChange={(open) => {
+          if (!open) resolveAmbiguousRetry(false);
+        }}
+        title={t("inbox.whatsappAmbiguous")}
+        description={t("inbox.whatsappAmbiguousRetryWarning")}
+        destructive
+        onConfirm={() => {
+          resolveAmbiguousRetry(true);
+        }}
+      />
     </section>
   );
 }

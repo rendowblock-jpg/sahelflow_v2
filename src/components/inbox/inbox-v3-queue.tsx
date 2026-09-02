@@ -353,7 +353,9 @@ function ConversationRow({
               <span aria-hidden="true">·</span>
             ) : null}
             {chat.workflow.assigneeId ? (
-              <span className="truncate">{copy("assignment")}</span>
+              <span className="truncate">
+                {chat.workflow.assigneeName || copy("assignment")}
+              </span>
             ) : null}
           </span>
         ) : null}

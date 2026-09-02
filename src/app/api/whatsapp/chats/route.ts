@@ -7,6 +7,7 @@ import {
   requireTrustedAction,
 } from "@/lib/identity/authorization";
 import { projectTrustedActorActions } from "@/lib/identity/conversation-projection";
+import { listTeamMembers } from "@/lib/identity/team-directory";
 import { getConversationAssignmentVersions } from "@/lib/inbox/conversation-assignment";
 import {
   sidecar,
@@ -82,6 +83,31 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     conversations.map((conversation) => conversation.id),
   );
 
+  // Ledger INB-20: rows render the assignee's display NAME, not a generic
+  // "assigned" word. Assignee ids are free-form strings, so the name comes
+  // from the team directory; unknown/foreign ids fall back to null and the
+  // client keeps its honest generic label.
+  const assigneeIds = Array.from(
+    new Set(
+      conversations
+        .map((conversation) => conversation.assigneeId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+  const assigneeNameById = new Map<string, string>();
+  if (assigneeIds.length > 0) {
+    try {
+      const teamMembers = await listTeamMembers(actorContext.shop);
+      for (const member of teamMembers) {
+        if (member.displayName) {
+          assigneeNameById.set(member.memberId, member.displayName);
+        }
+      }
+    } catch {
+      // Directory unavailable — rows degrade to the generic label.
+    }
+  }
+
   const chats = conversations.flatMap((conversation) => {
     if (!conversation.sourceId) return [];
     const last = conversation.messages[0];
@@ -113,6 +139,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         workflow: {
           status: conversation.status,
           assigneeId: conversation.assigneeId,
+          assigneeName: conversation.assigneeId
+            ? assigneeNameById.get(conversation.assigneeId) ?? null
+            : null,
           assignmentVersion: assignmentVersions.get(conversation.id) ?? 0,
           priority: conversation.priority,
           labels: parseLabels(conversation.labels),
