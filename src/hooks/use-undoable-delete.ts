@@ -20,7 +20,7 @@
  *   });
  *   <button onClick={() => deleteOrder(id)}>Delete</button>
  */
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { toast } from "@/lib/toast";
 import { useI18n } from "@/hooks/use-i18n";
 import { translateServerError } from "@/lib/i18n/translate-server-error";
@@ -44,10 +44,15 @@ interface UseUndoableDeleteOptions {
 
 export function useUndoableDelete(opts: UseUndoableDeleteOptions) {
   const { t } = useI18n();
-  const undoWindow = opts.undoWindowMs ?? 6000;
+  // Audit F8: a rapid double-click must not fire two DELETEs — the second
+  // would toast a raw failure for an already-deleted record.
+  const inFlightRef = useRef(false);
 
   return useCallback(
     async (id: string) => {
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
+      const undoWindow = opts.undoWindowMs ?? 6000;
       try {
         const res = await fetch(opts.deleteUrl(id), {
           method: "DELETE",
@@ -99,6 +104,8 @@ export function useUndoableDelete(opts: UseUndoableDeleteOptions) {
         toast.error(
           translateServerError(raw, t, t("common.deleteFailed")),
         );
+      } finally {
+        inFlightRef.current = false;
       }
     },
     [opts, t],

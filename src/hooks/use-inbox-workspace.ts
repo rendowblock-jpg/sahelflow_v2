@@ -64,6 +64,8 @@ export interface DeleteChatsOutcome {
   errorCode: string | null;
   errorDetail: string | null;
   rejectionSummary: string | null;
+  /** Audit S3-20: ids that matched nothing (foreign shop, typo) — null when unknown. */
+  notFoundIds: string[] | null;
 }
 
 /** Server 400 shape from POST /api/whatsapp/chats/delete (B5 round 3). */
@@ -1060,7 +1062,7 @@ export function useInboxWorkspace() {
   const deleteChats = useCallback(
     async (conversationIds: string[]): Promise<DeleteChatsOutcome> => {
       if (!canDeleteChats || conversationIds.length === 0) {
-        return { ok: false, errorCode: null, errorDetail: null, rejectionSummary: null };
+        return { ok: false, errorCode: null, errorDetail: null, rejectionSummary: null, notFoundIds: null };
       }
       // Round 3: pre-flight the exact server contract client-side. A doomed
       // request (empty id, id longer than the 64-char canonical contract —
@@ -1080,6 +1082,7 @@ export function useInboxWorkspace() {
             (oversized.length > 0
               ? `, offending lengths [${oversized.map((id) => id.length).join(", ")}] (max ${DELETE_CONTRACT_MAX_ID_LENGTH})`
               : `, max ${DELETE_CONTRACT_MAX_IDS}`),
+          notFoundIds: null,
         };
       }
       try {
@@ -1153,7 +1156,23 @@ export function useInboxWorkspace() {
             errorCode: errorCode ?? `HTTP_${response.status}`,
             errorDetail,
             rejectionSummary,
+            notFoundIds: null,
           };
+        }
+        // Audit S3-20 (client half): the additive `notFoundIds` verdict from
+        // the 200 body — defensive parse, absent on older paired servers.
+        let notFoundIds: string[] | null = null;
+        try {
+          const body = (await response.json()) as { notFoundIds?: unknown };
+          if (Array.isArray(body.notFoundIds)) {
+            notFoundIds = body.notFoundIds.every(
+              (id): id is string => typeof id === "string",
+            )
+              ? (body.notFoundIds as string[])
+              : null;
+          }
+        } catch {
+          // Non-JSON success body — leave null.
         }
         const active = activeChatRef.current;
         if (active && conversationIds.includes(active.conversationId)) {
@@ -1167,9 +1186,15 @@ export function useInboxWorkspace() {
           setReplyText("");
         }
         await loadChats();
-        return { ok: true, errorCode: null, errorDetail: null, rejectionSummary: null };
+        return {
+          ok: true,
+          errorCode: null,
+          errorDetail: null,
+          rejectionSummary: null,
+          notFoundIds,
+        };
       } catch {
-        return { ok: false, errorCode: null, errorDetail: null, rejectionSummary: null };
+        return { ok: false, errorCode: null, errorDetail: null, rejectionSummary: null, notFoundIds: null };
       }
     },
     [canDeleteChats, loadChats, replaceMessages, setReplyText],
