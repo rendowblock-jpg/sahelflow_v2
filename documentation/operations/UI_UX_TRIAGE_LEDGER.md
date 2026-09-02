@@ -44,7 +44,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | ID | Item | Target | Status |
 |---|---|---|---|
 | INB-10 ||| **DONE (source, wave 1)** — header search, n/N counter, prev/next, in-bubble highlight |
-| INB-11 | History pagination ("load older") + list virtualization | thread + `messages` route | OPEN |
+| INB-11 | History pagination ("load older") + list virtualization | thread + `messages` route | **PARTIAL (source, wave 9-b)** — composite-cursor `before` param (hasMore/olderCursor) + Load-earlier button shipped; list virtualization still open (perf-only) |
 | INB-12 | Pin / mute / archive conversation states | queue + prisma model | OPEN |
 | INB-13 | Reactions | thread (+sidecar capability) | BLOCKED (sidecar probe) |
 | INB-14 | Message delete-for-everyone | thread (+sidecar) | BLOCKED (sidecar probe) |
@@ -53,20 +53,20 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | INB-17 ||| **DONE (source, wave 2)** — hover mark-unread quick action (row-relative, valid DOM) |
 | INB-18 ||| **DONE (source, wave 2)** — j/k/Arrows cursor + Enter open |
 | INB-19 | Real avatars (profile photos) | queue/thread (+sidecar) | BLOCKED (sidecar probe) |
-| INB-20 | Assignee display name in rows (not generic word) | `inbox-v3-queue.tsx` | OPEN |
+| INB-20 ||| **DONE (source, wave 9-b)** — chats route projects team-directory assignee display names; unknown ids fall back to honest generic label |
 | INB-21 ||| **DONE (source, wave 2)** — filter popover: priority + label slices |
 | INB-22 ||| **DONE (source, wave 2)** — bulk mark-read + resolve, allSettled + toasts |
 | INB-23 ||| **DONE (source, wave 2)** — datetime-local + future-date validation |
 | INB-24 | Voice recording gestures (lock-to-record, slide-cancel, preview) | `use-voice-recorder.ts` | OPEN |
-| INB-25 | Multi-file attachment selection | `inbox-v3-thread.tsx` | OPEN |
+| INB-25 ||| **DONE (source, wave 9-b)** — multi-select file/image pickers walk files sequentially; one declared-or-sniffed type decision per file |
 
 ### P3 — Perf / code quality (invisible to Founder, visible in feel)
 | ID | Item | Target | Status |
 |---|---|---|---|
-| INB-26 | `React.memo` on `MessageBubble`; replace `JSON.stringify` deep-compare | `inbox-v3-thread.tsx`, `use-inbox-workspace.ts:306` | OPEN |
+| INB-26 ||| **DONE (source, wave 9-b)** — `MessageBubble` memoized with narrow attachment comparator + stable per-conversation callbacks |
 | INB-27 | Split 2,606-line god hook into chat/messages/drafts/outbox hooks | `use-inbox-workspace.ts` | OPEN |
 | INB-28 | Collapse 4 duplicated ~200-line send functions into one factory | `use-inbox-workspace.ts` | OPEN |
-| INB-29 | `window.confirm` → `AlertDialog` for ambiguous duplicate retry | `use-inbox-workspace.ts:1415` | OPEN |
+| INB-29 ||| **DONE (source, wave 9-b)** — ambiguous duplicate retry resolves via accessible ConfirmDialog; zero `window.confirm` calls remain |
 | INB-30 | Inline `ASSIGNMENT_COPY` into the central i18n chain | `conversation-controls.tsx:308-805` | OPEN |
 | INB-31 ||| **DONE (source, wave 6)** — 30s AbortSignal.timeout on text sends |
 
