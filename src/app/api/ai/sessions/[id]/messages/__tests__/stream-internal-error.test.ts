@@ -110,16 +110,20 @@ process.env.SF_MASTER_KEY =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 import { GeminiProviderError, geminiErrorMessage } from "@/lib/ai/gemini/provider";
+import { NextRequest } from "next/server";
 import { POST } from "../stream/route";
 
-function streamRequest(locale?: string): Request {
-  return new Request("http://localhost/api/ai/sessions/sess-1/messages/stream", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(
-      locale ? { message: "Hello", locale } : { message: "Hello" },
-    ),
-  });
+function streamRequest(locale?: string): NextRequest {
+  return new NextRequest(
+    "http://localhost/api/ai/sessions/sess-1/messages/stream",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        locale ? { message: "Hello", locale } : { message: "Hello" },
+      ),
+    },
+  );
 }
 
 type SseEvent = { event: string; data: Record<string, unknown> };
@@ -153,12 +157,13 @@ describe("POST /api/ai/sessions/[id]/messages/stream — SSE error classificatio
       const events = parseSse(await response.text());
       const errorEvents = events.filter((event) => event.event === "error");
       expect(errorEvents).toHaveLength(1);
-      expect(errorEvents[0].data).toMatchObject({
+      const failureEvent = errorEvents[0]!;
+      expect(failureEvent.data).toMatchObject({
         code: "AI_INTERNAL_ERROR",
         message: "The AI assistant hit an internal error. Please try again.",
       });
       // Raw internal error text must never ride the SSE event.
-      expect(JSON.stringify(errorEvents[0].data)).not.toContain("Prisma");
+      expect(JSON.stringify(failureEvent.data)).not.toContain("Prisma");
     } finally {
       agentHarness.thrown = null;
     }
@@ -181,12 +186,13 @@ describe("POST /api/ai/sessions/[id]/messages/stream — SSE error classificatio
       const events = parseSse(await response.text());
       const errorEvents = events.filter((event) => event.event === "error");
       expect(errorEvents).toHaveLength(1);
-      expect(errorEvents[0].data).toMatchObject({
+      const failureEvent = errorEvents[0]!;
+      expect(failureEvent.data).toMatchObject({
         code: "GEMINI_QUOTA_EXHAUSTED",
         message: geminiErrorMessage(providerError, "en"),
       });
       // The provider's raw message text is not forwarded — only the copy.
-      expect(JSON.stringify(errorEvents[0].data)).not.toContain(
+      expect(JSON.stringify(failureEvent.data)).not.toContain(
         "Resource exhausted",
       );
     } finally {
