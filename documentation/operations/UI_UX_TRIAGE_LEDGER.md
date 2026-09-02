@@ -67,7 +67,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | INB-27 | Split 2,606-line god hook into chat/messages/drafts/outbox hooks | `use-inbox-workspace.ts` | OPEN |
 | INB-28 | Collapse 4 duplicated ~200-line send functions into one factory | `use-inbox-workspace.ts` | OPEN |
 | INB-29 ||| **DONE (source, wave 9-b)** — ambiguous duplicate retry resolves via accessible ConfirmDialog; zero `window.confirm` calls remain |
-| INB-30 | Inline `ASSIGNMENT_COPY` into the central i18n chain | `conversation-controls.tsx:308-805` | OPEN |
+| INB-30 | Inline `ASSIGNMENT_COPY` into the central i18n chain | `conversation-controls.tsx:308-805` | **DONE (source, wave 10)** — 13 assignment labels + 5 activity strings moved verbatim into the three locale JSONs (`inbox.assignment.*` / `inbox.assignmentActivity.*` with `{{target}}` interpolation, parity 2863×3 pre-cleanup); `refresh` reuses the static `common.refresh` key; component + activity renderer resolve through the shared t() chain; copy-authority + assignment-UI contracts pin resolution, Arabic localization, exact pre-migration values and the no-duplicate rule |
 | INB-31 ||| **DONE (source, wave 6)** — 30s AbortSignal.timeout on text sends |
 
 ### Sidecar engineering (not UI polish — capability work)
@@ -112,7 +112,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 |---|---|---|---|
 | AI-23 ||| **DONE (source, wave 6)** — aria-busy on streaming log (two-step delete announce still OPEN) |
 | AI-24 ||| **DONE (source, wave 6)** — 3-pane layout skeleton |
-| AI-25 | Unconfigured state: capability explainer (reuse ~25 dead copy keys) + delete dead keys + legacy `ai.*` namespace | `ai-workspace.ts`, locales | OPEN |
+| AI-25 | Unconfigured state: capability explainer (reuse ~25 dead copy keys) + delete dead keys + legacy `ai.*` namespace | `ai-workspace.ts`, locales | **DONE (source, wave 10)** — StartSurface renders the capability explainer when setup resolves not-ready (adopted capabilities sentence + 4 tool-anchored chips, truthful seller-owned-key privacy note, `/settings?group=intelligence` CTA; copy adopted into the ai-decision-workspace runtime authority ×3); all 37 dead legacy `ai.*` locale keys deleted ×3 after a zero-reference repo scan (parity 2826×3); launchpad contract pins explainer rendering, per-locale resolution and the namespace retirement |
 | AI-26 | Truthful model/quality signal (contract today forbids usage metadata — revisit deliberately, never fabricate) | contracts + tests | OPEN |
 
 ---
