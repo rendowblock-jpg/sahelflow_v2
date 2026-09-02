@@ -21,7 +21,7 @@ function textResponse(
 
 function fetchError(
   message: string,
-  cause?: { name?: string; code?: string },
+  cause?: { name?: string | null; code?: string | null },
 ): TypeError {
   const error = new TypeError(message);
   if (cause) {
