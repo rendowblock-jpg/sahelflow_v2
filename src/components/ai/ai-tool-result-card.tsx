@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
   AlertTriangle,
   ArrowUpRight,
   CheckCircle2,
+  ChevronDown,
   Database,
   Loader2,
 } from "lucide-react";
@@ -259,6 +261,10 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
     params?: Record<string, string | number>,
   ) => getAiWorkspaceCopy(locale, key, params);
 
+  // Ledger AI-06: collapsed by default on success, auto-expanded while
+  // running and on failure (the operator must see errors without a click).
+  const [expanded, setExpanded] = useState(tool.state !== "complete");
+
   if (isProposalResult(tool.result)) return null;
 
   const route = TOOL_ROUTE[tool.name];
@@ -274,10 +280,16 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
       ? [result]
       : [];
   const scalar = records.length === 0 ? simpleValue(result) : null;
+  const argEntries = Object.entries(tool.args ?? {}).slice(0, 8);
 
   return (
     <section className="mt-2 overflow-hidden rounded-lg border bg-background/70 text-start">
-      <header className="flex min-h-11 items-center justify-between gap-3 border-b px-3 py-2">
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        aria-expanded={expanded}
+        className="flex min-h-11 w-full items-center justify-between gap-3 border-b px-3 py-2 text-start outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      >
         <div className="flex min-w-0 items-center gap-2">
           {running ? (
             <Loader2 className="size-4 shrink-0 animate-spin text-primary" aria-hidden="true" />
@@ -293,20 +305,46 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
             </p>
           </div>
         </div>
-        {!running ? (
-          <Badge variant={failed ? "destructive" : "secondary"} className="shrink-0 text-xs">
-            {failed ? copy("failed") : (
-              <span className="inline-flex items-center gap-1">
-                <CheckCircle2 className="size-3.5" aria-hidden="true" />
-                {copy("succeeded")}
-              </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {!running ? (
+            <Badge variant={failed ? "destructive" : "secondary"} className="text-xs">
+              {failed ? copy("failed") : (
+                <span className="inline-flex items-center gap-1">
+                  <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                  {copy("succeeded")}
+                </span>
+              )}
+            </Badge>
+          ) : null}
+          <ChevronDown
+            className={cn(
+              "size-4 text-muted-foreground transition-transform",
+              expanded && "rotate-180",
             )}
-          </Badge>
-        ) : null}
-      </header>
+            aria-hidden="true"
+          />
+        </div>
+      </button>
 
-      {!running ? (
+      {expanded && !running ? (
         <div className="space-y-3 p-3">
+          {argEntries.length > 0 ? (
+            <div>
+              <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {copy("toolArgs")}
+              </p>
+              <dl className="mt-1 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
+                {argEntries.map(([key, value]) => (
+                  <div key={key} className="min-w-0">
+                    <dt className="text-muted-foreground">{key}</dt>
+                    <dd className="mt-0.5 truncate font-medium text-foreground">
+                      <TechnicalValue>{simpleValue(value) ?? "—"}</TechnicalValue>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ) : null}
           {Array.isArray(result) ? (
             <p className="text-xs text-muted-foreground">
               {copy("resultItems", { count: result.length })}

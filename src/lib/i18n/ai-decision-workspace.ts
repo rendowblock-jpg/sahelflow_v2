@@ -25,6 +25,8 @@ const COPY = {
     setupAttention: "AI setup needs attention",
     setupChecking: "Checking AI setup",
     demoBadge: "Sample data",
+    historySearch: "Search analyses",
+    historyNoMatches: "No analysis matches this search",
     actionHistoryIssue: "Action review history is unavailable",
     actionHistoryIssueDescription:
       "Retry before assuming this analysis has no pending or failed sensitive actions.",
@@ -55,6 +57,8 @@ const COPY = {
     setupAttention: "La configuration IA demande votre attention",
     setupChecking: "Vérification de la configuration IA",
     demoBadge: "Données d’exemple",
+    historySearch: "Rechercher des analyses",
+    historyNoMatches: "Aucune analyse ne correspond à cette recherche",
     actionHistoryIssue: "L’historique de revue des actions est indisponible",
     actionHistoryIssueDescription:
       "Réessayez avant de conclure qu’aucune action sensible en attente ou en échec n’existe.",
@@ -85,6 +89,8 @@ const COPY = {
     setupAttention: "إعداد الذكاء الاصطناعي يحتاج إلى انتباه",
     setupChecking: "جارٍ التحقق من إعداد الذكاء الاصطناعي",
     demoBadge: "بيانات نموذجية",
+    historySearch: "ابحث في التحليلات",
+    historyNoMatches: "لا يوجد تحليل يطابق هذا البحث",
     actionHistoryIssue: "سجل مراجعة الإجراءات غير متاح",
     actionHistoryIssueDescription:
       "أعد المحاولة قبل افتراض عدم وجود إجراءات حساسة معلقة أو فاشلة في هذا التحليل.",

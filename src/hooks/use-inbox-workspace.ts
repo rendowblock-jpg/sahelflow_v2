@@ -1720,6 +1720,12 @@ export function useInboxWorkspace() {
       const response = await fetch("/api/whatsapp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // Ledger INB-31: text sends get a hard timeout so a hung request can
+        // never leave the bubble in "sending" limbo — the timeout raises a
+        // DOMException that the existing failure reconciliation already
+        // converts into a failed-with-retry bubble (durable outbox truth is
+        // unaffected: the effectKey contract owns actual delivery state).
+        signal: AbortSignal.timeout(30_000),
         body: JSON.stringify({
           clientMessageId: tempId,
           to: chat.transportId,

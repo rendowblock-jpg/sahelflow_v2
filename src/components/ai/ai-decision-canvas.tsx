@@ -4,6 +4,7 @@ import Link from "next/link";
 import { memo, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowLeft,
   Bot,
   BrainCircuit,
@@ -446,6 +447,7 @@ export function AiDecisionCanvas({
   const [draft, setDraft] = useState(initialDraft);
   const [prevInitialDraft, setPrevInitialDraft] = useState(initialDraft);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [awayFromTail, setAwayFromTail] = useState(false);
   const scrollRootRef = useRef<HTMLDivElement | null>(null);
   const tailRef = useRef<HTMLDivElement | null>(null);
   const followTailRef = useRef(true);
@@ -459,6 +461,8 @@ export function AiDecisionCanvas({
     const updateFollowState = () => {
       const remaining = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
       followTailRef.current = remaining < 96;
+      // Mirrors the ref into state (value-guarded) to drive the scroll pill.
+      setAwayFromTail(remaining >= 96);
     };
     updateFollowState();
     viewport.addEventListener("scroll", updateFollowState, { passive: true });
@@ -493,7 +497,7 @@ export function AiDecisionCanvas({
   };
 
   return (
-    <main data-ai-decision-canvas="true" className="flex h-full min-h-0 flex-col bg-background">
+    <main data-ai-decision-canvas="true" className="relative flex h-full min-h-0 flex-col bg-background">
       <header className="flex min-h-16 items-center justify-between gap-3 border-b px-4 md:px-5">
         <div className="flex min-w-0 items-center gap-3">
           {mobile ? (
@@ -561,6 +565,7 @@ export function AiDecisionCanvas({
             role="log"
             aria-live="polite"
             aria-relevant="additions text"
+            aria-busy={sending}
             aria-label={workspace.copy("messageLog")}
             className="mx-auto w-full max-w-5xl px-4 py-5 md:px-7 md:py-6"
           >
@@ -634,13 +639,34 @@ export function AiDecisionCanvas({
         </ScrollArea>
       </div>
 
+      {awayFromTail && messages.length > 0 ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-28 z-10 flex justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              followTailRef.current = true;
+              setAwayFromTail(false);
+              tailRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+            }}
+            aria-label={workspace.copy("scrollToLatest")}
+            className="pointer-events-auto inline-flex size-9 items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-lg outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ArrowDown className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
+
       <div className="border-t bg-background/96 px-4 py-3 backdrop-blur md:px-6 md:py-4">
         <div className="mx-auto flex w-full max-w-4xl items-end gap-2 rounded-xl border bg-card/80 p-2 shadow-sm focus-within:ring-2 focus-within:ring-ring/30">
           <Textarea
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing
+              ) {
                 event.preventDefault();
                 void submit();
               }
