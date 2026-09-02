@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { parseAsStringLiteral, useQueryStates } from "nuqs";
 import {
   useCallback,
   useEffect,
@@ -58,8 +59,37 @@ export function InboxV3Workspace({
   } = workspace;
 
   const [authority, setAuthority] = useState<InboxAuthorityView | null>(null);
-  const [queueFilter, setQueueFilter] = useState<DeskQueueFilter>("all");
-  const [workflowFilter, setWorkflowFilter] = useState<WorkflowFilter>("all");
+  // Audit F10: the two desk filters live in the URL like every other
+  // workbench — refresh and back-navigation keep the operator's scope.
+  const [deskFilters, setDeskFilters] = useQueryStates({
+    queue: parseAsStringLiteral([
+      "all",
+      "mine",
+      "unassigned",
+      "unread",
+    ]).withDefault("all"),
+    workflow: parseAsStringLiteral([
+      "all",
+      "open",
+      "pending",
+      "resolved",
+      "snoozed",
+    ]).withDefault("all"),
+  });
+  const queueFilter = deskFilters.queue;
+  const workflowFilter = deskFilters.workflow;
+  const setQueueFilter = useCallback(
+    (filter: DeskQueueFilter) => {
+      void setDeskFilters({ queue: filter });
+    },
+    [setDeskFilters],
+  );
+  const setWorkflowFilter = useCallback(
+    (filter: WorkflowFilter) => {
+      void setDeskFilters({ workflow: filter });
+    },
+    [setDeskFilters],
+  );
   const [candidateByConversation, setCandidateByConversation] = useState<
     Record<string, string>
   >({});

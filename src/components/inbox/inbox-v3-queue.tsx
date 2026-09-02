@@ -52,9 +52,10 @@ const WORKFLOW_FILTERS: WorkflowFilter[] = [
 function relativeTime(
   value: number | undefined,
   locale: "ar" | "fr" | "en",
+  now: number = Date.now(),
 ): string {
   if (!value) return "";
-  const diff = Math.max(0, Date.now() - value);
+  const diff = Math.max(0, now - value);
   const rtf = new Intl.RelativeTimeFormat(
     locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB",
     { numeric: "auto" },
@@ -95,7 +96,11 @@ function workflowLabel(
 ): string {
   switch (filter) {
     case "all":
-      return copy("queueAll");
+      // Distinct from the desk-queue "الكل" pill: the workflow scope is over
+      // STATUSES. Two identical "All" buttons in one panel broke the
+      // Founder-visual e2e (strict-mode role/name resolution) and was
+      // genuinely ambiguous UX.
+      return copy("workflowAll");
     case "open":
       return copy("queueOpen");
     case "pending":
@@ -139,6 +144,7 @@ function ConversationRow({
   chat,
   active,
   locale,
+  relativeNow,
   t,
   copy,
   selectMode,
@@ -149,6 +155,7 @@ function ConversationRow({
   chat: InboxChat;
   active: boolean;
   locale: "ar" | "fr" | "en";
+  relativeNow: number;
   t: ReturnType<typeof useInboxWorkspace>["t"];
   copy: ReturnType<typeof useInboxWorkspace>["copy"];
   selectMode: boolean;
@@ -221,7 +228,7 @@ function ConversationRow({
               chat.unread > 0 ? "font-medium text-primary" : "text-muted-foreground",
             )}
           >
-            {relativeTime(chat.lastMessageAt, locale)}
+            {relativeTime(chat.lastMessageAt, locale, relativeNow)}
           </span>
         </span>
 
@@ -246,7 +253,7 @@ function ConversationRow({
                 priority === "urgent"
                   ? "text-destructive"
                   : priority === "high"
-                    ? "text-orange-500"
+                    ? "text-warning"
                     : priority === "medium"
                       ? "text-primary"
                       : "text-muted-foreground",
@@ -314,7 +321,20 @@ export function InboxV3Queue({
     query: string;
     loading: boolean;
     results: InboxChat[];
-  }>({ query: "", loading: false, results: [] });
+    error: boolean;
+  }>({ query: "", loading: false, results: [], error: false });
+  // Audit F9: a failed server search must surface as a retryable error row,
+  // never silently as "no results" — the attempt counter re-arms the effect.
+  const [searchAttempt, setSearchAttempt] = useState(0);
+  // Audit F11: the queue's relative timestamps must tick instead of freezing
+  // until the next socket event (same self-scheduling idea as the thread
+  // header, one shared cadence for the whole queue).
+  const [relativeNow, setRelativeNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setRelativeNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -362,6 +382,7 @@ export function InboxV3Queue({
         ...current,
         query: normalizedQuery,
         loading: true,
+        error: false,
       }));
       try {
         const response = await fetch(
@@ -376,10 +397,16 @@ export function InboxV3Queue({
           results: data.results.map((result) =>
             searchResultToChat(result, copy("restrictedContact")),
           ),
+          error: false,
         });
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setSearchState({ query: normalizedQuery, loading: false, results: [] });
+          setSearchState({
+            query: normalizedQuery,
+            loading: false,
+            results: [],
+            error: true,
+          });
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -396,7 +423,7 @@ export function InboxV3Queue({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [copy, normalizedQuery, query]);
+  }, [copy, normalizedQuery, query, searchAttempt]);
 
   const rows = useMemo(() => {
     if (!normalizedQuery) return localMatches;
@@ -505,13 +532,18 @@ export function InboxV3Queue({
       );
       return;
     }
+    // Audit S3-20 (client half): name what resolved to nothing instead of a
+    // bare success — the operator leaves the dialog knowing the queue state.
+    if (outcome.notFoundIds && outcome.notFoundIds.length > 0) {
+      toast.warning(
+        copy("deleteChatsNotFound", { count: outcome.notFoundIds.length }),
+      );
+    }
     exitSelectMode();
   };
 
   const unreadEmpty =
     queueFilter === "unread" && queueCounts.unread === 0 && !normalizedQuery;
-  const workflowSelectLabel = (filter: WorkflowFilter) =>
-    `${copy("status")} · ${workflowLabel(filter, copy, t)}`;
 
   return (
     <section
@@ -664,21 +696,31 @@ export function InboxV3Queue({
           ) : null}
         </div>
 
-        <select
-          value={workflowFilter}
-          onChange={(event) =>
-            onWorkflowFilterChange(event.target.value as WorkflowFilter)
-          }
+        <div
+          className="mt-2 flex flex-wrap gap-1"
+          role="group"
           aria-label={copy("status")}
-          title={copy("status")}
-          className="mt-2 h-8 w-full rounded-lg border border-border/65 bg-background px-2 text-2xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {WORKFLOW_FILTERS.map((filter) => (
-            <option key={filter} value={filter}>
-              {workflowSelectLabel(filter)}
-            </option>
-          ))}
-        </select>
+          {WORKFLOW_FILTERS.map((filter) => {
+            const selected = workflowFilter === filter;
+            return (
+              <button
+                key={filter}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => onWorkflowFilterChange(filter)}
+                className={cn(
+                  "inline-flex h-7 items-center justify-center rounded-full border px-2.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  selected
+                    ? "border-primary/25 bg-primary/9 text-primary"
+                    : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                )}
+              >
+                {workflowLabel(filter, copy, t)}
+              </button>
+            );
+          })}
+        </div>
           </>
         )}
       </div>
@@ -726,6 +768,20 @@ export function InboxV3Queue({
                 {copy("searchResults", { count: rows.length })}
               </div>
             ) : null}
+            {normalizedQuery &&
+            searchState.query === normalizedQuery &&
+            searchState.error ? (
+              <div className="flex items-center justify-between gap-2 border-b border-border/55 bg-destructive/8 px-3 py-2 text-2xs text-destructive">
+                <span>{copy("searchFailed")}</span>
+                <button
+                  type="button"
+                  onClick={() => setSearchAttempt((attempt) => attempt + 1)}
+                  className="shrink-0 rounded-full border border-destructive/30 px-2 py-0.5 font-medium outline-none transition-colors hover:bg-destructive/12 focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {copy("searchRetry")}
+                </button>
+              </div>
+            ) : null}
             {rows.map((chat) => (
               <ConversationRow
                 key={`${chat.conversationId}:${chat.id}`}
@@ -735,6 +791,7 @@ export function InboxV3Queue({
                   chat.id === activeChatId
                 }
                 locale={locale}
+                relativeNow={relativeNow}
                 t={t}
                 copy={copy}
                 selectMode={selectMode}

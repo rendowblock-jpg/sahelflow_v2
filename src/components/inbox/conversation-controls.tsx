@@ -196,9 +196,9 @@ const PRIORITY_CONFIG: Record<
   { dot: string; label: string }
 > = {
   urgent: { dot: "bg-destructive", label: "inbox.priority.urgent" },
-  high: { dot: "bg-orange-500", label: "inbox.priority.high" },
-  medium: { dot: "bg-blue-500", label: "inbox.priority.medium" },
-  low: { dot: "bg-gray-400", label: "inbox.priority.low" },
+  high: { dot: "bg-warning", label: "inbox.priority.high" },
+  medium: { dot: "bg-primary", label: "inbox.priority.medium" },
+  low: { dot: "bg-muted-foreground/50", label: "inbox.priority.low" },
 };
 
 export function PriorityControl({
