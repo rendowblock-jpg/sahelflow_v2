@@ -90,26 +90,26 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | ID | Item | Target | Status |
 |---|---|---|---|
 | AI-06 ||| **DONE (source, wave 6)** — collapsible, args k/v shown, auto-expand on running/failure; timing + per-tool retry deferred (needs server duration events) |
-| AI-07 | Regenerate replaces in place (today: append-only duplicates) | `use-ai-workspace.ts:591-616` | OPEN |
-| AI-08 | History beyond silent last-20 cap: cursor pagination + notice (dead `historyRecentOnly` key exists) | `session-history.ts`, messages routes | OPEN |
+| AI-07 ||| **DONE (source, wave 9-a)** — server-authoritative truncate-after route; regenerate replaces the trailing exchange in place with optimistic rollback |
+| AI-08 ||| **DONE (source, wave 9-a)** — cursor pagination (hasMore/nextCursor + Load earlier button); honest notice supersedes dead historyRecentOnly |
 | AI-09 ||| **DONE (source, wave 6)** — history search + no-match state (pin deferred, needs schema) |
 | AI-10 ||| **DONE (source, wave 6)** — scroll pill when scrolled up during streaming |
-| AI-11 | Per-record citation links (`/orders/[id]`, not list pages) | `ai-tool-result-card.tsx:24-46` | OPEN |
+| AI-11 ||| **DONE (source, wave 9-a)** — per-record deep links (/orders/[id], /products/[id], /customers/[id]); list-route fallback when no record identity |
 | AI-12 ||| **DONE (source, wave 5)** — per-message clock on the hover row + tooltip |
-| AI-13 | Thumbs feedback → extraction-metrics-style quality loop | canvas + API | OPEN |
-| AI-14 | Follow-up suggestion chips after answers | canvas | OPEN |
-| AI-15 | Edit user message and resend | canvas + hook | OPEN |
-| AI-16 | Parallel tool calls: `parts.find` silently drops extra calls; render grouped | `agent.ts:215` | OPEN |
+| AI-13 | Thumbs feedback → extraction-metrics-style quality loop | canvas + API | OPEN (schema) |
+| AI-14 ||| **DONE (source, wave 9-a)** — grounded chips derived ONLY from real tool results; prefill composer, anchored dismissal |
+| AI-15 ||| **DONE (source, wave 9-a)** — edit user message → composer prefill + editing notice → truncate & re-stream |
+| AI-16 ||| **DONE (source, wave 9-a)** — all parallel function calls collected, executed, and returned to the model; every card rendered |
 | AI-17 ||| **DONE (source, wave 6)** — isComposing guard (char counter still OPEN) |
-| AI-18 | Client stream timeout / reconnect (hung SSE = infinite spinner) | `use-ai-workspace.ts` | OPEN |
-| AI-19 | Cross-session proposals inbox (approve pending from anywhere) | review panel | OPEN |
+| AI-18 ||| **DONE (source, wave 9-a)** — 45s inactivity watchdog aborts via stop path (partial persists); localized recoverable AI_STREAM_TIMEOUT |
+| AI-19 ||| **DONE (source, wave 9-a)** — GET /api/ai/actions shop-wide inbox; review panel shows pending-from-other-sessions with session labels |
+| AI-20 ||| **DONE (source, wave 9-a)** — panel populated: cross-session pending + recent decisions timeline from real proposal rows; truthful empty states |
+| AI-21 | Composer attachments (sellers screenshot orders; extraction stack exists but unreachable from agents composer) | canvas + extraction lib | OPEN |
+| AI-22 ||| **DONE (source, wave 9-a)** — / focus composer, Esc stop/cancel-edit, Alt+↑/↓ session nav, Ctrl+Enter approve focused card; desktop hint row |
 
 ### P2 — Panels / polish
 | ID | Item | Target | Status |
 |---|---|---|---|
-| AI-20 | "Review & evidence" panel is empty-state-most-of-the-time: populate (pending proposals across sessions, last approvals, audit timeline) or rename honestly | `ai-review-evidence.tsx` | OPEN |
-| AI-21 | Composer attachments (sellers screenshot orders; extraction stack exists but unreachable from agents composer) | canvas + extraction lib | OPEN |
-| AI-22 | Keyboard shortcuts (focus composer, stop, session nav, approve focused proposal) | canvas | OPEN |
 | AI-23 ||| **DONE (source, wave 6)** — aria-busy on streaming log (two-step delete announce still OPEN) |
 | AI-24 ||| **DONE (source, wave 6)** — 3-pane layout skeleton |
 | AI-25 | Unconfigured state: capability explainer (reuse ~25 dead copy keys) + delete dead keys + legacy `ai.*` namespace | `ai-workspace.ts`, locales | OPEN |
