@@ -374,4 +374,76 @@ describe("canonical CSV/XLSX order import", () => {
     ]);
     expect(await rawDb.businessCommand.count()).toBe(0);
   });
+
+  it("returns a coded 415 for unsupported file types (audit S1-1)", async () => {
+    const formData = new FormData();
+    formData.append(
+      "file",
+      new File(["not-a-spreadsheet"], "orders.pdf", {
+        type: "application/pdf",
+      }),
+    );
+    formData.append("commit", "false");
+    const response = await POST(
+      new NextRequest("http://localhost/api/import/orders", {
+        method: "POST",
+        body: formData,
+      }),
+    );
+    expect(response.status).toBe(415);
+    const body = await getJson(response);
+    expect(body).toMatchObject({ code: "IMPORT_SOURCE_UNSUPPORTED" });
+    // The actionable English guidance reaches the client instead of a 500.
+    expect(body.error).toContain("Unsupported order import file");
+  });
+
+  it("keeps raw driver failures out of the per-row payload (audit S1-2)", async () => {
+    await product({ name: "Trigger Case", sku: "CASE-TRG", price: 1500 });
+    const contents = csv([
+      [
+        "EXT-900",
+        "Trigger Customer",
+        "0555123456",
+        "Alger",
+        "Centre",
+        "9 Import Street",
+        "CASE-TRG",
+        "Trigger Case",
+        "",
+        "",
+        "1",
+        "1",
+        "0",
+        "pending",
+      ],
+    ]);
+
+    await rawDb.$executeRawUnsafe(
+      `CREATE TRIGGER import_route_block_command
+       BEFORE INSERT ON "BusinessCommand"
+       BEGIN SELECT RAISE(ABORT, 'forced import command failure'); END`,
+    );
+    try {
+      const response = await POST(importRequest(contents, true));
+      expect(response.status).toBe(200);
+      const body = await getJson(response);
+      expect(body.ok).toBe(false);
+      expect(body.errors).toEqual([
+        expect.objectContaining({
+          rowIndex: 0,
+          code: "ROW_UPDATE_FAILED",
+          error: "Order could not be updated",
+        }),
+      ]);
+      // The raw SQLite abort message stays in the log, never the payload.
+      expect(JSON.stringify(body.errors)).not.toContain(
+        "forced import command failure",
+      );
+      expect(await rawDb.order.count()).toBe(0);
+    } finally {
+      await rawDb.$executeRawUnsafe(
+        "DROP TRIGGER IF EXISTS import_route_block_command",
+      );
+    }
+  });
 });

@@ -97,7 +97,12 @@ export const POST = withErrorHandler(
       false,
     );
     if (!consent) {
-      return NextResponse.json({ error: "consent_required" }, { status: 403 });
+      // Audit S2-7: same coded dialect as the stream sibling; the legacy
+      // `error` value stays verbatim for the UI's string normalization.
+      return NextResponse.json(
+        { error: "consent_required", code: "AI_CONSENT_REQUIRED" },
+        { status: 403 },
+      );
     }
 
     await requireLicense();
@@ -108,6 +113,7 @@ export const POST = withErrorHandler(
       return NextResponse.json(
         {
           error: "AI_RATE_LIMITED",
+          code: "AI_RATE_LIMITED",
           reason: rateLimit.reason ?? null,
         },
         { status: 429 },

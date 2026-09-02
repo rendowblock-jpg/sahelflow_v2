@@ -14,8 +14,9 @@ export const GET = withErrorHandler(async (_req: NextRequest) => {
 }, "GET /api/phone-reputation");
 
 const reportSchema = z.object({
-  phone: z.string().min(1),
-  reason: z.string().min(1),
+  // Audit S3-15: phone feeds blind-index derivation — bounded input only.
+  phone: z.string().min(1).max(32),
+  reason: z.string().min(1).max(500),
   orderId: z.string().optional(),
 });
 

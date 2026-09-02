@@ -1,6 +1,26 @@
 /**
  * Server-error translation helper.
  *
+ * LOCALIZATION STRATEGY CONTRACT (audit S3-23):
+ *
+ * The app sanctions exactly TWO server-error localization strategies:
+ *
+ *  1. CODED + ENGLISH-VERBATIM (the default for every route): the API returns
+ *     `{ error: <stable English>, code: <STABLE_CODE> }` and the client
+ *     translates by substring-matching the `error` text via the rules below
+ *     (documented producer example: src/app/api/delivery/sync/route.ts).
+ *     This is why route messages must stay byte-identical when a change only
+ *     adds a `code` field — editing the English text silently breaks the
+ *     Arabic/French translation.
+ *
+ *  2. LOCALE-NATIVE ROUTE COPY (exception, requires a deliberate contract):
+ *     a route reads the client locale cookie itself and returns already
+ *     localized copy (producer example: the gemini-key route). Such routes own
+ *     their rendering and must not be substring-translated again.
+ *
+ * RULE: any NEW route MUST use strategy 1 — coded, English-verbatim, with a
+ * stable `code` the UI can branch on. Do not invent strategy 3.
+ *
  * Problem: API routes return English (or occasionally French) error strings in
  * their JSON `{ error: "..." }` responses. The client shows these verbatim in
  * toasts via `toast.error(e.message)` / `toast.error(data.error)`, so Arabic

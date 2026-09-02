@@ -94,6 +94,14 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         lastMessage: last
           ? {
               text: last.body,
+              // TIMESTAMP CONTRACT (audit S3-21): this projection — and the
+              // sibling /whatsapp/chats/[jid]/messages route — intentionally
+              // keep Baileys-style epoch SECONDS here because the inbox
+              // provider-shape consumers (Baileys-compatible clients and the
+              // sidecar parity layer) expect that exact field shape. Every
+              // other SahelFlow API surface returns ISO strings. This is the
+              // ONLY sanctioned epoch-seconds exception; new routes MUST use
+              // ISO strings.
               timestamp: Math.floor(last.timestamp.getTime() / 1_000),
               fromMe: isOutboundDirection(last.direction),
             }

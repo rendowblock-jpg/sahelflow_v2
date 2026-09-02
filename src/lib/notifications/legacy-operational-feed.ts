@@ -119,6 +119,7 @@ export async function listLegacyOperationalNotifications() {
       name: true,
       stock: true,
       lowStockThreshold: true,
+      updatedAt: true,
     },
   }) : [];
 
@@ -206,6 +207,10 @@ export async function listLegacyOperationalNotifications() {
     time: string;
     read: boolean;
     link: string;
+    /** Audit S3-19: real timestamp of the underlying record when one exists.
+     *  Aggregate rows (e.g. stale-queue) have none and are marked approximate
+     *  by the route instead of fabricating "now". */
+    createdAt?: string;
   }> = [];
 
   if (staleOrders > 0) {
@@ -236,6 +241,7 @@ export async function listLegacyOperationalNotifications() {
       // old automation alert from pinning the global unread badge forever.
       read: Boolean(notification.readAt) || minutesAgo > 24 * 60,
       link: notification.link ?? "/automations?tab=activity",
+      createdAt: notification.createdAt.toISOString(),
     });
   }
 
@@ -262,6 +268,7 @@ export async function listLegacyOperationalNotifications() {
       time: formatRelativeTime(minutesAgo, t),
       read: minutesAgo > 60,
       link: `/orders/${order.id}`,
+      createdAt: order.createdAt.toISOString(),
     });
   }
 
@@ -285,6 +292,7 @@ export async function listLegacyOperationalNotifications() {
       link: delivery.order?.id
         ? `/orders/${delivery.order.id}`
         : "/deliveries",
+      createdAt: delivery.updatedAt.toISOString(),
     });
   }
 
@@ -300,6 +308,7 @@ export async function listLegacyOperationalNotifications() {
       time: "",
       read: false,
       link: `/products/${product.id}`,
+      createdAt: product.updatedAt.toISOString(),
     });
   }
 
@@ -326,6 +335,7 @@ export async function listLegacyOperationalNotifications() {
       time: formatRelativeTime(minutesAgo, t),
       read: minutesAgo > 120,
       link: item.order?.id ? `/orders/${item.order.id}` : "/returns",
+      createdAt: item.createdAt.toISOString(),
     });
   }
 

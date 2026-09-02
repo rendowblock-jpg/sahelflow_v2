@@ -15,14 +15,17 @@ import { db, shopContext } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 const extractionSchema = z.object({
-  body: z.string().min(1),
+  // Audit S2-6: bounded request body — a multi-MB paste must be rejected at
+  // the door, not forwarded toward the Gemini/regex extraction pipeline.
+  body: z.string().min(1).max(16000),
   channel: z.string().optional(),
-  knownPhone: z.string().optional(),
+  knownPhone: z.string().max(32).optional(),
   /** AI-M14: optional messageId so the ExtractionMetric row can be linked
    *  back to the WhatsApp/TikTok Message that was extracted. Previously
    *  metrics were always recorded with messageId=null, making the
-   *  extraction-analytics dashboard unable to drill into specific messages. */
-  messageId: z.string().optional(),
+   *  extraction-analytics dashboard unable to drill into specific messages.
+   *  Audit S2-6: capped at 128 — the value feeds the rate-limit bucket key. */
+  messageId: z.string().max(128).optional(),
 });
 
 /** POST /api/extraction — extract an order from a message body.
@@ -51,9 +54,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     false,
   );
   if (!consent) {
+    // Audit S2-6: coded 403. The legacy `error` value and `message` text stay
+    // verbatim — the inbox extraction UI branches on `error === "consent_required"`.
     return NextResponse.json(
       {
         error: "consent_required",
+        code: "AI_CONSENT_REQUIRED",
         message:
           "AI extraction consent not given. Visit Settings → AI to enable.",
       },
@@ -79,9 +85,15 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const userKey = await getCurrentUserKey();
   const rl = checkRateLimit(extractionSessionKey, userKey);
   if (!rl.allowed) {
+    // Audit S2-6: coded 429 with Retry-After when the limiter provides one.
     return NextResponse.json(
-      { error: rl.reason ?? "Rate limited" },
-      { status: 429, headers: rl.retryAfterMs ? { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } : {} },
+      { error: rl.reason ?? "Rate limited", code: "AI_RATE_LIMITED" },
+      {
+        status: 429,
+        headers: rl.retryAfterMs
+          ? { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) }
+          : {},
+      },
     );
   }
 

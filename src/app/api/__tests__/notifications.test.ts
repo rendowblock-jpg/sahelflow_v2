@@ -306,6 +306,42 @@ describe("GET /api/notifications — derived notification feed", () => {
     expect(String(stale!.title)).toMatch(/order(s)? need(s)? confirmation/);
   });
 
+  it("derives legacy createdAt from the underlying record and flags aggregate rows as approximate (audit S3-19)", async () => {
+    setLocale("en");
+    const customer = await seedCustomer();
+    const product = await seedProduct();
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    await rawDb.order.create({
+      data: {
+        orderNumber: "ORD-STALE-TS",
+        status: "pending",
+        customerId: customer.id,
+        totalPrice: 1000, deliveryCost: 0, wilaya: "Alger", commune: "B", address: "A",
+        phone: "0770000001", source: "manual",
+        createdAt: threeHoursAgo,
+        items: { create: [{ productId: product.id, productName: "X", quantity: 1, unitPrice: 1000, total: 1000 }] },
+      },
+    });
+
+    const res = await GETNotifications();
+    expect(res.status).toBe(200);
+    const body = await getJson(res);
+    const notifs = body.notifications as Array<Record<string, unknown>>;
+
+    // The order row carries the REAL underlying timestamp, not "now".
+    const orderNotif = notifs.find((n) => n.type === "order");
+    expect(orderNotif).toBeTruthy();
+    expect(orderNotif!.approximate).toBe(false);
+    const derivedAt = new Date(String(orderNotif!.createdAt)).getTime();
+    expect(Math.abs(derivedAt - threeHoursAgo.getTime())).toBeLessThan(60_000);
+
+    // The aggregate stale-queue row has no single record — it must be marked
+    // approximate instead of fabricating a fresh timestamp.
+    const stale = notifs.find((n) => n.id === "stale-queue");
+    expect(stale).toBeTruthy();
+    expect(stale!.approximate).toBe(true);
+  });
+
   // ─── Auth ───────────────────────────────────────────────────────────────
   it("returns 401 when durable trusted-actor resolution is rejected", async () => {
     identityHarness.requireActor.mockRejectedValueOnce(

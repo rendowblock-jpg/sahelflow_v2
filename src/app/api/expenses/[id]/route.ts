@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, shopContext } from "@/lib/db";
 import { updateExpenseSchema } from "@/lib/validation";
+import { codedRowError } from "@/lib/api/coded-row-error";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { NotFoundError } from "@/types/errors";
+import { logger } from "@/lib/logger";
 import { requireAuth } from "@/lib/auth/server";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { logAudit } from "@/lib/audit";
@@ -31,15 +33,29 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   });
   if (!existing) throw new NotFoundError("Expense", id);
 
-  const expense = await context.prisma.expense.update({
-    where: { id },
-    data: {
-      ...(data.category !== undefined && { category: data.category }),
-      ...(data.amount !== undefined && { amount: data.amount }),
-      ...(data.date !== undefined && { date: new Date(data.date) }),
-      ...(data.notes !== undefined && { notes: data.notes ?? null }),
-    },
-  });
+  let expense;
+  try {
+    expense = await context.prisma.expense.update({
+      where: { id },
+      data: {
+        ...(data.category !== undefined && { category: data.category }),
+        ...(data.amount !== undefined && { amount: data.amount }),
+        ...(data.date !== undefined && { date: new Date(data.date) }),
+        ...(data.notes !== undefined && { notes: data.notes ?? null }),
+      },
+    });
+  } catch (error) {
+    // Audit S2-10: a stale row deleted between the check and the update must
+    // surface as coded NOT_FOUND, not an uncoded P2025 500. Raw driver
+    // message goes to the log only.
+    const coded = codedRowError(error, "Expense", id);
+    logger.warn("api.PATCH /api/expenses/[id].stale-row", {
+      id,
+      code: coded.code,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw coded;
+  }
 
   return NextResponse.json({ expense });
 }, "PATCH /api/expenses/[id]");
@@ -58,7 +74,18 @@ export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: Rou
   if (!existing) throw new NotFoundError("Expense", id);
 
   // Soft-delete (enables undo via /api/expenses/[id]/restore)
-  await context.prisma.expense.update({ where: { id }, data: { deletedAt: new Date() } });
+  try {
+    await context.prisma.expense.update({ where: { id }, data: { deletedAt: new Date() } });
+  } catch (error) {
+    // Audit S2-10: same stale-row race as PATCH — coded 404 instead of 500.
+    const coded = codedRowError(error, "Expense", id);
+    logger.warn("api.DELETE /api/expenses/[id].stale-row", {
+      id,
+      code: coded.code,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw coded;
+  }
   await logAudit(context, {
     action: "expense.deleted",
     entity: "expense",

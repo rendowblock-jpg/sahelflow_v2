@@ -16,6 +16,7 @@ import {
 } from "@/lib/identity/authorization";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 import type { CourierPosition } from "@/lib/delivery/canonical-courier";
+import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -95,7 +96,12 @@ export const PATCH = withErrorHandler(
     const body = await request.json();
     const position = await getCanonicalCourierPosition(serviceContext, id);
     if (!position.delivery) {
-      return NextResponse.json({ error: "Courier delivery not found" }, { status: 404 });
+      // Audit S2-9: coded 404 — client can branch instead of string-matching.
+      throw new SahelFlowError(
+        "Courier delivery not found",
+        "NOT_FOUND",
+        404,
+      );
     }
     const command = await reconcileCanonicalCourierBooking(
       {

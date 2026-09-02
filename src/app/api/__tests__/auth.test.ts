@@ -32,6 +32,7 @@ vi.mock("next/headers", () => ({
 import { POST as POSTChangePin } from "@/app/api/auth/change-pin/route";
 import { POST as POSTLogin } from "@/app/api/auth/login/route";
 import { POST as POSTLogout } from "@/app/api/auth/logout/route";
+import { POST as POSTReauthenticate } from "@/app/api/auth/reauthenticate/route";
 import { POST as POSTSetup } from "@/app/api/auth/setup/route";
 import { GET as GETStatus } from "@/app/api/auth/status/route";
 import { createSession, setupAuth } from "@/lib/auth/server";
@@ -121,6 +122,19 @@ describe("auth routes", () => {
         mockPost("http://localhost/api/auth/setup", { pin: "87654321" }),
       );
       expect(res.status).toBe(409);
+      expect(await getJson(res)).toMatchObject({
+        code: "AUTH_ALREADY_SETUP",
+      });
+    });
+
+    it("carries a coded 400 body on schema rejection (audit S2-5)", async () => {
+      const res = await POSTSetup(
+        mockPost("http://localhost/api/auth/setup", { pin: "123" }),
+      );
+      expect(res.status).toBe(400);
+      expect(await getJson(res)).toMatchObject({
+        code: "REQUEST_VALIDATION_FAILED",
+      });
     });
   });
 
@@ -178,6 +192,67 @@ describe("auth routes", () => {
         ),
       );
       expect(res.status).toBe(400);
+    });
+
+    it("carries coded rejection bodies (audit S2-5)", async () => {
+      const setupGate = await POSTLogin(
+        mockPost("http://localhost/api/auth/login", { pin: "12345678" }),
+      );
+      expect(setupGate.status).toBe(409);
+      expect(await getJson(setupGate)).toMatchObject({
+        code: "AUTH_SETUP_REQUIRED",
+        needsSetup: true,
+      });
+
+      await POSTSetup(
+        mockPost("http://localhost/api/auth/setup", { pin: "12345678" }),
+      );
+      cookieStore.clear();
+
+      const wrongPin = await POSTLogin(
+        mockPost(
+          "http://localhost/api/auth/login",
+          { pin: "totally-wrong" },
+          { "x-forwarded-for": "10.0.0.44" },
+        ),
+      );
+      expect(wrongPin.status).toBe(401);
+      expect(await getJson(wrongPin)).toMatchObject({
+        code: "INVALID_CREDENTIALS",
+        error: "Incorrect PIN",
+      });
+    });
+
+    it("formats unexpected internal failures as coded 500 AUTH_INTERNAL_ERROR (audit S2-5)", async () => {
+      await POSTSetup(
+        mockPost("http://localhost/api/auth/setup", { pin: "12345678" }),
+      );
+      cookieStore.clear();
+
+      // Block the owner-session insert — the failure surfaces through the
+      // route's own wrapper as a coded JSON 500, not Next's non-JSON default.
+      await rawDb.$executeRawUnsafe(
+        `CREATE TRIGGER auth_test_block_login_session
+         BEFORE INSERT ON "Session"
+         BEGIN SELECT RAISE(ABORT, 'forced login session failure'); END`,
+      );
+      try {
+        const res = await POSTLogin(
+          mockPost(
+            "http://localhost/api/auth/login",
+            { pin: "12345678" },
+            { "x-forwarded-for": "10.0.0.45" },
+          ),
+        );
+        expect(res.status).toBe(500);
+        expect(await getJson(res)).toMatchObject({
+          code: "AUTH_INTERNAL_ERROR",
+        });
+      } finally {
+        await rawDb.$executeRawUnsafe(
+          "DROP TRIGGER IF EXISTS auth_test_block_login_session",
+        );
+      }
     });
   });
 
@@ -262,6 +337,60 @@ describe("auth routes", () => {
         }),
       );
       expect(res.status).toBe(401);
+    });
+
+    it("carries coded rejection bodies (audit S2-5)", async () => {
+      await establishOwnerSession();
+
+      const samePin = await POSTChangePin(
+        mockPost("http://localhost/api/auth/change-pin", {
+          currentPin: "12345678",
+          newPin: "12345678",
+        }),
+      );
+      expect(samePin.status).toBe(400);
+      expect(await getJson(samePin)).toMatchObject({
+        code: "REQUEST_VALIDATION_FAILED",
+      });
+
+      const wrongCurrent = await POSTChangePin(
+        mockPost("http://localhost/api/auth/change-pin", {
+          currentPin: "wrong-current",
+          newPin: "newPass1234",
+        }),
+      );
+      expect(wrongCurrent.status).toBe(401);
+      expect(await getJson(wrongCurrent)).toMatchObject({
+        code: "INVALID_CREDENTIALS",
+        error: "Current PIN is incorrect",
+      });
+    });
+  });
+
+  describe("POST /api/auth/reauthenticate — coded bodies (audit S2-5)", () => {
+    it("returns coded 401 on a wrong PIN", async () => {
+      await establishOwnerSession();
+      const res = await POSTReauthenticate(
+        mockPost("http://localhost/api/auth/reauthenticate", {
+          pin: "totally-wrong",
+        }),
+      );
+      expect(res.status).toBe(401);
+      expect(await getJson(res)).toMatchObject({
+        code: "INVALID_CREDENTIALS",
+        error: "Incorrect PIN",
+      });
+    });
+
+    it("returns coded 400 on a missing PIN", async () => {
+      await establishOwnerSession();
+      const res = await POSTReauthenticate(
+        mockPost("http://localhost/api/auth/reauthenticate", {}),
+      );
+      expect(res.status).toBe(400);
+      expect(await getJson(res)).toMatchObject({
+        code: "REQUEST_VALIDATION_FAILED",
+      });
     });
   });
 

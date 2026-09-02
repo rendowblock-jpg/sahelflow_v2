@@ -156,11 +156,21 @@ export function parseFile(
     const workbook = XLSX.read(data, { type: "array", sheetRows: MAX_IMPORT_ROWS + 1 });
     const sheetName = workbook.SheetNames[0];
     if (!sheetName) {
-      throw new Error("Le fichier XLSX ne contient aucune feuille.");
+      // AAA audit follow-up: a sheetless workbook is a benign user mistake —
+      // coded 400, never the generic-500 branch.
+      throw new SahelFlowError(
+        "The XLSX file does not contain any sheet",
+        "IMPORT_FILE_EMPTY",
+        400,
+      );
     }
     const sheet = workbook.Sheets[sheetName];
     if (!sheet) {
-      throw new Error("La feuille est vide.");
+      throw new SahelFlowError(
+        "The first sheet of the XLSX file is empty",
+        "IMPORT_FILE_EMPTY",
+        400,
+      );
     }
     const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
       defval: "",
@@ -182,7 +192,14 @@ export function parseFile(
     return { headers, rows };
   }
 
-  throw new Error(`Format de fichier non supporté: .${ext}. Utilisez CSV ou XLSX.`);
+  // AAA audit follow-up: the shared engine serves products/customers/expenses
+  // imports too — a wrong extension is a coded 415 (same contract as the
+  // canonical orders import), not a raw 500.
+  throw new SahelFlowError(
+    "Unsupported import file; use CSV or XLSX",
+    "IMPORT_SOURCE_UNSUPPORTED",
+    415,
+  );
 }
 
 /** Column mapping: source column name → target field name. */

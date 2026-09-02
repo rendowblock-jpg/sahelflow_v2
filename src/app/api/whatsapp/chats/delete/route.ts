@@ -90,10 +90,17 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     { prisma: db, shop: actorContext.shop },
     parsed.data.ids,
   );
+  // Audit S3-20: ids that resolve to nothing (foreign shop, non-WhatsApp
+  // channel, typo) must be named, not silently absorbed into ok:true —
+  // multi-select deletion stays honest about what it actually removed.
+  const notFoundIds = parsed.data.ids.filter(
+    (id) => !result.deletedConversationIds.includes(id),
+  );
   return NextResponse.json({
     ok: true,
     deleted: result.deletedConversationIds.length,
     deletedMessages: result.deletedMessageCount,
     conversationIds: result.deletedConversationIds,
+    notFoundIds,
   });
 }, "POST /api/whatsapp/chats/delete");

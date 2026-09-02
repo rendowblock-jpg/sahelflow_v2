@@ -8,6 +8,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import * as XLSX from "@e965/xlsx";
+import { SahelFlowError } from "@/types/errors";
 import {
   parseFile,
   mapRows,
@@ -101,9 +102,17 @@ describe("parseFile — XLSX", () => {
 // ── parseFile (errors) ──────────────────────────────────────────────────────
 
 describe("parseFile — errors", () => {
-  it("throws on unsupported file extension", () => {
+  it("throws a coded 415 on unsupported file extension (audit follow-up)", () => {
     const buf = new ArrayBuffer(0);
-    expect(() => parseFile(buf, "data.json")).toThrow(/non supporté/i);
+    try {
+      parseFile(buf, "data.json");
+      expect.unreachable("parseFile must reject unsupported extensions");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SahelFlowError);
+      const coded = error as SahelFlowError;
+      expect(coded.code).toBe("IMPORT_SOURCE_UNSUPPORTED");
+      expect(coded.statusCode).toBe(415);
+    }
   });
 });
 
