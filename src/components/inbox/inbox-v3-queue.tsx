@@ -322,6 +322,7 @@ export function InboxV3Queue({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteShapeError, setDeleteShapeError] = useState<string | null>(null);
 
   const queueCounts = useMemo(
     () => ({
@@ -461,6 +462,7 @@ export function InboxV3Queue({
     setSelectMode(false);
     setSelectedIds(new Set());
     setDeleteError(null);
+    setDeleteShapeError(null);
     setDeleteDialogOpen(false);
   };
 
@@ -468,6 +470,7 @@ export function InboxV3Queue({
     if (effectiveSelected.length === 0) return;
     setDeleting(true);
     setDeleteError(null);
+    setDeleteShapeError(null);
     const outcome = await deleteChats([...effectiveSelected]);
     setDeleting(false);
     if (!outcome.ok) {
@@ -484,8 +487,22 @@ export function InboxV3Queue({
         : outcome.errorCode
           ? copy("deleteChatsFailedWithCode", { code: outcome.errorCode })
           : copy("deleteChatsFailed");
+      // Round 3: the PII-free shape verdict (schema paths / id lengths /
+      // body size, or the local contract violation) — the installed runtime
+      // has no reachable logs, so this line IS the diagnostic record.
+      setDeleteShapeError(
+        outcome.rejectionSummary
+          ? copy("deleteChatsFailedShape", { shape: outcome.rejectionSummary })
+          : null,
+      );
       setDeleteError(message);
-      toast.error(message);
+      toast.error(
+        outcome.rejectionSummary
+          ? `${message} ${copy("deleteChatsFailedShape", {
+              shape: outcome.rejectionSummary,
+            })}`
+          : message,
+      );
       return;
     }
     exitSelectMode();
@@ -752,6 +769,14 @@ export function InboxV3Queue({
           {deleteError ? (
             <p role="alert" className="text-[13px] text-destructive">
               {deleteError}
+            </p>
+          ) : null}
+          {deleteShapeError ? (
+            <p
+              role="alert"
+              className="break-all font-mono text-[11px] text-destructive/80"
+            >
+              {deleteShapeError}
             </p>
           ) : null}
           <AlertDialogFooter>
