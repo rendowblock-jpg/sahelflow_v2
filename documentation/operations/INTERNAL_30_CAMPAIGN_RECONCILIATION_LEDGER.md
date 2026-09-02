@@ -177,6 +177,69 @@ bounded micro-repair with the root named.
 Housekeeping remains open: rotate the Founder's Gemini key (screenshot-
 exposed per #373) — rotate BEFORE the next D1 verification.
 
+## Release-freeze quality line — AAA batches (2026-09-02)
+
+Founder directive (2026-09-02), after the installed round-3 verdict: the
+next release is NOT cut yet — "there is more problems and things i don't
+like and are not top tier class AAA in the app". The release train is
+FROZEN: no Internal.33 authority, no tag, no publication. Protected
+`main` accumulates source-quality work only, and the Founder's own
+findings list arrives next session as the second input to one triage
+ledger.
+
+### Red-gate repair (round-3 PRs to green)
+
+| PR | Blocker | Repair |
+|---|---|---|
+| #380 (B5) + all code PRs | `bun audit --production` failed on fresh browserslist advisories GHSA-c83g-rgw3-j3cx / GHSA-73wf-gq98-2v4g (2 high, transitive via `@babel/core`) | #382 pinned `browserslist` 4.28.8 through the existing overrides block (squash `bff3d13…`) |
+| #379 (D1) | `sf-verify` single TS error: `provider-verify.test.ts` helper typed `code?: string` vs `GeminiTransportCause.code: string \| null` | helper widened on-branch, rebased onto `bff3d13…`, all lanes green → squash `e9eee78…` |
+| #380 (B5) | (after #382/#379) stale base | rebased, all lanes green → squash `c8f8be3…` |
+| #381 (docs) | stale base | rebased, green → squash `c4e5621…` |
+
+### AAA source-quality audits (read-only, file:line-cited)
+
+Two parallel sweeps of protected `main` at the round-3 state:
+
+- **UI audit**: 26 findings (S1=4, S2=11, S3=11) — raw i18n keys at five
+  surfaces, `translateServerError` wired into only 10/46 toast files,
+  contradictory delete contracts + dead pending spinner (missing
+  `preventDefault`), `window.confirm` where `ConfirmDialog` exists,
+  inbox search failing silently as "no results", non-URL-persisted
+  inbox filters, demo panel carrying 112 lines of inline copy outside
+  the i18n authority. i18n key parity itself was perfect (2826×3).
+- **API audit**: 25 findings (S1=4, S2=8, S3=12) — raw `new Error` 500s
+  on wrong import file type, raw Prisma/SQLite text echoed per commit
+  row, `error.message` leaked over SSE after the 200, sidecar REST
+  token resolved once at module load (cold-start race permanently
+  degrading to unauthenticated), uncoded English-prose auth bodies,
+  three 403/429 dialects in one AI file, non-transactional multi-write
+  in `integrations/connect`, uncoded storefront post-publish invariant,
+  google-sheets export pulling full Order rows per batch. Structural
+  verdict: handler coverage 178/185, zero N+1, all lists paginated —
+  the debt is typological, not systemic.
+
+### AAA batch line (all merged under Required-battery green + expected-head squash discipline)
+
+| PR | Scope |
+|---|---|
+| #383 `4579e69…` | UI polish batch (33 files +2 new): localized errors at every audited surface (translator adopted across the remaining toast/error files), truthful delete contracts (order delete rewritten to the soft-delete + undo contract, `preventDefault` fixed, copy unified), i18n authority restored (all raw keys; parity 2834×3), destructive `alert-dialog` variant, danger-zone type-to-confirm, demo panel migrated to the dictionaries, `ConfirmDialog` swap, locale-stable rejection reasons. Implements audit F1–F7 + F14–F26 |
+| #385 `95dd9d3…` | Inbox polish batch: delete errors through the translator (F8), retryable search-error row (F9), URL-persisted desk filters via nuqs (F10), ticking timestamps on a shared cadence (F11), segmented workflow pills (F12), theme-token priorities (F13), double-submit guard in `useUndoableDelete`, all-status pill disambiguated from the desk-queue All pill, `notFoundIds` client surfacing (S3-20 client half). 3 dictionary keys ×3 locales |
+| #384 | API contract batch (40 files): every non-2xx carries a `code`, no internal leaks reach the client, mutation races closed. S1: import 415 `IMPORT_SOURCE_UNSUPPORTED` + coded per-row rejections via `codedRowError`, SSE failure events classified (`AI_INTERNAL_ERROR`), sidecar token lazy per-call with 401 retry. S2: coded auth family, extraction `AI_CONSENT_REQUIRED`/`AI_RATE_LIMITED` + bounded body, one 403/429 dialect, integrations row-first writes with compensating cleanup, coded 4xx pockets, `STOREFRONT_POST_PUBLISH_MISSING`, sheets export select-pruned to the 8 exported fields. S3: length/count caps, transactional CAS guard on order DELETE, no fabricated `createdAt`, `notFoundIds` (S3-20 server half). Follow-ups: shared import-engine coded rejections (products/customers/expenses), coded `auth/invitations/accept`, danger-zone confirm token accepts the shop name server-side (F19 alias, historical `RESET` still accepted). Implements audit S1-1..4 + S2-5..12 + S3-13..24 |
+
+### Conversion status and residuals
+
+- Round-3 B5/D1 source repairs are now **canonical on protected `main`**
+  (self-diagnosing delete + transport-named D1 probe), together with the
+  full AAA quality line. Installed conversion of the B5/D1 rows still
+  requires: Founder rotates the screenshot-exposed Gemini key FIRST,
+  then a signed successor under explicit release authority (FROZEN until
+  the Founder's own quality list is triaged), installed in place with
+  state preserved.
+- The 26+25 audit findings are fully assigned to the batch line above;
+  no finding is parked. Deferred CI-only residue: none open.
+- The #306 logout row stays LAST; FRC-3 stays parked until the quality
+  line + Founder's own list close.
+
 ## #359 delta rows (NOT part of the installed campaign)
 
 These rows reconcile the source delta that rides protected `main` but is **not** inside the published Internal.30 package. They do not block or change the campaign above.

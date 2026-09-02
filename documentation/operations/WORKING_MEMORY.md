@@ -1,16 +1,18 @@
 # SahelFlow — Working Memory
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
-> **Last updated:** 2026-09-01
+> **Last updated:** 2026-09-02
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
 ## Current truth
 
-- Protected `main` at handoff: the round-2 campaign repair line is merged — #372 `9e8b6d1…` (B3 named sidecar rejections + `code:reason` propagation), #373 `c8529fe…` (D1 `?key=` carriage + probe diagnostics + verify-then-store boundary), #374 `af6e070…` (FD-054 demo coexist with real data), #375 `43a2386…` (B5 client reason surfacing), on top of #370 `d63660f…` (R4 raw mic `DOMException.name`) and #371 `401b5a8…` (B5 coded shape-400s). Live GitHub wins if moved.
+- **Release train FROZEN by Founder directive (2026-09-02)**: "we are not making the next release yet, there is more problems and things i don't like and are not top tier class AAA in the app". No Internal.33 authority, no tag, no publication until the quality line closes AND the Founder's own findings list (arriving next session) is triaged into one ledger.
+- Protected `main` at handoff: the round-3 repair line + the AAA quality line are merged — #382 `bff3d13…` (browserslist 4.28.8 override pin, red-gate unblock), #379 `e9eee78…` (D1 round 3: probe verifies thinking-model 200s + names transport causes), #381 `c4e5621…` (round-3 ledger record), #380 `c8f8be3…` (B5 round 3: self-diagnosing delete — shape verdict in body + client pre-flight), #383 `4579e69…` (UI AAA batch: localized errors everywhere, truthful delete contracts, i18n authority restored — audit F1–F7+F14–F26), #385 `95dd9d3…` (inbox AAA batch: F8–F13 + double-submit guard + notFoundIds client half), #384 (API AAA contract batch: every non-2xx carries a code, no internal leaks, races closed — audit S1-1..4+S2-5..12+S3-13..24). Live GitHub wins if moved.
+- Two parallel read-only AAA audits (file:line-cited): 26 UI findings + 25 API findings; ALL assigned to the batch line above — none parked. Exact rows: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` (release-freeze quality line section).
 - Internal.31 was **installed in place by the Founder** (2026-09-01); its campaign re-verified the FD-051 repairs and produced the bounded round-2 findings above. Exact rows: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` (round-2 section).
 - FD-054 recorded (demo data loads alongside real seller data; removal deletes only the demo-tagged graph and fails closed with `DEMO_REMOVAL_BLOCKED_BY_REFERENCES`). Housekeeping: rotate the Founder's Gemini key (visible in a screenshot URL bar per #373).
-- Current sequencing decision: **Internal.32 / FD-055 published** — release PR #377 merged (squash `677dc463…`), dispatcher `33497016855`, signed publication `33497028241` (success, 36/36 steps), observer `33497039759` (success), release tag `sahelflow-v1.0.0-internal.32-677dc463f7d00a179cdfed090184818249523fd6`, published MSI `SahelFlow_1.0.0-internal.32_x64_en-US.msi` digest `sha256:34417299864cd449eb9c24832c1d715d3423ee37433495a18b1b3ff1ed4db9af`, `latest.json` published 2026-09-01T10:45:10Z. Certification cited product head `3d8eb7d…` (tree-identical to squash `43a2386…`; CI `33491588102`, Phase 5 `33491587990`, Phase 6-7 `33491587825`); the release-authority head passed the full Required battery (20 success / 1 skipped / 0 failed, incl. installed-MSI evidence) before the expected-head merge. **The Founder installed Internal.32 in place (2026-09-02) and executed its campaign round 3**: B3/B4 and the remaining rows pass (D3 six waves included, per Founder verdict); B5 and D1 remain reproduced — this time with the roots pinned to exact code paths and bounded round-3 repair branches opened (`fix/campaign-r3-d1-transport-named-causes`, `fix/campaign-r3-b5-self-diagnosing-delete`); the #306 logout row stays LAST. Exact rows: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` (round-3 section).
+- Current sequencing decision: **Internal.32 / FD-055 published** — release PR #377 merged (squash `677dc463…`), dispatcher `33497016855`, signed publication `33497028241` (success, 36/36 steps), observer `33497039759` (success), release tag `sahelflow-v1.0.0-internal.32-677dc463f7d00a179cdfed090184818249523fd6`, published MSI `SahelFlow_1.0.0-internal.32_x64_en-US.msi` digest `sha256:34417299864cd449eb9c24832c1d715d3423ee37433495a18b1b3ff1ed4db9af`, `latest.json` published 2026-09-01T10:45:10Z. **The Founder installed Internal.32 in place (2026-09-02) and executed its campaign round 3**: B3/B4 and the remaining rows pass (D3 six waves included, per Founder verdict); B5 and D1 were reproduced with roots pinned — their round-3 repairs are now MERGED on `main` (#379/#380) and convert on the next installed observation. The #306 logout row stays LAST. Exact rows: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` (round-3 + release-freeze quality line sections).
 - App `1.0.0-internal.31`; MSI `1.0.0.31`; authority **FD-053**; mode `founder-offline-only`.
 - Release PR #368 (squash `38c95aa8…`); reviewed release head `a1b4d56e5f723bbd3cacae104939ba668998e38b`; the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence) — certification cited product head `569e921…` (tree-identical to `f0fca29…`; CI `33368228685`, Phase 5 `33368228409`, Phase 6-7 `33368228448`).
 - Release PR #357; reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`; the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence) — certification cited product head `40f53860` (tree-identical to squash `14c059b7`; CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`).
@@ -102,22 +104,26 @@ Binding rules:
   repair line is installed in place and re-proves the B5/D1 rows, the
   applicable FRC-2 rows (R11) and the remaining FRC-1 rows.
 
-## Exact next-session order — close round 3, then Internal.33 authority
+## Exact next-session order — Founder's list, triage ledger, then release authority
 
-The Internal.32 installed campaign produced two root-pinned round-3 findings
-(B5 delete, D1 AI-key probe); bounded repair branches are open and the
-campaign continues on the next installed observation. Remaining order:
+The round-3 repair line and the AAA quality line (52 audit findings) are
+merged to protected `main`; the Founder froze the release train and will
+bring his own findings list next session. Remaining order:
 
-1. Land the round-3 repair line through the normal gates: both branches need
-   CI + adversarial review + expected-head squash merges, and the docs branch
-   (`docs/internal-32-round3-campaign-record`) reconciles the ledgers.
+1. Triage the Founder's own findings list together with any residue from
+   the 52-finding AAA line into ONE ledger (no parallel backlogs), then
+   execute it per one-bounded-root discipline through the normal gates
+   (branch → PR → adversarial review → Required battery → expected-head
+   squash merge).
 2. Re-resolve protected `main`, open PRs and #306/#316/#317/#230. The
    Internal.31/32 campaigns stay open except the logout row.
-3. The Founder rotates the screenshot-exposed Gemini key FIRST, then applies
-   the next signed successor (Internal.33, requires explicit release
-   authority packaging the round-3 line) in place through the normal updater,
-   preserving installation, shop and WhatsApp state (no logout, no AppData
-   reset).
+3. The Founder rotates the screenshot-exposed Gemini key FIRST, then —
+   only when the combined quality ledger is green and the Founder
+   explicitly authorizes release — a signed successor (Internal.33,
+   requires explicit release authority packaging the round-3 line + the
+   AAA quality line) is cut and installed in place through the normal
+   updater, preserving installation, shop and WhatsApp state (no logout,
+   no AppData reset).
 4. On the installed successor: D1 — test/save the fresh key; the probe now
    either VERIFIES outright (thinking-budget root) or names the exact
    transport/response cause (dns/tls/blocked/reset/timeout, finishReason,
@@ -200,10 +206,13 @@ Never weaken:
 
 - Internal.32 (FD-055) is signed/published AND Founder-installed; its round-3
   campaign passed B3/B4 and the remaining rows (D3 included, per Founder
-  verdict) but reproduced B5 and D1 with the roots pinned; the round-3
-  repair branches are source evidence only until they merge, are packaged by
-  a newer signed successor under explicit release authority, and the
-  installed observation converts the rows. Internal.30's FD-051 campaign
+  verdict) but reproduced B5 and D1 with the roots pinned. Their round-3
+  repairs (#379/#380) and the full AAA quality line (#382/#383/#384/#385)
+  are merged source evidence on protected `main` only — still NOT packaged
+  by any signed successor, and the release train is FROZEN by Founder
+  directive until the Founder's own findings list is triaged and he
+  explicitly authorizes release. Installed conversion of the rows happens
+  on the next installed observation. Internal.30's FD-051 campaign
   rows R1/R2/R7/R8/R10/R12 and the retained #306 rows passed; the logout row
   executes LAST.
 - Complete AI/tools/order-extraction certification is open; the FRC-2 source

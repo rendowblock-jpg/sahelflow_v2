@@ -3,10 +3,10 @@
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
 > **Last assessed:** 2026-09-02
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before every action; at this reconciliation the round-2 campaign repair line #370–#375 is merged (see `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` round-2 section)
+> **Live protected main:** resolve from GitHub before every action; at this reconciliation the round-3 repair line (#379/#380) AND the release-freeze AAA quality line (#382/#383/#384/#385) are merged (see `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` release-freeze quality line section)
 > **Current signed release:** Internal.32 / `1.0.0-internal.32` / MSI `1.0.0.32` / FD-055 (published 2026-09-01; Founder-installed in place 2026-09-02)
 > **Latest Founder-installed checkpoint:** Internal.32 / FD-055 (installed in place 2026-09-02)
-> **Current execution:** the Internal.32 installed campaign (round 3) passed B3/B4 and the remaining rows (D3 six waves included, per Founder verdict) and reproduced B5 and D1 with the roots pinned to exact code paths; bounded round-3 repair branches are open (`fix/campaign-r3-d1-transport-named-causes`, `fix/campaign-r3-b5-self-diagnosing-delete`) plus the docs record (`docs/internal-32-round3-campaign-record`); the #306 logout row stays LAST. Exact rows: `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` round-3 section
+> **Current execution:** the release train is FROZEN by Founder directive (2026-09-02) — no Internal.33 authority/tag/publication; the Internal.32 installed campaign (round 3) passed B3/B4 and the remaining rows (D3 six waves included, per Founder verdict), reproduced B5 and D1 with the roots pinned, and both round-3 repairs are now MERGED on `main` (installed conversion on the next installed observation, after the Founder rotates the screenshot-exposed Gemini key); the 26+25-finding AAA quality line is fully merged (#382/#383/#384/#385); next input is the Founder's own findings list → one triage ledger. The #306 logout row stays LAST. Exact rows: `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` round-3 + release-freeze quality line sections
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
