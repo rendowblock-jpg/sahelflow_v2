@@ -122,6 +122,7 @@
   },
   "engines": { "node": ">=20" },
   "overrides": {
+    "browserslist": "4.28.8",
     "deepmerge-ts": "8.0.0",
     "esbuild": "0.25.0",
     "music-metadata": "11.14.0",
