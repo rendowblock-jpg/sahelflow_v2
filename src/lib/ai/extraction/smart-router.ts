@@ -14,7 +14,8 @@
 import type { ServiceContext } from "@/lib/data/service-base";
 import { extractWithRegex } from "./regex-extractor";
 import { extractWithGemini } from "./gemini-extractor";
-import type { ExtractionInput, ExtractionResult } from "./types";
+import { extractWithGeminiFromImage } from "./image-extractor";
+import type { ExtractionImageInput, ExtractionInput, ExtractionResult } from "./types";
 
 /** Minimum regex confidence to skip Gemini */
 const REGEX_CONFIDENCE_THRESHOLD = 0.6;
@@ -24,6 +25,8 @@ export interface SmartRouterOptions {
   geminiApiKey?: string;
   /** Force Gemini even if regex succeeds (for testing) */
   forceGemini?: boolean;
+  /** Provider call ceiling (visual extraction path). */
+  timeoutMs?: number;
 }
 
 export async function extractOrder(
@@ -60,6 +63,24 @@ export async function extractOrder(
   // Step 3: Fall back to regex result (even if incomplete)
   const regexFallback = extractWithRegex(input);
   return regexFallback;
+}
+
+/**
+ * Ledger AI-21 — visual extraction entry point for the agents composer.
+ *
+ * There is deliberately NO regex fallback for screenshots: pixels have no
+ * offline extractor, so without the seller's Gemini key the honest result is
+ * the typed failure code (the composer surfaces it verbatim), never a
+ * fabricated order.
+ */
+export async function extractOrderFromImage(
+  input: ExtractionImageInput,
+  options: SmartRouterOptions = {},
+): Promise<ExtractionResult> {
+  return extractWithGeminiFromImage(input, {
+    apiKey: options.geminiApiKey ?? "",
+    ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
+  });
 }
 
 

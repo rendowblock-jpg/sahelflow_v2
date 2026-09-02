@@ -144,3 +144,13 @@ Output: {"phone":"0612345678","wilaya":"Oran","items":[{"productName":"parfum","
 
 export const EXTRACTION_USER_PROMPT = (message: string) =>
   `Extract the order from this Algerian COD message. Remember: normalize Arabic-Indic digits to Latin, map wilaya numbers to French names, and return ONLY valid JSON.\n\nMessage:\n"${message}"\n\nReturn only the JSON.`;
+
+/**
+ * Ledger AI-21 — visual extraction bridge. Sellers screenshot conversations
+ * (WhatsApp, Facebook, Instagram DMs); the composer accepts the image and the
+ * proven extraction pipeline reads it. The block produced from the result is
+ * addressed to the chat model, so the field labels stay in the model contract
+ * language (English) while all surrounding UI copy is localized.
+ */
+export const EXTRACTION_IMAGE_USER_PROMPT = (fileName: string) =>
+  `The attached image is a screenshot named "${fileName}" showing an Algerian COD order conversation or order details (WhatsApp, Facebook or Instagram). Read the visible text (any mix of Darija, Arabic script, French, English, Arabic-Indic or Latin digits) and extract the order exactly like a text message. Normalize Arabic-Indic digits to Latin, map wilaya numbers to French names, and return ONLY valid JSON. If the screenshot shows no order information at all, return {"items": []}.\n\nReturn only the JSON.`;

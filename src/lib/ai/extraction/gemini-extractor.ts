@@ -34,7 +34,9 @@ export const ExtractedOrderSchema = z.object({
   notes: z.string().optional(),
 });
 
-const responseSchema = {
+// Exported for the visual extractor (ledger AI-21): both paths validate the
+// model output with the exact same bounded schema — one extraction truth.
+export const responseSchema = {
   type: "object",
   properties: {
     customerName: { type: "string" }, phone: { type: "string" },
