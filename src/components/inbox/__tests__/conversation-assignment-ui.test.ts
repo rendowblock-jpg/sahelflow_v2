@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
+
+import { getTranslations } from "@/lib/i18n";
 
 const source = readFileSync(
   resolve(process.cwd(), "src/components/inbox/conversation-controls.tsx"),
@@ -31,12 +34,38 @@ describe("governed conversation assignment UI contract", () => {
     expect(source).toContain("canUpdate");
   });
 
-  it("contains Arabic, French and English assignment/recovery states", () => {
-    expect(source).toContain("Claim conversation");
-    expect(source).toContain("Prendre la conversation");
-    expect(source).toContain("استلام المحادثة");
-    expect(source).toContain("Conversation handed over to");
-    expect(source).toContain("Conversation transférée à");
-    expect(source).toContain("تم تسليم المحادثة إلى");
+  it("keeps assignment and handover copy in the trilingual i18n authority", () => {
+    const expected = {
+      en: {
+        claim: "Claim conversation",
+        handedOver: "Conversation handed over to {{target}}",
+      },
+      fr: {
+        claim: "Prendre la conversation",
+        handedOver: "Conversation transférée à {{target}}",
+      },
+      ar: {
+        claim: "استلام المحادثة",
+        handedOver: "تم تسليم المحادثة إلى {{target}}",
+      },
+    } as const;
+    for (const locale of ["en", "fr", "ar"] as const) {
+      const translations = getTranslations(locale);
+      expect(translations["inbox.assignment.claim"]).toBe(
+        expected[locale].claim,
+      );
+      expect(translations["inbox.assignmentActivity.handedOver"]).toBe(
+        expected[locale].handedOver,
+      );
+    }
+  });
+
+  it("resolves every assignment label through the shared t() chain", () => {
+    expect(source).not.toContain("const ASSIGNMENT_COPY");
+    expect(source).toContain("const { t } = useI18n();");
+    expect(source).toContain('t("inbox.assignment.loadError")');
+    expect(source).toContain('t("inbox.assignment.conflict")');
+    expect(source).toContain('t("common.refresh")');
+    expect(source).toContain("inbox.assignmentActivity.handedOver");
   });
 });
