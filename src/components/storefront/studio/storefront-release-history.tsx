@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Clock3, History, Loader2, RotateCcw } from "lucide-react";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useI18n } from "@/hooks/use-i18n";
 
 type Release = Readonly<{
@@ -30,6 +31,7 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
   const [loading, setLoading] = useState(true);
   const [rollingBack, setRollingBack] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [rollbackTarget, setRollbackTarget] = useState<Release | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,9 +81,8 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
 
   const active = useMemo(() => releases.find((release) => release.isActive) ?? null, [releases]);
 
-  const rollback = useCallback(async (source: Release) => {
+  const performRollback = useCallback(async (source: Release) => {
     if (!active || source.isActive || rollingBack) return;
-    if (!window.confirm(t("storefront.releaseHistory.confirm"))) return;
     setRollingBack(source.releaseId);
     setMessage(null);
     try {
@@ -158,7 +159,7 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
                   <button
                     type="button"
                     disabled={rollingBack !== null}
-                    onClick={() => void rollback(release)}
+                    onClick={() => setRollbackTarget(release)}
                     className="mt-3 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-2xs font-semibold hover:bg-background disabled:opacity-50"
                   >
                     {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
@@ -170,6 +171,22 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={rollbackTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRollbackTarget(null);
+        }}
+        title={t("storefront.releaseHistory.rollback")}
+        description={t("storefront.releaseHistory.confirm")}
+        confirmLabel={t("storefront.releaseHistory.rollback")}
+        destructive
+        onConfirm={() => {
+          const target = rollbackTarget;
+          setRollbackTarget(null);
+          if (target) void performRollback(target);
+        }}
+      />
     </section>
   );
 }

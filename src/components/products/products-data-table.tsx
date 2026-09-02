@@ -25,6 +25,7 @@ import {
 } from "@/hooks/swr/use-products";
 import { useI18n } from "@/hooks/use-i18n";
 import { useListSearchScope } from "@/hooks/use-list-search-scope";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { formatDZD } from "@/lib/utils";
 import type { Category } from "@/types/domain";
 
@@ -268,7 +269,7 @@ export function ProductsDataTable({
       <StateSurface
         icon={AlertTriangle}
         title={t("error.requestFailed")}
-        description={error.message}
+        description={translateServerError(error.message, t, t("error.requestFailed"))}
         tone="danger"
         size="inline"
         role="alert"

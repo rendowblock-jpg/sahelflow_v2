@@ -408,7 +408,9 @@ export default async function DashboardPage() {
                 ))}
               </div>
             ) : fieldAccess.deliveries ? (
-              <div className="px-3 py-5 text-sm text-muted-foreground">—</div>
+              <div className="px-3 py-5 text-sm text-muted-foreground">
+                {t("dashboard.deliveryPlaceholder")}
+              </div>
             ) : (
               <StateSurface
                 icon={LockKeyhole}

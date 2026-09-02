@@ -74,6 +74,8 @@ declare module "@tanstack/react-table" {
     hideOn?: "sm" | "md" | "lg";
     align?: "start" | "center" | "end";
     width?: string;
+    /** Long-text columns: wrap instead of the global whitespace-nowrap. */
+    wrap?: boolean;
   }
 }
 
@@ -379,7 +381,12 @@ export function DataTable<TData>({
                         <td
                           key={cell.id}
                           className={cn(
-                            "whitespace-nowrap text-sm align-middle",
+                            "text-sm align-middle",
+                            // Long-text columns opt into wrapping via column
+                            // meta; every other cell stays on one line.
+                            meta?.wrap
+                              ? "whitespace-normal break-words"
+                              : "whitespace-nowrap",
                             dens.cell,
                             alignClass,
                             hideClass,

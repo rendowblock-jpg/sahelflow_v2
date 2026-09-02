@@ -15,8 +15,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { toast } from "@/lib/toast";
+import { mutatePrefix } from "@/lib/swr/mutate";
 import { useI18n } from "@/hooks/use-i18n";
+import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 
 interface OrderDeleteButtonProps {
   orderId: string;
@@ -31,22 +32,35 @@ export function OrderDeleteButton({ orderId, orderStatus }: OrderDeleteButtonPro
 
   const canDelete = ["draft", "cancelled"].includes(orderStatus);
 
+  // Same contract as the orders list (orders-data-table.tsx): the endpoint is a
+  // SOFT delete, so the dialog warns once and the undo toast does the mercy
+  // pass — the copy no longer claims the delete is permanent.
+  const deleteOrder = useUndoableDelete({
+    deleteUrl: (id) => `/api/orders/${id}`,
+    restoreUrl: (id) => `/api/orders/${id}/restore`,
+    entityLabel: t("orders.workspace.entity"),
+    contextualLabel: (record) => {
+      const order = record as { orderNumber?: string };
+      return order.orderNumber
+        ? t("orders.workspace.entityNumber", { number: order.orderNumber })
+        : t("orders.workspace.entity");
+    },
+    onAfter: () => mutatePrefix("/api/orders"),
+    onSuccess: () => {
+      setOpen(false);
+      router.push("/orders");
+      router.refresh();
+    },
+  });
+
   const handleDelete = async () => {
     setPending(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}`, { method: "DELETE" });
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error ?? t("common.deleteFailed"));
-
-      toast.success(t("orders.orderDeleted"));
-      router.push("/orders");
-      router.refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("common.deleteFailed"));
+      // useUndoableDelete never throws — failures surface as a translated
+      // toast and the dialog stays open; success closes it via onSuccess.
+      await deleteOrder(orderId);
     } finally {
       setPending(false);
-      setOpen(false);
     }
   };
 
@@ -75,7 +89,12 @@ export function OrderDeleteButton({ orderId, orderStatus }: OrderDeleteButtonPro
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleDelete}
+            onClick={(event) => {
+              // Radix closes the dialog on click by default — keep it open
+              // while the delete is in flight so the pending spinner is real.
+              event.preventDefault();
+              void handleDelete();
+            }}
             disabled={pending}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >

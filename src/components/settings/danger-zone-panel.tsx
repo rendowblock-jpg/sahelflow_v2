@@ -8,11 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
 import { toast } from "@/lib/toast";
+import { useShopStore } from "@/stores/shop-store";
 
 type ApiPayload = { error?: string; code?: string };
 
@@ -34,10 +36,28 @@ export function DangerZonePanel({
   const [reauthBusy, setReauthBusy] = useState(false);
   const [reauthError, setReauthError] = useState<string | null>(null);
 
+  const shops = useShopStore((state) => state.shops);
+  const activeShopId = useShopStore((state) => state.activeShopId);
+  const activeShop = shops.find((shop) => shop.id === activeShopId) ?? null;
+
+  // F19: the type-to-confirm token is locale-neutral seller data — the shop's
+  // own name, typeable on the seller's keyboard — instead of the Latin RESET.
+  // The shipped-but-unnamed default shop keeps "RESET" (its real name is a
+  // placeholder, not something the seller identifies with).
+  const isDefaultShopPlaceholder =
+    activeShop?.id === "default" && activeShop.name === "Ma Boutique";
+  const shopToken =
+    activeShop && !isDefaultShopPlaceholder ? activeShop.name.trim() : "";
+  // An unnamed/whitespace shop name must not degenerate the gate into an
+  // always-matching empty token — RESET stays the neutral fallback.
+  const confirmToken = shopToken.length > 0 ? shopToken : "RESET";
+  const confirmTextMatches =
+    confirmText === confirmToken || confirmText === "RESET";
+
   async function handleReset(proofRefreshed = false) {
     if (!canReset) return;
-    if (confirmText !== "RESET") {
-      toast.error(t("settings.dangerZone.typeReset"));
+    if (!confirmTextMatches) {
+      toast.error(t("settings.dangerZone.typeReset", { token: confirmToken }));
       return;
     }
     setLoading(true);
@@ -46,7 +66,11 @@ export function DangerZonePanel({
       const response = await fetch("/api/settings/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirm: confirmText }),
+        // The wire contract is still the server's z.literal("RESET") token —
+        // the shop-name token is a client-side locale-neutral gate that maps
+        // onto it. If the backend batch moves the alias server-side, send the
+        // typed token verbatim instead.
+        body: JSON.stringify({ confirm: "RESET" }),
       });
       const payload = (await response.json().catch(() => ({}))) as ApiPayload;
       if (
@@ -64,9 +88,11 @@ export function DangerZonePanel({
       window.location.assign("/setup");
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : t("settings.dangerZone.resetFailed"),
+        translateServerError(
+          error instanceof Error ? error.message : "",
+          t,
+          t("settings.dangerZone.resetFailed"),
+        ),
       );
     } finally {
       setLoading(false);
@@ -85,7 +111,13 @@ export function DangerZonePanel({
       });
       const payload = (await response.json().catch(() => ({}))) as ApiPayload;
       if (!response.ok) {
-        setReauthError(payload.error ?? copy("verificationDescription"));
+        setReauthError(
+          translateServerError(
+            payload.error,
+            t,
+            copy("verificationDescription"),
+          ),
+        );
         return;
       }
       setReauthRequired(false);
@@ -138,12 +170,13 @@ export function DangerZonePanel({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">
-                {t("settings.dangerZone.typeReset")}
+                {t("settings.dangerZone.typeReset", { token: confirmToken })}
               </Label>
               <Input
                 value={confirmText}
                 onChange={(event) => setConfirmText(event.target.value)}
-                placeholder="RESET"
+                placeholder={confirmToken}
+                dir="auto"
                 className="max-w-xs"
                 spellCheck={false}
                 autoComplete="off"
@@ -154,7 +187,7 @@ export function DangerZonePanel({
               variant="destructive"
               size="sm"
               onClick={() => void handleReset()}
-              disabled={loading || confirmText !== "RESET" || reauthRequired}
+              disabled={loading || !confirmTextMatches || reauthRequired}
             >
               {loading ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />

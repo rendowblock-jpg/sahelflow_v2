@@ -35,6 +35,7 @@ interface ErrorRule {
 const RULES: readonly ErrorRule[] = [
   // Auth
   { match: "incorrect pin", key: "auth.incorrectPin" },
+  { match: "incorrect login or pin", key: "auth.incorrectCredentials" },
   { match: "too many attempts", key: "auth.tooManyAttempts" },
   { match: "too many failed attempts", key: "auth.accountLocked" },
   { match: "auth not set up", key: "auth.notSetUp" },

@@ -44,6 +44,7 @@ import { DZ_PHONE_PLACEHOLDER, formatDZPhone } from "@/lib/validation/phone";
 import { useDirtyGuard } from "@/hooks/form/use-dirty-guard";
 import { useFormDraft, clearFormDraft } from "@/hooks/form/use-form-draft";
 import { toast } from "@/lib/toast";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { orderFormSchema, type OrderFormValues } from "@/lib/validation/order-schema";
 import type { RiskAssessment } from "@/lib/risk-engine/types";
@@ -261,7 +262,13 @@ export function OrderFormDialog({
       // fresh risk check.
       skipRiskCheckRef.current = false;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("orders.form.createFailed"));
+      toast.error(
+        translateServerError(
+          err instanceof Error ? err.message : "",
+          t,
+          t("orders.form.createFailed"),
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -744,7 +751,10 @@ export function OrderFormDialog({
                 void proceedWithCreate();
               }}
               disabled={loading}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              // Override-the-warning confirm: the design system has no warning
+              // variant, so the destructive variant carries the risk weight
+              // (replaces the drifted raw bg-amber-600 classes).
+              variant="destructive"
             >
               {loading ? (
                 <>

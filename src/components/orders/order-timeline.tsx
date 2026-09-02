@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
+import { rejectionReasonDisplay } from "@/lib/orders/rejection-reasons";
 
 interface TimelineEntry {
   id: string;
@@ -56,8 +57,10 @@ function formatActionLabel(
     switch (actionType) {
       case "status_change":
         if (typeof p.rejectionReason === "string" && p.rejectionReason) {
+          // Locale-stable enum keys translate; legacy rows that stored a
+          // translated quick-pick label render verbatim.
           return t("orders.timeline.rejected", {
-            reason: p.rejectionReason,
+            reason: rejectionReasonDisplay(p.rejectionReason, t),
           });
         }
         return t("orders.timeline.status_change", { from: p.from ?? "?", to: p.to ?? "?" });

@@ -29,6 +29,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useI18n } from "@/hooks/use-i18n";
+import {
+  getSettingsWorkspaceCopy,
+  type SettingsWorkspaceCopyKey,
+  type SettingsWorkspaceLocale,
+} from "@/lib/i18n/settings-workspace";
 
 type DemoCounts = {
   categories: number;
@@ -52,157 +57,47 @@ type DemoStatus = {
   counts: DemoCounts;
 };
 
-type Copy = {
-  eyebrow: string;
-  title: string;
-  description: string;
-  isolated: string;
-  coexistNote: string;
-  loaded: string;
-  available: string;
-  withRealData: string;
-  withRealDataDescription: string;
-  confirmLoadTitle: string;
-  confirmLoad: string;
-  load: string;
-  loading: string;
-  remove: string;
-  removing: string;
-  openDashboard: string;
-  refresh: string;
-  confirmRemove: string;
-  failed: string;
-  products: string;
-  customers: string;
-  orders: string;
-  deliveries: string;
-  conversations: string;
-  expenses: string;
-  journeyTitle: string;
-  journey: string;
-  note: string;
+/** Structured failure from the demo-data API (coded 4xx carry `code`). */
+type DemoFailure = {
+  message: string;
+  code: string | null;
+  status: number;
 };
 
-const COPY: Record<"ar" | "fr" | "en", Copy> = {
-  ar: {
-    eyebrow: "بيانات تجريبية احترافية",
-    title: "سنة كاملة من متجر جزائري واقعي",
-    description:
-      "حمّل مساحة تجريبية غنية تمتد 365 يومًا حتى اليوم، مع منتجات وزبائن متكررين وطلبات وتوصيل وتحصيل COD ومرتجعات ومصاريف ومحادثات واتساب واقعية السياق بالعربية والفرنسية.",
-    isolated: "لا يتم إرسال رسائل أو طلبات حقيقية إلى شركات التوصيل.",
-    coexistNote: "تُضاف بجانب بياناتك الحقيقية — تُحذف السجلات التجريبية المُعلَّمة فقط.",
-    loaded: "البيانات التجريبية السنوية محمّلة",
-    available: "جاهزة للتحميل",
-    withRealData: "يحتوي هذا المتجر على بيانات حقيقية",
-    withRealDataDescription:
-      "ستُضاف مساحة البيانات التجريبية بجانبها وتُحسب في الإحصائيات والتقارير حتى حذفها (تعايش FD-052). إذا أشارت سجلات حقيقية لاحقًا إلى سجلات تجريبية فسيتوقف الحذف ويُخبرك بذلك — لا يُحذف أي شيء حقيقي تلقائيًا أبدًا.",
-    confirmLoadTitle: "تحميل البيانات التجريبية بجانب البيانات الحقيقية؟",
-    confirmLoad:
-      "السجلات التجريبية مُعلَّمة ويمكن حذفها في أي وقت، وتُحسب في الإحصائيات والتقارير حتى حذفها. تبقى العمليات الحقيقية متاحة. المتابعة؟",
-    load: "تحميل المتجر التجريبي السنوي",
-    loading: "جارٍ إنشاء سنة من البيانات...",
-    remove: "حذف البيانات التجريبية",
-    removing: "جارٍ الحذف...",
-    openDashboard: "فتح لوحة التحكم",
-    refresh: "تحديث الحالة",
-    confirmRemove:
-      "سيتم حذف السجلات التجريبية فقط. لن تتأثر أي بيانات أخرى. هل تريد المتابعة؟",
-    failed: "تعذر تنفيذ العملية",
-    products: "منتج",
-    customers: "زبون",
-    orders: "طلب",
-    deliveries: "شحنة",
-    conversations: "محادثة",
-    expenses: "مصروف",
-    journeyTitle: "القصة الرئيسية والسياق السنوي",
-    journey:
-      "سجل أعمال يمتد سنة كاملة مع مواسم نشاط مختلفة ← رسالة واتساب حديثة من فاطمة الزهراء ← استخراج ومراجعة الطلب ← التأكيد ← الشحن مع Yalidine ← التسليم ← تحصيل وتحويل COD مع سجل واضح.",
-    note:
-      "الأسماء والأرقام والطلبات خيالية ومخصصة للعرض. الأتمتة تعمل في وضع المحاكاة ولا تنفذ تأثيرات خارجية. أثناء بقاء البيانات التجريبية محمّلة تعمل عمليات المتجر الحقيقية عاديًا، ولا تُرسل الطلبات التجريبية أبدًا إلى شركات التوصيل الحقيقية.",
-  },
-  fr: {
-    eyebrow: "Données de démonstration professionnelles",
-    title: "Une année complète d'activité COD algérienne",
-    description:
-      "Chargez 365 jours d'activité jusqu'à aujourd'hui : produits, clients récurrents, commandes, livraison, collecte et remise COD, retours, dépenses et conversations WhatsApp en arabe et en français.",
-    isolated: "Aucun message ni ordre réel n'est envoyé à un transporteur.",
-    coexistNote:
-      "S'ajoute à vos données réelles — seules les lignes de démonstration sont jamais supprimées.",
-    loaded: "Démonstration annuelle chargée",
-    available: "Prête à charger",
-    withRealData: "Cette boutique contient déjà des données réelles",
-    withRealDataDescription:
-      "L'espace de démonstration sera ajouté à côté et mélangé aux statistiques et rapports jusqu'à sa suppression (coexistence FD-052). Si des données réelles référencent plus tard des enregistrements de démonstration, la suppression s'arrêtera et les nommera — rien de réel n'est jamais supprimé automatiquement.",
-    confirmLoadTitle:
-      "Charger la démonstration à côté des données réelles ?",
-    confirmLoad:
-      "Les lignes de démonstration sont étiquetées et supprimables à tout moment, et elles entrent dans les statistiques et rapports jusqu'à leur suppression. Les opérations réelles restent disponibles. Continuer ?",
-    load: "Charger la démonstration annuelle",
-    loading: "Création d'une année de données...",
-    remove: "Supprimer la démonstration",
-    removing: "Suppression...",
-    openDashboard: "Ouvrir le tableau de bord",
-    refresh: "Actualiser l'état",
-    confirmRemove:
-      "Seuls les enregistrements de démonstration seront supprimés. Les autres données resteront intactes. Continuer ?",
-    failed: "L'opération a échoué",
-    products: "produits",
-    customers: "clients",
-    orders: "commandes",
-    deliveries: "livraisons",
-    conversations: "conversations",
-    expenses: "dépenses",
-    journeyTitle: "Scénario phare dans un historique annuel",
-    journey:
-      "Douze mois d'activité avec des rythmes saisonniers → message WhatsApp récent de Fatima Zohra → extraction et revue → confirmation → expédition Yalidine → livraison → collecte et remise COD avec historique explicite.",
-    note:
-      "Les identités, téléphones et opérations sont fictifs. Les automatisations sont en simulation et n'exécutent aucun effet externe. Tant que la démonstration est chargée, les opérations réelles restent disponibles et les commandes de démonstration ne sont jamais envoyées à un transporteur réel.",
-  },
-  en: {
-    eyebrow: "Professional sample data",
-    title: "A full year of realistic Algerian COD activity",
-    description:
-      "Load a rolling 365-day workspace through today with products, repeat customers, orders, delivery, COD collection and remittance, returns, expenses, and Arabic/French WhatsApp conversations.",
-    isolated: "No real message, shipment, or provider action is sent.",
-    coexistNote:
-      "Loads alongside your real data — only demo-tagged rows are ever removed.",
-    loaded: "Annual demo data loaded",
-    available: "Ready to load",
-    withRealData: "This shop already contains real records",
-    withRealDataDescription:
-      "The demo workspace will be added alongside them and mixed into stats and reports until removed (FD-052 coexistence). If real records later reference demo records, removal stops and names them — nothing real is ever deleted automatically.",
-    confirmLoadTitle: "Load demo data alongside real records?",
-    confirmLoad:
-      "Demo rows are tagged and removable at any time, and they mix into stats and reports until removed. Real operations stay enabled. Continue?",
-    load: "Load annual Algerian demo store",
-    loading: "Creating one year of sample data...",
-    remove: "Remove demo data",
-    removing: "Removing...",
-    openDashboard: "Open dashboard",
-    refresh: "Refresh status",
-    confirmRemove:
-      "Only demo-tagged records will be removed. All other data stays untouched. Continue?",
-    failed: "The operation failed",
-    products: "products",
-    customers: "customers",
-    orders: "orders",
-    deliveries: "deliveries",
-    conversations: "conversations",
-    expenses: "expenses",
-    journeyTitle: "Flagship story inside annual history",
-    journey:
-      "Twelve months of varied operating history → recent Fatima Zohra WhatsApp message → extraction and review → confirmation → Yalidine shipment → delivery → COD collection and remittance with a clear timeline.",
-    note:
-      "Names, phone numbers, and operations are fictional. Automations run in dry-run mode and perform no external effects. While the demo is loaded, real shop operations stay enabled, and demo-tagged orders are never dispatched to real courier providers.",
-  },
+/** Panel-facing error: localized primary line + mono technical detail. */
+type DemoPanelError = {
+  primary: string;
+  detail: string | null;
 };
 
-async function readError(response: Response): Promise<string> {
+/** FD-054: removal fails closed when real records reference demo records. */
+const DEMO_REMOVAL_BLOCKED_CODE = "DEMO_REMOVAL_BLOCKED_BY_REFERENCES";
+
+class DemoRequestError extends Error {
+  readonly failure: DemoFailure;
+  constructor(failure: DemoFailure) {
+    super(failure.message);
+    this.name = "DemoRequestError";
+    this.failure = failure;
+  }
+}
+
+async function readFailure(response: Response): Promise<DemoFailure> {
+  const fallback: DemoFailure = {
+    message: `${response.status} ${response.statusText}`,
+    code: null,
+    status: response.status,
+  };
   try {
-    const body = (await response.json()) as { error?: string };
-    return body.error ?? `${response.status} ${response.statusText}`;
+    const body = (await response.json()) as { error?: string; code?: string };
+    if (!body.error && !body.code) return fallback;
+    return {
+      message: body.error ?? fallback.message,
+      code: body.code ?? null,
+      status: response.status,
+    };
   } catch {
-    return `${response.status} ${response.statusText}`;
+    return fallback;
   }
 }
 
@@ -212,29 +107,57 @@ async function requestStatus(signal?: AbortSignal): Promise<DemoStatus> {
     credentials: "same-origin",
     signal,
   });
-  if (!response.ok) throw new Error(await readError(response));
+  if (!response.ok) throw new DemoRequestError(await readFailure(response));
   return (await response.json()) as DemoStatus;
+}
+
+function extractFailure(caught: unknown): DemoFailure {
+  return caught instanceof DemoRequestError
+    ? caught.failure
+    : {
+        message: caught instanceof Error ? caught.message : "",
+        code: null,
+        status: 0,
+      };
 }
 
 export function DemoDataPanel() {
   const router = useRouter();
-  const { locale } = useI18n();
-  const copy = COPY[locale];
+  const { locale: rawLocale } = useI18n();
+  const locale = rawLocale as SettingsWorkspaceLocale;
+  // Sibling settings panels (danger zone, connections, …) read their product
+  // copy through the settings runtime dictionary — demo data now does too.
+  const copy = (key: SettingsWorkspaceCopyKey) =>
+    getSettingsWorkspaceCopy(locale, key);
   const [status, setStatus] = useState<DemoStatus | null>(null);
   const [busy, setBusy] = useState<"load" | "remove" | "refresh" | null>(
     "refresh",
   );
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<DemoFailure | null>(null);
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const [loadConfirmOpen, setLoadConfirmOpen] = useState(false);
+
+  // Derived (not stored) so a locale switch re-localizes the primary line;
+  // the server code/status stays secondary mono technical detail.
+  const error: DemoPanelError | null = failure
+    ? {
+        primary:
+          failure.code === DEMO_REMOVAL_BLOCKED_CODE
+            ? copy("demoData.removeBlocked")
+            : copy("demoData.actionFailed"),
+        detail:
+          failure.code ??
+          (failure.status > 0 ? `HTTP ${failure.status}` : null),
+      }
+    : null;
 
   useEffect(() => {
     const controller = new AbortController();
     void requestStatus(controller.signal)
       .then((nextStatus) => setStatus(nextStatus))
-      .catch((failure: unknown) => {
-        if (failure instanceof DOMException && failure.name === "AbortError") return;
-        setError(failure instanceof Error ? failure.message : "Status request failed");
+      .catch((caught: unknown) => {
+        if (caught instanceof DOMException && caught.name === "AbortError") return;
+        if (!controller.signal.aborted) setFailure(extractFailure(caught));
       })
       .finally(() => {
         if (!controller.signal.aborted) setBusy(null);
@@ -244,11 +167,11 @@ export function DemoDataPanel() {
 
   const refreshStatus = async () => {
     setBusy("refresh");
-    setError(null);
+    setFailure(null);
     try {
       setStatus(await requestStatus());
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : copy.failed);
+    } catch (caught) {
+      setFailure(extractFailure(caught));
     } finally {
       setBusy(null);
     }
@@ -256,18 +179,20 @@ export function DemoDataPanel() {
 
   const mutate = async (method: "POST" | "DELETE") => {
     setBusy(method === "POST" ? "load" : "remove");
-    setError(null);
+    setFailure(null);
     try {
       const response = await fetch("/api/demo-data", {
         method,
         cache: "no-store",
         credentials: "same-origin",
       });
-      if (!response.ok) throw new Error(await readError(response));
+      if (!response.ok) {
+        throw new DemoRequestError(await readFailure(response));
+      }
       setStatus((await response.json()) as DemoStatus);
       router.refresh();
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : copy.failed);
+    } catch (caught) {
+      setFailure(extractFailure(caught));
     } finally {
       setBusy(null);
     }
@@ -275,16 +200,16 @@ export function DemoDataPanel() {
 
   const metrics = status
     ? [
-        { icon: Package, value: status.counts.products, label: copy.products },
-        { icon: Users, value: status.counts.customers, label: copy.customers },
-        { icon: ShoppingCart, value: status.counts.orders, label: copy.orders },
-        { icon: Truck, value: status.counts.deliveries, label: copy.deliveries },
+        { icon: Package, value: status.counts.products, label: copy("demoData.products") },
+        { icon: Users, value: status.counts.customers, label: copy("demoData.customers") },
+        { icon: ShoppingCart, value: status.counts.orders, label: copy("demoData.orders") },
+        { icon: Truck, value: status.counts.deliveries, label: copy("demoData.deliveries") },
         {
           icon: MessageSquare,
           value: status.counts.conversations,
-          label: copy.conversations,
+          label: copy("demoData.conversations"),
         },
-        { icon: ReceiptText, value: status.counts.expenses, label: copy.expenses },
+        { icon: ReceiptText, value: status.counts.expenses, label: copy("demoData.expenses") },
       ]
     : [];
 
@@ -296,11 +221,11 @@ export function DemoDataPanel() {
             <div className="space-y-2">
               <Badge variant="outline" className="gap-1.5">
                 <Sparkles className="size-3.5" aria-hidden="true" />
-                {copy.eyebrow}
+                {copy("demoData.eyebrow")}
               </Badge>
-              <CardTitle className="text-xl">{copy.title}</CardTitle>
+              <CardTitle className="text-xl">{copy("demoData.title")}</CardTitle>
               <CardDescription className="max-w-2xl text-sm leading-6">
-                {copy.description}
+                {copy("demoData.description")}
               </CardDescription>
             </div>
             <div className="flex size-11 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground">
@@ -314,16 +239,16 @@ export function DemoDataPanel() {
             {status?.loaded ? (
               <Badge className="gap-1.5">
                 <ShieldCheck className="size-3.5" aria-hidden="true" />
-                {copy.loaded}
+                {copy("demoData.loaded")}
               </Badge>
             ) : status?.canSeed ? (
               <Badge variant="secondary" className="gap-1.5">
                 <Sparkles className="size-3.5" aria-hidden="true" />
-                {copy.available}
+                {copy("demoData.available")}
               </Badge>
             ) : null}
             <span className="text-xs text-muted-foreground">
-              {copy.coexistNote}
+              {copy("demoData.coexistNote")}
             </span>
           </div>
 
@@ -342,17 +267,17 @@ export function DemoDataPanel() {
           ) : null}
 
           <div className="rounded-md border bg-muted/20 p-4">
-            <p className="text-sm font-semibold">{copy.journeyTitle}</p>
+            <p className="text-sm font-semibold">{copy("demoData.journeyTitle")}</p>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              {copy.journey}
+              {copy("demoData.journey")}
             </p>
           </div>
 
           {status && !status.loaded && status.hasBusinessData ? (
             <div className="rounded-md border bg-muted/20 p-4 text-sm">
-              <p className="font-medium">{copy.withRealData}</p>
+              <p className="font-medium">{copy("demoData.withRealData")}</p>
               <p className="mt-1 text-muted-foreground">
-                {copy.withRealDataDescription}
+                {copy("demoData.withRealDataDescription")}
               </p>
             </div>
           ) : null}
@@ -362,8 +287,15 @@ export function DemoDataPanel() {
               role="alert"
               className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
             >
-              <span className="font-medium">{copy.failed}: </span>
-              {error}
+              <span className="font-medium">{error.primary}</span>
+              {error.detail ? (
+                <span
+                  dir="ltr"
+                  className="mt-1 block font-mono text-xs text-muted-foreground"
+                >
+                  {error.detail}
+                </span>
+              ) : null}
             </div>
           ) : null}
 
@@ -383,7 +315,7 @@ export function DemoDataPanel() {
                 ) : (
                   <Sparkles className="me-2 size-4" aria-hidden="true" />
                 )}
-                {busy === "load" ? copy.loading : copy.load}
+                {busy === "load" ? copy("demoData.loading") : copy("demoData.load")}
               </Button>
             ) : null}
 
@@ -391,7 +323,7 @@ export function DemoDataPanel() {
               <>
                 <Button asChild>
                   <Link href="/dashboard">
-                    {copy.openDashboard}
+                    {copy("demoData.openDashboard")}
                     <ExternalLink className="ms-2 size-4" aria-hidden="true" />
                   </Link>
                 </Button>
@@ -407,7 +339,7 @@ export function DemoDataPanel() {
                   ) : (
                     <Trash2 className="me-2 size-4" aria-hidden="true" />
                   )}
-                  {busy === "remove" ? copy.removing : copy.remove}
+                  {busy === "remove" ? copy("demoData.removing") : copy("demoData.remove")}
                 </Button>
               </>
             ) : null}
@@ -421,14 +353,14 @@ export function DemoDataPanel() {
               {busy === "refresh" ? (
                 <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
               ) : null}
-              {copy.refresh}
+              {copy("demoData.refresh")}
             </Button>
           </div>
 
           <div className="flex items-start gap-2 rounded-md border bg-muted/20 p-3 text-xs leading-5 text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>
-              {copy.isolated} {copy.note}
+              {copy("demoData.isolated")} {copy("demoData.note")}
             </span>
           </div>
         </CardContent>
@@ -437,9 +369,9 @@ export function DemoDataPanel() {
       <ConfirmDialog
         open={removeConfirmOpen}
         onOpenChange={setRemoveConfirmOpen}
-        title={copy.remove}
-        description={copy.confirmRemove}
-        confirmLabel={copy.remove}
+        title={copy("demoData.remove")}
+        description={copy("demoData.confirmRemove")}
+        confirmLabel={copy("demoData.remove")}
         destructive
         onConfirm={() => mutate("DELETE")}
       />
@@ -447,9 +379,9 @@ export function DemoDataPanel() {
       <ConfirmDialog
         open={loadConfirmOpen}
         onOpenChange={setLoadConfirmOpen}
-        title={copy.confirmLoadTitle}
-        description={copy.confirmLoad}
-        confirmLabel={copy.load}
+        title={copy("demoData.confirmLoadTitle")}
+        description={copy("demoData.confirmLoad")}
+        confirmLabel={copy("demoData.load")}
         onConfirm={() => mutate("POST")}
       />
     </div>

@@ -261,10 +261,11 @@ describe("confirmation queue fast-path surface contract", () => {
     expect(table).toContain('aria-label={t("confirmationQueue.inline.confirm")}');
     expect(table).toContain('aria-label={t("confirmationQueue.inline.reject")}');
     // Reject opens an anchored popover with quick-pick reasons, not a dialog.
+    // Quick-picks submit locale-stable enum keys (rejection-reasons.ts); the
+    // translated labels are display-only, never the stored value.
     expect(table).toContain('data-testid="queue-reject-quickpick"');
-    expect(table).toContain(
-      '"confirmationQueue.reject.reason.fakeOrder"',
-    );
+    expect(table).toContain('from "@/lib/orders/rejection-reasons"');
+    expect(table).toContain("resolveRejectionReasonSubmit(pickedKey, reason, t)");
     // Rows without inline authority keep the review-first link.
     expect(table).toContain('t("orders.workspace.confirmation.review")');
     expect(table).toContain("isQueueDecisionActionable(order)");

@@ -23,6 +23,7 @@
 import { useCallback } from "react";
 import { toast } from "@/lib/toast";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 
 interface UseUndoableDeleteOptions {
   /** Build the soft-delete URL from the id. */
@@ -35,6 +36,8 @@ interface UseUndoableDeleteOptions {
   contextualLabel?: (record: unknown) => string;
   /** Called after delete OR restore (e.g. mutatePrefix to revalidate lists). */
   onAfter?: () => void | Promise<void>;
+  /** Called once when the delete itself succeeded (not on undo). */
+  onSuccess?: (record: unknown) => void;
   /** Undo window in ms (default 6000). */
   undoWindowMs?: number;
 }
@@ -52,7 +55,12 @@ export function useUndoableDelete(opts: UseUndoableDeleteOptions) {
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.error?.message ?? body.error ?? `Delete failed (${res.status})`);
+          // Coded fallback for a non-JSON response (502 HTML, …) — the
+          // "Request failed (NNN)" shape is the translator's recognized
+          // coded pattern, so it localizes instead of leaking raw English.
+          throw new Error(
+            body.error?.message ?? body.error ?? `Request failed (${res.status})`,
+          );
         }
         const body = await res.json().catch(() => ({}));
         const label = opts.contextualLabel
@@ -84,10 +92,13 @@ export function useUndoableDelete(opts: UseUndoableDeleteOptions) {
           action: undoAction,
         });
 
+        opts.onSuccess?.(body.record ?? body);
         await opts.onAfter?.();
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Delete failed";
-        toast.error(msg);
+        const raw = err instanceof Error ? err.message : "";
+        toast.error(
+          translateServerError(raw, t, t("common.deleteFailed")),
+        );
       }
     },
     [opts, t],

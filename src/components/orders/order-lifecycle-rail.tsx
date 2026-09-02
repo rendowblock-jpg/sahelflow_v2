@@ -68,6 +68,11 @@ import {
   LIFECYCLE_RAIL_STEPS,
   type LifecycleAction,
 } from "@/lib/orders/order-action-dispatch";
+import {
+  REJECTION_REASONS,
+  resolveRejectionReasonSubmit,
+  type RejectionReasonKey,
+} from "@/lib/orders/rejection-reasons";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -174,14 +179,6 @@ const SUB_STATE_LABEL_KEYS: Readonly<Record<string, string>> = {
   corrected: "orders.workspace.fulfillment.state.corrected",
 };
 
-/** Rejection/cancellation quick-picks — the confirmation queue's reason set. */
-const REASON_QUICK_PICK_KEYS = [
-  "confirmationQueue.reject.reason.customerCancelled",
-  "confirmationQueue.reject.reason.fakeOrder",
-  "confirmationQueue.reject.reason.unreachable",
-  "confirmationQueue.reject.reason.postponed",
-] as const;
-
 /** Max buttons rendered inline; the rest collapse into the overflow popover. */
 const MAX_VISIBLE_ACTIONS = 3;
 
@@ -249,6 +246,8 @@ export function OrderLifecycleRail({
   const [reasonAction, setReasonAction] = useState<LifecycleAction | null>(null);
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [pickedReasonKey, setPickedReasonKey] =
+    useState<RejectionReasonKey | null>(null);
 
   const actions = getLifecycleActions({
     status,
@@ -345,6 +344,7 @@ export function OrderLifecycleRail({
     setOverflowOpen(false);
     if (action.requiresReason) {
       setReason("");
+      setPickedReasonKey(null);
       setReasonAction(action);
       return;
     }
@@ -354,7 +354,9 @@ export function OrderLifecycleRail({
   function submitReason(): void {
     if (!reasonAction) return;
     const action = reasonAction;
-    const trimmed = reason.trim();
+    // Quick-picks submit the locale-stable enum key; free text (or a legacy
+    // label typed back verbatim) normalizes through the shared resolver.
+    const trimmed = resolveRejectionReasonSubmit(pickedReasonKey, reason, t);
     // Governed rejections require a reason (server contract); legacy
     // cancellations submit without one — the status endpoint keeps no reason.
     if (action.kind === "reject" && !trimmed) return;
@@ -613,16 +615,20 @@ export function OrderLifecycleRail({
                 role="group"
                 aria-label={t("confirmationQueue.reject.quickPicksLabel")}
               >
-                {REASON_QUICK_PICK_KEYS.map((key) => {
-                  const label = t(key);
-                  const selected = reason === label;
+                {REJECTION_REASONS.map(({ key, i18nKey }) => {
+                  const label = t(i18nKey);
+                  const selected = pickedReasonKey === key;
                   return (
                     <button
                       key={key}
                       type="button"
                       data-testid="lifecycle-reason-quickpick"
+                      data-reason-key={key}
                       data-selected={selected}
-                      onClick={() => setReason(label)}
+                      onClick={() => {
+                        setPickedReasonKey(key);
+                        setReason(label);
+                      }}
                       className={cn(
                         "rounded-md border px-2 py-1 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                         selected
@@ -641,7 +647,10 @@ export function OrderLifecycleRail({
                 </span>
                 <Textarea
                   value={reason}
-                  onChange={(event) => setReason(event.target.value)}
+                  onChange={(event) => {
+                    setReason(event.target.value);
+                    setPickedReasonKey(null);
+                  }}
                   placeholder={t("orders.workspace.decision.reasonPlaceholder")}
                   maxLength={500}
                   rows={2}

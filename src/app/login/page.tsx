@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -52,7 +53,9 @@ export default function LoginPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error ?? t("error.loginFailed"));
+        // The server sends English prose only — map the known auth failures
+        // (wrong PIN, lockout, rate limit) into the active locale first.
+        setError(translateServerError(data.error, t, t("error.loginFailed")));
         if (data.needsSetup) setNeedsSetup(true);
         return;
       }

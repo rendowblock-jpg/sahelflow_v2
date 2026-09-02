@@ -23,9 +23,19 @@ import { toast as sonnerToast, type ExternalToast } from "sonner";
 
 type ToastVariant = "default" | "success" | "error" | "info" | "warning" | "loading";
 
+/** The options bag sonner accepts for `toast.promise` (loading/success/error renderers + toast options). */
+type PromiseToastData = Parameters<typeof sonnerToast.promise>[1];
+
 const DEFAULT_DURATION = 5000; // 5s — long enough to read + click undo
 
-/** Apply our default options + data-testid to every toast. */
+/**
+ * Apply our default options + sf-toast class to every toast.
+ *
+ * `toast.promise` re-applies the same shape inline (with the identical object
+ * spread) because sonner's promise options bag (`loading`/`success`/`error`
+ * renderers) is not assignable to plain `ExternalToast` — its `description`
+ * also accepts render functions.
+ */
 function withDefaults(options?: ExternalToast): ExternalToast {
   return {
     duration: DEFAULT_DURATION,
@@ -51,7 +61,21 @@ export const toast = {
     sonnerToast.warning(message, withDefaults(options)),
   loading: (message: string, options?: ExternalToast) =>
     sonnerToast.loading(message, withDefaults(options)),
-  promise: sonnerToast.promise,
+  // Promise toasts get the same house defaults (sf-toast class, default
+  // duration) as success/error — sonner's raw re-export styled differently.
+  // Mirrors withDefaults() field-for-field; see the note above withDefaults.
+  promise: <Data>(
+    promise: Promise<Data> | (() => Promise<Data>),
+    data?: PromiseToastData,
+  ) =>
+    sonnerToast.promise<Data>(promise, {
+      duration: DEFAULT_DURATION,
+      ...data,
+      classNames: {
+        toast: "sf-toast",
+        ...(data?.classNames ?? {}),
+      },
+    }),
   dismiss: sonnerToast.dismiss,
   custom: sonnerToast.custom,
 };
