@@ -1460,6 +1460,44 @@ export async function approveAiActionProposal(
   };
 }
 
+/**
+ * Operator-deny for one pending proposal (ledger AI-03): terminal, coded,
+ * and impossible to execute afterwards. Deliberately lightweight — a deny is
+ * one click, unlike approval which stays digest-bound and reason-tracked.
+ */
+export async function rejectAiActionProposal({
+  context,
+  proposalId,
+}: {
+  context: { prisma: DbClient; shop: ShopContext };
+  proposalId: string;
+}): Promise<{ ok: boolean; status: "rejected" | "unchanged" }> {
+  const row = await readProposalById(context.prisma, proposalId);
+  if (!row) {
+    throw new SahelFlowError(
+      "AI action proposal was not found",
+      "AI_ACTION_PROPOSAL_NOT_FOUND",
+      404,
+    );
+  }
+  if (!shopMatches(row, context.shop)) {
+    throw new SahelFlowError(
+      "AI action proposal belongs to another exact shop runtime",
+      "AI_ACTION_SHOP_DRIFT",
+      409,
+    );
+  }
+  const updated = await context.prisma.$executeRaw`
+    UPDATE "AiActionProposal"
+    SET "status" = 'rejected',
+        "lastErrorCode" = 'AI_ACTION_PROPOSAL_REJECTED',
+        "updatedAt" = CURRENT_TIMESTAMP
+    WHERE "id" = ${proposalId}
+      AND "status" NOT IN ('succeeded', 'expired', 'rejected')
+  `;
+  return { ok: updated > 0, status: updated > 0 ? "rejected" : "unchanged" };
+}
+
 export async function listAiActionProposals(
   context: { prisma: DbClient; shop: ShopContext },
   actor: TrustedActorContext,

@@ -15,6 +15,7 @@ import type { AiToolCallView } from "@/components/ai/ai-workspace-types";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
 import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import {
