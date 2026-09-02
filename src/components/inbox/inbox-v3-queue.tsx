@@ -186,30 +186,33 @@ function ConversationRow({
             : "bg-background hover:bg-muted/35",
       )}
     >
-      {selectMode ? (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
-            checked
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border/80 bg-background",
-          )}
-        >
-          {checked ? <Check className="size-3" /> : null}
-        </span>
-      ) : null}
       {active && !selectMode ? (
         <span className="absolute inset-block-2 start-0 w-0.5 rounded-full bg-primary" />
       ) : null}
 
-      <Avatar className="mt-0.5 size-9 shrink-0 border border-border/70 bg-background">
-        <AvatarFallback className="bg-primary/7 text-[13px] font-semibold text-primary">
-          {chat.name.charAt(0).toUpperCase() || (
-            <MessageSquareText className="size-4" />
+      {/* Select mode morphs the avatar slot in place (same size/position) into
+          a check target — WhatsApp-style. The row content never shifts. */}
+      {selectMode ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+            checked
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border/70 bg-background text-transparent group-hover:border-primary/60",
           )}
-        </AvatarFallback>
-      </Avatar>
+        >
+          <Check className="size-4" />
+        </span>
+      ) : (
+        <Avatar className="mt-0.5 size-9 shrink-0 border border-border/70 bg-background">
+          <AvatarFallback className="bg-primary/7 text-[13px] font-semibold text-primary">
+            {chat.name.charAt(0).toUpperCase() || (
+              <MessageSquareText className="size-4" />
+            )}
+          </AvatarFallback>
+        </Avatar>
+      )}
 
       <span className="min-w-0 flex-1 overflow-hidden">
         <span className="flex min-w-0 items-center gap-2 overflow-hidden">
@@ -571,33 +574,50 @@ export function InboxV3Queue({
           ) : null}
         </div>
 
+        {/* Selection mode morphs the queue-pills row in place — same height,
+            same visual language. The workflow row below stays visible so the
+            panel layout never jumps while selecting. */}
         {selectMode ? (
           <div
-            className="mt-2 flex flex-wrap items-center gap-1.5"
+            className="mt-2 flex items-center gap-1.5"
             data-inbox-select-toolbar="true"
           >
-            <span className="min-w-0 flex-1 truncate text-2xs font-medium text-foreground">
-              {copy("selectedCount", { count: effectiveSelected.length })}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={deleting}
-              data-inbox-chat-select-all="true"
-              onClick={() => {
-                const allSelected =
-                  rows.length > 0 &&
-                  effectiveSelected.length === rows.length;
-                setSelectedIds(allSelected ? new Set() : new Set(selectableIds));
-              }}
+            <div
+              className="flex min-w-0 flex-1 items-center rounded-full bg-primary/[0.08] p-0.5"
+              role="group"
+              aria-label={copy("selectChats")}
             >
-              {copy("selectAll")}
-            </Button>
+              <span
+                aria-live="polite"
+                className="inline-flex h-7 min-w-0 flex-1 items-center truncate rounded-full bg-background px-3 text-2xs font-semibold shadow-sm"
+              >
+                {copy("selectedCount", { count: effectiveSelected.length })}
+              </span>
+              <button
+                type="button"
+                aria-label={copy("selectAll")}
+                title={copy("selectAll")}
+                data-inbox-chat-select-all="true"
+                disabled={deleting || rows.length === 0}
+                onClick={() => {
+                  const allSelected =
+                    rows.length > 0 &&
+                    effectiveSelected.length === rows.length;
+                  setSelectedIds(
+                    allSelected ? new Set() : new Set(selectableIds),
+                  );
+                }}
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              >
+                <ListChecks className="size-3.5" aria-hidden="true" />
+              </button>
+            </div>
+
             <Button
               type="button"
               variant="destructive"
               size="sm"
+              className="h-8 rounded-full"
               disabled={effectiveSelected.length === 0 || deleting}
               data-inbox-chat-delete="true"
               onClick={() => setDeleteDialogOpen(true)}
@@ -612,22 +632,19 @@ export function InboxV3Queue({
               )}
               {copy("deleteChats")}
             </Button>
-            <Button
+
+            <button
               type="button"
-              variant="ghost"
-              size="icon-sm"
               aria-label={copy("cancelSelection")}
+              title={copy("cancelSelection")}
               disabled={deleting}
               onClick={exitSelectMode}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             >
-              <X className="size-4" aria-hidden="true" />
-            </Button>
-            {deleteError ? (
-              <p className="w-full text-2xs text-destructive">{deleteError}</p>
-            ) : null}
+              <X className="size-3.5" aria-hidden="true" />
+            </button>
           </div>
         ) : (
-          <>
         <div className="mt-2 flex items-center gap-1.5">
           <div
             className="flex min-w-0 flex-1 gap-1 rounded-full bg-muted/25 p-0.5"
@@ -695,6 +712,7 @@ export function InboxV3Queue({
             </button>
           ) : null}
         </div>
+        )}
 
         <div
           className="mt-2 flex flex-wrap gap-1"
@@ -721,8 +739,12 @@ export function InboxV3Queue({
             );
           })}
         </div>
-          </>
-        )}
+
+        {selectMode && deleteError ? (
+          <p className="mt-1.5 text-2xs text-destructive" role="alert">
+            {deleteError}
+          </p>
+        ) : null}
       </div>
 
       <ScrollArea className="min-h-0 flex-1">

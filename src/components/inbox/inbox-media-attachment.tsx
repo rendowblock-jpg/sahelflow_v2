@@ -1,7 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, FileText, ImageIcon, Loader2, Mic, Video } from "lucide-react";
+import {
+  Download,
+  FileArchive,
+  FileSpreadsheet,
+  FileText,
+  ImageIcon,
+  Loader2,
+  Mic,
+  Music,
+  Presentation,
+  Video,
+  type LucideIcon,
+} from "lucide-react";
 
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { VoiceNotePlayer } from "@/components/inbox/voice-note-player";
@@ -60,6 +72,108 @@ function MediaIcon({ kind }: { kind: string | undefined }) {
     default:
       return <FileText className="size-4" aria-hidden="true" />;
   }
+}
+
+type DocumentKind = { label: string; Icon: LucideIcon };
+
+const DOCUMENT_KIND_FALLBACK: DocumentKind = { label: "file", Icon: FileText };
+
+// Attachment families render as stable Latin brand labels (Word, PDF, Excel,
+// ZIP, …) instead of raw MIME strings. File-format names are universal in the
+// Algerian market and keep the metadata line direction-safe (dir="ltr").
+const DOCUMENT_KIND_BY_EXTENSION: Readonly<Record<string, DocumentKind>> = {
+  doc: { label: "Word", Icon: FileText },
+  docx: { label: "Word", Icon: FileText },
+  rtf: { label: "Word", Icon: FileText },
+  odt: { label: "Word", Icon: FileText },
+  pdf: { label: "PDF", Icon: FileText },
+  xls: { label: "Excel", Icon: FileSpreadsheet },
+  xlsx: { label: "Excel", Icon: FileSpreadsheet },
+  ods: { label: "Excel", Icon: FileSpreadsheet },
+  csv: { label: "CSV", Icon: FileSpreadsheet },
+  tsv: { label: "CSV", Icon: FileSpreadsheet },
+  ppt: { label: "PowerPoint", Icon: Presentation },
+  pptx: { label: "PowerPoint", Icon: Presentation },
+  odp: { label: "PowerPoint", Icon: Presentation },
+  zip: { label: "ZIP", Icon: FileArchive },
+  rar: { label: "RAR", Icon: FileArchive },
+  "7z": { label: "7Z", Icon: FileArchive },
+  gz: { label: "Archive", Icon: FileArchive },
+  tar: { label: "Archive", Icon: FileArchive },
+  txt: { label: "TXT", Icon: FileText },
+  md: { label: "TXT", Icon: FileText },
+  jpg: { label: "image", Icon: ImageIcon },
+  jpeg: { label: "image", Icon: ImageIcon },
+  png: { label: "image", Icon: ImageIcon },
+  gif: { label: "image", Icon: ImageIcon },
+  webp: { label: "image", Icon: ImageIcon },
+  avif: { label: "image", Icon: ImageIcon },
+  heic: { label: "image", Icon: ImageIcon },
+  mp4: { label: "video", Icon: Video },
+  mov: { label: "video", Icon: Video },
+  mkv: { label: "video", Icon: Video },
+  avi: { label: "video", Icon: Video },
+  webm: { label: "video", Icon: Video },
+  "3gp": { label: "video", Icon: Video },
+  mp3: { label: "audio", Icon: Music },
+  ogg: { label: "audio", Icon: Music },
+  oga: { label: "audio", Icon: Music },
+  opus: { label: "audio", Icon: Music },
+  wav: { label: "audio", Icon: Music },
+  m4a: { label: "audio", Icon: Music },
+  aac: { label: "audio", Icon: Music },
+  amr: { label: "audio", Icon: Music },
+  apk: { label: "APK", Icon: FileArchive },
+  epub: { label: "EPUB", Icon: FileText },
+};
+
+const DOCUMENT_KIND_BY_MIME: ReadonlyArray<{
+  pattern: RegExp;
+  kind: DocumentKind;
+}> = [
+  { pattern: /wordprocessingml|msword/, kind: { label: "Word", Icon: FileText } },
+  {
+    pattern: /spreadsheetml|ms-excel/,
+    kind: { label: "Excel", Icon: FileSpreadsheet },
+  },
+  {
+    pattern: /presentationml|ms-powerpoint/,
+    kind: { label: "PowerPoint", Icon: Presentation },
+  },
+  { pattern: /pdf/, kind: { label: "PDF", Icon: FileText } },
+  {
+    pattern: /zip|x-7z|x-rar|x-tar|gzip|bzip2/,
+    kind: { label: "Archive", Icon: FileArchive },
+  },
+  { pattern: /text\/csv/, kind: { label: "CSV", Icon: FileSpreadsheet } },
+  { pattern: /^text\//, kind: { label: "TXT", Icon: FileText } },
+  { pattern: /^image\//, kind: { label: "image", Icon: ImageIcon } },
+  { pattern: /^video\//, kind: { label: "video", Icon: Video } },
+  { pattern: /^audio\//, kind: { label: "audio", Icon: Music } },
+  {
+    pattern: /android\.package-archive/,
+    kind: { label: "APK", Icon: FileArchive },
+  },
+  { pattern: /epub\+zip/, kind: { label: "EPUB", Icon: FileText } },
+];
+
+export function documentKind(
+  fileName: string | null | undefined,
+  mimeType: string | null | undefined,
+): DocumentKind {
+  const extension = fileName?.includes(".")
+    ? (fileName.split(".").at(-1)?.toLowerCase() ?? null)
+    : null;
+  if (extension && DOCUMENT_KIND_BY_EXTENSION[extension]) {
+    return DOCUMENT_KIND_BY_EXTENSION[extension];
+  }
+  if (mimeType) {
+    const match = DOCUMENT_KIND_BY_MIME.find((rule) =>
+      rule.pattern.test(mimeType),
+    );
+    if (match) return match.kind;
+  }
+  return DOCUMENT_KIND_FALLBACK;
 }
 
 function formatBytes(value: number, locale: "ar" | "fr" | "en"): string {
@@ -363,8 +477,9 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
   if (!attachment) return null;
 
   const label = mediaLabel(message.messageType, locale);
+  const kind = documentKind(attachment.fileName, attachment.mimeType);
   const metadata = [
-    attachment.mimeType,
+    kind.label,
     attachment.sizeBytes !== null
       ? formatBytes(attachment.sizeBytes, locale)
       : null,
@@ -449,79 +564,112 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
   const inlineImageSrc = thumbnailUrl ?? readUrl;
 
   const showInlinePreview = !previewFailed;
+  const KindIcon = kind.Icon;
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <MediaIcon kind={message.messageType} />
-        <span>{label}</span>
-      </div>
-
-      {showInlinePreview &&
-      (message.messageType === "image" || message.messageType === "sticker") ? (
-        <div
-          className={cn(
-            "overflow-hidden rounded-xl border border-border/60 bg-muted/20",
-            message.messageType === "sticker" && "w-fit",
-          )}
-        >
-          {/* The authenticated endpoint is dynamic and intentionally bypasses Next image optimization. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={inlineImageSrc}
-            alt={label}
-            loading="lazy"
-            decoding="async"
-            onError={() => {
-              if (inlineImageSrc === thumbnailUrl) {
-                setThumbnailFailed(true);
-              } else {
-                setPreviewFailed(true);
-              }
-            }}
-            width={attachment.width ?? (message.messageType === "sticker" ? 192 : 640)}
-            height={attachment.height ?? (message.messageType === "sticker" ? 192 : 480)}
-            className={cn(
-              "block h-auto max-h-[28rem] w-auto max-w-full object-contain",
-              message.messageType === "sticker" && "max-h-48 max-w-48",
-            )}
-          />
+      {message.messageType === "document" ? (
+        // WhatsApp-style document card: one identity row (type tile + name +
+        // friendly format/size) instead of a stacked header + raw MIME lines.
+        // Direction-neutral by contract: media never branches on message
+        // direction — only the surrounding bubble is styled per direction.
+        <div className="flex items-start gap-2.5">
+          <span
+            aria-hidden="true"
+            className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground"
+          >
+            <KindIcon className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span
+              className="block break-words text-sm font-medium leading-5"
+              dir="auto"
+            >
+              {attachment.fileName ?? label}
+            </span>
+            <span
+              className="mt-0.5 block text-xs text-muted-foreground"
+              dir="ltr"
+            >
+              {metadata}
+            </span>
+          </span>
         </div>
-      ) : null}
+      ) : (
+        <>
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <MediaIcon kind={message.messageType} />
+            <span>{label}</span>
+          </div>
 
-      {showInlinePreview && message.messageType === "video" ? (
-        <video
-          src={readUrl}
-          poster={thumbnailUrl ?? undefined}
-          controls
-          playsInline
-          preload="metadata"
-          onError={() => setPreviewFailed(true)}
-          aria-label={label}
-          className="max-h-[28rem] w-full max-w-[34rem] rounded-xl border border-border/60 bg-black"
-        />
-      ) : null}
+          {showInlinePreview &&
+          (message.messageType === "image" ||
+            message.messageType === "sticker") ? (
+            <div
+              className={cn(
+                "overflow-hidden rounded-xl border border-border/60 bg-muted/20",
+                message.messageType === "sticker" && "w-fit",
+              )}
+            >
+              {/* The authenticated endpoint is dynamic and intentionally bypasses Next image optimization. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={inlineImageSrc}
+                alt={label}
+                loading="lazy"
+                decoding="async"
+                onError={() => {
+                  if (inlineImageSrc === thumbnailUrl) {
+                    setThumbnailFailed(true);
+                  } else {
+                    setPreviewFailed(true);
+                  }
+                }}
+                width={attachment.width ?? (message.messageType === "sticker" ? 192 : 640)}
+                height={attachment.height ?? (message.messageType === "sticker" ? 192 : 480)}
+                className={cn(
+                  "block h-auto max-h-[28rem] w-auto max-w-full object-contain",
+                  message.messageType === "sticker" && "max-h-48 max-w-48",
+                )}
+              />
+            </div>
+          ) : null}
 
-      {showInlinePreview && message.messageType === "audio" ? (
-        <VoiceNotePlayer src={readUrl} label={label} locale={locale} />
-      ) : null}
+          {showInlinePreview && message.messageType === "video" ? (
+            <video
+              src={readUrl}
+              poster={thumbnailUrl ?? undefined}
+              controls
+              playsInline
+              preload="metadata"
+              onError={() => setPreviewFailed(true)}
+              aria-label={label}
+              className="max-h-[28rem] w-full max-w-[34rem] rounded-xl border border-border/60 bg-black"
+            />
+          ) : null}
 
-      {previewFailed ? (
-        <p className="text-xs leading-5 text-muted-foreground" role="status">
-          {getInboxMediaCopy(locale, "previewUnavailable")}
-        </p>
-      ) : null}
+          {showInlinePreview && message.messageType === "audio" ? (
+            <VoiceNotePlayer src={readUrl} label={label} locale={locale} />
+          ) : null}
 
-      {attachment.fileName ? (
-        <p className="break-all text-xs font-medium" dir="auto">
-          {attachment.fileName}
-        </p>
-      ) : null}
-      {metadata ? (
-        <p className="text-xs text-muted-foreground" dir="ltr">
-          {metadata}
-        </p>
-      ) : null}
+          {previewFailed ? (
+            <p className="text-xs leading-5 text-muted-foreground" role="status">
+              {getInboxMediaCopy(locale, "previewUnavailable")}
+            </p>
+          ) : null}
+
+          {attachment.fileName ? (
+            <p className="break-all text-xs font-medium" dir="auto">
+              {attachment.fileName}
+            </p>
+          ) : null}
+          {metadata ? (
+            <p className="text-xs text-muted-foreground" dir="ltr">
+              {metadata}
+            </p>
+          ) : null}
+        </>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <DownloadButton
@@ -534,7 +682,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
               ? getInboxMediaCopy(locale, "openDocument")
               : getInboxMediaCopy(locale, "download")
           }
-          compact={message.messageType !== "document"}
+          compact
         />
         <span className="text-2xs leading-4 text-muted-foreground">
           {getInboxMediaCopy(locale, "ready")}

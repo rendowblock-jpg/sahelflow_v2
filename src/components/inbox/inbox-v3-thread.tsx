@@ -35,7 +35,10 @@ import {
 } from "@/components/inbox/conversation-controls";
 import { ConversationStatusBadge } from "@/components/inbox/conversation-status-badge";
 import { InboxCustomerWorkPanel } from "@/components/inbox/inbox-customer-work-panel";
-import { InboxMediaAttachment } from "@/components/inbox/inbox-media-attachment";
+import {
+  InboxMediaAttachment,
+  documentKind,
+} from "@/components/inbox/inbox-media-attachment";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
 import { MessageStatus } from "@/components/inbox/message-status";
@@ -351,8 +354,13 @@ function MessageBubble({
   );
   const canExtract = inbound && message.body.trim().length > 10;
 
+  // Chat geometry is direction-independent on purpose: inbound bubbles sit on
+  // the physical left and outbound on the physical right in every locale —
+  // the convention Algerian sellers know from WhatsApp in French/English.
+  // Pinning dir="ltr" here stops the RTL document from flipping justify-* and
+  // the logical corner tails; message text itself stays dir="auto" below.
   return (
-    <div className="group/message space-y-1.5">
+    <div className="group/message space-y-1.5" dir="ltr">
       <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
         <div
           className={cn(
@@ -421,7 +429,10 @@ function MessageBubble({
                     message.attachment.sizeBytes !== null) ? (
                     <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
                       {[
-                        message.attachment.mimeType,
+                        documentKind(
+                          message.attachment.fileName ?? null,
+                          message.attachment.mimeType,
+                        ).label,
                         message.attachment.sizeBytes !== null
                           ? formatBytes(message.attachment.sizeBytes, locale)
                           : null,
