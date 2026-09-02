@@ -18,7 +18,11 @@ describe("WhatsApp outbound video source boundary", () => {
     expect(thread).toContain("void sendVideo(file, quotedId)");
     expect(workspace).toContain("MAX_OUTBOUND_VIDEO_BYTES = 64 * 1024 * 1024");
     expect(workspace).toContain('"/api/whatsapp/send-video"');
-    expect(workspace).toContain('form.set("video", file');
+        // Ledger INB-28 disposition: the four duplicated send bodies collapsed
+    // into one factory; the per-media form field lives in the spec table
+    // (fieldName) and the shared call site is form.set(spec.fieldName, file…).
+    expect(workspace).toContain("form.set(spec.fieldName, file");
+    expect(workspace).toContain('fieldName: "video"');
     expect(workspace).toContain("void monitorWhatsAppEffect(");
   });
 

@@ -20,7 +20,11 @@ describe("WhatsApp outbound voice source boundary", () => {
       "MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024",
     );
     expect(workspace).toContain('"/api/whatsapp/send-voice"');
-    expect(workspace).toContain('form.set("audio", file');
+        // Ledger INB-28 disposition: the four duplicated send bodies collapsed
+    // into one factory; the per-media form field lives in the spec table
+    // (fieldName) and the shared call site is form.set(spec.fieldName, file…).
+    expect(workspace).toContain("form.set(spec.fieldName, file");
+    expect(workspace).toContain('fieldName: "audio"');
     expect(workspace).toContain("void monitorWhatsAppEffect(");
   });
 

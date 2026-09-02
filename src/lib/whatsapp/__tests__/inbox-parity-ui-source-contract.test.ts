@@ -23,7 +23,9 @@ describe("inbox conversation-native interaction source contract", () => {
     expect(hook).toContain("quotedMessageId");
     expect(hook).toContain("quotedMessageId: trimmedQuotedId");
     // All five send entry points accept and forward the quoted target.
-    expect(hook.match(/quotedMessageId\?: string \| null/g)?.length).toBe(5);
+    // Ledger INB-28 disposition: the four media senders share ONE factory
+    // signature, so the counted occurrences are sendReply + the factory.
+    expect(hook.match(/quotedMessageId\?: string \| null/g)?.length).toBe(2);
   });
 
   it("routes paste and drop ingestion through the validated send paths", () => {

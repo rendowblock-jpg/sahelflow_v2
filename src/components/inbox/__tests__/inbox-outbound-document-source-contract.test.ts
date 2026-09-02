@@ -21,7 +21,11 @@ describe("WhatsApp outbound document source boundary", () => {
       "MAX_OUTBOUND_DOCUMENT_BYTES = 64 * 1024 * 1024",
     );
     expect(workspace).toContain('"/api/whatsapp/send-document"');
-    expect(workspace).toContain('form.set("document", file');
+        // Ledger INB-28 disposition: the four duplicated send bodies collapsed
+    // into one factory; the per-media form field lives in the spec table
+    // (fieldName) and the shared call site is form.set(spec.fieldName, file…).
+    expect(workspace).toContain("form.set(spec.fieldName, file");
+    expect(workspace).toContain('fieldName: "document"');
     expect(workspace).toContain("void monitorWhatsAppEffect(");
   });
 

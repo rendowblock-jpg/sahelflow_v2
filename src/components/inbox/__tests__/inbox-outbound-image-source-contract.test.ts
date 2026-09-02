@@ -19,7 +19,11 @@ describe("WhatsApp outbound image source boundary", () => {
     expect(thread).toContain("disabled={sending || !canSend}");
     expect(workspace).toContain("MAX_OUTBOUND_IMAGE_BYTES = 20 * 1024 * 1024");
     expect(workspace).toContain('"/api/whatsapp/send-image"');
-    expect(workspace).toContain('form.set("image", file');
+        // Ledger INB-28 disposition: the four duplicated send bodies collapsed
+    // into one factory; the per-media form field lives in the spec table
+    // (fieldName) and the shared call site is form.set(spec.fieldName, file…).
+    expect(workspace).toContain("form.set(spec.fieldName, file");
+    expect(workspace).toContain('fieldName: "image"');
     expect(workspace).toContain("void monitorWhatsAppEffect(");
     expect(workspace).toContain("await loadMessages(chat, { background: true })");
   });
@@ -42,7 +46,7 @@ describe("WhatsApp outbound image source boundary", () => {
 
   it("removes only unqueued optimistic images and reloads canonical messages", () => {
     const workspace = source("src/hooks/use-inbox-workspace.ts");
-    const sendImageStart = workspace.indexOf("const sendImage = useCallback");
+    const sendImageStart = workspace.indexOf("const createMediaSender = useCallback");
     const sendImageEnd = workspace.indexOf("const connectWhatsApp", sendImageStart);
     const sendImage = workspace.slice(sendImageStart, sendImageEnd);
 

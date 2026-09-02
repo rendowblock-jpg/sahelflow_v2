@@ -322,6 +322,65 @@ function inboxMessagesEqual(
   });
 }
 
+/**
+ * Ledger INB-28 — the per-media spec table. Guards keep the exact
+ * authenticated type gates the route contracts pin; the four former
+ * duplicated senders share one factory through these specs.
+ */
+type MediaSendSpec = {
+  kind: "image" | "video" | "document" | "audio";
+  endpoint:
+    | "/api/whatsapp/send-image"
+    | "/api/whatsapp/send-video"
+    | "/api/whatsapp/send-document"
+    | "/api/whatsapp/send-voice";
+  fieldName: string;
+  fallbackFileName: string;
+  maxBytes: number;
+  rejects: (mediaType: string) => boolean;
+  /** WhatsApp carries the composer caption for media; audio never does. */
+  carriesCaption: boolean;
+};
+
+const MEDIA_SEND_SPECS = {
+  image: {
+    kind: "image",
+    endpoint: "/api/whatsapp/send-image",
+    fieldName: "image",
+    fallbackFileName: "image",
+    maxBytes: MAX_OUTBOUND_IMAGE_BYTES,
+    rejects: (mediaType: string) => !SAFE_OUTBOUND_IMAGE_TYPES.has(mediaType),
+    carriesCaption: true,
+  },
+  video: {
+    kind: "video",
+    endpoint: "/api/whatsapp/send-video",
+    fieldName: "video",
+    fallbackFileName: "video.mp4",
+    maxBytes: MAX_OUTBOUND_VIDEO_BYTES,
+    rejects: (mediaType: string) => mediaType !== "video/mp4",
+    carriesCaption: true,
+  },
+  document: {
+    kind: "document",
+    endpoint: "/api/whatsapp/send-document",
+    fieldName: "document",
+    fallbackFileName: "document",
+    maxBytes: MAX_OUTBOUND_DOCUMENT_BYTES,
+    rejects: (mediaType: string) => !SAFE_OUTBOUND_DOCUMENT_TYPES.has(mediaType),
+    carriesCaption: true,
+  },
+  voice: {
+    kind: "audio",
+    endpoint: "/api/whatsapp/send-voice",
+    fieldName: "audio",
+    fallbackFileName: "audio",
+    maxBytes: MAX_OUTBOUND_VOICE_BYTES,
+    rejects: (mediaType: string) => !SAFE_OUTBOUND_VOICE_TYPES.has(mediaType),
+    carriesCaption: false,
+  },
+} as const satisfies Record<string, MediaSendSpec>;
+
 export function useInboxWorkspace() {
   const searchParams = useSearchParams();
   const requestedConversationId = normalizeDeepLinkConversationId(
@@ -1916,190 +1975,201 @@ export function useInboxWorkspace() {
     t,
   ]);
 
-  const sendImage = useCallback(
-    async (file: File, quotedMessageId?: string | null) => {
-      const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
-      const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
-      if (
-        !chat ||
-        chat.channel !== "whatsapp" ||
-        !chat.transportId ||
-        effectiveStatus !== "connected" ||
-        !canReply ||
-        sendingRef.current
-      ) {
-        return;
-      }
-      if (
-        file.size <= 0 ||
-        file.size > MAX_OUTBOUND_IMAGE_BYTES ||
-        !SAFE_OUTBOUND_IMAGE_TYPES.has(mediaType)
-      ) {
-        setSendError(t("inbox.sendFailed"));
-        return;
-      }
-
-      const trimmedQuotedId = quotedMessageId?.trim() || null;
-      const quotedTarget = trimmedQuotedId
-        ? messagesRef.current.find((message) => message.id === trimmedQuotedId) ?? null
-        : null;
-      const tempId = crypto.randomUUID();
-      const caption = replyText.trim();
-      let knownEffectKey: string | null = null;
-      const clearAcceptedDraft = () => {
-        if (activeChatRef.current?.conversationId === chat.conversationId) {
-          setReplyText("");
+  // Ledger INB-28: one durable media-send factory. The four former ~200-line
+  // copies (image/video/document/voice) differed only in their spec — the
+  // endpoint, the form field, the bounded byte ceiling, the authenticated
+  // media-type gate, the attachment kind and whether WhatsApp carries the
+  // composer caption. Every behavioral guarantee is unchanged: bounded files,
+  // optimistic message with quoted provenance, upload progress + in-flight
+  // cancellation, durable effect-key reconciliation, pre-effect abort
+  // dropping only the optimistic row, and the shared sending gate.
+  const createMediaSender = useCallback(
+    (spec: MediaSendSpec) =>
+      async (file: File, quotedMessageId?: string | null) => {
+        const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
+        const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+        if (
+          !chat ||
+          chat.channel !== "whatsapp" ||
+          !chat.transportId ||
+          effectiveStatus !== "connected" ||
+          !canReply ||
+          sendingRef.current
+        ) {
+          return;
         }
-        void persistDraft(chat.conversationId, "");
-      };
-      sendingRef.current = true;
-      setSending(true);
-      setSendError(null);
-      mutateMessages(chat.conversationId, (current) => [
-        ...current,
-        {
-          id: tempId,
-          body: caption,
-          direction: "outbound",
-          timestamp: Date.now(),
-          messageType: "image",
-          deliveryStatus: "sending",
-          ...(trimmedQuotedId
-            ? {
-                quotedMessageId: trimmedQuotedId,
-                quoted: quotedTarget
-                  ? {
-                      fromMe: quotedTarget.direction === "outbound",
-                      preview: Array.from(quotedTarget.body).slice(0, 200).join(""),
-                      messageType: quotedTarget.messageType ?? null,
-                    }
-                  : null,
-              }
-            : {}),
-          attachment: {
-            formatVersion: 1,
-            kind: "image",
-            state: "ready",
-            mimeType: mediaType,
-            fileName: file.name || null,
-            sizeBytes: file.size,
-            durationSeconds: null,
-            width: null,
-            height: null,
-            voiceMessage: false,
-            location: null,
-            contact: null,
-            failureCode: null,
-          },
-        },
-      ]);
-
-      try {
-        const form = new FormData();
-        form.set("clientMessageId", tempId);
-        form.set("to", chat.transportId);
-        form.set("caption", caption);
-        if (trimmedQuotedId) form.set("quotedMessageId", trimmedQuotedId);
-        form.set("image", file, file.name || "image");
-        const { status: responseStatus, data } = await postFormWithUploadProgress(
-          "/api/whatsapp/send-image",
-          form,
-          (percent) => markUploadProgress(tempId, percent),
-          (abort) => uploadCancelRef.current.set(tempId, abort),
-        );
-        knownEffectKey = data.effectKey ?? null;
-        clearUploadState(tempId);
-
-        if (responseStatus === 202 && data.accepted && data.effectKey) {
-          clearAcceptedDraft();
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? {
-                    ...message,
-                    outboxEffectKey: data.effectKey,
-                    outboxState: data.state,
-                  }
-                : message,
-            ),
-          );
-          await loadMessages(chat, { background: true });
-          void monitorWhatsAppEffect(
-            chat.conversationId,
-            data.effectKey,
-            tempId,
-          );
-          void loadChats();
+        if (
+          file.size <= 0 ||
+          file.size > spec.maxBytes ||
+          spec.rejects(mediaType)
+        ) {
+          setSendError(t("inbox.sendFailed"));
           return;
         }
 
-        if (!(responseStatus >= 200 && responseStatus < 300) || !data.ok) {
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? {
-                    ...message,
-                    deliveryStatus: "failed",
-                    outboxEffectKey: data.effectKey,
-                    outboxState: data.state,
-                  }
-                : message,
-            ),
+        const trimmedQuotedId = quotedMessageId?.trim() || null;
+        const quotedTarget = trimmedQuotedId
+          ? messagesRef.current.find((message) => message.id === trimmedQuotedId) ?? null
+          : null;
+        const tempId = crypto.randomUUID();
+        const caption = spec.carriesCaption ? replyText.trim() : "";
+        let knownEffectKey: string | null = null;
+        const clearAcceptedDraft = () => {
+          if (activeChatRef.current?.conversationId === chat.conversationId) {
+            setReplyText("");
+          }
+          void persistDraft(chat.conversationId, "");
+        };
+        sendingRef.current = true;
+        setSending(true);
+        setSendError(null);
+        // WhatsApp audio carries no caption: the composer draft is left
+        // intact and the canonical Message body is empty.
+        mutateMessages(chat.conversationId, (current) => [
+          ...current,
+          {
+            id: tempId,
+            body: caption,
+            direction: "outbound",
+            timestamp: Date.now(),
+            messageType: spec.kind,
+            deliveryStatus: "sending",
+            ...(trimmedQuotedId
+              ? {
+                  quotedMessageId: trimmedQuotedId,
+                  quoted: quotedTarget
+                    ? {
+                        fromMe: quotedTarget.direction === "outbound",
+                        preview: Array.from(quotedTarget.body).slice(0, 200).join(""),
+                        messageType: quotedTarget.messageType ?? null,
+                      }
+                    : null,
+                }
+              : {}),
+            attachment: {
+              formatVersion: 1,
+              kind: spec.kind,
+              state: "ready",
+              mimeType: mediaType,
+              fileName: spec.kind === "audio" ? null : file.name || null,
+              sizeBytes: file.size,
+              durationSeconds: null,
+              width: null,
+              height: null,
+              voiceMessage: false,
+              location: null,
+              contact: null,
+              failureCode: null,
+            },
+          },
+        ]);
+
+        try {
+          const form = new FormData();
+          form.set("clientMessageId", tempId);
+          form.set("to", chat.transportId);
+          if (spec.carriesCaption) form.set("caption", caption);
+          if (trimmedQuotedId) form.set("quotedMessageId", trimmedQuotedId);
+          form.set(spec.fieldName, file, file.name || spec.fallbackFileName);
+          const { status: responseStatus, data } = await postFormWithUploadProgress(
+            spec.endpoint,
+            form,
+            (percent) => markUploadProgress(tempId, percent),
+            (abort) => uploadCancelRef.current.set(tempId, abort),
           );
-          if (data.effectKey) {
+          knownEffectKey = data.effectKey ?? null;
+          clearUploadState(tempId);
+
+          if (responseStatus === 202 && data.accepted && data.effectKey) {
+            if (spec.carriesCaption) clearAcceptedDraft();
+            mutateMessages(chat.conversationId, (current) =>
+              current.map((message) =>
+                message.id === tempId
+                  ? {
+                      ...message,
+                      outboxEffectKey: data.effectKey,
+                      outboxState: data.state,
+                    }
+                  : message,
+              ),
+            );
+            await loadMessages(chat, { background: true });
+            void monitorWhatsAppEffect(
+              chat.conversationId,
+              data.effectKey,
+              tempId,
+            );
+            void loadChats();
+            return;
+          }
+
+          if (!(responseStatus >= 200 && responseStatus < 300) || !data.ok) {
+            mutateMessages(chat.conversationId, (current) =>
+              current.map((message) =>
+                message.id === tempId
+                  ? {
+                      ...message,
+                      deliveryStatus: "failed",
+                      outboxEffectKey: data.effectKey,
+                      outboxState: data.state,
+                    }
+                  : message,
+              ),
+            );
+            if (data.effectKey) {
+              await loadMessages(chat, { background: true });
+            }
+            throw new Error(
+              data.requiresDuplicateConfirmation
+                ? t("inbox.whatsappAmbiguous")
+                : t("inbox.sendFailed"),
+            );
+          }
+
+          mutateMessages(chat.conversationId, (current) =>
+            reconcileInboxProviderMessage(current, tempId, data.id, {
+              deliveryStatus: "sent",
+              outboxEffectKey: data.effectKey,
+              outboxState: "succeeded",
+            }),
+          );
+          if (spec.carriesCaption) clearAcceptedDraft();
+          await loadMessages(chat, { background: true });
+          void loadChats();
+        } catch (error) {
+          clearUploadState(tempId);
+          if (error instanceof DOMException && error.name === "AbortError") {
+            // Pre-effect cancellation (#317): the request never completed, so
+            // no durable intent can exist. Drop only the optimistic message.
+            mutateMessages(chat.conversationId, (current) =>
+              current.filter((message) => message.id !== tempId),
+            );
+            return;
+          }
+          if (knownEffectKey) {
+            mutateMessages(chat.conversationId, (current) =>
+              current.map((message) =>
+                message.id === tempId
+                  ? { ...message, deliveryStatus: "failed" }
+                  : message,
+              ),
+            );
+          } else {
+            mutateMessages(chat.conversationId, (current) =>
+              current.filter((message) => message.id !== tempId),
+            );
             await loadMessages(chat, { background: true });
           }
-          throw new Error(
-            data.requiresDuplicateConfirmation
-              ? t("inbox.whatsappAmbiguous")
-              : t("inbox.sendFailed"),
-          );
+          if (activeChatRef.current?.conversationId === chat.conversationId) {
+            setSendError(
+              error instanceof Error ? error.message : t("inbox.sendFailed"),
+            );
+          }
+        } finally {
+          sendingRef.current = false;
+          setSending(false);
         }
-
-        mutateMessages(chat.conversationId, (current) =>
-          reconcileInboxProviderMessage(current, tempId, data.id, {
-            deliveryStatus: "sent",
-            outboxEffectKey: data.effectKey,
-            outboxState: "succeeded",
-          }),
-        );
-        clearAcceptedDraft();
-        await loadMessages(chat, { background: true });
-        void loadChats();
-      } catch (error) {
-        clearUploadState(tempId);
-        if (error instanceof DOMException && error.name === "AbortError") {
-          // Pre-effect cancellation (#317): the request never completed, so
-          // no durable intent can exist. Drop only the optimistic message.
-          mutateMessages(chat.conversationId, (current) =>
-            current.filter((message) => message.id !== tempId),
-          );
-          return;
-        }
-        if (knownEffectKey) {
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? { ...message, deliveryStatus: "failed" }
-                : message,
-            ),
-          );
-        } else {
-          mutateMessages(chat.conversationId, (current) =>
-            current.filter((message) => message.id !== tempId),
-          );
-          await loadMessages(chat, { background: true });
-        }
-        if (activeChatRef.current?.conversationId === chat.conversationId) {
-          setSendError(
-            error instanceof Error ? error.message : t("inbox.sendFailed"),
-          );
-        }
-      } finally {
-        sendingRef.current = false;
-        setSending(false);
-      }
-    },
+      },
     [
       activeChatId,
       canReply,
@@ -2118,600 +2188,13 @@ export function useInboxWorkspace() {
     ],
   );
 
-  const sendVideo = useCallback(
-    async (file: File, quotedMessageId?: string | null) => {
-      const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
-      const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
-      if (
-        !chat ||
-        chat.channel !== "whatsapp" ||
-        !chat.transportId ||
-        effectiveStatus !== "connected" ||
-        !canReply ||
-        sendingRef.current
-      ) {
-        return;
-      }
-      if (
-        file.size <= 0 ||
-        file.size > MAX_OUTBOUND_VIDEO_BYTES ||
-        mediaType !== "video/mp4"
-      ) {
-        setSendError(t("inbox.sendFailed"));
-        return;
-      }
-
-      const trimmedQuotedId = quotedMessageId?.trim() || null;
-      const quotedTarget = trimmedQuotedId
-        ? messagesRef.current.find((message) => message.id === trimmedQuotedId) ?? null
-        : null;
-      const tempId = crypto.randomUUID();
-      const caption = replyText.trim();
-      let knownEffectKey: string | null = null;
-      const clearAcceptedDraft = () => {
-        if (activeChatRef.current?.conversationId === chat.conversationId) {
-          setReplyText("");
-        }
-        void persistDraft(chat.conversationId, "");
-      };
-      sendingRef.current = true;
-      setSending(true);
-      setSendError(null);
-      mutateMessages(chat.conversationId, (current) => [
-        ...current,
-        {
-          id: tempId,
-          body: caption,
-          direction: "outbound",
-          timestamp: Date.now(),
-          messageType: "video",
-          deliveryStatus: "sending",
-          ...(trimmedQuotedId
-            ? {
-                quotedMessageId: trimmedQuotedId,
-                quoted: quotedTarget
-                  ? {
-                      fromMe: quotedTarget.direction === "outbound",
-                      preview: Array.from(quotedTarget.body).slice(0, 200).join(""),
-                      messageType: quotedTarget.messageType ?? null,
-                    }
-                  : null,
-              }
-            : {}),
-          attachment: {
-            formatVersion: 1,
-            kind: "video",
-            state: "ready",
-            mimeType: mediaType,
-            fileName: file.name || null,
-            sizeBytes: file.size,
-            durationSeconds: null,
-            width: null,
-            height: null,
-            voiceMessage: false,
-            location: null,
-            contact: null,
-            failureCode: null,
-          },
-        },
-      ]);
-
-      try {
-        const form = new FormData();
-        form.set("clientMessageId", tempId);
-        form.set("to", chat.transportId);
-        form.set("caption", caption);
-        if (trimmedQuotedId) form.set("quotedMessageId", trimmedQuotedId);
-        form.set("video", file, file.name || "video.mp4");
-        const { status: responseStatus, data } = await postFormWithUploadProgress(
-          "/api/whatsapp/send-video",
-          form,
-          (percent) => markUploadProgress(tempId, percent),
-          (abort) => uploadCancelRef.current.set(tempId, abort),
-        );
-        knownEffectKey = data.effectKey ?? null;
-        clearUploadState(tempId);
-
-        if (responseStatus === 202 && data.accepted && data.effectKey) {
-          clearAcceptedDraft();
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? {
-                    ...message,
-                    outboxEffectKey: data.effectKey,
-                    outboxState: data.state,
-                  }
-                : message,
-            ),
-          );
-          await loadMessages(chat, { background: true });
-          void monitorWhatsAppEffect(
-            chat.conversationId,
-            data.effectKey,
-            tempId,
-          );
-          void loadChats();
-          return;
-        }
-
-        if (!(responseStatus >= 200 && responseStatus < 300) || !data.ok) {
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? {
-                    ...message,
-                    deliveryStatus: "failed",
-                    outboxEffectKey: data.effectKey,
-                    outboxState: data.state,
-                  }
-                : message,
-            ),
-          );
-          if (data.effectKey) {
-            await loadMessages(chat, { background: true });
-          }
-          throw new Error(
-            data.requiresDuplicateConfirmation
-              ? t("inbox.whatsappAmbiguous")
-              : t("inbox.sendFailed"),
-          );
-        }
-
-        mutateMessages(chat.conversationId, (current) =>
-          reconcileInboxProviderMessage(current, tempId, data.id, {
-            deliveryStatus: "sent",
-            outboxEffectKey: data.effectKey,
-            outboxState: "succeeded",
-          }),
-        );
-        clearAcceptedDraft();
-        await loadMessages(chat, { background: true });
-        void loadChats();
-      } catch (error) {
-        clearUploadState(tempId);
-        if (error instanceof DOMException && error.name === "AbortError") {
-          // Pre-effect cancellation (#317): the request never completed, so
-          // no durable intent can exist. Drop only the optimistic message.
-          mutateMessages(chat.conversationId, (current) =>
-            current.filter((message) => message.id !== tempId),
-          );
-          return;
-        }
-        if (knownEffectKey) {
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? { ...message, deliveryStatus: "failed" }
-                : message,
-            ),
-          );
-        } else {
-          mutateMessages(chat.conversationId, (current) =>
-            current.filter((message) => message.id !== tempId),
-          );
-          await loadMessages(chat, { background: true });
-        }
-        if (activeChatRef.current?.conversationId === chat.conversationId) {
-          setSendError(
-            error instanceof Error ? error.message : t("inbox.sendFailed"),
-          );
-        }
-      } finally {
-        sendingRef.current = false;
-        setSending(false);
-      }
-    },
-    [
-      activeChatId,
-      canReply,
-      chats,
-      clearUploadState,
-      effectiveStatus,
-      loadChats,
-      loadMessages,
-      markUploadProgress,
-      monitorWhatsAppEffect,
-      mutateMessages,
-      persistDraft,
-      replyText,
-      setReplyText,
-      t,
-    ],
+  const sendImage = useMemo(() => createMediaSender(MEDIA_SEND_SPECS.image), [createMediaSender]);
+  const sendVideo = useMemo(() => createMediaSender(MEDIA_SEND_SPECS.video), [createMediaSender]);
+  const sendDocument = useMemo(
+    () => createMediaSender(MEDIA_SEND_SPECS.document),
+    [createMediaSender],
   );
-
-  const sendDocument = useCallback(
-    async (file: File, quotedMessageId?: string | null) => {
-      const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
-      const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
-      if (
-        !chat ||
-        chat.channel !== "whatsapp" ||
-        !chat.transportId ||
-        effectiveStatus !== "connected" ||
-        !canReply ||
-        sendingRef.current
-      ) {
-        return;
-      }
-      if (
-        file.size <= 0 ||
-        file.size > MAX_OUTBOUND_DOCUMENT_BYTES ||
-        !SAFE_OUTBOUND_DOCUMENT_TYPES.has(mediaType)
-      ) {
-        setSendError(t("inbox.sendFailed"));
-        return;
-      }
-
-      const trimmedQuotedId = quotedMessageId?.trim() || null;
-      const quotedTarget = trimmedQuotedId
-        ? messagesRef.current.find((message) => message.id === trimmedQuotedId) ?? null
-        : null;
-      const tempId = crypto.randomUUID();
-      const caption = replyText.trim();
-      let knownEffectKey: string | null = null;
-      const clearAcceptedDraft = () => {
-        if (activeChatRef.current?.conversationId === chat.conversationId) {
-          setReplyText("");
-        }
-        void persistDraft(chat.conversationId, "");
-      };
-      sendingRef.current = true;
-      setSending(true);
-      setSendError(null);
-      mutateMessages(chat.conversationId, (current) => [
-        ...current,
-        {
-          id: tempId,
-          body: caption,
-          direction: "outbound",
-          timestamp: Date.now(),
-          messageType: "document",
-          deliveryStatus: "sending",
-          ...(trimmedQuotedId
-            ? {
-                quotedMessageId: trimmedQuotedId,
-                quoted: quotedTarget
-                  ? {
-                      fromMe: quotedTarget.direction === "outbound",
-                      preview: Array.from(quotedTarget.body).slice(0, 200).join(""),
-                      messageType: quotedTarget.messageType ?? null,
-                    }
-                  : null,
-              }
-            : {}),
-          attachment: {
-            formatVersion: 1,
-            kind: "document",
-            state: "ready",
-            mimeType: mediaType,
-            fileName: file.name || null,
-            sizeBytes: file.size,
-            durationSeconds: null,
-            width: null,
-            height: null,
-            voiceMessage: false,
-            location: null,
-            contact: null,
-            failureCode: null,
-          },
-        },
-      ]);
-
-      try {
-        const form = new FormData();
-        form.set("clientMessageId", tempId);
-        form.set("to", chat.transportId);
-        form.set("caption", caption);
-        if (trimmedQuotedId) form.set("quotedMessageId", trimmedQuotedId);
-        form.set("document", file, file.name || "document");
-        const { status: responseStatus, data } = await postFormWithUploadProgress(
-          "/api/whatsapp/send-document",
-          form,
-          (percent) => markUploadProgress(tempId, percent),
-          (abort) => uploadCancelRef.current.set(tempId, abort),
-        );
-        knownEffectKey = data.effectKey ?? null;
-        clearUploadState(tempId);
-
-        if (responseStatus === 202 && data.accepted && data.effectKey) {
-          clearAcceptedDraft();
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? {
-                    ...message,
-                    outboxEffectKey: data.effectKey,
-                    outboxState: data.state,
-                  }
-                : message,
-            ),
-          );
-          await loadMessages(chat, { background: true });
-          void monitorWhatsAppEffect(
-            chat.conversationId,
-            data.effectKey,
-            tempId,
-          );
-          void loadChats();
-          return;
-        }
-
-        if (!(responseStatus >= 200 && responseStatus < 300) || !data.ok) {
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? {
-                    ...message,
-                    deliveryStatus: "failed",
-                    outboxEffectKey: data.effectKey,
-                    outboxState: data.state,
-                  }
-                : message,
-            ),
-          );
-          if (data.effectKey) {
-            await loadMessages(chat, { background: true });
-          }
-          throw new Error(
-            data.requiresDuplicateConfirmation
-              ? t("inbox.whatsappAmbiguous")
-              : t("inbox.sendFailed"),
-          );
-        }
-
-        mutateMessages(chat.conversationId, (current) =>
-          reconcileInboxProviderMessage(current, tempId, data.id, {
-            deliveryStatus: "sent",
-            outboxEffectKey: data.effectKey,
-            outboxState: "succeeded",
-          }),
-        );
-        clearAcceptedDraft();
-        await loadMessages(chat, { background: true });
-        void loadChats();
-      } catch (error) {
-        clearUploadState(tempId);
-        if (error instanceof DOMException && error.name === "AbortError") {
-          // Pre-effect cancellation (#317): the request never completed, so
-          // no durable intent can exist. Drop only the optimistic message.
-          mutateMessages(chat.conversationId, (current) =>
-            current.filter((message) => message.id !== tempId),
-          );
-          return;
-        }
-        if (knownEffectKey) {
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? { ...message, deliveryStatus: "failed" }
-                : message,
-            ),
-          );
-        } else {
-          mutateMessages(chat.conversationId, (current) =>
-            current.filter((message) => message.id !== tempId),
-          );
-          await loadMessages(chat, { background: true });
-        }
-        if (activeChatRef.current?.conversationId === chat.conversationId) {
-          setSendError(
-            error instanceof Error ? error.message : t("inbox.sendFailed"),
-          );
-        }
-      } finally {
-        sendingRef.current = false;
-        setSending(false);
-      }
-    },
-    [
-      activeChatId,
-      canReply,
-      chats,
-      clearUploadState,
-      effectiveStatus,
-      loadChats,
-      loadMessages,
-      markUploadProgress,
-      monitorWhatsAppEffect,
-      mutateMessages,
-      persistDraft,
-      replyText,
-      setReplyText,
-      t,
-    ],
-  );
-
-  const sendVoice = useCallback(
-    async (file: File, quotedMessageId?: string | null) => {
-      const chat = chats.find((entry) => entry.id === activeChatId) ?? null;
-      const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
-      if (
-        !chat ||
-        chat.channel !== "whatsapp" ||
-        !chat.transportId ||
-        effectiveStatus !== "connected" ||
-        !canReply ||
-        sendingRef.current
-      ) {
-        return;
-      }
-      if (
-        file.size <= 0 ||
-        file.size > MAX_OUTBOUND_VOICE_BYTES ||
-        !SAFE_OUTBOUND_VOICE_TYPES.has(mediaType)
-      ) {
-        setSendError(t("inbox.sendFailed"));
-        return;
-      }
-
-      const trimmedQuotedId = quotedMessageId?.trim() || null;
-      const quotedTarget = trimmedQuotedId
-        ? messagesRef.current.find((message) => message.id === trimmedQuotedId) ?? null
-        : null;
-      const tempId = crypto.randomUUID();
-      let knownEffectKey: string | null = null;
-      sendingRef.current = true;
-      setSending(true);
-      setSendError(null);
-      // WhatsApp audio carries no caption: the composer draft is left intact
-      // and the canonical Message body is empty.
-      mutateMessages(chat.conversationId, (current) => [
-        ...current,
-        {
-          id: tempId,
-          body: "",
-          direction: "outbound",
-          timestamp: Date.now(),
-          messageType: "audio",
-          deliveryStatus: "sending",
-          ...(trimmedQuotedId
-            ? {
-                quotedMessageId: trimmedQuotedId,
-                quoted: quotedTarget
-                  ? {
-                      fromMe: quotedTarget.direction === "outbound",
-                      preview: Array.from(quotedTarget.body).slice(0, 200).join(""),
-                      messageType: quotedTarget.messageType ?? null,
-                    }
-                  : null,
-              }
-            : {}),
-          attachment: {
-            formatVersion: 1,
-            kind: "audio",
-            state: "ready",
-            mimeType: mediaType,
-            fileName: null,
-            sizeBytes: file.size,
-            durationSeconds: null,
-            width: null,
-            height: null,
-            voiceMessage: false,
-            location: null,
-            contact: null,
-            failureCode: null,
-          },
-        },
-      ]);
-
-      try {
-        const form = new FormData();
-        form.set("clientMessageId", tempId);
-        form.set("to", chat.transportId);
-        if (trimmedQuotedId) form.set("quotedMessageId", trimmedQuotedId);
-        form.set("audio", file, file.name || "audio");
-        const { status: responseStatus, data } = await postFormWithUploadProgress(
-          "/api/whatsapp/send-voice",
-          form,
-          (percent) => markUploadProgress(tempId, percent),
-          (abort) => uploadCancelRef.current.set(tempId, abort),
-        );
-        knownEffectKey = data.effectKey ?? null;
-        clearUploadState(tempId);
-
-        if (responseStatus === 202 && data.accepted && data.effectKey) {
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? {
-                    ...message,
-                    outboxEffectKey: data.effectKey,
-                    outboxState: data.state,
-                  }
-                : message,
-            ),
-          );
-          await loadMessages(chat, { background: true });
-          void monitorWhatsAppEffect(
-            chat.conversationId,
-            data.effectKey,
-            tempId,
-          );
-          void loadChats();
-          return;
-        }
-
-        if (!(responseStatus >= 200 && responseStatus < 300) || !data.ok) {
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? {
-                    ...message,
-                    deliveryStatus: "failed",
-                    outboxEffectKey: data.effectKey,
-                    outboxState: data.state,
-                  }
-                : message,
-            ),
-          );
-          if (data.effectKey) {
-            await loadMessages(chat, { background: true });
-          }
-          throw new Error(
-            data.requiresDuplicateConfirmation
-              ? t("inbox.whatsappAmbiguous")
-              : t("inbox.sendFailed"),
-          );
-        }
-
-        mutateMessages(chat.conversationId, (current) =>
-          reconcileInboxProviderMessage(current, tempId, data.id, {
-            deliveryStatus: "sent",
-            outboxEffectKey: data.effectKey,
-            outboxState: "succeeded",
-          }),
-        );
-        await loadMessages(chat, { background: true });
-        void loadChats();
-      } catch (error) {
-        clearUploadState(tempId);
-        if (error instanceof DOMException && error.name === "AbortError") {
-          // Pre-effect cancellation (#317): the request never completed, so
-          // no durable intent can exist. Drop only the optimistic message.
-          mutateMessages(chat.conversationId, (current) =>
-            current.filter((message) => message.id !== tempId),
-          );
-          return;
-        }
-        if (knownEffectKey) {
-          mutateMessages(chat.conversationId, (current) =>
-            current.map((message) =>
-              message.id === tempId
-                ? { ...message, deliveryStatus: "failed" }
-                : message,
-            ),
-          );
-        } else {
-          mutateMessages(chat.conversationId, (current) =>
-            current.filter((message) => message.id !== tempId),
-          );
-          await loadMessages(chat, { background: true });
-        }
-        if (activeChatRef.current?.conversationId === chat.conversationId) {
-          setSendError(
-            error instanceof Error ? error.message : t("inbox.sendFailed"),
-          );
-        }
-      } finally {
-        sendingRef.current = false;
-        setSending(false);
-      }
-    },
-    [
-      activeChatId,
-      canReply,
-      chats,
-      clearUploadState,
-      effectiveStatus,
-      loadChats,
-      loadMessages,
-      markUploadProgress,
-      monitorWhatsAppEffect,
-      mutateMessages,
-      t,
-    ],
-  );
+  const sendVoice = useMemo(() => createMediaSender(MEDIA_SEND_SPECS.voice), [createMediaSender]);
 
   const connectWhatsApp = useCallback(async () => {
     try {
