@@ -33,6 +33,15 @@ async function clean(): Promise<void> {
   await db.projectionInvalidation.deleteMany();
   await db.outboxIntent.deleteMany();
   await db.domainEvent.deleteMany();
+  // Hermetic clean (CI full-suite ordering exposed this): BusinessCommand is
+  // onDelete: Restrict from InventoryReservation/InventoryMovement (mutual
+  // pair), FinancialMovement and CompensationFact. Earlier files in the
+  // sequential run (e.g. canonical-courier) legitimately leave such rows
+  // behind — the command deleteMany below must not depend on file order.
+  await db.compensationFact.deleteMany();
+  await db.financialMovement.deleteMany();
+  await db.inventoryMovement.deleteMany();
+  await db.inventoryReservation.deleteMany();
   await db.businessCommand.deleteMany();
   await db.businessAggregateVersion.deleteMany();
   await db.automationLog.deleteMany();
