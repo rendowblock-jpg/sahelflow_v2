@@ -79,6 +79,7 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useVoiceRecorder } from "@/components/inbox/use-voice-recorder";
 import { VoiceNotePlayer } from "@/components/inbox/voice-note-player";
+import { InboxLinkPreview, firstHttpUrlInText } from "@/components/inbox/link-preview-card";
 import {
   decideRecordingPointerUp,
   decideSlideCancel,
@@ -438,6 +439,8 @@ const MessageBubble = memo(function MessageBubble({
 
   const inbound = message.direction === "inbound";
   const media = isMediaMessage(message);
+  // Ledger INB-16: at most one preview per bubble, text bubbles only.
+  const linkUrl = media ? null : firstHttpUrlInText(message.body);
   const binaryMedia = Boolean(
     message.messageType &&
       ["image", "video", "audio", "document", "sticker"].includes(
@@ -592,6 +595,15 @@ const MessageBubble = memo(function MessageBubble({
             >
               <HighlightedMessageBody body={message.body} query={searchQuery} />
             </p>
+          ) : null}
+
+          {/* Ledger INB-16: WhatsApp-style link preview card for text bubbles.
+              Renders nothing until real metadata arrives — honest absence. */}
+          {!media && linkUrl ? (
+            <InboxLinkPreview
+              url={linkUrl}
+              label={copy("linkPreviewLabel")}
+            />
           ) : null}
 
           {!inbound && upload ? (
