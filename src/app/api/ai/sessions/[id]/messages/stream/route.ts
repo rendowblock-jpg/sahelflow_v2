@@ -37,7 +37,8 @@ type WorkspaceStreamEvent =
       type: "persistence_warning";
       code: "AI_RESPONSE_NOT_PERSISTED";
     }
-  | { type: "error"; message: string; code: string };
+  | { type: "error"; message: string; code: string }
+  | { type: "user_persisted"; id: string };
 
 /**
  * Audit S1-3: the stream has already returned 200, so withErrorHandler never
@@ -192,6 +193,16 @@ export const POST = withErrorHandler(
               `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`,
             ),
           );
+        }
+
+        // Ledger AI-07/AI-15: announce the durable id of the user turn before
+        // the agent runs, so regenerate-in-place and edit-and-resend can
+        // address truncation at a real persisted row instead of the client's
+        // optimistic local id.
+        try {
+          send({ type: "user_persisted", id: userMessage.id });
+        } catch {
+          // The client may already have aborted before the first event.
         }
 
         try {

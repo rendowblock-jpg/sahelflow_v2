@@ -212,45 +212,55 @@ export async function runAgent(
 
     const parts = response.candidates?.[0]?.content?.parts ?? [];
     const text = parts.map((part) => part.text ?? "").join("");
-    const functionCall = parts.find((part) => part.functionCall)?.functionCall;
-    if (functionCall) {
-      const executed = await execute(functionCall, toolContext, locale);
-      allToolCalls.push({
-        name: functionCall.name,
-        args: functionCall.args,
-        result: executed.result,
-      });
-      if (executed.actionProposal) {
+    // Ledger AI-16: one model turn may carry several parallel function calls.
+    // `parts.find` silently dropped every call after the first — collect ALL
+    // of them, execute each, and return every result to the model.
+    const functionCalls = parts.flatMap((part) =>
+      part.functionCall ? [part.functionCall] : [],
+    );
+    if (functionCalls.length > 0) {
+      const executed: Array<{ call: GeminiFunctionCall; outcome: ToolExecutionResult }> = [];
+      for (const call of functionCalls) {
+        const outcome = await execute(call, toolContext, locale);
+        executed.push({ call, outcome });
+        allToolCalls.push({
+          name: call.name,
+          args: call.args,
+          result: outcome.result,
+        });
+      }
+      const proposalOutcome = executed.find(
+        (entry) => entry.outcome.actionProposal,
+      );
+      if (proposalOutcome?.outcome.actionProposal) {
         return {
           response: proposalResponse(
             `${buffered}${text}`,
-            executed.actionProposal,
+            proposalOutcome.outcome.actionProposal,
             locale,
           ),
           toolCalls: allToolCalls,
-          actionProposal: executed.actionProposal,
+          actionProposal: proposalOutcome.outcome.actionProposal,
         };
       }
       if (text) buffered += text;
       contents.push({
         role: "model",
-        parts: [...(text ? [{ text }] : []), { functionCall }],
+        parts: [
+          ...(text ? [{ text }] : []),
+          ...functionCalls.map((call) => ({ functionCall: call })),
+        ],
       });
       contents.push({
         role: "user",
-        parts: [
-          {
-            functionResponse: {
-              name: functionCall.name,
-              response: {
-                result: historySafeToolResult(
-                  functionCall.name,
-                  executed.result,
-                ),
-              },
+        parts: executed.map(({ call, outcome }) => ({
+          functionResponse: {
+            name: call.name,
+            response: {
+              result: historySafeToolResult(call.name, outcome.result),
             },
           },
-        ],
+        })),
       });
       continue;
     }
@@ -285,7 +295,7 @@ export async function runAgent(
 
 interface ParsedStream {
   fullText: string;
-  functionCall: GeminiFunctionCall | null;
+  functionCalls: GeminiFunctionCall[];
   cancelled: boolean;
   providerError: GeminiProviderError | null;
 }
@@ -298,14 +308,16 @@ async function* parseStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let fullText = "";
-  let functionCall: GeminiFunctionCall | null = null;
+  // Ledger AI-16: collect every parallel function call in the turn instead of
+  // overwriting (last-wins) — the model may request several at once.
+  const functionCalls: GeminiFunctionCall[] = [];
   try {
     while (true) {
       if (signal?.aborted) {
         await reader.cancel();
         return {
           fullText,
-          functionCall: null,
+          functionCalls: [],
           cancelled: true,
           providerError: null,
         };
@@ -330,7 +342,7 @@ async function* parseStream(
           if (chunk.error) {
             return {
               fullText,
-              functionCall: null,
+              functionCalls: [],
               cancelled: false,
               providerError: geminiProviderErrorFromStream(chunk.error),
             };
@@ -341,7 +353,7 @@ async function* parseStream(
               fullText += part.text;
               yield { type: "text_delta", text: part.text };
             }
-            if (part.functionCall) functionCall = part.functionCall;
+            if (part.functionCall) functionCalls.push(part.functionCall);
           }
         }
       }
@@ -351,7 +363,7 @@ async function* parseStream(
   }
   return {
     fullText,
-    functionCall,
+    functionCalls,
     cancelled: false,
     providerError: null,
   };
@@ -406,7 +418,7 @@ export async function* runAgentStream(
       if (parsed.done) break;
       yield parsed.value;
     }
-    const { fullText, functionCall, cancelled, providerError } = parsed.value;
+    const { fullText, functionCalls, cancelled, providerError } = parsed.value;
     if (cancelled) return;
     if (providerError) {
       yield {
@@ -416,44 +428,48 @@ export async function* runAgentStream(
       return;
     }
 
-    if (functionCall) {
-      yield { type: "tool_call", name: functionCall.name, args: functionCall.args };
-      const executed = await execute(functionCall, toolContext, locale);
-      allToolCalls.push({
-        name: functionCall.name,
-        args: functionCall.args,
-        result: executed.result,
-      });
-      yield { type: "tool_result", name: functionCall.name, result: executed.result };
-      if (executed.actionProposal) {
-        yield { type: "action_proposal", proposal: executed.actionProposal };
-        yield {
-          type: "done",
-          response: proposalResponse(fullText, executed.actionProposal, locale),
-          toolCalls: allToolCalls,
-          actionProposal: executed.actionProposal,
-        };
-        return;
+    if (functionCalls.length > 0) {
+      // Ledger AI-16: render/execute every parallel call of the turn — one
+      // tool_call + tool_result event pair per call, each with its own result.
+      const executed: Array<{ call: GeminiFunctionCall; outcome: ToolExecutionResult }> = [];
+      for (const call of functionCalls) {
+        yield { type: "tool_call", name: call.name, args: call.args };
+        const outcome = await execute(call, toolContext, locale);
+        allToolCalls.push({
+          name: call.name,
+          args: call.args,
+          result: outcome.result,
+        });
+        yield { type: "tool_result", name: call.name, result: outcome.result };
+        executed.push({ call, outcome });
+        if (outcome.actionProposal) {
+          yield { type: "action_proposal", proposal: outcome.actionProposal };
+          yield {
+            type: "done",
+            response: proposalResponse(fullText, outcome.actionProposal, locale),
+            toolCalls: allToolCalls,
+            actionProposal: outcome.actionProposal,
+          };
+          return;
+        }
       }
       contents.push({
         role: "model",
-        parts: [...(fullText ? [{ text: fullText }] : []), { functionCall }],
+        parts: [
+          ...(fullText ? [{ text: fullText }] : []),
+          ...functionCalls.map((call) => ({ functionCall: call })),
+        ],
       });
       contents.push({
         role: "user",
-        parts: [
-          {
-            functionResponse: {
-              name: functionCall.name,
-              response: {
-                result: historySafeToolResult(
-                  functionCall.name,
-                  executed.result,
-                ),
-              },
+        parts: executed.map(({ call, outcome }) => ({
+          functionResponse: {
+            name: call.name,
+            response: {
+              result: historySafeToolResult(call.name, outcome.result),
             },
           },
-        ],
+        })),
       });
       continue;
     }

@@ -140,6 +140,33 @@ const COPY = {
     fieldMode: "Mode",
     fieldReason: "Reason",
     fieldCount: "Count",
+    // Ledger wave 9-a — AI-07/08/11/14/15/18/19/20/22.
+    streamTimeout:
+      "The AI reply stalled and timed out. What was already streamed was kept — retry when ready.",
+    loadEarlier: "Load earlier messages",
+    editMessage: "Edit",
+    editingNotice:
+      "Editing an earlier message — sending replaces this reply and everything after it.",
+    cancelEdit: "Cancel editing",
+    followUpOrderStatus: "How do I change the status of order {orderNumber}?",
+    followUpOrderDelivery: "What is the delivery status of order {orderNumber}?",
+    followUpCustomerOrders: "Show the recent orders of customer {name}",
+    followUpProductStock: "How much stock of {name} is left?",
+    followUpTopProducts: "Which products sell the most?",
+    pendingElsewhere: "Pending in other sessions",
+    pendingElsewhereDescription:
+      "Proposals opened from any other session can be reviewed and approved here.",
+    crossSessionUnavailable:
+      "The cross-session proposal inbox could not be loaded",
+    recentDecisions: "Recent decisions",
+    recentDecisionsDescription:
+      "Latest approve, deny and execution outcomes across sessions",
+    noRecentDecisions: "No decided sensitive actions yet",
+    sessionLabel: "Session",
+    shortcutFocusComposer: "Focus composer",
+    shortcutStopStream: "Stop streaming",
+    shortcutSwitchSessions: "Switch session",
+    shortcutApproveFocused: "Approve focused proposal",
   },
   fr: {
     workspaceTitle: "Opérations IA",
@@ -276,6 +303,33 @@ const COPY = {
     fieldMode: "Mode",
     fieldReason: "Motif",
     fieldCount: "Nombre",
+    // Ledger wave 9-a — AI-07/08/11/14/15/18/19/20/22.
+    streamTimeout:
+      "La réponse IA est restée silencieuse et a expiré. Ce qui était déjà affiché a été conservé — réessayez quand vous voulez.",
+    loadEarlier: "Charger les messages précédents",
+    editMessage: "Modifier",
+    editingNotice:
+      "Modification d’un message antérieur — l’envoi remplace cette réponse et tout ce qui la suit.",
+    cancelEdit: "Annuler la modification",
+    followUpOrderStatus: "Comment changer le statut de la commande {orderNumber} ?",
+    followUpOrderDelivery: "Quel est le statut de livraison de la commande {orderNumber} ?",
+    followUpCustomerOrders: "Montre les commandes récentes du client {name}",
+    followUpProductStock: "Combien reste-t-il en stock pour {name} ?",
+    followUpTopProducts: "Quels produits se vendent le plus ?",
+    pendingElsewhere: "En attente dans d’autres sessions",
+    pendingElsewhereDescription:
+      "Les propositions ouvertes depuis une autre session peuvent être revues et approuvées ici.",
+    crossSessionUnavailable:
+      "La boîte de réception des propositions inter-sessions n’a pas pu être chargée",
+    recentDecisions: "Décisions récentes",
+    recentDecisionsDescription:
+      "Dernières approbations, refus et exécutions toutes sessions confondues",
+    noRecentDecisions: "Aucune action sensible décidée pour le moment",
+    sessionLabel: "Session",
+    shortcutFocusComposer: "Aller au champ de saisie",
+    shortcutStopStream: "Arrêter la génération",
+    shortcutSwitchSessions: "Changer de session",
+    shortcutApproveFocused: "Approuver la proposition ciblée",
   },
   ar: {
     workspaceTitle: "عمليات الذكاء الاصطناعي",
@@ -412,6 +466,33 @@ const COPY = {
     fieldMode: "الوضع",
     fieldReason: "السبب",
     fieldCount: "العدد",
+    // Ledger wave 9-a — AI-07/08/11/14/15/18/19/20/22.
+    streamTimeout:
+      "توقفت استجابة الذكاء الاصطناعي وانتهت المهلة. ما تم عرضه بالفعل محفوظ — أعد المحاولة عندما تكون جاهزاً.",
+    loadEarlier: "تحميل الرسائل السابقة",
+    editMessage: "تعديل",
+    editingNotice:
+      "تعديل رسالة سابقة — الإرسال يستبدل هذا الرد وكل ما يليه.",
+    cancelEdit: "إلغاء التعديل",
+    followUpOrderStatus: "كيف أغيّر حالة الطلب {orderNumber}؟",
+    followUpOrderDelivery: "ما حالة توصيل الطلب {orderNumber}؟",
+    followUpCustomerOrders: "اعرض الطلبات الأخيرة للعميل {name}",
+    followUpProductStock: "كم تبقى من مخزون {name}؟",
+    followUpTopProducts: "أي المنتجات تُباع أكثر؟",
+    pendingElsewhere: "بانتظار المراجعة في جلسات أخرى",
+    pendingElsewhereDescription:
+      "يمكن مراجعة الاقتراحات المفتوحة من أي جلسة أخرى والموافقة عليها من هنا.",
+    crossSessionUnavailable:
+      "تعذر تحميل صندوق الاقتراحات عبر الجلسات",
+    recentDecisions: "القرارات الأخيرة",
+    recentDecisionsDescription:
+      "آخر الموافقات والرفض ونتائج التنفيذ عبر الجلسات",
+    noRecentDecisions: "لا توجد إجراءات حساسة تم البتّ فيها بعد",
+    sessionLabel: "الجلسة",
+    shortcutFocusComposer: "الانتقال إلى صندوق الكتابة",
+    shortcutStopStream: "إيقاف التوليد",
+    shortcutSwitchSessions: "تبديل الجلسة",
+    shortcutApproveFocused: "الموافقة على الاقتراح المُحدَّد",
   },
 } as const;
 

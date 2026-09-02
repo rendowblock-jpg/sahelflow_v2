@@ -54,6 +54,25 @@ export interface AiActionProposalHandle {
   proposalDigest: string;
 }
 
+/** Ledger AI-19: pending proposal with its originating session identity. */
+export interface AiActionProposalInboxHandle extends AiActionProposalHandle {
+  sessionId: string;
+  sessionTitle: string | null;
+}
+
+/** Ledger AI-20: one decided (approved/denied/executed/expired) proposal row. */
+export interface AiActionDecisionView {
+  id: string;
+  sessionId: string;
+  sessionTitle: string | null;
+  toolName: string;
+  status: string;
+  lastErrorCode: string | null;
+  proposalDigestPrefix: string;
+  createdAt: string;
+  decidedAt: string;
+}
+
 export type AiWorkspaceErrorCode =
   | "AI_CONSENT_REQUIRED"
   | "AI_LICENSE_REQUIRED"
@@ -65,6 +84,7 @@ export type AiWorkspaceErrorCode =
   | "AI_PROVIDER_UNAVAILABLE"
   | "AI_SESSION_LOAD_FAILED"
   | "AI_SESSION_CREATE_FAILED"
+  | "AI_STREAM_TIMEOUT"
   | "AI_INTERNAL_ERROR";
 
 export interface AiWorkspaceError {

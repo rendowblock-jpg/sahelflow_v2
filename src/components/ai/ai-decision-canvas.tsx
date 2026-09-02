@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowDown,
@@ -9,11 +9,13 @@ import {
   Bot,
   BrainCircuit,
   Check,
+  ChevronUp,
   CircleDollarSign,
   ClipboardCheck,
   Copy,
   Loader2,
   PackageSearch,
+  PencilLine,
   RefreshCw,
   RotateCcw,
   Send,
@@ -23,6 +25,10 @@ import {
 } from "lucide-react";
 
 import { AiActionProposalCard } from "@/components/ai/ai-action-proposal-card";
+import {
+  AiFollowUpChips,
+  deriveFollowUpSuggestions,
+} from "@/components/ai/ai-follow-up-chips";
 import { AiMarkdown } from "@/components/ai/markdown/ai-markdown";
 import { AiReviewEvidence } from "@/components/ai/ai-review-evidence";
 import { AiToolResultCard } from "@/components/ai/ai-tool-result-card";
@@ -71,6 +77,8 @@ function errorMessage(
       return workspace.copy("sessionCreateFailed");
     case "AI_PROVIDER_UNAVAILABLE":
       return workspace.copy("providerDegraded");
+    case "AI_STREAM_TIMEOUT":
+      return workspace.copy("streamTimeout");
     default:
       return workspace.copy("genericError");
   }
@@ -227,10 +235,12 @@ const MessageBubble = memo(function MessageBubble({
   message,
   copy,
   locale,
+  onEditMessage,
 }: {
   message: AiMessageView;
   copy: AiCopyFn;
   locale: string;
+  onEditMessage?: (messageId: string) => void;
 }) {
   const assistant = message.role === "assistant";
   const [copied, setCopied] = useState(false);
@@ -323,6 +333,17 @@ const MessageBubble = memo(function MessageBubble({
               assistant ? "justify-start" : "justify-end",
             )}
           >
+            {!assistant && onEditMessage ? (
+              <button
+                type="button"
+                onClick={() => onEditMessage(message.id)}
+                aria-label={copy("editMessage")}
+                title={copy("editMessage")}
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <PencilLine className="size-3.5" aria-hidden="true" />
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => void copyMessage()}
@@ -443,15 +464,44 @@ export function AiDecisionCanvas({
     canRegenerate,
     regenerate,
     copy,
+    sessions,
+    activeSessionId,
+    selectSession,
+    inbox,
+    approveProposal,
+    historyCapped,
+    loadingOlderMessages,
+    loadOlderMessages,
+    editingMessageId,
+    beginEditMessage,
+    cancelEditMessage,
+    editAndResend,
   } = workspace;
   const [draft, setDraft] = useState(initialDraft);
   const [prevInitialDraft, setPrevInitialDraft] = useState(initialDraft);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [awayFromTail, setAwayFromTail] = useState(false);
+  // Ledger AI-14: dismissal is anchored to the conversation tail id — a new
+  // turn naturally re-offers grounded suggestions.
+  const [chipsDismissedFor, setChipsDismissedFor] = useState<string | null>(null);
   const scrollRootRef = useRef<HTMLDivElement | null>(null);
   const tailRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const followTailRef = useRef(true);
   const setupReady = setup?.ready === true;
+  const lastMessageId = messages.length > 0 ? messages[messages.length - 1]!.id : null;
+  const editingMessage = editingMessageId
+    ? messages.find(
+        (message) => message.id === editingMessageId && message.role === "user",
+      ) ?? null
+    : null;
+  const followUpSuggestions = useMemo(
+    () =>
+      sending || editingMessageId
+        ? []
+        : deriveFollowUpSuggestions(messages, copy),
+    [copy, editingMessageId, messages, sending],
+  );
 
   useEffect(() => {
     const viewport = scrollRootRef.current?.querySelector<HTMLElement>(
@@ -484,6 +534,25 @@ export function AiDecisionCanvas({
     }
   }
 
+  // Ledger AI-15: entering edit mode prefills the composer with the durable
+  // message text once, per edit session.
+  const [prevEditingId, setPrevEditingId] = useState<string | null>(null);
+  if (editingMessageId !== prevEditingId) {
+    setPrevEditingId(editingMessageId);
+    if (editingMessageId && editingMessage) {
+      setDraft(editingMessage.content);
+    }
+  }
+
+  // Ledger AI-14: a new turn re-offers suggestions after an explicit dismissal.
+  const [prevTailForChips, setPrevTailForChips] = useState<string | null>(null);
+  if (lastMessageId !== prevTailForChips) {
+    setPrevTailForChips(lastMessageId);
+    if (chipsDismissedFor !== null && chipsDismissedFor !== lastMessageId) {
+      setChipsDismissedFor(null);
+    }
+  }
+
   useEffect(() => {
     if (!sending || !followTailRef.current) return;
     tailRef.current?.scrollIntoView({ block: "end" });
@@ -492,9 +561,99 @@ export function AiDecisionCanvas({
   const submit = async () => {
     const value = draft.trim();
     if (!value || sending || !setupReady || startingAnalysis) return;
+    if (editingMessageId) {
+      // Ledger AI-15: an edited send truncates the durable tail, then re-sends.
+      const accepted = await editAndResend(editingMessageId, value);
+      if (accepted) setDraft("");
+      return;
+    }
     const accepted = await onSend(value);
     if (accepted) setDraft("");
   };
+
+  // Ledger AI-22: discoverable keyboard surface. "/" focuses the composer
+  // (Gmail/WhatsApp convention, inert while typing), Escape stops an active
+  // stream (or cancels edit mode), Alt+↑/↓ walks the session list, and
+  // Ctrl+Enter approves the focused proposal card.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        // Radix-owned surfaces (sheets/dialogs) consume Escape first.
+        if (document.querySelector('[role="dialog"]')) return;
+        if (editingMessageId) {
+          event.preventDefault();
+          cancelEditMessage();
+          return;
+        }
+        if (sending) {
+          event.preventDefault();
+          stop();
+        }
+        return;
+      }
+      if (
+        event.key === "/" &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey
+      ) {
+        const target = event.target as HTMLElement | null;
+        if (
+          target?.tagName === "INPUT" ||
+          target?.tagName === "TEXTAREA" ||
+          target?.isContentEditable
+        ) {
+          return;
+        }
+        event.preventDefault();
+        composerRef.current?.focus();
+        return;
+      }
+      if (event.ctrlKey && event.key === "Enter") {
+        const focused = document.activeElement?.closest<HTMLElement>(
+          "[data-ai-proposal-id]",
+        );
+        const proposalId = focused?.dataset.aiProposalId;
+        if (!proposalId) return;
+        const handle =
+          proposals.find((entry) => entry.proposal.id === proposalId) ??
+          inbox.find((entry) => entry.proposal.id === proposalId);
+        if (handle) {
+          event.preventDefault();
+          void approveProposal(handle);
+        }
+        return;
+      }
+      if (
+        event.altKey &&
+        !event.ctrlKey &&
+        (event.key === "ArrowUp" || event.key === "ArrowDown")
+      ) {
+        if (sessions.length === 0) return;
+        const index = sessions.findIndex(
+          (session) => session.id === activeSessionId,
+        );
+        if (index < 0) return;
+        const next = event.key === "ArrowUp" ? index - 1 : index + 1;
+        if (next < 0 || next >= sessions.length) return;
+        event.preventDefault();
+        selectSession(sessions[next]!.id);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    activeSessionId,
+    approveProposal,
+    cancelEditMessage,
+    editingMessageId,
+    inbox,
+    proposals,
+    selectSession,
+    sending,
+    sessions,
+    stop,
+  ]);
 
   return (
     <main data-ai-decision-canvas="true" className="relative flex h-full min-h-0 flex-col bg-background">
@@ -581,12 +740,35 @@ export function AiDecisionCanvas({
               />
             ) : (
               <div className="space-y-5">
+                {historyCapped ? (
+                  <div className="flex justify-center" data-ai-load-older="true">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      disabled={loadingOlderMessages}
+                      onClick={() => void loadOlderMessages()}
+                    >
+                      {loadingOlderMessages ? (
+                        <Loader2
+                          className="me-1.5 size-3.5 animate-spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <ChevronUp className="me-1.5 size-3.5" aria-hidden="true" />
+                      )}
+                      {copy("loadEarlier")}
+                    </Button>
+                  </div>
+                ) : null}
                 {messages.map((message) => (
                   <MessageBubble
                     key={message.id}
                     message={message}
                     copy={copy}
                     locale={workspace.locale}
+                    onEditMessage={beginEditMessage}
                   />
                 ))}
 
@@ -605,6 +787,23 @@ export function AiDecisionCanvas({
                   </div>
                 ) : null}
 
+                {/* Ledger AI-14: grounded follow-up affordances under the last
+                    completed answer; anchored dismissal resets on a new turn. */}
+                {!sending && !editingMessageId && lastMessageId ? (
+                  <AiFollowUpChips
+                    suggestions={followUpSuggestions}
+                    copy={copy}
+                    onPick={(prompt) => {
+                      setDraft(prompt);
+                      composerRef.current?.focus();
+                    }}
+                    onDismiss={() => setChipsDismissedFor(lastMessageId)}
+                    className={
+                      chipsDismissedFor === lastMessageId ? "hidden" : undefined
+                    }
+                  />
+                ) : null}
+
                 {proposals.length > 0 ? (
                   <section
                     data-ai-inline-proposals="true"
@@ -621,13 +820,19 @@ export function AiDecisionCanvas({
                     </div>
                     <div className="space-y-3">
                       {proposals.map((handle) => (
-                        <AiActionProposalCard
+                        <div
                           key={handle.proposal.id}
-                          handle={handle}
-                          approving={workspace.approvingProposalId === handle.proposal.id}
-                          onApprove={workspace.approveProposal}
-                          interactive={false}
-                        />
+                          data-ai-proposal-id={handle.proposal.id}
+                        >
+                          <AiActionProposalCard
+                            handle={handle}
+                            approving={
+                              workspace.approvingProposalId === handle.proposal.id
+                            }
+                            onApprove={workspace.approveProposal}
+                            interactive={false}
+                          />
+                        </div>
                       ))}
                     </div>
                   </section>
@@ -657,8 +862,28 @@ export function AiDecisionCanvas({
       ) : null}
 
       <div className="border-t bg-background/96 px-4 py-3 backdrop-blur md:px-6 md:py-4">
+        {editingMessage ? (
+          <div
+            data-ai-editing="true"
+            className="mx-auto mb-2 flex w-full max-w-4xl items-center justify-between gap-3 rounded-xl border border-warning/25 bg-warning/5 px-3 py-2"
+          >
+            <p className="min-w-0 truncate text-xs text-foreground">
+              {copy("editingNotice")}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 shrink-0 text-xs"
+              onClick={cancelEditMessage}
+            >
+              {copy("cancelEdit")}
+            </Button>
+          </div>
+        ) : null}
         <div className="mx-auto flex w-full max-w-4xl items-end gap-2 rounded-xl border bg-card/80 p-2 shadow-sm focus-within:ring-2 focus-within:ring-ring/30">
           <Textarea
+            ref={composerRef}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
@@ -704,6 +929,12 @@ export function AiDecisionCanvas({
             </Button>
           )}
         </div>
+        <p className="mx-auto mt-1.5 hidden w-full max-w-4xl flex-wrap items-center gap-x-3 gap-y-1 px-1 text-2xs text-muted-foreground md:flex">
+          <span><kbd className="rounded border bg-muted/60 px-1 font-sans">/</kbd> {copy("shortcutFocusComposer")}</span>
+          <span><kbd className="rounded border bg-muted/60 px-1 font-sans">Esc</kbd> {copy("shortcutStopStream")}</span>
+          <span dir="ltr"><kbd className="rounded border bg-muted/60 px-1 font-sans">Alt+↑↓</kbd> {copy("shortcutSwitchSessions")}</span>
+          <span dir="ltr"><kbd className="rounded border bg-muted/60 px-1 font-sans">Ctrl+↵</kbd> {copy("shortcutApproveFocused")}</span>
+        </p>
       </div>
 
       {!wideReview ? (

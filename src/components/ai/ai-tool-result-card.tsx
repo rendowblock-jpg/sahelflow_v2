@@ -48,6 +48,43 @@ const TOOL_ROUTE: Record<string, string> = {
   get_conversation_messages: "/inbox",
 };
 
+/**
+ * Ledger AI-11: per-record citation links. For tools whose results carry a
+ * real record identity, this builds a deep link to the record's own detail
+ * route (checked against src/app/(dashboard)/…) instead of the list page.
+ * A tool missing from the map (or a record without its id field) falls back
+ * to the list-level TOOL_ROUTE button — nothing is ever guessed.
+ */
+const TOOL_RECORD_HREF: Record<
+  string,
+  (record: Record<string, unknown>) => string | null
+> = {
+  get_order_details: (record) =>
+    typeof record.id === "string" && record.id ? `/orders/${record.id}` : null,
+  create_order: (record) =>
+    typeof record.id === "string" && record.id ? `/orders/${record.id}` : null,
+  get_delivery_status: (record) =>
+    typeof record.orderId === "string" && record.orderId
+      ? `/orders/${record.orderId}`
+      : null,
+  get_product_details: (record) =>
+    typeof record.id === "string" && record.id
+      ? `/products/${record.id}`
+      : null,
+  search_products: (record) =>
+    typeof record.id === "string" && record.id
+      ? `/products/${record.id}`
+      : null,
+  get_customer_details: (record) =>
+    typeof record.id === "string" && record.id
+      ? `/customers/${record.id}`
+      : null,
+  search_customers: (record) =>
+    typeof record.id === "string" && record.id
+      ? `/customers/${record.id}`
+      : null,
+};
+
 const DELIVERY_STATUS_TOOLS = new Set([
   "get_delivery_status",
   "get_pending_deliveries",
@@ -225,32 +262,52 @@ function ResultRecord({
   copy,
   translate,
   statusNamespace,
+  href,
 }: {
   value: Record<string, unknown>;
   locale: AiWorkspaceLocale;
   copy: (key: AiWorkspaceCopyKey, params?: Record<string, string | number>) => string;
   translate: Translate;
   statusNamespace: StatusNamespace;
+  href: string | null;
 }) {
   const fields = recordFields(value, locale, translate, statusNamespace).slice(0, 6);
-  if (fields.length === 0) return null;
+  if (fields.length === 0 && !href) return null;
   return (
-    <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
-      {fields.map((field) => (
-        <div key={field.key} className="min-w-0">
-          <dt className="text-xs text-muted-foreground">
-            {copy(FIELD_COPY[field.key]!)}
-          </dt>
-          <dd className="mt-0.5 truncate font-medium text-foreground">
-            {field.technical ? (
-              <TechnicalValue>{field.value}</TechnicalValue>
-            ) : (
-              <span dir="auto">{field.value}</span>
-            )}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <div>
+      <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
+        {fields.map((field) => (
+          <div key={field.key} className="min-w-0">
+            <dt className="text-xs text-muted-foreground">
+              {copy(FIELD_COPY[field.key]!)}
+            </dt>
+            <dd className="mt-0.5 truncate font-medium text-foreground">
+              {field.technical ? (
+                <TechnicalValue>{field.value}</TechnicalValue>
+              ) : (
+                <span dir="auto">{field.value}</span>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {href ? (
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="mt-1 px-2 text-xs"
+        >
+          <Link href={href}>
+            {copy("viewInProduct")}
+            <ArrowUpRight
+              className="size-3.5 rtl:-scale-x-100"
+              aria-hidden="true"
+            />
+          </Link>
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
@@ -280,6 +337,13 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
     : isRecord(result)
       ? [result]
       : [];
+  const recordHrefs = records.map(
+    (record) => TOOL_RECORD_HREF[tool.name]?.(record) ?? null,
+  );
+  // A single-record answer with a real detail link no longer needs the
+  // list-level citation (AI-11: the citation IS the record).
+  const listRouteUsed =
+    route && !(records.length === 1 && recordHrefs[0]);
   const scalar = records.length === 0 ? simpleValue(result) : null;
   const argEntries = Object.entries(tool.args ?? {}).slice(0, 8);
 
@@ -359,6 +423,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
                 copy={copy}
                 translate={t}
                 statusNamespace={statusNamespace}
+                href={recordHrefs[index] ?? null}
               />
             </div>
           ))}
@@ -366,7 +431,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
           {records.length === 0 && !scalar && !failed ? (
             <p className="text-xs text-muted-foreground">{copy("toolResult")}</p>
           ) : null}
-          {route ? (
+          {listRouteUsed ? (
             <Button asChild variant="ghost" size="sm" className="px-2 text-xs">
               <Link href={route}>
                 {copy("viewInProduct")}
