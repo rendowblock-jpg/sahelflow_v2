@@ -136,6 +136,7 @@ export function useAiWorkspace() {
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [approvingProposalId, setApprovingProposalId] = useState<string | null>(null);
+  const [rejectingProposalId, setRejectingProposalId] = useState<string | null>(null);
   const [error, setError] = useState<AiWorkspaceError | null>(null);
 
   const streamAbortRef = useRef<AbortController | null>(null);
@@ -732,12 +733,47 @@ export function useAiWorkspace() {
     [approvingProposalId],
   );
 
+  /** Ledger AI-03: one-click deny — terminal, never executes. */
+  const rejectProposal = useCallback(
+    async (handle: AiActionProposalHandle) => {
+      if (rejectingProposalId) return false;
+      setRejectingProposalId(handle.proposal.id);
+      try {
+        const response = await fetch(
+          `/api/ai/actions/${encodeURIComponent(handle.proposal.id)}/reject`,
+          { method: "POST" },
+        );
+        if (!response.ok) throw new Error(`reject:${response.status}`);
+        // Terminal locally: drop it from the live queue (history keeps the
+        // row server-side via /actions).
+        setProposals((current) =>
+          current.filter((entry) => entry.proposal.id !== handle.proposal.id),
+        );
+        return true;
+      } catch {
+        const refreshed = await fetch(
+          `/api/ai/actions/${encodeURIComponent(handle.proposal.id)}`,
+          { cache: "no-store" },
+        )
+          .then((response) => (response.ok ? response.json() : null))
+          .catch(() => null);
+        if (refreshed) {
+          setProposals((current) => mergeProposal(current, refreshed as AiActionProposalHandle));
+        }
+        setError({ code: "AI_INTERNAL_ERROR" });
+        return false;
+      } finally {
+        setRejectingProposalId(null);
+      }
+    },
+    [rejectingProposalId],
+  );
+
   const retry = useCallback(async () => {
     setError(null);
     await Promise.all([loadSetup(), loadSessions()]);
     if (activeSessionId) await loadConversation(activeSessionId);
   }, [activeSessionId, loadConversation, loadSessions, loadSetup]);
-
   return {
     locale,
     copy,
@@ -754,6 +790,7 @@ export function useAiWorkspace() {
     creatingSession,
     sending,
     approvingProposalId,
+    rejectingProposalId,
     renamingSessionId,
     deletingSessionId,
     error,
@@ -766,6 +803,7 @@ export function useAiWorkspace() {
     renameSession,
     deleteSession,
     approveProposal,
+    rejectProposal,
     retry,
     refreshSetup: loadSetup,
   };

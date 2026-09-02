@@ -24,6 +24,7 @@ const COPY = {
     savedHistoryAvailable: "Saved history remains available",
     setupAttention: "AI setup needs attention",
     setupChecking: "Checking AI setup",
+    demoBadge: "Sample data",
     actionHistoryIssue: "Action review history is unavailable",
     actionHistoryIssueDescription:
       "Retry before assuming this analysis has no pending or failed sensitive actions.",
@@ -53,6 +54,7 @@ const COPY = {
     savedHistoryAvailable: "L’historique enregistré reste disponible",
     setupAttention: "La configuration IA demande votre attention",
     setupChecking: "Vérification de la configuration IA",
+    demoBadge: "Données d’exemple",
     actionHistoryIssue: "L’historique de revue des actions est indisponible",
     actionHistoryIssueDescription:
       "Réessayez avant de conclure qu’aucune action sensible en attente ou en échec n’existe.",
@@ -82,6 +84,7 @@ const COPY = {
     savedHistoryAvailable: "يبقى السجل المحفوظ متاحًا",
     setupAttention: "إعداد الذكاء الاصطناعي يحتاج إلى انتباه",
     setupChecking: "جارٍ التحقق من إعداد الذكاء الاصطناعي",
+    demoBadge: "بيانات نموذجية",
     actionHistoryIssue: "سجل مراجعة الإجراءات غير متاح",
     actionHistoryIssueDescription:
       "أعد المحاولة قبل افتراض عدم وجود إجراءات حساسة معلقة أو فاشلة في هذا التحليل.",

@@ -233,7 +233,36 @@ export const POST = withErrorHandler(
             },
           );
         } catch (error) {
-          if (error instanceof GeminiProviderError) {
+          if (request.signal.aborted) {
+            // Stop requested by the seller (ledger AI-04): keep the partial
+            // answer instead of discarding streamed tokens — ChatGPT-class
+            // stop semantics. The controller is already closed, so event
+            // sends become best-effort no-ops.
+            if (assistantResponse.trim()) {
+              try {
+                await context.prisma.aiChatMessage.create({
+                  data: {
+                    sessionId: id,
+                    role: "assistant",
+                    content: assistantResponse,
+                    toolCalls:
+                      assistantToolCalls.length > 0
+                        ? JSON.stringify(redactPii(assistantToolCalls))
+                        : null,
+                  },
+                });
+              } catch {
+                try {
+                  send({
+                    type: "persistence_warning",
+                    code: "AI_RESPONSE_NOT_PERSISTED",
+                  });
+                } catch {
+                  // Stream already closed by the abort.
+                }
+              }
+            }
+          } else if (error instanceof GeminiProviderError) {
             // Provider failures keep their coded, locale-native copy.
             send({
               type: "error",

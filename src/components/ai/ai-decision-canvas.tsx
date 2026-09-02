@@ -7,8 +7,10 @@ import {
   ArrowLeft,
   Bot,
   BrainCircuit,
+  Check,
   CircleDollarSign,
   ClipboardCheck,
+  Copy,
   Loader2,
   PackageSearch,
   RefreshCw,
@@ -156,7 +158,7 @@ function SetupNotice({
           </Button>
         ) : null}
         <Button asChild variant="outline" size="sm">
-          <Link href="/settings">
+          <Link href="/settings?group=intelligence">
             <Settings2 className="size-4" aria-hidden="true" />
             {workspace.copy("openSettings")}
           </Link>
@@ -206,6 +208,15 @@ type AiCopyFn = (
   params?: Record<string, string | number>,
 ) => string;
 
+function messageClock(value: string, locale: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB",
+    { hour: "2-digit", minute: "2-digit" },
+  ).format(date);
+}
+
 /**
  * One chat bubble. Memoized on (message, copy): during streaming, only the
  * message currently receiving deltas re-renders — completed messages keep
@@ -214,16 +225,31 @@ type AiCopyFn = (
 const MessageBubble = memo(function MessageBubble({
   message,
   copy,
+  locale,
 }: {
   message: AiMessageView;
   copy: AiCopyFn;
+  locale: string;
 }) {
   const assistant = message.role === "assistant";
+  const [copied, setCopied] = useState(false);
+  const clock = message.createdAt ? messageClock(message.createdAt, locale) : "";
+
+  const copyMessage = async () => {
+    if (!message.content) return;
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1_600);
+    } catch {
+      // Clipboard unavailable (permissions) — non-fatal, button resets.
+    }
+  };
 
   return (
     <article
       data-ai-message={message.role}
-      className={cn("flex gap-3", assistant ? "justify-start" : "justify-end")}
+      className={cn("group/message flex gap-3", assistant ? "justify-start" : "justify-end")}
     >
       {assistant ? (
         <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border bg-primary/5 text-primary">
@@ -284,6 +310,36 @@ const MessageBubble = memo(function MessageBubble({
                 </p>
               </div>
             </div>
+          </div>
+        ) : null}
+
+        {message.content && !message.streaming ? (
+          // Hover action row (ChatGPT-class): copy + clock under every
+          // completed message; the newest-message row stays visible.
+          <div
+            className={cn(
+              "mt-1 flex items-center gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/message:opacity-100 md:opacity-0",
+              assistant ? "justify-start" : "justify-end",
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => void copyMessage()}
+              aria-label={copied ? copy("messageCopied") : copy("copyMessage")}
+              title={clock ? `${copy("copyMessage")} · ${clock}` : copy("copyMessage")}
+              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {copied ? (
+                <Check className="size-3.5 text-success" aria-hidden="true" />
+              ) : (
+                <Copy className="size-3.5" aria-hidden="true" />
+              )}
+            </button>
+            {clock ? (
+              <span className="text-2xs tabular-nums text-muted-foreground" dir="ltr">
+                {clock}
+              </span>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -455,9 +511,21 @@ export function AiDecisionCanvas({
             <Bot className="size-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold tracking-tight">
-              {activeSession?.title || workspace.copy("newSessionTitle")}
-            </h2>
+            <div className="flex min-w-0 items-center gap-2">
+              <h2 className="truncate text-base font-semibold tracking-tight">
+                {activeSession?.title || workspace.copy("newSessionTitle")}
+              </h2>
+              {/* Ledger AI-01: seeded demo sessions are labelled honestly so
+                  canned conversations are never mistaken for model output. */}
+              {activeSession?.id.startsWith("demo-") ? (
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 text-2xs font-medium"
+                >
+                  {getAiDecisionCopy(workspace.locale, "demoBadge")}
+                </Badge>
+              ) : null}
+            </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {activeSession
                 ? getAiDecisionCopy(workspace.locale, "durableSession")
@@ -509,7 +577,12 @@ export function AiDecisionCanvas({
             ) : (
               <div className="space-y-5">
                 {messages.map((message) => (
-                  <MessageBubble key={message.id} message={message} copy={copy} />
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    copy={copy}
+                    locale={workspace.locale}
+                  />
                 ))}
 
                 {canRegenerate ? (

@@ -30,6 +30,8 @@ export function AiReviewEvidence({
     setupError,
     approvingProposalId,
     approveProposal,
+    rejectingProposalId,
+    rejectProposal,
     retry,
     locale,
   } = workspace;
@@ -118,6 +120,8 @@ export function AiReviewEvidence({
                     handle={handle}
                     approving={approvingProposalId === handle.proposal.id}
                     onApprove={approveProposal}
+                    rejecting={rejectingProposalId === handle.proposal.id}
+                    onReject={rejectProposal}
                   />
                 ))}
               </div>

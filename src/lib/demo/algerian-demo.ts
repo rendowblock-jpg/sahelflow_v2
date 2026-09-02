@@ -832,15 +832,15 @@ export async function seedAlgerianDemoData(
     await client.aiChatSession.create({
       data: {
         id: aiSessionId,
-        title: "Brief opérationnel du matin",
+        title: "Démo · Brief opérationnel du matin",
         createdAt: daysAgo(0, 8),
       },
     });
     const aiMessages = [
       ["user", "Donne-moi les priorités COD de ce matin.", null],
-      ["assistant", "8 commandes demandent une action : 3 confirmations WhatsApp, 2 colis en sortie de livraison, 2 COD collectés non remisés et 1 stock faible.", JSON.stringify([{ name: "get_operational_brief", result: { confirmations: 3, outForDelivery: 2, pendingRemittance: 2, lowStock: 1 } }])],
+      ["assistant", "8 commandes demandent une action : 3 confirmations WhatsApp, 2 colis en sortie de livraison, 2 COD collectés non remisés et 1 stock faible.", JSON.stringify([{ name: "get_stats", result: { confirmations: 3, outForDelivery: 2, pendingRemittance: 2, lowStock: 1 } }])],
       ["user", "Quel dossier dois-je vérifier en premier ?", null],
-      ["assistant", "Commencez par DZ-DEMO-0001 : la cliente a confirmé en arabe, l'adresse est complète et elle demande un appel avant expédition. Le dossier est prêt pour validation humaine.", JSON.stringify([{ name: "get_order", result: { orderNumber: "DZ-DEMO-0001", risk: "low", nextAction: "confirm" } }])],
+      ["assistant", "Commencez par DZ-DEMO-0001 : la cliente a confirmé en arabe, l'adresse est complète et elle demande un appel avant expédition. Le dossier est prêt pour validation humaine.", JSON.stringify([{ name: "get_order_details", result: { orderNumber: "DZ-DEMO-0001", risk: "low", nextAction: "confirm" } }])],
     ] as const;
     for (let index = 0; index < aiMessages.length; index += 1) {
       const [role, content, toolCalls] = aiMessages[index]!;
