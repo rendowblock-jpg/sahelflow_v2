@@ -99,9 +99,7 @@ describe("AI composer screenshot attachment (AI-21)", () => {
         expect(getAiWorkspaceCopy(locale, key), `${locale}:${key}`).toBeTruthy();
       }
     }
-    expect(getAiWorkspaceCopy("fr", "screenshotTooLarge")).toContain(
-      "{{limit}}",
-    );
+    expect(getAiWorkspaceCopy("fr", "screenshotTooLarge")).toContain("{limit}");
     expect(getAiWorkspaceCopy("en", "attachScreenshot")).toBe(
       "Attach screenshot",
     );

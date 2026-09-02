@@ -14,6 +14,7 @@ import type {
   AiWorkspaceError,
   AiWorkspaceErrorCode,
 } from "@/components/ai/ai-workspace-types";
+import { parseTurnSignal } from "@/components/ai/ai-workspace-types";
 import { useI18n } from "@/hooks/use-i18n";
 import {
   getAiWorkspaceCopy,
@@ -641,6 +642,10 @@ export function useAiWorkspace() {
                   typeof payload.response === "string"
                 ) {
                   delivered = Boolean(payload.response) || delivered;
+                  // Ledger AI-26: keep the provider's own turn signal when
+                  // present — parseTurnSignal drops anything unshaped, so no
+                  // fabricated or malformed value ever reaches the UI.
+                  const signal = parseTurnSignal(payload.signal);
                   setMessages((current) =>
                     current.map((message) =>
                       message.id === assistantId
@@ -648,6 +653,7 @@ export function useAiWorkspace() {
                             ...message,
                             content: payload.response as string,
                             streaming: false,
+                            signal,
                           }
                         : message,
                     ),

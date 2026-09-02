@@ -370,6 +370,26 @@ const MessageBubble = memo(function MessageBubble({
           </div>
         ) : null}
 
+        {/* Ledger AI-26: truthful provider signal — rendered only when the
+            provider actually reported the turn (model + usage). Line stays
+            LTR: model ids and token counts are technical identifiers. */}
+        {assistant && !message.streaming && message.signal ? (
+          <p
+            data-ai-model-signal="true"
+            className="mt-1.5 text-2xs text-muted-foreground"
+            dir="ltr"
+          >
+            {message.signal.totalTokens != null
+              ? copy("modelSignal", {
+                  model: message.signal.model,
+                  tokens: message.signal.totalTokens,
+                })
+              : copy("modelSignalModelOnly", {
+                  model: message.signal.model,
+                })}
+          </p>
+        ) : null}
+
         {message.persistenceWarning ? (
           <div className="mt-2 rounded-xl border border-warning/25 bg-warning/5 px-3 py-2.5">
             <div className="flex items-start gap-2.5">

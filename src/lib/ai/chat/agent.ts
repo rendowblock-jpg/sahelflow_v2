@@ -7,6 +7,7 @@ import {
 import {
   geminiErrorMessage,
   geminiProviderErrorFromStream,
+  type GeminiModel,
   type GeminiProviderError,
   requestGemini,
 } from "@/lib/ai/gemini/provider";
@@ -34,6 +35,11 @@ interface GeminiFunctionCall {
   name: string;
   args: Record<string, unknown>;
 }
+interface GeminiUsageMetadata {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+}
 interface GeminiResponse {
   candidates?: Array<{
     content?: {
@@ -43,6 +49,7 @@ interface GeminiResponse {
       }>;
     };
   }>;
+  usageMetadata?: GeminiUsageMetadata;
   error?: { code?: number; message?: string; status?: string };
 }
 
@@ -65,6 +72,38 @@ export interface AgentResult {
   error?: string;
   actionProposal?: AiActionProposalToolResult;
 }
+
+/**
+ * Ledger AI-26 — truthful turn signal. Built ONLY from the provider's own
+ * usageMetadata (absent fields stay absent) and the model id that actually
+ * served the request; `undefined` means the provider reported nothing and
+ * the UI shows no signal at all. Never estimated, never fabricated.
+ */
+export interface AgentTurnSignal {
+  model: GeminiModel;
+  promptTokens?: number;
+  candidateTokens?: number;
+  totalTokens?: number;
+}
+
+function turnSignal(
+  model: GeminiModel | null,
+  usage: GeminiUsageMetadata | null,
+): AgentTurnSignal | undefined {
+  if (!model || !usage) return undefined;
+  return {
+    model,
+    ...(usage.promptTokenCount != null
+      ? { promptTokens: usage.promptTokenCount }
+      : {}),
+    ...(usage.candidatesTokenCount != null
+      ? { candidateTokens: usage.candidatesTokenCount }
+      : {}),
+    ...(usage.totalTokenCount != null
+      ? { totalTokens: usage.totalTokenCount }
+      : {}),
+  };
+}
 export type AgentStreamEvent =
   | { type: "tool_call"; name: string; args: Record<string, unknown> }
   | { type: "tool_result"; name: string; result: unknown }
@@ -75,6 +114,7 @@ export type AgentStreamEvent =
       response: string;
       toolCalls: AgentResult["toolCalls"];
       actionProposal?: AiActionProposalToolResult;
+      signal?: AgentTurnSignal;
     }
   | { type: "error"; message: string };
 
@@ -298,6 +338,7 @@ interface ParsedStream {
   functionCalls: GeminiFunctionCall[];
   cancelled: boolean;
   providerError: GeminiProviderError | null;
+  usage: GeminiUsageMetadata | null;
 }
 
 async function* parseStream(
@@ -308,6 +349,7 @@ async function* parseStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let fullText = "";
+  let usage: GeminiUsageMetadata | null = null;
   // Ledger AI-16: collect every parallel function call in the turn instead of
   // overwriting (last-wins) — the model may request several at once.
   const functionCalls: GeminiFunctionCall[] = [];
@@ -320,6 +362,7 @@ async function* parseStream(
           functionCalls: [],
           cancelled: true,
           providerError: null,
+          usage,
         };
       }
       const { done, value } = await reader.read();
@@ -345,9 +388,13 @@ async function* parseStream(
               functionCalls: [],
               cancelled: false,
               providerError: geminiProviderErrorFromStream(chunk.error),
+              usage,
             };
           }
           const parts = chunk.candidates?.[0]?.content?.parts ?? [];
+          // Ledger AI-26: keep the provider's own usage report when it sends
+          // one (stream chunks typically carry it on the final chunk).
+          if (chunk.usageMetadata) usage = chunk.usageMetadata;
           for (const part of parts) {
             if (part.text) {
               fullText += part.text;
@@ -366,6 +413,7 @@ async function* parseStream(
     functionCalls,
     cancelled: false,
     providerError: null,
+    usage,
   };
 }
 
@@ -391,6 +439,9 @@ export async function* runAgentStream(
     ...renderHistory(conversationHistory),
     { role: "user", parts: [{ text: userMessage }] },
   ];
+  // Ledger AI-26: the model id that actually served the turn — requestGemini
+  // resolves fallbacks internally, so the reported model is request truth.
+  let servedModel: GeminiModel | null = null;
 
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration += 1) {
     if (externalSignal?.aborted) return;
@@ -401,6 +452,7 @@ export async function* runAgentStream(
         body: requestBody(contents, locale, tools),
       });
       stream = result.response.body;
+      servedModel = result.model;
     } catch (error) {
       if (externalSignal?.aborted) return;
       yield { type: "error", message: geminiErrorMessage(error, locale ?? "fr") };
@@ -418,7 +470,8 @@ export async function* runAgentStream(
       if (parsed.done) break;
       yield parsed.value;
     }
-    const { fullText, functionCalls, cancelled, providerError } = parsed.value;
+    const { fullText, functionCalls, cancelled, providerError, usage } =
+      parsed.value;
     if (cancelled) return;
     if (providerError) {
       yield {
@@ -449,6 +502,7 @@ export async function* runAgentStream(
             response: proposalResponse(fullText, outcome.actionProposal, locale),
             toolCalls: allToolCalls,
             actionProposal: outcome.actionProposal,
+            signal: turnSignal(servedModel, usage),
           };
           return;
         }
@@ -475,7 +529,12 @@ export async function* runAgentStream(
     }
 
     if (fullText) {
-      yield { type: "done", response: fullText, toolCalls: allToolCalls };
+      yield {
+        type: "done",
+        response: fullText,
+        toolCalls: allToolCalls,
+        signal: turnSignal(servedModel, usage),
+      };
       return;
     }
     yield {

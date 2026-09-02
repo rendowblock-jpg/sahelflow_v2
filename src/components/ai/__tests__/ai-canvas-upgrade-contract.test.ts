@@ -83,19 +83,27 @@ describe("R4-e AI canvas upgrade — regenerate", () => {
     expect(canvas).toContain("onClick={stop}");
   });
 
-  it("skips a usage/cost signal — the done event carries no usage metadata (nothing fabricated)", () => {
+  it("carries a truthful provider signal — real usage metadata only, never fabricated", () => {
+    // Ledger AI-26 disposition (deliberate contract revision): the done event
+    // now carries `signal`, but ONLY from the provider's own usageMetadata
+    // plus the model id that actually served the request. The prior blanket
+    // prohibition (agent must not mention usageMetadata) was replaced by a
+    // stricter truthfulness contract: absent fields stay absent, the UI
+    // renders nothing without a real provider report, and cost estimation
+    // remains forbidden.
     const agent = read("src/lib/ai/chat/agent.ts");
-    const stream = read(
-      "src/app/api/ai/sessions/[id]/messages/stream/route.ts",
-    );
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
-    // The contract today: done = { response, toolCalls } only.
     expect(agent).toContain('type: "done";');
-    expect(agent).not.toContain("usageMetadata");
-    expect(agent).not.toContain("promptTokenCount");
-    expect(stream).not.toContain("usage");
+    expect(agent).toContain("turnSignal");
+    expect(agent).toContain("usageMetadata");
+    // The signal is built only from provider-reported fields.
+    expect(agent).toContain("if (!model || !usage) return undefined;");
+    // No cost estimate anywhere — tokens are never converted to money.
     expect(canvas).not.toContain("turnCost");
-    expect(canvas).not.toContain("tokenCount");
+    expect(canvas).not.toContain("DZD/token");
+    // The canvas renders the signal only for settled provider-backed turns.
+    expect(canvas).toContain('data-ai-model-signal="true"');
+    expect(canvas).toContain("message.signal ?");
   });
 });
 
