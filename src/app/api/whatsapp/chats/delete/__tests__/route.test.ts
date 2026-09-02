@@ -137,4 +137,31 @@ describe("POST /api/whatsapp/chats/delete — self-diagnosing rejections (campai
     const serialized = JSON.stringify(await response.json());
     expect(serialized).not.toContain(secretishId);
   });
+
+  it("names ids that resolved to nothing instead of silently absorbing them (audit S3-20)", async () => {
+    harness.deleteChats.mockResolvedValueOnce({
+      deletedConversationIds: ["conv-1"],
+      deletedMessageCount: 4,
+    });
+    const response = await POST(
+      deleteRequest(JSON.stringify({ ids: ["conv-1", "conv-ghost"] })),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      ok: boolean;
+      deleted: number;
+      notFoundIds: string[];
+    };
+    expect(body).toMatchObject({ ok: true, deleted: 1 });
+    expect(body.notFoundIds).toEqual(["conv-ghost"]);
+  });
+
+  it("returns an empty notFoundIds list when every id resolved", async () => {
+    const response = await POST(
+      deleteRequest(JSON.stringify({ ids: ["conv-1"] })),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { notFoundIds: string[] };
+    expect(body.notFoundIds).toEqual([]);
+  });
 });

@@ -35,7 +35,10 @@ export const POST = withErrorHandler(async (request: Request) => {
   const limit = checkLoginRateLimit(ip);
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "Too many attempts. Please try again later." },
+      {
+        error: "Too many attempts. Please try again later.",
+        code: "RATE_LIMITED",
+      },
       {
         status: 429,
         headers: { "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)) },
@@ -45,7 +48,11 @@ export const POST = withErrorHandler(async (request: Request) => {
 
   if (!(await isAuthSetup())) {
     return NextResponse.json(
-      { error: "Authentication setup is required", needsSetup: true },
+      {
+        error: "Authentication setup is required",
+        code: "AUTH_SETUP_REQUIRED",
+        needsSetup: true,
+      },
       { status: 409 },
     );
   }
@@ -100,7 +107,10 @@ export const POST = withErrorHandler(async (request: Request) => {
     );
     if (!failure.allowed && failure.locked) {
       return NextResponse.json(
-        { error: "Too many failed attempts. Account temporarily locked." },
+        {
+          error: "Too many failed attempts. Account temporarily locked.",
+          code: "RATE_LIMITED",
+        },
         {
           status: 429,
           headers: {
