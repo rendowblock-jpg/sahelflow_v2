@@ -109,7 +109,7 @@ export function ProductRowActions({
                 void confirmDelete();
               }}
               disabled={deleting}
-              className="bg-destructive text-white hover:bg-destructive/90"
+              variant="destructive"
             >
               {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
               {t("products.delete")}

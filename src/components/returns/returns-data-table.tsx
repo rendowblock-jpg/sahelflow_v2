@@ -84,12 +84,9 @@ export function ReturnsDataTable({ fallback, locale }: ReturnsDataTableProps) {
     {
       accessorKey: "reason",
       header: () => t("returns.table.reason"),
-      cell: ({ row }) => (
-        <span className="block max-w-xs truncate text-muted-foreground">
-          {row.original.reason}
-        </span>
-      ),
-      meta: { hideOn: "md" },
+      cell: ({ row }) => <span>{row.original.reason}</span>,
+      // Seller free-text — wrap it instead of silently clipping (F26).
+      meta: { hideOn: "md", wrap: true },
       enableSorting: false,
     },
     {

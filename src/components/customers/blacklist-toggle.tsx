@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { Ban, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 
 import { useI18n } from "@/hooks/use-i18n";
 import { Button } from "@/components/ui/button";
@@ -79,7 +80,9 @@ export function BlacklistToggle({
       // Invalidate SWR cache for /api/customers* so list views reflect the blacklist change.
       void mutatePrefix("/api/customers");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("common.error"));
+      toast.error(
+        translateServerError(err instanceof Error ? err.message : "", t, t("common.error")),
+      );
     } finally {
       setSaving(false);
     }
@@ -101,7 +104,9 @@ export function BlacklistToggle({
       // Invalidate SWR cache for /api/customers* so list views reflect the unblacklist.
       void mutatePrefix("/api/customers");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("common.error"));
+      toast.error(
+        translateServerError(err instanceof Error ? err.message : "", t, t("common.error")),
+      );
     } finally {
       setSaving(false);
     }

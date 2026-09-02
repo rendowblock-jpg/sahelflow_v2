@@ -13,6 +13,7 @@ import { useOrders } from "@/hooks/swr/use-orders";
 import { useOrdersFilterParams } from "@/hooks/use-orders-filter-params";
 import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { toast } from "@/lib/toast";
 import type { OrderStatus } from "@/types/domain";
@@ -227,7 +228,7 @@ export function OrdersDataTable({
       <StateSurface
         icon={AlertTriangle}
         title={t("error.requestFailed")}
-        description={error.message}
+        description={translateServerError(error.message, t, t("error.requestFailed"))}
         tone="danger"
         size="inline"
         role="alert"

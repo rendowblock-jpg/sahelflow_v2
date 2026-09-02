@@ -479,10 +479,12 @@ describe("lifecycle rail surface contract", () => {
   });
 
   it("reuses the confirmation queue's rejection quick-picks and legacy hint", () => {
-    expect(rail).toContain('"confirmationQueue.reject.reason.customerCancelled"');
-    expect(rail).toContain('"confirmationQueue.reject.reason.fakeOrder"');
-    expect(rail).toContain('"confirmationQueue.reject.reason.unreachable"');
-    expect(rail).toContain('"confirmationQueue.reject.reason.postponed"');
+    // Quick-picks submit locale-stable enum keys (rejection-reasons.ts); the
+    // translated labels are display-only, never the stored value.
+    expect(rail).toContain('from "@/lib/orders/rejection-reasons"');
+    expect(rail).toContain(
+      "resolveRejectionReasonSubmit(pickedReasonKey, reason, t)",
+    );
     expect(rail).toContain('t("confirmationQueue.reject.legacyHint")');
     expect(rail).toContain('data-testid="lifecycle-reason-quickpick"');
   });

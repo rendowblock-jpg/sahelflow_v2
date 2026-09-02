@@ -167,6 +167,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {!storefrontFocusMode ? (
           <Topbar
             onCommandPaletteOpen={() => setCommandOpen(true)}
+            onCheatsheetOpen={() => setCheatsheetOpen(true)}
             serverLocale={locale}
             serverDir={dir}
           />

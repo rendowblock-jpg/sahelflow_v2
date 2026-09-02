@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 
 type ApiError = { error?: string };
 type AcceptanceAttempt = Readonly<{ fingerprint: string; requestId: string }>;
@@ -57,12 +58,22 @@ export default function JoinPage() {
         body: JSON.stringify({ token: normalizedToken, requestId, displayName: normalizedName, loginId: normalizedLogin, pin }),
       });
       const body = (await response.json()) as ApiError;
-      if (!response.ok) throw new Error(body.error ?? t("phase5.join.failed"));
+      if (!response.ok) {
+        throw new Error(
+          translateServerError(body.error, t, t("phase5.join.failed")),
+        );
+      }
       setSuccess(true);
       router.replace("/");
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("phase5.join.failed"));
+      setError(
+        translateServerError(
+          caught instanceof Error ? caught.message : "",
+          t,
+          t("phase5.join.failed"),
+        ),
+      );
     } finally {
       setLoading(false);
     }

@@ -39,6 +39,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/hooks/use-i18n";
 import { useNotificationCenter } from "@/hooks/use-notification-center";
 import type { Locale } from "@/lib/i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { toast } from "@/lib/toast";
 import { logoutAndRedirect } from "@/lib/auth/logout-client";
 import { useShopStore } from "@/stores/shop-store";
@@ -53,9 +54,17 @@ const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
 
 interface TopbarProps {
   onCommandPaletteOpen: () => void;
+  /** Open the offline keyboard-shortcuts cheatsheet (the in-app Help surface). */
+  onCheatsheetOpen: () => void;
   serverLocale: Locale;
   serverDir: "ltr" | "rtl";
 }
+
+/** Identity fields the topbar renders from GET /api/auth/me (may be absent). */
+type MemberIdentity = {
+  displayName?: string;
+  loginId?: string;
+};
 
 /**
  * Phase 5 application command/title bar.
@@ -67,6 +76,7 @@ interface TopbarProps {
  */
 export function Topbar({
   onCommandPaletteOpen,
+  onCheatsheetOpen,
   serverLocale,
   serverDir,
 }: TopbarProps) {
@@ -86,10 +96,34 @@ export function Topbar({
   const { notifications, unreadCount, applyLifecycle, readAll } =
     useNotificationCenter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [memberIdentity, setMemberIdentity] = useState<MemberIdentity | null>(
+    null,
+  );
 
   useEffect(() => {
     void loadShops();
   }, [loadShops]);
+
+  // Signed-in member identity (same endpoint the settings identity card uses).
+  // Silent on failure: the menu falls back to neutral identity copy instead of
+  // wearing the shop's identity as the user's own.
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then(async (response) =>
+        response.ok
+          ? ((await response.json()) as { profile?: MemberIdentity }).profile ??
+            null
+          : null,
+      )
+      .then((profile) => {
+        if (active) setMemberIdentity(profile);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const activeShop = shops.find((shop) => shop.id === activeShopId) ?? null;
   const switchTarget =
@@ -110,9 +144,11 @@ export function Topbar({
         await setActiveShop(shopId);
       } catch (error) {
         toast.error(
-          error instanceof Error
-            ? error.message
-            : t("topbar.shopSwitchBlocked"),
+          translateServerError(
+            error instanceof Error ? error.message : "",
+            t,
+            t("topbar.shopSwitchBlocked"),
+          ),
         );
       }
     },
@@ -433,17 +469,32 @@ export function Topbar({
             >
               <Avatar className="size-7 ring-1 ring-border">
                 <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-                  {displayShopName(activeShop).charAt(0).toUpperCase() || "S"}
+                  {memberIdentity?.displayName ? (
+                    memberIdentity.displayName.charAt(0).toUpperCase()
+                  ) : (
+                    <User className="size-3.5" aria-hidden="true" />
+                  )}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 shadow-dropdown">
             <DropdownMenuLabel className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium">{t("topbar.user")}</span>
-              <span className="text-xs font-normal text-muted-foreground">
-                SahelFlow
+              <span className="text-sm font-medium">
+                {memberIdentity?.displayName ?? t("topbar.user")}
               </span>
+              {memberIdentity?.displayName ? (
+                <span
+                  dir="ltr"
+                  className="truncate font-mono text-xs font-normal text-muted-foreground"
+                >
+                  {memberIdentity.loginId ?? "SahelFlow"}
+                </span>
+              ) : (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {displayShopName(activeShop) || "SahelFlow"}
+                </span>
+              )}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
@@ -459,15 +510,11 @@ export function Topbar({
                   {t("nav.settings")}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <a
-                  href="https://sahelflow.com/help"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <HelpCircle className="me-2 size-4" aria-hidden="true" />
-                  {t("topbar.helpSupport")}
-                </a>
+              <DropdownMenuItem onClick={onCheatsheetOpen}>
+                {/* sahelflow.com is not owned yet (#230) — offline help is the
+                    keyboard cheatsheet modal the shell already ships. */}
+                <HelpCircle className="me-2 size-4" aria-hidden="true" />
+                {t("topbar.helpSupport")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

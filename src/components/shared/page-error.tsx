@@ -6,6 +6,7 @@ import { AlertTriangle, RefreshCw, RotateCw } from "lucide-react";
 import { StateSurface } from "@/components/shared/state-surface";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { DESKTOP_RUNTIME_RECOVERED_EVENT } from "@/lib/runtime/desktop-recovery";
 
 interface PageErrorProps {
@@ -67,8 +68,10 @@ export function PageError({ error, reset, title, hideReload }: PageErrorProps) {
 
   const resolvedTitle =
     title ?? (expected ? t("error.title") : t("error.unexpectedTitle"));
+  // Expected errors may carry a bounded, human-readable message — translate the
+  // known server strings; raw text remains in the diagnostics channel above.
   const description = expected
-    ? error.message || t("error.defaultMessage")
+    ? translateServerError(error.message, t, t("error.defaultMessage"))
     : t("error.unexpectedMessage");
 
   return (

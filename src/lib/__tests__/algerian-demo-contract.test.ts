@@ -137,15 +137,24 @@ describe("Algerian Founder demo contract", () => {
     expect(settingsService).toContain('"demo_seed_created_at"');
     expect(settingsService).toContain("RESERVED_SETTING_KEYS.has(key)");
 
-    expect(panel).toContain('const COPY: Record<"ar" | "fr" | "en", Copy>');
+    // F18: the demo panel reads the settings runtime dictionary — the private
+    // COPY record and raw error rendering are gone; the FD-054 409 is
+    // code-mapped to a localized message with the code as secondary detail.
+    expect(panel).not.toContain("const COPY: Record");
+    expect(panel).toContain("getSettingsWorkspaceCopy");
+    expect(panel).toContain('"demoData.removeBlocked"');
+    expect(panel).toContain("DEMO_REMOVAL_BLOCKED_BY_REFERENCES");
     expect(panel).toContain('fetch("/api/demo-data"');
     expect(panel).toContain('mutate("DELETE")');
     expect(panel).toContain("<ConfirmDialog");
     expect(panel).toContain('onConfirm={() => mutate("DELETE")}');
     expect(panel).not.toContain("window.confirm");
-    expect(panel).toContain("Fatima Zohra WhatsApp message");
-    expect(panel).toContain("رسالة واتساب حديثة من فاطمة الزهراء");
-    expect(panel).toContain("365 يومًا حتى اليوم");
+    // Localized product copy now lives in the dictionary authority.
+    const demoCopy = read("src/lib/i18n/settings-workspace.ts");
+    expect(demoCopy).toContain('"demoData.journey"');
+    expect(demoCopy).toContain("Fatima Zohra WhatsApp message");
+    expect(demoCopy).toContain("رسالة واتساب حديثة من فاطمة الزهراء");
+    expect(demoCopy).toContain("365 يومًا حتى اليوم");
 
     expect(settings).toContain(
       'export type SettingsWorkspaceGroup =\n  | "workspace"\n  | "operations"\n  | "connections"\n  | "intelligence"\n  | "access"\n  | "data"',

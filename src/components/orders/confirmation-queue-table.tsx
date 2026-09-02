@@ -50,8 +50,14 @@ import {
   summarizeBatchFailures,
   type QueueDecision,
 } from "@/lib/orders/confirmation-queue-dispatch";
+import {
+  REJECTION_REASONS,
+  resolveRejectionReasonSubmit,
+  type RejectionReasonKey,
+} from "@/lib/orders/rejection-reasons";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { toast } from "@/lib/toast";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { cn, formatDZD, formatOperationalAge } from "@/lib/utils";
 import type {
   ConfirmationQueueItem,
@@ -65,13 +71,6 @@ interface ConfirmationQueueTableProps {
 
 /** MENA confirmation economics: deciding within 60 minutes cuts refusals. */
 const CONFIRMATION_SLA_MINUTES = 60;
-
-const REJECT_QUICK_PICK_KEYS = [
-  "confirmationQueue.reject.reason.customerCancelled",
-  "confirmationQueue.reject.reason.fakeOrder",
-  "confirmationQueue.reject.reason.unreachable",
-  "confirmationQueue.reject.reason.postponed",
-] as const;
 
 interface RejectReasonFormProps {
   title: string;
@@ -87,6 +86,9 @@ interface RejectReasonFormProps {
  * popover: one-click quick reasons (COD reality: fake orders, unreachable
  * customers) plus an optional free note, mirroring the governed decision
  * contract that requires a reason for every rejection.
+ *
+ * Quick-picks submit a locale-stable enum key (see rejection-reasons.ts); the
+ * textarea shows the localized label for reading while the pick is active.
  */
 function RejectReasonForm({
   title,
@@ -98,6 +100,7 @@ function RejectReasonForm({
 }: RejectReasonFormProps) {
   const { t } = useI18n();
   const [reason, setReason] = useState("");
+  const [pickedKey, setPickedKey] = useState<RejectionReasonKey | null>(null);
 
   return (
     <div className="space-y-3" data-testid="queue-reject-form">
@@ -107,16 +110,20 @@ function RejectReasonForm({
         role="group"
         aria-label={t("confirmationQueue.reject.quickPicksLabel")}
       >
-        {REJECT_QUICK_PICK_KEYS.map((key) => {
-          const label = t(key);
-          const selected = reason === label;
+        {REJECTION_REASONS.map(({ key, i18nKey }) => {
+          const label = t(i18nKey);
+          const selected = pickedKey === key;
           return (
             <button
               key={key}
               type="button"
               data-testid="queue-reject-quickpick"
+              data-reason-key={key}
               data-selected={selected}
-              onClick={() => setReason(label)}
+              onClick={() => {
+                setPickedKey(key);
+                setReason(label);
+              }}
               className={cn(
                 "rounded-md border px-2 py-1 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 selected
@@ -135,7 +142,10 @@ function RejectReasonForm({
         </span>
         <Textarea
           value={reason}
-          onChange={(event) => setReason(event.target.value)}
+          onChange={(event) => {
+            setReason(event.target.value);
+            setPickedKey(null);
+          }}
           placeholder={t("orders.workspace.decision.reasonPlaceholder")}
           maxLength={500}
           rows={2}
@@ -153,7 +163,9 @@ function RejectReasonForm({
           size="sm"
           variant="destructive"
           disabled={busy || !reason.trim()}
-          onClick={() => onSubmit(reason.trim())}
+          onClick={() =>
+            onSubmit(resolveRejectionReasonSubmit(pickedKey, reason, t))
+          }
         >
           {busy ? (
             <Loader2 className="me-1.5 size-4 animate-spin" aria-hidden="true" />
@@ -626,7 +638,7 @@ export function ConfirmationQueueTable({
       <StateSurface
         icon={AlertTriangle}
         title={t("error.requestFailed")}
-        description={error.message}
+        description={translateServerError(error.message, t, t("error.requestFailed"))}
         tone="danger"
         size="inline"
         role="alert"

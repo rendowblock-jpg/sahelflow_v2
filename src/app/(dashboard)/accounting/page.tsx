@@ -9,6 +9,7 @@ import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
 import { StateSurface } from "@/components/shared/state-surface";
 import { StatCard } from "@/components/shared/stat-card";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -55,7 +56,7 @@ export default async function AccountingPage() {
     new Date(now.getFullYear(), now.getMonth() - (5 - index), 1),
   );
 
-  const [expenses, profitability, monthlySeries] = await Promise.all([
+  const aggregates = await Promise.all([
     db.expense.findMany({
       where: { date: { gte: periodStart, lt: now }, deletedAt: null },
       orderBy: [{ date: "desc" }, { id: "desc" }],
@@ -75,7 +76,37 @@ export default async function AccountingPage() {
           })),
         )
       : Promise.resolve([]),
-  ]);
+  ])
+    .then(([expenses, profitability, monthlySeries]) => ({
+      expenses,
+      profitability,
+      monthlySeries,
+    }))
+    .catch(() => null);
+
+  // Degraded state: a transient DB hiccup should not fall through to the route
+  // error boundary — the workbench stays recognizable and offers a retry.
+  if (!aggregates) {
+    return (
+      <div className="app-content page-sections">
+        <PageHeader title={t("nav.accounting")} description={t("accounting.subtitle")} />
+        <StateSurface
+          icon={AlertTriangle}
+          title={t("accounting.loadFailed")}
+          description={t("error.requestFailed")}
+          tone="danger"
+          size="inline"
+          actions={
+            <Button asChild variant="outline" size="sm">
+              <a href="/accounting">{t("common.retry")}</a>
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  const { expenses, profitability, monthlySeries } = aggregates;
 
   const monthlyByKey = new Map(
     monthlySeries.map((entry) => [entry.key, entry.projection]),
@@ -189,7 +220,11 @@ export default async function AccountingPage() {
                     <TableRow key={expense.id}>
                       <TableCell className="text-muted-foreground">{formatDate(expense.date, locale)}</TableCell>
                       <TableCell className="font-medium">{t(`accounting.category.${expense.category}`)}</TableCell>
-                      <TableCell className="text-end font-medium tabular-nums">−{formatDZD(expense.amount, locale)}</TableCell>
+                      <TableCell className="text-end font-medium tabular-nums">
+                        {/* Isolate the signed amount so the minus glyph never
+                            marries the surrounding RTL label direction. */}
+                        <span dir="ltr">−{formatDZD(expense.amount, locale)}</span>
+                      </TableCell>
                       <TableCell className="max-w-xs text-muted-foreground">{expense.notes ?? "—"}</TableCell>
                       {canUpdate ? (
                         <TableCell className="text-end">
