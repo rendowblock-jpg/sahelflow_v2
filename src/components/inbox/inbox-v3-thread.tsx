@@ -1,6 +1,15 @@
 "use client";
 
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   AlertCircle,
   ArrowDown,
@@ -933,12 +942,101 @@ export function InboxV3Thread({
         threadMatchCount
       : 0;
 
+  // Ledger INB-11: render-window virtualization. The durable page (composite
+  // cursor) bounds what the server returns; the render window bounds what the
+  // DOM materializes. The window is bottom-anchored (the WhatsApp reading
+  // position), grows in steps while the top sentinel is approached, and snaps
+  // to the full thread when a search/quote jump targets hidden history.
+  const RENDER_WINDOW_INITIAL = 80;
+  const RENDER_WINDOW_STEP = 60;
+  const [renderWindow, setRenderWindow] = useState(RENDER_WINDOW_INITIAL);
+  const renderWindowSentinelRef = useRef<HTMLDivElement | null>(null);
+  const renderAnchorRef = useRef<number | null>(null);
+  const pendingJumpRef = useRef<string | null>(null);
+
+  // Conversation switch resets the window during the render it reacts to
+  // (adjust-state-on-change, no cascading effect render).
+  const [prevWindowKey, setPrevWindowKey] = useState(activeConversationKey);
+  if (prevWindowKey !== activeConversationKey) {
+    setPrevWindowKey(activeConversationKey);
+    setRenderWindow(RENDER_WINDOW_INITIAL);
+  }
+
+  const visibleStart =
+    messages.length > renderWindow ? messages.length - renderWindow : 0;
+  const windowExhausted = visibleStart === 0;
+  const visibleMessages = useMemo(
+    () => (windowExhausted ? messages : messages.slice(visibleStart)),
+    [messages, visibleStart, windowExhausted],
+  );
+
+  // Scroll anchor: growing the window prepends bubbles, so the viewport is
+  // re-anchored by the exact height delta after the DOM commits.
+  useLayoutEffect(() => {
+    const anchor = renderAnchorRef.current;
+    renderAnchorRef.current = null;
+    if (anchor === null) return;
+    const viewport = messagesInnerRef.current?.parentElement;
+    if (!viewport) return;
+    viewport.scrollTo({
+      top: viewport.scrollTop + (viewport.scrollHeight - anchor),
+    });
+  }, [renderWindow, visibleStart]);
+
+  // Deferred jump: a target outside the window first materializes the full
+  // thread, then the jump completes after the DOM commits.
+  useLayoutEffect(() => {
+    const pending = pendingJumpRef.current;
+    if (!pending) return;
+    const element = messagesInnerRef.current?.querySelector(
+      `[data-message-id="${CSS.escape(pending)}"]`,
+    );
+    if (!element) return;
+    pendingJumpRef.current = null;
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightedMessageId(pending);
+    if (highlightTimerRef.current) {
+      window.clearTimeout(highlightTimerRef.current);
+    }
+    highlightTimerRef.current = window.setTimeout(
+      () => setHighlightedMessageId(null),
+      2_200,
+    );
+  }, [messages, renderWindow]);
+
+  useEffect(() => {
+    if (windowExhausted) return;
+    const sentinel = renderWindowSentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        const viewport = messagesInnerRef.current?.parentElement;
+        renderAnchorRef.current = viewport ? viewport.scrollHeight : null;
+        setRenderWindow((current) => current + RENDER_WINDOW_STEP);
+      },
+      { rootMargin: "600px 0px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [windowExhausted, activeConversationKey]);
+
   const jumpToMessage = useCallback(
     (messageId: string): boolean => {
       const element = messagesInnerRef.current?.querySelector(
         `[data-message-id="${CSS.escape(messageId)}"]`,
       );
-      if (!element) return false;
+      if (!element) {
+        // Ledger INB-11: the target may sit outside the render window —
+        // materialize it and complete the jump after the DOM commit.
+        if (messages.length > renderWindow) {
+          pendingJumpRef.current = messageId;
+          renderAnchorRef.current = null;
+          setRenderWindow(messages.length);
+          return true;
+        }
+        return false;
+      }
       element.scrollIntoView({ behavior: "smooth", block: "center" });
       setHighlightedMessageId(messageId);
       if (highlightTimerRef.current) {
@@ -950,7 +1048,7 @@ export function InboxV3Thread({
       );
       return true;
     },
-    [messagesInnerRef],
+    [messages.length, messagesInnerRef, renderWindow],
   );
 
   // Ledger INB-26: stable per-conversation callbacks so memoized bubbles skip
@@ -1487,10 +1585,21 @@ export function InboxV3Thread({
                   </Button>
                 </div>
               ) : null}
-              {messages.map((message, index) => {
-              const previous = index > 0 ? messages[index - 1] : null;
+              {!windowExhausted ? (
+                <div
+                  ref={renderWindowSentinelRef}
+                  aria-hidden="true"
+                  data-inbox-render-window="true"
+                  className="h-px"
+                />
+              ) : null}
+              {visibleMessages.map((message, index) => {
+              const previous =
+                index > 0 ? visibleMessages[index - 1] ?? null : null;
               const next =
-                index < messages.length - 1 ? messages[index + 1] : null;
+                index < visibleMessages.length - 1
+                  ? visibleMessages[index + 1] ?? null
+                  : null;
               const showDay =
                 !previous ||
                 messageDayKey(previous.timestamp) !==
@@ -1532,7 +1641,7 @@ export function InboxV3Thread({
                       <span className="h-px flex-1 bg-border/55" />
                     </div>
                   ) : null}
-                  {index === dividerIndex ? (
+                  {index + visibleStart === dividerIndex ? (
                     <button
                       type="button"
                       onClick={dismissUnreadDivider}
