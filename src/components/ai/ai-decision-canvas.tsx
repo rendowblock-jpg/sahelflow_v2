@@ -396,6 +396,47 @@ function StartSurface({
         {getAiDecisionCopy(workspace.locale, "safeStartNote")}
       </p>
 
+      {!ready && workspace.setup ? (
+        <div className="mt-5 rounded-xl border bg-card/60 p-4">
+          <p className="text-sm font-semibold">
+            {getAiDecisionCopy(workspace.locale, "setupRequiredTitle")}
+          </p>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            {getAiDecisionCopy(workspace.locale, "setupRequiredCapabilities")}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {(
+              [
+                "setupChipPendingOrders",
+                "setupChipBestProducts",
+                "setupChipRevenueToday",
+                "setupChipTopWilayas",
+              ] as const
+            ).map((chip) => (
+              <span
+                key={chip}
+                className="rounded-full border bg-background px-2.5 py-0.5 text-xs text-muted-foreground"
+              >
+                {getAiDecisionCopy(workspace.locale, chip)}
+              </span>
+            ))}
+          </div>
+          <p className="mt-3 flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
+            <ShieldCheck
+              className="mt-0.5 size-3.5 shrink-0 text-primary"
+              aria-hidden="true"
+            />
+            {getAiDecisionCopy(workspace.locale, "setupRequiredPrivacyNote")}
+          </p>
+          <Button asChild variant="outline" size="sm" className="mt-3">
+            <Link href="/settings?group=intelligence">
+              <Settings2 className="size-4" aria-hidden="true" />
+              {workspace.copy("openSettings")}
+            </Link>
+          </Button>
+        </div>
+      ) : null}
+
       <div className="mt-6 grid gap-2 sm:grid-cols-2">
         {STARTERS.map((starter) => {
           const Icon = starter.icon;

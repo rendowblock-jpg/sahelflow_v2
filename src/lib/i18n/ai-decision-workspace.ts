@@ -35,6 +35,15 @@ const COPY = {
       "Read-only evidence stays in the decision canvas. Sensitive changes appear here before execution.",
     durableSession: "Saved locally",
     reviewCount: "{count} to review",
+    setupRequiredTitle: "What AI adds to this workspace",
+    setupRequiredCapabilities:
+      "I can search products, customers, create orders, get statistics, and estimate delivery fees.",
+    setupRequiredPrivacyNote:
+      "Analysis runs on your own Gemini key, stored encrypted on this device. Everything in SahelFlow keeps working without AI.",
+    setupChipPendingOrders: "Pending orders",
+    setupChipBestProducts: "Best products",
+    setupChipRevenueToday: "Revenue today",
+    setupChipTopWilayas: "Top wilayas",
   },
   fr: {
     newAnalysis: "Nouvelle analyse",
@@ -67,6 +76,15 @@ const COPY = {
       "Les preuves en lecture seule restent dans le canevas. Les changements sensibles apparaissent ici avant exécution.",
     durableSession: "Enregistrée localement",
     reviewCount: "{count} à vérifier",
+    setupRequiredTitle: "Ce que l’IA ajoute à cet espace",
+    setupRequiredCapabilities:
+      "Je peux rechercher des produits, des clients, créer des commandes, obtenir des statistiques, et estimer les frais de livraison.",
+    setupRequiredPrivacyNote:
+      "L’analyse s’exécute avec votre propre clé Gemini, chiffrée et stockée sur cet appareil. Tout SahelFlow reste fonctionnel sans IA.",
+    setupChipPendingOrders: "Commandes en attente",
+    setupChipBestProducts: "Meilleurs produits",
+    setupChipRevenueToday: "CA du jour",
+    setupChipTopWilayas: "Top wilayas",
   },
   ar: {
     newAnalysis: "تحليل جديد",
@@ -99,6 +117,15 @@ const COPY = {
       "تبقى الأدلة للقراءة في مساحة القرار. تظهر التغييرات الحساسة هنا قبل التنفيذ.",
     durableSession: "محفوظة محليًا",
     reviewCount: "{count} للمراجعة",
+    setupRequiredTitle: "ما يضيفه الذكاء الاصطناعي إلى هذه المساحة",
+    setupRequiredCapabilities:
+      "يمكنني البحث عن المنتجات والعملاء، وإنشاء الطلبات، والحصول على الإحصائيات، وتقدير رسوم التوصيل.",
+    setupRequiredPrivacyNote:
+      "يعمل التحليل بمفتاح Gemini الخاص بك، المشفّر والمخزَّن على هذا الجهاز. ويبقى كل شيء في SahelFlow فعالاً بدون الذكاء الاصطناعي.",
+    setupChipPendingOrders: "الطلبيات المعلقة",
+    setupChipBestProducts: "أفضل المنتجات",
+    setupChipRevenueToday: "إيرادات اليوم",
+    setupChipTopWilayas: "أفضل الولايات",
   },
 } as const;
 
