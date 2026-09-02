@@ -298,8 +298,17 @@ function inboxMessagesEqual(
   if (left.length !== right.length) return false;
   return left.every((message, index) => {
     const candidate = right[index];
+    if (candidate === undefined) return false;
+    // Same attachment object, or two distinct-but-equal attachments. Plain
+    // messages (no attachment) compare equal here, so the memo comparator
+    // stays effective for the common text-only case.
+    const attachmentsEqual =
+      message.attachment === candidate.attachment ||
+      (message.attachment !== undefined &&
+        candidate.attachment !== undefined &&
+        JSON.stringify(message.attachment) ===
+          JSON.stringify(candidate.attachment));
     return (
-      candidate !== undefined &&
       message.id === candidate.id &&
       message.body === candidate.body &&
       message.direction === candidate.direction &&
@@ -308,12 +317,7 @@ function inboxMessagesEqual(
       message.deliveryStatus === candidate.deliveryStatus &&
       message.outboxEffectKey === candidate.outboxEffectKey &&
       message.outboxState === candidate.outboxState &&
-      (message.attachment === candidate.attachment &&
-        message.attachment !== undefined) ||
-      (message.attachment !== undefined &&
-        candidate.attachment !== undefined &&
-        JSON.stringify(message.attachment) ===
-          JSON.stringify(candidate.attachment))
+      attachmentsEqual
     );
   });
 }
