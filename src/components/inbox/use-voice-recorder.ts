@@ -31,7 +31,15 @@ const VOICE_RECORDING_MIME_CANDIDATES = [
 /** Hard ceiling identical in spirit to the server's 32 MiB audio bound. */
 const MAX_RECORDING_MS = 15 * 60 * 1000;
 
-export type VoiceRecorderState = "idle" | "starting" | "recording";
+export type VoiceRecorderState = "idle" | "starting" | "recording" | "review";
+
+/** Ledger INB-24: the finished take awaiting the seller's preview decision. */
+export interface VoiceReviewTake {
+  /** Same-origin blob URL — plays through the shared VoiceNotePlayer. */
+  url: string;
+  durationMs: number;
+  sizeBytes: number;
+}
 
 interface UseVoiceRecorderInput {
   enabled: boolean;
@@ -50,8 +58,15 @@ interface UseVoiceRecorderInput {
 export interface VoiceRecorderController {
   state: VoiceRecorderState;
   elapsedMs: number;
+  /** Present exactly while `state === "review"`. */
+  review: VoiceReviewTake | null;
   start: () => Promise<void>;
-  stopAndSend: () => void;
+  /** Stop the live take into the preview surface (never sends directly). */
+  finish: () => void;
+  /** Send the reviewed take through the exact durable send path. */
+  confirmSend: () => void;
+  /** Drop the reviewed take (recording state) or the preview (review). */
+  discard: () => void;
   cancel: () => void;
   /** Abort any active take without invoking callbacks (chat switch/unmount). */
   dispose: () => void;
@@ -85,6 +100,8 @@ export function useVoiceRecorder({
   const [state, setState] = useState<VoiceRecorderState>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
 
+  const [review, setReview] = useState<VoiceReviewTake | null>(null);
+
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -93,6 +110,19 @@ export function useVoiceRecorder({
   const timerRef = useRef<number | null>(null);
   const startedAtRef = useRef(0);
   const maxDurationRef = useRef<number | null>(null);
+  // The reviewed take keeps its raw container bytes until the seller decides:
+  // OGG takes send as recorded, WebM/Opus takes remux at confirm time.
+  const reviewBlobRef = useRef<{ blob: Blob; type: string } | null>(null);
+  const reviewUrlRef = useRef<string | null>(null);
+
+  const clearReview = useCallback(() => {
+    if (reviewUrlRef.current) {
+      URL.revokeObjectURL(reviewUrlRef.current);
+      reviewUrlRef.current = null;
+    }
+    reviewBlobRef.current = null;
+    setReview(null);
+  }, []);
   // Callbacks are captured per-invocation so a stale closure can never send
   // into a previous conversation after a chat switch.
   const onCompleteRef = useRef(onComplete);
@@ -125,18 +155,66 @@ export function useVoiceRecorder({
       recorderRef.current.stop();
     }
     releaseResources();
+    clearReview();
     cancelledRef.current = false;
     setElapsedMs(0);
     setState("idle");
-  }, [releaseResources]);
+  }, [releaseResources, clearReview]);
 
-  const stopAndSend = useCallback(() => {
+  // Ledger INB-24: finishing a take now lands in the review surface instead
+  // of sending blindly — the durable path stays the only send route, reached
+  // through confirmSend once the seller has heard the preview.
+  const finish = useCallback(() => {
     const recorder = recorderRef.current;
     if (!recorder || recorder.state === "inactive") return;
     recorder.stop();
   }, []);
 
+  const confirmSend = useCallback(() => {
+    const pending = reviewBlobRef.current;
+    if (!pending) return;
+    const { blob, type } = pending;
+    reviewBlobRef.current = null;
+    const deliver = (file: File) => {
+      clearReview();
+      setElapsedMs(0);
+      setState("idle");
+      onCompleteRef.current(file);
+    };
+    if (type.startsWith("audio/ogg")) {
+      deliver(new File([blob], voiceNoteFileName(new Date()), { type }));
+      return;
+    }
+    // WebM/Opus take (every evergreen Chromium/WebView2 runtime): re-mux
+    // losslessly to RFC 7845 Ogg Opus before the durable send path sees it.
+    void blob
+      .arrayBuffer()
+      .then((buffer) => {
+        const ogg = remuxWebmOpusToOgg(new Uint8Array(buffer));
+        deliver(
+          new File([ogg], voiceNoteFileName(new Date()), { type: "audio/ogg" }),
+        );
+      })
+      .catch(() => {
+        clearReview();
+        setElapsedMs(0);
+        setState("idle");
+        onErrorRef.current(copyRef.current.processingFailed);
+      });
+  }, [clearReview]);
+
+  const discard = useCallback(() => {
+    clearReview();
+    setElapsedMs(0);
+    setState("idle");
+  }, [clearReview]);
+
   const cancel = useCallback(() => {
+    // In review the honest cancel is the discard decision.
+    if (reviewUrlRef.current && !recorderRef.current) {
+      discard();
+      return;
+    }
     cancelledRef.current = true;
     const recorder = recorderRef.current;
     if (recorder && recorder.state !== "inactive") {
@@ -146,7 +224,7 @@ export function useVoiceRecorder({
       setElapsedMs(0);
       setState("idle");
     }
-  }, [releaseResources]);
+  }, [releaseResources, discard]);
 
   const start = useCallback(async () => {
     if (!enabled || state !== "idle") return;
@@ -221,36 +299,27 @@ export function useVoiceRecorder({
     recorder.onstop = () => {
       const type = mimeTypeRef.current;
       const chunks = chunksRef.current;
+      const durationMs = Math.max(0, Date.now() - startedAtRef.current);
       releaseResources();
       setElapsedMs(0);
-      setState("idle");
       if (cancelledRef.current || chunks.length === 0) {
         cancelledRef.current = false;
+        setState("idle");
         return;
       }
       const blob = new Blob(chunks, { type });
-      if (blob.size === 0) return;
-      if (type.startsWith("audio/ogg")) {
-        onCompleteRef.current(
-          new File([blob], voiceNoteFileName(new Date()), { type }),
-        );
+      if (blob.size === 0) {
+        setState("idle");
         return;
       }
-      // WebM/Opus take (every evergreen Chromium/WebView2 runtime): re-mux
-      // losslessly to RFC 7845 Ogg Opus before the durable send path sees it.
-      void blob
-        .arrayBuffer()
-        .then((buffer) => {
-          const ogg = remuxWebmOpusToOgg(new Uint8Array(buffer));
-          onCompleteRef.current(
-            new File([ogg], voiceNoteFileName(new Date()), {
-              type: "audio/ogg",
-            }),
-          );
-        })
-        .catch(() => {
-          onErrorRef.current(copyRef.current.processingFailed);
-        });
+      // Ledger INB-24: the take lands in the preview surface. The raw
+      // container stays alive (WebM/Opus plays natively in WebView2; remux to
+      // Ogg Opus happens only when the seller confirms the send).
+      const url = URL.createObjectURL(blob);
+      reviewBlobRef.current = { blob, type };
+      reviewUrlRef.current = url;
+      setReview({ url, durationMs, sizeBytes: blob.size });
+      setState("review");
     };
     startedAtRef.current = Date.now();
     setElapsedMs(0);
@@ -258,14 +327,14 @@ export function useVoiceRecorder({
       const elapsed = Date.now() - startedAtRef.current;
       setElapsedMs(elapsed);
       if (elapsed >= MAX_RECORDING_MS) {
-        // Bounded take: stop and hand the recording to the same flow as a
-        // manual send instead of silently dropping a long voice note.
-        stopAndSend();
+        // Bounded take: finish into the review surface (INB-24) instead of
+        // silently dropping a long voice note — the seller still decides.
+        finish();
       }
     }, 200);
     recorder.start(1_000);
     setState("recording");
-  }, [enabled, releaseResources, state, stopAndSend]);
+  }, [enabled, releaseResources, state, finish]);
 
   // Chat switches and unmounts must never leave a live microphone open.
   useEffect(() => {
@@ -274,5 +343,15 @@ export function useVoiceRecorder({
     };
   }, [dispose]);
 
-  return { state, elapsedMs, start, stopAndSend, cancel, dispose };
+  return {
+    state,
+    elapsedMs,
+    review,
+    start,
+    finish,
+    confirmSend,
+    discard,
+    cancel,
+    dispose,
+  };
 }

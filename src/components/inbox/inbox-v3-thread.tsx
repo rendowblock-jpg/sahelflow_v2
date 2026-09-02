@@ -78,6 +78,13 @@ import { useMobile } from "@/hooks/use-mobile";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useVoiceRecorder } from "@/components/inbox/use-voice-recorder";
+import { VoiceNotePlayer } from "@/components/inbox/voice-note-player";
+import {
+  decideRecordingPointerUp,
+  decideSlideCancel,
+  slideTransform,
+  VOICE_LOCK_RISE_PX,
+} from "@/components/inbox/voice-recording-gestures";
 
 function localeCode(locale: "ar" | "fr" | "en"): string {
   return locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
@@ -808,6 +815,62 @@ export function InboxV3Thread({
   useEffect(() => {
     return () => disposeVoiceTake();
   }, [activeConversationKey, disposeVoiceTake]);
+
+  // Ledger INB-24 — WhatsApp recording gestures, desktop pointer truth.
+  // Pressing the mic starts the take; rising the pointer locks it; releasing
+  // without a lock finishes into the preview surface unless it was a quick
+  // tap (the existing click habit and the keyboard path keep a persistent
+  // take with visible pill controls — no gesture is ever required).
+  const micHoldRef = useRef<{ startY: number; locked: boolean } | null>(null);
+  const [micHoldActive, setMicHoldActive] = useState(false);
+  const [micHoldLocked, setMicHoldLocked] = useState(false);
+  const suppressMicClickRef = useRef(false);
+  const handleMicPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0 || sending || !canSend) return;
+    if (voiceRecorder.state !== "idle") return;
+    micHoldRef.current = { startY: event.clientY, locked: false };
+    setMicHoldActive(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    void voiceRecorder.start();
+  };
+  const handleMicPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const hold = micHoldRef.current;
+    if (!hold || hold.locked) return;
+    if (hold.startY - event.clientY >= VOICE_LOCK_RISE_PX) {
+      hold.locked = true;
+      setMicHoldLocked(true);
+    }
+  };
+  const endMicHold = (decide: boolean) => {
+    const hold = micHoldRef.current;
+    if (!hold) return;
+    micHoldRef.current = null;
+    setMicHoldActive(false);
+    setMicHoldLocked(false);
+    // The captured press always synthesizes a trailing click; only a real
+    // keyboard activation (no hold session) may start a take from onClick.
+    suppressMicClickRef.current = true;
+    if (
+      decide &&
+      decideRecordingPointerUp({
+        locked: hold.locked,
+        elapsedMs: voiceRecorder.elapsedMs,
+      }) === "finish"
+    ) {
+      voiceRecorder.finish();
+    }
+  };
+
+  // Slide-to-cancel on the recording pill (either physical direction — the
+  // pill carries no directional meaning, so RTL and LTR get one affordance).
+  const slideStartRef = useRef<number | null>(null);
+  const [slideDx, setSlideDx] = useState(0);
+  const [slideArmed, setSlideArmed] = useState(false);
+  const resetSlide = () => {
+    slideStartRef.current = null;
+    setSlideDx(0);
+    setSlideArmed(false);
+  };
 
   // ── In-thread search (WhatsApp pattern): header magnifier → match bar with
   // n/N counter, prev/next cycling, soft highlight in bubbles, Esc to close.
@@ -1597,12 +1660,73 @@ export function InboxV3Thread({
                   </button>
                 </div>
               ) : null}
-              {voiceRecorder.state !== "idle" ? (
+              {voiceRecorder.state === "review" && voiceRecorder.review ? (
+                // Ledger INB-24: preview before sending — the finished take
+                // plays through the shared WhatsApp-grade player and only the
+                // explicit send decision enters the durable path.
                 <div
                   className="flex items-center gap-2 px-1 py-1"
+                  data-inbox-voice-review="true"
+                  role="group"
+                  aria-label={copy("voicePreviewTitle")}
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={copy("voiceCancelRecording")}
+                    data-inbox-voice-discard="true"
+                    onClick={voiceRecorder.discard}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </Button>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-0.5 truncate text-2xs text-muted-foreground">
+                      {copy("voicePreviewTitle")}
+                    </p>
+                    <VoiceNotePlayer
+                      src={voiceRecorder.review.url}
+                      label={copy("mediaAudio")}
+                      locale={locale}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    aria-label={copy("voiceStopAndSend")}
+                    data-inbox-voice-send="true"
+                    onClick={voiceRecorder.confirmSend}
+                  >
+                    <Check className="size-4" aria-hidden="true" />
+                  </Button>
+                </div>
+              ) : voiceRecorder.state !== "idle" ? (
+                <div
+                  className="flex items-center gap-2 px-1 py-1 transition-transform"
                   data-inbox-voice-recorder={voiceRecorder.state}
                   role="status"
                   aria-label={copy("voiceRecording")}
+                  style={{
+                    transform: `translateX(${slideTransform(slideDx)}px)`,
+                  }}
+                  onPointerDown={(event) => {
+                    if (event.button !== 0) return;
+                    slideStartRef.current = event.clientX;
+                    setSlideDx(0);
+                    setSlideArmed(false);
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                  }}
+                  onPointerMove={(event) => {
+                    if (slideStartRef.current === null) return;
+                    const dx = event.clientX - slideStartRef.current;
+                    setSlideDx(dx);
+                    setSlideArmed(decideSlideCancel(dx));
+                  }}
+                  onPointerUp={() => {
+                    if (slideArmed) voiceRecorder.cancel();
+                    resetSlide();
+                  }}
+                  onPointerCancel={resetSlide}
                 >
                   {voiceRecorder.state === "starting" ? (
                     <Loader2
@@ -1628,7 +1752,13 @@ export function InboxV3Thread({
                     {formatRecordingElapsed(voiceRecorder.elapsedMs)}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[12px] text-muted-foreground">
-                    {copy("voiceRecording")}
+                    {slideArmed
+                      ? copy("voiceSlideToCancel")
+                      : micHoldActive
+                        ? micHoldLocked
+                          ? copy("voiceLocked")
+                          : copy("voiceReleaseToPreview")
+                        : copy("voiceRecording")}
                   </span>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1638,28 +1768,45 @@ export function InboxV3Thread({
                         size="icon-sm"
                         aria-label={copy("voiceCancelRecording")}
                         data-inbox-voice-cancel="true"
+                        className={cn(
+                          slideArmed &&
+                            "bg-destructive/15 text-destructive hover:bg-destructive/20 hover:text-destructive",
+                        )}
                         onClick={voiceRecorder.cancel}
                       >
                         <Trash2 className="size-4" aria-hidden="true" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" sideOffset={6}>
-                      {copy("voiceCancelRecording")}
+                      {slideArmed
+                        ? copy("voiceSlideToCancel")
+                        : copy("voiceCancelRecording")}
                     </TooltipContent>
                   </Tooltip>
                   <Button
                     type="button"
                     size="icon"
-                    aria-label={copy("voiceStopAndSend")}
-                    data-inbox-voice-send="true"
+                    aria-label={copy("voiceFinishRecording")}
+                    data-inbox-voice-finish="true"
                     disabled={voiceRecorder.state !== "recording"}
-                    onClick={voiceRecorder.stopAndSend}
+                    onClick={voiceRecorder.finish}
                   >
                     <Check className="size-4" aria-hidden="true" />
                   </Button>
                 </div>
-              ) : (
-              <div className="flex items-end gap-2">
+              ) : null}
+              {/* The composer row stays mounted (hidden) while recording so
+                  the captured mic press keeps receiving pointer events after
+                  the mode swap; display:none also removes it from the tab
+                  order and the accessibility tree. */}
+              <div
+                className={
+                  voiceRecorder.state !== "idle"
+                    ? "hidden"
+                    : "flex items-end gap-2"
+                }
+                aria-hidden={voiceRecorder.state !== "idle" || undefined}
+              >
               <input
                 ref={imageInputRef}
                 type="file"
@@ -1819,19 +1966,27 @@ export function InboxV3Thread({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={
-                      sending || !canSend || voiceRecorder.state !== "idle"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={sending || !canSend}
+                  aria-label={copy("voiceRecord")}
+                  data-inbox-audio-picker="true"
+                  onPointerDown={handleMicPointerDown}
+                  onPointerMove={handleMicPointerMove}
+                  onPointerUp={() => endMicHold(true)}
+                  onPointerCancel={() => endMicHold(false)}
+                  onClick={() => {
+                    if (suppressMicClickRef.current) {
+                      suppressMicClickRef.current = false;
+                      return;
                     }
-                    aria-label={copy("voiceRecord")}
-                    data-inbox-audio-picker="true"
-                    onClick={() => {
+                    if (voiceRecorder.state === "idle") {
                       void voiceRecorder.start();
-                    }}
-                  >
+                    }
+                  }}
+                >
                     <Mic className="size-4" aria-hidden="true" />
                   </Button>
                 </TooltipTrigger>
@@ -1896,7 +2051,6 @@ export function InboxV3Thread({
                 )}
               </Button>
               </div>
-              )}
             </div>
           </div>
         ) : (
