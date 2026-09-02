@@ -30,33 +30,33 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 ### P0/P1 — WhatsApp-parity surface
 | ID | Item | Target | Status |
 |---|---|---|---|
-| INB-01 | List preview: media-type icon, `You:` prefix, delivery ticks (API already returns `fromMe`) | `inbox-v3-queue.tsx`, chats projection | OPEN |
-| INB-02 | Emoji picker in composer | `inbox-v3-thread.tsx` | OPEN |
+| INB-01 ||| **DONE (source, wave 2)** — media glyphs + "You:" + server projects lastMessage.type; ticks deferred (needs per-message status in projection) |
+| INB-02 ||| **DONE (source, wave 2)** — dependency-free picker: 8 categories, search, MRU recents |
 | INB-03 | Scroll-to-bottom FAB with missed count | `inbox-v3-thread.tsx` | OPEN |
-| INB-04 | "New messages" unread divider | `inbox-v3-thread.tsx` | OPEN |
-| INB-05 | Image lightbox / zoom | `inbox-media-attachment.tsx` | OPEN |
-| INB-06 | Consecutive-bubble grouping (no repeated time chrome) | `inbox-v3-thread.tsx` | OPEN |
-| INB-07 | TODAY/YESTERDAY day separators | `inbox-v3-thread.tsx` | OPEN |
-| INB-08 | Auto-grow composer textarea | `inbox-v3-thread.tsx` | OPEN |
-| INB-09 | Draft indicator in list rows | `inbox-v3-queue.tsx` + drafts hook | OPEN |
+| INB-04 ||| **DONE (source, wave 1)** — divider + open-at-first-unread anchor, click-to-dismiss |
+| INB-05 ||| **DONE (source, wave 1)** — portal lightbox: Esc/backdrop, click-zoom, download, scroll-lock |
+| INB-06 ||| **DONE (source, wave 1)** — 2-minute same-direction clusters, tail on group-final bubble |
+| INB-07 ||| **DONE (source, wave 1)** — localized اليوم/أمس, weekday <7d, dated beyond |
+| INB-08 ||| **DONE (source, wave 1)** — JS-normalized auto-grow (128px cap) |
+| INB-09 ||| **DONE (source, wave 2)** — session-scoped draft mirror in rows |
 
 ### P2 — Depth
 | ID | Item | Target | Status |
 |---|---|---|---|
-| INB-10 | In-thread search with hit navigation | `inbox-v3-thread.tsx` | OPEN |
+| INB-10 ||| **DONE (source, wave 1)** — header search, n/N counter, prev/next, in-bubble highlight |
 | INB-11 | History pagination ("load older") + list virtualization | thread + `messages` route | OPEN |
 | INB-12 | Pin / mute / archive conversation states | queue + prisma model | OPEN |
 | INB-13 | Reactions | thread (+sidecar capability) | BLOCKED (sidecar probe) |
 | INB-14 | Message delete-for-everyone | thread (+sidecar) | BLOCKED (sidecar probe) |
-| INB-15 | Quote chips clickable → jump + highlight | `inbox-v3-thread.tsx` | OPEN |
+| INB-15 ||| **DONE (source, wave 1)** — clickable quotes → jump + ring highlight; honest not-loaded hint |
 | INB-16 | Link previews | media pipeline | OPEN |
-| INB-17 | Per-row hover quick actions + context menu | `inbox-v3-queue.tsx` | OPEN |
-| INB-18 | Keyboard navigation (`j/k`, `e` resolve, Enter open) | `use-keyboard-shortcuts.ts` | OPEN |
+| INB-17 ||| **DONE (source, wave 2)** — hover mark-unread quick action (row-relative, valid DOM) |
+| INB-18 ||| **DONE (source, wave 2)** — j/k/Arrows cursor + Enter open |
 | INB-19 | Real avatars (profile photos) | queue/thread (+sidecar) | BLOCKED (sidecar probe) |
 | INB-20 | Assignee display name in rows (not generic word) | `inbox-v3-queue.tsx` | OPEN |
-| INB-21 | Label/priority filters in queue + label chips | `inbox-v3-queue.tsx` | OPEN |
-| INB-22 | Bulk actions beyond delete (resolve/assign/mark-read) | `inbox-v3-queue.tsx` | OPEN |
-| INB-23 | Custom snooze datetime picker | `conversation-controls.tsx` | OPEN |
+| INB-21 ||| **DONE (source, wave 2)** — filter popover: priority + label slices |
+| INB-22 ||| **DONE (source, wave 2)** — bulk mark-read + resolve, allSettled + toasts |
+| INB-23 ||| **DONE (source, wave 2)** — datetime-local + future-date validation |
 | INB-24 | Voice recording gestures (lock-to-record, slide-cancel, preview) | `use-voice-recorder.ts` | OPEN |
 | INB-25 | Multi-file attachment selection | `inbox-v3-thread.tsx` | OPEN |
 
@@ -68,7 +68,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | INB-28 | Collapse 4 duplicated ~200-line send functions into one factory | `use-inbox-workspace.ts` | OPEN |
 | INB-29 | `window.confirm` → `AlertDialog` for ambiguous duplicate retry | `use-inbox-workspace.ts:1415` | OPEN |
 | INB-30 | Inline `ASSIGNMENT_COPY` into the central i18n chain | `conversation-controls.tsx:308-805` | OPEN |
-| INB-31 | Text-send abort/timeout parity with media sends | `use-inbox-workspace.ts` | OPEN |
+| INB-31 ||| **DONE (source, wave 6)** — 30s AbortSignal.timeout on text sends |
 
 ### Sidecar engineering (not UI polish — capability work)
 | ID | Item | Why it matters | Status |
@@ -80,27 +80,27 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 ### P0 — Trust killers
 | ID | Item | Target | Status |
 |---|---|---|---|
-| AI-01 | Seeded demo conversation renders as real, with FICTIONAL tool names (`get_operational_brief`, `get_order` — not in the 30-tool registry) and a broken-looking 2-field table under the unconfigured banner. Label demo sessions ("مثال") + add seed↔registry drift test | `algerian-demo.ts:830-857`, new drift test | OPEN |
-| AI-02 | No copy button on any message (zero clipboard code in `src/components/ai`) | `ai-decision-canvas.tsx` | OPEN |
-| AI-03 | Proposals cannot be rejected — approve-or-expire(10min) only; `rejected` status exists in vocabulary with no button/API | `ai-action-proposal-card.tsx`, actions API | OPEN |
-| AI-04 | Stop generation discards the partial answer (nothing persisted on abort) | `stream/route.ts:258-277` | OPEN |
-| AI-05 | Setup CTA dead-ends at `/settings` root; `?group=intelligence` deep-link exists unused | `ai-decision-canvas.tsx:159` | OPEN |
+| AI-01 ||| **DONE (source, wave 5)** — "Démo ·" title + live demo badge + seed remapped to REAL tools + drift contract test |
+| AI-02 ||| **DONE (source, wave 5)** — hover copy row on every completed bubble |
+| AI-03 ||| **DONE (source, wave 5)** — POST reject route + Deny button (terminal, coded) |
+| AI-04 ||| **DONE (source, wave 5)** — abort persists partial tokens |
+| AI-05 ||| **DONE (source, wave 5)** — deep-links ?group=intelligence |
 
 ### P1 — Assistant-UX parity
 | ID | Item | Target | Status |
 |---|---|---|---|
-| AI-06 | Tool cards: collapsible, show args (parsed but never rendered), raw result, timing, per-tool retry | `ai-tool-result-card.tsx` | OPEN |
+| AI-06 ||| **DONE (source, wave 6)** — collapsible, args k/v shown, auto-expand on running/failure; timing + per-tool retry deferred (needs server duration events) |
 | AI-07 | Regenerate replaces in place (today: append-only duplicates) | `use-ai-workspace.ts:591-616` | OPEN |
 | AI-08 | History beyond silent last-20 cap: cursor pagination + notice (dead `historyRecentOnly` key exists) | `session-history.ts`, messages routes | OPEN |
-| AI-09 | Session search + pin (50-session cap, no query) | `sessions/route.ts`, `ai-work-history.tsx` | OPEN |
-| AI-10 | Scroll-to-bottom pill during streaming | `ai-decision-canvas.tsx:398-430` | OPEN |
+| AI-09 ||| **DONE (source, wave 6)** — history search + no-match state (pin deferred, needs schema) |
+| AI-10 ||| **DONE (source, wave 6)** — scroll pill when scrolled up during streaming |
 | AI-11 | Per-record citation links (`/orders/[id]`, not list pages) | `ai-tool-result-card.tsx:24-46` | OPEN |
-| AI-12 | Message timestamps (`createdAt` in view model, never rendered) | `ai-decision-canvas.tsx` | OPEN |
+| AI-12 ||| **DONE (source, wave 5)** — per-message clock on the hover row + tooltip |
 | AI-13 | Thumbs feedback → extraction-metrics-style quality loop | canvas + API | OPEN |
 | AI-14 | Follow-up suggestion chips after answers | canvas | OPEN |
 | AI-15 | Edit user message and resend | canvas + hook | OPEN |
 | AI-16 | Parallel tool calls: `parts.find` silently drops extra calls; render grouped | `agent.ts:215` | OPEN |
-| AI-17 | IME composition guard on Enter (Arabic IME sends prematurely) + char counter | `ai-decision-canvas.tsx:569-574` | OPEN |
+| AI-17 ||| **DONE (source, wave 6)** — isComposing guard (char counter still OPEN) |
 | AI-18 | Client stream timeout / reconnect (hung SSE = infinite spinner) | `use-ai-workspace.ts` | OPEN |
 | AI-19 | Cross-session proposals inbox (approve pending from anywhere) | review panel | OPEN |
 
@@ -110,8 +110,8 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | AI-20 | "Review & evidence" panel is empty-state-most-of-the-time: populate (pending proposals across sessions, last approvals, audit timeline) or rename honestly | `ai-review-evidence.tsx` | OPEN |
 | AI-21 | Composer attachments (sellers screenshot orders; extraction stack exists but unreachable from agents composer) | canvas + extraction lib | OPEN |
 | AI-22 | Keyboard shortcuts (focus composer, stop, session nav, approve focused proposal) | canvas | OPEN |
-| AI-23 | a11y: `aria-busy` on streaming bubble; live announce for two-step delete | canvas, history | OPEN |
-| AI-24 | 3-pane skeleton loading (today: bare spinner) | `agents/loading.tsx` | OPEN |
+| AI-23 ||| **DONE (source, wave 6)** — aria-busy on streaming log (two-step delete announce still OPEN) |
+| AI-24 ||| **DONE (source, wave 6)** — 3-pane layout skeleton |
 | AI-25 | Unconfigured state: capability explainer (reuse ~25 dead copy keys) + delete dead keys + legacy `ai.*` namespace | `ai-workspace.ts`, locales | OPEN |
 | AI-26 | Truthful model/quality signal (contract today forbids usage metadata — revisit deliberately, never fabricate) | contracts + tests | OPEN |
 
