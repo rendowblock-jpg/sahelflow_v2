@@ -2842,5 +2842,6 @@
   "integrations.placeholder.noestTrackingsUrl": "Paste the exact tracking endpoint from NOEST docs",
   "integrations.placeholder.noestFeesUrl": "Paste the exact fees endpoint from NOEST docs",
   "delivery.certified": "Certified",
-  "delivery.uncertified": "Not certified"
+  "delivery.uncertified": "Not certified",
+  "inbox.snooze.futureDate": "Pick a future date and time."
 }

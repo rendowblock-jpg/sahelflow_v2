@@ -2842,5 +2842,6 @@
   "integrations.placeholder.noestTrackingsUrl": "ألصق رابط التتبع الرسمي من NOEST",
   "integrations.placeholder.noestFeesUrl": "ألصق رابط التعريفات الرسمي من NOEST",
   "delivery.certified": "معتمد",
-  "delivery.uncertified": "غير معتمد"
+  "delivery.uncertified": "غير معتمد",
+  "inbox.snooze.futureDate": "اختر تاريخًا ووقتًا في المستقبل."
 }

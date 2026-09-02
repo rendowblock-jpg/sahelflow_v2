@@ -72,6 +72,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
           body: true,
           direction: true,
           timestamp: true,
+          messageType: true,
         },
       },
     },
@@ -104,6 +105,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
               // ISO strings.
               timestamp: Math.floor(last.timestamp.getTime() / 1_000),
               fromMe: isOutboundDirection(last.direction),
+              // Preview rendering needs the media family (📷/🎤/📎 icons in
+              // the conversation list) — additive, provider-shape safe.
+              type: last.messageType ?? null,
             }
           : undefined,
         workflow: {

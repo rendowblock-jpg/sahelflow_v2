@@ -182,7 +182,12 @@ interface CanonicalChatResponse {
     name: string;
     phone: string | null;
     unread: number;
-    lastMessage?: { text: string; timestamp: number; fromMe: boolean };
+    lastMessage?: {
+      text: string;
+      timestamp: number;
+      fromMe: boolean;
+      type?: string | null;
+    };
     workflow: {
       status: string;
       assigneeId: string | null;
@@ -332,6 +337,10 @@ export function useInboxWorkspace() {
   const [sidecarStatus, setSidecarStatus] = useState<WhatsAppStatus | null>(null);
   const [dataDegraded, setDataDegraded] = useState(false);
   const [replyText, setReplyTextState] = useState("");
+  // Session-scoped draft previews per conversation ("Draft:" in queue rows).
+  // Server drafts remain authoritative; this mirrors what the operator has
+  // typed (or what loaded) so indicators survive conversation switches.
+  const [localDrafts, setLocalDrafts] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [uploads, setUploads] = useState<Record<string, InboxUploadState>>({});
@@ -406,10 +415,19 @@ export function useInboxWorkspace() {
 
   const setReplyText = useCallback(
     (value: string | ((current: string) => string)) => {
+      const resolved =
+        typeof value === "function" ? value(replyTextRef.current) : value;
       draftEditGenerationRef.current += 1;
-      setReplyTextState((current) => {
-        const next = typeof value === "function" ? value(current) : value;
-        replyTextRef.current = next;
+      replyTextRef.current = resolved;
+      setReplyTextState(resolved);
+      // Track the row-level draft indicator against the conversation whose
+      // draft layer is currently live (null during switches → no misattribution).
+      const conversationId = draftReadyConversationRef.current;
+      if (!conversationId) return;
+      setLocalDrafts((drafts) => {
+        const next = { ...drafts };
+        if (resolved.trim()) next[conversationId] = resolved;
+        else delete next[conversationId];
         return next;
       });
     },
@@ -511,6 +529,8 @@ export function useInboxWorkspace() {
             lastMessageAt: chat.lastMessage
               ? chat.lastMessage.timestamp * 1000
               : undefined,
+            lastMessageFromMe: chat.lastMessage?.fromMe,
+            lastMessageType: chat.lastMessage?.type ?? undefined,
             unread: chat.unread,
             workflow: {
               status:
@@ -861,8 +881,15 @@ export function useInboxWorkspace() {
       );
       draftReadyConversationRef.current = chat.conversationId;
       if (draftEditGenerationRef.current === editGeneration) {
-        replyTextRef.current = data.body;
-        setReplyTextState(data.body);
+        const draftBody = data.body;
+        replyTextRef.current = draftBody;
+        setReplyTextState(draftBody);
+        setLocalDrafts((drafts) => {
+          const next = { ...drafts };
+          if (draftBody.trim()) next[chat.conversationId] = draftBody;
+          else delete next[chat.conversationId];
+          return next;
+        });
       } else {
         void persistDraft(chat.conversationId, replyTextRef.current);
       }
@@ -2663,6 +2690,7 @@ export function useInboxWorkspace() {
     dismissUnreadDivider,
     replyText,
     setReplyText,
+    localDrafts,
     sending,
     sendError,
     setSendError,

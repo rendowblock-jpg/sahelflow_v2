@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 
 import { CannedResponsePicker } from "@/components/inbox/canned-response-picker";
+import { EmojiPicker } from "@/components/inbox/inbox-emoji-picker";
 import {
   ActivityMessage,
   StatusControl,
@@ -1758,6 +1759,12 @@ export function InboxV3Thread({
                   {copy("voiceRecord")}
                 </TooltipContent>
               </Tooltip>
+              <EmojiPicker
+                disabled={sending || !canSend}
+                onSelect={(emoji) =>
+                  setReplyText((current) => `${current}${emoji}`)
+                }
+              />
               <CannedResponsePicker
                 disabled={sending}
                 onSelect={(text) =>

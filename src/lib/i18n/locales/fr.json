@@ -2842,5 +2842,6 @@
   "integrations.placeholder.noestTrackingsUrl": "Coller l’endpoint de suivi exact fourni par NOEST",
   "integrations.placeholder.noestFeesUrl": "Coller l’endpoint des tarifs exact fourni par NOEST",
   "delivery.certified": "Certifié",
-  "delivery.uncertified": "Non certifié"
+  "delivery.uncertified": "Non certifié",
+  "inbox.snooze.futureDate": "Choisissez une date et une heure futures."
 }

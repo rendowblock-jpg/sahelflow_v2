@@ -82,6 +82,8 @@ export function StatusControl({
   const { t } = useI18n();
   const [status, setStatus] = useState<ConversationStatus>(initialStatus);
   const [snoozeOpen, setSnoozeOpen] = useState(false);
+  const [customSnooze, setCustomSnooze] = useState("");
+  const [customSnoozeError, setCustomSnoozeError] = useState(false);
 
   const change = useCallback(
     async (newStatus: ConversationStatus, snoozedUntil?: string) => {
@@ -179,6 +181,46 @@ export function StatusControl({
                 {preset.label}
               </Button>
             ))}
+          </div>
+          <div className="border-t border-border/60 pt-3">
+            <label
+              htmlFor="snooze-custom-datetime"
+              className="text-xs font-medium text-muted-foreground"
+            >
+              {t("inbox.snooze.custom")}
+            </label>
+            <div className="mt-1.5 flex items-center gap-2">
+              <Input
+                id="snooze-custom-datetime"
+                type="datetime-local"
+                value={customSnooze}
+                onChange={(event) => {
+                  setCustomSnooze(event.target.value);
+                  setCustomSnoozeError(false);
+                }}
+                className="h-9 text-xs"
+              />
+              <Button
+                variant="outline"
+                disabled={!customSnooze}
+                onClick={() => {
+                  const when = new Date(customSnooze);
+                  if (Number.isNaN(when.getTime()) || when.getTime() <= Date.now()) {
+                    setCustomSnoozeError(true);
+                    return;
+                  }
+                  setSnoozeOpen(false);
+                  void change("snoozed", when.toISOString());
+                }}
+              >
+                {t("inbox.snooze.confirm")}
+              </Button>
+            </div>
+            {customSnoozeError ? (
+              <p className="mt-1.5 text-2xs text-destructive">
+                {t("inbox.snooze.futureDate")}
+              </p>
+            ) : null}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setSnoozeOpen(false)}>
