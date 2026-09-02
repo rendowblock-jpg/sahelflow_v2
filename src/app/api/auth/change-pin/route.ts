@@ -34,8 +34,14 @@ export const POST = withErrorHandler(async (req: Request) => {
   const ip = getClientIp(req.headers);
   const limit = checkLoginRateLimit(ip);
   if (!limit.allowed) {
+    // Audit S2-5: coded rejection bodies — exact English strings kept verbatim
+    // for the client substring-translation contract. Headers preserved, so
+    // these stay NextResponse bodies rather than thrown SahelFlowErrors.
     return NextResponse.json(
-      { error: "Too many attempts. Please try again later." },
+      {
+        error: "Too many attempts. Please try again later.",
+        code: "RATE_LIMITED",
+      },
       {
         status: 429,
         headers: { "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)) },
@@ -48,14 +54,20 @@ export const POST = withErrorHandler(async (req: Request) => {
   if (!parsed.success) {
     recordLoginAttempt(ip);
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid request" },
+      {
+        error: parsed.error.issues[0]?.message ?? "Invalid request",
+        code: "REQUEST_VALIDATION_FAILED",
+      },
       { status: 400 },
     );
   }
   if (parsed.data.newPin === parsed.data.currentPin) {
     recordLoginAttempt(ip);
     return NextResponse.json(
-      { error: "New PIN must be different from the current PIN" },
+      {
+        error: "New PIN must be different from the current PIN",
+        code: "REQUEST_VALIDATION_FAILED",
+      },
       { status: 400 },
     );
   }
@@ -71,7 +83,10 @@ export const POST = withErrorHandler(async (req: Request) => {
     void auditLog("auth.pin.change.failed", { reason: result.reason }, ip);
     if (!failure.allowed && failure.locked) {
       return NextResponse.json(
-        { error: "Too many failed attempts. Account temporarily locked." },
+        {
+          error: "Too many failed attempts. Account temporarily locked.",
+          code: "RATE_LIMITED",
+        },
         {
           status: 429,
           headers: {
@@ -80,7 +95,10 @@ export const POST = withErrorHandler(async (req: Request) => {
         },
       );
     }
-    return NextResponse.json({ error: "Current PIN is incorrect" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Current PIN is incorrect", code: "INVALID_CREDENTIALS" },
+      { status: 401 },
+    );
   }
 
   recordLoginSuccess(ip);

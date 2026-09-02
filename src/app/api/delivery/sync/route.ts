@@ -238,7 +238,8 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   await requireRouteAuth(req, { actions: ["deliveries.read", "orders.read"] });
   const deliveryId = req.nextUrl.searchParams.get("deliveryId");
   if (!deliveryId) {
-    return NextResponse.json({ error: "deliveryId required" }, { status: 400 });
+    // Audit S2-9: coded 400 — same naming as the POST sibling's contract.
+    throw new SahelFlowError("deliveryId required", "VALIDATION_ERROR", 400);
   }
 
   const delivery = await db.delivery.findUnique({ where: { id: deliveryId } });

@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const { TEST_TOKEN, TEST_URL } = vi.hoisted(() => ({
   TEST_TOKEN: "test-sidecar-token-abcdef-0123456789",
@@ -293,5 +296,106 @@ describe("WhatsApp sidecar client", () => {
     expect(caught).toBeInstanceOf(SidecarUnavailableError);
     expect(caught).toMatchObject({ ambiguous: true });
     vi.useRealTimers();
+  });
+
+  describe("lazy token resolution (audit S1-4)", () => {
+    let tokenDir: string;
+    let tokenFile: string;
+    const FILE_TOKEN = "file-sidecar-token-0123456789abcdef";
+
+    beforeEach(() => {
+      tokenDir = mkdtempSync(join(tmpdir(), "sidecar-token-"));
+      tokenFile = join(tokenDir, "token");
+    });
+
+    async function importFreshClient() {
+      vi.resetModules();
+      return import("../sidecar-client");
+    }
+
+    function stubEnvForLazyTest(): void {
+      vi.doMock("@/lib/env", () => ({
+        env: {
+          whatsappSidecarUrl: TEST_URL,
+          sidecarToken: undefined,
+          sidecarTokenFile: tokenFile,
+        },
+      }));
+    }
+
+    it("resolves the token lazily on first request once the sidecar file appears", async () => {
+      stubEnvForLazyTest();
+      const fresh = await importFreshClient();
+
+      // Cold start: no env token, no token file yet — the request goes out
+      // unauthenticated in non-production (previous dev behavior) and fails.
+      fetchMock.mockResolvedValue(
+        response(401, { error: "unauthorized", code: "SIDECAR_UNAUTHORIZED" }),
+      );
+      await expect(fresh.sidecar.status()).rejects.toMatchObject({
+        status: 401,
+      });
+      const [, firstInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect((firstInit.headers as Record<string, string>).Authorization).toBeUndefined();
+
+      // The sidecar writes its token file after startup — the very next
+      // request must pick it up (module-load resolution would never retry).
+      writeFileSync(tokenFile, `${FILE_TOKEN}\n`, "utf8");
+      fetchMock.mockResolvedValue(response(200, { status: "connected" }));
+      await fresh.sidecar.status();
+      const [, secondInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+      expect(secondInit.headers).toMatchObject({
+        Authorization: `Bearer ${FILE_TOKEN}`,
+      });
+
+      rmSync(tokenDir, { recursive: true, force: true });
+    });
+
+    it("re-resolves the token after a 401 so a rotated token file wins", async () => {
+      writeFileSync(tokenFile, `${FILE_TOKEN}\n`, "utf8");
+      stubEnvForLazyTest();
+      const fresh = await importFreshClient();
+
+      // First request authenticates with the file token and is rejected.
+      fetchMock.mockResolvedValue(
+        response(401, { error: "unauthorized", code: "SIDECAR_UNAUTHORIZED" }),
+      );
+      await expect(fresh.sidecar.status()).rejects.toMatchObject({
+        status: 401,
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Token rotation: the sidecar rewrites its file. The memo must have
+      // been cleared by the 401, so the next call re-resolves and succeeds.
+      const rotated = "rotated-sidecar-token-0123456789";
+      writeFileSync(tokenFile, `${rotated}\n`, "utf8");
+      fetchMock.mockResolvedValue(response(200, { status: "connected" }));
+      await fresh.sidecar.status();
+      const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+      expect(init.headers).toMatchObject({
+        Authorization: `Bearer ${rotated}`,
+      });
+
+      rmSync(tokenDir, { recursive: true, force: true });
+    });
+
+    it("throws a coded SIDECAR_TOKEN_UNAVAILABLE error in production instead of sending unauthenticated requests", async () => {
+      stubEnvForLazyTest();
+      const fresh = await importFreshClient();
+      vi.stubEnv("NODE_ENV", "production");
+      try {
+        await expect(fresh.sidecar.status()).rejects.toMatchObject({
+          name: "SidecarRequestError",
+          code: "SIDECAR_TOKEN_UNAVAILABLE",
+          message: "Sidecar token unavailable",
+          retryable: true,
+          ambiguous: false,
+        });
+        // No unauthenticated fetch was sent.
+        expect(fetchMock).not.toHaveBeenCalled();
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
   });
 });

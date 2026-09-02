@@ -110,10 +110,14 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         );
       }
       if (order.status !== "confirmed") {
+        // Audit S3-22: "order not in a mutable state" is a state conflict —
+        // 409 CONFLICT, aligning with the shipped-status half above and with
+        // orders/[id] DELETE. Message kept verbatim (client substring
+        // translation matches "must be confirmed before shipping").
         throw new SahelFlowError(
           `Order must be confirmed before shipping (current status: ${order.status})`,
-          "VALIDATION_ERROR",
-          400,
+          "CONFLICT",
+          409,
         );
       }
 
@@ -129,10 +133,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     });
   } catch (error) {
     if (error instanceof ExistingShipmentError) {
+      // Audit S2-9: coded bodies — trackingNumber preserved for the UI.
       return NextResponse.json(
         {
           error: "Shipment already exists for this order",
           trackingNumber: error.trackingNumber,
+          code: "STATE_CONFLICT",
         },
         { status: 409 },
       );
@@ -145,7 +151,11 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   if (reserved.blocked) {
     return NextResponse.json(
-      { error: reserved.reason, reconciliationRequired: true },
+      {
+        error: reserved.reason,
+        reconciliationRequired: true,
+        code: "STATE_CONFLICT",
+      },
       { status: 409 },
     );
   }
@@ -213,6 +223,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       {
         error: result.error ?? "Failed to create shipment",
         reconciliationRequired: true,
+        code: "DELIVERY_PROVIDER_UNAVAILABLE",
       },
       { status: 502 },
     );
@@ -234,6 +245,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       {
         error: "Provider reported shipment creation without a tracking number",
         reconciliationRequired: true,
+        code: "DELIVERY_PROVIDER_UNAVAILABLE",
       },
       { status: 502 },
     );

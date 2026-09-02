@@ -28,8 +28,13 @@ export const POST = withErrorHandler(async (req: Request) => {
   const ip = getClientIp(req.headers);
   const limit = checkLoginRateLimit(ip);
   if (!limit.allowed) {
+    // Audit S2-5: coded rejection bodies — exact English strings kept verbatim;
+    // Retry-After headers preserved via NextResponse bodies.
     return NextResponse.json(
-      { error: "Too many attempts. Please try again later." },
+      {
+        error: "Too many attempts. Please try again later.",
+        code: "RATE_LIMITED",
+      },
       {
         status: 429,
         headers: { "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)) },
@@ -40,7 +45,10 @@ export const POST = withErrorHandler(async (req: Request) => {
   const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     recordLoginAttempt(ip);
-    return NextResponse.json({ error: "PIN is required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "PIN is required", code: "REQUEST_VALIDATION_FAILED" },
+      { status: 400 },
+    );
   }
 
   const authority = await getCurrentSessionAuthority();
@@ -86,7 +94,10 @@ export const POST = withErrorHandler(async (req: Request) => {
     );
     if (!failure.allowed && failure.locked) {
       return NextResponse.json(
-        { error: "Too many failed attempts. Account temporarily locked." },
+        {
+          error: "Too many failed attempts. Account temporarily locked.",
+          code: "RATE_LIMITED",
+        },
         {
           status: 429,
           headers: {
@@ -95,7 +106,10 @@ export const POST = withErrorHandler(async (req: Request) => {
         },
       );
     }
-    return NextResponse.json({ error: "Incorrect PIN" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Incorrect PIN", code: "INVALID_CREDENTIALS" },
+      { status: 401 },
+    );
   }
 
   recordLoginSuccess(ip);

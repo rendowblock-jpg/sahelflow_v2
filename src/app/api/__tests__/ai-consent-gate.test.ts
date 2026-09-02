@@ -136,6 +136,39 @@ describe("POST /api/extraction — consent gate", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("carries the coded AI_CONSENT_REQUIRED field on the 403 body (audit S2-6)", async () => {
+    const res = await POSTExtraction(
+      mockPost("http://localhost/api/extraction", {
+        body: "2x iPhone 14 Alger 0661234567",
+      }),
+    );
+    expect(res.status).toBe(403);
+    const body = await getJson(res);
+    expect(body).toMatchObject({
+      error: "consent_required",
+      code: "AI_CONSENT_REQUIRED",
+    });
+  });
+
+  it("rejects oversized extraction bodies with coded 400 REQUEST_VALIDATION_FAILED (audit S2-6)", async () => {
+    await setConsent(true);
+    const fetchSpy = vi.fn().mockResolvedValue(geminiOkResponse("{}"));
+    vi.stubGlobal("fetch", fetchSpy);
+    try {
+      const res = await POSTExtraction(
+        mockPost("http://localhost/api/extraction", {
+          body: "x".repeat(16001),
+        }),
+      );
+      expect(res.status).toBe(400);
+      const body = await getJson(res);
+      expect(body.code).toBe("REQUEST_VALIDATION_FAILED");
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 describe("POST /api/ai/sessions/[id]/messages — consent gate", () => {

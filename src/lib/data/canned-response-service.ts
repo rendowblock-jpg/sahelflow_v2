@@ -2,7 +2,12 @@ import "server-only";
 import type { ServiceContext } from "@/lib/data/service-base";
 
 export async function listCannedResponses(context: ServiceContext) {
-  return context.prisma.cannedResponse.findMany({ orderBy: { shortCode: "asc" } });
+  // Audit S3-14: bounded list — only the search path was capped before.
+  // 200 covers any sane catalog while keeping the response bounded.
+  return context.prisma.cannedResponse.findMany({
+    orderBy: { shortCode: "asc" },
+    take: 200,
+  });
 }
 
 export async function createCannedResponse(context: ServiceContext, data: { shortCode: string; content: string; description?: string }) {

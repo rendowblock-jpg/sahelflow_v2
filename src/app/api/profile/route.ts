@@ -34,7 +34,17 @@ const UpdateSchema = z.object({
   name: z.string().max(100).optional(),
   email: z.string().email().max(200).optional(),
   phone: z.string().max(50).optional(),
-  photo: z.string().max(500).optional(),
+  // Audit S3-24: profile photo is rendered as an image src elsewhere — accept
+  // only bounded http(s) URLs. Stored values are unaffected (input-only gate).
+  photo: z
+    .string()
+    .max(500)
+    .url("Photo must be a valid URL")
+    .refine(
+      (value) => /^https?:\/\//i.test(value),
+      "Photo URL must use http or https",
+    )
+    .optional(),
   bio: z.string().max(1000).optional(),
 });
 
@@ -43,8 +53,12 @@ export const PUT = withErrorHandler(async (req: Request) => {
   const body = await req.json();
   const parsed = UpdateSchema.safeParse(body);
   if (!parsed.success) {
+    // Audit S2-9: coded 400 on the hand-rolled rejection body.
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid data" },
+      {
+        error: parsed.error.issues[0]?.message ?? "Invalid data",
+        code: "REQUEST_VALIDATION_FAILED",
+      },
       { status: 400 },
     );
   }

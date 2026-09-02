@@ -2,7 +2,9 @@ import { createHash } from "node:crypto";
 
 import { NextRequest, NextResponse } from "next/server";
 
+import { codedRowError } from "@/lib/api/coded-row-error";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { logger } from "@/lib/logger";
 import {
   dispatchTrigger,
   type TriggerEvent,
@@ -34,7 +36,14 @@ function sourceForFilename(filename: string): CanonicalFileSource {
   const extension = filename.toLowerCase().split(".").pop();
   if (extension === "csv" || extension === "txt") return "csv";
   if (extension === "xlsx" || extension === "xls") return "xlsx";
-  throw new Error("Unsupported order import file; use CSV or XLSX");
+  // Audit S1-1: a benign wrong-file-type mistake must surface as a coded 415,
+  // not fall into withErrorHandler's generic-500 branch (same contract as the
+  // size guard below).
+  throw new SahelFlowError(
+    "Unsupported order import file; use CSV or XLSX",
+    "IMPORT_SOURCE_UNSUPPORTED",
+    415,
+  );
 }
 
 function optionalNumber(value: unknown): number | undefined {
@@ -151,7 +160,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   let inserted = 0;
   let replayed = 0;
   let processedRows = 0;
-  const errors: Array<{ rowIndex: number; error: string }> = [
+  // Audit S1-2: per-row failures carry {rowIndex, code, error} where `error`
+  // is a stable short English string produced by codedRowError — raw Prisma/
+  // SQLite driver messages stay in the app log only, never in the payload.
+  const errors: Array<{ rowIndex: number; error: string; code?: string }> = [
     ...prepared.invalid.map((failure) => ({
       rowIndex: failure.rowIndex,
       error: failure.errors.join(", "),
@@ -196,9 +208,17 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         );
       }
     } catch (error) {
+      const coded = codedRowError(error, "Order", group.sourceOrderId);
+      logger.warn("api.POST /api/import/orders.row-failed", {
+        sourceOrderId: group.sourceOrderId,
+        rowIndex: group.rowIndices[0] ?? 0,
+        code: coded.code,
+        error: error instanceof Error ? error.message : String(error),
+      });
       errors.push({
         rowIndex: group.rowIndices[0] ?? 0,
-        error: error instanceof Error ? error.message : "Order import failed",
+        error: coded.message,
+        code: coded.code,
       });
     }
   }

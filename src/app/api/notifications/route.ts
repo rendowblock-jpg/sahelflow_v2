@@ -54,7 +54,13 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
           ? "warning"
           : "info",
       archived: false,
-      createdAt: new Date().toISOString(),
+      // Audit S3-19: legacy rows previously fabricated createdAt = now, so
+      // relative times ("2 minutes ago") lied for stale stock/alert rows.
+      // The feed now derives a real timestamp from the underlying record;
+      // aggregate rows without one carry `approximate: true` (additive field)
+      // so the UI can stop promising false relative times later.
+      createdAt: notification.createdAt ?? new Date().toISOString(),
+      approximate: !notification.createdAt,
       nativePending: false,
     }));
   return NextResponse.json({

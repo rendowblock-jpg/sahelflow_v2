@@ -14,9 +14,10 @@ export const GET = withErrorHandler(async (_req: NextRequest) => {
 }, "GET /api/canned-responses");
 
 const createSchema = z.object({
-  shortCode: z.string().min(1),
-  content: z.string().min(1),
-  description: z.string().optional(),
+  // Audit S3-14: bounded fields — shortCode/content/description were uncapped.
+  shortCode: z.string().min(1).max(32),
+  content: z.string().min(1).max(2000),
+  description: z.string().max(500).optional(),
 });
 
 export const POST = withErrorHandler(async (req: NextRequest) => {

@@ -14,6 +14,7 @@ import {
 } from "@/lib/identity/authorization";
 import { storefrontStudioThemeSchema } from "@/lib/storefront/studio-schema";
 import { normalizeStorefrontTheme } from "@/lib/storefront/theme-normalize";
+import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -72,10 +73,8 @@ export const GET = withErrorHandler(
       id,
     );
     if (!config) {
-      return NextResponse.json(
-        { error: "Storefront not found" },
-        { status: 404 },
-      );
+      // Audit S2-9: coded 404 (GET).
+      throw new SahelFlowError("Storefront not found", "NOT_FOUND", 404);
     }
     return NextResponse.json({ config });
   },
@@ -92,9 +91,12 @@ export const GET = withErrorHandler(
  */
 export const PUT = withErrorHandler(async () => {
   await requireTrustedAction("storefront.manage");
+  // Audit S2-9: coded 405. The legacy `error` value and `requiredFlow` field
+  // stay verbatim (contract test + UI copy rely on them).
   return NextResponse.json(
     {
       error: "storefront_live_update_disabled",
+      code: "STOREFRONT_LIVE_UPDATE_DISABLED",
       requiredFlow: "PATCH private Studio draft, then POST exact draft publish",
     },
     { status: 405 },
@@ -118,10 +120,8 @@ export const PATCH = withErrorHandler(
       "@/lib/storefront/service"
     );
     if (!(await storefrontService.getById(context, id))) {
-      return NextResponse.json(
-        { error: "Storefront not found" },
-        { status: 404 },
-      );
+      // Audit S2-9: coded 404 (PATCH).
+      throw new SahelFlowError("Storefront not found", "NOT_FOUND", 404);
     }
     try {
       const config = await storefrontService.saveStudioDraft(
@@ -135,7 +135,7 @@ export const PATCH = withErrorHandler(
       if (error instanceof StorefrontVersionConflictError) {
         const config = await storefrontService.getStudioDraftById(context, id);
         return NextResponse.json(
-          { error: "version_conflict", config },
+          { error: "version_conflict", code: "DRAFT_VERSION_CONFLICT", config },
           { status: 409 },
         );
       }
@@ -167,10 +167,8 @@ export const POST = withErrorHandler(
       "@/lib/storefront/service"
     );
     if (!(await storefrontService.getById(context, id))) {
-      return NextResponse.json(
-        { error: "Storefront not found" },
-        { status: 404 },
-      );
+      // Audit S2-9: coded 404 (POST).
+      throw new SahelFlowError("Storefront not found", "NOT_FOUND", 404);
     }
 
     try {
@@ -238,14 +236,20 @@ export const POST = withErrorHandler(
 
       const config = await storefrontService.getById(context, id);
       if (!config) {
-        throw new Error("Published storefront disappeared after finalization");
+        // Audit S2-11: a serious, diagnosable state must not surface as an
+        // anonymous 500 — coded SahelFlowError like its siblings.
+        throw new SahelFlowError(
+          "Published storefront disappeared after finalization",
+          "STOREFRONT_POST_PUBLISH_MISSING",
+          500,
+        );
       }
       return NextResponse.json({ config, hostedRelease });
     } catch (error) {
       if (error instanceof StorefrontVersionConflictError) {
         const config = await storefrontService.getStudioDraftById(context, id);
         return NextResponse.json(
-          { error: "version_conflict", config },
+          { error: "version_conflict", code: "DRAFT_VERSION_CONFLICT", config },
           { status: 409 },
         );
       }
@@ -272,10 +276,8 @@ export const DELETE = withErrorHandler(
     const context = { prisma: db, shop: shopContext };
     const existing = await storefrontService.getById(context, id);
     if (!existing) {
-      return NextResponse.json(
-        { error: "Storefront not found" },
-        { status: 404 },
-      );
+      // Audit S2-9: coded 404 (DELETE).
+      throw new SahelFlowError("Storefront not found", "NOT_FOUND", 404);
     }
 
     let hostedPaused = false;

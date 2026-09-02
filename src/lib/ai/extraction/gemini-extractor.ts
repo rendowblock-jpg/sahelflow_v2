@@ -23,11 +23,13 @@ export const ExtractedOrderSchema = z.object({
   wilaya: z.string().optional(),
   commune: z.string().optional(),
   address: z.string().optional(),
+  // Audit S3-18: a misbehaving model response must not inject an unbounded
+  // item list into the proposal path.
   items: z.array(z.object({
     productName: z.string(),
     quantity: numeric("quantity", 1).transform((value) => Math.trunc(value)),
     unitPrice: numeric("unitPrice").optional(),
-  })),
+  })).max(200),
   totalPrice: numeric("totalPrice").optional(),
   notes: z.string().optional(),
 });

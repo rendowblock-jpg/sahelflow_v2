@@ -19,6 +19,7 @@ import { shopContext } from "@/lib/db";
 import { createActiveTeamLoginSession } from "@/lib/identity/team-credentials";
 import { registerTeamSessionAuthority } from "@/lib/identity/team-revocation-authority";
 import { establishTeamSession } from "@/lib/identity/team-session";
+import { logger } from "@/lib/logger";
 
 const LoginSchema = z
   .object({
@@ -32,7 +33,30 @@ const LoginSchema = z
   })
   .strict();
 
+/**
+ * Audit S2-5: every rejection body carries a stable `code` alongside the exact
+ * English `error` string — the login page and translate-server-error rules
+ * match that text verbatim, so it must not change. This route deliberately
+ * stays hand-rolled (rate-limit headers + limiter side effects differ from
+ * withErrorHandler); an unexpected throw is formatted as coded 500
+ * AUTH_INTERNAL_ERROR with the same JSON shape instead of Next's non-JSON 500.
+ */
 export async function POST(request: Request) {
+  try {
+    return await loginHandler(request);
+  } catch (error) {
+    logger.error("api.POST /api/auth/login.unexpected", error instanceof Error ? error : undefined);
+    return NextResponse.json(
+      {
+        error: "Login failed due to an internal error. Please try again.",
+        code: "AUTH_INTERNAL_ERROR",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+async function loginHandler(request: Request): Promise<NextResponse> {
   // Audit metadata only (client-controlled): kept for session/audit records.
   const ip = getClientIp(request.headers);
   // Limiter bucket key (audit 7-a F14): loopback-consistent, not spoofable,
@@ -41,7 +65,10 @@ export async function POST(request: Request) {
   const limit = checkLoginRateLimit(limiterKey);
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "Too many attempts. Please try again later." },
+      {
+        error: "Too many attempts. Please try again later.",
+        code: "RATE_LIMITED",
+      },
       {
         status: 429,
         headers: { "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)) },
@@ -53,14 +80,21 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     recordLoginAttempt(limiterKey);
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid request" },
+      {
+        error: parsed.error.issues[0]?.message ?? "Invalid request",
+        code: "REQUEST_VALIDATION_FAILED",
+      },
       { status: 400 },
     );
   }
 
   if (!(await isAuthSetup())) {
     return NextResponse.json(
-      { error: "Auth not set up yet", needsSetup: true },
+      {
+        error: "Auth not set up yet",
+        code: "AUTH_SETUP_REQUIRED",
+        needsSetup: true,
+      },
       { status: 409 },
     );
   }
@@ -78,7 +112,10 @@ export async function POST(request: Request) {
       void auditLog("auth.login.failed", { reason: "member_credentials" }, ip);
       if (!failure.allowed && failure.locked) {
         return NextResponse.json(
-          { error: "Too many failed attempts. Account temporarily locked." },
+          {
+            error: "Too many failed attempts. Account temporarily locked.",
+            code: "RATE_LIMITED",
+          },
           {
             status: 429,
             headers: {
@@ -87,7 +124,10 @@ export async function POST(request: Request) {
           },
         );
       }
-      return NextResponse.json({ error: "Incorrect login or PIN" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Incorrect login or PIN", code: "INVALID_CREDENTIALS" },
+        { status: 401 },
+      );
     }
 
     await registerTeamSessionAuthority({
@@ -123,7 +163,10 @@ export async function POST(request: Request) {
     void auditLog("auth.login.failed", { reason: "wrong_pin" }, ip);
     if (!failure.allowed && failure.locked) {
       return NextResponse.json(
-        { error: "Too many failed attempts. Account temporarily locked." },
+        {
+          error: "Too many failed attempts. Account temporarily locked.",
+          code: "RATE_LIMITED",
+        },
         {
           status: 429,
           headers: {
@@ -132,7 +175,10 @@ export async function POST(request: Request) {
         },
       );
     }
-    return NextResponse.json({ error: "Incorrect PIN" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Incorrect PIN", code: "INVALID_CREDENTIALS" },
+      { status: 401 },
+    );
   }
 
   recordLoginSuccess(limiterKey);

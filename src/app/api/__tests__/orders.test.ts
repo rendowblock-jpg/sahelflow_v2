@@ -12,6 +12,7 @@ import {
   it,
   vi,
 } from "vitest";
+import { NextRequest } from "next/server";
 
 import {
   cleanDb,
@@ -93,7 +94,7 @@ vi.mock("@/lib/automations/engine", () => ({
 }));
 
 import { POST as POSTOrder } from "@/app/api/orders/route";
-import { PATCH as PATCHOrder } from "@/app/api/orders/[id]/route";
+import { DELETE as DELETEOrder, PATCH as PATCHOrder } from "@/app/api/orders/[id]/route";
 import { PATCH as PATCHStatus } from "@/app/api/orders/[id]/status/route";
 import { POST as POSTBulk } from "@/app/api/orders/bulk/route";
 
@@ -572,6 +573,117 @@ describe("PATCH /api/orders/[id]/status — transition status", () => {
       { params: Promise.resolve({ id: order.id }) },
     );
     expect(response.status).toBe(401);
+  });
+});
+
+describe("DELETE /api/orders/[id] — transactional CAS soft-delete (audit S3-16)", () => {
+  beforeEach(async () => {
+    await cleanDb();
+    authority.requireAction
+      .mockReset()
+      .mockResolvedValue(authority.ownerContext);
+  });
+
+  async function seedDeletableOrder(status: "draft" | "cancelled" | "pending") {
+    const product = await seedProduct({ price: 2500, stock: 100 });
+    const customer = await seedCustomer();
+    const order = await rawDb.order.create({
+      data: {
+        orderNumber: `ORD-DELETE-${status}-${customerCounter}`,
+        status,
+        customerId: customer.id,
+        totalPrice: 5000,
+        deliveryCost: 600,
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "123 Rue Didouche",
+        phone: "0555000001",
+        source: "manual",
+        items: {
+          create: [
+            {
+              productId: product.id,
+              productName: "Test Product",
+              quantity: 2,
+              unitPrice: 2500,
+              total: 5000,
+            },
+          ],
+        },
+      },
+    });
+    return { order };
+  }
+
+  it("soft-deletes a draft order and reports the deleted record", async () => {
+    const { order } = await seedDeletableOrder("draft");
+    const response = await DELETEOrder(
+      new NextRequest(`http://localhost/api/orders/${order.id}`, {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ id: order.id }) },
+    );
+    expect(response.status).toBe(200);
+    const body = await getJson(response);
+    expect(body.success).toBe(true);
+    expect(
+      (await rawDb.order.findUnique({ where: { id: order.id } }))?.deletedAt,
+    ).toBeTruthy();
+  });
+
+  it("keeps the coded 409 verdicts for active orders and orders with returns", async () => {
+    const active = await seedDeletableOrder("pending");
+    const activeResponse = await DELETEOrder(
+      new NextRequest(`http://localhost/api/orders/${active.order.id}`, {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ id: active.order.id }) },
+    );
+    expect(activeResponse.status).toBe(409);
+    expect(await getJson(activeResponse)).toMatchObject({
+      code: "CONFLICT",
+      error: "Cannot delete an active order. Cancel it first.",
+    });
+
+    const withReturn = await seedDeletableOrder("cancelled");
+    await rawDb.return.create({
+      data: {
+        orderId: withReturn.order.id,
+        type: "refund",
+        reason: "Arrived damaged",
+      },
+    });
+    const returnResponse = await DELETEOrder(
+      new NextRequest(`http://localhost/api/orders/${withReturn.order.id}`, {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ id: withReturn.order.id }) },
+    );
+    expect(returnResponse.status).toBe(409);
+    expect(await getJson(returnResponse)).toMatchObject({
+      code: "CONFLICT",
+      error: "Cannot delete an order with returns. Delete the returns first.",
+    });
+    expect(
+      (await rawDb.order.findUnique({ where: { id: withReturn.order.id } }))
+        ?.deletedAt,
+    ).toBeNull();
+  });
+
+  it("returns coded 404 for an already soft-deleted order instead of re-deleting", async () => {
+    const { order } = await seedDeletableOrder("draft");
+    await rawDb.order.update({
+      where: { id: order.id },
+      data: { deletedAt: new Date() },
+    });
+    const response = await DELETEOrder(
+      new NextRequest(`http://localhost/api/orders/${order.id}`, {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ id: order.id }) },
+    );
+    expect(response.status).toBe(404);
+    expect(await getJson(response)).toMatchObject({ code: "NOT_FOUND" });
   });
 });
 

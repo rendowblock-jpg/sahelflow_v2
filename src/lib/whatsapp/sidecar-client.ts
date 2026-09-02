@@ -30,7 +30,29 @@ function resolveSidecarRestToken(): string | undefined {
   return undefined;
 }
 
-const SIDECAR_REST_TOKEN = resolveSidecarRestToken();
+/**
+ * Audit S1-4: the REST token used to be resolved once at module load, so a
+ * cold-start race (token file not yet written by the sidecar) permanently
+ * degraded the process to unauthenticated requests until restart. Resolution
+ * is now lazy + memoized: the first request resolves it, and any sidecar 401
+ * clears the memo so the next call re-resolves from env/file (bounded — one
+ * resolve attempt per request, no retry loop).
+ */
+let memoizedRestToken: string | undefined;
+let restTokenResolved = false;
+
+function sidecarRestToken(): string | undefined {
+  if (!restTokenResolved) {
+    memoizedRestToken = resolveSidecarRestToken();
+    restTokenResolved = true;
+  }
+  return memoizedRestToken;
+}
+
+function invalidateSidecarRestToken(): void {
+  memoizedRestToken = undefined;
+  restTokenResolved = false;
+}
 
 export class SidecarUnavailableError extends Error {
   constructor(
@@ -64,8 +86,23 @@ function authorizedHeaders(init?: RequestInit): Record<string, string> {
   const headers: Record<string, string> = {
     ...(init?.headers as Record<string, string> | undefined),
   };
-  if (SIDECAR_REST_TOKEN) {
-    headers.Authorization = `Bearer ${SIDECAR_REST_TOKEN}`;
+  const token = sidecarRestToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  } else if (process.env.NODE_ENV === "production") {
+    // Audit S1-4: fail loudly instead of sending an unauthenticated request.
+    // Retryable + unambiguous — nothing was sent, and a later attempt may
+    // resolve the token once the sidecar has written its file. The memo is
+    // cleared so the next call retries resolution.
+    invalidateSidecarRestToken();
+    throw new SidecarRequestError(
+      "Sidecar token unavailable",
+      "SIDECAR_TOKEN_UNAVAILABLE",
+      true,
+      false,
+      503,
+      null,
+    );
   }
   return headers;
 }
@@ -134,6 +171,11 @@ async function sidecarRequest(
       }),
     );
   } catch (error) {
+    if (error instanceof SidecarRequestError && error.status === 401) {
+      // Audit S1-4: the memoized token was rejected — drop it so the next
+      // request re-resolves the current env/file value.
+      invalidateSidecarRestToken();
+    }
     return throwTransportError(error);
   } finally {
     clearTimeout(timeoutId);
@@ -206,6 +248,9 @@ async function sidecarStreamingRequest(
     });
   } catch (error) {
     finish();
+    if (error instanceof SidecarRequestError && error.status === 401) {
+      invalidateSidecarRestToken();
+    }
     return throwTransportError(error);
   }
 }
@@ -439,22 +484,23 @@ export const sidecar = {
     }),
 
   /** Private server-to-sidecar REST credential. Never return this to a browser. */
-  restToken: (): string | undefined => SIDECAR_REST_TOKEN,
+  restToken: (): string | undefined => sidecarRestToken(),
 
   /** Issue a short-lived push-only WebSocket grant for one trusted subject. */
-  wsGrant: (subject: string): string | undefined =>
-    SIDECAR_REST_TOKEN
-      ? createSidecarWebSocketGrant(SIDECAR_REST_TOKEN, subject)
-      : undefined,
+  wsGrant: (subject: string): string | undefined => {
+    const token = sidecarRestToken();
+    return token ? createSidecarWebSocketGrant(token, subject) : undefined;
+  },
 
   wsGrantBundle: (
     subject: string,
   ): { token: string; expiresAt: number } | undefined => {
-    if (!SIDECAR_REST_TOKEN) return undefined;
+    const token = sidecarRestToken();
+    if (!token) return undefined;
     const issuedAt = Date.now();
     return {
       token: createSidecarWebSocketGrant(
-        SIDECAR_REST_TOKEN,
+        token,
         subject,
         issuedAt,
         SIDECAR_WS_GRANT_TTL_MS,

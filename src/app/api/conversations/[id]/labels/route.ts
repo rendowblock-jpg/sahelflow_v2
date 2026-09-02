@@ -12,12 +12,14 @@ import {
 } from "@/lib/data/conversation-service";
 import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
+import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
 const putSchema = z.object({
-  labels: z.array(z.string()).max(50),
+  // Audit S3-17: individual label strings were unbounded.
+  labels: z.array(z.string().max(64)).max(50),
 });
 
 /**
@@ -34,10 +36,8 @@ export const GET = withErrorHandler(async (
     rawId,
   );
   if (!id) {
-    return NextResponse.json(
-      { error: "Conversation not found" },
-      { status: 404 },
-    );
+    // Audit S2-9: coded 404 — same contract as coded sibling routes.
+    throw new SahelFlowError("Conversation not found", "NOT_FOUND", 404);
   }
   const labels = await getConversationLabels({ prisma: db, shop: shopContext }, id);
   return NextResponse.json({ labels });

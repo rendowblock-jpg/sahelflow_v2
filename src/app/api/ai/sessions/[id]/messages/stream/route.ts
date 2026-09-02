@@ -10,12 +10,17 @@ import {
   type AgentStreamEvent,
 } from "@/lib/ai/chat/agent";
 import { loadRecentAiChatMessages } from "@/lib/ai/chat/session-history";
+import {
+  GeminiProviderError,
+  geminiErrorMessage,
+} from "@/lib/ai/gemini/provider";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getCurrentUserKey, requireAuth } from "@/lib/auth/server";
 import { db, shopContext } from "@/lib/db";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 import { requireLicense } from "@/lib/license/license-server";
+import { logger } from "@/lib/logger";
 import { redactPii } from "@/lib/redact-pii";
 import { getBool, SETTING_KEYS } from "@/lib/settings";
 
@@ -31,7 +36,18 @@ type WorkspaceStreamEvent =
   | {
       type: "persistence_warning";
       code: "AI_RESPONSE_NOT_PERSISTED";
-    };
+    }
+  | { type: "error"; message: string; code: string };
+
+/**
+ * Audit S1-3: the stream has already returned 200, so withErrorHandler never
+ * sanitizes anything sent over SSE. The `error` event therefore carries a
+ * stable coded message only — raw internal error.message (Prisma/IPC/storage)
+ * must never reach the UI mid-chat. `message` is kept as the field name the
+ * stream consumer reads (src/hooks/use-ai-workspace.ts); `code` is additive.
+ */
+const AI_INTERNAL_ERROR_MESSAGE =
+  "The AI assistant hit an internal error. Please try again.";
 
 function jsonError(status: number, error: string, extra?: Record<string, unknown>) {
   return new NextResponse(JSON.stringify({ error, ...extra }), {
@@ -102,19 +118,24 @@ export const POST = withErrorHandler(
       false,
     );
     if (!consent) {
-      return jsonError(403, "consent_required");
+      // Audit S2-7: one coded 403/429 dialect for the AI surface. The legacy
+      // `error` value stays verbatim — the chat UI normalizes it by string.
+      return jsonError(403, "consent_required", { code: "AI_CONSENT_REQUIRED" });
     }
 
     try {
       await requireLicense();
     } catch {
-      return jsonError(403, "AI_LICENSE_REQUIRED");
+      return jsonError(403, "AI_LICENSE_REQUIRED", {
+        code: "AI_LICENSE_REQUIRED",
+      });
     }
 
     const userKey = await getCurrentUserKey();
     const rateLimit = checkRateLimit(id, userKey);
     if (!rateLimit.allowed) {
       return jsonError(429, "AI_RATE_LIMITED", {
+        code: "AI_RATE_LIMITED",
         reason: rateLimit.reason ?? null,
       });
     }
@@ -212,9 +233,25 @@ export const POST = withErrorHandler(
             },
           );
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "AI_INTERNAL_ERROR";
-          send({ type: "error", message });
+          if (error instanceof GeminiProviderError) {
+            // Provider failures keep their coded, locale-native copy.
+            send({
+              type: "error",
+              message: geminiErrorMessage(error, input.locale),
+              code: error.code,
+            });
+          } else {
+            logger.error(
+              "api.POST /api/ai/sessions/[id]/messages/stream.internal",
+              error instanceof Error ? error : undefined,
+              { sessionId: id },
+            );
+            send({
+              type: "error",
+              message: AI_INTERNAL_ERROR_MESSAGE,
+              code: "AI_INTERNAL_ERROR",
+            });
+          }
           shouldPersistAssistant = false;
         }
 

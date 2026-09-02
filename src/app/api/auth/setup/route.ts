@@ -126,8 +126,12 @@ export const POST = withErrorHandler(async (req: Request) => {
   const body = await req.json();
   const parsed = SetupSchema.safeParse(body);
   if (!parsed.success) {
+    // Audit S2-5: coded rejection bodies — exact English strings kept verbatim.
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid PIN" },
+      {
+        error: parsed.error.issues[0]?.message ?? "Invalid PIN",
+        code: "REQUEST_VALIDATION_FAILED",
+      },
       { status: 400 },
     );
   }
@@ -141,7 +145,10 @@ export const POST = withErrorHandler(async (req: Request) => {
   }
   if (alreadySetup) {
     return NextResponse.json(
-      { error: "Auth is already set up. Use the settings page to change your PIN." },
+      {
+        error: "Auth is already set up. Use the settings page to change your PIN.",
+        code: "AUTH_ALREADY_SETUP",
+      },
       { status: 409 },
     );
   }

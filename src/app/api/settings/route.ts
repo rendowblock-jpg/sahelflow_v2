@@ -30,8 +30,20 @@ export const GET = withErrorHandler(async (): Promise<NextResponse> => {
   return NextResponse.json({ settings });
 }, "GET /api/settings");
 
+// Audit S3-13: bounded settings payload — the previous record accepted any
+// key count/length and value size, and every entry is written inside one
+// 30s SQLite transaction. Zod failures surface as coded 400
+// REQUEST_VALIDATION_FAILED via withErrorHandler.
 const updateSchema = z.object({
-  settings: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+  settings: z
+    .record(
+      z.string().max(64),
+      z.union([z.string().max(4000), z.number().finite(), z.boolean()]),
+    )
+    .refine(
+      (record) => Object.keys(record).length <= 64,
+      "Settings update is limited to 64 keys",
+    ),
 });
 
 /**

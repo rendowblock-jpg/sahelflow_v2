@@ -35,8 +35,12 @@ export const POST = withErrorHandler(async (req: Request) => {
   const body = await req.json();
   const parsed = ExportSchema.safeParse(body);
   if (!parsed.success) {
+    // Audit S2-12: coded 400 on the safeParse rejection.
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid spreadsheet ID" },
+      {
+        error: parsed.error.issues[0]?.message ?? "Invalid spreadsheet ID",
+        code: "REQUEST_VALIDATION_FAILED",
+      },
       { status: 400 },
     );
   }
@@ -67,9 +71,20 @@ export const POST = withErrorHandler(async (req: Request) => {
   let totalUpdatedRows = 0;
 
   for (; batchIndex < MAX_BATCHES; batchIndex++) {
+    // Audit S2-12: select exactly the 8 exported fields (was `include:
+    // { customer: true }`, which pulled every Order column — notes,
+    // sourceMetadata, addresses — through memory at the 100k-row cap).
     const batch = await db.order.findMany({
       where: { deletedAt: null },
-      include: { customer: true },
+      select: {
+        orderNumber: true,
+        wilaya: true,
+        commune: true,
+        totalPrice: true,
+        status: true,
+        createdAt: true,
+        customer: { select: { name: true, phone: true } },
+      },
       orderBy: { createdAt: "desc" },
       skip: batchIndex * DB_BATCH_SIZE,
       take: DB_BATCH_SIZE,

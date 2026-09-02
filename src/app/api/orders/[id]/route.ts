@@ -40,6 +40,13 @@ export const GET = withErrorHandler(
 
 /**
  * DELETE /api/orders/[id] — soft-delete only draft/cancelled legacy orders.
+ *
+ * Audit S3-16 (with S2-10): the status/returns checks and the soft-delete used
+ * to be separate statements — a return created between check and update could
+ * leave a deleted order owning a return. The checks + the CAS soft-delete now
+ * run in one transaction, and the updateMany guard re-verifies that the status
+ * is still mutable and the row is not already deleted (the CAS pattern used by
+ * delivery/create).
  */
 export const DELETE = withErrorHandler(
   async (_req: NextRequest, { params }: RouteContext) => {
@@ -47,47 +54,72 @@ export const DELETE = withErrorHandler(
     const { id } = await params;
     const context = { prisma: db, shop: shopContext };
 
-    const order = await db.order.findUnique({
-      where: { id },
-      select: { status: true, source: true, sourceMetadata: true },
-    });
+    const updated = await db.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id },
+        select: { status: true, source: true, sourceMetadata: true, deletedAt: true },
+      });
 
-    if (!order) {
-      throw new SahelFlowError("Order not found", "NOT_FOUND", 404);
-    }
+      if (!order || order.deletedAt) {
+        throw new SahelFlowError("Order not found", "NOT_FOUND", 404);
+      }
 
-    if (isTrustedManualOrderAuthority(order.source, order.sourceMetadata)) {
-      throw new SahelFlowError(
-        "Canonical manual orders require a governed deletion command",
-        "CANONICAL_FOLLOWUP_REQUIRED",
-        409,
-      );
-    }
+      if (isTrustedManualOrderAuthority(order.source, order.sourceMetadata)) {
+        throw new SahelFlowError(
+          "Canonical manual orders require a governed deletion command",
+          "CANONICAL_FOLLOWUP_REQUIRED",
+          409,
+        );
+      }
 
-    if (!["draft", "cancelled"].includes(order.status)) {
-      throw new SahelFlowError(
-        "Cannot delete an active order. Cancel it first.",
-        "CONFLICT",
-        409,
-      );
-    }
+      if (!["draft", "cancelled"].includes(order.status)) {
+        throw new SahelFlowError(
+          "Cannot delete an active order. Cancel it first.",
+          "CONFLICT",
+          409,
+        );
+      }
 
-    const returns = await db.return.findMany({
-      where: { orderId: id },
-      select: { id: true },
-    });
-    if (returns.length > 0) {
-      throw new SahelFlowError(
-        "Cannot delete an order with returns. Delete the returns first.",
-        "CONFLICT",
-        409,
-      );
-    }
+      const returns = await tx.return.findMany({
+        where: { orderId: id },
+        select: { id: true },
+      });
+      if (returns.length > 0) {
+        throw new SahelFlowError(
+          "Cannot delete an order with returns. Delete the returns first.",
+          "CONFLICT",
+          409,
+        );
+      }
 
-    const updated = await context.prisma.order.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-      select: { id: true, orderNumber: true, deletedAt: true },
+      const claimed = await tx.order.updateMany({
+        where: {
+          id,
+          deletedAt: null,
+          status: { in: ["draft", "cancelled"] },
+        },
+        data: { deletedAt: new Date() },
+      });
+      if (claimed.count !== 1) {
+        // Lost the race: re-read to project the exact pre-existing verdict.
+        const current = await tx.order.findUnique({
+          where: { id },
+          select: { status: true, deletedAt: true },
+        });
+        if (!current || current.deletedAt) {
+          throw new SahelFlowError("Order not found", "NOT_FOUND", 404);
+        }
+        throw new SahelFlowError(
+          "Cannot delete an active order. Cancel it first.",
+          "CONFLICT",
+          409,
+        );
+      }
+
+      return tx.order.findUniqueOrThrow({
+        where: { id },
+        select: { id: true, orderNumber: true, deletedAt: true },
+      });
     });
 
     await logAudit(context, {

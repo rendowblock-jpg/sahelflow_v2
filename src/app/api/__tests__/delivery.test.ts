@@ -164,12 +164,16 @@ describe("POST /api/delivery/create — create shipment", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 400 when the order is not yet confirmed (e.g. pending)", async () => {
+  it("returns 409 when the order is not yet confirmed (e.g. pending) — state conflict, audit S3-22", async () => {
     const { order } = await seedOrderAtStatus("pending");
     const res = await POSTCreate(
       mockPost("http://localhost/api/delivery/create", { orderId: order.id, provider: "yalidine" }),
     );
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body).toMatchObject({ code: "CONFLICT" });
+    // Message kept verbatim for the client substring-translation contract.
+    expect(body.error).toContain("must be confirmed before shipping");
   });
 
   it("returns 502 when the adapter fails (success: false)", async () => {
