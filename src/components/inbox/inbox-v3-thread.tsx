@@ -1,10 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
+  ArrowDown,
   ArrowLeft,
   Check,
+  ChevronDown,
+  ChevronUp,
   Copy,
   FileText,
   ImageIcon,
@@ -19,6 +22,7 @@ import {
   Plus,
   RefreshCw,
   Reply,
+  Search,
   Send,
   Sparkles,
   Trash2,
@@ -65,9 +69,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { useMobile } from "@/hooks/use-mobile";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useVoiceRecorder } from "@/components/inbox/use-voice-recorder";
 
@@ -87,12 +93,74 @@ function messageDayKey(value: number): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
-function messageDayLabel(value: number, locale: "ar" | "fr" | "en"): string {
+function messageDayLabel(
+  value: number,
+  locale: "ar" | "fr" | "en",
+  copy: ReturnType<typeof useInboxWorkspace>["copy"],
+): string {
+  // WhatsApp-class relative day words (اليوم / أمس / Aujourd’hui / Hier);
+  // weekday names inside the week, absolute dates beyond it.
+  const dayStart = (() => {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  })();
+  const todayStart = (() => {
+    const date = new Date(Date.now());
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  })();
+  const diffDays = Math.round((todayStart - dayStart) / 86_400_000);
+  if (diffDays === 0) return copy("dayToday");
+  if (diffDays === 1) return copy("dayYesterday");
+  if (diffDays > 1 && diffDays < 7) {
+    return new Intl.DateTimeFormat(localeCode(locale), {
+      weekday: "long",
+    }).format(new Date(value));
+  }
   return new Intl.DateTimeFormat(localeCode(locale), {
-    weekday: "short",
     day: "numeric",
     month: "short",
+    ...(diffDays >= 365 ? { year: "numeric" as const } : {}),
   }).format(new Date(value));
+}
+
+/** Same-direction bubbles within this gap form one visual group (WhatsApp). */
+const GROUP_GAP_MS = 2 * 60_000;
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Soft highlight of in-thread search matches inside a bubble body. */
+function HighlightedMessageBody({
+  body,
+  query,
+}: {
+  body: string;
+  query: string;
+}) {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return <>{body}</>;
+  const parts = body.split(
+    new RegExp(`(${escapeRegExp(trimmed)})`, "ig"),
+  );
+  return (
+    <>
+      {parts.map((part, index) =>
+        index % 2 === 1 ? (
+          <mark
+            key={index}
+            className="rounded-sm bg-warning/30 px-0.5 text-foreground"
+          >
+            {part}
+          </mark>
+        ) : (
+          <Fragment key={index}>{part}</Fragment>
+        ),
+      )}
+    </>
+  );
 }
 
 /** "Active …" hint appears only after the thread has been idle this long. */
@@ -327,6 +395,12 @@ function MessageBubble({
   canInteract,
   upload,
   onCancelUpload,
+  groupStart = true,
+  groupEnd = true,
+  highlighted = false,
+  quotedJumpable = false,
+  onJumpToQuoted,
+  searchQuery = "",
 }: {
   message: InboxMessage;
   locale: "ar" | "fr" | "en";
@@ -339,6 +413,15 @@ function MessageBubble({
   canInteract: boolean;
   upload?: { progress: number; cancellable: boolean };
   onCancelUpload: (messageId: string) => void;
+  /** First bubble of a visual sender-group (drives margins + tail corners). */
+  groupStart?: boolean;
+  /** Last bubble of a visual sender-group (carries the tail corner). */
+  groupEnd?: boolean;
+  /** Momentary jump/search target highlight. */
+  highlighted?: boolean;
+  quotedJumpable?: boolean;
+  onJumpToQuoted?: () => void;
+  searchQuery?: string;
 }) {
   if (message.messageType === "activity" || message.direction === "system") {
     return <ActivityMessage body={message.body} timestamp={message.timestamp} />;
@@ -359,30 +442,66 @@ function MessageBubble({
   // the convention Algerian sellers know from WhatsApp in French/English.
   // Pinning dir="ltr" here stops the RTL document from flipping justify-* and
   // the logical corner tails; message text itself stays dir="auto" below.
+  const renderQuoteBody = () => (
+    <>
+      <div className="flex items-center gap-1 text-2xs font-medium text-primary">
+        <Reply className="size-3" aria-hidden="true" />
+        <span>{copy("replyingTo")}</span>
+      </div>
+      <p
+        className="mt-0.5 line-clamp-2 break-words text-2xs leading-4 text-muted-foreground"
+        dir="auto"
+      >
+        {message.quoted?.preview || "…"}
+      </p>
+    </>
+  );
+
   return (
-    <div className="group/message space-y-1.5" dir="ltr">
+    <div
+      data-message-id={message.id}
+      className={cn(
+        "group/message space-y-1.5",
+        groupStart ? "mt-4" : "mt-1",
+        highlighted &&
+          "rounded-2xl ring-2 ring-primary/60 ring-offset-2 ring-offset-background transition-shadow",
+      )}
+      dir="ltr"
+    >
       <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
         <div
           className={cn(
             "max-w-[min(38rem,80%)] rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
             inbound
-              ? "rounded-es-md border-border/70 bg-background text-foreground"
-              : "rounded-ee-md border-primary/20 bg-primary/10 text-foreground",
+              ? "border-border/70 bg-background text-foreground"
+              : "border-primary/20 bg-primary/10 text-foreground",
+            // Tail corner sits on the group's last bubble; continuation
+            // bubbles soften their connecting corners (WhatsApp grouping).
+            inbound && groupEnd && "rounded-es-md",
+            !inbound && groupEnd && "rounded-ee-md",
+            inbound && !groupStart && "rounded-ss-md",
+            !inbound && !groupStart && "rounded-se-md",
           )}
         >
           {message.quoted || message.quotedMessageId ? (
-            <div className="mb-2 rounded-lg border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5">
-              <div className="flex items-center gap-1 text-2xs font-medium text-primary">
-                <Reply className="size-3" aria-hidden="true" />
-                <span>{copy("replyingTo")}</span>
-              </div>
-              <p
-                className="mt-0.5 line-clamp-2 break-words text-2xs leading-4 text-muted-foreground"
-                dir="auto"
+            quotedJumpable && onJumpToQuoted ? (
+              <button
+                type="button"
+                onClick={onJumpToQuoted}
+                aria-label={copy("jumpToMessage")}
+                title={copy("jumpToMessage")}
+                className="mb-2 block w-full rounded-lg border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5 text-start outline-none transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {message.quoted?.preview || "…"}
-              </p>
-            </div>
+                {renderQuoteBody()}
+              </button>
+            ) : (
+              <div
+                title={copy("quoteNotLoaded")}
+                className="mb-2 rounded-lg border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5"
+              >
+                {renderQuoteBody()}
+              </div>
+            )
           ) : null}
 
           {media ? (
@@ -459,7 +578,7 @@ function MessageBubble({
               dir="auto"
               data-sf-user-content="true"
             >
-              {message.body}
+              <HighlightedMessageBody body={message.body} query={searchQuery} />
             </p>
           ) : null}
 
@@ -599,6 +718,11 @@ export function InboxV3Thread({
     loadingMessages,
     messagesInnerRef,
     messagesEndRef,
+    isAwayFromBottom,
+    missedMessageCount,
+    activeChatInitialUnread,
+    scrollToLatestMessages,
+    dismissUnreadDivider,
     locale,
     t,
     copy,
@@ -674,6 +798,108 @@ export function InboxV3Thread({
   useEffect(() => {
     return () => disposeVoiceTake();
   }, [activeConversationKey, disposeVoiceTake]);
+
+  // ── In-thread search (WhatsApp pattern): header magnifier → match bar with
+  // n/N counter, prev/next cycling, soft highlight in bubbles, Esc to close.
+  const [threadSearchOpen, setThreadSearchOpen] = useState(false);
+  const [threadSearchQuery, setThreadSearchQuery] = useState("");
+  const [threadSearchIndex, setThreadSearchIndex] = useState(0);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<
+    string | null
+  >(null);
+  const highlightTimerRef = useRef<number | null>(null);
+  const replyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Conversation-scoped UI state resets via the documented render-phase key
+  // reset (react.dev "You might not need an Effect") — no cascading renders.
+  const [searchResetKey, setSearchResetKey] = useState(activeConversationKey);
+  if (searchResetKey !== activeConversationKey) {
+    setSearchResetKey(activeConversationKey);
+    setThreadSearchOpen(false);
+    setThreadSearchQuery("");
+    setThreadSearchIndex(0);
+    setHighlightedMessageId(null);
+  }
+
+  // Timer cleanup stays in an effect: it disposes an external resource on
+  // conversation switch/unmount without touching state.
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) {
+        window.clearTimeout(highlightTimerRef.current);
+        highlightTimerRef.current = null;
+      }
+    };
+  }, [activeConversationKey]);
+
+  const normalizedThreadQuery = threadSearchQuery.trim().toLowerCase();
+  const threadMatchIds = useMemo(() => {
+    if (normalizedThreadQuery.length < 2) return [] as string[];
+    return messages
+      .filter((message) =>
+        message.body.toLowerCase().includes(normalizedThreadQuery),
+      )
+      .map((message) => message.id);
+  }, [messages, normalizedThreadQuery]);
+  const threadMatchCount = threadMatchIds.length;
+  const safeThreadIndex =
+    threadMatchCount > 0
+      ? ((threadSearchIndex % threadMatchCount) + threadMatchCount) %
+        threadMatchCount
+      : 0;
+
+  const jumpToMessage = useCallback(
+    (messageId: string): boolean => {
+      const element = messagesInnerRef.current?.querySelector(
+        `[data-message-id="${CSS.escape(messageId)}"]`,
+      );
+      if (!element) return false;
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedMessageId(messageId);
+      if (highlightTimerRef.current) {
+        window.clearTimeout(highlightTimerRef.current);
+      }
+      highlightTimerRef.current = window.setTimeout(
+        () => setHighlightedMessageId(null),
+        2_200,
+      );
+      return true;
+    },
+    [messagesInnerRef],
+  );
+
+  const gotoThreadMatch = (delta: number) => {
+    if (threadMatchCount === 0) return;
+    const nextIndex = (safeThreadIndex + delta + threadMatchCount) % threadMatchCount;
+    setThreadSearchIndex(nextIndex);
+    const targetId = threadMatchIds[nextIndex];
+    if (targetId && !jumpToMessage(targetId)) {
+      toast.warning(copy("quoteNotLoaded"));
+    }
+  };
+
+  const messageIdSet = useMemo(
+    () => new Set(messages.map((message) => message.id)),
+    [messages],
+  );
+
+  // "New messages" boundary — index of the first message that was unread at
+  // open (captured before mark-read). Only rendered with read history above.
+  const dividerIndex =
+    activeChatInitialUnread > 0 &&
+    messages.length > activeChatInitialUnread &&
+    messages.length - activeChatInitialUnread >= 1
+      ? messages.length - activeChatInitialUnread
+      : -1;
+
+  // Auto-grow composer (WhatsApp-class): grows with content up to the CSS
+  // cap (~5 lines), resets on conversation switch via the value change.
+  useEffect(() => {
+    const element = replyTextareaRef.current;
+    if (!element) return;
+    element.style.height = "auto";
+    element.style.height = `${Math.min(element.scrollHeight, 128)}px`;
+  }, [replyText, activeConversationKey]);
 
   if (!activeChat) {
     return (
@@ -757,7 +983,7 @@ export function InboxV3Thread({
     <section
       id="inbox-thread-pane"
       data-inbox-thread="active"
-      className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/[0.06]"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-muted/[0.06]"
     >
       <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border/60 bg-background/95 px-3 py-2 sm:px-4">
         <div className="flex min-w-0 items-center gap-2.5">
@@ -821,6 +1047,23 @@ export function InboxV3Thread({
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={copy("searchInChat")}
+                aria-pressed={threadSearchOpen}
+                onClick={() => setThreadSearchOpen((open) => !open)}
+              >
+                <Search className="size-4" aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={6}>
+              {copy("searchInChat")}
+            </TooltipContent>
+          </Tooltip>
           {canUpdateConversation ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -930,6 +1173,89 @@ export function InboxV3Thread({
         </div>
       </header>
 
+      {threadSearchOpen ? (
+        <div
+          role="search"
+          className="flex items-center gap-2 border-b border-border/60 bg-background/95 px-3 py-2 sm:px-4"
+        >
+          <Search
+            className="size-3.5 shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
+            value={threadSearchQuery}
+            autoFocus
+            onChange={(event) => {
+              setThreadSearchQuery(event.target.value);
+              setThreadSearchIndex(0);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                gotoThreadMatch(event.shiftKey ? -1 : 1);
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setThreadSearchOpen(false);
+                setThreadSearchQuery("");
+              }
+            }}
+            aria-label={copy("searchInChat")}
+            placeholder={copy("searchInChat")}
+            className="h-8 flex-1 bg-muted/20 text-[13px]"
+          />
+          {normalizedThreadQuery.length >= 2 ? (
+            threadMatchCount > 0 ? (
+              <span
+                aria-live="polite"
+                className="shrink-0 text-2xs tabular-nums text-muted-foreground"
+              >
+                {copy("searchPosition", {
+                  index: safeThreadIndex + 1,
+                  count: threadMatchCount,
+                })}
+              </span>
+            ) : (
+              <span className="shrink-0 text-2xs text-muted-foreground">
+                {copy("searchNoMatches")}
+              </span>
+            )
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={threadMatchCount === 0}
+            aria-label={copy("searchPrevious")}
+            onClick={() => gotoThreadMatch(-1)}
+          >
+            <ChevronUp className="size-4" aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={threadMatchCount === 0}
+            aria-label={copy("searchNext")}
+            onClick={() => gotoThreadMatch(1)}
+          >
+            <ChevronDown className="size-4" aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={copy("closeSearch")}
+            onClick={() => {
+              setThreadSearchOpen(false);
+              setThreadSearchQuery("");
+            }}
+          >
+            <X className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
+      ) : null}
+
       <ScrollArea
         className={cn(
           "min-h-0 flex-1",
@@ -942,7 +1268,7 @@ export function InboxV3Thread({
       >
         <div
           ref={messagesInnerRef}
-          className="mx-auto w-full max-w-[56rem] space-y-3 px-3 py-5 sm:px-6 lg:px-8"
+          className="mx-auto w-full max-w-[56rem] px-3 py-4 sm:px-6 lg:px-8"
           role="log"
           aria-live="polite"
           aria-label={copy("messages")}
@@ -964,21 +1290,63 @@ export function InboxV3Thread({
           ) : (
             messages.map((message, index) => {
               const previous = index > 0 ? messages[index - 1] : null;
+              const next =
+                index < messages.length - 1 ? messages[index + 1] : null;
               const showDay =
                 !previous ||
                 messageDayKey(previous.timestamp) !==
                   messageDayKey(message.timestamp);
+              const isActivity =
+                message.messageType === "activity" ||
+                message.direction === "system";
+              const prevInGroup = Boolean(
+                previous &&
+                  !isActivity &&
+                  previous.messageType !== "activity" &&
+                  previous.direction !== "system" &&
+                  previous.direction === message.direction &&
+                  !showDay &&
+                  message.timestamp - previous.timestamp <= GROUP_GAP_MS,
+              );
+              const nextInGroup = Boolean(
+                next &&
+                  !isActivity &&
+                  next.messageType !== "activity" &&
+                  next.direction !== "system" &&
+                  next.direction === message.direction &&
+                  messageDayKey(next.timestamp) ===
+                    messageDayKey(message.timestamp) &&
+                  next.timestamp - message.timestamp <= GROUP_GAP_MS,
+              );
+              const quotedId = message.quotedMessageId ?? null;
               return (
                 <Fragment key={message.id}>
                   {showDay ? (
                     <div
                       role="separator"
-                      className="flex items-center gap-3 py-2 text-2xs font-medium text-muted-foreground"
+                      className="mt-4 flex items-center gap-3 py-2 text-2xs font-medium text-muted-foreground"
                     >
                       <span className="h-px flex-1 bg-border/55" />
-                      <span>{messageDayLabel(message.timestamp, locale)}</span>
+                      <span>
+                        {messageDayLabel(message.timestamp, locale, copy)}
+                      </span>
                       <span className="h-px flex-1 bg-border/55" />
                     </div>
+                  ) : null}
+                  {index === dividerIndex ? (
+                    <button
+                      type="button"
+                      onClick={dismissUnreadDivider}
+                      aria-label={copy("newMessagesDivider")}
+                      title={copy("newMessagesDivider")}
+                      className="mt-3 flex w-full items-center gap-3 py-1 text-2xs font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span className="h-px flex-1 bg-primary/35" />
+                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5">
+                        {copy("newMessagesDivider")}
+                      </span>
+                      <span className="h-px flex-1 bg-primary/35" />
+                    </button>
                   ) : null}
                   <MessageBubble
                     message={message}
@@ -992,6 +1360,24 @@ export function InboxV3Thread({
                     canInteract={canSend}
                     upload={uploads[message.id]}
                     onCancelUpload={cancelUpload}
+                    groupStart={!prevInGroup}
+                    groupEnd={!nextInGroup}
+                    highlighted={highlightedMessageId === message.id}
+                    quotedJumpable={Boolean(
+                      quotedId && messageIdSet.has(quotedId),
+                    )}
+                    onJumpToQuoted={
+                      quotedId
+                        ? () => {
+                            if (!jumpToMessage(quotedId)) {
+                              toast.warning(copy("quoteNotLoaded"));
+                            }
+                          }
+                        : undefined
+                    }
+                    searchQuery={
+                      threadSearchOpen ? threadSearchQuery : ""
+                    }
                   />
                 </Fragment>
               );
@@ -1000,6 +1386,24 @@ export function InboxV3Thread({
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
+
+      {isAwayFromBottom && messages.length > 0 && !loadingMessages ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-20 z-10 flex justify-center">
+          <button
+            type="button"
+            onClick={scrollToLatestMessages}
+            aria-label={copy("scrollToLatest")}
+            className="pointer-events-auto relative inline-flex size-9 items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-lg outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ArrowDown className="size-4" aria-hidden="true" />
+            {missedMessageCount > 0 ? (
+              <span className="absolute -end-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 tabular-nums text-primary-foreground">
+                {missedMessageCount > 99 ? "99+" : missedMessageCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
+      ) : null}
 
       <footer className="border-t border-border/60 bg-background/98 px-3 py-2 sm:px-4">
         {canCompose ? (
@@ -1363,6 +1767,7 @@ export function InboxV3Thread({
                 }
               />
               <Textarea
+                ref={replyTextareaRef}
                 dir={
                   replyText.trim()
                     ? "auto"

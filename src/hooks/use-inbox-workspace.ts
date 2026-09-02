@@ -341,6 +341,19 @@ export function useInboxWorkspace() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesInnerRef = useRef<HTMLDivElement | null>(null);
   const isNearBottomRef = useRef(true);
+  // Scroll-to-latest affordance state (WhatsApp-class tail management):
+  // distance-from-bottom drives the FAB; messages arriving while the operator
+  // is scrolled up accumulate into the missed count instead of yanking the
+  // viewport (Signal-style auto-scroll is a documented anti-pattern).
+  const [isAwayFromBottom, setIsAwayFromBottom] = useState(false);
+  const [missedMessageCount, setMissedMessageCount] = useState(0);
+  // Unread-at-open snapshot: captured in selectChat BEFORE any mark-read
+  // round-trip, drives the "New messages" divider and the open-at-first-unread
+  // anchor. Dismissed explicitly (divider click) or on the next selection.
+  const [activeChatInitialUnread, setActiveChatInitialUnread] = useState(0);
+  const activeChatInitialUnreadRef = useRef(0);
+  const initialUnreadScrollDoneRef = useRef(false);
+  const prevMessageCountRef = useRef(0);
   const activeTransportIdRef = useRef<string | null>(null);
   const chatRefreshTimerRef = useRef<number | null>(null);
   const chatLoadGenerationRef = useRef(0);
@@ -1027,6 +1040,15 @@ export function useInboxWorkspace() {
       });
       activeTransportIdRef.current = chat.transportId ?? null;
       setActiveChatId(chat.id);
+      // Snapshot the unread count at open time — mark-read lands later, so
+      // this is the only truthful moment to place the unread boundary.
+      const initialUnread = chat.unread > 0 ? chat.unread : 0;
+      setActiveChatInitialUnread(initialUnread);
+      activeChatInitialUnreadRef.current = initialUnread;
+      initialUnreadScrollDoneRef.current = false;
+      prevMessageCountRef.current = 0;
+      setIsAwayFromBottom(true);
+      setMissedMessageCount(0);
       replaceMessages([]);
       draftReadyConversationRef.current = null;
       setReplyText("");
@@ -1046,6 +1068,11 @@ export function useInboxWorkspace() {
     activeTransportIdRef.current = null;
     draftLoadGenerationRef.current += 1;
     draftReadyConversationRef.current = null;
+    setActiveChatInitialUnread(0);
+    activeChatInitialUnreadRef.current = 0;
+    initialUnreadScrollDoneRef.current = false;
+    setIsAwayFromBottom(false);
+    setMissedMessageCount(0);
     setActiveChatId(null);
     replaceMessages([]);
     setReplyText("");
@@ -1291,17 +1318,73 @@ export function useInboxWorkspace() {
     if (!viewport) return;
     const handleScroll = () => {
       const { scrollHeight, scrollTop, clientHeight } = viewport;
-      isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150;
+      const nearBottom = scrollHeight - scrollTop - clientHeight < 150;
+      isNearBottomRef.current = nearBottom;
+      setIsAwayFromBottom(!nearBottom);
+      if (nearBottom) setMissedMessageCount(0);
     };
     viewport.addEventListener("scroll", handleScroll, { passive: true });
     return () => viewport.removeEventListener("scroll", handleScroll);
   }, [activeChatId]);
 
   useEffect(() => {
+    const grew = messages.length > prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
     if (isNearBottomRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      return;
     }
+    if (grew) setMissedMessageCount((current) => current + 1);
   }, [messages]);
+
+  // Open-at-first-unread (WhatsApp behavior): when a conversation opened with
+  // unread messages loads its first page, anchor the viewport on the first
+  // unread message instead of forcing the tail. Later arrivals follow the
+  // normal stick-to-bottom rule.
+  useEffect(() => {
+    const unread = activeChatInitialUnreadRef.current;
+    if (
+      initialUnreadScrollDoneRef.current ||
+      unread <= 0 ||
+      loadingMessages ||
+      messages.length === 0
+    ) {
+      return;
+    }
+    initialUnreadScrollDoneRef.current = true;
+    const targetIndex = Math.min(
+      messages.length - 1,
+      Math.max(0, messages.length - unread),
+    );
+    // The unread window may already be the tail — in that case stay pinned.
+    if (targetIndex >= messages.length - 1) {
+      isNearBottomRef.current = true;
+      setIsAwayFromBottom(false);
+      return;
+    }
+    isNearBottomRef.current = false;
+    setIsAwayFromBottom(true);
+    const targetId = messages[targetIndex]?.id;
+    if (!targetId) return;
+    requestAnimationFrame(() => {
+      const element = messagesInnerRef.current?.querySelector(
+        `[data-message-id="${CSS.escape(targetId)}"]`,
+      );
+      element?.scrollIntoView({ block: "center" });
+    });
+  }, [messages, loadingMessages]);
+
+  const scrollToLatestMessages = useCallback(() => {
+    isNearBottomRef.current = true;
+    setIsAwayFromBottom(false);
+    setMissedMessageCount(0);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const dismissUnreadDivider = useCallback(() => {
+    setActiveChatInitialUnread(0);
+    activeChatInitialUnreadRef.current = 0;
+  }, []);
 
   useEffect(() => {
     if (status !== "qr") return;
@@ -2573,6 +2656,11 @@ export function useInboxWorkspace() {
     loadingMessages,
     messagesInnerRef,
     messagesEndRef,
+    isAwayFromBottom,
+    missedMessageCount,
+    activeChatInitialUnread,
+    scrollToLatestMessages,
+    dismissUnreadDivider,
     replyText,
     setReplyText,
     sending,

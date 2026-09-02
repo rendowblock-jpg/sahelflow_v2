@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Download,
   FileArchive,
@@ -12,6 +13,7 @@ import {
   Music,
   Presentation,
   Video,
+  X,
   type LucideIcon,
 } from "lucide-react";
 
@@ -276,6 +278,102 @@ function DownloadButton({
   );
 }
 
+/**
+ * Full-screen image viewer (AAA lightbox contract): Esc closes, backdrop
+ * click closes, single click on the image toggles fit/zoom, download stays
+ * reachable, focus lands on the close button and the scroll lock keeps the
+ * thread behind it still. Rendered through a portal above everything.
+ */
+function InboxMediaLightbox({
+  src,
+  alt,
+  downloadHref,
+  fallbackName,
+  locale,
+  onClose,
+}: {
+  src: string;
+  alt: string;
+  downloadHref: string;
+  fallbackName: string;
+  locale: "ar" | "fr" | "en";
+  onClose: () => void;
+}) {
+  const [zoomed, setZoomed] = useState(false);
+
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={alt}
+      data-inbox-lightbox="true"
+      className="fixed inset-0 z-[80] flex flex-col bg-black/90 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="flex items-center justify-end gap-2 p-3"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <DownloadButton
+          href={downloadHref}
+          fallbackName={fallbackName}
+          locale={locale}
+          onFailure={() => undefined}
+          label={getInboxMediaCopy(locale, "download")}
+          compact
+        />
+        <button
+          type="button"
+          autoFocus
+          aria-label={getInboxWorkspaceCopy(locale, "closeFullscreen")}
+          onClick={onClose}
+          className="inline-flex size-9 items-center justify-center rounded-full text-white/90 outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/70"
+        >
+          <X className="size-5" aria-hidden="true" />
+        </button>
+      </div>
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 items-center justify-center p-4",
+          zoomed && "cursor-zoom-out items-start justify-start overflow-auto",
+        )}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {/* The authenticated endpoint is dynamic and intentionally bypasses Next image optimization. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt}
+          onClick={() => setZoomed((current) => !current)}
+          className={cn(
+            "max-h-full max-w-full object-contain transition-transform duration-200",
+            zoomed
+              ? "max-w-none cursor-zoom-out scale-[1.75]"
+              : "cursor-zoom-in",
+          )}
+        />
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function validPolledProjection(
   value: unknown,
 ): InboxLocalMediaProjection | null {
@@ -459,6 +557,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
   const [previewFailed, setPreviewFailed] = useState(false);
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (!pendingMessageId) return;
@@ -605,34 +704,46 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
           {showInlinePreview &&
           (message.messageType === "image" ||
             message.messageType === "sticker") ? (
-            <div
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(true)}
+              aria-haspopup="dialog"
+              aria-label={getInboxWorkspaceCopy(locale, "viewFullSize")}
+              title={getInboxWorkspaceCopy(locale, "viewFullSize")}
               className={cn(
-                "overflow-hidden rounded-xl border border-border/60 bg-muted/20",
-                message.messageType === "sticker" && "w-fit",
+                "block cursor-zoom-in rounded-xl text-start outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                message.messageType === "sticker" ? "w-fit" : "w-full",
               )}
             >
-              {/* The authenticated endpoint is dynamic and intentionally bypasses Next image optimization. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={inlineImageSrc}
-                alt={label}
-                loading="lazy"
-                decoding="async"
-                onError={() => {
-                  if (inlineImageSrc === thumbnailUrl) {
-                    setThumbnailFailed(true);
-                  } else {
-                    setPreviewFailed(true);
-                  }
-                }}
-                width={attachment.width ?? (message.messageType === "sticker" ? 192 : 640)}
-                height={attachment.height ?? (message.messageType === "sticker" ? 192 : 480)}
+              <div
                 className={cn(
-                  "block h-auto max-h-[28rem] w-auto max-w-full object-contain",
-                  message.messageType === "sticker" && "max-h-48 max-w-48",
+                  "overflow-hidden rounded-xl border border-border/60 bg-muted/20",
+                  message.messageType === "sticker" && "w-fit",
                 )}
-              />
-            </div>
+              >
+                {/* The authenticated endpoint is dynamic and intentionally bypasses Next image optimization. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={inlineImageSrc}
+                  alt={label}
+                  loading="lazy"
+                  decoding="async"
+                  onError={() => {
+                    if (inlineImageSrc === thumbnailUrl) {
+                      setThumbnailFailed(true);
+                    } else {
+                      setPreviewFailed(true);
+                    }
+                  }}
+                  width={attachment.width ?? (message.messageType === "sticker" ? 192 : 640)}
+                  height={attachment.height ?? (message.messageType === "sticker" ? 192 : 480)}
+                  className={cn(
+                    "block h-auto max-h-[28rem] w-auto max-w-full object-contain",
+                    message.messageType === "sticker" && "max-h-48 max-w-48",
+                  )}
+                />
+              </div>
+            </button>
           ) : null}
 
           {showInlinePreview && message.messageType === "video" ? (
@@ -688,6 +799,19 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
           {getInboxMediaCopy(locale, "ready")}
         </span>
       </div>
+
+      {lightboxOpen && readUrl ? (
+        <InboxMediaLightbox
+          src={readUrl}
+          alt={label}
+          downloadHref={downloadUrl}
+          fallbackName={
+            attachment.fileName ?? `whatsapp-${message.messageType ?? "media"}`
+          }
+          locale={locale}
+          onClose={() => setLightboxOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
