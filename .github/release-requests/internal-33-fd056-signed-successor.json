@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.33 FD-056 signed successor publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.33",
+  "windowsMsiVersion": "1.0.0.33",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-056",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "92c35bcc3571ccce83d4457832d0237f148a30d5",
+    "phase5RunId": 33699338132,
+    "phase67RunId": 33699338129,
+    "ciRunId": 33699338361
+  },
+  "reason": "Founder directive 2026-09-02 ('complete all the work professionally and flawlessly then make the update') authorizes exactly one combined signed successor (Internal.33) under FD-056 packaging the exact protected-main frontier since Internal.32: the full UI/UX triage line on PR #387 — the AAA message-surface repair waves (2c526a7 founder findings F-01..F-03, 3b919b9 thread surface wave 1, 381b58e queue+composer wave 2, 6619186 AI trust-killer wave, a590738 AI parity wave), the ledger completion waves (54a3fd5 waves 1/2/5/6, f9ef350+c4350b4 AI-07/08/11/14/15/16/18/19/20/22 and INB-11/20/25/26/29, 40f3882 INB-30 i18n authority, 8dfa2f9 AI-25 unconfigured-state explainer + dead-namespace retirement), the wave-11..15 line (26204af INB-24 voice gestures with lock/slide-cancel/preview-before-send, 1965b02 AI-21 composer screenshot extraction, 071dedc INB-16 SSRF-disciplined link previews, a69b2bb AI-26 truthful provider turn signals, f03296e INB-28 media-sender factory, 52c2ae3 INB-11 render-window virtualization, 31eeb6d AI-13 thumbs feedback loop, d8a3765 INB-12 pin/mute/archive state truth), the qs 6.16.0 security pin (8a42a22, GHSA-x5fp-wj9c-mxmx + GHSA-4mjr-xmp4-gh2g) and the archive-queue type-truth repair (92c35bc). The certification product head 92c35bc is tree-identical to the protected-main squash of PR #387 (git diff empty) and passed the full gate line with zero failed checks: 20 success / 3 risk-classified skips — including the exact-evidence MSI build and the installed lifecycle gates at the same head. Sidecar-probe rows (INB-13/14/19/32) stay BLOCKED (no real-session probe capability); INB-27 stays OPEN by recorded disposition. The Internal.33 installed campaign re-verifies the wave rows on the founder install (voice gestures, screenshot attachments, link previews, turn signals, pin/mute/archive, feedback loop) and D3 six-wave observations; the retained #306 logout row executes LAST after every other row is green; the Founder rotates the screenshot-exposed Gemini key before real AI usage. Founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim; #230 unaffected."
+}

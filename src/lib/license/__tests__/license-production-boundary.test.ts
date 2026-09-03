@@ -58,11 +58,11 @@ describe("production licensing authority inventory", () => {
     expect(build).toContain("std::net::IpAddr");
     expect(build).toContain("public DNS hostnames, not IP/reserved/private-style destinations");
     expect(build).toContain("provisioned SahelFlow-owned host suffix");
-    expect(versionAuthority).toContain('\"version\": \"1.0.0-internal.32\"');
+    expect(versionAuthority).toContain('\"version\": \"1.0.0-internal.33\"');
     expect(versionAuthority).toContain('\"releaseMode\": \"founder-offline-only\"');
-    expect(versionAuthority).toContain('\"authorityDecision\": \"FD-055\"');
+    expect(versionAuthority).toContain('\"authorityDecision\": \"FD-056\"');
     expect(versionAuthority).toContain('\"ownedHostSuffix\": null');
-    expect(versionAudit).toContain("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, Internal.18/FD-037, Internal.19/FD-038, Internal.20/FD-039, Internal.21/FD-040, Internal.22/FD-041, Internal.23/FD-042, Internal.24/FD-043, Internal.25/FD-044, Internal.26/FD-046, Internal.27/FD-047, Internal.28/FD-049, Internal.29/FD-050, Internal.30/FD-051, Internal.31/FD-053, or Internal.32/FD-055 on the internal channel with no owned host suffix");
+    expect(versionAudit).toContain("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, Internal.18/FD-037, Internal.19/FD-038, Internal.20/FD-039, Internal.21/FD-040, Internal.22/FD-041, Internal.23/FD-042, Internal.24/FD-043, Internal.25/FD-044, Internal.26/FD-046, Internal.27/FD-047, Internal.28/FD-049, Internal.29/FD-050, Internal.30/FD-051, Internal.31/FD-053, Internal.32/FD-055, or Internal.33/FD-056 on the internal channel with no owned host suffix");
     expect(build).toContain('Some(\"1.0.0-internal.15\"), Some(\"FD-032\")');
     expect(build).toContain('Some(\"1.0.0-internal.16\"), Some(\"FD-034\")');
     expect(build).toContain('Some(\"1.0.0-internal.17\"), Some(\"FD-036\")');
@@ -77,7 +77,7 @@ describe("production licensing authority inventory", () => {
     expect(build).toContain('Some(\"1.0.0-internal.26\"), Some(\"FD-046\")');
     expect(build).toContain('Some(\"1.0.0-internal.27\"), Some(\"FD-047\")');
     expect(build).toContain('Some(\"1.0.0-internal.28\"), Some(\"FD-049\")');
-    expect(build).toContain("founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, FD-038/Internal.19, FD-039/Internal.20, FD-040/Internal.21, FD-041/Internal.22, FD-042/Internal.23, FD-043/Internal.24, FD-044/Internal.25, FD-046/Internal.26, FD-047/Internal.27, FD-049/Internal.28, FD-050/Internal.29, FD-051/Internal.30, FD-053/Internal.31, or FD-055/Internal.32");
+    expect(build).toContain("founder-offline-only licensing is authorized only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, FD-038/Internal.19, FD-039/Internal.20, FD-040/Internal.21, FD-041/Internal.22, FD-042/Internal.23, FD-043/Internal.24, FD-044/Internal.25, FD-046/Internal.26, FD-047/Internal.27, FD-049/Internal.28, FD-050/Internal.29, FD-051/Internal.30, FD-053/Internal.31, FD-055/Internal.32, or FD-056/Internal.33");
     expect(build).toContain("Founder-only offline checkpoints must not package SF_LICENSE_SERVICE_URL");
     expect(build).toContain("cargo:rustc-env=SF_LICENSE_SERVICE_URL=");
     expect(build).toContain("customer-online releases require SF_LICENSE_SERVICE_URL");
@@ -88,7 +88,7 @@ describe("production licensing authority inventory", () => {
     expect(release).toContain("name: Build Signed Internal Windows Update");
     expect(release).toContain("SF_LICENSE_SERVICE_URL: ${{ secrets.SF_LICENSE_SERVICE_URL || vars.SF_LICENSE_SERVICE_URL }}");
     expect(release).toContain("'SF_LICENSE_SERVICE_URL=' >> $env:GITHUB_ENV");
-    expect(release).toContain("exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, FD-038/Internal.19, FD-039/Internal.20, FD-040/Internal.21, FD-041/Internal.22, FD-042/Internal.23, FD-043/Internal.24, FD-044/Internal.25, FD-046/Internal.26, FD-047/Internal.27, FD-049/Internal.28, FD-050/Internal.29, FD-051/Internal.30, FD-053/Internal.31, or FD-055/Internal.32");
+    expect(release).toContain("exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, FD-038/Internal.19, FD-039/Internal.20, FD-040/Internal.21, FD-041/Internal.22, FD-042/Internal.23, FD-043/Internal.24, FD-044/Internal.25, FD-046/Internal.26, FD-047/Internal.27, FD-049/Internal.28, FD-050/Internal.29, FD-051/Internal.30, FD-053/Internal.31, FD-055/Internal.32, or FD-056/Internal.33");
     expect(statusRoute).toContain("onlineTrialAvailable:");
     expect(trialRoute).toContain("LICENSE_TRIAL_DISABLED_FOR_FOUNDER_CHECKPOINT");
     expect(licensePanel).toContain("projection?.onlineTrialAvailable === true");
