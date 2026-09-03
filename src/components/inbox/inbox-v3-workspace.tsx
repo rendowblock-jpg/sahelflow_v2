@@ -67,6 +67,7 @@ export function InboxV3Workspace({
       "mine",
       "unassigned",
       "unread",
+      "archived",
     ]).withDefault("all"),
     workflow: parseAsStringLiteral([
       "all",

@@ -145,6 +145,12 @@ function matchesDeskFilters(
   workflowFilter: WorkflowFilter,
   currentMemberId: string | null,
 ): boolean {
+  // Ledger INB-12: archived conversations show only in the archive queue.
+  // Checked FIRST — after the queue chain the compiler has already narrowed
+  // the desk filter to the four active values.
+  const archiveOk =
+    queueFilter === "archived" ? chat.archived : !chat.archived;
+  if (!archiveOk) return false;
   const queueMatches =
     queueFilter === "all" ||
     (queueFilter === "unread" && chat.unread > 0) ||
@@ -153,10 +159,6 @@ function matchesDeskFilters(
       Boolean(currentMemberId) &&
       chat.workflow.assigneeId === currentMemberId);
   if (!queueMatches) return false;
-  // Ledger INB-12: archived conversations show only in the archive queue.
-  const archiveOk =
-    queueFilter === "archived" ? chat.archived : !chat.archived;
-  if (!archiveOk) return false;
   const status = chat.workflow.status ?? "open";
   return workflowFilter === "all" || status === workflowFilter;
 }
