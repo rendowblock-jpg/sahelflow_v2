@@ -52,6 +52,7 @@ html[dir="rtl"],
 [data-sahelflow-shell="desktop"] :is(
   [data-inbox-workspace],
   [data-ai-workspace],
+  [data-ai-decision-workspace],
   [data-storefront-studio]
 ) {
   animation: sf-workspace-enter var(--sf-motion-page) var(--sf-motion-ease-out) both;

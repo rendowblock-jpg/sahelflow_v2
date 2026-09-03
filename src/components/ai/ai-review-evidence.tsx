@@ -75,13 +75,18 @@ export function AiReviewEvidence({
     >
       <div className="border-b px-4 py-4">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold">
-              {getAiDecisionCopy(locale, "reviewEvidence")}
-            </h2>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              {getAiDecisionCopy(locale, "reviewEvidenceDescription")}
-            </p>
+          <div className="flex min-w-0 items-start gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary/12 to-primary/[0.04] text-primary">
+              <ShieldCheck className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">
+                {getAiDecisionCopy(locale, "reviewEvidence")}
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {getAiDecisionCopy(locale, "reviewEvidenceDescription")}
+              </p>
+            </div>
           </div>
           {proposals.length + elsewhere.length > 0 ? (
             <Badge variant="secondary" className="text-xs">
@@ -338,7 +343,7 @@ export function AiReviewEvidence({
               ) : null}
             </div>
 
-            <dl className="mt-3 space-y-2 text-xs">
+            <dl className="mt-3 space-y-2 rounded-xl border bg-card/60 p-3 text-xs">
               <div className="flex items-center justify-between gap-3">
                 <dt className="flex items-center gap-2 text-muted-foreground">
                   <ShieldCheck className="size-3.5" aria-hidden="true" />

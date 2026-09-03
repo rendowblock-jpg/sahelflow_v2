@@ -37,13 +37,30 @@ const COPY = {
     reviewCount: "{count} to review",
     setupRequiredTitle: "What AI adds to this workspace",
     setupRequiredCapabilities:
-      "I can search products, customers, create orders, get statistics, and estimate delivery fees.",
+      "Orders, products, customers, delivery fees, revenue and risk analysis, and WhatsApp conversation search — with sensitive changes always submitted as proposals for your approval.",
     setupRequiredPrivacyNote:
       "Analysis runs on your own Gemini key, stored encrypted on this device. Everything in SahelFlow keeps working without AI.",
     setupChipPendingOrders: "Pending orders",
     setupChipBestProducts: "Best products",
     setupChipRevenueToday: "Revenue today",
     setupChipTopWilayas: "Top wilayas",
+    assistantName: "Assistant",
+    messagesMeta: "{count} messages",
+    startJobsTitle: "Start from a common seller job",
+    composerCounter: "{count} / {max}",
+    deleteArmAnnounce: "Deleting \"{title}\" — activate delete again to confirm",
+    abilitiesTitle: "What the agent can do",
+    abilitiesDescription:
+      "Live from this shop's tool policy — read work runs directly, sensitive changes always wait for your approval.",
+    abilityNeedsApproval: "Needs approval",
+    abilitiesUnavailable: "The live capability list is unavailable right now.",
+    starterCountPending: "{count} waiting",
+    starterCountToday: "{count} today",
+    starterCountLowStock: "{count} low",
+    inboxStripCount: "{count} sensitive actions await your approval",
+    inboxStripDescription:
+      "Proposed by the agent in any analysis. Nothing runs until you approve it.",
+    inboxStripOpen: "Open review",
   },
   fr: {
     newAnalysis: "Nouvelle analyse",
@@ -78,13 +95,30 @@ const COPY = {
     reviewCount: "{count} à vérifier",
     setupRequiredTitle: "Ce que l’IA ajoute à cet espace",
     setupRequiredCapabilities:
-      "Je peux rechercher des produits, des clients, créer des commandes, obtenir des statistiques, et estimer les frais de livraison.",
+      "Commandes, produits, clients, frais de livraison, revenus, analyse de risque et recherche dans les conversations WhatsApp — les changements sensibles sont toujours soumis sous forme de propositions à approuver.",
     setupRequiredPrivacyNote:
       "L’analyse s’exécute avec votre propre clé Gemini, chiffrée et stockée sur cet appareil. Tout SahelFlow reste fonctionnel sans IA.",
     setupChipPendingOrders: "Commandes en attente",
     setupChipBestProducts: "Meilleurs produits",
     setupChipRevenueToday: "CA du jour",
     setupChipTopWilayas: "Top wilayas",
+    assistantName: "Assistant",
+    messagesMeta: "{count} messages",
+    startJobsTitle: "Partir d’une tâche vendeur courante",
+    composerCounter: "{count} / {max}",
+    deleteArmAnnounce: "Suppression de « {title} » armée — activez à nouveau la suppression pour confirmer",
+    abilitiesTitle: "Ce que l’agent sait faire",
+    abilitiesDescription:
+      "En direct de la politique d’outils de cette boutique — la lecture s’exécute directement, les changements sensibles attendent toujours votre approbation.",
+    abilityNeedsApproval: "Nécessite une approbation",
+    abilitiesUnavailable: "La liste des capacités est indisponible pour le moment.",
+    starterCountPending: "{count} en attente",
+    starterCountToday: "{count} aujourd’hui",
+    starterCountLowStock: "{count} stock faible",
+    inboxStripCount: "{count} actions sensibles attendent votre approbation",
+    inboxStripDescription:
+      "Proposées par l’agent dans n’importe quelle analyse. Rien ne s’exécute sans votre approbation.",
+    inboxStripOpen: "Ouvrir la revue",
   },
   ar: {
     newAnalysis: "تحليل جديد",
@@ -119,13 +153,30 @@ const COPY = {
     reviewCount: "{count} للمراجعة",
     setupRequiredTitle: "ما يضيفه الذكاء الاصطناعي إلى هذه المساحة",
     setupRequiredCapabilities:
-      "يمكنني البحث عن المنتجات والعملاء، وإنشاء الطلبات، والحصول على الإحصائيات، وتقدير رسوم التوصيل.",
+      "الطلبات والمنتجات والعملاء ورسوم التوصيل وتحليل الإيرادات والمخاطر والبحث في محادثات واتساب — والتغييرات الحساسة تُقدَّم دائمًا كمقترحات بانتظار موافقتك.",
     setupRequiredPrivacyNote:
       "يعمل التحليل بمفتاح Gemini الخاص بك، المشفّر والمخزَّن على هذا الجهاز. ويبقى كل شيء في SahelFlow فعالاً بدون الذكاء الاصطناعي.",
     setupChipPendingOrders: "الطلبيات المعلقة",
     setupChipBestProducts: "أفضل المنتجات",
     setupChipRevenueToday: "إيرادات اليوم",
     setupChipTopWilayas: "أفضل الولايات",
+    assistantName: "المساعد",
+    messagesMeta: "{count} رسالة",
+    startJobsTitle: "ابدأ من مهمة بيع شائعة",
+    composerCounter: "{count} / {max}",
+    deleteArmAnnounce: "جارٍ حذف \"{title}\" — فعّل الحذف مرة أخرى للتأكيد",
+    abilitiesTitle: "ما يستطيع الوكيل فعله",
+    abilitiesDescription:
+      "مباشرةً من سياسة أدوات هذا المتجر — الأعمال القرائية تُنفَّذ فورًا، والتغييرات الحساسة تنتظر موافقتك دائمًا.",
+    abilityNeedsApproval: "يتطلب موافقة",
+    abilitiesUnavailable: "قائمة القدرات غير متاحة حاليًا.",
+    starterCountPending: "{count} بانتظارك",
+    starterCountToday: "{count} اليوم",
+    starterCountLowStock: "{count} منخفض",
+    inboxStripCount: "{count} إجراءات حساسة بانتظار موافقتك",
+    inboxStripDescription:
+      "قام الوكيل باقتراحها في أي تحليل. لا يُنفَّذ شيء حتى توافق عليه.",
+    inboxStripOpen: "فتح المراجعة",
   },
 } as const;
 

@@ -82,6 +82,47 @@ export interface AiSetupState {
   ready: boolean;
 }
 
+/**
+ * Ledger F-06 — capability truth projected from the same central policy map
+ * the registry and proposal runtime enforce. The page renders this instead of
+ * a hand-written abilities sentence that drifts from the agent's real surface.
+ */
+export type AiCapabilityGroupId =
+  | "orders"
+  | "customers"
+  | "products"
+  | "delivery"
+  | "insights"
+  | "conversations";
+
+export interface AiCapabilityTool {
+  name: string;
+  executionClass: "read" | "external_read" | "sensitive";
+}
+
+export interface AiCapabilityGroup {
+  id: AiCapabilityGroupId;
+  tools: AiCapabilityTool[];
+}
+
+/**
+ * F-06 — the shop's honest present-state counts. Each field is independently
+ * nullable: `null` means "could not be measured right now" and renders no
+ * badge — never a fabricated zero.
+ */
+export interface AiShopBriefing {
+  pendingOrders: number | null;
+  ordersToday: number | null;
+  lowStockProducts: number | null;
+  pendingDeliveries: number | null;
+  pendingProposals: number | null;
+}
+
+export interface AiCapabilitiesPayload {
+  groups: AiCapabilityGroup[];
+  briefing: AiShopBriefing;
+}
+
 export interface AiActionProposalProjection {
   id: string;
   toolName: string;

@@ -201,10 +201,16 @@ function requestBody(
   contents: Content[],
   locale: AiChatLocale | undefined,
   tools: ReturnType<typeof getAllToolDefinitions>,
+  /** F-06: presentation-only shop snapshot (date + read-only counts). Never
+   *  action authority; an empty string omits the block entirely. */
+  shopContextNote?: string,
 ) {
   return {
     systemInstruction: {
-      parts: [{ text: aiChatSystemPrompt(locale ?? "fr") }],
+      parts: [
+        { text: aiChatSystemPrompt(locale ?? "fr") },
+        ...(shopContextNote ? [{ text: shopContextNote }] : []),
+      ],
     },
     contents,
     tools: [{ functionDeclarations: tools }],
@@ -266,6 +272,7 @@ export async function runAgent(
   userMessage: string,
   toolContext: ToolContext = { db, shop: shopContext },
   locale?: AiChatLocale,
+  shopContextNote?: string,
 ): Promise<AgentResult> {
   const apiKey = await getSecret(
     { prisma: db, shop: shopContext },
@@ -285,7 +292,7 @@ export async function runAgent(
     let response: GeminiResponse;
     try {
       const result = await requestGemini(apiKey, {
-        body: requestBody(contents, locale, tools),
+        body: requestBody(contents, locale, tools, shopContextNote),
       });
       response = (await result.response.json()) as GeminiResponse;
     } catch (error) {
@@ -491,6 +498,7 @@ export async function* runAgentStream(
   externalSignal?: AbortSignal,
   toolContext: ToolContext = { db, shop: shopContext },
   locale?: AiChatLocale,
+  shopContextNote?: string,
 ): AsyncGenerator<AgentStreamEvent> {
   const apiKey = await getSecret(
     { prisma: db, shop: shopContext },
@@ -517,7 +525,7 @@ export async function* runAgentStream(
     try {
       const result = await requestGemini(apiKey, {
         stream: true,
-        body: requestBody(contents, locale, tools),
+        body: requestBody(contents, locale, tools, shopContextNote),
       });
       stream = result.response.body;
       servedModel = result.model;

@@ -66,7 +66,7 @@
 }
 
 [data-sahelflow-shell="desktop"] :is(
-  [data-ai-workspace="v2"],
+  [data-ai-decision-workspace="true"],
   [data-inbox-workspace="v2"],
   [data-storefront-studio="v2"],
   [data-storefront-studio="bootstrap"]
@@ -170,52 +170,11 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-resizable-panes="true"] 
   }
 }
 
-/* ── AI deterministic pane order ────────────────────────────────────────── */
-@media (min-width: 768px) {
-  [data-ai-workspace="v2"] {
-    direction: ltr;
-    grid-template-areas: "sessions thread";
-    grid-template-columns: var(--rail-md) minmax(0, 1fr) !important;
-  }
-
-  [data-ai-workspace="v2"] > [data-ai-sessions="true"] {
-    grid-area: sessions;
-  }
-
-  [data-ai-workspace="v2"] > [data-ai-thread="true"] {
-    grid-area: thread;
-  }
-
-  html[dir="rtl"] [data-ai-workspace="v2"] {
-    grid-template-areas: "thread sessions";
-    grid-template-columns: minmax(0, 1fr) var(--rail-md) !important;
-  }
-
-  html[dir="rtl"] [data-ai-workspace="v2"] > [data-ai-sessions="true"],
-  html[dir="rtl"] [data-ai-workspace="v2"] > [data-ai-thread="true"] {
-    direction: rtl;
-  }
-}
-
-@media (min-width: 1280px) {
-  [data-ai-workspace="v2"] {
-    grid-template-areas: "sessions thread context";
-    grid-template-columns: var(--rail-md) minmax(30rem, 1fr) var(--rail-4xl) !important;
-  }
-
-  [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
-    grid-area: context;
-  }
-
-  html[dir="rtl"] [data-ai-workspace="v2"] {
-    grid-template-areas: "context thread sessions";
-    grid-template-columns: var(--rail-4xl) minmax(30rem, 1fr) var(--rail-md) !important;
-  }
-
-  html[dir="rtl"] [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
-    direction: rtl;
-  }
-}
+/* The AI decision workspace owns its geometry in the component grid
+ * (17.5rem rail + canvas + conditional 20rem inspector). CSS Grid follows
+ * document direction, so RTL mirrors without a forced-direction layer —
+ * the removed legacy data-ai-workspace="v2" template-area hacks targeted
+ * a composition that no longer renders. */
 
 /* ── Storefront Studio deterministic pane order ─────────────────────────── */
 [data-storefront-studio="v2"] > div.grid {

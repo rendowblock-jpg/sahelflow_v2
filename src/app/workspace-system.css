@@ -8,7 +8,7 @@
  */
 
 [data-inbox-workspace="v2"],
-[data-ai-workspace="v2"] {
+[data-ai-decision-workspace="true"] {
   position: relative;
   isolation: isolate;
   border-color: color-mix(in oklch, var(--border) 92%, transparent);
@@ -24,13 +24,13 @@
   container-type: inline-size;
 }
 
-[data-ai-workspace="v2"] {
+[data-ai-decision-workspace="true"] {
   container-name: ai-workspace;
   container-type: inline-size;
 }
 
 .dark [data-inbox-workspace="v2"],
-.dark [data-ai-workspace="v2"] {
+.dark [data-ai-decision-workspace="true"] {
   box-shadow:
     0 1px 2px oklch(0 0 0 / 0.20),
     0 22px 58px oklch(0 0 0 / 0.20),
@@ -124,8 +124,10 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 }
 
 /* ── AI Agents ─────────────────────────────────────────────────────────── */
-[data-ai-sessions="true"],
-[data-ai-context="true"] {
+/* F-06: the session rail and the review inspector share the Inbox queue's
+ * quiet vertical gradient so all three flagship panes read as one product. */
+[data-ai-work-history="true"],
+[data-ai-review-evidence="true"] {
   background:
     linear-gradient(
       180deg,
@@ -152,14 +154,93 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
     0 5px 16px color-mix(in oklch, var(--primary) 7%, transparent);
 }
 
-[data-ai-thread="true"] {
+/* Active session marker: a logical-direction primary bar owns selection
+ * truth the same way the Inbox conversation does (F-06 hierarchy wave). */
+[data-ai-session][aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    var(--primary),
+    color-mix(in oklch, var(--primary) 55%, var(--success))
+  );
+}
+
+[data-ai-decision-canvas="true"] {
   background:
     radial-gradient(
       circle at 50% -8rem,
-      color-mix(in oklch, var(--primary) 7%, transparent),
+      color-mix(in oklch, var(--primary) 8%, transparent),
       transparent 30rem
     ),
     var(--background);
+}
+
+[data-ai-decision-canvas="true"] > header {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 55%, transparent),
+    transparent
+  );
+  border-bottom-color: color-mix(in oklch, var(--border) 85%, transparent);
+}
+
+/* Provider configuration truth on the canvas header (AI-26 vocabulary:
+ * configuration state, never fabricated provider health). */
+[data-ai-status-dot="ready"] {
+  background: var(--success);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--success) 18%, transparent);
+}
+
+[data-ai-status-dot="attention"] {
+  background: var(--warning);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--warning) 22%, transparent);
+}
+
+/* Structure-matching conversation skeletons (§26.8 perceived performance). */
+@keyframes sf-ai-skeleton {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+[data-ai-skeleton="true"] {
+  background: color-mix(in oklch, var(--muted) 72%, transparent);
+  animation: sf-ai-skeleton 1.6s ease-in-out infinite;
+}
+
+/* Streaming caret: the honest “model is writing” signal under the growing
+ * markdown body (transform/opacity only; disabled under reduced motion). */
+@keyframes sf-ai-caret {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scaleY(0.8);
+  }
+}
+
+[data-ai-streaming-caret="true"] {
+  display: inline-block;
+  width: 0.5rem;
+  height: 1.05rem;
+  margin-inline-start: 0.15rem;
+  border-radius: 1px;
+  background: var(--primary);
+  vertical-align: text-bottom;
+  animation: sf-ai-caret 1s var(--sf-motion-ease-state, ease-in-out) infinite;
 }
 
 [data-ai-message="assistant"],
@@ -185,13 +266,15 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   box-shadow: 0 7px 20px color-mix(in oklch, var(--primary) 17%, transparent);
 }
 
-[data-ai-thread="true"] > div:last-child {
+/* The floating composer sits on a blurred footer deck so long threads slide
+ * beneath it instead of colliding with it (F-06 composer wave). */
+[data-ai-composer-deck="true"] {
   background: color-mix(in oklch, var(--background) 90%, transparent);
   backdrop-filter: blur(16px) saturate(1.06);
   -webkit-backdrop-filter: blur(16px) saturate(1.06);
 }
 
-[data-ai-thread="true"] > div:last-child > div {
+[data-ai-composer="true"] {
   border-color: color-mix(in oklch, var(--border) 90%, transparent);
   background: color-mix(in oklch, var(--card) 92%, transparent);
   box-shadow:
@@ -202,14 +285,14 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   transition-timing-function: var(--sf-motion-ease-state);
 }
 
-[data-ai-thread="true"] > div:last-child > div:focus-within {
+[data-ai-composer="true"]:focus-within {
   border-color: color-mix(in oklch, var(--primary) 52%, var(--border));
   box-shadow:
     0 0 0 3px color-mix(in oklch, var(--primary) 12%, transparent),
     0 12px 38px oklch(0 0 0 / 0.11);
 }
 
-[data-ai-context="true"] section.rounded-xl,
+[data-ai-review-evidence="true"] section,
 [data-inbox-context="true"] section {
   transition-property: border-color, background-color, box-shadow;
   transition-duration: var(--sf-motion-state);
@@ -246,12 +329,8 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 }
 
 @container ai-workspace (max-width: 64rem) {
-  [data-ai-workspace="v2"] > div:has(> [data-ai-context="true"]) {
+  [data-ai-decision-workspace="true"] > div:has(> [data-ai-review-evidence="true"]) {
     display: none !important;
-  }
-
-  [data-ai-thread="true"] [data-slot="sheet-trigger"] {
-    display: inline-flex !important;
   }
 }
 
@@ -271,5 +350,13 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   }
   [data-ai-session]:hover {
     transform: none;
+  }
+  [data-ai-streaming-caret="true"] {
+    animation: none !important;
+    opacity: 0.6;
+  }
+  [data-ai-skeleton="true"] {
+    animation: none !important;
+    opacity: 0.7;
   }
 }

@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createAiActionProposal } from "@/lib/ai/actions/service";
+import { AI_CHAT_MESSAGE_MAX_LENGTH } from "@/lib/ai/chat-limits";
 import { runWithAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
 import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
+import { aiShopContextNote } from "@/lib/ai/chat/shop-context";
 import {
   AI_CHAT_HISTORY_LIMIT,
   loadAiChatMessagesBefore,
@@ -78,7 +80,7 @@ export const GET = withErrorHandler(
 );
 
 const sendSchema = z.object({
-  message: z.string().trim().min(1).max(4000),
+  message: z.string().trim().min(1).max(AI_CHAT_MESSAGE_MAX_LENGTH),
   locale: z.enum(["en", "fr", "ar"]).optional().default("fr"),
 });
 
@@ -188,8 +190,11 @@ export const POST = withErrorHandler(
             rawArgs: args,
           }),
       },
-      () =>
-        runAgent(
+      async () => {
+        // F-06: presentation-only shop snapshot; empty on failure, never a
+        // turn-breaking dependency.
+        const shopContextNote = await aiShopContextNote();
+        return runAgent(
           history,
           input.message,
           {
@@ -198,7 +203,9 @@ export const POST = withErrorHandler(
             sourceIdentity: `ai-session:${id}`,
           },
           input.locale,
-        ),
+          shopContextNote,
+        );
+      },
     );
 
     if (result.response) {

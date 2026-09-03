@@ -102,3 +102,43 @@ const LABELS: Record<AiWorkspaceLocale, Record<string, string>> = {
 export function getAiToolLabel(locale: AiWorkspaceLocale, name: string): string {
   return LABELS[locale][name] ?? name;
 }
+
+/**
+ * Ledger F-06 — localized labels for the capability groups the Agents page
+ * presents. Group ids are the stable contract emitted by
+ * /api/ai/capabilities; an unknown id falls back to the raw id (never a
+ * crash), the same rule as tool labels.
+ */
+const GROUP_LABELS: Record<AiWorkspaceLocale, Record<string, string>> = {
+  en: {
+    orders: "Orders",
+    customers: "Customers",
+    products: "Products",
+    delivery: "Delivery",
+    insights: "Insights",
+    conversations: "Conversations",
+  },
+  fr: {
+    orders: "Commandes",
+    customers: "Clients",
+    products: "Produits",
+    delivery: "Livraison",
+    insights: "Analyses",
+    conversations: "Conversations",
+  },
+  ar: {
+    orders: "الطلبات",
+    customers: "العملاء",
+    products: "المنتجات",
+    delivery: "التوصيل",
+    insights: "التحليلات",
+    conversations: "المحادثات",
+  },
+};
+
+export function getAiToolGroupLabel(
+  locale: AiWorkspaceLocale,
+  group: string,
+): string {
+  return GROUP_LABELS[locale][group] ?? group;
+}
