@@ -10,8 +10,14 @@ import { deleteWhatsAppChats } from "@/lib/whatsapp/chat-delete";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  // Canonical Conversation ids from the inbox projection, 1..100 per batch.
-  ids: z.array(z.string().min(1).max(64)).min(1).max(100),
+  // Conversation ids from the inbox projection, 1..100 per batch. The bound
+  // follows the projection's own id space, not the cuid assumption: real
+  // stores hold legacy, demo-prefixed and provider-derived ids (the Internal.33
+  // installed campaign reproduced a legitimate 69-char id rejected by the
+  // previous 64-char bound — founder finding F-04). 256 matches every other
+  // provider-shape contract (conversationId in conversation-assignment, jid,
+  // to, waMessageId).
+  ids: z.array(z.string().min(1).max(256)).min(1).max(100),
 });
 
 /**

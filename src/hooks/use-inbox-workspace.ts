@@ -78,7 +78,12 @@ export interface DeleteChatsRejection {
 }
 
 const DELETE_CONTRACT_MAX_IDS = 100;
-const DELETE_CONTRACT_MAX_ID_LENGTH = 64;
+// Must mirror the server route's zod bound exactly. 256 — not the cuid-length
+// guess (64): the Internal.33 installed campaign reproduced a legitimate
+// 69-char conversation id (legacy/provider-shaped) that the 64 bound turned
+// into a permanent, undeletable chat (founder finding F-04). The projection's
+// id space is the authority.
+const DELETE_CONTRACT_MAX_ID_LENGTH = 256;
 
 /**
  * Compact PII-free diagnostic summary of a delete rejection. Never includes
@@ -1269,10 +1274,12 @@ export function useInboxWorkspace() {
         return { ok: false, errorCode: null, errorDetail: null, rejectionSummary: null, notFoundIds: null };
       }
       // Round 3: pre-flight the exact server contract client-side. A doomed
-      // request (empty id, id longer than the 64-char canonical contract —
-      // e.g. a deep-link pinned row — or more than 100 ids) must fail HERE
-      // with the offending shape named instead of round-tripping to the same
-      // coded 400 with no further evidence.
+      // request (empty id, id longer than the 256-char projection contract —
+      // round 4: real stores hold legitimate 69-char legacy/provider ids, so
+      // the bound widened from the cuid-era 64, founder finding F-04 — or
+      // more than 100 ids) must fail HERE with the offending shape named
+      // instead of round-tripping to the same coded 400 with no further
+      // evidence.
       const oversized = conversationIds.filter(
         (id) => id.length < 1 || id.length > DELETE_CONTRACT_MAX_ID_LENGTH,
       );
