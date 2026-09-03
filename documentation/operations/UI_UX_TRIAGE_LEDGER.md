@@ -44,12 +44,12 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | ID | Item | Target | Status |
 |---|---|---|---|
 | INB-10 ||| **DONE (source, wave 1)** — header search, n/N counter, prev/next, in-bubble highlight |
-| INB-11 | History pagination ("load older") + list virtualization | thread + `messages` route | **PARTIAL (source, wave 9-b)** — composite-cursor `before` param (hasMore/olderCursor) + Load-earlier button shipped; list virtualization still open (perf-only) |
-| INB-12 | Pin / mute / archive conversation states | queue + prisma model | OPEN |
+| INB-11 | History pagination ("load older") + list virtualization | thread + `messages` route | **DONE (source, waves 9-b + 13)** — composite-cursor pagination shipped in wave 9-b; render-window virtualization shipped in wave 13 (bottom-anchored 80/60 window, IntersectionObserver growth, scroll-true re-anchoring, unread-divider offset, full materialization on search/quote jumps) |
+| INB-12 | Pin / mute / archive conversation states | queue + prisma model | **DONE (source, wave 15)** — additive columns (pinnedAt/mutedUntil/archivedAt + archive index), server-projected state truth with a mute horizon, owner-gated partial PATCH route, archive pill with archive-aware counts, pinned-first stable ordering, per-row badges + state menu with optimistic rollback |
 | INB-13 | Reactions | thread (+sidecar capability) | BLOCKED (sidecar probe) |
 | INB-14 | Message delete-for-everyone | thread (+sidecar) | BLOCKED (sidecar probe) |
 | INB-15 ||| **DONE (source, wave 1)** — clickable quotes → jump + ring highlight; honest not-loaded hint |
-| INB-16 | Link previews | media pipeline | OPEN |
+| INB-16 | Link previews | media pipeline | **DONE (source, wave 12)** — server-side OpenGraph card with full SSRF discipline (scheme/credential/port allowlist, per-hop DNS re-validation, manual redirects ≤3, 64 KiB/4s bounds, TTL LRU); client card is viewport-gated and renders nothing until real metadata exists |
 | INB-17 ||| **DONE (source, wave 2)** — hover mark-unread quick action (row-relative, valid DOM) |
 | INB-18 ||| **DONE (source, wave 2)** — j/k/Arrows cursor + Enter open |
 | INB-19 | Real avatars (profile photos) | queue/thread (+sidecar) | BLOCKED (sidecar probe) |
@@ -57,15 +57,15 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | INB-21 ||| **DONE (source, wave 2)** — filter popover: priority + label slices |
 | INB-22 ||| **DONE (source, wave 2)** — bulk mark-read + resolve, allSettled + toasts |
 | INB-23 ||| **DONE (source, wave 2)** — datetime-local + future-date validation |
-| INB-24 | Voice recording gestures (lock-to-record, slide-cancel, preview) | `use-voice-recorder.ts` | OPEN |
+| INB-24 | Voice recording gestures (lock-to-record, slide-cancel, preview) | `use-voice-recorder.ts` | **DONE (source, wave 11)** — pure gesture decisions (hold-to-record, slide-up-to-lock at 48px, direction-neutral slide-to-cancel at 96px, <500ms tap keeps the persistent take + keyboard path), review-before-send surface through the shared VoiceNotePlayer, remux moved to confirm time; durable path unchanged |
 | INB-25 ||| **DONE (source, wave 9-b)** — multi-select file/image pickers walk files sequentially; one declared-or-sniffed type decision per file |
 
 ### P3 — Perf / code quality (invisible to Founder, visible in feel)
 | ID | Item | Target | Status |
 |---|---|---|---|
 | INB-26 ||| **DONE (source, wave 9-b)** — `MessageBubble` memoized with narrow attachment comparator + stable per-conversation callbacks |
-| INB-27 | Split 2,606-line god hook into chat/messages/drafts/outbox hooks | `use-inbox-workspace.ts` | OPEN |
-| INB-28 | Collapse 4 duplicated ~200-line send functions into one factory | `use-inbox-workspace.ts` | OPEN |
+| INB-27 | Split 2,606-line god hook into chat/messages/drafts/outbox hooks | `use-inbox-workspace.ts` | OPEN (deferred) — the only remaining source row; its churn spans ~18 source-pin contract files. Deferred deliberately for release integrity after INB-28 collapsed the largest duplication; revisit directly after Internal.33 |
+| INB-28 | Collapse 4 duplicated ~200-line send functions into one factory | `use-inbox-workspace.ts` | **DONE (source, wave 13)** — one `createMediaSender` factory + a module-level MEDIA_SEND_SPECS table; behavior byte-identical (bounded files, optimistic message + quoted provenance, progress/cancellation, effect-key reconciliation, pre-effect abort, audio-without-caption truth) |
 | INB-29 ||| **DONE (source, wave 9-b)** — ambiguous duplicate retry resolves via accessible ConfirmDialog; zero `window.confirm` calls remain |
 | INB-30 | Inline `ASSIGNMENT_COPY` into the central i18n chain | `conversation-controls.tsx:308-805` | **DONE (source, wave 10)** — 13 assignment labels + 5 activity strings moved verbatim into the three locale JSONs (`inbox.assignment.*` / `inbox.assignmentActivity.*` with `{{target}}` interpolation, parity 2863×3 pre-cleanup); `refresh` reuses the static `common.refresh` key; component + activity renderer resolve through the shared t() chain; copy-authority + assignment-UI contracts pin resolution, Arabic localization, exact pre-migration values and the no-duplicate rule |
 | INB-31 ||| **DONE (source, wave 6)** — 30s AbortSignal.timeout on text sends |
@@ -96,7 +96,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | AI-10 ||| **DONE (source, wave 6)** — scroll pill when scrolled up during streaming |
 | AI-11 ||| **DONE (source, wave 9-a)** — per-record deep links (/orders/[id], /products/[id], /customers/[id]); list-route fallback when no record identity |
 | AI-12 ||| **DONE (source, wave 5)** — per-message clock on the hover row + tooltip |
-| AI-13 | Thumbs feedback → extraction-metrics-style quality loop | canvas + API | OPEN (schema) |
+| AI-13 | Thumbs feedback → extraction-metrics-style quality loop | canvas + API | **DONE (source, wave 14)** — additive `AiMessageFeedback` table (unique per message, cascade, value+createdAt index) with migration; gated feedback route (auth, ownership 404s, upsert/clear); truthful thumbs on settled answers with optimistic rollback; durable truth lives in the table for the quality loop |
 | AI-14 ||| **DONE (source, wave 9-a)** — grounded chips derived ONLY from real tool results; prefill composer, anchored dismissal |
 | AI-15 ||| **DONE (source, wave 9-a)** — edit user message → composer prefill + editing notice → truncate & re-stream |
 | AI-16 ||| **DONE (source, wave 9-a)** — all parallel function calls collected, executed, and returned to the model; every card rendered |
@@ -104,7 +104,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | AI-18 ||| **DONE (source, wave 9-a)** — 45s inactivity watchdog aborts via stop path (partial persists); localized recoverable AI_STREAM_TIMEOUT |
 | AI-19 ||| **DONE (source, wave 9-a)** — GET /api/ai/actions shop-wide inbox; review panel shows pending-from-other-sessions with session labels |
 | AI-20 ||| **DONE (source, wave 9-a)** — panel populated: cross-session pending + recent decisions timeline from real proposal rows; truthful empty states |
-| AI-21 | Composer attachments (sellers screenshot orders; extraction stack exists but unreachable from agents composer) | canvas + extraction lib | OPEN |
+| AI-21 | Composer attachments (sellers screenshot orders; extraction stack exists but unreachable from agents composer) | canvas + extraction lib | **DONE (source, wave 11)** — visual extraction path sharing the text extractor's bounded schema verbatim (JPEG/PNG/WebP, 10 MiB, sniffed magic numbers, no regex fallback for pixels); bounded multipart `/api/extraction/image` with the identical consent gate + per-user rate limit; composer attach/paste with a review-first summary appended to the DRAFT — extraction never auto-sends |
 | AI-22 ||| **DONE (source, wave 9-a)** — / focus composer, Esc stop/cancel-edit, Alt+↑/↓ session nav, Ctrl+Enter approve focused card; desktop hint row |
 
 ### P2 — Panels / polish
@@ -113,7 +113,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | AI-23 ||| **DONE (source, wave 6)** — aria-busy on streaming log (two-step delete announce still OPEN) |
 | AI-24 ||| **DONE (source, wave 6)** — 3-pane layout skeleton |
 | AI-25 | Unconfigured state: capability explainer (reuse ~25 dead copy keys) + delete dead keys + legacy `ai.*` namespace | `ai-workspace.ts`, locales | **DONE (source, wave 10)** — StartSurface renders the capability explainer when setup resolves not-ready (adopted capabilities sentence + 4 tool-anchored chips, truthful seller-owned-key privacy note, `/settings?group=intelligence` CTA; copy adopted into the ai-decision-workspace runtime authority ×3); all 37 dead legacy `ai.*` locale keys deleted ×3 after a zero-reference repo scan (parity 2826×3); launchpad contract pins explainer rendering, per-locale resolution and the namespace retirement |
-| AI-26 | Truthful model/quality signal (contract today forbids usage metadata — revisit deliberately, never fabricate) | contracts + tests | OPEN |
+| AI-26 | Truthful model/quality signal (contract today forbids usage metadata — revisit deliberately, never fabricate) | contracts + tests | **DONE (source, wave 12)** — the done event carries an optional signal built ONLY from the provider's own usageMetadata + the served model id; client parse drops malformed shapes; the line renders only when the provider reported the turn; ephemeral by design (history rows show none); cost estimation stays forbidden; the blanket no-usage contract deliberately superseded with disposition |
 
 ---
 
