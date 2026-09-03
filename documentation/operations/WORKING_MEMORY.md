@@ -1,7 +1,7 @@
 # SahelFlow — Working Memory
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
-> **Last updated:** 2026-09-02
+> **Last updated:** 2026-09-03
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
@@ -11,13 +11,13 @@
 
 - **Waves 11–15 continuation (2026-09-02, resumed session, Founder directive "complete all the work professionally and flawlessly then make the update")**: the remaining un-gated ledger rows PLUS the authorized schema wave were executed to source on PR #387 — INB-24 (WhatsApp voice gestures: hold-to-record, slide-up lock, slide-to-cancel, review-before-send through the shared player; contract revised with disposition), AI-21 (visual screenshot extraction bridged to the composer: shared bounded schema, sniffed bytes, consent+rate gates, review-first draft insert, never auto-sends), INB-16 (link previews with SSRF discipline and honest absence), AI-26 (truthful provider signal: done-event `signal` from the provider's own usageMetadata + served model, malformed shapes dropped, cost estimation still forbidden; the blanket no-usage contract deliberately superseded), INB-28 (one media-send factory + spec table replacing four ~200-line copies), INB-11 (render-window virtualization, bottom-anchored with scroll-true anchoring and jump expansion), AI-13 + INB-12 (authorized schema wave: additive `AiMessageFeedback` table and Conversation pin/mute/archive columns with hand-written migrations, gated routes, queue UI). INB-27 is the single remaining OPEN source row, deferred deliberately (18-file contract churn vs release integrity). Founder gates executed under the directive: PR #387 merge and the Internal.33 line follow this commit; B5/D1 still convert ONLY on Founder-installed observation; the Gemini key rotation (#373) remains a Founder-side action.
 
-- **Release train FROZEN by Founder directive (2026-09-02)**: "we are not making the next release yet, there is more problems and things i don't like and are not top tier class AAA in the app". No Internal.33 authority, no tag, no publication until the quality line closes AND the Founder's own findings list (arriving next session) is triaged into one ledger.
+- **Release train FROZEN by Founder directive (2026-09-02)**: "we are not making the next release yet, there is more problems and things i don't like and are not top tier class AAA in the app". **SUPERSEDED the same day (2026-09-02)**: the Founder directive "complete all the work professionally and flawlessly then make the update" closed the quality line and authorized the Internal.33/FD-056 update — see the Current sequencing decision below.
 - Protected `main` at handoff: the round-3 repair line + the AAA quality line are merged — #382 `bff3d13…` (browserslist 4.28.8 override pin, red-gate unblock), #379 `e9eee78…` (D1 round 3: probe verifies thinking-model 200s + names transport causes), #381 `c4e5621…` (round-3 ledger record), #380 `c8f8be3…` (B5 round 3: self-diagnosing delete — shape verdict in body + client pre-flight), #383 `4579e69…` (UI AAA batch: localized errors everywhere, truthful delete contracts, i18n authority restored — audit F1–F7+F14–F26), #385 `95dd9d3…` (inbox AAA batch: F8–F13 + double-submit guard + notFoundIds client half), #384 `420b379…` (API AAA contract batch: every non-2xx carries a code, no internal leaks, races closed — audit S1-1..4+S2-5..12+S3-13..24). Live GitHub wins if moved.
 - Two parallel read-only AAA audits (file:line-cited): 26 UI findings + 25 API findings; ALL assigned to the batch line above — none parked. Exact rows: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` (release-freeze quality line section).
 - Internal.31 was **installed in place by the Founder** (2026-09-01); its campaign re-verified the FD-051 repairs and produced the bounded round-2 findings above. Exact rows: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` (round-2 section).
 - FD-054 recorded (demo data loads alongside real seller data; removal deletes only the demo-tagged graph and fails closed with `DEMO_REMOVAL_BLOCKED_BY_REFERENCES`). Housekeeping: rotate the Founder's Gemini key (visible in a screenshot URL bar per #373).
-- Current sequencing decision: **Internal.32 / FD-055 published** — release PR #377 merged (squash `677dc463…`), dispatcher `33497016855`, signed publication `33497028241` (success, 36/36 steps), observer `33497039759` (success), release tag `sahelflow-v1.0.0-internal.32-677dc463f7d00a179cdfed090184818249523fd6`, published MSI `SahelFlow_1.0.0-internal.32_x64_en-US.msi` digest `sha256:34417299864cd449eb9c24832c1d715d3423ee37433495a18b1b3ff1ed4db9af`, `latest.json` published 2026-09-01T10:45:10Z. **The Founder installed Internal.32 in place (2026-09-02) and executed its campaign round 3**: B3/B4 and the remaining rows pass (D3 six waves included, per Founder verdict); B5 and D1 were reproduced with roots pinned — their round-3 repairs are now MERGED on `main` (#379/#380) and convert on the next installed observation. The #306 logout row stays LAST. Exact rows: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` (round-3 + release-freeze quality line sections).
-- App `1.0.0-internal.31`; MSI `1.0.0.31`; authority **FD-053**; mode `founder-offline-only`.
+- Current sequencing decision: **Internal.33 / FD-056 published** — the Founder directive 2026-09-02 ("complete all the work professionally and flawlessly then make the update") lifted the freeze after the triage quality line closed; PR #387 merged by squash `1cb5cef7…` (29 commits; tree `c06bd9ed…` identical to reviewed head `92c35bc…`); release PR #389 merged by squash `cc081c86…`, dispatcher `33704527056`, signed publication `33704536249` (success), observer `33704547389` (success), release tag `sahelflow-v1.0.0-internal.33-cc081c8687a17620c8bd0d9c4bb416da71fdb3f5`, published MSI `SahelFlow_1.0.0-internal.33_x64_en-US.msi` digest `sha256:16a8ce71e2694671cfe267d6fde84635973e254ae0fd1fc25d35fc6662afafe2`, `latest.json` published 2026-09-03T02:00:42Z. Certification cited product head `92c35bc…` (tree-identical to squash `1cb5cef…`; CI `33699338361`, Phase 5 `33699338132`, Phase 6-7 `33699338129`); the release-authority head passed the full Required battery (20 success / 1 skipped / 0 failed, incl. installed-MSI evidence + gates) before the expected-head merge. The Founder has not yet installed Internal.33; its installed campaign re-verifies the wave rows (voice gestures, screenshot attachments, link previews, turn signals, pin/mute/archive, feedback loop) and D3 six-wave observations, then the retained #306 logout row LAST; the Gemini key rotation (#373) remains a Founder-side precondition for real AI usage. The prior Internal.32/FD-055 publication (tag `sahelflow-v1.0.0-internal.32-677dc463…`, digest `sha256:34417299…`) and its installed round-3 campaign remain recorded in `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`.
+- App `1.0.0-internal.33`; MSI `1.0.0.33`; authority **FD-056**; mode `founder-offline-only` (published, Founder installation pending; the Founder's installed build remains Internal.32 until the in-place update).
 - Release PR #368 (squash `38c95aa8…`); reviewed release head `a1b4d56e5f723bbd3cacae104939ba668998e38b`; the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence) — certification cited product head `569e921…` (tree-identical to `f0fca29…`; CI `33368228685`, Phase 5 `33368228409`, Phase 6-7 `33368228448`).
 - Release PR #357; reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`; the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence) — certification cited product head `40f53860` (tree-identical to squash `14c059b7`; CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`).
 - Internal.29's certification cited corpus head `4921f34eb87369384d7cd09d92064a69b11cbac9` (CI `33207445430`, Phase 5 `33207445134`, Phase 6-7 `33207445070`), the last product-tree change before the documentation-only #343.
@@ -108,38 +108,36 @@ Binding rules:
   repair line is installed in place and re-proves the B5/D1 rows, the
   applicable FRC-2 rows (R11) and the remaining FRC-1 rows.
 
-## Exact next-session order — Founder's list, triage ledger, then release authority
+## Exact next-session order — Internal.33 installed campaign
 
-The round-3 repair line and the AAA quality line (52 audit findings) are
-merged to protected `main`; the Founder froze the release train and will
-bring his own findings list next session. Remaining order:
+The triage-ledger quality line is merged (#387, squash `1cb5cef…`) and
+published as **Internal.33 / FD-056** (tag
+`sahelflow-v1.0.0-internal.33-cc081c8…`, MSI digest
+`sha256:16a8ce71…`). Remaining order:
 
-1. Triage the Founder's own findings list together with any residue from
-   the 52-finding AAA line into ONE ledger (no parallel backlogs), then
-   execute it per one-bounded-root discipline through the normal gates
-   (branch → PR → adversarial review → Required battery → expected-head
-   squash merge).
-2. Re-resolve protected `main`, open PRs and #306/#316/#317/#230. The
-   Internal.31/32 campaigns stay open except the logout row.
-3. The Founder rotates the screenshot-exposed Gemini key FIRST, then —
-   only when the combined quality ledger is green and the Founder
-   explicitly authorizes release — a signed successor (Internal.33,
-   requires explicit release authority packaging the round-3 line + the
-   AAA quality line) is cut and installed in place through the normal
-   updater, preserving installation, shop and WhatsApp state (no logout,
-   no AppData reset).
-4. On the installed successor: D1 — test/save the fresh key; the probe now
-   either VERIFIES outright (thinking-budget root) or names the exact
-   transport/response cause (dns/tls/blocked/reset/timeout, finishReason,
-   jsonParseFailed). B5 — retry the permanent delete; the dialog now shows
-   the exact failing schema condition (or the local pre-flight names the
-   offending id length before any request).
-5. Record results in `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`,
+1. Re-resolve protected `main`, open PRs and #306/#316/#317/#230. The
+   Internal.32/33 campaigns stay open except the logout row; sidecar rows
+   (INB-13/14/19/32) stay BLOCKED and INB-27 stays OPEN by recorded
+   disposition.
+2. The Founder applies the in-place Internal.33 update through the normal
+   updater, preserving installation, shop and WhatsApp state (no logout, no
+   AppData reset), and rotates the screenshot-exposed Gemini key (#373)
+   before real AI usage.
+3. On the installed Internal.33: re-verify the wave rows on the founder
+   install — INB-24 voice gestures (hold-to-record, slide lock/cancel,
+   review-before-send), AI-21 composer screenshot extraction
+   (consent-gated, review-first, never auto-sends), INB-16 link previews,
+   AI-26 truthful turn signals (real usage metadata only), INB-28 unified
+   media sends, INB-11 virtualized list behavior, AI-13 thumbs feedback,
+   INB-12 pin/mute/archive — plus D3 six-wave observations; B5/D1 convert
+   on this installed observation.
+4. Record results in `operations/UI_UX_TRIAGE_LEDGER.md`,
+   `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`,
    `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` and current-state
    documentation; convert rows only where installed evidence exists. A named
    root that is not yet repaired opens exactly one bounded micro-repair —
    nothing else moves.
-6. Execute the retained #306 logout row LAST (only after every other row is
+5. Execute the retained #306 logout row LAST (only after every other row is
    green), then resume FRC-3 (Required capability/journey assurance ledger)
    in dependency order; preserve external blockers.
 
