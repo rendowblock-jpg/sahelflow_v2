@@ -48,7 +48,10 @@ interface GeminiResponse {
         functionCall?: GeminiFunctionCall;
       }>;
     };
+    // F-05: terminal-shape truth for empty-visible-text turns.
+    finishReason?: string;
   }>;
+  promptFeedback?: { blockReason?: string };
   usageMetadata?: GeminiUsageMetadata;
   error?: { code?: number; message?: string; status?: string };
 }
@@ -205,7 +208,15 @@ function requestBody(
     },
     contents,
     tools: [{ functionDeclarations: tools }],
-    generationConfig: { maxOutputTokens: 2048 },
+    // F-05 (Internal.33 installed campaign): the served flash models are
+    // thinking-enabled — they spend generation output on internal thought
+    // BEFORE any visible text. The 2048 budget starved visible answers into
+    // empty candidates (finishReason MAX_TOKENS) and the UI showed the
+    // dead-end "rephrase" copy even though the key had authenticated and the
+    // model had answered — the identical failure the D1 round-3 verify probe
+    // fixed at 8 tokens. 8192 gives thought + answer headroom within the
+    // documented output window.
+    generationConfig: { maxOutputTokens: 8192 },
   };
 }
 
@@ -213,6 +224,41 @@ function missingKey(locale: AiChatLocale = "fr"): string {
   if (locale === "ar") return "لا يوجد مفتاح Gemini مهيأ. أضف المفتاح من الإعدادات ← الذكاء الاصطناعي.";
   if (locale === "en") return "No Gemini key is configured. Add one in Settings → Artificial intelligence.";
   return "Aucune clé Gemini n'est configurée. Ajoutez-la dans Paramètres → Intelligence artificielle.";
+}
+
+/**
+ * PII-free shape of a 200/stream response that carried no visible text —
+ * the truthful verdict surface for founder finding F-05 (the previous copy
+ * told the operator to "rephrase", which was both false and a dead end).
+ */
+type EmptyResponseShape = {
+  finishReason: string | null;
+  blockReason: string | null;
+};
+
+function emptyResponseMessage(
+  locale: AiChatLocale | undefined,
+  shape: EmptyResponseShape,
+): string {
+  if (shape.blockReason) {
+    if (locale === "ar")
+      return `رفض النموذج الطلب وفق سياسات المحتوى (${shape.blockReason}). لم تُرسل أي بيانات — أعد المحاولة بطلب مختلف.`;
+    if (locale === "en")
+      return `The model refused this request under its content policy (${shape.blockReason}). Nothing was sent — try a different request.`;
+    return `Le modèle a refusé cette demande selon sa politique de contenu (${shape.blockReason}). Rien n'a été envoyé — essayez une autre demande.`;
+  }
+  if (shape.finishReason === "MAX_TOKENS") {
+    if (locale === "ar")
+      return "استهلك النموذج ميزانية التوليد في التفكير الداخلي قبل أي نص مرئي. أعد إرسال طلبك — إذا تكرر ذلك فالنموذج مشبع حاليًا.";
+    if (locale === "en")
+      return "The model spent its generation budget on internal reasoning before any visible text. Send the request again — if it repeats, the model is currently saturated.";
+    return "Le modèle a dépensé son budget de génération en raisonnement interne avant tout texte visible. Renvoyez la demande — si cela se répète, le modèle est actuellement saturé.";
+  }
+  if (locale === "ar")
+    return "لم يُعِد النموذج محتوى مرئيًا. أعد إرسال طلبك.";
+  if (locale === "en")
+    return "The model returned no visible content. Send the request again.";
+  return "Le modèle n'a renvoyé aucun contenu visible. Renvoyez la demande.";
 }
 
 export async function runAgent(
@@ -311,13 +357,15 @@ export async function runAgent(
         toolCalls: allToolCalls,
       };
     }
+    // F-05: truthful empty-shape verdict instead of the false "rephrase"
+    // dead end. The shape is PII-free and names what the provider actually
+    // returned (thought-budget exhaustion / policy refusal / empty).
     return {
-      response:
-        locale === "ar"
-          ? "تعذر إنشاء إجابة. أعد صياغة سؤالك."
-          : locale === "en"
-            ? "I could not generate a response. Please rephrase your question."
-            : "Je n'ai pas pu générer de réponse. Reformulez votre question.",
+      response: emptyResponseMessage(locale, {
+        finishReason:
+          response.candidates?.[0]?.finishReason ?? null,
+        blockReason: response.promptFeedback?.blockReason ?? null,
+      }),
       toolCalls: allToolCalls,
     };
   }
@@ -339,6 +387,11 @@ interface ParsedStream {
   cancelled: boolean;
   providerError: GeminiProviderError | null;
   usage: GeminiUsageMetadata | null;
+  // F-05: PII-free terminal shape of the last stream chunk, so an
+  // empty-visible-text turn yields its truthful cause instead of the
+  // old "rephrase your question" dead end.
+  finishReason: string | null;
+  blockReason: string | null;
 }
 
 async function* parseStream(
@@ -350,6 +403,10 @@ async function* parseStream(
   let buffer = "";
   let fullText = "";
   let usage: GeminiUsageMetadata | null = null;
+  // F-05: PII-free terminal shape of the turn (last chunk wins — the final
+  // SSE chunk carries the finishReason/promptFeedback verdict).
+  let finishReason: string | null = null;
+  let blockReason: string | null = null;
   // Ledger AI-16: collect every parallel function call in the turn instead of
   // overwriting (last-wins) — the model may request several at once.
   const functionCalls: GeminiFunctionCall[] = [];
@@ -363,6 +420,8 @@ async function* parseStream(
           cancelled: true,
           providerError: null,
           usage,
+          finishReason,
+          blockReason,
         };
       }
       const { done, value } = await reader.read();
@@ -389,12 +448,19 @@ async function* parseStream(
               cancelled: false,
               providerError: geminiProviderErrorFromStream(chunk.error),
               usage,
+              finishReason,
+              blockReason,
             };
           }
           const parts = chunk.candidates?.[0]?.content?.parts ?? [];
           // Ledger AI-26: keep the provider's own usage report when it sends
           // one (stream chunks typically carry it on the final chunk).
           if (chunk.usageMetadata) usage = chunk.usageMetadata;
+          // F-05: keep the terminal-shape verdict when the provider sends one.
+          const chunkFinishReason = chunk.candidates?.[0]?.finishReason;
+          if (chunkFinishReason) finishReason = chunkFinishReason;
+          const chunkBlockReason = chunk.promptFeedback?.blockReason;
+          if (chunkBlockReason) blockReason = chunkBlockReason;
           for (const part of parts) {
             if (part.text) {
               fullText += part.text;
@@ -414,6 +480,8 @@ async function* parseStream(
     cancelled: false,
     providerError: null,
     usage,
+    finishReason,
+    blockReason,
   };
 }
 
@@ -538,14 +606,16 @@ export async function* runAgentStream(
       return;
     }
     yield {
-      type: "done",
-      response:
-        locale === "ar"
-          ? "تعذر إنشاء إجابة. أعد صياغة سؤالك."
-          : locale === "en"
-            ? "I could not generate a response. Please rephrase your question."
-            : "Je n'ai pas pu générer de réponse. Reformulez votre question.",
-      toolCalls: allToolCalls,
+      type: "error",
+      // F-05: an authenticated 200/stream with no visible text is a
+      // provider-truth failure, not a user-phrasing problem. The coded error
+      // surface marks the turn interrupted and names the PII-free shape
+      // (thought-budget exhaustion / policy refusal / empty) instead of the
+      // old "rephrase your question" done event.
+      message: emptyResponseMessage(locale, {
+        finishReason: parsed.value.finishReason,
+        blockReason: parsed.value.blockReason,
+      }),
     };
     return;
   }
