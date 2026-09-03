@@ -66,6 +66,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       snoozedUntil: true,
       waitingSince: true,
       firstReplyAt: true,
+      pinnedAt: true,
+      mutedUntil: true,
+      archivedAt: true,
       messages: {
         orderBy: { timestamp: "desc" },
         take: 1,
@@ -136,6 +139,15 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
               type: last.messageType ?? null,
             }
           : undefined,
+        // Ledger INB-12: server-projected state truth. Mute is a horizon —
+        // an expired mutedUntil reads as unmuted, never as a stale flag.
+        states: {
+          pinned: conversation.pinnedAt !== null,
+          muted: conversation.mutedUntil
+            ? conversation.mutedUntil.getTime() > Date.now()
+            : false,
+          archived: conversation.archivedAt !== null,
+        },
         workflow: {
           status: conversation.status,
           assigneeId: conversation.assigneeId,

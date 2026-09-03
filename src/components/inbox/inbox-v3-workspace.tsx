@@ -183,7 +183,12 @@ export function InboxV3Workspace({
   }, [authority, chats, defaultQueueResolved, loadingChats]);
 
   const visibleQueueChats = useMemo(() => {
-    return chats.filter((chat) => {
+    return chats
+      .filter((chat) => {
+      // Ledger INB-12: archived conversations show only in the archive queue.
+      const archiveOk =
+        queueFilter === "archived" ? chat.archived : !chat.archived;
+      if (!archiveOk) return false;
       const queueMatches =
         queueFilter === "all" ||
         (queueFilter === "unread" && chat.unread > 0) ||
@@ -194,7 +199,10 @@ export function InboxV3Workspace({
       if (!queueMatches) return false;
       const status = chat.workflow.status ?? "open";
       return workflowFilter === "all" || status === workflowFilter;
-    });
+      })
+      // Pinned conversations float first (INB-12); the stable sort keeps the
+      // server's recency order inside each group.
+      .sort((a, b) => Number(b.pinned) - Number(a.pinned));
   }, [authority?.currentMemberId, chats, queueFilter, workflowFilter]);
 
   useEffect(() => {

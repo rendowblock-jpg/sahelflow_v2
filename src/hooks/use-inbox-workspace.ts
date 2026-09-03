@@ -182,6 +182,7 @@ interface CanonicalChatResponse {
     name: string;
     phone: string | null;
     unread: number;
+    states?: { pinned: boolean; muted: boolean; archived: boolean };
     lastMessage?: {
       text: string;
       timestamp: number;
@@ -270,6 +271,9 @@ function mapConversationProjection(
       ? new Date(conversation.lastMessageAt).getTime()
       : undefined,
     unread: conversation.unreadCount,
+    pinned: false,
+    muted: false,
+    archived: false,
     workflow: {
       status: conversation.status as ConversationWorkflowState["status"],
       assigneeId: conversation.assigneeId,
@@ -613,6 +617,9 @@ export function useInboxWorkspace() {
             lastMessageFromMe: chat.lastMessage?.fromMe,
             lastMessageType: chat.lastMessage?.type ?? undefined,
             unread: chat.unread,
+            pinned: chat.states?.pinned ?? false,
+            muted: chat.states?.muted ?? false,
+            archived: chat.states?.archived ?? false,
             workflow: {
               status:
                 chat.workflow.status as ConversationWorkflowState["status"],
@@ -2196,6 +2203,57 @@ export function useInboxWorkspace() {
   );
   const sendVoice = useMemo(() => createMediaSender(MEDIA_SEND_SPECS.voice), [createMediaSender]);
 
+  // Ledger INB-12: pin / mute / archive from the queue. Optimistic mirror of
+  // the server truth with an honest rollback; a background refresh
+  // reconciles the mute horizon.
+  const setConversationState = useCallback(
+    async (
+      chat: InboxChat,
+      patch: { pinned?: boolean; muted?: boolean; archived?: boolean },
+    ): Promise<boolean> => {
+      if (!canUpdateConversation) return false;
+      const conversationId = chat.conversationId;
+      const previous = chats.find(
+        (entry) => entry.conversationId === conversationId,
+      );
+      setChats((current) =>
+        current.map((entry) =>
+          entry.conversationId === conversationId
+            ? {
+                ...entry,
+                pinned: patch.pinned ?? entry.pinned,
+                muted: patch.muted ?? entry.muted,
+                archived: patch.archived ?? entry.archived,
+              }
+            : entry,
+        ),
+      );
+      try {
+        const response = await fetch(
+          `/api/conversations/${encodeURIComponent(conversationId)}/state`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(patch),
+          },
+        );
+        if (!response.ok) throw new Error(`state update: ${response.status}`);
+        scheduleChatsRefresh();
+        return true;
+      } catch {
+        if (previous) {
+          setChats((current) =>
+            current.map((entry) =>
+              entry.conversationId === conversationId ? previous : entry,
+            ),
+          );
+        }
+        return false;
+      }
+    },
+    [canUpdateConversation, chats, scheduleChatsRefresh],
+  );
+
   const connectWhatsApp = useCallback(async () => {
     try {
       const response = await fetch("/api/whatsapp/connect", { method: "POST" });
@@ -2221,7 +2279,14 @@ export function useInboxWorkspace() {
 
   const filteredChats = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase();
-    return chats.filter((chat) => {
+    return chats
+      .filter((chat) => {
+      // Ledger INB-12: archived conversations live in their own queue only.
+      if (queueFilter === "archived") {
+        if (!chat.archived) return false;
+      } else if (chat.archived) {
+        return false;
+      }
       const statusValue = chat.workflow.status ?? "open";
       const queueMatches =
         queueFilter === "all" ||
@@ -2234,7 +2299,10 @@ export function useInboxWorkspace() {
       return [chat.name, chat.phone, chat.lastMessageText]
         .filter(Boolean)
         .some((value) => value!.toLocaleLowerCase().includes(query));
-    });
+      })
+      // Pinned conversations float first (INB-12); the stable sort keeps the
+      // server's recency order inside each group.
+      .sort((a, b) => Number(b.pinned) - Number(a.pinned));
   }, [chats, queueFilter, searchQuery]);
 
   const queueCounts = useMemo(
@@ -2293,6 +2361,7 @@ export function useInboxWorkspace() {
     loadingOlderMessages,
     loadOlderMessages,
     markUnread,
+    setConversationState,
     canUpdateConversation,
     canReply,
     canDeleteChats,

@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Archive,
+  ArchiveRestore,
+  Bell,
+  BellOff,
   Check,
   CheckCheck,
   CheckCircle2,
@@ -15,6 +19,9 @@ import {
   Mail,
   MessageSquareText,
   Mic,
+  MoreVertical,
+  Pin,
+  PinOff,
   Search,
   Trash2,
   UserMinus,
@@ -27,6 +34,12 @@ import type {
   InboxSearchResult,
   WorkflowFilter,
 } from "@/components/inbox/inbox-desk-types";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { searchResultToChat } from "@/components/inbox/inbox-desk-types";
 import type { InboxChat } from "@/components/inbox/inbox-workspace-types";
 import {
@@ -52,7 +65,7 @@ import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread"];
+const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread", "archived"];
 const WORKFLOW_FILTERS: WorkflowFilter[] = [
   "all",
   "open",
@@ -98,6 +111,8 @@ function queueLabel(
       return copy("queueUnread");
     case "all":
       return copy("queueAll");
+    case "archived":
+      return copy("queueArchived");
   }
 }
 
@@ -138,6 +153,10 @@ function matchesDeskFilters(
       Boolean(currentMemberId) &&
       chat.workflow.assigneeId === currentMemberId);
   if (!queueMatches) return false;
+  // Ledger INB-12: archived conversations show only in the archive queue.
+  const archiveOk =
+    queueFilter === "archived" ? chat.archived : !chat.archived;
+  if (!archiveOk) return false;
   const status = chat.workflow.status ?? "open";
   return workflowFilter === "all" || status === workflowFilter;
 }
@@ -280,6 +299,18 @@ function ConversationRow({
           >
             {chat.name}
           </bdi>
+          {chat.pinned ? (
+            <Pin
+              className="size-3 shrink-0 text-primary"
+              aria-label={copy("pinChat")}
+            />
+          ) : null}
+          {chat.muted ? (
+            <BellOff
+              className="size-3 shrink-0 text-muted-foreground"
+              aria-label={copy("muteChat")}
+            />
+          ) : null}
           <span
             className={cn(
               "shrink-0 text-2xs tabular-nums",
@@ -393,6 +424,7 @@ export function InboxV3Queue({
     canDeleteChats,
     deleteChats,
     markUnread,
+    setConversationState,
     refreshChats,
     canUpdateConversation,
     localDrafts,
@@ -444,17 +476,20 @@ export function InboxV3Queue({
     return [...set].sort((a, b) => a.localeCompare(b)).slice(0, 30);
   }, [chats]);
 
-  const queueCounts = useMemo(
-    () => ({
+  const queueCounts = useMemo(() => {
+    // Ledger INB-12: archive-aware counts — the active queues never count
+    // archived rows; the archive pill counts only archived rows.
+    const active = chats.filter((chat) => !chat.archived);
+    return {
       mine: currentMemberId
-        ? chats.filter((chat) => chat.workflow.assigneeId === currentMemberId).length
+        ? active.filter((chat) => chat.workflow.assigneeId === currentMemberId).length
         : 0,
-      unassigned: chats.filter((chat) => !chat.workflow.assigneeId).length,
-      unread: chats.filter((chat) => chat.unread > 0).length,
-      all: chats.length,
-    }),
-    [chats, currentMemberId],
-  );
+      unassigned: active.filter((chat) => !chat.workflow.assigneeId).length,
+      unread: active.filter((chat) => chat.unread > 0).length,
+      all: active.length,
+      archived: chats.length - active.length,
+    };
+  }, [chats, currentMemberId]);
 
   const baseRows = useMemo(
     () =>
@@ -1126,6 +1161,51 @@ export function InboxV3Queue({
                       : undefined
                   }
                 />
+                {!selectMode && canUpdateConversation ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={copy("conversationState")}
+                        title={copy("conversationState")}
+                        data-inbox-row-state="true"
+                        onClick={(event) => event.stopPropagation()}
+                        className="absolute end-4 top-2 z-10 hidden size-7 items-center justify-center rounded-md border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring group-hover/row:flex"
+                      >
+                        <MoreVertical className="size-3.5" aria-hidden="true" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" sideOffset={4}>
+                      <DropdownMenuItem
+                        data-inbox-state-pin="true"
+                        onClick={() => {
+                          void setConversationState(chat, { pinned: !chat.pinned });
+                        }}
+                      >
+                        {chat.pinned ? <PinOff className="size-4" aria-hidden="true" /> : <Pin className="size-4" aria-hidden="true" />}
+                        {chat.pinned ? copy("unpinChat") : copy("pinChat")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        data-inbox-state-mute="true"
+                        onClick={() => {
+                          void setConversationState(chat, { muted: !chat.muted });
+                        }}
+                      >
+                        {chat.muted ? <Bell className="size-4" aria-hidden="true" /> : <BellOff className="size-4" aria-hidden="true" />}
+                        {chat.muted ? copy("unmuteChat") : copy("muteChat")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        data-inbox-state-archive="true"
+                        onClick={() => {
+                          void setConversationState(chat, { archived: !chat.archived });
+                        }}
+                      >
+                        {chat.archived ? <ArchiveRestore className="size-4" aria-hidden="true" /> : <Archive className="size-4" aria-hidden="true" />}
+                        {chat.archived ? copy("unarchiveChat") : copy("archiveChat")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
                 {!selectMode && canUpdateConversation && chat.unread === 0 ? (
                   <button
                     type="button"

@@ -1,6 +1,11 @@
 import type { InboxChat } from "@/components/inbox/inbox-workspace-types";
 
-export type DeskQueueFilter = "mine" | "unassigned" | "unread" | "all";
+export type DeskQueueFilter =
+  | "mine"
+  | "unassigned"
+  | "unread"
+  | "all"
+  | "archived";
 export type WorkflowFilter = "all" | "open" | "pending" | "resolved" | "snoozed";
 
 export type InboxAuthorityView = {
@@ -53,6 +58,9 @@ export function searchResultToChat(
       ? { lastMessageAt: new Date(result.lastMessageAt).getTime() }
       : {}),
     unread: result.unreadCount,
+    pinned: false,
+    muted: false,
+    archived: false,
     workflow: {
       status: result.workflow.status as InboxChat["workflow"]["status"],
       assigneeId: result.workflow.assigneeId,
