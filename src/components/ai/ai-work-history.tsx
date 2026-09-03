@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Bot,
@@ -86,6 +86,7 @@ export function AiWorkHistory({
     value: string;
   } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [historyQuery, setHistoryQuery] = useState("");
   const [confirmResetTimer, setConfirmResetTimer] = useState<number | null>(
     null,
   );
@@ -108,6 +109,14 @@ export function AiWorkHistory({
     return ["pending", "approved", "failed", "conflict"].includes(state);
   }).length;
   const groups = ["today", "yesterday", "earlier"] as const;
+  // Ledger AI-09: client-side session search over the loaded history.
+  const normalizedHistoryQuery = historyQuery.trim().toLowerCase();
+  const visibleSessions = useMemo(() => {
+    if (!normalizedHistoryQuery) return sessions;
+    return sessions.filter((session) =>
+      (session.title ?? "").toLowerCase().includes(normalizedHistoryQuery),
+    );
+  }, [sessions, normalizedHistoryQuery]);
   const rowActionsLocked =
     navigationLocked ||
     sending ||
@@ -174,6 +183,15 @@ export function AiWorkHistory({
           )}
           {getAiDecisionCopy(locale, "newAnalysis")}
         </Button>
+        {sessions.length > 0 ? (
+          <Input
+            value={historyQuery}
+            onChange={(event) => setHistoryQuery(event.target.value)}
+            placeholder={getAiDecisionCopy(locale, "historySearch")}
+            aria-label={getAiDecisionCopy(locale, "historySearch")}
+            className="mt-2 h-8 bg-background/60 text-[13px]"
+          />
+        ) : null}
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
@@ -192,7 +210,7 @@ export function AiWorkHistory({
             </div>
           ) : (
             groups.map((group) => {
-              const groupedSessions = sessions.filter(
+              const groupedSessions = visibleSessions.filter(
                 (session) => sessionDateGroup(session.updatedAt) === group,
               );
               if (groupedSessions.length === 0) return null;
@@ -387,6 +405,13 @@ export function AiWorkHistory({
               );
             })
           )}
+          {!loadingSessions &&
+          sessions.length > 0 &&
+          visibleSessions.length === 0 ? (
+            <p className="px-3 py-6 text-center text-xs text-muted-foreground">
+              {getAiDecisionCopy(locale, "historyNoMatches")}
+            </p>
+          ) : null}
         </div>
       </ScrollArea>
     </aside>

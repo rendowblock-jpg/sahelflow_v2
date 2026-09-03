@@ -24,6 +24,9 @@ const COPY = {
     savedHistoryAvailable: "Saved history remains available",
     setupAttention: "AI setup needs attention",
     setupChecking: "Checking AI setup",
+    demoBadge: "Sample data",
+    historySearch: "Search analyses",
+    historyNoMatches: "No analysis matches this search",
     actionHistoryIssue: "Action review history is unavailable",
     actionHistoryIssueDescription:
       "Retry before assuming this analysis has no pending or failed sensitive actions.",
@@ -32,6 +35,15 @@ const COPY = {
       "Read-only evidence stays in the decision canvas. Sensitive changes appear here before execution.",
     durableSession: "Saved locally",
     reviewCount: "{count} to review",
+    setupRequiredTitle: "What AI adds to this workspace",
+    setupRequiredCapabilities:
+      "I can search products, customers, create orders, get statistics, and estimate delivery fees.",
+    setupRequiredPrivacyNote:
+      "Analysis runs on your own Gemini key, stored encrypted on this device. Everything in SahelFlow keeps working without AI.",
+    setupChipPendingOrders: "Pending orders",
+    setupChipBestProducts: "Best products",
+    setupChipRevenueToday: "Revenue today",
+    setupChipTopWilayas: "Top wilayas",
   },
   fr: {
     newAnalysis: "Nouvelle analyse",
@@ -53,6 +65,9 @@ const COPY = {
     savedHistoryAvailable: "L’historique enregistré reste disponible",
     setupAttention: "La configuration IA demande votre attention",
     setupChecking: "Vérification de la configuration IA",
+    demoBadge: "Données d’exemple",
+    historySearch: "Rechercher des analyses",
+    historyNoMatches: "Aucune analyse ne correspond à cette recherche",
     actionHistoryIssue: "L’historique de revue des actions est indisponible",
     actionHistoryIssueDescription:
       "Réessayez avant de conclure qu’aucune action sensible en attente ou en échec n’existe.",
@@ -61,6 +76,15 @@ const COPY = {
       "Les preuves en lecture seule restent dans le canevas. Les changements sensibles apparaissent ici avant exécution.",
     durableSession: "Enregistrée localement",
     reviewCount: "{count} à vérifier",
+    setupRequiredTitle: "Ce que l’IA ajoute à cet espace",
+    setupRequiredCapabilities:
+      "Je peux rechercher des produits, des clients, créer des commandes, obtenir des statistiques, et estimer les frais de livraison.",
+    setupRequiredPrivacyNote:
+      "L’analyse s’exécute avec votre propre clé Gemini, chiffrée et stockée sur cet appareil. Tout SahelFlow reste fonctionnel sans IA.",
+    setupChipPendingOrders: "Commandes en attente",
+    setupChipBestProducts: "Meilleurs produits",
+    setupChipRevenueToday: "CA du jour",
+    setupChipTopWilayas: "Top wilayas",
   },
   ar: {
     newAnalysis: "تحليل جديد",
@@ -82,6 +106,9 @@ const COPY = {
     savedHistoryAvailable: "يبقى السجل المحفوظ متاحًا",
     setupAttention: "إعداد الذكاء الاصطناعي يحتاج إلى انتباه",
     setupChecking: "جارٍ التحقق من إعداد الذكاء الاصطناعي",
+    demoBadge: "بيانات نموذجية",
+    historySearch: "ابحث في التحليلات",
+    historyNoMatches: "لا يوجد تحليل يطابق هذا البحث",
     actionHistoryIssue: "سجل مراجعة الإجراءات غير متاح",
     actionHistoryIssueDescription:
       "أعد المحاولة قبل افتراض عدم وجود إجراءات حساسة معلقة أو فاشلة في هذا التحليل.",
@@ -90,6 +117,15 @@ const COPY = {
       "تبقى الأدلة للقراءة في مساحة القرار. تظهر التغييرات الحساسة هنا قبل التنفيذ.",
     durableSession: "محفوظة محليًا",
     reviewCount: "{count} للمراجعة",
+    setupRequiredTitle: "ما يضيفه الذكاء الاصطناعي إلى هذه المساحة",
+    setupRequiredCapabilities:
+      "يمكنني البحث عن المنتجات والعملاء، وإنشاء الطلبات، والحصول على الإحصائيات، وتقدير رسوم التوصيل.",
+    setupRequiredPrivacyNote:
+      "يعمل التحليل بمفتاح Gemini الخاص بك، المشفّر والمخزَّن على هذا الجهاز. ويبقى كل شيء في SahelFlow فعالاً بدون الذكاء الاصطناعي.",
+    setupChipPendingOrders: "الطلبيات المعلقة",
+    setupChipBestProducts: "أفضل المنتجات",
+    setupChipRevenueToday: "إيرادات اليوم",
+    setupChipTopWilayas: "أفضل الولايات",
   },
 } as const;
 

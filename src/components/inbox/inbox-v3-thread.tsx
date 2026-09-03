@@ -1,10 +1,22 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   AlertCircle,
+  ArrowDown,
   ArrowLeft,
   Check,
+  ChevronDown,
+  ChevronUp,
   Copy,
   FileText,
   ImageIcon,
@@ -19,6 +31,7 @@ import {
   Plus,
   RefreshCw,
   Reply,
+  Search,
   Send,
   Sparkles,
   Trash2,
@@ -29,13 +42,18 @@ import {
 } from "lucide-react";
 
 import { CannedResponsePicker } from "@/components/inbox/canned-response-picker";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { EmojiPicker } from "@/components/inbox/inbox-emoji-picker";
 import {
   ActivityMessage,
   StatusControl,
 } from "@/components/inbox/conversation-controls";
 import { ConversationStatusBadge } from "@/components/inbox/conversation-status-badge";
 import { InboxCustomerWorkPanel } from "@/components/inbox/inbox-customer-work-panel";
-import { InboxMediaAttachment } from "@/components/inbox/inbox-media-attachment";
+import {
+  InboxMediaAttachment,
+  documentKind,
+} from "@/components/inbox/inbox-media-attachment";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { MessageExtraction } from "@/components/inbox/message-extraction";
 import { MessageStatus } from "@/components/inbox/message-status";
@@ -62,11 +80,21 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { useMobile } from "@/hooks/use-mobile";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useVoiceRecorder } from "@/components/inbox/use-voice-recorder";
+import { VoiceNotePlayer } from "@/components/inbox/voice-note-player";
+import { InboxLinkPreview, firstHttpUrlInText } from "@/components/inbox/link-preview-card";
+import {
+  decideRecordingPointerUp,
+  decideSlideCancel,
+  slideTransform,
+  VOICE_LOCK_RISE_PX,
+} from "@/components/inbox/voice-recording-gestures";
 
 function localeCode(locale: "ar" | "fr" | "en"): string {
   return locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
@@ -84,12 +112,74 @@ function messageDayKey(value: number): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
-function messageDayLabel(value: number, locale: "ar" | "fr" | "en"): string {
+function messageDayLabel(
+  value: number,
+  locale: "ar" | "fr" | "en",
+  copy: ReturnType<typeof useInboxWorkspace>["copy"],
+): string {
+  // WhatsApp-class relative day words (اليوم / أمس / Aujourd’hui / Hier);
+  // weekday names inside the week, absolute dates beyond it.
+  const dayStart = (() => {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  })();
+  const todayStart = (() => {
+    const date = new Date(Date.now());
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  })();
+  const diffDays = Math.round((todayStart - dayStart) / 86_400_000);
+  if (diffDays === 0) return copy("dayToday");
+  if (diffDays === 1) return copy("dayYesterday");
+  if (diffDays > 1 && diffDays < 7) {
+    return new Intl.DateTimeFormat(localeCode(locale), {
+      weekday: "long",
+    }).format(new Date(value));
+  }
   return new Intl.DateTimeFormat(localeCode(locale), {
-    weekday: "short",
     day: "numeric",
     month: "short",
+    ...(diffDays >= 365 ? { year: "numeric" as const } : {}),
   }).format(new Date(value));
+}
+
+/** Same-direction bubbles within this gap form one visual group (WhatsApp). */
+const GROUP_GAP_MS = 2 * 60_000;
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Soft highlight of in-thread search matches inside a bubble body. */
+function HighlightedMessageBody({
+  body,
+  query,
+}: {
+  body: string;
+  query: string;
+}) {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return <>{body}</>;
+  const parts = body.split(
+    new RegExp(`(${escapeRegExp(trimmed)})`, "ig"),
+  );
+  return (
+    <>
+      {parts.map((part, index) =>
+        index % 2 === 1 ? (
+          <mark
+            key={index}
+            className="rounded-sm bg-warning/30 px-0.5 text-foreground"
+          >
+            {part}
+          </mark>
+        ) : (
+          <Fragment key={index}>{part}</Fragment>
+        ),
+      )}
+    </>
+  );
 }
 
 /** "Active …" hint appears only after the thread has been idle this long. */
@@ -312,7 +402,7 @@ function CopyMessageButton({
   );
 }
 
-function MessageBubble({
+const MessageBubble = memo(function MessageBubble({
   message,
   locale,
   t,
@@ -324,18 +414,33 @@ function MessageBubble({
   canInteract,
   upload,
   onCancelUpload,
+  groupStart = true,
+  groupEnd = true,
+  highlighted = false,
+  quotedJumpable = false,
+  onJumpToQuoted,
+  searchQuery = "",
 }: {
   message: InboxMessage;
   locale: "ar" | "fr" | "en";
   t: ReturnType<typeof useInboxWorkspace>["t"];
   copy: ReturnType<typeof useInboxWorkspace>["copy"];
   candidate: boolean;
-  onChooseCandidate: () => void;
+  onChooseCandidate: (messageId: string) => void;
   onRetry: (message: InboxMessage) => void;
   onReply: (message: InboxMessage) => void;
   canInteract: boolean;
   upload?: { progress: number; cancellable: boolean };
   onCancelUpload: (messageId: string) => void;
+  /** First bubble of a visual sender-group (drives margins + tail corners). */
+  groupStart?: boolean;
+  /** Last bubble of a visual sender-group (carries the tail corner). */
+  groupEnd?: boolean;
+  /** Momentary jump/search target highlight. */
+  highlighted?: boolean;
+  quotedJumpable?: boolean;
+  onJumpToQuoted?: (quotedMessageId: string) => void;
+  searchQuery?: string;
 }) {
   if (message.messageType === "activity" || message.direction === "system") {
     return <ActivityMessage body={message.body} timestamp={message.timestamp} />;
@@ -343,6 +448,8 @@ function MessageBubble({
 
   const inbound = message.direction === "inbound";
   const media = isMediaMessage(message);
+  // Ledger INB-16: at most one preview per bubble, text bubbles only.
+  const linkUrl = media ? null : firstHttpUrlInText(message.body);
   const binaryMedia = Boolean(
     message.messageType &&
       ["image", "video", "audio", "document", "sticker"].includes(
@@ -351,30 +458,74 @@ function MessageBubble({
   );
   const canExtract = inbound && message.body.trim().length > 10;
 
+  // Chat geometry is direction-independent on purpose: inbound bubbles sit on
+  // the physical left and outbound on the physical right in every locale —
+  // the convention Algerian sellers know from WhatsApp in French/English.
+  // Pinning dir="ltr" here stops the RTL document from flipping justify-* and
+  // the logical corner tails; message text itself stays dir="auto" below.
+  const renderQuoteBody = () => (
+    <>
+      <div className="flex items-center gap-1 text-2xs font-medium text-primary">
+        <Reply className="size-3" aria-hidden="true" />
+        <span>{copy("replyingTo")}</span>
+      </div>
+      <p
+        className="mt-0.5 line-clamp-2 break-words text-2xs leading-4 text-muted-foreground"
+        dir="auto"
+      >
+        {message.quoted?.preview || "…"}
+      </p>
+    </>
+  );
+
   return (
-    <div className="group/message space-y-1.5">
+    <div
+      data-message-id={message.id}
+      className={cn(
+        "group/message space-y-1.5",
+        groupStart ? "mt-4" : "mt-1",
+        highlighted &&
+          "rounded-2xl ring-2 ring-primary/60 ring-offset-2 ring-offset-background transition-shadow",
+      )}
+      dir="ltr"
+    >
       <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
         <div
           className={cn(
             "max-w-[min(38rem,80%)] rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
             inbound
-              ? "rounded-es-md border-border/70 bg-background text-foreground"
-              : "rounded-ee-md border-primary/20 bg-primary/10 text-foreground",
+              ? "border-border/70 bg-background text-foreground"
+              : "border-primary/20 bg-primary/10 text-foreground",
+            // Tail corner sits on the group's last bubble; continuation
+            // bubbles soften their connecting corners (WhatsApp grouping).
+            inbound && groupEnd && "rounded-es-md",
+            !inbound && groupEnd && "rounded-ee-md",
+            inbound && !groupStart && "rounded-ss-md",
+            !inbound && !groupStart && "rounded-se-md",
           )}
         >
           {message.quoted || message.quotedMessageId ? (
-            <div className="mb-2 rounded-lg border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5">
-              <div className="flex items-center gap-1 text-2xs font-medium text-primary">
-                <Reply className="size-3" aria-hidden="true" />
-                <span>{copy("replyingTo")}</span>
-              </div>
-              <p
-                className="mt-0.5 line-clamp-2 break-words text-2xs leading-4 text-muted-foreground"
-                dir="auto"
+            quotedJumpable && onJumpToQuoted ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const quotedId = message.quotedMessageId;
+                  if (quotedId) onJumpToQuoted(quotedId);
+                }}
+                aria-label={copy("jumpToMessage")}
+                title={copy("jumpToMessage")}
+                className="mb-2 block w-full rounded-lg border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5 text-start outline-none transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {message.quoted?.preview || "…"}
-              </p>
-            </div>
+                {renderQuoteBody()}
+              </button>
+            ) : (
+              <div
+                title={copy("quoteNotLoaded")}
+                className="mb-2 rounded-lg border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5"
+              >
+                {renderQuoteBody()}
+              </div>
+            )
           ) : null}
 
           {media ? (
@@ -421,7 +572,10 @@ function MessageBubble({
                     message.attachment.sizeBytes !== null) ? (
                     <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
                       {[
-                        message.attachment.mimeType,
+                        documentKind(
+                          message.attachment.fileName ?? null,
+                          message.attachment.mimeType,
+                        ).label,
                         message.attachment.sizeBytes !== null
                           ? formatBytes(message.attachment.sizeBytes, locale)
                           : null,
@@ -448,8 +602,17 @@ function MessageBubble({
               dir="auto"
               data-sf-user-content="true"
             >
-              {message.body}
+              <HighlightedMessageBody body={message.body} query={searchQuery} />
             </p>
+          ) : null}
+
+          {/* Ledger INB-16: WhatsApp-style link preview card for text bubbles.
+              Renders nothing until real metadata arrives — honest absence. */}
+          {!media && linkUrl ? (
+            <InboxLinkPreview
+              url={linkUrl}
+              label={copy("linkPreviewLabel")}
+            />
           ) : null}
 
           {!inbound && upload ? (
@@ -520,7 +683,7 @@ function MessageBubble({
         <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
           <button
             type="button"
-            onClick={onChooseCandidate}
+            onClick={() => onChooseCandidate(message.id)}
             aria-pressed={candidate}
             className={cn(
               "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
@@ -557,7 +720,7 @@ function MessageBubble({
       ) : null}
     </div>
   );
-}
+});
 
 function formatRecordingElapsed(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -588,6 +751,11 @@ export function InboxV3Thread({
     loadingMessages,
     messagesInnerRef,
     messagesEndRef,
+    isAwayFromBottom,
+    missedMessageCount,
+    activeChatInitialUnread,
+    scrollToLatestMessages,
+    dismissUnreadDivider,
     locale,
     t,
     copy,
@@ -609,6 +777,11 @@ export function InboxV3Thread({
     transport,
     refreshChats,
     markUnread,
+    historyHasMore,
+    loadingOlderMessages,
+    loadOlderMessages,
+    ambiguousRetryMessage,
+    resolveAmbiguousRetry,
   } = workspace;
 
   const [replySelection, setReplySelection] = useState<{
@@ -663,6 +836,335 @@ export function InboxV3Thread({
   useEffect(() => {
     return () => disposeVoiceTake();
   }, [activeConversationKey, disposeVoiceTake]);
+
+  // Ledger INB-24 — WhatsApp recording gestures, desktop pointer truth.
+  // Pressing the mic starts the take; rising the pointer locks it; releasing
+  // without a lock finishes into the preview surface unless it was a quick
+  // tap (the existing click habit and the keyboard path keep a persistent
+  // take with visible pill controls — no gesture is ever required).
+  const micHoldRef = useRef<{ startY: number; locked: boolean } | null>(null);
+  const [micHoldActive, setMicHoldActive] = useState(false);
+  const [micHoldLocked, setMicHoldLocked] = useState(false);
+  const suppressMicClickRef = useRef(false);
+  const handleMicPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0 || sending || !canSend) return;
+    if (voiceRecorder.state !== "idle") return;
+    micHoldRef.current = { startY: event.clientY, locked: false };
+    setMicHoldActive(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    void voiceRecorder.start();
+  };
+  const handleMicPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const hold = micHoldRef.current;
+    if (!hold || hold.locked) return;
+    if (hold.startY - event.clientY >= VOICE_LOCK_RISE_PX) {
+      hold.locked = true;
+      setMicHoldLocked(true);
+    }
+  };
+  const endMicHold = (decide: boolean) => {
+    const hold = micHoldRef.current;
+    if (!hold) return;
+    micHoldRef.current = null;
+    setMicHoldActive(false);
+    setMicHoldLocked(false);
+    // The captured press always synthesizes a trailing click; only a real
+    // keyboard activation (no hold session) may start a take from onClick.
+    suppressMicClickRef.current = true;
+    if (
+      decide &&
+      decideRecordingPointerUp({
+        locked: hold.locked,
+        elapsedMs: voiceRecorder.elapsedMs,
+      }) === "finish"
+    ) {
+      voiceRecorder.finish();
+    }
+  };
+
+  // Slide-to-cancel on the recording pill (either physical direction — the
+  // pill carries no directional meaning, so RTL and LTR get one affordance).
+  const slideStartRef = useRef<number | null>(null);
+  const [slideDx, setSlideDx] = useState(0);
+  const [slideArmed, setSlideArmed] = useState(false);
+  const resetSlide = () => {
+    slideStartRef.current = null;
+    setSlideDx(0);
+    setSlideArmed(false);
+  };
+
+  // ── In-thread search (WhatsApp pattern): header magnifier → match bar with
+  // n/N counter, prev/next cycling, soft highlight in bubbles, Esc to close.
+  const [threadSearchOpen, setThreadSearchOpen] = useState(false);
+  const [threadSearchQuery, setThreadSearchQuery] = useState("");
+  const [threadSearchIndex, setThreadSearchIndex] = useState(0);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<
+    string | null
+  >(null);
+  const highlightTimerRef = useRef<number | null>(null);
+  const replyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Conversation-scoped UI state resets via the documented render-phase key
+  // reset (react.dev "You might not need an Effect") — no cascading renders.
+  const [searchResetKey, setSearchResetKey] = useState(activeConversationKey);
+  if (searchResetKey !== activeConversationKey) {
+    setSearchResetKey(activeConversationKey);
+    setThreadSearchOpen(false);
+    setThreadSearchQuery("");
+    setThreadSearchIndex(0);
+    setHighlightedMessageId(null);
+  }
+
+  // Timer cleanup stays in an effect: it disposes an external resource on
+  // conversation switch/unmount without touching state.
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) {
+        window.clearTimeout(highlightTimerRef.current);
+        highlightTimerRef.current = null;
+      }
+    };
+  }, [activeConversationKey]);
+
+  const normalizedThreadQuery = threadSearchQuery.trim().toLowerCase();
+  const threadMatchIds = useMemo(() => {
+    if (normalizedThreadQuery.length < 2) return [] as string[];
+    return messages
+      .filter((message) =>
+        message.body.toLowerCase().includes(normalizedThreadQuery),
+      )
+      .map((message) => message.id);
+  }, [messages, normalizedThreadQuery]);
+  const threadMatchCount = threadMatchIds.length;
+  const safeThreadIndex =
+    threadMatchCount > 0
+      ? ((threadSearchIndex % threadMatchCount) + threadMatchCount) %
+        threadMatchCount
+      : 0;
+
+  // Ledger INB-11: render-window virtualization. The durable page (composite
+  // cursor) bounds what the server returns; the render window bounds what the
+  // DOM materializes. The window is bottom-anchored (the WhatsApp reading
+  // position), grows in steps while the top sentinel is approached, and snaps
+  // to the full thread when a search/quote jump targets hidden history.
+  const RENDER_WINDOW_INITIAL = 80;
+  const RENDER_WINDOW_STEP = 60;
+  const [renderWindow, setRenderWindow] = useState(RENDER_WINDOW_INITIAL);
+  const renderWindowSentinelRef = useRef<HTMLDivElement | null>(null);
+  const renderAnchorRef = useRef<number | null>(null);
+  const pendingJumpRef = useRef<string | null>(null);
+
+  // Conversation switch resets the window during the render it reacts to
+  // (adjust-state-on-change, no cascading effect render).
+  const [prevWindowKey, setPrevWindowKey] = useState(activeConversationKey);
+  if (prevWindowKey !== activeConversationKey) {
+    setPrevWindowKey(activeConversationKey);
+    setRenderWindow(RENDER_WINDOW_INITIAL);
+  }
+
+  const visibleStart =
+    messages.length > renderWindow ? messages.length - renderWindow : 0;
+  const windowExhausted = visibleStart === 0;
+  const visibleMessages = useMemo(
+    () => (windowExhausted ? messages : messages.slice(visibleStart)),
+    [messages, visibleStart, windowExhausted],
+  );
+
+  // Scroll anchor: growing the window prepends bubbles, so the viewport is
+  // re-anchored by the exact height delta after the DOM commits.
+  useLayoutEffect(() => {
+    const anchor = renderAnchorRef.current;
+    renderAnchorRef.current = null;
+    if (anchor === null) return;
+    const viewport = messagesInnerRef.current?.parentElement;
+    if (!viewport) return;
+    viewport.scrollTo({
+      top: viewport.scrollTop + (viewport.scrollHeight - anchor),
+    });
+  }, [renderWindow, visibleStart]);
+
+  // Deferred jump: a target outside the window first materializes the full
+  // thread, then the jump completes after the DOM commits.
+  useLayoutEffect(() => {
+    const pending = pendingJumpRef.current;
+    if (!pending) return;
+    const element = messagesInnerRef.current?.querySelector(
+      `[data-message-id="${CSS.escape(pending)}"]`,
+    );
+    if (!element) return;
+    pendingJumpRef.current = null;
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightedMessageId(pending);
+    if (highlightTimerRef.current) {
+      window.clearTimeout(highlightTimerRef.current);
+    }
+    highlightTimerRef.current = window.setTimeout(
+      () => setHighlightedMessageId(null),
+      2_200,
+    );
+  }, [messages, renderWindow]);
+
+  useEffect(() => {
+    if (windowExhausted) return;
+    const sentinel = renderWindowSentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        const viewport = messagesInnerRef.current?.parentElement;
+        renderAnchorRef.current = viewport ? viewport.scrollHeight : null;
+        setRenderWindow((current) => current + RENDER_WINDOW_STEP);
+      },
+      { rootMargin: "600px 0px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [windowExhausted, activeConversationKey]);
+
+  const jumpToMessage = useCallback(
+    (messageId: string): boolean => {
+      const element = messagesInnerRef.current?.querySelector(
+        `[data-message-id="${CSS.escape(messageId)}"]`,
+      );
+      if (!element) {
+        // Ledger INB-11: the target may sit outside the render window —
+        // materialize it and complete the jump after the DOM commit.
+        if (messages.length > renderWindow) {
+          pendingJumpRef.current = messageId;
+          renderAnchorRef.current = null;
+          setRenderWindow(messages.length);
+          return true;
+        }
+        return false;
+      }
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedMessageId(messageId);
+      if (highlightTimerRef.current) {
+        window.clearTimeout(highlightTimerRef.current);
+      }
+      highlightTimerRef.current = window.setTimeout(
+        () => setHighlightedMessageId(null),
+        2_200,
+      );
+      return true;
+    },
+    [messages.length, messagesInnerRef, renderWindow],
+  );
+
+  // Ledger INB-26: stable per-conversation callbacks so memoized bubbles skip
+  // re-render when unrelated state (queue chips, search, dialogs) changes.
+  const replyToMessage = useCallback(
+    (message: InboxMessage | null) => {
+      setReplySelection({ key: activeConversationKey, message });
+    },
+    [activeConversationKey],
+  );
+  const jumpToQuotedMessage = useCallback(
+    (quotedMessageId: string) => {
+      if (!jumpToMessage(quotedMessageId)) {
+        toast.warning(copy("quoteNotLoaded"));
+      }
+    },
+    [copy, jumpToMessage],
+  );
+
+  /**
+   * Ledger INB-25: one image file = one declared-or-sniffed type decision and
+   * one durable send effect. Extracted from the picker so multi-select can
+   * walk files sequentially without duplicating the sniffing rules.
+   */
+  const handleSelectedImageFile = useCallback(
+    async (file: File, quotedId: string | null) => {
+      const declaredType =
+        file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+      if (
+        declaredType &&
+        declaredType !== "application/octet-stream"
+      ) {
+        await sendImage(file, quotedId);
+        return;
+      }
+      try {
+        const buffer = await file.slice(0, 12).arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+        const ascii = (start: number, end: number) =>
+          String.fromCharCode(...bytes.slice(start, end));
+        let sniffedType = "";
+        if (
+          bytes.length >= 3 &&
+          bytes[0] === 0xff &&
+          bytes[1] === 0xd8 &&
+          bytes[2] === 0xff
+        ) {
+          sniffedType = "image/jpeg";
+        } else if (
+          bytes.length >= 8 &&
+          bytes[0] === 0x89 &&
+          ascii(1, 4) === "PNG" &&
+          bytes[4] === 0x0d &&
+          bytes[5] === 0x0a &&
+          bytes[6] === 0x1a &&
+          bytes[7] === 0x0a
+        ) {
+          sniffedType = "image/png";
+        } else if (
+          bytes.length >= 12 &&
+          ascii(0, 4) === "RIFF" &&
+          ascii(8, 12) === "WEBP"
+        ) {
+          sniffedType = "image/webp";
+        }
+        if (!sniffedType) {
+          await sendImage(file, quotedId);
+          return;
+        }
+        await sendImage(
+          new File([file], file.name, {
+            type: sniffedType,
+            lastModified: file.lastModified,
+          }),
+          quotedId,
+        );
+      } catch {
+        await sendImage(file, quotedId);
+      }
+    },
+    [sendImage],
+  );
+
+
+  const gotoThreadMatch = (delta: number) => {
+    if (threadMatchCount === 0) return;
+    const nextIndex = (safeThreadIndex + delta + threadMatchCount) % threadMatchCount;
+    setThreadSearchIndex(nextIndex);
+    const targetId = threadMatchIds[nextIndex];
+    if (targetId && !jumpToMessage(targetId)) {
+      toast.warning(copy("quoteNotLoaded"));
+    }
+  };
+
+  const messageIdSet = useMemo(
+    () => new Set(messages.map((message) => message.id)),
+    [messages],
+  );
+
+  // "New messages" boundary — index of the first message that was unread at
+  // open (captured before mark-read). Only rendered with read history above.
+  const dividerIndex =
+    activeChatInitialUnread > 0 &&
+    messages.length > activeChatInitialUnread &&
+    messages.length - activeChatInitialUnread >= 1
+      ? messages.length - activeChatInitialUnread
+      : -1;
+
+  // Auto-grow composer (WhatsApp-class): grows with content up to the CSS
+  // cap (~5 lines), resets on conversation switch via the value change.
+  useEffect(() => {
+    const element = replyTextareaRef.current;
+    if (!element) return;
+    element.style.height = "auto";
+    element.style.height = `${Math.min(element.scrollHeight, 128)}px`;
+  }, [replyText, activeConversationKey]);
 
   if (!activeChat) {
     return (
@@ -746,7 +1248,7 @@ export function InboxV3Thread({
     <section
       id="inbox-thread-pane"
       data-inbox-thread="active"
-      className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/[0.06]"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-muted/[0.06]"
     >
       <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border/60 bg-background/95 px-3 py-2 sm:px-4">
         <div className="flex min-w-0 items-center gap-2.5">
@@ -810,6 +1312,23 @@ export function InboxV3Thread({
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={copy("searchInChat")}
+                aria-pressed={threadSearchOpen}
+                onClick={() => setThreadSearchOpen((open) => !open)}
+              >
+                <Search className="size-4" aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={6}>
+              {copy("searchInChat")}
+            </TooltipContent>
+          </Tooltip>
           {canUpdateConversation ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -919,6 +1438,89 @@ export function InboxV3Thread({
         </div>
       </header>
 
+      {threadSearchOpen ? (
+        <div
+          role="search"
+          className="flex items-center gap-2 border-b border-border/60 bg-background/95 px-3 py-2 sm:px-4"
+        >
+          <Search
+            className="size-3.5 shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
+            value={threadSearchQuery}
+            autoFocus
+            onChange={(event) => {
+              setThreadSearchQuery(event.target.value);
+              setThreadSearchIndex(0);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                gotoThreadMatch(event.shiftKey ? -1 : 1);
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setThreadSearchOpen(false);
+                setThreadSearchQuery("");
+              }
+            }}
+            aria-label={copy("searchInChat")}
+            placeholder={copy("searchInChat")}
+            className="h-8 flex-1 bg-muted/20 text-[13px]"
+          />
+          {normalizedThreadQuery.length >= 2 ? (
+            threadMatchCount > 0 ? (
+              <span
+                aria-live="polite"
+                className="shrink-0 text-2xs tabular-nums text-muted-foreground"
+              >
+                {copy("searchPosition", {
+                  index: safeThreadIndex + 1,
+                  count: threadMatchCount,
+                })}
+              </span>
+            ) : (
+              <span className="shrink-0 text-2xs text-muted-foreground">
+                {copy("searchNoMatches")}
+              </span>
+            )
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={threadMatchCount === 0}
+            aria-label={copy("searchPrevious")}
+            onClick={() => gotoThreadMatch(-1)}
+          >
+            <ChevronUp className="size-4" aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={threadMatchCount === 0}
+            aria-label={copy("searchNext")}
+            onClick={() => gotoThreadMatch(1)}
+          >
+            <ChevronDown className="size-4" aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={copy("closeSearch")}
+            onClick={() => {
+              setThreadSearchOpen(false);
+              setThreadSearchQuery("");
+            }}
+          >
+            <X className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
+      ) : null}
+
       <ScrollArea
         className={cn(
           "min-h-0 flex-1",
@@ -931,7 +1533,7 @@ export function InboxV3Thread({
       >
         <div
           ref={messagesInnerRef}
-          className="mx-auto w-full max-w-[56rem] space-y-3 px-3 py-5 sm:px-6 lg:px-8"
+          className="mx-auto w-full max-w-[56rem] px-3 py-4 sm:px-6 lg:px-8"
           role="log"
           aria-live="polite"
           aria-label={copy("messages")}
@@ -951,23 +1553,108 @@ export function InboxV3Thread({
               {t("inbox.noMessages")}
             </div>
           ) : (
-            messages.map((message, index) => {
-              const previous = index > 0 ? messages[index - 1] : null;
+            <>
+              {historyHasMore && !loadingMessages ? (
+                <div
+                  className="flex justify-center py-2"
+                  data-inbox-load-older="true"
+                >
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    disabled={loadingOlderMessages}
+                    onClick={() => {
+                      void loadOlderMessages().then((ok) => {
+                        if (!ok) toast.warning(copy("loadEarlierFailed"));
+                      });
+                    }}
+                  >
+                    {loadingOlderMessages ? (
+                      <Loader2
+                        className="me-1.5 size-3.5 animate-spin"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <ChevronUp className="me-1.5 size-3.5" aria-hidden="true" />
+                    )}
+                    {loadingOlderMessages
+                      ? copy("loadingEarlier")
+                      : copy("loadEarlier")}
+                  </Button>
+                </div>
+              ) : null}
+              {!windowExhausted ? (
+                <div
+                  ref={renderWindowSentinelRef}
+                  aria-hidden="true"
+                  data-inbox-render-window="true"
+                  className="h-px"
+                />
+              ) : null}
+              {visibleMessages.map((message, index) => {
+              const previous =
+                index > 0 ? visibleMessages[index - 1] ?? null : null;
+              const next =
+                index < visibleMessages.length - 1
+                  ? visibleMessages[index + 1] ?? null
+                  : null;
               const showDay =
                 !previous ||
                 messageDayKey(previous.timestamp) !==
                   messageDayKey(message.timestamp);
+              const isActivity =
+                message.messageType === "activity" ||
+                message.direction === "system";
+              const prevInGroup = Boolean(
+                previous &&
+                  !isActivity &&
+                  previous.messageType !== "activity" &&
+                  previous.direction !== "system" &&
+                  previous.direction === message.direction &&
+                  !showDay &&
+                  message.timestamp - previous.timestamp <= GROUP_GAP_MS,
+              );
+              const nextInGroup = Boolean(
+                next &&
+                  !isActivity &&
+                  next.messageType !== "activity" &&
+                  next.direction !== "system" &&
+                  next.direction === message.direction &&
+                  messageDayKey(next.timestamp) ===
+                    messageDayKey(message.timestamp) &&
+                  next.timestamp - message.timestamp <= GROUP_GAP_MS,
+              );
+              const quotedId = message.quotedMessageId ?? null;
               return (
                 <Fragment key={message.id}>
                   {showDay ? (
                     <div
                       role="separator"
-                      className="flex items-center gap-3 py-2 text-2xs font-medium text-muted-foreground"
+                      className="mt-4 flex items-center gap-3 py-2 text-2xs font-medium text-muted-foreground"
                     >
                       <span className="h-px flex-1 bg-border/55" />
-                      <span>{messageDayLabel(message.timestamp, locale)}</span>
+                      <span>
+                        {messageDayLabel(message.timestamp, locale, copy)}
+                      </span>
                       <span className="h-px flex-1 bg-border/55" />
                     </div>
+                  ) : null}
+                  {index + visibleStart === dividerIndex ? (
+                    <button
+                      type="button"
+                      onClick={dismissUnreadDivider}
+                      aria-label={copy("newMessagesDivider")}
+                      title={copy("newMessagesDivider")}
+                      className="mt-3 flex w-full items-center gap-3 py-1 text-2xs font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span className="h-px flex-1 bg-primary/35" />
+                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5">
+                        {copy("newMessagesDivider")}
+                      </span>
+                      <span className="h-px flex-1 bg-primary/35" />
+                    </button>
                   ) : null}
                   <MessageBubble
                     message={message}
@@ -975,20 +1662,51 @@ export function InboxV3Thread({
                     t={t}
                     copy={copy}
                     candidate={selectedCandidate?.id === message.id}
-                    onChooseCandidate={() => onSelectCandidate(message.id)}
-                    onRetry={(entry) => void retryFailedMessage(entry)}
-                    onReply={(entry) => setReplyTarget(entry)}
+                    onChooseCandidate={onSelectCandidate}
+                    onRetry={retryFailedMessage}
+                    onReply={replyToMessage}
                     canInteract={canSend}
                     upload={uploads[message.id]}
                     onCancelUpload={cancelUpload}
+                    groupStart={!prevInGroup}
+                    groupEnd={!nextInGroup}
+                    highlighted={highlightedMessageId === message.id}
+                    quotedJumpable={Boolean(
+                      quotedId && messageIdSet.has(quotedId),
+                    )}
+                    onJumpToQuoted={
+                      quotedId ? jumpToQuotedMessage : undefined
+                    }
+                    searchQuery={
+                      threadSearchOpen ? threadSearchQuery : ""
+                    }
                   />
                 </Fragment>
               );
-            })
+              })}
+            </>
           )}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
+
+      {isAwayFromBottom && messages.length > 0 && !loadingMessages ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-20 z-10 flex justify-center">
+          <button
+            type="button"
+            onClick={scrollToLatestMessages}
+            aria-label={copy("scrollToLatest")}
+            className="pointer-events-auto relative inline-flex size-9 items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-lg outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ArrowDown className="size-4" aria-hidden="true" />
+            {missedMessageCount > 0 ? (
+              <span className="absolute -end-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 tabular-nums text-primary-foreground">
+                {missedMessageCount > 99 ? "99+" : missedMessageCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
+      ) : null}
 
       <footer className="border-t border-border/60 bg-background/98 px-3 py-2 sm:px-4">
         {canCompose ? (
@@ -1063,12 +1781,73 @@ export function InboxV3Thread({
                   </button>
                 </div>
               ) : null}
-              {voiceRecorder.state !== "idle" ? (
+              {voiceRecorder.state === "review" && voiceRecorder.review ? (
+                // Ledger INB-24: preview before sending — the finished take
+                // plays through the shared WhatsApp-grade player and only the
+                // explicit send decision enters the durable path.
                 <div
                   className="flex items-center gap-2 px-1 py-1"
+                  data-inbox-voice-review="true"
+                  role="group"
+                  aria-label={copy("voicePreviewTitle")}
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={copy("voiceCancelRecording")}
+                    data-inbox-voice-discard="true"
+                    onClick={voiceRecorder.discard}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </Button>
+                  <div className="min-w-0 flex-1">
+                    <p className="mb-0.5 truncate text-2xs text-muted-foreground">
+                      {copy("voicePreviewTitle")}
+                    </p>
+                    <VoiceNotePlayer
+                      src={voiceRecorder.review.url}
+                      label={copy("mediaAudio")}
+                      locale={locale}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    aria-label={copy("voiceStopAndSend")}
+                    data-inbox-voice-send="true"
+                    onClick={voiceRecorder.confirmSend}
+                  >
+                    <Check className="size-4" aria-hidden="true" />
+                  </Button>
+                </div>
+              ) : voiceRecorder.state !== "idle" ? (
+                <div
+                  className="flex items-center gap-2 px-1 py-1 transition-transform"
                   data-inbox-voice-recorder={voiceRecorder.state}
                   role="status"
                   aria-label={copy("voiceRecording")}
+                  style={{
+                    transform: `translateX(${slideTransform(slideDx)}px)`,
+                  }}
+                  onPointerDown={(event) => {
+                    if (event.button !== 0) return;
+                    slideStartRef.current = event.clientX;
+                    setSlideDx(0);
+                    setSlideArmed(false);
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                  }}
+                  onPointerMove={(event) => {
+                    if (slideStartRef.current === null) return;
+                    const dx = event.clientX - slideStartRef.current;
+                    setSlideDx(dx);
+                    setSlideArmed(decideSlideCancel(dx));
+                  }}
+                  onPointerUp={() => {
+                    if (slideArmed) voiceRecorder.cancel();
+                    resetSlide();
+                  }}
+                  onPointerCancel={resetSlide}
                 >
                   {voiceRecorder.state === "starting" ? (
                     <Loader2
@@ -1094,7 +1873,13 @@ export function InboxV3Thread({
                     {formatRecordingElapsed(voiceRecorder.elapsedMs)}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[12px] text-muted-foreground">
-                    {copy("voiceRecording")}
+                    {slideArmed
+                      ? copy("voiceSlideToCancel")
+                      : micHoldActive
+                        ? micHoldLocked
+                          ? copy("voiceLocked")
+                          : copy("voiceReleaseToPreview")
+                        : copy("voiceRecording")}
                   </span>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1104,96 +1889,68 @@ export function InboxV3Thread({
                         size="icon-sm"
                         aria-label={copy("voiceCancelRecording")}
                         data-inbox-voice-cancel="true"
+                        className={cn(
+                          slideArmed &&
+                            "bg-destructive/15 text-destructive hover:bg-destructive/20 hover:text-destructive",
+                        )}
                         onClick={voiceRecorder.cancel}
                       >
                         <Trash2 className="size-4" aria-hidden="true" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" sideOffset={6}>
-                      {copy("voiceCancelRecording")}
+                      {slideArmed
+                        ? copy("voiceSlideToCancel")
+                        : copy("voiceCancelRecording")}
                     </TooltipContent>
                   </Tooltip>
                   <Button
                     type="button"
                     size="icon"
-                    aria-label={copy("voiceStopAndSend")}
-                    data-inbox-voice-send="true"
+                    aria-label={copy("voiceFinishRecording")}
+                    data-inbox-voice-finish="true"
                     disabled={voiceRecorder.state !== "recording"}
-                    onClick={voiceRecorder.stopAndSend}
+                    onClick={voiceRecorder.finish}
                   >
                     <Check className="size-4" aria-hidden="true" />
                   </Button>
                 </div>
-              ) : (
-              <div className="flex items-end gap-2">
+              ) : null}
+              {/* The composer row stays mounted (hidden) while recording so
+                  the captured mic press keeps receiving pointer events after
+                  the mode swap; display:none also removes it from the tab
+                  order and the accessibility tree. */}
+              <div
+                className={
+                  voiceRecorder.state !== "idle"
+                    ? "hidden"
+                    : "flex items-end gap-2"
+                }
+                aria-hidden={voiceRecorder.state !== "idle" || undefined}
+              >
               <input
                 ref={imageInputRef}
                 type="file"
+                multiple
                 accept="image/jpeg,image/png,image/webp"
                 aria-label={copy("mediaImage")}
                 className="sr-only"
                 tabIndex={-1}
                 data-inbox-image-input="true"
                 onChange={(event) => {
-                  const file = event.currentTarget.files?.[0] ?? null;
+                  const files = Array.from(event.currentTarget.files ?? []);
                   event.currentTarget.value = "";
-                  if (!file) return;
+                  if (files.length === 0) return;
                   const quotedId = replyTarget?.id ?? null;
                   setReplyTarget(null);
-                  const declaredType =
-                    file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
-                  if (
-                    declaredType &&
-                    declaredType !== "application/octet-stream"
-                  ) {
-                    void sendImage(file, quotedId);
-                    return;
-                  }
-                  void file
-                    .slice(0, 12)
-                    .arrayBuffer()
-                    .then((buffer) => {
-                      const bytes = new Uint8Array(buffer);
-                      const ascii = (start: number, end: number) =>
-                        String.fromCharCode(...bytes.slice(start, end));
-                      let sniffedType = "";
-                      if (
-                        bytes.length >= 3 &&
-                        bytes[0] === 0xff &&
-                        bytes[1] === 0xd8 &&
-                        bytes[2] === 0xff
-                      ) {
-                        sniffedType = "image/jpeg";
-                      } else if (
-                        bytes.length >= 8 &&
-                        bytes[0] === 0x89 &&
-                        ascii(1, 4) === "PNG" &&
-                        bytes[4] === 0x0d &&
-                        bytes[5] === 0x0a &&
-                        bytes[6] === 0x1a &&
-                        bytes[7] === 0x0a
-                      ) {
-                        sniffedType = "image/png";
-                      } else if (
-                        bytes.length >= 12 &&
-                        ascii(0, 4) === "RIFF" &&
-                        ascii(8, 12) === "WEBP"
-                      ) {
-                        sniffedType = "image/webp";
-                      }
-                      if (!sniffedType) {
-                        void sendImage(file, quotedId);
-                        return;
-                      }
-                      void sendImage(
-                        new File([file], file.name, {
-                          type: sniffedType,
-                          lastModified: file.lastModified,
-                        }),
-                        quotedId,
-                      );
-                    })
-                    .catch(() => void sendImage(file, quotedId));
+                  // Ledger INB-25: multi-image selection sends sequentially so
+                  // each file keeps its own durable outbox effect and upload
+                  // progress (WhatsApp-parity order guarantee).
+                  void (async () => {
+                    for (const file of files) {
+                      await handleSelectedImageFile(file, quotedId);
+                    }
+                  })();
                 }}
               />
               <input
@@ -1243,18 +2000,25 @@ export function InboxV3Thread({
               <input
                 ref={documentInputRef}
                 type="file"
+                multiple
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/plain,text/csv"
                 aria-label={copy("mediaDocument")}
                 className="sr-only"
                 tabIndex={-1}
                 data-inbox-document-input="true"
                 onChange={(event) => {
-                  const file = event.currentTarget.files?.[0] ?? null;
+                  const files = Array.from(event.currentTarget.files ?? []);
                   event.currentTarget.value = "";
-                  if (!file) return;
+                  if (files.length === 0) return;
                   const quotedId = replyTarget?.id ?? null;
                   setReplyTarget(null);
-                  void sendDocument(file, quotedId);
+                  // Ledger INB-25: sequential document sends, one durable
+                  // effect per file.
+                  void (async () => {
+                    for (const file of files) {
+                      await sendDocument(file, quotedId);
+                    }
+                  })();
                 }}
               />
               <input
@@ -1323,19 +2087,27 @@ export function InboxV3Thread({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={
-                      sending || !canSend || voiceRecorder.state !== "idle"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={sending || !canSend}
+                  aria-label={copy("voiceRecord")}
+                  data-inbox-audio-picker="true"
+                  onPointerDown={handleMicPointerDown}
+                  onPointerMove={handleMicPointerMove}
+                  onPointerUp={() => endMicHold(true)}
+                  onPointerCancel={() => endMicHold(false)}
+                  onClick={() => {
+                    if (suppressMicClickRef.current) {
+                      suppressMicClickRef.current = false;
+                      return;
                     }
-                    aria-label={copy("voiceRecord")}
-                    data-inbox-audio-picker="true"
-                    onClick={() => {
+                    if (voiceRecorder.state === "idle") {
                       void voiceRecorder.start();
-                    }}
-                  >
+                    }
+                  }}
+                >
                     <Mic className="size-4" aria-hidden="true" />
                   </Button>
                 </TooltipTrigger>
@@ -1343,6 +2115,12 @@ export function InboxV3Thread({
                   {copy("voiceRecord")}
                 </TooltipContent>
               </Tooltip>
+              <EmojiPicker
+                disabled={sending || !canSend}
+                onSelect={(emoji) =>
+                  setReplyText((current) => `${current}${emoji}`)
+                }
+              />
               <CannedResponsePicker
                 disabled={sending}
                 onSelect={(text) =>
@@ -1352,6 +2130,7 @@ export function InboxV3Thread({
                 }
               />
               <Textarea
+                ref={replyTextareaRef}
                 dir={
                   replyText.trim()
                     ? "auto"
@@ -1393,7 +2172,6 @@ export function InboxV3Thread({
                 )}
               </Button>
               </div>
-              )}
             </div>
           </div>
         ) : (
@@ -1416,6 +2194,21 @@ export function InboxV3Thread({
           </div>
         ) : null}
       </footer>
+
+      {/* Ledger INB-29: ambiguous retry is a deliberate decision, surfaced as
+          an accessible AlertDialog instead of window.confirm. */}
+      <ConfirmDialog
+        open={ambiguousRetryMessage !== null}
+        onOpenChange={(open) => {
+          if (!open) resolveAmbiguousRetry(false);
+        }}
+        title={t("inbox.whatsappAmbiguous")}
+        description={t("inbox.whatsappAmbiguousRetryWarning")}
+        destructive
+        onConfirm={() => {
+          resolveAmbiguousRetry(true);
+        }}
+      />
     </section>
   );
 }

@@ -20,12 +20,17 @@ describe("WhatsApp outbound voice source boundary", () => {
       "MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024",
     );
     expect(workspace).toContain('"/api/whatsapp/send-voice"');
-    expect(workspace).toContain('form.set("audio", file');
+        // Ledger INB-28 disposition: the four duplicated send bodies collapsed
+    // into one factory; the per-media form field lives in the spec table
+    // (fieldName) and the shared call site is form.set(spec.fieldName, file…).
+    expect(workspace).toContain("form.set(spec.fieldName, file");
+    expect(workspace).toContain('fieldName: "audio"');
     expect(workspace).toContain("void monitorWhatsAppEffect(");
   });
 
   it("records voice notes in the composer and hands them to the durable send path", () => {
     const recorder = source("src/components/inbox/use-voice-recorder.ts");
+    const gestures = source("src/components/inbox/voice-recording-gestures.ts");
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
     const config = source("src-tauri/tauri.conf.json");
 
@@ -41,14 +46,40 @@ describe("WhatsApp outbound voice source boundary", () => {
     expect(recorder).toContain("getUserMedia");
     expect(recorder).toContain("MAX_RECORDING_MS");
     expect(recorder).toContain("voiceNoteFileName");
+    // Ledger INB-24: the take first lands in the preview surface (blob URL);
+    // the container remux happens only when the seller confirms the send.
+    expect(recorder).toContain("URL.createObjectURL");
+    expect(recorder).toContain('setState("review")');
+    expect(recorder).toContain("confirmSend");
+    expect(recorder).toContain("discard");
+    // The mic button starts the recorder; it no longer opens the file dialog.
     expect(thread).toContain("void voiceRecorder.start()");
-    expect(thread).toContain("onClick={voiceRecorder.stopAndSend}");
+    expect(thread).toContain("void voiceRecorder.start();");
+    // Ledger INB-24 disposition: the recording-state check button finishes
+    // into the preview and the review send button (confirmSend) enters the
+    // durable path — the direct `stopAndSend` onClick pin is superseded.
+    expect(thread).toContain("onClick={voiceRecorder.confirmSend}");
+    expect(thread).toContain("onClick={voiceRecorder.finish}");
     expect(thread).toContain("onClick={voiceRecorder.cancel}");
+    expect(thread).toContain("onClick={voiceRecorder.discard}");
     expect(thread).toContain('data-inbox-voice-recorder={voiceRecorder.state}');
     expect(thread).toContain('data-inbox-voice-send="true"');
     expect(thread).toContain('data-inbox-voice-cancel="true"');
-    // The mic button starts the recorder; it no longer opens the file dialog.
-    expect(thread).toContain("void voiceRecorder.start();");
+    expect(thread).toContain('data-inbox-voice-finish="true"');
+    expect(thread).toContain('data-inbox-voice-discard="true"');
+    expect(thread).toContain('data-inbox-voice-review="true"');
+    // WhatsApp gestures: hold-to-record with slide-up lock, slide-to-cancel
+    // and preview-before-send, decided by the pure gesture module.
+    expect(gestures).toContain("VOICE_LOCK_RISE_PX = 48");
+    expect(gestures).toContain("VOICE_SLIDE_CANCEL_PX = 96");
+    expect(gestures).toContain("VOICE_TAP_MAX_MS = 500");
+    expect(thread).toContain("decideRecordingPointerUp");
+    expect(thread).toContain("decideSlideCancel");
+    expect(thread).toContain("setPointerCapture");
+    // The preview plays through the shared WhatsApp-grade player (R5-e), not
+    // a bare <audio controls>.
+    expect(thread).toContain("<VoiceNotePlayer");
+    expect(thread).not.toContain("<audio controls");
     expect(thread).not.toContain(
       "data-inbox-audio-picker=\"true\"\n                    onClick={() => audioInputRef.current?.click()}",
     );

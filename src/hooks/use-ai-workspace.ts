@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
+  AiActionDecisionView,
   AiActionProposalHandle,
+  AiActionProposalInboxHandle,
   AiActionProposalProjection,
   AiMessageView,
   AiSessionSummary,
@@ -12,6 +14,7 @@ import type {
   AiWorkspaceError,
   AiWorkspaceErrorCode,
 } from "@/components/ai/ai-workspace-types";
+import { parseTurnSignal } from "@/components/ai/ai-workspace-types";
 import { useI18n } from "@/hooks/use-i18n";
 import {
   getAiWorkspaceCopy,
@@ -69,6 +72,7 @@ function errorCode(value: unknown, fallback: AiWorkspaceErrorCode): AiWorkspaceE
     "AI_PROVIDER_UNAVAILABLE",
     "AI_SESSION_LOAD_FAILED",
     "AI_SESSION_CREATE_FAILED",
+    "AI_STREAM_TIMEOUT",
     "AI_INTERNAL_ERROR",
   ];
   return {
@@ -126,6 +130,13 @@ export function useAiWorkspace() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<AiMessageView[]>([]);
   const [proposals, setProposals] = useState<AiActionProposalHandle[]>([]);
+  const [inbox, setInbox] = useState<AiActionProposalInboxHandle[]>([]);
+  const [inboxDecisions, setInboxDecisions] = useState<AiActionDecisionView[]>([]);
+  const [inboxLoading, setInboxLoading] = useState(false);
+  const [inboxError, setInboxError] = useState(false);
+  const [historyCursor, setHistoryCursor] = useState<string | null>(null);
+  const [historyCapped, setHistoryCapped] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [setup, setSetup] = useState<AiSetupState | null>(null);
   const [setupError, setSetupError] = useState(false);
   const [actionHistoryError, setActionHistoryError] = useState(false);
@@ -136,12 +147,15 @@ export function useAiWorkspace() {
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [approvingProposalId, setApprovingProposalId] = useState<string | null>(null);
+  const [rejectingProposalId, setRejectingProposalId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [error, setError] = useState<AiWorkspaceError | null>(null);
 
   const streamAbortRef = useRef<AbortController | null>(null);
   const conversationAbortRef = useRef<AbortController | null>(null);
   const conversationGenerationRef = useRef(0);
   const toolSequenceRef = useRef(0);
+  const historyGenerationRef = useRef(0);
 
   const activeSession = useMemo(
     () => sessions.find((session) => session.id === activeSessionId) ?? null,
@@ -195,26 +209,56 @@ export function useAiWorkspace() {
     [],
   );
 
+  /**
+   * Ledger AI-19/AI-20: shop-wide proposal inbox — pending proposals across
+   * ALL sessions plus the recent approve/deny/execution timeline.
+   */
+  const loadInbox = useCallback(async (signal?: AbortSignal) => {
+    setInboxLoading(true);
+    try {
+      const response = await fetch("/api/ai/actions", {
+        cache: "no-store",
+        signal,
+      });
+      if (!response.ok) throw new Error(`inbox:${response.status}`);
+      const data = (await response.json()) as {
+        pending?: AiActionProposalInboxHandle[];
+        recent?: AiActionDecisionView[];
+      };
+      setInbox(Array.isArray(data.pending) ? data.pending : []);
+      setInboxDecisions(Array.isArray(data.recent) ? data.recent : []);
+      setInboxError(false);
+    } catch (caught) {
+      if (caught instanceof DOMException && caught.name === "AbortError") return;
+      setInboxError(true);
+    } finally {
+      setInboxLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
       void Promise.all([
         loadSetup(controller.signal),
         loadSessions({ signal: controller.signal }),
+        loadInbox(controller.signal),
       ]);
     }, 0);
     return () => {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [loadSessions, loadSetup]);
+  }, [loadInbox, loadSessions, loadSetup]);
 
   const loadConversation = useCallback(async (sessionId: string) => {
     conversationAbortRef.current?.abort();
     const controller = new AbortController();
     conversationAbortRef.current = controller;
     const generation = ++conversationGenerationRef.current;
+    historyGenerationRef.current = generation;
     setLoadingConversation(true);
+    setEditingMessageId(null);
     try {
       const [messagesResponse, actionsResponse] = await Promise.all([
         fetch(`/api/ai/sessions/${encodeURIComponent(sessionId)}/messages`, {
@@ -241,6 +285,8 @@ export function useAiWorkspace() {
             createdAt: string;
           }>;
         };
+        hasMore?: boolean;
+        nextCursor?: string | null;
       };
       setMessages(
         (messageData.session?.messages ?? []).map(
@@ -253,6 +299,10 @@ export function useAiWorkspace() {
           }),
         ),
       );
+      // Ledger AI-08: the recent window is a cursor page — remember whether
+      // older history exists so the canvas can offer an honest "load earlier".
+      setHistoryCapped(messageData.hasMore === true);
+      setHistoryCursor(messageData.nextCursor ?? null);
 
       if (actionsResponse.ok) {
         const actionData = (await actionsResponse.json()) as {
@@ -288,6 +338,56 @@ export function useAiWorkspace() {
     return () => window.clearTimeout(timeoutId);
   }, [activeSessionId, loadConversation]);
 
+  /** Ledger AI-08: prepend the next older cursor page of durable history. */
+  const loadOlderMessages = useCallback(async () => {
+    const sessionId = activeSessionId;
+    const cursor = historyCursor;
+    if (!sessionId || !cursor || loadingOlderMessages) return false;
+    const generation = historyGenerationRef.current;
+    setLoadingOlderMessages(true);
+    try {
+      const response = await fetch(
+        `/api/ai/sessions/${encodeURIComponent(sessionId)}/messages?cursor=${encodeURIComponent(cursor)}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) throw new Error(`older:${response.status}`);
+      const data = (await response.json()) as {
+        session?: {
+          messages?: Array<{
+            id: string;
+            role: string;
+            content: string;
+            toolCalls: string | null;
+            createdAt: string;
+          }>;
+        };
+        hasMore?: boolean;
+        nextCursor?: string | null;
+      };
+      if (generation !== historyGenerationRef.current) return false;
+      const older = (data.session?.messages ?? []).map(
+        (message): AiMessageView => ({
+          id: message.id,
+          role: message.role === "assistant" ? "assistant" : "user",
+          content: message.content,
+          createdAt: message.createdAt,
+          toolCalls: parseToolCalls(message.id, message.toolCalls),
+        }),
+      );
+      if (older.length > 0) {
+        setMessages((current) => [...older, ...current]);
+      }
+      setHistoryCapped(data.hasMore === true);
+      setHistoryCursor(data.nextCursor ?? null);
+      return true;
+    } catch {
+      setError({ code: "AI_SESSION_LOAD_FAILED" });
+      return false;
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  }, [activeSessionId, historyCursor, loadingOlderMessages]);
+
   useEffect(
     () => () => {
       conversationAbortRef.current?.abort();
@@ -304,6 +404,9 @@ export function useAiWorkspace() {
         setMessages([]);
         setProposals([]);
         setActionHistoryError(false);
+        setHistoryCapped(false);
+        setHistoryCursor(null);
+        setEditingMessageId(null);
       }
       setActiveSessionId(sessionId);
     },
@@ -349,6 +452,46 @@ export function useAiWorkspace() {
     );
   }, []);
 
+  // Ledger AI-13: one durable quality row per assistant answer. Optimistic
+  // on the live view; the opposite thumb overwrites, the active thumb
+  // deletes ("none"). Failures roll the optimistic state back honestly.
+  const sendFeedback = useCallback(
+    async (messageId: string, value: "up" | "down" | "none") => {
+      const sessionId = activeSessionId;
+      if (!sessionId) return false;
+      const previous = messages.find(
+        (message) => message.id === messageId,
+      )?.feedback;
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === messageId
+            ? { ...message, feedback: value === "none" ? null : value }
+            : message,
+        ),
+      );
+      try {
+        const response = await fetch(
+          `/api/ai/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/feedback`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ value }),
+          },
+        );
+        if (!response.ok) throw new Error(String(response.status));
+        return true;
+      } catch {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === messageId ? { ...message, feedback: previous ?? null } : message,
+          ),
+        );
+        return false;
+      }
+    },
+    [activeSessionId, messages],
+  );
+
   const send = useCallback(
     async (rawMessage: string) => {
       const userMessage = rawMessage.trim();
@@ -390,6 +533,19 @@ export function useAiWorkspace() {
       streamAbortRef.current?.abort();
       streamAbortRef.current = controller;
       let delivered = false;
+      // Ledger AI-18: a hung SSE stream must never leave an infinite spinner.
+      // A watchdog aborts after ~45s without any stream activity; the abort
+      // rides the existing stop path, so the server's persist-on-stop logic
+      // (AI-04) keeps the partial answer and the UI shows recoverable state.
+      const STREAM_INACTIVITY_TIMEOUT_MS = 45_000;
+      let lastActivityAt = Date.now();
+      let streamTimedOut = false;
+      const streamWatchdogId = window.setInterval(() => {
+        if (Date.now() - lastActivityAt > STREAM_INACTIVITY_TIMEOUT_MS) {
+          streamTimedOut = true;
+          controller.abort();
+        }
+      }, 5_000);
 
       try {
         const response = await fetch(
@@ -413,6 +569,7 @@ export function useAiWorkspace() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          lastActivityAt = Date.now();
           buffer += decoder.decode(value, { stream: true });
           let separator = buffer.indexOf("\n\n");
           while (separator >= 0) {
@@ -432,7 +589,19 @@ export function useAiWorkspace() {
                 payload = null;
               }
               if (payload) {
-                if (
+                if (eventType === "user_persisted" && typeof payload.id === "string") {
+                  // Ledger AI-07/AI-15: swap the optimistic local user id for
+                  // the durable row id so regenerate/edit truncation targets
+                  // a real persisted message.
+                  const persistedUserId = payload.id;
+                  setMessages((current) =>
+                    current.map((message) =>
+                      message.id === userId
+                        ? { ...message, id: persistedUserId }
+                        : message,
+                    ),
+                  );
+                } else if (
                   eventType === "text_delta" &&
                   typeof payload.text === "string"
                 ) {
@@ -513,6 +682,10 @@ export function useAiWorkspace() {
                   typeof payload.response === "string"
                 ) {
                   delivered = Boolean(payload.response) || delivered;
+                  // Ledger AI-26: keep the provider's own turn signal when
+                  // present — parseTurnSignal drops anything unshaped, so no
+                  // fabricated or malformed value ever reaches the UI.
+                  const signal = parseTurnSignal(payload.signal);
                   setMessages((current) =>
                     current.map((message) =>
                       message.id === assistantId
@@ -520,6 +693,7 @@ export function useAiWorkspace() {
                             ...message,
                             content: payload.response as string,
                             streaming: false,
+                            signal,
                           }
                         : message,
                     ),
@@ -565,6 +739,18 @@ export function useAiWorkspace() {
         return delivered;
       } catch (caught) {
         if (caught instanceof DOMException && caught.name === "AbortError") {
+          if (streamTimedOut) {
+            // Ledger AI-18: timeout is recoverable — the partial answer was
+            // persisted server-side via the same path as a manual stop.
+            setError({ code: "AI_STREAM_TIMEOUT" });
+            setMessages((current) =>
+              current.map((message) =>
+                message.id === assistantId
+                  ? { ...message, streaming: false, interrupted: true }
+                  : message,
+              ),
+            );
+          }
           return delivered;
         }
         if (caught && typeof caught === "object" && "code" in caught) {
@@ -581,6 +767,7 @@ export function useAiWorkspace() {
         );
         return delivered;
       } finally {
+        window.clearInterval(streamWatchdogId);
         if (streamAbortRef.current === controller) streamAbortRef.current = null;
         setSending(false);
       }
@@ -606,14 +793,104 @@ export function useAiWorkspace() {
     activeSessionId !== null;
 
   /**
-   * Re-send the last seller prompt as a new exchange: a fresh user turn plus
-   * a new streamed assistant reply append to the conversation (durable
-   * history keeps the earlier attempt intact).
+   * Ledger AI-07/AI-15: server-authoritative truncation of the conversation
+   * tail after (and, when re-sending, including) one user message. The client
+   * state is updated optimistically and rolled back if the endpoint refuses.
+   */
+  const truncateAfter = useCallback(
+    async (sessionId: string, messageId: string, includeMessage: boolean) => {
+      const response = await fetch(
+        `/api/ai/sessions/${encodeURIComponent(sessionId)}/messages/truncate-after`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ afterMessageId: messageId, includeMessage }),
+        },
+      ).catch(() => null);
+      return Boolean(response?.ok);
+    },
+    [],
+  );
+
+  /**
+   * Regenerate replaces the trailing exchange IN PLACE (ledger AI-07): the
+   * previous answer — and the user turn that triggered it — are truncated on
+   * the server, then the same prompt is re-sent through the established
+   * stream path as a fresh exchange.
    */
   const regenerate = useCallback(async () => {
     if (!canRegenerate || !lastUserPrompt) return false;
+    const sessionId = activeSessionId;
+    if (!sessionId) return false;
+    let lastUserIndex = -1;
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (messages[i]?.role === "user") {
+        lastUserIndex = i;
+        break;
+      }
+    }
+    const target = lastUserIndex >= 0 ? messages[lastUserIndex] : null;
+    if (!target) return false;
+    const snapshot = messages;
+    setMessages(messages.slice(0, lastUserIndex));
+    const truncated = await truncateAfter(sessionId, target.id, true);
+    if (!truncated) {
+      setMessages(snapshot);
+      setError({ code: "AI_INTERNAL_ERROR" });
+      return false;
+    }
     return send(lastUserPrompt);
-  }, [canRegenerate, lastUserPrompt, send]);
+  }, [
+    activeSessionId,
+    canRegenerate,
+    lastUserPrompt,
+    messages,
+    send,
+    truncateAfter,
+  ]);
+
+  /** Ledger AI-15: mark a user message as being edited (composer prefill). */
+  const beginEditMessage = useCallback(
+    (messageId: string) => {
+      if (sending || loadingConversation || setup?.ready !== true) return;
+      setEditingMessageId(messageId);
+    },
+    [loadingConversation, sending, setup?.ready],
+  );
+
+  const cancelEditMessage = useCallback(() => {
+    setEditingMessageId(null);
+  }, []);
+
+  /**
+   * Ledger AI-15: resend an edited earlier user message — truncates that
+   * message and everything after it on the server, then streams the edited
+   * text as a fresh exchange. Optimistic like regenerate, with rollback.
+   */
+  const editAndResend = useCallback(
+    async (messageId: string, rawContent: string) => {
+      const content = rawContent.trim();
+      const sessionId = activeSessionId;
+      if (!content || !sessionId || sending || setup?.ready !== true) {
+        return false;
+      }
+      const targetIndex = messages.findIndex(
+        (message) => message.id === messageId && message.role === "user",
+      );
+      if (targetIndex < 0) return false;
+      const snapshot = messages;
+      setEditingMessageId(null);
+      setMessages(messages.slice(0, targetIndex));
+      const truncated = await truncateAfter(sessionId, messageId, true);
+      if (!truncated) {
+        setMessages(snapshot);
+        setError({ code: "AI_INTERNAL_ERROR" });
+        return false;
+      }
+      return send(content);
+    },
+    [activeSessionId, messages, send, sending, setup?.ready, truncateAfter],
+  );
 
   const renameSession = useCallback(async (sessionId: string, title: string) => {
     const trimmed = title.trim().slice(0, 160);
@@ -706,10 +983,19 @@ export function useAiWorkspace() {
           );
         }
         const proposal = data.proposal;
-        setProposals((current) =>
-          mergeProposal(current, { ...handle, proposal }),
+        const foreignSessionId = (handle as { sessionId?: string }).sessionId;
+        if (!foreignSessionId || foreignSessionId === activeSessionId) {
+          setProposals((current) =>
+            mergeProposal(current, { ...handle, proposal }),
+          );
+        }
+        // Ledger AI-19: the approved proposal leaves the shop-wide inbox.
+        setInbox((current) =>
+          current.filter((entry) => entry.proposal.id !== handle.proposal.id),
         );
         setActionHistoryError(false);
+        // Ledger AI-19: the shop-wide inbox reflects the decision too.
+        void loadInbox();
         return true;
       } catch (caught) {
         const response = await fetch(
@@ -729,15 +1015,55 @@ export function useAiWorkspace() {
         setApprovingProposalId(null);
       }
     },
-    [approvingProposalId],
+    [activeSessionId, approvingProposalId, loadInbox],
+  );
+
+  /** Ledger AI-03: one-click deny — terminal, never executes. */
+  const rejectProposal = useCallback(
+    async (handle: AiActionProposalHandle) => {
+      if (rejectingProposalId) return false;
+      setRejectingProposalId(handle.proposal.id);
+      try {
+        const response = await fetch(
+          `/api/ai/actions/${encodeURIComponent(handle.proposal.id)}/reject`,
+          { method: "POST" },
+        );
+        if (!response.ok) throw new Error(`reject:${response.status}`);
+        // Terminal locally: drop it from the live queue (history keeps the
+        // row server-side via /actions).
+        setProposals((current) =>
+          current.filter((entry) => entry.proposal.id !== handle.proposal.id),
+        );
+        // Ledger AI-19: drop it from the cross-session inbox too.
+        setInbox((current) =>
+          current.filter((entry) => entry.proposal.id !== handle.proposal.id),
+        );
+        void loadInbox();
+        return true;
+      } catch {
+        const refreshed = await fetch(
+          `/api/ai/actions/${encodeURIComponent(handle.proposal.id)}`,
+          { cache: "no-store" },
+        )
+          .then((response) => (response.ok ? response.json() : null))
+          .catch(() => null);
+        if (refreshed) {
+          setProposals((current) => mergeProposal(current, refreshed as AiActionProposalHandle));
+        }
+        setError({ code: "AI_INTERNAL_ERROR" });
+        return false;
+      } finally {
+        setRejectingProposalId(null);
+      }
+    },
+    [loadInbox, rejectingProposalId],
   );
 
   const retry = useCallback(async () => {
     setError(null);
-    await Promise.all([loadSetup(), loadSessions()]);
+    await Promise.all([loadSetup(), loadSessions(), loadInbox()]);
     if (activeSessionId) await loadConversation(activeSessionId);
-  }, [activeSessionId, loadConversation, loadSessions, loadSetup]);
-
+  }, [activeSessionId, loadConversation, loadInbox, loadSessions, loadSetup]);
   return {
     locale,
     copy,
@@ -746,6 +1072,18 @@ export function useAiWorkspace() {
     activeSessionId,
     messages,
     proposals,
+    inbox,
+    inboxDecisions,
+    inboxLoading,
+    inboxError,
+    refreshInbox: loadInbox,
+    historyCapped,
+    loadingOlderMessages,
+    loadOlderMessages,
+    editingMessageId,
+    beginEditMessage,
+    cancelEditMessage,
+    editAndResend,
     setup,
     setupError,
     actionHistoryError,
@@ -754,6 +1092,7 @@ export function useAiWorkspace() {
     creatingSession,
     sending,
     approvingProposalId,
+    rejectingProposalId,
     renamingSessionId,
     deletingSessionId,
     error,
@@ -765,7 +1104,9 @@ export function useAiWorkspace() {
     regenerate,
     renameSession,
     deleteSession,
+    sendFeedback,
     approveProposal,
+    rejectProposal,
     retry,
     refreshSetup: loadSetup,
   };

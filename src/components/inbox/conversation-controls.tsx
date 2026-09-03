@@ -49,6 +49,8 @@ export type ConversationPriority = "urgent" | "high" | "medium" | "low";
 export interface ConversationWorkflowState {
   status: ConversationStatus;
   assigneeId: string | null;
+  /** Team-directory display name for the assignee (INB-20); null when unknown. */
+  assigneeName?: string | null;
   assignmentVersion: number;
   priority: ConversationPriority | null;
   labels: string[] | null;
@@ -82,6 +84,8 @@ export function StatusControl({
   const { t } = useI18n();
   const [status, setStatus] = useState<ConversationStatus>(initialStatus);
   const [snoozeOpen, setSnoozeOpen] = useState(false);
+  const [customSnooze, setCustomSnooze] = useState("");
+  const [customSnoozeError, setCustomSnoozeError] = useState(false);
 
   const change = useCallback(
     async (newStatus: ConversationStatus, snoozedUntil?: string) => {
@@ -179,6 +183,46 @@ export function StatusControl({
                 {preset.label}
               </Button>
             ))}
+          </div>
+          <div className="border-t border-border/60 pt-3">
+            <label
+              htmlFor="snooze-custom-datetime"
+              className="text-xs font-medium text-muted-foreground"
+            >
+              {t("inbox.snooze.custom")}
+            </label>
+            <div className="mt-1.5 flex items-center gap-2">
+              <Input
+                id="snooze-custom-datetime"
+                type="datetime-local"
+                value={customSnooze}
+                onChange={(event) => {
+                  setCustomSnooze(event.target.value);
+                  setCustomSnoozeError(false);
+                }}
+                className="h-9 text-xs"
+              />
+              <Button
+                variant="outline"
+                disabled={!customSnooze}
+                onClick={() => {
+                  const when = new Date(customSnooze);
+                  if (Number.isNaN(when.getTime()) || when.getTime() <= Date.now()) {
+                    setCustomSnoozeError(true);
+                    return;
+                  }
+                  setSnoozeOpen(false);
+                  void change("snoozed", when.toISOString());
+                }}
+              >
+                {t("inbox.snooze.confirm")}
+              </Button>
+            </div>
+            {customSnoozeError ? (
+              <p className="mt-1.5 text-2xs text-destructive">
+                {t("inbox.snooze.futureDate")}
+              </p>
+            ) : null}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setSnoozeOpen(false)}>
@@ -305,57 +349,6 @@ type AssignmentAuthority = {
   error?: string;
 };
 
-const ASSIGNMENT_COPY = {
-  en: {
-    unassigned: "Unassigned",
-    owner: "Workspace owner",
-    loading: "Loading assignment…",
-    loadError: "Assignment authority could not be loaded.",
-    refresh: "Refresh",
-    claim: "Claim conversation",
-    release: "Release my assignment",
-    assign: "Assign or hand over",
-    remove: "Remove assignment",
-    noTargets: "No active members are available for this shop.",
-    conflict: "Assignment changed elsewhere. The latest state was loaded.",
-    saveError: "The assignment could not be saved.",
-    manager: "Manager",
-    operator: "Operator",
-  },
-  fr: {
-    unassigned: "Non attribuée",
-    owner: "Propriétaire de l’espace",
-    loading: "Chargement de l’attribution…",
-    loadError: "Impossible de charger l’autorité d’attribution.",
-    refresh: "Actualiser",
-    claim: "Prendre la conversation",
-    release: "Libérer mon attribution",
-    assign: "Attribuer ou transférer",
-    remove: "Retirer l’attribution",
-    noTargets: "Aucun membre actif n’est disponible pour cette boutique.",
-    conflict: "L’attribution a changé ailleurs. Le dernier état a été chargé.",
-    saveError: "Impossible d’enregistrer l’attribution.",
-    manager: "Responsable",
-    operator: "Opérateur",
-  },
-  ar: {
-    unassigned: "غير مسندة",
-    owner: "مالك مساحة العمل",
-    loading: "جارٍ تحميل الإسناد…",
-    loadError: "تعذر تحميل صلاحية الإسناد.",
-    refresh: "تحديث",
-    claim: "استلام المحادثة",
-    release: "تحرير الإسناد الخاص بي",
-    assign: "إسناد أو تسليم",
-    remove: "إزالة الإسناد",
-    noTargets: "لا يوجد أعضاء نشطون متاحون لهذا المتجر.",
-    conflict: "تغيّر الإسناد في مكان آخر. تم تحميل أحدث حالة.",
-    saveError: "تعذر حفظ الإسناد.",
-    manager: "مدير",
-    operator: "مشغّل",
-  },
-} as const;
-
 function shortMemberId(value: string): string {
   return value.length <= 12 ? value : `…${value.slice(-12)}`;
 }
@@ -371,8 +364,7 @@ export function AssigneeControl({
   initialVersion: number;
   onUpdated?: (assigneeId: string | null, version: number) => void;
 }) {
-  const { locale } = useI18n();
-  const copy = ASSIGNMENT_COPY[locale];
+  const { t } = useI18n();
   const [assigneeId, setAssigneeId] = useState<string | null>(initialAssignee);
   const [version, setVersion] = useState(initialVersion);
   const [authority, setAuthority] = useState<
@@ -396,17 +388,17 @@ export function AssigneeControl({
         { cache: "no-store" },
       );
       const body = (await response.json()) as AssignmentAuthority;
-      if (!response.ok) throw new Error(body.error ?? copy.loadError);
+      if (!response.ok) throw new Error(body.error ?? t("inbox.assignment.loadError"));
       setAssigneeId(body.assignment.assigneeId);
       setVersion(body.assignment.version);
       setAuthority(body.currentActor);
       setMembers(body.assignableMembers);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.loadError);
+      setError(caught instanceof Error ? caught.message : t("inbox.assignment.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [conversationId, copy.loadError]);
+  }, [conversationId, t]);
 
   useEffect(() => {
     requestRef.current = null;
@@ -423,17 +415,17 @@ export function AssigneeControl({
     [members],
   );
   const assigneeLabel = useMemo(() => {
-    if (!assigneeId) return copy.unassigned;
+    if (!assigneeId) return t("inbox.assignment.unassigned");
     const member = memberById.get(assigneeId);
     if (member?.displayName) return member.displayName;
     if (
       authority?.memberId === assigneeId &&
       authority.role === "owner"
     ) {
-      return copy.owner;
+      return t("inbox.assignment.owner");
     }
     return shortMemberId(assigneeId);
-  }, [assigneeId, authority, copy.owner, copy.unassigned, memberById]);
+  }, [assigneeId, authority, t, memberById]);
 
   const canClaim =
     authority?.allowedActions.includes("conversations.claim") ?? false;
@@ -492,11 +484,11 @@ export function AssigneeControl({
         if (response.status === 409) {
           requestRef.current = null;
           await hydrate();
-          throw new Error(copy.conflict);
+          throw new Error(t("inbox.assignment.conflict"));
         }
-        throw new Error(body.error ?? copy.saveError);
+        throw new Error(body.error ?? t("inbox.assignment.saveError"));
       }
-      if (!body.assignment) throw new Error(copy.saveError);
+      if (!body.assignment) throw new Error(t("inbox.assignment.saveError"));
       const nextAssigneeId = body.assignment.assignee?.memberId ?? null;
       setAssigneeId(nextAssigneeId);
       setVersion(body.assignment.version);
@@ -504,7 +496,7 @@ export function AssigneeControl({
       setOpen(false);
       onUpdated?.(nextAssigneeId, body.assignment.version);
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : copy.saveError;
+      const message = caught instanceof Error ? caught.message : t("inbox.assignment.saveError");
       setError(message);
       toast.error(message);
     } finally {
@@ -533,7 +525,7 @@ export function AssigneeControl({
           ) : (
             <UserPlus className="h-3 w-3 opacity-50" />
           )}
-          {loading ? copy.loading : assigneeLabel}
+          {loading ? t("inbox.assignment.loading") : assigneeLabel}
           <ChevronDown className="h-3 w-3 opacity-50" />
         </button>
       </PopoverTrigger>
@@ -549,7 +541,7 @@ export function AssigneeControl({
               onClick={() => void hydrate()}
             >
               <RefreshCw className="me-1 h-3 w-3" />
-              {copy.refresh}
+              {t("common.refresh")}
             </Button>
           </div>
         ) : null}
@@ -564,7 +556,7 @@ export function AssigneeControl({
             onClick={() => void submit("claim")}
           >
             <UserPlus className="me-2 h-4 w-4" />
-            {copy.claim}
+            {t("inbox.assignment.claim")}
           </Button>
         ) : null}
         {canReleaseNow ? (
@@ -577,19 +569,19 @@ export function AssigneeControl({
             onClick={() => void submit("release")}
           >
             <UserMinus className="me-2 h-4 w-4" />
-            {copy.release}
+            {t("inbox.assignment.release")}
           </Button>
         ) : null}
 
         {canAssign ? (
           <>
             <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">
-              {copy.assign}
+              {t("inbox.assignment.assign")}
             </p>
             <div className="max-h-52 space-y-1 overflow-y-auto">
               {members.length === 0 ? (
                 <p className="px-2 py-3 text-xs text-muted-foreground">
-                  {copy.noTargets}
+                  {t("inbox.assignment.noTargets")}
                 </p>
               ) : (
                 members.map((member) => (
@@ -605,14 +597,14 @@ export function AssigneeControl({
                     onClick={() => void submit("assign", member.memberId)}
                   >
                     <span className="truncate">
-                      {member.displayName ?? copy.owner}
+                      {member.displayName ?? t("inbox.assignment.owner")}
                     </span>
                     <span className="ms-2 text-2xs text-muted-foreground">
                       {member.role === "owner"
-                        ? copy.owner
+                        ? t("inbox.assignment.owner")
                         : member.role === "manager"
-                          ? copy.manager
-                          : copy.operator}
+                          ? t("inbox.assignment.manager")
+                          : t("inbox.assignment.operator")}
                     </span>
                   </Button>
                 ))
@@ -628,7 +620,7 @@ export function AssigneeControl({
                 onClick={() => void submit("unassign")}
               >
                 <UserMinus className="me-2 h-4 w-4" />
-                {copy.remove}
+                {t("inbox.assignment.remove")}
               </Button>
             ) : null}
           </>
@@ -747,9 +739,17 @@ type AssignmentActivityPayload = {
   toMemberId: string | null;
 };
 
+const ASSIGNMENT_ACTIVITY_KEYS = {
+  assignment_claimed: "inbox.assignmentActivity.claimed",
+  assignment_released: "inbox.assignmentActivity.released",
+  assignment_assigned: "inbox.assignmentActivity.assigned",
+  assignment_handed_over: "inbox.assignmentActivity.handedOver",
+  assignment_unassigned: "inbox.assignmentActivity.unassigned",
+} as const;
+
 function assignmentActivityText(
   body: string,
-  locale: "ar" | "fr" | "en",
+  t: (key: string, params?: Record<string, string | number>) => string,
 ): string {
   let payload: AssignmentActivityPayload;
   try {
@@ -758,50 +758,12 @@ function assignmentActivityText(
     return body;
   }
   if (payload.kind !== "conversation_assignment") return body;
+  const key = ASSIGNMENT_ACTIVITY_KEYS[payload.activityType];
+  if (!key) return body;
   const target =
     payload.toDisplayName ??
     (payload.toMemberId ? shortMemberId(payload.toMemberId) : "");
-
-  if (locale === "ar") {
-    switch (payload.activityType) {
-      case "assignment_claimed":
-        return "تم استلام المحادثة";
-      case "assignment_released":
-        return "تم تحرير الإسناد";
-      case "assignment_assigned":
-        return `تم إسناد المحادثة إلى ${target}`;
-      case "assignment_handed_over":
-        return `تم تسليم المحادثة إلى ${target}`;
-      case "assignment_unassigned":
-        return "تمت إزالة الإسناد";
-    }
-  }
-  if (locale === "fr") {
-    switch (payload.activityType) {
-      case "assignment_claimed":
-        return "Conversation prise en charge";
-      case "assignment_released":
-        return "Attribution libérée";
-      case "assignment_assigned":
-        return `Conversation attribuée à ${target}`;
-      case "assignment_handed_over":
-        return `Conversation transférée à ${target}`;
-      case "assignment_unassigned":
-        return "Attribution retirée";
-    }
-  }
-  switch (payload.activityType) {
-    case "assignment_claimed":
-      return "Conversation claimed";
-    case "assignment_released":
-      return "Assignment released";
-    case "assignment_assigned":
-      return `Conversation assigned to ${target}`;
-    case "assignment_handed_over":
-      return `Conversation handed over to ${target}`;
-    case "assignment_unassigned":
-      return "Assignment removed";
-  }
+  return t(key, { target });
 }
 
 export function ActivityMessage({
@@ -811,11 +773,11 @@ export function ActivityMessage({
   body: string;
   timestamp: number;
 }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   return (
     <div className="flex justify-center py-1">
       <div className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-        <span>{assignmentActivityText(body, locale)}</span>
+        <span>{assignmentActivityText(body, t)}</span>
         <span className="opacity-60">
           {new Date(timestamp).toLocaleTimeString(
             locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR",

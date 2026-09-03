@@ -60,3 +60,11 @@ export interface ExtractionInput {
   /** Existing customer phone (if the conversation has one) — helps matching */
   knownPhone?: string;
 }
+
+/** Ledger AI-21 — input to the visual (screenshot) extractor. The MIME type
+ *  is the magic-number-sniffed truth, never the browser declaration. */
+export interface ExtractionImageInput {
+  fileName: string;
+  mimeType: string;
+  bytes: Uint8Array;
+}

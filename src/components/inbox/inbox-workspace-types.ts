@@ -10,7 +10,8 @@ export type InboxQueueFilter =
   | "unread"
   | "open"
   | "pending"
-  | "resolved";
+  | "resolved"
+  | "archived";
 
 export type InboxChatChannel = "whatsapp" | "conversation";
 
@@ -26,7 +27,15 @@ export interface InboxChat {
   channel: InboxChatChannel;
   lastMessageText?: string;
   lastMessageAt?: number;
+  /** True when the newest message was sent by the operator ("You: " preview). */
+  lastMessageFromMe?: boolean;
+  /** Media family of the newest message (image/video/audio/document/…). */
+  lastMessageType?: string | null;
   unread: number;
+  // Ledger INB-12: WhatsApp conversation states (server-projected truth).
+  pinned: boolean;
+  muted: boolean;
+  archived: boolean;
   workflow: Partial<ConversationWorkflowState>;
 }
 

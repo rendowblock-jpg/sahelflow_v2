@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
   AlertTriangle,
   ArrowUpRight,
   CheckCircle2,
+  ChevronDown,
   Database,
   Loader2,
 } from "lucide-react";
@@ -13,6 +15,7 @@ import type { AiToolCallView } from "@/components/ai/ai-workspace-types";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
 import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import {
@@ -43,6 +46,43 @@ const TOOL_ROUTE: Record<string, string> = {
   get_wilaya_risk: "/risk",
   search_conversations: "/inbox",
   get_conversation_messages: "/inbox",
+};
+
+/**
+ * Ledger AI-11: per-record citation links. For tools whose results carry a
+ * real record identity, this builds a deep link to the record's own detail
+ * route (checked against src/app/(dashboard)/…) instead of the list page.
+ * A tool missing from the map (or a record without its id field) falls back
+ * to the list-level TOOL_ROUTE button — nothing is ever guessed.
+ */
+const TOOL_RECORD_HREF: Record<
+  string,
+  (record: Record<string, unknown>) => string | null
+> = {
+  get_order_details: (record) =>
+    typeof record.id === "string" && record.id ? `/orders/${record.id}` : null,
+  create_order: (record) =>
+    typeof record.id === "string" && record.id ? `/orders/${record.id}` : null,
+  get_delivery_status: (record) =>
+    typeof record.orderId === "string" && record.orderId
+      ? `/orders/${record.orderId}`
+      : null,
+  get_product_details: (record) =>
+    typeof record.id === "string" && record.id
+      ? `/products/${record.id}`
+      : null,
+  search_products: (record) =>
+    typeof record.id === "string" && record.id
+      ? `/products/${record.id}`
+      : null,
+  get_customer_details: (record) =>
+    typeof record.id === "string" && record.id
+      ? `/customers/${record.id}`
+      : null,
+  search_customers: (record) =>
+    typeof record.id === "string" && record.id
+      ? `/customers/${record.id}`
+      : null,
 };
 
 const DELIVERY_STATUS_TOOLS = new Set([
@@ -222,32 +262,52 @@ function ResultRecord({
   copy,
   translate,
   statusNamespace,
+  href,
 }: {
   value: Record<string, unknown>;
   locale: AiWorkspaceLocale;
   copy: (key: AiWorkspaceCopyKey, params?: Record<string, string | number>) => string;
   translate: Translate;
   statusNamespace: StatusNamespace;
+  href: string | null;
 }) {
   const fields = recordFields(value, locale, translate, statusNamespace).slice(0, 6);
-  if (fields.length === 0) return null;
+  if (fields.length === 0 && !href) return null;
   return (
-    <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
-      {fields.map((field) => (
-        <div key={field.key} className="min-w-0">
-          <dt className="text-xs text-muted-foreground">
-            {copy(FIELD_COPY[field.key]!)}
-          </dt>
-          <dd className="mt-0.5 truncate font-medium text-foreground">
-            {field.technical ? (
-              <TechnicalValue>{field.value}</TechnicalValue>
-            ) : (
-              <span dir="auto">{field.value}</span>
-            )}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <div>
+      <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
+        {fields.map((field) => (
+          <div key={field.key} className="min-w-0">
+            <dt className="text-xs text-muted-foreground">
+              {copy(FIELD_COPY[field.key]!)}
+            </dt>
+            <dd className="mt-0.5 truncate font-medium text-foreground">
+              {field.technical ? (
+                <TechnicalValue>{field.value}</TechnicalValue>
+              ) : (
+                <span dir="auto">{field.value}</span>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {href ? (
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="mt-1 px-2 text-xs"
+        >
+          <Link href={href}>
+            {copy("viewInProduct")}
+            <ArrowUpRight
+              className="size-3.5 rtl:-scale-x-100"
+              aria-hidden="true"
+            />
+          </Link>
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
@@ -258,6 +318,10 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
     key: AiWorkspaceCopyKey,
     params?: Record<string, string | number>,
   ) => getAiWorkspaceCopy(locale, key, params);
+
+  // Ledger AI-06: collapsed by default on success, auto-expanded while
+  // running and on failure (the operator must see errors without a click).
+  const [expanded, setExpanded] = useState(tool.state !== "complete");
 
   if (isProposalResult(tool.result)) return null;
 
@@ -273,11 +337,24 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
     : isRecord(result)
       ? [result]
       : [];
+  const recordHrefs = records.map(
+    (record) => TOOL_RECORD_HREF[tool.name]?.(record) ?? null,
+  );
+  // A single-record answer with a real detail link no longer needs the
+  // list-level citation (AI-11: the citation IS the record).
+  const listRouteUsed =
+    route && !(records.length === 1 && recordHrefs[0]);
   const scalar = records.length === 0 ? simpleValue(result) : null;
+  const argEntries = Object.entries(tool.args ?? {}).slice(0, 8);
 
   return (
     <section className="mt-2 overflow-hidden rounded-lg border bg-background/70 text-start">
-      <header className="flex min-h-11 items-center justify-between gap-3 border-b px-3 py-2">
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        aria-expanded={expanded}
+        className="flex min-h-11 w-full items-center justify-between gap-3 border-b px-3 py-2 text-start outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      >
         <div className="flex min-w-0 items-center gap-2">
           {running ? (
             <Loader2 className="size-4 shrink-0 animate-spin text-primary" aria-hidden="true" />
@@ -293,20 +370,46 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
             </p>
           </div>
         </div>
-        {!running ? (
-          <Badge variant={failed ? "destructive" : "secondary"} className="shrink-0 text-xs">
-            {failed ? copy("failed") : (
-              <span className="inline-flex items-center gap-1">
-                <CheckCircle2 className="size-3.5" aria-hidden="true" />
-                {copy("succeeded")}
-              </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {!running ? (
+            <Badge variant={failed ? "destructive" : "secondary"} className="text-xs">
+              {failed ? copy("failed") : (
+                <span className="inline-flex items-center gap-1">
+                  <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                  {copy("succeeded")}
+                </span>
+              )}
+            </Badge>
+          ) : null}
+          <ChevronDown
+            className={cn(
+              "size-4 text-muted-foreground transition-transform",
+              expanded && "rotate-180",
             )}
-          </Badge>
-        ) : null}
-      </header>
+            aria-hidden="true"
+          />
+        </div>
+      </button>
 
-      {!running ? (
+      {expanded && !running ? (
         <div className="space-y-3 p-3">
+          {argEntries.length > 0 ? (
+            <div>
+              <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {copy("toolArgs")}
+              </p>
+              <dl className="mt-1 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
+                {argEntries.map(([key, value]) => (
+                  <div key={key} className="min-w-0">
+                    <dt className="text-muted-foreground">{key}</dt>
+                    <dd className="mt-0.5 truncate font-medium text-foreground">
+                      <TechnicalValue>{simpleValue(value) ?? "—"}</TechnicalValue>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ) : null}
           {Array.isArray(result) ? (
             <p className="text-xs text-muted-foreground">
               {copy("resultItems", { count: result.length })}
@@ -320,6 +423,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
                 copy={copy}
                 translate={t}
                 statusNamespace={statusNamespace}
+                href={recordHrefs[index] ?? null}
               />
             </div>
           ))}
@@ -327,7 +431,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
           {records.length === 0 && !scalar && !failed ? (
             <p className="text-xs text-muted-foreground">{copy("toolResult")}</p>
           ) : null}
-          {route ? (
+          {listRouteUsed ? (
             <Button asChild variant="ghost" size="sm" className="px-2 text-xs">
               <Link href={route}>
                 {copy("viewInProduct")}

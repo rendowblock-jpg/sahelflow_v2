@@ -162,6 +162,27 @@ const STOREFRONT_RELEASE_KEYS = [
   "storefront.releaseHistory.products",
 ] as const;
 
+const INBOX_ASSIGNMENT_KEYS = [
+  "inbox.assignment.unassigned",
+  "inbox.assignment.owner",
+  "inbox.assignment.loading",
+  "inbox.assignment.loadError",
+  "inbox.assignment.claim",
+  "inbox.assignment.release",
+  "inbox.assignment.assign",
+  "inbox.assignment.remove",
+  "inbox.assignment.noTargets",
+  "inbox.assignment.conflict",
+  "inbox.assignment.saveError",
+  "inbox.assignment.manager",
+  "inbox.assignment.operator",
+  "inbox.assignmentActivity.claimed",
+  "inbox.assignmentActivity.released",
+  "inbox.assignmentActivity.assigned",
+  "inbox.assignmentActivity.handedOver",
+  "inbox.assignmentActivity.unassigned",
+] as const;
+
 const DICTS = [
   {
     name: "cod-runtime (canonical COD dashboard)",
@@ -314,5 +335,63 @@ describe("migrated components no longer ship an inline copy authority", () => {
     expect(src).toContain('const { t, locale } = useI18n();');
     expect(src).toContain('t("settings.security.title")');
     expect(src).toContain('t("common.cancel")');
+  });
+
+  it("conversation assignee control resolves every label through t()", () => {
+    const src = source("src/components/inbox/conversation-controls.tsx");
+    expect(src).not.toContain("const ASSIGNMENT_COPY");
+    expect(src).toContain("const { t } = useI18n();");
+    expect(src).toContain('t("inbox.assignment.loadError")');
+    expect(src).toContain('t("inbox.assignment.conflict")');
+    expect(src).toContain('t("common.refresh")');
+  });
+});
+
+describe("inbox assignment control copy authority (INB-30)", () => {
+  it.each(LOCALES)("resolves every migrated key for %s", (locale) => {
+    for (const key of INBOX_ASSIGNMENT_KEYS) {
+      const value = translate(locale, key);
+      expect(value, `${locale} must resolve ${key}`).toBeTypeOf("string");
+      expect(value?.trim(), `${locale}:${key} must not be empty`).not.toBe("");
+      expect(value, `${locale}:${key} must not leak the key`).not.toBe(key);
+    }
+  });
+
+  it("keeps Arabic copy localized", () => {
+    for (const key of INBOX_ASSIGNMENT_KEYS) {
+      expect(translate("ar", key), `${key} must be Arabic`).toMatch(
+        /[\u0600-\u06ff]/,
+      );
+    }
+  });
+
+  it("renders the migrated copy with its exact pre-migration values", () => {
+    expect(translate("en", "inbox.assignment.claim")).toBe(
+      "Claim conversation",
+    );
+    expect(translate("fr", "inbox.assignment.claim")).toBe(
+      "Prendre la conversation",
+    );
+    expect(translate("ar", "inbox.assignment.owner")).toBe(
+      "مالك مساحة العمل",
+    );
+    expect(translate("en", "inbox.assignmentActivity.handedOver")).toBe(
+      "Conversation handed over to {{target}}",
+    );
+    expect(translate("fr", "inbox.assignmentActivity.assigned")).toBe(
+      "Conversation attribuée à {{target}}",
+    );
+    expect(translate("ar", "inbox.assignmentActivity.handedOver")).toBe(
+      "تم تسليم المحادثة إلى {{target}}",
+    );
+  });
+
+  it("reuses the static common.refresh key instead of duplicating it", () => {
+    expect(getTranslations("en")["inbox.assignment.refresh"]).toBeUndefined();
+    for (const locale of LOCALES) {
+      expect(translate(locale, "common.refresh")).toBe(
+        locale === "en" ? "Refresh" : locale === "fr" ? "Actualiser" : "تحديث",
+      );
+    }
   });
 });

@@ -4,7 +4,11 @@ import { z } from "zod";
 import { createAiActionProposal } from "@/lib/ai/actions/service";
 import { runWithAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
 import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
-import { loadRecentAiChatMessages } from "@/lib/ai/chat/session-history";
+import {
+  AI_CHAT_HISTORY_LIMIT,
+  loadAiChatMessagesBefore,
+  loadRecentAiChatMessages,
+} from "@/lib/ai/chat/session-history";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getCurrentUserKey, requireAuth } from "@/lib/auth/server";
@@ -18,8 +22,15 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+/**
+ * GET /api/ai/sessions/[id]/messages — recent window by default; ledger AI-08
+ * adds an honest cursor protocol instead of the silent last-20 cap: pass
+ * `cursor` (the id of the oldest message the client holds) to page older
+ * history. Every response carries `hasMore` + `nextCursor` so the client can
+ * offer "load earlier" and label truncated history truthfully.
+ */
 export const GET = withErrorHandler(
-  async (_request: NextRequest, { params }: RouteContext) => {
+  async (request: NextRequest, { params }: RouteContext) => {
     await requireAuth("ai.use");
     const { id } = await params;
     const session = await db.aiChatSession.findUnique({ where: { id } });
@@ -29,8 +40,39 @@ export const GET = withErrorHandler(
         { status: 404 },
       );
     }
-    const messages = await loadRecentAiChatMessages(db, id);
-    return NextResponse.json({ session: { ...session, messages } });
+
+    const cursor = request.nextUrl.searchParams.get("cursor")?.trim() || null;
+    const requestedLimit = Number.parseInt(
+      request.nextUrl.searchParams.get("limit") ?? "",
+      10,
+    );
+    const limit = Number.isFinite(requestedLimit)
+      ? requestedLimit
+      : AI_CHAT_HISTORY_LIMIT;
+
+    if (cursor) {
+      const page = await loadAiChatMessagesBefore(db, id, cursor, limit);
+      if (!page) {
+        return NextResponse.json(
+          { error: "AI_MESSAGE_NOT_FOUND" },
+          { status: 404 },
+        );
+      }
+      return NextResponse.json({
+        session: { ...session, messages: page.messages },
+        hasMore: page.hasMore,
+        nextCursor: page.nextCursor,
+      });
+    }
+
+    const messages = await loadRecentAiChatMessages(db, id, limit);
+    const hasMore = messages.length > 0;
+    const nextCursor = messages.length > 0 ? messages[0]!.id : null;
+    return NextResponse.json({
+      session: { ...session, messages },
+      hasMore,
+      nextCursor,
+    });
   },
   "GET /api/ai/sessions/[id]/messages",
 );

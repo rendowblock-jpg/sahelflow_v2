@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   AlertTriangle,
+  Ban,
   CheckCircle2,
   Clock3,
   Loader2,
@@ -124,11 +125,15 @@ export function AiActionProposalCard({
   handle,
   approving,
   onApprove,
+  rejecting = false,
+  onReject,
   interactive = true,
 }: {
   handle: AiActionProposalHandle;
   approving: boolean;
   onApprove: (handle: AiActionProposalHandle, reason?: string) => Promise<boolean>;
+  rejecting?: boolean;
+  onReject?: (handle: AiActionProposalHandle) => Promise<boolean>;
   interactive?: boolean;
 }) {
   const { locale: rawLocale, t } = useI18n();
@@ -250,26 +255,44 @@ export function AiActionProposalCard({
         ) : null}
 
         {interactive && approvable ? (
-          <Button
-            type="button"
-            size="sm"
-            className="w-full"
-            disabled={approving || (retrying && reason.trim().length < 3)}
-            onClick={() => void onApprove(handle, retrying ? reason : undefined)}
-          >
-            {approving ? (
-              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-            ) : retrying ? (
-              <RotateCcw className="size-3.5" aria-hidden="true" />
-            ) : (
-              <ShieldCheck className="size-3.5" aria-hidden="true" />
-            )}
-            {approving
-              ? copy("approving")
-              : retrying
-                ? copy("retryAction")
-                : copy("approve")}
-          </Button>
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={approving || (retrying && reason.trim().length < 3)}
+              onClick={() => void onApprove(handle, retrying ? reason : undefined)}
+            >
+              {approving ? (
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+              ) : retrying ? (
+                <RotateCcw className="size-3.5" aria-hidden="true" />
+              ) : (
+                <ShieldCheck className="size-3.5" aria-hidden="true" />
+              )}
+              {approving
+                ? copy("approving")
+                : retrying
+                  ? copy("retryAction")
+                  : copy("approve")}
+            </Button>
+            {onReject ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={approving || rejecting}
+                aria-label={copy("reject")}
+                onClick={() => void onReject(handle)}
+              >
+                {rejecting ? (
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Ban className="size-3.5" aria-hidden="true" />
+                )}
+                {copy("reject")}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
 
         {interactive ? (

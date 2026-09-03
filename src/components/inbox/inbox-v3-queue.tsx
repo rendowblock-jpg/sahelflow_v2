@@ -1,17 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Archive,
+  ArchiveRestore,
+  Bell,
+  BellOff,
   Check,
+  CheckCheck,
   CheckCircle2,
+  FileText,
+  Filter,
   Flag,
+  ImageIcon,
   ListChecks,
   Loader2,
+  Mail,
   MessageSquareText,
+  Mic,
+  MoreVertical,
+  Pin,
+  PinOff,
   Search,
   Trash2,
   UserMinus,
+  Video,
   X,
 } from "lucide-react";
 
@@ -20,6 +34,12 @@ import type {
   InboxSearchResult,
   WorkflowFilter,
 } from "@/components/inbox/inbox-desk-types";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { searchResultToChat } from "@/components/inbox/inbox-desk-types";
 import type { InboxChat } from "@/components/inbox/inbox-workspace-types";
 import {
@@ -35,12 +55,17 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread"];
+const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread", "archived"];
 const WORKFLOW_FILTERS: WorkflowFilter[] = [
   "all",
   "open",
@@ -86,6 +111,8 @@ function queueLabel(
       return copy("queueUnread");
     case "all":
       return copy("queueAll");
+    case "archived":
+      return copy("queueArchived");
   }
 }
 
@@ -118,6 +145,12 @@ function matchesDeskFilters(
   workflowFilter: WorkflowFilter,
   currentMemberId: string | null,
 ): boolean {
+  // Ledger INB-12: archived conversations show only in the archive queue.
+  // Checked FIRST — after the queue chain the compiler has already narrowed
+  // the desk filter to the four active values.
+  const archiveOk =
+    queueFilter === "archived" ? chat.archived : !chat.archived;
+  if (!archiveOk) return false;
   const queueMatches =
     queueFilter === "all" ||
     (queueFilter === "unread" && chat.unread > 0) ||
@@ -140,6 +173,42 @@ function statusLabel(
   return t("inbox.status.open");
 }
 
+/** Media-family glyph for the list preview (📷/🎤/📎 convention). */
+function PreviewGlyph({ type }: { type?: string | null }) {
+  switch (type) {
+    case "image":
+    case "sticker":
+      return (
+        <ImageIcon
+          className="size-3 shrink-0 text-muted-foreground"
+          aria-hidden="true"
+        />
+      );
+    case "video":
+      return (
+        <Video
+          className="size-3 shrink-0 text-muted-foreground"
+          aria-hidden="true"
+        />
+      );
+    case "audio":
+      return (
+        <Mic className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+      );
+    case "document":
+      return (
+        <FileText
+          className="size-3 shrink-0 text-muted-foreground"
+          aria-hidden="true"
+        />
+      );
+    default:
+      return null;
+  }
+}
+
+const PRIORITY_FILTER_VALUES = ["", "urgent", "high", "medium", "low"] as const;
+
 function ConversationRow({
   chat,
   active,
@@ -151,6 +220,8 @@ function ConversationRow({
   checked,
   onSelect,
   onToggle,
+  cursorActive = false,
+  draftPreview,
 }: {
   chat: InboxChat;
   active: boolean;
@@ -162,6 +233,10 @@ function ConversationRow({
   checked: boolean;
   onSelect: () => void;
   onToggle: () => void;
+  /** j/k keyboard cursor highlight. */
+  cursorActive?: boolean;
+  /** Session draft preview text for this conversation, when present. */
+  draftPreview?: string;
 }) {
   const status = chat.workflow.status ?? "open";
   const priority = chat.workflow.priority;
@@ -184,32 +259,36 @@ function ConversationRow({
           : active
             ? "bg-primary/[0.055]"
             : "bg-background hover:bg-muted/35",
+        cursorActive && !active && "bg-muted/45 ring-1 ring-inset ring-primary/40",
       )}
     >
-      {selectMode ? (
-        <span
-          aria-hidden="true"
-          className={cn(
-            "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
-            checked
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border/80 bg-background",
-          )}
-        >
-          {checked ? <Check className="size-3" /> : null}
-        </span>
-      ) : null}
       {active && !selectMode ? (
         <span className="absolute inset-block-2 start-0 w-0.5 rounded-full bg-primary" />
       ) : null}
 
-      <Avatar className="mt-0.5 size-9 shrink-0 border border-border/70 bg-background">
-        <AvatarFallback className="bg-primary/7 text-[13px] font-semibold text-primary">
-          {chat.name.charAt(0).toUpperCase() || (
-            <MessageSquareText className="size-4" />
+      {/* Select mode morphs the avatar slot in place (same size/position) into
+          a check target — WhatsApp-style. The row content never shifts. */}
+      {selectMode ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+            checked
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border/70 bg-background text-transparent group-hover:border-primary/60",
           )}
-        </AvatarFallback>
-      </Avatar>
+        >
+          <Check className="size-4" />
+        </span>
+      ) : (
+        <Avatar className="mt-0.5 size-9 shrink-0 border border-border/70 bg-background">
+          <AvatarFallback className="bg-primary/7 text-[13px] font-semibold text-primary">
+            {chat.name.charAt(0).toUpperCase() || (
+              <MessageSquareText className="size-4" />
+            )}
+          </AvatarFallback>
+        </Avatar>
+      )}
 
       <span className="min-w-0 flex-1 overflow-hidden">
         <span className="flex min-w-0 items-center gap-2 overflow-hidden">
@@ -222,6 +301,18 @@ function ConversationRow({
           >
             {chat.name}
           </bdi>
+          {chat.pinned ? (
+            <Pin
+              className="size-3 shrink-0 text-primary"
+              aria-label={copy("pinChat")}
+            />
+          ) : null}
+          {chat.muted ? (
+            <BellOff
+              className="size-3 shrink-0 text-muted-foreground"
+              aria-label={copy("muteChat")}
+            />
+          ) : null}
           <span
             className={cn(
               "shrink-0 text-2xs tabular-nums",
@@ -233,18 +324,35 @@ function ConversationRow({
         </span>
 
         <span className="mt-1 flex min-w-0 items-center gap-1.5 overflow-hidden">
-          <bdi
-            dir="auto"
-            data-inbox-preview="true"
-            className={cn(
-              "block min-w-0 max-w-full flex-1 truncate text-start text-xs leading-5 [unicode-bidi:plaintext]",
-              chat.unread > 0
-                ? "font-medium text-foreground/90"
-                : "text-muted-foreground",
-            )}
-          >
-            {chat.lastMessageText || copy("savedHistory")}
-          </bdi>
+          {draftPreview ? (
+            <span
+              data-inbox-preview="true"
+              className="min-w-0 flex-1 truncate text-start text-xs font-medium leading-5 text-warning"
+            >
+              {copy("draftIndicator", { preview: draftPreview })}
+            </span>
+          ) : (
+            <>
+              {chat.lastMessageFromMe ? (
+                <span className="shrink-0 text-xs font-medium leading-5 text-foreground/80">
+                  {copy("youPrefix")}:
+                </span>
+              ) : null}
+              <PreviewGlyph type={chat.lastMessageType} />
+              <bdi
+                dir="auto"
+                data-inbox-preview="true"
+                className={cn(
+                  "block min-w-0 max-w-full flex-1 truncate text-start text-xs leading-5 [unicode-bidi:plaintext]",
+                  chat.unread > 0
+                    ? "font-medium text-foreground/90"
+                    : "text-muted-foreground",
+                )}
+              >
+                {chat.lastMessageText || copy("savedHistory")}
+              </bdi>
+            </>
+          )}
 
           {priority ? (
             <Flag
@@ -278,7 +386,9 @@ function ConversationRow({
               <span aria-hidden="true">·</span>
             ) : null}
             {chat.workflow.assigneeId ? (
-              <span className="truncate">{copy("assignment")}</span>
+              <span className="truncate">
+                {chat.workflow.assigneeName || copy("assignment")}
+              </span>
             ) : null}
           </span>
         ) : null}
@@ -315,6 +425,11 @@ export function InboxV3Queue({
     loadingChats,
     canDeleteChats,
     deleteChats,
+    markUnread,
+    setConversationState,
+    refreshChats,
+    canUpdateConversation,
+    localDrafts,
   } = workspace;
   const [query, setQuery] = useState("");
   const [searchState, setSearchState] = useState<{
@@ -343,18 +458,40 @@ export function InboxV3Queue({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteShapeError, setDeleteShapeError] = useState<string | null>(null);
+  // Ledger INB-21: priority/label slices over the desk (data exists server-side;
+  // this surfaces it as filters).
+  const [priorityFilter, setPriorityFilter] = useState<
+    (typeof PRIORITY_FILTER_VALUES)[number]
+  >("");
+  const [labelFilter, setLabelFilter] = useState("");
+  // Ledger INB-18: j/k list cursor (Gmail/Linear convention).
+  const [cursorConversationId, setCursorConversationId] = useState<
+    string | null
+  >(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
-  const queueCounts = useMemo(
-    () => ({
+  const availableLabels = useMemo(() => {
+    const set = new Set<string>();
+    for (const chat of chats) {
+      for (const label of chat.workflow.labels ?? []) set.add(label);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b)).slice(0, 30);
+  }, [chats]);
+
+  const queueCounts = useMemo(() => {
+    // Ledger INB-12: archive-aware counts — the active queues never count
+    // archived rows; the archive pill counts only archived rows.
+    const active = chats.filter((chat) => !chat.archived);
+    return {
       mine: currentMemberId
-        ? chats.filter((chat) => chat.workflow.assigneeId === currentMemberId).length
+        ? active.filter((chat) => chat.workflow.assigneeId === currentMemberId).length
         : 0,
-      unassigned: chats.filter((chat) => !chat.workflow.assigneeId).length,
-      unread: chats.filter((chat) => chat.unread > 0).length,
-      all: chats.length,
-    }),
-    [chats, currentMemberId],
-  );
+      unassigned: active.filter((chat) => !chat.workflow.assigneeId).length,
+      unread: active.filter((chat) => chat.unread > 0).length,
+      all: active.length,
+      archived: chats.length - active.length,
+    };
+  }, [chats, currentMemberId]);
 
   const baseRows = useMemo(
     () =>
@@ -444,11 +581,18 @@ export function InboxV3Queue({
         byConversation.set(chat.conversationId, chat);
       }
     }
-    return [...byConversation.values()];
+    const merged = [...byConversation.values()];
+    return merged.filter(
+      (chat) =>
+        (!priorityFilter || chat.workflow.priority === priorityFilter) &&
+        (!labelFilter || (chat.workflow.labels ?? []).includes(labelFilter)),
+    );
   }, [
     currentMemberId,
+    labelFilter,
     localMatches,
     normalizedQuery,
+    priorityFilter,
     queueFilter,
     searchState,
     workflowFilter,
@@ -492,6 +636,78 @@ export function InboxV3Queue({
     setDeleteShapeError(null);
     setDeleteDialogOpen(false);
   };
+
+  /** Ledger INB-22: bulk mark-read / resolve over the current selection. */
+  const runBulkUpdate = useCallback(
+    async (action: "read" | "resolve") => {
+      if (bulkBusy || effectiveSelected.length === 0) return;
+      setBulkBusy(true);
+      const results = await Promise.allSettled(
+        [...effectiveSelected].map((conversationId) =>
+          fetch(
+            `/api/conversations/${encodeURIComponent(conversationId)}/${
+              action === "read" ? "read" : "status"
+            }`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body:
+                action === "read"
+                  ? undefined
+                  : JSON.stringify({ status: "resolved" }),
+            },
+          ).then((response) => {
+            if (!response.ok) throw new Error(String(response.status));
+          }),
+        ),
+      );
+      setBulkBusy(false);
+      const failed = results.filter(
+        (result) => result.status === "rejected",
+      ).length;
+      if (failed > 0) {
+        toast.warning(copy("bulkApplyFailed"));
+      } else {
+        exitSelectMode();
+      }
+      void refreshChats();
+    },
+    [bulkBusy, copy, effectiveSelected, exitSelectMode, refreshChats],
+  );
+
+  /** Ledger INB-18: j/k/Arrow list cursor with Enter-to-open. */
+  const handleQueueKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (selectMode || rows.length === 0) return;
+      const isNext = event.key === "j" || event.key === "ArrowDown";
+      const isPrev = event.key === "k" || event.key === "ArrowUp";
+      if (!isNext && !isPrev && event.key !== "Enter") return;
+      event.preventDefault();
+      if (event.key === "Enter") {
+        const target =
+          rows.find(
+            (chat) => chat.conversationId === cursorConversationId,
+          ) ?? rows[0];
+        if (target) openChat(target);
+        return;
+      }
+      const currentIndex = rows.findIndex(
+        (chat) => chat.conversationId === cursorConversationId,
+      );
+      const nextIndex = isNext
+        ? Math.min(rows.length - 1, currentIndex + 1)
+        : Math.max(0, currentIndex <= 0 ? 0 : currentIndex - 1);
+      const target = rows[nextIndex];
+      if (!target) return;
+      setCursorConversationId(target.conversationId);
+      document
+        .querySelector(
+          `[data-inbox-conversation="${CSS.escape(target.conversationId)}"]`,
+        )
+        ?.scrollIntoView({ block: "nearest" });
+    },
+    [cursorConversationId, openChat, rows, selectMode],
+  );
 
   const performDelete = async () => {
     if (effectiveSelected.length === 0) return;
@@ -571,33 +787,50 @@ export function InboxV3Queue({
           ) : null}
         </div>
 
+        {/* Selection mode morphs the queue-pills row in place — same height,
+            same visual language. The workflow row below stays visible so the
+            panel layout never jumps while selecting. */}
         {selectMode ? (
           <div
-            className="mt-2 flex flex-wrap items-center gap-1.5"
+            className="mt-2 flex items-center gap-1.5"
             data-inbox-select-toolbar="true"
           >
-            <span className="min-w-0 flex-1 truncate text-2xs font-medium text-foreground">
-              {copy("selectedCount", { count: effectiveSelected.length })}
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={deleting}
-              data-inbox-chat-select-all="true"
-              onClick={() => {
-                const allSelected =
-                  rows.length > 0 &&
-                  effectiveSelected.length === rows.length;
-                setSelectedIds(allSelected ? new Set() : new Set(selectableIds));
-              }}
+            <div
+              className="flex min-w-0 flex-1 items-center rounded-full bg-primary/[0.08] p-0.5"
+              role="group"
+              aria-label={copy("selectChats")}
             >
-              {copy("selectAll")}
-            </Button>
+              <span
+                aria-live="polite"
+                className="inline-flex h-7 min-w-0 flex-1 items-center truncate rounded-full bg-background px-3 text-2xs font-semibold shadow-sm"
+              >
+                {copy("selectedCount", { count: effectiveSelected.length })}
+              </span>
+              <button
+                type="button"
+                aria-label={copy("selectAll")}
+                title={copy("selectAll")}
+                data-inbox-chat-select-all="true"
+                disabled={deleting || rows.length === 0}
+                onClick={() => {
+                  const allSelected =
+                    rows.length > 0 &&
+                    effectiveSelected.length === rows.length;
+                  setSelectedIds(
+                    allSelected ? new Set() : new Set(selectableIds),
+                  );
+                }}
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              >
+                <ListChecks className="size-3.5" aria-hidden="true" />
+              </button>
+            </div>
+
             <Button
               type="button"
               variant="destructive"
               size="sm"
+              className="h-8 rounded-full"
               disabled={effectiveSelected.length === 0 || deleting}
               data-inbox-chat-delete="true"
               onClick={() => setDeleteDialogOpen(true)}
@@ -612,22 +845,44 @@ export function InboxV3Queue({
               )}
               {copy("deleteChats")}
             </Button>
+
             <Button
               type="button"
-              variant="ghost"
-              size="icon-sm"
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-full"
+              disabled={bulkBusy || effectiveSelected.length === 0 || deleting}
+              data-inbox-chat-bulk-read="true"
+              onClick={() => void runBulkUpdate("read")}
+            >
+              <CheckCheck className="size-3.5" aria-hidden="true" />
+              <span className="hidden xl:inline">{copy("bulkMarkRead")}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-full"
+              disabled={bulkBusy || effectiveSelected.length === 0 || deleting}
+              data-inbox-chat-bulk-resolve="true"
+              onClick={() => void runBulkUpdate("resolve")}
+            >
+              <CheckCircle2 className="size-3.5" aria-hidden="true" />
+              <span className="hidden xl:inline">{copy("bulkResolve")}</span>
+            </Button>
+
+            <button
+              type="button"
               aria-label={copy("cancelSelection")}
+              title={copy("cancelSelection")}
               disabled={deleting}
               onClick={exitSelectMode}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
             >
-              <X className="size-4" aria-hidden="true" />
-            </Button>
-            {deleteError ? (
-              <p className="w-full text-2xs text-destructive">{deleteError}</p>
-            ) : null}
+              <X className="size-3.5" aria-hidden="true" />
+            </button>
           </div>
         ) : (
-          <>
         <div className="mt-2 flex items-center gap-1.5">
           <div
             className="flex min-w-0 flex-1 gap-1 rounded-full bg-muted/25 p-0.5"
@@ -680,6 +935,97 @@ export function InboxV3Queue({
             <span className="sr-only">{queueCounts.unassigned}</span>
           </button>
 
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label={copy("filterMenu")}
+                title={copy("filterMenu")}
+                aria-pressed={priorityFilter !== "" || labelFilter !== ""}
+                className={cn(
+                  "inline-flex size-8 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  priorityFilter !== "" || labelFilter !== ""
+                    ? "border-primary/25 bg-primary/9 text-primary"
+                    : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                )}
+              >
+                <Filter className="size-3.5" aria-hidden="true" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              side="bottom"
+              sideOffset={6}
+              className="w-60 p-3"
+            >
+              <p className="text-2xs font-semibold text-foreground">
+                {copy("filterPriority")}
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {PRIORITY_FILTER_VALUES.map((value) => (
+                  <button
+                    key={value || "any"}
+                    type="button"
+                    aria-pressed={priorityFilter === value}
+                    onClick={() => setPriorityFilter(value)}
+                    className={cn(
+                      "inline-flex h-7 items-center rounded-full border px-2.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                      priorityFilter === value
+                        ? "border-primary/25 bg-primary/9 text-primary"
+                        : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    )}
+                  >
+                    {value === ""
+                      ? copy("anyPriority")
+                      : t(`inbox.priority.${value}`)}
+                  </button>
+                ))}
+              </div>
+              {availableLabels.length > 0 ? (
+                <>
+                  <p className="mt-3 text-2xs font-semibold text-foreground">
+                    {copy("filterLabels")}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    <button
+                      type="button"
+                      aria-pressed={labelFilter === ""}
+                      onClick={() => setLabelFilter("")}
+                      className={cn(
+                        "inline-flex h-7 items-center rounded-full border px-2.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                        labelFilter === ""
+                          ? "border-primary/25 bg-primary/9 text-primary"
+                          : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                      )}
+                    >
+                      {copy("anyLabel")}
+                    </button>
+                    {availableLabels.map((label) => (
+                      <button
+                        key={label}
+                        type="button"
+                        aria-pressed={labelFilter === label}
+                        onClick={() =>
+                          setLabelFilter((current) =>
+                            current === label ? "" : label,
+                          )
+                        }
+                        className={cn(
+                          "inline-flex h-7 max-w-36 items-center rounded-full border px-2.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                          labelFilter === label
+                            ? "border-primary/25 bg-primary/9 text-primary"
+                            : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                        )}
+                      >
+                        <span className="truncate">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </PopoverContent>
+          </Popover>
+
           {canDeleteChats && chats.length > 0 ? (
             <button
               type="button"
@@ -695,6 +1041,7 @@ export function InboxV3Queue({
             </button>
           ) : null}
         </div>
+        )}
 
         <div
           className="mt-2 flex flex-wrap gap-1"
@@ -721,11 +1068,19 @@ export function InboxV3Queue({
             );
           })}
         </div>
-          </>
-        )}
+
+        {selectMode && deleteError ? (
+          <p className="mt-1.5 text-2xs text-destructive" role="alert">
+            {deleteError}
+          </p>
+        ) : null}
       </div>
 
-      <ScrollArea className="min-h-0 flex-1">
+      <div
+        onKeyDown={handleQueueKeyDown}
+        className="flex min-h-0 flex-1 flex-col outline-none"
+      >
+        <ScrollArea className="min-h-0 flex-1">
         {loadingChats ? (
           <div className="space-y-1 p-2" aria-label={t("common.loading")}>
             {[0, 1, 2, 3, 4].map((item) => (
@@ -783,26 +1138,98 @@ export function InboxV3Queue({
               </div>
             ) : null}
             {rows.map((chat) => (
-              <ConversationRow
+              <div
                 key={`${chat.conversationId}:${chat.id}`}
-                chat={chat}
-                active={
-                  chat.conversationId === workspace.activeChat?.conversationId ||
-                  chat.id === activeChatId
-                }
-                locale={locale}
-                relativeNow={relativeNow}
-                t={t}
-                copy={copy}
-                selectMode={selectMode}
-                checked={selectedIds.has(chat.conversationId)}
-                onSelect={() => openChat(chat)}
-                onToggle={() => toggleSelected(chat.conversationId)}
-              />
+                className="group/row relative"
+              >
+                <ConversationRow
+                  chat={chat}
+                  active={
+                    chat.conversationId === workspace.activeChat?.conversationId ||
+                    chat.id === activeChatId
+                  }
+                  locale={locale}
+                  relativeNow={relativeNow}
+                  t={t}
+                  copy={copy}
+                  selectMode={selectMode}
+                  checked={selectedIds.has(chat.conversationId)}
+                  onSelect={() => openChat(chat)}
+                  onToggle={() => toggleSelected(chat.conversationId)}
+                  cursorActive={cursorConversationId === chat.conversationId}
+                  draftPreview={
+                    localDrafts[chat.conversationId]
+                      ? localDrafts[chat.conversationId]!.slice(0, 42)
+                      : undefined
+                  }
+                />
+                {!selectMode && canUpdateConversation ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={copy("conversationState")}
+                        title={copy("conversationState")}
+                        data-inbox-row-state="true"
+                        onClick={(event) => event.stopPropagation()}
+                        className="absolute end-4 top-2 z-10 hidden size-7 items-center justify-center rounded-md border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring group-hover/row:flex"
+                      >
+                        <MoreVertical className="size-3.5" aria-hidden="true" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" sideOffset={4}>
+                      <DropdownMenuItem
+                        data-inbox-state-pin="true"
+                        onClick={() => {
+                          void setConversationState(chat, { pinned: !chat.pinned });
+                        }}
+                      >
+                        {chat.pinned ? <PinOff className="size-4" aria-hidden="true" /> : <Pin className="size-4" aria-hidden="true" />}
+                        {chat.pinned ? copy("unpinChat") : copy("pinChat")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        data-inbox-state-mute="true"
+                        onClick={() => {
+                          void setConversationState(chat, { muted: !chat.muted });
+                        }}
+                      >
+                        {chat.muted ? <Bell className="size-4" aria-hidden="true" /> : <BellOff className="size-4" aria-hidden="true" />}
+                        {chat.muted ? copy("unmuteChat") : copy("muteChat")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        data-inbox-state-archive="true"
+                        onClick={() => {
+                          void setConversationState(chat, { archived: !chat.archived });
+                        }}
+                      >
+                        {chat.archived ? <ArchiveRestore className="size-4" aria-hidden="true" /> : <Archive className="size-4" aria-hidden="true" />}
+                        {chat.archived ? copy("unarchiveChat") : copy("archiveChat")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+                {!selectMode && canUpdateConversation && chat.unread === 0 ? (
+                  <button
+                    type="button"
+                    aria-label={copy("markUnread")}
+                    title={copy("markUnread")}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void markUnread(chat).then((updated) => {
+                        if (updated) void refreshChats();
+                      });
+                    }}
+                    className="absolute end-12 top-2 z-10 hidden size-7 items-center justify-center rounded-md border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring group-hover/row:flex"
+                  >
+                    <Mail className="size-3.5" aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
             ))}
           </div>
         )}
       </ScrollArea>
+      </div>
 
       <AlertDialog
         open={deleteDialogOpen}

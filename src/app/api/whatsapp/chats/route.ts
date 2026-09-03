@@ -7,6 +7,7 @@ import {
   requireTrustedAction,
 } from "@/lib/identity/authorization";
 import { projectTrustedActorActions } from "@/lib/identity/conversation-projection";
+import { listTeamMembers } from "@/lib/identity/team-directory";
 import { getConversationAssignmentVersions } from "@/lib/inbox/conversation-assignment";
 import {
   sidecar,
@@ -65,6 +66,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       snoozedUntil: true,
       waitingSince: true,
       firstReplyAt: true,
+      pinnedAt: true,
+      mutedUntil: true,
+      archivedAt: true,
       messages: {
         orderBy: { timestamp: "desc" },
         take: 1,
@@ -72,6 +76,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
           body: true,
           direction: true,
           timestamp: true,
+          messageType: true,
         },
       },
     },
@@ -80,6 +85,31 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     { prisma: db, shop: shopContext },
     conversations.map((conversation) => conversation.id),
   );
+
+  // Ledger INB-20: rows render the assignee's display NAME, not a generic
+  // "assigned" word. Assignee ids are free-form strings, so the name comes
+  // from the team directory; unknown/foreign ids fall back to null and the
+  // client keeps its honest generic label.
+  const assigneeIds = Array.from(
+    new Set(
+      conversations
+        .map((conversation) => conversation.assigneeId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+  const assigneeNameById = new Map<string, string>();
+  if (assigneeIds.length > 0) {
+    try {
+      const teamMembers = await listTeamMembers(actorContext.shop);
+      for (const member of teamMembers) {
+        if (member.displayName) {
+          assigneeNameById.set(member.memberId, member.displayName);
+        }
+      }
+    } catch {
+      // Directory unavailable — rows degrade to the generic label.
+    }
+  }
 
   const chats = conversations.flatMap((conversation) => {
     if (!conversation.sourceId) return [];
@@ -104,11 +134,26 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
               // ISO strings.
               timestamp: Math.floor(last.timestamp.getTime() / 1_000),
               fromMe: isOutboundDirection(last.direction),
+              // Preview rendering needs the media family (📷/🎤/📎 icons in
+              // the conversation list) — additive, provider-shape safe.
+              type: last.messageType ?? null,
             }
           : undefined,
+        // Ledger INB-12: server-projected state truth. Mute is a horizon —
+        // an expired mutedUntil reads as unmuted, never as a stale flag.
+        states: {
+          pinned: conversation.pinnedAt !== null,
+          muted: conversation.mutedUntil
+            ? conversation.mutedUntil.getTime() > Date.now()
+            : false,
+          archived: conversation.archivedAt !== null,
+        },
         workflow: {
           status: conversation.status,
           assigneeId: conversation.assigneeId,
+          assigneeName: conversation.assigneeId
+            ? assigneeNameById.get(conversation.assigneeId) ?? null
+            : null,
           assignmentVersion: assignmentVersions.get(conversation.id) ?? 0,
           priority: conversation.priority,
           labels: parseLabels(conversation.labels),

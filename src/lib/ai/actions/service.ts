@@ -1460,6 +1460,44 @@ export async function approveAiActionProposal(
   };
 }
 
+/**
+ * Operator-deny for one pending proposal (ledger AI-03): terminal, coded,
+ * and impossible to execute afterwards. Deliberately lightweight — a deny is
+ * one click, unlike approval which stays digest-bound and reason-tracked.
+ */
+export async function rejectAiActionProposal({
+  context,
+  proposalId,
+}: {
+  context: { prisma: DbClient; shop: ShopContext };
+  proposalId: string;
+}): Promise<{ ok: boolean; status: "rejected" | "unchanged" }> {
+  const row = await readProposalById(context.prisma, proposalId);
+  if (!row) {
+    throw new SahelFlowError(
+      "AI action proposal was not found",
+      "AI_ACTION_PROPOSAL_NOT_FOUND",
+      404,
+    );
+  }
+  if (!shopMatches(row, context.shop)) {
+    throw new SahelFlowError(
+      "AI action proposal belongs to another exact shop runtime",
+      "AI_ACTION_SHOP_DRIFT",
+      409,
+    );
+  }
+  const updated = await context.prisma.$executeRaw`
+    UPDATE "AiActionProposal"
+    SET "status" = 'rejected',
+        "lastErrorCode" = 'AI_ACTION_PROPOSAL_REJECTED',
+        "updatedAt" = CURRENT_TIMESTAMP
+    WHERE "id" = ${proposalId}
+      AND "status" NOT IN ('succeeded', 'expired', 'rejected')
+  `;
+  return { ok: updated > 0, status: updated > 0 ? "rejected" : "unchanged" };
+}
+
 export async function listAiActionProposals(
   context: { prisma: DbClient; shop: ShopContext },
   actor: TrustedActorContext,
@@ -1484,6 +1522,111 @@ export async function listAiActionProposals(
     });
   }
   return output;
+}
+
+/**
+ * Ledger AI-19: shop-wide pending proposals with their originating session
+ * identity, so the review panel can surface approvable work from ANY session
+ * instead of only the currently open one. Shop-bound like the session-scoped
+ * sibling; permission-filtered per row after decryption.
+ */
+export interface AiActionProposalInboxHandle extends AiActionProposalHandle {
+  sessionId: string;
+  sessionTitle: string | null;
+}
+
+interface ProposalRowWithSession extends ProposalRow {
+  sessionTitle: string | null;
+}
+
+export async function listPendingAiActionProposalsAcrossSessions(
+  context: { prisma: DbClient; shop: ShopContext },
+  actor: TrustedActorContext,
+  limit = 50,
+): Promise<AiActionProposalInboxHandle[]> {
+  assertTrustedAction(actor, "ai.use", { shopId: context.shop.shopId });
+  const boundedLimit = Math.max(1, Math.min(limit, 100));
+  const rows = await context.prisma.$queryRaw<ProposalRowWithSession[]>`
+    SELECT p.*, s."title" AS "sessionTitle"
+    FROM "AiActionProposal" p
+    LEFT JOIN "AiChatSession" s ON s."id" = p."sessionId"
+    WHERE p."shopIncarnationId" = ${context.shop.shopIncarnationId}
+      AND p."status" = 'pending'
+    ORDER BY p."createdAt" DESC
+    LIMIT ${boundedLimit}
+  `;
+  const output: AiActionProposalInboxHandle[] = [];
+  for (const row of rows) {
+    const proposal = await decryptProposal(context, row);
+    if (!canReadProposal(actor, proposal.permissions.required)) continue;
+    output.push({
+      proposal: await proposalProjection(context, proposal),
+      proposalDigest: row.proposalDigest,
+      sessionId: row.sessionId,
+      sessionTitle: row.sessionTitle,
+    });
+  }
+  return output;
+}
+
+/**
+ * Ledger AI-20: recent terminal/decided proposals (approve, deny, execution
+ * outcome) as a plain audit timeline. Status/tool/digest columns are plaintext
+ * by design — no decryption needed for this slice.
+ */
+export interface AiActionDecisionEntry {
+  id: string;
+  sessionId: string;
+  sessionTitle: string | null;
+  toolName: string;
+  status: string;
+  lastErrorCode: string | null;
+  proposalDigestPrefix: string;
+  createdAt: string;
+  decidedAt: string;
+}
+
+export async function listRecentAiActionDecisions(
+  context: { prisma: DbClient; shop: ShopContext },
+  actor: TrustedActorContext,
+  limit = 12,
+): Promise<AiActionDecisionEntry[]> {
+  assertTrustedAction(actor, "ai.use", { shopId: context.shop.shopId });
+  const boundedLimit = Math.max(1, Math.min(limit, 50));
+  const rows = await context.prisma.$queryRaw<
+    Array<{
+      id: string;
+      sessionId: string;
+      sessionTitle: string | null;
+      toolName: string;
+      status: string;
+      lastErrorCode: string | null;
+      proposalDigest: string;
+      createdAt: Date | string;
+      updatedAt: Date | string;
+    }>
+  >`
+    SELECT p."id", p."sessionId", s."title" AS "sessionTitle", p."toolName",
+           p."status", p."lastErrorCode", p."proposalDigest",
+           p."createdAt", p."updatedAt"
+    FROM "AiActionProposal" p
+    LEFT JOIN "AiChatSession" s ON s."id" = p."sessionId"
+    WHERE p."shopIncarnationId" = ${context.shop.shopIncarnationId}
+      AND p."status" IN ('approved', 'rejected', 'succeeded', 'failed', 'expired', 'conflict')
+    ORDER BY p."updatedAt" DESC
+    LIMIT ${boundedLimit}
+  `;
+  return rows.map((row) => ({
+    id: row.id,
+    sessionId: row.sessionId,
+    sessionTitle: row.sessionTitle,
+    toolName: row.toolName,
+    status: row.status,
+    lastErrorCode: row.lastErrorCode,
+    proposalDigestPrefix: row.proposalDigest.slice(0, 12),
+    createdAt: toDate(row.createdAt).toISOString(),
+    decidedAt: toDate(row.updatedAt).toISOString(),
+  }));
 }
 
 export async function getAiActionProposal(

@@ -294,6 +294,9 @@ model Conversation {
   labels        String?                          // JSON array of label strings
   draftBody     String?                          // protected persisted reply draft
   draftRevision Int       @default(0)            // monotonic ordering for autosave/lifecycle races
+  pinnedAt      DateTime?                        // INB-12: pinned queue ordering
+  mutedUntil    DateTime?                        // INB-12: mute horizon (null = unmuted)
+  archivedAt    DateTime?                        // INB-12: archive marker (null = active)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   messages      Message[]
@@ -309,6 +312,7 @@ model Conversation {
   @@index([waitingSince])
   @@index([sourceId])           // S-M1: ensureConversationForJid hot path
   @@unique([channel, sourceId]) // S-M1: one conversation per channel+sourceId
+  @@index([archivedAt])         // INB-12: archive queue scan
 }
 
 model Message {
@@ -480,10 +484,10 @@ model Integration {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model AiChatSession {
-  id        String         @id @default(cuid())
+  id        String             @id @default(cuid())
   title     String?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
   messages  AiChatMessage[]
 }
 
@@ -495,8 +499,25 @@ model AiChatMessage {
   content   String
   toolCalls String?
   createdAt DateTime      @default(now())
+  feedback  AiMessageFeedback?
 
   @@index([sessionId, createdAt])
+}
+
+/// Ledger AI-13 — per-answer quality feedback. One row per assistant message
+/// (unique messageId): clicking the opposite thumb overwrites, clicking the
+/// active thumb again deletes. The table feeds the same quality-loop shape
+/// as ExtractionMetric (method/confidence analytics) instead of decorating
+/// the conversation with vanity counters.
+model AiMessageFeedback {
+  id        String        @id @default(cuid())
+  messageId String
+  message   AiChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  value     String // "up" | "down"
+  createdAt DateTime      @default(now())
+
+  @@unique([messageId])
+  @@index([value, createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
