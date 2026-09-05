@@ -24,7 +24,8 @@ describe("Inbox final review invariants", () => {
 
   it("pins enriched search chats and keeps manual plus auto selections in the canonical URL", () => {
     const queue = source("src/components/inbox/inbox-v3-queue.tsx");
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    // INB-27: selection lives in the thread hook module.
+    const workspace = source("src/hooks/inbox/use-inbox-thread.ts");
     const deskTypes = source("src/components/inbox/inbox-desk-types.ts");
 
     expect(queue).toContain("selectChat(canonical ?? chat)");

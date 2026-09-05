@@ -10,28 +10,31 @@ function source(path: string): string {
 describe("WhatsApp outbound document source boundary", () => {
   it("exposes one bounded document picker and the durable send monitor", () => {
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    // INB-27: media bounds/specs live in the shared layer; the send factory
+    // lives in the outbox hook.
+    const shared = source("src/hooks/inbox/inbox-workspace-shared.ts");
+    const outbox = source("src/hooks/inbox/use-inbox-outbox.ts");
 
     expect(thread).toContain('accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,');
     expect(thread).toContain('data-inbox-document-picker="true"');
     expect(thread).toContain('data-inbox-document-input="true"');
     expect(thread).toContain('aria-label={copy("mediaDocument")}');
     expect(thread).toContain("void sendDocument(file, quotedId)");
-    expect(workspace).toContain(
+    expect(shared).toContain(
       "MAX_OUTBOUND_DOCUMENT_BYTES = 64 * 1024 * 1024",
     );
-    expect(workspace).toContain('"/api/whatsapp/send-document"');
+    expect(shared).toContain('"/api/whatsapp/send-document"');
         // Ledger INB-28 disposition: the four duplicated send bodies collapsed
     // into one factory; the per-media form field lives in the spec table
     // (fieldName) and the shared call site is form.set(spec.fieldName, file…).
-    expect(workspace).toContain("form.set(spec.fieldName, file");
-    expect(workspace).toContain('fieldName: "document"');
-    expect(workspace).toContain("void monitorWhatsAppEffect(");
+    expect(outbox).toContain("form.set(spec.fieldName, file");
+    expect(shared).toContain('fieldName: "document"');
+    expect(outbox).toContain("void monitorWhatsAppEffect(");
   });
 
   it("allows only the bounded business document declaration set", () => {
     const route = source("src/app/api/whatsapp/send-document/route.ts");
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    const shared = source("src/hooks/inbox/inbox-workspace-shared.ts");
 
     expect(route).toContain('"application/pdf"');
     expect(route).toContain(
@@ -39,7 +42,7 @@ describe("WhatsApp outbound document source boundary", () => {
     );
     expect(route).toContain('"text/csv"');
     expect(route).toContain("!SAFE_DOCUMENT_TYPES.has(mediaType)");
-    expect(workspace).toContain(
+    expect(shared).toContain(
       "!SAFE_OUTBOUND_DOCUMENT_TYPES.has(mediaType)",
     );
   });

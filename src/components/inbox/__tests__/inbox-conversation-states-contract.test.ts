@@ -56,7 +56,8 @@ describe("inbox conversation states (INB-12)", () => {
   });
 
   it("sorts pinned first and isolates the archive queue", () => {
-    const hook = source("src/hooks/use-inbox-workspace.ts");
+    // INB-27: the queue projection lives in the chat-queue hook module.
+    const hook = source("src/hooks/inbox/use-inbox-chat-queue.ts");
     expect(hook).toContain("Number(b.pinned) - Number(a.pinned)");
     expect(hook).toContain('queueFilter === "archived"');
     expect(hook).toContain("const setConversationState = useCallback(");

@@ -15,7 +15,8 @@ function source(path: string): string {
 describe("inbox conversation-native interaction source contract", () => {
   const thread = source("src/components/inbox/inbox-v3-thread.tsx");
   const attachment = source("src/components/inbox/inbox-media-attachment.tsx");
-  const hook = source("src/hooks/use-inbox-workspace.ts");
+  // INB-27: the durable send path lives in the outbox hook module.
+  const hook = source("src/hooks/inbox/use-inbox-outbox.ts");
 
   it("keeps quoted-reply context on the durable send path", () => {
     expect(thread).toContain("data-inbox-reply-chip=\"true\"");

@@ -10,22 +10,25 @@ function source(path: string): string {
 describe("WhatsApp outbound voice source boundary", () => {
   it("exposes one bounded audio picker and the durable send monitor", () => {
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    // INB-27: media bounds/specs live in the shared layer; the send factory
+    // lives in the outbox hook.
+    const shared = source("src/hooks/inbox/inbox-workspace-shared.ts");
+    const outbox = source("src/hooks/inbox/use-inbox-outbox.ts");
 
     expect(thread).toContain('data-inbox-audio-picker="true"');
     expect(thread).toContain('data-inbox-audio-input="true"');
     expect(thread).toContain('aria-label={copy("mediaAudio")}');
     expect(thread).toContain("void sendVoice(file, quotedId)");
-    expect(workspace).toContain(
+    expect(shared).toContain(
       "MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024",
     );
-    expect(workspace).toContain('"/api/whatsapp/send-voice"');
+    expect(shared).toContain('"/api/whatsapp/send-voice"');
         // Ledger INB-28 disposition: the four duplicated send bodies collapsed
     // into one factory; the per-media form field lives in the spec table
     // (fieldName) and the shared call site is form.set(spec.fieldName, file…).
-    expect(workspace).toContain("form.set(spec.fieldName, file");
-    expect(workspace).toContain('fieldName: "audio"');
-    expect(workspace).toContain("void monitorWhatsAppEffect(");
+    expect(outbox).toContain("form.set(spec.fieldName, file");
+    expect(shared).toContain('fieldName: "audio"');
+    expect(outbox).toContain("void monitorWhatsAppEffect(");
   });
 
   it("records voice notes in the composer and hands them to the durable send path", () => {
@@ -91,13 +94,13 @@ describe("WhatsApp outbound voice source boundary", () => {
 
   it("allows only the bounded authenticated audio declaration set", () => {
     const route = source("src/app/api/whatsapp/send-voice/route.ts");
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    const shared = source("src/hooks/inbox/inbox-workspace-shared.ts");
 
     expect(route).toContain('"audio/ogg"');
     expect(route).toContain('"audio/mpeg"');
     expect(route).toContain('"audio/mp4"');
     expect(route).toContain("!SAFE_VOICE_TYPES.has(mediaType)");
-    expect(workspace).toContain("!SAFE_OUTBOUND_VOICE_TYPES.has(mediaType)");
+    expect(shared).toContain("!SAFE_OUTBOUND_VOICE_TYPES.has(mediaType)");
   });
 
   it("authenticates container metadata before staging and seals the PTT truth", () => {

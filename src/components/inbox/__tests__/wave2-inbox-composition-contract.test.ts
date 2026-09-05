@@ -65,7 +65,9 @@ describe("Class-AAA Inbox composition contract", () => {
   });
 
   it("preserves bounded thread scrolling and mobile queue-first navigation", () => {
-    const hook = read("src/hooks/use-inbox-workspace.ts");
+    // INB-27: the thread projection and tail management live in the thread
+    // hook module.
+    const hook = read("src/hooks/inbox/use-inbox-thread.ts");
     const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
     const thread = read("src/components/inbox/inbox-v3-thread.tsx");
 

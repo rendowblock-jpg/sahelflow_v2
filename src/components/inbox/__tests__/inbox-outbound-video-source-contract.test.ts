@@ -10,31 +10,34 @@ function source(path: string): string {
 describe("WhatsApp outbound video source boundary", () => {
   it("exposes one bounded MP4 picker and the durable send monitor", () => {
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    // INB-27: media bounds/specs live in the shared layer; the send factory
+    // lives in the outbox hook.
+    const shared = source("src/hooks/inbox/inbox-workspace-shared.ts");
+    const outbox = source("src/hooks/inbox/use-inbox-outbox.ts");
 
     expect(thread).toContain('accept="video/mp4"');
     expect(thread).toContain('data-inbox-video-picker="true"');
     expect(thread).toContain('aria-label={copy("mediaVideo")}');
     expect(thread).toContain("void sendVideo(file, quotedId)");
-    expect(workspace).toContain("MAX_OUTBOUND_VIDEO_BYTES = 64 * 1024 * 1024");
-    expect(workspace).toContain('"/api/whatsapp/send-video"');
+    expect(shared).toContain("MAX_OUTBOUND_VIDEO_BYTES = 64 * 1024 * 1024");
+    expect(shared).toContain('"/api/whatsapp/send-video"');
         // Ledger INB-28 disposition: the four duplicated send bodies collapsed
     // into one factory; the per-media form field lives in the spec table
     // (fieldName) and the shared call site is form.set(spec.fieldName, file…).
-    expect(workspace).toContain("form.set(spec.fieldName, file");
-    expect(workspace).toContain('fieldName: "video"');
-    expect(workspace).toContain("void monitorWhatsAppEffect(");
+    expect(outbox).toContain("form.set(spec.fieldName, file");
+    expect(shared).toContain('fieldName: "video"');
+    expect(outbox).toContain("void monitorWhatsAppEffect(");
   });
 
   it("treats generic browser MIME as a hint while authenticating MP4 bytes", () => {
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    const shared = source("src/hooks/inbox/inbox-workspace-shared.ts");
     const mediaStore = source("src/lib/whatsapp/media-object-store.ts");
 
     expect(thread).toContain('declaredType !== "application/octet-stream"');
     expect(thread).toContain('fileType !== "ftyp"');
     expect(thread).toContain('type: "video/mp4"');
-    expect(workspace).toContain('mediaType !== "video/mp4"');
+    expect(shared).toContain('mediaType !== "video/mp4"');
     expect(mediaStore).toContain('kind === "video"');
     expect(mediaStore).toContain('sniffed === "video/mp4"');
   });
