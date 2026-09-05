@@ -152,6 +152,13 @@ function errorMessage(
       return workspace.copy("sessionCreateFailed");
     case "AI_PROVIDER_UNAVAILABLE":
       return workspace.copy("providerDegraded");
+    case "AI_PROVIDER_REPORTED":
+      // F-09: the server's locale-native verdict IS the banner text — no
+      // invented title on top of it. Falls back to the degraded copy only
+      // if an older paired server sent an empty message.
+      return error.detail && error.detail.trim()
+        ? error.detail
+        : workspace.copy("providerDegraded");
     case "AI_STREAM_TIMEOUT":
       return workspace.copy("streamTimeout");
     default:
@@ -270,7 +277,9 @@ function ErrorNotice({
         />
         <div className="min-w-0">
           <p className="text-sm font-semibold">{errorMessage(error, workspace)}</p>
-          {error.detail ? (
+          {error.detail && error.code !== "AI_PROVIDER_REPORTED" ? (
+            // AI_PROVIDER_REPORTED already renders the server message as the
+            // title — repeating it as the sub-line would duplicate the text.
             <p dir="auto" className="mt-1 text-xs leading-5 text-muted-foreground">
               {error.detail}
             </p>

@@ -119,7 +119,11 @@ export type AgentStreamEvent =
       actionProposal?: AiActionProposalToolResult;
       signal?: AgentTurnSignal;
     }
-  | { type: "error"; message: string };
+  // F-09 (Internal.34 installed campaign): error events carry a stable code
+  // so the client never has to guess the cause class from prose. The
+  // provider-failure path keeps its GeminiProviderErrorCode; the
+  // empty-response path names its own cause.
+  | { type: "error"; message: string; code?: string };
 
 type ToolExecutionResult = {
   result: unknown;
@@ -242,9 +246,29 @@ type EmptyResponseShape = {
   blockReason: string | null;
 };
 
+/**
+ * F-09: thought-token usage proof. When the provider reports output tokens
+ * but returns no visible text, the number itself is the evidence that the
+ * turn actually ran (the budget went to internal reasoning); it is PII-free
+ * and comes only from the provider's own usageMetadata — never estimated.
+ */
+function usageProofSuffix(
+  locale: AiChatLocale | undefined,
+  usage: GeminiUsageMetadata | null | undefined,
+): string {
+  const spent = usage?.candidatesTokenCount;
+  if (typeof spent !== "number" || spent <= 0) return "";
+  if (locale === "ar")
+    return ` استُهلك ${spent} رمز توليد دون أي نص مرئي.`;
+  if (locale === "en")
+    return ` ${spent} output tokens were spent with no visible text.`;
+  return ` ${spent} jetons de génération ont été dépensés sans texte visible.`;
+}
+
 function emptyResponseMessage(
   locale: AiChatLocale | undefined,
   shape: EmptyResponseShape,
+  usage?: GeminiUsageMetadata | null,
 ): string {
   if (shape.blockReason) {
     if (locale === "ar")
@@ -255,16 +279,16 @@ function emptyResponseMessage(
   }
   if (shape.finishReason === "MAX_TOKENS") {
     if (locale === "ar")
-      return "استهلك النموذج ميزانية التوليد في التفكير الداخلي قبل أي نص مرئي. أعد إرسال طلبك — إذا تكرر ذلك فالنموذج مشبع حاليًا.";
+      return `استهلك النموذج ميزانية التوليد في التفكير الداخلي قبل أي نص مرئي. أعد إرسال طلبك — إذا تكرر ذلك فالنموذج مشبع حاليًا.${usageProofSuffix(locale, usage)}`;
     if (locale === "en")
-      return "The model spent its generation budget on internal reasoning before any visible text. Send the request again — if it repeats, the model is currently saturated.";
-    return "Le modèle a dépensé son budget de génération en raisonnement interne avant tout texte visible. Renvoyez la demande — si cela se répète, le modèle est actuellement saturé.";
+      return `The model spent its generation budget on internal reasoning before any visible text. Send the request again — if it repeats, the model is currently saturated.${usageProofSuffix(locale, usage)}`;
+    return `Le modèle a dépensé son budget de génération en raisonnement interne avant tout texte visible. Renvoyez la demande — si cela se répète, le modèle est actuellement saturé.${usageProofSuffix(locale, usage)}`;
   }
   if (locale === "ar")
-    return "لم يُعِد النموذج محتوى مرئيًا. أعد إرسال طلبك.";
+    return `لم يُعِد النموذج محتوى مرئيًا. أعد إرسال طلبك.${usageProofSuffix(locale, usage)}`;
   if (locale === "en")
-    return "The model returned no visible content. Send the request again.";
-  return "Le modèle n'a renvoyé aucun contenu visible. Renvoyez la demande.";
+    return `The model returned no visible content. Send the request again.${usageProofSuffix(locale, usage)}`;
+  return `Le modèle n'a renvoyé aucun contenu visible. Renvoyez la demande.${usageProofSuffix(locale, usage)}`;
 }
 
 export async function runAgent(
@@ -366,13 +390,18 @@ export async function runAgent(
     }
     // F-05: truthful empty-shape verdict instead of the false "rephrase"
     // dead end. The shape is PII-free and names what the provider actually
-    // returned (thought-budget exhaustion / policy refusal / empty).
+    // returned (thought-budget exhaustion / policy refusal / empty), with
+    // the provider's own token report as proof when it sent one (F-09).
     return {
-      response: emptyResponseMessage(locale, {
-        finishReason:
-          response.candidates?.[0]?.finishReason ?? null,
-        blockReason: response.promptFeedback?.blockReason ?? null,
-      }),
+      response: emptyResponseMessage(
+        locale,
+        {
+          finishReason:
+            response.candidates?.[0]?.finishReason ?? null,
+          blockReason: response.promptFeedback?.blockReason ?? null,
+        },
+        response.usageMetadata ?? null,
+      ),
       toolCalls: allToolCalls,
     };
   }
@@ -619,11 +648,18 @@ export async function* runAgentStream(
       // provider-truth failure, not a user-phrasing problem. The coded error
       // surface marks the turn interrupted and names the PII-free shape
       // (thought-budget exhaustion / policy refusal / empty) instead of the
-      // old "rephrase your question" done event.
-      message: emptyResponseMessage(locale, {
-        finishReason: parsed.value.finishReason,
-        blockReason: parsed.value.blockReason,
-      }),
+      // old "rephrase your question" done event. F-09: the stable code and
+      // the usage proof let the UI show the truthful cause, never the
+      // misleading "provider unavailable" collapse.
+      message: emptyResponseMessage(
+        locale,
+        {
+          finishReason: parsed.value.finishReason,
+          blockReason: parsed.value.blockReason,
+        },
+        parsed.value.usage,
+      ),
+      code: "AI_PROVIDER_EMPTY_RESPONSE",
     };
     return;
   }

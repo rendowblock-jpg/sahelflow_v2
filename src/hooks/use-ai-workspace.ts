@@ -71,6 +71,7 @@ function errorCode(value: unknown, fallback: AiWorkspaceErrorCode): AiWorkspaceE
     "AI_SESSION_NOT_FOUND",
     "AI_RESPONSE_NOT_PERSISTED",
     "AI_PROVIDER_UNAVAILABLE",
+    "AI_PROVIDER_REPORTED",
     "AI_SESSION_LOAD_FAILED",
     "AI_SESSION_CREATE_FAILED",
     "AI_STREAM_TIMEOUT",
@@ -750,8 +751,23 @@ export function useAiWorkspace() {
                   setError({ code: "AI_RESPONSE_NOT_PERSISTED" });
                 } else if (eventType === "error") {
                   const detail =
-                    typeof payload.message === "string" ? payload.message : null;
-                  setError({ code: "AI_PROVIDER_UNAVAILABLE", detail });
+                    typeof payload.message === "string" && payload.message.trim()
+                      ? payload.message
+                      : null;
+                  // F-09 (Internal.34 installed campaign): the server authors
+                  // locale-native, truthful copy for every coded failure —
+                  // Gemini key/quota/region verdicts (geminiErrorMessage) and
+                  // the empty-response verdict (agent.ts). Collapsing every
+                  // SSE error into "provider unavailable" hid the real cause
+                  // behind a false title. When the server sent a message, the
+                  // banner shows it verbatim (AI_PROVIDER_REPORTED); the
+                  // degraded title stays only for transport-level collapses
+                  // with no server verdict.
+                  setError(
+                    detail
+                      ? { code: "AI_PROVIDER_REPORTED", detail }
+                      : { code: "AI_PROVIDER_UNAVAILABLE" },
+                  );
                   setMessages((current) =>
                     current.map((message) =>
                       message.id === assistantId
