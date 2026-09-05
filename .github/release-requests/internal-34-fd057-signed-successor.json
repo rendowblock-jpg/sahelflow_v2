@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.34 FD-057 signed successor publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.34",
+  "windowsMsiVersion": "1.0.0.34",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-057",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "9dc8e74d2466e897957847946c7ffd6603a8fc5f",
+    "phase5RunId": 33961402071,
+    "phase67RunId": 33961402075,
+    "ciRunId": 33961402161
+  },
+  "reason": "Founder directive 2026-09-05 ('Release Internal.34') authorizes exactly one combined signed successor (Internal.34) under FD-057 packaging the exact protected-main frontier since Internal.33: PR #391 (Internal.33 installed-campaign findings F-04/F-05/F-06/F-07/F-08 — delete contract, AI thinking-budget, agents-page functional completion, queue header) squash-merged as 1847396, and PR #392 (INB-27 god-hook split — the 2,381-line workspace inbox hook decomposed into seven src/hooks/inbox/ concern hooks — chat queue, drafts, thread, outbox, transport — behind a 458-line facade with zero component-consumer changes and the ten contract files re-anchored to the same invariants) squash-merged as 9dc8e74 under the expected-head discipline (live re-resolution before the write: base 1847396 equal to main, head 80395e2c, mergeable clean, hosted Required battery at the exact head 14 success / 5 risk-classified skips / 0 failed). The certification product head 9dc8e74 is tree-identical to the reviewed PR #392 head 80395e2 (tree ce742113) and passed the full gate line at that exact head with zero failed checks: CI run 33961402161, Phase 5 run 33961402071, Phase 6-7 run 33961402075. The docs-only reconciliation PR #393 (8ec2c88) carries zero source delta and marks the INB-27 ledger row DONE (source). Sidecar-probe rows (INB-13/14/19/32) stay BLOCKED (no real-session probe capability). The Internal.34 installed campaign re-verifies the F-04..F-08 findings and the INB-27 concern-hook waves on the founder install, continues the retained Internal.33 campaign rows and D3 six-wave observations, executes the retained #306 logout row LAST after every other row is green, and the Founder rotates the screenshot-exposed Gemini key before real AI usage. Founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim; #230 unaffected."
+}
