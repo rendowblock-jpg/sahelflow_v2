@@ -12,7 +12,11 @@ describe("WhatsApp Inbox parity source slice", () => {
     const schema = source("prisma/schema.prisma");
     const protectedFields = source("src/lib/crypto/protected-pii.ts");
     const route = source("src/app/api/conversations/[id]/draft/route.ts");
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    // INB-27: draft pins live in the drafts hook; send pins in the outbox
+    // hook; selection ordering in the thread hook.
+    const drafts = source("src/hooks/inbox/use-inbox-drafts.ts");
+    const outbox = source("src/hooks/inbox/use-inbox-outbox.ts");
+    const thread = source("src/hooks/inbox/use-inbox-thread.ts");
 
     expect(schema).toContain("draftBody     String?");
     expect(protectedFields).toContain('"draftBody"');
@@ -24,72 +28,71 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(route).toContain("current?.draftRevision === revision");
     expect(route).toContain("data: { draftRevision: promotedRevision }");
     expect(route).toContain("return { applied: true, revision: promotedRevision }");
-    expect(workspace).toContain("DRAFT_SAVE_DELAY_MS");
-    expect(workspace).toContain("draftReadyConversationRef");
-    expect(workspace).toContain("draftWriteQueueRef");
-    expect(workspace).toContain("draftRevisionRef");
-    expect(workspace).toContain("DRAFT_LOAD_ATTEMPTS");
-    expect(workspace).toContain("if (!response || !isCurrentDraft()) return");
-    expect(workspace).toContain("if (data.applied === true) return true");
-    expect(workspace).toContain("DRAFT_WRITE_ATTEMPTS");
-    expect(workspace).toContain("attempt < DRAFT_WRITE_ATTEMPTS");
-    const draftLoader = workspace.slice(
-      workspace.indexOf("const loadDraft"),
-      workspace.indexOf("const handleStatusChange"),
-    );
+    expect(drafts).toContain("DRAFT_SAVE_DELAY_MS");
+    expect(drafts).toContain("draftReadyConversationRef");
+    expect(drafts).toContain("draftWriteQueueRef");
+    expect(drafts).toContain("draftRevisionRef");
+    expect(drafts).toContain("DRAFT_LOAD_ATTEMPTS");
+    expect(drafts).toContain("if (!response || !isCurrentDraft()) return");
+    expect(drafts).toContain("if (data.applied === true) return true");
+    expect(drafts).toContain("DRAFT_WRITE_ATTEMPTS");
+    expect(drafts).toContain("attempt < DRAFT_WRITE_ATTEMPTS");
+    // The draft loader never races its own finally-cleanup: no finally inside
+    // the loader body (the old slice invariant, re-anchored to the module).
+    const draftLoader = drafts.slice(drafts.indexOf("const loadDraft"));
     expect(draftLoader).not.toContain("finally");
     expect(draftLoader.indexOf("await response.json()"))
       .toBeLessThan(draftLoader.indexOf("draftReadyConversationRef.current ="));
-    expect(workspace).toContain(
+    expect(drafts).toContain(
       "draftWriteQueueRef.current.get(chat.conversationId)",
     );
-    expect(workspace).toContain('window.addEventListener("pagehide"');
-    expect(workspace).toContain(
+    expect(drafts).toContain('window.addEventListener("pagehide"');
+    expect(drafts).toContain(
       'document.addEventListener("visibilitychange"',
     );
-    expect(workspace).toContain("keepalive: true");
-    const selectChat = workspace.indexOf("const selectChat");
+    expect(drafts).toContain("keepalive: true");
+    const selectChat = thread.indexOf("const selectChat");
     expect(
-      workspace.indexOf(
+      thread.indexOf(
         "previousChat?.conversationId === chat.conversationId",
         selectChat,
       ),
-    ).toBeLessThan(workspace.indexOf("void persistDraft(", selectChat));
+    ).toBeLessThan(thread.indexOf("void persistDraft(", selectChat));
     expect(
-      workspace.indexOf("void persistDraft(", selectChat),
-    ).toBeLessThan(workspace.indexOf("activeChatRef.current = chat", selectChat));
-    const sendReply = workspace.indexOf("const sendReply");
-    const clearAcceptedDraft = workspace.indexOf(
+      thread.indexOf("void persistDraft(", selectChat),
+    ).toBeLessThan(thread.indexOf("activeChatRef.current = chat", selectChat));
+    const sendReply = outbox.indexOf("const sendReply");
+    const clearAcceptedDraft = outbox.indexOf(
       "const clearAcceptedDraft",
       sendReply,
     );
     expect(clearAcceptedDraft).toBeGreaterThan(sendReply);
     expect(
-      workspace.indexOf(
+      outbox.indexOf(
         "activeChatRef.current?.conversationId === chat.conversationId",
         clearAcceptedDraft,
       ),
     ).toBeGreaterThan(clearAcceptedDraft);
-    expect(workspace.indexOf("clearAcceptedDraft();", sendReply))
-      .toBeGreaterThan(workspace.indexOf('fetch("/api/whatsapp/send"'));
+    expect(outbox.indexOf("clearAcceptedDraft();", sendReply))
+      .toBeGreaterThan(outbox.indexOf('fetch("/api/whatsapp/send"'));
   });
 
   it("marks unread without reducing an existing inbound unread count", () => {
     const route = source("src/app/api/conversations/[id]/unread/route.ts");
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    const queue = source("src/hooks/inbox/use-inbox-chat-queue.ts");
 
     expect(route).toContain("where: { id, unreadCount: 0 }");
     expect(route).toContain("data: { unreadCount: { increment: 1 } }");
     expect(thread).toContain('copy("markUnread")');
     expect(thread).toContain("if (updated) onBackToQueue()");
-    expect(workspace).toContain("explicitUnreadHoldRef");
-    expect(workspace).toContain("readStateWriteQueueRef");
-    expect(workspace).toContain("messageLoadGenerationRef.current += 1");
-    expect(workspace.match(/chatLoadGenerationRef\.current \+= 1/g)?.length)
+    expect(queue).toContain("explicitUnreadHoldRef");
+    expect(queue).toContain("readStateWriteQueueRef");
+    expect(queue).toContain("messageLoadGenerationRef.current += 1");
+    expect(queue.match(/chatLoadGenerationRef\.current \+= 1/g)?.length)
       .toBeGreaterThanOrEqual(2);
-    expect(workspace.indexOf("await readStateWriteQueueRef.current"))
-      .toBeLessThan(workspace.indexOf('/unread`'));
+    expect(queue.indexOf("await readStateWriteQueueRef.current"))
+      .toBeLessThan(queue.indexOf('/unread`'));
   });
 
   it("never projects raw attachment ciphertext or provider paths to the Inbox", () => {
@@ -109,7 +112,7 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(metadata).not.toContain("source.directPath");
     expect(inbound).toContain("normalizeWhatsAppMessageContent");
     expect(inbound).toContain("extractWhatsAppMessageAttachment(messageContent)");
-    expect(source("src/hooks/use-inbox-workspace.ts")).toContain(
+    expect(source("src/hooks/inbox/use-inbox-transport.ts")).toContain(
       "void loadMessages(activeChat, { background: true })",
     );
     expect(thread).toContain("https://www.openstreetmap.org/");

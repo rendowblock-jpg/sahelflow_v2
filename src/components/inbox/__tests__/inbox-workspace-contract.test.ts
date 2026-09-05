@@ -55,83 +55,97 @@ describe("Inbox Class-AAA operations desk contract", () => {
   it("preserves assignment versions and coalesced live refresh at the authority boundary", () => {
     const route = read("src/app/api/whatsapp/chats/route.ts");
     const assignment = read("src/lib/inbox/conversation-assignment.ts");
-    const hook = read("src/hooks/use-inbox-workspace.ts");
+    // INB-27: the former god hook is split into concern hooks; the queue,
+    // thread and transport pins live at their canonical modules now.
+    const queue = read("src/hooks/inbox/use-inbox-chat-queue.ts");
+    const thread = read("src/hooks/inbox/use-inbox-thread.ts");
+    const transport = read("src/hooks/inbox/use-inbox-transport.ts");
     expect(route).toContain("getConversationAssignmentVersions");
     expect(route).toContain("{ prisma: db, shop: shopContext }");
     expect(route).not.toContain("$queryRaw");
     expect(assignment).toContain("Prisma.join(unique)");
     expect(assignment).toContain('FROM "BusinessAggregateVersion"');
-    expect(hook).toContain("CHAT_REFRESH_COALESCE_MS");
-    expect(hook).toContain("scheduleChatsRefresh");
-    expect(hook).toContain("chatLoadGenerationRef");
-    expect(hook).toContain("isLatestChatLoad");
-    expect(hook).toContain("loadFallbackProjection(loadGeneration)");
-    expect(hook).toContain("LIVE_RECOVERY_POLL_MS");
-    expect(hook).toContain('sidecarStatus !== "connected"');
-    expect(hook).toContain("sidecarReachable !== true");
-    expect(hook).toContain("loadMessages(chat, { background: true })");
-    expect(hook).toContain("const isCurrentConversation");
-    expect(hook).toContain("messageLoadGenerationRef");
-    expect(hook).toContain(
+    expect(queue).toContain("CHAT_REFRESH_COALESCE_MS");
+    expect(queue).toContain("scheduleChatsRefresh");
+    expect(queue).toContain("chatLoadGenerationRef");
+    expect(queue).toContain("isLatestChatLoad");
+    expect(queue).toContain("loadFallbackProjection(loadGeneration)");
+    expect(transport).toContain("LIVE_RECOVERY_POLL_MS");
+    expect(transport).toContain('sidecarStatus !== "connected"');
+    expect(transport).toContain("sidecarReachable !== true");
+    expect(transport).toContain("loadMessages(chat, { background: true })");
+    expect(thread).toContain("const isCurrentConversation");
+    expect(thread).toContain("messageLoadGenerationRef");
+    expect(thread).toContain(
       "messageLoadGenerationRef.current === messageLoadGeneration",
     );
-    expect(hook).toContain("messageSelectionGenerationRef");
-    expect(hook).toContain("messageMutationGenerationRef");
-    expect(hook).toContain(
+    expect(thread).toContain("messageSelectionGenerationRef");
+    expect(thread).toContain("messageMutationGenerationRef");
+    expect(thread).toContain(
       "messageMutationGenerationRef.current === mutationGeneration",
     );
-    expect(hook).toContain("mergeInboxMessageProjection");
-    expect(hook).toContain(
+    expect(thread).toContain("mergeInboxMessageProjection");
+    expect(thread).toContain(
       "mergeInboxMessageProjection(loaded, messagesRef.current)",
     );
-    expect(hook).toContain("sendingRef.current");
-    expect(hook).toContain("if (cancelled || sendingRef.current) return");
-    expect(hook).toContain("inboxMessagesEqual");
-    expect(hook).toContain(
+    expect(transport).toContain("sendingRef.current");
+    expect(transport).toContain("if (cancelled || sendingRef.current) return");
+    expect(thread).toContain("inboxMessagesEqual");
+    expect(thread).toContain(
       "activeChatRef.current?.conversationId !== conversationId",
     );
-    expect(hook).toContain("canApplyLoadedProjection");
-    expect(hook).toContain("!background &&");
-    expect(hook).toContain("canApplyLoadedProjection() &&");
-    expect(hook).toContain(
+    expect(thread).toContain("canApplyLoadedProjection");
+    expect(thread).toContain("!background &&");
+    expect(thread).toContain("canApplyLoadedProjection() &&");
+    expect(thread).toContain(
       "activeChatRef.current?.conversationId === requestedConversationId",
     );
-    const messageLoader = hook.slice(
-      hook.indexOf("const loadMessages"),
-      hook.indexOf("const handleStatusChange"),
-    );
-    expect(messageLoader).not.toContain("setSidecarReachable");
+    // The message loader never touches sidecar status; only the transport
+    // status handler does (the old slice invariant, re-anchored per module).
+    expect(thread).not.toContain("setSidecarReachable");
+    expect(transport).toContain("setSidecarReachable(true)");
   });
 
   it("opens search and command results through canonical persisted conversation ids", () => {
     const search = read("src/lib/search/universal-search-server.ts");
-    const hook = read("src/hooks/use-inbox-workspace.ts");
-    const queue = read("src/components/inbox/inbox-v3-queue.tsx");
+    const facade = read("src/hooks/use-inbox-workspace.ts");
+    const queue = read("src/hooks/inbox/use-inbox-chat-queue.ts");
+    const queueSurface = read("src/components/inbox/inbox-v3-queue.tsx");
 
     expect(search).toContain(
       'href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`',
     );
-    expect(hook).toContain('searchParams.get("conversation")');
-    expect(hook).toContain("pinnedDeepLinkChatRef");
-    expect(queue).toContain("/api/conversations/search?q=");
-    expect(queue).toContain("selectChat(canonical ?? chat)");
-    expect(queue).toContain(
+    expect(facade).toContain('searchParams.get("conversation")');
+    expect(queue).toContain("pinnedDeepLinkChatRef");
+    expect(queueSurface).toContain("/api/conversations/search?q=");
+    expect(queueSurface).toContain("selectChat(canonical ?? chat)");
+    expect(queueSurface).toContain(
       "`/inbox?conversation=${encodeURIComponent(chat.conversationId)}`",
     );
   });
 
-  it("keeps transport and durable outbox authority in the existing workspace hook", () => {
-    const hook = read("src/hooks/use-inbox-workspace.ts");
+  it("keeps transport and durable outbox authority in the composed workspace hooks", () => {
+    const facade = read("src/hooks/use-inbox-workspace.ts");
+    const queue = read("src/hooks/inbox/use-inbox-chat-queue.ts");
+    const outbox = read("src/hooks/inbox/use-inbox-outbox.ts");
     const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
     const thread = read("src/components/inbox/inbox-v3-thread.tsx");
 
     expect(workspace).toContain("useInboxWorkspace()");
-    expect(hook).toContain('fetch("/api/whatsapp/chats?limit=100"');
-    expect(hook).toContain("loadFallbackProjection");
-    expect(hook).toContain("monitorWhatsAppEffect");
-    expect(hook).toContain("retryFailedMessage");
+    expect(queue).toContain('fetch("/api/whatsapp/chats?limit=100"');
+    expect(queue).toContain("loadFallbackProjection");
+    expect(outbox).toContain("monitorWhatsAppEffect");
+    expect(outbox).toContain("retryFailedMessage");
     expect(thread).toContain("retryFailedMessage");
     expect(thread).toContain("MessageStatus");
+    // INB-27: the facade stays the single composition root — every concern
+    // hook is wired through it, no component imports a sub-hook directly.
+    expect(facade).toContain("useInboxChatQueue(");
+    expect(facade).toContain("useInboxDrafts(");
+    expect(facade).toContain("useInboxThread(");
+    expect(facade).toContain("useInboxOutbox(");
+    expect(facade).toContain("useInboxTransportHandlers(");
+    expect(facade).toContain("useInboxTransportRuntime(");
   });
 
   it("unifies workflow routing and private notes without weakening concurrency", () => {

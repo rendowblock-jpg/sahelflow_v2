@@ -10,27 +10,30 @@ function source(path: string): string {
 describe("WhatsApp outbound image source boundary", () => {
   it("exposes only the bounded image picker and reuses the durable send monitor", () => {
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    // INB-27: media bounds/specs live in the shared layer; the send factory
+    // lives in the outbox hook.
+    const shared = source("src/hooks/inbox/inbox-workspace-shared.ts");
+    const outbox = source("src/hooks/inbox/use-inbox-outbox.ts");
 
     expect(thread).toContain('accept="image/jpeg,image/png,image/webp"');
     expect(thread).toContain('data-inbox-image-picker="true"');
     expect(thread).toContain('aria-label={copy("mediaImage")}');
     expect(thread).toContain("void sendImage(file, quotedId)");
     expect(thread).toContain("disabled={sending || !canSend}");
-    expect(workspace).toContain("MAX_OUTBOUND_IMAGE_BYTES = 20 * 1024 * 1024");
-    expect(workspace).toContain('"/api/whatsapp/send-image"');
+    expect(shared).toContain("MAX_OUTBOUND_IMAGE_BYTES = 20 * 1024 * 1024");
+    expect(shared).toContain('"/api/whatsapp/send-image"');
         // Ledger INB-28 disposition: the four duplicated send bodies collapsed
     // into one factory; the per-media form field lives in the spec table
     // (fieldName) and the shared call site is form.set(spec.fieldName, file…).
-    expect(workspace).toContain("form.set(spec.fieldName, file");
-    expect(workspace).toContain('fieldName: "image"');
-    expect(workspace).toContain("void monitorWhatsAppEffect(");
-    expect(workspace).toContain("await loadMessages(chat, { background: true })");
+    expect(outbox).toContain("form.set(spec.fieldName, file");
+    expect(shared).toContain('fieldName: "image"');
+    expect(outbox).toContain("void monitorWhatsAppEffect(");
+    expect(outbox).toContain("await loadMessages(chat, { background: true })");
   });
 
   it("treats missing or generic browser MIME as a hint while keeping byte authority", () => {
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
+    const shared = source("src/hooks/inbox/inbox-workspace-shared.ts");
     const mediaStore = source("src/lib/whatsapp/media-object-store.ts");
 
     expect(thread).toContain('declaredType !== "application/octet-stream"');
@@ -39,16 +42,16 @@ describe("WhatsApp outbound image source boundary", () => {
     expect(thread).toContain('sniffedType = "image/png"');
     expect(thread).toContain('sniffedType = "image/webp"');
     expect(thread).toContain("new File([file], file.name");
-    expect(workspace).toContain("!SAFE_OUTBOUND_IMAGE_TYPES.has(mediaType)");
+    expect(shared).toContain("!SAFE_OUTBOUND_IMAGE_TYPES.has(mediaType)");
     expect(mediaStore).toContain("sniffMediaType(kind");
     expect(mediaStore).toContain("MEDIA_CONTENT_TYPE_MISMATCH");
   });
 
   it("removes only unqueued optimistic images and reloads canonical messages", () => {
-    const workspace = source("src/hooks/use-inbox-workspace.ts");
-    const sendImageStart = workspace.indexOf("const createMediaSender = useCallback");
-    const sendImageEnd = workspace.indexOf("const connectWhatsApp", sendImageStart);
-    const sendImage = workspace.slice(sendImageStart, sendImageEnd);
+    const outbox = source("src/hooks/inbox/use-inbox-outbox.ts");
+    const sendImageStart = outbox.indexOf("const createMediaSender = useCallback");
+    const sendImageEnd = outbox.indexOf("const sendImage = useMemo", sendImageStart);
+    const sendImage = outbox.slice(sendImageStart, sendImageEnd);
 
     expect(sendImage).toContain("let knownEffectKey: string | null = null");
     expect(sendImage).toContain("knownEffectKey = data.effectKey ?? null");
