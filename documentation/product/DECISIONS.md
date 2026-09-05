@@ -1024,6 +1024,42 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is created.
   #230 and the zero-budget boundary are unaffected.
 
+## FD-057 — One signed successor (Internal.34) packaging the post-campaign repair line
+
+The Founder's 2026-09-05 directive ("Release Internal.34"), issued after the
+Internal.33 installed-campaign findings were repaired at source and the last
+open source ledger row closed, authorizes exactly one combined signed
+successor (Internal.34) packaging the protected-main frontier at cutting
+time: the Internal.33 campaign repair line on PR #391 — F-04 delete-contract
+repair, F-05 AI thinking-budget, F-06 agents-page functional completion,
+F-07 queue header (squash 1847396) — and the INB-27 god-hook split on PR
+#392: the 2,381-line workspace inbox hook decomposed into seven
+src/hooks/inbox/ concern hooks (chat queue, drafts, thread, outbox,
+transport) behind a 458-line facade with zero component-consumer changes and
+the ten contract files re-anchored to the same invariants (squash 9dc8e74,
+expected-head discipline).
+
+Binding boundaries:
+
+- The successor packages exactly the protected-main frontier at the release
+  head; certification cites the tree-identical product head (9dc8e74 equal to
+  the reviewed PR #392 head 80395e2, tree ce742113) and its green CI/Phase 5/
+  Phase 6-7 runs at that exact head; the docs-only reconciliation PR #393
+  carries zero source delta and marks the INB-27 ledger row DONE (source).
+- FD-045 evidence rules are unchanged: release-authority PR, exact-head
+  review, required gates, expected-head merge, signed run, in-place preserved
+  install.
+- Sidecar-probe rows (INB-13/14/19/32) stay BLOCKED — no real-session probe
+  capability exists in this environment.
+- The Internal.34 installed campaign re-verifies the F-04..F-08 findings and
+  the INB-27 concern-hook waves on the founder install and continues the
+  retained Internal.33 campaign rows and D3 six-wave observations; the
+  retained #306 logout row executes LAST, after every other row is green.
+  The Founder rotates the screenshot-exposed Gemini key before real AI
+  usage.
+- No customer-online, Beta, Stable or paid-deployment authority is created.
+  #230 and the zero-budget boundary are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states
