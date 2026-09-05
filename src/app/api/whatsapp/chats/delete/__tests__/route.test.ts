@@ -83,7 +83,7 @@ describe("POST /api/whatsapp/chats/delete — self-diagnosing rejections (campai
   });
 
   it("rejects an oversized id with the failing schema path and id lengths", async () => {
-    const longId = "x".repeat(78);
+    const longId = "x".repeat(300);
     const rawBody = JSON.stringify({ ids: [longId] });
     const response = await POST(deleteRequest(rawBody));
     expect(response.status).toBe(400);
@@ -101,10 +101,34 @@ describe("POST /api/whatsapp/chats/delete — self-diagnosing rejections (campai
     expect(body.rejection.reason).toBe("schema_violation");
     expect(body.rejection.issues).toContain("ids.0");
     expect(body.rejection.idCount).toBe(1);
-    expect(body.rejection.idLengths).toEqual([78]);
+    expect(body.rejection.idLengths).toEqual([300]);
     expect(body.rejection.bodyLength).toBe(rawBody.length);
     // Ids are never echoed — only their shape.
     expect(JSON.stringify(body)).not.toContain(longId);
+  });
+
+  it("accepts a legitimate 69-char legacy/provider-shaped id (founder finding F-04)", async () => {
+    // The Internal.33 installed campaign reproduced a real, deletable
+    // conversation whose id is 69 chars — the previous 64-char cuid-era
+    // bound made it permanently undeletable. The projection's id space is
+    // the authority; the contract now carries 256-char headroom like every
+    // other provider-shape schema.
+    const legacyId = "x".repeat(69);
+    harness.deleteChats.mockResolvedValue({
+      deletedConversationIds: [legacyId],
+      deletedMessageCount: 2,
+    });
+    const response = await POST(
+      deleteRequest(JSON.stringify({ ids: [legacyId] })),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { ok: boolean; deleted: number };
+    expect(body.ok).toBe(true);
+    expect(body.deleted).toBe(1);
+    expect(harness.deleteChats).toHaveBeenCalledWith(
+      expect.anything(),
+      [legacyId],
+    );
   });
 
   it("rejects an empty ids array naming the ids path", async () => {

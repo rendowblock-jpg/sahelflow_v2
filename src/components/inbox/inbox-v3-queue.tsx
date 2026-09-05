@@ -769,153 +769,28 @@ export function InboxV3Queue({
       className="flex min-h-0 w-full flex-1 flex-col bg-background md:flex-none"
     >
       <div className="border-b border-border/60 px-3 py-2.5">
-        <div className="relative">
-          <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            aria-label={copy("searchConversations")}
-            placeholder={copy("searchConversations")}
-            className="h-9 rounded-lg bg-muted/20 ps-8 pe-8 text-[13px]"
-          />
-          {searchState.query === normalizedQuery && searchState.loading ? (
-            <Loader2
-              className="absolute end-2.5 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground"
-              aria-hidden="true"
+        {/* F-07 (Internal.33 installed campaign): the search field and the
+            queue-action cluster share one row so the desk pills below own
+            their full width — the previous layout crushed five localized
+            pill labels against three icon buttons and the counts rendered
+            over the icons at real queue-panel widths. */}
+        <div className="flex items-center gap-1.5">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              aria-label={copy("searchConversations")}
+              placeholder={copy("searchConversations")}
+              className="h-9 rounded-lg bg-muted/20 ps-8 pe-8 text-[13px]"
             />
-          ) : null}
-        </div>
-
-        {/* Selection mode morphs the queue-pills row in place — same height,
-            same visual language. The workflow row below stays visible so the
-            panel layout never jumps while selecting. */}
-        {selectMode ? (
-          <div
-            className="mt-2 flex items-center gap-1.5"
-            data-inbox-select-toolbar="true"
-          >
-            <div
-              className="flex min-w-0 flex-1 items-center rounded-full bg-primary/[0.08] p-0.5"
-              role="group"
-              aria-label={copy("selectChats")}
-            >
-              <span
-                aria-live="polite"
-                className="inline-flex h-7 min-w-0 flex-1 items-center truncate rounded-full bg-background px-3 text-2xs font-semibold shadow-sm"
-              >
-                {copy("selectedCount", { count: effectiveSelected.length })}
-              </span>
-              <button
-                type="button"
-                aria-label={copy("selectAll")}
-                title={copy("selectAll")}
-                data-inbox-chat-select-all="true"
-                disabled={deleting || rows.length === 0}
-                onClick={() => {
-                  const allSelected =
-                    rows.length > 0 &&
-                    effectiveSelected.length === rows.length;
-                  setSelectedIds(
-                    allSelected ? new Set() : new Set(selectableIds),
-                  );
-                }}
-                className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-              >
-                <ListChecks className="size-3.5" aria-hidden="true" />
-              </button>
-            </div>
-
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              className="h-8 rounded-full"
-              disabled={effectiveSelected.length === 0 || deleting}
-              data-inbox-chat-delete="true"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              {deleting ? (
-                <Loader2
-                  className="size-3.5 animate-spin"
-                  aria-hidden="true"
-                />
-              ) : (
-                <Trash2 className="size-3.5" aria-hidden="true" />
-              )}
-              {copy("deleteChats")}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 rounded-full"
-              disabled={bulkBusy || effectiveSelected.length === 0 || deleting}
-              data-inbox-chat-bulk-read="true"
-              onClick={() => void runBulkUpdate("read")}
-            >
-              <CheckCheck className="size-3.5" aria-hidden="true" />
-              <span className="hidden xl:inline">{copy("bulkMarkRead")}</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 rounded-full"
-              disabled={bulkBusy || effectiveSelected.length === 0 || deleting}
-              data-inbox-chat-bulk-resolve="true"
-              onClick={() => void runBulkUpdate("resolve")}
-            >
-              <CheckCircle2 className="size-3.5" aria-hidden="true" />
-              <span className="hidden xl:inline">{copy("bulkResolve")}</span>
-            </Button>
-
-            <button
-              type="button"
-              aria-label={copy("cancelSelection")}
-              title={copy("cancelSelection")}
-              disabled={deleting}
-              onClick={exitSelectMode}
-              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-            >
-              <X className="size-3.5" aria-hidden="true" />
-            </button>
-          </div>
-        ) : (
-        <div className="mt-2 flex items-center gap-1.5">
-          <div
-            className="flex min-w-0 flex-1 gap-1 rounded-full bg-muted/25 p-0.5"
-            role="group"
-            aria-label={copy("workQueue")}
-          >
-            {PRIMARY_QUEUES.map((filter) => {
-              const selected = queueFilter === filter;
-              return (
-                <button
-                  key={filter}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => onQueueFilterChange(filter)}
-                  className={cn(
-                    "inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-1.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                    selected
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <span className="truncate">{queueLabel(filter, copy)}</span>
-                  <span
-                    className={cn(
-                      "shrink-0 tabular-nums",
-                      selected ? "text-primary" : "text-muted-foreground/75",
-                    )}
-                  >
-                    {queueCounts[filter]}
-                  </span>
-                </button>
-              );
-            })}
+            {searchState.query === normalizedQuery && searchState.loading ? (
+              <Loader2
+                className="absolute end-2.5 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground"
+                aria-hidden="true"
+              />
+            ) : null}
           </div>
 
           <button
@@ -1026,7 +901,7 @@ export function InboxV3Queue({
             </PopoverContent>
           </Popover>
 
-          {canDeleteChats && chats.length > 0 ? (
+          {canDeleteChats && chats.length > 0 && !selectMode ? (
             <button
               type="button"
               aria-label={copy("selectChats")}
@@ -1040,6 +915,138 @@ export function InboxV3Queue({
               <ListChecks className="size-3.5" aria-hidden="true" />
             </button>
           ) : null}
+        </div>
+
+        {/* Selection mode morphs the queue-pills row in place — same height,
+            same visual language. The workflow row below stays visible so the
+            panel layout never jumps while selecting. */}
+        {selectMode ? (
+          <div
+            className="mt-2 flex items-center gap-1.5"
+            data-inbox-select-toolbar="true"
+          >
+            <div
+              className="flex min-w-0 flex-1 items-center rounded-full bg-primary/[0.08] p-0.5"
+              role="group"
+              aria-label={copy("selectChats")}
+            >
+              <span
+                aria-live="polite"
+                className="inline-flex h-7 min-w-0 flex-1 items-center truncate rounded-full bg-background px-3 text-2xs font-semibold shadow-sm"
+              >
+                {copy("selectedCount", { count: effectiveSelected.length })}
+              </span>
+              <button
+                type="button"
+                aria-label={copy("selectAll")}
+                title={copy("selectAll")}
+                data-inbox-chat-select-all="true"
+                disabled={deleting || rows.length === 0}
+                onClick={() => {
+                  const allSelected =
+                    rows.length > 0 &&
+                    effectiveSelected.length === rows.length;
+                  setSelectedIds(
+                    allSelected ? new Set() : new Set(selectableIds),
+                  );
+                }}
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              >
+                <ListChecks className="size-3.5" aria-hidden="true" />
+              </button>
+            </div>
+
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="h-8 shrink-0 rounded-full"
+              disabled={effectiveSelected.length === 0 || deleting}
+              data-inbox-chat-delete="true"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              {deleting ? (
+                <Loader2
+                  className="size-3.5 animate-spin"
+                  aria-hidden="true"
+                />
+              ) : (
+                <Trash2 className="size-3.5" aria-hidden="true" />
+              )}
+              {copy("deleteChats")}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 rounded-full"
+              disabled={bulkBusy || effectiveSelected.length === 0 || deleting}
+              data-inbox-chat-bulk-read="true"
+              onClick={() => void runBulkUpdate("read")}
+            >
+              <CheckCheck className="size-3.5" aria-hidden="true" />
+              <span className="hidden xl:inline">{copy("bulkMarkRead")}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 rounded-full"
+              disabled={bulkBusy || effectiveSelected.length === 0 || deleting}
+              data-inbox-chat-bulk-resolve="true"
+              onClick={() => void runBulkUpdate("resolve")}
+            >
+              <CheckCircle2 className="size-3.5" aria-hidden="true" />
+              <span className="hidden xl:inline">{copy("bulkResolve")}</span>
+            </Button>
+
+            <button
+              type="button"
+              aria-label={copy("cancelSelection")}
+              title={copy("cancelSelection")}
+              disabled={deleting}
+              onClick={exitSelectMode}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            >
+              <X className="size-3.5" aria-hidden="true" />
+            </button>
+          </div>
+        ) : (
+        <div className="mt-2 flex items-center gap-1.5">
+          <div
+            className="flex min-w-0 flex-1 gap-1 rounded-full bg-muted/25 p-0.5"
+            role="group"
+            aria-label={copy("workQueue")}
+          >
+            {PRIMARY_QUEUES.map((filter) => {
+              const selected = queueFilter === filter;
+              return (
+                <button
+                  key={filter}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => onQueueFilterChange(filter)}
+                  className={cn(
+                    "inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-1.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    selected
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <span className="truncate">{queueLabel(filter, copy)}</span>
+                  <span
+                    className={cn(
+                      "shrink-0 tabular-nums",
+                      selected ? "text-primary" : "text-muted-foreground/75",
+                    )}
+                  >
+                    {queueCounts[filter]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
         )}
 

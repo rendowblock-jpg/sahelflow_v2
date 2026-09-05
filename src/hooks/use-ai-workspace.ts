@@ -7,6 +7,7 @@ import type {
   AiActionProposalHandle,
   AiActionProposalInboxHandle,
   AiActionProposalProjection,
+  AiCapabilitiesPayload,
   AiMessageView,
   AiSessionSummary,
   AiSetupState,
@@ -139,6 +140,12 @@ export function useAiWorkspace() {
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [setup, setSetup] = useState<AiSetupState | null>(null);
   const [setupError, setSetupError] = useState(false);
+  // Ledger F-06: capability truth + shop briefing — loaded once per mount,
+  // refreshable with the workspace retry. Distinguishes "still loading" from
+  // "unavailable" so the page never fakes either state.
+  const [capabilities, setCapabilities] = useState<AiCapabilitiesPayload | null>(null);
+  const [capabilitiesError, setCapabilitiesError] = useState(false);
+  const [loadingCapabilities, setLoadingCapabilities] = useState(true);
   const [actionHistoryError, setActionHistoryError] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingConversation, setLoadingConversation] = useState(false);
@@ -236,6 +243,35 @@ export function useAiWorkspace() {
     }
   }, []);
 
+  const loadCapabilities = useCallback(async (signal?: AbortSignal) => {
+    setLoadingCapabilities(true);
+    try {
+      const response = await fetch("/api/ai/capabilities", {
+        cache: "no-store",
+        signal,
+      });
+      if (!response.ok) throw new Error(`capabilities:${response.status}`);
+      const data = (await response.json()) as Partial<AiCapabilitiesPayload>;
+      setCapabilities({
+        groups: Array.isArray(data.groups) ? data.groups : [],
+        briefing: data.briefing ?? {
+          pendingOrders: null,
+          ordersToday: null,
+          lowStockProducts: null,
+          pendingDeliveries: null,
+          pendingProposals: null,
+        },
+      });
+      setCapabilitiesError(false);
+    } catch (caught) {
+      if (caught instanceof DOMException && caught.name === "AbortError") return;
+      setCapabilities(null);
+      setCapabilitiesError(true);
+    } finally {
+      setLoadingCapabilities(false);
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
@@ -243,13 +279,14 @@ export function useAiWorkspace() {
         loadSetup(controller.signal),
         loadSessions({ signal: controller.signal }),
         loadInbox(controller.signal),
+        loadCapabilities(controller.signal),
       ]);
     }, 0);
     return () => {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [loadInbox, loadSessions, loadSetup]);
+  }, [loadCapabilities, loadInbox, loadSessions, loadSetup]);
 
   const loadConversation = useCallback(async (sessionId: string) => {
     conversationAbortRef.current?.abort();
@@ -1061,9 +1098,9 @@ export function useAiWorkspace() {
 
   const retry = useCallback(async () => {
     setError(null);
-    await Promise.all([loadSetup(), loadSessions(), loadInbox()]);
+    await Promise.all([loadSetup(), loadSessions(), loadInbox(), loadCapabilities()]);
     if (activeSessionId) await loadConversation(activeSessionId);
-  }, [activeSessionId, loadConversation, loadInbox, loadSessions, loadSetup]);
+  }, [activeSessionId, loadCapabilities, loadConversation, loadInbox, loadSessions, loadSetup]);
   return {
     locale,
     copy,
@@ -1086,6 +1123,9 @@ export function useAiWorkspace() {
     editAndResend,
     setup,
     setupError,
+    capabilities,
+    capabilitiesError,
+    loadingCapabilities,
     actionHistoryError,
     loadingSessions,
     loadingConversation,

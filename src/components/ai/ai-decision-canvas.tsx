@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ArrowDown,
   ArrowLeft,
+  ArrowRight,
   Bot,
   BrainCircuit,
   Check,
@@ -37,7 +38,9 @@ import { AiMarkdown } from "@/components/ai/markdown/ai-markdown";
 import { AiReviewEvidence } from "@/components/ai/ai-review-evidence";
 import { AiToolResultCard } from "@/components/ai/ai-tool-result-card";
 import type {
+  AiCapabilityGroup,
   AiMessageView,
+  AiShopBriefing,
   AiWorkspaceError,
 } from "@/components/ai/ai-workspace-types";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +56,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
 import { useI18n } from "@/hooks/use-i18n";
-import { getAiDecisionCopy } from "@/lib/i18n/ai-decision-workspace";
+import {
+  AI_CHAT_COUNTER_VISIBLE_SHARE,
+  AI_CHAT_MESSAGE_MAX_LENGTH,
+} from "@/lib/ai/chat-limits";
+import { getAiDecisionCopy, type AiDecisionLocale } from "@/lib/i18n/ai-decision-workspace";
+import { getAiToolGroupLabel, getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import type { AiWorkspaceCopyKey } from "@/lib/i18n/ai-workspace";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -296,18 +304,21 @@ function messageClock(value: string, locale: string): string {
 /**
  * One chat bubble. Memoized on (message, copy): during streaming, only the
  * message currently receiving deltas re-renders — completed messages keep
- * their parsed markdown cached inside <AiMarkdown>.
+ * their parsed markdown cached inside <AiMarkdown>. The newest assistant turn
+ * keeps its action row visible (older turns reveal it on hover/focus).
  */
 const MessageBubble = memo(function MessageBubble({
   message,
   copy,
   locale,
+  isLatest,
   onEditMessage,
   onFeedback,
 }: {
   message: AiMessageView;
   copy: AiCopyFn;
-  locale: string;
+  locale: AiDecisionLocale;
+  isLatest?: boolean;
   onEditMessage?: (messageId: string) => void;
   onFeedback?: (messageId: string, value: "up" | "down" | "none") => void;
 }) {
@@ -332,24 +343,39 @@ const MessageBubble = memo(function MessageBubble({
       className={cn("group/message flex gap-3", assistant ? "justify-start" : "justify-end")}
     >
       {assistant ? (
-        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border bg-primary/5 text-primary">
+        <span className="mt-5 flex size-8 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-gradient-to-b from-primary/12 to-primary/[0.04] text-primary shadow-sm">
           <Bot className="size-4" aria-hidden="true" />
         </span>
       ) : null}
       <div className={cn("min-w-0", assistant ? "w-full max-w-3xl" : "max-w-[85%]") }>
+        {assistant ? (
+          // Byline owns identity (F-06): the turn is attributed to the
+          // assistant, the clock stays on the hover row (AI-12).
+          <p className="mb-1 text-2xs font-semibold tracking-wide text-muted-foreground">
+            {getAiDecisionCopy(locale, "assistantName")}
+          </p>
+        ) : null}
         <div
           className={cn(
-            "rounded-xl px-4 py-3 text-sm leading-6",
+            "px-4 py-3 text-sm leading-6",
             assistant
-              ? "border bg-card/75 text-foreground"
-              : "bg-primary text-primary-foreground",
+              ? "rounded-2xl rounded-ss-md border bg-card/75 text-foreground"
+              : "rounded-2xl rounded-ee-md bg-primary text-primary-foreground shadow-sm",
           )}
         >
           {message.content ? (
             assistant ? (
-              // Assistant output is model-emitted markdown: rendered through
-              // the token-tree renderer — raw HTML can only become text.
-              <AiMarkdown content={message.content} />
+              <div>
+                {/* Assistant output is model-emitted markdown: rendered through
+                    the token-tree renderer — raw HTML can only become text. */}
+                <AiMarkdown content={message.content} />
+                {message.streaming ? (
+                  <span
+                    data-ai-streaming-caret="true"
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </div>
             ) : (
               // Seller input is echoed verbatim — no markdown interpretation.
               <p dir="auto" className="whitespace-pre-wrap break-words">
@@ -451,11 +477,12 @@ const MessageBubble = memo(function MessageBubble({
         ) : null}
 
         {message.content && !message.streaming ? (
-          // Hover action row (ChatGPT-class): copy + clock under every
+          // Hover action row (ChatGPT-class): edit + copy + clock under every
           // completed message; the newest-message row stays visible.
           <div
             className={cn(
-              "mt-1 flex items-center gap-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/message:opacity-100 md:opacity-0",
+              "mt-1 flex items-center gap-1.5 transition-opacity focus-within:opacity-100 group-hover/message:opacity-100",
+              isLatest ? "opacity-100" : "opacity-0",
               assistant ? "justify-start" : "justify-end",
             )}
           >
@@ -495,6 +522,211 @@ const MessageBubble = memo(function MessageBubble({
   );
 });
 
+function SetupChecklistRow({
+  ready,
+  label,
+  readyLabel,
+  missingLabel,
+}: {
+  ready: boolean;
+  label: string;
+  readyLabel: string;
+  missingLabel: string;
+}) {
+  return (
+    <li className="flex items-center justify-between gap-3 rounded-lg border bg-background/60 px-3 py-2">
+      <span className="flex min-w-0 items-center gap-2.5">
+        <span
+          className={cn(
+            "flex size-6 shrink-0 items-center justify-center rounded-md",
+            ready ? "bg-success/10 text-success" : "bg-warning/10 text-warning",
+          )}
+        >
+          {ready ? (
+            <Check className="size-3.5" aria-hidden="true" />
+          ) : (
+            <AlertTriangle className="size-3.5" aria-hidden="true" />
+          )}
+        </span>
+        <span className="truncate text-xs font-medium">{label}</span>
+      </span>
+      <span
+        className={cn(
+          "shrink-0 text-2xs font-semibold",
+          ready ? "text-success" : "text-warning",
+        )}
+      >
+        {ready ? readyLabel : missingLabel}
+      </span>
+    </li>
+  );
+}
+
+/**
+ * Ledger F-06 — the agents workforce, rendered from capability truth.
+ * Groups and availability come from /api/ai/capabilities, which projects the
+ * SAME central policy map the registry and proposal runtime enforce — the page
+ * can never claim an ability the agent does not have, nor hide one it has.
+ */
+function AbilityGroupCard({
+  group,
+  locale,
+}: {
+  group: AiCapabilityGroup;
+  locale: ReturnType<typeof useAiWorkspace>["locale"];
+}) {
+  return (
+    <div
+      data-ai-ability-group={group.id}
+      className="rounded-xl border bg-card/70 p-3.5"
+    >
+      <p className="text-sm font-semibold">
+        {getAiToolGroupLabel(locale, group.id)}
+      </p>
+      <ul className="mt-2 flex flex-wrap gap-1.5">
+        {group.tools.map((tool) => {
+          const sensitive = tool.executionClass === "sensitive";
+          return (
+            <li
+              key={tool.name}
+              data-ai-ability={tool.name}
+              data-ai-ability-class={tool.executionClass}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs",
+                sensitive
+                  ? "border-warning/30 bg-warning/[0.06] text-warning"
+                  : "border-border/70 bg-background text-foreground",
+              )}
+            >
+              {getAiToolLabel(locale, tool.name)}
+              {sensitive ? (
+                <>
+                  <ShieldCheck className="size-3" aria-hidden="true" />
+                  <span className="sr-only">
+                    {getAiDecisionCopy(locale, "abilityNeedsApproval")}
+                  </span>
+                </>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function AbilitiesPanel({
+  workspace,
+}: {
+  workspace: ReturnType<typeof useAiWorkspace>;
+}) {
+  const { capabilities, capabilitiesError, loadingCapabilities, locale } =
+    workspace;
+
+  return (
+    <section data-ai-abilities="true" className="mt-7">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {getAiDecisionCopy(locale, "abilitiesTitle")}
+      </p>
+      {loadingCapabilities ? (
+        // Structure-matching skeleton (§26.8): the shape of two group cards.
+        <div
+          data-ai-abilities-skeleton="true"
+          aria-hidden="true"
+          className="mt-3 grid gap-2.5 sm:grid-cols-2"
+        >
+          {[0, 1, 2, 3].map((row) => (
+            <div key={row} className="rounded-xl border bg-card/70 p-3.5">
+              <span data-ai-skeleton="true" className="block h-3.5 w-20 rounded-full" />
+              <span data-ai-skeleton="true" className="mt-2.5 block h-5 w-3/4 rounded-full" />
+              <span data-ai-skeleton="true" className="mt-1.5 block h-5 w-1/2 rounded-full" />
+            </div>
+          ))}
+        </div>
+      ) : capabilitiesError || !capabilities ? (
+        // Honest unavailability — the stale-marketing sentence is never shown
+        // as if it were live truth.
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+          {getAiDecisionCopy(locale, "abilitiesUnavailable")}
+        </p>
+      ) : (
+        <>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            {getAiDecisionCopy(locale, "abilitiesDescription")}
+          </p>
+          <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+            {capabilities.groups.map((group) => (
+              <AbilityGroupCard key={group.id} group={group} locale={locale} />
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** F-06: the shop's real numbers, next to the jobs they ground. A count that
+ *  could not be measured renders no badge — never a fabricated zero. */
+function starterCount(
+  id: (typeof STARTERS)[number]["id"],
+  briefing: AiShopBriefing | undefined,
+): { copyKey: "starterCountPending" | "starterCountToday" | "starterCountLowStock"; count: number } | null {
+  if (!briefing) return null;
+  if (id === "pending" && briefing.pendingOrders != null) {
+    return { copyKey: "starterCountPending", count: briefing.pendingOrders };
+  }
+  if (id === "revenue" && briefing.ordersToday != null) {
+    return { copyKey: "starterCountToday", count: briefing.ordersToday };
+  }
+  if (id === "products" && briefing.lowStockProducts != null) {
+    return { copyKey: "starterCountLowStock", count: briefing.lowStockProducts };
+  }
+  return null;
+}
+
+/**
+ * Ledger F-06 — the shop-wide approval loop, surfaced where the seller works.
+ * Pending sensitive actions exist across ALL sessions; without this strip
+ * they were invisible unless the seller already knew to open the review
+ * pane. Hidden while the rail owns the surface (wideReview) and while the
+ * inbox is loading or failed (honest absence, not a fake "all clear").
+ */
+function InboxStrip({
+  workspace,
+  wideReview,
+  onOpenReview,
+}: {
+  workspace: ReturnType<typeof useAiWorkspace>;
+  wideReview: boolean;
+  onOpenReview: () => void;
+}) {
+  const { inbox, inboxLoading, inboxError, locale } = workspace;
+  if (wideReview || inboxLoading || inboxError || inbox.length === 0) {
+    return null;
+  }
+  return (
+    <div
+      data-ai-inbox-strip="true"
+      className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/[0.045] px-3.5 py-2.5"
+    >
+      <div className="flex min-w-0 items-start gap-2.5">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">
+            {getAiDecisionCopy(locale, "inboxStripCount", { count: inbox.length })}
+          </p>
+          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+            {getAiDecisionCopy(locale, "inboxStripDescription")}
+          </p>
+        </div>
+      </div>
+      <Button type="button" size="sm" variant="outline" onClick={onOpenReview}>
+        {getAiDecisionCopy(locale, "inboxStripOpen")}
+      </Button>
+    </div>
+  );
+}
+
 function StartSurface({
   workspace,
   starting,
@@ -508,10 +740,10 @@ function StartSurface({
 
   return (
     <div data-ai-start-state="true" className="mx-auto flex w-full max-w-3xl flex-col justify-center py-8">
-      <span className="flex size-11 items-center justify-center rounded-2xl border bg-primary/5 text-primary">
-        <BrainCircuit className="size-5" aria-hidden="true" />
+      <span className="relative flex size-12 items-center justify-center rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/15 to-primary/[0.04] text-primary shadow-sm">
+        <BrainCircuit className="size-6" aria-hidden="true" />
       </span>
-      <h2 className="mt-4 text-xl font-semibold tracking-tight">
+      <h2 className="mt-5 text-2xl font-semibold tracking-tight">
         {getAiDecisionCopy(workspace.locale, "startTitle")}
       </h2>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -523,13 +755,29 @@ function StartSurface({
       </p>
 
       {!ready && workspace.setup ? (
-        <div className="mt-5 rounded-xl border bg-card/60 p-4">
+        <div className="mt-6 rounded-2xl border bg-card/60 p-4 shadow-sm">
           <p className="text-sm font-semibold">
             {getAiDecisionCopy(workspace.locale, "setupRequiredTitle")}
           </p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
             {getAiDecisionCopy(workspace.locale, "setupRequiredCapabilities")}
           </p>
+          {/* Truthful two-row checklist: the same configuration facts the
+              review panel owns (consent + key), never provider health. */}
+          <ul className="mt-3 space-y-1.5">
+            <SetupChecklistRow
+              ready={workspace.setup.consentAccepted === true}
+              label={workspace.copy("consent")}
+              readyLabel={workspace.copy("accepted")}
+              missingLabel={workspace.copy("missing")}
+            />
+            <SetupChecklistRow
+              ready={workspace.setup.keyConfigured === true}
+              label={workspace.copy("gemini")}
+              readyLabel={workspace.copy("configured")}
+              missingLabel={workspace.copy("notConfigured")}
+            />
+          </ul>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {(
               [
@@ -563,9 +811,13 @@ function StartSurface({
         </div>
       ) : null}
 
-      <div className="mt-6 grid gap-2 sm:grid-cols-2">
+      <p className="mt-7 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {getAiDecisionCopy(workspace.locale, "startJobsTitle")}
+      </p>
+      <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
         {STARTERS.map((starter) => {
           const Icon = starter.icon;
+          const count = starterCount(starter.id, workspace.capabilities?.briefing);
           return (
             <button
               key={starter.id}
@@ -573,28 +825,48 @@ function StartSurface({
               disabled={!ready || starting}
               onClick={() => void onStart(workspace.copy(starter.prompt))}
               className={cn(
-                "rounded-xl border bg-card/70 p-3.5 text-start transition-colors",
+                "group/starter rounded-xl border bg-card/70 p-3.5 text-start transition-colors",
                 "hover:border-primary/25 hover:bg-primary/[0.025] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 "disabled:cursor-not-allowed disabled:opacity-50",
               )}
             >
               <span className="flex items-start gap-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/7 text-primary">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary/12 to-primary/[0.04] text-primary">
                   <Icon className="size-4" aria-hidden="true" />
                 </span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold">
-                    {workspace.copy(starter.title)}
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2">
+                    <span className="truncate text-sm font-semibold">
+                      {workspace.copy(starter.title)}
+                    </span>
+                    {count ? (
+                      <span
+                        data-ai-briefing-count={starter.id}
+                        className="shrink-0 rounded-full border border-primary/20 bg-primary/[0.06] px-2 py-0.5 text-2xs font-semibold tabular-nums text-primary"
+                      >
+                        {getAiDecisionCopy(workspace.locale, count.copyKey, {
+                          count: count.count,
+                        })}
+                      </span>
+                    ) : null}
                   </span>
                   <span className="mt-1 block text-xs leading-5 text-muted-foreground">
                     {workspace.copy(starter.description)}
                   </span>
                 </span>
+                <ArrowRight
+                  className="mt-1 size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/starter:opacity-70 rtl:-scale-x-100"
+                  aria-hidden="true"
+                />
               </span>
             </button>
           );
         })}
       </div>
+
+      {/* F-06: the workforce itself — what the agent can do on THIS shop,
+          live from the tool policy, with honest availability markers. */}
+      <AbilitiesPanel workspace={workspace} />
     </div>
   );
 }
@@ -635,6 +907,7 @@ export function AiDecisionCanvas({
     activeSessionId,
     selectSession,
     inbox,
+    inboxError,
     approveProposal,
     historyCapped,
     loadingOlderMessages,
@@ -668,6 +941,11 @@ export function AiDecisionCanvas({
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const followTailRef = useRef(true);
   const setupReady = setup?.ready === true;
+  // Ledger AI-17 residual: the counter owns the last 30% of the bound —
+  // always-visible counters are noise for the common short prompt.
+  const counterVisibleFrom = Math.ceil(
+    AI_CHAT_MESSAGE_MAX_LENGTH * AI_CHAT_COUNTER_VISIBLE_SHARE,
+  );
 
   const clearScreenshot = () => {
     if (screenshotUrlRef.current) {
@@ -747,6 +1025,14 @@ export function AiDecisionCanvas({
     setScreenshot(shot);
     void extractScreenshot(shot);
   };
+  // Ledger F-06: the badge is shop-wide truth. The inbox covers pending
+  // proposals from EVERY session (the current session's are a subset); when
+  // the inbox is unavailable the session queue remains the honest fallback.
+  const reviewBadgeCount = inboxError
+    ? proposals.length
+    : inbox.length > 0
+      ? inbox.length
+      : proposals.length;
   const lastMessageId = messages.length > 0 ? messages[messages.length - 1]!.id : null;
   const editingMessage = editingMessageId
     ? messages.find(
@@ -928,8 +1214,17 @@ export function AiDecisionCanvas({
               <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
             </Button>
           ) : null}
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border bg-primary/5 text-primary">
+          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-gradient-to-b from-primary/12 to-primary/[0.04] text-primary shadow-sm">
             <Bot className="size-4" aria-hidden="true" />
+            {workspace.setup ? (
+              // Configuration truth on the avatar (AI-26): consent+key state
+              // from the setup probe — never a fabricated provider heartbeat.
+              <span
+                data-ai-status-dot={setupReady ? "ready" : "attention"}
+                aria-hidden="true"
+                className="absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full border-2 border-background"
+              />
+            ) : null}
           </span>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
@@ -947,34 +1242,59 @@ export function AiDecisionCanvas({
                 </Badge>
               ) : null}
             </div>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
               {activeSession
-                ? getAiDecisionCopy(workspace.locale, "durableSession")
+                ? `${getAiDecisionCopy(workspace.locale, "durableSession")} · ${getAiDecisionCopy(workspace.locale, "messagesMeta", { count: messages.length })}`
                 : getAiDecisionCopy(workspace.locale, "newAnalysis")}
             </p>
           </div>
         </div>
 
-        {!wideReview ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setReviewOpen(true)}
-          >
-            <ShieldCheck className="size-4" aria-hidden="true" />
-            {getAiDecisionCopy(workspace.locale, "reviewEvidence")}
-            {proposals.length > 0 ? (
-              <Badge variant="secondary" className="ms-1 text-xs">
-                {proposals.length}
-              </Badge>
-            ) : null}
-          </Button>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-2">
+          {workspace.setup ? (
+            <Badge
+              variant="outline"
+              data-ai-config-chip="true"
+              className="hidden items-center gap-1.5 text-2xs font-medium text-muted-foreground sm:inline-flex"
+            >
+              <span
+                data-ai-status-dot={setupReady ? "ready" : "attention"}
+                aria-hidden="true"
+                className="size-1.5 rounded-full"
+              />
+              {setupReady
+                ? getAiDecisionCopy(workspace.locale, "providerReady")
+                : getAiDecisionCopy(workspace.locale, "setupAttention")}
+            </Badge>
+          ) : null}
+          {!wideReview ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setReviewOpen(true)}
+            >
+              <ShieldCheck className="size-4" aria-hidden="true" />
+              {getAiDecisionCopy(workspace.locale, "reviewEvidence")}
+              {reviewBadgeCount > 0 ? (
+                <Badge variant="secondary" className="ms-1 text-xs">
+                  {reviewBadgeCount}
+                </Badge>
+              ) : null}
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       <SetupNotice workspace={workspace} />
       <ErrorNotice workspace={workspace} />
+      {/* Ledger F-06: pending agent work across ALL sessions, surfaced where
+          the seller works — the approval loop is the page's main output. */}
+      <InboxStrip
+        workspace={workspace}
+        wideReview={wideReview}
+        onOpenReview={() => setReviewOpen(true)}
+      />
 
       <div ref={scrollRootRef} className="min-h-0 flex-1">
         <ScrollArea className="h-full">
@@ -987,8 +1307,31 @@ export function AiDecisionCanvas({
             className="mx-auto w-full max-w-5xl px-4 py-5 md:px-7 md:py-6"
           >
             {loadingConversation ? (
-              <div className="flex min-h-72 items-center justify-center text-muted-foreground">
-                <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+              // Structure-matching skeleton (§26.8): the shape of a turn pair
+              // instead of a bare spinner — no fake content, no layout jump.
+              <div
+                data-ai-conversation-skeleton="true"
+                aria-hidden="true"
+                className="mx-auto w-full max-w-3xl space-y-6 py-2"
+              >
+                <div className="flex gap-3">
+                  <span data-ai-skeleton="true" className="mt-5 size-8 shrink-0 rounded-xl" />
+                  <div className="w-full max-w-3xl space-y-2">
+                    <span data-ai-skeleton="true" className="block h-3 w-24 rounded-full" />
+                    <span data-ai-skeleton="true" className="block h-20 w-full rounded-2xl" />
+                    <span data-ai-skeleton="true" className="block h-3 w-2/3 rounded-full" />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <span data-ai-skeleton="true" className="block h-11 w-2/5 rounded-2xl" />
+                </div>
+                <div className="flex gap-3">
+                  <span data-ai-skeleton="true" className="mt-5 size-8 shrink-0 rounded-xl" />
+                  <div className="w-full max-w-3xl space-y-2">
+                    <span data-ai-skeleton="true" className="block h-3 w-24 rounded-full" />
+                    <span data-ai-skeleton="true" className="block h-14 w-4/5 rounded-2xl" />
+                  </div>
+                </div>
               </div>
             ) : messages.length === 0 ? (
               <StartSurface
@@ -1026,6 +1369,7 @@ export function AiDecisionCanvas({
                     message={message}
                     copy={copy}
                     locale={workspace.locale}
+                    isLatest={message.id === lastMessageId}
                     onEditMessage={beginEditMessage}
                     onFeedback={sendFeedback}
                   />
@@ -1120,7 +1464,10 @@ export function AiDecisionCanvas({
         </div>
       ) : null}
 
-      <div className="border-t bg-background/96 px-4 py-3 backdrop-blur md:px-6 md:py-4">
+      <div
+        data-ai-composer-deck="true"
+        className="border-t px-4 py-3 md:px-6 md:py-4"
+      >
         {editingMessage ? (
           <div
             data-ai-editing="true"
@@ -1170,7 +1517,10 @@ export function AiDecisionCanvas({
               </Button>
             </div>
           ) : null}
-          <div className="flex w-full items-end gap-2 rounded-xl border bg-card/80 p-2 shadow-sm focus-within:ring-2 focus-within:ring-ring/30">
+          <div
+            data-ai-composer="true"
+            className="flex w-full items-end gap-2 rounded-2xl border bg-card/80 p-2 shadow-sm"
+          >
           <input
             ref={screenshotInputRef}
             type="file"
@@ -1227,6 +1577,7 @@ export function AiDecisionCanvas({
             aria-label={workspace.copy("composerPlaceholder")}
             rows={1}
             dir="auto"
+            maxLength={AI_CHAT_MESSAGE_MAX_LENGTH}
             disabled={!setupReady || sending || startingAnalysis}
             className="max-h-36 min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-sm shadow-none focus-visible:ring-0"
           />
@@ -1236,6 +1587,7 @@ export function AiDecisionCanvas({
               size="icon"
               variant="outline"
               aria-label={workspace.copy("stop")}
+              className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={stop}
             >
               <Square className="size-4" aria-hidden="true" />
@@ -1246,6 +1598,7 @@ export function AiDecisionCanvas({
               size="icon"
               aria-label={workspace.copy("send")}
               disabled={!setupReady || !draft.trim() || startingAnalysis || readingScreenshot}
+              className="shrink-0 shadow-sm"
               onClick={() => void submit()}
             >
               {startingAnalysis ? (
@@ -1256,6 +1609,25 @@ export function AiDecisionCanvas({
             </Button>
           )}
           </div>
+          {draft.length >= counterVisibleFrom ? (
+            // Ledger AI-17 residual: honest near-limit counter, one bound with
+            // both server schemas (chat-limits.ts). Numbers stay LTR.
+            <p
+              data-ai-composer-counter="true"
+              dir="ltr"
+              className={cn(
+                "mt-1 text-end text-2xs tabular-nums",
+                draft.length >= AI_CHAT_MESSAGE_MAX_LENGTH
+                  ? "font-semibold text-warning"
+                  : "text-muted-foreground",
+              )}
+            >
+              {getAiDecisionCopy(workspace.locale, "composerCounter", {
+                count: draft.length,
+                max: AI_CHAT_MESSAGE_MAX_LENGTH,
+              })}
+            </p>
+          ) : null}
         </div>
         <p className="mx-auto mt-1.5 hidden w-full max-w-4xl flex-wrap items-center gap-x-3 gap-y-1 px-1 text-2xs text-muted-foreground md:flex">
           <span><kbd className="rounded border bg-muted/60 px-1 font-sans">/</kbd> {copy("shortcutFocusComposer")}</span>

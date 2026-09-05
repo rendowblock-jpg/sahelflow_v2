@@ -262,11 +262,13 @@ describe("runAgent — error handling", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it("returns 'could not generate' on an empty response", async () => {
+  it("returns the truthful empty-shape verdict on an empty response", async () => {
     vi.mocked(getSecret).mockResolvedValue("test-key");
     vi.mocked(fetch).mockResolvedValue(geminiJsonResponse({ candidates: [{ content: { parts: [] } }] }));
     const result = await runAgent([], "Salut");
-    expect(result.response).toMatch(/Reformulez votre question/);
+    // F-05: the old "Reformulez votre question" copy blamed the user for a
+    // provider-truth failure; the verdict must name the empty shape instead.
+    expect(result.response).toMatch(/aucun contenu visible/i);
   });
 });
 
@@ -403,14 +405,44 @@ describe("runAgentStream — error events", () => {
 });
 
 describe("runAgentStream — empty response", () => {
-  it("yields a done event with the 'could not generate' message when no parts arrive", async () => {
+  it("yields an error event naming the thought-budget shape when no parts arrive", async () => {
     vi.mocked(getSecret).mockResolvedValue("test-key");
     vi.mocked(fetch).mockResolvedValue(
-      sseResponse([{ candidates: [{ content: { parts: [] } }] }]),
+      sseResponse([
+        {
+          candidates: [
+            {
+              content: { parts: [] },
+              finishReason: "MAX_TOKENS",
+            },
+          ],
+        },
+      ]),
     );
     const events = await collectStream([], "Salut");
-    expect(events).toHaveLength(1);
-    expect(events[0]!.type).toBe("done");
-    expect(expectEvent(events, "done").response).toMatch(/Reformulez votre question/);
+    // F-05: an authenticated stream with no visible text is a provider-truth
+    // failure, not a user-phrasing problem — the coded error surface marks
+    // the turn interrupted and names the PII-free shape.
+    const error = events.find((e) => e.type === "error");
+    expect(error).toBeDefined();
+    expect(
+      (error as { message: string }).message,
+    ).toMatch(/raisonnement interne|reasoning/i);
+  });
+
+  it("names a policy refusal through the blockReason verdict", async () => {
+    vi.mocked(getSecret).mockResolvedValue("test-key");
+    vi.mocked(fetch).mockResolvedValue(
+      sseResponse([
+        {
+          candidates: [{ content: { parts: [] } }],
+          promptFeedback: { blockReason: "SAFETY" },
+        },
+      ]),
+    );
+    const events = await collectStream([], "Salut");
+    const error = events.find((e) => e.type === "error");
+    expect(error).toBeDefined();
+    expect((error as { message: string }).message).toContain("SAFETY");
   });
 });

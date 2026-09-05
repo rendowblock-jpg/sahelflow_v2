@@ -38,13 +38,26 @@ function sessionDateGroup(value: string): "today" | "yesterday" | "earlier" {
   return "earlier";
 }
 
-function sessionTime(value: string, locale: AiDecisionLocale): string {
+function sessionStamp(value: string, locale: AiDecisionLocale): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat(
-    locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-DZ" : "en-DZ",
-    { hour: "2-digit", minute: "2-digit" },
-  ).format(date);
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startYesterday = new Date(startToday);
+  startYesterday.setDate(startYesterday.getDate() - 1);
+  const tag = locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-DZ" : "en-DZ";
+  // Today and yesterday keep the clock (the group label owns the day);
+  // anything older would lie with a bare HH:mm — it shows a short date.
+  if (date >= startYesterday) {
+    return new Intl.DateTimeFormat(tag, {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+  return new Intl.DateTimeFormat(tag, {
+    day: "numeric",
+    month: "short",
+  }).format(date);
 }
 
 function groupLabel(
@@ -162,6 +175,22 @@ export function AiWorkHistory({
       data-ai-work-history="true"
       className="flex h-full min-h-0 w-full flex-col border-e bg-muted/[0.035]"
     >
+      {/* Ledger AI-23 residual: the two-step delete announces itself to
+          assistive tech the moment it arms (visual arm state was already
+          shown; the a11y arm state was missing). */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {confirmDeleteId
+          ? getAiDecisionCopy(
+              locale,
+              "deleteArmAnnounce",
+              {
+                title:
+                  sessions.find((session) => session.id === confirmDeleteId)?.title ||
+                  workspace.copy("newSessionTitle"),
+              },
+            )
+          : ""}
+      </p>
       <div className="border-b px-4 py-4">
         <h2 className="text-sm font-semibold">
           {getAiDecisionCopy(locale, "workHistory")}
@@ -197,12 +226,20 @@ export function AiWorkHistory({
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-5 px-2.5 py-3">
           {loadingSessions ? (
-            <div className="flex min-h-40 items-center justify-center text-muted-foreground">
-              <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+            // Structure-matching skeleton rows (§26.8) — no bare spinner.
+            <div data-ai-history-skeleton="true" aria-hidden="true" className="space-y-2 px-1 pt-1">
+              {[0, 1, 2, 3, 4].map((row) => (
+                <div key={row} className="rounded-lg p-2.5">
+                  <span data-ai-skeleton="true" className="block h-3.5 w-3/4 rounded-full" />
+                  <span data-ai-skeleton="true" className="mt-2 block h-2.5 w-1/2 rounded-full" />
+                </div>
+              ))}
             </div>
           ) : sessions.length === 0 ? (
             <div className="px-3 py-8 text-center">
-              <Bot className="mx-auto size-6 text-muted-foreground" aria-hidden="true" />
+              <span className="mx-auto flex size-10 items-center justify-center rounded-xl border bg-card text-muted-foreground">
+                <Bot className="size-5" aria-hidden="true" />
+              </span>
               <p className="mt-3 text-sm font-semibold">{workspace.copy("noSessions")}</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 {workspace.copy("noSessionsDescription")}
@@ -216,7 +253,7 @@ export function AiWorkHistory({
               if (groupedSessions.length === 0) return null;
               return (
                 <section key={group} aria-label={groupLabel(group, workspace)}>
-                  <p className="px-2 pb-1.5 text-xs font-semibold text-muted-foreground">
+                  <p className="sticky top-0 z-10 bg-background/85 px-2 py-1.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
                     {groupLabel(group, workspace)}
                   </p>
                   <div className="space-y-1">
@@ -335,7 +372,7 @@ export function AiWorkHistory({
                               ) : null}
                             </span>
                             <span className="mt-2 block text-xs tabular-nums text-muted-foreground">
-                              {sessionTime(session.updatedAt, locale)}
+                              {sessionStamp(session.updatedAt, locale)}
                             </span>
                           </button>
 

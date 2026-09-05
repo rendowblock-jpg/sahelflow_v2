@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { runWithAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
+import { AI_CHAT_MESSAGE_MAX_LENGTH } from "@/lib/ai/chat-limits";
 import { createAiActionProposal } from "@/lib/ai/actions/service";
 import {
   runAgentStream,
@@ -9,6 +10,7 @@ import {
   type AgentResult,
   type AgentStreamEvent,
 } from "@/lib/ai/chat/agent";
+import { aiShopContextNote } from "@/lib/ai/chat/shop-context";
 import { loadRecentAiChatMessages } from "@/lib/ai/chat/session-history";
 import {
   GeminiProviderError,
@@ -27,7 +29,7 @@ import { getBool, SETTING_KEYS } from "@/lib/settings";
 export const dynamic = "force-dynamic";
 
 const sendSchema = z.object({
-  message: z.string().trim().min(1).max(4000),
+  message: z.string().trim().min(1).max(AI_CHAT_MESSAGE_MAX_LENGTH),
   locale: z.enum(["en", "fr", "ar"]).optional().default("fr"),
 });
 
@@ -219,6 +221,10 @@ export const POST = withErrorHandler(
                 }),
             },
             async () => {
+              // F-06: presentation-only shop snapshot for the model. The
+              // helper never throws (empty string on failure), so a context
+              // problem can never break the turn itself.
+              const shopContextNote = await aiShopContextNote();
               for await (const event of runAgentStream(
                 history,
                 input.message,
@@ -229,6 +235,7 @@ export const POST = withErrorHandler(
                   sourceIdentity: `ai-session:${id}`,
                 },
                 input.locale,
+                shopContextNote,
               )) {
                 send(event);
                 if (event.type === "text_delta") {
