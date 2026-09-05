@@ -8,9 +8,10 @@
 > can still be ingested as additional rows — structure is ready.
 >
 > **Conversion rule.** Everything here is SOURCE-level on `main`. Nothing is
-> "installed" until it ships in an authorized signed release (Internal.33 —
-> release train FROZEN per WORKING_MEMORY). Rows move to the capability
-> ledgers only after installed conversion.
+> "installed" until it ships in an authorized signed release (latest:
+> Internal.33 / FD-056, Founder-installed 2026-09-03; the #391/#392 lines ride
+> protected `main` and await the next signed successor). Rows move to the
+> capability ledgers only after installed conversion.
 
 Status: `OPEN` · `DONE (source, <ref>)` · `BLOCKED (<reason>)`
 Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · `P2` depth · `P3` perf/power/quality
@@ -69,7 +70,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | ID | Item | Target | Status |
 |---|---|---|---|
 | INB-26 ||| **DONE (source, wave 9-b)** — `MessageBubble` memoized with narrow attachment comparator + stable per-conversation callbacks |
-| INB-27 | Split 2,606-line god hook into chat/messages/drafts/outbox hooks | `use-inbox-workspace.ts` | **DONE (source, 2026-09-03 session)** — the hook family now lives in `src/hooks/inbox/`: `inbox-workspace-shared.ts` (bounded constants, media-send specs, pure projections, delete-rejection summarizer), `use-inbox-shared-refs.ts` (the seven cross-concern refs), `use-inbox-chat-queue.ts` (canonical load + durable fallback + read-state writes + INB-12 state mirror + queue projections), `use-inbox-drafts.ts` (revisioned draft queue, autosave, lifecycle flush), `use-inbox-thread.ts` (generation-guarded loads, additive history paging, selection, WhatsApp-class tail anchoring), `use-inbox-outbox.ts` (shared send gate, INB-28 factory, durable effect monitor, INB-29 retry, truthful uploads) and `use-inbox-transport.ts` (socket handlers, bounded live-recovery poll, connect/logout, QR refresh). `use-inbox-workspace.ts` remains the composition root with the exact historical return shape — zero component-consumer changes; every function body moved verbatim (F-04's 256-char delete bound ported onto the shared layer). The 10 source-pin contract files were re-anchored to their canonical modules with identical invariants. Evidence: targeted suite 203/203 across 26 files in a fresh sandbox, full-project `tsc --noEmit` 0 errors, ESLint 0 errors (one pre-existing verbatim `no-non-null-assertion` warning retained inside the untouched filter body) |
+| INB-27 | Split 2,606-line god hook into chat/messages/drafts/outbox hooks | `use-inbox-workspace.ts` | **DONE (source, PR #392 merged to main `9dc8e74…` 2026-09-05 under the Founder's directive)** — the hook family now lives in `src/hooks/inbox/`: `inbox-workspace-shared.ts` (bounded constants, media-send specs, pure projections, delete-rejection summarizer), `use-inbox-shared-refs.ts` (the seven cross-concern refs), `use-inbox-chat-queue.ts` (canonical load + durable fallback + read-state writes + INB-12 state mirror + queue projections), `use-inbox-drafts.ts` (revisioned draft queue, autosave, lifecycle flush), `use-inbox-thread.ts` (generation-guarded loads, additive history paging, selection, WhatsApp-class tail anchoring), `use-inbox-outbox.ts` (shared send gate, INB-28 factory, durable effect monitor, INB-29 retry, truthful uploads) and `use-inbox-transport.ts` (socket handlers, bounded live-recovery poll, connect/logout, QR refresh). `use-inbox-workspace.ts` remains the composition root with the exact historical return shape — zero component-consumer changes; every function body moved verbatim (F-04's 256-char delete bound ported onto the shared layer). The 10 source-pin contract files were re-anchored to their canonical modules with identical invariants. Evidence: targeted suite 203/203 across 26 files in a fresh sandbox, facade-graph tsc exit 0, ESLint 0 errors; hosted Required battery green at the merged head (14 success / 5 risk-classified skips / 0 failed). The earlier "full-project tsc 0 errors" claim was corrected as unreliable (sandbox memory); the hosted CI battery is the only full-project type gate. Converts on installed observation |
 | INB-28 | Collapse 4 duplicated ~200-line send functions into one factory | `use-inbox-workspace.ts` | **DONE (source, wave 13)** — one `createMediaSender` factory + a module-level MEDIA_SEND_SPECS table; behavior byte-identical (bounded files, optimistic message + quoted provenance, progress/cancellation, effect-key reconciliation, pre-effect abort, audio-without-caption truth) |
 | INB-29 ||| **DONE (source, wave 9-b)** — ambiguous duplicate retry resolves via accessible ConfirmDialog; zero `window.confirm` calls remain |
 | INB-30 | Inline `ASSIGNMENT_COPY` into the central i18n chain | `conversation-controls.tsx:308-805` | **DONE (source, wave 10)** — 13 assignment labels + 5 activity strings moved verbatim into the three locale JSONs (`inbox.assignment.*` / `inbox.assignmentActivity.*` with `{{target}}` interpolation, parity 2863×3 pre-cleanup); `refresh` reuses the static `common.refresh` key; component + activity renderer resolve through the shared t() chain; copy-authority + assignment-UI contracts pin resolution, Arabic localization, exact pre-migration values and the no-duplicate rule |
@@ -124,7 +125,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 
 ## Rules
 
-1. **No row is "closed" until installed conversion** in an authorized signed release (Internal.33). Source-merge ≠ shipped.
+1. **No row is "closed" until installed conversion** in an authorized signed release (latest: Internal.33). Source-merge ≠ shipped.
 2. Sidecar-probe items (INB-13/14/19/32) need a capability probe + contract revision BEFORE UI work is scheduled.
 3. Contract tests are design law: adaptation goes code-side (see F-01: media direction-neutrality contract enforced by `voice-note-player.test.ts:72`).
 4. New Founder findings get an `F-xx` row with screenshot reference; never fold them silently into INB/AI rows.
