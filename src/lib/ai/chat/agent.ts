@@ -13,6 +13,7 @@ import {
 } from "@/lib/ai/gemini/provider";
 import { serializeToolResultForRemoteModel } from "@/lib/ai/redact";
 import { db, shopContext } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import { getSecret } from "@/lib/secrets";
 import {
   aiChatSystemPrompt,
@@ -438,6 +439,13 @@ async function* parseStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let fullText = "";
+  // F-05 residual evidence: PII-free turn diagnostics. bytesSeen counts raw
+  // provider bytes, dataEvents counts chunks the parser actually consumed —
+  // when a turn ends with no visible text, that pair names whether the
+  // provider streamed at all and whether the parser saw it (the
+  // discriminator the bare-empty loop could never produce).
+  let bytesSeen = 0;
+  let dataEvents = 0;
   let usage: GeminiUsageMetadata | null = null;
   // F-05: PII-free terminal shape of the turn (last chunk wins — the final
   // SSE chunk carries the finishReason/promptFeedback verdict).
@@ -462,7 +470,18 @@ async function* parseStream(
       }
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+      bytesSeen += value.byteLength;
+      // F-05 residual (Internal.34 installed campaign): Google's SSE frames
+      // travel with CRLF line endings; the previous LF-only "\n\n" splitter
+      // never matched "\r\n\r\n" (it contains no LF-LF pair), so not one
+      // chunk of a real provider stream was ever parsed — every chat turn
+      // ended in the bare-empty verdict while the non-streaming verify probe
+      // worked ("the key is good"). Stripping CR per chunk is framing-safe
+      // across chunk boundaries: it never adds characters and never merges
+      // LF separators (the only theoretical loss is bare-CR framing, which
+      // no SSE server emits; JSON payloads cannot contain raw CR — control
+      // characters are escaped on the wire).
+      buffer += decoder.decode(value, { stream: true }).replace(/\r/g, "");
       let separator: number;
       while ((separator = buffer.indexOf("\n\n")) >= 0) {
         const event = buffer.slice(0, separator);
@@ -477,6 +496,7 @@ async function* parseStream(
           } catch {
             continue;
           }
+          dataEvents += 1;
           if (chunk.error) {
             return {
               fullText,
@@ -509,6 +529,14 @@ async function* parseStream(
     }
   } finally {
     reader.releaseLock();
+  }
+  if (!fullText && functionCalls.length === 0) {
+    logger.warn("ai.gemini.stream_empty_turn", {
+      bytesSeen,
+      dataEvents,
+      finishReason,
+      blockReason,
+    });
   }
   return {
     fullText,
