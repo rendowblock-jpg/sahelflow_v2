@@ -349,14 +349,16 @@ jobs:
                 ($authority.version -ceq '1.0.0-internal.33' -and
                   $authority.licensing.authorityDecision -ceq 'FD-056') -or
                 ($authority.version -ceq '1.0.0-internal.34' -and
-                  $authority.licensing.authorityDecision -ceq 'FD-057')
+                  $authority.licensing.authorityDecision -ceq 'FD-057') -or
+                ($authority.version -ceq '1.0.0-internal.35' -and
+                  $authority.licensing.authorityDecision -ceq 'FD-058')
               )
               if (
                 -not $founderOfflineAuthority -or
                 $authority.channel -cne 'internal' -or
                 $null -ne $authority.licensing.ownedHostSuffix
               ) {
-                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, FD-038/Internal.19, FD-039/Internal.20, FD-040/Internal.21, FD-041/Internal.22, FD-042/Internal.23, FD-043/Internal.24, FD-044/Internal.25, FD-046/Internal.26, FD-047/Internal.27, FD-049/Internal.28, FD-050/Internal.29, FD-051/Internal.30, FD-053/Internal.31, FD-055/Internal.32, FD-056/Internal.33, or FD-057/Internal.34'
+                throw 'founder-offline-only release authority is valid only for exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, FD-038/Internal.19, FD-039/Internal.20, FD-040/Internal.21, FD-041/Internal.22, FD-042/Internal.23, FD-043/Internal.24, FD-044/Internal.25, FD-046/Internal.26, FD-047/Internal.27, FD-049/Internal.28, FD-050/Internal.29, FD-051/Internal.30, FD-053/Internal.31, FD-055/Internal.32, FD-056/Internal.33, FD-057/Internal.34, or FD-058/Internal.35'
               }
               'SF_LICENSE_SERVICE_URL=' >> $env:GITHUB_ENV
               "SF_RELEASE_SCOPE=founder-offline-only ($($authority.licensing.authorityDecision); online trial disabled)" >> $env:GITHUB_ENV

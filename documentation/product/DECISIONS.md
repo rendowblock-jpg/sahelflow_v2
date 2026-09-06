@@ -1060,6 +1060,41 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is created.
   #230 and the zero-budget boundary are unaffected.
 
+## FD-058 — One signed successor (Internal.35) packaging the Internal.34 installed-campaign repair line
+
+The Founder's 2026-09-06 directive ("go with 1 then 2" — merge the two open
+campaign PRs, then cut the signed successor packaging both lines), issued
+after every lane of both PRs passed at their exact heads, authorizes exactly
+one combined signed successor (Internal.35) packaging the protected-main
+frontier at cutting time: PR #396 — the Internal.34 installed-campaign AI
+line (F-09 truthful provider-verdict banners, F-10 bounded busy-retry chat
+delete, F-11 wrap-protected select toolbar, F-12 Class-AAA agents
+redesign) plus the F-05 residual root cause — the Gemini alt=sse stream
+parser was blind to Google's CRLF event framing, so every real chat turn
+parsed to a bare-empty verdict while the non-streaming verify probe
+succeeded (squash `dcd82f8…`) — and PR #397 — the notifications show-all
+workspace repair F-13 (N-1 pagination wipe, N-2 duplicate-id rendering,
+N-3 per-row mark-read, N-4 preferences skeleton, N-5 unread surfacing,
+N-6 preference-state chips, N-7 semantic day headers, N-8 inbox-v3
+presentation grammar) (expected-head discipline against the reviewed
+branch head).
+
+Binding boundaries:
+
+- The successor packages exactly the protected-main frontier at the release
+  head; certification cites the product head and its green CI/Phase 5/
+  Phase 6-7 runs at that exact head (tree-identity with the reviewed PR
+  heads recorded in the release request).
+- FD-045 evidence rules are unchanged: release-authority PR, exact-head
+  review, required gates, expected-head merge, signed run, in-place
+  preserved install.
+- The Internal.35 installed campaign re-verifies F-05 residual (chat must
+  stream), F-09..F-13, and continues the retained campaign rows; the
+  retained #306 logout row executes LAST, after every other row is green.
+  The Founder rotates the chat-transited GitHub PAT after the merge window.
+- No customer-online, Beta, Stable or paid-deployment authority is created.
+  #230 and the zero-budget boundary are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

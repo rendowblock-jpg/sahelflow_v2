@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.35 FD-058 signed successor publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.35",
+  "windowsMsiVersion": "1.0.0.35",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-058",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "d83bd8e2e6f2c25d6a8e28354d74f5bbfb0e4671",
+    "phase5RunId": 34016720554,
+    "phase67RunId": 34016720602,
+    "ciRunId": 34016720713
+  },
+  "reason": "Founder directive 2026-09-06 ('go with 1 then 2') authorizes exactly one combined signed successor (Internal.35) under FD-058 packaging the exact protected-main frontier since Internal.34: PR #396 (Internal.34 installed-campaign AI line — F-09 truthful provider-verdict banners, F-10 bounded busy-retry chat delete, F-11 wrap-protected select toolbar, F-12 Class-AAA agents redesign — plus the F-05 residual ROOT CAUSE: the Gemini alt=sse stream parser split events on LF-LF only while Google frames with CRLF, so every real chat turn parsed to a bare-empty verdict while the non-streaming verify probe succeeded; repaired by CR-stripping per decoded chunk + PII-free stream_empty_turn evidence log + CRLF fixtures) squash-merged as dcd82f8, and PR #397 (notifications show-all workspace repair F-13: N-1 HIGH pagination wipe on every action, N-2 HIGH duplicate-id rendering from live-polled page 1 + frozen appended pages, N-3 per-row mark-read, N-4 preferences skeleton, N-5 unread surfacing, N-6 quiet-hours/mute/retention state chips, N-7 semantic day headers, N-8 inbox-v3 presentation grammar; 8 new i18n keys AR/FR/EN; pinned source contract preserved) merged with the trivial UI_UX_TRIAGE_LEDGER adjacency resolution against the merged F-09..F-12 rows. Every lane of both PRs passed at their exact heads (14 success / 5 risk-classified skips / 0 failed each). Founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim; #230 unaffected. The Internal.35 installed campaign re-verifies F-05 residual (chat streams), F-09..F-13, and the retained rows; #306 logout stays LAST; the Founder rotates the chat-transited GitHub PAT after the merge window. Certification product head d83bd8e (protected main after the PR #397 squash) is tree-identical (a29d4d7b) to the reviewed PR #397 head ccded6a carrying the ledger adjacency resolution, and passed the full gate line at that exact head with zero failed checks: CI run 34016720713, Phase 5 run 34016720554, Phase 6-7 run 34016720602 (14 success / 5 risk-classified skips / 0 failed)."
+}
