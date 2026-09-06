@@ -169,14 +169,21 @@ export async function deleteWhatsAppChats(
       });
       break;
     } catch (error) {
-      if (attempt < BUSY_RETRY_DELAYS_MS.length && isSqliteBusyError(error)) {
+      // noUncheckedIndexedAccess: index into the delays table must narrow
+      // before use; the bounds guard makes the undefined branch unreachable,
+      // and falling back to throwing keeps the non-retry path intact.
+      const delay =
+        attempt < BUSY_RETRY_DELAYS_MS.length
+          ? BUSY_RETRY_DELAYS_MS[attempt]
+          : undefined;
+      if (delay !== undefined && isSqliteBusyError(error)) {
         logger.warn("whatsapp.chat_delete.busy_retry", {
           attempt: attempt + 1,
           conversations: conversationIds.length,
           messages: messageIds.length,
           events: eventIds.length,
         });
-        await sleep(BUSY_RETRY_DELAYS_MS[attempt]);
+        await sleep(delay);
         continue;
       }
       throw error;
