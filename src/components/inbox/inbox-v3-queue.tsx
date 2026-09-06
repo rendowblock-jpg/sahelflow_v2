@@ -919,14 +919,22 @@ export function InboxV3Queue({
 
         {/* Selection mode morphs the queue-pills row in place — same height,
             same visual language. The workflow row below stays visible so the
-            panel layout never jumps while selecting. */}
+            panel layout never jumps while selecting.
+
+            F-08/F-11 (Internal.34 installed campaign, founder-confirmed): at
+            ~430px RTL with Arabic labels the single flex row clipped — the
+            count pill (the only non-shrink-0 item) collapsed to zero width
+            and collided with the select-all control. The row now wraps
+            instead of clipping (nothing can ever overlap), the count pill
+            owns a real minimum width, and the delete label drops to
+            icon-only below 480px viewports (title + aria-label preserved). */}
         {selectMode ? (
           <div
-            className="mt-2 flex items-center gap-1.5"
+            className="mt-2 flex flex-wrap items-center gap-1.5"
             data-inbox-select-toolbar="true"
           >
             <div
-              className="flex min-w-0 flex-1 items-center rounded-full bg-primary/[0.08] p-0.5"
+              className="flex min-w-32 flex-1 items-center rounded-full bg-primary/[0.08] p-0.5"
               role="group"
               aria-label={copy("selectChats")}
             >
@@ -963,6 +971,8 @@ export function InboxV3Queue({
               className="h-8 shrink-0 rounded-full"
               disabled={effectiveSelected.length === 0 || deleting}
               data-inbox-chat-delete="true"
+              aria-label={copy("deleteChats")}
+              title={copy("deleteChats")}
               onClick={() => setDeleteDialogOpen(true)}
             >
               {deleting ? (
@@ -973,7 +983,9 @@ export function InboxV3Queue({
               ) : (
                 <Trash2 className="size-3.5" aria-hidden="true" />
               )}
-              {copy("deleteChats")}
+              <span className="hidden min-[480px]:inline">
+                {copy("deleteChats")}
+              </span>
             </Button>
 
             <Button

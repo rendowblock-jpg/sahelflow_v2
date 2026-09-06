@@ -13,6 +13,7 @@ import {
 } from "@/lib/ai/gemini/provider";
 import { serializeToolResultForRemoteModel } from "@/lib/ai/redact";
 import { db, shopContext } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import { getSecret } from "@/lib/secrets";
 import {
   aiChatSystemPrompt,
@@ -119,7 +120,11 @@ export type AgentStreamEvent =
       actionProposal?: AiActionProposalToolResult;
       signal?: AgentTurnSignal;
     }
-  | { type: "error"; message: string };
+  // F-09 (Internal.34 installed campaign): error events carry a stable code
+  // so the client never has to guess the cause class from prose. The
+  // provider-failure path keeps its GeminiProviderErrorCode; the
+  // empty-response path names its own cause.
+  | { type: "error"; message: string; code?: string };
 
 type ToolExecutionResult = {
   result: unknown;
@@ -242,9 +247,29 @@ type EmptyResponseShape = {
   blockReason: string | null;
 };
 
+/**
+ * F-09: thought-token usage proof. When the provider reports output tokens
+ * but returns no visible text, the number itself is the evidence that the
+ * turn actually ran (the budget went to internal reasoning); it is PII-free
+ * and comes only from the provider's own usageMetadata — never estimated.
+ */
+function usageProofSuffix(
+  locale: AiChatLocale | undefined,
+  usage: GeminiUsageMetadata | null | undefined,
+): string {
+  const spent = usage?.candidatesTokenCount;
+  if (typeof spent !== "number" || spent <= 0) return "";
+  if (locale === "ar")
+    return ` استُهلك ${spent} رمز توليد دون أي نص مرئي.`;
+  if (locale === "en")
+    return ` ${spent} output tokens were spent with no visible text.`;
+  return ` ${spent} jetons de génération ont été dépensés sans texte visible.`;
+}
+
 function emptyResponseMessage(
   locale: AiChatLocale | undefined,
   shape: EmptyResponseShape,
+  usage?: GeminiUsageMetadata | null,
 ): string {
   if (shape.blockReason) {
     if (locale === "ar")
@@ -255,16 +280,16 @@ function emptyResponseMessage(
   }
   if (shape.finishReason === "MAX_TOKENS") {
     if (locale === "ar")
-      return "استهلك النموذج ميزانية التوليد في التفكير الداخلي قبل أي نص مرئي. أعد إرسال طلبك — إذا تكرر ذلك فالنموذج مشبع حاليًا.";
+      return `استهلك النموذج ميزانية التوليد في التفكير الداخلي قبل أي نص مرئي. أعد إرسال طلبك — إذا تكرر ذلك فالنموذج مشبع حاليًا.${usageProofSuffix(locale, usage)}`;
     if (locale === "en")
-      return "The model spent its generation budget on internal reasoning before any visible text. Send the request again — if it repeats, the model is currently saturated.";
-    return "Le modèle a dépensé son budget de génération en raisonnement interne avant tout texte visible. Renvoyez la demande — si cela se répète, le modèle est actuellement saturé.";
+      return `The model spent its generation budget on internal reasoning before any visible text. Send the request again — if it repeats, the model is currently saturated.${usageProofSuffix(locale, usage)}`;
+    return `Le modèle a dépensé son budget de génération en raisonnement interne avant tout texte visible. Renvoyez la demande — si cela se répète, le modèle est actuellement saturé.${usageProofSuffix(locale, usage)}`;
   }
   if (locale === "ar")
-    return "لم يُعِد النموذج محتوى مرئيًا. أعد إرسال طلبك.";
+    return `لم يُعِد النموذج محتوى مرئيًا. أعد إرسال طلبك.${usageProofSuffix(locale, usage)}`;
   if (locale === "en")
-    return "The model returned no visible content. Send the request again.";
-  return "Le modèle n'a renvoyé aucun contenu visible. Renvoyez la demande.";
+    return `The model returned no visible content. Send the request again.${usageProofSuffix(locale, usage)}`;
+  return `Le modèle n'a renvoyé aucun contenu visible. Renvoyez la demande.${usageProofSuffix(locale, usage)}`;
 }
 
 export async function runAgent(
@@ -366,13 +391,18 @@ export async function runAgent(
     }
     // F-05: truthful empty-shape verdict instead of the false "rephrase"
     // dead end. The shape is PII-free and names what the provider actually
-    // returned (thought-budget exhaustion / policy refusal / empty).
+    // returned (thought-budget exhaustion / policy refusal / empty), with
+    // the provider's own token report as proof when it sent one (F-09).
     return {
-      response: emptyResponseMessage(locale, {
-        finishReason:
-          response.candidates?.[0]?.finishReason ?? null,
-        blockReason: response.promptFeedback?.blockReason ?? null,
-      }),
+      response: emptyResponseMessage(
+        locale,
+        {
+          finishReason:
+            response.candidates?.[0]?.finishReason ?? null,
+          blockReason: response.promptFeedback?.blockReason ?? null,
+        },
+        response.usageMetadata ?? null,
+      ),
       toolCalls: allToolCalls,
     };
   }
@@ -409,6 +439,13 @@ async function* parseStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let fullText = "";
+  // F-05 residual evidence: PII-free turn diagnostics. bytesSeen counts raw
+  // provider bytes, dataEvents counts chunks the parser actually consumed —
+  // when a turn ends with no visible text, that pair names whether the
+  // provider streamed at all and whether the parser saw it (the
+  // discriminator the bare-empty loop could never produce).
+  let bytesSeen = 0;
+  let dataEvents = 0;
   let usage: GeminiUsageMetadata | null = null;
   // F-05: PII-free terminal shape of the turn (last chunk wins — the final
   // SSE chunk carries the finishReason/promptFeedback verdict).
@@ -433,7 +470,18 @@ async function* parseStream(
       }
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: true });
+      bytesSeen += value.byteLength;
+      // F-05 residual (Internal.34 installed campaign): Google's SSE frames
+      // travel with CRLF line endings; the previous LF-only "\n\n" splitter
+      // never matched "\r\n\r\n" (it contains no LF-LF pair), so not one
+      // chunk of a real provider stream was ever parsed — every chat turn
+      // ended in the bare-empty verdict while the non-streaming verify probe
+      // worked ("the key is good"). Stripping CR per chunk is framing-safe
+      // across chunk boundaries: it never adds characters and never merges
+      // LF separators (the only theoretical loss is bare-CR framing, which
+      // no SSE server emits; JSON payloads cannot contain raw CR — control
+      // characters are escaped on the wire).
+      buffer += decoder.decode(value, { stream: true }).replace(/\r/g, "");
       let separator: number;
       while ((separator = buffer.indexOf("\n\n")) >= 0) {
         const event = buffer.slice(0, separator);
@@ -448,6 +496,7 @@ async function* parseStream(
           } catch {
             continue;
           }
+          dataEvents += 1;
           if (chunk.error) {
             return {
               fullText,
@@ -480,6 +529,14 @@ async function* parseStream(
     }
   } finally {
     reader.releaseLock();
+  }
+  if (!fullText && functionCalls.length === 0) {
+    logger.warn("ai.gemini.stream_empty_turn", {
+      bytesSeen,
+      dataEvents,
+      finishReason,
+      blockReason,
+    });
   }
   return {
     fullText,
@@ -619,11 +676,18 @@ export async function* runAgentStream(
       // provider-truth failure, not a user-phrasing problem. The coded error
       // surface marks the turn interrupted and names the PII-free shape
       // (thought-budget exhaustion / policy refusal / empty) instead of the
-      // old "rephrase your question" done event.
-      message: emptyResponseMessage(locale, {
-        finishReason: parsed.value.finishReason,
-        blockReason: parsed.value.blockReason,
-      }),
+      // old "rephrase your question" done event. F-09: the stable code and
+      // the usage proof let the UI show the truthful cause, never the
+      // misleading "provider unavailable" collapse.
+      message: emptyResponseMessage(
+        locale,
+        {
+          finishReason: parsed.value.finishReason,
+          blockReason: parsed.value.blockReason,
+        },
+        parsed.value.usage,
+      ),
+      code: "AI_PROVIDER_EMPTY_RESPONSE",
     };
     return;
   }

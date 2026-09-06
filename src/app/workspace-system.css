@@ -248,20 +248,11 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   animation: sf-workspace-item-in var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
 
-[data-ai-message="assistant"] > div > div:first-child {
-  border-color: color-mix(in oklch, var(--border) 88%, transparent);
-  background: color-mix(in oklch, var(--card) 97%, var(--primary) 3%);
-  box-shadow:
-    0 1px 2px oklch(0 0 0 / 0.04),
-    0 7px 22px oklch(0 0 0 / 0.055);
-}
-
-.dark [data-ai-message="assistant"] > div > div:first-child {
-  box-shadow:
-    0 1px 2px oklch(0 0 0 / 0.18),
-    0 8px 26px oklch(0 0 0 / 0.12);
-}
-
+/* 8-a redesign: assistant turns are intentionally FLAT — model output reads
+ * as the workspace's own voice directly on the canvas; the seller's filled
+ * primary bubble is the only elevated card in the thread, so role ownership
+ * is unmistakable without boxing every answer. The user turn keeps its
+ * primary-tinted elevation below. */
 [data-ai-message="user"] > div > div:first-child {
   box-shadow: 0 7px 20px color-mix(in oklch, var(--primary) 17%, transparent);
 }

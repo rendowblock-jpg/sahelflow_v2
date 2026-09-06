@@ -348,12 +348,12 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
   const argEntries = Object.entries(tool.args ?? {}).slice(0, 8);
 
   return (
-    <section className="mt-2 overflow-hidden rounded-lg border bg-background/70 text-start">
+    <section className="mt-2 overflow-hidden rounded-xl border border-border/60 bg-card/50 text-start">
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}
         aria-expanded={expanded}
-        className="flex min-h-11 w-full items-center justify-between gap-3 border-b px-3 py-2 text-start outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        className="flex min-h-11 w-full items-center justify-between gap-3 border-b border-border/60 px-3.5 py-2 text-start outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <div className="flex min-w-0 items-center gap-2">
           {running ? (
@@ -372,7 +372,10 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {!running ? (
-            <Badge variant={failed ? "destructive" : "secondary"} className="text-xs">
+            <Badge
+              variant={failed ? "destructive" : "secondary"}
+              className="rounded-full px-2 text-2xs font-medium"
+            >
               {failed ? copy("failed") : (
                 <span className="inline-flex items-center gap-1">
                   <CheckCircle2 className="size-3.5" aria-hidden="true" />
@@ -392,16 +395,16 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
       </button>
 
       {expanded && !running ? (
-        <div className="space-y-3 p-3">
+        <div className="space-y-3 p-3.5">
           {argEntries.length > 0 ? (
             <div>
               <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {copy("toolArgs")}
               </p>
-              <dl className="mt-1 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
+              <dl className="mt-1.5 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
                 {argEntries.map(([key, value]) => (
                   <div key={key} className="min-w-0">
-                    <dt className="text-muted-foreground">{key}</dt>
+                    <dt className="text-2xs text-muted-foreground">{key}</dt>
                     <dd className="mt-0.5 truncate font-medium text-foreground">
                       <TechnicalValue>{simpleValue(value) ?? "—"}</TechnicalValue>
                     </dd>
@@ -416,7 +419,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
             </p>
           ) : null}
           {records.map((record, index) => (
-            <div key={`${tool.id}:record:${index}`} className={index > 0 ? "border-t pt-2" : ""}>
+            <div key={`${tool.id}:record:${index}`} className={index > 0 ? "border-t border-border/50 pt-3" : ""}>
               <ResultRecord
                 value={record}
                 locale={locale}

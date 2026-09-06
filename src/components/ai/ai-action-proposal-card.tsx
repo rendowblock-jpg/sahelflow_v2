@@ -164,15 +164,15 @@ export function AiActionProposalCard({
   });
 
   return (
-    <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <header className="flex items-start justify-between gap-3 border-b px-4 py-3.5">
+    <section className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
+      <header className="flex items-start justify-between gap-3 border-b border-border/60 bg-muted/25 px-4 py-3">
         <div className="flex min-w-0 items-start gap-2.5">
           <div className="mt-0.5">{statusIcon(effectiveStatus)}</div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">
               {copy("sensitiveProposal")}
             </p>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            <p className="mt-0.5 truncate text-2xs text-muted-foreground">
               {getAiToolLabel(locale, proposal.toolName)}
             </p>
           </div>
@@ -185,7 +185,7 @@ export function AiActionProposalCard({
                 ? "destructive"
                 : "outline"
           }
-          className="shrink-0 text-xs"
+          className="shrink-0 text-2xs font-medium"
         >
           {copy(statusKey(effectiveStatus))}
         </Badge>
@@ -212,7 +212,7 @@ export function AiActionProposalCard({
         ) : null}
 
         {interactive ? (
-          <div className="rounded-lg border bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
+          <div className="rounded-lg border border-border/60 bg-muted/25 px-3 py-2.5 text-xs text-muted-foreground">
             <div className="flex items-center justify-between gap-3">
               <span>{copy("proposalDigest")}</span>
               <TechnicalValue className="text-foreground">
@@ -259,6 +259,7 @@ export function AiActionProposalCard({
             <Button
               type="button"
               size="sm"
+              className="justify-center"
               disabled={approving || (retrying && reason.trim().length < 3)}
               onClick={() => void onApprove(handle, retrying ? reason : undefined)}
             >

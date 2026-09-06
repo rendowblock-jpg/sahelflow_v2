@@ -168,6 +168,12 @@ export type AiWorkspaceErrorCode =
   | "AI_SESSION_NOT_FOUND"
   | "AI_RESPONSE_NOT_PERSISTED"
   | "AI_PROVIDER_UNAVAILABLE"
+  // F-09 (Internal.34 installed campaign): the stream's `error` events carry
+  // locale-native, server-authored copy naming the REAL cause (invalid key,
+  // quota, thought-budget exhaustion, policy refusal, …). Showing them under
+  // the generic "provider unavailable" title misled the operator; this code
+  // renders the server's message verbatim as the banner text instead.
+  | "AI_PROVIDER_REPORTED"
   | "AI_SESSION_LOAD_FAILED"
   | "AI_SESSION_CREATE_FAILED"
   | "AI_STREAM_TIMEOUT"

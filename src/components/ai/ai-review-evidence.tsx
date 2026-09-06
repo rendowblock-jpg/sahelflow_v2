@@ -73,23 +73,26 @@ export function AiReviewEvidence({
       data-ai-review-evidence="true"
       className="flex h-full min-h-0 flex-col bg-background"
     >
-      <div className="border-b px-4 py-4">
+      <div className="border-b px-4 py-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary/12 to-primary/[0.04] text-primary">
               <ShieldCheck className="size-4" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold">
+              <h2 className="text-sm font-semibold tracking-tight">
                 {getAiDecisionCopy(locale, "reviewEvidence")}
               </h2>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              <p className="mt-1 text-2xs leading-4 text-muted-foreground">
                 {getAiDecisionCopy(locale, "reviewEvidenceDescription")}
               </p>
             </div>
           </div>
           {proposals.length + elsewhere.length > 0 ? (
-            <Badge variant="secondary" className="text-xs">
+            <Badge
+              variant="secondary"
+              className="shrink-0 rounded-full px-2 text-2xs font-semibold tabular-nums text-muted-foreground"
+            >
               {proposals.length + elsewhere.length}
             </Badge>
           ) : null}
@@ -97,19 +100,19 @@ export function AiReviewEvidence({
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
-        <div className="space-y-5 p-4">
+        <div className="space-y-6 p-4">
           <section aria-labelledby="ai-review-actions-title">
-            <div className="mb-2">
+            <div className="mb-2.5">
               <h3 id="ai-review-actions-title" className="text-sm font-semibold">
                 {workspace.copy("actions")}
               </h3>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              <p className="mt-1 text-2xs leading-4 text-muted-foreground">
                 {getAiDecisionCopy(locale, "proposedChangesDescription")}
               </p>
             </div>
 
             {actionHistoryError ? (
-              <div className="rounded-xl border border-warning/25 bg-warning/5 p-3">
+              <div className="rounded-xl border border-warning/25 bg-warning/[0.06] p-3.5">
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle
                     className="mt-0.5 size-4 shrink-0 text-warning"
@@ -136,12 +139,14 @@ export function AiReviewEvidence({
                 </div>
               </div>
             ) : proposals.length === 0 ? (
-              <div className="rounded-xl border border-dashed p-4 text-center">
-                <CheckCircle2
-                  className="mx-auto size-5 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <p className="mt-2 text-sm font-semibold">
+              <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-5 text-center">
+                <span className="mx-auto flex size-9 items-center justify-center rounded-full bg-muted/50">
+                  <CheckCircle2
+                    className="size-5 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                </span>
+                <p className="mt-2.5 text-sm font-semibold">
                   {getAiDecisionCopy(locale, "noReviewItems")}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -169,10 +174,10 @@ export function AiReviewEvidence({
           </section>
 
           <section
-            className="border-t pt-4"
+            className="border-t pt-5"
             aria-labelledby="ai-review-elsewhere-title"
           >
-            <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="mb-2.5 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Inbox className="size-4 text-primary" aria-hidden="true" />
                 <h3
@@ -198,12 +203,12 @@ export function AiReviewEvidence({
                 )}
               </Button>
             </div>
-            <p className="mb-3 text-xs leading-5 text-muted-foreground">
+            <p className="mb-3 text-2xs leading-4 text-muted-foreground">
               {workspace.copy("pendingElsewhereDescription")}
             </p>
 
             {inboxError ? (
-              <div className="rounded-xl border border-warning/25 bg-warning/5 p-3">
+              <div className="rounded-xl border border-warning/25 bg-warning/[0.06] p-3.5">
                 <p className="text-sm font-semibold">
                   {workspace.copy("crossSessionUnavailable")}
                 </p>
@@ -219,7 +224,7 @@ export function AiReviewEvidence({
                 </Button>
               </div>
             ) : elsewhere.length === 0 ? (
-              <p className="rounded-xl border border-dashed p-3 text-center text-xs text-muted-foreground">
+              <p className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-3.5 text-center text-xs text-muted-foreground">
                 {inboxLoading
                   ? getAiDecisionCopy(locale, "setupChecking")
                   : getAiDecisionCopy(locale, "noReviewItemsDescription")}
@@ -252,10 +257,10 @@ export function AiReviewEvidence({
           </section>
 
           <section
-            className="border-t pt-4"
+            className="border-t pt-5"
             aria-labelledby="ai-review-decisions-title"
           >
-            <div className="mb-2">
+            <div className="mb-2.5">
               <h3
                 id="ai-review-decisions-title"
                 className="text-sm font-semibold"
@@ -268,7 +273,7 @@ export function AiReviewEvidence({
             </div>
 
             {inboxDecisions.length === 0 ? (
-              <p className="rounded-xl border border-dashed p-3 text-center text-xs text-muted-foreground">
+              <p className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-3.5 text-center text-xs text-muted-foreground">
                 {workspace.copy("noRecentDecisions")}
               </p>
             ) : (
@@ -284,7 +289,7 @@ export function AiReviewEvidence({
                   return (
                     <li
                       key={decision.id}
-                      className="flex items-start gap-2.5 rounded-lg border bg-card/60 px-3 py-2"
+                      className="flex items-start gap-2.5 rounded-lg border border-border/60 bg-card/60 px-3 py-2"
                     >
                       {settled ? (
                         <CheckCircle2
@@ -328,7 +333,7 @@ export function AiReviewEvidence({
             )}
           </section>
 
-          <section className="border-t pt-4" aria-labelledby="ai-provider-title">
+          <section className="border-t pt-5" aria-labelledby="ai-provider-title">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <BrainCircuit className="size-4 text-primary" aria-hidden="true" />
@@ -337,13 +342,13 @@ export function AiReviewEvidence({
                 </h3>
               </div>
               {setupReady ? (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="rounded-full text-2xs">
                   {getAiDecisionCopy(locale, "providerReady")}
                 </Badge>
               ) : null}
             </div>
 
-            <dl className="mt-3 space-y-2 rounded-xl border bg-card/60 p-3 text-xs">
+            <dl className="mt-3 space-y-2 rounded-xl border border-border/60 bg-card/60 p-3 text-xs">
               <div className="flex items-center justify-between gap-3">
                 <dt className="flex items-center gap-2 text-muted-foreground">
                   <ShieldCheck className="size-3.5" aria-hidden="true" />
@@ -373,7 +378,7 @@ export function AiReviewEvidence({
             </dl>
 
             {setupError || !setupReady ? (
-              <div className="mt-3 rounded-lg bg-muted/45 px-3 py-2.5">
+              <div className="mt-3 rounded-lg bg-muted/30 px-3 py-2.5">
                 <p className="text-xs leading-5 text-muted-foreground">
                   {setupError
                     ? workspace.copy("setupUnavailableDescription")
