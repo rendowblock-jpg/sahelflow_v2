@@ -151,7 +151,7 @@ export function AiFollowUpChips({
           dir="auto"
           title={prompt}
           onClick={() => onPick(prompt)}
-          className="max-w-full truncate rounded-full border bg-card/70 px-3 py-1.5 text-start text-xs text-foreground transition-colors hover:border-primary/25 hover:bg-primary/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="max-w-full truncate rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-start text-xs text-foreground shadow-sm transition-colors hover:border-primary/25 hover:bg-primary/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {prompt}
         </button>

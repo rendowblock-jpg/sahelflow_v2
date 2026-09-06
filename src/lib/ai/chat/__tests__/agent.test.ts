@@ -72,6 +72,22 @@ function sseResponse(chunks: object[], status = 200): Response {
   return new Response(body, { status, headers: { "Content-Type": "text/event-stream" } });
 }
 
+function crlfSseResponse(chunks: object[], status = 200): Response {
+  // F-05 residual: Google's SSE endpoints frame events with CRLF line
+  // endings. The LF-only fixtures above document the event shape; this one
+  // documents the wire truth the parser must survive.
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const c of chunks) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(c)}\r\n\r\n`));
+      }
+      controller.close();
+    },
+  });
+  return new Response(body, { status, headers: { "Content-Type": "text/event-stream" } });
+}
+
 async function collectStream(
   history: AgentMessage[],
   message: string,
@@ -444,5 +460,61 @@ describe("runAgentStream — empty response", () => {
     const error = events.find((e) => e.type === "error");
     expect(error).toBeDefined();
     expect((error as { message: string }).message).toContain("SAFETY");
+  });
+});
+
+describe("runAgentStream — CRLF provider framing (F-05 residual)", () => {
+  it("parses Google-style CRLF-framed events into deltas, done and turn signal", async () => {
+    vi.mocked(getSecret).mockResolvedValue("test-key");
+    vi.mocked(fetch).mockResolvedValue(
+      crlfSseResponse([
+        { candidates: [{ content: { parts: [{ text: "Bonjour " }] } }] },
+        {
+          candidates: [
+            { content: { parts: [{ text: "le monde." }] }, finishReason: "STOP" },
+          ],
+          usageMetadata: {
+            promptTokenCount: 12,
+            candidatesTokenCount: 9,
+            totalTokenCount: 21,
+          },
+        },
+      ]),
+    );
+    const events = await collectStream([], "Salut");
+    expect(events.map((e) => e.type)).toEqual(["text_delta", "text_delta", "done"]);
+    const done = expectEvent(events, "done");
+    expect(done.response).toBe("Bonjour le monde.");
+    expect(done.signal).toMatchObject({ totalTokens: 21 });
+  });
+
+  it("reassembles a CRLF separator split across chunk boundaries", async () => {
+    vi.mocked(getSecret).mockResolvedValue("test-key");
+    const encoder = new TextEncoder();
+    const frame = (chunk: object) =>
+      encoder.encode(`data: ${JSON.stringify(chunk)}\r\n\r\n`);
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const first = frame({ candidates: [{ content: { parts: [{ text: "ABC" }] } }] });
+        const second = frame({ candidates: [{ content: { parts: [{ text: "DEF" }] } }] });
+        // Split the first frame so its trailing "\r\n\r\n" never travels in
+        // one chunk: the CR lands at the end of a read, its LF opens the
+        // next. The per-chunk CR strip must still form one separator.
+        const pivot = first.length - 2;
+        controller.enqueue(first.slice(0, pivot));
+        controller.enqueue(first.slice(pivot));
+        controller.enqueue(second);
+        controller.close();
+      },
+    });
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream" },
+      }),
+    );
+    const events = await collectStream([], "Salut");
+    expect(events.map((e) => e.type)).toEqual(["text_delta", "text_delta", "done"]);
+    expect(expectEvent(events, "done").response).toBe("ABCDEF");
   });
 });

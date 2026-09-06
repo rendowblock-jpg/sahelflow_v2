@@ -8,6 +8,7 @@ import {
   Loader2,
   Pencil,
   Plus,
+  Search,
   Trash2,
   X,
 } from "lucide-react";
@@ -191,17 +192,32 @@ export function AiWorkHistory({
             )
           : ""}
       </p>
-      <div className="border-b px-4 py-4">
-        <h2 className="text-sm font-semibold">
-          {getAiDecisionCopy(locale, "workHistory")}
-        </h2>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          {getAiDecisionCopy(locale, "workHistoryDescription")}
-        </p>
+      <div className="flex flex-col gap-2.5 border-b px-3.5 pb-3 pt-4">
+        <div>
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <h2 className="truncate text-sm font-semibold tracking-tight">
+              {getAiDecisionCopy(locale, "workHistory")}
+            </h2>
+            {sessions.length > 0 ? (
+              <Badge
+                variant="secondary"
+                className="shrink-0 rounded-full px-2 text-2xs font-semibold tabular-nums text-muted-foreground"
+              >
+                <span className="sr-only">
+                  {`${workspace.copy("sessions")}: `}
+                </span>
+                {sessions.length}
+              </Badge>
+            ) : null}
+          </div>
+          <p className="mt-1 text-2xs leading-4 text-muted-foreground">
+            {getAiDecisionCopy(locale, "workHistoryDescription")}
+          </p>
+        </div>
         <Button
           type="button"
           size="sm"
-          className="mt-3 w-full justify-center"
+          className="w-full justify-center"
           disabled={loadingSessions || creatingSession || sending}
           onClick={onNewAnalysis}
         >
@@ -213,13 +229,30 @@ export function AiWorkHistory({
           {getAiDecisionCopy(locale, "newAnalysis")}
         </Button>
         {sessions.length > 0 ? (
-          <Input
-            value={historyQuery}
-            onChange={(event) => setHistoryQuery(event.target.value)}
-            placeholder={getAiDecisionCopy(locale, "historySearch")}
-            aria-label={getAiDecisionCopy(locale, "historySearch")}
-            className="mt-2 h-8 bg-background/60 text-[13px]"
-          />
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              value={historyQuery}
+              onChange={(event) => setHistoryQuery(event.target.value)}
+              placeholder={getAiDecisionCopy(locale, "historySearch")}
+              aria-label={getAiDecisionCopy(locale, "historySearch")}
+              className="h-8 rounded-full border-border/65 bg-background/60 ps-8 pe-8 text-[13px]"
+            />
+            {historyQuery ? (
+              <button
+                type="button"
+                aria-label={workspace.copy("close")}
+                title={workspace.copy("close")}
+                onClick={() => setHistoryQuery("")}
+                className="absolute end-1.5 top-1/2 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="size-3" aria-hidden="true" />
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
@@ -236,8 +269,8 @@ export function AiWorkHistory({
               ))}
             </div>
           ) : sessions.length === 0 ? (
-            <div className="px-3 py-8 text-center">
-              <span className="mx-auto flex size-10 items-center justify-center rounded-xl border bg-card text-muted-foreground">
+            <div className="px-3 py-10 text-center">
+              <span className="mx-auto flex size-11 items-center justify-center rounded-xl border border-border/60 bg-card text-muted-foreground shadow-sm">
                 <Bot className="size-5" aria-hidden="true" />
               </span>
               <p className="mt-3 text-sm font-semibold">{workspace.copy("noSessions")}</p>
@@ -253,7 +286,7 @@ export function AiWorkHistory({
               if (groupedSessions.length === 0) return null;
               return (
                 <section key={group} aria-label={groupLabel(group, workspace)}>
-                  <p className="sticky top-0 z-10 bg-background/85 px-2 py-1.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
+                  <p className="sticky top-0 z-10 bg-card/85 px-2 py-1.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
                     {groupLabel(group, workspace)}
                   </p>
                   <div className="space-y-1">
@@ -270,7 +303,7 @@ export function AiWorkHistory({
                           <div
                             key={session.id}
                             data-ai-session-rename="true"
-                            className="flex items-center gap-1 rounded-lg border border-primary/15 bg-primary/[0.04] px-1.5 py-1"
+                            className="flex items-center gap-1 rounded-lg border border-primary/20 bg-card px-1.5 py-1 shadow-sm"
                           >
                             <Input
                               value={renaming.value}
@@ -347,13 +380,20 @@ export function AiWorkHistory({
                               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                               "disabled:cursor-not-allowed disabled:opacity-50",
                               active
-                                ? "border-primary/15 bg-primary/[0.055]"
+                                ? "border-primary/15 bg-primary/[0.06]"
                                 : "hover:bg-muted/55",
+                              deleteArmed &&
+                                "border-destructive/30 bg-destructive/[0.05]",
                             )}
                           >
                             <span className="flex items-start justify-between gap-2">
                               <span className="min-w-0 flex-1 pe-12">
-                                <span className="block truncate text-sm font-semibold text-foreground">
+                                <span
+                                  className={cn(
+                                    "block truncate text-sm text-foreground",
+                                    active ? "font-semibold" : "font-medium",
+                                  )}
+                                >
                                   {session.title || workspace.copy("newSessionTitle")}
                                 </span>
                                 {preview ? (
@@ -366,12 +406,18 @@ export function AiWorkHistory({
                                 ) : null}
                               </span>
                               {active && reviewCount > 0 ? (
-                                <Badge variant="outline" className="shrink-0 text-xs">
+                                <Badge
+                                  variant="outline"
+                                  className="shrink-0 rounded-full border-primary/25 bg-primary/[0.06] px-2 text-2xs font-semibold tabular-nums text-primary"
+                                >
+                                  <span className="sr-only">
+                                    {`${getAiDecisionCopy(locale, "needsReview")}: `}
+                                  </span>
                                   {reviewCount}
                                 </Badge>
                               ) : null}
                             </span>
-                            <span className="mt-2 block text-xs tabular-nums text-muted-foreground">
+                            <span className="mt-1.5 block text-2xs tabular-nums text-muted-foreground">
                               {sessionStamp(session.updatedAt, locale)}
                             </span>
                           </button>
@@ -379,9 +425,10 @@ export function AiWorkHistory({
                           {!busy ? (
                             <div
                               className={cn(
-                                "absolute end-1 top-1.5 flex items-center gap-0.5 rounded-md bg-background/85 p-0.5 backdrop-blur-sm transition-opacity",
+                                "absolute end-1 top-1.5 flex items-center gap-0.5 rounded-md border border-border/60 bg-background/90 p-0.5 shadow-sm backdrop-blur-sm transition-opacity",
                                 "opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100",
-                                active && "md:opacity-100",
+                                (active || deleteArmed) && "md:opacity-100",
+                                deleteArmed && "border-destructive/30 bg-destructive/[0.06]",
                               )}
                             >
                               <Button
@@ -405,7 +452,11 @@ export function AiWorkHistory({
                                 type="button"
                                 size="icon"
                                 variant="ghost"
-                                className="size-6"
+                                className={cn(
+                                  "size-6",
+                                  deleteArmed &&
+                                    "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                                )}
                                 data-ai-session-delete={session.id}
                                 aria-label={
                                   deleteArmed
@@ -424,13 +475,7 @@ export function AiWorkHistory({
                                     : armDelete(session.id)
                                 }
                               >
-                                <Trash2
-                                  className={cn(
-                                    "size-3",
-                                    deleteArmed && "text-destructive",
-                                  )}
-                                  aria-hidden="true"
-                                />
+                                <Trash2 className="size-3" aria-hidden="true" />
                               </Button>
                             </div>
                           ) : null}
@@ -445,9 +490,14 @@ export function AiWorkHistory({
           {!loadingSessions &&
           sessions.length > 0 &&
           visibleSessions.length === 0 ? (
-            <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              {getAiDecisionCopy(locale, "historyNoMatches")}
-            </p>
+            <div className="px-3 py-8 text-center">
+              <span className="mx-auto flex size-9 items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
+                <Search className="size-4" aria-hidden="true" />
+              </span>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                {getAiDecisionCopy(locale, "historyNoMatches")}
+              </p>
+            </div>
           ) : null}
         </div>
       </ScrollArea>
