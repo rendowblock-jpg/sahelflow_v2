@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-26
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.35 / FD-058 is the latest signed/published (Founder installation pending; installed remains Internal.34 / FD-057) — it packages the Internal.34 campaign lines (#396 F-09..F-12 + F-05 CRLF root cause, #397 F-13); next is the Founder's in-place Internal.35 update, the re-verification campaign over the F-09..F-13 + retained FD-050/#306/#316/#317 rows, evidence reconciliation, then FRC-3 resume; the merged #399–#403 delta rides protected `main` (best-known `418d665…`) and receives its first installed/Founder observation on the next signed package
+> **Current checkpoint:** Internal.35 / FD-058 is the latest signed/published (Founder installation pending; installed remains Internal.34 / FD-057) — it packages the Internal.34 campaign lines (#396 F-09..F-12 + F-05 CRLF root cause, #397 F-13); next is the Founder's in-place Internal.35 update, the re-verification campaign over the F-09..F-13 + retained FD-050/#306/#316/#317 rows, evidence reconciliation, then FRC-3 resume; the merged #399–#406 delta rides protected `main` (best-known `c50f297…`) and receives its first installed/Founder observation on the next signed package
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 

@@ -1,7 +1,7 @@
 # SahelFlow documentation authority
 
 > **Status:** Active non-archive documentation entry point
-> **Last reconciled:** 2026-09-08 (best-known local `origin/main` `418d665…`; re-resolve live before acting)
+> **Last reconciled:** 2026-09-08 (best-known local `origin/main` `c50f297…` after PR #406; re-resolve live before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
 > **Latest signed/published checkpoint:** Internal.35 / `1.0.0-internal.35` / MSI `1.0.0.35` / FD-058 (Founder installation pending; Internal.34 / FD-057 remains latest installed)
@@ -28,9 +28,13 @@ This directory is the active documentation authority for SahelFlow. `documentati
 
 Reading order does not change authority precedence. A newer explicit Founder decision outranks lower execution documents for the choice it changes. Protected GitHub source, exact Actions evidence and signed releases outrank stale chat summaries.
 
+## Security-evidence authority (single interpretation)
+
+`security/phase4-vulnerability-triage.json` is the live accepted-disposition authority (CycloneDX VEX input) only: it records accepted exceptions, mitigations and not-affected verdicts, and it never asserts that any exact head is vulnerability-free — an empty findings array means no disposition was accepted, nothing more. The only machine-proven exact-head audit truth is the blocking `bun audit --production` GitHub Actions check executed at the exact audited commit (`.github/workflows/ci.yml`, `.github/workflows/phase6-7-completion.yml`); the triage file does not duplicate or restate that run result. SBOM/VEX artifacts and their authority digests are generated deterministically by `scripts/generate-phase4-evidence.ts` and re-verified by `scripts/verify-phase4-closure.ts`; Rust advisory coverage rides the CycloneDX SBOM (resolved Cargo.lock components) under the explicit policy in the triage file. Historical Phase 4 material stays in `documentation/archive/phase4/` and is never promoted back into authority.
+
 ## Current protected and signed truth
 
-Protected `main` best-known `418d665…` after PR #403 (trilingual server-error rules) on top of #402 (AAA eslint gates), docs-only #401 (frontier reconcile + missing route boundaries), #400 (AI agents AAA command-center) and release-authority #398. Revalidate live state before every write/merge.
+Protected `main` best-known `c50f297…` after PR #406 (FRC-3 Required capability/journey ledger adoption) on top of #405 (P3 AI-ledger micro-repairs: F-2/F-3 + AI-17/AI-23 conversions) and docs-only #404 (the #401–#403 delta reconcile), which followed #403/#402/#401/#400/#399 and release-authority #398. Revalidate live state before every write/merge.
 
 Internal.35 is the latest real signed/published offline package:
 

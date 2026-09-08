@@ -196,6 +196,7 @@ const requiredFiles = [
   "documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md",
   "documentation/operations/UI_UX_TRIAGE_LEDGER.md",
   "documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md",
+  "documentation/security/phase4-vulnerability-triage.json",
   "documentation/research/RESEARCH.md",
   ".github/phase-checkpoints/phase3-durable-effects.json",
   ".github/phase-checkpoints/phase3-surface-inventory.json",
@@ -377,6 +378,13 @@ requireMarkers("documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER
   "Installed conversion only by observation",
   "No cross-SHA evidence mixing",
   "J-01",
+]);
+requireMarkers("documentation/security/phase4-vulnerability-triage.json", [
+  "authorityScope",
+  "exactHeadAuditAuthority",
+  "evidenceGeneration",
+  "emptyFindingsMeaning",
+  "bun audit --production",
 ]);
 requireMarkers("documentation/research/RESEARCH.md", [
   "Research-first quality rule",
