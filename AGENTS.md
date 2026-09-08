@@ -33,12 +33,12 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-At the 2026-09-08 reconciliation (best-known local `origin/main` `418d665…`; re-resolve live before acting):
+At the 2026-09-08 reconciliation (best-known local `origin/main` `c50f297…`; re-resolve live before acting):
 
-- protected `main` best-known: `418d665…` / PR #403 (trilingual phone/license/shop-lifecycle server-error rules) on top of #402 (AAA eslint gates), docs-only #401 (frontier reconcile + missing route boundaries), #400 (AI agents AAA command-center redesign), docs-only #399 and release-authority #398;
+- protected `main` best-known: `c50f297…` / PR #406 (FRC-3 Required capability/journey ledger adoption) on top of #405 (P3 AI-ledger micro-repairs: F-2/F-3 source truth + AI-17/AI-23 row conversions) and docs-only #404 (the #401–#403 delta reconcile), which followed #403 (trilingual phone/license/shop-lifecycle server-error rules), #402 (AAA eslint gates), docs-only #401 (frontier reconcile + missing route boundaries), #400 (AI agents AAA command-center redesign), docs-only #399 and release-authority #398;
 - latest signed/published checkpoint: **Internal.35** / **FD-058**, mode `founder-offline-only`; the latest **Founder-installed** checkpoint remains Internal.34 / FD-057 until the in-place Internal.35 update;
 - Internal.35 release source: `f45e6e1c9ece903623dcbe71a22b6806b0562cde` (no longer equals protected `main`: #399 docs + #400 merged after publication); tag `sahelflow-v1.0.0-internal.35-f45e6e1c9ece903623dcbe71a22b6806b0562cde`; app `1.0.0-internal.35` / MSI `1.0.0.35`;
-- Internal.35 packages the Internal.34 installed-campaign repair line (#396: F-09..F-12 + F-05 CRLF root cause) and the F-13 notifications line (#397); the #399–#403 delta rides `main` ahead of the next signed package; Internal.30 facts (`2eb8a337…`, dispatcher `33292273959`, run `33292278832`, MSI `sha256:bef15026…`) remain retained evidence — see `documentation/operations/WORKING_MEMORY.md` and `documentation/system/CURRENT_STATE.md`;
+- Internal.35 packages the Internal.34 installed-campaign repair line (#396: F-09..F-12 + F-05 CRLF root cause) and the F-13 notifications line (#397); the #399–#406 delta rides `main` ahead of the next signed package; Internal.30 facts (`2eb8a337…`, dispatcher `33292273959`, run `33292278832`, MSI `sha256:bef15026…`) remain retained evidence — see `documentation/operations/WORKING_MEMORY.md` and `documentation/system/CURRENT_STATE.md`;
 - Internal.34 (installed in place 2026-09-05, FD-057) reported F-04..F-08/F-09..F-13, all repaired on protected main via #396/#397;
 - issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint;
 - issues #306 and #230 remain open for real-phone WhatsApp certification and customer-online readiness;
