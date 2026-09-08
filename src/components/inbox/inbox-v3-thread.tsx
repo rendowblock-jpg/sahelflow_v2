@@ -482,7 +482,9 @@ const MessageBubble = memo(function MessageBubble({
     <div
       data-message-id={message.id}
       className={cn(
-        "group/message space-y-1.5",
+        // `relative` anchors the floated hover-action clusters below; without a
+        // positioned ancestor they would resolve against the scroll container.
+        "group/message relative space-y-1.5",
         groupStart ? "mt-4" : "mt-1",
         highlighted &&
           "rounded-2xl ring-2 ring-primary/60 ring-offset-2 ring-offset-background transition-shadow",
@@ -655,10 +657,18 @@ const MessageBubble = memo(function MessageBubble({
       </div>
 
       {message.body.trim() || message.attachment?.fileName ? (
+        // The controls were `opacity-0` but still in flow, so this row reserved
+        // its full height under EVERY bubble — permanent dead space that reads
+        // as loose, un-WhatsApp-like density.
+        // Floated, not collapsed. An earlier revision used
+        // `grid-rows-[0fr]` to reclaim the dead space, but that zeroes the box
+        // of controls that stay in the tab order — a focusable element with no
+        // dimensions. Absolute positioning removes the row from flow while the
+        // controls keep their real size whenever they are revealed.
         <div
           className={cn(
-            "flex gap-1",
-            inbound ? "justify-start" : "justify-end",
+            "pointer-events-none absolute -bottom-1 z-10 flex gap-1 opacity-0 transition-opacity duration-150 group-hover/message:pointer-events-auto group-hover/message:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 motion-reduce:transition-none",
+            inbound ? "start-0" : "end-0",
           )}
         >
           {canInteract ? (
@@ -680,7 +690,18 @@ const MessageBubble = memo(function MessageBubble({
       ) : null}
 
       {canExtract ? (
-        <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
+        // The selected candidate keeps its chip visible (it is a persistent
+        // state, not a hover affordance), so the row stays expanded whenever
+        // `candidate` is true and only collapses in the unselected case.
+        <div
+          className={cn(
+            "flex",
+            candidate
+              ? "pt-1"
+              : "pointer-events-none absolute -bottom-1 z-10 opacity-0 transition-opacity duration-150 group-hover/message:pointer-events-auto group-hover/message:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 motion-reduce:transition-none",
+            candidate ? (inbound ? "justify-start" : "justify-end") : inbound ? "start-24" : "end-24",
+          )}
+        >
           <button
             type="button"
             onClick={() => onChooseCandidate(message.id)}

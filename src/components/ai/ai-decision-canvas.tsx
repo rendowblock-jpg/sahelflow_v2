@@ -349,29 +349,18 @@ const MessageBubble = memo(function MessageBubble({
   return (
     <article
       data-ai-message={message.role}
-      className={cn("group/message flex gap-3", assistant ? "justify-start" : "justify-end")}
+      className={cn("group/message flex", assistant ? "justify-start" : "justify-end")}
     >
-      {assistant ? (
-        <span className="mt-1 flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary/16 to-primary/[0.05] text-primary shadow-sm">
-          <Bot className="size-4" aria-hidden="true" />
-        </span>
-      ) : null}
       <div className={cn("min-w-0", assistant ? "w-full max-w-3xl" : "max-w-[85%] md:max-w-[78%]") }>
-        {assistant ? (
-          // Byline owns identity (F-06): the turn is attributed to the
-          // assistant, the clock stays on the hover row (AI-12).
-          <div className="mb-1.5 flex items-center gap-2">
-            <p className="text-2xs font-bold uppercase tracking-wider text-foreground/70">
-              {getAiDecisionCopy(locale, "assistantName")}
-            </p>
-            <span aria-hidden="true" className="h-px w-6 bg-border/70" />
-          </div>
-        ) : null}
         {assistant ? (
           // Assistant turns read as decision blocks — a layered card on the
           // canvas grammar. The seller's turn stays the only filled bubble,
           // so role ownership is unmistakable at a glance.
-          <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3.5 text-[14px] leading-6 text-foreground shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
+          // The assistant turn is the workspace's own voice, so it carries no
+          // container: no border, no fill, no shadow. The seller's turn is the
+          // only enclosed surface, which is what makes role ownership readable
+          // at a glance without an avatar or a per-turn label.
+          <div className="text-sm leading-6 text-foreground">
             {message.content ? (
               <div>
                 {/* Assistant output is model-emitted markdown: rendered through
@@ -394,7 +383,7 @@ const MessageBubble = memo(function MessageBubble({
             ) : null}
           </div>
         ) : (
-          <div className="rounded-2xl rounded-ee-md bg-gradient-to-b from-primary to-primary/90 px-4 py-2.5 text-[14px] leading-6 text-primary-foreground shadow-[0_1px_2px_oklch(0_0_0/0.12),0_8px_24px_oklch(0_0_0/0.08)]">
+          <div className="rounded-2xl rounded-ee-md bg-primary px-4 py-2.5 text-sm leading-6 text-primary-foreground">
             {message.content ? (
               // Seller input is echoed verbatim — no markdown interpretation.
               <p dir="auto" className="whitespace-pre-wrap break-words">
@@ -771,18 +760,24 @@ function StartSurface({
     workspace.capabilities?.briefing?.pendingProposals ?? workspace.inbox.length ?? 0;
   return (
     <div data-ai-start-state="true" className="mx-auto flex w-full max-w-3xl flex-col items-stretch py-6 text-start md:py-8">
-      <div className="flex items-start gap-4 rounded-2xl border border-border/60 bg-gradient-to-b from-card to-muted/[0.22] p-5 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_16px_40px_oklch(0_0_0/0.06)] md:p-6">
-        <span className="relative flex size-12 shrink-0 items-center justify-center rounded-2xl border border-primary/25 bg-gradient-to-b from-primary/20 to-primary/[0.05] text-primary shadow-sm">
+      {/*
+        The start surface previously stacked five bordered/gradient/shadowed
+        containers before any content. Nothing had hierarchy because every
+        layer competed for the same attention. One elevation level now; the
+        heading and spacing do the work.
+      */}
+      <div className="flex items-start gap-4">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <BrainCircuit className="size-6" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-[22px] font-bold leading-7 tracking-tight md:text-2xl md:leading-8">
+          <h2 className="text-2xl font-bold leading-8 tracking-tight">
             {getAiDecisionCopy(workspace.locale, "startTitle")}
           </h2>
-          <p className="mt-1.5 max-w-xl text-[13px] leading-6 text-muted-foreground">
+          <p className="mt-1.5 max-w-xl text-sm leading-6 text-muted-foreground">
             {getAiDecisionCopy(workspace.locale, "startDescription")}
           </p>
-          <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.06] px-2.5 py-1 text-2xs font-semibold text-primary">
+          <p className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
             {getAiDecisionCopy(workspace.locale, "safeStartNote")}
           </p>
@@ -795,7 +790,7 @@ function StartSurface({
       </div>
 
       {!ready && workspace.setup ? (
-        <div className="mt-7 w-full rounded-xl border bg-card/60 p-4 text-start shadow-sm md:p-5">
+        <div className="mt-7 w-full rounded-xl border bg-card/60 p-4 text-start md:p-5">
           <p className="text-sm font-semibold">
             {getAiDecisionCopy(workspace.locale, "setupRequiredTitle")}
           </p>
@@ -886,7 +881,7 @@ function StartSurface({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
-                    <span className="truncate text-[14px] font-bold tracking-tight">
+                    <span className="truncate text-sm font-bold tracking-tight">
                       {workspace.copy(starter.title)}
                     </span>
                     {count ? (
@@ -900,7 +895,7 @@ function StartSurface({
                       </span>
                     ) : null}
                   </span>
-                  <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
                     {workspace.copy(starter.description)}
                   </span>
                 </span>
@@ -1278,7 +1273,7 @@ export function AiDecisionCanvas({
           </span>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
-              <h2 className="truncate text-[15px] font-bold tracking-tight">
+              <h2 className="truncate text-sm font-bold tracking-tight">
                 {activeSession?.title || workspace.copy("newSessionTitle")}
               </h2>
               {/* Ledger AI-01: seeded demo sessions are labelled honestly so

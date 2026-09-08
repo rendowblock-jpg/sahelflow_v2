@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Ban,
@@ -142,6 +142,44 @@ export function AiActionProposalCard({
     key: AiWorkspaceCopyKey,
     params?: Record<string, string | number>,
   ) => getAiWorkspaceCopy(locale, key, params);
+  const [fieldsExpanded, setFieldsExpanded] = useState(false);
+  // Approval commits an irreversible business mutation (order creation,
+  // cancellation, price/stock change). The control previously fired on a single
+  // click while the codebase already required two steps for far less consequential
+  // deletions. Same convention as ai-work-history.tsx: arm, then confirm,
+  // self-disarming so an abandoned card cannot stay hot.
+  const [approveArmed, setApproveArmed] = useState(false);
+  const armTimerRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (armTimerRef.current !== null) {
+        window.clearTimeout(armTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const disarmApprove = () => {
+    if (armTimerRef.current !== null) {
+      window.clearTimeout(armTimerRef.current);
+      armTimerRef.current = null;
+    }
+    setApproveArmed(false);
+  };
+
+  const handleApprove = () => {
+    if (!approveArmed) {
+      setApproveArmed(true);
+      armTimerRef.current = window.setTimeout(() => {
+        setApproveArmed(false);
+        armTimerRef.current = null;
+      }, 4000);
+      return;
+    }
+    disarmApprove();
+    void onApprove(handle, retrying ? reason : undefined);
+  };
   const [reason, setReason] = useState("");
   const proposal = handle.proposal;
   const effectiveStatus = proposal.executionState ?? proposal.status;
@@ -205,15 +243,14 @@ export function AiActionProposalCard({
         </Badge>
       </header>
 
+      <p role="status" aria-live="polite" className="sr-only">
+        {approveArmed ? copy("approveArmAnnounce") : ""}
+      </p>
+
       <div className="space-y-3.5 p-4">
-        {summary.length > 8 ? (
-          <p dir="ltr" className="text-2xs font-semibold tabular-nums text-muted-foreground">
-            +{summary.length - 8}
-          </p>
-        ) : null}
         {summary.length > 0 ? (
           <dl className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
-            {summary.slice(0, 8).map((field) => (
+            {(fieldsExpanded ? summary : summary.slice(0, 8)).map((field) => (
               <div key={field.key} className="min-w-0">
                 <dt className="text-xs font-medium text-muted-foreground">
                   {copy(SUMMARY_LABELS[field.key]!)}
@@ -230,6 +267,26 @@ export function AiActionProposalCard({
           </dl>
         ) : null}
 
+        {/*
+          This card approves an irreversible business mutation. The previous
+          surface truncated to 8 fields and rendered a bare `+N` above the list
+          with no way to reveal the rest, so the operator could not see the full
+          set of values being approved. The hidden fields are now reachable.
+        */}
+        {summary.length > 8 ? (
+          <button
+            type="button"
+            data-ai-proposal-fields-toggle={fieldsExpanded ? "expanded" : "collapsed"}
+            aria-expanded={fieldsExpanded}
+            onClick={() => setFieldsExpanded((current) => !current)}
+            className="inline-flex min-h-7 items-center gap-1.5 rounded-md text-xs font-medium text-primary outline-none transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {fieldsExpanded
+              ? copy("lessFields")
+              : `${copy("moreFields")} (${summary.length - 8})`}
+          </button>
+        ) : null}
+
         {interactive ? (
           <div className="rounded-lg border border-border/60 bg-muted/25 px-3 py-2.5 text-xs text-muted-foreground">
             <div className="flex items-center justify-between gap-3">
@@ -240,7 +297,7 @@ export function AiActionProposalCard({
             </div>
             {createdLabel ? (
               <div className="mt-1.5 flex items-center justify-between gap-3">
-                <span>{copy("fieldFrom")}</span>
+                <span>{copy("proposedAt")}</span>
                 <time dateTime={proposal.createdAt} className="tabular-nums text-foreground">
                   {createdLabel}
                 </time>
@@ -292,8 +349,10 @@ export function AiActionProposalCard({
               type="button"
               size="sm"
               className="justify-center"
+              data-ai-proposal-approve={approveArmed ? "armed" : "idle"}
+              variant={approveArmed ? "destructive" : "default"}
               disabled={approving || (retrying && reason.trim().length < 3)}
-              onClick={() => void onApprove(handle, retrying ? reason : undefined)}
+              onClick={handleApprove}
             >
               {approving ? (
                 <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
@@ -304,9 +363,11 @@ export function AiActionProposalCard({
               )}
               {approving
                 ? copy("approving")
-                : retrying
-                  ? copy("retryAction")
-                  : copy("approve")}
+                : approveArmed
+                  ? copy("approveArmed")
+                  : retrying
+                    ? copy("retryAction")
+                    : copy("approve")}
             </Button>
             {onReject ? (
               <Button
@@ -314,8 +375,10 @@ export function AiActionProposalCard({
                 size="sm"
                 variant="outline"
                 disabled={approving || rejecting}
-                aria-label={copy("reject")}
-                onClick={() => void onReject(handle)}
+                onClick={() => {
+                  disarmApprove();
+                  void onReject(handle);
+                }}
               >
                 {rejecting ? (
                   <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />

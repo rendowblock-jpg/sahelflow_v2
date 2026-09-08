@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Archive,
@@ -209,7 +209,14 @@ function PreviewGlyph({ type }: { type?: string | null }) {
 
 const PRIORITY_FILTER_VALUES = ["", "urgent", "high", "medium", "low"] as const;
 
-function ConversationRow({
+/**
+ * Memoized: the queue re-renders whenever ANY of the 102 workspace fields
+ * changes — including `replyText`, which the queue never displays. Without this
+ * boundary, typing one character in the thread composer re-rendered every row
+ * in the desk. All callbacks are stable (see the prop contract below), so the
+ * default shallow comparison is sufficient and correct.
+ */
+const ConversationRow = memo(function ConversationRow({
   chat,
   active,
   locale,
@@ -231,8 +238,13 @@ function ConversationRow({
   copy: ReturnType<typeof useInboxWorkspace>["copy"];
   selectMode: boolean;
   checked: boolean;
-  onSelect: () => void;
-  onToggle: () => void;
+  /**
+   * Stable across renders. The row passes its own `chat` back rather than the
+   * parent closing over it per row, so `memo` below can actually skip work —
+   * a per-row arrow would change identity on every parent render and defeat it.
+   */
+  onSelect: (chat: InboxChat) => void;
+  onToggle: (conversationId: string) => void;
   /** j/k keyboard cursor highlight. */
   cursorActive?: boolean;
   /** Session draft preview text for this conversation, when present. */
@@ -249,7 +261,9 @@ function ConversationRow({
       data-inbox-unread={chat.unread > 0 ? "true" : "false"}
       data-inbox-status={status}
       data-inbox-selected={selectMode && checked ? "true" : "false"}
-      onClick={selectMode ? onToggle : onSelect}
+      onClick={
+        selectMode ? () => onToggle(chat.conversationId) : () => onSelect(chat)
+      }
       aria-current={!selectMode && active ? "true" : undefined}
       aria-pressed={selectMode ? checked : undefined}
       className={cn(
@@ -395,7 +409,7 @@ function ConversationRow({
       </span>
     </button>
   );
-}
+});
 
 export function InboxV3Queue({
   workspace,
@@ -598,15 +612,18 @@ export function InboxV3Queue({
     workflowFilter,
   ]);
 
-  const openChat = (chat: InboxChat) => {
-    const canonical = chats.find(
-      (entry) => entry.conversationId === chat.conversationId,
-    );
-    selectChat(canonical ?? chat);
-    router.replace(
-      `/inbox?conversation=${encodeURIComponent(chat.conversationId)}`,
-    );
-  };
+  const openChat = useCallback(
+    (chat: InboxChat) => {
+      const canonical = chats.find(
+        (entry) => entry.conversationId === chat.conversationId,
+      );
+      selectChat(canonical ?? chat);
+      router.replace(
+        `/inbox?conversation=${encodeURIComponent(chat.conversationId)}`,
+      );
+    },
+    [chats, router, selectChat],
+  );
 
   const selectableIds = useMemo(
     () => new Set(rows.map((chat) => chat.conversationId)),
@@ -617,7 +634,7 @@ export function InboxV3Queue({
     [selectableIds, selectedIds],
   );
 
-  const toggleSelected = (conversationId: string) => {
+  const toggleSelected = useCallback((conversationId: string) => {
     setSelectedIds((current) => {
       const next = new Set(current);
       if (next.has(conversationId)) {
@@ -627,7 +644,7 @@ export function InboxV3Queue({
       }
       return next;
     });
-  };
+  }, []);
 
   const exitSelectMode = () => {
     setSelectMode(false);
@@ -1173,8 +1190,8 @@ export function InboxV3Queue({
                   copy={copy}
                   selectMode={selectMode}
                   checked={selectedIds.has(chat.conversationId)}
-                  onSelect={() => openChat(chat)}
-                  onToggle={() => toggleSelected(chat.conversationId)}
+                  onSelect={openChat}
+                  onToggle={toggleSelected}
                   cursorActive={cursorConversationId === chat.conversationId}
                   draftPreview={
                     localDrafts[chat.conversationId]
