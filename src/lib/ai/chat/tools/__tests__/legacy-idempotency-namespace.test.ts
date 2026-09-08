@@ -24,9 +24,14 @@ const LEGACY_NAMESPACE = "ai-order:";
 const CANONICAL_NAMESPACE = "ai-action:";
 
 function idempotencyKeyTemplates(source: string): string[] {
-  return [...source.matchAll(/idempotencyKey:\s*`([^`]+)`/g)].map(
-    (match) => match[1],
-  );
+  const keys: string[] = [];
+  for (const match of source.matchAll(/idempotencyKey:\s*`([^`]+)`/g)) {
+    // noUncheckedIndexedAccess: match[1] is `string | undefined` at the type
+    // level; the capture group is always present when the pattern matches.
+    const key = match[1];
+    if (key !== undefined) keys.push(key);
+  }
+  return keys;
 }
 
 describe("legacy create_order idempotency namespace (F-3 pin)", () => {
