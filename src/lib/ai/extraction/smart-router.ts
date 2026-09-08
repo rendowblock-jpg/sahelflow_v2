@@ -7,8 +7,9 @@
  *   3. Otherwise → try Gemini (uses seller's API key)
  *   4. If Gemini also fails → return best result + missing fields
  *
- * This protects the 1,500 RPD Gemini quota: ~70% of messages
- * are handled by regex and never hit Gemini.
+ * This protects the seller-owned Gemini quota (the shared session/user rate
+ * limiter caps chat + extraction at 20/session/hour and 100/user/day): ~70%
+ * of messages are handled by regex and never hit Gemini.
  */
 
 import type { ServiceContext } from "@/lib/data/service-base";

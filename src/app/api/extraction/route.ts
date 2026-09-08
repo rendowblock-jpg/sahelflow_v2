@@ -73,8 +73,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // AI-M1: rate-limit the extraction route to prevent Gemini-quota
   // exhaustion. Parity with the chat routes (/api/ai/sessions/[id]/messages
   // + stream), which already call checkRateLimit. Without this, an
-  // authenticated user could spam /api/extraction to drain the 1500 RPD
-  // Gemini free-tier in seconds.
+  // authenticated user could spam /api/extraction to drain the seller's
+  // Gemini free-tier quota in seconds.
   // Use a synthetic session key for the per-session bucket (the extraction
   // route has no sessionId; the user-key bucket is the real protection).
   // W3-19: pass the user's auth key (was: omitted → defaulted to "default",
