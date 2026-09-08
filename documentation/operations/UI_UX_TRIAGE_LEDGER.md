@@ -111,7 +111,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 | AI-14 ||| **DONE (source, wave 9-a)** — grounded chips derived ONLY from real tool results; prefill composer, anchored dismissal |
 | AI-15 ||| **DONE (source, wave 9-a)** — edit user message → composer prefill + editing notice → truncate & re-stream |
 | AI-16 ||| **DONE (source, wave 9-a)** — all parallel function calls collected, executed, and returned to the model; every card rendered |
-| AI-17 ||| **DONE (source, wave 6)** — isComposing guard (char counter still OPEN) |
+| AI-17 | Composer composition safety + honest char counter | decision-canvas composer | **DONE (source, wave 6)** — isComposing guard; **char-counter residual DONE (source, PR #391)** — honest near-limit counter bound to the same server authority as the composer itself (`AI_CHAT_MESSAGE_MAX_LENGTH` in `chat-limits.ts`, `data-ai-composer-counter`, LTR tabular numbers, warning weight at the bound); pinned by `f06-page-completion-contract.test.ts`; converts on the next installed observation |
 | AI-18 ||| **DONE (source, wave 9-a)** — 45s inactivity watchdog aborts via stop path (partial persists); localized recoverable AI_STREAM_TIMEOUT |
 | AI-19 ||| **DONE (source, wave 9-a)** — GET /api/ai/actions shop-wide inbox; review panel shows pending-from-other-sessions with session labels |
 | AI-20 ||| **DONE (source, wave 9-a)** — panel populated: cross-session pending + recent decisions timeline from real proposal rows; truthful empty states |
@@ -121,7 +121,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 ### P2 — Panels / polish
 | ID | Item | Target | Status |
 |---|---|---|---|
-| AI-23 ||| **DONE (source, wave 6)** — aria-busy on streaming log (two-step delete announce still OPEN) |
+| AI-23 | Streaming-log assistive signaling + armed-delete announcement | work-history rail | **DONE (source, wave 6)** — aria-busy on the streaming log; **two-step delete announce residual DONE (source, PR #391)** — the armed delete announces itself via `role="status" aria-live="polite"` (`deleteArmAnnounce`, sr-only, disarms on unmount/re-arm); pinned by `f06-page-completion-contract.test.ts`; converts on the next installed observation |
 | AI-24 ||| **DONE (source, wave 6)** — 3-pane layout skeleton |
 | AI-25 | Unconfigured state: capability explainer (reuse ~25 dead copy keys) + delete dead keys + legacy `ai.*` namespace | `ai-workspace.ts`, locales | **DONE (source, wave 10)** — StartSurface renders the capability explainer when setup resolves not-ready (adopted capabilities sentence + 4 tool-anchored chips, truthful seller-owned-key privacy note, `/settings?group=intelligence` CTA; copy adopted into the ai-decision-workspace runtime authority ×3); all 37 dead legacy `ai.*` locale keys deleted ×3 after a zero-reference repo scan (parity 2826×3); launchpad contract pins explainer rendering, per-locale resolution and the namespace retirement |
 | AI-26 | Truthful model/quality signal (contract today forbids usage metadata — revisit deliberately, never fabricate) | contracts + tests | **DONE (source, wave 12)** — the done event carries an optional signal built ONLY from the provider's own usageMetadata + the served model id; client parse drops malformed shapes; the line renders only when the provider reported the turn; ephemeral by design (history rows show none); cost estimation stays forbidden; the blanket no-usage contract deliberately superseded with disposition |

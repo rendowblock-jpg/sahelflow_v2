@@ -195,15 +195,8 @@ shapes the smart router delegates to Gemini and the human review sheet guards.
   extraction intentionally license-free; the permission boundary still holds. Left
   unchanged here because entitlement behavior must not be altered without a
   recorded Founder decision.
-- **F-2 (P3, copy truth):** stale quota comments — `rate-limit.ts` header says
-  "Gemini free-tier allows 15 requests/day" and `smart-router.ts`/extraction route
-  comments cite "1,500 RPD"; the actual limiter is 20/session/hour + 100/user/day.
-  Comments only; no behavior impact.
-- **F-3 (P3, maintenance note):** the legacy in-tool `create_order` body
-  (`core-tools.ts:205-324`) is unreachable in production (registry intercepts
-  sensitive tools; fail-closed pinned by `registry-policy.test.ts:52`) but keeps a
-  divergent `ai-order:` idempotency key alive in legacy test mode. Candidate for a
-  future cleanup batch; not a defect.
+- **F-2 (P3, copy truth) — DONE (source, branch `fix/p3-ai-ledger-micro-repairs`):** the stale quota comments are re-anchored to the actual limiter truth (20/session/hour + 100/user/day over the seller-owned key shared by the chat and extraction routes): the `rate-limit.ts` header no longer cites "15 requests/day", and `smart-router.ts` plus the extraction route no longer cite "1,500 RPD". Comments only; no behavior impact.
+- **F-3 (P3, maintenance note) — DONE (source, same branch):** the divergence is now a pinned invariant instead of an unpinned candidate. The legacy `ai-order:` key stays deliberately (registry.ts keeps the legacy bodies for Vitest-only compatibility — a registered decision, not an accident), and `legacy-idempotency-namespace.test.ts` contracts it as disjoint from the canonical proposal-bound `ai-action:` namespace (`executor.ts`), so a future collision/unification fails CI instead of replay-consuming a legitimate canonical order. Not a defect; production path unchanged (registry intercepts sensitive tools; fail-closed pinned by `registry-policy.test.ts`).
 
 ## Non-claims
 

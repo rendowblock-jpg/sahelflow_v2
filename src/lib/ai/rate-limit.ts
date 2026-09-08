@@ -1,8 +1,9 @@
 /**
  * Simple in-memory rate limiter for AI routes (Session 30, AUDIT-7 AI4).
  *
- * Gemini free-tier allows 15 requests/day. Without rate limiting, a single
- * user can exhaust the quota in seconds. This is a basic token-bucket per
+ * The limiter protects the seller-owned Gemini key shared by the chat and
+ * extraction routes. Without rate limiting, a single user could exhaust the
+ * seller's free-tier quota in seconds. This is a basic token-bucket per
  * sessionId — production should use Redis or similar, but for a local-first
  * desktop app with one user, in-memory is sufficient.
  *
