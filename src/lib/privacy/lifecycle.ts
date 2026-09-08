@@ -326,12 +326,21 @@ export async function executeShopErase(
       await tx.customer.deleteMany({});
       await tx.automationLog.deleteMany({});
       await tx.automation.deleteMany({});
+      // AI quality feedback precedes its cascading chat-message parent.
+      await tx.aiMessageFeedback.deleteMany({});
       await tx.aiChatMessage.deleteMany({});
       await tx.aiChatSession.deleteMany({});
       await tx.phoneReputation.deleteMany({});
       await tx.integration.deleteMany({});
       await tx.counter.deleteMany({});
       await tx.auditLog.deleteMany({});
+
+      // Search token/dirty bookkeeping is derived from erased entities and is
+      // wiped only after the canonical deletes have fired their projection
+      // triggers; the migration-seeded revision watermark is retained so the
+      // trigger-maintained bookkeeping keeps advancing after erase.
+      await tx.searchProjectionToken.deleteMany({});
+      await tx.searchProjectionDirty.deleteMany({});
 
       // Credentials and provider configuration are confidential data. Both the
       // dedicated encrypted store and non-secret settings are erased.
