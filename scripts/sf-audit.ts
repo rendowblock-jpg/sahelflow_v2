@@ -195,6 +195,7 @@ const requiredFiles = [
   "documentation/operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md",
   "documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md",
   "documentation/operations/UI_UX_TRIAGE_LEDGER.md",
+  "documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md",
   "documentation/research/RESEARCH.md",
   ".github/phase-checkpoints/phase3-durable-effects.json",
   ".github/phase-checkpoints/phase3-surface-inventory.json",
@@ -257,11 +258,11 @@ const markdownFiles = walkMarkdown(repoRoot);
 const activeDocumentationFiles = walkMarkdown(
   resolve(repoRoot, "documentation"),
 );
-if (activeDocumentationFiles.length !== 14) {
+if (activeDocumentationFiles.length !== 15) {
   report(
     "drift",
     "documentation/",
-    `expected 14 active Markdown files, found ${activeDocumentationFiles.length}`,
+    `expected 15 active Markdown files, found ${activeDocumentationFiles.length}`,
   );
 }
 
@@ -370,6 +371,12 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "#221, #226, #230",
   "31657621918",
   "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734",
+]);
+requireMarkers("documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md", [
+  "Section 6 — Conversion rules (how a row changes class)",
+  "Installed conversion only by observation",
+  "No cross-SHA evidence mixing",
+  "J-01",
 ]);
 requireMarkers("documentation/research/RESEARCH.md", [
   "Research-first quality rule",
