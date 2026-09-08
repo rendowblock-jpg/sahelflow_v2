@@ -18,14 +18,18 @@
  * them for the inbox render window (INB-11), the notification list and the
  * pane resizer, so they are stubbed here rather than in every test file.
  */
+// Registers the jest-dom matchers AND their type augmentation on vitest's
+// `Assertion` interface. Importing `@testing-library/jest-dom/matchers` and
+// calling `expect.extend` works at RUNTIME but declares no types, so
+// `toBeInTheDocument`/`toHaveAttribute` fail `tsc --noEmit` — caught by the
+// hosted Quality Gate, which is the only full-project type authority here.
+import "@testing-library/jest-dom/vitest";
+
 import { act, cleanup, render as rtlRender } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
-import { afterEach, expect, vi } from "vitest";
-import * as matchers from "@testing-library/jest-dom/matchers";
+import { afterEach, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-
-expect.extend(matchers);
 
 type ObserverCallback = (entries: unknown[], observer: unknown) => void;
 
