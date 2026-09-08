@@ -66,19 +66,31 @@
     {
       "id": "operational-security-metadata",
       "models": [
-        "AiActionApproval", "AiActionExecution", "AutomationLog", "AutomationRun", "AutomationStepAttempt",
+        "AiActionApproval", "AiActionExecution", "AiMessageFeedback", "AutomationLog", "AutomationRun", "AutomationStepAttempt",
         "AutomationStepRun", "BusinessAggregateVersion", "BusinessCommand", "CommerceSyncItemAttempt",
         "CommerceSyncPage", "CommerceSyncRun", "CommerceSyncRunAttempt", "CompensationFact", "DomainEvent",
-        "ExtractionMetric", "OutboxIntent", "ProjectionInvalidation", "ProviderCapabilityCertification",
-        "ProviderIngressAttempt", "WhatsAppOutboundEffect"
+        "ExtractionMetric", "NotificationDeliveryAttempt", "NotificationEvent", "NotificationPreference",
+        "OperationalNotification", "OutboxIntent", "ProjectionInvalidation", "ProviderCapabilityCertification",
+        "ProviderIngressAttempt", "SearchProjectionDirty", "SearchProjectionToken", "WhatsAppOutboundEffect"
       ],
       "classification": "security-metadata",
-      "purpose": "Authorization, idempotency, durable effects, incident response, provider ingress, recovery and audit.",
+      "purpose": "Authorization, idempotency, durable effects, incident response, provider ingress, notification-center operational state, per-actor notification controls, search projection bookkeeping, AI quality analytics, recovery and audit.",
       "retentionClass": "operational-security",
       "export": "included-when-subject-or-business-relevant; secrets excluded",
       "encryptedBackup": "included-encrypted",
       "erase": "delete",
       "diagnostics": "reason codes, counts and hashes only"
+    },
+    {
+      "id": "search-projection-watermark",
+      "models": ["SearchProjectionRevision"],
+      "classification": "security-metadata",
+      "purpose": "Migration-seeded search projection revision watermark advanced by SQLite projection triggers; counters only, retained so projection bookkeeping keeps converging across erase cycles.",
+      "retentionClass": "installation-security",
+      "export": "excluded-from-subject-export",
+      "encryptedBackup": "included-encrypted",
+      "erase": "retain-or-rebuild",
+      "diagnostics": "revision counters only; no seller, customer or entity identifiers"
     },
     {
       "id": "confidential-business",
