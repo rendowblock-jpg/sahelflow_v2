@@ -163,8 +163,22 @@ export function AiActionProposalCard({
     return formatted === null ? [] : [{ key, value: formatted }];
   });
 
+  const createdLabel = (() => {
+    try {
+      return new Intl.DateTimeFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`, {
+        dateStyle: "short",
+        timeStyle: "short",
+      }).format(new Date(proposal.createdAt));
+    } catch {
+      return null;
+    }
+  })();
   return (
-    <section className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
+    <section
+      data-ai-proposal-card={proposal.id}
+      data-ai-proposal-status={effectiveStatus}
+      className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm"
+    >
       <header className="flex items-start justify-between gap-3 border-b border-border/60 bg-muted/25 px-4 py-3">
         <div className="flex min-w-0 items-start gap-2.5">
           <div className="mt-0.5">{statusIcon(effectiveStatus)}</div>
@@ -192,6 +206,11 @@ export function AiActionProposalCard({
       </header>
 
       <div className="space-y-3.5 p-4">
+        {summary.length > 8 ? (
+          <p dir="ltr" className="text-2xs font-semibold tabular-nums text-muted-foreground">
+            +{summary.length - 8}
+          </p>
+        ) : null}
         {summary.length > 0 ? (
           <dl className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
             {summary.slice(0, 8).map((field) => (
@@ -219,6 +238,14 @@ export function AiActionProposalCard({
                 {proposal.proposalDigestPrefix}
               </TechnicalValue>
             </div>
+            {createdLabel ? (
+              <div className="mt-1.5 flex items-center justify-between gap-3">
+                <span>{copy("fieldFrom")}</span>
+                <time dateTime={proposal.createdAt} className="tabular-nums text-foreground">
+                  {createdLabel}
+                </time>
+              </div>
+            ) : null}
             <div className="mt-1.5 flex items-center justify-between gap-3">
               <span>{copy("expires")}</span>
               <time dateTime={proposal.expiresAt} className="tabular-nums text-foreground">
@@ -229,7 +256,12 @@ export function AiActionProposalCard({
               </time>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <p className="flex items-center justify-between gap-3 text-2xs tabular-nums text-muted-foreground">
+            <TechnicalValue>{proposal.proposalDigestPrefix}</TechnicalValue>
+            {createdLabel ? <time dateTime={proposal.createdAt}>{createdLabel}</time> : null}
+          </p>
+        )}
 
         {effectiveStatus === "conflict" ? (
           <p className="text-xs leading-5 text-destructive">{copy("actionRequiresNewProposal")}</p>

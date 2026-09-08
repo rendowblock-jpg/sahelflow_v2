@@ -9,6 +9,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Square,
   Trash2,
   X,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import {
   getAiDecisionCopy,
   type AiDecisionLocale,
 } from "@/lib/i18n/ai-decision-workspace";
+import { getAiToolGroupLabel } from "@/lib/i18n/ai-tool-labels";
 import { cn } from "@/lib/utils";
 
 function sessionDateGroup(value: string): "today" | "yesterday" | "earlier" {
@@ -70,6 +72,15 @@ function groupLabel(
   return getAiDecisionCopy(workspace.locale, "earlier");
 }
 
+function sessionPreview(session: { messages?: Array<{ content?: string | null } | null> | null }): string {
+  const msgs = session.messages ?? [];
+  for (let index = msgs.length - 1; index >= 0; index -= 1) {
+    const content = msgs[index]?.content?.trim();
+    if (content) return content;
+  }
+  return "";
+}
+
 export function AiWorkHistory({
   workspace,
   navigationLocked,
@@ -94,7 +105,24 @@ export function AiWorkHistory({
     deletingSessionId,
     renameSession,
     deleteSession,
-  } = workspace;
+    capabilities,
+    inbox,
+  } = workspace as ReturnType<typeof useAiWorkspace> & {
+    capabilities?: {
+      briefing?: {
+        pendingOrders?: number | null;
+        ordersToday?: number | null;
+        lowStockProducts?: number | null;
+        pendingDeliveries?: number | null;
+        pendingProposals?: number | null;
+      } | null;
+      groups?: Array<{
+        id: "orders" | "customers" | "products" | "delivery" | "insights" | "conversations";
+        tools: Array<{ name: string; executionClass: string }>;
+      }>;
+    } | null;
+    inbox?: Array<unknown>;
+  };
   const [renaming, setRenaming] = useState<{
     id: string;
     value: string;
@@ -123,12 +151,12 @@ export function AiWorkHistory({
     return ["pending", "approved", "failed", "conflict"].includes(state);
   }).length;
   const groups = ["today", "yesterday", "earlier"] as const;
-  // Ledger AI-09: client-side session search over the loaded history.
+  // Ledger AI-09: client-side session search over title + latest preview.
   const normalizedHistoryQuery = historyQuery.trim().toLowerCase();
   const visibleSessions = useMemo(() => {
     if (!normalizedHistoryQuery) return sessions;
     return sessions.filter((session) =>
-      (session.title ?? "").toLowerCase().includes(normalizedHistoryQuery),
+      ((session.title ?? "") + " " + sessionPreview(session)).toLowerCase().includes(normalizedHistoryQuery),
     );
   }, [sessions, normalizedHistoryQuery]);
   const rowActionsLocked =
@@ -214,20 +242,34 @@ export function AiWorkHistory({
             {getAiDecisionCopy(locale, "workHistoryDescription")}
           </p>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          className="w-full justify-center"
-          disabled={loadingSessions || creatingSession || sending}
-          onClick={onNewAnalysis}
-        >
-          {creatingSession ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <Plus className="size-4" aria-hidden="true" />
-          )}
-          {getAiDecisionCopy(locale, "newAnalysis")}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            className="flex-1 justify-center"
+            disabled={loadingSessions || creatingSession || sending}
+            onClick={onNewAnalysis}
+          >
+            {creatingSession ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Plus className="size-4" aria-hidden="true" />
+            )}
+            {getAiDecisionCopy(locale, "newAnalysis")}
+          </Button>
+          {sending ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-label={workspace.copy("stop")}
+              title={workspace.copy("stop")}
+              onClick={() => workspace.stop()}
+            >
+              <Square className="size-4" aria-hidden="true" />
+            </Button>
+          ) : null}
+        </div>
         {sessions.length > 0 ? (
           <div className="relative">
             <Search
@@ -255,6 +297,79 @@ export function AiWorkHistory({
           </div>
         ) : null}
       </div>
+
+      {/* Work rail pulse — the shop's live present state above the session
+          list. Every count is independently nullable: unmeasured renders
+          nothing, never a fabricated zero. Workforce groups reuse the same
+          capability truth the canvas AbilitiesPanel renders. */}
+      {capabilities?.briefing || (capabilities?.groups?.length ?? 0) > 0 || (inbox?.length ?? 0) > 0 ? (
+        <div data-ai-work-rail-pulse="true" className="border-b px-3.5 py-3">
+          {capabilities?.briefing ? (
+            <div className="grid grid-cols-3 gap-1.5">
+              {capabilities.briefing.pendingOrders != null ? (
+                <div className="rounded-lg border border-border/60 bg-card/70 px-2 py-1.5 text-center">
+                  <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.pendingOrders}</p>
+                  <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+                    {getAiDecisionCopy(locale, "starterCountPending", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
+                  </p>
+                </div>
+              ) : null}
+              {capabilities.briefing.ordersToday != null ? (
+                <div className="rounded-lg border border-border/60 bg-card/70 px-2 py-1.5 text-center">
+                  <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.ordersToday}</p>
+                  <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+                    {getAiDecisionCopy(locale, "starterCountToday", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
+                  </p>
+                </div>
+              ) : null}
+              {capabilities.briefing.lowStockProducts != null ? (
+                <div className="rounded-lg border border-border/60 bg-card/70 px-2 py-1.5 text-center">
+                  <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.lowStockProducts}</p>
+                  <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+                    {getAiDecisionCopy(locale, "starterCountLowStock", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {(inbox?.length ?? 0) > 0 ? (
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/[0.08] px-2.5 py-1 text-2xs font-semibold text-warning">
+              <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
+              {getAiDecisionCopy(locale, "inboxStripCount", { count: inbox?.length ?? 0 })}
+            </p>
+          ) : null}
+          {(capabilities?.groups?.length ?? 0) > 0 ? (
+            <ul className="mt-2 space-y-1" aria-label={getAiDecisionCopy(locale, "abilitiesTitle")}>
+              {(capabilities?.groups ?? []).map((group) => {
+                const sensitive = group.tools.filter((tool) => tool.executionClass === "sensitive").length;
+                return (
+                  <li
+                    key={group.id}
+                    className="flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-2xs text-muted-foreground"
+                  >
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span
+                        className={cn(
+                          "size-1.5 shrink-0 rounded-full",
+                          sensitive > 0 ? "bg-warning" : "bg-success",
+                        )}
+                        aria-hidden="true"
+                      />
+                      <span className="truncate font-medium text-foreground/80">
+                        {getAiToolGroupLabel(locale, group.id)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 tabular-nums">
+                      {group.tools.length}
+                      {sensitive > 0 ? ` · ${sensitive} ✓` : ""}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
 
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-5 px-2.5 py-3">
@@ -292,7 +407,7 @@ export function AiWorkHistory({
                   <div className="space-y-1">
                     {groupedSessions.map((session) => {
                       const active = session.id === activeSessionId;
-                      const preview = session.messages?.[0]?.content?.trim();
+                      const preview = sessionPreview(session);
                       const renamingThis = renaming?.id === session.id;
                       const deleteArmed = confirmDeleteId === session.id;
                       const busy =

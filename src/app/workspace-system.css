@@ -248,13 +248,47 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   animation: sf-workspace-item-in var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
 
-/* 8-a redesign: assistant turns are intentionally FLAT — model output reads
- * as the workspace's own voice directly on the canvas; the seller's filled
- * primary bubble is the only elevated card in the thread, so role ownership
- * is unmistakable without boxing every answer. The user turn keeps its
- * primary-tinted elevation below. */
+/* AAA v2: assistant turns read as decision blocks — layered cards on the
+ * canvas grammar with a bold byline rule; the seller's filled primary bubble
+ * stays the only saturated card, so role ownership is unmistakable. */
+[data-ai-message="assistant"] > div > div:has([data-ai-markdown="true"]) {
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.04),
+    0 12px 32px oklch(0 0 0 / 0.05);
+}
 [data-ai-message="user"] > div > div:first-child {
   box-shadow: 0 7px 20px color-mix(in oklch, var(--primary) 17%, transparent);
+}
+
+/* Work-rail pulse: shop present-state + workforce above the session list. */
+[data-ai-work-rail-pulse="true"] {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--primary) 5%, transparent),
+      transparent 70%
+    );
+}
+
+/* Start command-center: hero, job commands, workforce panel share one
+ * layered grammar instead of scattered flat cards. */
+[data-ai-start-state="true"] [data-ai-abilities="true"] {
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 0.04),
+    0 14px 36px oklch(0 0 0 / 0.05);
+}
+[data-ai-ability-group] {
+  transition-property: border-color, box-shadow, transform;
+  transition-duration: var(--sf-motion-state);
+  transition-timing-function: var(--sf-motion-ease-state);
+}
+[data-ai-ability-group]:hover {
+  border-color: color-mix(in oklch, var(--primary) 28%, var(--border));
+  box-shadow: 0 8px 24px oklch(0 0 0 / 0.07);
+}
+[data-ai-inbox-strip="true"] {
+  backdrop-filter: blur(12px) saturate(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
 }
 
 /* The floating composer sits on a blurred footer deck so long threads slide
