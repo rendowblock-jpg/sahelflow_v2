@@ -1,11 +1,12 @@
 # SahelFlow — Final Roadmap
 
 > **Status:** Active dependency/completion program
-> **Last reconciled:** 2026-09-01
+> **Last reconciled:** 2026-09-06 (best-known local `origin/main` `41f7e149…`; live fetch unreachable — re-resolve live before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before action; at this reconciliation the round-2 campaign repair line #370–#375 is merged
-> **Latest Founder-installed checkpoint:** Internal.31 / FD-053 (installed in place 2026-09-01)
-> **Current execution mode:** the Internal.31 installed campaign produced the round-2 findings; the Internal.32 / FD-055 signed successor packages the round-2 repair line (#370–#375), then its installed campaign re-verifies the affected rows (R3–R6 surfacing, R11, D3) with the #306 logout row LAST, then FRC-3 resumes (round-2 ledger: `../operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`)
+> **Live protected main:** resolve from GitHub before action; best-known `41f7e149…` after PR #400 on top of #398/#399
+> **Latest signed/published checkpoint:** Internal.35 / FD-058 (published 2026-09-06)
+> **Latest Founder-installed checkpoint:** Internal.34 / FD-057 (installed in place 2026-09-05)
+> **Current execution mode:** the Founder applies the in-place Internal.35 update, re-verifies F-09..F-13 + F-05 residual + retained FD-050/#306/#316/#317 rows with the #306 logout row LAST, then FRC-3 resumes (ledgers: `../operations/WORKING_MEMORY.md`, `../operations/UI_UX_TRIAGE_LEDGER.md`)
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 
