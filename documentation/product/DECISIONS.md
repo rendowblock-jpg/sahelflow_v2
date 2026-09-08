@@ -1095,17 +1095,22 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is created.
   #230 and the zero-budget boundary are unaffected.
 
-## FD-059 — One signed successor (Internal.36) packaging the #399–#411 protected-main frontier (PROPOSED — pending Founder adoption)
+## FD-059 — One signed successor (Internal.36) packaging the #399–#411 protected-main frontier
 
 The Founder's 2026-09-08 directive ("let's go with D" — prepare the next
-signed successor packaging the #399–#411 delta as Internal.36), issued after
+signed successor packaging the #399–#411 delta as Internal.36), followed by
+the Founder's 2026-09-08 adoption directive ("continue and complete the work
+fully"), issued after
 live verification that protected `main` at `7052db9…` (PR #411, tree
 `1214fe83…`, tree-identical to the reviewed PR #411 head `72cbef96…`) carries
 the full required-gate line green at that exact head (CI run 34271651655,
 Phase 5 run 34271651439, Phase 6-7 run 34271651432 — success, 0 failed),
-authorizes — upon explicit Founder adoption of this numbered decision —
-exactly one combined signed successor (Internal.36) packaging the
-protected-main frontier since Internal.35 (release source `f45e6e1…`):
+authorizes exactly one combined signed successor (Internal.36) packaging the
+protected-main frontier since Internal.35 (release source `f45e6e1…`).
+FD-059 is ADOPTED by the 2026-09-08 adoption directive; the sequencing
+boundary below is resolved to option (b) — one combined campaign on the
+installed Internal.36 candidate — as part of that adoption. The packaged
+frontier:
 
 - PR #399/#401/#404/#410 (docs-only): frontier reconciliation to
   Internal.35 and its delta records; route-boundary and ledger adjacency
@@ -1134,9 +1139,6 @@ protected-main frontier since Internal.35 (release source `f45e6e1…`):
 
 Binding boundaries:
 
-- This decision takes effect only on explicit Founder adoption (spoken or
-  written FD-059 confirmation); the release PR is prepared as a draft and
-  creates no authority until adopted and merged at the expected head.
 - The successor packages exactly the protected-main frontier at the release
   head; certification cites the product head and its green CI/Phase 5/
   Phase 6-7 runs at that exact head (tree-identity with the reviewed PR
@@ -1144,18 +1146,16 @@ Binding boundaries:
 - FD-045 evidence rules are unchanged: release-authority PR, exact-head
   review, required gates, expected-head merge, signed run, in-place
   preserved install.
-- Sequencing — the Founder selects exactly one at adoption:
-  (a) preserve the recorded order: the Founder first applies the in-place
-  Internal.35 update and runs the FD-058 installed campaign, then installs
-  Internal.36 when published; or
-  (b) one combined campaign: the Founder skips the interim Internal.35
-  install and runs the FD-058 campaign rows (F-05 residual, F-09..F-13,
-  retained FD-050 rows, D3 waves, applicable #316/#317 native rows,
-  retained #306 rows) once, on the installed Internal.36 candidate, which
-  contains every Internal.35 repair. Ledger rows convert only on that
-  installed observation, per the FRC-3 conversion rules. If (b) is chosen,
-  this decision supersedes only the sequencing boundary of FD-058; every
-  FD-058 publication fact remains retained evidence.
+- Sequencing — RESOLVED to option (b) by the adoption directive: one
+  combined campaign. The Founder skips the interim Internal.35 install and
+  runs the FD-058 campaign rows (F-05 residual, F-09..F-13, retained
+  FD-050 rows, D3 waves, applicable #316/#317 native rows, retained #306
+  rows) once, on the installed Internal.36 candidate, which contains every
+  Internal.35 repair. This decision supersedes only the sequencing boundary
+  of FD-058; every FD-058 publication fact remains retained evidence. Ledger
+  rows convert only on that installed observation, per the FRC-3 conversion
+  rules. The updater channel serves Internal.36 to the installed Internal.34
+  after publication.
 - The retained #306 logout row executes LAST, after every other row is
   green, on whichever installed candidate the campaign runs. The Founder
   rotates the chat-transited GitHub PAT after the merge window.
