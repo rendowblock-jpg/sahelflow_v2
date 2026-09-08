@@ -1095,6 +1095,73 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is created.
   #230 and the zero-budget boundary are unaffected.
 
+## FD-059 — One signed successor (Internal.36) packaging the #399–#411 protected-main frontier
+
+The Founder's 2026-09-08 directive ("let's go with D" — prepare the next
+signed successor packaging the #399–#411 delta as Internal.36), followed by
+the Founder's 2026-09-08 adoption directive ("continue and complete the work
+fully"), issued after
+live verification that protected `main` at `7052db9…` (PR #411, tree
+`1214fe83…`, tree-identical to the reviewed PR #411 head `72cbef96…`) carries
+the full required-gate line green at that exact head (CI run 34271651655,
+Phase 5 run 34271651439, Phase 6-7 run 34271651432 — success, 0 failed),
+authorizes exactly one combined signed successor (Internal.36) packaging the
+protected-main frontier since Internal.35 (release source `f45e6e1…`).
+FD-059 is ADOPTED by the 2026-09-08 adoption directive; the sequencing
+boundary below is resolved to option (b) — one combined campaign on the
+installed Internal.36 candidate — as part of that adoption. The packaged
+frontier:
+
+- PR #399/#401/#404/#410 (docs-only): frontier reconciliation to
+  Internal.35 and its delta records; route-boundary and ledger adjacency
+  corrections.
+- PR #400 (41f7e14…): AI agents AAA command-center redesign — work-rail
+  pulse, decision-block thread, review navigation.
+- PR #402 (a08bc00…): AAA eslint gates tightened — `no-console` as error in
+  API surface, exhaustive-deps warning.
+- PR #403 (418d665…): trilingual (AR/FR/EN) phone/license/shop-lifecycle
+  server-error rules.
+- PR #405 (c32b857…): P3 AI micro-repairs — F-2 quota-comment source truth,
+  F-3 legacy idempotency namespace pin, AI-17/AI-23 ledger conversions;
+  F-1 (`requireLicense()` on `POST /api/extraction`) remains untouched
+  pending its recorded Founder decision.
+- PR #406 (c50f297…): adoption of the FRC-3 Required capability/journey
+  assurance ledger (order A→D→C→B).
+- Issue #407 resolved by PR #408 (b2db189…) — phase4 triage adopted as the
+  live accepted-disposition (VEX) authority — and PR #409 (9f3704f…) — the
+  8 unclassified Prisma models classified, closure test CI-attached
+  (Phase 4 closure authority green).
+- PR #411 (7052db9…): behavioral UI-evidence infrastructure (per-file
+  happy-dom render harness; 3 render suites / 12 behavioral tests), AI
+  proposal-card corrections (aria-expanded disclosure, created-at truth,
+  arm-then-confirm per AI-23), agents-surface AAA subtraction,
+  ConversationRow memoization, hover floating clusters.
+
+Binding boundaries:
+
+- The successor packages exactly the protected-main frontier at the release
+  head; certification cites the product head and its green CI/Phase 5/
+  Phase 6-7 runs at that exact head (tree-identity with the reviewed PR
+  #411 head recorded in the release request).
+- FD-045 evidence rules are unchanged: release-authority PR, exact-head
+  review, required gates, expected-head merge, signed run, in-place
+  preserved install.
+- Sequencing — RESOLVED to option (b) by the adoption directive: one
+  combined campaign. The Founder skips the interim Internal.35 install and
+  runs the FD-058 campaign rows (F-05 residual, F-09..F-13, retained
+  FD-050 rows, D3 waves, applicable #316/#317 native rows, retained #306
+  rows) once, on the installed Internal.36 candidate, which contains every
+  Internal.35 repair. This decision supersedes only the sequencing boundary
+  of FD-058; every FD-058 publication fact remains retained evidence. Ledger
+  rows convert only on that installed observation, per the FRC-3 conversion
+  rules. The updater channel serves Internal.36 to the installed Internal.34
+  after publication.
+- The retained #306 logout row executes LAST, after every other row is
+  green, on whichever installed candidate the campaign runs. The Founder
+  rotates the chat-transited GitHub PAT after the merge window.
+- No customer-online, Beta, Stable or paid-deployment authority is created.
+  #230 and the zero-budget boundary are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states
