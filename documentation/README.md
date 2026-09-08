@@ -1,14 +1,12 @@
 # SahelFlow documentation authority
 
 > **Status:** Active non-archive documentation entry point
-> **Last reconciled:** 2026-08-30
+> **Last reconciled:** 2026-09-06 (best-known local `origin/main` `41f7e149…`; live fetch unreachable — re-resolve live before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
-> **Latest signed/published checkpoint:** Internal.30 / `1.0.0-internal.30` / MSI `1.0.0.30` / FD-051 (Founder installation pending; Internal.29 remains latest installed)
-> **Protected release source:** `2eb8a33749118e233240019bf2df9a47d586a04d` / PR #357
-> **Reviewed release head:** `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`
-> **Signed publication run:** `33292278832` — success
-> **Current next outcome:** the Founder applies the in-place Internal.30 update with state preserved, re-verifies the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth, C1 sleep/wake auto-receive) plus the deep-audit register's audit-affected rows, the retained FRC-2 repair rows, the #306 real-phone rows and the applicable matrix rows, evidence is reconciled, then FRC-3 resumes; the merged PR #359 six-wave delta rides protected `main` and receives its first installed/Founder observation on the next signed package (delta: `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`)
+> **Latest signed/published checkpoint:** Internal.35 / `1.0.0-internal.35` / MSI `1.0.0.35` / FD-058 (Founder installation pending; Internal.34 / FD-057 remains latest installed)
+> **Protected release source:** `f45e6e1c9ece903623dcbe71a22b6806b0562cde` / PR #398
+> **Current next outcome:** the Founder applies the in-place Internal.35 update with state preserved, re-verifies the F-09..F-13 + F-05-residual rows plus retained FD-050/#306/#316/#317 rows, evidence is reconciled, then FRC-3 resumes; the merged #399/#400 delta rides protected `main` and receives its first installed/Founder observation on the next signed package
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
@@ -31,15 +29,20 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Current protected and signed truth
 
-Protected `main` at reconciliation is `324719ff999565967e2939a5eacc82539ae86cbc` after PR #359 (frontend Class-AAA remediation, six waves); docs-only #358/#360 sit between release PR #357 and #359, and no open PR remains after the #359 merge. Revalidate live state before every write/merge.
+Protected `main` best-known `41f7e149…` after PR #400 (AI agents AAA command-center) on top of docs-only #399 and release-authority #398. Revalidate live state before every write/merge.
 
-Internal.30 is the latest real signed/published offline package:
+Internal.35 is the latest real signed/published offline package:
 
-- app `1.0.0-internal.30`;
-- MSI `1.0.0.30`;
-- authority FD-051 (Founder instruction 2026-08-30: "Cut the successor");
-- mode `founder-offline-only`;
-- release PR #357 / reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`;
+- app `1.0.0-internal.35`;
+- MSI `1.0.0.35`;
+- authority FD-058; mode `founder-offline-only`;
+- release PR #398 / protected source `f45e6e1c9ece903623dcbe71a22b6806b0562cde`;
+- tag `sahelflow-v1.0.0-internal.35-f45e6e1c9ece903623dcbe71a22b6806b0562cde`;
+- the full Required battery passed on the exact head (20 success / 1 risk-classified skip / 0 failed, including installed-MSI evidence);
+- packages the Internal.34 campaign lines (#396 F-09..F-12 + F-05 CRLF root cause, #397 F-13 notifications); #399 docs + #400 ride `main` ahead of the next package.
+
+Retained Internal.30 history (superseded as latest by Internal.31–Internal.35 — see `operations/WORKING_MEMORY.md` and `system/CURRENT_STATE.md` header):
+- Internal.30: app `1.0.0-internal.30` / MSI `1.0.0.30` / FD-051 / PR #357 / head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`;
 - the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence);
 - certification cited product head `40f5386095e3a11b5f586673d3f6d0cc99956a66` — tree-identical to the #355 squash `14c059b7621d08a041830a626d5b3f2fb6fd75e6` (CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`); #356 is documentation-only;
 - packages the FD-050 installed-campaign repair line (#346–#353) AND the deep-audit remediation register (#355); the frontend/UI stream PR #359 was NOT bundled at publication and was merged to protected `main` at `324719ff…` on 2026-08-31 (Founder option-B directive) — it rides `main` ahead of the next signed package (`operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`);
@@ -48,7 +51,7 @@ Internal.30 is the latest real signed/published offline package:
 - release tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`;
 - MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`.
 
-The Founder has **not yet installed** Internal.30. The latest Founder-installed checkpoint remains Internal.29 (FD-050, installed in place during its campaign — it reproduced defects B1–B5 and D1, all repaired as #346–#353 and packaged inside Internal.30 together with the deep-audit remediation register #355). Retained Internal.29 publication facts: dispatcher `33212635887`, signed run `33212648778`, observer `33212661580`, tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`, MSI digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`.
+The Founder has **not yet installed** Internal.35. The latest Founder-installed checkpoint remains Internal.34 / FD-057 (installed in place 2026-09-05). Retained Internal.30/Internal.29 publication facts: Internal.30 dispatcher `33292273959`, signed run `33292278832`, observer `33292285084`, tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`, MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`; Internal.29 dispatcher `33212635887`, signed run `33212648778`, observer `33212661580`, tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`, MSI digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`.
 
 The signed workflow proved exact protected-source and reviewed-tree binding, Required PR success, signed MSI/updater build, staged runtime readiness, local signature verification, signed install/launch/reopen, authenticated hydrated WebView twice, deterministic rewrites, evidence manifest, `latest.json`, exact tag and publication.
 

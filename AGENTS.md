@@ -33,27 +33,27 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-At the 2026-08-31 reconciliation:
+At the 2026-09-06 reconciliation (best-known local `origin/main`; live fetch unreachable from this machine — re-resolve live before acting):
 
-- protected `main`: `324719ff999565967e2939a5eacc82539ae86cbc` / PR #359 (frontend Class-AAA remediation, six waves) squash-merge after docs-only #358/#360; re-resolve live before acting;
-- latest signed/published checkpoint: **Internal.30** / **FD-051**, mode `founder-offline-only`; the latest **Founder-installed** checkpoint remains Internal.29 until the in-place Internal.30 update;
-- Internal.30 release source: `2eb8a33749118e233240019bf2df9a47d586a04d` (no longer equals protected `main`: PR #359 merged after publication — see the reconciliation ledger); reviewed release head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`; signed dispatcher `33292273959`, updater/publication run `33292278832`, release observer `33292285084`; MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`; tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`;
-- Internal.30 packages the FD-050 installed-campaign repair line (#346–#353: campaign defects B1–B5/D1, Baileys status-enum truth, C1 auto-receive resilience) and the deep-audit remediation register (#355); the frontend/UI stream PR #359 was merged to protected `main` at `324719ff…` on the Founder's 2026-08-31 directive (option B) and is explicitly NOT part of published Internal.30 — its six waves ride `main` ahead of the next signed package; the exact delta and campaign rows live in `documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`;
-- Internal.29 (installed in place during its FD-050 campaign) demonstrated the retained product rows but reproduced defects B1–B5 and D1, all repaired on protected main;
+- protected `main` best-known: `41f7e149…` / PR #400 (AI agents AAA command-center redesign) on top of docs-only #399 and release-authority #398;
+- latest signed/published checkpoint: **Internal.35** / **FD-058**, mode `founder-offline-only`; the latest **Founder-installed** checkpoint remains Internal.34 / FD-057 until the in-place Internal.35 update;
+- Internal.35 release source: `f45e6e1c9ece903623dcbe71a22b6806b0562cde` (no longer equals protected `main`: #399 docs + #400 merged after publication); tag `sahelflow-v1.0.0-internal.35-f45e6e1c9ece903623dcbe71a22b6806b0562cde`; app `1.0.0-internal.35` / MSI `1.0.0.35`;
+- Internal.35 packages the Internal.34 installed-campaign repair line (#396: F-09..F-12 + F-05 CRLF root cause) and the F-13 notifications line (#397); the docs/PR #399 + #400 delta rides `main` ahead of the next signed package; Internal.30 facts (`2eb8a337…`, dispatcher `33292273959`, run `33292278832`, MSI `sha256:bef15026…`) remain retained evidence — see `documentation/operations/WORKING_MEMORY.md` and `documentation/system/CURRENT_STATE.md`;
+- Internal.34 (installed in place 2026-09-05, FD-057) reported F-04..F-08/F-09..F-13, all repaired on protected main via #396/#397;
 - issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint;
 - issues #306 and #230 remain open for real-phone WhatsApp certification and customer-online readiness;
-- issues #316 and #317 remain open only for installed/real-phone evidence; their source is complete and packaged in published Internal.30.
+- issues #316 and #317 remain open only for installed/real-phone evidence; their source is complete and packaged in published Internal.35.
 
-Internal.30 is the signed/published authority; the Founder has not yet installed it. Do not describe Internal.30 or any source work as installed, live-provider-certified or Founder-accepted until the in-place update and real-phone campaign produce that evidence. Preserve the Founder's Internal.29 installation state until that campaign.
+Internal.35 is the signed/published authority; the Founder has not yet installed it. Do not describe Internal.35 or any source work as installed, live-provider-certified or Founder-accepted until the in-place update and real-phone campaign produce that evidence. Preserve the Founder's Internal.34 installation state until that campaign.
 
 ## Exact next outcome
 
-Execute the **FD-051 installed Founder campaign** while preserving every FD-045 evidence rule.
+Execute the **FD-058 installed Founder campaign** while preserving every FD-045 evidence rule.
 
 1. Re-resolve protected `main`, open PRs and issues #306/#316/#317/#230.
-2. Confirm Internal.30 / FD-051 remains the latest signed/published checkpoint (release PR #357, signed run `33292278832`) and that the Founder has not yet installed it.
-3. The Founder applies the in-place Internal.30 update through the normal updater without logging out, resetting AppData or clearing protected auth.
-4. On the installed Internal.30 candidate, re-verify the FD-050 campaign rows (B1–B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive), the deep-audit register's audit-affected rows, the retained #306 real-phone rows (automatic no-refresh inbound, reopen persistence, EN/AR observation, governed status, reviewed extraction, logout last) plus applicable #316/#317 native rows and representative media/parity exercises.
+2. Confirm Internal.35 / FD-058 remains the latest signed/published checkpoint (release PR #398) and that the Founder has not yet installed it (installed remains Internal.34).
+3. The Founder applies the in-place Internal.35 update through the normal updater without logging out, resetting AppData or clearing protected auth.
+4. On the installed Internal.35 candidate, re-verify the F-09..F-13 rows, the F-05 CRLF residual, the retained FD-050 rows (B1–B5, D1, delivery-receipt enum truth, C1 sleep/wake auto-receive), the deep-audit register's audit-affected rows, the retained #306 real-phone rows (automatic no-refresh inbound, reopen persistence, EN/AR observation, governed status, reviewed extraction, logout last) plus applicable #316/#317 native rows and representative media/parity exercises.
 5. Reconcile the capability ledgers and current-state documentation with the installed evidence; convert `implemented-unproven` rows only where the campaign actually proved them.
 6. Resume FRC-3 (Required capability/journey assurance ledger) after that installed Founder observation, in dependency order; FRC-4/FRC-5 keep their external blockers.
 7. Publicly promise only exact live-certified provider/actions. Unverified providers stay hidden, disabled or conditional.
