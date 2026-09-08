@@ -89,6 +89,14 @@ const RULES: readonly ErrorRule[] = [
   // Validation
   { match: "invalid wilaya", key: "common.invalidWilaya" },
   { match: "failed to load communes", key: "common.failedToLoadCommunes" },
+  { match: "invalid algerian phone", key: "inbox.invalidPhoneFormat" },
+  { match: "phone is required", key: "validation.phoneRequired" },
+
+  // License authority (hook/store errors surfaced to the seller)
+  { match: "license authority", key: "license.status.unavailable" },
+
+  // Desktop shop lifecycle (topbar title + native receipts)
+  { match: "native shop lifecycle", key: "shops.lifecycleError" },
 
   // Generic fallback patterns
   { match: "not found", key: "error.notFound" },
