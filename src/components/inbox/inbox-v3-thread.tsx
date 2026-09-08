@@ -655,9 +655,21 @@ const MessageBubble = memo(function MessageBubble({
       </div>
 
       {message.body.trim() || message.attachment?.fileName ? (
+        // The controls inside are `opacity-0` until hover/focus. Opacity does
+        // not remove an element from layout, so this row previously reserved
+        // its full height under EVERY bubble — permanent dead space that reads
+        // as loose, un-WhatsApp-like density. `grid-rows-[0fr]` collapses the
+        // row to zero height while keeping it focusable and animatable, and it
+        // expands on hover/focus-within alongside the existing fade.
         <div
           className={cn(
-            "flex gap-1",
+            "grid grid-rows-[0fr] transition-[grid-template-rows] duration-150 group-hover/message:grid-rows-[1fr] focus-within:grid-rows-[1fr] motion-reduce:transition-none",
+            inbound ? "justify-items-start" : "justify-items-end",
+          )}
+        >
+        <div
+          className={cn(
+            "flex gap-1 overflow-hidden",
             inbound ? "justify-start" : "justify-end",
           )}
         >
@@ -677,10 +689,28 @@ const MessageBubble = memo(function MessageBubble({
             copy={copy}
           />
         </div>
+        </div>
       ) : null}
 
       {canExtract ? (
-        <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
+        // The selected candidate keeps its chip visible (it is a persistent
+        // state, not a hover affordance), so the row stays expanded whenever
+        // `candidate` is true and only collapses in the unselected case.
+        <div
+          className={cn(
+            "grid transition-[grid-template-rows] duration-150 motion-reduce:transition-none",
+            inbound ? "justify-items-start" : "justify-items-end",
+            candidate
+              ? "grid-rows-[1fr]"
+              : "grid-rows-[0fr] group-hover/message:grid-rows-[1fr] focus-within:grid-rows-[1fr]",
+          )}
+        >
+        <div
+          className={cn(
+            "flex overflow-hidden",
+            inbound ? "justify-start" : "justify-end",
+          )}
+        >
           <button
             type="button"
             onClick={() => onChooseCandidate(message.id)}
@@ -695,6 +725,7 @@ const MessageBubble = memo(function MessageBubble({
             <Sparkles className="size-3" aria-hidden="true" />
             {copy("chooseOrderMessage")}
           </button>
+        </div>
         </div>
       ) : null}
 
