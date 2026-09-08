@@ -352,7 +352,7 @@ const MessageBubble = memo(function MessageBubble({
       className={cn("group/message flex gap-3", assistant ? "justify-start" : "justify-end")}
     >
       {assistant ? (
-        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary/12 to-primary/[0.04] text-primary shadow-sm">
+        <span className="mt-1 flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary/16 to-primary/[0.05] text-primary shadow-sm">
           <Bot className="size-4" aria-hidden="true" />
         </span>
       ) : null}
@@ -360,15 +360,18 @@ const MessageBubble = memo(function MessageBubble({
         {assistant ? (
           // Byline owns identity (F-06): the turn is attributed to the
           // assistant, the clock stays on the hover row (AI-12).
-          <p className="mb-1.5 text-2xs font-semibold tracking-wide text-muted-foreground">
-            {getAiDecisionCopy(locale, "assistantName")}
-          </p>
+          <div className="mb-1.5 flex items-center gap-2">
+            <p className="text-2xs font-bold uppercase tracking-wider text-foreground/70">
+              {getAiDecisionCopy(locale, "assistantName")}
+            </p>
+            <span aria-hidden="true" className="h-px w-6 bg-border/70" />
+          </div>
         ) : null}
         {assistant ? (
-          // Assistant turns read as the workspace's own voice — a flat,
-          // borderless surface on the canvas. The seller's turn stays the
-          // only filled bubble, so role ownership is unmistakable at a glance.
-          <div className="text-sm leading-6 text-foreground">
+          // Assistant turns read as decision blocks — a layered card on the
+          // canvas grammar. The seller's turn stays the only filled bubble,
+          // so role ownership is unmistakable at a glance.
+          <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3.5 text-[14px] leading-6 text-foreground shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
             {message.content ? (
               <div>
                 {/* Assistant output is model-emitted markdown: rendered through
@@ -391,7 +394,7 @@ const MessageBubble = memo(function MessageBubble({
             ) : null}
           </div>
         ) : (
-          <div className="rounded-2xl rounded-ee-md bg-primary px-4 py-2.5 text-sm leading-6 text-primary-foreground shadow-sm">
+          <div className="rounded-2xl rounded-ee-md bg-gradient-to-b from-primary to-primary/90 px-4 py-2.5 text-[14px] leading-6 text-primary-foreground shadow-[0_1px_2px_oklch(0_0_0/0.12),0_8px_24px_oklch(0_0_0/0.08)]">
             {message.content ? (
               // Seller input is echoed verbatim — no markdown interpretation.
               <p dir="auto" className="whitespace-pre-wrap break-words">
@@ -589,14 +592,21 @@ function AbilityGroupCard({
   group: AiCapabilityGroup;
   locale: ReturnType<typeof useAiWorkspace>["locale"];
 }) {
+  const sensitiveCount = group.tools.filter((tool) => tool.executionClass === "sensitive").length;
   return (
     <div
       data-ai-ability-group={group.id}
-      className="rounded-xl border border-border/60 bg-card/60 p-4"
+      className="rounded-2xl border border-border/70 bg-gradient-to-b from-card to-card/60 p-4 shadow-[0_1px_2px_oklch(0_0_0/0.04)]"
     >
-      <p className="text-sm font-semibold">
-        {getAiToolGroupLabel(locale, group.id)}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-bold tracking-tight">
+          {getAiToolGroupLabel(locale, group.id)}
+        </p>
+        <p className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-2xs font-semibold tabular-nums text-muted-foreground">
+          {group.tools.length}
+          {sensitiveCount > 0 ? ` · ${sensitiveCount} ✓` : ""}
+        </p>
+      </div>
       <ul className="mt-2.5 flex flex-wrap gap-1.5">
         {group.tools.map((tool) => {
           const sensitive = tool.executionClass === "sensitive";
@@ -638,10 +648,15 @@ function AbilitiesPanel({
     workspace;
 
   return (
-    <section data-ai-abilities="true" className="mt-10 w-full text-start">
-      <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-        {getAiDecisionCopy(locale, "abilitiesTitle")}
-      </p>
+    <section data-ai-abilities="true" className="mt-8 w-full text-start rounded-2xl border border-border/60 bg-muted/[0.18] p-4 md:p-5">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-sm font-bold tracking-tight">
+          {getAiDecisionCopy(locale, "abilitiesTitle")}
+        </p>
+        <p className="shrink-0 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {getAiDecisionCopy(locale, "durableSession")}
+        </p>
+      </div>
       {loadingCapabilities ? (
         // Structure-matching skeleton (§26.8): the shape of two group cards.
         <div
@@ -721,7 +736,7 @@ function InboxStrip({
   return (
     <div
       data-ai-inbox-strip="true"
-      className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/[0.05] px-4 py-3 shadow-sm md:mx-6"
+      className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/[0.10] to-primary/[0.04] px-4 py-3 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_10px_28px_oklch(0_0_0/0.06)] md:mx-6"
     >
       <div className="flex min-w-0 items-start gap-2.5">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
@@ -752,21 +767,32 @@ function StartSurface({
 }) {
   const ready = workspace.setup?.ready === true;
 
+  const pendingCount =
+    workspace.capabilities?.briefing?.pendingProposals ?? workspace.inbox.length ?? 0;
   return (
-    <div data-ai-start-state="true" className="mx-auto flex w-full max-w-3xl flex-col items-center py-10 text-center md:py-14">
-      <span className="relative flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/15 to-primary/[0.04] text-primary shadow-sm">
-        <BrainCircuit className="size-7" aria-hidden="true" />
-      </span>
-      <h2 className="mt-5 text-2xl font-semibold tracking-tight">
-        {getAiDecisionCopy(workspace.locale, "startTitle")}
-      </h2>
-      <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-        {getAiDecisionCopy(workspace.locale, "startDescription")}
-      </p>
-      <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1 text-2xs font-medium text-muted-foreground">
-        <ShieldCheck className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-        {getAiDecisionCopy(workspace.locale, "safeStartNote")}
-      </p>
+    <div data-ai-start-state="true" className="mx-auto flex w-full max-w-3xl flex-col items-stretch py-6 text-start md:py-8">
+      <div className="flex items-start gap-4 rounded-2xl border border-border/60 bg-gradient-to-b from-card to-muted/[0.22] p-5 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_16px_40px_oklch(0_0_0/0.06)] md:p-6">
+        <span className="relative flex size-12 shrink-0 items-center justify-center rounded-2xl border border-primary/25 bg-gradient-to-b from-primary/20 to-primary/[0.05] text-primary shadow-sm">
+          <BrainCircuit className="size-6" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[22px] font-bold leading-7 tracking-tight md:text-2xl md:leading-8">
+            {getAiDecisionCopy(workspace.locale, "startTitle")}
+          </h2>
+          <p className="mt-1.5 max-w-xl text-[13px] leading-6 text-muted-foreground">
+            {getAiDecisionCopy(workspace.locale, "startDescription")}
+          </p>
+          <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.06] px-2.5 py-1 text-2xs font-semibold text-primary">
+            <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
+            {getAiDecisionCopy(workspace.locale, "safeStartNote")}
+          </p>
+        </div>
+        {pendingCount > 0 ? (
+          <p className="hidden shrink-0 rounded-full border border-warning/30 bg-warning/[0.09] px-2.5 py-1 text-2xs font-bold tabular-nums text-warning sm:block">
+            {getAiDecisionCopy(workspace.locale, "inboxStripCount", { count: pendingCount })}
+          </p>
+        ) : null}
+      </div>
 
       {!ready && workspace.setup ? (
         <div className="mt-7 w-full rounded-xl border bg-card/60 p-4 text-start shadow-sm md:p-5">
@@ -825,14 +851,15 @@ function StartSurface({
         </div>
       ) : null}
 
-      <div className="mt-9 flex w-full items-center gap-3">
-        <span className="h-px flex-1 bg-border/60" aria-hidden="true" />
-        <p className="text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="mt-6 flex w-full items-baseline justify-between gap-3">
+        <p className="text-sm font-bold tracking-tight">
           {getAiDecisionCopy(workspace.locale, "startJobsTitle")}
         </p>
-        <span className="h-px flex-1 bg-border/60" aria-hidden="true" />
+        <p className="shrink-0 text-2xs font-medium tabular-nums text-muted-foreground">
+          {getAiDecisionCopy(workspace.locale, "messagesMeta", { count: STARTERS.length })}
+        </p>
       </div>
-      <div className="mt-4 grid w-full gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid w-full gap-3 sm:grid-cols-2">
         {STARTERS.map((starter) => {
           const Icon = starter.icon;
           const count = starterCount(starter.id, workspace.capabilities?.briefing);
@@ -843,25 +870,29 @@ function StartSurface({
               disabled={!ready || starting}
               onClick={() => void onStart(workspace.copy(starter.prompt))}
               className={cn(
-                "group/starter rounded-xl border border-border/60 bg-card/60 p-4 text-start transition-all duration-200",
-                "hover:-translate-y-0.5 hover:border-primary/25 hover:bg-card hover:shadow-[0_2px_4px_oklch(0_0_0/0.04),0_12px_28px_oklch(0_0_0/0.07)]",
+                "group/starter relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-b from-card to-card/60 p-4 text-start transition-all duration-200",
+                "hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_2px_4px_oklch(0_0_0/0.05),0_16px_36px_oklch(0_0_0/0.09)]",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 "disabled:pointer-events-none disabled:opacity-50",
               )}
             >
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 start-0 w-1 bg-gradient-to-b from-primary/50 to-primary/5 opacity-0 transition-opacity duration-200 group-hover/starter:opacity-100"
+              />
               <span className="flex items-start gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary/12 to-primary/[0.04] text-primary">
-                  <Icon className="size-4" aria-hidden="true" />
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary/16 to-primary/[0.05] text-primary shadow-sm">
+                  <Icon className="size-[18px]" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
-                    <span className="truncate text-sm font-semibold">
+                    <span className="truncate text-[14px] font-bold tracking-tight">
                       {workspace.copy(starter.title)}
                     </span>
                     {count ? (
                       <span
                         data-ai-briefing-count={starter.id}
-                        className="shrink-0 rounded-full border border-primary/20 bg-primary/[0.06] px-2 py-0.5 text-2xs font-semibold tabular-nums text-primary"
+                        className="shrink-0 rounded-full border border-primary/25 bg-primary/[0.09] px-2 py-0.5 text-2xs font-bold tabular-nums text-primary"
                       >
                         {getAiDecisionCopy(workspace.locale, count.copyKey, {
                           count: count.count,
@@ -869,12 +900,12 @@ function StartSurface({
                       </span>
                     ) : null}
                   </span>
-                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                  <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">
                     {workspace.copy(starter.description)}
                   </span>
                 </span>
                 <ArrowRight
-                  className="mt-1 size-4 shrink-0 text-muted-foreground opacity-0 transition-all duration-200 group-hover/starter:translate-x-0.5 group-hover/starter:opacity-60 rtl:-scale-x-100 rtl:group-hover/starter:-translate-x-0.5"
+                  className="mt-1 size-4 shrink-0 text-primary opacity-0 transition-all duration-200 group-hover/starter:translate-x-0.5 group-hover/starter:opacity-80 rtl:-scale-x-100 rtl:group-hover/starter:-translate-x-0.5"
                   aria-hidden="true"
                 />
               </span>
@@ -1219,8 +1250,8 @@ export function AiDecisionCanvas({
   ]);
 
   return (
-    <main data-ai-decision-canvas="true" className="relative flex h-full min-h-0 flex-col bg-background">
-      <header className="flex min-h-16 items-center justify-between gap-3 border-b px-4 md:px-6">
+    <main data-ai-decision-canvas="true" className="relative flex h-full min-h-0 flex-col bg-gradient-to-b from-muted/[0.28] via-background to-background">
+      <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border/70 bg-card/70 px-4 backdrop-blur-sm md:px-6">
         <div className="flex min-w-0 items-center gap-3">
           {mobile ? (
             <Button
@@ -1247,7 +1278,7 @@ export function AiDecisionCanvas({
           </span>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
-              <h2 className="truncate text-base font-semibold tracking-tight">
+              <h2 className="truncate text-[15px] font-bold tracking-tight">
                 {activeSession?.title || workspace.copy("newSessionTitle")}
               </h2>
               {/* Ledger AI-01: seeded demo sessions are labelled honestly so
@@ -1411,10 +1442,16 @@ export function AiDecisionCanvas({
                 ) : null}
 
                 {/* Ledger AI-14: grounded follow-up affordances under the last
-                    completed answer; anchored dismissal resets on a new turn. */}
+                    completed answer; anchored dismissal resets on a new turn.
+                    When the turn produced no grounded chips, fall back to two
+                    shop job prompts so the thread never ends dead. */}
                 {!sending && !editingMessageId && lastMessageId ? (
                   <AiFollowUpChips
-                    suggestions={followUpSuggestions}
+                    suggestions={
+                      followUpSuggestions.length > 0
+                        ? followUpSuggestions
+                        : [workspace.copy(STARTERS[0].prompt), workspace.copy(STARTERS[1].prompt)]
+                    }
                     copy={copy}
                     onPick={(prompt) => {
                       setDraft(prompt);
@@ -1430,16 +1467,29 @@ export function AiDecisionCanvas({
                 {proposals.length > 0 ? (
                   <section
                     data-ai-inline-proposals="true"
-                    className="ms-11 max-w-3xl border-s-2 border-primary/25 ps-4"
+                    className="ms-11 max-w-3xl rounded-2xl border border-primary/25 bg-primary/[0.04] p-4"
                     aria-labelledby="ai-proposed-changes-title"
                   >
-                    <div className="mb-3">
-                      <h2 id="ai-proposed-changes-title" className="text-sm font-semibold">
-                        {getAiDecisionCopy(workspace.locale, "proposedChanges")}
-                      </h2>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        {getAiDecisionCopy(workspace.locale, "proposedChangesDescription")}
-                      </p>
+                    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h2 id="ai-proposed-changes-title" className="text-sm font-bold tracking-tight">
+                          {getAiDecisionCopy(workspace.locale, "proposedChanges")}
+                        </h2>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {getAiDecisionCopy(workspace.locale, "proposedChangesDescription")}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0"
+                        onClick={() => setReviewOpen(true)}
+                      >
+                        <ShieldCheck className="size-3.5" aria-hidden="true" />
+                        {getAiDecisionCopy(workspace.locale, "inboxStripOpen")}
+                        {proposals.length > 0 ? ` · ${proposals.length}` : ""}
+                      </Button>
                     </div>
                     <div className="space-y-3">
                       {proposals.map((handle) => (
@@ -1486,7 +1536,7 @@ export function AiDecisionCanvas({
 
       <div
         data-ai-composer-deck="true"
-        className="border-t px-4 py-3 md:px-6 md:py-4"
+        className="border-t border-border/70 bg-card/50 px-4 py-3 backdrop-blur-sm md:px-6 md:py-4"
       >
         {editingMessage ? (
           <div
@@ -1545,7 +1595,7 @@ export function AiDecisionCanvas({
           ) : null}
           <div
             data-ai-composer="true"
-            className="flex w-full items-end gap-2 rounded-2xl border bg-card/80 p-2 shadow-sm"
+            className="flex w-full items-end gap-2 rounded-2xl border border-border/70 bg-card p-2 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_12px_32px_oklch(0_0_0/0.07)] focus-within:border-primary/40"
           >
           <input
             ref={screenshotInputRef}

@@ -59,6 +59,7 @@ export function AiReviewEvidence({
     rejectProposal,
     retry,
     locale,
+    selectSession,
   } = workspace;
   const setupReady = setup?.ready === true;
 
@@ -243,13 +244,18 @@ export function AiReviewEvidence({
                       rejecting={rejectingProposalId === entry.proposal.id}
                       onReject={rejectProposal}
                     />
-                    <p className="mt-1 flex items-center gap-1.5 px-1 text-2xs text-muted-foreground">
-                      <Clock3 className="size-3" aria-hidden="true" />
+                    <button
+                      type="button"
+                      onClick={() => selectSession(entry.sessionId)}
+                      className="mt-1 flex w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-2xs text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                      title={entry.sessionTitle || entry.sessionId}
+                    >
+                      <Clock3 className="size-3 shrink-0" aria-hidden="true" />
                       <span className="truncate">
                         {entry.sessionTitle ||
                           `${workspace.copy("sessionLabel")} · ${entry.sessionId.slice(-6)}`}
                       </span>
-                    </p>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -272,7 +278,16 @@ export function AiReviewEvidence({
               </p>
             </div>
 
-            {inboxDecisions.length === 0 ? (
+            {inboxLoading ? (
+              <div aria-hidden="true" className="space-y-1.5">
+                {[0, 1].map((row) => (
+                  <div key={row} className="rounded-lg border border-border/60 px-3 py-2">
+                    <span data-ai-skeleton="true" className="block h-3 w-2/3 rounded-full" />
+                    <span data-ai-skeleton="true" className="mt-1.5 block h-2.5 w-1/3 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            ) : inboxDecisions.length === 0 ? (
               <p className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-3.5 text-center text-xs text-muted-foreground">
                 {workspace.copy("noRecentDecisions")}
               </p>
@@ -316,14 +331,20 @@ export function AiReviewEvidence({
                             {decision.status}
                           </TechnicalValue>
                         </p>
-                        <p className="mt-0.5 truncate text-2xs text-muted-foreground">
-                          {[
-                            decisionClock(decision.decidedAt, locale),
-                            decision.sessionTitle ||
-                              `${workspace.copy("sessionLabel")} · ${decision.sessionId.slice(-6)}`,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
+                        <p className="mt-0.5 flex min-w-0 items-center gap-1 text-2xs text-muted-foreground">
+                          <span className="shrink-0 tabular-nums">
+                            {decisionClock(decision.decidedAt, locale)}
+                          </span>
+                          <span aria-hidden="true">·</span>
+                          <button
+                            type="button"
+                            onClick={() => selectSession(decision.sessionId)}
+                            className="min-w-0 flex-1 truncate rounded text-start outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                            title={decision.sessionTitle || decision.sessionId}
+                          >
+                            {decision.sessionTitle ||
+                              `${workspace.copy("sessionLabel")} · ${decision.sessionId.slice(-6)}`}
+                          </button>
                         </p>
                       </div>
                     </li>

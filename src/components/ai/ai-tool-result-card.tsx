@@ -345,14 +345,24 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
   const listRouteUsed =
     route && !(records.length === 1 && recordHrefs[0]);
   const scalar = records.length === 0 ? simpleValue(result) : null;
-  const argEntries = Object.entries(tool.args ?? {}).slice(0, 8);
+  const allArgs = Object.entries(tool.args ?? {});
+  const argEntries = allArgs.slice(0, 8);
+  const hiddenArgs = allArgs.length - argEntries.length;
+  const totalRecords = Array.isArray(result) ? result.filter(isRecord).length : records.length;
+  const hiddenRecords = totalRecords - records.length;
+  const toolLabel = getAiToolLabel(locale, tool.name);
 
   return (
-    <section className="mt-2 overflow-hidden rounded-xl border border-border/60 bg-card/50 text-start">
+    <section
+      data-ai-tool-card={tool.name}
+      data-ai-tool-state={tool.state}
+      className="mt-2 overflow-hidden rounded-xl border border-border/60 bg-card/50 text-start"
+    >
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}
         aria-expanded={expanded}
+        aria-label={toolLabel}
         className="flex min-h-11 w-full items-center justify-between gap-3 border-b border-border/60 px-3.5 py-2 text-start outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
         <div className="flex min-w-0 items-center gap-2">
@@ -364,9 +374,10 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
             <Database className="size-4 shrink-0 text-primary" aria-hidden="true" />
           )}
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{getAiToolLabel(locale, tool.name)}</p>
+            <p className="truncate text-sm font-semibold">{toolLabel}</p>
             <p className="text-xs text-muted-foreground">
               {running ? copy("toolWorking") : failed ? copy("toolFailed") : copy("toolResult")}
+              {totalRecords > 0 ? ` · ${totalRecords}` : ""}
             </p>
           </div>
         </div>
@@ -394,18 +405,28 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
         </div>
       </button>
 
+      {running ? (
+        <div aria-hidden="true" className="h-1 w-full overflow-hidden bg-muted/40">
+          <div className="h-full w-1/3 animate-pulse rounded-full bg-primary/60" />
+        </div>
+      ) : null}
       {expanded && !running ? (
         <div className="space-y-3 p-3.5">
           {argEntries.length > 0 ? (
             <div>
-              <p className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="flex items-center gap-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {copy("toolArgs")}
+                {hiddenArgs > 0 ? (
+                  <span dir="ltr" className="rounded-full border border-border/60 px-1.5 py-px tabular-nums normal-case">
+                    +{hiddenArgs}
+                  </span>
+                ) : null}
               </p>
               <dl className="mt-1.5 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
                 {argEntries.map(([key, value]) => (
                   <div key={key} className="min-w-0">
                     <dt className="text-2xs text-muted-foreground">{key}</dt>
-                    <dd className="mt-0.5 truncate font-medium text-foreground">
+                    <dd className="mt-0.5 truncate font-medium text-foreground" title={simpleValue(value) ?? undefined}>
                       <TechnicalValue>{simpleValue(value) ?? "—"}</TechnicalValue>
                     </dd>
                   </div>
@@ -416,6 +437,11 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
           {Array.isArray(result) ? (
             <p className="text-xs text-muted-foreground">
               {copy("resultItems", { count: result.length })}
+            </p>
+          ) : null}
+          {hiddenRecords > 0 ? (
+            <p dir="ltr" className="text-2xs font-semibold tabular-nums text-muted-foreground">
+              +{hiddenRecords}
             </p>
           ) : null}
           {records.map((record, index) => (
@@ -430,7 +456,11 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
               />
             </div>
           ))}
-          {scalar ? <p dir="auto" className="text-xs text-foreground">{scalar}</p> : null}
+          {scalar ? (
+            <p dir="auto" role={failed ? "alert" : undefined} className={failed ? "text-xs font-medium text-destructive" : "text-xs text-foreground"}>
+              {scalar}
+            </p>
+          ) : null}
           {records.length === 0 && !scalar && !failed ? (
             <p className="text-xs text-muted-foreground">{copy("toolResult")}</p>
           ) : null}
