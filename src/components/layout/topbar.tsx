@@ -218,7 +218,11 @@ export function Topbar({
               aria-label={shopLabel}
               aria-live="polite"
               title={
-                switchStatus === "blocked" ? (switchError ?? undefined) : shopLabel
+                switchStatus === "blocked"
+                  ? (switchError
+                    ? translateServerError(switchError, t, t("common.error"))
+                    : undefined)
+                  : shopLabel
               }
             >
               <Store
