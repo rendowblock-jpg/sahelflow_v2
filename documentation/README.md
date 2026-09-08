@@ -24,6 +24,7 @@ This directory is the active documentation authority for SahelFlow. `documentati
 10. `product/DECISIONS.md` — consolidated Founder decisions, including FD-045 First Revenue Certification.
 11. `system/ARCHITECTURE.md` — canonical authority, provider, AI, native, security and recovery invariants.
 12. `research/RESEARCH.md` plus privacy/security inventories when relevant.
+13. `operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md` — the FRC-3 Required capability/journey assurance ledger (19 capabilities / 27 journeys / page-completion surface / INV-001..044 mapped to exact evidence) when FRC classification, installed-campaign conversion or launch-readiness evidence is in scope.
 
 Reading order does not change authority precedence. A newer explicit Founder decision outranks lower execution documents for the choice it changes. Protected GitHub source, exact Actions evidence and signed releases outrank stale chat summaries.
 
