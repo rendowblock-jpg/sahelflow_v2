@@ -21,10 +21,24 @@ const eslintConfig = [
       "@typescript-eslint/no-non-null-assertion": "warn",
       // No console.log in production paths (use structured logger)
       "no-console": ["warn", { allow: ["warn", "error"] }],
+      // Stale closures/effects are a real defect class in inbox/socket/queue
+      // hooks. Warn-only: surfaces in Actions logs without failing the gate.
+      "react-hooks/exhaustive-deps": "warn",
       // Prefer const
       "prefer-const": "error",
       // Next.js: no typo warnings suppressed
       "@next/next/no-html-link-for-pages": "off",
+    },
+  },
+  // Server routes must use the structured logger (`src/lib/logger.ts`) —
+  // never bare console. Verified zero console.* in src/app/api at introduction.
+  // NOTE: flat-config merges rule options index-wise, so the base allow-list
+  // must be restated here. The sentinel matches no real console method, which
+  // bans every console.* call in server routes (`allow: []` is schema-invalid).
+  {
+    files: ["src/app/api/**/*.ts", "src/app/api/**/*.tsx"],
+    rules: {
+      "no-console": ["error", { allow: ["__use_structured_logger__"] }],
     },
   },
   {
