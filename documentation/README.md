@@ -1,12 +1,12 @@
 # SahelFlow documentation authority
 
 > **Status:** Active non-archive documentation entry point
-> **Last reconciled:** 2026-09-06 (best-known local `origin/main` `41f7e149…`; live fetch unreachable — re-resolve live before acting)
+> **Last reconciled:** 2026-09-08 (best-known local `origin/main` `418d665…`; re-resolve live before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
 > **Latest signed/published checkpoint:** Internal.35 / `1.0.0-internal.35` / MSI `1.0.0.35` / FD-058 (Founder installation pending; Internal.34 / FD-057 remains latest installed)
 > **Protected release source:** `f45e6e1c9ece903623dcbe71a22b6806b0562cde` / PR #398
-> **Current next outcome:** the Founder applies the in-place Internal.35 update with state preserved, re-verifies the F-09..F-13 + F-05-residual rows plus retained FD-050/#306/#316/#317 rows, evidence is reconciled, then FRC-3 resumes; the merged #399/#400 delta rides protected `main` and receives its first installed/Founder observation on the next signed package
+> **Current next outcome:** the Founder applies the in-place Internal.35 update with state preserved, re-verifies the F-09..F-13 + F-05-residual rows plus retained FD-050/#306/#316/#317 rows, evidence is reconciled, then FRC-3 resumes; the merged #399–#403 delta rides protected `main` and receives its first installed/Founder observation on the next signed package
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
@@ -29,7 +29,7 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Current protected and signed truth
 
-Protected `main` best-known `41f7e149…` after PR #400 (AI agents AAA command-center) on top of docs-only #399 and release-authority #398. Revalidate live state before every write/merge.
+Protected `main` best-known `418d665…` after PR #403 (trilingual server-error rules) on top of #402 (AAA eslint gates), docs-only #401 (frontier reconcile + missing route boundaries), #400 (AI agents AAA command-center) and release-authority #398. Revalidate live state before every write/merge.
 
 Internal.35 is the latest real signed/published offline package:
 
@@ -39,7 +39,7 @@ Internal.35 is the latest real signed/published offline package:
 - release PR #398 / protected source `f45e6e1c9ece903623dcbe71a22b6806b0562cde`;
 - tag `sahelflow-v1.0.0-internal.35-f45e6e1c9ece903623dcbe71a22b6806b0562cde`;
 - the full Required battery passed on the exact head (20 success / 1 risk-classified skip / 0 failed, including installed-MSI evidence);
-- packages the Internal.34 campaign lines (#396 F-09..F-12 + F-05 CRLF root cause, #397 F-13 notifications); #399 docs + #400 ride `main` ahead of the next package.
+- packages the Internal.34 campaign lines (#396 F-09..F-12 + F-05 CRLF root cause, #397 F-13 notifications); #399–#403 ride `main` ahead of the next package.
 
 Retained Internal.30 history (superseded as latest by Internal.31–Internal.35 — see `operations/WORKING_MEMORY.md` and `system/CURRENT_STATE.md` header):
 - Internal.30: app `1.0.0-internal.30` / MSI `1.0.0.30` / FD-051 / PR #357 / head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`;

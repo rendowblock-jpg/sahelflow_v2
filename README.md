@@ -6,7 +6,7 @@ The active documentation entry point is [`documentation/README.md`](documentatio
 
 ## Current repository truth
 
-- Resolve protected `main` before every write, review, merge, package or evidence claim. Best-known local `origin/main` is `41f7e149…` after PR #400 (AI agents AAA command-center) on top of docs-only #399 and release-authority #398 (live fetch unreachable from this machine — re-resolve live). Protected `main` is now **ahead of** the published package — see `documentation/operations/WORKING_MEMORY.md`.
+- Resolve protected `main` before every write, review, merge, package or evidence claim. Best-known local `origin/main` is `418d665…` after PR #403 (trilingual server-error rules) on top of #402 (AAA eslint gates), docs-only #401 (frontier reconcile + missing route boundaries), #400 (AI agents AAA command-center) and release-authority #398. Protected `main` is now **ahead of** the published package — see `documentation/operations/WORKING_MEMORY.md`.
 - Latest signed/published package: **Internal.35** — app `1.0.0-internal.35`, MSI `1.0.0.35`, FD-058, `founder-offline-only`. The latest **Founder-installed** checkpoint remains Internal.34 / FD-057 until the Founder applies the in-place Internal.35 update.
 - Internal.35 release authority is PR #398; protected release source `f45e6e1c9ece903623dcbe71a22b6806b0562cde`; tag `sahelflow-v1.0.0-internal.35-f45e6e1c9ece903623dcbe71a22b6806b0562cde`. Internal.30 facts (PR #357, source `2eb8a337…`, MSI `sha256:bef15026…`) remain retained evidence.
 - Signed Internal.35 publication completed successfully; Internal.30's `33292273959`/`33292278832`/`33292285084` and Internal.29's `33212635887`/`33212648778`/`33212661580` remain retained evidence.
@@ -16,6 +16,7 @@ The active documentation entry point is [`documentation/README.md`](documentatio
 - Issues #316 and #317 are **open for installed/real-phone evidence only**: their source is complete and packaged in published Internal.35.
 - Issue #230 is **open/reopened P1**: customer-online trial/network readiness remains blocked until owned production-domain and representative-network evidence exist.
 - PR #400 (AI agents AAA command-center redesign) was **merged** at `41f7e149…` on top of docs-only #399. Its content is **NOT** inside published Internal.35; it rides protected `main` ahead of the next signed package and receives its first installed/Founder observation there.
+- PRs #401 (docs: frontier reconcile to Internal.35 + missing App Router boundaries), #402 (AAA eslint gates — api `no-console` error, exhaustive-deps warn) and #403 (trilingual phone/license/shop-lifecycle server-error rules) were **merged** at `418d665…`. This delta also rides protected `main` ahead of the next signed package.
 - Internal.35 and newer protected source do not authorize customer-online, Beta or Stable.
 
 ## What Internal.30 adds
