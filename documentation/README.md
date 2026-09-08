@@ -1,7 +1,7 @@
 # SahelFlow documentation authority
 
 > **Status:** Active non-archive documentation entry point
-> **Last reconciled:** 2026-09-08 (best-known local `origin/main` `c50f297…` after PR #406; re-resolve live before acting)
+> **Last reconciled:** 2026-09-08 (best-known local `origin/main` `9f3704f…` after PR #409; re-resolve live before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
 > **Latest signed/published checkpoint:** Internal.35 / `1.0.0-internal.35` / MSI `1.0.0.35` / FD-058 (Founder installation pending; Internal.34 / FD-057 remains latest installed)
@@ -34,7 +34,7 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Current protected and signed truth
 
-Protected `main` best-known `c50f297…` after PR #406 (FRC-3 Required capability/journey ledger adoption) on top of #405 (P3 AI-ledger micro-repairs: F-2/F-3 + AI-17/AI-23 conversions) and docs-only #404 (the #401–#403 delta reconcile), which followed #403/#402/#401/#400/#399 and release-authority #398. Revalidate live state before every write/merge.
+Protected `main` best-known `9f3704f…` after PR #409 (Phase 4 closure authority green — 8 unclassified Prisma models classified, closure test CI-attached) on top of #408 (#303 disposition: phase4 triage = live VEX disposition authority), #406 (FRC-3 Required capability/journey ledger adoption), #405 (P3 AI-ledger micro-repairs: F-2/F-3 + AI-17/AI-23 conversions) and docs-only #404 (the #401–#403 delta reconcile), which followed #403/#402/#401/#400/#399 and release-authority #398. Revalidate live state before every write/merge.
 
 Internal.35 is the latest real signed/published offline package:
 

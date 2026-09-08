@@ -1,9 +1,9 @@
 # SahelFlow — Final Roadmap
 
 > **Status:** Active dependency/completion program
-> **Last reconciled:** 2026-09-08 (best-known local `origin/main` `c50f297…`; re-resolve live before acting)
+> **Last reconciled:** 2026-09-08 (best-known local `origin/main` `9f3704f…`; re-resolve live before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before action; best-known `c50f297…` after PR #406 (FRC-3 Required capability/journey ledger adoption) on top of #405 (P3 AI-ledger micro-repairs), docs-only #404 (the #401–#403 delta reconcile), #403 (trilingual server-error rules), #402 (AAA eslint gates), docs-only #401, #400, #399 and release-authority #398
+> **Live protected main:** resolve from GitHub before action; best-known `9f3704f…` after PR #409 (Phase 4 closure authority green) on top of #408 (#303 disposition), #406 (FRC-3 ledger adoption), #405 (P3 AI-ledger micro-repairs), docs-only #404 (the #401–#403 delta reconcile), #403 (trilingual server-error rules), #402 (AAA eslint gates), docs-only #401, #400, #399 and release-authority #398
 > **Latest signed/published checkpoint:** Internal.35 / FD-058 (published 2026-09-06)
 > **Latest Founder-installed checkpoint:** Internal.34 / FD-057 (installed in place 2026-09-05)
 > **Current execution mode:** the Founder applies the in-place Internal.35 update, re-verifies F-09..F-13 + F-05 residual + retained FD-050/#306/#316/#317 rows with the #306 logout row LAST, then FRC-3 resumes (ledgers: `../operations/WORKING_MEMORY.md`, `../operations/UI_UX_TRIAGE_LEDGER.md`, `../operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md`)
