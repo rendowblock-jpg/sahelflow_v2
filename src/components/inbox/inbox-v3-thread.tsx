@@ -482,7 +482,9 @@ const MessageBubble = memo(function MessageBubble({
     <div
       data-message-id={message.id}
       className={cn(
-        "group/message space-y-1.5",
+        // `relative` anchors the floated hover-action clusters below; without a
+        // positioned ancestor they would resolve against the scroll container.
+        "group/message relative space-y-1.5",
         groupStart ? "mt-4" : "mt-1",
         highlighted &&
           "rounded-2xl ring-2 ring-primary/60 ring-offset-2 ring-offset-background transition-shadow",
@@ -655,22 +657,18 @@ const MessageBubble = memo(function MessageBubble({
       </div>
 
       {message.body.trim() || message.attachment?.fileName ? (
-        // The controls inside are `opacity-0` until hover/focus. Opacity does
-        // not remove an element from layout, so this row previously reserved
+        // The controls were `opacity-0` but still in flow, so this row reserved
         // its full height under EVERY bubble — permanent dead space that reads
-        // as loose, un-WhatsApp-like density. `grid-rows-[0fr]` collapses the
-        // row to zero height while keeping it focusable and animatable, and it
-        // expands on hover/focus-within alongside the existing fade.
+        // as loose, un-WhatsApp-like density.
+        // Floated, not collapsed. An earlier revision used
+        // `grid-rows-[0fr]` to reclaim the dead space, but that zeroes the box
+        // of controls that stay in the tab order — a focusable element with no
+        // dimensions. Absolute positioning removes the row from flow while the
+        // controls keep their real size whenever they are revealed.
         <div
           className={cn(
-            "grid grid-rows-[0fr] transition-[grid-template-rows] duration-150 group-hover/message:grid-rows-[1fr] focus-within:grid-rows-[1fr] motion-reduce:transition-none",
-            inbound ? "justify-items-start" : "justify-items-end",
-          )}
-        >
-        <div
-          className={cn(
-            "flex gap-1 overflow-hidden",
-            inbound ? "justify-start" : "justify-end",
+            "pointer-events-none absolute -bottom-1 z-10 flex gap-1 opacity-0 transition-opacity duration-150 group-hover/message:pointer-events-auto group-hover/message:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 motion-reduce:transition-none",
+            inbound ? "start-0" : "end-0",
           )}
         >
           {canInteract ? (
@@ -689,7 +687,6 @@ const MessageBubble = memo(function MessageBubble({
             copy={copy}
           />
         </div>
-        </div>
       ) : null}
 
       {canExtract ? (
@@ -698,17 +695,11 @@ const MessageBubble = memo(function MessageBubble({
         // `candidate` is true and only collapses in the unselected case.
         <div
           className={cn(
-            "grid transition-[grid-template-rows] duration-150 motion-reduce:transition-none",
-            inbound ? "justify-items-start" : "justify-items-end",
+            "flex",
             candidate
-              ? "grid-rows-[1fr]"
-              : "grid-rows-[0fr] group-hover/message:grid-rows-[1fr] focus-within:grid-rows-[1fr]",
-          )}
-        >
-        <div
-          className={cn(
-            "flex overflow-hidden",
-            inbound ? "justify-start" : "justify-end",
+              ? "pt-1"
+              : "pointer-events-none absolute -bottom-1 z-10 opacity-0 transition-opacity duration-150 group-hover/message:pointer-events-auto group-hover/message:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 motion-reduce:transition-none",
+            candidate ? (inbound ? "justify-start" : "justify-end") : inbound ? "start-24" : "end-24",
           )}
         >
           <button
@@ -725,7 +716,6 @@ const MessageBubble = memo(function MessageBubble({
             <Sparkles className="size-3" aria-hidden="true" />
             {copy("chooseOrderMessage")}
           </button>
-        </div>
         </div>
       ) : null}
 
