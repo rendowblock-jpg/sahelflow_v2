@@ -187,7 +187,7 @@ export function ProductsDataTable({
                   ) : undefined
                 }
               >
-                <div className="mb-3 flex items-center gap-3 rounded-lg border border-border/70 bg-muted/20 p-2.5">
+                <div className="mb-3 flex items-center gap-3 rounded-surface border border-border/70 bg-muted/20 p-2.5">
                   <ProductThumbnail
                     src={product.images?.[0]}
                     alt=""

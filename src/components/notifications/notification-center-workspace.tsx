@@ -227,7 +227,7 @@ export function NotificationCenterWorkspace() {
         <div className="flex items-center gap-2">
           {feed.unreadCount > 0 ? (
             <span
-              className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-2xs font-semibold tabular-nums text-primary"
+              className="inline-flex items-center rounded-full bg-primary-soft px-2.5 py-1 text-caption font-semibold tabular-nums text-primary"
               data-testid="notifications-unread-pill"
             >
               {t("notifications.unreadCount", { count: feed.unreadCount })}
@@ -246,17 +246,17 @@ export function NotificationCenterWorkspace() {
         </div>
       </header>
 
-      <section className="rounded-xl border border-border bg-card p-4 sm:p-5" aria-labelledby="notification-preferences">
+      <section className="rounded-surface border border-border bg-card p-4 sm:p-5" aria-labelledby="notification-preferences">
         <div className="flex items-start gap-3">
           <span
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+            className="flex size-9 shrink-0 items-center justify-center rounded-surface bg-muted text-muted-foreground"
             aria-hidden="true"
           >
             <SlidersHorizontal className="size-4" />
           </span>
           <div className="min-w-0">
             <h2 id="notification-preferences" className="text-sm font-semibold">{t("notifications.preferences")}</h2>
-            <p className="mt-0.5 text-2xs text-muted-foreground">{t("notifications.preferencesDescription")}</p>
+            <p className="mt-0.5 text-caption text-muted-foreground">{t("notifications.preferencesDescription")}</p>
           </div>
         </div>
         {preference ? (
@@ -327,7 +327,7 @@ export function NotificationCenterWorkspace() {
             aria-label={t("notifications.loading")}
           >
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-11 rounded-lg" />
+              <Skeleton key={index} className="h-11 rounded-surface" />
             ))}
           </div>
         )}
@@ -352,7 +352,7 @@ export function NotificationCenterWorkspace() {
           >
             {t(`notifications.filter.${value}`)}
             {value === "unread" && feed.unreadCount > 0 ? (
-              <span className="ms-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-2xs font-semibold leading-none tabular-nums text-primary-foreground">
+              <span className="ms-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-caption font-semibold leading-none tabular-nums text-primary-foreground">
                 {feed.unreadCount}
                 <span className="sr-only">{t("notifications.unread")}</span>
               </span>
@@ -381,14 +381,14 @@ export function NotificationCenterWorkspace() {
 
       {showSkeleton ? (
         <div
-          className="rounded-xl border border-border bg-card"
+          className="rounded-surface border border-border bg-card"
           role="status"
           aria-busy="true"
           aria-label={t("notifications.loading")}
         >
           {Array.from({ length: 6 }).map((_, index) => (
             <div key={index} className="flex items-start gap-3 border-b border-border p-4 last:border-b-0">
-              <Skeleton className="mt-0.5 size-9 rounded-lg" />
+              <Skeleton className="mt-0.5 size-9 rounded-surface" />
               <div className="min-w-0 flex-1 space-y-2">
                 <Skeleton className="h-4 max-w-60 w-2/5" />
                 <Skeleton className="h-3 w-3/5" />
@@ -397,7 +397,7 @@ export function NotificationCenterWorkspace() {
           ))}
         </div>
       ) : showEmpty ? (
-        <div className="rounded-xl border border-border bg-card">
+        <div className="rounded-surface border border-border bg-card">
           <div className="flex min-h-48 flex-col items-center justify-center p-8 text-center">
             <span
               className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted/50"
@@ -412,14 +412,14 @@ export function NotificationCenterWorkspace() {
         </div>
       ) : (
         <section
-          className="overflow-clip rounded-xl border border-border bg-card shadow-sm"
+          className="overflow-clip rounded-surface border border-border bg-card shadow-sm"
           aria-busy={loadingMore}
           aria-label={t("notifications.title")}
         >
           {groups.map((group, index) => (
             <div key={group.key} data-day-group={group.key}>
               <h3
-                className={`sticky top-0 z-10 bg-card/90 px-4 py-2 text-2xs font-semibold tracking-wide text-muted-foreground backdrop-blur-sm ${index === 0 ? "rounded-t-xl" : "border-t border-border/60"}`}
+                className={`sticky top-0 z-10 bg-card/90 px-4 py-2 text-caption font-semibold tracking-wide text-muted-foreground backdrop-blur-sm ${index === 0 ? "rounded-t-surface" : "border-t border-border/60"}`}
               >
                 {group.label}
               </h3>
@@ -430,11 +430,11 @@ export function NotificationCenterWorkspace() {
                   return (
                     <li
                       key={item.id}
-                      className={`group relative flex items-start gap-3 p-4 transition-colors motion-reduce:transition-none hover:bg-muted/25 ${item.read ? "" : "bg-primary/[0.06]"}`}
+                      className={`group relative flex items-start gap-3 p-4 transition-colors motion-reduce:transition-none hover:bg-muted/25 ${item.read ? "" : "bg-primary-soft"}`}
                       data-unread={item.read ? undefined : "true"}
                     >
                       <span
-                        className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ${presentation.className}`}
+                        className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-surface ${presentation.className}`}
                         role="img"
                         aria-label={t(presentation.labelKey)}
                         title={t(presentation.labelKey)}
@@ -458,7 +458,7 @@ export function NotificationCenterWorkspace() {
                           >
                             {item.title}
                           </Link>
-                          <time className="ms-auto text-2xs tabular-nums text-muted-foreground" dateTime={item.createdAt}>{item.time}</time>
+                          <time className="ms-auto text-caption tabular-nums text-muted-foreground" dateTime={item.createdAt}>{item.time}</time>
                         </div>
                         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
                       </div>
@@ -497,7 +497,7 @@ export function NotificationCenterWorkspace() {
           </Button>
         </div>
       ) : items.length > 0 && !feed.error ? (
-        <div className="flex items-center gap-3 text-2xs text-muted-foreground" aria-hidden="true">
+        <div className="flex items-center gap-3 text-caption text-muted-foreground" aria-hidden="true">
           <span className="h-px flex-1 bg-border/60" />
           <History className="size-3.5" />
           <span className="h-px flex-1 bg-border/60" />
@@ -510,7 +510,7 @@ export function NotificationCenterWorkspace() {
 
 function PreferenceToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
   return (
-    <label className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border bg-muted/25 px-3 py-2 text-sm transition-colors motion-reduce:transition-none hover:bg-muted/40">
+    <label className="flex min-h-11 items-center justify-between gap-3 rounded-surface border border-border bg-muted/25 px-3 py-2 text-sm transition-colors motion-reduce:transition-none hover:bg-muted/40">
       <span>{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
     </label>
@@ -519,7 +519,7 @@ function PreferenceToggle({ label, checked, onChange }: { label: string; checked
 
 function PreferenceChip({ icon: Icon, children }: { icon: typeof Clock3; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/25 px-2.5 py-1 text-2xs text-muted-foreground">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/25 px-2.5 py-1 text-caption text-muted-foreground">
       <Icon className="size-3.5" aria-hidden="true" />
       {children}
     </span>

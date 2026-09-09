@@ -179,7 +179,7 @@ export function RankedMetricList({
         return (
           <div
             key={entry.key}
-            className="group rounded-xl px-2 py-2.5 transition-colors hover:bg-muted/35 focus-within:bg-muted/35 motion-reduce:transition-none"
+            className="group rounded-surface px-2 py-2.5 transition-colors hover:bg-muted/35 focus-within:bg-muted/35 motion-reduce:transition-none"
             data-ranked-row="true"
           >
             <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-2.5">

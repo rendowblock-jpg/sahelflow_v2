@@ -208,13 +208,13 @@ export function SecurityAuthorityPanel() {
       </div>
 
       {loading && !authority ? (
-        <div className="rounded-lg border p-5 text-sm text-muted-foreground">
+        <div className="rounded-surface border p-5 text-sm text-muted-foreground">
           {t("settings.security.loading")}
         </div>
       ) : null}
 
       {error ? (
-        <div role="alert" className="rounded-lg border border-destructive/30 p-4 text-sm text-destructive">
+        <div role="alert" className="rounded-surface border border-destructive/30 p-4 text-sm text-destructive">
           {error}
         </div>
       ) : null}
@@ -222,7 +222,7 @@ export function SecurityAuthorityPanel() {
       {authority ? (
         <>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border p-4">
+            <div className="rounded-surface border p-4">
               <p className="text-sm font-medium">{t("settings.security.workspace")}</p>
               <dl className="mt-3 space-y-2 text-sm">
                 <div className="flex justify-between gap-4">
@@ -238,7 +238,7 @@ export function SecurityAuthorityPanel() {
               </dl>
             </div>
 
-            <div className="rounded-lg border p-4">
+            <div className="rounded-surface border p-4">
               <div className="flex items-center gap-2">
                 <MonitorSmartphone className="h-4 w-4" aria-hidden="true" />
                 <p className="text-sm font-medium">{t("settings.security.device")}</p>
@@ -260,7 +260,7 @@ export function SecurityAuthorityPanel() {
             </div>
           </div>
 
-          <div className="rounded-lg border">
+          <div className="rounded-surface border">
             <div className="border-b px-4 py-3">
               <h4 className="text-sm font-semibold">{t("settings.security.sessions")}</h4>
             </div>
@@ -286,7 +286,7 @@ export function SecurityAuthorityPanel() {
                             {shortId(session.sessionId)}
                           </span>
                           {session.current ? (
-                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
                               {t("settings.security.current")}
                             </span>
                           ) : null}
@@ -317,20 +317,21 @@ export function SecurityAuthorityPanel() {
       ) : null}
 
       {reauthSessionId ? (
-        <div className="rounded-lg border p-4" role="dialog" aria-modal="false" aria-labelledby="session-reauth-title">
+        <div className="rounded-surface border p-4" role="dialog" aria-modal="false" aria-labelledby="session-reauth-title">
           <div className="flex items-center gap-2">
             <KeyRound className="h-4 w-4" aria-hidden="true" />
             <h4 id="session-reauth-title" className="text-sm font-semibold">
               {t("settings.security.reauthTitle")}
             </h4>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p id="session-reauth-hint" className="mt-1 text-sm text-muted-foreground">
             {t("settings.security.reauthDescription")}
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <Input
               type="password"
               inputMode="numeric"
+              aria-describedby="session-reauth-hint"
               autoComplete="current-password"
               value={pin}
               onChange={(event) => setPin(event.target.value)}

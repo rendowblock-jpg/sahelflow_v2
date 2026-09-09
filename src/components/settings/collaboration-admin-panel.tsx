@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Archive, Loader2, Plus, RefreshCw, UsersRound } from "lucide-react";
 
+import { Field } from "@/components/system";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
@@ -236,7 +237,7 @@ export function CollaborationAdminPanel() {
 
   if (loading) {
     return (
-      <section className="rounded-xl border p-5">
+      <section className="rounded-surface border p-5">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           {copy.loading}
@@ -247,7 +248,7 @@ export function CollaborationAdminPanel() {
 
   if (!view) {
     return (
-      <section className="rounded-xl border p-5">
+      <section className="rounded-surface border p-5">
         <p className="text-sm text-destructive">{error ?? copy.loadError}</p>
         <Button className="mt-3" size="sm" variant="outline" onClick={() => void load()}>
           <RefreshCw className="me-2 h-4 w-4" />
@@ -261,7 +262,7 @@ export function CollaborationAdminPanel() {
     `${member.displayName ?? copy.owner} · ${copy[member.role]}`;
 
   return (
-    <section className="space-y-6 rounded-xl border p-5">
+    <section className="space-y-6 rounded-surface border p-5">
       <div>
         <div className="flex items-center gap-2">
           <UsersRound className="h-5 w-5 text-primary" />
@@ -275,12 +276,20 @@ export function CollaborationAdminPanel() {
         <div className="space-y-3">
           <h4 className="text-sm font-semibold">{copy.workgroups}</h4>
           {view.permissions.workgroupsManage ? (
-            <div className="grid gap-3 rounded-lg bg-muted/30 p-3 md:grid-cols-2">
-              <Input value={groupName} onChange={(event) => setGroupName(event.target.value)} placeholder={copy.workgroupName} />
-              <Input value={groupDescription} onChange={(event) => setGroupDescription(event.target.value)} placeholder={copy.descriptionLabel} />
+            <div className="grid gap-3 rounded-surface bg-muted/30 p-3 md:grid-cols-2">
+              <Field id="collab-workgroup-name" label={copy.workgroupName}>
+                {(control) => (
+                  <Input {...control} value={groupName} onChange={(event) => setGroupName(event.target.value)} />
+                )}
+              </Field>
+              <Field id="collab-workgroup-description" label={copy.descriptionLabel}>
+                {(control) => (
+                  <Input {...control} value={groupDescription} onChange={(event) => setGroupDescription(event.target.value)} />
+                )}
+              </Field>
               <div className="grid gap-2 md:col-span-2 sm:grid-cols-2 lg:grid-cols-3">
                 {view.activeMembers.map((member) => (
-                  <label key={member.memberId} className="flex items-center gap-2 rounded-md border bg-background p-2 text-xs">
+                  <label key={member.memberId} className="flex items-center gap-2 rounded-control border bg-background p-2 text-xs">
                     <input
                       type="checkbox"
                       checked={newGroupMembers.includes(member.memberId)}
@@ -329,7 +338,7 @@ export function CollaborationAdminPanel() {
                 const activeIds = group.memberships.map((entry) => entry.memberId);
                 const selected = selectedByGroup[group.id] ?? [];
                 return (
-                  <div key={group.id} className="rounded-lg border p-3">
+                  <div key={group.id} className="rounded-surface border p-3">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{group.name}</p>
@@ -361,7 +370,7 @@ export function CollaborationAdminPanel() {
                       <div className="mt-3 space-y-2">
                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                           {view.activeMembers.map((member) => (
-                            <label key={member.memberId} className="flex items-center gap-2 rounded-md bg-muted/30 p-2 text-xs">
+                            <label key={member.memberId} className="flex items-center gap-2 rounded-control bg-muted/30 p-2 text-xs">
                               <input
                                 type="checkbox"
                                 checked={selected.includes(member.memberId)}
@@ -426,21 +435,41 @@ export function CollaborationAdminPanel() {
         <div className="space-y-3">
           <h4 className="text-sm font-semibold">{copy.queues}</h4>
           {view.permissions.queuesManage ? (
-            <div className="grid gap-3 rounded-lg bg-muted/30 p-3 md:grid-cols-2">
-              <Input value={queueKey} onChange={(event) => setQueueKey(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))} placeholder={copy.queueKey} />
-              <Input value={queueName} onChange={(event) => setQueueName(event.target.value)} placeholder={copy.queueName} />
-              <Input value={queueDescription} onChange={(event) => setQueueDescription(event.target.value)} placeholder={copy.descriptionLabel} />
-              <select className="h-10 rounded-md border bg-background px-3 text-sm" value={queueType} onChange={(event) => setQueueType(event.target.value as EntityType)}>
-                <option value="conversation">{copy.conversation}</option>
-                <option value="order">{copy.order}</option>
-                <option value="confirmation">{copy.confirmation}</option>
-              </select>
-              <select className="h-10 rounded-md border bg-background px-3 text-sm" value={queueGroupId} onChange={(event) => setQueueGroupId(event.target.value)}>
-                <option value="">{copy.none}</option>
-                {view.workgroups.filter((group) => group.state === "active").map((group) => (
-                  <option key={group.id} value={group.id}>{group.name}</option>
-                ))}
-              </select>
+            <div className="grid gap-3 rounded-surface bg-muted/30 p-3 md:grid-cols-2">
+              <Field id="collab-queue-key" label={copy.queueKey}>
+                {(control) => (
+                  <Input {...control} value={queueKey} onChange={(event) => setQueueKey(event.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))} />
+                )}
+              </Field>
+              <Field id="collab-queue-name" label={copy.queueName}>
+                {(control) => (
+                  <Input {...control} value={queueName} onChange={(event) => setQueueName(event.target.value)} />
+                )}
+              </Field>
+              <Field id="collab-queue-description" label={copy.descriptionLabel}>
+                {(control) => (
+                  <Input {...control} value={queueDescription} onChange={(event) => setQueueDescription(event.target.value)} />
+                )}
+              </Field>
+              <Field id="collab-queue-type" label={copy.entityType}>
+                {(control) => (
+                  <select {...control} className="h-10 w-full rounded-control border bg-background px-3 text-sm" value={queueType} onChange={(event) => setQueueType(event.target.value as EntityType)}>
+                    <option value="conversation">{copy.conversation}</option>
+                    <option value="order">{copy.order}</option>
+                    <option value="confirmation">{copy.confirmation}</option>
+                  </select>
+                )}
+              </Field>
+              <Field id="collab-queue-workgroup" label={copy.workgroup}>
+                {(control) => (
+                  <select {...control} className="h-10 w-full rounded-control border bg-background px-3 text-sm" value={queueGroupId} onChange={(event) => setQueueGroupId(event.target.value)}>
+                    <option value="">{copy.none}</option>
+                    {view.workgroups.filter((group) => group.state === "active").map((group) => (
+                      <option key={group.id} value={group.id}>{group.name}</option>
+                    ))}
+                  </select>
+                )}
+              </Field>
               <Button
                 disabled={saving || !queueKey || !queueName.trim()}
                 onClick={async () => {
@@ -474,7 +503,7 @@ export function CollaborationAdminPanel() {
           ) : (
             <div className="grid gap-2 md:grid-cols-2">
               {view.queues.map((queue) => (
-                <div key={queue.id} className="rounded-lg border p-3">
+                <div key={queue.id} className="rounded-surface border p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-medium">{queue.name}</p>

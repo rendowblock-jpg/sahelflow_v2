@@ -2289,7 +2289,7 @@
   "shops.error": "Erreur",
   "shops.iconLabel": "Icône",
   "shops.lifecycleError": "L'opération sur la boutique n'a pas pu aboutir. Veuillez réessayer.",
-  "shops.nameLabel": "Nom de la boutique *",
+  "shops.nameLabel": "Nom de la boutique",
   "shops.namePlaceholder": "Ma Boutique",
   "shops.nameRequired": "Le nom de la boutique est requis",
   "shops.newShop": "Nouvelle boutique",

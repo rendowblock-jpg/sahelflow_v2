@@ -18,16 +18,16 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 const STATUS_STYLES: Record<string, { i18nKey: string; dot: string; bg: string; text: string; border: string }> = {
-  pending: { i18nKey: "deliveries.status.pending", dot: "bg-warning", bg: "bg-warning/10", text: "text-warning", border: "border-warning/25" },
-  created: { i18nKey: "deliveries.status.created", dot: "bg-primary", bg: "bg-primary/10", text: "text-primary", border: "border-primary/25" },
-  picked_up: { i18nKey: "deliveries.status.pickedUp", dot: "bg-primary", bg: "bg-primary/10", text: "text-primary", border: "border-primary/25" },
-  in_transit: { i18nKey: "deliveries.status.inTransit", dot: "bg-primary", bg: "bg-primary/10", text: "text-primary", border: "border-primary/25" },
-  at_hub: { i18nKey: "deliveries.status.atHub", dot: "bg-primary", bg: "bg-primary/10", text: "text-primary", border: "border-primary/25" },
-  out_for_delivery: { i18nKey: "deliveries.status.outForDelivery", dot: "bg-primary", bg: "bg-primary/10", text: "text-primary", border: "border-primary/25" },
-  delivered: { i18nKey: "deliveries.status.delivered", dot: "bg-success", bg: "bg-success/10", text: "text-success", border: "border-success/25" },
-  returned: { i18nKey: "deliveries.status.returned", dot: "bg-destructive", bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/25" },
-  refused: { i18nKey: "deliveries.status.refused", dot: "bg-destructive", bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/25" },
-  failed: { i18nKey: "deliveries.status.failed", dot: "bg-destructive", bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/25" },
+  pending: { i18nKey: "deliveries.status.pending", dot: "bg-warning", bg: "bg-warning-soft", text: "text-warning", border: "border-warning/25" },
+  created: { i18nKey: "deliveries.status.created", dot: "bg-primary", bg: "bg-primary-soft", text: "text-primary", border: "border-primary/25" },
+  picked_up: { i18nKey: "deliveries.status.pickedUp", dot: "bg-primary", bg: "bg-primary-soft", text: "text-primary", border: "border-primary/25" },
+  in_transit: { i18nKey: "deliveries.status.inTransit", dot: "bg-primary", bg: "bg-primary-soft", text: "text-primary", border: "border-primary/25" },
+  at_hub: { i18nKey: "deliveries.status.atHub", dot: "bg-primary", bg: "bg-primary-soft", text: "text-primary", border: "border-primary/25" },
+  out_for_delivery: { i18nKey: "deliveries.status.outForDelivery", dot: "bg-primary", bg: "bg-primary-soft", text: "text-primary", border: "border-primary/25" },
+  delivered: { i18nKey: "deliveries.status.delivered", dot: "bg-success", bg: "bg-success-soft", text: "text-success", border: "border-success/25" },
+  returned: { i18nKey: "deliveries.status.returned", dot: "bg-destructive", bg: "bg-destructive-soft", text: "text-destructive", border: "border-destructive/25" },
+  refused: { i18nKey: "deliveries.status.refused", dot: "bg-destructive", bg: "bg-destructive-soft", text: "text-destructive", border: "border-destructive/25" },
+  failed: { i18nKey: "deliveries.status.failed", dot: "bg-destructive", bg: "bg-destructive-soft", text: "text-destructive", border: "border-destructive/25" },
 };
 
 const ALL_STATUSES = Object.keys(STATUS_STYLES);
@@ -87,7 +87,7 @@ export function DeliveryStatusBadge({
           type="button"
           disabled={disabled || isPending}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
             style.bg,
             style.text,
             style.border,

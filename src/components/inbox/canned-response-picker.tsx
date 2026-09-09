@@ -132,7 +132,7 @@ function CannedResponsePickerBody({ onSelect, onPick }: CannedResponsePickerBody
   return (
     <>
       <div className="border-b p-2">
-        <div className="flex items-center gap-2 rounded-md px-2">
+        <div className="flex items-center gap-2 rounded-control px-2">
           <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <Input
             ref={inputRef}
@@ -174,7 +174,7 @@ function CannedResponsePickerBody({ onSelect, onPick }: CannedResponsePickerBody
                       {item.shortCode}
                     </span>
                     {item.description && (
-                      <span className="text-2xs text-muted-foreground shrink-0">
+                      <span className="text-caption text-muted-foreground shrink-0">
                         {item.description}
                       </span>
                     )}

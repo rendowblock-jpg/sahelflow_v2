@@ -19,7 +19,7 @@ export function KpiDrillDownLink({
       href={href}
       aria-label={label}
       title={label}
-      className="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/45 text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+      className="inline-flex size-8 shrink-0 items-center justify-center rounded-control border border-border/70 bg-muted/45 text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
     >
       <ArrowUpRight className="size-4 rtl:-scale-x-100" aria-hidden="true" />
     </Link>

@@ -265,7 +265,7 @@ export default async function DashboardPage() {
         data-dashboard-operational-grid="true"
         className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]"
       >
-        <section className="min-w-0 rounded-md border border-border/80 bg-background">
+        <section className="min-w-0 rounded-control border border-border/80 bg-background">
           <div className="flex items-center justify-between gap-3 border-b border-border/70 px-3 py-2.5">
             <h2 className="text-sm font-semibold">
               {t("dashboard.recentOrders")}
@@ -342,7 +342,7 @@ export default async function DashboardPage() {
                       ) : null}
                       {statusStyle ? (
                         <span
-                          className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+                          className={`inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-xs font-medium ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
                         >
                           <span
                             className={`size-1.5 rounded-full ${statusStyle.dot}`}
@@ -364,7 +364,7 @@ export default async function DashboardPage() {
         </section>
 
         <div className="grid min-w-0 gap-3">
-          <section className="rounded-md border border-border/80 bg-background">
+          <section className="rounded-control border border-border/80 bg-background">
             <div className="flex items-center justify-between border-b border-border/70 px-3 py-2.5">
               <h2 className="text-sm font-semibold">{t("nav.delivery")}</h2>
               {fieldAccess.deliveries ? (
@@ -425,7 +425,7 @@ export default async function DashboardPage() {
           {fieldAccess.risk && riskReport ? (
             <section
               data-dashboard-risk-watch="true"
-              className="overflow-hidden rounded-md border border-border/80 bg-background"
+              className="overflow-hidden rounded-control border border-border/80 bg-background"
             >
               <div className="flex items-start justify-between gap-3 border-b border-border/70 px-3 py-2.5">
                 <div className="min-w-0">
@@ -451,7 +451,7 @@ export default async function DashboardPage() {
 
               <div className="divide-y divide-border/70 px-3">
                 <div className="flex min-w-0 items-center gap-3 py-3">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-destructive/25 bg-destructive/5 text-destructive">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-surface border border-destructive/25 bg-destructive-subtle text-destructive">
                     <AlertTriangle className="size-3.5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -470,7 +470,7 @@ export default async function DashboardPage() {
                 </div>
 
                 <div className="flex min-w-0 items-center gap-3 py-3">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/35 text-muted-foreground">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/35 text-muted-foreground">
                     <TrendingDown className="size-3.5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -484,7 +484,7 @@ export default async function DashboardPage() {
                 </div>
 
                 <div className="flex min-w-0 items-center gap-3 py-3">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/35 text-muted-foreground">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/35 text-muted-foreground">
                     <Activity className="size-3.5" aria-hidden="true" />
                   </span>
                   <div className="min-w-0 flex-1">

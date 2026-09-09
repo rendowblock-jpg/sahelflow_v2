@@ -307,7 +307,7 @@ export function VoiceNotePlayer({ src, label, locale }: VoiceNotePlayerProps) {
             type="button"
             onClick={retry}
             data-inbox-voice-retry="true"
-            className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-7 items-center gap-1 rounded-control px-2 font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
           >
             <RotateCcw className="size-3" aria-hidden="true" />
             {copy("inbox.voice.retry")}
@@ -343,7 +343,7 @@ export function VoiceNotePlayer({ src, label, locale }: VoiceNotePlayerProps) {
             onClick={handleWaveformClick}
             onKeyDown={handleSliderKeyDown}
             data-inbox-voice-waveform="true"
-            className="flex h-8 min-w-0 flex-1 cursor-pointer items-center gap-[2px] rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-8 min-w-0 flex-1 cursor-pointer items-center gap-[2px] rounded-control outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {peaks === undefined
               ? Array.from({ length: VOICE_NOTE_BAR_COUNT }, (_, index) => (

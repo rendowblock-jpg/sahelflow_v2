@@ -62,6 +62,31 @@
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
 
+  /* ── Semantic tints — INTERFACE_SYSTEM.md §4 ─────────────────────────────
+     Three authorized steps per semantic color, replacing the 20+ ad-hoc alpha
+     values formerly in use (bg-primary/[0.025], /[0.04], /[0.055], /[0.06],
+     /[0.07], /[0.09], bg-warning/[0.035], /[0.09], ...). color-mix resolves lazily at
+     the use site, so each tint tracks the active preset and mode the way
+     --primary-hover already does.
+       subtle — resting background of an informational region
+       soft   — hover, selected row, active chip
+       strong — emphasis, armed destructive state */
+  --color-primary-subtle: color-mix(in oklch, var(--primary) 4%, transparent);
+  --color-primary-soft: color-mix(in oklch, var(--primary) 8%, transparent);
+  --color-primary-strong: color-mix(in oklch, var(--primary) 14%, transparent);
+  --color-success-subtle: color-mix(in oklch, var(--success) 4%, transparent);
+  --color-success-soft: color-mix(in oklch, var(--success) 8%, transparent);
+  --color-success-strong: color-mix(in oklch, var(--success) 14%, transparent);
+  --color-warning-subtle: color-mix(in oklch, var(--warning) 4%, transparent);
+  --color-warning-soft: color-mix(in oklch, var(--warning) 8%, transparent);
+  --color-warning-strong: color-mix(in oklch, var(--warning) 14%, transparent);
+  --color-destructive-subtle: color-mix(in oklch, var(--destructive) 4%, transparent);
+  --color-destructive-soft: color-mix(in oklch, var(--destructive) 8%, transparent);
+  --color-destructive-strong: color-mix(in oklch, var(--destructive) 14%, transparent);
+  --color-info-subtle: color-mix(in oklch, var(--info) 4%, transparent);
+  --color-info-soft: color-mix(in oklch, var(--info) 8%, transparent);
+  --color-info-strong: color-mix(in oklch, var(--info) 14%, transparent);
+
   /* Radius */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -72,9 +97,68 @@
 }
 
 @theme {
+  /* ── Type ramp — INTERFACE_SYSTEM.md §2 ──────────────────────────────────
+     The authoritative scale. Before this ramp existed, 1,200 of 1,291 type-size
+     usages in src/components were text-xs/text-sm/text-2xs and only 34 exceeded
+     text-base, so no surface carried hierarchy. Surfaces migrate onto these
+     tokens as they are rebuilt; the ramp is additive and changes nothing until
+     adopted. Weight and tracking travel WITH the size so a heading cannot be
+     half-applied. */
+  --text-display: 1.875rem;          /* 30px — landing-surface identity */
+  --text-display--line-height: 2.25rem;
+  --text-display--font-weight: 600;
+  --text-display--letter-spacing: -0.02em;
+
+  --text-title-1: 1.5rem;            /* 24px — page title */
+  --text-title-1--line-height: 2rem;
+  --text-title-1--font-weight: 600;
+  --text-title-1--letter-spacing: -0.015em;
+
+  --text-title-2: 1.125rem;          /* 18px — section heading */
+  --text-title-2--line-height: 1.625rem;
+  --text-title-2--font-weight: 600;
+
+  --text-title-3: 0.9375rem;         /* 15px — card / row / panel title */
+  --text-title-3--line-height: 1.375rem;
+  --text-title-3--font-weight: 600;
+
+  --text-body: 0.875rem;             /* 14px — default reading size */
+  --text-body--line-height: 1.375rem;
+
+  --text-body-sm: 0.8125rem;         /* 13px — secondary text, metadata */
+  --text-body-sm--line-height: 1.25rem;
+
+  /* Caption carries size and rhythm only. Headings own their weight because it
+     is semantic; caption is used for both labels (which want medium) and
+     timestamps and meta (which do not), so imposing a weight here would
+     silently embolden every meta line that adopts the token. Callers choose. */
+  --text-caption: 0.75rem;           /* 12px — labels, timestamps, badges */
+  --text-caption--line-height: 1rem;
+
+  /* ── Radius — INTERFACE_SYSTEM.md §3 ─────────────────────────────────────
+     Three radii replace the eight currently in use (lg 201x, md 171x, full
+     170x, xl 90x, 2xl 24x, sm 13x, none 2x, 3xl 2x). --radius-surface keeps
+     the historical --radius value so adoption is visually continuous. */
+  --radius-control: 0.375rem;        /* 6px — inputs, buttons, badges, chips */
+  --radius-surface: 0.625rem;        /* 10px — cards, panels, dialogs, media */
+
+  /* Storefront theme radius is SELLER-OWNED DATA, not SahelFlow chrome. The
+     `soft | rounded | sharp` enum (storefront/presentation-types.ts:13) is a
+     published shop's visual identity, chosen by the seller and already live on
+     their storefront. INTERFACE_SYSTEM.md §3 governs the operations interface;
+     collapsing these onto it would silently restyle shipped shops and make two
+     of the three options render identically. Named here so they are system
+     values rather than arbitrary ones — see INTERFACE_SYSTEM.md §3. */
+  --radius-storefront-soft: 0.875rem;   /* 14px — storefront theme "soft" */
+  --radius-storefront-round: 1.125rem;  /* 18px — storefront theme "rounded" */
+
   /* Typography — sub-xs operational microcopy floor (11px). The R5-f codemod
      replaced every text-[9/10/11px] utility with this token; arabic-system.css
-     raises it to 12px under the Arabic reading floor. */
+     raises it to 12px under the Arabic reading floor.
+     RETIRING (SYS-03): 11px is below the interface floor for Latin locales,
+     where it applies at all 150 sites — the Arabic lift is scoped to
+     html[dir="rtl"] [data-sahelflow-shell="desktop"] only. Migrate every
+     occurrence to --text-caption; do not introduce new ones. */
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1rem;
 
@@ -99,7 +183,7 @@
 
   --destructive: oklch(0.577 0.245 27.325);
   /* Feedback semantics are calibrated for their RENDERED role — colored text
-     on canvas/card tints (bg-success/10 chips, text-success, ...) — at WCAG AA
+     on canvas/card tints (bg-success-soft chips, text-success, ...) — at WCAG AA
      (>= 4.5:1). Solid -foreground pairs are gated too where they pass; the
      light warning solid pair never renders (warning surfaces carry dark text
      on tinted fills only) — see contrast-contract.test.ts. */
@@ -359,7 +443,6 @@
     background-clip: text;
   }
 
-
   /* ── Named shadow utilities (Cal.com pattern) ── */
   .shadow-btn {
     box-shadow: var(--shadow-btn-rested);
@@ -421,7 +504,6 @@
   .stagger-8 { animation-delay: 400ms; }
 }
 
-
   /* Stagger grid — children fade up with incremental delay */
   .stagger-grid > * {
     animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -435,34 +517,7 @@
   .stagger-grid > *:nth-child(7) { animation-delay: 350ms; }
   .stagger-grid > *:nth-child(8) { animation-delay: 400ms; }
 
-  /* Premium card hover — subtle lift + shadow */
-  .card-lift {
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .card-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px oklch(0 0 0 / 0.08), 0 1px 2px oklch(0 0 0 / 0.04);
-  }
-  .dark .card-lift:hover {
-    box-shadow: 0 4px 16px oklch(0 0 0 / 0.3), 0 1px 2px oklch(0 0 0 / 0.2);
-  }
-
 /* ── Page transition ── */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
 /* ── Keyframes ──────────────────────────────────────────────────────────────── */
 
 @keyframes animateIn {
@@ -517,15 +572,6 @@
 @keyframes pulseSubtle {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
-}
-
-@keyframes typingBounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-.animate-typing-bounce {
-  animation: typingBounce 0.6s infinite;
 }
 
 /* ── Card Hover Effects ─────────────────────────────────────────────────────── */
@@ -717,7 +763,6 @@
   }
 }
 
-
 /* ═══════════════════════════════════════════════════════════════════════
    Responsive polish — top-tier mobile experience
    ═══════════════════════════════════════════════════════════════════════ */
@@ -790,7 +835,6 @@ html { scroll-behavior: smooth; }
 h1 { @apply text-2xl font-semibold tracking-tight text-foreground sm:text-3xl; }
 h2 { @apply text-xl font-semibold tracking-tight text-foreground; }
 h3 { @apply text-base font-semibold text-foreground; }
-
 
 /* ═══════════════════════════════════════════════════════════════════════
    Table RTL + consistency — ensure tables fully respect direction
@@ -883,19 +927,6 @@ html[dir="rtl"] body {
   outline-offset: var(--focus-ring-offset);
   /* border-radius intentionally NOT set here — let each component keep its own radius */
 }
-
-/* Consistent card hover (subtle elevation) */
-.card-hover {
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-.card-hover:hover {
-  box-shadow: 0 4px 16px oklch(0 0 0 / 0.08);
-  transform: translateY(-1px);
-}
-
-/* Consistent badge sizing */
-.badge-sm { font-size: 11px; line-height: 16px; padding: 2px 8px; }
-.badge-md { font-size: 12px; line-height: 18px; padding: 3px 10px; }
 
 /* Consistent stat number formatting */
 .tabular-nums { font-variant-numeric: tabular-nums; }

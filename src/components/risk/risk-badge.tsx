@@ -40,7 +40,7 @@ export function RiskBadge({ level, score, href }: RiskBadgeProps) {
   const content = (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border border-border/60 px-1.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1.5 rounded-control border border-border/60 px-1.5 py-0.5 text-xs font-medium",
         TEXT_COLORS[level],
         "bg-muted/30",
         href && "transition-colors hover:bg-muted/60",

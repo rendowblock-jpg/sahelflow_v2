@@ -283,7 +283,7 @@ function FilterChip({
       <button
         type="button"
         onClick={onRemove}
-        className="ms-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        className="ms-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-background hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={removeLabel}
       >
         <X className="size-3.5" aria-hidden="true" />

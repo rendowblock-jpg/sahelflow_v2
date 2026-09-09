@@ -61,7 +61,7 @@ export function InboxPaneResizer({
       data-inbox-pane-resizer="true"
       className={cn(
         "group relative hidden w-2 shrink-0 touch-none select-none items-stretch justify-center bg-transparent outline-none md:flex",
-        "cursor-col-resize focus-visible:bg-primary/10",
+        "cursor-col-resize focus-visible:bg-primary-soft",
       )}
       onDoubleClick={() => onCommit(INBOX_QUEUE_DEFAULT_WIDTH)}
       onPointerDown={(event) => {

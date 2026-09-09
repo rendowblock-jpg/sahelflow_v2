@@ -170,7 +170,7 @@ function HighlightedMessageBody({
         index % 2 === 1 ? (
           <mark
             key={index}
-            className="rounded-sm bg-warning/30 px-0.5 text-foreground"
+            className="rounded-control bg-warning/30 px-0.5 text-foreground"
           >
             {part}
           </mark>
@@ -378,7 +378,7 @@ function CopyMessageButton({
       }}
       aria-live="polite"
       className={cn(
-        "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
+        "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
         state === "failed"
           ? "text-destructive opacity-100"
           : state === "copied"
@@ -465,12 +465,12 @@ const MessageBubble = memo(function MessageBubble({
   // the logical corner tails; message text itself stays dir="auto" below.
   const renderQuoteBody = () => (
     <>
-      <div className="flex items-center gap-1 text-2xs font-medium text-primary">
+      <div className="flex items-center gap-1 text-caption font-medium text-primary">
         <Reply className="size-3" aria-hidden="true" />
         <span>{copy("replyingTo")}</span>
       </div>
       <p
-        className="mt-0.5 line-clamp-2 break-words text-2xs leading-4 text-muted-foreground"
+        className="mt-0.5 line-clamp-2 break-words text-caption leading-4 text-muted-foreground"
         dir="auto"
       >
         {message.quoted?.preview || "…"}
@@ -487,7 +487,7 @@ const MessageBubble = memo(function MessageBubble({
         "group/message relative space-y-1.5",
         groupStart ? "mt-4" : "mt-1",
         highlighted &&
-          "rounded-2xl ring-2 ring-primary/60 ring-offset-2 ring-offset-background transition-shadow",
+          "rounded-surface ring-2 ring-primary/60 ring-offset-2 ring-offset-background transition-shadow",
       )}
       dir="ltr"
     >
@@ -497,13 +497,13 @@ const MessageBubble = memo(function MessageBubble({
             "max-w-[min(38rem,80%)] rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
             inbound
               ? "border-border/70 bg-background text-foreground"
-              : "border-primary/20 bg-primary/10 text-foreground",
+              : "border-primary/20 bg-primary-soft text-foreground",
             // Tail corner sits on the group's last bubble; continuation
             // bubbles soften their connecting corners (WhatsApp grouping).
-            inbound && groupEnd && "rounded-es-md",
-            !inbound && groupEnd && "rounded-ee-md",
-            inbound && !groupStart && "rounded-ss-md",
-            !inbound && !groupStart && "rounded-se-md",
+            inbound && groupEnd && "rounded-es-control",
+            !inbound && groupEnd && "rounded-ee-control",
+            inbound && !groupStart && "rounded-ss-control",
+            !inbound && !groupStart && "rounded-se-control",
           )}
         >
           {message.quoted || message.quotedMessageId ? (
@@ -516,14 +516,14 @@ const MessageBubble = memo(function MessageBubble({
                 }}
                 aria-label={copy("jumpToMessage")}
                 title={copy("jumpToMessage")}
-                className="mb-2 block w-full rounded-lg border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5 text-start outline-none transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring"
+                className="mb-2 block w-full rounded-surface border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5 text-start outline-none transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {renderQuoteBody()}
               </button>
             ) : (
               <div
                 title={copy("quoteNotLoaded")}
-                className="mb-2 rounded-lg border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5"
+                className="mb-2 rounded-surface border-s-2 border-primary/40 bg-background/60 px-2.5 py-1.5"
               >
                 {renderQuoteBody()}
               </div>
@@ -533,7 +533,7 @@ const MessageBubble = memo(function MessageBubble({
           {media ? (
             <div
               className={cn(
-                "mb-2 rounded-xl border p-3",
+                "mb-2 rounded-surface border p-3",
                 inbound
                   ? "border-border/60 bg-muted/30"
                   : "border-primary/15 bg-background/55",
@@ -630,14 +630,14 @@ const MessageBubble = memo(function MessageBubble({
                 />
               </div>
               <div className="mt-1 flex items-center justify-between gap-2">
-                <span className="text-2xs tabular-nums text-muted-foreground">
+                <span className="text-caption tabular-nums text-muted-foreground">
                   {copy("uploadProgress", { percent: upload.progress })}
                 </span>
                 {upload.cancellable ? (
                   <button
                     type="button"
                     onClick={() => onCancelUpload(message.id)}
-                    className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-2xs font-medium text-destructive outline-none transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex min-h-7 items-center gap-1 rounded-control px-2 text-caption font-medium text-destructive outline-none transition-colors hover:bg-destructive-soft focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <X className="size-3" aria-hidden="true" />
                     {copy("cancelUpload")}
@@ -647,7 +647,7 @@ const MessageBubble = memo(function MessageBubble({
             </div>
           ) : null}
 
-          <div className="mt-1 flex items-center justify-end gap-1 text-2xs tabular-nums text-muted-foreground">
+          <div className="mt-1 flex items-center justify-end gap-1 text-caption tabular-nums text-muted-foreground">
             <span>{messageTime(message.timestamp, locale)}</span>
             {!inbound ? (
               <MessageStatus status={message.deliveryStatus ?? "sent"} />
@@ -676,7 +676,7 @@ const MessageBubble = memo(function MessageBubble({
               type="button"
               onClick={() => onReply(message)}
               aria-label={copy("replyToMessage")}
-              className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100"
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100"
             >
               <Reply className="size-3 icon-rtl-flip" aria-hidden="true" />
               {copy("replyToMessage")}
@@ -707,9 +707,9 @@ const MessageBubble = memo(function MessageBubble({
             onClick={() => onChooseCandidate(message.id)}
             aria-pressed={candidate}
             className={cn(
-              "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
+              "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
               candidate
-                ? "bg-primary/9 text-primary"
+                ? "bg-primary-soft text-primary"
                 : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",
             )}
           >
@@ -733,7 +733,7 @@ const MessageBubble = memo(function MessageBubble({
             {t("inbox.retry")}
           </Button>
           {message.outboxErrorCode ? (
-            <span className="font-mono text-2xs text-muted-foreground">
+            <span className="font-mono text-caption text-muted-foreground">
               {message.outboxErrorCode}
             </span>
           ) : null}
@@ -1195,7 +1195,7 @@ export function InboxV3Thread({
         className="flex min-h-0 min-w-0 flex-1 items-center justify-center bg-muted/[0.06] p-8"
       >
         <div className="max-w-sm text-center">
-          <div className="mx-auto flex size-11 items-center justify-center rounded-2xl border border-border/70 bg-background shadow-sm">
+          <div className="mx-auto flex size-11 items-center justify-center rounded-surface border border-border/70 bg-background shadow-sm">
             <MessageSquareText
               className="size-5 text-muted-foreground"
               aria-hidden="true"
@@ -1289,7 +1289,7 @@ export function InboxV3Thread({
           ) : null}
 
           <Avatar className="size-9 border border-border/70 bg-background">
-            <AvatarFallback className="bg-primary/7 text-[13px] font-semibold text-primary">
+            <AvatarFallback className="bg-primary-soft text-[13px] font-semibold text-primary">
               {activeChat.name.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -1313,7 +1313,7 @@ export function InboxV3Thread({
                 />
               )}
             </div>
-            <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-2xs text-muted-foreground">
+            <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-caption text-muted-foreground">
               {activeChat.phone ? (
                 <span dir="ltr" className="truncate tabular-nums">
                   {activeChat.phone}
@@ -1408,7 +1408,7 @@ export function InboxV3Thread({
               </SheetHeader>
               {selectedCandidate && activeChat.transportId ? (
                 <div className="mt-5 space-y-4">
-                  <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                  <div className="rounded-surface border border-border/70 bg-muted/20 p-3">
                     <p className="text-xs font-medium text-muted-foreground">
                       {copy("orderCandidate")}
                     </p>
@@ -1494,7 +1494,7 @@ export function InboxV3Thread({
             threadMatchCount > 0 ? (
               <span
                 aria-live="polite"
-                className="shrink-0 text-2xs tabular-nums text-muted-foreground"
+                className="shrink-0 text-caption tabular-nums text-muted-foreground"
               >
                 {copy("searchPosition", {
                   index: safeThreadIndex + 1,
@@ -1502,7 +1502,7 @@ export function InboxV3Thread({
                 })}
               </span>
             ) : (
-              <span className="shrink-0 text-2xs text-muted-foreground">
+              <span className="shrink-0 text-caption text-muted-foreground">
                 {copy("searchNoMatches")}
               </span>
             )
@@ -1653,7 +1653,7 @@ export function InboxV3Thread({
                   {showDay ? (
                     <div
                       role="separator"
-                      className="mt-4 flex items-center gap-3 py-2 text-2xs font-medium text-muted-foreground"
+                      className="mt-4 flex items-center gap-3 py-2 text-caption font-medium text-muted-foreground"
                     >
                       <span className="h-px flex-1 bg-border/55" />
                       <span>
@@ -1668,10 +1668,10 @@ export function InboxV3Thread({
                       onClick={dismissUnreadDivider}
                       aria-label={copy("newMessagesDivider")}
                       title={copy("newMessagesDivider")}
-                      className="mt-3 flex w-full items-center gap-3 py-1 text-2xs font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="mt-3 flex w-full items-center gap-3 py-1 text-caption font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <span className="h-px flex-1 bg-primary/35" />
-                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5">
+                      <span className="rounded-full bg-primary-soft px-2.5 py-0.5">
                         {copy("newMessagesDivider")}
                       </span>
                       <span className="h-px flex-1 bg-primary/35" />
@@ -1721,7 +1721,7 @@ export function InboxV3Thread({
           >
             <ArrowDown className="size-4" aria-hidden="true" />
             {missedMessageCount > 0 ? (
-              <span className="absolute -end-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 tabular-nums text-primary-foreground">
+              <span className="absolute -end-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-caption font-bold leading-4 tabular-nums text-primary-foreground">
                 {missedMessageCount > 99 ? "99+" : missedMessageCount}
               </span>
             ) : null}
@@ -1733,7 +1733,7 @@ export function InboxV3Thread({
         {canCompose ? (
           <div className="mx-auto max-w-[56rem]">
             {!canSend ? (
-              <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-warning/15 bg-warning/5 px-3 py-2 text-xs text-muted-foreground">
+              <div className="mb-2 flex flex-wrap items-center gap-2 rounded-surface border border-warning/15 bg-warning-subtle px-3 py-2 text-xs text-muted-foreground">
                 <WifiOff
                   className="size-3.5 shrink-0 text-warning"
                   aria-hidden="true"
@@ -1744,7 +1744,7 @@ export function InboxV3Thread({
             ) : null}
 
             <div
-              className="rounded-2xl border border-border/75 bg-muted/15 p-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/15 data-[drag-active=true]:border-primary data-[drag-active=true]:bg-primary/5"
+              className="rounded-surface border border-border/75 bg-muted/15 p-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/15 data-[drag-active=true]:border-primary data-[drag-active=true]:bg-primary-subtle"
               data-drag-active={dragActive ? "true" : "false"}
               onDragOver={(event) => {
                 if (!canSend) return;
@@ -1772,7 +1772,7 @@ export function InboxV3Thread({
             >
               {replyTarget ? (
                 <div
-                  className="flex w-full items-start gap-2 rounded-xl border border-border/70 bg-background/80 px-2.5 py-1.5"
+                  className="flex w-full items-start gap-2 rounded-surface border border-border/70 bg-background/80 px-2.5 py-1.5"
                   data-inbox-reply-chip="true"
                 >
                   <Reply
@@ -1780,11 +1780,11 @@ export function InboxV3Thread({
                     aria-hidden="true"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-2xs font-medium text-primary">
+                    <p className="text-caption font-medium text-primary">
                       {copy("replyingTo")}
                     </p>
                     <p
-                      className="truncate text-2xs leading-4 text-muted-foreground"
+                      className="truncate text-caption leading-4 text-muted-foreground"
                       dir="auto"
                     >
                       {replyTarget.body.trim() ||
@@ -1796,7 +1796,7 @@ export function InboxV3Thread({
                     type="button"
                     onClick={() => setReplyTarget(null)}
                     aria-label={t("common.cancel")}
-                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <X className="size-3.5" aria-hidden="true" />
                   </button>
@@ -1823,7 +1823,7 @@ export function InboxV3Thread({
                     <Trash2 className="size-4" aria-hidden="true" />
                   </Button>
                   <div className="min-w-0 flex-1">
-                    <p className="mb-0.5 truncate text-2xs text-muted-foreground">
+                    <p className="mb-0.5 truncate text-caption text-muted-foreground">
                       {copy("voicePreviewTitle")}
                     </p>
                     <VoiceNotePlayer
@@ -1912,7 +1912,7 @@ export function InboxV3Thread({
                         data-inbox-voice-cancel="true"
                         className={cn(
                           slideArmed &&
-                            "bg-destructive/15 text-destructive hover:bg-destructive/20 hover:text-destructive",
+                            "bg-destructive-strong text-destructive hover:bg-destructive/20 hover:text-destructive",
                         )}
                         onClick={voiceRecorder.cancel}
                       >
@@ -2196,7 +2196,7 @@ export function InboxV3Thread({
             </div>
           </div>
         ) : (
-          <div className="mx-auto flex max-w-[56rem] items-center gap-2 rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5 text-sm text-muted-foreground">
+          <div className="mx-auto flex max-w-[56rem] items-center gap-2 rounded-surface border border-border/70 bg-muted/20 px-3 py-2.5 text-sm text-muted-foreground">
             {canReply ? (
               <WifiOff className="size-4 shrink-0" aria-hidden="true" />
             ) : (

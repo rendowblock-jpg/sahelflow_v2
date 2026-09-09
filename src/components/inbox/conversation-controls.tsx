@@ -134,7 +134,7 @@ export function StatusControl({
           <button
             type="button"
             className={cn(
-              "flex items-center gap-1 rounded-md text-xs font-medium transition-colors",
+              "flex items-center gap-1 rounded-control text-xs font-medium transition-colors",
               appearance === "badge"
                 ? "border-0 bg-transparent p-0 hover:opacity-80"
                 : "border px-2 py-1 hover:bg-muted",
@@ -219,7 +219,7 @@ export function StatusControl({
               </Button>
             </div>
             {customSnoozeError ? (
-              <p className="mt-1.5 text-2xs text-destructive">
+              <p className="mt-1.5 text-caption text-destructive">
                 {t("inbox.snooze.futureDate")}
               </p>
             ) : null}
@@ -274,7 +274,7 @@ export function PriorityControl({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted">
+        <button className="flex items-center gap-1.5 rounded-control border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted">
           {priority ? (
             <>
               <span
@@ -506,7 +506,7 @@ export function AssigneeControl({
 
   if (!loading && !error && !hasAvailableAction) {
     return (
-      <span className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground">
+      <span className="flex items-center gap-1.5 rounded-control border px-2 py-1 text-xs font-medium text-muted-foreground">
         <UserPlus className="h-3 w-3 opacity-50" />
         {assigneeLabel}
       </span>
@@ -517,7 +517,7 @@ export function AssigneeControl({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-60"
+          className="flex items-center gap-1.5 rounded-control border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-60"
           disabled={loading}
         >
           {loading ? (
@@ -531,7 +531,7 @@ export function AssigneeControl({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-2">
         {error ? (
-          <div className="mb-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+          <div className="mb-2 rounded-control border border-destructive/30 bg-destructive-subtle p-2 text-xs text-destructive">
             <p>{error}</p>
             <Button
               type="button"
@@ -599,7 +599,7 @@ export function AssigneeControl({
                     <span className="truncate">
                       {member.displayName ?? t("inbox.assignment.owner")}
                     </span>
-                    <span className="ms-2 text-2xs text-muted-foreground">
+                    <span className="ms-2 text-caption text-muted-foreground">
                       {member.role === "owner"
                         ? t("inbox.assignment.owner")
                         : member.role === "manager"
@@ -676,7 +676,7 @@ export function LabelsControl({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted">
+        <button className="flex items-center gap-1.5 rounded-control border px-2 py-1 text-xs font-medium transition-colors hover:bg-muted">
           <Tag className="h-3 w-3 opacity-50" />
           {labels.length > 0
             ? t("inbox.labels.count", { count: labels.length })

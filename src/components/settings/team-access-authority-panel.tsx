@@ -628,12 +628,12 @@ export function TeamAccessAuthorityPanel() {
       </div>
 
       {error ? (
-        <div role="alert" className="rounded-lg border border-destructive/30 p-4 text-sm text-destructive">
+        <div role="alert" className="rounded-surface border border-destructive/30 p-4 text-sm text-destructive">
           {error}
         </div>
       ) : null}
 
-      <div className="rounded-lg border p-4">
+      <div className="rounded-surface border p-4">
         <div className="flex items-center gap-2">
           <UserPlus className="h-4 w-4" />
           <h4 className="text-sm font-semibold">{copy.create}</h4>
@@ -652,7 +652,7 @@ export function TeamAccessAuthorityPanel() {
                 <select
                   value={role}
                   onChange={(event) => changeRole(event.target.value as InviteRole)}
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="h-10 w-full rounded-control border bg-background px-3 text-sm"
                 >
                   <option value="manager">{copy.manager}</option>
                   <option value="operator">{copy.operator}</option>
@@ -665,7 +665,7 @@ export function TeamAccessAuthorityPanel() {
                 <select
                   value={expiry}
                   onChange={(event) => setExpiry(Number(event.target.value))}
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="h-10 w-full rounded-control border bg-background px-3 text-sm"
                 >
                   {[24, 72, 168].map((hours) => (
                     <option key={hours} value={hours}>
@@ -752,11 +752,11 @@ export function TeamAccessAuthorityPanel() {
       </div>
 
       {token ? (
-        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <div className="rounded-surface border border-primary/30 bg-primary-subtle p-4">
           <h4 className="text-sm font-semibold">{copy.tokenTitle}</h4>
           <p className="mt-1 text-sm text-muted-foreground">{copy.tokenDescription}</p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <code dir="ltr" className="min-w-0 flex-1 break-all rounded-md border bg-background p-3 text-xs">
+            <code dir="ltr" className="min-w-0 flex-1 break-all rounded-control border bg-background p-3 text-xs">
               {token}
             </code>
             <Button
@@ -776,12 +776,12 @@ export function TeamAccessAuthorityPanel() {
       ) : null}
 
       {tokenUnavailable ? (
-        <div role="alert" className="rounded-lg border p-4 text-sm text-muted-foreground">
+        <div role="alert" className="rounded-surface border p-4 text-sm text-muted-foreground">
           {copy.tokenUnavailable}
         </div>
       ) : null}
 
-      <div className="rounded-lg border">
+      <div className="rounded-surface border">
         <div className="border-b px-4 py-3">
           <h4 className="text-sm font-semibold">{copy.invitations}</h4>
         </div>
@@ -820,18 +820,20 @@ export function TeamAccessAuthorityPanel() {
       </div>
 
       {pending ? (
-        <div className="rounded-lg border p-4" role="dialog" aria-labelledby="team-authority-reauth-title">
+        <div className="rounded-surface border p-4" role="dialog" aria-labelledby="team-authority-reauth-title">
           <div className="flex items-center gap-2">
             <KeyRound className="h-4 w-4" />
             <h4 id="team-authority-reauth-title" className="text-sm font-semibold">
               {copy.reauthTitle}
             </h4>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">{copy.reauthDescription}</p>
+          <p id="team-authority-reauth-hint" className="mt-1 text-sm text-muted-foreground">{copy.reauthDescription}</p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <Input
               type="password"
               inputMode="numeric"
+              aria-describedby="team-authority-reauth-hint"
+              aria-label={copy.pin}
               autoComplete="current-password"
               value={pin}
               onChange={(event) => setPin(event.target.value)}

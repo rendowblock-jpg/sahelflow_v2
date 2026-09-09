@@ -21,6 +21,7 @@ import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import { getWhatsAppPairingCopy } from "@/lib/i18n/whatsapp-pairing";
 import { toast } from "@/lib/toast";
 import type { WhatsAppStatus } from "@/lib/whatsapp/types";
+import { IconTile } from "@/components/system";
 
 /**
  * Onboarding WhatsApp pairing panel (R4-b).
@@ -193,12 +194,12 @@ export function OnboardingPairingPanel({
   return (
     <div
       data-onboarding-pairing={phase}
-      className="overflow-hidden rounded-xl border"
+      className="overflow-hidden rounded-surface border"
     >
       <div className="px-6 py-6">
         {phase === "starting" || phase === "waiting-qr" ? (
           <div className="flex min-h-64 flex-col items-center justify-center text-center">
-            <div className="flex size-14 items-center justify-center rounded-2xl border bg-primary/8 text-primary">
+            <div className="flex size-14 items-center justify-center rounded-surface border bg-primary-soft text-primary">
               <Loader2 className="size-6 animate-spin" aria-hidden="true" />
             </div>
             <h3 className="mt-5 text-base font-semibold">
@@ -216,7 +217,7 @@ export function OnboardingPairingPanel({
 
         {phase === "qr-ready" ? (
           <div className="grid gap-6 sm:grid-cols-[15rem_1fr] sm:items-center">
-            <div className="mx-auto flex size-60 items-center justify-center rounded-3xl border bg-white p-3 shadow-sm">
+            <div className="mx-auto flex size-60 items-center justify-center rounded-surface border bg-white p-3 shadow-sm">
               {qrImageFailed ? (
                 <div className="px-4 text-center text-slate-700">
                   <TriangleAlert className="mx-auto size-7" aria-hidden="true" />
@@ -234,7 +235,7 @@ export function OnboardingPairingPanel({
                   key={`${qrKey}:${qrRevision}`}
                   src={`/api/whatsapp/qr-image?refresh=${qrKey}-${qrRevision}`}
                   alt={pairingCopy("qrAlt")}
-                  className="size-full rounded-2xl object-contain"
+                  className="size-full rounded-surface object-contain"
                   onLoad={() => setQrImageFailed(false)}
                   onError={() => setQrImageFailed(true)}
                 />
@@ -242,9 +243,7 @@ export function OnboardingPairingPanel({
             </div>
 
             <div className="text-start">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Smartphone className="size-5" aria-hidden="true" />
-              </div>
+              <IconTile icon={Smartphone} tone="primary" size="lg" />
               <h3 className="mt-4 text-base font-semibold">
                 {pairingCopy("scanTitle")}
               </h3>
@@ -277,7 +276,7 @@ export function OnboardingPairingPanel({
             data-onboarding-pairing-connected="true"
             className="flex min-h-64 flex-col items-center justify-center text-center"
           >
-            <div className="flex size-14 items-center justify-center rounded-2xl bg-success/10 text-success">
+            <div className="flex size-14 items-center justify-center rounded-surface bg-success-soft text-success">
               <CheckCircle2 className="size-7" aria-hidden="true" />
             </div>
             <h3 className="mt-5 text-base font-semibold">
@@ -291,7 +290,7 @@ export function OnboardingPairingPanel({
 
         {phase === "unavailable" || phase === "disconnected" ? (
           <div className="flex min-h-64 flex-col items-center justify-center text-center">
-            <div className="flex size-14 items-center justify-center rounded-2xl border bg-destructive/8 text-destructive">
+            <div className="flex size-14 items-center justify-center rounded-surface border bg-destructive-soft text-destructive">
               {phase === "unavailable" ? (
                 <WifiOff className="size-6" aria-hidden="true" />
               ) : (

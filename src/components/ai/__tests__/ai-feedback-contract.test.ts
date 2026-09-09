@@ -56,12 +56,15 @@ describe("AI thumbs feedback (AI-13)", () => {
     expect(hook).toContain("const sendFeedback = useCallback(");
     expect(hook).toContain('body: JSON.stringify({ value })');
     expect(hook).toContain("feedback: previous ?? null");
-    expect(canvas).toContain('data-ai-feedback-up="true"');
-    expect(canvas).toContain('data-ai-feedback-down="true"');
-    expect(canvas).toContain("aria-pressed={message.feedback === \"up\"}");
+    // STR-01 moved MessageBubble into its own module. The thumbs live there;
+    // the canvas still owns the wiring that hands them the handler.
+    const bubble = source("src/components/ai/ai-message-bubble.tsx");
+    expect(bubble).toContain('data-ai-feedback-up="true"');
+    expect(bubble).toContain('data-ai-feedback-down="true"');
+    expect(bubble).toContain("aria-pressed={message.feedback === \"up\"}");
     expect(canvas).toContain("onFeedback={sendFeedback}");
     // The thumbs never decorate streaming or empty bubbles.
-    expect(canvas).toContain("!message.streaming && message.content");
+    expect(bubble).toContain("!message.streaming && message.content");
   });
 
   it("ships the feedback labels in en/fr/ar", () => {

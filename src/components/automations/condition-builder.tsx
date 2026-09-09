@@ -103,17 +103,17 @@ export function ConditionBuilder({ value, onChange }: ConditionBuilderProps) {
   };
 
   return (
-    <div className="space-y-3 rounded-lg border p-4">
+    <div className="space-y-3 rounded-surface border p-4">
       {/* Mode switcher */}
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium">{t("conditionBuilder.match")}</span>
-        <div className="flex items-center gap-1 rounded-md border p-0.5" role="group" aria-label={t("conditionBuilder.match")}>
+        <div className="flex items-center gap-1 rounded-control border p-0.5" role="group" aria-label={t("conditionBuilder.match")}>
           <button
             type="button"
             onClick={() => switchMode("all")}
             aria-pressed={mode === "all"}
             className={cn(
-              "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+              "rounded-control px-2.5 py-1 text-xs font-medium transition-colors",
               mode === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -124,7 +124,7 @@ export function ConditionBuilder({ value, onChange }: ConditionBuilderProps) {
             onClick={() => switchMode("any")}
             aria-pressed={mode === "any"}
             className={cn(
-              "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+              "rounded-control px-2.5 py-1 text-xs font-medium transition-colors",
               mode === "any" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >

@@ -144,7 +144,7 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
             {copy("loading")}
           </div>
         ) : loadState === "error" ? (
-          <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-warning/25 bg-warning/5 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-4 rounded-surface border border-warning/25 bg-warning-subtle p-4">
             <div className="flex min-w-0 items-start gap-3">
               <AlertTriangle
                 className="mt-0.5 size-5 shrink-0 text-warning"
@@ -172,7 +172,7 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
             {list.map((entry) => (
               <div
                 key={`${entry.phone}:${entry.at}`}
-                className="flex items-center justify-between rounded-lg border p-2.5"
+                className="flex items-center justify-between rounded-surface border p-2.5"
               >
                 <div>
                   <p className="font-mono text-sm" dir="ltr">
@@ -186,7 +186,7 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
             ))}
           </div>
         ) : (
-          <p className="rounded-lg border border-dashed py-4 text-center text-sm text-muted-foreground">
+          <p className="rounded-surface border border-dashed py-4 text-center text-sm text-muted-foreground">
             {t("phoneReputation.empty")}
           </p>
         )}

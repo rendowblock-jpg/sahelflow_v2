@@ -306,11 +306,11 @@ export function CommerceIntegrationsPanel({
             return (
               <div
                 key={definition.id}
-                className="rounded-xl border bg-background/70 p-4"
+                className="rounded-surface border bg-background/70 p-4"
               >
                 <div className="flex items-start gap-3">
                   <span
-                    className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${definition.iconContainerClassName}`}
+                    className={`flex size-10 shrink-0 items-center justify-center rounded-surface ${definition.iconContainerClassName}`}
                   >
                     <Icon
                       className={`size-5 ${definition.iconClassName}`}
@@ -364,7 +364,7 @@ export function CommerceIntegrationsPanel({
           })}
         </div>
 
-        <div className="flex items-center gap-2 rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 rounded-surface border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
           <GoogleSheetsIcon className="size-4 shrink-0" aria-hidden="true" />
           <span>{t("common.comingSoon")}: Google Sheets</span>
         </div>
@@ -409,17 +409,19 @@ export function CommerceIntegrationsPanel({
             ))}
 
             {reauthRequired ? (
-              <div className="space-y-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
+              <div className="space-y-3 rounded-surface border border-warning/30 bg-warning-subtle p-3">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <KeyRound className="size-4" aria-hidden="true" />
                   {copy("reauthTitle")}
                 </div>
-                <p className="text-xs leading-5 text-muted-foreground">
+                <p id="commerce-reauth-hint" className="text-xs leading-5 text-muted-foreground">
                   {copy("reauthDescription")}
                 </p>
                 <Input
                   type="password"
                   inputMode="numeric"
+                  aria-describedby={reauthError ? "commerce-reauth-hint commerce-reauth-error" : "commerce-reauth-hint"}
+                  aria-invalid={reauthError ? true : undefined}
                   autoComplete="current-password"
                   value={pin}
                   onChange={(event) => setPin(event.target.value)}
@@ -430,7 +432,7 @@ export function CommerceIntegrationsPanel({
                   }}
                 />
                 {reauthError ? (
-                  <p role="alert" className="text-xs text-destructive">
+                  <p id="commerce-reauth-error" role="alert" className="text-xs text-destructive">
                     {reauthError}
                   </p>
                 ) : null}

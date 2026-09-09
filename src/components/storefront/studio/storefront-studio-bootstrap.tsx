@@ -21,6 +21,7 @@ import {
 } from "@/lib/storefront/presentation-types";
 import { createDefaultStorefrontTheme } from "@/lib/storefront/theme-default";
 import { toast } from "@/lib/toast";
+import { IconTile } from "@/components/system";
 
 interface Props {
   products: StorefrontStudioProduct[];
@@ -187,7 +188,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
   return (
     <div
       data-storefront-studio="bootstrap"
-      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-surface border bg-background"
     >
       <header className="flex min-h-16 items-center justify-between gap-3 border-b px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
@@ -196,9 +197,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
               <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
             </Link>
           </Button>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-primary/8 text-primary">
-            <Store className="size-4" aria-hidden="true" />
-          </span>
+          <IconTile icon={Store} tone="primary" size="md" bordered />
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold">
               {t("storefronts.newTitle")}
@@ -246,7 +245,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                 <Label htmlFor="studio-slug">
                   {t("storefront.builder.slug")} *
                 </Label>
-                <div className="flex items-center gap-2 rounded-lg border bg-background px-3 focus-within:ring-2 focus-within:ring-ring/25">
+                <div className="flex items-center gap-2 rounded-surface border bg-background px-3 focus-within:ring-2 focus-within:ring-ring/25">
                   <span dir="ltr" className="shrink-0 text-xs text-muted-foreground">
                     /storefront/
                   </span>
@@ -333,9 +332,9 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                       type="button"
                       aria-pressed={selected}
                       onClick={() => setTemplate(id)}
-                      className={`rounded-xl border p-3 text-start transition ${
+                      className={`rounded-surface border p-3 text-start transition ${
                         selected
-                          ? "border-primary bg-primary/8 ring-1 ring-primary/20"
+                          ? "border-primary bg-primary-soft ring-1 ring-primary/20"
                           : "bg-background hover:bg-muted/50"
                       }`}
                     >
@@ -369,7 +368,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                 <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                 <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t("storefront.builder.searchProduct")} className="ps-9" />
               </div>
-              <div className="mt-2 max-h-64 space-y-1 overflow-y-auto rounded-lg border bg-background p-1">
+              <div className="mt-2 max-h-64 space-y-1 overflow-y-auto rounded-surface border bg-background p-1">
                 {filteredProducts.length === 0 ? (
                   <p className="p-4 text-center text-xs text-muted-foreground">
                     {products.length === 0
@@ -385,13 +384,13 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                         type="button"
                         aria-pressed={selected}
                         onClick={() => toggleProduct(product.id)}
-                        className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start transition ${selected ? "bg-primary/8" : "hover:bg-muted/60"}`}
+                        className={`flex w-full items-center gap-2 rounded-control px-2.5 py-2 text-start transition ${selected ? "bg-primary-soft" : "hover:bg-muted/60"}`}
                       >
-                        <span className={`flex size-5 shrink-0 items-center justify-center rounded border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}>
+                        <span className={`flex size-5 shrink-0 items-center justify-center rounded-control border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}>
                           {selected ? <Check className="size-3" aria-hidden="true" /> : null}
                         </span>
                         <span className="min-w-0 flex-1 truncate text-xs font-medium">{product.name}</span>
-                        <span className="shrink-0 text-2xs tabular-nums text-muted-foreground">{product.stock}</span>
+                        <span className="shrink-0 text-caption tabular-nums text-muted-foreground">{product.stock}</span>
                       </button>
                     );
                   })
@@ -402,11 +401,11 @@ export function StorefrontStudioBootstrap({ products }: Props) {
         </aside>
 
         <main className="min-h-0 overflow-auto bg-muted/20 p-4 lg:p-6">
-          <div className="mx-auto min-h-full max-w-6xl overflow-hidden rounded-xl border bg-background shadow-sm">
+          <div className="mx-auto min-h-full max-w-6xl overflow-hidden rounded-surface border bg-background shadow-sm">
             <div className="flex items-center justify-between gap-3 border-b bg-background px-4 py-2.5">
               <div>
                 <p className="text-xs font-semibold">{t("storefront.studio.preview")}</p>
-                <p className="text-2xs text-muted-foreground">{t("storefronts.newDesc")}</p>
+                <p className="text-caption text-muted-foreground">{t("storefronts.newDesc")}</p>
               </div>
               <Badge variant="outline">{t(TEMPLATE_COPY[template].label)}</Badge>
             </div>

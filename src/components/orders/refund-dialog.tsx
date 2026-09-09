@@ -61,7 +61,7 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <div className="rounded-lg bg-muted p-3 text-sm space-y-1">
+          <div className="rounded-surface bg-muted p-3 text-sm space-y-1">
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("refund.orderTotal")}</span>
               <span className="font-medium">{formatDZD(maxAmount, locale)}</span>

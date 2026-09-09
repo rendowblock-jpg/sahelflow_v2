@@ -416,10 +416,10 @@ export function CanonicalCodDashboard({
       </div>
 
       {notice ? (
-        <p role="status" className="rounded-md border border-success/30 bg-success/10 p-3 text-sm text-success">{notice}</p>
+        <p role="status" className="rounded-control border border-success/30 bg-success-soft p-3 text-sm text-success">{notice}</p>
       ) : null}
       {error ? (
-        <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>
+        <p role="alert" className="rounded-control border border-destructive/30 bg-destructive-soft p-3 text-sm text-destructive">{error}</p>
       ) : null}
 
       <Card>
@@ -440,7 +440,7 @@ export function CanonicalCodDashboard({
                 const referenceId = `cod-collection-reference-${item.orderId}`;
                 const dateId = `cod-collection-date-${item.orderId}`;
                 return (
-                  <div key={item.orderId} className="rounded-lg border p-4">
+                  <div key={item.orderId} className="rounded-surface border p-4">
                     <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="font-mono text-sm font-semibold">{item.orderNumber}</p>
@@ -477,7 +477,7 @@ export function CanonicalCodDashboard({
           {summary.awaitingRemittance.length === 0 ? (
             <EmptyState icon={CheckCircle2} title={t("codReconciliation.noRemittance")} />
           ) : (
-            <div className="overflow-x-auto rounded-lg border">
+            <div className="overflow-x-auto rounded-surface border">
               <table className="w-full min-w-[900px] text-sm">
                 <thead className="border-b bg-muted/60 text-muted-foreground">
                   <tr>
@@ -495,7 +495,7 @@ export function CanonicalCodDashboard({
                   {summary.awaitingRemittance.map((item) => {
                     const draft = settlementDraft(item);
                     return (
-                      <tr key={item.orderId} className={draft.selected ? "bg-primary/5" : undefined}>
+                      <tr key={item.orderId} className={draft.selected ? "bg-primary-subtle" : undefined}>
                         <td className="p-3"><Checkbox checked={draft.selected} onCheckedChange={(value) => toggleOrder(item, value === true)} aria-label={`${t("codReconciliation.select")} ${item.orderNumber}`} /></td>
                         <td className="p-3"><p className="font-mono font-medium">{item.orderNumber}</p><p className="text-xs text-muted-foreground">{item.customerName}</p></td>
                         <td className="p-3" dir="auto">{item.provider}</td>
@@ -512,7 +512,7 @@ export function CanonicalCodDashboard({
             </div>
           )}
 
-          <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
+          <div className="space-y-4 rounded-surface border bg-muted/20 p-4">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div className="space-y-1.5"><Label htmlFor="cod-batch-provider">{t("codReconciliation.provider")}</Label><Input id="cod-batch-provider" dir="auto" disabled={Boolean(selectedProvider)} value={selectedProvider ?? batch.provider} onChange={(event) => setBatch((current) => ({ ...current, provider: event.target.value }))} /></div>
               <div className="space-y-1.5"><Label htmlFor="cod-batch-reference">{t("codReconciliation.batchReference")}</Label><Input id="cod-batch-reference" dir="auto" value={batch.reference} onChange={(event) => setBatch((current) => ({ ...current, reference: event.target.value }))} /></div>
@@ -561,7 +561,7 @@ export function CanonicalCodDashboard({
                 const orderSelectId = `cod-review-order-${line.lineId}`;
                 const reasonId = `cod-review-reason-${line.lineId}`;
                 return (
-                  <div key={line.lineId} className="rounded-lg border p-4">
+                  <div key={line.lineId} className="rounded-surface border p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div><Badge variant={line.unresolvedUnmatched ? "secondary" : "destructive"}>{line.unresolvedUnmatched ? t("codReconciliation.unmatched") : t("codReconciliation.disputed")}</Badge><p className="mt-2 font-mono text-sm">{line.externalReference}</p><p className="text-xs text-muted-foreground">{line.provider} · {formatDate(line.receivedAt, locale)}</p></div>
                       <div className="text-end text-sm tabular-nums"><p>{t("codReconciliation.gross")}: {formatDZD(line.effectiveGross, locale)}</p><p>{t("codReconciliation.fees")}: {formatDZD(line.effectiveFee, locale)}</p><p className={line.effectiveDiscrepancy === 0 ? "" : "text-destructive"}>{t("codReconciliation.reviewCount")}: {formatDZD(line.effectiveDiscrepancy, locale)}</p></div>
@@ -569,7 +569,7 @@ export function CanonicalCodDashboard({
 
                     {line.unresolvedUnmatched ? (
                       <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-                        <div className="space-y-1.5"><Label htmlFor={orderSelectId}>{t("codReconciliation.matchOrder")}</Label><select id={orderSelectId} className="h-9 w-full rounded-md border bg-background px-3 text-sm" value={draft.orderId} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, orderId: event.target.value } }))}><option value="">—</option>{matchCandidates.filter((item) => item.provider === line.provider).map((item) => <option key={item.orderId} value={item.orderId}>{item.orderNumber} · {item.customerName} · {formatDZD(item.outstandingRemittance, locale)}</option>)}</select></div>
+                        <div className="space-y-1.5"><Label htmlFor={orderSelectId}>{t("codReconciliation.matchOrder")}</Label><select id={orderSelectId} className="h-9 w-full rounded-control border bg-background px-3 text-sm" value={draft.orderId} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, orderId: event.target.value } }))}><option value="">—</option>{matchCandidates.filter((item) => item.provider === line.provider).map((item) => <option key={item.orderId} value={item.orderId}>{item.orderNumber} · {item.customerName} · {formatDZD(item.outstandingRemittance, locale)}</option>)}</select></div>
                         <div className="space-y-1.5"><Label htmlFor={reasonId}>{t("codReconciliation.reason")}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
                         <Button disabled={Boolean(busy) || !matchingOrder || !draft.reason.trim()} onClick={() => matchingOrder && void commit(operationKey, `/api/accounting/cod-settlements/lines/${line.lineId}/match`, { orderId: matchingOrder.orderId, expectedVersion: matchingOrder.orderVersion, reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{t("codReconciliation.match")}</Button>
                       </div>
@@ -595,7 +595,7 @@ export function CanonicalCodDashboard({
                 const deltaId = `cod-collection-delta-${item.orderId}`;
                 const reasonId = `cod-collection-reason-${item.orderId}`;
                 return (
-                  <div key={operationKey} className="rounded-lg border border-warning/40 p-4">
+                  <div key={operationKey} className="rounded-surface border border-warning/40 p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3"><div><Badge variant="outline">{t("codReconciliation.collectionCorrection")}</Badge><p className="mt-2 font-mono text-sm font-semibold">{item.orderNumber}</p><p className="text-sm text-muted-foreground">{item.customerName}</p></div><div className="text-end text-sm"><p>{t("codReconciliation.expectedAmount")}: {formatDZD(item.expectedReceivable, locale)}</p><p>{t("codReconciliation.collectedTotal")}: {formatDZD(item.effectiveCollected, locale)}</p><p className="text-destructive">{t("codReconciliation.reviewCount")}: {formatDZD(item.discrepancy, locale)}</p></div></div>
                     <div className="mt-4 grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end"><div className="space-y-1.5"><Label htmlFor={deltaId}>{t("codReconciliation.collectionDelta")}</Label><Input id={deltaId} inputMode="numeric" value={draft.delta} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, delta: event.target.value } }))} /></div><div className="space-y-1.5"><Label htmlFor={reasonId}>{t("codReconciliation.reason")}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, reason: event.target.value } }))} /></div><Button disabled={Boolean(busy) || integer(draft.delta) === 0 || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/orders/${item.orderId}/cod/collection/correction`, { expectedVersion: item.orderVersion, amountDelta: integer(draft.delta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{t("codReconciliation.correction")}</Button></div>
                   </div>
@@ -612,7 +612,7 @@ export function CanonicalCodDashboard({
           {summary.recentSettlements.length === 0 ? (
             <EmptyState icon={ReceiptText} title={t("codReconciliation.noRecent")} />
           ) : (
-            <div className="overflow-x-auto rounded-lg border">
+            <div className="overflow-x-auto rounded-surface border">
               <table className="w-full min-w-[760px] text-sm">
                 <thead className="border-b bg-muted/60 text-muted-foreground"><tr><th className="p-3 text-start">{t("codReconciliation.reference")}</th><th className="p-3 text-start">{t("codReconciliation.provider")}</th><th className="p-3 text-start">{t("codReconciliation.state")}</th><th className="p-3 text-end">{t("codReconciliation.gross")}</th><th className="p-3 text-end">{t("codReconciliation.fees")}</th><th className="p-3 text-end">{t("codReconciliation.net")}</th><th className="p-3 text-end">{t("codReconciliation.reviewCount")}</th></tr></thead>
                 <tbody className="divide-y">{summary.recentSettlements.map((item) => <tr key={item.settlementId}><td className="p-3"><p className="font-mono font-medium">{item.externalReference}</p><p className="text-xs text-muted-foreground">{formatDate(item.receivedAt, locale)} · {item.lineCount} {t("codReconciliation.lines")}</p></td><td className="p-3" dir="auto">{item.provider}</td><td className="p-3"><Badge variant={item.status === "posted" ? "outline" : "destructive"}>{item.status === "posted" ? t("codReconciliation.posted") : t("codReconciliation.needsReview")}</Badge></td><td className="p-3 text-end tabular-nums">{formatDZD(item.grossAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.feeAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.netAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.discrepancyAmount + item.unmatchedAmount, locale)}</td></tr>)}</tbody>

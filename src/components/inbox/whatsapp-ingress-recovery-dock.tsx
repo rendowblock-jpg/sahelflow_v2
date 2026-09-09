@@ -164,7 +164,7 @@ export function WhatsAppIngressRecoveryDock({
     <Sheet open={open} onOpenChange={setOpen}>
       <div
         role="status"
-        className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-warning/25 bg-warning/6 px-3 py-2"
+        className="flex min-h-10 items-center justify-between gap-3 rounded-surface border border-warning/25 bg-warning-soft px-3 py-2"
       >
         <div className="flex min-w-0 items-center gap-2 text-xs">
           <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
@@ -216,7 +216,7 @@ export function WhatsAppIngressRecoveryDock({
               const reason = reasons[event.id] ?? "";
               const retrying = retryingId === event.id;
               return (
-                <section key={event.id} className="rounded-lg border bg-muted/20 p-3.5">
+                <section key={event.id} className="rounded-surface border bg-muted/20 p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -225,12 +225,12 @@ export function WhatsAppIngressRecoveryDock({
                         </strong>
                         <Badge
                           variant={event.status === "dead_letter" ? "destructive" : "outline"}
-                          className="text-2xs"
+                          className="text-caption"
                         >
                           {tr(event.status as WhatsAppIngressRecoveryKey)}
                         </Badge>
                       </div>
-                      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-2xs text-muted-foreground">
+                      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-caption text-muted-foreground">
                         <span>{copy("attempts")}: {event.attemptCount}</span>
                         {event.lastErrorCode ? (
                           <span dir="ltr">{copy("lastError")}: {event.lastErrorCode}</span>
@@ -244,7 +244,7 @@ export function WhatsAppIngressRecoveryDock({
                       <History className="size-3.5" aria-hidden="true" />
                       {copy("history")}
                     </summary>
-                    <ol className="mt-2 space-y-1.5 ps-5 text-2xs text-muted-foreground">
+                    <ol className="mt-2 space-y-1.5 ps-5 text-caption text-muted-foreground">
                       {event.attempts.map((attempt) => (
                         <li key={attempt.id}>
                           <span dir="ltr">#{attempt.attemptNumber}</span>

@@ -334,7 +334,7 @@ export function ConversationCollaborationInline({
 
   if (mode !== "ready" && !comments && !routing) {
     return (
-      <div className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
+      <div className="rounded-surface border bg-muted/20 p-3 text-sm text-muted-foreground">
         <p>{notice}</p>
         {mode === "error" || mode === "offline" ? (
           <Button
@@ -355,7 +355,7 @@ export function ConversationCollaborationInline({
   return (
     <div className="space-y-5">
       {notice ? (
-        <div className="rounded-md border bg-muted/25 px-3 py-2 text-xs leading-5 text-muted-foreground">
+        <div className="rounded-control border bg-muted/25 px-3 py-2 text-xs leading-5 text-muted-foreground">
           {notice}
         </div>
       ) : null}
@@ -376,7 +376,7 @@ export function ConversationCollaborationInline({
                 value={queueId}
                 onChange={(event) => setQueueId(event.target.value)}
                 disabled={!routing.permissions.canRoute || savingRoute}
-                className="h-9 w-full rounded-md border bg-background px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-9 w-full rounded-control border bg-background px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="none">{copy("noQueue")}</option>
                 {routing.queues.map((queue) => (
@@ -394,7 +394,7 @@ export function ConversationCollaborationInline({
                   setWorkState(event.target.value === "closed" ? "closed" : "open")
                 }
                 disabled={!routing.permissions.canRoute || savingRoute}
-                className="h-9 w-full rounded-md border bg-background px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-9 w-full rounded-control border bg-background px-2.5 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="open">{copy("openWork")}</option>
                 <option value="closed">{copy("closedWork")}</option>
@@ -435,13 +435,13 @@ export function ConversationCollaborationInline({
           </h4>
 
           {comments.comments.length === 0 ? (
-            <p className="rounded-lg bg-muted/35 p-3 text-sm leading-5 text-muted-foreground">
+            <p className="rounded-surface bg-muted/35 p-3 text-sm leading-5 text-muted-foreground">
               {copy("noInternalNotes")}
             </p>
           ) : (
             <div className="max-h-56 space-y-2 overflow-y-auto pe-1">
               {comments.comments.map((entry) => (
-                <article key={entry.id} className="rounded-lg bg-muted/35 p-3">
+                <article key={entry.id} className="rounded-surface bg-muted/35 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                     <span>{memberLabel(entry.authorMemberId)}</span>
                     <time dateTime={entry.createdAt}>
@@ -475,7 +475,7 @@ export function ConversationCollaborationInline({
                 className="min-h-20 text-sm"
               />
               {comments.members.length > 0 ? (
-                <details className="rounded-md border bg-muted/15 px-3 py-2">
+                <details className="rounded-control border bg-muted/15 px-3 py-2">
                   <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
                     {copy("mentions")}
                   </summary>
@@ -486,8 +486,8 @@ export function ConversationCollaborationInline({
                         <label
                           key={member.memberId}
                           className={cn(
-                            "flex min-h-9 items-center gap-2 rounded-md px-2 text-xs",
-                            checked ? "bg-primary/8 text-foreground" : "hover:bg-muted/60",
+                            "flex min-h-9 items-center gap-2 rounded-control px-2 text-xs",
+                            checked ? "bg-primary-soft text-foreground" : "hover:bg-muted/60",
                           )}
                         >
                           <input

@@ -142,7 +142,7 @@ export function DangerZonePanel({
       </CardHeader>
       <CardContent className="space-y-6">
         {canExport ? (
-          <div className="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 rounded-surface border p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium">{copy("ordersExport")}</p>
               <p className="text-xs leading-5 text-muted-foreground">
@@ -159,7 +159,7 @@ export function DangerZonePanel({
         ) : null}
 
         {canReset ? (
-          <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+          <div className="space-y-3 rounded-surface border border-destructive/30 bg-destructive-subtle p-4">
             <div>
               <p className="text-sm font-medium text-destructive">
                 {t("settings.dangerZone.resetDatabase")}
@@ -169,10 +169,14 @@ export function DangerZonePanel({
               </p>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">
+              {/* IA-05: this Label carried no htmlFor and the Input no id, so
+                  the two were never associated — on the one control that gates
+                  a database reset. */}
+              <Label htmlFor="danger-zone-confirm" className="text-xs">
                 {t("settings.dangerZone.typeReset", { token: confirmToken })}
               </Label>
               <Input
+                id="danger-zone-confirm"
                 value={confirmText}
                 onChange={(event) => setConfirmText(event.target.value)}
                 placeholder={confirmToken}
@@ -200,17 +204,19 @@ export function DangerZonePanel({
             </Button>
 
             {reauthRequired ? (
-              <div className="space-y-3 rounded-lg border bg-background p-3">
+              <div className="space-y-3 rounded-surface border bg-background p-3">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <KeyRound className="size-4" aria-hidden="true" />
                   {copy("verificationRequired")}
                 </div>
-                <p className="text-xs leading-5 text-muted-foreground">
+                <p id="danger-zone-reauth-hint" className="text-xs leading-5 text-muted-foreground">
                   {copy("verificationDescription")}
                 </p>
                 <Input
                   type="password"
                   inputMode="numeric"
+                  aria-describedby={reauthError ? "danger-zone-reauth-hint danger-zone-reauth-error" : "danger-zone-reauth-hint"}
+                  aria-invalid={reauthError ? true : undefined}
                   autoComplete="current-password"
                   value={pin}
                   onChange={(event) => setPin(event.target.value)}
@@ -220,7 +226,7 @@ export function DangerZonePanel({
                   }}
                 />
                 {reauthError ? (
-                  <p role="alert" className="text-xs text-destructive">
+                  <p id="danger-zone-reauth-error" role="alert" className="text-xs text-destructive">
                     {reauthError}
                   </p>
                 ) : null}

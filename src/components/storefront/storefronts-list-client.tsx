@@ -279,7 +279,7 @@ export function StorefrontsListClient({
           </DialogHeader>
 
           {reauthRequired ? (
-            <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <div className="space-y-3 rounded-surface border bg-muted/20 p-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <KeyRound className="size-4" aria-hidden="true" />
                 {studioCopy("deleteVerificationTitle")}

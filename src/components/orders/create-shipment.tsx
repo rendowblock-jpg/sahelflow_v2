@@ -215,7 +215,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
         {/* Sync tracking */}
         {delivery?.trackingNumber && (
           <div className="space-y-3">
-            <div className="rounded-lg border p-3 space-y-1.5 text-sm">
+            <div className="rounded-surface border p-3 space-y-1.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("orders.shipment.carrier")}</span>
                 <span className="font-medium">
@@ -259,13 +259,13 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
 
         {/* Feedback */}
         {error && (
-          <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="flex items-start gap-2 rounded-control bg-destructive-soft p-3 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
         {result && (
-          <div className="flex items-start gap-2 rounded-md bg-emerald-50 dark:bg-emerald-950/30 p-3 text-sm text-success">
+          <div className="flex items-start gap-2 rounded-control bg-emerald-50 dark:bg-emerald-950/30 p-3 text-sm text-success">
             <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{result}</span>
           </div>

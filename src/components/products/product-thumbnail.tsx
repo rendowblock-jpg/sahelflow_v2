@@ -67,7 +67,7 @@ export function ProductThumbnail({
     <span
       data-product-thumbnail="primary"
       className={cn(
-        "relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/80 bg-muted/35",
+        "relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-surface border border-border/80 bg-muted/35",
         className,
       )}
     >

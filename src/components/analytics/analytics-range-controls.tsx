@@ -68,7 +68,7 @@ export function AnalyticsRangeControls() {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div
-        className="flex items-center rounded-lg border bg-muted/40 p-0.5"
+        className="flex items-center rounded-surface border bg-muted/40 p-0.5"
         role="group"
         aria-label={t("orders.filters.dateRange")}
       >
@@ -79,7 +79,7 @@ export function AnalyticsRangeControls() {
             onClick={() => handlePreset(preset)}
             aria-pressed={range === preset}
             className={cn(
-              "rounded-md px-3 py-1.5 text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "rounded-control px-3 py-1.5 text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
               range === preset && !customActive
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
@@ -94,7 +94,7 @@ export function AnalyticsRangeControls() {
           aria-pressed={customActive}
           aria-expanded={showCustomFields}
           className={cn(
-            "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "flex items-center gap-1.5 rounded-control px-3 py-1.5 text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
             customActive
               ? "bg-background text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground",

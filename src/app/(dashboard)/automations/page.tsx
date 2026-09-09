@@ -411,7 +411,7 @@ export default async function AutomationsPage({
                     <CardContent className="p-0">
                       <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex min-w-0 items-start gap-4">
-                          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/[0.06] text-primary">
+                          <span className="flex size-11 shrink-0 items-center justify-center rounded-surface border border-primary/15 bg-primary-soft text-primary">
                             <Zap className="size-5" />
                           </span>
                           <div className="min-w-0 space-y-3">
@@ -530,7 +530,7 @@ export default async function AutomationsPage({
                 <Card key={template.key} className="border-border/70">
                   <CardContent className="space-y-4 p-5">
                     <div className="flex items-start justify-between gap-4">
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary">
                         <Sparkles className="size-4" />
                       </span>
                       {canManage ? (

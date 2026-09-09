@@ -12,12 +12,30 @@ describe("Class-AAA AI composition contract", () => {
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
 
-    expect(page).toContain('className="app-workspace-content"');
+    // IA-01 converted this pin rather than deleting it. What it protects is
+    // that the Agents route renders as a full-height workspace and never a
+    // nested mini-app; it protected that by pinning the geometry class on the
+    // page itself, which also froze Agents outside the page grammar and left
+    // its only <h1> `sr-only`.
+    //
+    // The route now uses the shared workspace grammar, and the geometry class
+    // moved into the primitive that owns it — including staying on the route's
+    // ROOT element, which the `#main-content:has(> .app-workspace-content)`
+    // rule in experience-system.css depends on. Both halves are asserted, so
+    // the guarantee is unchanged and the exemption is gone.
+    expect(page).toContain("PageShell");
+    expect(page).toContain('variant="workspace"');
+    expect(page).not.toContain('<h1 className="sr-only">');
+    const pageShell = read("src/components/system/page-shell.tsx");
+    expect(pageShell).toContain('workspace: "app-workspace-content flex flex-col"');
     expect(shell).toContain("AiDecisionWorkspace");
     expect(shell).toContain('className="h-full min-h-0 overflow-hidden"');
     expect(workspace).toContain('data-ai-decision-workspace="true"');
     expect(workspace).toContain('data-ai-layout={wideReview ? "wide" : "desktop"}');
-    expect(workspace).not.toContain('rounded-xl border bg-card');
+    // Intent, not a token: the workspace root is a full-height decision surface,
+    // never a nested card. Pinned as `rounded-xl border bg-card` before SYS-05
+    // retired that utility; restated so no radius token reintroduces the card.
+    expect(workspace).not.toMatch(/rounded-[\w-]+ border bg-card/);
   });
 
   it("keeps the decision canvas dominant and review progressive at 1366", () => {
@@ -48,11 +66,14 @@ describe("Class-AAA AI composition contract", () => {
 
   it("keeps starter jobs contextual and proposals first-class", () => {
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the start surface into its own module; these
+    // assertions follow the code they protect.
+    const startSurface = read("src/components/ai/ai-start-surface.tsx");
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
 
-    expect(canvas).toContain('data-ai-start-state="true"');
+    expect(startSurface).toContain('data-ai-start-state="true"');
     expect(canvas).toContain("messages.length === 0");
-    expect(canvas).toContain("STARTERS.map");
+    expect(startSurface).toContain("STARTERS.map");
     expect(canvas).toContain("AiActionProposalCard");
     expect(shell).not.toContain("AiOperationalLaunchpad");
   });

@@ -38,6 +38,28 @@ html[dir="rtl"] [data-sahelflow-shell="desktop"] .text-2xs {
   line-height: 1.05rem;
 }
 
+/* The same one-step lift for the INTERFACE_SYSTEM.md §2 ramp, so a surface
+ * adopting the ramp keeps the Arabic reading floor it had under the legacy
+ * sizes instead of silently losing it. Only the body-scale steps lift; the
+ * title steps are already large enough and carry their own semantics.
+ *   --text-caption 12px -> 13px   (the .text-xs treatment)
+ *   --text-body-sm 13px -> 14px
+ *   --text-body    14px -> 15px   (the .text-sm treatment) */
+html[dir="rtl"] [data-sahelflow-shell="desktop"] .text-caption {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+html[dir="rtl"] [data-sahelflow-shell="desktop"] .text-body-sm {
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+}
+
+html[dir="rtl"] [data-sahelflow-shell="desktop"] .text-body {
+  font-size: 0.9375rem;
+  line-height: 1.45rem;
+}
+
 html[dir="rtl"] :is(h1, h2, h3, h4) {
   font-family:
     var(--font-arabic),

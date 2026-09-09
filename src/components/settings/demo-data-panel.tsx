@@ -34,6 +34,7 @@ import {
   type SettingsWorkspaceCopyKey,
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
+import { IconTile } from "@/components/system";
 
 type DemoCounts = {
   categories: number;
@@ -228,9 +229,7 @@ export function DemoDataPanel() {
                 {copy("demoData.description")}
               </CardDescription>
             </div>
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground">
-              <Database className="size-5" aria-hidden="true" />
-            </div>
+            <IconTile icon={Database} size="lg" bordered />
           </div>
         </CardHeader>
 
@@ -255,7 +254,7 @@ export function DemoDataPanel() {
           {status?.loaded ? (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
               {metrics.map(({ icon: Icon, value, label }) => (
-                <div key={label} className="rounded-md border bg-muted/20 p-3">
+                <div key={label} className="rounded-control border bg-muted/20 p-3">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Icon className="size-4" aria-hidden="true" />
                     <span className="text-xs">{label}</span>
@@ -266,7 +265,7 @@ export function DemoDataPanel() {
             </div>
           ) : null}
 
-          <div className="rounded-md border bg-muted/20 p-4">
+          <div className="rounded-control border bg-muted/20 p-4">
             <p className="text-sm font-semibold">{copy("demoData.journeyTitle")}</p>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
               {copy("demoData.journey")}
@@ -274,7 +273,7 @@ export function DemoDataPanel() {
           </div>
 
           {status && !status.loaded && status.hasBusinessData ? (
-            <div className="rounded-md border bg-muted/20 p-4 text-sm">
+            <div className="rounded-control border bg-muted/20 p-4 text-sm">
               <p className="font-medium">{copy("demoData.withRealData")}</p>
               <p className="mt-1 text-muted-foreground">
                 {copy("demoData.withRealDataDescription")}
@@ -285,7 +284,7 @@ export function DemoDataPanel() {
           {error ? (
             <div
               role="alert"
-              className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+              className="rounded-control border border-destructive/30 bg-destructive-subtle p-3 text-sm text-destructive"
             >
               <span className="font-medium">{error.primary}</span>
               {error.detail ? (
@@ -357,7 +356,7 @@ export function DemoDataPanel() {
             </Button>
           </div>
 
-          <div className="flex items-start gap-2 rounded-md border bg-muted/20 p-3 text-xs leading-5 text-muted-foreground">
+          <div className="flex items-start gap-2 rounded-control border bg-muted/20 p-3 text-xs leading-5 text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>
               {copy("demoData.isolated")} {copy("demoData.note")}

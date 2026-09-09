@@ -32,17 +32,17 @@ export function FullPageSkeleton({
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-64" />
         </div>
-        <Skeleton className="h-9 w-32 rounded-lg" />
+        <Skeleton className="h-9 w-32 rounded-surface" />
       </div>
 
       {/* Stat cards skeleton */}
       {showStats && (
         <div className="card-grid-4 stagger-grid">
           {Array.from({ length: statCount }).map((_, i) => (
-            <div key={i} className="rounded-xl border p-5 space-y-3">
+            <div key={i} className="rounded-surface border p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-8 w-8 rounded-lg" />
+                <Skeleton className="h-8 w-8 rounded-surface" />
               </div>
               <Skeleton className="h-8 w-20" />
               <Skeleton className="h-3 w-16" />
@@ -53,17 +53,17 @@ export function FullPageSkeleton({
 
       {/* Table skeleton */}
       {showTable && (
-        <div className="rounded-lg border">
+        <div className="rounded-surface border">
           {/* Table header */}
           <div className="border-b p-4 flex items-center justify-between">
             <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-8 w-24 rounded-lg" />
+            <Skeleton className="h-8 w-24 rounded-surface" />
           </div>
           {/* Table rows */}
           <div className="p-4 space-y-3">
             {Array.from({ length: rowCount }).map((_, i) => (
               <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-4 w-4 rounded-control" />
                 <Skeleton className="h-4 flex-1 max-w-[120px]" />
                 <Skeleton className="h-4 flex-1 max-w-[100px]" />
                 <Skeleton className="h-4 w-20" />

@@ -35,27 +35,27 @@ const TYPE_PRESENTATION: Record<
 > = {
   order: {
     icon: ShoppingBag,
-    className: "bg-primary/10 text-primary",
+    className: "bg-primary-soft text-primary",
     labelKey: "notifications.type.order",
   },
   delivery: {
     icon: Truck,
-    className: "bg-info/10 text-info",
+    className: "bg-info-soft text-info",
     labelKey: "notifications.type.delivery",
   },
   stock: {
     icon: Package,
-    className: "bg-warning/10 text-warning",
+    className: "bg-warning-soft text-warning",
     labelKey: "notifications.type.stock",
   },
   return: {
     icon: Undo2,
-    className: "bg-warning/10 text-warning",
+    className: "bg-warning-soft text-warning",
     labelKey: "notifications.type.return",
   },
   alert: {
     icon: ShieldAlert,
-    className: "bg-destructive/10 text-destructive",
+    className: "bg-destructive-soft text-destructive",
     labelKey: "notifications.type.alert",
   },
   info: {
@@ -67,7 +67,7 @@ const TYPE_PRESENTATION: Record<
 
 const INBOX_PRESENTATION: NotificationPresentation = {
   icon: MessageSquare,
-  className: "bg-primary/10 text-primary",
+  className: "bg-primary-soft text-primary",
   labelKey: "notifications.inboxCategory",
 };
 

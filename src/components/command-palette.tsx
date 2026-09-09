@@ -70,7 +70,7 @@ type ResultRow = UniversalSearchCandidate & {
 };
 
 const GROUP_HEADING_STYLES =
-  "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-1 [&_[cmdk-group-heading]]:text-2xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.08em]";
+  "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-1 [&_[cmdk-group-heading]]:text-caption [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.08em]";
 
 interface SearchResponse {
   query: string;
@@ -421,9 +421,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         key={result.id}
         value={`${result.kind}:${result.id}:${result.label}`}
         onSelect={() => openHref(result.href)}
-        className="group min-h-[3.65rem] rounded-xl border border-transparent px-3 py-2.5 transition-colors data-[selected=true]:border-primary/20 data-[selected=true]:bg-accent/80"
+        className="group min-h-[3.65rem] rounded-surface border border-transparent px-3 py-2.5 transition-colors data-[selected=true]:border-primary/20 data-[selected=true]:bg-accent/80"
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background/75 shadow-sm">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/60 bg-background/75 shadow-sm">
           <Icon className="size-4" aria-hidden="true" />
         </span>
         <span className="min-w-0 flex-1">
@@ -441,20 +441,20 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           )}
           {result.sublabel ? (
             hasTechnicalSublabel(result.kind, result.sublabel) ? (
-              <TechnicalValue className="mt-0.5 block truncate text-start text-2xs leading-4 text-muted-foreground">
+              <TechnicalValue className="mt-0.5 block truncate text-start text-caption leading-4 text-muted-foreground">
                 {result.sublabel}
               </TechnicalValue>
             ) : (
               <bdi
                 dir="auto"
-                className="mt-0.5 block truncate text-start text-2xs leading-4 text-muted-foreground [unicode-bidi:plaintext]"
+                className="mt-0.5 block truncate text-start text-caption leading-4 text-muted-foreground [unicode-bidi:plaintext]"
               >
                 {result.sublabel}
               </bdi>
             )
           ) : null}
         </span>
-        <span className="ms-2 shrink-0 rounded-full border border-border/55 bg-muted/25 px-2 py-0.5 text-2xs font-medium text-muted-foreground">
+        <span className="ms-2 shrink-0 rounded-full border border-border/55 bg-muted/25 px-2 py-0.5 text-caption font-medium text-muted-foreground">
           {copy(KIND_COPY[result.kind])}
         </span>
         <ArrowUpRight
@@ -500,7 +500,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           shouldFilter={false}
           className={cn(
             "rounded-[22px] bg-transparent",
-            "[&_[data-slot=command-input-wrapper]]:h-14 [&_[data-slot=command-input-wrapper]]:gap-3 [&_[data-slot=command-input-wrapper]]:rounded-xl [&_[data-slot=command-input-wrapper]]:border [&_[data-slot=command-input-wrapper]]:border-border/65 [&_[data-slot=command-input-wrapper]]:bg-background/70 [&_[data-slot=command-input-wrapper]]:px-4 [&_[data-slot=command-input-wrapper]]:shadow-sm",
+            "[&_[data-slot=command-input-wrapper]]:h-14 [&_[data-slot=command-input-wrapper]]:gap-3 [&_[data-slot=command-input-wrapper]]:rounded-surface [&_[data-slot=command-input-wrapper]]:border [&_[data-slot=command-input-wrapper]]:border-border/65 [&_[data-slot=command-input-wrapper]]:bg-background/70 [&_[data-slot=command-input-wrapper]]:px-4 [&_[data-slot=command-input-wrapper]]:shadow-sm",
             "[&_[data-slot=command-input-wrapper]_svg]:size-[18px] [&_[data-slot=command-input-wrapper]_svg]:opacity-55",
             "[&_[cmdk-input]]:h-14 [&_[cmdk-input]]:text-[15px] [&_[cmdk-input]]:font-medium",
           )}
@@ -531,8 +531,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             {!normalizedQuery ? (
               <>
                 <div className="px-2 pb-3 pt-1">
-                  <div className="flex items-start gap-3 rounded-2xl border border-border/50 bg-muted/12 px-4 py-3.5">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/55 bg-background/75 shadow-sm">
+                  <div className="flex items-start gap-3 rounded-surface border border-border/50 bg-muted/12 px-4 py-3.5">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/55 bg-background/75 shadow-sm">
                       <Search className="size-4 text-primary" aria-hidden="true" />
                     </span>
                     <div className="min-w-0">
@@ -548,10 +548,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
                 <div className="flex items-end justify-between gap-4 px-3 pb-1.5 pt-0.5">
                   <div>
-                    <p className="text-2xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    <p className="text-caption font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                       {copy("quickAccess")}
                     </p>
-                    <p className="mt-0.5 text-2xs text-muted-foreground/75">
+                    <p className="mt-0.5 text-caption text-muted-foreground/75">
                       {copy("quickHint")}
                     </p>
                   </div>
@@ -566,16 +566,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                           key={item.id}
                           value={`quick-${item.id}`}
                           onSelect={() => openHref(item.href)}
-                          className="group min-h-[4.1rem] rounded-2xl border border-border/45 bg-muted/10 px-3.5 py-3 transition-colors data-[selected=true]:border-primary/25 data-[selected=true]:bg-accent/75"
+                          className="group min-h-[4.1rem] rounded-surface border border-border/45 bg-muted/10 px-3.5 py-3 transition-colors data-[selected=true]:border-primary/25 data-[selected=true]:bg-accent/75"
                         >
-                          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/55 bg-background/75 shadow-sm">
+                          <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/55 bg-background/75 shadow-sm">
                             <Icon className="size-4" aria-hidden="true" />
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-start text-[13px] font-semibold">
                               {item.label}
                             </span>
-                            <span className="mt-0.5 block text-start text-2xs text-muted-foreground">
+                            <span className="mt-0.5 block text-start text-caption text-muted-foreground">
                               {copy("open")}
                             </span>
                           </span>
@@ -619,7 +619,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
             {partiallyDegraded ? (
               <div
-                className="mx-1 mb-2 flex items-start gap-2 rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 text-2xs leading-5 text-warning"
+                className="mx-1 mb-2 flex items-start gap-2 rounded-surface border border-warning/20 bg-warning-subtle px-3 py-2 text-caption leading-5 text-warning"
                 role="status"
               >
                 <AlertTriangle
@@ -719,21 +719,21 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             ) : null}
           </CommandList>
 
-          <div className="flex min-h-11 items-center gap-2 border-t border-border/60 bg-muted/10 px-3.5 text-2xs text-muted-foreground">
+          <div className="flex min-h-11 items-center gap-2 border-t border-border/60 bg-muted/10 px-3.5 text-caption text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <kbd className="rounded-md border border-border/65 bg-background/80 px-1.5 py-0.5 font-mono shadow-sm">
+              <kbd className="rounded-control border border-border/65 bg-background/80 px-1.5 py-0.5 font-mono shadow-sm">
                 ↑↓
               </kbd>
               {copy("navigate")}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <kbd className="rounded-md border border-border/65 bg-background/80 px-1.5 py-0.5 font-mono shadow-sm">
+              <kbd className="rounded-control border border-border/65 bg-background/80 px-1.5 py-0.5 font-mono shadow-sm">
                 ↵
               </kbd>
               {copy("open")}
             </span>
             <span className="ms-auto inline-flex items-center gap-1.5">
-              <kbd className="rounded-md border border-border/65 bg-background/80 px-1.5 py-0.5 font-mono shadow-sm">
+              <kbd className="rounded-control border border-border/65 bg-background/80 px-1.5 py-0.5 font-mono shadow-sm">
                 Esc
               </kbd>
               {copy("close")}

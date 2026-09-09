@@ -161,7 +161,7 @@ export function LicensePanel() {
         )}
 
         {projection?.minimumPermanentRecoveryEpoch && (
-          <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
+          <div className="rounded-control border border-warning/40 bg-warning-soft p-3">
             <p className="text-xs font-medium text-foreground">
               {t("license.permanentRecoveryEpoch")}
             </p>
@@ -194,7 +194,7 @@ export function LicensePanel() {
         )}
 
         {projection?.onlineTrialAvailable === false && !permanent && (
-          <p className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-muted-foreground">
+          <p className="rounded-control border border-warning/40 bg-warning-soft p-3 text-sm text-muted-foreground">
             {t("license.founderOfflineCheckpoint")}
           </p>
         )}

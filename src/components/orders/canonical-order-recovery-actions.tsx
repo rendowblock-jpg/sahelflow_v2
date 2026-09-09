@@ -508,7 +508,7 @@ export function CanonicalOrderRecoveryActions({
                 {position.items.map((item) => (
                   <div
                     key={item.orderItemId}
-                    className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_180px] sm:items-center"
+                    className="grid gap-2 rounded-surface border p-3 sm:grid-cols-[1fr_180px] sm:items-center"
                   >
                     <div className="min-w-0">
                       <p
@@ -541,7 +541,7 @@ export function CanonicalOrderRecoveryActions({
                           }))
                         }
                         disabled={committing}
-                        className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                        className="h-9 w-full rounded-control border bg-background px-3 text-sm"
                       >
                         <option value="">{copy.chooseDisposition}</option>
                         <option value="available">{copy.available}</option>

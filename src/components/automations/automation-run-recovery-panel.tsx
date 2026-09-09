@@ -26,6 +26,7 @@ import {
   type AutomationWorkspaceCopyKey,
 } from "@/lib/i18n/automation-workspace";
 import { toast } from "@/lib/toast";
+import { IconTile } from "@/components/system";
 
 interface AttemptHistory {
   id: string;
@@ -145,9 +146,7 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
     return (
       <Card className="border-border/70">
         <CardContent className="flex min-h-44 flex-col items-center justify-center gap-3 p-6 text-center">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-            <Activity className="size-4" />
-          </span>
+          <IconTile icon={Activity} size="lg" />
           <div>
             <p className="text-sm font-semibold">{c("workspace.latest")}</p>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
@@ -186,7 +185,7 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
             <CardContent className="p-0">
               <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
-                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/30">
+                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/30">
                     {statusIcon(run.status)}
                   </span>
                   <div className="min-w-0 space-y-2">
@@ -202,16 +201,16 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                       <span>{formatter.format(new Date(run.createdAt))}</span>
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-md bg-success/10 px-2 py-1 text-success">
+                      <span className="rounded-control bg-success-soft px-2 py-1 text-success">
                         {run.succeededStepCount} {t("automations.runtime.state.succeeded")}
                       </span>
                       {run.failedStepCount > 0 ? (
-                        <span className="rounded-md bg-destructive/10 px-2 py-1 text-destructive">
+                        <span className="rounded-control bg-destructive-soft px-2 py-1 text-destructive">
                           {run.failedStepCount} {t("automations.runtime.state.failed")}
                         </span>
                       ) : null}
                       {run.skippedStepCount > 0 ? (
-                        <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground">
+                        <span className="rounded-control bg-muted px-2 py-1 text-muted-foreground">
                           {run.skippedStepCount} {t("automations.runtime.state.skipped")}
                         </span>
                       ) : null}
@@ -252,10 +251,10 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                       return (
                         <div
                           key={step.id}
-                          className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
+                          className="flex flex-col gap-2 rounded-surface border border-border/60 bg-background p-3 sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="flex size-7 items-center justify-center rounded-md bg-muted text-xs font-semibold">
+                            <span className="flex size-7 items-center justify-center rounded-control bg-muted text-xs font-semibold">
                               {step.position + 1}
                             </span>
                             <div>
@@ -274,7 +273,7 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                   </div>
 
                   {run.recoverable ? (
-                    <div className="rounded-xl border border-warning/40 bg-warning/5 p-4">
+                    <div className="rounded-surface border border-warning/40 bg-warning-subtle p-4">
                       <div className="mb-3 flex items-start gap-2">
                         <RotateCcw className="mt-0.5 size-4 shrink-0 text-warning" />
                         <div>
@@ -309,7 +308,7 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                       </div>
                     </div>
                   ) : run.recoveryBlockCode && needsAttention ? (
-                    <div className="flex items-start gap-2 rounded-xl border border-border/70 bg-background p-4 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-2 rounded-surface border border-border/70 bg-background p-4 text-sm text-muted-foreground">
                       <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                       <span>
                         {run.recoveryBlockCode === "AUTOMATION_EFFECT_RECOVERY_REQUIRED" ||
@@ -320,7 +319,7 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                     </div>
                   ) : null}
 
-                  <details className="rounded-lg border border-border/60 bg-background p-3 text-xs">
+                  <details className="rounded-surface border border-border/60 bg-background p-3 text-xs">
                     <summary className="cursor-pointer font-medium text-muted-foreground">
                       {c("workspace.details")}
                     </summary>

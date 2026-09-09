@@ -1,31 +1,18 @@
 "use client";
 
-import Link from "next/link";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle,
   ArrowDown,
   ArrowLeft,
-  ArrowRight,
   Bot,
-  BrainCircuit,
-  Check,
+  ChevronRight,
   ChevronUp,
-  CircleDollarSign,
-  ClipboardCheck,
-  Copy,
   Loader2,
-  PackageSearch,
   Paperclip,
-  PencilLine,
-  RefreshCw,
   RotateCcw,
   Send,
-  Settings2,
   ShieldCheck,
   Square,
-  ThumbsDown,
-  ThumbsUp,
   X,
 } from "lucide-react";
 
@@ -34,15 +21,15 @@ import {
   AiFollowUpChips,
   deriveFollowUpSuggestions,
 } from "@/components/ai/ai-follow-up-chips";
-import { AiMarkdown } from "@/components/ai/markdown/ai-markdown";
+import { MessageBubble } from "@/components/ai/ai-message-bubble";
+import {
+  ErrorNotice,
+  InboxStrip,
+  STARTERS,
+  SetupNotice,
+  StartSurface,
+} from "@/components/ai/ai-start-surface";
 import { AiReviewEvidence } from "@/components/ai/ai-review-evidence";
-import { AiToolResultCard } from "@/components/ai/ai-tool-result-card";
-import type {
-  AiCapabilityGroup,
-  AiMessageView,
-  AiShopBriefing,
-  AiWorkspaceError,
-} from "@/components/ai/ai-workspace-types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -60,9 +47,7 @@ import {
   AI_CHAT_COUNTER_VISIBLE_SHARE,
   AI_CHAT_MESSAGE_MAX_LENGTH,
 } from "@/lib/ai/chat-limits";
-import { getAiDecisionCopy, type AiDecisionLocale } from "@/lib/i18n/ai-decision-workspace";
-import { getAiToolGroupLabel, getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
-import type { AiWorkspaceCopyKey } from "@/lib/i18n/ai-workspace";
+import { getAiDecisionCopy } from "@/lib/i18n/ai-decision-workspace";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
@@ -126,794 +111,6 @@ function screenshotSummary(result: ScreenshotExtractionResult): string {
     lines.push(`missing: ${result.missingFields.join(", ")}`);
   }
   return lines.join("\n");
-}
-
-function errorMessage(
-  error: AiWorkspaceError,
-  workspace: ReturnType<typeof useAiWorkspace>,
-): string {
-  switch (error.code) {
-    case "AI_CONSENT_REQUIRED":
-      return workspace.copy("consentMissing");
-    case "AI_LICENSE_REQUIRED":
-      return workspace.copy("licenseRequired");
-    case "AI_RATE_LIMITED":
-      return workspace.copy("rateLimited");
-    case "AI_INVALID_MESSAGE":
-    case "AI_INVALID_REQUEST":
-      return workspace.copy("invalidMessage");
-    case "AI_SESSION_NOT_FOUND":
-      return workspace.copy("sessionMissing");
-    case "AI_RESPONSE_NOT_PERSISTED":
-      return workspace.copy("responseNotPersisted");
-    case "AI_SESSION_LOAD_FAILED":
-      return workspace.copy("conversationLoadFailed");
-    case "AI_SESSION_CREATE_FAILED":
-      return workspace.copy("sessionCreateFailed");
-    case "AI_PROVIDER_UNAVAILABLE":
-      return workspace.copy("providerDegraded");
-    case "AI_PROVIDER_REPORTED":
-      // F-09: the server's locale-native verdict IS the banner text — no
-      // invented title on top of it. Falls back to the degraded copy only
-      // if an older paired server sent an empty message.
-      return error.detail && error.detail.trim()
-        ? error.detail
-        : workspace.copy("providerDegraded");
-    case "AI_STREAM_TIMEOUT":
-      return workspace.copy("streamTimeout");
-    default:
-      return workspace.copy("genericError");
-  }
-}
-
-const STARTERS = [
-  {
-    id: "pending",
-    title: "launchPendingTitle",
-    description: "launchPendingDescription",
-    prompt: "launchPendingPrompt",
-    icon: ClipboardCheck,
-  },
-  {
-    id: "revenue",
-    title: "launchRevenueTitle",
-    description: "launchRevenueDescription",
-    prompt: "launchRevenuePrompt",
-    icon: CircleDollarSign,
-  },
-  {
-    id: "returns",
-    title: "launchReturnsTitle",
-    description: "launchReturnsDescription",
-    prompt: "launchReturnsPrompt",
-    icon: RotateCcw,
-  },
-  {
-    id: "products",
-    title: "launchProductsTitle",
-    description: "launchProductsDescription",
-    prompt: "launchProductsPrompt",
-    icon: PackageSearch,
-  },
-] as const;
-
-function SetupNotice({
-  workspace,
-}: {
-  workspace: ReturnType<typeof useAiWorkspace>;
-}) {
-  const { setup, setupError, refreshSetup, locale } = workspace;
-  if (setup?.ready === true) return null;
-
-  if (!setup && !setupError) {
-    return (
-      <div className="flex items-center gap-2.5 border-b bg-muted/25 px-4 py-2.5 text-xs text-muted-foreground md:px-6">
-        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-        {getAiDecisionCopy(locale, "setupChecking")}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warning/20 bg-warning/5 px-4 py-2.5 md:px-6">
-      <div className="flex min-w-0 items-start gap-2.5">
-        <AlertTriangle
-          className="mt-0.5 size-4 shrink-0 text-warning"
-          aria-hidden="true"
-        />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">
-            {setupError
-              ? workspace.copy("setupUnavailable")
-              : getAiDecisionCopy(locale, "setupAttention")}
-          </p>
-          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-            {setupError
-              ? workspace.copy("setupUnavailableDescription")
-              : !setup?.consentAccepted
-                ? workspace.copy("consentMissing")
-                : workspace.copy("keyMissing")}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {setupError ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => void refreshSetup()}
-          >
-            <RefreshCw className="size-4" aria-hidden="true" />
-            {workspace.copy("retry")}
-          </Button>
-        ) : null}
-        <Button asChild variant="outline" size="sm">
-          <Link href="/settings?group=intelligence">
-            <Settings2 className="size-4" aria-hidden="true" />
-            {workspace.copy("openSettings")}
-          </Link>
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function ErrorNotice({
-  workspace,
-}: {
-  workspace: ReturnType<typeof useAiWorkspace>;
-}) {
-  const { error, retry } = workspace;
-  if (!error) return null;
-  const persistenceOnly = error.code === "AI_RESPONSE_NOT_PERSISTED";
-
-  return (
-    <div className="mx-4 mt-3 flex items-start justify-between gap-3 rounded-xl border border-destructive/25 bg-destructive/[0.06] p-3.5 shadow-sm md:mx-6">
-      <div className="flex min-w-0 items-start gap-2.5">
-        <AlertTriangle
-          className="mt-0.5 size-4 shrink-0 text-destructive"
-          aria-hidden="true"
-        />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">{errorMessage(error, workspace)}</p>
-          {error.detail && error.code !== "AI_PROVIDER_REPORTED" ? (
-            // AI_PROVIDER_REPORTED already renders the server message as the
-            // title — repeating it as the sub-line would duplicate the text.
-            <p dir="auto" className="mt-1 text-xs leading-5 text-muted-foreground">
-              {error.detail}
-            </p>
-          ) : null}
-        </div>
-      </div>
-      {!persistenceOnly ? (
-        <Button type="button" size="sm" variant="ghost" onClick={() => void retry()}>
-          <RefreshCw className="size-4" aria-hidden="true" />
-          {workspace.copy("retry")}
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-type AiCopyFn = (
-  key: AiWorkspaceCopyKey,
-  params?: Record<string, string | number>,
-) => string;
-
-function messageClock(value: string, locale: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat(
-    locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB",
-    { hour: "2-digit", minute: "2-digit" },
-  ).format(date);
-}
-
-/**
- * One chat bubble. Memoized on (message, copy): during streaming, only the
- * message currently receiving deltas re-renders — completed messages keep
- * their parsed markdown cached inside <AiMarkdown>. The newest assistant turn
- * keeps its action row visible (older turns reveal it on hover/focus).
- */
-const MessageBubble = memo(function MessageBubble({
-  message,
-  copy,
-  locale,
-  isLatest,
-  onEditMessage,
-  onFeedback,
-}: {
-  message: AiMessageView;
-  copy: AiCopyFn;
-  locale: AiDecisionLocale;
-  isLatest?: boolean;
-  onEditMessage?: (messageId: string) => void;
-  onFeedback?: (messageId: string, value: "up" | "down" | "none") => void;
-}) {
-  const assistant = message.role === "assistant";
-  const [copied, setCopied] = useState(false);
-  const clock = message.createdAt ? messageClock(message.createdAt, locale) : "";
-
-  const copyMessage = async () => {
-    if (!message.content) return;
-    try {
-      await navigator.clipboard.writeText(message.content);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1_600);
-    } catch {
-      // Clipboard unavailable (permissions) — non-fatal, button resets.
-    }
-  };
-
-  return (
-    <article
-      data-ai-message={message.role}
-      className={cn("group/message flex", assistant ? "justify-start" : "justify-end")}
-    >
-      <div className={cn("min-w-0", assistant ? "w-full max-w-3xl" : "max-w-[85%] md:max-w-[78%]") }>
-        {assistant ? (
-          // Assistant turns read as decision blocks — a layered card on the
-          // canvas grammar. The seller's turn stays the only filled bubble,
-          // so role ownership is unmistakable at a glance.
-          // The assistant turn is the workspace's own voice, so it carries no
-          // container: no border, no fill, no shadow. The seller's turn is the
-          // only enclosed surface, which is what makes role ownership readable
-          // at a glance without an avatar or a per-turn label.
-          <div className="text-sm leading-6 text-foreground">
-            {message.content ? (
-              <div>
-                {/* Assistant output is model-emitted markdown: rendered through
-                    the token-tree renderer — raw HTML can only become text. */}
-                <AiMarkdown content={message.content} />
-                {message.streaming ? (
-                  <span
-                    data-ai-streaming-caret="true"
-                    aria-hidden="true"
-                  />
-                ) : null}
-              </div>
-            ) : message.streaming ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                {copy("working")}
-              </div>
-            ) : message.interrupted ? (
-              <p className="text-xs text-muted-foreground">{copy("stopped")}</p>
-            ) : null}
-          </div>
-        ) : (
-          <div className="rounded-2xl rounded-ee-md bg-primary px-4 py-2.5 text-sm leading-6 text-primary-foreground">
-            {message.content ? (
-              // Seller input is echoed verbatim — no markdown interpretation.
-              <p dir="auto" className="whitespace-pre-wrap break-words">
-                {message.content}
-              </p>
-            ) : message.streaming ? (
-              <div className="flex items-center gap-2 text-xs opacity-80">
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                {copy("working")}
-              </div>
-            ) : null}
-          </div>
-        )}
-
-        {assistant && message.toolCalls.length > 0 ? (
-          <div className="space-y-2 pt-3">
-            {message.toolCalls.map((tool) => (
-              <AiToolResultCard key={tool.id} tool={tool} />
-            ))}
-          </div>
-        ) : null}
-
-        {/* Ledger AI-26: truthful provider signal — rendered only when the
-            provider actually reported the turn (model + usage). Line stays
-            LTR: model ids and token counts are technical identifiers. */}
-        {assistant && !message.streaming && message.signal ? (
-          <p
-            data-ai-model-signal="true"
-            className="mt-1.5 text-2xs text-muted-foreground"
-            dir="ltr"
-          >
-            {message.signal.totalTokens != null
-              ? copy("modelSignal", {
-                  model: message.signal.model,
-                  tokens: message.signal.totalTokens,
-                })
-              : copy("modelSignalModelOnly", {
-                  model: message.signal.model,
-                })}
-          </p>
-        ) : null}
-
-        {message.persistenceWarning ? (
-          <div className="mt-3 rounded-xl border border-warning/25 bg-warning/[0.06] px-3.5 py-3">
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle
-                className="mt-0.5 size-4 shrink-0 text-warning"
-                aria-hidden="true"
-              />
-              <div>
-                <p className="text-sm font-semibold">
-                  {copy("responseNotPersisted")}
-                </p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {copy("responseNotPersistedDescription")}
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {assistant && onFeedback && !message.streaming && message.content ? (
-          // Ledger AI-13: truthful thumbs — the opposite thumb overwrites,
-          // the active thumb clears; nothing auto-sends or decorates.
-          <div className="mt-1.5 flex items-center gap-1">
-            <button
-              type="button"
-              data-ai-feedback-up="true"
-              aria-pressed={message.feedback === "up"}
-              aria-label={copy("feedbackUp")}
-              title={copy("feedbackUp")}
-              disabled={message.feedback === "up"}
-              onClick={() => onFeedback(message.id, "up")}
-              className={cn(
-                "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
-                message.feedback === "up" && "bg-primary/10 text-primary opacity-100",
-              )}
-            >
-              <ThumbsUp className="size-3" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              data-ai-feedback-down="true"
-              aria-pressed={message.feedback === "down"}
-              aria-label={copy("feedbackDown")}
-              title={copy("feedbackDown")}
-              disabled={message.feedback === "down"}
-              onClick={() => onFeedback(message.id, "down")}
-              className={cn(
-                "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
-                message.feedback === "down" && "bg-destructive/10 text-destructive opacity-100",
-              )}
-            >
-              <ThumbsDown className="size-3" aria-hidden="true" />
-            </button>
-          </div>
-        ) : null}
-
-        {message.content && !message.streaming ? (
-          // Hover action row (ChatGPT-class): edit + copy + clock under every
-          // completed message; the newest-message row stays visible.
-          <div
-            className={cn(
-              "mt-1.5 flex items-center gap-1.5 transition-opacity focus-within:opacity-100 group-hover/message:opacity-100",
-              isLatest ? "opacity-100" : "opacity-0",
-              assistant ? "justify-start" : "justify-end",
-            )}
-          >
-            {!assistant && onEditMessage ? (
-              <button
-                type="button"
-                onClick={() => onEditMessage(message.id)}
-                aria-label={copy("editMessage")}
-                title={copy("editMessage")}
-                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <PencilLine className="size-3.5" aria-hidden="true" />
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => void copyMessage()}
-              aria-label={copied ? copy("messageCopied") : copy("copyMessage")}
-              title={clock ? `${copy("copyMessage")} · ${clock}` : copy("copyMessage")}
-              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {copied ? (
-                <Check className="size-3.5 text-success" aria-hidden="true" />
-              ) : (
-                <Copy className="size-3.5" aria-hidden="true" />
-              )}
-            </button>
-            {clock ? (
-              <span className="text-2xs tabular-nums text-muted-foreground" dir="ltr">
-                {clock}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-    </article>
-  );
-});
-
-function SetupChecklistRow({
-  ready,
-  label,
-  readyLabel,
-  missingLabel,
-}: {
-  ready: boolean;
-  label: string;
-  readyLabel: string;
-  missingLabel: string;
-}) {
-  return (
-    <li className="flex items-center justify-between gap-3 rounded-lg border bg-background/60 px-3 py-2">
-      <span className="flex min-w-0 items-center gap-2.5">
-        <span
-          className={cn(
-            "flex size-6 shrink-0 items-center justify-center rounded-md",
-            ready ? "bg-success/10 text-success" : "bg-warning/10 text-warning",
-          )}
-        >
-          {ready ? (
-            <Check className="size-3.5" aria-hidden="true" />
-          ) : (
-            <AlertTriangle className="size-3.5" aria-hidden="true" />
-          )}
-        </span>
-        <span className="truncate text-xs font-medium">{label}</span>
-      </span>
-      <span
-        className={cn(
-          "shrink-0 text-2xs font-semibold",
-          ready ? "text-success" : "text-warning",
-        )}
-      >
-        {ready ? readyLabel : missingLabel}
-      </span>
-    </li>
-  );
-}
-
-/**
- * Ledger F-06 — the agents workforce, rendered from capability truth.
- * Groups and availability come from /api/ai/capabilities, which projects the
- * SAME central policy map the registry and proposal runtime enforce — the page
- * can never claim an ability the agent does not have, nor hide one it has.
- */
-function AbilityGroupCard({
-  group,
-  locale,
-}: {
-  group: AiCapabilityGroup;
-  locale: ReturnType<typeof useAiWorkspace>["locale"];
-}) {
-  const sensitiveCount = group.tools.filter((tool) => tool.executionClass === "sensitive").length;
-  return (
-    <div
-      data-ai-ability-group={group.id}
-      className="rounded-2xl border border-border/70 bg-gradient-to-b from-card to-card/60 p-4 shadow-[0_1px_2px_oklch(0_0_0/0.04)]"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-bold tracking-tight">
-          {getAiToolGroupLabel(locale, group.id)}
-        </p>
-        <p className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-2xs font-semibold tabular-nums text-muted-foreground">
-          {group.tools.length}
-          {sensitiveCount > 0 ? ` · ${sensitiveCount} ✓` : ""}
-        </p>
-      </div>
-      <ul className="mt-2.5 flex flex-wrap gap-1.5">
-        {group.tools.map((tool) => {
-          const sensitive = tool.executionClass === "sensitive";
-          return (
-            <li
-              key={tool.name}
-              data-ai-ability={tool.name}
-              data-ai-ability-class={tool.executionClass}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-2xs font-medium transition-colors",
-                sensitive
-                  ? "border-warning/30 bg-warning/[0.08] text-warning"
-                  : "border-border/60 bg-background text-foreground",
-              )}
-            >
-              {getAiToolLabel(locale, tool.name)}
-              {sensitive ? (
-                <>
-                  <ShieldCheck className="size-3" aria-hidden="true" />
-                  <span className="sr-only">
-                    {getAiDecisionCopy(locale, "abilityNeedsApproval")}
-                  </span>
-                </>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
-function AbilitiesPanel({
-  workspace,
-}: {
-  workspace: ReturnType<typeof useAiWorkspace>;
-}) {
-  const { capabilities, capabilitiesError, loadingCapabilities, locale } =
-    workspace;
-
-  return (
-    <section data-ai-abilities="true" className="mt-8 w-full text-start rounded-2xl border border-border/60 bg-muted/[0.18] p-4 md:p-5">
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="text-sm font-bold tracking-tight">
-          {getAiDecisionCopy(locale, "abilitiesTitle")}
-        </p>
-        <p className="shrink-0 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {getAiDecisionCopy(locale, "durableSession")}
-        </p>
-      </div>
-      {loadingCapabilities ? (
-        // Structure-matching skeleton (§26.8): the shape of two group cards.
-        <div
-          data-ai-abilities-skeleton="true"
-          aria-hidden="true"
-          className="mt-4 grid gap-3 sm:grid-cols-2"
-        >
-          {[0, 1, 2, 3].map((row) => (
-            <div key={row} className="rounded-xl border bg-card/60 p-4">
-              <span data-ai-skeleton="true" className="block h-3.5 w-20 rounded-full" />
-              <span data-ai-skeleton="true" className="mt-3 block h-4 w-3/4 rounded-full" />
-              <span data-ai-skeleton="true" className="mt-1.5 block h-4 w-1/2 rounded-full" />
-            </div>
-          ))}
-        </div>
-      ) : capabilitiesError || !capabilities ? (
-        // Honest unavailability — the stale-marketing sentence is never shown
-        // as if it were live truth.
-        <p className="mt-2 text-xs leading-5 text-muted-foreground">
-          {getAiDecisionCopy(locale, "abilitiesUnavailable")}
-        </p>
-      ) : (
-        <>
-          <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-            {getAiDecisionCopy(locale, "abilitiesDescription")}
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {capabilities.groups.map((group) => (
-              <AbilityGroupCard key={group.id} group={group} locale={locale} />
-            ))}
-          </div>
-        </>
-      )}
-    </section>
-  );
-}
-
-/** F-06: the shop's real numbers, next to the jobs they ground. A count that
- *  could not be measured renders no badge — never a fabricated zero. */
-function starterCount(
-  id: (typeof STARTERS)[number]["id"],
-  briefing: AiShopBriefing | undefined,
-): { copyKey: "starterCountPending" | "starterCountToday" | "starterCountLowStock"; count: number } | null {
-  if (!briefing) return null;
-  if (id === "pending" && briefing.pendingOrders != null) {
-    return { copyKey: "starterCountPending", count: briefing.pendingOrders };
-  }
-  if (id === "revenue" && briefing.ordersToday != null) {
-    return { copyKey: "starterCountToday", count: briefing.ordersToday };
-  }
-  if (id === "products" && briefing.lowStockProducts != null) {
-    return { copyKey: "starterCountLowStock", count: briefing.lowStockProducts };
-  }
-  return null;
-}
-
-/**
- * Ledger F-06 — the shop-wide approval loop, surfaced where the seller works.
- * Pending sensitive actions exist across ALL sessions; without this strip
- * they were invisible unless the seller already knew to open the review
- * pane. Hidden while the rail owns the surface (wideReview) and while the
- * inbox is loading or failed (honest absence, not a fake "all clear").
- */
-function InboxStrip({
-  workspace,
-  wideReview,
-  onOpenReview,
-}: {
-  workspace: ReturnType<typeof useAiWorkspace>;
-  wideReview: boolean;
-  onOpenReview: () => void;
-}) {
-  const { inbox, inboxLoading, inboxError, locale } = workspace;
-  if (wideReview || inboxLoading || inboxError || inbox.length === 0) {
-    return null;
-  }
-  return (
-    <div
-      data-ai-inbox-strip="true"
-      className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/[0.10] to-primary/[0.04] px-4 py-3 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_10px_28px_oklch(0_0_0/0.06)] md:mx-6"
-    >
-      <div className="flex min-w-0 items-start gap-2.5">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">
-            {getAiDecisionCopy(locale, "inboxStripCount", { count: inbox.length })}
-          </p>
-          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-            {getAiDecisionCopy(locale, "inboxStripDescription")}
-          </p>
-        </div>
-      </div>
-      <Button type="button" size="sm" variant="outline" onClick={onOpenReview}>
-        {getAiDecisionCopy(locale, "inboxStripOpen")}
-      </Button>
-    </div>
-  );
-}
-
-function StartSurface({
-  workspace,
-  starting,
-  onStart,
-}: {
-  workspace: ReturnType<typeof useAiWorkspace>;
-  starting: boolean;
-  onStart: (prompt: string) => Promise<boolean>;
-}) {
-  const ready = workspace.setup?.ready === true;
-
-  const pendingCount =
-    workspace.capabilities?.briefing?.pendingProposals ?? workspace.inbox.length ?? 0;
-  return (
-    <div data-ai-start-state="true" className="mx-auto flex w-full max-w-3xl flex-col items-stretch py-6 text-start md:py-8">
-      {/*
-        The start surface previously stacked five bordered/gradient/shadowed
-        containers before any content. Nothing had hierarchy because every
-        layer competed for the same attention. One elevation level now; the
-        heading and spacing do the work.
-      */}
-      <div className="flex items-start gap-4">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <BrainCircuit className="size-6" aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-bold leading-8 tracking-tight">
-            {getAiDecisionCopy(workspace.locale, "startTitle")}
-          </h2>
-          <p className="mt-1.5 max-w-xl text-sm leading-6 text-muted-foreground">
-            {getAiDecisionCopy(workspace.locale, "startDescription")}
-          </p>
-          <p className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
-            {getAiDecisionCopy(workspace.locale, "safeStartNote")}
-          </p>
-        </div>
-        {pendingCount > 0 ? (
-          <p className="hidden shrink-0 rounded-full border border-warning/30 bg-warning/[0.09] px-2.5 py-1 text-2xs font-bold tabular-nums text-warning sm:block">
-            {getAiDecisionCopy(workspace.locale, "inboxStripCount", { count: pendingCount })}
-          </p>
-        ) : null}
-      </div>
-
-      {!ready && workspace.setup ? (
-        <div className="mt-7 w-full rounded-xl border bg-card/60 p-4 text-start md:p-5">
-          <p className="text-sm font-semibold">
-            {getAiDecisionCopy(workspace.locale, "setupRequiredTitle")}
-          </p>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            {getAiDecisionCopy(workspace.locale, "setupRequiredCapabilities")}
-          </p>
-          {/* Truthful two-row checklist: the same configuration facts the
-              review panel owns (consent + key), never provider health. */}
-          <ul className="mt-3 space-y-1.5">
-            <SetupChecklistRow
-              ready={workspace.setup.consentAccepted === true}
-              label={workspace.copy("consent")}
-              readyLabel={workspace.copy("accepted")}
-              missingLabel={workspace.copy("missing")}
-            />
-            <SetupChecklistRow
-              ready={workspace.setup.keyConfigured === true}
-              label={workspace.copy("gemini")}
-              readyLabel={workspace.copy("configured")}
-              missingLabel={workspace.copy("notConfigured")}
-            />
-          </ul>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {(
-              [
-                "setupChipPendingOrders",
-                "setupChipBestProducts",
-                "setupChipRevenueToday",
-                "setupChipTopWilayas",
-              ] as const
-            ).map((chip) => (
-              <span
-                key={chip}
-                className="rounded-full border border-border/60 bg-background px-2.5 py-1 text-2xs text-muted-foreground"
-              >
-                {getAiDecisionCopy(workspace.locale, chip)}
-              </span>
-            ))}
-          </div>
-          <p className="mt-3 flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
-            <ShieldCheck
-              className="mt-0.5 size-3.5 shrink-0 text-primary"
-              aria-hidden="true"
-            />
-            {getAiDecisionCopy(workspace.locale, "setupRequiredPrivacyNote")}
-          </p>
-          <Button asChild variant="outline" size="sm" className="mt-3">
-            <Link href="/settings?group=intelligence">
-              <Settings2 className="size-4" aria-hidden="true" />
-              {workspace.copy("openSettings")}
-            </Link>
-          </Button>
-        </div>
-      ) : null}
-
-      <div className="mt-6 flex w-full items-baseline justify-between gap-3">
-        <p className="text-sm font-bold tracking-tight">
-          {getAiDecisionCopy(workspace.locale, "startJobsTitle")}
-        </p>
-        <p className="shrink-0 text-2xs font-medium tabular-nums text-muted-foreground">
-          {getAiDecisionCopy(workspace.locale, "messagesMeta", { count: STARTERS.length })}
-        </p>
-      </div>
-      <div className="mt-3 grid w-full gap-3 sm:grid-cols-2">
-        {STARTERS.map((starter) => {
-          const Icon = starter.icon;
-          const count = starterCount(starter.id, workspace.capabilities?.briefing);
-          return (
-            <button
-              key={starter.id}
-              type="button"
-              disabled={!ready || starting}
-              onClick={() => void onStart(workspace.copy(starter.prompt))}
-              className={cn(
-                "group/starter relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-b from-card to-card/60 p-4 text-start transition-all duration-200",
-                "hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_2px_4px_oklch(0_0_0/0.05),0_16px_36px_oklch(0_0_0/0.09)]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                "disabled:pointer-events-none disabled:opacity-50",
-              )}
-            >
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 start-0 w-1 bg-gradient-to-b from-primary/50 to-primary/5 opacity-0 transition-opacity duration-200 group-hover/starter:opacity-100"
-              />
-              <span className="flex items-start gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary/16 to-primary/[0.05] text-primary shadow-sm">
-                  <Icon className="size-[18px]" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2">
-                    <span className="truncate text-sm font-bold tracking-tight">
-                      {workspace.copy(starter.title)}
-                    </span>
-                    {count ? (
-                      <span
-                        data-ai-briefing-count={starter.id}
-                        className="shrink-0 rounded-full border border-primary/25 bg-primary/[0.09] px-2 py-0.5 text-2xs font-bold tabular-nums text-primary"
-                      >
-                        {getAiDecisionCopy(workspace.locale, count.copyKey, {
-                          count: count.count,
-                        })}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                    {workspace.copy(starter.description)}
-                  </span>
-                </span>
-                <ArrowRight
-                  className="mt-1 size-4 shrink-0 text-primary opacity-0 transition-all duration-200 group-hover/starter:translate-x-0.5 group-hover/starter:opacity-80 rtl:-scale-x-100 rtl:group-hover/starter:-translate-x-0.5"
-                  aria-hidden="true"
-                />
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* F-06: the workforce itself — what the agent can do on THIS shop,
-          live from the tool policy, with honest availability markers. */}
-      <AbilitiesPanel workspace={workspace} />
-    </div>
-  );
 }
 
 export function AiDecisionCanvas({
@@ -1259,16 +456,32 @@ export function AiDecisionCanvas({
               <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
             </Button>
           ) : null}
-          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary/12 to-primary/[0.04] text-primary shadow-sm">
+          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-surface border border-primary/15 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary shadow-sm">
             <Bot className="size-4" aria-hidden="true" />
             {workspace.setup ? (
               // Configuration truth on the avatar (AI-26): consent+key state
               // from the setup probe — never a fabricated provider heartbeat.
-              <span
-                data-ai-status-dot={setupReady ? "ready" : "attention"}
-                aria-hidden="true"
-                className="absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full border-2 border-background"
-              />
+              //
+              // UI-04: this dot and the labelled config chip in the same header
+              // are bound to the same `setupReady`, so above `sm` the screen
+              // stated one fact twice — once in words, once as an unlabelled
+              // dot forty pixels away. The chip is `hidden sm:inline-flex`, so
+              // the dot is scoped to the width where the chip is absent: one
+              // indicator at every viewport, and never zero.
+              <>
+                <span
+                  data-ai-status-dot={setupReady ? "ready" : "attention"}
+                  aria-hidden="true"
+                  className="absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full border-2 border-background sm:hidden"
+                />
+                {/* Below `sm` the dot is the only provider signal, and a bare
+                    colour is not a signal to assistive tech. */}
+                <span className="sr-only sm:hidden">
+                  {setupReady
+                    ? getAiDecisionCopy(workspace.locale, "providerReady")
+                    : getAiDecisionCopy(workspace.locale, "setupAttention")}
+                </span>
+              </>
             ) : null}
           </span>
           <div className="min-w-0">
@@ -1281,7 +494,7 @@ export function AiDecisionCanvas({
               {activeSession?.id.startsWith("demo-") ? (
                 <Badge
                   variant="secondary"
-                  className="shrink-0 text-2xs font-medium"
+                  className="shrink-0 text-caption font-medium"
                 >
                   {getAiDecisionCopy(workspace.locale, "demoBadge")}
                 </Badge>
@@ -1300,7 +513,7 @@ export function AiDecisionCanvas({
             <Badge
               variant="outline"
               data-ai-config-chip="true"
-              className="hidden items-center gap-1.5 text-2xs font-medium text-muted-foreground sm:inline-flex"
+              className="hidden items-center gap-1.5 text-caption font-medium text-muted-foreground sm:inline-flex"
             >
               <span
                 data-ai-status-dot={setupReady ? "ready" : "attention"}
@@ -1322,7 +535,7 @@ export function AiDecisionCanvas({
               <ShieldCheck className="size-4" aria-hidden="true" />
               {getAiDecisionCopy(workspace.locale, "reviewEvidence")}
               {reviewBadgeCount > 0 ? (
-                <Badge variant="secondary" className="ms-1 rounded-full px-2 text-2xs tabular-nums">
+                <Badge variant="secondary" className="ms-1 rounded-full px-2 text-caption tabular-nums">
                   {reviewBadgeCount}
                 </Badge>
               ) : null}
@@ -1360,22 +573,22 @@ export function AiDecisionCanvas({
                 className="mx-auto w-full max-w-3xl space-y-7 py-2"
               >
                 <div className="flex gap-3">
-                  <span data-ai-skeleton="true" className="mt-0.5 size-8 shrink-0 rounded-lg" />
+                  <span data-ai-skeleton="true" className="mt-0.5 size-8 shrink-0 rounded-surface" />
                   <div className="w-full max-w-3xl space-y-2.5">
                     <span data-ai-skeleton="true" className="block h-3 w-24 rounded-full" />
-                    <span data-ai-skeleton="true" className="block h-3.5 w-11/12 rounded-md" />
-                    <span data-ai-skeleton="true" className="block h-3.5 w-4/5 rounded-md" />
-                    <span data-ai-skeleton="true" className="block h-3.5 w-2/5 rounded-md" />
+                    <span data-ai-skeleton="true" className="block h-3.5 w-11/12 rounded-control" />
+                    <span data-ai-skeleton="true" className="block h-3.5 w-4/5 rounded-control" />
+                    <span data-ai-skeleton="true" className="block h-3.5 w-2/5 rounded-control" />
                   </div>
                 </div>
                 <div className="flex justify-end">
-                  <span data-ai-skeleton="true" className="block h-11 w-2/5 rounded-2xl rounded-ee-md" />
+                  <span data-ai-skeleton="true" className="block h-11 w-2/5 rounded-surface rounded-ee-control" />
                 </div>
                 <div className="flex gap-3">
-                  <span data-ai-skeleton="true" className="mt-0.5 size-8 shrink-0 rounded-lg" />
+                  <span data-ai-skeleton="true" className="mt-0.5 size-8 shrink-0 rounded-surface" />
                   <div className="w-full max-w-3xl space-y-2.5">
                     <span data-ai-skeleton="true" className="block h-3 w-24 rounded-full" />
-                    <span data-ai-skeleton="true" className="block h-3.5 w-3/4 rounded-md" />
+                    <span data-ai-skeleton="true" className="block h-3.5 w-3/4 rounded-control" />
                   </div>
                 </div>
               </div>
@@ -1436,9 +649,9 @@ export function AiDecisionCanvas({
                   </div>
                 ) : null}
 
-                {/* Ledger AI-14: grounded follow-up affordances under the last
+                {/* Ledger AI-14: grounded-control follow-up affordances under the last
                     completed answer; anchored dismissal resets on a new turn.
-                    When the turn produced no grounded chips, fall back to two
+                    When the turn produced no grounded-control chips, fall back to two
                     shop job prompts so the thread never ends dead. */}
                 {!sending && !editingMessageId && lastMessageId ? (
                   <AiFollowUpChips
@@ -1462,7 +675,7 @@ export function AiDecisionCanvas({
                 {proposals.length > 0 ? (
                   <section
                     data-ai-inline-proposals="true"
-                    className="ms-11 max-w-3xl rounded-2xl border border-primary/25 bg-primary/[0.04] p-4"
+                    className="ms-11 max-w-3xl rounded-surface border border-primary/25 bg-primary-subtle p-4"
                     aria-labelledby="ai-proposed-changes-title"
                   >
                     <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -1536,7 +749,7 @@ export function AiDecisionCanvas({
         {editingMessage ? (
           <div
             data-ai-editing="true"
-            className="mx-auto mb-2 flex w-full max-w-4xl items-center justify-between gap-3 rounded-xl border border-warning/30 bg-warning/[0.07] px-3.5 py-2.5"
+            className="mx-auto mb-2 flex w-full max-w-4xl items-center justify-between gap-3 rounded-surface border border-warning/30 bg-warning-soft px-3.5 py-2.5"
           >
             <p className="min-w-0 truncate text-xs text-foreground">
               {copy("editingNotice")}
@@ -1556,13 +769,13 @@ export function AiDecisionCanvas({
           {screenshot ? (
             <div
               data-ai-screenshot-chip="true"
-              className="mb-2 flex items-center gap-3 rounded-xl border border-border/60 bg-muted/25 px-3 py-2"
+              className="mb-2 flex items-center gap-3 rounded-surface border border-border/60 bg-muted/25 px-3 py-2"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview, never persisted */}
               <img
                 src={screenshot.previewUrl}
                 alt={screenshot.file.name || copy("attachScreenshot")}
-                className="size-10 shrink-0 rounded-lg border border-border/60 object-cover"
+                className="size-10 shrink-0 rounded-surface border border-border/60 object-cover"
               />
               {readingScreenshot ? (
                 <Loader2
@@ -1590,7 +803,7 @@ export function AiDecisionCanvas({
           ) : null}
           <div
             data-ai-composer="true"
-            className="flex w-full items-end gap-2 rounded-2xl border border-border/70 bg-card p-2 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_12px_32px_oklch(0_0_0/0.07)] focus-within:border-primary/40"
+            className="flex w-full items-end gap-2 rounded-surface border border-border/70 bg-card p-2 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_12px_32px_oklch(0_0_0/0.07)] focus-within:border-primary/40"
           >
           <input
             ref={screenshotInputRef}
@@ -1659,7 +872,7 @@ export function AiDecisionCanvas({
               size="icon"
               variant="outline"
               aria-label={workspace.copy("stop")}
-              className="shrink-0 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="shrink-0 rounded-surface border-destructive/30 text-destructive hover:bg-destructive-soft hover:text-destructive"
               onClick={stop}
             >
               <Square className="size-4" aria-hidden="true" />
@@ -1670,7 +883,7 @@ export function AiDecisionCanvas({
               size="icon"
               aria-label={workspace.copy("send")}
               disabled={!setupReady || !draft.trim() || startingAnalysis || readingScreenshot}
-              className="shrink-0 rounded-xl shadow-sm"
+              className="shrink-0 rounded-surface shadow-sm"
               onClick={() => void submit()}
             >
               {startingAnalysis ? (
@@ -1688,7 +901,7 @@ export function AiDecisionCanvas({
               data-ai-composer-counter="true"
               dir="ltr"
               className={cn(
-                "mt-1 text-end text-2xs tabular-nums",
+                "mt-1 text-end text-caption tabular-nums",
                 draft.length >= AI_CHAT_MESSAGE_MAX_LENGTH
                   ? "font-semibold text-warning"
                   : "text-muted-foreground",
@@ -1701,12 +914,36 @@ export function AiDecisionCanvas({
             </p>
           ) : null}
         </div>
-        <p className="mx-auto mt-1.5 hidden w-full max-w-4xl flex-wrap items-center gap-x-3 gap-y-1 px-1 text-2xs text-muted-foreground md:flex">
-          <span><kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">/</kbd> {copy("shortcutFocusComposer")}</span>
-          <span><kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Esc</kbd> {copy("shortcutStopStream")}</span>
-          <span dir="ltr"><kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Alt+↑↓</kbd> {copy("shortcutSwitchSessions")}</span>
-          <span dir="ltr"><kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Ctrl+↵</kbd> {copy("shortcutApproveFocused")}</span>
-        </p>
+        {/*
+          UI-03 — this was four shortcuts printed permanently under the
+          composer. A reference the seller reads once does not earn a
+          standing row beneath the thing they type into every day, so it is
+          on-demand disclosure now: collapsed by default, one line when open.
+
+          `<details>` rather than React state — it is the native disclosure
+          widget, so the trigger is a real button, keyboard- and
+          screen-reader-operable, with expanded state announced for free.
+          The label reuses `common.cheatsheet`, which already exists in all
+          three locales, so this introduces no new copy keys.
+        */}
+        <details
+          data-ai-shortcut-disclosure="true"
+          className="group mx-auto mt-1.5 hidden w-full max-w-4xl px-1 md:block"
+        >
+          <summary className="inline-flex w-fit cursor-pointer list-none items-center gap-1 rounded-control text-caption text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+            <ChevronRight
+              className="size-3 transition-transform group-open:rotate-90 rtl:rotate-180 rtl:group-open:rotate-90"
+              aria-hidden="true"
+            />
+            {t("common.cheatsheet")}
+          </summary>
+          <p className="mt-1.5 flex w-full flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
+            <span><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">/</kbd> {copy("shortcutFocusComposer")}</span>
+            <span><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Esc</kbd> {copy("shortcutStopStream")}</span>
+            <span dir="ltr"><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Alt+↑↓</kbd> {copy("shortcutSwitchSessions")}</span>
+            <span dir="ltr"><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Ctrl+↵</kbd> {copy("shortcutApproveFocused")}</span>
+          </p>
+        </details>
       </div>
 
       {!wideReview ? (

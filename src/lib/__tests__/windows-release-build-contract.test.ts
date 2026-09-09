@@ -221,9 +221,9 @@ describe("Windows signed release build contract", () => {
     const lockfile = read("bun.lock");
     const release = read(".github/workflows/release.yml");
 
-    expect(packageJson.overrides?.sharp).toBe("0.35.3");
-    expect(sidecarPackage.dependencies?.sharp).toBe("0.35.3");
-    expect(lockfile).toContain('"sharp": ["sharp@0.35.3"');
+    expect(packageJson.overrides?.sharp).toBe("0.35.4");
+    expect(sidecarPackage.dependencies?.sharp).toBe("0.35.4");
+    expect(lockfile).toContain('"sharp": ["sharp@0.35.4"');
     expect(release).toContain("Required PR gate");
     expect(release).toMatch(
       /Upload staged packaged runtime diagnostics[\s\S]*if-no-files-found:\s*ignore/,

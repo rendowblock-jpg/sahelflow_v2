@@ -12,6 +12,7 @@ import {
   HelpCircle,
   LogOut,
   Menu,
+  Plus,
   Search,
   Settings,
   Store,
@@ -43,6 +44,7 @@ import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { toast } from "@/lib/toast";
 import { logoutAndRedirect } from "@/lib/auth/logout-client";
 import { useShopStore } from "@/stores/shop-store";
+import { CreateShopDialog } from "./create-shop-dialog";
 import { navigationItemForPathname } from "./navigation";
 import { Sidebar } from "./sidebar";
 
@@ -96,6 +98,7 @@ export function Topbar({
   const { notifications, unreadCount, applyLifecycle, readAll } =
     useNotificationCenter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [createShopOpen, setCreateShopOpen] = useState(false);
   const [memberIdentity, setMemberIdentity] = useState<MemberIdentity | null>(
     null,
   );
@@ -261,15 +264,39 @@ export function Topbar({
                 ) : null}
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
+            {/*
+              The seller's only route to shop creation. `onSelect` is prevented
+              so the menu closing does not unmount the dialog with it; the
+              dialog itself renders outside this menu.
+            */}
+            <DropdownMenuItem
+              className="gap-2"
+              disabled={switchStatus === "pending"}
+              onSelect={(event) => {
+                event.preventDefault();
+                setCreateShopOpen(true);
+              }}
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate">
+                {t("shops.newShop")}
+              </span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <CreateShopDialog
+          open={createShopOpen}
+          onOpenChange={setCreateShopOpen}
+        />
       </div>
 
       <button
         type="button"
         data-command-trigger="true"
         onClick={onCommandPaletteOpen}
-        className="mx-auto hidden h-8 min-h-(--sf-touch-target) min-w-0 max-w-xl flex-1 items-center gap-2 rounded-lg border border-border/80 bg-muted/30 px-2.5 text-sm text-muted-foreground outline-none transition-[background-color,border-color,box-shadow,color] hover:border-border hover:bg-muted/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex"
+        className="mx-auto hidden h-8 min-h-(--sf-touch-target) min-w-0 max-w-xl flex-1 items-center gap-2 rounded-surface border border-border/80 bg-muted/30 px-2.5 text-sm text-muted-foreground outline-none transition-[background-color,border-color,box-shadow,color] hover:border-border hover:bg-muted/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex"
         aria-label={t("topbar.searchPlaceholder")}
         aria-keyshortcuts="Control+K"
       >
@@ -279,7 +306,7 @@ export function Topbar({
         </span>
         <kbd
           dir="ltr"
-          className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-md border border-border/80 bg-background/80 px-1.5 font-mono text-2xs font-medium text-muted-foreground shadow-sm [unicode-bidi:isolate]"
+          className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-control border border-border/80 bg-background/80 px-1.5 font-mono text-caption font-medium text-muted-foreground shadow-sm [unicode-bidi:isolate]"
         >
           <span aria-hidden="true">Ctrl</span>
           <span aria-hidden="true">K</span>
@@ -310,7 +337,7 @@ export function Topbar({
               disabled={isLocalePending}
             >
               <Globe className="size-4" aria-hidden="true" />
-              <span className="hidden text-2xs font-semibold uppercase sm:inline">
+              <span className="hidden text-caption font-semibold uppercase sm:inline">
                 {locale}
               </span>
             </Button>
@@ -349,7 +376,7 @@ export function Topbar({
             >
               <Bell className="size-4" aria-hidden="true" />
               {unreadCount > 0 ? (
-                <span className="absolute end-0 top-0 flex min-w-3.5 -translate-y-0.5 translate-x-0.5 items-center justify-center rounded-full bg-background px-1 text-2xs font-bold leading-3.5 text-destructive ring-1 ring-destructive rtl:-translate-x-0.5">
+                <span className="absolute end-0 top-0 flex min-w-3.5 -translate-y-0.5 translate-x-0.5 items-center justify-center rounded-full bg-background px-1 text-caption font-bold leading-3.5 text-destructive ring-1 ring-destructive rtl:-translate-x-0.5">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               ) : null}
@@ -384,7 +411,7 @@ export function Topbar({
                   const content = (
                     <>
                       <span
-                        className={`flex size-8 shrink-0 items-center justify-center rounded-md ${presentation.className}`}
+                        className={`flex size-8 shrink-0 items-center justify-center rounded-control ${presentation.className}`}
                       >
                         <Icon className="size-3.5" aria-hidden="true" />
                       </span>
@@ -405,7 +432,7 @@ export function Topbar({
                             {notification.body}
                           </span>
                         ) : null}
-                        <span className="block text-2xs text-muted-foreground/70">
+                        <span className="block text-caption text-muted-foreground/70">
                           {notification.time}
                         </span>
                       </span>
@@ -472,7 +499,7 @@ export function Topbar({
               aria-label={t("common.openMenu")}
             >
               <Avatar className="size-7 ring-1 ring-border">
-                <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                <AvatarFallback className="bg-primary-soft text-xs font-semibold text-primary">
                   {memberIdentity?.displayName ? (
                     memberIdentity.displayName.charAt(0).toUpperCase()
                   ) : (

@@ -69,18 +69,41 @@ html[dir="rtl"],
 [data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(3) { animation-delay: 40ms; }
 [data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(4) { animation-delay: 56ms; }
 [data-sahelflow-shell="desktop"] .stagger-grid > :nth-child(n + 5) { animation-delay: 68ms; }
-
-[data-sahelflow-shell="desktop"] .animate-fade-in {
-  animation: sf-surface-fade var(--sf-motion-surface) var(--sf-motion-ease-out) both;
-}
 [data-sahelflow-shell="desktop"] .animate-fade-up {
   animation: sf-surface-enter var(--sf-motion-surface) var(--sf-motion-ease-out) both;
+}
+[data-sahelflow-shell="desktop"] :is(.animate-slide-right, .animate-slide-inline) {
+  animation: sf-surface-inline var(--sf-motion-surface) var(--sf-motion-ease-out) both;
+}
+/* Surface entrance vocabulary. These are declared motion contract (pinned by
+ * motion-system-contract.test.ts) even though no component consumes the classes
+ * today — retiring the vocabulary is a deliberate motion-system decision
+ * (register UI-08), not a dead-code sweep, and it retires as a unit with its
+ * contract updated in the same change.
+ *
+ * This file is imported last, so restoring the full shorthand here also makes
+ * it the SINGLE owner of these classes: the partial longhand overrides that
+ * globals.css and product-system.css used to contribute stay deleted, which is
+ * what resolves the SYS-01 cross-file merge for this vocabulary. */
+[data-sahelflow-shell="desktop"] .animate-fade-in {
+  animation: sf-surface-fade var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
 [data-sahelflow-shell="desktop"] .animate-scale-in {
   animation: sf-surface-scale var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
-[data-sahelflow-shell="desktop"] :is(.animate-slide-right, .animate-slide-inline) {
-  animation: sf-surface-inline var(--sf-motion-surface) var(--sf-motion-ease-out) both;
+@keyframes sf-surface-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sf-surface-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Card feedback — hover is physical feedback, not a decorative floating-card
@@ -176,22 +199,6 @@ html[dir="rtl"],
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes sf-surface-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes sf-surface-scale {
-  from {
-    opacity: 0;
-    transform: scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
   }
 }
 

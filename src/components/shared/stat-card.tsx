@@ -74,20 +74,20 @@ const toneClasses: Record<
     icon: "border-border/70 bg-muted/45 text-muted-foreground",
   },
   accent: {
-    surface: "border-primary/20 bg-primary/[0.025]",
-    icon: "border-primary/20 bg-primary/10 text-primary",
+    surface: "border-primary/20 bg-primary-subtle",
+    icon: "border-primary/20 bg-primary-soft text-primary",
   },
   success: {
-    surface: "border-success/20 bg-success/[0.025]",
-    icon: "border-success/20 bg-success/10 text-success",
+    surface: "border-success/20 bg-success-subtle",
+    icon: "border-success/20 bg-success-soft text-success",
   },
   warning: {
-    surface: "border-warning/25 bg-warning/[0.035]",
-    icon: "border-warning/25 bg-warning/10 text-warning",
+    surface: "border-warning/25 bg-warning-subtle",
+    icon: "border-warning/25 bg-warning-soft text-warning",
   },
   danger: {
-    surface: "border-destructive/20 bg-destructive/[0.025]",
-    icon: "border-destructive/20 bg-destructive/10 text-destructive",
+    surface: "border-destructive/20 bg-destructive-subtle",
+    icon: "border-destructive/20 bg-destructive-soft text-destructive",
   },
 };
 
@@ -139,13 +139,13 @@ export function StatCard({
   return (
     <section
       className={cn(
-        "min-w-0 rounded-lg border border-border/80 bg-card",
+        "min-w-0 rounded-surface border border-border/80 bg-card",
         emphasis === "primary" ? "px-5 py-4" : "px-4 py-3.5",
         toneStyle.surface,
         actionable &&
-          "transition-[background-color,border-color,box-shadow] duration-150 hover:border-primary/35 hover:bg-primary/[0.02] focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-ring/25 motion-reduce:transition-none",
+          "transition-[background-color,border-color,box-shadow] duration-150 hover:border-primary/35 hover:bg-primary-subtle focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-ring/25 motion-reduce:transition-none",
         selected &&
-          "border-primary/45 bg-primary/[0.045] ring-1 ring-primary/15",
+          "border-primary/45 bg-primary-subtle ring-1 ring-primary/15",
         className,
       )}
       style={style}
@@ -164,7 +164,7 @@ export function StatCard({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={tooltip}
                   >
                     <Info className="size-3.5" aria-hidden="true" />
@@ -219,7 +219,7 @@ export function StatCard({
           {actionable ? <div data-stat-action="true">{action}</div> : null}
           <div
             className={cn(
-              "flex shrink-0 items-center justify-center rounded-lg border [&_svg]:size-[18px]",
+              "flex shrink-0 items-center justify-center rounded-surface border [&_svg]:size-[18px]",
               emphasis === "primary" ? "size-10" : "size-9",
               toneStyle.icon,
             )}
@@ -241,7 +241,7 @@ export function StatCard({
           </div>
           {sparkContext ? (
             <div
-              className="mt-1 flex items-center justify-between gap-2 text-2xs leading-4 text-muted-foreground/80"
+              className="mt-1 flex items-center justify-between gap-2 text-caption leading-4 text-muted-foreground/80"
               data-stat-sparkline-context="true"
             >
               <span>{sparkContext}</span>

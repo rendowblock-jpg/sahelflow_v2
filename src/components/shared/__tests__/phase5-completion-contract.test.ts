@@ -113,7 +113,11 @@ describe("Phase 5 whole-product completion contract", () => {
 
   it("keeps provider recovery, AI and extraction entry server-authoritative", () => {
     const inbox = read("src/app/(dashboard)/inbox/page.tsx");
-    const recovery = read("src/components/inbox/whatsapp-ingress-recovery-panel.tsx");
+    // Re-anchored to the shipping implementation. The panel this used to read
+    // was a superseded predecessor with zero importers; the dock is what the
+    // inbox header actually renders (inbox-v3-header.tsx), and it carries the
+    // same retry authority this assertion exists to protect.
+    const recovery = read("src/components/inbox/whatsapp-ingress-recovery-dock.tsx");
     const agents = read("src/app/(dashboard)/agents/page.tsx");
     const extraction = read("src/app/(dashboard)/analytics/extraction/page.tsx");
     expect(inbox).toContain('requireTrustedAction("conversations.read")');

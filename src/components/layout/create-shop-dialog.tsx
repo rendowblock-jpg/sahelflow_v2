@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
+
+import { Field } from "@/components/system";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,107 +12,192 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "@/lib/toast";
-import { Plus, Loader2 } from "lucide-react";
-import { useShopStore } from "@/stores/shop-store";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
+import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
+import { useShopStore } from "@/stores/shop-store";
 
-const EMOJI_OPTIONS = ["🏪", "🛍️", "📦", "📱", "👕", "💻", "🏠", "💄", "⚽", "🎮"];
+const EMOJI_OPTIONS = [
+  "🏪",
+  "🛍️",
+  "📦",
+  "📱",
+  "👕",
+  "💻",
+  "🏠",
+  "💄",
+  "⚽",
+  "🎮",
+] as const;
 
-export function CreateShopDialog() {
+const NAME_FIELD_ID = "create-shop-name";
+
+/**
+ * Shop creation.
+ *
+ * This dialog existed but was imported by nothing, so a seller had no way to
+ * create a shop at all — while `POST /api/shops`, the native provisioning
+ * lifecycle and the signed slot entitlement were all in place, and multi-shop
+ * is a paid entitlement under FD-017 (register FN-01). It is now reachable from
+ * the topbar workspace switcher.
+ *
+ * Controlled by the caller rather than owning a `DialogTrigger`, because the
+ * trigger lives inside a dropdown menu: a dialog nested in the menu would be
+ * unmounted as the menu closes.
+ *
+ * Slot authority is NOT re-implemented here. The native layer rejects creation
+ * beyond the signed `shop_slots` count, so this surface reports that refusal
+ * truthfully instead of guessing at the seller's entitlement client-side.
+ */
+export function CreateShopDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [icon, setIcon] = useState("🏪");
-  const [pending, startTransition] = useTransition();
-  const createShop = useShopStore((s) => s.createShop);
+  const [icon, setIcon] = useState<string>(EMOJI_OPTIONS[0]);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const createShop = useShopStore((state) => state.createShop);
 
   function reset() {
     setName("");
-    setIcon("🏪");
+    setIcon(EMOJI_OPTIONS[0]);
+    setError(null);
+  }
+
+  function close(next: boolean) {
+    if (pending) return;
+    onOpenChange(next);
+    if (!next) reset();
   }
 
   async function handleCreate() {
     const requestedName = name.trim();
     if (!requestedName) {
-      toast.error(t("shops.nameRequired"));
+      setError(t("shops.nameRequired"));
       return;
     }
-    startTransition(async () => {
-      try {
-        await createShop({ name: requestedName, icon });
-        toast.success(t("shops.created", { name: requestedName }));
-        setOpen(false);
-        reset();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : t("shops.error"));
-      }
-    });
+
+    setPending(true);
+    setError(null);
+    try {
+      await createShop({ name: requestedName, icon });
+      toast.success(t("shops.created", { name: requestedName }));
+      onOpenChange(false);
+      reset();
+    } catch (caught) {
+      // Slot exhaustion, permission refusal and native unavailability all
+      // arrive here. Surface the server's own verdict rather than a generic
+      // failure that hides why the seller was refused.
+      setError(translateServerError(caught, t, t("shops.lifecycleError")));
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
-      <DialogTrigger asChild>
-        <button className="relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground">
-          <Plus className="h-4 w-4" />
-          <span>{t("shops.newShop")}</span>
-        </button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("shops.createTitle")}</DialogTitle>
-          <DialogDescription>
-            {t("shops.createDescription")}
-          </DialogDescription>
+          <DialogDescription>{t("shops.createDescription")}</DialogDescription>
         </DialogHeader>
+
         <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label htmlFor="shop-name">{t("shops.nameLabel")}</Label>
-            <Input
-              id="shop-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("shops.namePlaceholder")}
-              maxLength={50}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  void handleCreate();
-                }
-              }}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>{t("shops.iconLabel")}</Label>
-            <div className="flex flex-wrap gap-2">
-              {EMOJI_OPTIONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => setIcon(emoji)}
-                  className={`h-9 w-9 rounded-md border-2 text-lg transition-colors ${
-                    icon === emoji
-                      ? "border-primary bg-accent"
-                      : "border-border hover:border-foreground/20"
-                  }`}
-                >
-                  {emoji}
-                </button>
-              ))}
+          <Field
+            id={NAME_FIELD_ID}
+            label={t("shops.nameLabel")}
+            error={error ?? undefined}
+            required
+          >
+            {(control) => (
+              <Input
+                {...control}
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder={t("shops.namePlaceholder")}
+                maxLength={50}
+                autoFocus
+                disabled={pending}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void handleCreate();
+                  }
+                }}
+              />
+            )}
+          </Field>
+
+          <div className="space-y-1.5">
+            <span className="block text-body-sm font-medium text-foreground">
+              {t("shops.iconLabel")}
+            </span>
+            {/*
+              A radiogroup, not ten anonymous buttons: the previous markup gave
+              assistive technology no way to tell the options apart or to know
+              which was selected.
+            */}
+            <div
+              role="radiogroup"
+              aria-label={t("shops.iconLabel")}
+              className="flex flex-wrap gap-2"
+            >
+              {EMOJI_OPTIONS.map((emoji) => {
+                const selected = icon === emoji;
+                return (
+                  <button
+                    key={emoji}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    aria-label={emoji}
+                    disabled={pending}
+                    onClick={() => setIcon(emoji)}
+                    className={cn(
+                      "flex size-9 items-center justify-center rounded-control border text-lg outline-none transition-colors",
+                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                      "disabled:opacity-50",
+                      selected
+                        ? "border-primary bg-primary-soft"
+                        : "border-border hover:border-foreground/20 hover:bg-muted/60",
+                    )}
+                  >
+                    <span aria-hidden="true">{emoji}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => close(false)}
+            disabled={pending}
+          >
             {t("shops.cancel")}
           </Button>
-          <Button onClick={handleCreate} disabled={pending || !name.trim()}>
-            {pending && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
+          <Button
+            type="button"
+            onClick={() => void handleCreate()}
+            disabled={pending || !name.trim()}
+          >
+            {pending ? (
+              <Loader2 className="me-2 size-4 animate-spin" aria-hidden="true" />
+            ) : null}
             {t("shops.create")}
           </Button>
         </DialogFooter>

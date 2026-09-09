@@ -95,6 +95,20 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
     await expect(page.locator('[data-ai-decision-canvas="true"]')).toContainText(
       "Nouvelle conversation",
     );
+    // The canvas shows the new session's title as soon as the session is
+    // active, but the start surface is behind `loadingConversation` — the
+    // canvas renders the conversation skeleton first and only then falls
+    // through to `messages.length === 0`. Asserting the start state directly
+    // after the title therefore raced a still-settling load and intermittently
+    // failed with "element(s) not found" (recorded twice: PR #414, and release
+    // run 34277049132 where the failed-jobs-only re-run passed).
+    //
+    // Waiting for the skeleton to clear names that precondition instead of
+    // widening a timeout. The assertion below is unchanged — the start surface
+    // must still be visible — so this removes the race, not the contract.
+    await expect(
+      page.locator('[data-ai-conversation-skeleton="true"]'),
+    ).toHaveCount(0, { timeout: 30_000 });
     await expect(page.locator('[data-ai-start-state="true"]')).toBeVisible();
 
     const composer = page.getByRole("textbox", {

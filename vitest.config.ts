@@ -50,12 +50,24 @@ export default defineConfig({
         "src/lib/survivability/native-bridge.ts",
       ],
       thresholds: {
-        // Maintain the 80% application-source floor. Platform-bound native
-        // transport is validated by the stronger Windows/native evidence lanes.
-        statements: 80,
-        branches: 60,
-        functions: 60,
-        lines: 80,
+        // SEC-02: these are a RATCHET pinned to measured truth, not an aspiration.
+        //
+        // The previous 80% statements/lines floor was never met (measured 77.29%)
+        // and could not fail anything, because ci.yml ran the coverage step under
+        // `continue-on-error: true`. A floor that nothing can enforce is not a
+        // floor — it is a number that makes the suite look stricter than it is,
+        // and it also made `vitest run --coverage` fail for every developer who
+        // ran it locally while CI reported success on the same tree.
+        //
+        // Pinned just below the measured 2026-09-09 values so the gate passes on
+        // current truth and fails the moment coverage REGRESSES. Raise these
+        // numbers when coverage rises; never lower them to make a red run green.
+        // Platform-bound native transport stays excluded above — it is validated
+        // by the stronger Windows/native evidence lanes, not by V8 line counts.
+        statements: 77,
+        branches: 76,
+        functions: 82,
+        lines: 77,
       },
     },
   },

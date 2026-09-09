@@ -161,7 +161,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   variants={productVariants}
                   defaultPrice={product.price}
                 />
-                <div className="rounded-md border bg-muted/30 p-3">
+                <div className="rounded-control border bg-muted/30 p-3">
                   <div className="mb-2 text-xs text-muted-foreground">
                     {t("products.allVariants")}
                   </div>

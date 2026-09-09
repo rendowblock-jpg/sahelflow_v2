@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { InboxV3Workspace } from "@/components/inbox/inbox-v3-workspace";
 import { getI18n } from "@/lib/i18n-server";
+import { PageShell } from "@/components/system";
 import {
   requireTrustedAction,
   trustedActionAllowed,
@@ -28,14 +29,17 @@ export default async function InboxPage() {
     trustedActionAllowed(actorContext, "conversations.update", resource);
 
   return (
-    <div className="app-workspace-content flex flex-col">
-      <h1 className="sr-only">{t("metadata.title.inbox")}</h1>
-      <div className="min-h-0 flex-1">
-        <InboxV3Workspace
-          canViewIngress={canViewIngress}
-          canRetryIngress={canRetryIngress}
-        />
-      </div>
-    </div>
+    // IA-01: Inbox was the second route opted out of the page grammar, with its
+    // only <h1> hidden by `sr-only`. PageShell's `workspace` variant keeps the
+    // full-height geometry it needs — `app-workspace-content` still sits on the
+    // route root for the `#main-content:has(> …)` rule, and the body stays
+    // `min-h-0 flex-1 overflow-hidden` so the panes own the remaining space —
+    // while the screen finally states its own name.
+    <PageShell variant="workspace" title={t("metadata.title.inbox")}>
+      <InboxV3Workspace
+        canViewIngress={canViewIngress}
+        canRetryIngress={canRetryIngress}
+      />
+    </PageShell>
   );
 }

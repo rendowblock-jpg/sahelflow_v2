@@ -20,20 +20,20 @@ const TONE_CLASSES: Record<
     frame: "border-border/70 bg-background",
   },
   info: {
-    icon: "border-primary/20 bg-primary/10 text-primary",
-    frame: "border-primary/15 bg-primary/[0.025]",
+    icon: "border-primary/20 bg-primary-soft text-primary",
+    frame: "border-primary/15 bg-primary-subtle",
   },
   success: {
-    icon: "border-success/20 bg-success/10 text-success",
-    frame: "border-success/15 bg-success/[0.025]",
+    icon: "border-success/20 bg-success-soft text-success",
+    frame: "border-success/15 bg-success-subtle",
   },
   warning: {
-    icon: "border-warning/25 bg-warning/10 text-warning",
-    frame: "border-warning/20 bg-warning/[0.025]",
+    icon: "border-warning/25 bg-warning-soft text-warning",
+    frame: "border-warning/20 bg-warning-subtle",
   },
   danger: {
-    icon: "border-destructive/20 bg-destructive/10 text-destructive",
-    frame: "border-destructive/15 bg-destructive/[0.025]",
+    icon: "border-destructive/20 bg-destructive-soft text-destructive",
+    frame: "border-destructive/15 bg-destructive-subtle",
   },
 };
 
@@ -87,7 +87,7 @@ export function StateSurface({
   return (
     <section
       className={cn(
-        "flex rounded-lg border",
+        "flex rounded-surface border",
         inline
           ? "w-fit max-w-[min(100%,48rem)] self-start items-start justify-start"
           : "w-full items-center justify-center",
@@ -112,7 +112,7 @@ export function StateSurface({
         <div
           className={cn(
             "flex shrink-0 items-center justify-center border",
-            inline ? "size-7 rounded-md" : "mb-4 size-11 rounded-lg",
+            inline ? "size-7 rounded-control" : "mb-4 size-11 rounded-surface",
             toneClasses.icon,
           )}
           aria-hidden="true"
@@ -146,7 +146,7 @@ export function StateSurface({
           ) : null}
 
           {details && inline ? (
-            <div className="mt-1.5 rounded-md border border-border/70 bg-muted/35 px-2.5 py-1.5 text-start text-xs text-muted-foreground">
+            <div className="mt-1.5 rounded-control border border-border/70 bg-muted/35 px-2.5 py-1.5 text-start text-xs text-muted-foreground">
               {details}
             </div>
           ) : null}
@@ -159,7 +159,7 @@ export function StateSurface({
         ) : null}
 
         {details && !inline ? (
-          <div className="mt-4 w-full rounded-md border border-border/70 bg-muted/35 px-3 py-2 text-start text-xs text-muted-foreground">
+          <div className="mt-4 w-full rounded-control border border-border/70 bg-muted/35 px-3 py-2 text-start text-xs text-muted-foreground">
             {details}
           </div>
         ) : null}

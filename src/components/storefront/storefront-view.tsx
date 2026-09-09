@@ -386,7 +386,7 @@ function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
             <h1 className="text-2xl font-bold">{t("storefront.view.orderConfirmed")}</h1>
             <p className="text-muted-foreground">{result.message}</p>
             {result.orderNumber ? (
-              <div className="rounded-lg bg-muted p-3">
+              <div className="rounded-surface bg-muted p-3">
                 <p className="text-xs text-muted-foreground">{t("storefront.view.orderNumber")}</p>
                 <p className="font-mono text-lg font-bold">{result.orderNumber}</p>
               </div>
@@ -487,7 +487,7 @@ function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
               />
               <div className="space-y-1">
                 <Label htmlFor="delivery-mode">{t("storefront.view.deliveryMode")}</Label>
-                <select id="delivery-mode" value={form.deliveryMode} onChange={(event) => changeForm("deliveryMode", event.target.value as "home" | "desk")} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
+                <select id="delivery-mode" value={form.deliveryMode} onChange={(event) => changeForm("deliveryMode", event.target.value as "home" | "desk")} className="h-11 w-full rounded-control border bg-background px-3 text-sm">
                   <option value="home">{t("storefront.view.deliveryHome")}</option>
                   <option value="desk">{t("storefront.view.deliveryDesk")}</option>
                 </select>
@@ -503,7 +503,7 @@ function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
                 </div>
               ) : null}
               {result && !result.ok ? (
-                <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-2 text-xs text-destructive">
+                <div className="flex items-start gap-2 rounded-control bg-destructive-soft p-2 text-xs text-destructive">
                   <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
                   <span>{result.message}</span>
                 </div>
@@ -555,7 +555,7 @@ function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
                     invalidateSubmission();
                     setSelectedVariants((current) => ({ ...current, [product.id]: event.target.value }));
                   }}
-                  className="h-11 w-full rounded-md border bg-background px-3 text-sm"
+                  className="h-11 w-full rounded-control border bg-background px-3 text-sm"
                 >
                   <option value="">—</option>
                   {variants.map((variant) => (

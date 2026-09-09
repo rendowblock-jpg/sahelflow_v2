@@ -3,6 +3,7 @@
 import { ArrowRight, Bot, MessageCircle, PackageCheck } from "lucide-react";
 
 import { useI18n } from "@/hooks/use-i18n";
+import { IconTile } from "@/components/system";
 
 /**
  * Flagship-loop explainer (R4-b) — teaches the core SahelFlow loop the old
@@ -44,7 +45,7 @@ export function FlagshipLoopExplainer({
     return (
       <div
         data-onboarding-loop="compact"
-        className="rounded-lg border bg-muted/30 p-3"
+        className="rounded-surface border bg-muted/30 p-3"
       >
         <p className="text-xs font-semibold text-foreground">
           {t("onboarding.loop.title")}
@@ -54,9 +55,7 @@ export function FlagshipLoopExplainer({
             const Icon = beat.icon;
             return (
               <li key={beat.title} className="flex items-center gap-2">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Icon className="size-3.5" aria-hidden="true" />
-                </span>
+                <IconTile icon={Icon} tone="primary" size="xs" />
                 <span className="text-xs text-muted-foreground">
                   {beat.title}
                 </span>
@@ -77,7 +76,7 @@ export function FlagshipLoopExplainer({
   return (
     <div
       data-onboarding-loop="full"
-      className="rounded-xl border bg-muted/30 p-5"
+      className="rounded-surface border bg-muted/30 p-5"
     >
       <p className="text-sm font-semibold">{t("onboarding.loop.title")}</p>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -90,12 +89,10 @@ export function FlagshipLoopExplainer({
             <li
               key={beat.title}
               data-onboarding-loop-beat={index + 1}
-              className="relative flex flex-col gap-2 rounded-lg border bg-background p-4"
+              className="relative flex flex-col gap-2 rounded-surface border bg-background p-4"
             >
               <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Icon className="size-4" aria-hidden="true" />
-                </span>
+                <IconTile icon={Icon} tone="primary" size="sm" />
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {index + 1}/3
                 </span>

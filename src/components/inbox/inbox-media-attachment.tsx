@@ -264,7 +264,7 @@ function DownloadButton({
       disabled={downloading}
       aria-busy={downloading}
       className={cn(
-        "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-border/70 bg-background px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-65",
+        "inline-flex min-h-9 items-center justify-center gap-1.5 rounded-surface border border-border/70 bg-background px-3 text-xs font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-65",
         compact && "min-h-8 px-2.5",
       )}
     >
@@ -675,7 +675,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
         <div className="flex items-start gap-2.5">
           <span
             aria-hidden="true"
-            className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground"
+            className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-surface border border-border/60 bg-muted/40 text-muted-foreground"
           >
             <KindIcon className="size-5" />
           </span>
@@ -711,13 +711,13 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
               aria-label={getInboxWorkspaceCopy(locale, "viewFullSize")}
               title={getInboxWorkspaceCopy(locale, "viewFullSize")}
               className={cn(
-                "block cursor-zoom-in rounded-xl text-start outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "block cursor-zoom-in rounded-surface text-start outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 message.messageType === "sticker" ? "w-fit" : "w-full",
               )}
             >
               <div
                 className={cn(
-                  "overflow-hidden rounded-xl border border-border/60 bg-muted/20",
+                  "overflow-hidden rounded-surface border border-border/60 bg-muted/20",
                   message.messageType === "sticker" && "w-fit",
                 )}
               >
@@ -755,7 +755,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
               preload="metadata"
               onError={() => setPreviewFailed(true)}
               aria-label={label}
-              className="max-h-[28rem] w-full max-w-[34rem] rounded-xl border border-border/60 bg-black"
+              className="max-h-[28rem] w-full max-w-[34rem] rounded-surface border border-border/60 bg-black"
             />
           ) : null}
 
@@ -795,7 +795,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
           }
           compact
         />
-        <span className="text-2xs leading-4 text-muted-foreground">
+        <span className="text-caption leading-4 text-muted-foreground">
           {getInboxMediaCopy(locale, "ready")}
         </span>
       </div>

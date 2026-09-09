@@ -55,7 +55,7 @@ export function CheatsheetModal({ open, onOpenChange }: CheatsheetModalProps) {
               {NAV_SHORTCUTS.map((s) => (
                 <div key={s.keys} className="flex items-center justify-between py-1">
                   <span className="text-sm">{t(s.labelKey)}</span>
-                  <kbd className="rounded border border-border bg-muted px-2 py-0.5 font-mono text-xs">
+                  <kbd className="rounded-control border border-border bg-muted px-2 py-0.5 font-mono text-xs">
                     {s.keys}
                   </kbd>
                 </div>
@@ -70,7 +70,7 @@ export function CheatsheetModal({ open, onOpenChange }: CheatsheetModalProps) {
               {ACTION_SHORTCUTS.map((s) => (
                 <div key={s.keys} className="flex items-center justify-between py-1">
                   <span className="text-sm">{t(s.labelKey)}</span>
-                  <kbd className="rounded border border-border bg-muted px-2 py-0.5 font-mono text-xs">
+                  <kbd className="rounded-control border border-border bg-muted px-2 py-0.5 font-mono text-xs">
                     {s.keys}
                   </kbd>
                 </div>

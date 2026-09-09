@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 
 import { BUSINESS_ENVELOPE_SECRET_KEY } from "@/lib/business-truth/envelope-key";
 import { db, type DbClient } from "@/lib/db";
+import type { Locale } from "@/lib/i18n";
 import {
   clearAlgerianDemoData,
   getAlgerianDemoStatus,
@@ -310,6 +311,7 @@ export async function getAlgerianDemoWorkspaceStatus(
  */
 export async function loadAlgerianDemoWorkspace(
   client: DbClient = db,
+  locale: Locale = "fr",
 ): Promise<AlgerianDemoStatus> {
   return withDemoPolicyLock(() =>
     client.$transaction(async (transaction) => {
@@ -321,7 +323,7 @@ export async function loadAlgerianDemoWorkspace(
       // the atomic annual rebuild.
       await clearDemoDerivedRecords(tx);
       await clearAlgerianDemoData(tx);
-      await seedAlgerianDemoData(tx);
+      await seedAlgerianDemoData(tx, locale);
       await finalizeAlgerianDemoStory(tx);
       return safeStatus(tx);
     }, TRANSACTION_OPTIONS),

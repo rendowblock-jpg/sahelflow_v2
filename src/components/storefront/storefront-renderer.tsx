@@ -110,7 +110,7 @@ export function StorefrontRenderer({
             {...props}
             className={sectionClass(
               section,
-              "mb-4 rounded-lg px-3 py-2 text-center text-2xs font-medium text-white",
+              "mb-4 rounded-surface px-3 py-2 text-center text-caption font-medium text-white",
             )}
             style={{
               background:
@@ -162,7 +162,7 @@ export function StorefrontRenderer({
             }
           >
             <span
-              className="text-2xs font-bold uppercase tracking-widest"
+              className="text-caption font-bold uppercase tracking-widest"
               style={
                 theme.template === "oasis"
                   ? undefined
@@ -210,7 +210,7 @@ export function StorefrontRenderer({
             {...props}
             className={sectionClass(
               section,
-              "grid grid-cols-2 gap-2 py-5 text-2xs sm:grid-cols-4",
+              "grid grid-cols-2 gap-2 py-5 text-caption sm:grid-cols-4",
             )}
           >
             {theme.trust.showCodBadge ? (
@@ -368,7 +368,7 @@ export function StorefrontRenderer({
                 {eyebrow ? (
                   <p
                     dir="auto"
-                    className="text-2xs font-bold uppercase tracking-wider"
+                    className="text-caption font-bold uppercase tracking-wider"
                     style={{ color: theme.primaryColor }}
                   >
                     {eyebrow}
@@ -542,7 +542,7 @@ export function StorefrontRenderer({
             {...props}
             className={sectionClass(
               section,
-              "mt-6 border-t pt-5 text-center text-2xs opacity-60",
+              "mt-6 border-t pt-5 text-center text-caption opacity-60",
             )}
           >
             <span>{t("storefront.studio.footerBrand", { name: draft.name })}</span>
@@ -628,7 +628,7 @@ function ProductGrid({
             <div className="space-y-2 p-3">
               <div className="text-sm font-semibold">{product.name}</div>
               {theme.catalog.showSku && product.sku ? (
-                <div className="text-2xs opacity-50">{product.sku}</div>
+                <div className="text-caption opacity-50">{product.sku}</div>
               ) : null}
               {theme.showPrices ? (
                 <div
@@ -639,7 +639,7 @@ function ProductGrid({
                 </div>
               ) : null}
               {theme.showStock ? (
-                <div className="text-2xs opacity-60">
+                <div className="text-caption opacity-60">
                   {t("storefront.studio.stockCount", { count: product.stock })}
                 </div>
               ) : null}
@@ -654,7 +654,7 @@ function ProductGrid({
 
 function Trust({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-lg border bg-white/40 px-2 py-2 [&_svg]:h-3.5 [&_svg]:w-3.5">
+    <div className="flex items-center gap-1.5 rounded-surface border bg-white/40 px-2 py-2 [&_svg]:h-3.5 [&_svg]:w-3.5">
       <span aria-hidden="true">{icon}</span>
       <span>{label}</span>
     </div>
@@ -678,7 +678,7 @@ function StorefrontContactBlock({
   const { t } = useStorefrontI18n();
   return (
     <div
-      className="rounded-xl border p-4 text-sm"
+      className="rounded-surface border p-4 text-sm"
       style={{ background: "color-mix(in srgb, currentColor 4%, transparent)" }}
     >
       <p className="mb-3 font-semibold">{t("storefront.view.contact")}</p>
@@ -725,7 +725,7 @@ function EmptyStudioSection({
     <section
       key={section.id}
       {...props}
-      className={`${props.className ?? ""} my-3 rounded-lg border border-dashed p-4 text-center text-xs opacity-60`}
+      className={`${props.className ?? ""} my-3 rounded-surface border border-dashed p-4 text-center text-xs opacity-60`}
     >
       {label}
     </section>
@@ -746,9 +746,12 @@ function heroClass(
 function radius(
   value: StorefrontPreviewProps["draft"]["theme"]["radius"],
 ): string {
+  // Seller-owned storefront identity, deliberately NOT the app's control/surface
+  // pair — see globals.css and INTERFACE_SYSTEM.md §3. Three settings must stay
+  // three distinct radii or the seller's theme control loses an option.
   return value === "sharp"
     ? "rounded-none"
     : value === "rounded"
-      ? "rounded-2xl"
-      : "rounded-xl";
+      ? "rounded-storefront-round"
+      : "rounded-storefront-soft";
 }

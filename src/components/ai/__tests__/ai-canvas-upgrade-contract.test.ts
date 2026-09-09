@@ -15,12 +15,15 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("R4-e AI canvas upgrade — markdown rendering", () => {
   it("renders assistant markdown through the token-tree renderer, seller input verbatim", () => {
-    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
     const renderer = read("src/components/ai/markdown/ai-markdown.tsx");
+    // STR-01 moved MessageBubble into its own module; these assertions
+    // follow the code they protect rather than being relaxed. Every string
+    // this test pins now lives in the bubble, so the canvas is not read here.
+    const bubble = read("src/components/ai/ai-message-bubble.tsx");
 
-    expect(canvas).toContain("<AiMarkdown content={message.content} />");
-    expect(canvas).toContain("// Seller input is echoed verbatim");
-    expect(canvas).toContain("whitespace-pre-wrap break-words");
+    expect(bubble).toContain("<AiMarkdown content={message.content} />");
+    expect(bubble).toContain("// Seller input is echoed verbatim");
+    expect(bubble).toContain("whitespace-pre-wrap break-words");
     expect(renderer).toContain('data-ai-markdown="true"');
     expect(renderer).toContain("parseMarkdown(content)");
   });
@@ -54,7 +57,11 @@ describe("R4-e AI canvas upgrade — markdown rendering", () => {
   it("memoizes per message so only the streaming bubble re-parses on deltas", () => {
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
     const renderer = read("src/components/ai/markdown/ai-markdown.tsx");
-    expect(canvas).toContain("const MessageBubble = memo(function MessageBubble");
+    // STR-01 moved MessageBubble into its own module; these assertions
+    // follow the code they protect rather than being relaxed.
+    const bubble = read("src/components/ai/ai-message-bubble.tsx");
+    expect(bubble).toContain("const MessageBubble = memo(function MessageBubble");
+    // The call site stays in the canvas — that is what wires copy through.
     expect(canvas).toContain("copy={copy}");
     expect(renderer).toContain("memo(function AiMarkdown");
     expect(renderer).toContain("useMemo(() => parseMarkdown(content), [content])");
@@ -102,8 +109,11 @@ describe("R4-e AI canvas upgrade — regenerate", () => {
     expect(canvas).not.toContain("turnCost");
     expect(canvas).not.toContain("DZD/token");
     // The canvas renders the signal only for settled provider-backed turns.
-    expect(canvas).toContain('data-ai-model-signal="true"');
-    expect(canvas).toContain("message.signal ?");
+    // STR-01 moved MessageBubble into its own module; these assertions
+    // follow the code they protect rather than being relaxed.
+    const bubble = read("src/components/ai/ai-message-bubble.tsx");
+    expect(bubble).toContain('data-ai-model-signal="true"');
+    expect(bubble).toContain("message.signal ?");
   });
 });
 

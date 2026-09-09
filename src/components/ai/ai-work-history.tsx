@@ -81,6 +81,24 @@ function sessionPreview(session: { messages?: Array<{ content?: string | null } 
   return "";
 }
 
+/**
+ * UI-05 — the title is derived from the session's FIRST message and the preview
+ * shows its LATEST one. In a session that has only been asked one question those
+ * are the same message, so the card printed the seller's prompt twice: once
+ * clipped as a title, once again as a two-line excerpt directly beneath it.
+ *
+ * Comparing on the title's body (the ellipsis is a rendering artefact, not
+ * content) catches that case without hiding a genuine reply, which is what the
+ * preview line is actually for.
+ */
+function previewRepeatsTitle(title: string, preview: string): boolean {
+  if (!title || !preview) return false;
+  const normalize = (value: string) => value.replace(/\s+/gu, " ").trim();
+  const body = normalize(title).replace(/…$/u, "");
+  if (!body) return false;
+  return normalize(preview).startsWith(body);
+}
+
 export function AiWorkHistory({
   workspace,
   navigationLocked,
@@ -229,7 +247,7 @@ export function AiWorkHistory({
             {sessions.length > 0 ? (
               <Badge
                 variant="secondary"
-                className="shrink-0 rounded-full px-2 text-2xs font-semibold tabular-nums text-muted-foreground"
+                className="shrink-0 rounded-full px-2 text-caption font-semibold tabular-nums text-muted-foreground"
               >
                 <span className="sr-only">
                   {`${workspace.copy("sessions")}: `}
@@ -238,7 +256,7 @@ export function AiWorkHistory({
               </Badge>
             ) : null}
           </div>
-          <p className="mt-1 text-2xs leading-4 text-muted-foreground">
+          <p className="mt-1 text-caption leading-4 text-muted-foreground">
             {getAiDecisionCopy(locale, "workHistoryDescription")}
           </p>
         </div>
@@ -307,25 +325,25 @@ export function AiWorkHistory({
           {capabilities?.briefing ? (
             <div className="grid grid-cols-3 gap-1.5">
               {capabilities.briefing.pendingOrders != null ? (
-                <div className="rounded-lg border border-border/60 bg-card/70 px-2 py-1.5 text-center">
+                <div className="rounded-surface border border-border/60 bg-card/70 px-2 py-1.5 text-center">
                   <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.pendingOrders}</p>
-                  <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+                  <p className="mt-0.5 truncate text-caption text-muted-foreground">
                     {getAiDecisionCopy(locale, "starterCountPending", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
                   </p>
                 </div>
               ) : null}
               {capabilities.briefing.ordersToday != null ? (
-                <div className="rounded-lg border border-border/60 bg-card/70 px-2 py-1.5 text-center">
+                <div className="rounded-surface border border-border/60 bg-card/70 px-2 py-1.5 text-center">
                   <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.ordersToday}</p>
-                  <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+                  <p className="mt-0.5 truncate text-caption text-muted-foreground">
                     {getAiDecisionCopy(locale, "starterCountToday", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
                   </p>
                 </div>
               ) : null}
               {capabilities.briefing.lowStockProducts != null ? (
-                <div className="rounded-lg border border-border/60 bg-card/70 px-2 py-1.5 text-center">
+                <div className="rounded-surface border border-border/60 bg-card/70 px-2 py-1.5 text-center">
                   <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.lowStockProducts}</p>
-                  <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+                  <p className="mt-0.5 truncate text-caption text-muted-foreground">
                     {getAiDecisionCopy(locale, "starterCountLowStock", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
                   </p>
                 </div>
@@ -333,7 +351,7 @@ export function AiWorkHistory({
             </div>
           ) : null}
           {(inbox?.length ?? 0) > 0 ? (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/[0.08] px-2.5 py-1 text-2xs font-semibold text-warning">
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-caption font-semibold text-warning">
               <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
               {getAiDecisionCopy(locale, "inboxStripCount", { count: inbox?.length ?? 0 })}
             </p>
@@ -345,7 +363,7 @@ export function AiWorkHistory({
                 return (
                   <li
                     key={group.id}
-                    className="flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-2xs text-muted-foreground"
+                    className="flex items-center justify-between gap-2 rounded-control px-1.5 py-1 text-caption text-muted-foreground"
                   >
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span
@@ -377,7 +395,7 @@ export function AiWorkHistory({
             // Structure-matching skeleton rows (§26.8) — no bare spinner.
             <div data-ai-history-skeleton="true" aria-hidden="true" className="space-y-2 px-1 pt-1">
               {[0, 1, 2, 3, 4].map((row) => (
-                <div key={row} className="rounded-lg p-2.5">
+                <div key={row} className="rounded-surface p-2.5">
                   <span data-ai-skeleton="true" className="block h-3.5 w-3/4 rounded-full" />
                   <span data-ai-skeleton="true" className="mt-2 block h-2.5 w-1/2 rounded-full" />
                 </div>
@@ -385,7 +403,7 @@ export function AiWorkHistory({
             </div>
           ) : sessions.length === 0 ? (
             <div className="px-3 py-10 text-center">
-              <span className="mx-auto flex size-11 items-center justify-center rounded-xl border border-border/60 bg-card text-muted-foreground shadow-sm">
+              <span className="mx-auto flex size-11 items-center justify-center rounded-surface border border-border/60 bg-card text-muted-foreground shadow-sm">
                 <Bot className="size-5" aria-hidden="true" />
               </span>
               <p className="mt-3 text-sm font-semibold">{workspace.copy("noSessions")}</p>
@@ -401,13 +419,21 @@ export function AiWorkHistory({
               if (groupedSessions.length === 0) return null;
               return (
                 <section key={group} aria-label={groupLabel(group, workspace)}>
-                  <p className="sticky top-0 z-10 bg-card/85 px-2 py-1.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
+                  <p className="sticky top-0 z-10 bg-card/85 px-2 py-1.5 text-caption font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
                     {groupLabel(group, workspace)}
                   </p>
                   <div className="space-y-1">
                     {groupedSessions.map((session) => {
                       const active = session.id === activeSessionId;
-                      const preview = sessionPreview(session);
+                      const sessionTitle =
+                        session.title || workspace.copy("newSessionTitle");
+                      const rawPreview = sessionPreview(session);
+                      const preview = previewRepeatsTitle(
+                        session.title ?? "",
+                        rawPreview,
+                      )
+                        ? ""
+                        : rawPreview;
                       const renamingThis = renaming?.id === session.id;
                       const deleteArmed = confirmDeleteId === session.id;
                       const busy =
@@ -418,7 +444,7 @@ export function AiWorkHistory({
                           <div
                             key={session.id}
                             data-ai-session-rename="true"
-                            className="flex items-center gap-1 rounded-lg border border-primary/20 bg-card px-1.5 py-1 shadow-sm"
+                            className="flex items-center gap-1 rounded-surface border border-primary/20 bg-card px-1.5 py-1 shadow-sm"
                           >
                             <Input
                               value={renaming.value}
@@ -482,7 +508,7 @@ export function AiWorkHistory({
                       return (
                         <div
                           key={session.id}
-                          className="group relative rounded-lg"
+                          className="group relative rounded-surface"
                         >
                           <button
                             type="button"
@@ -491,14 +517,14 @@ export function AiWorkHistory({
                             disabled={navigationLocked}
                             onClick={() => onOpenSession(session.id)}
                             className={cn(
-                              "w-full rounded-lg border border-transparent px-3 py-2.5 text-start transition-colors",
+                              "w-full rounded-surface border border-transparent px-3 py-2.5 text-start transition-colors",
                               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                               "disabled:cursor-not-allowed disabled:opacity-50",
                               active
-                                ? "border-primary/15 bg-primary/[0.06]"
+                                ? "border-primary/15 bg-primary-soft"
                                 : "hover:bg-muted/55",
                               deleteArmed &&
-                                "border-destructive/30 bg-destructive/[0.05]",
+                                "border-destructive/30 bg-destructive-subtle",
                             )}
                           >
                             <span className="flex items-start justify-between gap-2">
@@ -509,7 +535,7 @@ export function AiWorkHistory({
                                     active ? "font-semibold" : "font-medium",
                                   )}
                                 >
-                                  {session.title || workspace.copy("newSessionTitle")}
+                                  {sessionTitle}
                                 </span>
                                 {preview ? (
                                   <span
@@ -523,7 +549,7 @@ export function AiWorkHistory({
                               {active && reviewCount > 0 ? (
                                 <Badge
                                   variant="outline"
-                                  className="shrink-0 rounded-full border-primary/25 bg-primary/[0.06] px-2 text-2xs font-semibold tabular-nums text-primary"
+                                  className="shrink-0 rounded-full border-primary/25 bg-primary-soft px-2 text-caption font-semibold tabular-nums text-primary"
                                 >
                                   <span className="sr-only">
                                     {`${getAiDecisionCopy(locale, "needsReview")}: `}
@@ -532,7 +558,7 @@ export function AiWorkHistory({
                                 </Badge>
                               ) : null}
                             </span>
-                            <span className="mt-1.5 block text-2xs tabular-nums text-muted-foreground">
+                            <span className="mt-1.5 block text-caption tabular-nums text-muted-foreground">
                               {sessionStamp(session.updatedAt, locale)}
                             </span>
                           </button>
@@ -540,10 +566,10 @@ export function AiWorkHistory({
                           {!busy ? (
                             <div
                               className={cn(
-                                "absolute end-1 top-1.5 flex items-center gap-0.5 rounded-md border border-border/60 bg-background/90 p-0.5 shadow-sm backdrop-blur-sm transition-opacity",
+                                "absolute end-1 top-1.5 flex items-center gap-0.5 rounded-control border border-border/60 bg-background/90 p-0.5 shadow-sm backdrop-blur-sm transition-opacity",
                                 "opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100",
                                 (active || deleteArmed) && "md:opacity-100",
-                                deleteArmed && "border-destructive/30 bg-destructive/[0.06]",
+                                deleteArmed && "border-destructive/30 bg-destructive-soft",
                               )}
                             >
                               <Button
@@ -570,7 +596,7 @@ export function AiWorkHistory({
                                 className={cn(
                                   "size-6",
                                   deleteArmed &&
-                                    "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                                    "text-destructive hover:bg-destructive-soft hover:text-destructive",
                                 )}
                                 data-ai-session-delete={session.id}
                                 aria-label={

@@ -36,6 +36,7 @@ import {
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
 import { toast } from "@/lib/toast";
+import { IconTile } from "@/components/system";
 
 const GEMINI_CONSENT_KEY = "gemini_consent_accepted";
 
@@ -344,9 +345,7 @@ export function AiKeyPanel({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <span className="flex size-8 items-center justify-center rounded-md bg-primary/10">
-              <Bot className="size-5 text-primary" aria-hidden="true" />
-            </span>
+            <IconTile icon={Bot} tone="primary" size="sm" />
             {t("aiKey.title")}
           </CardTitle>
           <CardDescription>{t("aiKey.description")}</CardDescription>
@@ -354,7 +353,7 @@ export function AiKeyPanel({
         <CardContent className="space-y-4">
           {canManageKey ? (
             <>
-              <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center justify-between rounded-surface border p-3">
                 <div className="flex items-center gap-2">
                   <KeyRound
                     className="size-4 text-muted-foreground"
@@ -389,15 +388,23 @@ export function AiKeyPanel({
                   <ShieldAlert className="size-4" />
                   <AlertTitle>{copy("verificationRequired")}</AlertTitle>
                   <AlertDescription className="space-y-3">
-                    <p className="text-xs text-muted-foreground">
+                    <p
+                      id="ai-key-reauth-hint"
+                      className="text-xs text-muted-foreground"
+                    >
                       {copy("verificationDescription")}
                     </p>
                     <div className="flex flex-col gap-2 sm:flex-row">
+                      {/* IA-05: a placeholder is not a label — it disappears on
+                          first keystroke and is not an accessible name. */}
                       <Input
+                        id="ai-key-reauth-pin"
                         type="password"
                         value={pin}
                         onChange={(event) => setPin(event.target.value)}
                         placeholder={t("auth.pinPlaceholder")}
+                        aria-label={t("auth.pinPlaceholder")}
+                        aria-describedby="ai-key-reauth-hint"
                         autoComplete="current-password"
                         disabled={reauthBusy}
                       />
@@ -537,10 +544,10 @@ export function AiKeyPanel({
               {result ? (
                 <div
                   role={result.ok ? "status" : "alert"}
-                  className={`flex items-start gap-2 rounded-md p-3 text-sm ${
+                  className={`flex items-start gap-2 rounded-control p-3 text-sm ${
                     result.ok
-                      ? "bg-success/10 text-success dark:bg-success/15"
-                      : "bg-destructive/10 text-destructive"
+                      ? "bg-success-soft text-success dark:bg-success-strong"
+                      : "bg-destructive-soft text-destructive"
                   }`}
                 >
                   {result.ok ? (

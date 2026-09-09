@@ -126,7 +126,7 @@ describe("Settings Class-AAA control-center contract", () => {
   it("does not turn unavailable authority into missing credentials or empty history", () => {
     const ai = read("src/components/settings/ai-key-panel.tsx");
     const delivery = read(
-      "src/components/settings/delivery-credentials-panel-wave3.tsx",
+      "src/components/settings/delivery-credentials-panel.tsx",
     );
     const backup = read("src/components/settings/backup-restore-panel.tsx");
     const commerceRecovery = read(

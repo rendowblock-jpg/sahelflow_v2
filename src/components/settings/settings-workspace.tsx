@@ -173,11 +173,11 @@ function SettingsDirectory({
             aria-pressed={selected}
             onClick={() => onSelect(group.id)}
             className={cn(
-              "group relative w-full rounded-xl text-start outline-none transition-[background-color,color,box-shadow] duration-150",
+              "group relative w-full rounded-surface text-start outline-none transition-[background-color,color,box-shadow] duration-150",
               "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               mobile ? "px-3.5 py-3.5" : "px-3 py-2.5",
               selected && !mobile
-                ? "bg-primary/[0.085] text-foreground shadow-xs"
+                ? "bg-primary-soft text-foreground shadow-xs"
                 : "text-muted-foreground hover:bg-muted/55 hover:text-foreground",
             )}
           >
@@ -190,7 +190,7 @@ function SettingsDirectory({
             <span className="flex items-center gap-3">
               <span
                 className={cn(
-                  "flex shrink-0 items-center justify-center rounded-xl border bg-background",
+                  "flex shrink-0 items-center justify-center rounded-surface border bg-background",
                   mobile ? "size-10" : "size-9",
                   selected && !mobile
                     ? "border-primary/30 text-primary"
@@ -494,13 +494,13 @@ export function SettingsWorkspace({
           )}
         >
           <div className={mobile ? "px-1 pb-4" : "px-2 pb-4"}>
-            <p className="text-base font-semibold tracking-tight text-foreground">
+            <p className="text-title-3 text-foreground">
               {copy("controlCenter")}
             </p>
             <p
               className={cn(
-                "mt-1 text-sm text-muted-foreground",
-                mobile ? "max-w-xl leading-6" : "leading-5",
+                "mt-1 text-body-sm text-muted-foreground",
+                mobile ? "max-w-xl" : undefined,
               )}
             >
               {copy("workspaceHint")}
@@ -555,7 +555,7 @@ export function SettingsWorkspace({
             </Button>
             <span
               className={cn(
-                "mt-0.5 flex shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.07] text-primary",
+                "mt-0.5 flex shrink-0 items-center justify-center rounded-surface border border-primary/20 bg-primary-soft text-primary",
                 mobile ? "size-9" : "size-10",
               )}
             >
@@ -571,18 +571,13 @@ export function SettingsWorkspace({
                 data-settings-detail-heading="true"
                 tabIndex={-1}
                 className={cn(
-                  "font-semibold tracking-tight outline-none",
-                  mobile ? "text-base" : "text-xl",
+                  "outline-none",
+                  mobile ? "text-title-2" : "text-title-1",
                 )}
               >
                 {copy(effectiveActive)}
               </h2>
-              <p
-                className={cn(
-                  "mt-1 max-w-3xl text-sm text-muted-foreground",
-                  mobile ? "leading-5" : "leading-6",
-                )}
-              >
+              <p className="mt-1 max-w-prose text-body text-muted-foreground">
                 {copy(effectiveGroup.descriptionKey)}
               </p>
             </div>

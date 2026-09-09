@@ -53,9 +53,9 @@ const WILAYA_CODE_BY_NAME = new Map<string, number>(
 );
 
 const CELL_TONE_CLASSES = {
-  success: "bg-success/12 text-success",
-  warning: "bg-warning/15 text-warning",
-  danger: "bg-destructive/10 text-destructive",
+  success: "bg-success-strong text-success",
+  warning: "bg-warning-strong text-warning",
+  danger: "bg-destructive-soft text-destructive",
 } as const;
 
 const RATE_TONE_CLASSES = {
@@ -271,12 +271,12 @@ export async function CourierPerformanceSection({
                               href={drillDown}
                               title={t("analytics.courier.viewDelivered")}
                               className={cn(
-                                "block rounded-md px-2 py-1.5 text-xs font-medium tabular-nums transition-transform outline-none hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring",
+                                "block rounded-control px-2 py-1.5 text-xs font-medium tabular-nums transition-transform outline-none hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring",
                                 cellTone(cell.successRate),
                               )}
                             >
                               {percentFormatter.format(cell.successRate / 100)}
-                              <span className="ms-1 text-2xs opacity-75">
+                              <span className="ms-1 text-caption opacity-75">
                                 {integerFormatter.format(cell.delivered)}/
                                 {integerFormatter.format(cell.shipments)}
                               </span>
