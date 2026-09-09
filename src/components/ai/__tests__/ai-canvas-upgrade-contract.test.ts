@@ -31,6 +31,7 @@ describe("R4-e AI canvas upgrade — markdown rendering", () => {
   it("never injects raw HTML anywhere in the AI component graph", () => {
     const paths = [
       "src/components/ai/ai-decision-canvas.tsx",
+      "src/components/ai/ai-message-log.tsx",
       "src/components/ai/ai-composer-deck.tsx",
       "src/components/ai/ai-decision-workspace.tsx",
       "src/components/ai/ai-workspace-shell.tsx",
@@ -56,14 +57,15 @@ describe("R4-e AI canvas upgrade — markdown rendering", () => {
   });
 
   it("memoizes per message so only the streaming bubble re-parses on deltas", () => {
-    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
     const renderer = read("src/components/ai/markdown/ai-markdown.tsx");
-    // STR-01 moved MessageBubble into its own module; these assertions
-    // follow the code they protect rather than being relaxed.
+    // STR-01 moved MessageBubble into its own module, then moved the
+    // conversation log out of the canvas; these assertions follow the code
+    // they protect rather than being relaxed.
     const bubble = read("src/components/ai/ai-message-bubble.tsx");
+    const log = read("src/components/ai/ai-message-log.tsx");
     expect(bubble).toContain("const MessageBubble = memo(function MessageBubble");
-    // The call site stays in the canvas — that is what wires copy through.
-    expect(canvas).toContain("copy={copy}");
+    // The call site is in the log — that is what wires copy through.
+    expect(log).toContain("copy={copy}");
     expect(renderer).toContain("memo(function AiMarkdown");
     expect(renderer).toContain("useMemo(() => parseMarkdown(content), [content])");
   });
@@ -84,13 +86,15 @@ describe("R4-e AI canvas upgrade — regenerate", () => {
 
   it("offers regenerate on the last assistant message while keeping Stop", () => {
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
-    // STR-01 moved the composer deck into its own module, and Stop lives in
-    // the composer; these assertions follow the code they protect rather
-    // than being relaxed. Regenerate stays in the canvas, next to the log.
+    // STR-01 split the canvas: Stop lives in the composer deck and regenerate
+    // moved with the conversation log. These assertions follow the code they
+    // protect rather than being relaxed — both affordances are still pinned,
+    // and the canvas is still pinned as the single stop authority above them.
     const deck = read("src/components/ai/ai-composer-deck.tsx");
-    expect(canvas).toContain('data-ai-regenerate="true"');
-    expect(canvas).toContain('t("ai.canvas.regenerate")');
-    expect(canvas).toContain("onClick={() => void regenerate()}");
+    const log = read("src/components/ai/ai-message-log.tsx");
+    expect(log).toContain('data-ai-regenerate="true"');
+    expect(log).toContain('t("ai.canvas.regenerate")');
+    expect(log).toContain("onClick={() => void regenerate()}");
     expect(deck).toContain('aria-label={workspace.copy("stop")}');
     expect(deck).toContain("onClick={stop}");
     // The canvas still hands the stream control down — one stop authority.
@@ -107,16 +111,20 @@ describe("R4-e AI canvas upgrade — regenerate", () => {
     // remains forbidden.
     const agent = read("src/lib/ai/chat/agent.ts");
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    const log = read("src/components/ai/ai-message-log.tsx");
     expect(agent).toContain('type: "done";');
     expect(agent).toContain("turnSignal");
     expect(agent).toContain("usageMetadata");
     // The signal is built only from provider-reported fields.
     expect(agent).toContain("if (!model || !usage) return undefined;");
-    // No cost estimate anywhere — tokens are never converted to money.
-    expect(canvas).not.toContain("turnCost");
-    expect(canvas).not.toContain("DZD/token");
-    // The canvas renders the signal only for settled provider-backed turns.
-    // STR-01 moved MessageBubble into its own module; these assertions
+    // No cost estimate anywhere — tokens are never converted to money. The
+    // negative is asserted on both halves of the split canvas.
+    for (const source of [canvas, log]) {
+      expect(source).not.toContain("turnCost");
+      expect(source).not.toContain("DZD/token");
+    }
+    // The conversation renders the signal only for settled provider-backed
+    // turns. STR-01 moved MessageBubble into its own module; these assertions
     // follow the code they protect rather than being relaxed.
     const bubble = read("src/components/ai/ai-message-bubble.tsx");
     expect(bubble).toContain('data-ai-model-signal="true"');

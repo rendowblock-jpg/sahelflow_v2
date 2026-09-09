@@ -92,24 +92,30 @@ describe("F-06 AI page-completion wave", () => {
   });
 
   it("streams with a visible caret and keeps the newest turn actionable", () => {
-    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
-
-    // STR-01 moved MessageBubble into its own module; the caret and the
-    // newest-turn affordance moved with it. The canvas still decides which
-    // message is latest, so that wiring is still asserted against the canvas.
+    // STR-01 moved MessageBubble into its own module and then moved the
+    // conversation log out of the canvas; the caret, the newest-turn
+    // affordance and the wiring that decides which message is latest all
+    // moved with the code. These assertions follow it rather than being
+    // relaxed.
     const bubble = read("src/components/ai/ai-message-bubble.tsx");
+    const log = read("src/components/ai/ai-message-log.tsx");
     expect(bubble).toContain('data-ai-streaming-caret="true"');
-    expect(canvas).toContain("isLatest={message.id === lastMessageId}");
+    expect(log).toContain("isLatest={message.id === lastMessageId}");
     expect(bubble).toContain("isLatest ? \"opacity-100\" : \"opacity-0\"");
   });
 
   it("loads conversations and history with structure-matching skeletons (§26.8)", () => {
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the conversation log into its own module; the hydration
+    // skeleton moved with it.
+    const log = read("src/components/ai/ai-message-log.tsx");
     const history = read("src/components/ai/ai-work-history.tsx");
 
-    expect(canvas).toContain('data-ai-conversation-skeleton="true"');
+    expect(log).toContain('data-ai-conversation-skeleton="true"');
     expect(history).toContain('data-ai-history-skeleton="true"');
-    // No bare center-spinners remain as load states on this page.
+    // No bare center-spinners remain as load states on this page — asserted
+    // on both halves of the split canvas.
+    expect(log).not.toContain("min-h-72 items-center justify-center");
     expect(canvas).not.toContain("min-h-72 items-center justify-center");
     expect(history).not.toContain("min-h-40 items-center justify-center");
   });
@@ -216,14 +222,16 @@ describe("F-06 AI page-completion wave", () => {
 
   it("surfaces the shop-wide approval loop where the seller works (F-06)", () => {
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
-    // STR-01 moved the start surface into its own module; these
-    // assertions follow the code they protect.
+    // STR-01 moved the start surface and then the conversation log into their
+    // own modules; these assertions follow the code they protect. The header
+    // badge stays canvas-owned.
     const startSurface = read("src/components/ai/ai-start-surface.tsx");
+    const log = read("src/components/ai/ai-message-log.tsx");
 
     // The strip names pending work from ALL sessions and opens the review.
     expect(startSurface).toContain('data-ai-inbox-strip="true"');
     expect(startSurface).toContain('"inboxStripCount"');
-    expect(canvas).toContain('"inboxStripOpen"');
+    expect(log).toContain('"inboxStripOpen"');
     // Honest absence: no strip while loading or after an inbox failure.
     expect(startSurface).toContain("inboxLoading || inboxError || inbox.length === 0");
     // The header badge is shop-wide, not session-only.
