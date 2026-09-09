@@ -281,41 +281,10 @@ textarea {
   transition-duration: var(--sf-motion-state);
   transition-timing-function: var(--sf-motion-ease-state);
 }
-.card-lift,
-.card-hover {
-  transition-property: transform, box-shadow, border-color, background-color;
-  transition-duration: var(--sf-motion-surface);
-  transition-timing-function: var(--sf-motion-ease-out);
-}
-.card-lift:hover,
-.card-hover:hover {
-  transform: translateY(-1px);
-}
-.animate-slide-right,
-.animate-slide-inline {
-  animation-name: sf-slide-inline;
-  animation-duration: var(--sf-motion-surface);
-  animation-timing-function: var(--sf-motion-ease-out);
-  animation-fill-mode: both;
-}
-.animate-in,
-.animate-fade-in {
-  animation-duration: var(--sf-motion-surface);
-  animation-timing-function: var(--sf-motion-ease-out);
-}
 .animate-fade-up {
   animation-duration: var(--sf-motion-surface);
   animation-timing-function: var(--sf-motion-ease-out);
 }
-.animate-scale-in {
-  animation-duration: var(--sf-motion-surface);
-  animation-timing-function: var(--sf-motion-ease-out);
-}
-@keyframes sf-slide-inline {
-  from { opacity: 0; transform: translateX(var(--sf-motion-inline-entry)); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
 /* ── Elevated surfaces ──────────────────────────────────────────────────── */
 .shadow-dropdown,
 .shadow-popover {
