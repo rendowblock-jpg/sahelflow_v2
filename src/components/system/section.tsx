@@ -12,7 +12,11 @@ import { cn } from "@/lib/utils";
  * sections previously announced themselves in the same voice as their own
  * metadata.
  */
-interface SectionProps extends React.ComponentProps<"section"> {
+interface SectionProps
+  extends Omit<React.ComponentProps<"section">, "title"> {
+  // The DOM `title` attribute is a string (it renders a tooltip). A section
+  // heading is arbitrary content, so the native attribute is omitted rather
+  // than widened — the same treatment Row and PageShell already use.
   title?: React.ReactNode;
   description?: React.ReactNode;
   /** Controls aligned to the end of the heading row. */
