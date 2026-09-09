@@ -388,15 +388,23 @@ export function AiKeyPanel({
                   <ShieldAlert className="size-4" />
                   <AlertTitle>{copy("verificationRequired")}</AlertTitle>
                   <AlertDescription className="space-y-3">
-                    <p className="text-xs text-muted-foreground">
+                    <p
+                      id="ai-key-reauth-hint"
+                      className="text-xs text-muted-foreground"
+                    >
                       {copy("verificationDescription")}
                     </p>
                     <div className="flex flex-col gap-2 sm:flex-row">
+                      {/* IA-05: a placeholder is not a label — it disappears on
+                          first keystroke and is not an accessible name. */}
                       <Input
+                        id="ai-key-reauth-pin"
                         type="password"
                         value={pin}
                         onChange={(event) => setPin(event.target.value)}
                         placeholder={t("auth.pinPlaceholder")}
+                        aria-label={t("auth.pinPlaceholder")}
+                        aria-describedby="ai-key-reauth-hint"
                         autoComplete="current-password"
                         disabled={reauthBusy}
                       />

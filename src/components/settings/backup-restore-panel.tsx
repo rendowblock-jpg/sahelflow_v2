@@ -493,19 +493,30 @@ export function BackupRestorePanel({
               {restoreTarget.backupId}
             </p>
             {restoreTarget.requiresRecoveryKit ? (
-              <label className="block space-y-2 text-sm">
-                <span>{copy.recoveryCode}</span>
+              <div className="block space-y-2 text-sm">
+                {/* IA-05: this was one <label> wrapping the field AND its hint,
+                    so the accessible name became "Recovery code" with the whole
+                    hint sentence concatenated onto it. The label now names the
+                    field and the hint is referenced, not absorbed. */}
+                <label htmlFor="backup-recovery-code" className="block">
+                  {copy.recoveryCode}
+                </label>
                 <Input
+                  id="backup-recovery-code"
+                  aria-describedby="backup-recovery-code-hint"
                   value={recoveryCode}
                   onChange={(event) => setRecoveryCode(event.target.value)}
                   autoComplete="off"
                   spellCheck={false}
                   dir="ltr"
                 />
-                <span className="block text-xs text-muted-foreground">
+                <span
+                  id="backup-recovery-code-hint"
+                  className="block text-xs text-muted-foreground"
+                >
                   {copy.recoveryCodeHint}
                 </span>
-              </label>
+              </div>
             ) : null}
             <div className="flex justify-end gap-2">
               <Button

@@ -254,7 +254,14 @@ export function DeliveryCredentialsPanel() {
               <ShieldCheck className="size-4" aria-hidden="true" />
               <AlertTitle>{copy("verificationRequired")}</AlertTitle>
               <AlertDescription className="mt-2 flex flex-col gap-2 sm:flex-row">
-                <Input type="password" value={pin} onChange={(event) => setPin(event.target.value)} autoComplete="current-password" />
+                {/* IA-05: this PIN field had no accessible name at all. */}
+                <Input
+                  type="password"
+                  value={pin}
+                  onChange={(event) => setPin(event.target.value)}
+                  aria-label={copy("verificationRequired")}
+                  autoComplete="current-password"
+                />
                 <Button onClick={() => void reauthenticate()} disabled={!pin.trim() || busy === "reauth"}>
                   {busy === "reauth" ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
                   {copy("verify")}

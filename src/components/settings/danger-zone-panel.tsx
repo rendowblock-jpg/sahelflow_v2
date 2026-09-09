@@ -169,10 +169,14 @@ export function DangerZonePanel({
               </p>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">
+              {/* IA-05: this Label carried no htmlFor and the Input no id, so
+                  the two were never associated — on the one control that gates
+                  a database reset. */}
+              <Label htmlFor="danger-zone-confirm" className="text-xs">
                 {t("settings.dangerZone.typeReset", { token: confirmToken })}
               </Label>
               <Input
+                id="danger-zone-confirm"
                 value={confirmText}
                 onChange={(event) => setConfirmText(event.target.value)}
                 placeholder={confirmToken}
