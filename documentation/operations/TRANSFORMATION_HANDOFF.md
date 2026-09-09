@@ -9,7 +9,90 @@ Last verified: 2026-09-09
 
 ---
 
-## 1. The one thing blocking PR #414
+## 0. START HERE — the SEC-01 bump landed and broke the installed-MSI gate
+
+**Superseded section 1 below.** As of `3ed8754` the dependency bump *was* applied
+(`package.json` + `sidecars/whatsapp/package.json` + `bun.lock` together, plus the
+`sharp` pin in `windows-release-build-contract.test.ts:221-226` bumped `0.35.3` →
+`0.35.4`). `bun audit --production` is expected to pass now.
+
+Applying it also flipped the risk classifier, so the heavy Windows lanes ran for
+the first time on this branch — and **`installed-msi` failed all three gates**:
+
+```
+lifecycle=failure, authenticatedUi=failure, replacementRestore=failure
+```
+
+### Do not read that as three independent failures
+
+Read the chain in order; only the first is a root cause.
+
+1. **`lifecycle`** — `verify-installed-windows-msi.ps1:1174`
+   ```
+   Native protected installation-root rotation failed with exit code 101,
+   argument observed True, stderr categories process-authority-conflict,
+   and 1 surviving installed process(es).
+   ```
+   Exit 101 is a Rust panic. The category maps to the signature at
+   `verify-installed-windows-msi.ps1:1124` — *"another SahelFlow desktop or
+   installation-root rotation process is active"*. **A previous installed process
+   did not exit.**
+
+2. **`authenticatedUi`** — `verify-installed-windows-ui.ps1:329`, after 100 s:
+   ```json
+   {"endpointMatched":false,"responding":true,"workspaceWindowCount":0,
+    "visibleWindows":[{"title":"com.sahelflow.desktop-siw"},{"title":""}]}
+   ```
+   The server **is** responding, but no workspace window exists and the endpoint
+   does not match. That is consistent with launching into the *surviving* instance
+   from step 1 (`-siw` = the safe-startup window), i.e. a **cascade**, not a
+   second root cause.
+
+3. **`replacementRestore`** — `validated replacement source fixture is missing`.
+   Definitively a cascade: that fixture is written at the **end** of the lifecycle
+   step's `try` block, which threw in step 1. It never had a chance to exist.
+
+### The hypothesis that fits all of it
+
+A `next` 16.2.11 → 16.3.4 change in standalone-server shutdown would leave the
+Node child alive after close → "1 surviving installed process" → rotation
+`process-authority-conflict` (gate 1) → next launch attaches to the survivor
+(gate 2) → fixture never written (gate 3). **One cause, three symptoms.**
+
+This is a hypothesis, not a conclusion. It is **not** yet established that the
+bump caused this — the lane was `skipped` on every earlier head of this branch,
+so there is no green baseline on this branch to compare against.
+
+### How to settle it — read the evidence artifact, do not re-run blind
+
+The job uploaded everything needed: **`windows-installed-e2e-34357805838-1`**
+(13 files, artifact id `10108016524`, 7-day retention). Read in this order:
+
+| File | Answers |
+| --- | --- |
+| `processes.json` | **The decisive one.** What was still running, its `CommandLine` and `ParentProcessId`. If it is `node.exe` under the install root, the shutdown hypothesis is confirmed. |
+| `lifecycle-error.txt` | Full rotation exception with the native stderr. |
+| `startup-diagnostic.json`, `runtime-endpoint.json`, `runtime-ui-ready.json` | Why `endpointMatched` was false. |
+| `runtime-cache-inventory.json` | Whether the 16.3.4 standalone tree staged correctly. |
+
+### Precedent worth knowing
+
+Main run **#785** landed the *previous* Next.js bump as
+*"upgrade Next.js to 16.2.11 — after full CI, Windows Rust release parity, and
+installed-MSI launch/close/reopen validation."* **This repo's own precedent is
+that a Next.js bump is not done until installed-MSI is green.** It is currently
+red. Treat that gate as the acceptance criterion for the bump, not as noise.
+
+If the bump is confirmed as the cause, the options in order of preference are:
+take `next` **16.3.3** instead of 16.3.4 (the minimum that clears the advisory —
+it may not carry the offending change); fix the shutdown path in the launcher;
+or hold the `next` bump alone while landing `sharp`/`js-yaml`/`hono`/
+`baseline-browser-mapping`, which reduces the advisory count without touching
+the framework. Do **not** disable or weaken the installed gate.
+
+---
+
+## 1. The one thing blocking PR #414 — as of `644ec14`, now superseded
 
 **`bun audit --production` — nothing else.**
 
