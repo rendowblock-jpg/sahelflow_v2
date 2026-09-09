@@ -12,7 +12,22 @@ describe("Class-AAA AI composition contract", () => {
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
 
-    expect(page).toContain('className="app-workspace-content"');
+    // IA-01 converted this pin rather than deleting it. What it protects is
+    // that the Agents route renders as a full-height workspace and never a
+    // nested mini-app; it protected that by pinning the geometry class on the
+    // page itself, which also froze Agents outside the page grammar and left
+    // its only <h1> `sr-only`.
+    //
+    // The route now uses the shared workspace grammar, and the geometry class
+    // moved into the primitive that owns it — including staying on the route's
+    // ROOT element, which the `#main-content:has(> .app-workspace-content)`
+    // rule in experience-system.css depends on. Both halves are asserted, so
+    // the guarantee is unchanged and the exemption is gone.
+    expect(page).toContain("PageShell");
+    expect(page).toContain('variant="workspace"');
+    expect(page).not.toContain('<h1 className="sr-only">');
+    const pageShell = read("src/components/system/page-shell.tsx");
+    expect(pageShell).toContain('workspace: "app-workspace-content flex flex-col"');
     expect(shell).toContain("AiDecisionWorkspace");
     expect(shell).toContain('className="h-full min-h-0 overflow-hidden"');
     expect(workspace).toContain('data-ai-decision-workspace="true"');

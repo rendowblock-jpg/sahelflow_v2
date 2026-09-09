@@ -10,6 +10,7 @@ import {
   Bot,
   BrainCircuit,
   Check,
+  ChevronRight,
   ChevronUp,
   CircleDollarSign,
   ClipboardCheck,
@@ -1263,11 +1264,27 @@ export function AiDecisionCanvas({
             {workspace.setup ? (
               // Configuration truth on the avatar (AI-26): consent+key state
               // from the setup probe — never a fabricated provider heartbeat.
-              <span
-                data-ai-status-dot={setupReady ? "ready" : "attention"}
-                aria-hidden="true"
-                className="absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full border-2 border-background"
-              />
+              //
+              // UI-04: this dot and the labelled config chip in the same header
+              // are bound to the same `setupReady`, so above `sm` the screen
+              // stated one fact twice — once in words, once as an unlabelled
+              // dot forty pixels away. The chip is `hidden sm:inline-flex`, so
+              // the dot is scoped to the width where the chip is absent: one
+              // indicator at every viewport, and never zero.
+              <>
+                <span
+                  data-ai-status-dot={setupReady ? "ready" : "attention"}
+                  aria-hidden="true"
+                  className="absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full border-2 border-background sm:hidden"
+                />
+                {/* Below `sm` the dot is the only provider signal, and a bare
+                    colour is not a signal to assistive tech. */}
+                <span className="sr-only sm:hidden">
+                  {setupReady
+                    ? getAiDecisionCopy(workspace.locale, "providerReady")
+                    : getAiDecisionCopy(workspace.locale, "setupAttention")}
+                </span>
+              </>
             ) : null}
           </span>
           <div className="min-w-0">
@@ -1700,12 +1717,36 @@ export function AiDecisionCanvas({
             </p>
           ) : null}
         </div>
-        <p className="mx-auto mt-1.5 hidden w-full max-w-4xl flex-wrap items-center gap-x-3 gap-y-1 px-1 text-caption text-muted-foreground md:flex">
-          <span><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">/</kbd> {copy("shortcutFocusComposer")}</span>
-          <span><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Esc</kbd> {copy("shortcutStopStream")}</span>
-          <span dir="ltr"><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Alt+↑↓</kbd> {copy("shortcutSwitchSessions")}</span>
-          <span dir="ltr"><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Ctrl+↵</kbd> {copy("shortcutApproveFocused")}</span>
-        </p>
+        {/*
+          UI-03 — this was four shortcuts printed permanently under the
+          composer. A reference the seller reads once does not earn a
+          standing row beneath the thing they type into every day, so it is
+          on-demand disclosure now: collapsed by default, one line when open.
+
+          `<details>` rather than React state — it is the native disclosure
+          widget, so the trigger is a real button, keyboard- and
+          screen-reader-operable, with expanded state announced for free.
+          The label reuses `common.cheatsheet`, which already exists in all
+          three locales, so this introduces no new copy keys.
+        */}
+        <details
+          data-ai-shortcut-disclosure="true"
+          className="group mx-auto mt-1.5 hidden w-full max-w-4xl px-1 md:block"
+        >
+          <summary className="inline-flex w-fit cursor-pointer list-none items-center gap-1 rounded-control text-caption text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+            <ChevronRight
+              className="size-3 transition-transform group-open:rotate-90 rtl:rotate-180 rtl:group-open:rotate-90"
+              aria-hidden="true"
+            />
+            {t("common.cheatsheet")}
+          </summary>
+          <p className="mt-1.5 flex w-full flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
+            <span><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">/</kbd> {copy("shortcutFocusComposer")}</span>
+            <span><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Esc</kbd> {copy("shortcutStopStream")}</span>
+            <span dir="ltr"><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Alt+↑↓</kbd> {copy("shortcutSwitchSessions")}</span>
+            <span dir="ltr"><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Ctrl+↵</kbd> {copy("shortcutApproveFocused")}</span>
+          </p>
+        </details>
       </div>
 
       {!wideReview ? (

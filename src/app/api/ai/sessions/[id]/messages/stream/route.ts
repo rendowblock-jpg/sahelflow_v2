@@ -3,6 +3,10 @@ import { z } from "zod";
 
 import { runWithAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
 import { AI_CHAT_MESSAGE_MAX_LENGTH } from "@/lib/ai/chat-limits";
+import {
+  deriveAiSessionTitle,
+  isDerivableAiSessionTitle,
+} from "@/lib/ai/chat/session-title";
 import { createAiActionProposal } from "@/lib/ai/actions/service";
 import {
   runAgentStream,
@@ -92,12 +96,16 @@ async function touchSessionAfterUserMessage(
   message: string,
   hadHistory: boolean,
 ) {
-  if (!hadHistory && (!session.title || session.title === "Nouvelle conversation")) {
-    await db.aiChatSession.update({
-      where: { id: sessionId },
-      data: { title: message.slice(0, 50) },
-    });
-    return;
+  if (!hadHistory && isDerivableAiSessionTitle(session.title)) {
+    // UI-05: a word-boundary title, not a mid-word / mid-character slice.
+    const derived = deriveAiSessionTitle(message);
+    if (derived) {
+      await db.aiChatSession.update({
+        where: { id: sessionId },
+        data: { title: derived },
+      });
+      return;
+    }
   }
   await db.aiChatSession.update({
     where: { id: sessionId },

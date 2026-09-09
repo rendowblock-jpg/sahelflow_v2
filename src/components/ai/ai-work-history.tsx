@@ -81,6 +81,24 @@ function sessionPreview(session: { messages?: Array<{ content?: string | null } 
   return "";
 }
 
+/**
+ * UI-05 — the title is derived from the session's FIRST message and the preview
+ * shows its LATEST one. In a session that has only been asked one question those
+ * are the same message, so the card printed the seller's prompt twice: once
+ * clipped as a title, once again as a two-line excerpt directly beneath it.
+ *
+ * Comparing on the title's body (the ellipsis is a rendering artefact, not
+ * content) catches that case without hiding a genuine reply, which is what the
+ * preview line is actually for.
+ */
+function previewRepeatsTitle(title: string, preview: string): boolean {
+  if (!title || !preview) return false;
+  const normalize = (value: string) => value.replace(/\s+/gu, " ").trim();
+  const body = normalize(title).replace(/…$/u, "");
+  if (!body) return false;
+  return normalize(preview).startsWith(body);
+}
+
 export function AiWorkHistory({
   workspace,
   navigationLocked,
@@ -407,7 +425,15 @@ export function AiWorkHistory({
                   <div className="space-y-1">
                     {groupedSessions.map((session) => {
                       const active = session.id === activeSessionId;
-                      const preview = sessionPreview(session);
+                      const sessionTitle =
+                        session.title || workspace.copy("newSessionTitle");
+                      const rawPreview = sessionPreview(session);
+                      const preview = previewRepeatsTitle(
+                        session.title ?? "",
+                        rawPreview,
+                      )
+                        ? ""
+                        : rawPreview;
                       const renamingThis = renaming?.id === session.id;
                       const deleteArmed = confirmDeleteId === session.id;
                       const busy =
@@ -509,7 +535,7 @@ export function AiWorkHistory({
                                     active ? "font-semibold" : "font-medium",
                                   )}
                                 >
-                                  {session.title || workspace.copy("newSessionTitle")}
+                                  {sessionTitle}
                                 </span>
                                 {preview ? (
                                   <span
