@@ -68,6 +68,7 @@ import {
 } from "@/lib/i18n/automation-workspace";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { IconTile } from "@/components/system";
 
 type FailurePolicy = "stop" | "continue";
 type StepConfig = {
@@ -798,9 +799,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
           <div className="min-h-0 overflow-y-auto p-5 sm:p-6">
             <DialogHeader className="mb-6 text-start">
               <DialogTitle className="flex items-center gap-2 text-xl">
-                <span className="flex size-8 items-center justify-center rounded-surface bg-primary-soft text-primary">
-                  <Sparkles className="size-4" />
-                </span>
+                <IconTile icon={Sparkles} tone="primary" size="sm" />
                 {isEdit ? c("builder.editTitle") : c("builder.createTitle")}
               </DialogTitle>
               <DialogDescription>{c("builder.subtitle")}</DialogDescription>
@@ -833,9 +832,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
 
               <section className="space-y-3 rounded-surface border border-border/70 bg-card p-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary">
-                    <Zap className="size-4" />
-                  </span>
+                  <IconTile icon={Zap} tone="primary" size="sm" />
                   <div className="min-w-0 flex-1 space-y-1">
                     <Label htmlFor="automation-trigger-v2">
                       {c("builder.whenTitle")}
@@ -875,9 +872,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
               <section className="space-y-4 rounded-surface border border-border/70 bg-card p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary">
-                      <MessageCircle className="size-4" />
-                    </span>
+                    <IconTile icon={MessageCircle} tone="primary" size="sm" />
                     <div className="space-y-1">
                       <Label>{c("builder.thenTitle")}</Label>
                       <p className="text-xs text-muted-foreground">

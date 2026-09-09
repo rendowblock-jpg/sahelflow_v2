@@ -43,6 +43,7 @@ import {
   formatSize,
   type SupportedLocale,
 } from "./backup-restore-copy";
+import { IconTile } from "@/components/system";
 
 interface BackupEntry {
   backupId: string;
@@ -299,9 +300,7 @@ export function BackupRestorePanel({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <span className="flex size-8 items-center justify-center rounded-control bg-primary-soft">
-              <DatabaseBackup className="size-5 text-primary" aria-hidden="true" />
-            </span>
+            <IconTile icon={DatabaseBackup} tone="primary" size="sm" />
             {copy.title}
           </CardTitle>
           <CardDescription>{copy.description}</CardDescription>

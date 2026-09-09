@@ -21,6 +21,7 @@ import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import { getWhatsAppPairingCopy } from "@/lib/i18n/whatsapp-pairing";
 import { toast } from "@/lib/toast";
 import type { WhatsAppStatus } from "@/lib/whatsapp/types";
+import { IconTile } from "@/components/system";
 
 /**
  * Onboarding WhatsApp pairing panel (R4-b).
@@ -242,9 +243,7 @@ export function OnboardingPairingPanel({
             </div>
 
             <div className="text-start">
-              <div className="flex size-10 items-center justify-center rounded-surface bg-primary-soft text-primary">
-                <Smartphone className="size-5" aria-hidden="true" />
-              </div>
+              <IconTile icon={Smartphone} tone="primary" size="lg" />
               <h3 className="mt-4 text-base font-semibold">
                 {pairingCopy("scanTitle")}
               </h3>

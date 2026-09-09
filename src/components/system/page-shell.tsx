@@ -75,6 +75,7 @@ export function PageShell({
             <IconTile
               icon={Icon}
               size={workspace ? "sm" : "md"}
+              bordered
               className={workspace ? undefined : "mt-0.5"}
             />
           ) : null}

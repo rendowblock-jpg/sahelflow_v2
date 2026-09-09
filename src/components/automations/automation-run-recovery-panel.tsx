@@ -26,6 +26,7 @@ import {
   type AutomationWorkspaceCopyKey,
 } from "@/lib/i18n/automation-workspace";
 import { toast } from "@/lib/toast";
+import { IconTile } from "@/components/system";
 
 interface AttemptHistory {
   id: string;
@@ -145,9 +146,7 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
     return (
       <Card className="border-border/70">
         <CardContent className="flex min-h-44 flex-col items-center justify-center gap-3 p-6 text-center">
-          <span className="flex size-10 items-center justify-center rounded-surface bg-muted text-muted-foreground">
-            <Activity className="size-4" />
-          </span>
+          <IconTile icon={Activity} size="lg" />
           <div>
             <p className="text-sm font-semibold">{c("workspace.latest")}</p>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">

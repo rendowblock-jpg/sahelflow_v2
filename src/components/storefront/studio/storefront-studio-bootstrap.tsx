@@ -21,6 +21,7 @@ import {
 } from "@/lib/storefront/presentation-types";
 import { createDefaultStorefrontTheme } from "@/lib/storefront/theme-default";
 import { toast } from "@/lib/toast";
+import { IconTile } from "@/components/system";
 
 interface Props {
   products: StorefrontStudioProduct[];
@@ -196,9 +197,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
               <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
             </Link>
           </Button>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border bg-primary-soft text-primary">
-            <Store className="size-4" aria-hidden="true" />
-          </span>
+          <IconTile icon={Store} tone="primary" size="md" bordered />
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold">
               {t("storefronts.newTitle")}

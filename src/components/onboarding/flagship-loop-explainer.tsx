@@ -3,6 +3,7 @@
 import { ArrowRight, Bot, MessageCircle, PackageCheck } from "lucide-react";
 
 import { useI18n } from "@/hooks/use-i18n";
+import { IconTile } from "@/components/system";
 
 /**
  * Flagship-loop explainer (R4-b) — teaches the core SahelFlow loop the old
@@ -54,9 +55,7 @@ export function FlagshipLoopExplainer({
             const Icon = beat.icon;
             return (
               <li key={beat.title} className="flex items-center gap-2">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-control bg-primary-soft text-primary">
-                  <Icon className="size-3.5" aria-hidden="true" />
-                </span>
+                <IconTile icon={Icon} tone="primary" size="xs" />
                 <span className="text-xs text-muted-foreground">
                   {beat.title}
                 </span>
@@ -93,9 +92,7 @@ export function FlagshipLoopExplainer({
               className="relative flex flex-col gap-2 rounded-surface border bg-background p-4"
             >
               <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-surface bg-primary-soft text-primary">
-                  <Icon className="size-4" aria-hidden="true" />
-                </span>
+                <IconTile icon={Icon} tone="primary" size="sm" />
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {index + 1}/3
                 </span>

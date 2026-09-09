@@ -65,6 +65,7 @@ import { getAiToolGroupLabel, getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import type { AiWorkspaceCopyKey } from "@/lib/i18n/ai-workspace";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { IconTile } from "@/components/system";
 
 /**
  * Ledger AI-21 — visual extraction bridge for the agents composer. Sellers
@@ -767,9 +768,7 @@ function StartSurface({
         heading and spacing do the work.
       */}
       <div className="flex items-start gap-4">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary">
-          <BrainCircuit className="size-6" aria-hidden="true" />
-        </span>
+        <IconTile icon={BrainCircuit} tone="primary" size="xl" />
         <div className="min-w-0 flex-1">
           <h2 className="text-2xl font-bold leading-8 tracking-tight">
             {getAiDecisionCopy(workspace.locale, "startTitle")}

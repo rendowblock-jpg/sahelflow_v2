@@ -34,6 +34,7 @@ import {
   type SettingsWorkspaceCopyKey,
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
+import { IconTile } from "@/components/system";
 
 type DemoCounts = {
   categories: number;
@@ -228,9 +229,7 @@ export function DemoDataPanel() {
                 {copy("demoData.description")}
               </CardDescription>
             </div>
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-control border bg-muted text-muted-foreground">
-              <Database className="size-5" aria-hidden="true" />
-            </div>
+            <IconTile icon={Database} size="lg" bordered />
           </div>
         </CardHeader>
 

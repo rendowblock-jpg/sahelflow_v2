@@ -27,6 +27,7 @@ import {
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { getWhatsAppPairingCopy } from "@/lib/i18n/whatsapp-pairing";
 import type { WhatsAppStatus } from "@/lib/whatsapp/types";
+import { IconTile } from "@/components/system";
 
 function isWhatsAppStatus(value: unknown): value is WhatsAppStatus {
   return (
@@ -265,9 +266,7 @@ export function WhatsAppPairingDialog({
                 </div>
 
                 <div className="text-start">
-                  <div className="flex size-10 items-center justify-center rounded-surface bg-primary-soft text-primary">
-                    <Smartphone className="size-5" aria-hidden="true" />
-                  </div>
+                  <IconTile icon={Smartphone} tone="primary" size="lg" />
                   <h3 className="mt-4 text-base font-semibold">
                     {pairingCopy("scanTitle")}
                   </h3>

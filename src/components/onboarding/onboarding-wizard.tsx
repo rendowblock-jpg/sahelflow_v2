@@ -45,6 +45,7 @@ import {
   isValidDZMobilePhone,
   normalizeDZPhone,
 } from "@/lib/validation/phone";
+import { IconTile } from "@/components/system";
 
 /**
  * Checklist-driven onboarding wizard (R4-b).
@@ -442,9 +443,7 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
         <main className="min-w-0">
           {/* Step header */}
           <div className="mb-4 flex items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-surface bg-primary-soft">
-              <CurrentIcon className="h-5 w-5 text-primary" aria-hidden="true" />
-            </div>
+            <IconTile icon={CurrentIcon} tone="primary" size="lg" />
             <div>
               <h1 className="text-lg font-semibold tracking-tight">
                 {currentStepMeta?.title}

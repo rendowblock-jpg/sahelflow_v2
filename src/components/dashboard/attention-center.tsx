@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { IconTile } from "@/components/system";
 
 export interface AttentionItem {
   id: string;
@@ -53,9 +54,7 @@ export function AttentionCenter({
 
       {active.length === 0 ? (
         <div className="flex items-center gap-2.5 px-3 py-4 text-sm text-muted-foreground">
-          <span className="flex size-8 items-center justify-center rounded-control border border-success/20 bg-success-subtle text-success">
-            <CheckCircle2 className="size-4" aria-hidden="true" />
-          </span>
+          <IconTile icon={CheckCircle2} tone="success" size="sm" bordered />
           <span>{allClearLabel}</span>
         </div>
       ) : (

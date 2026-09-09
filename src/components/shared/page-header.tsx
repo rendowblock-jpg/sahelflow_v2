@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { IconTile } from "@/components/system";
 
 interface PageHeaderProps {
   title: React.ReactNode;
@@ -35,9 +36,7 @@ export function PageHeader({
     >
       <div className="flex min-w-0 items-start gap-3">
         {Icon ? (
-          <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-surface border bg-muted/45 text-muted-foreground">
-            <Icon className="size-[18px]" aria-hidden="true" />
-          </div>
+          <IconTile icon={Icon} size="md" bordered className="mt-0.5" />
         ) : null}
         <div className="min-w-0 space-y-1">
           <h1 className="text-balance text-start text-xl font-semibold leading-7 tracking-tight text-foreground rtl:tracking-normal sm:text-2xl sm:leading-8">

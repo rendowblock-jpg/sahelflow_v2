@@ -36,6 +36,7 @@ import {
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
 import { toast } from "@/lib/toast";
+import { IconTile } from "@/components/system";
 
 const GEMINI_CONSENT_KEY = "gemini_consent_accepted";
 
@@ -344,9 +345,7 @@ export function AiKeyPanel({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <span className="flex size-8 items-center justify-center rounded-control bg-primary-soft">
-              <Bot className="size-5 text-primary" aria-hidden="true" />
-            </span>
+            <IconTile icon={Bot} tone="primary" size="sm" />
             {t("aiKey.title")}
           </CardTitle>
           <CardDescription>{t("aiKey.description")}</CardDescription>
