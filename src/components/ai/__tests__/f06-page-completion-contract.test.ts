@@ -57,7 +57,10 @@ describe("F-06 AI page-completion wave", () => {
 
   it("keeps the composer bound and counter on one shared server authority (AI-17 residual)", () => {
     const limits = read("src/lib/ai/chat-limits.ts");
-    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the composer deck into its own module; these assertions
+    // follow the code they protect rather than being relaxed. The bound is
+    // still one shared server authority — only the client file moved.
+    const deck = read("src/components/ai/ai-composer-deck.tsx");
     const messages = read("src/app/api/ai/sessions/[id]/messages/route.ts");
     const stream = read("src/app/api/ai/sessions/[id]/messages/stream/route.ts");
 
@@ -67,11 +70,14 @@ describe("F-06 AI page-completion wave", () => {
       expect(route).toContain("AI_CHAT_MESSAGE_MAX_LENGTH");
       expect(route).not.toContain("max(4000)");
     }
-    expect(canvas).toContain("maxLength={AI_CHAT_MESSAGE_MAX_LENGTH}");
-    expect(canvas).toContain('data-ai-composer-counter="true"');
-    expect(canvas).toContain('"composerCounter"');
+    expect(deck).toContain("maxLength={AI_CHAT_MESSAGE_MAX_LENGTH}");
+    expect(deck).toContain('data-ai-composer-counter="true"');
+    expect(deck).toContain('"composerCounter"');
     // Counter appears only near the bound — the visible share, not always on.
-    expect(canvas).toContain("AI_CHAT_COUNTER_VISIBLE_SHARE");
+    expect(deck).toContain("AI_CHAT_COUNTER_VISIBLE_SHARE");
+    // No second bound may reappear in the canvas after the split.
+    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    expect(canvas).not.toContain("maxLength=");
   });
 
   it("shows configuration truth, never fabricated provider health (AI-26)", () => {

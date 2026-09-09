@@ -31,6 +31,7 @@ describe("R4-e AI canvas upgrade — markdown rendering", () => {
   it("never injects raw HTML anywhere in the AI component graph", () => {
     const paths = [
       "src/components/ai/ai-decision-canvas.tsx",
+      "src/components/ai/ai-composer-deck.tsx",
       "src/components/ai/ai-decision-workspace.tsx",
       "src/components/ai/ai-workspace-shell.tsx",
       "src/components/ai/ai-work-history.tsx",
@@ -83,11 +84,17 @@ describe("R4-e AI canvas upgrade — regenerate", () => {
 
   it("offers regenerate on the last assistant message while keeping Stop", () => {
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the composer deck into its own module, and Stop lives in
+    // the composer; these assertions follow the code they protect rather
+    // than being relaxed. Regenerate stays in the canvas, next to the log.
+    const deck = read("src/components/ai/ai-composer-deck.tsx");
     expect(canvas).toContain('data-ai-regenerate="true"');
     expect(canvas).toContain('t("ai.canvas.regenerate")');
     expect(canvas).toContain("onClick={() => void regenerate()}");
-    expect(canvas).toContain('aria-label={workspace.copy("stop")}');
-    expect(canvas).toContain("onClick={stop}");
+    expect(deck).toContain('aria-label={workspace.copy("stop")}');
+    expect(deck).toContain("onClick={stop}");
+    // The canvas still hands the stream control down — one stop authority.
+    expect(canvas).toContain("stop={stop}");
   });
 
   it("carries a truthful provider signal — real usage metadata only, never fabricated", () => {
