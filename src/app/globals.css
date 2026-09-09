@@ -128,9 +128,12 @@
   --text-body-sm: 0.8125rem;         /* 13px — secondary text, metadata */
   --text-body-sm--line-height: 1.25rem;
 
+  /* Caption carries size and rhythm only. Headings own their weight because it
+     is semantic; caption is used for both labels (which want medium) and
+     timestamps and meta (which do not), so imposing a weight here would
+     silently embolden every meta line that adopts the token. Callers choose. */
   --text-caption: 0.75rem;           /* 12px — labels, timestamps, badges */
   --text-caption--line-height: 1rem;
-  --text-caption--font-weight: 500;
 
   /* ── Radius — INTERFACE_SYSTEM.md §3 ─────────────────────────────────────
      Three radii replace the eight currently in use (lg 201x, md 171x, full

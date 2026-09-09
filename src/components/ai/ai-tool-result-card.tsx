@@ -385,7 +385,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
           {!running ? (
             <Badge
               variant={failed ? "destructive" : "secondary"}
-              className="rounded-full px-2 text-2xs font-medium"
+              className="rounded-full px-2 text-caption font-medium"
             >
               {failed ? copy("failed") : (
                 <span className="inline-flex items-center gap-1">
@@ -414,7 +414,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
         <div className="space-y-3 p-3.5">
           {argEntries.length > 0 ? (
             <div>
-              <p className="flex items-center gap-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="flex items-center gap-2 text-caption font-semibold uppercase tracking-wide text-muted-foreground">
                 {copy("toolArgs")}
                 {hiddenArgs > 0 ? (
                   <span dir="ltr" className="rounded-full border border-border/60 px-1.5 py-px tabular-nums normal-case">
@@ -425,7 +425,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
               <dl className="mt-1.5 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
                 {argEntries.map(([key, value]) => (
                   <div key={key} className="min-w-0">
-                    <dt className="text-2xs text-muted-foreground">{key}</dt>
+                    <dt className="text-caption text-muted-foreground">{key}</dt>
                     <dd className="mt-0.5 truncate font-medium text-foreground" title={simpleValue(value) ?? undefined}>
                       <TechnicalValue>{simpleValue(value) ?? "—"}</TechnicalValue>
                     </dd>
@@ -447,7 +447,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
             </p>
           ) : null}
           {hiddenRecords > 0 ? (
-            <p dir="ltr" className="text-2xs font-semibold tabular-nums text-muted-foreground">
+            <p dir="ltr" className="text-caption font-semibold tabular-nums text-muted-foreground">
               +{hiddenRecords}
             </p>
           ) : null}

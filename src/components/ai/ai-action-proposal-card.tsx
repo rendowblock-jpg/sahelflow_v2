@@ -224,7 +224,7 @@ export function AiActionProposalCard({
             <p className="text-sm font-semibold text-foreground">
               {copy("sensitiveProposal")}
             </p>
-            <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+            <p className="mt-0.5 truncate text-caption text-muted-foreground">
               {getAiToolLabel(locale, proposal.toolName)}
             </p>
           </div>
@@ -237,7 +237,7 @@ export function AiActionProposalCard({
                 ? "destructive"
                 : "outline"
           }
-          className="shrink-0 text-2xs font-medium"
+          className="shrink-0 text-caption font-medium"
         >
           {copy(statusKey(effectiveStatus))}
         </Badge>
@@ -314,7 +314,7 @@ export function AiActionProposalCard({
             </div>
           </div>
         ) : (
-          <p className="flex items-center justify-between gap-3 text-2xs tabular-nums text-muted-foreground">
+          <p className="flex items-center justify-between gap-3 text-caption tabular-nums text-muted-foreground">
             <TechnicalValue>{proposal.proposalDigestPrefix}</TechnicalValue>
             {createdLabel ? <time dateTime={proposal.createdAt}>{createdLabel}</time> : null}
           </p>

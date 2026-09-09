@@ -229,7 +229,7 @@ export function AiWorkHistory({
             {sessions.length > 0 ? (
               <Badge
                 variant="secondary"
-                className="shrink-0 rounded-full px-2 text-2xs font-semibold tabular-nums text-muted-foreground"
+                className="shrink-0 rounded-full px-2 text-caption font-semibold tabular-nums text-muted-foreground"
               >
                 <span className="sr-only">
                   {`${workspace.copy("sessions")}: `}
@@ -238,7 +238,7 @@ export function AiWorkHistory({
               </Badge>
             ) : null}
           </div>
-          <p className="mt-1 text-2xs leading-4 text-muted-foreground">
+          <p className="mt-1 text-caption leading-4 text-muted-foreground">
             {getAiDecisionCopy(locale, "workHistoryDescription")}
           </p>
         </div>
@@ -309,7 +309,7 @@ export function AiWorkHistory({
               {capabilities.briefing.pendingOrders != null ? (
                 <div className="rounded-lg border border-border/60 bg-card/70 px-2 py-1.5 text-center">
                   <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.pendingOrders}</p>
-                  <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+                  <p className="mt-0.5 truncate text-caption text-muted-foreground">
                     {getAiDecisionCopy(locale, "starterCountPending", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
                   </p>
                 </div>
@@ -317,7 +317,7 @@ export function AiWorkHistory({
               {capabilities.briefing.ordersToday != null ? (
                 <div className="rounded-lg border border-border/60 bg-card/70 px-2 py-1.5 text-center">
                   <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.ordersToday}</p>
-                  <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+                  <p className="mt-0.5 truncate text-caption text-muted-foreground">
                     {getAiDecisionCopy(locale, "starterCountToday", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
                   </p>
                 </div>
@@ -325,7 +325,7 @@ export function AiWorkHistory({
               {capabilities.briefing.lowStockProducts != null ? (
                 <div className="rounded-lg border border-border/60 bg-card/70 px-2 py-1.5 text-center">
                   <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.lowStockProducts}</p>
-                  <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+                  <p className="mt-0.5 truncate text-caption text-muted-foreground">
                     {getAiDecisionCopy(locale, "starterCountLowStock", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
                   </p>
                 </div>
@@ -333,7 +333,7 @@ export function AiWorkHistory({
             </div>
           ) : null}
           {(inbox?.length ?? 0) > 0 ? (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/[0.08] px-2.5 py-1 text-2xs font-semibold text-warning">
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/[0.08] px-2.5 py-1 text-caption font-semibold text-warning">
               <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
               {getAiDecisionCopy(locale, "inboxStripCount", { count: inbox?.length ?? 0 })}
             </p>
@@ -345,7 +345,7 @@ export function AiWorkHistory({
                 return (
                   <li
                     key={group.id}
-                    className="flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-2xs text-muted-foreground"
+                    className="flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-caption text-muted-foreground"
                   >
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span
@@ -401,7 +401,7 @@ export function AiWorkHistory({
               if (groupedSessions.length === 0) return null;
               return (
                 <section key={group} aria-label={groupLabel(group, workspace)}>
-                  <p className="sticky top-0 z-10 bg-card/85 px-2 py-1.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
+                  <p className="sticky top-0 z-10 bg-card/85 px-2 py-1.5 text-caption font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm">
                     {groupLabel(group, workspace)}
                   </p>
                   <div className="space-y-1">
@@ -523,7 +523,7 @@ export function AiWorkHistory({
                               {active && reviewCount > 0 ? (
                                 <Badge
                                   variant="outline"
-                                  className="shrink-0 rounded-full border-primary/25 bg-primary/[0.06] px-2 text-2xs font-semibold tabular-nums text-primary"
+                                  className="shrink-0 rounded-full border-primary/25 bg-primary/[0.06] px-2 text-caption font-semibold tabular-nums text-primary"
                                 >
                                   <span className="sr-only">
                                     {`${getAiDecisionCopy(locale, "needsReview")}: `}
@@ -532,7 +532,7 @@ export function AiWorkHistory({
                                 </Badge>
                               ) : null}
                             </span>
-                            <span className="mt-1.5 block text-2xs tabular-nums text-muted-foreground">
+                            <span className="mt-1.5 block text-caption tabular-nums text-muted-foreground">
                               {sessionStamp(session.updatedAt, locale)}
                             </span>
                           </button>

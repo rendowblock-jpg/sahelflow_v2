@@ -412,7 +412,7 @@ const MessageBubble = memo(function MessageBubble({
         {assistant && !message.streaming && message.signal ? (
           <p
             data-ai-model-signal="true"
-            className="mt-1.5 text-2xs text-muted-foreground"
+            className="mt-1.5 text-caption text-muted-foreground"
             dir="ltr"
           >
             {message.signal.totalTokens != null
@@ -517,7 +517,7 @@ const MessageBubble = memo(function MessageBubble({
               )}
             </button>
             {clock ? (
-              <span className="text-2xs tabular-nums text-muted-foreground" dir="ltr">
+              <span className="text-caption tabular-nums text-muted-foreground" dir="ltr">
                 {clock}
               </span>
             ) : null}
@@ -558,7 +558,7 @@ function SetupChecklistRow({
       </span>
       <span
         className={cn(
-          "shrink-0 text-2xs font-semibold",
+          "shrink-0 text-caption font-semibold",
           ready ? "text-success" : "text-warning",
         )}
       >
@@ -591,7 +591,7 @@ function AbilityGroupCard({
         <p className="text-sm font-bold tracking-tight">
           {getAiToolGroupLabel(locale, group.id)}
         </p>
-        <p className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-2xs font-semibold tabular-nums text-muted-foreground">
+        <p className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-caption font-semibold tabular-nums text-muted-foreground">
           {group.tools.length}
           {sensitiveCount > 0 ? ` · ${sensitiveCount} ✓` : ""}
         </p>
@@ -605,7 +605,7 @@ function AbilityGroupCard({
               data-ai-ability={tool.name}
               data-ai-ability-class={tool.executionClass}
               className={cn(
-                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-2xs font-medium transition-colors",
+                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-caption font-medium transition-colors",
                 sensitive
                   ? "border-warning/30 bg-warning/[0.08] text-warning"
                   : "border-border/60 bg-background text-foreground",
@@ -642,7 +642,7 @@ function AbilitiesPanel({
         <p className="text-sm font-bold tracking-tight">
           {getAiDecisionCopy(locale, "abilitiesTitle")}
         </p>
-        <p className="shrink-0 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="shrink-0 text-caption font-semibold uppercase tracking-wider text-muted-foreground">
           {getAiDecisionCopy(locale, "durableSession")}
         </p>
       </div>
@@ -783,7 +783,7 @@ function StartSurface({
           </p>
         </div>
         {pendingCount > 0 ? (
-          <p className="hidden shrink-0 rounded-full border border-warning/30 bg-warning/[0.09] px-2.5 py-1 text-2xs font-bold tabular-nums text-warning sm:block">
+          <p className="hidden shrink-0 rounded-full border border-warning/30 bg-warning/[0.09] px-2.5 py-1 text-caption font-bold tabular-nums text-warning sm:block">
             {getAiDecisionCopy(workspace.locale, "inboxStripCount", { count: pendingCount })}
           </p>
         ) : null}
@@ -824,7 +824,7 @@ function StartSurface({
             ).map((chip) => (
               <span
                 key={chip}
-                className="rounded-full border border-border/60 bg-background px-2.5 py-1 text-2xs text-muted-foreground"
+                className="rounded-full border border-border/60 bg-background px-2.5 py-1 text-caption text-muted-foreground"
               >
                 {getAiDecisionCopy(workspace.locale, chip)}
               </span>
@@ -850,7 +850,7 @@ function StartSurface({
         <p className="text-sm font-bold tracking-tight">
           {getAiDecisionCopy(workspace.locale, "startJobsTitle")}
         </p>
-        <p className="shrink-0 text-2xs font-medium tabular-nums text-muted-foreground">
+        <p className="shrink-0 text-caption font-medium tabular-nums text-muted-foreground">
           {getAiDecisionCopy(workspace.locale, "messagesMeta", { count: STARTERS.length })}
         </p>
       </div>
@@ -887,7 +887,7 @@ function StartSurface({
                     {count ? (
                       <span
                         data-ai-briefing-count={starter.id}
-                        className="shrink-0 rounded-full border border-primary/25 bg-primary/[0.09] px-2 py-0.5 text-2xs font-bold tabular-nums text-primary"
+                        className="shrink-0 rounded-full border border-primary/25 bg-primary/[0.09] px-2 py-0.5 text-caption font-bold tabular-nums text-primary"
                       >
                         {getAiDecisionCopy(workspace.locale, count.copyKey, {
                           count: count.count,
@@ -1281,7 +1281,7 @@ export function AiDecisionCanvas({
               {activeSession?.id.startsWith("demo-") ? (
                 <Badge
                   variant="secondary"
-                  className="shrink-0 text-2xs font-medium"
+                  className="shrink-0 text-caption font-medium"
                 >
                   {getAiDecisionCopy(workspace.locale, "demoBadge")}
                 </Badge>
@@ -1300,7 +1300,7 @@ export function AiDecisionCanvas({
             <Badge
               variant="outline"
               data-ai-config-chip="true"
-              className="hidden items-center gap-1.5 text-2xs font-medium text-muted-foreground sm:inline-flex"
+              className="hidden items-center gap-1.5 text-caption font-medium text-muted-foreground sm:inline-flex"
             >
               <span
                 data-ai-status-dot={setupReady ? "ready" : "attention"}
@@ -1322,7 +1322,7 @@ export function AiDecisionCanvas({
               <ShieldCheck className="size-4" aria-hidden="true" />
               {getAiDecisionCopy(workspace.locale, "reviewEvidence")}
               {reviewBadgeCount > 0 ? (
-                <Badge variant="secondary" className="ms-1 rounded-full px-2 text-2xs tabular-nums">
+                <Badge variant="secondary" className="ms-1 rounded-full px-2 text-caption tabular-nums">
                   {reviewBadgeCount}
                 </Badge>
               ) : null}
@@ -1688,7 +1688,7 @@ export function AiDecisionCanvas({
               data-ai-composer-counter="true"
               dir="ltr"
               className={cn(
-                "mt-1 text-end text-2xs tabular-nums",
+                "mt-1 text-end text-caption tabular-nums",
                 draft.length >= AI_CHAT_MESSAGE_MAX_LENGTH
                   ? "font-semibold text-warning"
                   : "text-muted-foreground",
@@ -1701,7 +1701,7 @@ export function AiDecisionCanvas({
             </p>
           ) : null}
         </div>
-        <p className="mx-auto mt-1.5 hidden w-full max-w-4xl flex-wrap items-center gap-x-3 gap-y-1 px-1 text-2xs text-muted-foreground md:flex">
+        <p className="mx-auto mt-1.5 hidden w-full max-w-4xl flex-wrap items-center gap-x-3 gap-y-1 px-1 text-caption text-muted-foreground md:flex">
           <span><kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">/</kbd> {copy("shortcutFocusComposer")}</span>
           <span><kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Esc</kbd> {copy("shortcutStopStream")}</span>
           <span dir="ltr"><kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Alt+↑↓</kbd> {copy("shortcutSwitchSessions")}</span>

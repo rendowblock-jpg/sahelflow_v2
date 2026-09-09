@@ -99,7 +99,7 @@ export function AiReviewEvidence({
               <h2 className="text-sm font-semibold tracking-tight">
                 {getAiDecisionCopy(locale, "reviewEvidence")}
               </h2>
-              <p className="mt-1 text-2xs leading-4 text-muted-foreground">
+              <p className="mt-1 text-caption leading-4 text-muted-foreground">
                 {getAiDecisionCopy(locale, "reviewEvidenceDescription")}
               </p>
             </div>
@@ -107,7 +107,7 @@ export function AiReviewEvidence({
           {proposals.length + elsewhere.length > 0 ? (
             <Badge
               variant="secondary"
-              className="shrink-0 rounded-full px-2 text-2xs font-semibold tabular-nums text-muted-foreground"
+              className="shrink-0 rounded-full px-2 text-caption font-semibold tabular-nums text-muted-foreground"
             >
               {proposals.length + elsewhere.length}
             </Badge>
@@ -133,7 +133,7 @@ export function AiReviewEvidence({
               <h3 id="ai-review-actions-title" className="text-sm font-semibold">
                 {workspace.copy("actions")}
               </h3>
-              <p className="mt-1 text-2xs leading-4 text-muted-foreground">
+              <p className="mt-1 text-caption leading-4 text-muted-foreground">
                 {getAiDecisionCopy(locale, "proposedChangesDescription")}
               </p>
             </div>
@@ -230,7 +230,7 @@ export function AiReviewEvidence({
                 )}
               </Button>
             </div>
-            <p className="mb-3 text-2xs leading-4 text-muted-foreground">
+            <p className="mb-3 text-caption leading-4 text-muted-foreground">
               {workspace.copy("pendingElsewhereDescription")}
             </p>
 
@@ -273,7 +273,7 @@ export function AiReviewEvidence({
                     <button
                       type="button"
                       onClick={() => selectSession(entry.sessionId)}
-                      className="mt-1 flex w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-2xs text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                      className="mt-1 flex w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-caption text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                       title={entry.sessionTitle || entry.sessionId}
                     >
                       <Clock3 className="size-3 shrink-0" aria-hidden="true" />
@@ -357,7 +357,7 @@ export function AiReviewEvidence({
                             {decision.status}
                           </TechnicalValue>
                         </p>
-                        <p className="mt-0.5 flex min-w-0 items-center gap-1 text-2xs text-muted-foreground">
+                        <p className="mt-0.5 flex min-w-0 items-center gap-1 text-caption text-muted-foreground">
                           <span className="shrink-0 tabular-nums">
                             {decisionClock(decision.decidedAt, locale)}
                           </span>
@@ -391,7 +391,7 @@ export function AiReviewEvidence({
                 </h3>
               </div>
               {setupReady ? (
-                <Badge variant="outline" className="rounded-full text-2xs">
+                <Badge variant="outline" className="rounded-full text-caption">
                   {getAiDecisionCopy(locale, "providerReady")}
                 </Badge>
               ) : null}
