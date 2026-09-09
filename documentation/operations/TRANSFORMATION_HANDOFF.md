@@ -9,92 +9,76 @@ Last verified: 2026-09-09 at `1a6a00b`
 
 ---
 
-## 0. START HERE — the PR is GREEN; W3 (Agents) is the next real work
+## 0. START HERE — the register's mechanical and page-level rows are closed
 
-**Everything in the old sections 0 and 1 is resolved.** They described the
-SEC-01 dependency bump and the installed-MSI failure it exposed. Both are closed,
-and the history is kept below only so the reasoning is auditable.
+Branch is green and the work below is CI-verified. What remains is genuinely
+large, not leftover tidying — read §4 before picking anything up.
 
-### The installed-MSI failure was a runner transient, and that is now proven
+### Closed since the last handoff
 
-The `lifecycle=failure, authenticatedUi=failure, replacementRestore=failure`
-chain on `3ed8754` did **not** reproduce. Two full batteries since have run every
-installed gate green:
+| Row | Outcome |
+| --- | --- |
+| SEC-01 | dependency chain bumped; `bun audit --production` passes |
+| SYS-05 | 8 radii -> 3 tokens, 582 substitutions / 137 files |
+| SYS-08 | IconTile scale corrected to its call sites, 16 tiles adopted |
+| SEC-02 | coverage is an ENFORCED ratchet (77/76/82/77), no longer decorative |
+| DEAD-02 | the "dead" shim was live; real implementation took the canonical name |
+| IA-01 | **closed at its root** — see below |
+| IA-05 | zero unlabelled inputs in Settings, 8 `aria-describedby` links |
+| UI-03/04/05 | shortcut disclosure, one status signal, honest session titles |
+| UI-06 | measured; 4 routes were lying about their shape, 11 were already right |
+| STR-01 | canvas 1,767 -> 964 across two extractions — **still open**, see §4 |
 
-| Head | lifecycle | authenticatedUi | replacementRestore |
-| --- | --- | --- | --- |
-| `3ed8754` | failure | failure | failure |
-| `e7c1e1c` | **success** | **success** | **success** |
-| `0e70496` | **success** | **success** | **success** |
+### IA-01 was not what it looked like
 
-The Founder's reading was right: the native authority **fail-closed correctly**,
-refusing to rotate an installation root while an unauthorized installed process
-(`sahelflow.exe` PID 7560, created ~2.5 min into that same job) was still alive.
-That is a reaping property of the run, not of the build. The `next` 16.3.4 bump
-is exonerated, not merely demoted — the shutdown hypothesis was falsified by its
-own stated test and must not be revived without new evidence.
+The register framed it as "Agents and Inbox opt out of the page grammar". Both
+are now on `PageShell variant="workspace"` with real visible headings. But the
+deeper half was that **`PageShell` and `PageHeader` each rendered their own
+`<header>` and `<h1>`** — the product had two headings with two type scales, so
+migrating routes alone would have moved the split rather than closed it.
 
-**`bun audit --production` passes. There is no blocker on this PR.**
+`PageHeader` is now the single header implementation and `PageShell` composes
+it. PageShell owns the page CONTAINER; PageHeader owns page IDENTITY. Its
+heading also joined the type ramp — it had hardcoded `text-xl`/`sm:text-2xl`
+with an arbitrary `text-[15px]` description across 21 routes, which meant the
+largest text in the product was the text least governed by INTERFACE_SYSTEM.md
+§2, and Arabic never got its reading floor there.
 
-### What landed after that
+### Decisions a future session could undo by accident
 
-`0e70496` — validated by a complete green battery (Quality Gate, Phase 5,
-Phase 6-7, AR/FR/EN accessibility, Windows standalone/launcher, installed-MSI):
+1. **The storefront radius carve-out is deliberate** (`--radius-storefront-soft`
+   / `-round`). Collapsing it made two of the seller's three theme options
+   render identically. Do not "finish the migration".
+2. **W4's Card -> Panel migration is CORRECTED, not pending.** Per IA-05b,
+   `settings-control-center.module.css` already strips border/radius/background
+   from every card and adds hairlines, so Settings ALREADY renders as flat
+   sections. Swapping in `Panel` would give them borders and radii and make the
+   surface MORE island-like. The valuable Settings work was IA-05, and it is done.
+3. **IA-03 / IA-04 are CORRECTED.** The Agents 3-column layout and its 1500px
+   breakpoint are deliberate, behaviourally covered at 1600px by
+   `e2e/ai-workspace.spec.ts:127`, and contract-locked. Changing them is a design
+   decision for the Founder, not a repair.
+4. **IconTile's scale follows its call sites**, not the reverse. It shipped with
+   proportions no tile had and was adopted zero times.
 
-- **SYS-05** — 582 substitutions across 137 files; eight radii collapse to
-  `rounded-control` / `rounded-surface` / `rounded-full`.
-- **DEAD-02** — the "dead" shim was live (2 production importers + a contract
-  test pinning its path); the real implementation took the canonical name.
-- **SEC-02** — coverage is now an enforced regression ratchet.
-- **IA-05** — six re-authentication fields wired, 0 → 6 `aria-describedby`.
+### The contract-conversion method that made all of this possible
 
-`1a6a00b` — **SYS-08**, IconTile scale corrected to its call sites, 16 tiles
-converted across 13 files.
+Every pin that blocked a repair was CONVERTED, never deleted or relaxed:
+restate the intent, assert it where the guarantee now lives, and keep the
+wiring assertions on the file that still decides them.
 
-### Three decisions the next session must not silently undo
+**Three traps this cost real time to learn:**
 
-1. **The storefront radius carve-out is deliberate.** `StorefrontRadius`
-   (`soft | rounded | sharp`) is a published shop's identity, chosen by the
-   seller. Collapsing it onto `control`/`surface` made two of the three options
-   render identically and deleted a shipped control. It resolves through
-   `--radius-storefront-soft` / `--radius-storefront-round`, and
-   INTERFACE_SYSTEM.md §3 was amended in the same change. Do not "finish the
-   migration" by folding it back in.
-2. **Two prohibition contracts were restated as intent, not tokens.** A codemod
-   had rewritten `not.toContain("lg:rounded-xl")` into
-   `not.toContain("lg:rounded-surface")` — quietly changing what the contract
-   forbids, and in the AI case forbidding what is now legitimate `Panel`
-   styling. They are now `/lg:rounded-/` and `/rounded-[\w-]+ border bg-card/`.
-   **Watch for this class of bug on every future codemod: a mechanical rewrite
-   that touches `__tests__` can weaken a contract while appearing to update it.**
-3. **IconTile's scale was corrected because the primitive was wrong, not the
-   surfaces.** It shipped with proportions no call site had and was adopted
-   zero times. Adopting it as-shipped would have meant 19 unrequested visual
-   regressions. Check a primitive against its call sites before adopting it.
-
-### Do this next
-
-**W3 — rebuild Agents from the information architecture up.** IA-01, IA-03,
-IA-04, UI-01..UI-05, STR-01 (canvas). This is the headline Founder-facing item
-and the one the register has been building toward.
-
-Two things make it harder than it looks, and both are recorded rather than
-discovered again:
-
-- **The Founder has rejected this surface twice** (F-06, then F-12 with "top
-  tier class AAA redesign"). The scope correction on F-06 was explicit:
-  *functional, NOT colors/motion/CSS*. A third repaint is the wrong answer.
-- **TEST-01 is the gate.** `ai-workspace-contract.test.ts:25` pins the 1500px
-  media query and `:26`/`:28` pin the exact grid strings, so the Agents layout
-  is contract-locked — the test named *"uses two panes at common desktop width
-  and progressive review evidence"* would pass if the component rendered
-  nothing. Those pins must convert to behavioural evidence **in the same
-  change** that rebuilds the surface, restating intent rather than deleting the
-  contract. Note that `e2e/ai-workspace.spec.ts:127` already verifies the
-  3-column layout behaviourally, and the register records that the layout and
-  its 1500px breakpoint are **deliberate**, not drift.
-
----
+- A codemod that touches `__tests__` can weaken a contract while appearing to
+  update it. SYS-05 rewrote two `not.toContain(...)` prohibitions into
+  prohibitions of *different* strings, one of which had become legitimate system
+  styling. Read the test diff separately from the source diff.
+- A `toContain`-only re-anchoring sweep misses **ordering** assertions.
+  `f06-page-completion-contract` compares two `indexOf` results; both operands
+  moved in STR-01, and with `>=` instead of `>` it would have PASSED while
+  asserting nothing.
+- "No importers" is not "unreferenced" in a repo where 136 test files read
+  source by path.
 
 ## 0b. Retained history — the SEC-01 bump and the installed-MSI diagnosis
 
@@ -330,39 +314,36 @@ them — do not extend the fill scale over them without new tokens:
 
 ## 4. Next targets, in order
 
-Closed since this list was written: **SEC-01**, **SYS-05**, **SYS-06**,
-**SYS-08**, **SEC-02**, **DEAD-01**, **DEAD-02**, **IA-05**, **FN-01**,
-**UI-01/UI-02**, **L10N-02**.
+Everything mechanical, page-level and accessibility-shaped is closed. What is
+left is the expensive half, and each item is a real project rather than a tidy-up.
 
-1. **W3 — Agents rebuilt.** IA-01, IA-03, IA-04, UI-01..UI-05, STR-01 (canvas).
-   See §0 for the two constraints that govern it: the Founder's twice-rejected
-   scope correction (*functional, NOT colors/motion/CSS*) and TEST-01's
-   contract lock on the layout. Convert the pinning assertions to behaviour in
-   the same change.
-2. **W4 — Settings rebuilt.** IA-05's remaining surface area on the
-   `Row`/`Section`/`Field` grammar. The re-auth fields are wired; what is left
-   is the panel geometry, and note IA-05b: the "11 card islands" reading was
-   already corrected as wrong, so do not rebuild against it.
-3. **W5 — Navigation and page shell.** IA-01 across all 30 routes, IA-02
-   restored hierarchy, UI-06 per-page skeletons (24 of 30 loading states are
-   one of two identical generic skeletons).
-4. **W6 — Copy authority.** L10N-01: 3 JSON locale files at parity plus 39
-   inline TypeScript translation modules. Any new user-facing string needs all
-   three locales or the parity contract fails.
-5. **W7 — Structure.** STR-01 decomposition (`inbox-v3-thread` 2,235 lines,
-   `storefront-studio` 1,752, `ai-decision-canvas` 1,727), STR-02 (208
-   `as unknown as`, 321 non-null assertions) and STR-03 (28 markers) triaged,
-   not blanket-removed.
-6. **TEST-01 — the structural one**, converted per surface as surfaces are
-   rebuilt rather than as its own pass. 444 vitest files; **136 assert source
-   text** via `readFileSync` carrying **3,980 `toContain`**; **3** render a
-   component.
-7. **W8 — Conformance sweep** against INTERFACE_SYSTEM.md §14.
-
-**SYS-04** (2,099 arbitrary values) stays continuous across the remaining waves,
-retired in the surface that owns each one. The three `rounded-full` empty-state
-marks left by SYS-08 (`ai-review-evidence`, `ai-work-history`, `feature-gate`)
-belong to **UI-07**'s state-primitive consolidation, not to SYS-08.
+1. **STR-01 remainder — the canvas body.** 964 lines, still 2.4x the §13
+   400-line rule. The two easy seams are taken; what remains (message log,
+   composer, review sheet) is a genuine decomposition, not a move, because those
+   parts share state with the component. **Measure the pin exposure first** — the
+   method that worked twice: map every `expect(canvas).toContain(...)` string to
+   the block that owns it, and do not forget `indexOf` ordering assertions.
+   The same treatment is owed to `inbox-v3-thread` (2,235), `storefront-studio`
+   (1,752) and `inbox-v3-queue` (1,325).
+2. **TEST-01 — the structural one.** 444 vitest files; **136 assert source text**
+   via `readFileSync` carrying **3,980 `toContain`**; **3** render a component.
+   This is why every repair above had to convert contracts by hand. Convert per
+   surface as surfaces are rebuilt; converting in bulk would be a rewrite of the
+   suite with no behavioural safety net underneath it.
+3. **L10N-01 — copy authority.** 3 JSON locale files at parity plus **39 inline
+   TypeScript translation modules totalling ~5k lines**. Any new user-facing
+   string needs all three locales or the parity contract fails. Migrating the
+   inline modules into JSON is mostly mechanical but very wide.
+4. **STR-02 / STR-03 — type-safety and markers.** 208 `as unknown as`, 321
+   non-null assertions, 28 TODO/FIXME/ts-ignore outside tests. Triaged
+   individually, never blanket-removed — each one is a place the compiler was
+   overruled, and some of those overrides are load-bearing.
+5. **SYS-04 — arbitrary values**, retired continuously in the surface that owns
+   each one rather than as a sweep.
+6. **UI-07** — the three `rounded-full` empty-state marks left by SYS-08
+   (`ai-review-evidence`, `ai-work-history`, `feature-gate`) belong to the
+   state-primitive consolidation, not to IconTile.
+7. **W8 — conformance sweep** against INTERFACE_SYSTEM.md §14, last.
 
 ## 5. Method notes that were paid for
 
