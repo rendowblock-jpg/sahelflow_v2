@@ -52,28 +52,54 @@ Read the chain in order; only the first is a root cause.
    Definitively a cascade: that fixture is written at the **end** of the lifecycle
    step's `try` block, which threw in step 1. It never had a chance to exist.
 
-### The hypothesis that fits all of it
+### The shutdown hypothesis was WRONG — evidence read it out
 
-A `next` 16.2.11 → 16.3.4 change in standalone-server shutdown would leave the
-Node child alive after close → "1 surviving installed process" → rotation
-`process-authority-conflict` (gate 1) → next launch attaches to the survivor
-(gate 2) → fixture never written (gate 3). **One cause, three symptoms.**
+I originally proposed that a `next` 16.2.11 → 16.3.4 shutdown change left the
+Node child alive, and set the falsification test explicitly: *"if it is
+`node.exe` under the install root, the shutdown hypothesis is confirmed."*
 
-This is a hypothesis, not a conclusion. It is **not** yet established that the
-bump caused this — the lane was `skipped` on every earlier head of this branch,
-so there is no green baseline on this branch to compare against.
+The Founder read `installation-root-rotation-diagnostic.json` from the artifact.
+**The survivor is `sahelflow.exe` PID 7560 (parent 4412), created 14:01:50Z and
+still alive at the 14:05:51Z rotation attempt** — the Tauri host binary, not the
+Node child. My stated test came back negative, so the hypothesis is withdrawn.
 
-### How to settle it — read the evidence artifact, do not re-run blind
+What the evidence establishes instead:
 
-The job uploaded everything needed: **`windows-installed-e2e-34357805838-1`**
-(13 files, artifact id `10108016524`, 7-day retention). Read in this order:
+- The native authority **fail-closed correctly**. It refused to rotate an
+  installation root while an installed process it had not authorized was still
+  running. That is the protected boundary working, not breaking.
+- The survivor came from **this same job's earlier install phases** (created
+  ~2.5 min into the lifecycle script), so this is a reaping/cleanup property of
+  the run, not a property of the build.
 
-| File | Answers |
-| --- | --- |
-| `processes.json` | **The decisive one.** What was still running, its `CommandLine` and `ParentProcessId`. If it is `node.exe` under the install root, the shutdown hypothesis is confirmed. |
-| `lifecycle-error.txt` | Full rotation exception with the native stderr. |
-| `startup-diagnostic.json`, `runtime-endpoint.json`, `runtime-ui-ready.json` | Why `endpointMatched` was false. |
-| `runtime-cache-inventory.json` | Whether the 16.3.4 standalone tree staged correctly. |
+Independently verified here, and stronger than first claimed: **the entire PR
+has zero native delta against `main`** — `git diff origin/main...HEAD --
+src-tauri Cargo.lock '*.rs'` is empty. The rotation code, launcher and
+process-authority logic are byte-identical to main. Combined with `Windows
+database + standalone + contained launcher` passing **green on this exact head**
+(that lane exercises the packaged standalone and the contained launcher), the
+case for a runner transient is good, and this lane was green on 2026-09-06 in
+run `34017582977`.
+
+**The cascade reading still holds and is now better supported.** A surviving
+`sahelflow.exe` with single-instance behaviour explains gate 2 exactly: the new
+launch attaches to the survivor, producing the `com.sahelflow.desktop-siw`
+window, `workspaceWindowCount: 0` and `endpointMatched: false`. Gate 3 remains a
+definite cascade.
+
+**One question the diagnostic does not answer.** It names the survivor under the
+install-root filter. It does not say whether a `node.exe` child *also* survived
+— and `sahelflow.exe` can stay alive waiting on an unreaped child. So the Next
+bump is not fully exonerated, only demoted: `processes.json` in the same
+artifact carries every `node.exe`/`sahelflow.exe`/`msedgewebview2.exe` with
+`ParentProcessId`, and would settle whether PID 7560 was waiting on a child.
+Worth one look if the failure recurs; not worth blocking on if the re-run is
+green.
+
+**If the rotation refusal reproduces with the same `process-authority-conflict`
+category, it is not a transient** and must be investigated as a real defect —
+an installed app instance that does not exit is a product bug regardless of what
+triggered this run.
 
 ### Precedent worth knowing
 
@@ -83,12 +109,10 @@ installed-MSI launch/close/reopen validation."* **This repo's own precedent is
 that a Next.js bump is not done until installed-MSI is green.** It is currently
 red. Treat that gate as the acceptance criterion for the bump, not as noise.
 
-If the bump is confirmed as the cause, the options in order of preference are:
-take `next` **16.3.3** instead of 16.3.4 (the minimum that clears the advisory —
-it may not carry the offending change); fix the shutdown path in the launcher;
-or hold the `next` bump alone while landing `sharp`/`js-yaml`/`hono`/
-`baseline-browser-mapping`, which reduces the advisory count without touching
-the framework. Do **not** disable or weaken the installed gate.
+Only if the bump is somehow implicated after all: take `next` **16.3.3** (the
+minimum that clears the advisory), or hold the `next` bump alone while landing
+`sharp`/`js-yaml`/`hono`/`baseline-browser-mapping`. On current evidence none of
+that is indicated. Either way, do **not** disable or weaken the installed gate.
 
 ---
 
