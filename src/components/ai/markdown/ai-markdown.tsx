@@ -42,7 +42,7 @@ function inlineNodes(
           <code
             key={key}
             dir="ltr"
-            className="rounded-md border bg-muted px-1 py-0.5 font-mono text-[0.85em]"
+            className="rounded-control border bg-muted px-1 py-0.5 font-mono text-[0.85em]"
           >
             {token.text}
           </code>
@@ -122,7 +122,7 @@ function blockNode(block: MarkdownBlock, key: string): ReactNode {
         <pre
           key={key}
           dir="ltr"
-          className="overflow-x-auto rounded-lg border bg-muted/60 px-3 py-2.5 text-xs leading-5"
+          className="overflow-x-auto rounded-surface border bg-muted/60 px-3 py-2.5 text-xs leading-5"
         >
           <code className="font-mono">
             {block.language ? (
@@ -180,7 +180,7 @@ function blockNode(block: MarkdownBlock, key: string): ReactNode {
       return (
         <div
           key={key}
-          className="w-full overflow-x-auto overscroll-x-contain rounded-lg border"
+          className="w-full overflow-x-auto overscroll-x-contain rounded-surface border"
         >
           <Table className="text-xs">
             <TableHeader>

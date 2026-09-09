@@ -798,7 +798,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
           <div className="min-h-0 overflow-y-auto p-5 sm:p-6">
             <DialogHeader className="mb-6 text-start">
               <DialogTitle className="flex items-center gap-2 text-xl">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                <span className="flex size-8 items-center justify-center rounded-surface bg-primary-soft text-primary">
                   <Sparkles className="size-4" />
                 </span>
                 {isEdit ? c("builder.editTitle") : c("builder.createTitle")}
@@ -807,14 +807,14 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
             </DialogHeader>
 
             {legacyInvalid ? (
-              <div className="mb-5 flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive-subtle p-4 text-sm">
+              <div className="mb-5 flex items-start gap-3 rounded-surface border border-destructive/40 bg-destructive-subtle p-4 text-sm">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
                 <p>{c("builder.invalidLegacy")}</p>
               </div>
             ) : null}
 
             <div className="space-y-5">
-              <section className="space-y-3 rounded-xl border border-border/70 bg-card p-4">
+              <section className="space-y-3 rounded-surface border border-border/70 bg-card p-4">
                 <div className="space-y-1">
                   <Label htmlFor="automation-name-v2">{c("builder.name")}</Label>
                   <p className="text-xs text-muted-foreground">
@@ -831,9 +831,9 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                 />
               </section>
 
-              <section className="space-y-3 rounded-xl border border-border/70 bg-card p-4">
+              <section className="space-y-3 rounded-surface border border-border/70 bg-card p-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary">
                     <Zap className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1 space-y-1">
@@ -872,10 +872,10 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                 disabled={loading}
               />
 
-              <section className="space-y-4 rounded-xl border border-border/70 bg-card p-4">
+              <section className="space-y-4 rounded-surface border border-border/70 bg-card p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary">
                       <MessageCircle className="size-4" />
                     </span>
                     <div className="space-y-1">
@@ -910,7 +910,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                 </div>
 
                 {steps.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-warning/50 bg-warning-subtle p-4 text-sm text-muted-foreground">
+                  <div className="rounded-surface border border-dashed border-warning/50 bg-warning-subtle p-4 text-sm text-muted-foreground">
                     {c("builder.actionUnavailable")}
                   </div>
                 ) : (
@@ -950,7 +950,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                       return (
                         <article
                           key={`${index}-${step.action}`}
-                          className="space-y-4 rounded-xl border border-border/70 bg-muted/10 p-4"
+                          className="space-y-4 rounded-surface border border-border/70 bg-muted/10 p-4"
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
@@ -1103,7 +1103,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                 }
                                 className="min-h-28"
                               />
-                              <div className="space-y-2 rounded-lg border border-border/60 bg-background/70 p-3">
+                              <div className="space-y-2 rounded-surface border border-border/60 bg-background/70 p-3">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="text-xs font-medium">
                                     {c("builder.variables")}
@@ -1115,7 +1115,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                       dir="ltr"
                                       disabled={loading}
                                       onClick={() => insertVariable(index, variable)}
-                                      className="rounded-md border border-border/70 bg-muted/40 px-2 py-1 font-mono text-caption text-muted-foreground transition-colors hover:text-foreground"
+                                      className="rounded-control border border-border/70 bg-muted/40 px-2 py-1 font-mono text-caption text-muted-foreground transition-colors hover:text-foreground"
                                     >
                                       {`{{${variable}}}`}
                                     </button>
@@ -1172,7 +1172,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                     dir="ltr"
                                     disabled={loading}
                                     onClick={() => insertVariable(index, variable)}
-                                    className="rounded-md border border-border/70 bg-muted/40 px-2 py-1 font-mono text-caption text-muted-foreground hover:text-foreground"
+                                    className="rounded-control border border-border/70 bg-muted/40 px-2 py-1 font-mono text-caption text-muted-foreground hover:text-foreground"
                                   >
                                     {`{{${variable}}}`}
                                   </button>
@@ -1288,12 +1288,12 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                                 </SelectContent>
                               </Select>
                               {statusTargets.length === 0 ? (
-                                <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-subtle p-3 text-xs text-muted-foreground">
+                                <div className="flex items-start gap-2 rounded-surface border border-warning/40 bg-warning-subtle p-3 text-xs text-muted-foreground">
                                   <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                                   <span>{c("builder.statusNeedsRecheck")}</span>
                                 </div>
                               ) : null}
-                              <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-subtle p-3 text-xs text-muted-foreground">
+                              <div className="flex items-start gap-2 rounded-surface border border-warning/40 bg-warning-subtle p-3 text-xs text-muted-foreground">
                                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                                 <span>{c("builder.statusWarning")}</span>
                               </div>
@@ -1306,7 +1306,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                 )}
               </section>
 
-              <details className="group rounded-xl border border-border/70 bg-card p-4">
+              <details className="group rounded-surface border border-border/70 bg-card p-4">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold">{c("builder.advanced")}</p>
@@ -1355,7 +1355,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-start justify-between gap-4 rounded-lg border border-border/60 p-3 sm:col-span-2">
+                  <div className="flex items-start justify-between gap-4 rounded-surface border border-border/60 p-3 sm:col-span-2">
                     <div>
                       <Label htmlFor="automation-test-v2">
                         {c("builder.testMode")}
@@ -1374,7 +1374,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                 </div>
               </details>
 
-              <section className="rounded-xl border border-primary/25 bg-primary-subtle p-4">
+              <section className="rounded-surface border border-primary/25 bg-primary-subtle p-4">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
                   <div className="min-w-0 space-y-2">
@@ -1454,7 +1454,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
                     actionLabels.length > 0 ? actionLabels.join(" · ") : "—",
                   ],
                 ].map(([label, value], index) => (
-                  <div key={String(label)} className="relative rounded-xl border border-border/70 bg-background p-3">
+                  <div key={String(label)} className="relative rounded-surface border border-border/70 bg-background p-3">
                     <div className="mb-1 flex items-center gap-2">
                       <span className="flex size-5 items-center justify-center rounded-full bg-primary-soft text-caption font-semibold text-primary">
                         {index + 1}
@@ -1469,7 +1469,7 @@ export function AutomationBuilder({ automation, preset, children }: Props) {
               </div>
               <div
                 className={cn(
-                  "rounded-xl border p-3 text-xs",
+                  "rounded-surface border p-3 text-xs",
                   valid
                     ? "border-success/30 bg-success-subtle text-muted-foreground"
                     : "border-warning/40 bg-warning-subtle text-muted-foreground",

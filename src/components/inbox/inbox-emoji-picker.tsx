@@ -284,7 +284,7 @@ export function EmojiPicker({
                 aria-selected={index === activeCategory}
                 onClick={() => setActiveCategory(index)}
                 className={cn(
-                  "inline-flex h-7 shrink-0 items-center rounded-md px-1.5 text-sm outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
+                  "inline-flex h-7 shrink-0 items-center rounded-control px-1.5 text-sm outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
                   index === activeCategory && "bg-muted",
                 )}
               >
@@ -310,7 +310,7 @@ export function EmojiPicker({
                   role="option"
                   aria-label={emoji}
                   onClick={() => pick(emoji)}
-                  className="flex size-8 items-center justify-center rounded-md text-lg outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex size-8 items-center justify-center rounded-control text-lg outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {emoji}
                 </button>
@@ -327,7 +327,7 @@ export function EmojiPicker({
               role="option"
               aria-label={entry.n}
               onClick={() => pick(entry.e)}
-              className="flex size-8 items-center justify-center rounded-md text-lg outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex size-8 items-center justify-center rounded-control text-lg outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
             >
               {entry.e}
             </button>

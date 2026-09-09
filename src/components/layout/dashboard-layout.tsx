@@ -144,7 +144,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <a
         href="#main-content"
         dir={dir}
-        className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-[100] focus:rounded-md focus:border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-[100] focus:rounded-control focus:border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg"
       >
         {t("common.skipToContent")}
       </a>

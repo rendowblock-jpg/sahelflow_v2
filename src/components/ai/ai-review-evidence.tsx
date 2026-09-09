@@ -92,7 +92,7 @@ export function AiReviewEvidence({
       <div className="border-b px-4 py-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-surface border border-primary/15 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary">
               <ShieldCheck className="size-4" aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -139,7 +139,7 @@ export function AiReviewEvidence({
             </div>
 
             {actionHistoryError ? (
-              <div className="rounded-xl border border-warning/25 bg-warning-soft p-3.5">
+              <div className="rounded-surface border border-warning/25 bg-warning-soft p-3.5">
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle
                     className="mt-0.5 size-4 shrink-0 text-warning"
@@ -166,7 +166,7 @@ export function AiReviewEvidence({
                 </div>
               </div>
             ) : proposals.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-5 text-center">
+              <div className="rounded-surface border border-dashed border-border/70 bg-muted/20 p-5 text-center">
                 <span className="mx-auto flex size-9 items-center justify-center rounded-full bg-muted/50">
                   <CheckCircle2
                     className="size-5 text-muted-foreground"
@@ -235,7 +235,7 @@ export function AiReviewEvidence({
             </p>
 
             {inboxError ? (
-              <div className="rounded-xl border border-warning/25 bg-warning-soft p-3.5">
+              <div className="rounded-surface border border-warning/25 bg-warning-soft p-3.5">
                 <p className="text-sm font-semibold">
                   {workspace.copy("crossSessionUnavailable")}
                 </p>
@@ -251,7 +251,7 @@ export function AiReviewEvidence({
                 </Button>
               </div>
             ) : elsewhere.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-3.5 text-center text-xs text-muted-foreground">
+              <p className="rounded-surface border border-dashed border-border/70 bg-muted/20 p-3.5 text-center text-xs text-muted-foreground">
                 {inboxLoading
                   ? getAiDecisionCopy(locale, "setupChecking")
                   : getAiDecisionCopy(locale, "noReviewItemsDescription")}
@@ -273,7 +273,7 @@ export function AiReviewEvidence({
                     <button
                       type="button"
                       onClick={() => selectSession(entry.sessionId)}
-                      className="mt-1 flex w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-caption text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                      className="mt-1 flex w-full items-center gap-1.5 rounded-control px-1 py-0.5 text-caption text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                       title={entry.sessionTitle || entry.sessionId}
                     >
                       <Clock3 className="size-3 shrink-0" aria-hidden="true" />
@@ -307,14 +307,14 @@ export function AiReviewEvidence({
             {inboxLoading ? (
               <div aria-hidden="true" className="space-y-1.5">
                 {[0, 1].map((row) => (
-                  <div key={row} className="rounded-lg border border-border/60 px-3 py-2">
+                  <div key={row} className="rounded-surface border border-border/60 px-3 py-2">
                     <span data-ai-skeleton="true" className="block h-3 w-2/3 rounded-full" />
                     <span data-ai-skeleton="true" className="mt-1.5 block h-2.5 w-1/3 rounded-full" />
                   </div>
                 ))}
               </div>
             ) : inboxDecisions.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-3.5 text-center text-xs text-muted-foreground">
+              <p className="rounded-surface border border-dashed border-border/70 bg-muted/20 p-3.5 text-center text-xs text-muted-foreground">
                 {workspace.copy("noRecentDecisions")}
               </p>
             ) : (
@@ -330,7 +330,7 @@ export function AiReviewEvidence({
                   return (
                     <li
                       key={decision.id}
-                      className="flex items-start gap-2.5 rounded-lg border border-border/60 bg-card/60 px-3 py-2"
+                      className="flex items-start gap-2.5 rounded-surface border border-border/60 bg-card/60 px-3 py-2"
                     >
                       {settled ? (
                         <CheckCircle2
@@ -365,7 +365,7 @@ export function AiReviewEvidence({
                           <button
                             type="button"
                             onClick={() => selectSession(decision.sessionId)}
-                            className="min-w-0 flex-1 truncate rounded text-start outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                            className="min-w-0 flex-1 truncate rounded-control text-start outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                             title={decision.sessionTitle || decision.sessionId}
                           >
                             {decision.sessionTitle ||
@@ -397,7 +397,7 @@ export function AiReviewEvidence({
               ) : null}
             </div>
 
-            <dl className="mt-3 space-y-2 rounded-xl border border-border/60 bg-card/60 p-3 text-xs">
+            <dl className="mt-3 space-y-2 rounded-surface border border-border/60 bg-card/60 p-3 text-xs">
               <div className="flex items-center justify-between gap-3">
                 <dt className="flex items-center gap-2 text-muted-foreground">
                   <ShieldCheck className="size-3.5" aria-hidden="true" />
@@ -427,7 +427,7 @@ export function AiReviewEvidence({
             </dl>
 
             {setupError || !setupReady ? (
-              <div className="mt-3 rounded-lg bg-muted/30 px-3 py-2.5">
+              <div className="mt-3 rounded-surface bg-muted/30 px-3 py-2.5">
                 <p className="text-xs leading-5 text-muted-foreground">
                   {setupError
                     ? workspace.copy("setupUnavailableDescription")

@@ -269,7 +269,7 @@ function ErrorNotice({
   const persistenceOnly = error.code === "AI_RESPONSE_NOT_PERSISTED";
 
   return (
-    <div className="mx-4 mt-3 flex items-start justify-between gap-3 rounded-xl border border-destructive/25 bg-destructive-soft p-3.5 shadow-sm md:mx-6">
+    <div className="mx-4 mt-3 flex items-start justify-between gap-3 rounded-surface border border-destructive/25 bg-destructive-soft p-3.5 shadow-sm md:mx-6">
       <div className="flex min-w-0 items-start gap-2.5">
         <AlertTriangle
           className="mt-0.5 size-4 shrink-0 text-destructive"
@@ -383,7 +383,7 @@ const MessageBubble = memo(function MessageBubble({
             ) : null}
           </div>
         ) : (
-          <div className="rounded-2xl rounded-ee-md bg-primary px-4 py-2.5 text-sm leading-6 text-primary-foreground">
+          <div className="rounded-surface rounded-ee-control bg-primary px-4 py-2.5 text-sm leading-6 text-primary-foreground">
             {message.content ? (
               // Seller input is echoed verbatim — no markdown interpretation.
               <p dir="auto" className="whitespace-pre-wrap break-words">
@@ -427,7 +427,7 @@ const MessageBubble = memo(function MessageBubble({
         ) : null}
 
         {message.persistenceWarning ? (
-          <div className="mt-3 rounded-xl border border-warning/25 bg-warning-soft px-3.5 py-3">
+          <div className="mt-3 rounded-surface border border-warning/25 bg-warning-soft px-3.5 py-3">
             <div className="flex items-start gap-2.5">
               <AlertTriangle
                 className="mt-0.5 size-4 shrink-0 text-warning"
@@ -458,7 +458,7 @@ const MessageBubble = memo(function MessageBubble({
               disabled={message.feedback === "up"}
               onClick={() => onFeedback(message.id, "up")}
               className={cn(
-                "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
+                "inline-flex size-7 items-center justify-center rounded-control text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
                 message.feedback === "up" && "bg-primary-soft text-primary opacity-100",
               )}
             >
@@ -473,7 +473,7 @@ const MessageBubble = memo(function MessageBubble({
               disabled={message.feedback === "down"}
               onClick={() => onFeedback(message.id, "down")}
               className={cn(
-                "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
+                "inline-flex size-7 items-center justify-center rounded-control text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
                 message.feedback === "down" && "bg-destructive-soft text-destructive opacity-100",
               )}
             >
@@ -498,7 +498,7 @@ const MessageBubble = memo(function MessageBubble({
                 onClick={() => onEditMessage(message.id)}
                 aria-label={copy("editMessage")}
                 title={copy("editMessage")}
-                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex size-7 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <PencilLine className="size-3.5" aria-hidden="true" />
               </button>
@@ -508,7 +508,7 @@ const MessageBubble = memo(function MessageBubble({
               onClick={() => void copyMessage()}
               aria-label={copied ? copy("messageCopied") : copy("copyMessage")}
               title={clock ? `${copy("copyMessage")} · ${clock}` : copy("copyMessage")}
-              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex size-7 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
             >
               {copied ? (
                 <Check className="size-3.5 text-success" aria-hidden="true" />
@@ -540,11 +540,11 @@ function SetupChecklistRow({
   missingLabel: string;
 }) {
   return (
-    <li className="flex items-center justify-between gap-3 rounded-lg border bg-background/60 px-3 py-2">
+    <li className="flex items-center justify-between gap-3 rounded-surface border bg-background/60 px-3 py-2">
       <span className="flex min-w-0 items-center gap-2.5">
         <span
           className={cn(
-            "flex size-6 shrink-0 items-center justify-center rounded-md",
+            "flex size-6 shrink-0 items-center justify-center rounded-control",
             ready ? "bg-success-soft text-success" : "bg-warning-soft text-warning",
           )}
         >
@@ -585,7 +585,7 @@ function AbilityGroupCard({
   return (
     <div
       data-ai-ability-group={group.id}
-      className="rounded-2xl border border-border/70 bg-gradient-to-b from-card to-card/60 p-4 shadow-[0_1px_2px_oklch(0_0_0/0.04)]"
+      className="rounded-surface border border-border/70 bg-gradient-to-b from-card to-card/60 p-4 shadow-[0_1px_2px_oklch(0_0_0/0.04)]"
     >
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-bold tracking-tight">
@@ -637,7 +637,7 @@ function AbilitiesPanel({
     workspace;
 
   return (
-    <section data-ai-abilities="true" className="mt-8 w-full text-start rounded-2xl border border-border/60 bg-muted/[0.18] p-4 md:p-5">
+    <section data-ai-abilities="true" className="mt-8 w-full text-start rounded-surface border border-border/60 bg-muted/[0.18] p-4 md:p-5">
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-sm font-bold tracking-tight">
           {getAiDecisionCopy(locale, "abilitiesTitle")}
@@ -654,7 +654,7 @@ function AbilitiesPanel({
           className="mt-4 grid gap-3 sm:grid-cols-2"
         >
           {[0, 1, 2, 3].map((row) => (
-            <div key={row} className="rounded-xl border bg-card/60 p-4">
+            <div key={row} className="rounded-surface border bg-card/60 p-4">
               <span data-ai-skeleton="true" className="block h-3.5 w-20 rounded-full" />
               <span data-ai-skeleton="true" className="mt-3 block h-4 w-3/4 rounded-full" />
               <span data-ai-skeleton="true" className="mt-1.5 block h-4 w-1/2 rounded-full" />
@@ -725,7 +725,7 @@ function InboxStrip({
   return (
     <div
       data-ai-inbox-strip="true"
-      className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-b from-primary-soft to-primary-subtle px-4 py-3 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_10px_28px_oklch(0_0_0/0.06)] md:mx-6"
+      className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-surface border border-primary/30 bg-gradient-to-b from-primary-soft to-primary-subtle px-4 py-3 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_10px_28px_oklch(0_0_0/0.06)] md:mx-6"
     >
       <div className="flex min-w-0 items-start gap-2.5">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
@@ -767,7 +767,7 @@ function StartSurface({
         heading and spacing do the work.
       */}
       <div className="flex items-start gap-4">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary">
           <BrainCircuit className="size-6" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
@@ -790,7 +790,7 @@ function StartSurface({
       </div>
 
       {!ready && workspace.setup ? (
-        <div className="mt-7 w-full rounded-xl border bg-card/60 p-4 text-start md:p-5">
+        <div className="mt-7 w-full rounded-surface border bg-card/60 p-4 text-start md:p-5">
           <p className="text-sm font-semibold">
             {getAiDecisionCopy(workspace.locale, "setupRequiredTitle")}
           </p>
@@ -865,7 +865,7 @@ function StartSurface({
               disabled={!ready || starting}
               onClick={() => void onStart(workspace.copy(starter.prompt))}
               className={cn(
-                "group/starter relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-b from-card to-card/60 p-4 text-start transition-all duration-200",
+                "group/starter relative overflow-hidden rounded-surface border border-border/70 bg-gradient-to-b from-card to-card/60 p-4 text-start transition-all duration-200",
                 "hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_2px_4px_oklch(0_0_0/0.05),0_16px_36px_oklch(0_0_0/0.09)]",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 "disabled:pointer-events-none disabled:opacity-50",
@@ -876,7 +876,7 @@ function StartSurface({
                 className="pointer-events-none absolute inset-y-0 start-0 w-1 bg-gradient-to-b from-primary/50 to-primary-subtle opacity-0 transition-opacity duration-200 group-hover/starter:opacity-100"
               />
               <span className="flex items-start gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary shadow-sm">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-surface border border-primary/20 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary shadow-sm">
                   <Icon className="size-[18px]" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -1259,7 +1259,7 @@ export function AiDecisionCanvas({
               <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
             </Button>
           ) : null}
-          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary shadow-sm">
+          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-surface border border-primary/15 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary shadow-sm">
             <Bot className="size-4" aria-hidden="true" />
             {workspace.setup ? (
               // Configuration truth on the avatar (AI-26): consent+key state
@@ -1360,22 +1360,22 @@ export function AiDecisionCanvas({
                 className="mx-auto w-full max-w-3xl space-y-7 py-2"
               >
                 <div className="flex gap-3">
-                  <span data-ai-skeleton="true" className="mt-0.5 size-8 shrink-0 rounded-lg" />
+                  <span data-ai-skeleton="true" className="mt-0.5 size-8 shrink-0 rounded-surface" />
                   <div className="w-full max-w-3xl space-y-2.5">
                     <span data-ai-skeleton="true" className="block h-3 w-24 rounded-full" />
-                    <span data-ai-skeleton="true" className="block h-3.5 w-11/12 rounded-md" />
-                    <span data-ai-skeleton="true" className="block h-3.5 w-4/5 rounded-md" />
-                    <span data-ai-skeleton="true" className="block h-3.5 w-2/5 rounded-md" />
+                    <span data-ai-skeleton="true" className="block h-3.5 w-11/12 rounded-control" />
+                    <span data-ai-skeleton="true" className="block h-3.5 w-4/5 rounded-control" />
+                    <span data-ai-skeleton="true" className="block h-3.5 w-2/5 rounded-control" />
                   </div>
                 </div>
                 <div className="flex justify-end">
-                  <span data-ai-skeleton="true" className="block h-11 w-2/5 rounded-2xl rounded-ee-md" />
+                  <span data-ai-skeleton="true" className="block h-11 w-2/5 rounded-surface rounded-ee-control" />
                 </div>
                 <div className="flex gap-3">
-                  <span data-ai-skeleton="true" className="mt-0.5 size-8 shrink-0 rounded-lg" />
+                  <span data-ai-skeleton="true" className="mt-0.5 size-8 shrink-0 rounded-surface" />
                   <div className="w-full max-w-3xl space-y-2.5">
                     <span data-ai-skeleton="true" className="block h-3 w-24 rounded-full" />
-                    <span data-ai-skeleton="true" className="block h-3.5 w-3/4 rounded-md" />
+                    <span data-ai-skeleton="true" className="block h-3.5 w-3/4 rounded-control" />
                   </div>
                 </div>
               </div>
@@ -1436,9 +1436,9 @@ export function AiDecisionCanvas({
                   </div>
                 ) : null}
 
-                {/* Ledger AI-14: grounded follow-up affordances under the last
+                {/* Ledger AI-14: grounded-control follow-up affordances under the last
                     completed answer; anchored dismissal resets on a new turn.
-                    When the turn produced no grounded chips, fall back to two
+                    When the turn produced no grounded-control chips, fall back to two
                     shop job prompts so the thread never ends dead. */}
                 {!sending && !editingMessageId && lastMessageId ? (
                   <AiFollowUpChips
@@ -1462,7 +1462,7 @@ export function AiDecisionCanvas({
                 {proposals.length > 0 ? (
                   <section
                     data-ai-inline-proposals="true"
-                    className="ms-11 max-w-3xl rounded-2xl border border-primary/25 bg-primary-subtle p-4"
+                    className="ms-11 max-w-3xl rounded-surface border border-primary/25 bg-primary-subtle p-4"
                     aria-labelledby="ai-proposed-changes-title"
                   >
                     <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -1536,7 +1536,7 @@ export function AiDecisionCanvas({
         {editingMessage ? (
           <div
             data-ai-editing="true"
-            className="mx-auto mb-2 flex w-full max-w-4xl items-center justify-between gap-3 rounded-xl border border-warning/30 bg-warning-soft px-3.5 py-2.5"
+            className="mx-auto mb-2 flex w-full max-w-4xl items-center justify-between gap-3 rounded-surface border border-warning/30 bg-warning-soft px-3.5 py-2.5"
           >
             <p className="min-w-0 truncate text-xs text-foreground">
               {copy("editingNotice")}
@@ -1556,13 +1556,13 @@ export function AiDecisionCanvas({
           {screenshot ? (
             <div
               data-ai-screenshot-chip="true"
-              className="mb-2 flex items-center gap-3 rounded-xl border border-border/60 bg-muted/25 px-3 py-2"
+              className="mb-2 flex items-center gap-3 rounded-surface border border-border/60 bg-muted/25 px-3 py-2"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview, never persisted */}
               <img
                 src={screenshot.previewUrl}
                 alt={screenshot.file.name || copy("attachScreenshot")}
-                className="size-10 shrink-0 rounded-lg border border-border/60 object-cover"
+                className="size-10 shrink-0 rounded-surface border border-border/60 object-cover"
               />
               {readingScreenshot ? (
                 <Loader2
@@ -1590,7 +1590,7 @@ export function AiDecisionCanvas({
           ) : null}
           <div
             data-ai-composer="true"
-            className="flex w-full items-end gap-2 rounded-2xl border border-border/70 bg-card p-2 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_12px_32px_oklch(0_0_0/0.07)] focus-within:border-primary/40"
+            className="flex w-full items-end gap-2 rounded-surface border border-border/70 bg-card p-2 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_12px_32px_oklch(0_0_0/0.07)] focus-within:border-primary/40"
           >
           <input
             ref={screenshotInputRef}
@@ -1659,7 +1659,7 @@ export function AiDecisionCanvas({
               size="icon"
               variant="outline"
               aria-label={workspace.copy("stop")}
-              className="shrink-0 rounded-xl border-destructive/30 text-destructive hover:bg-destructive-soft hover:text-destructive"
+              className="shrink-0 rounded-surface border-destructive/30 text-destructive hover:bg-destructive-soft hover:text-destructive"
               onClick={stop}
             >
               <Square className="size-4" aria-hidden="true" />
@@ -1670,7 +1670,7 @@ export function AiDecisionCanvas({
               size="icon"
               aria-label={workspace.copy("send")}
               disabled={!setupReady || !draft.trim() || startingAnalysis || readingScreenshot}
-              className="shrink-0 rounded-xl shadow-sm"
+              className="shrink-0 rounded-surface shadow-sm"
               onClick={() => void submit()}
             >
               {startingAnalysis ? (
@@ -1702,10 +1702,10 @@ export function AiDecisionCanvas({
           ) : null}
         </div>
         <p className="mx-auto mt-1.5 hidden w-full max-w-4xl flex-wrap items-center gap-x-3 gap-y-1 px-1 text-caption text-muted-foreground md:flex">
-          <span><kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">/</kbd> {copy("shortcutFocusComposer")}</span>
-          <span><kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Esc</kbd> {copy("shortcutStopStream")}</span>
-          <span dir="ltr"><kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Alt+↑↓</kbd> {copy("shortcutSwitchSessions")}</span>
-          <span dir="ltr"><kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Ctrl+↵</kbd> {copy("shortcutApproveFocused")}</span>
+          <span><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">/</kbd> {copy("shortcutFocusComposer")}</span>
+          <span><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Esc</kbd> {copy("shortcutStopStream")}</span>
+          <span dir="ltr"><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Alt+↑↓</kbd> {copy("shortcutSwitchSessions")}</span>
+          <span dir="ltr"><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Ctrl+↵</kbd> {copy("shortcutApproveFocused")}</span>
         </p>
       </div>
 

@@ -523,7 +523,7 @@ export function CanonicalCustomerReturnActions({
       </dl>
 
       {currentCase ? (
-        <div className="space-y-3 rounded-lg border p-3">
+        <div className="space-y-3 rounded-surface border p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Badge>{currentCase.caseType === "exchange" ? copy.exchange : copy.return}</Badge>
@@ -560,7 +560,7 @@ export function CanonicalCustomerReturnActions({
           <p className="text-sm text-muted-foreground">{copy.noRefunds}</p>
         ) : (
           position.refunds.map((refund) => (
-            <div key={refund.refundId} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+            <div key={refund.refundId} className="flex flex-wrap items-center justify-between gap-3 rounded-surface border p-3 text-sm">
               <div>
                 <p className="font-medium tabular-nums">{copy.issued}: {formatDZD(refund.amount, locale)}</p>
                 <p className="text-xs text-muted-foreground">
@@ -618,7 +618,7 @@ export function CanonicalCustomerReturnActions({
                       setCaseType(next);
                       setExchangeLines(next === "exchange" ? [newExchangeLine()] : []);
                     }}
-                    className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                    className="h-9 w-full rounded-control border bg-background px-3 text-sm"
                   >
                     <option value="return">{copy.returnCase}</option>
                     <option value="exchange">{copy.exchangeCase}</option>
@@ -626,7 +626,7 @@ export function CanonicalCustomerReturnActions({
                 </div>
                 <div className="space-y-2">
                   {position.orderItems.map((item) => (
-                    <div key={item.orderItemId} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_140px] sm:items-end">
+                    <div key={item.orderItemId} className="grid gap-2 rounded-surface border p-3 sm:grid-cols-[1fr_140px] sm:items-end">
                       <div>
                         <p className="text-sm font-medium" dir="auto">
                           {item.productName}{item.variantName ? ` · ${item.variantName}` : ""}
@@ -670,7 +670,7 @@ export function CanonicalCustomerReturnActions({
                       const product = catalog.find((entry) => entry.id === line.productId);
                       const variants = product?.productVariants.filter((variant) => variant.isActive) ?? [];
                       return (
-                        <div key={line.key} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2">
+                        <div key={line.key} className="grid gap-2 rounded-surface border p-3 sm:grid-cols-2">
                           <select
                             value={line.productId}
                             onChange={(event) =>
@@ -682,7 +682,7 @@ export function CanonicalCustomerReturnActions({
                                 ),
                               )
                             }
-                            className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                            className="h-9 w-full rounded-control border bg-background px-3 text-sm"
                           >
                             <option value="">{copy.chooseProduct}</option>
                             {catalog.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
@@ -699,7 +699,7 @@ export function CanonicalCustomerReturnActions({
                               )
                             }
                             disabled={!product || variants.length === 0}
-                            className="h-9 w-full rounded-md border bg-background px-3 text-sm disabled:opacity-60"
+                            className="h-9 w-full rounded-control border bg-background px-3 text-sm disabled:opacity-60"
                           >
                             <option value="">{variants.length > 0 ? copy.chooseVariant : copy.noVariant}</option>
                             {variants.map((variant) => <option key={variant.id} value={variant.id}>{variant.name}</option>)}
@@ -753,7 +753,7 @@ export function CanonicalCustomerReturnActions({
             {dialog?.kind === "transition" && dialog.action === "inspect" && currentCase ? (
               <div className="space-y-2">
                 {currentCase.requestedItems.map((item) => (
-                  <div key={item.orderItemId} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_180px] sm:items-center">
+                  <div key={item.orderItemId} className="grid gap-2 rounded-surface border p-3 sm:grid-cols-[1fr_180px] sm:items-center">
                     <span className="text-sm" dir="auto">
                       {item.productName}{item.variantName ? ` · ${item.variantName}` : ""} · {item.requestedQuantity}
                     </span>
@@ -765,7 +765,7 @@ export function CanonicalCustomerReturnActions({
                           [item.orderItemId]: event.target.value as ReturnDisposition,
                         }))
                       }
-                      className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                      className="h-9 w-full rounded-control border bg-background px-3 text-sm"
                     >
                       <option value="">{copy.chooseDisposition}</option>
                       {(["available", "damaged", "quarantine", "lost"] as const).map((value) => (
@@ -785,7 +785,7 @@ export function CanonicalCustomerReturnActions({
                     id="refund-method"
                     value={refundMethod}
                     onChange={(event) => setRefundMethod(event.target.value as RefundMethod)}
-                    className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                    className="h-9 w-full rounded-control border bg-background px-3 text-sm"
                   >
                     {(["cash", "bank", "credit", "courier_deduction"] as const).map((value) => (
                       <option key={value} value={value}>{copy[value]}</option>

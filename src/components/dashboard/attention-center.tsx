@@ -41,11 +41,11 @@ export function AttentionCenter({
   const active = items.filter((item) => item.value > 0);
 
   return (
-    <section className="rounded-md border border-border/80 bg-background">
+    <section className="rounded-control border border-border/80 bg-background">
       <div className="flex items-center justify-between border-b border-border/70 px-3 py-2.5">
         <h2 className="text-sm font-semibold text-foreground">{title}</h2>
         {active.length > 0 ? (
-          <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+          <span className="rounded-control bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
             {active.reduce((sum, item) => sum + item.value, 0)}
           </span>
         ) : null}
@@ -53,7 +53,7 @@ export function AttentionCenter({
 
       {active.length === 0 ? (
         <div className="flex items-center gap-2.5 px-3 py-4 text-sm text-muted-foreground">
-          <span className="flex size-8 items-center justify-center rounded-md border border-success/20 bg-success-subtle text-success">
+          <span className="flex size-8 items-center justify-center rounded-control border border-success/20 bg-success-subtle text-success">
             <CheckCircle2 className="size-4" aria-hidden="true" />
           </span>
           <span>{allClearLabel}</span>
@@ -71,7 +71,7 @@ export function AttentionCenter({
               >
                 <span
                   className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-md border",
+                    "flex size-8 shrink-0 items-center justify-center rounded-control border",
                     TONE[tone],
                   )}
                 >

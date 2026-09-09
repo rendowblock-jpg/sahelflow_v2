@@ -205,7 +205,7 @@ export function DataTable<TData>({
     <div className={cn("space-y-3", className)} data-table-density={density}>
       {bulkActions && selectedIds.length > 0 ? (
         <div
-          className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/35 px-3 py-2"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-control border bg-muted/35 px-3 py-2"
           data-testid="data-table-bulk-bar"
           role="toolbar"
           aria-label={t("dataTable.selected", { count: selectedIds.length })}
@@ -239,7 +239,7 @@ export function DataTable<TData>({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-md border bg-background">
+      <div className="overflow-hidden rounded-control border bg-background">
         <div className="relative overflow-x-auto">
           <table className="w-full" aria-busy={isLoading}>
             <thead className="sticky top-0 z-10 border-b bg-muted/80 backdrop-blur-sm">
@@ -295,7 +295,7 @@ export function DataTable<TData>({
                           <button
                             type="button"
                             className={cn(
-                              "inline-flex min-h-7 max-w-full items-center rounded px-1 text-inherit outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                              "inline-flex min-h-7 max-w-full items-center rounded-control px-1 text-inherit outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
                               meta?.align === "end" && "ms-auto",
                               meta?.align === "center" && "mx-auto",
                             )}
@@ -416,7 +416,7 @@ export function DataTable<TData>({
       <div className="flex flex-wrap items-center justify-between gap-3">
         {showDensityToggle ? (
           <div
-            className="flex items-center gap-1 rounded-md border p-0.5"
+            className="flex items-center gap-1 rounded-control border p-0.5"
             role="group"
             aria-label={t("dataTable.density")}
           >
@@ -426,7 +426,7 @@ export function DataTable<TData>({
                 type="button"
                 onClick={() => setDensity(option)}
                 className={cn(
-                  "rounded px-2 py-1 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  "rounded-control px-2 py-1 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                   density === option
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",

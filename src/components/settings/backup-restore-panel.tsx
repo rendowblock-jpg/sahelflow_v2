@@ -299,7 +299,7 @@ export function BackupRestorePanel({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <span className="flex size-8 items-center justify-center rounded-md bg-primary-soft">
+            <span className="flex size-8 items-center justify-center rounded-control bg-primary-soft">
               <DatabaseBackup className="size-5 text-primary" aria-hidden="true" />
             </span>
             {copy.title}
@@ -308,7 +308,7 @@ export function BackupRestorePanel({
         </CardHeader>
         <CardContent className="space-y-4">
           {!desktop ? (
-            <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            <p className="rounded-surface border border-dashed p-4 text-sm text-muted-foreground">
               {copy.desktopOnly}
             </p>
           ) : (
@@ -348,7 +348,7 @@ export function BackupRestorePanel({
               ) : null}
 
               {!canRead ? (
-                <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                <p className="rounded-surface border border-dashed p-4 text-sm text-muted-foreground">
                   {workspaceCopy("backupHistoryRestricted")}
                 </p>
               ) : loading ? (
@@ -359,7 +359,7 @@ export function BackupRestorePanel({
               ) : loadError ? (
                 <div
                   role="alert"
-                  className="space-y-3 rounded-lg border border-destructive/30 bg-destructive-subtle p-4 text-sm"
+                  className="space-y-3 rounded-surface border border-destructive/30 bg-destructive-subtle p-4 text-sm"
                 >
                   <p className="font-medium text-destructive">
                     {workspaceCopy("unavailable")}
@@ -378,7 +378,7 @@ export function BackupRestorePanel({
                   </Button>
                 </div>
               ) : backups.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-6 text-center">
+                <div className="rounded-surface border border-dashed p-6 text-center">
                   <ShieldCheck className="mx-auto mb-2 size-8 text-muted-foreground" />
                   <p className="text-sm font-medium">{copy.empty}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -386,7 +386,7 @@ export function BackupRestorePanel({
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-lg border">
+                <div className="overflow-x-auto rounded-surface border">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -480,7 +480,7 @@ export function BackupRestorePanel({
             role="dialog"
             aria-modal="true"
             aria-labelledby="restore-title"
-            className="w-full max-w-lg space-y-4 rounded-xl border bg-card p-6 shadow-xl"
+            className="w-full max-w-lg space-y-4 rounded-surface border bg-card p-6 shadow-xl"
           >
             <div>
               <h2 id="restore-title" className="font-semibold">
@@ -490,7 +490,7 @@ export function BackupRestorePanel({
                 {copy.restoreDescription}
               </p>
             </div>
-            <p className="rounded-md bg-muted p-2 font-mono text-xs" dir="ltr">
+            <p className="rounded-control bg-muted p-2 font-mono text-xs" dir="ltr">
               {restoreTarget.backupId}
             </p>
             {restoreTarget.requiresRecoveryKit ? (
@@ -545,7 +545,7 @@ export function BackupRestorePanel({
             role="dialog"
             aria-modal="true"
             aria-labelledby="kit-title"
-            className="w-full max-w-lg space-y-4 rounded-xl border bg-card p-6 shadow-xl"
+            className="w-full max-w-lg space-y-4 rounded-surface border bg-card p-6 shadow-xl"
           >
             <div>
               <h2 id="kit-title" className="font-semibold">
@@ -558,14 +558,14 @@ export function BackupRestorePanel({
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">{copy.kitPath}</p>
               <p
-                className="break-all rounded-md bg-muted p-2 font-mono text-xs"
+                className="break-all rounded-control bg-muted p-2 font-mono text-xs"
                 dir="ltr"
               >
                 {kitResult.path}
               </p>
               <p className="text-xs text-muted-foreground">{copy.codeLabel}</p>
               <p
-                className="break-all rounded-md border p-3 font-mono text-sm"
+                className="break-all rounded-control border p-3 font-mono text-sm"
                 dir="ltr"
               >
                 {kitResult.recoveryCode}
@@ -586,7 +586,7 @@ export function BackupRestorePanel({
             role="dialog"
             aria-modal="true"
             aria-labelledby="backup-reauth-title"
-            className="w-full max-w-md space-y-4 rounded-xl border bg-card p-6 shadow-xl"
+            className="w-full max-w-md space-y-4 rounded-surface border bg-card p-6 shadow-xl"
           >
             <div className="flex items-center gap-2">
               <KeyRound className="size-4" aria-hidden="true" />
@@ -594,12 +594,14 @@ export function BackupRestorePanel({
                 {workspaceCopy("verificationRequired")}
               </h2>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p id="backup-reauth-hint" className="text-sm text-muted-foreground">
               {workspaceCopy("verificationDescription")}
             </p>
             <Input
               type="password"
               inputMode="numeric"
+              aria-describedby={reauthError ? "backup-reauth-hint backup-reauth-error" : "backup-reauth-hint"}
+              aria-invalid={reauthError ? true : undefined}
               autoComplete="current-password"
               value={pin}
               onChange={(event) => setPin(event.target.value)}
@@ -609,7 +611,7 @@ export function BackupRestorePanel({
               }}
             />
             {reauthError ? (
-              <p role="alert" className="text-sm text-destructive">
+              <p id="backup-reauth-error" role="alert" className="text-sm text-destructive">
                 {reauthError}
               </p>
             ) : null}

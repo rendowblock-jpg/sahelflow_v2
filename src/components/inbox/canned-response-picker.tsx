@@ -132,7 +132,7 @@ function CannedResponsePickerBody({ onSelect, onPick }: CannedResponsePickerBody
   return (
     <>
       <div className="border-b p-2">
-        <div className="flex items-center gap-2 rounded-md px-2">
+        <div className="flex items-center gap-2 rounded-control px-2">
           <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <Input
             ref={inputRef}

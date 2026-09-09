@@ -221,7 +221,7 @@ export function WhatsAppPairingDialog({
           <div className="px-6 py-6">
             {phase === "starting" || phase === "waiting-qr" ? (
               <div className="flex min-h-72 flex-col items-center justify-center text-center">
-                <div className="flex size-14 items-center justify-center rounded-2xl border bg-primary-soft text-primary">
+                <div className="flex size-14 items-center justify-center rounded-surface border bg-primary-soft text-primary">
                   <Loader2 className="size-6 animate-spin" aria-hidden="true" />
                 </div>
                 <h3 className="mt-5 text-base font-semibold">
@@ -239,7 +239,7 @@ export function WhatsAppPairingDialog({
 
             {phase === "qr-ready" ? (
               <div className="grid gap-6 sm:grid-cols-[15rem_1fr] sm:items-center">
-                <div className="mx-auto flex size-60 items-center justify-center rounded-3xl border bg-white p-3 shadow-sm">
+                <div className="mx-auto flex size-60 items-center justify-center rounded-surface border bg-white p-3 shadow-sm">
                   {qrImageFailed ? (
                     <div className="px-4 text-center text-slate-700">
                       <TriangleAlert className="mx-auto size-7" aria-hidden="true" />
@@ -257,7 +257,7 @@ export function WhatsAppPairingDialog({
                       key={`${qrKey}:${qrRevision}`}
                       src={`/api/whatsapp/qr-image?refresh=${qrKey}-${qrRevision}`}
                       alt={pairingCopy("qrAlt")}
-                      className="size-full rounded-2xl object-contain"
+                      className="size-full rounded-surface object-contain"
                       onLoad={() => setQrImageFailed(false)}
                       onError={() => setQrImageFailed(true)}
                     />
@@ -265,7 +265,7 @@ export function WhatsAppPairingDialog({
                 </div>
 
                 <div className="text-start">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                  <div className="flex size-10 items-center justify-center rounded-surface bg-primary-soft text-primary">
                     <Smartphone className="size-5" aria-hidden="true" />
                   </div>
                   <h3 className="mt-4 text-base font-semibold">
@@ -297,7 +297,7 @@ export function WhatsAppPairingDialog({
 
             {phase === "connected" ? (
               <div className="flex min-h-72 flex-col items-center justify-center text-center">
-                <div className="flex size-14 items-center justify-center rounded-2xl bg-success-soft text-success">
+                <div className="flex size-14 items-center justify-center rounded-surface bg-success-soft text-success">
                   <CheckCircle2 className="size-7" aria-hidden="true" />
                 </div>
                 <h3 className="mt-5 text-base font-semibold">
@@ -311,7 +311,7 @@ export function WhatsAppPairingDialog({
 
             {phase === "unavailable" || phase === "disconnected" ? (
               <div className="flex min-h-72 flex-col items-center justify-center text-center">
-                <div className="flex size-14 items-center justify-center rounded-2xl border bg-destructive-soft text-destructive">
+                <div className="flex size-14 items-center justify-center rounded-surface border bg-destructive-soft text-destructive">
                   {phase === "unavailable" ? (
                     <WifiOff className="size-6" aria-hidden="true" />
                   ) : (

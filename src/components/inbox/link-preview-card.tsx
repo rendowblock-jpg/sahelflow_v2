@@ -124,7 +124,7 @@ export function InboxLinkPreview({
         rel="noopener noreferrer nofollow"
         data-inbox-link-preview="true"
         aria-label={label}
-        className="mt-2 block max-w-full overflow-hidden rounded-xl border border-border/60 bg-background/70 outline-none transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring"
+        className="mt-2 block max-w-full overflow-hidden rounded-surface border border-border/60 bg-background/70 outline-none transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring"
       >
         <span className="block border-b border-border/50 px-3 py-2 text-caption font-medium text-primary">
           <Link2 className="me-1.5 inline size-3 align-[-2px]" aria-hidden="true" />

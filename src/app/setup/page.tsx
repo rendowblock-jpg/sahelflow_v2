@@ -72,7 +72,7 @@ export default function SetupPage() {
       <RuntimeUiReadyBeacon />
       <Card className="w-full max-w-sm border shadow-none">
         <CardHeader className="pb-4 text-center">
-          <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+          <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-control border bg-muted text-muted-foreground">
             <Lock className="size-5" aria-hidden="true" />
           </div>
           <CardTitle className="text-xl font-semibold tracking-tight">
@@ -118,7 +118,7 @@ export default function SetupPage() {
             </div>
 
             {error ? (
-              <p className="rounded-md border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive" role="alert">
+              <p className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive" role="alert">
                 {error}
               </p>
             ) : null}
@@ -139,7 +139,7 @@ export default function SetupPage() {
               )}
             </Button>
 
-            <div className="flex items-start gap-2 rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground">
+            <div className="flex items-start gap-2 rounded-control border bg-muted/20 p-3 text-xs text-muted-foreground">
               <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               <span>{t("auth.pinSecurityNote")}</span>
             </div>

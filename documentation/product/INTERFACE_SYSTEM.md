@@ -85,8 +85,19 @@ Three radii. Nothing else.
 | `--radius-surface` → `rounded-surface` | 10px | Cards, panels, dialogs, popovers, media |
 | `rounded-full` | 9999px | Avatars, pills, status dots, circular controls |
 
-`rounded-xl`, `rounded-2xl`, `rounded-3xl` and bare `rounded-sm` are retired from
-component code.
+`rounded-xs`, `rounded-sm`, `rounded-md`, `rounded-lg`, `rounded-xl`, `rounded-2xl`,
+`rounded-3xl` and the bare `rounded` are retired from component code. `rounded-none`
+survives as the deliberate absence of a radius (line-variant tabs, edge-to-edge cards),
+not as a fourth step.
+
+**One carve-out: the seller's storefront.** `StorefrontRadius` (`soft | rounded | sharp`,
+`lib/storefront/presentation-types.ts:13`) is a published shop's visual identity, chosen
+by the seller and already live on their storefront. This system governs SahelFlow's
+*operations interface*; it does not restyle a seller's shop. Those three settings resolve
+through `--radius-storefront-soft` (14px) and `--radius-storefront-round` (18px), named in
+`globals.css` so they are system values rather than arbitrary ones. Collapsing them onto
+`control`/`surface` would make two of the three options render identically and delete a
+shipped product control — that is a functional regression wearing a conformance costume.
 
 ---
 

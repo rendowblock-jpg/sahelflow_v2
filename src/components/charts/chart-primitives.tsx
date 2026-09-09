@@ -174,7 +174,7 @@ export function ChartCard({
             {icon ? (
               <span
                 className={cn(
-                  "flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/45 text-muted-foreground",
+                  "flex size-8 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/45 text-muted-foreground",
                   accent,
                 )}
                 data-chart-header-icon="true"
@@ -237,7 +237,7 @@ export function ChartEmpty({
 }) {
   return (
     <div
-      className="flex w-full items-center justify-center rounded-md border border-dashed border-border/70 bg-muted/20 px-4 text-center text-sm text-muted-foreground"
+      className="flex w-full items-center justify-center rounded-control border border-dashed border-border/70 bg-muted/20 px-4 text-center text-sm text-muted-foreground"
       style={{ height: normalizeChartHeight(height) }}
       role="status"
     >

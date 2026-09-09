@@ -385,7 +385,7 @@ export default async function OrderDetailPage({
                         </p>
                         {item.productVariantName && (
                           <p className="text-xs text-muted-foreground">
-                            <span className="inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5">
+                            <span className="inline-flex items-center gap-1 rounded-control border px-1.5 py-0.5">
                               {t("products.variant")}: {item.productVariantName}
                             </span>
                           </p>
@@ -727,7 +727,7 @@ export default async function OrderDetailPage({
                       {refunds.map((r) => (
                         <div
                           key={r.id}
-                          className="flex items-center justify-between rounded-lg border p-2.5 text-sm"
+                          className="flex items-center justify-between rounded-surface border p-2.5 text-sm"
                         >
                           <div>
                             <span className="font-medium">

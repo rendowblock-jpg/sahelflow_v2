@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
  * The product surface container.
  *
  * `ui/card.tsx` is the shadcn atom and carries its own geometry
- * (`rounded-xl`, `py-6`, `gap-6`, `shadow-layer`). Panel is the system
+ * (`rounded-surface`, `py-6`, `gap-6`, `shadow-layer`). Panel is the system
  * container: one radius (`--radius-surface`), one padding step, a hairline
  * border and no resting shadow — elevation is reserved for transient surfaces
  * per INTERFACE_SYSTEM.md §4. Surfaces migrate from Card to Panel as they are

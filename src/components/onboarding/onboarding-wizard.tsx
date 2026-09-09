@@ -442,7 +442,7 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
         <main className="min-w-0">
           {/* Step header */}
           <div className="mb-4 flex items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-surface bg-primary-soft">
               <CurrentIcon className="h-5 w-5 text-primary" aria-hidden="true" />
             </div>
             <div>
@@ -549,7 +549,7 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
                         key={row.id}
                         data-onboarding-summary-item={row.id}
                         data-done={row.done}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-surface border p-3"
                       >
                         <span className="flex items-center gap-2 text-sm font-medium">
                           {row.done ? (

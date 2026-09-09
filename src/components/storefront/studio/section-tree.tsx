@@ -115,7 +115,7 @@ export function SectionTree({
               }}
               onDragEnd={clearDrag}
               className={cn(
-                "group relative overflow-hidden rounded-xl border bg-background transition-[border-color,background-color,box-shadow,opacity,transform]",
+                "group relative overflow-hidden rounded-surface border bg-background transition-[border-color,background-color,box-shadow,opacity,transform]",
                 active
                   ? "border-primary/45 bg-primary-subtle shadow-sm"
                   : "border-border/75 hover:border-primary/20 hover:bg-muted/30",
@@ -133,7 +133,7 @@ export function SectionTree({
 
               <div className="flex min-w-0 items-center gap-1 px-1.5 py-1.5">
                 <span
-                  className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground/60 active:cursor-grabbing"
+                  className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-control text-muted-foreground/60 active:cursor-grabbing"
                   title={t("storefront.studio.sectionsLabel")}
                   aria-hidden="true"
                 >
@@ -154,12 +154,12 @@ export function SectionTree({
                       onMove(section.id, 1);
                     }
                   }}
-                  className="min-w-0 flex-1 rounded-lg px-1.5 py-1.5 text-start outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="min-w-0 flex-1 rounded-surface px-1.5 py-1.5 text-start outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-current={active ? "true" : undefined}
                   aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
                 >
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded bg-muted px-1 text-caption font-medium tabular-nums text-muted-foreground">
+                    <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-control bg-muted px-1 text-caption font-medium tabular-nums text-muted-foreground">
                       {index + 1}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-xs font-semibold">
@@ -229,7 +229,7 @@ export function SectionTree({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex min-h-9 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs font-semibold text-muted-foreground outline-none transition-[border-color,background-color,color] hover:border-primary/45 hover:bg-primary-subtle hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex min-h-9 w-full items-center justify-center gap-2 rounded-surface border border-dashed border-border px-3 py-2 text-xs font-semibold text-muted-foreground outline-none transition-[border-color,background-color,color] hover:border-primary/45 hover:bg-primary-subtle hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Plus className="size-3.5" aria-hidden="true" />
             {t("storefront.studio.addSection")}
@@ -273,7 +273,7 @@ function TreeAction({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex size-7 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30 [&_svg]:size-3.5",
+        "flex size-7 items-center justify-center rounded-control outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30 [&_svg]:size-3.5",
         destructive
           ? "text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",

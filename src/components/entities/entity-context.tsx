@@ -49,7 +49,7 @@ export function EntityLink({
     <Link
       href={href}
       className={cn(
-        "group inline-flex min-w-0 items-center gap-1 rounded-sm text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring",
+        "group inline-flex min-w-0 items-center gap-1 rounded-control text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring",
         compact ? "text-xs" : "text-sm",
         className,
       )}

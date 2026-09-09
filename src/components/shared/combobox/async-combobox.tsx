@@ -237,10 +237,10 @@ export function AsyncCombobox<T extends AsyncComboboxOption>({
                     <div
                       key={index}
                       aria-hidden="true"
-                      className="flex min-h-10 animate-pulse items-center gap-3 rounded-sm bg-muted px-2 py-1.5"
+                      className="flex min-h-10 animate-pulse items-center gap-3 rounded-control bg-muted px-2 py-1.5"
                     >
-                      <div className="h-3.5 w-1/3 rounded bg-muted-foreground/20" />
-                      <div className="h-3.5 w-1/5 rounded bg-muted-foreground/10" />
+                      <div className="h-3.5 w-1/3 rounded-control bg-muted-foreground/20" />
+                      <div className="h-3.5 w-1/5 rounded-control bg-muted-foreground/10" />
                     </div>
                   ))}
                 </div>

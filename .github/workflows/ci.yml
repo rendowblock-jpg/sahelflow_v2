@@ -173,10 +173,15 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
-      # TEST-001: Coverage remains visible as an informational trend signal.
-      # Product correctness, security, dependency audit and migration checks stay blocking.
-      - name: Coverage check (informational)
-        continue-on-error: true
+      # TEST-001 (revised by SEC-02): coverage is now a blocking REGRESSION gate.
+      #
+      # It was informational because the declared 80% floor was unreachable
+      # (measured 77.29%), so the step could only ever be noise. The thresholds in
+      # vitest.config.ts are now pinned to measured truth, which makes the gate
+      # both passable and meaningful: it goes red only when coverage FALLS.
+      # TEST-001's intent — never block a correct change on an arbitrary target —
+      # is preserved; what is removed is a check that could not fail.
+      - name: Coverage regression gate
         run: bunx vitest run --coverage
 
       # PROD-021: Audit dependencies for known vulnerabilities

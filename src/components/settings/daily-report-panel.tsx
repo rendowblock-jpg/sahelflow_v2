@@ -180,7 +180,7 @@ export function DailyReportPanel() {
           {t("reports.dailyDesc")}
         </p>
 
-        <div className="flex items-center justify-between rounded-lg border p-3">
+        <div className="flex items-center justify-between rounded-surface border p-3">
           <div>
             <Label
               id="daily-report-enabled-label"
@@ -271,13 +271,13 @@ export function DailyReportPanel() {
           </Button>
         </div>
 
-        <details className="rounded-md border border-border/50 text-xs text-muted-foreground">
+        <details className="rounded-control border border-border/50 text-xs text-muted-foreground">
           <summary className="cursor-pointer select-none px-3 py-2 font-medium transition-colors hover:bg-muted/30">
             {t("reports.advancedConfig")}
           </summary>
           <div className="space-y-2 px-3 pb-3">
             <p>{t("reports.cronHelp")}</p>
-            <pre className="overflow-x-auto rounded bg-muted/50 p-2 font-mono">
+            <pre className="overflow-x-auto rounded-control bg-muted/50 p-2 font-mono">
               0 9 * * * curl -X POST -H &quot;x-cron-secret: $SECRET&quot; http://localhost:3000/api/reports/daily
             </pre>
           </div>

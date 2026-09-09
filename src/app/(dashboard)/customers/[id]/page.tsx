@@ -193,7 +193,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       />
 
       {customer.fieldAccess.risk && customer.isBlacklisted === true ? (
-        <div className="flex items-start gap-3 rounded-lg border border-destructive/25 bg-destructive-subtle p-4">
+        <div className="flex items-start gap-3 rounded-surface border border-destructive/25 bg-destructive-subtle p-4">
           <Ban className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-destructive">
@@ -292,17 +292,17 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-lg border p-3">
+                  <div className="rounded-surface border p-3">
                     <p className="text-xs text-muted-foreground">{t("customers.delivered")}</p>
                     <p className="text-lg font-bold tabular-nums">{stats.deliveredCount}</p>
                   </div>
-                  <div className="rounded-lg border p-3">
+                  <div className="rounded-surface border p-3">
                     <p className="text-xs text-muted-foreground">{t("customers.returned")}</p>
                     <p className="text-lg font-bold tabular-nums">{stats.returnedCount}</p>
                   </div>
                 </div>
                 {stats.firstOrderDate ? (
-                  <div className="rounded-lg border bg-muted/30 p-3">
+                  <div className="rounded-surface border bg-muted/30 p-3">
                     <p className="text-xs text-muted-foreground">{t("customers.firstOrder")}</p>
                     <p className="text-sm font-medium">{formatDate(stats.firstOrderDate, locale)}</p>
                   </div>
@@ -366,7 +366,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
                           </TableCell>
                           <TableCell>
                             {style ? (
-                              <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.border}`}>
+                              <span className={`inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.border}`}>
                                 <span className={`size-1.5 rounded-full ${style.dot}`} />
                                 {t(style.i18nKey)}
                               </span>

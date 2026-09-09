@@ -59,7 +59,7 @@ export function OnboardingChecklist({
       aria-label={t("onboarding.checklist.title")}
       className="flex flex-col gap-3"
     >
-      <div className="rounded-xl border bg-background p-4">
+      <div className="rounded-surface border bg-background p-4">
         <p className="text-sm font-semibold">{t("onboarding.checklist.title")}</p>
         <p className="mt-1 text-xs text-muted-foreground" role="status">
           {progressCopy}
@@ -84,7 +84,7 @@ export function OnboardingChecklist({
                       : t("onboarding.checklist.openStep", { step: label })
                   }
                   onClick={() => onSelectStep(item.step)}
-                  className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-start text-sm transition-colors ${
+                  className={`flex w-full items-center gap-2.5 rounded-surface border px-3 py-2.5 text-start text-sm transition-colors ${
                     active
                       ? "border-primary/40 bg-primary-subtle text-foreground"
                       : item.done
@@ -110,7 +110,7 @@ export function OnboardingChecklist({
               data-done={finished}
               aria-current={currentStep === 4 ? "step" : undefined}
               onClick={onSelectFinish}
-              className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-start text-sm transition-colors ${
+              className={`flex w-full items-center gap-2.5 rounded-surface border px-3 py-2.5 text-start text-sm transition-colors ${
                 currentStep === 4
                   ? "border-primary/40 bg-primary-subtle text-foreground"
                   : "border-dashed text-muted-foreground hover:bg-muted/50 hover:text-foreground"

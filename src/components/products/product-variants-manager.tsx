@@ -48,7 +48,7 @@ export function ProductVariantsManager({ disabled }: ProductVariantsManagerProps
   }
 
   return (
-    <div className="space-y-3 rounded-lg border p-4">
+    <div className="space-y-3 rounded-surface border p-4">
       <div className="flex items-center justify-between">
         <div>
           <Label className="text-sm font-medium">
@@ -77,7 +77,7 @@ export function ProductVariantsManager({ disabled }: ProductVariantsManagerProps
       ) : (
         <div className="space-y-3">
           {fields.map((field, index) => (
-            <div key={field.id} className="space-y-2 rounded-md border bg-muted/30 p-3">
+            <div key={field.id} className="space-y-2 rounded-control border bg-muted/30 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">
                   {t("products.variantNumber", { n: index + 1 })}

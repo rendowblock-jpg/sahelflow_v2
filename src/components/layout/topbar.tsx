@@ -296,7 +296,7 @@ export function Topbar({
         type="button"
         data-command-trigger="true"
         onClick={onCommandPaletteOpen}
-        className="mx-auto hidden h-8 min-h-(--sf-touch-target) min-w-0 max-w-xl flex-1 items-center gap-2 rounded-lg border border-border/80 bg-muted/30 px-2.5 text-sm text-muted-foreground outline-none transition-[background-color,border-color,box-shadow,color] hover:border-border hover:bg-muted/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex"
+        className="mx-auto hidden h-8 min-h-(--sf-touch-target) min-w-0 max-w-xl flex-1 items-center gap-2 rounded-surface border border-border/80 bg-muted/30 px-2.5 text-sm text-muted-foreground outline-none transition-[background-color,border-color,box-shadow,color] hover:border-border hover:bg-muted/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex"
         aria-label={t("topbar.searchPlaceholder")}
         aria-keyshortcuts="Control+K"
       >
@@ -306,7 +306,7 @@ export function Topbar({
         </span>
         <kbd
           dir="ltr"
-          className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-md border border-border/80 bg-background/80 px-1.5 font-mono text-caption font-medium text-muted-foreground shadow-sm [unicode-bidi:isolate]"
+          className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-control border border-border/80 bg-background/80 px-1.5 font-mono text-caption font-medium text-muted-foreground shadow-sm [unicode-bidi:isolate]"
         >
           <span aria-hidden="true">Ctrl</span>
           <span aria-hidden="true">K</span>
@@ -411,7 +411,7 @@ export function Topbar({
                   const content = (
                     <>
                       <span
-                        className={`flex size-8 shrink-0 items-center justify-center rounded-md ${presentation.className}`}
+                        className={`flex size-8 shrink-0 items-center justify-center rounded-control ${presentation.className}`}
                       >
                         <Icon className="size-3.5" aria-hidden="true" />
                       </span>

@@ -235,7 +235,7 @@ export function UpdateChecker() {
               </div>
 
               {updateAvailable.body && (
-                <div className="rounded-md bg-muted/50 p-3 max-h-48 overflow-y-auto">
+                <div className="rounded-control bg-muted/50 p-3 max-h-48 overflow-y-auto">
                   <pre className="text-xs whitespace-pre-wrap font-sans">
                     {updateAvailable.body}
                   </pre>

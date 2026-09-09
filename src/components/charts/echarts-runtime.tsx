@@ -506,7 +506,7 @@ export function EChartSurface({
       ref={containerRef}
       data-echarts-surface="true"
       className={cn(
-        "w-full min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "w-full min-w-0 rounded-control outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
       style={{ height }}

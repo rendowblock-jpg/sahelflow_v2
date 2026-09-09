@@ -201,7 +201,7 @@ export function CustomerRiskCard({
                 </span>
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium",
+                    "inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-xs font-medium",
                     signalsLevel === "high" &&
                       "border-destructive/25 bg-destructive-soft text-destructive",
                     signalsLevel === "medium" &&

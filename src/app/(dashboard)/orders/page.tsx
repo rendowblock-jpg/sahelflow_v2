@@ -373,7 +373,7 @@ export default async function OrdersPage({
         {fallback.fieldAccess.risk ? (
           <Link
             href="/risk"
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-control px-2 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ShieldAlert className="size-4" aria-hidden="true" />
             {t("nav.risk")}

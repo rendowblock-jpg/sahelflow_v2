@@ -109,9 +109,9 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
   }, [active, load, rollingBack, storefrontId, t]);
 
   return (
-    <section className="rounded-2xl border bg-background p-4" dir={dir} aria-label={t("storefront.releaseHistory.title")}>
+    <section className="rounded-surface border bg-background p-4" dir={dir} aria-label={t("storefront.releaseHistory.title")}>
       <div className="flex flex-wrap items-start gap-3">
-        <div className="rounded-xl border bg-muted/40 p-2.5 text-primary">
+        <div className="rounded-surface border bg-muted/40 p-2.5 text-primary">
           <History className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
@@ -122,14 +122,14 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
           type="button"
           onClick={() => void load()}
           disabled={loading || rollingBack !== null}
-          className="rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50"
+          className="rounded-surface border px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <History className="h-3.5 w-3.5" aria-hidden="true" />}
           <span className="sr-only">{t("storefront.releaseHistory.title")}</span>
         </button>
       </div>
 
-      {message ? <p className="mt-3 rounded-lg border bg-muted/30 px-3 py-2 text-xs" role="status">{message}</p> : null}
+      {message ? <p className="mt-3 rounded-surface border bg-muted/30 px-3 py-2 text-xs" role="status">{message}</p> : null}
       {loading ? (
         <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -146,7 +146,7 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
               : date.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
             const busy = rollingBack === release.releaseId;
             return (
-              <article key={release.releaseId} className={`rounded-xl border p-3 ${release.isActive ? "border-primary/50 bg-primary-subtle" : "bg-muted/20"}`}>
+              <article key={release.releaseId} className={`rounded-surface border p-3 ${release.isActive ? "border-primary/50 bg-primary-subtle" : "bg-muted/20"}`}>
                 <div className="flex items-center gap-2">
                   {release.isActive ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> : <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />}
                   <span className="text-xs font-semibold capitalize">{release.templateId}</span>
@@ -160,7 +160,7 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
                     type="button"
                     disabled={rollingBack !== null}
                     onClick={() => setRollbackTarget(release)}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-caption font-semibold hover:bg-background disabled:opacity-50"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-surface border px-2.5 py-1.5 text-caption font-semibold hover:bg-background disabled:opacity-50"
                   >
                     {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
                     {busy ? t("storefront.releaseHistory.rollingBack") : t("storefront.releaseHistory.rollback")}

@@ -9,7 +9,10 @@ describe("Phase 5 experience foundation source contract", () => {
   it("keeps the authenticated shell edge-to-edge instead of nesting a floating web panel", () => {
     const source = read("src/components/layout/dashboard-layout.tsx");
     expect(source).toContain('data-sahelflow-shell="desktop"');
-    expect(source).not.toContain("lg:rounded-xl");
+    // Intent, not a token: the shell must never acquire a responsive radius at
+    // any breakpoint. Pinned as `lg:rounded-xl` before SYS-05 retired that
+    // utility; restated as the whole class so no future radius token reopens it.
+    expect(source).not.toMatch(/\blg:rounded-/);
     expect(source).not.toContain("lg:p-2");
   });
 
@@ -173,7 +176,10 @@ describe("Phase 5 experience foundation source contract", () => {
     const source = read("src/components/shared/state-surface.tsx");
     expect(source).toContain('inline: "min-h-0 px-2.5 py-2"');
     expect(source).toContain("w-fit max-w-[min(100%,48rem)] self-start");
-    expect(source).toContain('inline ? "size-7 rounded-md"');
+    // SYS-05 converted the retired `rounded-md` to the system's control radius.
+    // The pinned intent is unchanged: an inline notice keeps a compact icon tile
+    // on the control radius, never the larger surface one the block variant uses.
+    expect(source).toContain('inline ? "size-7 rounded-control"');
     expect(source).toContain('inline ? "text-[13px] leading-5"');
     expect(source).toContain('data-state-size={size}');
   });

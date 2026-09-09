@@ -55,7 +55,7 @@ function PresetPreview({ candidate }: { candidate: ThemePreset }) {
   return (
     <span
       aria-hidden="true"
-      className="relative block h-14 w-full overflow-hidden rounded-lg border border-white/10 shadow-inner"
+      className="relative block h-14 w-full overflow-hidden rounded-surface border border-white/10 shadow-inner"
       style={{ background: swatch.canvas }}
     >
       <span
@@ -70,13 +70,13 @@ function PresetPreview({ candidate }: { candidate: ThemePreset }) {
         <span className="h-1.5 w-5 rounded-full bg-white/16" />
       </span>
       <span className="absolute inset-x-5 bottom-3 grid grid-cols-3 gap-1.5">
-        <span className="h-4 rounded bg-white/7" />
+        <span className="h-4 rounded-control bg-white/7" />
         <span
-          className="h-4 rounded"
+          className="h-4 rounded-control"
           style={{ background: `color-mix(in oklch, ${swatch.secondary} 28%, transparent)` }}
         />
         <span
-          className="h-4 rounded"
+          className="h-4 rounded-control"
           style={{ background: `color-mix(in oklch, ${swatch.accent} 24%, transparent)` }}
         />
       </span>
@@ -114,7 +114,7 @@ export function AppearancePanel() {
                   aria-pressed={selected}
                   data-theme-mode={id}
                   className={cn(
-                    "flex min-h-12 items-center gap-3 rounded-xl border px-3.5 py-2.5 text-start text-sm font-medium",
+                    "flex min-h-12 items-center gap-3 rounded-surface border px-3.5 py-2.5 text-start text-sm font-medium",
                     "transition-[background-color,border-color,color,box-shadow,transform] duration-150",
                     selected
                       ? "border-primary/50 bg-primary-soft text-foreground shadow-sm"
@@ -123,7 +123,7 @@ export function AppearancePanel() {
                 >
                   <span
                     className={cn(
-                      "flex size-8 shrink-0 items-center justify-center rounded-lg border bg-card",
+                      "flex size-8 shrink-0 items-center justify-center rounded-surface border bg-card",
                       selected && "border-primary/30 text-primary",
                     )}
                   >
@@ -157,7 +157,7 @@ export function AppearancePanel() {
                   aria-pressed={selected}
                   data-theme-preset-option={candidate}
                   className={cn(
-                    "group overflow-hidden rounded-xl border p-2 text-start text-sm font-medium",
+                    "group overflow-hidden rounded-surface border p-2 text-start text-sm font-medium",
                     "transition-[background-color,border-color,color,box-shadow,transform] duration-150",
                     selected
                       ? "border-primary/55 bg-primary-soft text-foreground shadow-sm"
@@ -209,7 +209,7 @@ export function AppearancePanel() {
                   aria-pressed={selected}
                   data-density-option={candidate}
                   className={cn(
-                    "flex min-h-12 items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-start text-sm font-medium",
+                    "flex min-h-12 items-center justify-between gap-3 rounded-surface border px-3.5 py-2.5 text-start text-sm font-medium",
                     "transition-[background-color,border-color,color,box-shadow] duration-150",
                     selected
                       ? "border-primary/50 bg-primary-soft text-foreground shadow-sm"

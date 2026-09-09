@@ -281,7 +281,7 @@ export function CanonicalCodActions({ orderId }: { orderId: string }) {
           [copy.outstanding, position.outstandingCollection + position.outstandingRemittance],
           [copy.discrepancy, position.discrepancy],
         ].map(([label, amount]) => (
-          <div key={String(label)} className="rounded-md border bg-muted/20 p-2.5">
+          <div key={String(label)} className="rounded-control border bg-muted/20 p-2.5">
             <dt className="text-xs text-muted-foreground">{String(label)}</dt>
             <dd className={`mt-1 font-medium tabular-nums ${label === copy.discrepancy && amount !== 0 ? "text-destructive" : ""}`}>{formatDZD(Number(amount), locale)}</dd>
           </div>
@@ -293,7 +293,7 @@ export function CanonicalCodActions({ orderId }: { orderId: string }) {
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
 
       {!position.collectionId ? (
-        <div className="space-y-3 rounded-lg border p-3">
+        <div className="space-y-3 rounded-surface border p-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5"><Label>{copy.amount}</Label><Input inputMode="numeric" value={collection.amount} onChange={(event) => setCollection((current) => ({ ...current, amount: event.target.value }))} /></div>
             <div className="space-y-1.5"><Label>{copy.provider}</Label><Input dir="auto" value={collection.provider} onChange={(event) => setCollection((current) => ({ ...current, provider: event.target.value }))} /></div>
@@ -303,7 +303,7 @@ export function CanonicalCodActions({ orderId }: { orderId: string }) {
           <div className="flex justify-end"><Button disabled={submitting || !collection.provider.trim() || safeInteger(collection.amount) <= 0} onClick={() => void commit("collection", { amount: safeInteger(collection.amount), provider: collection.provider.trim(), reference: collection.reference.trim() || undefined, collectedAt: new Date(collection.collectedAt).toISOString() })}>{submitting ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{copy.record}</Button></div>
         </div>
       ) : position.discrepancy !== 0 ? (
-        <div className="space-y-3 rounded-lg border border-warning/40 p-3">
+        <div className="space-y-3 rounded-surface border border-warning/40 p-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5"><Label>{copy.delta}</Label><Input inputMode="numeric" value={correction.delta} onChange={(event) => setCorrection((current) => ({ ...current, delta: event.target.value }))} /></div>
             <div className="space-y-1.5"><Label>{copy.reason}</Label><Input dir="auto" value={correction.reason} onChange={(event) => setCorrection((current) => ({ ...current, reason: event.target.value }))} /></div>

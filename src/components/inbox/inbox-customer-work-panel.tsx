@@ -188,7 +188,7 @@ export function InboxCustomerWorkPanel({
                 {copy("loadingContext")}
               </div>
             ) : error ? (
-              <div className="mt-3 rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
+              <div className="mt-3 rounded-surface border bg-muted/20 p-3 text-sm text-muted-foreground">
                 <p>{copy("contextUnavailable")}</p>
                 <Button
                   type="button"
@@ -202,12 +202,12 @@ export function InboxCustomerWorkPanel({
                 </Button>
               </div>
             ) : !context?.customer ? (
-              <p className="mt-3 rounded-lg bg-muted/35 p-3 text-sm leading-5 text-muted-foreground">
+              <p className="mt-3 rounded-surface bg-muted/35 p-3 text-sm leading-5 text-muted-foreground">
                 {copy("customerNotLinked")}
               </p>
             ) : (
               <div className="mt-3 space-y-3">
-                <div className="rounded-xl border bg-muted/20 p-3.5">
+                <div className="rounded-surface border bg-muted/20 p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{context.customer.name}</p>
@@ -245,7 +245,7 @@ export function InboxCustomerWorkPanel({
                     </div>
                   ) : null}
                   {context.fieldAccess.risk && context.customer.isBlacklisted ? (
-                    <div className="mt-3 rounded-md border border-destructive/20 bg-destructive-soft px-2.5 py-2 text-xs text-destructive">
+                    <div className="mt-3 rounded-control border border-destructive/20 bg-destructive-soft px-2.5 py-2 text-xs text-destructive">
                       <span className="font-semibold">{copy("blacklisted")}</span>
                       {context.customer.blacklistReason ? (
                         <span className="ms-1.5">{context.customer.blacklistReason}</span>
@@ -255,20 +255,20 @@ export function InboxCustomerWorkPanel({
                 </div>
 
                 <dl className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-lg bg-muted/30 p-2.5">
+                  <div className="rounded-surface bg-muted/30 p-2.5">
                     <dt className="text-muted-foreground">{copy("orders")}</dt>
                     <dd className="mt-1 text-sm font-semibold tabular-nums">
                       {context.customer.orderCount}
                     </dd>
                   </div>
-                  <div className="rounded-lg bg-muted/30 p-2.5">
+                  <div className="rounded-surface bg-muted/30 p-2.5">
                     <dt className="text-muted-foreground">{copy("deliveryRate")}</dt>
                     <dd className="mt-1 text-sm font-semibold tabular-nums">
                       {context.deliveryRate === null ? "—" : `${context.deliveryRate}%`}
                     </dd>
                   </div>
                   {context.customer.totalSpent !== null ? (
-                    <div className="col-span-2 rounded-lg bg-muted/30 p-2.5">
+                    <div className="col-span-2 rounded-surface bg-muted/30 p-2.5">
                       <dt className="text-muted-foreground">{copy("totalSpent")}</dt>
                       <dd className="mt-1 text-sm font-semibold tabular-nums">
                         {formatMoney(context.customer.totalSpent, locale)}
@@ -323,7 +323,7 @@ export function InboxCustomerWorkPanel({
                       <a
                         key={order.id}
                         href={`/orders/${order.id}`}
-                        className="group flex items-center justify-between gap-3 rounded-lg border bg-muted/15 px-3 py-2.5 text-sm transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="group flex items-center justify-between gap-3 rounded-surface border bg-muted/15 px-3 py-2.5 text-sm transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <span className="min-w-0">
                           <span
@@ -372,7 +372,7 @@ export function InboxCustomerWorkPanel({
                   />
                 </div>
               ) : (
-                <p className="mt-3 rounded-lg bg-muted/35 p-3 text-sm leading-5 text-muted-foreground">
+                <p className="mt-3 rounded-surface bg-muted/35 p-3 text-sm leading-5 text-muted-foreground">
                   {copy("noOrderCandidate")}
                 </p>
               )}

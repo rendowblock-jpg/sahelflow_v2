@@ -162,7 +162,7 @@ export function ProductImageUpload({
         {value.map((url, idx) => (
           <div
             key={`${url}-${idx}`}
-            className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted"
+            className="group relative aspect-square overflow-hidden rounded-surface border border-border bg-muted"
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded URLs, no optimization needed */}
             <img
@@ -172,7 +172,7 @@ export function ProductImageUpload({
               loading="lazy"
             />
             {idx === 0 && (
-              <span className="absolute start-1 top-1 rounded bg-primary/90 px-1.5 py-0.5 text-xs font-medium text-primary-foreground">
+              <span className="absolute start-1 top-1 rounded-control bg-primary/90 px-1.5 py-0.5 text-xs font-medium text-primary-foreground">
                 {t("products.imagePrimary")}
               </span>
             )}
@@ -196,7 +196,7 @@ export function ProductImageUpload({
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
             disabled={!isInteractive}
-            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-muted/30 p-2 text-muted-foreground transition-colors hover:border-primary hover:bg-primary-subtle hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-surface border border-dashed border-border bg-muted/30 p-2 text-muted-foreground transition-colors hover:border-primary hover:bg-primary-subtle hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
             aria-label={t("products.addImage")}
           >
             {uploading ? (

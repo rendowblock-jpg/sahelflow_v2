@@ -280,12 +280,12 @@ export default async function RiskPage({
             ) : null}
           </TabsList>
 
-          <div className="flex w-fit max-w-full flex-wrap items-center gap-1 rounded-lg border bg-background p-1">
+          <div className="flex w-fit max-w-full flex-wrap items-center gap-1 rounded-surface border bg-background p-1">
             {RANGES.map((range) => (
               <Link
                 key={range.days}
                 href={`/risk?days=${range.days}&tab=${activeTab}`}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`rounded-control px-3 py-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
                   days === range.days
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -431,7 +431,7 @@ export default async function RiskPage({
               <CardContent>
                 <div className="divide-y divide-border/70">
                   <div className="flex min-w-0 items-center gap-3 py-3 first:pt-1">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/35 text-muted-foreground">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/35 text-muted-foreground">
                       <TrendingDown className="size-4" aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -445,7 +445,7 @@ export default async function RiskPage({
                   </div>
 
                   <div className="flex min-w-0 items-center gap-3 py-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/35 text-muted-foreground">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/35 text-muted-foreground">
                       <Ban className="size-4" aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -470,7 +470,7 @@ export default async function RiskPage({
                   </div>
 
                   <div className="flex min-w-0 items-center gap-3 py-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/35 text-muted-foreground">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/35 text-muted-foreground">
                       <Activity className="size-4" aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -489,7 +489,7 @@ export default async function RiskPage({
                   </div>
 
                   <div className="flex min-w-0 items-center gap-3 py-3 last:pb-1">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted/35 text-muted-foreground">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/35 text-muted-foreground">
                       <MapPin className="size-4" aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">

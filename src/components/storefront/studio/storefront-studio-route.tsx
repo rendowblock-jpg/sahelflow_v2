@@ -52,7 +52,7 @@ export async function StorefrontStudioRoute({ id }: { id: string }) {
           href="/storefronts"
           aria-label={t("storefront.builder.back")}
           title={t("storefront.builder.back")}
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex size-8 shrink-0 items-center justify-center rounded-surface text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
         </Link>

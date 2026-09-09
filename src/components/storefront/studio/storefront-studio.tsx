@@ -348,7 +348,7 @@ export function StorefrontStudio({
           </div>
         </div>
 
-        <label className="inline-flex min-h-9 items-center gap-2 rounded-lg border px-2.5 text-caption font-medium">
+        <label className="inline-flex min-h-9 items-center gap-2 rounded-surface border px-2.5 text-caption font-medium">
           <input
             type="checkbox"
             checked={draft.isActive}
@@ -362,7 +362,7 @@ export function StorefrontStudio({
         </label>
 
         <div
-          className="flex rounded-lg border p-0.5"
+          className="flex rounded-surface border p-0.5"
           aria-label={t("storefront.studio.previewDevice")}
         >
           <DeviceButton
@@ -416,7 +416,7 @@ export function StorefrontStudio({
                     t("storefront.studio.validationFailed"),
             );
           }}
-          className="min-h-9 rounded-lg border px-3 text-xs font-medium hover:bg-muted"
+          className="min-h-9 rounded-surface border px-3 text-xs font-medium hover:bg-muted"
         >
           {t("storefront.studio.validate")}
         </button>
@@ -426,7 +426,7 @@ export function StorefrontStudio({
             !dirty || saveState === "saving" || saveState === "conflict"
           }
           onClick={() => void persist(draft, true)}
-          className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+          className="inline-flex min-h-9 items-center gap-2 rounded-surface bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50"
         >
           <Save className="size-3.5" />
           {t("storefront.builder.save")}
@@ -440,7 +440,7 @@ export function StorefrontStudio({
             saveState === "conflict"
           }
           onClick={() => void publish()}
-          className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-primary px-3 text-xs font-semibold text-primary hover:bg-primary-soft disabled:opacity-50"
+          className="inline-flex min-h-9 items-center gap-2 rounded-surface border border-primary px-3 text-xs font-semibold text-primary hover:bg-primary-soft disabled:opacity-50"
         >
           <Cloud className="size-3.5" />
           {t("storefront.studio.publish")}
@@ -454,14 +454,14 @@ export function StorefrontStudio({
           <button
             type="button"
             onClick={acceptServerDraft}
-            className="rounded-md border px-2 py-1 font-medium"
+            className="rounded-control border px-2 py-1 font-medium"
           >
             {t("storefront.studio.useSavedVersion")}
           </button>
           <button
             type="button"
             onClick={keepLocalDraft}
-            className="rounded-md bg-foreground px-2 py-1 font-medium text-background"
+            className="rounded-control bg-foreground px-2 py-1 font-medium text-background"
           >
             {t("storefront.studio.keepChanges")}
           </button>
@@ -490,7 +490,7 @@ export function StorefrontStudio({
                 aria-pressed={panel === item.id}
                 onClick={() => setPanel(item.id)}
                 className={cn(
-                  "min-h-9 rounded-lg px-2 text-start text-caption font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  "min-h-9 rounded-surface px-2 text-start text-caption font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                   panel === item.id
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -582,7 +582,7 @@ export function StorefrontStudio({
 
         <main className="flex min-h-0 justify-center overflow-auto bg-muted/25 p-4 md:p-5">
           <div
-            className={`w-full ${width} self-start overflow-hidden rounded-xl border bg-background shadow-lg transition-[max-width]`}
+            className={`w-full ${width} self-start overflow-hidden rounded-surface border bg-background shadow-lg transition-[max-width]`}
           >
             <SaharaPreview
               draft={draft}
@@ -657,7 +657,7 @@ function ShippingRulesPanel({
       </div>
 
       {rules.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-3 text-caption text-muted-foreground">
+        <p className="rounded-surface border border-dashed p-3 text-caption text-muted-foreground">
           {t("storefront.studio.shippingEmpty")}
         </p>
       ) : null}
@@ -665,7 +665,7 @@ function ShippingRulesPanel({
       {rules.map((rule, index) => (
         <div
           key={`${rule.wilayaCode}:${rule.deliveryMode}:${index}`}
-          className="space-y-2 rounded-lg border p-2"
+          className="space-y-2 rounded-surface border p-2"
         >
           <Field label={t("storefront.studio.wilayaCode")}>
             <input
@@ -745,7 +745,7 @@ function ShippingRulesPanel({
         type="button"
         disabled={rules.length >= 138}
         onClick={addRule}
-        className="min-h-9 w-full rounded-lg border px-3 text-xs font-medium hover:bg-muted disabled:opacity-40"
+        className="min-h-9 w-full rounded-surface border px-3 text-xs font-medium hover:bg-muted disabled:opacity-40"
       >
         {t("storefront.studio.addDeliveryRule")}
       </button>
@@ -1125,7 +1125,7 @@ function SectionInspector({
             <select
               value={sectionSetting("align") || "split"}
               onChange={(event) => patchSection({ align: event.target.value })}
-              className="min-h-9 w-full rounded-lg border bg-background px-2.5 text-xs text-foreground"
+              className="min-h-9 w-full rounded-surface border bg-background px-2.5 text-xs text-foreground"
             >
               <option value="split">{c("mediaStart")}</option>
               <option value="media-end">{c("mediaEnd")}</option>
@@ -1145,7 +1145,7 @@ function SectionInspector({
           </Field>
           <div className="space-y-3">
             {section.blocks.map((block, index) => (
-              <div key={block.id} className="space-y-2 rounded-xl border p-3">
+              <div key={block.id} className="space-y-2 rounded-surface border p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-caption font-semibold tabular-nums text-muted-foreground">
                     {index + 1}
@@ -1159,7 +1159,7 @@ function SectionInspector({
                         deleteStorefrontBlock(draft, section.id, block.id),
                       )
                     }
-                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
+                    className="flex size-7 items-center justify-center rounded-control text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
                   >
                     <Trash2 className="size-3.5" />
                   </button>
@@ -1227,7 +1227,7 @@ function SectionInspector({
                   }),
                 )
               }
-              className="flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed text-xs font-semibold text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-40"
+              className="flex min-h-9 w-full items-center justify-center gap-2 rounded-surface border border-dashed text-xs font-semibold text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-40"
             >
               <Plus className="size-3.5" />
               {c("addTestimonial")}
@@ -1247,7 +1247,7 @@ function SectionInspector({
           </Field>
           <div className="space-y-3">
             {section.blocks.map((block, index) => (
-              <div key={block.id} className="space-y-2 rounded-xl border p-3">
+              <div key={block.id} className="space-y-2 rounded-surface border p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-caption font-semibold tabular-nums text-muted-foreground">
                     {index + 1}
@@ -1261,7 +1261,7 @@ function SectionInspector({
                         deleteStorefrontBlock(draft, section.id, block.id),
                       )
                     }
-                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
+                    className="flex size-7 items-center justify-center rounded-control text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
                   >
                     <Trash2 className="size-3.5" />
                   </button>
@@ -1313,7 +1313,7 @@ function SectionInspector({
                   }),
                 )
               }
-              className="flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-dashed text-xs font-semibold text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-40"
+              className="flex min-h-9 w-full items-center justify-center gap-2 rounded-surface border border-dashed text-xs font-semibold text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-40"
             >
               <Plus className="size-3.5" />
               {c("addFaq")}
@@ -1422,7 +1422,7 @@ function SectionInspector({
       ) : null}
 
       {section.type === "navbar" ? (
-        <p className="rounded-lg border border-dashed p-3 text-xs leading-5 text-muted-foreground">
+        <p className="rounded-surface border border-dashed p-3 text-xs leading-5 text-muted-foreground">
           {c("contentHint")}
         </p>
       ) : null}
@@ -1473,7 +1473,7 @@ function SeoPanel({
         checked={seo.noIndex}
         onChange={(noIndex) => setSeo({ noIndex })}
       />
-      <div className="rounded-lg border p-2 text-caption leading-4 text-muted-foreground">
+      <div className="rounded-surface border p-2 text-caption leading-4 text-muted-foreground">
         <Cloud className="mb-1 size-4" />
         {t("storefront.studio.domainAuthority")}
       </div>
@@ -1504,7 +1504,7 @@ function ProductPicker({
       {products.map((product) => (
         <label
           key={product.id}
-          className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs hover:bg-muted"
+          className="flex min-h-10 cursor-pointer items-center gap-2 rounded-surface px-2 py-2 text-xs hover:bg-muted"
         >
           <input
             type="checkbox"
@@ -1588,7 +1588,7 @@ function DeviceButton({
       aria-pressed={active}
       onClick={() => onClick(id)}
       className={cn(
-        "flex size-8 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-3.5",
+        "flex size-8 items-center justify-center rounded-control outline-none focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-3.5",
         active
           ? "bg-muted text-foreground"
           : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
@@ -1617,7 +1617,7 @@ function ToolbarButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex size-9 items-center justify-center rounded-lg border text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30 [&_svg]:size-3.5"
+      className="flex size-9 items-center justify-center rounded-surface border text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30 [&_svg]:size-3.5"
     >
       {children}
     </button>
@@ -1649,7 +1649,7 @@ function Field({
   return (
     <label className="block space-y-1 text-caption font-medium text-muted-foreground">
       <span>{label}</span>
-      <div className="[&_input]:min-h-9 [&_input]:w-full [&_input]:rounded-lg [&_input]:border [&_input]:bg-background [&_input]:px-2.5 [&_input]:text-xs [&_input]:text-foreground [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:bg-background [&_textarea]:px-2.5 [&_textarea]:py-2 [&_textarea]:text-xs [&_textarea]:text-foreground">
+      <div className="[&_input]:min-h-9 [&_input]:w-full [&_input]:rounded-surface [&_input]:border [&_input]:bg-background [&_input]:px-2.5 [&_input]:text-xs [&_input]:text-foreground [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-surface [&_textarea]:border [&_textarea]:bg-background [&_textarea]:px-2.5 [&_textarea]:py-2 [&_textarea]:text-xs [&_textarea]:text-foreground">
         {children}
       </div>
     </label>
@@ -1668,7 +1668,7 @@ function ColorField({
   return (
     <label className="space-y-1 text-caption font-medium text-muted-foreground">
       <span>{label}</span>
-      <span className="flex min-h-9 items-center gap-1 rounded-lg border p-1">
+      <span className="flex min-h-9 items-center gap-1 rounded-surface border p-1">
         <input
           type="color"
           aria-label={label}
@@ -1723,7 +1723,7 @@ function SelectField({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-9 w-full rounded-lg border bg-background px-2.5 text-xs capitalize text-foreground"
+        className="min-h-9 w-full rounded-surface border bg-background px-2.5 text-xs capitalize text-foreground"
       >
         {values.map((candidate) => (
           <option key={candidate} value={candidate}>

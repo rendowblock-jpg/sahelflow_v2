@@ -133,7 +133,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-muted-foreground">{t("orders.status")}</span>
               {orderStyle ? (
-                <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${orderStyle.bg} ${orderStyle.text} ${orderStyle.border}`}>
+                <span className={`inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-xs font-medium ${orderStyle.bg} ${orderStyle.text} ${orderStyle.border}`}>
                   <span className={`size-1.5 rounded-full ${orderStyle.dot}`} aria-hidden="true" />
                   {t(orderStyle.i18nKey)}
                 </span>

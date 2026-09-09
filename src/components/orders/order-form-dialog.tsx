@@ -508,7 +508,7 @@ export function OrderFormDialog({
               )}
 
               {fields.length > 0 ? (
-                <div className="space-y-2 rounded-lg border p-3">
+                <div className="space-y-2 rounded-surface border p-3">
                   {fields.map((item, i) => {
                     const product = activeProducts.find((p) => p.id === item.productId);
                     const variants = (product?.productVariants ?? []).filter(
@@ -568,7 +568,7 @@ export function OrderFormDialog({
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground py-4 text-center rounded-lg border border-dashed">
+                <p className="text-sm text-muted-foreground py-4 text-center rounded-surface border border-dashed">
                   {t("orders.form.noItems")}
                 </p>
               )}
@@ -664,7 +664,7 @@ export function OrderFormDialog({
             <Separator />
 
             {/* Total */}
-            <div className="flex items-center justify-between rounded-lg bg-muted p-4">
+            <div className="flex items-center justify-between rounded-surface bg-muted p-4">
               <span className="text-sm font-medium">{t("orders.total")}</span>
               <span className="text-xl font-bold">{formatDZD(total, locale)}</span>
             </div>
@@ -720,7 +720,7 @@ export function OrderFormDialog({
                   })}
                 </p>
                 {riskWarning && riskWarning.assessment.factors.length > 0 && (
-                  <ul className="space-y-1 rounded-md bg-muted p-3 text-xs">
+                  <ul className="space-y-1 rounded-control bg-muted p-3 text-xs">
                     {riskWarning.assessment.factors
                       .filter((f) => f.direction === "risk" && f.points > 0)
                       .sort((a, b) => b.points - a.points)

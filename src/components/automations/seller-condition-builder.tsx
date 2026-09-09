@@ -104,7 +104,7 @@ export function SellerConditionBuilder({
   };
 
   return (
-    <div className="space-y-4 rounded-xl border border-border/70 bg-muted/10 p-4">
+    <div className="space-y-4 rounded-surface border border-border/70 bg-muted/10 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <Label>{c("builder.ifTitle")}</Label>
@@ -112,7 +112,7 @@ export function SellerConditionBuilder({
         </div>
         {conditions.length > 0 ? (
           <div
-            className="flex items-center gap-1 rounded-lg border border-border/70 bg-background p-1"
+            className="flex items-center gap-1 rounded-surface border border-border/70 bg-background p-1"
             role="group"
             aria-label={c("condition.field")}
           >
@@ -122,7 +122,7 @@ export function SellerConditionBuilder({
               onClick={() => switchMode("all")}
               aria-pressed={mode === "all"}
               className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                "rounded-control px-3 py-1.5 text-xs font-medium transition-colors",
                 mode === "all"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground",
@@ -136,7 +136,7 @@ export function SellerConditionBuilder({
               onClick={() => switchMode("any")}
               aria-pressed={mode === "any"}
               className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                "rounded-control px-3 py-1.5 text-xs font-medium transition-colors",
                 mode === "any"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground",
@@ -149,11 +149,11 @@ export function SellerConditionBuilder({
       </div>
 
       {fields.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+        <p className="rounded-surface border border-dashed p-4 text-sm text-muted-foreground">
           {c("condition.noFields")}
         </p>
       ) : conditions.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border/70 p-4">
+        <div className="rounded-surface border border-dashed border-border/70 p-4">
           <p className="text-sm font-medium">{c("workspace.always")}</p>
           <p className="mt-1 text-xs text-muted-foreground">
             {c("builder.noConditions")}
@@ -177,7 +177,7 @@ export function SellerConditionBuilder({
             return (
               <div
                 key={`${condition.field}-${index}`}
-                className="grid gap-2 rounded-lg border border-border/60 bg-background p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)_auto] sm:items-end"
+                className="grid gap-2 rounded-surface border border-border/60 bg-background p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)_auto] sm:items-end"
               >
                 <div className="space-y-1.5">
                   <Label
@@ -274,7 +274,7 @@ export function SellerConditionBuilder({
                       </span>
                       <div
                         aria-hidden="true"
-                        className="flex h-9 items-center rounded-md border border-dashed px-3 text-xs text-muted-foreground"
+                        className="flex h-9 items-center rounded-control border border-dashed px-3 text-xs text-muted-foreground"
                       >
                         —
                       </div>

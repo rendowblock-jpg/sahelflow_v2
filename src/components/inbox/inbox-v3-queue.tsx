@@ -800,7 +800,7 @@ export function InboxV3Queue({
               onChange={(event) => setQuery(event.target.value)}
               aria-label={copy("searchConversations")}
               placeholder={copy("searchConversations")}
-              className="h-9 rounded-lg bg-muted/20 ps-8 pe-8 text-[13px]"
+              className="h-9 rounded-surface bg-muted/20 ps-8 pe-8 text-[13px]"
             />
             {searchState.query === normalizedQuery && searchState.loading ? (
               <Loader2
@@ -1122,7 +1122,7 @@ export function InboxV3Queue({
             {[0, 1, 2, 3, 4].map((item) => (
               <div
                 key={item}
-                className="h-[4.75rem] animate-pulse rounded-lg bg-muted/45"
+                className="h-[4.75rem] animate-pulse rounded-surface bg-muted/45"
               />
             ))}
           </div>
@@ -1208,7 +1208,7 @@ export function InboxV3Queue({
                         title={copy("conversationState")}
                         data-inbox-row-state="true"
                         onClick={(event) => event.stopPropagation()}
-                        className="absolute end-4 top-2 z-10 hidden size-7 items-center justify-center rounded-md border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring group-hover/row:flex"
+                        className="absolute end-4 top-2 z-10 hidden size-7 items-center justify-center rounded-control border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring group-hover/row:flex"
                       >
                         <MoreVertical className="size-3.5" aria-hidden="true" />
                       </button>
@@ -1255,7 +1255,7 @@ export function InboxV3Queue({
                         if (updated) void refreshChats();
                       });
                     }}
-                    className="absolute end-12 top-2 z-10 hidden size-7 items-center justify-center rounded-md border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring group-hover/row:flex"
+                    className="absolute end-12 top-2 z-10 hidden size-7 items-center justify-center rounded-control border border-border/65 bg-background text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring group-hover/row:flex"
                   >
                     <Mail className="size-3.5" aria-hidden="true" />
                   </button>

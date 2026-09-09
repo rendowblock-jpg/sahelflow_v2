@@ -91,7 +91,7 @@ describe("Onboarding checklist-driven wizard contract (R4-b)", () => {
     );
     expect(wizard).toContain("<DeliveryCredentialsPanel />");
     const panel = read(
-      "src/components/settings/delivery-credentials-panel-wave3.tsx",
+      "src/components/settings/delivery-credentials-panel.tsx",
     );
     // Registry-driven providers (all four, including EcoTrack — d5 finding).
     expect(panel).toContain('"ecotrack"');

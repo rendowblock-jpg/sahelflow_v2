@@ -17,7 +17,10 @@ describe("Class-AAA AI composition contract", () => {
     expect(shell).toContain('className="h-full min-h-0 overflow-hidden"');
     expect(workspace).toContain('data-ai-decision-workspace="true"');
     expect(workspace).toContain('data-ai-layout={wideReview ? "wide" : "desktop"}');
-    expect(workspace).not.toContain('rounded-xl border bg-card');
+    // Intent, not a token: the workspace root is a full-height decision surface,
+    // never a nested card. Pinned as `rounded-xl border bg-card` before SYS-05
+    // retired that utility; restated so no radius token reintroduces the card.
+    expect(workspace).not.toMatch(/rounded-[\w-]+ border bg-card/);
   });
 
   it("keeps the decision canvas dominant and review progressive at 1366", () => {

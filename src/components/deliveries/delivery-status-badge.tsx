@@ -87,7 +87,7 @@ export function DeliveryStatusBadge({
           type="button"
           disabled={disabled || isPending}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
             style.bg,
             style.text,
             style.border,

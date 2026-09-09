@@ -215,7 +215,7 @@ export function AiActionProposalCard({
     <section
       data-ai-proposal-card={proposal.id}
       data-ai-proposal-status={effectiveStatus}
-      className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm"
+      className="overflow-hidden rounded-surface border border-border/60 bg-card shadow-sm"
     >
       <header className="flex items-start justify-between gap-3 border-b border-border/60 bg-muted/25 px-4 py-3">
         <div className="flex min-w-0 items-start gap-2.5">
@@ -279,7 +279,7 @@ export function AiActionProposalCard({
             data-ai-proposal-fields-toggle={fieldsExpanded ? "expanded" : "collapsed"}
             aria-expanded={fieldsExpanded}
             onClick={() => setFieldsExpanded((current) => !current)}
-            className="inline-flex min-h-7 items-center gap-1.5 rounded-md text-xs font-medium text-primary outline-none transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-7 items-center gap-1.5 rounded-control text-xs font-medium text-primary outline-none transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-ring"
           >
             {fieldsExpanded
               ? copy("lessFields")
@@ -288,7 +288,7 @@ export function AiActionProposalCard({
         ) : null}
 
         {interactive ? (
-          <div className="rounded-lg border border-border/60 bg-muted/25 px-3 py-2.5 text-xs text-muted-foreground">
+          <div className="rounded-surface border border-border/60 bg-muted/25 px-3 py-2.5 text-xs text-muted-foreground">
             <div className="flex items-center justify-between gap-3">
               <span>{copy("proposalDigest")}</span>
               <TechnicalValue className="text-foreground">

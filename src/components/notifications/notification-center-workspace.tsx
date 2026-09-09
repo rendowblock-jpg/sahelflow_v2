@@ -246,10 +246,10 @@ export function NotificationCenterWorkspace() {
         </div>
       </header>
 
-      <section className="rounded-xl border border-border bg-card p-4 sm:p-5" aria-labelledby="notification-preferences">
+      <section className="rounded-surface border border-border bg-card p-4 sm:p-5" aria-labelledby="notification-preferences">
         <div className="flex items-start gap-3">
           <span
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+            className="flex size-9 shrink-0 items-center justify-center rounded-surface bg-muted text-muted-foreground"
             aria-hidden="true"
           >
             <SlidersHorizontal className="size-4" />
@@ -327,7 +327,7 @@ export function NotificationCenterWorkspace() {
             aria-label={t("notifications.loading")}
           >
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-11 rounded-lg" />
+              <Skeleton key={index} className="h-11 rounded-surface" />
             ))}
           </div>
         )}
@@ -381,14 +381,14 @@ export function NotificationCenterWorkspace() {
 
       {showSkeleton ? (
         <div
-          className="rounded-xl border border-border bg-card"
+          className="rounded-surface border border-border bg-card"
           role="status"
           aria-busy="true"
           aria-label={t("notifications.loading")}
         >
           {Array.from({ length: 6 }).map((_, index) => (
             <div key={index} className="flex items-start gap-3 border-b border-border p-4 last:border-b-0">
-              <Skeleton className="mt-0.5 size-9 rounded-lg" />
+              <Skeleton className="mt-0.5 size-9 rounded-surface" />
               <div className="min-w-0 flex-1 space-y-2">
                 <Skeleton className="h-4 max-w-60 w-2/5" />
                 <Skeleton className="h-3 w-3/5" />
@@ -397,7 +397,7 @@ export function NotificationCenterWorkspace() {
           ))}
         </div>
       ) : showEmpty ? (
-        <div className="rounded-xl border border-border bg-card">
+        <div className="rounded-surface border border-border bg-card">
           <div className="flex min-h-48 flex-col items-center justify-center p-8 text-center">
             <span
               className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted/50"
@@ -412,14 +412,14 @@ export function NotificationCenterWorkspace() {
         </div>
       ) : (
         <section
-          className="overflow-clip rounded-xl border border-border bg-card shadow-sm"
+          className="overflow-clip rounded-surface border border-border bg-card shadow-sm"
           aria-busy={loadingMore}
           aria-label={t("notifications.title")}
         >
           {groups.map((group, index) => (
             <div key={group.key} data-day-group={group.key}>
               <h3
-                className={`sticky top-0 z-10 bg-card/90 px-4 py-2 text-caption font-semibold tracking-wide text-muted-foreground backdrop-blur-sm ${index === 0 ? "rounded-t-xl" : "border-t border-border/60"}`}
+                className={`sticky top-0 z-10 bg-card/90 px-4 py-2 text-caption font-semibold tracking-wide text-muted-foreground backdrop-blur-sm ${index === 0 ? "rounded-t-surface" : "border-t border-border/60"}`}
               >
                 {group.label}
               </h3>
@@ -434,7 +434,7 @@ export function NotificationCenterWorkspace() {
                       data-unread={item.read ? undefined : "true"}
                     >
                       <span
-                        className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ${presentation.className}`}
+                        className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-surface ${presentation.className}`}
                         role="img"
                         aria-label={t(presentation.labelKey)}
                         title={t(presentation.labelKey)}
@@ -510,7 +510,7 @@ export function NotificationCenterWorkspace() {
 
 function PreferenceToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
   return (
-    <label className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border bg-muted/25 px-3 py-2 text-sm transition-colors motion-reduce:transition-none hover:bg-muted/40">
+    <label className="flex min-h-11 items-center justify-between gap-3 rounded-surface border border-border bg-muted/25 px-3 py-2 text-sm transition-colors motion-reduce:transition-none hover:bg-muted/40">
       <span>{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
     </label>

@@ -182,7 +182,7 @@ export function CommerceSyncRecoveryPanel() {
             {copy("loading")}
           </div>
         ) : loadState === "error" ? (
-          <div className="m-4 flex flex-wrap items-start justify-between gap-4 rounded-lg border border-warning/25 bg-warning-subtle p-4">
+          <div className="m-4 flex flex-wrap items-start justify-between gap-4 rounded-surface border border-warning/25 bg-warning-subtle p-4">
             <div className="flex min-w-0 items-start gap-3">
               <AlertTriangle
                 className="mt-0.5 size-5 shrink-0 text-warning"
@@ -301,7 +301,7 @@ export function CommerceSyncRecoveryPanel() {
                   {!run.recoverable &&
                   run.recoveryBlockCode &&
                   ["partially_completed", "dead_letter"].includes(run.status) ? (
-                    <div className="mt-3 flex items-start gap-2 rounded-md border p-3 text-sm text-muted-foreground">
+                    <div className="mt-3 flex items-start gap-2 rounded-control border p-3 text-sm text-muted-foreground">
                       <AlertTriangle
                         className="mt-0.5 size-4 shrink-0"
                         aria-hidden="true"
@@ -328,7 +328,7 @@ export function CommerceSyncRecoveryPanel() {
                         </p>
                       ) : (
                         run.items.map((item) => (
-                          <div key={item.id} className="rounded-md border p-3">
+                          <div key={item.id} className="rounded-control border p-3">
                             <div className="flex flex-wrap items-center gap-2 text-sm">
                               <span className="font-medium">
                                 {t("commerce.runtime.sourceOrder")}

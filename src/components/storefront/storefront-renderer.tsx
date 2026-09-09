@@ -110,7 +110,7 @@ export function StorefrontRenderer({
             {...props}
             className={sectionClass(
               section,
-              "mb-4 rounded-lg px-3 py-2 text-center text-caption font-medium text-white",
+              "mb-4 rounded-surface px-3 py-2 text-center text-caption font-medium text-white",
             )}
             style={{
               background:
@@ -654,7 +654,7 @@ function ProductGrid({
 
 function Trust({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className="flex items-center gap-1.5 rounded-lg border bg-white/40 px-2 py-2 [&_svg]:h-3.5 [&_svg]:w-3.5">
+    <div className="flex items-center gap-1.5 rounded-surface border bg-white/40 px-2 py-2 [&_svg]:h-3.5 [&_svg]:w-3.5">
       <span aria-hidden="true">{icon}</span>
       <span>{label}</span>
     </div>
@@ -678,7 +678,7 @@ function StorefrontContactBlock({
   const { t } = useStorefrontI18n();
   return (
     <div
-      className="rounded-xl border p-4 text-sm"
+      className="rounded-surface border p-4 text-sm"
       style={{ background: "color-mix(in srgb, currentColor 4%, transparent)" }}
     >
       <p className="mb-3 font-semibold">{t("storefront.view.contact")}</p>
@@ -725,7 +725,7 @@ function EmptyStudioSection({
     <section
       key={section.id}
       {...props}
-      className={`${props.className ?? ""} my-3 rounded-lg border border-dashed p-4 text-center text-xs opacity-60`}
+      className={`${props.className ?? ""} my-3 rounded-surface border border-dashed p-4 text-center text-xs opacity-60`}
     >
       {label}
     </section>
@@ -746,9 +746,12 @@ function heroClass(
 function radius(
   value: StorefrontPreviewProps["draft"]["theme"]["radius"],
 ): string {
+  // Seller-owned storefront identity, deliberately NOT the app's control/surface
+  // pair — see globals.css and INTERFACE_SYSTEM.md §3. Three settings must stay
+  // three distinct radii or the seller's theme control loses an option.
   return value === "sharp"
     ? "rounded-none"
     : value === "rounded"
-      ? "rounded-2xl"
-      : "rounded-xl";
+      ? "rounded-storefront-round"
+      : "rounded-storefront-soft";
 }

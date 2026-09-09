@@ -87,7 +87,7 @@ export function StateSurface({
   return (
     <section
       className={cn(
-        "flex rounded-lg border",
+        "flex rounded-surface border",
         inline
           ? "w-fit max-w-[min(100%,48rem)] self-start items-start justify-start"
           : "w-full items-center justify-center",
@@ -112,7 +112,7 @@ export function StateSurface({
         <div
           className={cn(
             "flex shrink-0 items-center justify-center border",
-            inline ? "size-7 rounded-md" : "mb-4 size-11 rounded-lg",
+            inline ? "size-7 rounded-control" : "mb-4 size-11 rounded-surface",
             toneClasses.icon,
           )}
           aria-hidden="true"
@@ -146,7 +146,7 @@ export function StateSurface({
           ) : null}
 
           {details && inline ? (
-            <div className="mt-1.5 rounded-md border border-border/70 bg-muted/35 px-2.5 py-1.5 text-start text-xs text-muted-foreground">
+            <div className="mt-1.5 rounded-control border border-border/70 bg-muted/35 px-2.5 py-1.5 text-start text-xs text-muted-foreground">
               {details}
             </div>
           ) : null}
@@ -159,7 +159,7 @@ export function StateSurface({
         ) : null}
 
         {details && !inline ? (
-          <div className="mt-4 w-full rounded-md border border-border/70 bg-muted/35 px-3 py-2 text-start text-xs text-muted-foreground">
+          <div className="mt-4 w-full rounded-control border border-border/70 bg-muted/35 px-3 py-2 text-start text-xs text-muted-foreground">
             {details}
           </div>
         ) : null}

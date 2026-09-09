@@ -73,20 +73,20 @@ export default function LoginPage() {
       <RuntimeUiReadyBeacon />
       <Card className="w-full max-w-sm border shadow-none">
         <CardHeader className="pb-4 text-center">
-          <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+          <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-control border bg-muted text-muted-foreground">
             {mode === "owner" ? <Lock className="size-5" aria-hidden="true" /> : <Users className="size-5" aria-hidden="true" />}
           </div>
           <CardTitle className="text-xl font-semibold tracking-tight">SahelFlow</CardTitle>
           <CardDescription>{t("auth.loginDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 grid grid-cols-2 rounded-md border bg-muted/20 p-1" role="tablist">
+          <div className="mb-4 grid grid-cols-2 rounded-control border bg-muted/20 p-1" role="tablist">
             <button
               type="button"
               role="tab"
               aria-selected={mode === "owner"}
               onClick={() => { setMode("owner"); setError(""); }}
-              className={`rounded-sm px-3 py-2 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "owner" ? "bg-background text-foreground" : "text-muted-foreground"}`}
+              className={`rounded-control px-3 py-2 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "owner" ? "bg-background text-foreground" : "text-muted-foreground"}`}
             >
               {t("phase5.auth.owner")}
             </button>
@@ -95,7 +95,7 @@ export default function LoginPage() {
               role="tab"
               aria-selected={mode === "member"}
               onClick={() => { setMode("member"); setError(""); }}
-              className={`rounded-sm px-3 py-2 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "member" ? "bg-background text-foreground" : "text-muted-foreground"}`}
+              className={`rounded-control px-3 py-2 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "member" ? "bg-background text-foreground" : "text-muted-foreground"}`}
             >
               {t("phase5.auth.member")}
             </button>
@@ -137,7 +137,7 @@ export default function LoginPage() {
             </div>
 
             {error ? (
-              <p className="rounded-md border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive" role="alert">{error}</p>
+              <p className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive" role="alert">{error}</p>
             ) : null}
 
             <Button type="submit" className="h-10 w-full" disabled={loading || pin.length < 1 || (mode === "member" && loginId.length < 3)}>

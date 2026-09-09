@@ -38,7 +38,7 @@ export function PageLoading({
       {showStats && (
         <div className="stagger-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: statCount }).map((_, i) => (
-            <div key={i} className="rounded-xl border p-5 space-y-3">
+            <div key={i} className="rounded-surface border p-5 space-y-3">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-8 w-20" />
             </div>
@@ -48,7 +48,7 @@ export function PageLoading({
 
       {/* Table skeleton */}
       {showTable && (
-        <div className="rounded-lg border">
+        <div className="rounded-surface border">
           <div className="border-b p-4">
             <Skeleton className="h-6 w-32" />
           </div>

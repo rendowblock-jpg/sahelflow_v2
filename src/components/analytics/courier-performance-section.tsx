@@ -271,7 +271,7 @@ export async function CourierPerformanceSection({
                               href={drillDown}
                               title={t("analytics.courier.viewDelivered")}
                               className={cn(
-                                "block rounded-md px-2 py-1.5 text-xs font-medium tabular-nums transition-transform outline-none hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring",
+                                "block rounded-control px-2 py-1.5 text-xs font-medium tabular-nums transition-transform outline-none hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring",
                                 cellTone(cell.successRate),
                               )}
                             >

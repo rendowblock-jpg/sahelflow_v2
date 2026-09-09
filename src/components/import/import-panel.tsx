@@ -150,7 +150,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
         </div>
 
         {preview ? (
-          <section className="space-y-3 rounded-md border p-4" aria-live="polite">
+          <section className="space-y-3 rounded-control border p-4" aria-live="polite">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <span>{t("import.totalLabel")} <strong>{preview.totalRows}</strong></span>
@@ -178,7 +178,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
             </div>
 
             {preview.preview.length > 0 ? (
-              <div className="max-h-64 overflow-auto rounded-md border">
+              <div className="max-h-64 overflow-auto rounded-control border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -218,7 +218,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
         ) : null}
 
         {commitResult ? (
-          <section className="space-y-2 rounded-md border p-4" aria-live="polite">
+          <section className="space-y-2 rounded-control border p-4" aria-live="polite">
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="size-4 text-success" aria-hidden="true" />
               <span className="font-medium">
@@ -244,7 +244,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
         ) : null}
 
         {error ? (
-          <div className="flex items-start gap-2 rounded-md border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive" role="alert">
+          <div className="flex items-start gap-2 rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive" role="alert">
             <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>

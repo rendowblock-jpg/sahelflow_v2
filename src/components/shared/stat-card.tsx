@@ -139,7 +139,7 @@ export function StatCard({
   return (
     <section
       className={cn(
-        "min-w-0 rounded-lg border border-border/80 bg-card",
+        "min-w-0 rounded-surface border border-border/80 bg-card",
         emphasis === "primary" ? "px-5 py-4" : "px-4 py-3.5",
         toneStyle.surface,
         actionable &&
@@ -164,7 +164,7 @@ export function StatCard({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={tooltip}
                   >
                     <Info className="size-3.5" aria-hidden="true" />
@@ -219,7 +219,7 @@ export function StatCard({
           {actionable ? <div data-stat-action="true">{action}</div> : null}
           <div
             className={cn(
-              "flex shrink-0 items-center justify-center rounded-lg border [&_svg]:size-[18px]",
+              "flex shrink-0 items-center justify-center rounded-surface border [&_svg]:size-[18px]",
               emphasis === "primary" ? "size-10" : "size-9",
               toneStyle.icon,
             )}

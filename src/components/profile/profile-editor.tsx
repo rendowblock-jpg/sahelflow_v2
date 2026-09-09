@@ -88,7 +88,7 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 rounded-md border p-4 text-sm text-muted-foreground" role="status">
+      <div className="flex items-center gap-2 rounded-control border p-4 text-sm text-muted-foreground" role="status">
         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
         {t("common.loading")}
       </div>

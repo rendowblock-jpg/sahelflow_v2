@@ -171,7 +171,7 @@ export function RiskControlPanel({ config: initialConfig }: Props) {
                 { key: "autoHoldCritical", labelKey: "risk.control.autoActions.autoHoldCritical" },
                 { key: "autoFlagBlacklist", labelKey: "risk.control.autoActions.autoFlagBlacklist" },
               ] as const).map(({ key, labelKey }) => (
-                <div key={key} className="flex items-center justify-between rounded-lg border p-3">
+                <div key={key} className="flex items-center justify-between rounded-surface border p-3">
                   <Label className="text-sm font-normal cursor-pointer">{t(labelKey)}</Label>
                   <Switch
                     checked={config.autoActions[key]}

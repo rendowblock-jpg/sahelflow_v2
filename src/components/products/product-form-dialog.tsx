@@ -450,7 +450,7 @@ export function ProductFormDialog({
               control={form.control}
               name="isActive"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                <FormItem className="flex flex-row items-center justify-between rounded-surface border p-3">
                   <div className="space-y-0.5">
                     <FormLabel>{t("common.status")}</FormLabel>
                     <FormDescription>

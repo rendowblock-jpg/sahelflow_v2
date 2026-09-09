@@ -278,18 +278,18 @@ export function TeamMembersPanel() {
       </div>
 
       {error ? (
-        <div role="alert" className="rounded-lg border border-destructive/30 p-4 text-sm text-destructive">
+        <div role="alert" className="rounded-surface border border-destructive/30 p-4 text-sm text-destructive">
           {error}
         </div>
       ) : null}
 
       {!isOwner && inventory ? (
-        <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+        <div className="rounded-surface border p-3 text-sm text-muted-foreground">
           {copy.ownerOnly}
         </div>
       ) : null}
 
-      <div className="rounded-lg border">
+      <div className="rounded-surface border">
         {loading && !inventory ? (
           <p className="p-4 text-sm text-muted-foreground">{copy.loading}</p>
         ) : sortedMembers.length === 0 ? (
@@ -348,20 +348,21 @@ export function TeamMembersPanel() {
       </div>
 
       {pendingMemberId ? (
-        <div className="rounded-lg border p-4" role="dialog" aria-modal="false" aria-labelledby="member-revoke-title">
+        <div className="rounded-surface border p-4" role="dialog" aria-modal="false" aria-labelledby="member-revoke-title">
           <div className="flex items-center gap-2">
             <KeyRound className="h-4 w-4" aria-hidden="true" />
             <h4 id="member-revoke-title" className="text-sm font-semibold">
               {copy.reauthTitle}
             </h4>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p id="member-revoke-reauth-hint" className="mt-1 text-sm text-muted-foreground">
             {copy.reauthDescription}
           </p>
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <Input
               type="password"
               inputMode="numeric"
+              aria-describedby="member-revoke-reauth-hint"
               autoComplete="current-password"
               value={pin}
               onChange={(event) => setPin(event.target.value)}

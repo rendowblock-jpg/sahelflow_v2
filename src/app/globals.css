@@ -142,6 +142,16 @@
   --radius-control: 0.375rem;        /* 6px — inputs, buttons, badges, chips */
   --radius-surface: 0.625rem;        /* 10px — cards, panels, dialogs, media */
 
+  /* Storefront theme radius is SELLER-OWNED DATA, not SahelFlow chrome. The
+     `soft | rounded | sharp` enum (storefront/presentation-types.ts:13) is a
+     published shop's visual identity, chosen by the seller and already live on
+     their storefront. INTERFACE_SYSTEM.md §3 governs the operations interface;
+     collapsing these onto it would silently restyle shipped shops and make two
+     of the three options render identically. Named here so they are system
+     values rather than arbitrary ones — see INTERFACE_SYSTEM.md §3. */
+  --radius-storefront-soft: 0.875rem;   /* 14px — storefront theme "soft" */
+  --radius-storefront-round: 1.125rem;  /* 18px — storefront theme "rounded" */
+
   /* Typography — sub-xs operational microcopy floor (11px). The R5-f codemod
      replaced every text-[9/10/11px] utility with this token; arabic-system.css
      raises it to 12px under the Arabic reading floor.

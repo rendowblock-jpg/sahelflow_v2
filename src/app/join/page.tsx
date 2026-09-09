@@ -84,7 +84,7 @@ export default function JoinPage() {
       <RuntimeUiReadyBeacon />
       <Card className="w-full max-w-lg border shadow-none">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-md border bg-muted text-muted-foreground">
+          <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-control border bg-muted text-muted-foreground">
             <UserPlus className="size-5" aria-hidden="true" />
           </div>
           <CardTitle>{t("phase5.join.title")}</CardTitle>
@@ -120,8 +120,8 @@ export default function JoinPage() {
               </div>
             </div>
 
-            {error ? <p role="alert" className="rounded-md border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive">{error}</p> : null}
-            {success ? <p role="status" className="rounded-md border border-success/25 bg-success-subtle p-3 text-sm text-success">{t("phase5.join.success")}</p> : null}
+            {error ? <p role="alert" className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive">{error}</p> : null}
+            {success ? <p role="status" className="rounded-control border border-success/25 bg-success-subtle p-3 text-sm text-success">{t("phase5.join.success")}</p> : null}
 
             <Button type="submit" className="w-full" disabled={loading || success || !token.trim() || !displayName.trim() || loginId.length < 3 || pin.length < 8 || confirmation.length < 8}>
               {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <><KeyRound className="me-2 size-4" aria-hidden="true" />{t("phase5.join.submit")}<ArrowRight className="ms-2 size-4 rtl:rotate-180" aria-hidden="true" /></>}

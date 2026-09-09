@@ -173,7 +173,7 @@ function SettingsDirectory({
             aria-pressed={selected}
             onClick={() => onSelect(group.id)}
             className={cn(
-              "group relative w-full rounded-xl text-start outline-none transition-[background-color,color,box-shadow] duration-150",
+              "group relative w-full rounded-surface text-start outline-none transition-[background-color,color,box-shadow] duration-150",
               "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               mobile ? "px-3.5 py-3.5" : "px-3 py-2.5",
               selected && !mobile
@@ -190,7 +190,7 @@ function SettingsDirectory({
             <span className="flex items-center gap-3">
               <span
                 className={cn(
-                  "flex shrink-0 items-center justify-center rounded-xl border bg-background",
+                  "flex shrink-0 items-center justify-center rounded-surface border bg-background",
                   mobile ? "size-10" : "size-9",
                   selected && !mobile
                     ? "border-primary/30 text-primary"
@@ -555,7 +555,7 @@ export function SettingsWorkspace({
             </Button>
             <span
               className={cn(
-                "mt-0.5 flex shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary-soft text-primary",
+                "mt-0.5 flex shrink-0 items-center justify-center rounded-surface border border-primary/20 bg-primary-soft text-primary",
                 mobile ? "size-9" : "size-10",
               )}
             >

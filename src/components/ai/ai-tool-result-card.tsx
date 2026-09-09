@@ -356,7 +356,7 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
     <section
       data-ai-tool-card={tool.name}
       data-ai-tool-state={tool.state}
-      className="mt-2 overflow-hidden rounded-xl border border-border/60 bg-card/50 text-start"
+      className="mt-2 overflow-hidden rounded-surface border border-border/60 bg-card/50 text-start"
     >
       <button
         type="button"

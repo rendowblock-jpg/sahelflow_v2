@@ -164,7 +164,7 @@ export function WhatsAppIngressRecoveryDock({
     <Sheet open={open} onOpenChange={setOpen}>
       <div
         role="status"
-        className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-warning/25 bg-warning-soft px-3 py-2"
+        className="flex min-h-10 items-center justify-between gap-3 rounded-surface border border-warning/25 bg-warning-soft px-3 py-2"
       >
         <div className="flex min-w-0 items-center gap-2 text-xs">
           <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
@@ -216,7 +216,7 @@ export function WhatsAppIngressRecoveryDock({
               const reason = reasons[event.id] ?? "";
               const retrying = retryingId === event.id;
               return (
-                <section key={event.id} className="rounded-lg border bg-muted/20 p-3.5">
+                <section key={event.id} className="rounded-surface border bg-muted/20 p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">

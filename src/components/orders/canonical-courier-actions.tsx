@@ -313,7 +313,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
       </div>
 
       {canBook ? (
-        <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <div className="grid gap-3 rounded-surface border p-3 sm:grid-cols-[1fr_auto] sm:items-end">
           <div className="space-y-1.5">
             <Label htmlFor={`courier-provider-${orderId}`}>{copy.provider}</Label>
             <Select value={provider} onValueChange={(value) => setProvider(value as Provider)}>
@@ -341,7 +341,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
       ) : null}
 
       {delivery ? (
-        <dl className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3 text-sm sm:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-3 rounded-surface bg-muted/40 p-3 text-sm sm:grid-cols-4">
           <div>
             <dt className="text-xs text-muted-foreground">{copy.provider}</dt>
             <dd className="font-medium" dir="auto">
@@ -398,7 +398,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
       )}
 
       {ambiguous ? (
-        <div className="space-y-3 rounded-lg border border-warning/40 bg-warning-soft p-3">
+        <div className="space-y-3 rounded-surface border border-warning/40 bg-warning-soft p-3">
           <div className="flex gap-2">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
