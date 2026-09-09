@@ -88,9 +88,13 @@ describe("F-06 AI page-completion wave", () => {
   it("streams with a visible caret and keeps the newest turn actionable", () => {
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
 
-    expect(canvas).toContain('data-ai-streaming-caret="true"');
+    // STR-01 moved MessageBubble into its own module; the caret and the
+    // newest-turn affordance moved with it. The canvas still decides which
+    // message is latest, so that wiring is still asserted against the canvas.
+    const bubble = read("src/components/ai/ai-message-bubble.tsx");
+    expect(bubble).toContain('data-ai-streaming-caret="true"');
     expect(canvas).toContain("isLatest={message.id === lastMessageId}");
-    expect(canvas).toContain("isLatest ? \"opacity-100\" : \"opacity-0\"");
+    expect(bubble).toContain("isLatest ? \"opacity-100\" : \"opacity-0\"");
   });
 
   it("loads conversations and history with structure-matching skeletons (§26.8)", () => {

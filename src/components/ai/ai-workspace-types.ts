@@ -1,3 +1,5 @@
+import type { AiWorkspaceCopyKey } from "@/lib/i18n/ai-workspace";
+
 export interface AiSessionSummary {
   id: string;
   title: string | null;
@@ -183,3 +185,14 @@ export interface AiWorkspaceError {
   code: AiWorkspaceErrorCode;
   detail?: string | null;
 }
+
+/**
+ * The AI surface's copy resolver. STR-01 moved this here from
+ * `ai-decision-canvas.tsx`: once MessageBubble was extracted, both files needed
+ * the type, and importing it from the canvas would have made the dependency
+ * circular. It belongs with the other shared AI view types.
+ */
+export type AiCopyFn = (
+  key: AiWorkspaceCopyKey,
+  params?: Record<string, string | number>,
+) => string;
