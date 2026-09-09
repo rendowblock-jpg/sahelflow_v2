@@ -434,7 +434,14 @@ export function AiToolResultCard({ tool }: { tool: AiToolCallView }) {
               </dl>
             </div>
           ) : null}
-          {Array.isArray(result) ? (
+          {/*
+            A count is information only when there is something to count.
+            Rendering "0 results" beside a succeeded tool put an internal array
+            length on the seller's screen and read as debug output (register
+            UI-02); the empty case already falls through to the truthful
+            no-records line below.
+          */}
+          {Array.isArray(result) && result.length > 0 ? (
             <p className="text-xs text-muted-foreground">
               {copy("resultItems", { count: result.length })}
             </p>

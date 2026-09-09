@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { AiActionProposalCard } from "@/components/ai/ai-action-proposal-card";
+import { StateSurface } from "@/components/system";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,20 @@ export function AiReviewEvidence({
     (entry) => !proposals.some((p) => p.proposal.id === entry.proposal.id),
   );
 
+  // The rail used to render THREE stacked dashed boxes when there was nothing
+  // to review — and two of them printed the same sentence — so an idle rail
+  // spent a third of the screen announcing its own emptiness three times
+  // (register UI-01). When every review slice is genuinely empty the rail now
+  // says it once, calmly, and the provider section below still carries real
+  // state. Errors and loading are excluded: those are not emptiness.
+  const reviewEmpty =
+    !actionHistoryError &&
+    !inboxError &&
+    !inboxLoading &&
+    proposals.length === 0 &&
+    elsewhere.length === 0 &&
+    inboxDecisions.length === 0;
+
   return (
     <aside
       data-ai-review-evidence="true"
@@ -102,6 +117,17 @@ export function AiReviewEvidence({
 
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-6 p-4">
+          {reviewEmpty ? (
+            <StateSurface
+              icon={CheckCircle2}
+              tone="neutral"
+              size="panel"
+              title={getAiDecisionCopy(locale, "noReviewItems")}
+              description={getAiDecisionCopy(locale, "noReviewItemsDescription")}
+              testId="ai-review-empty"
+            />
+          ) : (
+            <>
           <section aria-labelledby="ai-review-actions-title">
             <div className="mb-2.5">
               <h3 id="ai-review-actions-title" className="text-sm font-semibold">
@@ -353,6 +379,8 @@ export function AiReviewEvidence({
               </ol>
             )}
           </section>
+            </>
+          )}
 
           <section className="border-t pt-5" aria-labelledby="ai-provider-title">
             <div className="flex items-center justify-between gap-3">
