@@ -300,7 +300,7 @@ export function EmojiPicker({
         >
           {!visible && recents.length > 0 ? (
             <>
-              <p className="col-span-8 px-1 pb-0.5 pt-1 text-2xs font-medium text-muted-foreground">
+              <p className="col-span-8 px-1 pb-0.5 pt-1 text-caption font-medium text-muted-foreground">
                 {copy("emojiRecent")}
               </p>
               {recents.map((emoji) => (
@@ -315,7 +315,7 @@ export function EmojiPicker({
                   {emoji}
                 </button>
               ))}
-              <p className="col-span-8 px-1 pb-0.5 pt-1 text-2xs font-medium text-muted-foreground">
+              <p className="col-span-8 px-1 pb-0.5 pt-1 text-caption font-medium text-muted-foreground">
                 {copy(CATEGORIES[activeCategory]?.key ?? "emojiCatSmileys")}
               </p>
             </>

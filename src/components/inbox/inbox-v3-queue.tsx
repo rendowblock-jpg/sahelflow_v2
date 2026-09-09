@@ -329,7 +329,7 @@ const ConversationRow = memo(function ConversationRow({
           ) : null}
           <span
             className={cn(
-              "shrink-0 text-2xs tabular-nums",
+              "shrink-0 text-caption tabular-nums",
               chat.unread > 0 ? "font-medium text-primary" : "text-muted-foreground",
             )}
           >
@@ -385,14 +385,14 @@ const ConversationRow = memo(function ConversationRow({
           ) : null}
 
           {chat.unread > 0 ? (
-            <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-2xs font-bold leading-5 tabular-nums text-primary-foreground">
+            <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-caption font-bold leading-5 tabular-nums text-primary-foreground">
               {chat.unread > 99 ? "99+" : chat.unread}
             </span>
           ) : null}
         </span>
 
         {hasOperationalMeta ? (
-          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden text-2xs leading-4 text-muted-foreground">
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden text-caption leading-4 text-muted-foreground">
             {status !== "open" ? (
               <span className="truncate">{statusLabel(status, t)}</span>
             ) : null}
@@ -850,7 +850,7 @@ export function InboxV3Queue({
               sideOffset={6}
               className="w-60 p-3"
             >
-              <p className="text-2xs font-semibold text-foreground">
+              <p className="text-caption font-semibold text-foreground">
                 {copy("filterPriority")}
               </p>
               <div className="mt-1.5 flex flex-wrap gap-1">
@@ -861,7 +861,7 @@ export function InboxV3Queue({
                     aria-pressed={priorityFilter === value}
                     onClick={() => setPriorityFilter(value)}
                     className={cn(
-                      "inline-flex h-7 items-center rounded-full border px-2.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                      "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       priorityFilter === value
                         ? "border-primary/25 bg-primary/9 text-primary"
                         : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -875,7 +875,7 @@ export function InboxV3Queue({
               </div>
               {availableLabels.length > 0 ? (
                 <>
-                  <p className="mt-3 text-2xs font-semibold text-foreground">
+                  <p className="mt-3 text-caption font-semibold text-foreground">
                     {copy("filterLabels")}
                   </p>
                   <div className="mt-1.5 flex flex-wrap gap-1">
@@ -884,7 +884,7 @@ export function InboxV3Queue({
                       aria-pressed={labelFilter === ""}
                       onClick={() => setLabelFilter("")}
                       className={cn(
-                        "inline-flex h-7 items-center rounded-full border px-2.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                        "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                         labelFilter === ""
                           ? "border-primary/25 bg-primary/9 text-primary"
                           : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -903,7 +903,7 @@ export function InboxV3Queue({
                           )
                         }
                         className={cn(
-                          "inline-flex h-7 max-w-36 items-center rounded-full border px-2.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                          "inline-flex h-7 max-w-36 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                           labelFilter === label
                             ? "border-primary/25 bg-primary/9 text-primary"
                             : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -957,7 +957,7 @@ export function InboxV3Queue({
             >
               <span
                 aria-live="polite"
-                className="inline-flex h-7 min-w-0 flex-1 items-center truncate rounded-full bg-background px-3 text-2xs font-semibold shadow-sm"
+                className="inline-flex h-7 min-w-0 flex-1 items-center truncate rounded-full bg-background px-3 text-caption font-semibold shadow-sm"
               >
                 {copy("selectedCount", { count: effectiveSelected.length })}
               </span>
@@ -1057,7 +1057,7 @@ export function InboxV3Queue({
                   aria-pressed={selected}
                   onClick={() => onQueueFilterChange(filter)}
                   className={cn(
-                    "inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-1.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    "inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-1.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                     selected
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -1093,7 +1093,7 @@ export function InboxV3Queue({
                 aria-pressed={selected}
                 onClick={() => onWorkflowFilterChange(filter)}
                 className={cn(
-                  "inline-flex h-7 items-center justify-center rounded-full border px-2.5 text-2xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                  "inline-flex h-7 items-center justify-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                   selected
                     ? "border-primary/25 bg-primary/9 text-primary"
                     : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
@@ -1106,7 +1106,7 @@ export function InboxV3Queue({
         </div>
 
         {selectMode && deleteError ? (
-          <p className="mt-1.5 text-2xs text-destructive" role="alert">
+          <p className="mt-1.5 text-caption text-destructive" role="alert">
             {deleteError}
           </p>
         ) : null}
@@ -1155,14 +1155,14 @@ export function InboxV3Queue({
             {normalizedQuery &&
             searchState.query === normalizedQuery &&
             searchState.results.length > 0 ? (
-              <div className="border-b border-border/55 bg-muted/15 px-3 py-1.5 text-2xs text-muted-foreground">
+              <div className="border-b border-border/55 bg-muted/15 px-3 py-1.5 text-caption text-muted-foreground">
                 {copy("searchResults", { count: rows.length })}
               </div>
             ) : null}
             {normalizedQuery &&
             searchState.query === normalizedQuery &&
             searchState.error ? (
-              <div className="flex items-center justify-between gap-2 border-b border-border/55 bg-destructive/8 px-3 py-2 text-2xs text-destructive">
+              <div className="flex items-center justify-between gap-2 border-b border-border/55 bg-destructive/8 px-3 py-2 text-caption text-destructive">
                 <span>{copy("searchFailed")}</span>
                 <button
                   type="button"
@@ -1294,7 +1294,7 @@ export function InboxV3Queue({
           {deleteShapeError ? (
             <p
               role="alert"
-              className="break-all font-mono text-[11px] text-destructive/80"
+              className="break-all font-mono text-caption text-destructive/80"
             >
               {deleteShapeError}
             </p>

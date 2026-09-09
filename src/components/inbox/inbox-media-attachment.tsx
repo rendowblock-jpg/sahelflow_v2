@@ -795,7 +795,7 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
           }
           compact
         />
-        <span className="text-2xs leading-4 text-muted-foreground">
+        <span className="text-caption leading-4 text-muted-foreground">
           {getInboxMediaCopy(locale, "ready")}
         </span>
       </div>

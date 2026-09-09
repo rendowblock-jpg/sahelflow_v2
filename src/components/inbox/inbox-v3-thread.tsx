@@ -378,7 +378,7 @@ function CopyMessageButton({
       }}
       aria-live="polite"
       className={cn(
-        "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
+        "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-caption font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
         state === "failed"
           ? "text-destructive opacity-100"
           : state === "copied"
@@ -465,12 +465,12 @@ const MessageBubble = memo(function MessageBubble({
   // the logical corner tails; message text itself stays dir="auto" below.
   const renderQuoteBody = () => (
     <>
-      <div className="flex items-center gap-1 text-2xs font-medium text-primary">
+      <div className="flex items-center gap-1 text-caption font-medium text-primary">
         <Reply className="size-3" aria-hidden="true" />
         <span>{copy("replyingTo")}</span>
       </div>
       <p
-        className="mt-0.5 line-clamp-2 break-words text-2xs leading-4 text-muted-foreground"
+        className="mt-0.5 line-clamp-2 break-words text-caption leading-4 text-muted-foreground"
         dir="auto"
       >
         {message.quoted?.preview || "…"}
@@ -630,14 +630,14 @@ const MessageBubble = memo(function MessageBubble({
                 />
               </div>
               <div className="mt-1 flex items-center justify-between gap-2">
-                <span className="text-2xs tabular-nums text-muted-foreground">
+                <span className="text-caption tabular-nums text-muted-foreground">
                   {copy("uploadProgress", { percent: upload.progress })}
                 </span>
                 {upload.cancellable ? (
                   <button
                     type="button"
                     onClick={() => onCancelUpload(message.id)}
-                    className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-2xs font-medium text-destructive outline-none transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-caption font-medium text-destructive outline-none transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <X className="size-3" aria-hidden="true" />
                     {copy("cancelUpload")}
@@ -647,7 +647,7 @@ const MessageBubble = memo(function MessageBubble({
             </div>
           ) : null}
 
-          <div className="mt-1 flex items-center justify-end gap-1 text-2xs tabular-nums text-muted-foreground">
+          <div className="mt-1 flex items-center justify-end gap-1 text-caption tabular-nums text-muted-foreground">
             <span>{messageTime(message.timestamp, locale)}</span>
             {!inbound ? (
               <MessageStatus status={message.deliveryStatus ?? "sent"} />
@@ -676,7 +676,7 @@ const MessageBubble = memo(function MessageBubble({
               type="button"
               onClick={() => onReply(message)}
               aria-label={copy("replyToMessage")}
-              className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100"
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-caption font-medium text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100"
             >
               <Reply className="size-3 icon-rtl-flip" aria-hidden="true" />
               {copy("replyToMessage")}
@@ -707,7 +707,7 @@ const MessageBubble = memo(function MessageBubble({
             onClick={() => onChooseCandidate(message.id)}
             aria-pressed={candidate}
             className={cn(
-              "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-2xs font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
+              "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-caption font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
               candidate
                 ? "bg-primary/9 text-primary"
                 : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",
@@ -733,7 +733,7 @@ const MessageBubble = memo(function MessageBubble({
             {t("inbox.retry")}
           </Button>
           {message.outboxErrorCode ? (
-            <span className="font-mono text-2xs text-muted-foreground">
+            <span className="font-mono text-caption text-muted-foreground">
               {message.outboxErrorCode}
             </span>
           ) : null}
@@ -1313,7 +1313,7 @@ export function InboxV3Thread({
                 />
               )}
             </div>
-            <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-2xs text-muted-foreground">
+            <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-caption text-muted-foreground">
               {activeChat.phone ? (
                 <span dir="ltr" className="truncate tabular-nums">
                   {activeChat.phone}
@@ -1494,7 +1494,7 @@ export function InboxV3Thread({
             threadMatchCount > 0 ? (
               <span
                 aria-live="polite"
-                className="shrink-0 text-2xs tabular-nums text-muted-foreground"
+                className="shrink-0 text-caption tabular-nums text-muted-foreground"
               >
                 {copy("searchPosition", {
                   index: safeThreadIndex + 1,
@@ -1502,7 +1502,7 @@ export function InboxV3Thread({
                 })}
               </span>
             ) : (
-              <span className="shrink-0 text-2xs text-muted-foreground">
+              <span className="shrink-0 text-caption text-muted-foreground">
                 {copy("searchNoMatches")}
               </span>
             )
@@ -1653,7 +1653,7 @@ export function InboxV3Thread({
                   {showDay ? (
                     <div
                       role="separator"
-                      className="mt-4 flex items-center gap-3 py-2 text-2xs font-medium text-muted-foreground"
+                      className="mt-4 flex items-center gap-3 py-2 text-caption font-medium text-muted-foreground"
                     >
                       <span className="h-px flex-1 bg-border/55" />
                       <span>
@@ -1668,7 +1668,7 @@ export function InboxV3Thread({
                       onClick={dismissUnreadDivider}
                       aria-label={copy("newMessagesDivider")}
                       title={copy("newMessagesDivider")}
-                      className="mt-3 flex w-full items-center gap-3 py-1 text-2xs font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="mt-3 flex w-full items-center gap-3 py-1 text-caption font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <span className="h-px flex-1 bg-primary/35" />
                       <span className="rounded-full bg-primary/10 px-2.5 py-0.5">
@@ -1780,11 +1780,11 @@ export function InboxV3Thread({
                     aria-hidden="true"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-2xs font-medium text-primary">
+                    <p className="text-caption font-medium text-primary">
                       {copy("replyingTo")}
                     </p>
                     <p
-                      className="truncate text-2xs leading-4 text-muted-foreground"
+                      className="truncate text-caption leading-4 text-muted-foreground"
                       dir="auto"
                     >
                       {replyTarget.body.trim() ||
@@ -1823,7 +1823,7 @@ export function InboxV3Thread({
                     <Trash2 className="size-4" aria-hidden="true" />
                   </Button>
                   <div className="min-w-0 flex-1">
-                    <p className="mb-0.5 truncate text-2xs text-muted-foreground">
+                    <p className="mb-0.5 truncate text-caption text-muted-foreground">
                       {copy("voicePreviewTitle")}
                     </p>
                     <VoiceNotePlayer

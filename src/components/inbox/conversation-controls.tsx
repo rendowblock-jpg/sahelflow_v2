@@ -219,7 +219,7 @@ export function StatusControl({
               </Button>
             </div>
             {customSnoozeError ? (
-              <p className="mt-1.5 text-2xs text-destructive">
+              <p className="mt-1.5 text-caption text-destructive">
                 {t("inbox.snooze.futureDate")}
               </p>
             ) : null}
@@ -599,7 +599,7 @@ export function AssigneeControl({
                     <span className="truncate">
                       {member.displayName ?? t("inbox.assignment.owner")}
                     </span>
-                    <span className="ms-2 text-2xs text-muted-foreground">
+                    <span className="ms-2 text-caption text-muted-foreground">
                       {member.role === "owner"
                         ? t("inbox.assignment.owner")
                         : member.role === "manager"
