@@ -2289,7 +2289,7 @@
   "shops.error": "Error",
   "shops.iconLabel": "Icon",
   "shops.lifecycleError": "The shop operation could not be completed. Please try again.",
-  "shops.nameLabel": "Shop name *",
+  "shops.nameLabel": "Shop name",
   "shops.namePlaceholder": "My Shop",
   "shops.nameRequired": "Shop name is required",
   "shops.newShop": "New shop",

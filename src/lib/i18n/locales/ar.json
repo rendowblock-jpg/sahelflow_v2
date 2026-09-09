@@ -2289,7 +2289,7 @@
   "shops.error": "خطأ",
   "shops.iconLabel": "أيقونة",
   "shops.lifecycleError": "تعذّر إتمام العملية على المتجر. يرجى المحاولة مرة أخرى.",
-  "shops.nameLabel": "اسم المتجر *",
+  "shops.nameLabel": "اسم المتجر",
   "shops.namePlaceholder": "متجري",
   "shops.nameRequired": "اسم المتجر مطلوب",
   "shops.newShop": "متجر جديد",

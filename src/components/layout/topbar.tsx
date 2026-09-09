@@ -12,6 +12,7 @@ import {
   HelpCircle,
   LogOut,
   Menu,
+  Plus,
   Search,
   Settings,
   Store,
@@ -43,6 +44,7 @@ import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { toast } from "@/lib/toast";
 import { logoutAndRedirect } from "@/lib/auth/logout-client";
 import { useShopStore } from "@/stores/shop-store";
+import { CreateShopDialog } from "./create-shop-dialog";
 import { navigationItemForPathname } from "./navigation";
 import { Sidebar } from "./sidebar";
 
@@ -96,6 +98,7 @@ export function Topbar({
   const { notifications, unreadCount, applyLifecycle, readAll } =
     useNotificationCenter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [createShopOpen, setCreateShopOpen] = useState(false);
   const [memberIdentity, setMemberIdentity] = useState<MemberIdentity | null>(
     null,
   );
@@ -261,8 +264,32 @@ export function Topbar({
                 ) : null}
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
+            {/*
+              The seller's only route to shop creation. `onSelect` is prevented
+              so the menu closing does not unmount the dialog with it; the
+              dialog itself renders outside this menu.
+            */}
+            <DropdownMenuItem
+              className="gap-2"
+              disabled={switchStatus === "pending"}
+              onSelect={(event) => {
+                event.preventDefault();
+                setCreateShopOpen(true);
+              }}
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate">
+                {t("shops.newShop")}
+              </span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <CreateShopDialog
+          open={createShopOpen}
+          onOpenChange={setCreateShopOpen}
+        />
       </div>
 
       <button
