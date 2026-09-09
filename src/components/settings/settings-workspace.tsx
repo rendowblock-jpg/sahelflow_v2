@@ -494,13 +494,13 @@ export function SettingsWorkspace({
           )}
         >
           <div className={mobile ? "px-1 pb-4" : "px-2 pb-4"}>
-            <p className="text-base font-semibold tracking-tight text-foreground">
+            <p className="text-title-3 text-foreground">
               {copy("controlCenter")}
             </p>
             <p
               className={cn(
-                "mt-1 text-sm text-muted-foreground",
-                mobile ? "max-w-xl leading-6" : "leading-5",
+                "mt-1 text-body-sm text-muted-foreground",
+                mobile ? "max-w-xl" : undefined,
               )}
             >
               {copy("workspaceHint")}
@@ -571,18 +571,13 @@ export function SettingsWorkspace({
                 data-settings-detail-heading="true"
                 tabIndex={-1}
                 className={cn(
-                  "font-semibold tracking-tight outline-none",
-                  mobile ? "text-base" : "text-xl",
+                  "outline-none",
+                  mobile ? "text-title-2" : "text-title-1",
                 )}
               >
                 {copy(effectiveActive)}
               </h2>
-              <p
-                className={cn(
-                  "mt-1 max-w-3xl text-sm text-muted-foreground",
-                  mobile ? "leading-5" : "leading-6",
-                )}
-              >
+              <p className="mt-1 max-w-prose text-body text-muted-foreground">
                 {copy(effectiveGroup.descriptionKey)}
               </p>
             </div>
