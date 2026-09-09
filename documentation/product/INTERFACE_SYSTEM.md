@@ -258,3 +258,20 @@ Conformance is verified per surface and recorded in
 `operations/TRANSFORMATION_REGISTER.md`. Source conformance is not installed evidence;
 the existing evidence discipline in `AGENTS.md` and `operations/WORKFLOW.md` is unchanged
 by this document.
+
+---
+
+## 15. Where the system lives
+
+`src/components/system/` is the primitive layer and the only place a shared
+interface concept may be defined. Import through the barrel:
+
+```ts
+import { PageShell, Section, Row, RowGroup, Field, Panel, IconTile, Toolbar } from "@/components/system";
+```
+
+`src/components/ui/` remains the shadcn atom layer (Button, Input, Dialog, …)
+and is consumed *by* the primitives. `src/components/shared/` is legacy: its
+members either migrate into `system/` or retire as their surfaces are rebuilt.
+`StateSurface` is already promoted through the barrel as the canonical empty /
+loading / failure surface.
