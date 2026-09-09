@@ -12,7 +12,15 @@ describe("Class-AAA Inbox composition contract", () => {
     const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
     const foundation = read("src/app/phase5.css");
 
-    expect(page).toContain('className="app-workspace-content flex flex-col"');
+    // IA-01: the geometry class moved into the primitive that owns it, and
+    // still lands on the route's ROOT element — which the
+    // `#main-content:has(> .app-workspace-content)` rule in
+    // experience-system.css depends on. Asserted where it now lives.
+    expect(page).toContain("PageShell");
+    expect(page).toContain('variant="workspace"');
+    expect(
+      read("src/components/system/page-shell.tsx"),
+    ).toContain('workspace: "app-workspace-content flex flex-col"');
     expect(page).toContain("InboxV3Workspace");
     expect(page).not.toContain("InboxOperationsDesk");
     expect(page).not.toContain("InboxDesktopPrimer");
@@ -81,10 +89,25 @@ describe("Class-AAA Inbox composition contract", () => {
     expect(thread).not.toContain("clearActiveChat");
   });
 
-  it("keeps a localized semantic work-surface heading without consuming layout space", () => {
+  it("keeps a localized semantic work-surface heading without consuming pane space", () => {
     const page = read("src/app/(dashboard)/inbox/page.tsx");
+    const shell = read("src/components/system/page-shell.tsx");
+
+    // IA-01 converted this pin rather than deleting it. Its two halves were
+    // "localized semantic heading" and "without consuming layout space", and
+    // only the second one required `sr-only` — which is also what left Inbox
+    // with no visible identity at all.
+    //
+    // The workspace variant satisfies both: the heading is real and visible,
+    // while the panes still get every pixel below it because the shell body
+    // stays `min-h-0 flex-1 overflow-hidden` inside a full-height container.
+    // Both halves are asserted, so the guarantee survives the change.
     expect(page).toContain("const { t } = await getI18n();");
-    expect(page).toContain('<h1 className="sr-only">{t("metadata.title.inbox")}</h1>');
+    expect(page).toContain('title={t("metadata.title.inbox")}');
+    expect(page).toContain('variant="workspace"');
+    expect(page).not.toContain('<h1 className="sr-only">');
+    expect(shell).toContain('workspace: "app-workspace-content flex flex-col"');
+    expect(shell).toContain('workspace ? "min-h-0 flex-1 overflow-hidden"');
   });
 
   it("closes adversarial Inbox review gaps at their authority boundaries", () => {

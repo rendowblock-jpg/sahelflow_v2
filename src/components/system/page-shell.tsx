@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { IconTile } from "@/components/system/icon-tile";
+import { PageHeader } from "@/components/shared/page-header";
 import { cn } from "@/lib/utils";
 
 /**
@@ -11,6 +11,11 @@ import { cn } from "@/lib/utils";
  * `<h1>` with `sr-only`, so those surfaces carried no visible identity at all
  * (register IA-01). PageShell closes that split — a full-height workspace is a
  * *variant* of the page grammar, not an exemption from it.
+ *
+ * IA-01 — the header itself is `PageHeader`, not a second implementation of
+ * one. PageShell owns the page CONTAINER (which shell class, how the body
+ * scrolls); PageHeader owns page IDENTITY. Two components rendering their own
+ * heading was the deeper half of the two-architectures defect.
  *
  * The shell classes (`app-content`, `app-content-narrow`,
  * `app-workspace-content`) remain the layout authority from
@@ -61,59 +66,13 @@ export function PageShell({
       className={cn(CONTAINER_CLASSES[variant], className)}
       {...props}
     >
-      <header
-        data-slot="page-shell-header"
-        className={cn(
-          "flex min-w-0 flex-col gap-3 text-start sm:flex-row sm:items-start sm:justify-between sm:gap-6",
-          workspace
-            ? "shrink-0 border-b border-border/80 px-4 py-3"
-            : "border-b border-border/70 pb-4",
-        )}
-      >
-        <div className="flex min-w-0 items-start gap-3">
-          {Icon ? (
-            <IconTile
-              icon={Icon}
-              size={workspace ? "sm" : "md"}
-              bordered
-              className={workspace ? undefined : "mt-0.5"}
-            />
-          ) : null}
-          <div className="min-w-0">
-            {/*
-              Always visible. A page whose only heading is `sr-only` reads to a
-              sighted seller as a screen with no name.
-            */}
-            <h1
-              className={cn(
-                "min-w-0 text-balance text-start text-foreground",
-                workspace ? "text-title-2" : "text-title-1",
-              )}
-            >
-              {title}
-            </h1>
-            {description ? (
-              <p
-                className={cn(
-                  "max-w-prose text-pretty text-start text-muted-foreground",
-                  workspace ? "text-caption" : "mt-1 text-body",
-                )}
-              >
-                {description}
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        {actions ? (
-          <div
-            data-slot="page-shell-actions"
-            className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end"
-          >
-            {actions}
-          </div>
-        ) : null}
-      </header>
+      <PageHeader
+        title={title}
+        description={description}
+        icon={Icon}
+        actions={actions}
+        variant={workspace ? "workspace" : "document"}
+      />
 
       {toolbar ? (
         <div
