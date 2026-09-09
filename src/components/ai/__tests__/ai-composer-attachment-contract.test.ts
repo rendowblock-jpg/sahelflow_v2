@@ -63,26 +63,35 @@ describe("AI composer screenshot attachment (AI-21)", () => {
   });
 
   it("wires the composer attach/paste path with a review-first summary", () => {
+    // STR-01 moved the composer deck into its own module; these assertions
+    // follow the code they protect rather than being relaxed. Every string
+    // pinned here is unchanged — only the file that must carry it moved.
+    const deck = source("src/components/ai/ai-composer-deck.tsx");
     const canvas = source("src/components/ai/ai-decision-canvas.tsx");
 
-    expect(canvas).toContain('data-ai-composer-attach="true"');
-    expect(canvas).toContain('data-ai-screenshot-input="true"');
-    expect(canvas).toContain('data-ai-screenshot-chip="true"');
-    expect(canvas).toContain('data-ai-screenshot-remove="true"');
-    expect(canvas).toContain('accept={SCREENSHOT_ACCEPT}');
-    expect(canvas).toContain("ingestScreenshot(file)");
-    expect(canvas).toContain('"/api/extraction/image"');
+    expect(deck).toContain('data-ai-composer-attach="true"');
+    expect(deck).toContain('data-ai-screenshot-input="true"');
+    expect(deck).toContain('data-ai-screenshot-chip="true"');
+    expect(deck).toContain('data-ai-screenshot-remove="true"');
+    expect(deck).toContain('accept={SCREENSHOT_ACCEPT}');
+    expect(deck).toContain("ingestScreenshot(file)");
+    expect(deck).toContain('"/api/extraction/image"');
     // Consent and rate-limit failures reuse the exact chat-send copy.
-    expect(canvas).toContain('copy("consentMissing")');
-    expect(canvas).toContain('copy("rateLimited")');
+    expect(deck).toContain('copy("consentMissing")');
+    expect(deck).toContain('copy("rateLimited")');
     // The extraction result is appended to the DRAFT for review; nothing is
-    // auto-sent from the extraction flow.
-    expect(canvas).toContain("function screenshotSummary");
-    expect(canvas).toContain("setDraft((current) =>");
+    // auto-sent from the extraction flow. Asserted on both halves of the
+    // split so neither module can regain a send.
+    expect(deck).toContain("function screenshotSummary");
+    expect(deck).toContain("setDraft((current) =>");
+    expect(deck).not.toContain("onSend(summary)");
     expect(canvas).not.toContain("onSend(summary)");
+    // The canvas owns the draft and hands it to the deck — one text truth.
+    expect(canvas).toContain("<AiComposerDeck");
+    expect(canvas).toContain("setDraft={setDraft}");
     // Client picker boundaries mirror the route authority (pinned values).
-    expect(canvas).toContain("const SCREENSHOT_MAX_BYTES = 10 * 1024 * 1024;");
-    expect(canvas).toContain('"image/jpeg", "image/png", "image/webp"');
+    expect(deck).toContain("const SCREENSHOT_MAX_BYTES = 10 * 1024 * 1024;");
+    expect(deck).toContain('"image/jpeg", "image/png", "image/webp"');
   });
 
   it("ships every composer-attachment key in en/fr/ar", () => {

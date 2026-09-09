@@ -7,7 +7,14 @@ import {
   type RefObject,
   type SetStateAction,
 } from "react";
-import { ChevronRight, Loader2, Paperclip, Send, Square, X } from "lucide-react";
+import {
+  ChevronRight,
+  Loader2,
+  Paperclip,
+  Send,
+  Square,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -137,8 +144,8 @@ export function AiComposerDeck({
   // The live preview URL is revoked through this ref — never inside a state
   // updater, which React may invoke twice (StrictMode) or skip entirely.
   const screenshotUrlRef = useRef<string | null>(null);
-  // Ledger AI-17 residual: the counter owns the last 30% of the bound —
-  // always-visible counters are noise for the common short prompt.
+  // Ledger AI-17 residual: the counter owns the last stretch before the
+  // bound — an always-visible counter is noise for the common short prompt.
   const counterVisibleFrom = Math.ceil(
     AI_CHAT_MESSAGE_MAX_LENGTH * AI_CHAT_COUNTER_VISIBLE_SHARE,
   );
@@ -151,9 +158,10 @@ export function AiComposerDeck({
     setScreenshot(null);
   };
 
-  const extractScreenshot = async (
-    shot: { file: File; previewUrl: string },
-  ): Promise<void> => {
+  const extractScreenshot = async (shot: {
+    file: File;
+    previewUrl: string;
+  }): Promise<void> => {
     setReadingScreenshot(true);
     try {
       const form = new FormData();
@@ -267,7 +275,7 @@ export function AiComposerDeck({
             <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
               {readingScreenshot
                 ? copy("readingScreenshot")
-                : (screenshot.file.name || copy("attachScreenshot"))}
+                : screenshot.file.name || copy("attachScreenshot")}
             </p>
             <Button
               type="button"
@@ -286,94 +294,101 @@ export function AiComposerDeck({
           data-ai-composer="true"
           className="flex w-full items-end gap-2 rounded-surface border border-border/70 bg-card p-2 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_12px_32px_oklch(0_0_0/0.07)] focus-within:border-primary/40"
         >
-        <input
-          ref={screenshotInputRef}
-          type="file"
-          accept={SCREENSHOT_ACCEPT}
-          aria-label={copy("attachScreenshot")}
-          className="sr-only"
-          tabIndex={-1}
-          data-ai-screenshot-input="true"
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0] ?? null;
-            event.currentTarget.value = "";
-            if (file) ingestScreenshot(file);
-          }}
-        />
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          aria-label={copy("attachScreenshot")}
-          data-ai-composer-attach="true"
-          disabled={!setupReady || sending || readingScreenshot || startingAnalysis}
-          onClick={() => screenshotInputRef.current?.click()}
-          className="shrink-0 text-muted-foreground hover:text-foreground"
-        >
-          {readingScreenshot ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <Paperclip className="size-4" aria-hidden="true" />
-          )}
-        </Button>
-        <Textarea
-          ref={composerRef}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onPaste={(event) => {
-            // Ledger AI-21: screenshots arrive as paste too (WhatsApp/
-            // Facebook screenshot workflows); one decision per image.
-            const file = event.clipboardData?.files?.[0];
-            if (file && setupReady && !sending && !readingScreenshot) {
-              event.preventDefault();
-              ingestScreenshot(file);
-            }
-          }}
-          onKeyDown={(event) => {
-            if (
-              event.key === "Enter" &&
-              !event.shiftKey &&
-              !event.nativeEvent.isComposing
-            ) {
-              event.preventDefault();
-              void onSubmit();
-            }
-          }}
-          placeholder={workspace.copy("composerPlaceholder")}
-          aria-label={workspace.copy("composerPlaceholder")}
-          rows={1}
-          dir="auto"
-          maxLength={AI_CHAT_MESSAGE_MAX_LENGTH}
-          disabled={!setupReady || sending || startingAnalysis}
-          className="max-h-36 min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-sm shadow-none focus-visible:ring-0"
-        />
-        {sending ? (
+          <input
+            ref={screenshotInputRef}
+            type="file"
+            accept={SCREENSHOT_ACCEPT}
+            aria-label={copy("attachScreenshot")}
+            className="sr-only"
+            tabIndex={-1}
+            data-ai-screenshot-input="true"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0] ?? null;
+              event.currentTarget.value = "";
+              if (file) ingestScreenshot(file);
+            }}
+          />
           <Button
             type="button"
             size="icon"
-            variant="outline"
-            aria-label={workspace.copy("stop")}
-            className="shrink-0 rounded-surface border-destructive/30 text-destructive hover:bg-destructive-soft hover:text-destructive"
-            onClick={stop}
+            variant="ghost"
+            aria-label={copy("attachScreenshot")}
+            data-ai-composer-attach="true"
+            disabled={
+              !setupReady || sending || readingScreenshot || startingAnalysis
+            }
+            onClick={() => screenshotInputRef.current?.click()}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
           >
-            <Square className="size-4" aria-hidden="true" />
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            size="icon"
-            aria-label={workspace.copy("send")}
-            disabled={!setupReady || !draft.trim() || startingAnalysis || readingScreenshot}
-            className="shrink-0 rounded-surface shadow-sm"
-            onClick={() => void onSubmit()}
-          >
-            {startingAnalysis ? (
+            {readingScreenshot ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Send className="size-4 rtl:-scale-x-100" aria-hidden="true" />
+              <Paperclip className="size-4" aria-hidden="true" />
             )}
           </Button>
-        )}
+          <Textarea
+            ref={composerRef}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onPaste={(event) => {
+              // Ledger AI-21: screenshots arrive as paste too (WhatsApp/
+              // Facebook screenshot workflows); one decision per image.
+              const file = event.clipboardData?.files?.[0];
+              if (file && setupReady && !sending && !readingScreenshot) {
+                event.preventDefault();
+                ingestScreenshot(file);
+              }
+            }}
+            onKeyDown={(event) => {
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault();
+                void onSubmit();
+              }
+            }}
+            placeholder={workspace.copy("composerPlaceholder")}
+            aria-label={workspace.copy("composerPlaceholder")}
+            rows={1}
+            dir="auto"
+            maxLength={AI_CHAT_MESSAGE_MAX_LENGTH}
+            disabled={!setupReady || sending || startingAnalysis}
+            className="max-h-36 min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-sm shadow-none focus-visible:ring-0"
+          />
+          {sending ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              aria-label={workspace.copy("stop")}
+              className="shrink-0 rounded-surface border-destructive/30 text-destructive hover:bg-destructive-soft hover:text-destructive"
+              onClick={stop}
+            >
+              <Square className="size-4" aria-hidden="true" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              size="icon"
+              aria-label={workspace.copy("send")}
+              disabled={
+                !setupReady ||
+                !draft.trim() ||
+                startingAnalysis ||
+                readingScreenshot
+              }
+              className="shrink-0 rounded-surface shadow-sm"
+              onClick={() => void onSubmit()}
+            >
+              {startingAnalysis ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Send className="size-4 rtl:-scale-x-100" aria-hidden="true" />
+              )}
+            </Button>
+          )}
         </div>
         {draft.length >= counterVisibleFrom ? (
           // Ledger AI-17 residual: honest near-limit counter, one bound with
@@ -419,10 +434,30 @@ export function AiComposerDeck({
           {t("common.cheatsheet")}
         </summary>
         <p className="mt-1.5 flex w-full flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
-          <span><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">/</kbd> {copy("shortcutFocusComposer")}</span>
-          <span><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Esc</kbd> {copy("shortcutStopStream")}</span>
-          <span dir="ltr"><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Alt+↑↓</kbd> {copy("shortcutSwitchSessions")}</span>
-          <span dir="ltr"><kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">Ctrl+↵</kbd> {copy("shortcutApproveFocused")}</span>
+          <span>
+            <kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">
+              /
+            </kbd>{" "}
+            {copy("shortcutFocusComposer")}
+          </span>
+          <span>
+            <kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">
+              Esc
+            </kbd>{" "}
+            {copy("shortcutStopStream")}
+          </span>
+          <span dir="ltr">
+            <kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">
+              Alt+↑↓
+            </kbd>{" "}
+            {copy("shortcutSwitchSessions")}
+          </span>
+          <span dir="ltr">
+            <kbd className="rounded-control border border-border/60 bg-muted/50 px-1.5 py-0.5 font-sans">
+              Ctrl+↵
+            </kbd>{" "}
+            {copy("shortcutApproveFocused")}
+          </span>
         </p>
       </details>
     </div>
