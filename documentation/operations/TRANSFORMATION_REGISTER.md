@@ -90,7 +90,7 @@ Recorded so the transformation does not "fix" what is already right:
 | ID | Finding | Evidence | Status |
 |---|---|---|---|
 | L10N-01 | **Two parallel copy systems.** The 3 JSON locale files (2,838 lines each, at parity) plus **39 inline TypeScript translation modules totalling 5,979 lines** holding their own AR/FR/EN maps — more copy outside the copy authority than inside it. This is the mechanism by which wording drifts between screens. | `src/lib/i18n/*.ts` (39 modules) vs `src/lib/i18n/locales/*.json` | OPEN |
-| L10N-02 | **Demo/seed content is hardcoded French** and renders inside an Arabic interface. Not a rendering bug — the seed is not locale-aware. | `src/lib/demo/algerian-demo.ts:835`, `:840` | OPEN |
+| L10N-02 | **Demo/seed content is hardcoded French** and renders inside an Arabic interface. Not a rendering bug — the seed is not locale-aware. | `src/lib/demo/algerian-demo.ts:835`, `:840` | **DONE (source, W3a)** — narrowed by evidence, then fixed. Seller- and customer-authored demo content (product names, WhatsApp messages) stays French/Arabic/Darija mixed **deliberately**: that is what an Algerian seller's real day looks like, and flattening it would make the demo less honest. The defect was the demo **AI transcript**, which is SahelFlow's own voice answering in French inside an Arabic interface. `DEMO_AI_SESSION` now carries the title and four turns in AR/FR/EN, `seedAlgerianDemoData` and `loadAlgerianDemoWorkspace` take an optional `locale` defaulting to `fr` (so all 14 existing callers and every test are unchanged), and `POST /api/demo-data` resolves the seller's locale through `getI18n()`. |
 
 ## P2 — Structure and dead code
 

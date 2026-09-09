@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { getI18n } from "@/lib/i18n-server";
 import {
   getAlgerianDemoWorkspaceStatus,
   loadAlgerianDemoWorkspace,
@@ -20,7 +21,10 @@ export const GET = withErrorHandler(async () => {
 
 export const POST = withErrorHandler(async () => {
   await requireAuth(["settings.manage", "approvals.approve"]);
-  return NextResponse.json(await loadAlgerianDemoWorkspace(), {
+  // The demo assistant transcript speaks in SahelFlow's own voice, so it is
+  // seeded in the seller's interface language (register L10N-02).
+  const { locale } = await getI18n();
+  return NextResponse.json(await loadAlgerianDemoWorkspace(undefined, locale), {
     status: 201,
     headers: noStore,
   });

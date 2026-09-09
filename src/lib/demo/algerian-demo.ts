@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db, type DbClient } from "@/lib/db";
+import type { Locale } from "@/lib/i18n";
 
 export const ALGERIAN_DEMO_VERSION = "algerian-cod-founder-v1";
 const DEMO_PREFIX = "demo-";
@@ -277,8 +278,54 @@ export async function clearAlgerianDemoData(
   return getAlgerianDemoStatus(client);
 }
 
+/**
+ * The demo AI session speaks in SahelFlow's OWN voice, so it follows the
+ * seller's interface language.
+ *
+ * Seller- and customer-authored demo content (product names, WhatsApp
+ * messages, customer names) deliberately stays French/Arabic/Darija mixed:
+ * that is what an Algerian seller's real day looks like, and flattening it
+ * would make the demo less honest, not more. This table covers only the
+ * assistant transcript, which previously rendered French replies inside an
+ * Arabic interface — the product answering in the wrong language
+ * (register L10N-02).
+ */
+const DEMO_AI_SESSION: Record<
+  Locale,
+  { title: string; turns: readonly [string, string, string, string] }
+> = {
+  fr: {
+    title: "Démo · Brief opérationnel du matin",
+    turns: [
+      "Donne-moi les priorités COD de ce matin.",
+      "8 commandes demandent une action : 3 confirmations WhatsApp, 2 colis en sortie de livraison, 2 COD collectés non remisés et 1 stock faible.",
+      "Quel dossier dois-je vérifier en premier ?",
+      "Commencez par DZ-DEMO-0001 : la cliente a confirmé en arabe, l'adresse est complète et elle demande un appel avant expédition. Le dossier est prêt pour validation humaine.",
+    ],
+  },
+  en: {
+    title: "Demo · Morning operations brief",
+    turns: [
+      "Give me this morning's COD priorities.",
+      "8 orders need an action: 3 WhatsApp confirmations, 2 parcels out for delivery, 2 COD amounts collected but not remitted, and 1 low stock item.",
+      "Which one should I check first?",
+      "Start with DZ-DEMO-0001: the customer confirmed in Arabic, the address is complete, and she asked for a call before shipping. It is ready for human validation.",
+    ],
+  },
+  ar: {
+    title: "عرض توضيحي · موجز عمليات الصباح",
+    turns: [
+      "أعطني أولويات الدفع عند الاستلام لهذا الصباح.",
+      "8 طلبات تحتاج إلى إجراء: 3 تأكيدات واتساب، وطردان في طريق التوصيل، ومبلغان محصّلان لم يُسلَّما بعد، ومنتج واحد بمخزون منخفض.",
+      "أي ملف أراجعه أولاً؟",
+      "ابدأ بـ DZ-DEMO-0001: أكّدت الزبونة بالعربية، والعنوان مكتمل، وطلبت مكالمة قبل الشحن. الطلب جاهز للمراجعة البشرية.",
+    ],
+  },
+};
+
 export async function seedAlgerianDemoData(
   client: DbClient = db,
+  locale: Locale = "fr",
 ): Promise<AlgerianDemoStatus> {
   const initial = await getAlgerianDemoStatus(client);
   if (initial.loaded) return initial;
@@ -828,19 +875,20 @@ export async function seedAlgerianDemoData(
       ],
     });
 
+    const demoAiSession = DEMO_AI_SESSION[locale] ?? DEMO_AI_SESSION.fr;
     const aiSessionId = "demo-ai-session-01";
     await client.aiChatSession.create({
       data: {
         id: aiSessionId,
-        title: "Démo · Brief opérationnel du matin",
+        title: demoAiSession.title,
         createdAt: daysAgo(0, 8),
       },
     });
     const aiMessages = [
-      ["user", "Donne-moi les priorités COD de ce matin.", null],
-      ["assistant", "8 commandes demandent une action : 3 confirmations WhatsApp, 2 colis en sortie de livraison, 2 COD collectés non remisés et 1 stock faible.", JSON.stringify([{ name: "get_stats", result: { confirmations: 3, outForDelivery: 2, pendingRemittance: 2, lowStock: 1 } }])],
-      ["user", "Quel dossier dois-je vérifier en premier ?", null],
-      ["assistant", "Commencez par DZ-DEMO-0001 : la cliente a confirmé en arabe, l'adresse est complète et elle demande un appel avant expédition. Le dossier est prêt pour validation humaine.", JSON.stringify([{ name: "get_order_details", result: { orderNumber: "DZ-DEMO-0001", risk: "low", nextAction: "confirm" } }])],
+      ["user", demoAiSession.turns[0], null],
+      ["assistant", demoAiSession.turns[1], JSON.stringify([{ name: "get_stats", result: { confirmations: 3, outForDelivery: 2, pendingRemittance: 2, lowStock: 1 } }])],
+      ["user", demoAiSession.turns[2], null],
+      ["assistant", demoAiSession.turns[3], JSON.stringify([{ name: "get_order_details", result: { orderNumber: "DZ-DEMO-0001", risk: "low", nextAction: "confirm" } }])],
     ] as const;
     for (let index = 0; index < aiMessages.length; index += 1) {
       const [role, content, toolCalls] = aiMessages[index]!;
