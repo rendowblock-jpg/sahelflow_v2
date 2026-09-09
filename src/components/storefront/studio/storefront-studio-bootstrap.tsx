@@ -196,7 +196,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
               <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
             </Link>
           </Button>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-primary/8 text-primary">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-primary-soft text-primary">
             <Store className="size-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
@@ -335,7 +335,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                       onClick={() => setTemplate(id)}
                       className={`rounded-xl border p-3 text-start transition ${
                         selected
-                          ? "border-primary bg-primary/8 ring-1 ring-primary/20"
+                          ? "border-primary bg-primary-soft ring-1 ring-primary/20"
                           : "bg-background hover:bg-muted/50"
                       }`}
                     >
@@ -385,7 +385,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                         type="button"
                         aria-pressed={selected}
                         onClick={() => toggleProduct(product.id)}
-                        className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start transition ${selected ? "bg-primary/8" : "hover:bg-muted/60"}`}
+                        className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start transition ${selected ? "bg-primary-soft" : "hover:bg-muted/60"}`}
                       >
                         <span className={`flex size-5 shrink-0 items-center justify-center rounded border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}>
                           {selected ? <Check className="size-3" aria-hidden="true" /> : null}

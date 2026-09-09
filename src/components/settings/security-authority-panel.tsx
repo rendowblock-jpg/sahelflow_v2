@@ -286,7 +286,7 @@ export function SecurityAuthorityPanel() {
                             {shortId(session.sessionId)}
                           </span>
                           {session.current ? (
-                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
                               {t("settings.security.current")}
                             </span>
                           ) : null}

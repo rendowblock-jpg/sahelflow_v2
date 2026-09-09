@@ -117,11 +117,11 @@ export function SectionTree({
               className={cn(
                 "group relative overflow-hidden rounded-xl border bg-background transition-[border-color,background-color,box-shadow,opacity,transform]",
                 active
-                  ? "border-primary/45 bg-primary/[0.04] shadow-sm"
+                  ? "border-primary/45 bg-primary-subtle shadow-sm"
                   : "border-border/75 hover:border-primary/20 hover:bg-muted/30",
                 !section.enabled && "opacity-65",
                 dragging && "scale-[0.985] opacity-55",
-                dropTarget && "border-primary bg-primary/[0.07] shadow-sm",
+                dropTarget && "border-primary bg-primary-soft shadow-sm",
               )}
             >
               {active || dropTarget ? (
@@ -229,7 +229,7 @@ export function SectionTree({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex min-h-9 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs font-semibold text-muted-foreground outline-none transition-[border-color,background-color,color] hover:border-primary/45 hover:bg-primary/[0.035] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex min-h-9 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs font-semibold text-muted-foreground outline-none transition-[border-color,background-color,color] hover:border-primary/45 hover:bg-primary-subtle hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Plus className="size-3.5" aria-hidden="true" />
             {t("storefront.studio.addSection")}
@@ -275,7 +275,7 @@ function TreeAction({
       className={cn(
         "flex size-7 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-30 [&_svg]:size-3.5",
         destructive
-          ? "text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          ? "text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >

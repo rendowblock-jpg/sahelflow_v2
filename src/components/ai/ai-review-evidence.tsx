@@ -92,7 +92,7 @@ export function AiReviewEvidence({
       <div className="border-b px-4 py-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary/12 to-primary/[0.04] text-primary">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary">
               <ShieldCheck className="size-4" aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -139,7 +139,7 @@ export function AiReviewEvidence({
             </div>
 
             {actionHistoryError ? (
-              <div className="rounded-xl border border-warning/25 bg-warning/[0.06] p-3.5">
+              <div className="rounded-xl border border-warning/25 bg-warning-soft p-3.5">
                 <div className="flex items-start gap-2.5">
                   <AlertTriangle
                     className="mt-0.5 size-4 shrink-0 text-warning"
@@ -235,7 +235,7 @@ export function AiReviewEvidence({
             </p>
 
             {inboxError ? (
-              <div className="rounded-xl border border-warning/25 bg-warning/[0.06] p-3.5">
+              <div className="rounded-xl border border-warning/25 bg-warning-soft p-3.5">
                 <p className="text-sm font-semibold">
                   {workspace.copy("crossSessionUnavailable")}
                 </p>

@@ -50,7 +50,7 @@ function ConnectionState({
       <span
         className={cn(
           base,
-          "border-destructive/20 bg-destructive/5 text-destructive",
+          "border-destructive/20 bg-destructive-subtle text-destructive",
         )}
       >
         <WifiOff className="size-3.5" aria-hidden="true" />
@@ -64,7 +64,7 @@ function ConnectionState({
       <span
         className={cn(
           base,
-          "border-success/20 bg-success/7 text-success",
+          "border-success/20 bg-success-soft text-success",
         )}
       >
         <CheckCircle2 className="size-3.5" aria-hidden="true" />
@@ -83,7 +83,7 @@ function ConnectionState({
         onClick={onRetry}
         className={cn(
           base,
-          "border-warning/20 bg-warning/7 text-warning transition-colors hover:bg-warning/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "border-warning/20 bg-warning-soft text-warning transition-colors hover:bg-warning-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         )}
       >
         <RefreshCw className="size-3.5 animate-spin" aria-hidden="true" />
@@ -94,7 +94,7 @@ function ConnectionState({
 
   if (transport.status === "qr") {
     return (
-      <span className={cn(base, "border-primary/20 bg-primary/7 text-primary")}>
+      <span className={cn(base, "border-primary/20 bg-primary-soft text-primary")}>
         <QrCode className="size-3.5" aria-hidden="true" />
         {copy("pair")}
       </span>
@@ -227,7 +227,7 @@ export function InboxV3Header({
               {t("nav.inbox")}
             </h2>
             {queueCounts.unread > 0 ? (
-              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-caption font-bold leading-5 tabular-nums text-primary">
+              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary-soft px-1.5 text-caption font-bold leading-5 tabular-nums text-primary">
                 {queueCounts.unread > 99 ? "99+" : queueCounts.unread}
               </span>
             ) : null}
@@ -274,7 +274,7 @@ export function InboxV3Header({
 
       {dataDegraded ? (
         <div
-          className="flex items-center gap-2 border-t bg-warning/5 px-4 py-2 text-xs text-warning"
+          className="flex items-center gap-2 border-t bg-warning-subtle px-4 py-2 text-xs text-warning"
           role="status"
         >
           <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />

@@ -10,7 +10,7 @@ export default async function NotFound() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
       <div className="animate-fade-up text-center space-y-4">
         {/* Premium 404 display */}
-        <div className="mx-auto rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 p-5 ring-1 ring-primary/20 w-fit">
+        <div className="mx-auto rounded-2xl bg-gradient-to-br from-primary-strong to-primary-subtle p-5 ring-1 ring-primary/20 w-fit">
           <SearchX className="h-10 w-10 text-primary" />
         </div>
         <h1 className="text-6xl font-bold text-muted-foreground">{t("notFound.code")}</h1>

@@ -752,7 +752,7 @@ export function TeamAccessAuthorityPanel() {
       </div>
 
       {token ? (
-        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <div className="rounded-lg border border-primary/30 bg-primary-subtle p-4">
           <h4 className="text-sm font-semibold">{copy.tokenTitle}</h4>
           <p className="mt-1 text-sm text-muted-foreground">{copy.tokenDescription}</p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">

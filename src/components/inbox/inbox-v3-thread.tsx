@@ -497,7 +497,7 @@ const MessageBubble = memo(function MessageBubble({
             "max-w-[min(38rem,80%)] rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
             inbound
               ? "border-border/70 bg-background text-foreground"
-              : "border-primary/20 bg-primary/10 text-foreground",
+              : "border-primary/20 bg-primary-soft text-foreground",
             // Tail corner sits on the group's last bubble; continuation
             // bubbles soften their connecting corners (WhatsApp grouping).
             inbound && groupEnd && "rounded-es-md",
@@ -637,7 +637,7 @@ const MessageBubble = memo(function MessageBubble({
                   <button
                     type="button"
                     onClick={() => onCancelUpload(message.id)}
-                    className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-caption font-medium text-destructive outline-none transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring"
+                    className="inline-flex min-h-7 items-center gap-1 rounded-md px-2 text-caption font-medium text-destructive outline-none transition-colors hover:bg-destructive-soft focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <X className="size-3" aria-hidden="true" />
                     {copy("cancelUpload")}
@@ -709,7 +709,7 @@ const MessageBubble = memo(function MessageBubble({
             className={cn(
               "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-md px-2 text-caption font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
               candidate
-                ? "bg-primary/9 text-primary"
+                ? "bg-primary-soft text-primary"
                 : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",
             )}
           >
@@ -1289,7 +1289,7 @@ export function InboxV3Thread({
           ) : null}
 
           <Avatar className="size-9 border border-border/70 bg-background">
-            <AvatarFallback className="bg-primary/7 text-[13px] font-semibold text-primary">
+            <AvatarFallback className="bg-primary-soft text-[13px] font-semibold text-primary">
               {activeChat.name.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -1671,7 +1671,7 @@ export function InboxV3Thread({
                       className="mt-3 flex w-full items-center gap-3 py-1 text-caption font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <span className="h-px flex-1 bg-primary/35" />
-                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5">
+                      <span className="rounded-full bg-primary-soft px-2.5 py-0.5">
                         {copy("newMessagesDivider")}
                       </span>
                       <span className="h-px flex-1 bg-primary/35" />
@@ -1733,7 +1733,7 @@ export function InboxV3Thread({
         {canCompose ? (
           <div className="mx-auto max-w-[56rem]">
             {!canSend ? (
-              <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-warning/15 bg-warning/5 px-3 py-2 text-xs text-muted-foreground">
+              <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-warning/15 bg-warning-subtle px-3 py-2 text-xs text-muted-foreground">
                 <WifiOff
                   className="size-3.5 shrink-0 text-warning"
                   aria-hidden="true"
@@ -1744,7 +1744,7 @@ export function InboxV3Thread({
             ) : null}
 
             <div
-              className="rounded-2xl border border-border/75 bg-muted/15 p-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/15 data-[drag-active=true]:border-primary data-[drag-active=true]:bg-primary/5"
+              className="rounded-2xl border border-border/75 bg-muted/15 p-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/15 data-[drag-active=true]:border-primary data-[drag-active=true]:bg-primary-subtle"
               data-drag-active={dragActive ? "true" : "false"}
               onDragOver={(event) => {
                 if (!canSend) return;
@@ -1912,7 +1912,7 @@ export function InboxV3Thread({
                         data-inbox-voice-cancel="true"
                         className={cn(
                           slideArmed &&
-                            "bg-destructive/15 text-destructive hover:bg-destructive/20 hover:text-destructive",
+                            "bg-destructive-strong text-destructive hover:bg-destructive/20 hover:text-destructive",
                         )}
                         onClick={voiceRecorder.cancel}
                       >

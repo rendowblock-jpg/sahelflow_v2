@@ -196,7 +196,7 @@ export function ProductImageUpload({
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
             disabled={!isInteractive}
-            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-muted/30 p-2 text-muted-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-muted/30 p-2 text-muted-foreground transition-colors hover:border-primary hover:bg-primary-subtle hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
             aria-label={t("products.addImage")}
           >
             {uploading ? (

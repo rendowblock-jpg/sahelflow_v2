@@ -531,7 +531,7 @@ export function AssigneeControl({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-2">
         {error ? (
-          <div className="mb-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+          <div className="mb-2 rounded-md border border-destructive/30 bg-destructive-subtle p-2 text-xs text-destructive">
             <p>{error}</p>
             <Button
               type="button"

@@ -17,7 +17,7 @@ export type IconTileSize = "sm" | "md" | "lg";
  *
  * Before this primitive existed the same idea was hand-rolled 36 times across
  * the component tree at differing sizes, radii and one-off alpha tints
- * (`bg-primary/[0.04]`, `from-primary/12`, `border-primary/15`, ...). Tone now
+ * (`bg-primary-subtle`, `from-primary-strong`, `border-primary/15`, ...). Tone now
  * resolves through the authorized tint tokens, so a tile tracks the active
  * theme preset and mode instead of pinning a literal alpha.
  *

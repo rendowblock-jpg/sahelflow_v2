@@ -398,7 +398,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
       )}
 
       {ambiguous ? (
-        <div className="space-y-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
+        <div className="space-y-3 rounded-lg border border-warning/40 bg-warning-soft p-3">
           <div className="flex gap-2">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <div>

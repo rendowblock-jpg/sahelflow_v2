@@ -74,20 +74,20 @@ const toneClasses: Record<
     icon: "border-border/70 bg-muted/45 text-muted-foreground",
   },
   accent: {
-    surface: "border-primary/20 bg-primary/[0.025]",
-    icon: "border-primary/20 bg-primary/10 text-primary",
+    surface: "border-primary/20 bg-primary-subtle",
+    icon: "border-primary/20 bg-primary-soft text-primary",
   },
   success: {
-    surface: "border-success/20 bg-success/[0.025]",
-    icon: "border-success/20 bg-success/10 text-success",
+    surface: "border-success/20 bg-success-subtle",
+    icon: "border-success/20 bg-success-soft text-success",
   },
   warning: {
-    surface: "border-warning/25 bg-warning/[0.035]",
-    icon: "border-warning/25 bg-warning/10 text-warning",
+    surface: "border-warning/25 bg-warning-subtle",
+    icon: "border-warning/25 bg-warning-soft text-warning",
   },
   danger: {
-    surface: "border-destructive/20 bg-destructive/[0.025]",
-    icon: "border-destructive/20 bg-destructive/10 text-destructive",
+    surface: "border-destructive/20 bg-destructive-subtle",
+    icon: "border-destructive/20 bg-destructive-soft text-destructive",
   },
 };
 
@@ -143,9 +143,9 @@ export function StatCard({
         emphasis === "primary" ? "px-5 py-4" : "px-4 py-3.5",
         toneStyle.surface,
         actionable &&
-          "transition-[background-color,border-color,box-shadow] duration-150 hover:border-primary/35 hover:bg-primary/[0.02] focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-ring/25 motion-reduce:transition-none",
+          "transition-[background-color,border-color,box-shadow] duration-150 hover:border-primary/35 hover:bg-primary-subtle focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-ring/25 motion-reduce:transition-none",
         selected &&
-          "border-primary/45 bg-primary/[0.045] ring-1 ring-primary/15",
+          "border-primary/45 bg-primary-subtle ring-1 ring-primary/15",
         className,
       )}
       style={style}

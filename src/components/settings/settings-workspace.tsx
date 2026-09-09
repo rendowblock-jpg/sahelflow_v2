@@ -177,7 +177,7 @@ function SettingsDirectory({
               "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               mobile ? "px-3.5 py-3.5" : "px-3 py-2.5",
               selected && !mobile
-                ? "bg-primary/[0.085] text-foreground shadow-xs"
+                ? "bg-primary-soft text-foreground shadow-xs"
                 : "text-muted-foreground hover:bg-muted/55 hover:text-foreground",
             )}
           >
@@ -555,7 +555,7 @@ export function SettingsWorkspace({
             </Button>
             <span
               className={cn(
-                "mt-0.5 flex shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/[0.07] text-primary",
+                "mt-0.5 flex shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary-soft text-primary",
                 mobile ? "size-9" : "size-10",
               )}
             >

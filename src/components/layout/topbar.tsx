@@ -499,7 +499,7 @@ export function Topbar({
               aria-label={t("common.openMenu")}
             >
               <Avatar className="size-7 ring-1 ring-border">
-                <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                <AvatarFallback className="bg-primary-soft text-xs font-semibold text-primary">
                   {memberIdentity?.displayName ? (
                     memberIdentity.displayName.charAt(0).toUpperCase()
                   ) : (

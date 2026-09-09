@@ -21,10 +21,10 @@ import { cn } from "@/lib/utils";
 type ReturnStatus = "requested" | "approved" | "rejected" | "completed";
 
 const STATUS_STYLES: Record<ReturnStatus, { i18nKey: string; dot: string; bg: string; text: string; border: string }> = {
-  requested: { i18nKey: "returns.status.requested", dot: "bg-warning", bg: "bg-warning/10", text: "text-warning", border: "border-warning/25" },
-  approved: { i18nKey: "returns.status.approved", dot: "bg-primary", bg: "bg-primary/10", text: "text-primary", border: "border-primary/25" },
-  rejected: { i18nKey: "returns.status.rejected", dot: "bg-destructive", bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/25" },
-  completed: { i18nKey: "returns.status.completed", dot: "bg-success", bg: "bg-success/10", text: "text-success", border: "border-success/25" },
+  requested: { i18nKey: "returns.status.requested", dot: "bg-warning", bg: "bg-warning-soft", text: "text-warning", border: "border-warning/25" },
+  approved: { i18nKey: "returns.status.approved", dot: "bg-primary", bg: "bg-primary-soft", text: "text-primary", border: "border-primary/25" },
+  rejected: { i18nKey: "returns.status.rejected", dot: "bg-destructive", bg: "bg-destructive-soft", text: "text-destructive", border: "border-destructive/25" },
+  completed: { i18nKey: "returns.status.completed", dot: "bg-success", bg: "bg-success-soft", text: "text-success", border: "border-success/25" },
 };
 const ALLOWED_TRANSITIONS: Record<ReturnStatus, ReturnStatus[]> = {
   requested: ["approved", "rejected"],

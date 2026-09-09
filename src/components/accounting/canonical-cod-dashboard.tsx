@@ -416,10 +416,10 @@ export function CanonicalCodDashboard({
       </div>
 
       {notice ? (
-        <p role="status" className="rounded-md border border-success/30 bg-success/10 p-3 text-sm text-success">{notice}</p>
+        <p role="status" className="rounded-md border border-success/30 bg-success-soft p-3 text-sm text-success">{notice}</p>
       ) : null}
       {error ? (
-        <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>
+        <p role="alert" className="rounded-md border border-destructive/30 bg-destructive-soft p-3 text-sm text-destructive">{error}</p>
       ) : null}
 
       <Card>
@@ -495,7 +495,7 @@ export function CanonicalCodDashboard({
                   {summary.awaitingRemittance.map((item) => {
                     const draft = settlementDraft(item);
                     return (
-                      <tr key={item.orderId} className={draft.selected ? "bg-primary/5" : undefined}>
+                      <tr key={item.orderId} className={draft.selected ? "bg-primary-subtle" : undefined}>
                         <td className="p-3"><Checkbox checked={draft.selected} onCheckedChange={(value) => toggleOrder(item, value === true)} aria-label={`${t("codReconciliation.select")} ${item.orderNumber}`} /></td>
                         <td className="p-3"><p className="font-mono font-medium">{item.orderNumber}</p><p className="text-xs text-muted-foreground">{item.customerName}</p></td>
                         <td className="p-3" dir="auto">{item.provider}</td>

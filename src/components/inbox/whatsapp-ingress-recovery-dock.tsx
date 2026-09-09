@@ -164,7 +164,7 @@ export function WhatsAppIngressRecoveryDock({
     <Sheet open={open} onOpenChange={setOpen}>
       <div
         role="status"
-        className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-warning/25 bg-warning/6 px-3 py-2"
+        className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-warning/25 bg-warning-soft px-3 py-2"
       >
         <div className="flex min-w-0 items-center gap-2 text-xs">
           <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />

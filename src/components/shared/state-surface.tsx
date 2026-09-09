@@ -20,20 +20,20 @@ const TONE_CLASSES: Record<
     frame: "border-border/70 bg-background",
   },
   info: {
-    icon: "border-primary/20 bg-primary/10 text-primary",
-    frame: "border-primary/15 bg-primary/[0.025]",
+    icon: "border-primary/20 bg-primary-soft text-primary",
+    frame: "border-primary/15 bg-primary-subtle",
   },
   success: {
-    icon: "border-success/20 bg-success/10 text-success",
-    frame: "border-success/15 bg-success/[0.025]",
+    icon: "border-success/20 bg-success-soft text-success",
+    frame: "border-success/15 bg-success-subtle",
   },
   warning: {
-    icon: "border-warning/25 bg-warning/10 text-warning",
-    frame: "border-warning/20 bg-warning/[0.025]",
+    icon: "border-warning/25 bg-warning-soft text-warning",
+    frame: "border-warning/20 bg-warning-subtle",
   },
   danger: {
-    icon: "border-destructive/20 bg-destructive/10 text-destructive",
-    frame: "border-destructive/15 bg-destructive/[0.025]",
+    icon: "border-destructive/20 bg-destructive-soft text-destructive",
+    frame: "border-destructive/15 bg-destructive-subtle",
   },
 };
 

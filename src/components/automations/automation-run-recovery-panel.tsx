@@ -202,11 +202,11 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                       <span>{formatter.format(new Date(run.createdAt))}</span>
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-md bg-success/10 px-2 py-1 text-success">
+                      <span className="rounded-md bg-success-soft px-2 py-1 text-success">
                         {run.succeededStepCount} {t("automations.runtime.state.succeeded")}
                       </span>
                       {run.failedStepCount > 0 ? (
-                        <span className="rounded-md bg-destructive/10 px-2 py-1 text-destructive">
+                        <span className="rounded-md bg-destructive-soft px-2 py-1 text-destructive">
                           {run.failedStepCount} {t("automations.runtime.state.failed")}
                         </span>
                       ) : null}
@@ -274,7 +274,7 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                   </div>
 
                   {run.recoverable ? (
-                    <div className="rounded-xl border border-warning/40 bg-warning/5 p-4">
+                    <div className="rounded-xl border border-warning/40 bg-warning-subtle p-4">
                       <div className="mb-3 flex items-start gap-2">
                         <RotateCcw className="mt-0.5 size-4 shrink-0 text-warning" />
                         <div>

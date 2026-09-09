@@ -172,9 +172,9 @@ const TIMELINE_ICONS = {
 
 const TONE_CLASS = {
   neutral: "border-border bg-muted text-muted-foreground",
-  success: "border-success/30 bg-success/10 text-success",
-  warning: "border-warning/30 bg-warning/10 text-warning",
-  danger: "border-destructive/30 bg-destructive/10 text-destructive",
+  success: "border-success/30 bg-success-soft text-success",
+  warning: "border-warning/30 bg-warning-soft text-warning",
+  danger: "border-destructive/30 bg-destructive-soft text-destructive",
 } as const;
 
 /** Shared semantic history/timeline primitive for entity state and audit facts. */

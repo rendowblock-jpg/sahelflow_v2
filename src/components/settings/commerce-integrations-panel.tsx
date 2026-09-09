@@ -409,7 +409,7 @@ export function CommerceIntegrationsPanel({
             ))}
 
             {reauthRequired ? (
-              <div className="space-y-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
+              <div className="space-y-3 rounded-lg border border-warning/30 bg-warning-subtle p-3">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <KeyRound className="size-4" aria-hidden="true" />
                   {copy("reauthTitle")}

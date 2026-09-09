@@ -340,7 +340,7 @@ export function DataTable<TData>({
                     className={cn(
                       "transition-colors hover:bg-muted/40",
                       onRowClick && "cursor-pointer",
-                      row.getIsSelected() && "bg-primary/5",
+                      row.getIsSelected() && "bg-primary-subtle",
                     )}
                     onClick={
                       onRowClick

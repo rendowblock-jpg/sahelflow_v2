@@ -15,8 +15,8 @@ export interface AttentionItem {
 
 const TONE: Record<NonNullable<AttentionItem["tone"]>, string> = {
   neutral: "border-border/70 bg-muted/20 text-muted-foreground",
-  warning: "border-warning/20 bg-warning/5 text-warning",
-  danger: "border-destructive/20 bg-destructive/5 text-destructive",
+  warning: "border-warning/20 bg-warning-subtle text-warning",
+  danger: "border-destructive/20 bg-destructive-subtle text-destructive",
 };
 
 interface AttentionCenterProps {
@@ -53,7 +53,7 @@ export function AttentionCenter({
 
       {active.length === 0 ? (
         <div className="flex items-center gap-2.5 px-3 py-4 text-sm text-muted-foreground">
-          <span className="flex size-8 items-center justify-center rounded-md border border-success/20 bg-success/5 text-success">
+          <span className="flex size-8 items-center justify-center rounded-md border border-success/20 bg-success-subtle text-success">
             <CheckCircle2 className="size-4" aria-hidden="true" />
           </span>
           <span>{allClearLabel}</span>

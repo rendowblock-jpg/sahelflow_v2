@@ -117,7 +117,7 @@ export function AppearancePanel() {
                     "flex min-h-12 items-center gap-3 rounded-xl border px-3.5 py-2.5 text-start text-sm font-medium",
                     "transition-[background-color,border-color,color,box-shadow,transform] duration-150",
                     selected
-                      ? "border-primary/50 bg-primary/10 text-foreground shadow-sm"
+                      ? "border-primary/50 bg-primary-soft text-foreground shadow-sm"
                       : "bg-background text-muted-foreground hover:-translate-y-px hover:bg-muted/60 hover:text-foreground",
                   )}
                 >
@@ -160,7 +160,7 @@ export function AppearancePanel() {
                     "group overflow-hidden rounded-xl border p-2 text-start text-sm font-medium",
                     "transition-[background-color,border-color,color,box-shadow,transform] duration-150",
                     selected
-                      ? "border-primary/55 bg-primary/[0.07] text-foreground shadow-sm"
+                      ? "border-primary/55 bg-primary-soft text-foreground shadow-sm"
                       : "bg-background text-muted-foreground hover:-translate-y-px hover:border-border hover:bg-muted/35 hover:text-foreground",
                   )}
                 >
@@ -212,7 +212,7 @@ export function AppearancePanel() {
                     "flex min-h-12 items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-start text-sm font-medium",
                     "transition-[background-color,border-color,color,box-shadow] duration-150",
                     selected
-                      ? "border-primary/50 bg-primary/10 text-foreground shadow-sm"
+                      ? "border-primary/50 bg-primary-soft text-foreground shadow-sm"
                       : "bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                   )}
                 >

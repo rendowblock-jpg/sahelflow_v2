@@ -619,7 +619,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
             {partiallyDegraded ? (
               <div
-                className="mx-1 mb-2 flex items-start gap-2 rounded-xl border border-warning/20 bg-warning/5 px-3 py-2 text-caption leading-5 text-warning"
+                className="mx-1 mb-2 flex items-start gap-2 rounded-xl border border-warning/20 bg-warning-subtle px-3 py-2 text-caption leading-5 text-warning"
                 role="status"
               >
                 <AlertTriangle

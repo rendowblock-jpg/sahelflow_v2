@@ -299,7 +299,7 @@ export function BackupRestorePanel({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <span className="flex size-8 items-center justify-center rounded-md bg-primary/10">
+            <span className="flex size-8 items-center justify-center rounded-md bg-primary-soft">
               <DatabaseBackup className="size-5 text-primary" aria-hidden="true" />
             </span>
             {copy.title}
@@ -359,7 +359,7 @@ export function BackupRestorePanel({
               ) : loadError ? (
                 <div
                   role="alert"
-                  className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"
+                  className="space-y-3 rounded-lg border border-destructive/30 bg-destructive-subtle p-4 text-sm"
                 >
                   <p className="font-medium text-destructive">
                     {workspaceCopy("unavailable")}

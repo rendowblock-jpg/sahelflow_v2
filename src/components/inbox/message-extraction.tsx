@@ -207,7 +207,7 @@ export function MessageExtraction({
       )}
 
       {result && (
-        <Card className="border-primary/20 bg-primary/5">
+        <Card className="border-primary/20 bg-primary-subtle">
           <CardContent className="space-y-3 pt-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

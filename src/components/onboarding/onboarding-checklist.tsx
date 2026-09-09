@@ -86,7 +86,7 @@ export function OnboardingChecklist({
                   onClick={() => onSelectStep(item.step)}
                   className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-start text-sm transition-colors ${
                     active
-                      ? "border-primary/40 bg-primary/5 text-foreground"
+                      ? "border-primary/40 bg-primary-subtle text-foreground"
                       : item.done
                         ? "border-transparent bg-muted/40 text-foreground hover:bg-muted"
                         : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -112,7 +112,7 @@ export function OnboardingChecklist({
               onClick={onSelectFinish}
               className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-start text-sm transition-colors ${
                 currentStep === 4
-                  ? "border-primary/40 bg-primary/5 text-foreground"
+                  ? "border-primary/40 bg-primary-subtle text-foreground"
                   : "border-dashed text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               }`}
             >
@@ -139,9 +139,9 @@ export function OnboardingChecklist({
                   onClick={() => onSelectStep(item.step)}
                   className={`flex size-9 items-center justify-center rounded-full border transition-colors ${
                     item.done
-                      ? "border-success/30 bg-success/10 text-success"
+                      ? "border-success/30 bg-success-soft text-success"
                       : active
-                        ? "border-primary/40 bg-primary/10 text-primary"
+                        ? "border-primary/40 bg-primary-soft text-primary"
                         : "border-border text-muted-foreground"
                   }`}
                 >

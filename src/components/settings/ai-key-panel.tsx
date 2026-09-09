@@ -344,7 +344,7 @@ export function AiKeyPanel({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <span className="flex size-8 items-center justify-center rounded-md bg-primary/10">
+            <span className="flex size-8 items-center justify-center rounded-md bg-primary-soft">
               <Bot className="size-5 text-primary" aria-hidden="true" />
             </span>
             {t("aiKey.title")}
@@ -539,8 +539,8 @@ export function AiKeyPanel({
                   role={result.ok ? "status" : "alert"}
                   className={`flex items-start gap-2 rounded-md p-3 text-sm ${
                     result.ok
-                      ? "bg-success/10 text-success dark:bg-success/15"
-                      : "bg-destructive/10 text-destructive"
+                      ? "bg-success-soft text-success dark:bg-success-strong"
+                      : "bg-destructive-soft text-destructive"
                   }`}
                 >
                   {result.ok ? (

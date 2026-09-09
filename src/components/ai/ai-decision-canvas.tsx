@@ -215,7 +215,7 @@ function SetupNotice({
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warning/20 bg-warning/5 px-4 py-2.5 md:px-6">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-warning/20 bg-warning-subtle px-4 py-2.5 md:px-6">
       <div className="flex min-w-0 items-start gap-2.5">
         <AlertTriangle
           className="mt-0.5 size-4 shrink-0 text-warning"
@@ -269,7 +269,7 @@ function ErrorNotice({
   const persistenceOnly = error.code === "AI_RESPONSE_NOT_PERSISTED";
 
   return (
-    <div className="mx-4 mt-3 flex items-start justify-between gap-3 rounded-xl border border-destructive/25 bg-destructive/[0.06] p-3.5 shadow-sm md:mx-6">
+    <div className="mx-4 mt-3 flex items-start justify-between gap-3 rounded-xl border border-destructive/25 bg-destructive-soft p-3.5 shadow-sm md:mx-6">
       <div className="flex min-w-0 items-start gap-2.5">
         <AlertTriangle
           className="mt-0.5 size-4 shrink-0 text-destructive"
@@ -427,7 +427,7 @@ const MessageBubble = memo(function MessageBubble({
         ) : null}
 
         {message.persistenceWarning ? (
-          <div className="mt-3 rounded-xl border border-warning/25 bg-warning/[0.06] px-3.5 py-3">
+          <div className="mt-3 rounded-xl border border-warning/25 bg-warning-soft px-3.5 py-3">
             <div className="flex items-start gap-2.5">
               <AlertTriangle
                 className="mt-0.5 size-4 shrink-0 text-warning"
@@ -459,7 +459,7 @@ const MessageBubble = memo(function MessageBubble({
               onClick={() => onFeedback(message.id, "up")}
               className={cn(
                 "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
-                message.feedback === "up" && "bg-primary/10 text-primary opacity-100",
+                message.feedback === "up" && "bg-primary-soft text-primary opacity-100",
               )}
             >
               <ThumbsUp className="size-3" aria-hidden="true" />
@@ -474,7 +474,7 @@ const MessageBubble = memo(function MessageBubble({
               onClick={() => onFeedback(message.id, "down")}
               className={cn(
                 "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
-                message.feedback === "down" && "bg-destructive/10 text-destructive opacity-100",
+                message.feedback === "down" && "bg-destructive-soft text-destructive opacity-100",
               )}
             >
               <ThumbsDown className="size-3" aria-hidden="true" />
@@ -545,7 +545,7 @@ function SetupChecklistRow({
         <span
           className={cn(
             "flex size-6 shrink-0 items-center justify-center rounded-md",
-            ready ? "bg-success/10 text-success" : "bg-warning/10 text-warning",
+            ready ? "bg-success-soft text-success" : "bg-warning-soft text-warning",
           )}
         >
           {ready ? (
@@ -607,7 +607,7 @@ function AbilityGroupCard({
               className={cn(
                 "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-caption font-medium transition-colors",
                 sensitive
-                  ? "border-warning/30 bg-warning/[0.08] text-warning"
+                  ? "border-warning/30 bg-warning-soft text-warning"
                   : "border-border/60 bg-background text-foreground",
               )}
             >
@@ -725,7 +725,7 @@ function InboxStrip({
   return (
     <div
       data-ai-inbox-strip="true"
-      className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/[0.10] to-primary/[0.04] px-4 py-3 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_10px_28px_oklch(0_0_0/0.06)] md:mx-6"
+      className="mx-4 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-gradient-to-b from-primary-soft to-primary-subtle px-4 py-3 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_10px_28px_oklch(0_0_0/0.06)] md:mx-6"
     >
       <div className="flex min-w-0 items-start gap-2.5">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
@@ -767,7 +767,7 @@ function StartSurface({
         heading and spacing do the work.
       */}
       <div className="flex items-start gap-4">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary">
           <BrainCircuit className="size-6" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
@@ -783,7 +783,7 @@ function StartSurface({
           </p>
         </div>
         {pendingCount > 0 ? (
-          <p className="hidden shrink-0 rounded-full border border-warning/30 bg-warning/[0.09] px-2.5 py-1 text-caption font-bold tabular-nums text-warning sm:block">
+          <p className="hidden shrink-0 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-caption font-bold tabular-nums text-warning sm:block">
             {getAiDecisionCopy(workspace.locale, "inboxStripCount", { count: pendingCount })}
           </p>
         ) : null}
@@ -873,10 +873,10 @@ function StartSurface({
             >
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 start-0 w-1 bg-gradient-to-b from-primary/50 to-primary/5 opacity-0 transition-opacity duration-200 group-hover/starter:opacity-100"
+                className="pointer-events-none absolute inset-y-0 start-0 w-1 bg-gradient-to-b from-primary/50 to-primary-subtle opacity-0 transition-opacity duration-200 group-hover/starter:opacity-100"
               />
               <span className="flex items-start gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary/16 to-primary/[0.05] text-primary shadow-sm">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary shadow-sm">
                   <Icon className="size-[18px]" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -887,7 +887,7 @@ function StartSurface({
                     {count ? (
                       <span
                         data-ai-briefing-count={starter.id}
-                        className="shrink-0 rounded-full border border-primary/25 bg-primary/[0.09] px-2 py-0.5 text-caption font-bold tabular-nums text-primary"
+                        className="shrink-0 rounded-full border border-primary/25 bg-primary-soft px-2 py-0.5 text-caption font-bold tabular-nums text-primary"
                       >
                         {getAiDecisionCopy(workspace.locale, count.copyKey, {
                           count: count.count,
@@ -1259,7 +1259,7 @@ export function AiDecisionCanvas({
               <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
             </Button>
           ) : null}
-          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary/12 to-primary/[0.04] text-primary shadow-sm">
+          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary shadow-sm">
             <Bot className="size-4" aria-hidden="true" />
             {workspace.setup ? (
               // Configuration truth on the avatar (AI-26): consent+key state
@@ -1462,7 +1462,7 @@ export function AiDecisionCanvas({
                 {proposals.length > 0 ? (
                   <section
                     data-ai-inline-proposals="true"
-                    className="ms-11 max-w-3xl rounded-2xl border border-primary/25 bg-primary/[0.04] p-4"
+                    className="ms-11 max-w-3xl rounded-2xl border border-primary/25 bg-primary-subtle p-4"
                     aria-labelledby="ai-proposed-changes-title"
                   >
                     <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
@@ -1536,7 +1536,7 @@ export function AiDecisionCanvas({
         {editingMessage ? (
           <div
             data-ai-editing="true"
-            className="mx-auto mb-2 flex w-full max-w-4xl items-center justify-between gap-3 rounded-xl border border-warning/30 bg-warning/[0.07] px-3.5 py-2.5"
+            className="mx-auto mb-2 flex w-full max-w-4xl items-center justify-between gap-3 rounded-xl border border-warning/30 bg-warning-soft px-3.5 py-2.5"
           >
             <p className="min-w-0 truncate text-xs text-foreground">
               {copy("editingNotice")}
@@ -1659,7 +1659,7 @@ export function AiDecisionCanvas({
               size="icon"
               variant="outline"
               aria-label={workspace.copy("stop")}
-              className="shrink-0 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="shrink-0 rounded-xl border-destructive/30 text-destructive hover:bg-destructive-soft hover:text-destructive"
               onClick={stop}
             >
               <Square className="size-4" aria-hidden="true" />

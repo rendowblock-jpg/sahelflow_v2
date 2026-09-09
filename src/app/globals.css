@@ -64,8 +64,8 @@
 
   /* ── Semantic tints — INTERFACE_SYSTEM.md §4 ─────────────────────────────
      Three authorized steps per semantic color, replacing the 20+ ad-hoc alpha
-     values in use (bg-primary/[0.025], /[0.04], /[0.055], /[0.06], /[0.07],
-     /[0.09], bg-warning/[0.035], /[0.09], ...). color-mix resolves lazily at
+     values formerly in use (bg-primary/[0.025], /[0.04], /[0.055], /[0.06],
+     /[0.07], /[0.09], bg-warning/[0.035], /[0.09], ...). color-mix resolves lazily at
      the use site, so each tint tracks the active preset and mode the way
      --primary-hover already does.
        subtle — resting background of an informational region
@@ -173,7 +173,7 @@
 
   --destructive: oklch(0.577 0.245 27.325);
   /* Feedback semantics are calibrated for their RENDERED role — colored text
-     on canvas/card tints (bg-success/10 chips, text-success, ...) — at WCAG AA
+     on canvas/card tints (bg-success-soft chips, text-success, ...) — at WCAG AA
      (>= 4.5:1). Solid -foreground pairs are gated too where they pass; the
      light warning solid pair never renders (warning surfaces carry dark text
      on tinted fills only) — see contrast-contract.test.ts. */

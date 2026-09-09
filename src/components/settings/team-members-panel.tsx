@@ -309,7 +309,7 @@ export function TeamMembersPanel() {
                       <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                         {copy[member.role]}
                       </span>
-                      <span className={`rounded-full px-2 py-0.5 text-xs ${revoked ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-xs ${revoked ? "bg-destructive-soft text-destructive" : "bg-primary-soft text-primary"}`}>
                         {revoked ? copy.revoked : copy.active}
                       </span>
                     </div>

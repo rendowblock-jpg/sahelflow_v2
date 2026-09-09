@@ -269,9 +269,9 @@ const ConversationRow = memo(function ConversationRow({
       className={cn(
         "group relative flex min-h-[4.75rem] w-full items-start gap-2.5 overflow-hidden border-b border-border/55 px-3 py-2.5 text-start outline-none transition-colors last:border-b-0 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
         selectMode && checked
-          ? "bg-primary/[0.07]"
+          ? "bg-primary-soft"
           : active
-            ? "bg-primary/[0.055]"
+            ? "bg-primary-subtle"
             : "bg-background hover:bg-muted/35",
         cursorActive && !active && "bg-muted/45 ring-1 ring-inset ring-primary/40",
       )}
@@ -296,7 +296,7 @@ const ConversationRow = memo(function ConversationRow({
         </span>
       ) : (
         <Avatar className="mt-0.5 size-9 shrink-0 border border-border/70 bg-background">
-          <AvatarFallback className="bg-primary/7 text-[13px] font-semibold text-primary">
+          <AvatarFallback className="bg-primary-soft text-[13px] font-semibold text-primary">
             {chat.name.charAt(0).toUpperCase() || (
               <MessageSquareText className="size-4" />
             )}
@@ -819,7 +819,7 @@ export function InboxV3Queue({
             className={cn(
               "inline-flex size-8 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
               queueFilter === "unassigned"
-                ? "border-primary/25 bg-primary/9 text-primary"
+                ? "border-primary/25 bg-primary-soft text-primary"
                 : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
             )}
           >
@@ -837,7 +837,7 @@ export function InboxV3Queue({
                 className={cn(
                   "inline-flex size-8 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                   priorityFilter !== "" || labelFilter !== ""
-                    ? "border-primary/25 bg-primary/9 text-primary"
+                    ? "border-primary/25 bg-primary-soft text-primary"
                     : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                 )}
               >
@@ -863,7 +863,7 @@ export function InboxV3Queue({
                     className={cn(
                       "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                       priorityFilter === value
-                        ? "border-primary/25 bg-primary/9 text-primary"
+                        ? "border-primary/25 bg-primary-soft text-primary"
                         : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                     )}
                   >
@@ -886,7 +886,7 @@ export function InboxV3Queue({
                       className={cn(
                         "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                         labelFilter === ""
-                          ? "border-primary/25 bg-primary/9 text-primary"
+                          ? "border-primary/25 bg-primary-soft text-primary"
                           : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                       )}
                     >
@@ -905,7 +905,7 @@ export function InboxV3Queue({
                         className={cn(
                           "inline-flex h-7 max-w-36 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                           labelFilter === label
-                            ? "border-primary/25 bg-primary/9 text-primary"
+                            ? "border-primary/25 bg-primary-soft text-primary"
                             : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                         )}
                       >
@@ -951,7 +951,7 @@ export function InboxV3Queue({
             data-inbox-select-toolbar="true"
           >
             <div
-              className="flex min-w-32 flex-1 items-center rounded-full bg-primary/[0.08] p-0.5"
+              className="flex min-w-32 flex-1 items-center rounded-full bg-primary-soft p-0.5"
               role="group"
               aria-label={copy("selectChats")}
             >
@@ -1095,7 +1095,7 @@ export function InboxV3Queue({
                 className={cn(
                   "inline-flex h-7 items-center justify-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                   selected
-                    ? "border-primary/25 bg-primary/9 text-primary"
+                    ? "border-primary/25 bg-primary-soft text-primary"
                     : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                 )}
               >
@@ -1162,12 +1162,12 @@ export function InboxV3Queue({
             {normalizedQuery &&
             searchState.query === normalizedQuery &&
             searchState.error ? (
-              <div className="flex items-center justify-between gap-2 border-b border-border/55 bg-destructive/8 px-3 py-2 text-caption text-destructive">
+              <div className="flex items-center justify-between gap-2 border-b border-border/55 bg-destructive-soft px-3 py-2 text-caption text-destructive">
                 <span>{copy("searchFailed")}</span>
                 <button
                   type="button"
                   onClick={() => setSearchAttempt((attempt) => attempt + 1)}
-                  className="shrink-0 rounded-full border border-destructive/30 px-2 py-0.5 font-medium outline-none transition-colors hover:bg-destructive/12 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="shrink-0 rounded-full border border-destructive/30 px-2 py-0.5 font-medium outline-none transition-colors hover:bg-destructive-strong focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {copy("searchRetry")}
                 </button>

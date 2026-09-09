@@ -333,7 +333,7 @@ export function AiWorkHistory({
             </div>
           ) : null}
           {(inbox?.length ?? 0) > 0 ? (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/[0.08] px-2.5 py-1 text-caption font-semibold text-warning">
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-caption font-semibold text-warning">
               <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
               {getAiDecisionCopy(locale, "inboxStripCount", { count: inbox?.length ?? 0 })}
             </p>
@@ -495,10 +495,10 @@ export function AiWorkHistory({
                               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                               "disabled:cursor-not-allowed disabled:opacity-50",
                               active
-                                ? "border-primary/15 bg-primary/[0.06]"
+                                ? "border-primary/15 bg-primary-soft"
                                 : "hover:bg-muted/55",
                               deleteArmed &&
-                                "border-destructive/30 bg-destructive/[0.05]",
+                                "border-destructive/30 bg-destructive-subtle",
                             )}
                           >
                             <span className="flex items-start justify-between gap-2">
@@ -523,7 +523,7 @@ export function AiWorkHistory({
                               {active && reviewCount > 0 ? (
                                 <Badge
                                   variant="outline"
-                                  className="shrink-0 rounded-full border-primary/25 bg-primary/[0.06] px-2 text-caption font-semibold tabular-nums text-primary"
+                                  className="shrink-0 rounded-full border-primary/25 bg-primary-soft px-2 text-caption font-semibold tabular-nums text-primary"
                                 >
                                   <span className="sr-only">
                                     {`${getAiDecisionCopy(locale, "needsReview")}: `}
@@ -543,7 +543,7 @@ export function AiWorkHistory({
                                 "absolute end-1 top-1.5 flex items-center gap-0.5 rounded-md border border-border/60 bg-background/90 p-0.5 shadow-sm backdrop-blur-sm transition-opacity",
                                 "opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 md:focus-within:opacity-100",
                                 (active || deleteArmed) && "md:opacity-100",
-                                deleteArmed && "border-destructive/30 bg-destructive/[0.06]",
+                                deleteArmed && "border-destructive/30 bg-destructive-soft",
                               )}
                             >
                               <Button
@@ -570,7 +570,7 @@ export function AiWorkHistory({
                                 className={cn(
                                   "size-6",
                                   deleteArmed &&
-                                    "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                                    "text-destructive hover:bg-destructive-soft hover:text-destructive",
                                 )}
                                 data-ai-session-delete={session.id}
                                 aria-label={

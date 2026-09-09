@@ -333,7 +333,7 @@ export function DeliveryCredentialsPanelWave3() {
           }) : null}
 
           {result ? (
-            <div role={result.ok ? "status" : "alert"} className={result.ok ? "flex items-center gap-2 rounded-md bg-success/10 p-3 text-sm text-success" : "rounded-md bg-destructive/10 p-3 text-sm text-destructive"}>
+            <div role={result.ok ? "status" : "alert"} className={result.ok ? "flex items-center gap-2 rounded-md bg-success-soft p-3 text-sm text-success" : "rounded-md bg-destructive-soft p-3 text-sm text-destructive"}>
               {result.ok ? <CheckCircle2 className="size-4" aria-hidden="true" /> : null}{result.message}
             </div>
           ) : null}

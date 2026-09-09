@@ -440,7 +440,7 @@ export function StorefrontStudio({
             saveState === "conflict"
           }
           onClick={() => void publish()}
-          className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-primary px-3 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
+          className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-primary px-3 text-xs font-semibold text-primary hover:bg-primary-soft disabled:opacity-50"
         >
           <Cloud className="size-3.5" />
           {t("storefront.studio.publish")}
@@ -448,7 +448,7 @@ export function StorefrontStudio({
       </header>
 
       {conflict ? (
-        <div className="flex flex-wrap items-center gap-3 border-b border-warning/30 bg-warning/8 px-4 py-2 text-xs">
+        <div className="flex flex-wrap items-center gap-3 border-b border-warning/30 bg-warning-soft px-4 py-2 text-xs">
           <AlertTriangle className="size-4 text-warning" />
           <span className="flex-1">{t("storefront.studio.conflictNotice")}</span>
           <button
@@ -1159,7 +1159,7 @@ function SectionInspector({
                         deleteStorefrontBlock(draft, section.id, block.id),
                       )
                     }
-                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
                   >
                     <Trash2 className="size-3.5" />
                   </button>
@@ -1261,7 +1261,7 @@ function SectionInspector({
                         deleteStorefrontBlock(draft, section.id, block.id),
                       )
                     }
-                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
                   >
                     <Trash2 className="size-3.5" />
                   </button>

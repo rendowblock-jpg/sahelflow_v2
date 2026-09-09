@@ -487,7 +487,7 @@ export function ConversationCollaborationInline({
                           key={member.memberId}
                           className={cn(
                             "flex min-h-9 items-center gap-2 rounded-md px-2 text-xs",
-                            checked ? "bg-primary/8 text-foreground" : "hover:bg-muted/60",
+                            checked ? "bg-primary-soft text-foreground" : "hover:bg-muted/60",
                           )}
                         >
                           <input

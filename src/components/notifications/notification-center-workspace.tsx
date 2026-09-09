@@ -227,7 +227,7 @@ export function NotificationCenterWorkspace() {
         <div className="flex items-center gap-2">
           {feed.unreadCount > 0 ? (
             <span
-              className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-caption font-semibold tabular-nums text-primary"
+              className="inline-flex items-center rounded-full bg-primary-soft px-2.5 py-1 text-caption font-semibold tabular-nums text-primary"
               data-testid="notifications-unread-pill"
             >
               {t("notifications.unreadCount", { count: feed.unreadCount })}
@@ -430,7 +430,7 @@ export function NotificationCenterWorkspace() {
                   return (
                     <li
                       key={item.id}
-                      className={`group relative flex items-start gap-3 p-4 transition-colors motion-reduce:transition-none hover:bg-muted/25 ${item.read ? "" : "bg-primary/[0.06]"}`}
+                      className={`group relative flex items-start gap-3 p-4 transition-colors motion-reduce:transition-none hover:bg-muted/25 ${item.read ? "" : "bg-primary-soft"}`}
                       data-unread={item.read ? undefined : "true"}
                     >
                       <span

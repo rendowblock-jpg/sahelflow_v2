@@ -146,12 +146,12 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
               : date.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
             const busy = rollingBack === release.releaseId;
             return (
-              <article key={release.releaseId} className={`rounded-xl border p-3 ${release.isActive ? "border-primary/50 bg-primary/5" : "bg-muted/20"}`}>
+              <article key={release.releaseId} className={`rounded-xl border p-3 ${release.isActive ? "border-primary/50 bg-primary-subtle" : "bg-muted/20"}`}>
                 <div className="flex items-center gap-2">
                   {release.isActive ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> : <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />}
                   <span className="text-xs font-semibold capitalize">{release.templateId}</span>
                   <span className="text-caption uppercase text-muted-foreground">{release.locale}</span>
-                  {release.isActive ? <span className="ms-auto rounded-full bg-primary/10 px-2 py-0.5 text-caption font-semibold text-primary">{t("storefront.releaseHistory.current")}</span> : null}
+                  {release.isActive ? <span className="ms-auto rounded-full bg-primary-soft px-2 py-0.5 text-caption font-semibold text-primary">{t("storefront.releaseHistory.current")}</span> : null}
                 </div>
                 <p className="mt-2 text-caption text-muted-foreground">{dateLabel}</p>
                 <p className="mt-1 font-mono text-caption text-muted-foreground">{release.artifactDigest.slice(0, 12)}… · {release.catalog.length} {t("storefront.releaseHistory.products")}</p>

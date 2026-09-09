@@ -503,7 +503,7 @@ function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
                 </div>
               ) : null}
               {result && !result.ok ? (
-                <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-2 text-xs text-destructive">
+                <div className="flex items-start gap-2 rounded-md bg-destructive-soft p-2 text-xs text-destructive">
                   <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
                   <span>{result.message}</span>
                 </div>

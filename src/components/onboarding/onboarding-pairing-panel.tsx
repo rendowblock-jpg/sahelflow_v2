@@ -198,7 +198,7 @@ export function OnboardingPairingPanel({
       <div className="px-6 py-6">
         {phase === "starting" || phase === "waiting-qr" ? (
           <div className="flex min-h-64 flex-col items-center justify-center text-center">
-            <div className="flex size-14 items-center justify-center rounded-2xl border bg-primary/8 text-primary">
+            <div className="flex size-14 items-center justify-center rounded-2xl border bg-primary-soft text-primary">
               <Loader2 className="size-6 animate-spin" aria-hidden="true" />
             </div>
             <h3 className="mt-5 text-base font-semibold">
@@ -242,7 +242,7 @@ export function OnboardingPairingPanel({
             </div>
 
             <div className="text-start">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
                 <Smartphone className="size-5" aria-hidden="true" />
               </div>
               <h3 className="mt-4 text-base font-semibold">
@@ -277,7 +277,7 @@ export function OnboardingPairingPanel({
             data-onboarding-pairing-connected="true"
             className="flex min-h-64 flex-col items-center justify-center text-center"
           >
-            <div className="flex size-14 items-center justify-center rounded-2xl bg-success/10 text-success">
+            <div className="flex size-14 items-center justify-center rounded-2xl bg-success-soft text-success">
               <CheckCircle2 className="size-7" aria-hidden="true" />
             </div>
             <h3 className="mt-5 text-base font-semibold">
@@ -291,7 +291,7 @@ export function OnboardingPairingPanel({
 
         {phase === "unavailable" || phase === "disconnected" ? (
           <div className="flex min-h-64 flex-col items-center justify-center text-center">
-            <div className="flex size-14 items-center justify-center rounded-2xl border bg-destructive/8 text-destructive">
+            <div className="flex size-14 items-center justify-center rounded-2xl border bg-destructive-soft text-destructive">
               {phase === "unavailable" ? (
                 <WifiOff className="size-6" aria-hidden="true" />
               ) : (

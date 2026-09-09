@@ -144,7 +144,7 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
             {copy("loading")}
           </div>
         ) : loadState === "error" ? (
-          <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-warning/25 bg-warning/5 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-warning/25 bg-warning-subtle p-4">
             <div className="flex min-w-0 items-start gap-3">
               <AlertTriangle
                 className="mt-0.5 size-5 shrink-0 text-warning"

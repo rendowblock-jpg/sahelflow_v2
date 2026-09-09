@@ -127,7 +127,7 @@ function RejectReasonForm({
               className={cn(
                 "rounded-md border px-2 py-1 text-xs outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 selected
-                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  ? "border-destructive/40 bg-destructive-soft text-destructive"
                   : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground",
               )}
             >

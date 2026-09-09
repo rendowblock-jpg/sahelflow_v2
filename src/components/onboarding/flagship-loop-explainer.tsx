@@ -54,7 +54,7 @@ export function FlagshipLoopExplainer({
             const Icon = beat.icon;
             return (
               <li key={beat.title} className="flex items-center gap-2">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
                   <Icon className="size-3.5" aria-hidden="true" />
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -93,7 +93,7 @@ export function FlagshipLoopExplainer({
               className="relative flex flex-col gap-2 rounded-lg border bg-background p-4"
             >
               <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-primary-soft text-primary">
                   <Icon className="size-4" aria-hidden="true" />
                 </span>
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

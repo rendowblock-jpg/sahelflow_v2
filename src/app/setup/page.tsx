@@ -118,7 +118,7 @@ export default function SetupPage() {
             </div>
 
             {error ? (
-              <p className="rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive" role="alert">
+              <p className="rounded-md border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive" role="alert">
                 {error}
               </p>
             ) : null}
