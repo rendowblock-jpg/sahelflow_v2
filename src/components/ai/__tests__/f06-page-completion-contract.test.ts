@@ -175,41 +175,51 @@ describe("F-06 AI page-completion wave", () => {
   });
 
   it("presents the agents workforce from live capability truth (F-06)", () => {
-    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the start surface into its own module; these
+    // assertions follow the code they protect.
+    const startSurface = read("src/components/ai/ai-start-surface.tsx");
 
-    expect(canvas).toContain('data-ai-abilities="true"');
-    expect(canvas).toContain("AbilityGroupCard");
-    expect(canvas).toContain("getAiToolGroupLabel");
-    expect(canvas).toContain("getAiToolLabel");
+    expect(startSurface).toContain('data-ai-abilities="true"');
+    expect(startSurface).toContain("AbilityGroupCard");
+    expect(startSurface).toContain("getAiToolGroupLabel");
+    expect(startSurface).toContain("getAiToolLabel");
     // Sensitive abilities are marked as needing approval, visibly.
-    expect(canvas).toContain('data-ai-ability-class={tool.executionClass}');
-    expect(canvas).toContain('"abilityNeedsApproval"');
+    expect(startSurface).toContain('data-ai-ability-class={tool.executionClass}');
+    expect(startSurface).toContain('"abilityNeedsApproval"');
     // Loading renders a structure-matching skeleton, failure renders honest
     // unavailability — never stale marketing copy as if it were live truth.
-    expect(canvas).toContain('data-ai-abilities-skeleton="true"');
-    expect(canvas).toContain('"abilitiesUnavailable"');
+    expect(startSurface).toContain('data-ai-abilities-skeleton="true"');
+    expect(startSurface).toContain('"abilitiesUnavailable"');
   });
 
   it("grounds the start surface in the shop's real counts (F-06)", () => {
-    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the start surface into its own module; these
+    // assertions follow the code they protect.
+    const startSurface = read("src/components/ai/ai-start-surface.tsx");
 
-    expect(canvas).toContain("starterCount(");
-    expect(canvas).toContain('data-ai-briefing-count={starter.id}');
-    // The start surface hosts the workforce panel.
-    expect(canvas.indexOf("AbilitiesPanel workspace={workspace}")).toBeGreaterThan(
-      canvas.indexOf('data-ai-start-state="true"'),
-    );
+    expect(startSurface).toContain("starterCount(");
+    expect(startSurface).toContain('data-ai-briefing-count={starter.id}');
+    // The start surface hosts the workforce panel. STR-01 moved both halves of
+    // this ordering check into the same new module, so the relationship it
+    // protects — abilities rendered INSIDE the start state, not above it — is
+    // asserted there and is unchanged.
+    expect(
+      startSurface.indexOf("AbilitiesPanel workspace={workspace}"),
+    ).toBeGreaterThan(startSurface.indexOf('data-ai-start-state="true"'));
   });
 
   it("surfaces the shop-wide approval loop where the seller works (F-06)", () => {
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the start surface into its own module; these
+    // assertions follow the code they protect.
+    const startSurface = read("src/components/ai/ai-start-surface.tsx");
 
     // The strip names pending work from ALL sessions and opens the review.
-    expect(canvas).toContain('data-ai-inbox-strip="true"');
-    expect(canvas).toContain('"inboxStripCount"');
+    expect(startSurface).toContain('data-ai-inbox-strip="true"');
+    expect(startSurface).toContain('"inboxStripCount"');
     expect(canvas).toContain('"inboxStripOpen"');
     // Honest absence: no strip while loading or after an inbox failure.
-    expect(canvas).toContain("inboxLoading || inboxError || inbox.length === 0");
+    expect(startSurface).toContain("inboxLoading || inboxError || inbox.length === 0");
     // The header badge is shop-wide, not session-only.
     expect(canvas).toContain("reviewBadgeCount");
   });

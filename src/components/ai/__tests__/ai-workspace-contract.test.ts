@@ -102,12 +102,14 @@ describe("AI Class-AAA decision workspace contract", () => {
 
   it("keeps degraded setup and action-history truth distinct from empty states", () => {
     const hook = read("src/hooks/use-ai-workspace.ts");
-    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the start surface into its own module; these
+    // assertions follow the code they protect.
+    const startSurface = read("src/components/ai/ai-start-surface.tsx");
     const review = read("src/components/ai/ai-review-evidence.tsx");
     expect(hook).toContain("AiSetupState | null");
     expect(hook).toContain("setupError");
     expect(hook).toContain("actionHistoryError");
-    expect(canvas).toContain('workspace.copy("setupUnavailable")');
+    expect(startSurface).toContain('workspace.copy("setupUnavailable")');
     expect(review).toContain("actionHistoryError");
     expect(review).toContain('getAiDecisionCopy(locale, "actionHistoryIssue")');
     expect(review).toContain("proposals.length === 0");

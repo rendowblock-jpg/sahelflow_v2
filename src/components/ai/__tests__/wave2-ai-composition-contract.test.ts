@@ -66,11 +66,14 @@ describe("Class-AAA AI composition contract", () => {
 
   it("keeps starter jobs contextual and proposals first-class", () => {
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the start surface into its own module; these
+    // assertions follow the code they protect.
+    const startSurface = read("src/components/ai/ai-start-surface.tsx");
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
 
-    expect(canvas).toContain('data-ai-start-state="true"');
+    expect(startSurface).toContain('data-ai-start-state="true"');
     expect(canvas).toContain("messages.length === 0");
-    expect(canvas).toContain("STARTERS.map");
+    expect(startSurface).toContain("STARTERS.map");
     expect(canvas).toContain("AiActionProposalCard");
     expect(shell).not.toContain("AiOperationalLaunchpad");
   });

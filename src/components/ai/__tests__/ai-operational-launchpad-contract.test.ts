@@ -12,6 +12,9 @@ describe("AI Class-AAA start-state authority", () => {
   it("keeps focused seller jobs inside the empty decision canvas instead of permanent chrome", () => {
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the start surface into its own module; these
+    // assertions follow the code they protect.
+    const startSurface = read("src/components/ai/ai-start-surface.tsx");
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
     const copy = read("src/lib/i18n/ai-workspace.ts");
 
@@ -19,9 +22,9 @@ describe("AI Class-AAA start-state authority", () => {
     expect(shell).not.toContain("AiOperationalLaunchpad");
     expect(shell).not.toContain('from "@/components/ai/ai-workspace"');
     expect(shell).not.toContain("<AiWorkspace ");
-    expect(canvas).toContain('data-ai-start-state="true"');
+    expect(startSurface).toContain('data-ai-start-state="true"');
     expect(canvas).toContain("messages.length === 0");
-    expect(canvas).toContain("STARTERS.map");
+    expect(startSurface).toContain("STARTERS.map");
     expect(copy).toContain("launchPendingPrompt");
     expect(copy).toContain("launchRevenuePrompt");
     expect(copy).toContain("launchReturnsPrompt");
@@ -36,23 +39,25 @@ describe("AI Class-AAA start-state authority", () => {
   });
 
   it("explains AI capabilities on the unconfigured start surface (AI-25)", () => {
-    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the start surface into its own module; these
+    // assertions follow the code they protect.
+    const startSurface = read("src/components/ai/ai-start-surface.tsx");
 
-    expect(canvas).toContain(
+    expect(startSurface).toContain(
       'getAiDecisionCopy(workspace.locale, "setupRequiredTitle")',
     );
-    expect(canvas).toContain(
+    expect(startSurface).toContain(
       'getAiDecisionCopy(workspace.locale, "setupRequiredCapabilities")',
     );
-    expect(canvas).toContain(
+    expect(startSurface).toContain(
       'getAiDecisionCopy(workspace.locale, "setupRequiredPrivacyNote")',
     );
-    expect(canvas).toContain('"setupChipPendingOrders"');
-    expect(canvas).toContain('href="/settings?group=intelligence"');
+    expect(startSurface).toContain('"setupChipPendingOrders"');
+    expect(startSurface).toContain('href="/settings?group=intelligence"');
     // truthful state split: the explainer renders only after setup resolves
     // (the checking banner owns the loading state), starters stay gated
-    expect(canvas).toContain("!ready && workspace.setup");
-    expect(canvas).toContain("disabled={!ready || starting}");
+    expect(startSurface).toContain("!ready && workspace.setup");
+    expect(startSurface).toContain("disabled={!ready || starting}");
   });
 
   it("resolves the adopted setup-explainer copy in every locale", () => {
