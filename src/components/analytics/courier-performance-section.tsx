@@ -276,7 +276,7 @@ export async function CourierPerformanceSection({
                               )}
                             >
                               {percentFormatter.format(cell.successRate / 100)}
-                              <span className="ms-1 text-2xs opacity-75">
+                              <span className="ms-1 text-caption opacity-75">
                                 {integerFormatter.format(cell.delivered)}/
                                 {integerFormatter.format(cell.shipments)}
                               </span>

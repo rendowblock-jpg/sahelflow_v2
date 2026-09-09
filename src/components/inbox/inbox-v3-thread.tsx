@@ -1721,7 +1721,7 @@ export function InboxV3Thread({
           >
             <ArrowDown className="size-4" aria-hidden="true" />
             {missedMessageCount > 0 ? (
-              <span className="absolute -end-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 tabular-nums text-primary-foreground">
+              <span className="absolute -end-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-caption font-bold leading-4 tabular-nums text-primary-foreground">
                 {missedMessageCount > 99 ? "99+" : missedMessageCount}
               </span>
             ) : null}

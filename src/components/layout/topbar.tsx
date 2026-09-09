@@ -306,7 +306,7 @@ export function Topbar({
         </span>
         <kbd
           dir="ltr"
-          className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-md border border-border/80 bg-background/80 px-1.5 font-mono text-2xs font-medium text-muted-foreground shadow-sm [unicode-bidi:isolate]"
+          className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-md border border-border/80 bg-background/80 px-1.5 font-mono text-caption font-medium text-muted-foreground shadow-sm [unicode-bidi:isolate]"
         >
           <span aria-hidden="true">Ctrl</span>
           <span aria-hidden="true">K</span>
@@ -337,7 +337,7 @@ export function Topbar({
               disabled={isLocalePending}
             >
               <Globe className="size-4" aria-hidden="true" />
-              <span className="hidden text-2xs font-semibold uppercase sm:inline">
+              <span className="hidden text-caption font-semibold uppercase sm:inline">
                 {locale}
               </span>
             </Button>
@@ -376,7 +376,7 @@ export function Topbar({
             >
               <Bell className="size-4" aria-hidden="true" />
               {unreadCount > 0 ? (
-                <span className="absolute end-0 top-0 flex min-w-3.5 -translate-y-0.5 translate-x-0.5 items-center justify-center rounded-full bg-background px-1 text-2xs font-bold leading-3.5 text-destructive ring-1 ring-destructive rtl:-translate-x-0.5">
+                <span className="absolute end-0 top-0 flex min-w-3.5 -translate-y-0.5 translate-x-0.5 items-center justify-center rounded-full bg-background px-1 text-caption font-bold leading-3.5 text-destructive ring-1 ring-destructive rtl:-translate-x-0.5">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               ) : null}
@@ -432,7 +432,7 @@ export function Topbar({
                             {notification.body}
                           </span>
                         ) : null}
-                        <span className="block text-2xs text-muted-foreground/70">
+                        <span className="block text-caption text-muted-foreground/70">
                           {notification.time}
                         </span>
                       </span>

@@ -150,17 +150,17 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
                 <div className="flex items-center gap-2">
                   {release.isActive ? <CheckCircle2 className="h-3.5 w-3.5 text-primary" /> : <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />}
                   <span className="text-xs font-semibold capitalize">{release.templateId}</span>
-                  <span className="text-2xs uppercase text-muted-foreground">{release.locale}</span>
-                  {release.isActive ? <span className="ms-auto rounded-full bg-primary/10 px-2 py-0.5 text-2xs font-semibold text-primary">{t("storefront.releaseHistory.current")}</span> : null}
+                  <span className="text-caption uppercase text-muted-foreground">{release.locale}</span>
+                  {release.isActive ? <span className="ms-auto rounded-full bg-primary/10 px-2 py-0.5 text-caption font-semibold text-primary">{t("storefront.releaseHistory.current")}</span> : null}
                 </div>
-                <p className="mt-2 text-2xs text-muted-foreground">{dateLabel}</p>
-                <p className="mt-1 font-mono text-2xs text-muted-foreground">{release.artifactDigest.slice(0, 12)}… · {release.catalog.length} {t("storefront.releaseHistory.products")}</p>
+                <p className="mt-2 text-caption text-muted-foreground">{dateLabel}</p>
+                <p className="mt-1 font-mono text-caption text-muted-foreground">{release.artifactDigest.slice(0, 12)}… · {release.catalog.length} {t("storefront.releaseHistory.products")}</p>
                 {!release.isActive && active ? (
                   <button
                     type="button"
                     disabled={rollingBack !== null}
                     onClick={() => setRollbackTarget(release)}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-2xs font-semibold hover:bg-background disabled:opacity-50"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-caption font-semibold hover:bg-background disabled:opacity-50"
                   >
                     {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
                     {busy ? t("storefront.releaseHistory.rollingBack") : t("storefront.releaseHistory.rollback")}

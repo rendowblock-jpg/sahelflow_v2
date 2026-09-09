@@ -227,7 +227,7 @@ export function NotificationCenterWorkspace() {
         <div className="flex items-center gap-2">
           {feed.unreadCount > 0 ? (
             <span
-              className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-2xs font-semibold tabular-nums text-primary"
+              className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-caption font-semibold tabular-nums text-primary"
               data-testid="notifications-unread-pill"
             >
               {t("notifications.unreadCount", { count: feed.unreadCount })}
@@ -256,7 +256,7 @@ export function NotificationCenterWorkspace() {
           </span>
           <div className="min-w-0">
             <h2 id="notification-preferences" className="text-sm font-semibold">{t("notifications.preferences")}</h2>
-            <p className="mt-0.5 text-2xs text-muted-foreground">{t("notifications.preferencesDescription")}</p>
+            <p className="mt-0.5 text-caption text-muted-foreground">{t("notifications.preferencesDescription")}</p>
           </div>
         </div>
         {preference ? (
@@ -352,7 +352,7 @@ export function NotificationCenterWorkspace() {
           >
             {t(`notifications.filter.${value}`)}
             {value === "unread" && feed.unreadCount > 0 ? (
-              <span className="ms-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-2xs font-semibold leading-none tabular-nums text-primary-foreground">
+              <span className="ms-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-caption font-semibold leading-none tabular-nums text-primary-foreground">
                 {feed.unreadCount}
                 <span className="sr-only">{t("notifications.unread")}</span>
               </span>
@@ -419,7 +419,7 @@ export function NotificationCenterWorkspace() {
           {groups.map((group, index) => (
             <div key={group.key} data-day-group={group.key}>
               <h3
-                className={`sticky top-0 z-10 bg-card/90 px-4 py-2 text-2xs font-semibold tracking-wide text-muted-foreground backdrop-blur-sm ${index === 0 ? "rounded-t-xl" : "border-t border-border/60"}`}
+                className={`sticky top-0 z-10 bg-card/90 px-4 py-2 text-caption font-semibold tracking-wide text-muted-foreground backdrop-blur-sm ${index === 0 ? "rounded-t-xl" : "border-t border-border/60"}`}
               >
                 {group.label}
               </h3>
@@ -458,7 +458,7 @@ export function NotificationCenterWorkspace() {
                           >
                             {item.title}
                           </Link>
-                          <time className="ms-auto text-2xs tabular-nums text-muted-foreground" dateTime={item.createdAt}>{item.time}</time>
+                          <time className="ms-auto text-caption tabular-nums text-muted-foreground" dateTime={item.createdAt}>{item.time}</time>
                         </div>
                         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
                       </div>
@@ -497,7 +497,7 @@ export function NotificationCenterWorkspace() {
           </Button>
         </div>
       ) : items.length > 0 && !feed.error ? (
-        <div className="flex items-center gap-3 text-2xs text-muted-foreground" aria-hidden="true">
+        <div className="flex items-center gap-3 text-caption text-muted-foreground" aria-hidden="true">
           <span className="h-px flex-1 bg-border/60" />
           <History className="size-3.5" />
           <span className="h-px flex-1 bg-border/60" />
@@ -519,7 +519,7 @@ function PreferenceToggle({ label, checked, onChange }: { label: string; checked
 
 function PreferenceChip({ icon: Icon, children }: { icon: typeof Clock3; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/25 px-2.5 py-1 text-2xs text-muted-foreground">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/25 px-2.5 py-1 text-caption text-muted-foreground">
       <Icon className="size-3.5" aria-hidden="true" />
       {children}
     </span>
