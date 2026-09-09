@@ -41,6 +41,9 @@ describe("Class-AAA AI composition contract", () => {
   it("keeps the decision canvas dominant and review progressive at 1366", () => {
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the conversation log into its own module; these
+    // assertions follow the code they protect.
+    const log = read("src/components/ai/ai-message-log.tsx");
 
     expect(workspace).toContain('grid-cols-[17.5rem_minmax(0,1fr)]');
     expect(workspace).toContain(
@@ -48,7 +51,7 @@ describe("Class-AAA AI composition contract", () => {
     );
     expect(workspace).toContain('useMediaQuery("(min-width: 1500px)")');
     expect(canvas).toContain('data-ai-decision-canvas="true"');
-    expect(canvas).toContain('data-ai-inline-proposals="true"');
+    expect(log).toContain('data-ai-inline-proposals="true"');
     expect(canvas).toContain('<SheetContent side="end"');
   });
 
@@ -65,16 +68,16 @@ describe("Class-AAA AI composition contract", () => {
   });
 
   it("keeps starter jobs contextual and proposals first-class", () => {
-    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
-    // STR-01 moved the start surface into its own module; these
-    // assertions follow the code they protect.
+    // STR-01 moved the start surface and then the conversation log into their
+    // own modules; these assertions follow the code they protect.
+    const log = read("src/components/ai/ai-message-log.tsx");
     const startSurface = read("src/components/ai/ai-start-surface.tsx");
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
 
     expect(startSurface).toContain('data-ai-start-state="true"');
-    expect(canvas).toContain("messages.length === 0");
+    expect(log).toContain("messages.length === 0");
     expect(startSurface).toContain("STARTERS.map");
-    expect(canvas).toContain("AiActionProposalCard");
+    expect(log).toContain("AiActionProposalCard");
     expect(shell).not.toContain("AiOperationalLaunchpad");
   });
 });

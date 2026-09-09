@@ -11,10 +11,12 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 describe("AI Class-AAA start-state authority", () => {
   it("keeps focused seller jobs inside the empty decision canvas instead of permanent chrome", () => {
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
-    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
-    // STR-01 moved the start surface into its own module; these
-    // assertions follow the code they protect.
+    // STR-01 moved the start surface into its own module, then moved the
+    // conversation log — including the empty-state branch that chooses the
+    // start surface — out of the canvas. These assertions follow the code
+    // they protect rather than being relaxed.
     const startSurface = read("src/components/ai/ai-start-surface.tsx");
+    const log = read("src/components/ai/ai-message-log.tsx");
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
     const copy = read("src/lib/i18n/ai-workspace.ts");
 
@@ -23,7 +25,7 @@ describe("AI Class-AAA start-state authority", () => {
     expect(shell).not.toContain('from "@/components/ai/ai-workspace"');
     expect(shell).not.toContain("<AiWorkspace ");
     expect(startSurface).toContain('data-ai-start-state="true"');
-    expect(canvas).toContain("messages.length === 0");
+    expect(log).toContain("messages.length === 0");
     expect(startSurface).toContain("STARTERS.map");
     expect(copy).toContain("launchPendingPrompt");
     expect(copy).toContain("launchRevenuePrompt");
