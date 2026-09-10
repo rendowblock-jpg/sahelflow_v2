@@ -630,7 +630,29 @@ const GOVERNED_REVIEW_EXPECTATIONS = {
   },
 } as const;
 
+// The confirmation queue and the review detail are re-rendered by the CI
+// development server on every navigation, so the waits below are latency
+// exposed rather than authority exposed: the queue row assertion follows a
+// force-dynamic render plus a fresh database read taken immediately after a
+// write, on a shared hosted runner. Playwright's default 5s expect window has
+// already produced documented red-from-latency failures on this journey, and
+// the lane runs with --retries=0, so a single slow render is terminal.
+//
+// Use the same 30s budget the hydration and work-surface helpers above already
+// use. The contract being proven is that the governed order reaches the
+// confirmation queue and opens into review — not that it does so within five
+// seconds. A genuine authority regression still fails, because the surface
+// never appears at all.
+const GOVERNED_SURFACE_TIMEOUT_MS = 30_000;
+
 test.describe.serial("Orders governed seller journey", () => {
+  // The lane runs --retries=0 while the project-level trace mode is
+  // "on-first-retry", so a failure in this journey uploads no trace at all.
+  // Retain traces here only: enabling retention project-wide would add
+  // recording overhead to the throttled Phase 7 performance trend and perturb
+  // the very measurements that test exists to bound.
+  test.use({ trace: "retain-on-failure" });
+
   let orderId = "";
   let orderNumber = "";
 
@@ -650,23 +672,29 @@ test.describe.serial("Orders governed seller journey", () => {
     await page.goto("/orders", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
     const queueLink = page.locator('a[href="/orders/confirmation-queue"]').first();
-    await expect(queueLink).toBeVisible();
+    await expect(queueLink).toBeVisible({
+      timeout: GOVERNED_SURFACE_TIMEOUT_MS,
+    });
     await queueLink.click();
     await page.waitForURL((url) => url.pathname === "/orders/confirmation-queue");
     await waitForHydration(page);
 
     const row = page.getByRole("row").filter({ hasText: orderNumber });
-    await expect(row).toBeVisible();
+    await expect(row).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
     const reviewLink = row.locator('a[href^="/orders/"]').last();
-    await expect(reviewLink).toBeVisible();
+    await expect(reviewLink).toBeVisible({
+      timeout: GOVERNED_SURFACE_TIMEOUT_MS,
+    });
     await reviewLink.click();
     await page.waitForURL((url) => url.pathname === `/orders/${orderId}`);
     await waitForHydration(page);
 
-    await expect(page.getByText(GOVERNED_REVIEW_EXPECTATIONS.en.title)).toBeVisible();
+    await expect(
+      page.getByText(GOVERNED_REVIEW_EXPECTATIONS.en.title),
+    ).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
     await expect(
       page.getByText(GOVERNED_REVIEW_EXPECTATIONS.en.authority),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
     await expect(page.locator("body")).not.toContainText("rule-1");
     await assertContained(page, `/orders/${orderId}`);
     await assertNoLeakedTranslationKeys(page, `/orders/${orderId}`);
@@ -690,7 +718,7 @@ test.describe.serial("Orders governed seller journey", () => {
       await waitForHydration(page);
 
       const row = page.getByRole("row").filter({ hasText: orderNumber });
-      await expect(row).toBeVisible();
+      await expect(row).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
       const reviewLink = row.locator('a[href^="/orders/"]').last();
       await reviewLink.click();
       await page.waitForURL((url) => url.pathname === `/orders/${orderId}`);
@@ -699,8 +727,12 @@ test.describe.serial("Orders governed seller journey", () => {
       const expectation = GOVERNED_REVIEW_EXPECTATIONS[locale];
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page.locator("html")).toHaveAttribute("dir", expectation.dir);
-      await expect(page.getByText(expectation.title)).toBeVisible();
-      await expect(page.getByText(expectation.authority)).toBeVisible();
+      await expect(page.getByText(expectation.title)).toBeVisible({
+        timeout: GOVERNED_SURFACE_TIMEOUT_MS,
+      });
+      await expect(page.getByText(expectation.authority)).toBeVisible({
+        timeout: GOVERNED_SURFACE_TIMEOUT_MS,
+      });
       await expect(page.locator("body")).not.toContainText(
         "Canonical order authority",
       );
@@ -732,7 +764,7 @@ test.describe.serial("Orders governed seller journey", () => {
     await page.getByRole("button", { name: "Confirm order" }).click();
 
     await expect(page.getByText("Fulfillment and delivery")).toBeVisible({
-      timeout: 30_000,
+      timeout: GOVERNED_SURFACE_TIMEOUT_MS,
     });
     // The lifecycle rail replaced the former canonical-fulfillment card, so
     // the authority badge string is gone by design ("one authority per
@@ -746,7 +778,9 @@ test.describe.serial("Orders governed seller journey", () => {
     await expect(
       page.getByRole("button", { name: "Confirm order" }),
     ).not.toBeEnabled();
-    await expect(page.getByRole("button", { name: "Mark packed" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Mark packed" }),
+    ).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
     await expect(page.locator("body")).toContainText(orderNumber);
     await assertContained(page, `/orders/${orderId}`);
     await assertNoLeakedTranslationKeys(page, `/orders/${orderId}`);
