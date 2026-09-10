@@ -1,12 +1,13 @@
 # SahelFlow documentation authority
 
 > **Status:** Active non-archive documentation entry point
-> **Last reconciled:** 2026-09-08 (best-known local `origin/main` `9f3704f…` after PR #409; re-resolve live before acting)
+> **Last reconciled:** 2026-09-10 (protected `main` `730641b7…` after PR #416; re-resolve live before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
-> **Latest signed/published checkpoint:** Internal.35 / `1.0.0-internal.35` / MSI `1.0.0.35` / FD-058 (Founder installation pending; Internal.34 / FD-057 remains latest installed)
-> **Protected release source:** `f45e6e1c9ece903623dcbe71a22b6806b0562cde` / PR #398
-> **Current next outcome:** the Founder applies the in-place Internal.35 update with state preserved, re-verifies the F-09..F-13 + F-05-residual rows plus retained FD-050/#306/#316/#317 rows, evidence is reconciled, then FRC-3 resumes; the merged #399–#403 delta rides protected `main` and receives its first installed/Founder observation on the next signed package
+> **Latest signed/published checkpoint:** Internal.36 / `1.0.0-internal.36` / MSI `1.0.0.36` / FD-059 — **published, not installed**; see "Installed truth" below
+> **Protected release source:** `4e527f0549674789b4f679ae7c2368d2520ccb44` / PR #412 (publication record #413)
+> **Latest recorded installed checkpoint:** Internal.34 / FD-057 (installed in place 2026-09-05) — unchanged by Internal.35 and Internal.36
+> **Current next outcome:** the FD-058 installed campaign on the Internal.36 candidate, then evidence reconciliation and FRC-3 resumption; the merged #414–#416 source delta rides protected `main` and receives its first installed/Founder observation on the next signed package
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
@@ -15,7 +16,7 @@ This directory is the active documentation authority for SahelFlow. `documentati
 1. `system/CURRENT_STATE.md` — exact merged/released/installed/provider truth and current non-claims.
 2. `system/ROADMAP.md` — First Revenue Certification dependency/completion order.
 3. `operations/WORKFLOW.md` — research, implementation, review, CI, installed/provider evidence and release process.
-4. `operations/WORKING_MEMORY.md` — single compact resumable frontier.
+4. `operations/WORKING_MEMORY.md` — single compact resumable frontier, and **the authority for what is installed**.
 5. `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md` — active issue #317 message/media evidence ledger when Inbox or provider work is in scope.
 6. `operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md` — active FRC-2 AI/tools/order-extraction evidence ledger when AI work is in scope.
 7. `operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md` — the exact Internal.30 ↔ protected-`main` reconciliation (PR #359 delta) and the FD-051 installed-campaign rows when packaging, releasing or executing the campaign.
@@ -25,6 +26,7 @@ This directory is the active documentation authority for SahelFlow. `documentati
 11. `system/ARCHITECTURE.md` — canonical authority, provider, AI, native, security and recovery invariants.
 12. `research/RESEARCH.md` plus privacy/security inventories when relevant.
 13. `operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md` — the FRC-3 Required capability/journey assurance ledger (19 capabilities / 27 journeys / page-completion surface / INV-001..044 mapped to exact evidence) when FRC classification, installed-campaign conversion or launch-readiness evidence is in scope.
+14. `product/INTERFACE_SYSTEM.md`, `operations/TRANSFORMATION_REGISTER.md` and `operations/TRANSFORMATION_HANDOFF.md` — the interface system and the transformation program's row states and resume procedure, when source-level transformation work is in scope. Read the register's CORRECTED rows before "fixing" anything they cover.
 
 Reading order does not change authority precedence. A newer explicit Founder decision outranks lower execution documents for the choice it changes. Protected GitHub source, exact Actions evidence and signed releases outrank stale chat summaries.
 
@@ -34,33 +36,48 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Current protected and signed truth
 
-Protected `main` best-known `9f3704f…` after PR #409 (Phase 4 closure authority green — 8 unclassified Prisma models classified, closure test CI-attached) on top of #408 (#303 disposition: phase4 triage = live VEX disposition authority), #406 (FRC-3 Required capability/journey ledger adoption), #405 (P3 AI-ledger micro-repairs: F-2/F-3 + AI-17/AI-23 conversions) and docs-only #404 (the #401–#403 delta reconcile), which followed #403/#402/#401/#400/#399 and release-authority #398. Revalidate live state before every write/merge.
+Protected `main` is best-known `730641b7…` after PR #416 (STR-01 slice 1: the AI composer deck extracted from `ai-decision-canvas.tsx`), on top of #414 (whole-app transformation W1–W6), #413 (Internal.36 publication record), #412 (**Internal.36 / FD-059** release authority), #411 (behavioural UI evidence), #410 (delta reconcile) and #409 (Phase 4 closure authority). Revalidate live state before every write/merge.
 
-Internal.35 is the latest real signed/published offline package:
+Internal.36 is the latest real signed/published offline package:
 
-- app `1.0.0-internal.35`;
-- MSI `1.0.0.35`;
-- authority FD-058; mode `founder-offline-only`;
-- release PR #398 / protected source `f45e6e1c9ece903623dcbe71a22b6806b0562cde`;
-- tag `sahelflow-v1.0.0-internal.35-f45e6e1c9ece903623dcbe71a22b6806b0562cde`;
-- the full Required battery passed on the exact head (20 success / 1 risk-classified skip / 0 failed, including installed-MSI evidence);
-- packages the Internal.34 campaign lines (#396 F-09..F-12 + F-05 CRLF root cause, #397 F-13 notifications); #399–#403 ride `main` ahead of the next package.
+- app `1.0.0-internal.36`;
+- MSI `1.0.0.36`;
+- authority FD-059; mode `founder-offline-only`;
+- release PR #412 / protected source `4e527f0549674789b4f679ae7c2368d2520ccb44`;
+- tag `sahelflow-v1.0.0-internal.36-4e527f0549674789b4f679ae7c2368d2520ccb44`;
+- MSI digest `sha256:5d5b03e284327dd2bc9fb4be674719bba8022506a46a7d3518236dc2700ab243`;
+- signed run `34281216710`; publication record PR #413;
+- the source merged after it (#414, #415, #416) rides `main` ahead of the next package and carries no release authority.
 
-Retained Internal.30 history (superseded as latest by Internal.31–Internal.35 — see `operations/WORKING_MEMORY.md` and `system/CURRENT_STATE.md` header):
-- Internal.30: app `1.0.0-internal.30` / MSI `1.0.0.30` / FD-051 / PR #357 / head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`;
-- the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence);
-- certification cited product head `40f5386095e3a11b5f586673d3f6d0cc99956a66` — tree-identical to the #355 squash `14c059b7621d08a041830a626d5b3f2fb6fd75e6` (CI `33287186297`, Phase 5 `33287186245`, Phase 6-7 `33287186170`); #356 is documentation-only;
-- packages the FD-050 installed-campaign repair line (#346–#353) AND the deep-audit remediation register (#355); the frontend/UI stream PR #359 was NOT bundled at publication and was merged to protected `main` at `324719ff…` on 2026-08-31 (Founder option-B directive) — it rides `main` ahead of the next signed package (`operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md`);
-- dispatcher `33292273959` — success;
-- signed updater/publication `33292278832` and release observer `33292285084` — success;
-- release tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`;
-- MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`.
+Retained signed-checkpoint history (superseded as latest — see `operations/WORKING_MEMORY.md` and `system/CURRENT_STATE.md`):
 
-The Founder has **not yet installed** Internal.35. The latest Founder-installed checkpoint remains Internal.34 / FD-057 (installed in place 2026-09-05). Retained Internal.30/Internal.29 publication facts: Internal.30 dispatcher `33292273959`, signed run `33292278832`, observer `33292285084`, tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`, MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`; Internal.29 dispatcher `33212635887`, signed run `33212648778`, observer `33212661580`, tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`, MSI digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`.
+- Internal.35: app `1.0.0-internal.35` / MSI `1.0.0.35` / FD-058 / PR #398 / source `f45e6e1c9ece903623dcbe71a22b6806b0562cde` / digest `sha256:97bcd5dc…`;
+- Internal.34: source `0cdd5ce2…` / digest `sha256:dc3d3771…` / FD-057 — **the latest checkpoint with a recorded Founder installation**;
+- Internal.30: app `1.0.0-internal.30` / MSI `1.0.0.30` / FD-051 / PR #357 / head `aa4a632a9269ac2318bbf414611cf0e75cb97f5c`; dispatcher `33292273959`, signed run `33292278832`, observer `33292285084`; tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`; digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`; the full Required battery passed on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence);
+- Internal.29: dispatcher `33212635887`, signed run `33212648778`, observer `33212661580`, tag `sahelflow-v1.0.0-internal.29-a34917e582c4806aee35ad5aca12aaea82a0ddcf`, digest `sha256:c3afdadc8a3f457826f37bd45084d2647a65d9a79f51b71d0d68f86d068aa50f`.
 
 The signed workflow proved exact protected-source and reviewed-tree binding, Required PR success, signed MSI/updater build, staged runtime readiness, local signature verification, signed install/launch/reopen, authenticated hydrated WebView twice, deterministic rewrites, evidence manifest, `latest.json`, exact tag and publication.
 
+### Installed truth (read before converting any ledger row)
+
+**Published is not installed.** The FD-058 installed campaign on the Internal.36 candidate has produced no recorded installed observation, so **no ledger row converts from Internal.35 or Internal.36**. The latest recorded Founder-installed checkpoint remains **Internal.34 / FD-057**.
+
+There is a known unresolved contradiction: `operations/TRANSFORMATION_REGISTER.md` asserts a Founder-installed Internal.36 in its header, while `operations/WORKING_MEMORY.md` still lists the in-place update as the next Founder action. Those cannot both be true. This file resolves the ambiguity in the conservative direction — no installed claim — and defers to `operations/WORKING_MEMORY.md` as the installed authority. Only the Founder, who owns the observation, can close the contradiction.
+
+## Parallel source-level transformation track
+
+The whole-app transformation program (merged through #414, continued in #416 and its successors) is a **source-level track**. It carries **no release authority**, converts **no installed row** and produces **no provider or customer evidence**. Its row states live in `operations/TRANSFORMATION_REGISTER.md`; its resume procedure and local test setup live in `operations/TRANSFORMATION_HANDOFF.md`.
+
+Two standing rules the program learned the hard way, both now enforced in `AGENTS.md`:
+
+- CI triggers only on pull requests targeting `main` (`.github/workflows/ci.yml`, `on: pull_request: branches: [main]`). A stacked PR onto a feature branch receives **zero check runs** and can never be verified. Retargeting its base afterwards does not help, because `edited` is not in the workflow's `types`.
+- `concurrency: cancel-in-progress: true` discards an in-flight run when the same branch is pushed again, so never push more than one slice ahead of CI.
+
+Rows marked **CORRECTED by evidence** (IA-02, IA-03, IA-04, IA-05b, UI-07, FN-02) must not be reopened or "fixed"; they were closed by evidence showing the original finding was wrong, not by a repair.
+
 ## Product line now packaged
+
+The lines below are retained Internal.28/Internal.29-era packaging history, superseded as *latest* by Internal.30 through Internal.36 but retained for audit continuity.
 
 Internal.29 retains the completed product/security line through Internal.28 and adds:
 
@@ -91,9 +108,10 @@ Do not restart those programs without direct regression evidence.
 - **#316 — open:** Class-AAA durable Notification Center and WhatsApp attention routing is source-merged through PR #319; signed/installed/native evidence is pending.
 - **#317 — open:** professional WhatsApp Inbox capability ledger and certified message/media operational parity.
 - **#230 — open/reopened P1:** no owned production domain exists; customer-online trial/network readiness remains blocked.
+- **#164 — open.**
 - Real commerce/courier account certification, representative beta, independent review and Stable remain unproven.
 
-Internal.27 is Founder-offline-only. It is not customer-online, Beta or Stable.
+The current package is Founder-offline-only. It is not customer-online, Beta or Stable.
 
 ## FD-045 — First Revenue Certification strategy
 
@@ -137,7 +155,9 @@ PR #315 source merge
 
 FD-049 (2026-08-27) later fixed one more cadence point: after #317 completes,
 one signed successor (Internal.28) is authorized for Founder-installed testing
-before FRC-2–5 resume.
+before FRC-2–5 resume. That successor and seven further checkpoints have since
+been published; the cadence rule, not its Internal.28 example, is what remains
+binding.
 
 This batching changes cadence, not evidence. #315 remains source-complete only;
 #306 remains open. Source/mock/CI rows may be closed before release, while
@@ -159,19 +179,20 @@ Beta or Stable is authorized by FD-048.
 - **Phase 5 closure:** PR #220 remains the historical application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
 - Historical Internal.15 is `1.0.0-internal.15`; signed run `31657621918` remains evidence.
 - PR #250, PR #251 and `agent/internal-16-wave-4` remain Wave 4 history, not active implementation.
-- Historical sentence retained for marker continuity: **Issues #221, #226 and #230 remain open**. Current truth supersedes it: #221/#226 are closed/completed, #230 is open, and #306 is open.
+- Historical sentence retained for marker continuity: **Issues #221, #226 and #230 remain open**. Current truth supersedes it: #221/#226 are closed/completed, and the live open set is #164, #230, #306, #316, #317.
 - The historical evidence set included issues #201, #214, #221, #226 and #230.
 - The active product phase label remains **Phase 6 — Arabic, RTL and accessibility parity** for semantic continuity while First Revenue Certification closes Phase 9-adjacent external evidence.
 
 ## Exact resume path
 
-1. Resolve live protected `main`, open PRs, #306/#316/#317 and #230.
-2. Read the mandatory authority set above and confirm Internal.28 / FD-049 remains latest signed/published and the Founder installation is the next evidence action.
-3. After the Founder applies the in-place Internal.28 update, execute the retained #306 rows plus applicable #316/#317 native rows using `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md`; convert rows only where installed evidence exists.
+1. Resolve live protected `main`, open PRs, #164/#230/#306/#316/#317.
+2. Read the mandatory authority set above and confirm **Internal.36 / FD-059** remains the latest signed/published checkpoint and that the FD-058 installed campaign on that candidate is the next evidence action.
+3. After the Founder applies the in-place Internal.36 update, execute the retained #306 rows plus applicable #316/#317 native rows using `operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md`; convert rows only where installed evidence exists. Resolve the register-vs-working-memory installed contradiction named above at the same time, from the observation rather than from either document.
 4. Reconcile the ledger and current-state documentation with the campaign results, then continue FRC-2 through FRC-5 source/evidence work in dependency order. Maintain capability-specific certification states and explicit external blockers.
-5. Do not create or install a further successor, and do not repeat the installed campaign, without a newer explicit Founder decision; FRC-2–5 resume after the Internal.28 installed observation.
-6. Do not expose or market an integration/action before its live certification record exists.
-7. Keep #306 installed proof, #230/customer-online, commercial deployment, Beta and Stable as separate explicit gates.
+5. Source-level transformation work (`operations/TRANSFORMATION_REGISTER.md`) may proceed in parallel at any time. It never converts an installed row, never carries release authority and must not be presented as campaign progress.
+6. Do not create or install a further successor, and do not repeat the installed campaign, without a newer explicit Founder decision.
+7. Do not expose or market an integration/action before its live certification record exists.
+8. Keep #306 installed proof, #230/customer-online, commercial deployment, Beta and Stable as separate explicit gates.
 
 Acceptance hierarchy for whole-product experience remains:
 
