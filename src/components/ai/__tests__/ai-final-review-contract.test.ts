@@ -56,11 +56,17 @@ describe("AI Class-AAA final review regressions", () => {
 
   it("keeps chronological proposal objects non-interactive and review evidence authoritative", () => {
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the conversation log — including the chronological
+    // proposal objects — into its own module; these assertions follow the
+    // code they protect. The retired second interactive surface is asserted
+    // gone from BOTH files so it cannot reappear in either.
+    const log = read("src/components/ai/ai-message-log.tsx");
     const card = read("src/components/ai/ai-action-proposal-card.tsx");
     const review = read("src/components/ai/ai-review-evidence.tsx");
 
-    expect(canvas).toContain('data-ai-inline-proposals="true"');
-    expect(canvas).toContain("interactive={false}");
+    expect(log).toContain('data-ai-inline-proposals="true"');
+    expect(log).toContain("interactive={false}");
+    expect(log).not.toContain("!wideReview && proposals.length > 0");
     expect(canvas).not.toContain("!wideReview && proposals.length > 0");
     expect(card).toContain("interactive = true");
     expect(card).toContain("interactive && approvable");
