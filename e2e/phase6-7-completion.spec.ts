@@ -646,13 +646,6 @@ const GOVERNED_REVIEW_EXPECTATIONS = {
 const GOVERNED_SURFACE_TIMEOUT_MS = 30_000;
 
 test.describe.serial("Orders governed seller journey", () => {
-  // The lane runs --retries=0 while the project-level trace mode is
-  // "on-first-retry", so a failure in this journey uploads no trace at all.
-  // Retain traces here only: enabling retention project-wide would add
-  // recording overhead to the throttled Phase 7 performance trend and perturb
-  // the very measurements that test exists to bound.
-  test.use({ trace: "retain-on-failure" });
-
   let orderId = "";
   let orderNumber = "";
 
