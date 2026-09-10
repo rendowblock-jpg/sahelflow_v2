@@ -12,10 +12,19 @@ The Founder-owned Windows installation is evidence-bearing state. Never reset/de
 4. Read `documentation/operations/WORKFLOW.md`.
 5. Read `documentation/operations/WORKING_MEMORY.md`.
 6. Read governing Product, Experience, Founder Decisions and Architecture sections for the task.
-7. Re-fetch live protected `main`, open PRs and current issue states before any write.
-8. Resolve protected-main SHA again immediately before every merge, release-authority change or package action.
+7. For interface, structure or whole-app transformation work, also read `documentation/product/INTERFACE_SYSTEM.md` (the system every surface conforms to), `documentation/operations/TRANSFORMATION_REGISTER.md` (the demonstrated findings and their status) and `documentation/operations/TRANSFORMATION_HANDOFF.md` (the transformation resume point).
+8. Re-fetch live protected `main`, open PRs and current issue states before any write.
+9. Resolve protected-main SHA again immediately before every merge, release-authority change or package action.
 
 Do not restart a generic codebase audit, generic RTL sweep, the old Inbox → AI → Settings plan, Founder Problems #1–#5, Automations V2 or the completed #300/#304/#305 source-security packages. FRC-3 is a bounded evidence matrix against existing contracts, not permission for speculative reconstruction.
+
+Do not re-open the transformation rows that were CORRECTED by evidence rather than repaired. Acting on their original wording makes the product worse, and each one looks like unfinished work from the outside:
+
+- **IA-02** — the flattened 16-item sidebar is a recorded product decision (`SF16-NAV-017`), not drift; the domain model is deliberately retained for route context, search and permissions.
+- **IA-03 / IA-04** — the Agents three-column layout and its 1500px branch are deliberate, behaviourally covered by `e2e/ai-workspace.spec.ts:127` and contract-locked; changing them is a Founder design decision, not a repair.
+- **IA-05b** — Settings already renders as flat hairline-separated sections; the proposed `Card` → `Panel` migration would give it borders and radii and make it more island-like, not less.
+- **UI-07** — the state primitives are one renderer (`StateSurface`) with two thin composition adapters; "consolidating" them would delete a useful trilingual copy catalog.
+- The storefront radius carve-out (`--radius-storefront-soft` / `-round`) is deliberate seller-owned theme data. Collapsing it onto the two canonical radii makes two of the seller's three theme options render identically.
 
 ## Authority precedence
 
@@ -33,31 +42,31 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-At the 2026-09-08 reconciliation (best-known local `origin/main` `9f3704f…`; re-resolve live before acting):
+At the 2026-09-09 reconciliation (protected `main` resolved live at `29987b0…`; re-resolve live before acting):
 
-- protected `main` best-known: `9f3704f…` / PR #409 (Phase 4 closure authority green — 8 unclassified Prisma models classified, closure test CI-attached) on top of #408 (#303 disposition: phase4 triage = live VEX disposition authority + frontier reconcile), #406 (FRC-3 Required capability/journey ledger adoption), #405 (P3 AI-ledger micro-repairs: F-2/F-3 source truth + AI-17/AI-23 row conversions) and docs-only #404 (the #401–#403 delta reconcile), which followed #403 (trilingual phone/license/shop-lifecycle server-error rules), #402 (AAA eslint gates), docs-only #401 (frontier reconcile + missing route boundaries), #400 (AI agents AAA command-center redesign), docs-only #399 and release-authority #398;
-- latest signed/published checkpoint: **Internal.35** / **FD-058**, mode `founder-offline-only`; the latest **Founder-installed** checkpoint remains Internal.34 / FD-057 until the in-place Internal.35 update;
-- Internal.35 release source: `f45e6e1c9ece903623dcbe71a22b6806b0562cde` (no longer equals protected `main`: #399 docs + #400 merged after publication); tag `sahelflow-v1.0.0-internal.35-f45e6e1c9ece903623dcbe71a22b6806b0562cde`; app `1.0.0-internal.35` / MSI `1.0.0.35`;
-- Internal.35 packages the Internal.34 installed-campaign repair line (#396: F-09..F-12 + F-05 CRLF root cause) and the F-13 notifications line (#397); the #399–#409 delta rides `main` ahead of the next signed package; Internal.30 facts (`2eb8a337…`, dispatcher `33292273959`, run `33292278832`, MSI `sha256:bef15026…`) remain retained evidence — see `documentation/operations/WORKING_MEMORY.md` and `documentation/system/CURRENT_STATE.md`;
-- Internal.34 (installed in place 2026-09-05, FD-057) reported F-04..F-08/F-09..F-13, all repaired on protected main via #396/#397;
-- issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint;
-- issues #306 and #230 remain open for real-phone WhatsApp certification and customer-online readiness;
-- issues #316 and #317 remain open only for installed/real-phone evidence; their source is complete and packaged in published Internal.35.
+- protected `main`: `29987b0…` / PR #414 (whole-app transformation W1–W6 — interface system authority, primitive layer, the FN-01 shop-creation repair, SEC-01 dependency remediation and SEC-02 coverage enforcement) on top of #413 (Internal.36 FD-059 signed publication record, `406debe…`), #412 (Internal.36 FD-059 release authority, `4e527f05…`), #411 (behavioural UI evidence + AAA subtraction on the agents surface, `7052db9e…`), docs-only #410 (the #407–#409 delta reconcile) and #409 (Phase 4 closure authority green), which followed #408, #406, #405, docs-only #404, #403, #402, docs-only #401, #400, #399 and release-authority #398;
+- latest signed/published checkpoint: **Internal.36** / **FD-059**, mode `founder-offline-only`; release PR #412 / protected source `4e527f0549674789b4f679ae7c2368d2520ccb44`; tag `sahelflow-v1.0.0-internal.36-4e527f0549674789b4f679ae7c2368d2520ccb44`; app `1.0.0-internal.36` / MSI `1.0.0.36`; MSI digest `sha256:5d5b03e284327dd2bc9fb4be674719bba8022506a46a7d3518236dc2700ab243`; signed build run `34281216710`, observers `34281232614` + `34281432828`;
+- Internal.36 packages the line through PR #411; the #414 transformation delta rides protected `main` ahead of the next signed package and has received no installed or Founder observation;
+- **installed truth is unchanged by any of the above.** The FD-058 campaign on the Internal.36 candidate has produced no recorded installed observation, so no ledger row converts from it. Treat `documentation/operations/WORKING_MEMORY.md` as the authority for what is installed, and record the in-place update there before claiming otherwise;
+- Internal.35 release source `f45e6e1c9ece903623dcbe71a22b6806b0562cde` (PR #398) and the retained Internal.30 facts (`2eb8a337…`, dispatcher `33292273959`, run `33292278832`, MSI `sha256:bef15026…`) remain retained evidence — see `documentation/operations/WORKING_MEMORY.md` and `documentation/system/CURRENT_STATE.md`;
+- issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint; #226 remains closed/completed with its budgets retained as regression criteria;
+- open issues are #164 (Phase 0–9 execution epic), #230 (customer-online readiness), #306 (real-phone WhatsApp certification), #316 and #317 (installed/real-phone evidence only; their source is complete and packaged).
 
-Internal.35 is the signed/published authority; the Founder has not yet installed it. Do not describe Internal.35 or any source work as installed, live-provider-certified or Founder-accepted until the in-place update and real-phone campaign produce that evidence. Preserve the Founder's Internal.34 installation state until that campaign.
+Internal.36 is the signed/published authority. Do not describe Internal.36, the #414 transformation delta or any source work as installed, live-provider-certified or Founder-accepted until an in-place update and campaign produce that evidence. Preserve the Founder's installation state until that campaign.
 
 ## Exact next outcome
 
-Execute the **FD-058 installed Founder campaign** while preserving every FD-045 evidence rule.
+Execute the **FD-058 installed Founder campaign** on the Internal.36 candidate while preserving every FD-045 evidence rule.
 
 1. Re-resolve protected `main`, open PRs and issues #306/#316/#317/#230.
-2. Confirm Internal.35 / FD-058 remains the latest signed/published checkpoint (release PR #398) and that the Founder has not yet installed it (installed remains Internal.34).
-3. The Founder applies the in-place Internal.35 update through the normal updater without logging out, resetting AppData or clearing protected auth.
-4. On the installed Internal.35 candidate, re-verify the F-09..F-13 rows, the F-05 CRLF residual, the retained FD-050 rows (B1–B5, D1, delivery-receipt enum truth, C1 sleep/wake auto-receive), the deep-audit register's audit-affected rows, the retained #306 real-phone rows (automatic no-refresh inbound, reopen persistence, EN/AR observation, governed status, reviewed extraction, logout last) plus applicable #316/#317 native rows and representative media/parity exercises.
+2. Confirm Internal.36 / FD-059 remains the latest signed/published checkpoint (release PR #412) and confirm the current installed checkpoint from `documentation/operations/WORKING_MEMORY.md` before making any installed claim.
+3. The Founder applies the in-place update through the normal updater without logging out, resetting AppData or clearing protected auth.
+4. On the installed candidate, re-verify the F-09..F-13 rows, the F-05 CRLF residual (chat must stream), the retained FD-050 rows (B1–B5, D1, delivery-receipt enum truth, C1 sleep/wake auto-receive), the D3 waves, the deep-audit register's audit-affected rows, the retained #306 real-phone rows (automatic no-refresh inbound, reopen persistence, EN/AR observation, governed status, reviewed extraction, logout last) plus applicable #316/#317 native rows and representative media/parity exercises.
 5. Reconcile the capability ledgers and current-state documentation with the installed evidence; convert `implemented-unproven` rows only where the campaign actually proved them.
-6. Resume FRC-3 (Required capability/journey assurance ledger) after that installed Founder observation, in dependency order; FRC-4/FRC-5 keep their external blockers.
-7. Publicly promise only exact live-certified provider/actions. Unverified providers stay hidden, disabled or conditional.
-8. Keep #306, #230, customer-online, paid deployment, Beta and Stable separate until their own evidence and authority close them.
+6. Resume FRC-3 (Required capability/journey assurance ledger) after that installed Founder observation, in the Founder-directed order A→D→C→B; FRC-4/FRC-5 keep their external blockers.
+7. Continue the transformation program from `documentation/operations/TRANSFORMATION_HANDOFF.md` §4 in parallel at source level only — it carries no release authority and converts no installed row.
+8. Publicly promise only exact live-certified provider/actions. Unverified providers stay hidden, disabled or conditional.
+9. Keep #306, #230, customer-online, paid deployment, Beta and Stable separate until their own evidence and authority close them.
 
 ## First Revenue Certification rules
 
@@ -82,7 +91,7 @@ Execute the **FD-058 installed Founder campaign** while preserving every FD-045 
 
 ## Protected boundaries
 
-No certification, repair or release work may weaken:
+No certification, repair, transformation or release work may weaken:
 
 - Golden COD idempotency/version/audit/event/outbox;
 - trusted actor/shop/session/permission boundaries;
@@ -101,6 +110,8 @@ No certification, repair or release work may weaken:
 
 - Run the **selected Level 1/2/3 gates** required by the consequence.
 - No cross-SHA evidence mix or retry-away of deterministic failure.
+- A failure that names a service the diff cannot reach gets **one** re-run, with the evidence recorded before the retry. A second identical failure is a defect to investigate, never a third retry.
+- Never push more than one slice ahead of CI: `concurrency: cancel-in-progress: true` discards the in-flight evidence, including for documentation-only pushes.
 - No live-provider claim from source, mocks or automation alone.
 - No Founder acceptance claim from CI.
 - No customer-online/Beta/Stable claim from Founder-only authority.
@@ -109,4 +120,4 @@ No certification, repair or release work may weaken:
 
 ## Documentation discipline
 
-`documentation/archive/**` is history/evidence only. Active non-archive documentation plus protected source/GitHub define current truth. `documentation/operations/WORKING_MEMORY.md` is the single compact resumable handoff; do not create a competing masterplan.
+`documentation/archive/**` is history/evidence only. Active non-archive documentation plus protected source/GitHub define current truth. `documentation/operations/WORKING_MEMORY.md` is the single compact resumable handoff; do not create a competing masterplan. `documentation/operations/TRANSFORMATION_HANDOFF.md` is subordinate to it and scoped to the transformation program only.

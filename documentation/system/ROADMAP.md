@@ -1,12 +1,12 @@
 # SahelFlow — Final Roadmap
 
 > **Status:** Active dependency/completion program
-> **Last reconciled:** 2026-09-08 (best-known local `origin/main` `9f3704f…`; re-resolve live before acting)
+> **Last reconciled:** 2026-09-09 (protected `main` resolved live at `29987b0…`; re-resolve before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before action; best-known `9f3704f…` after PR #409 (Phase 4 closure authority green) on top of #408 (#303 disposition), #406 (FRC-3 ledger adoption), #405 (P3 AI-ledger micro-repairs), docs-only #404 (the #401–#403 delta reconcile), #403 (trilingual server-error rules), #402 (AAA eslint gates), docs-only #401, #400, #399 and release-authority #398
-> **Latest signed/published checkpoint:** Internal.35 / FD-058 (published 2026-09-06)
-> **Latest Founder-installed checkpoint:** Internal.34 / FD-057 (installed in place 2026-09-05)
-> **Current execution mode:** the Founder applies the in-place Internal.35 update, re-verifies F-09..F-13 + F-05 residual + retained FD-050/#306/#316/#317 rows with the #306 logout row LAST, then FRC-3 resumes (ledgers: `../operations/WORKING_MEMORY.md`, `../operations/UI_UX_TRIAGE_LEDGER.md`, `../operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md`)
+> **Live protected main:** resolve from GitHub before action; `29987b0…` after PR #414 (whole-app transformation W1–W6: interface system authority, primitive layer, FN-01 shop creation, SEC-01 dependency remediation, SEC-02 enforced coverage) on top of #413 (Internal.36 FD-059 publication record), #412 (Internal.36 FD-059 release authority), #411 (behavioural UI evidence on the agents surface), docs-only #410, #409 (Phase 4 closure authority green), #408, #406, #405, docs-only #404, #403, #402, docs-only #401, #400, #399 and release-authority #398
+> **Latest signed/published checkpoint:** Internal.36 / FD-059 (published 2026-09-08; tag `sahelflow-v1.0.0-internal.36-4e527f05…`, MSI digest `sha256:5d5b03e2…`)
+> **Latest Founder-installed checkpoint:** resolve from `../operations/WORKING_MEMORY.md` before any installed claim — the FD-058 campaign on the Internal.36 candidate has produced no recorded installed observation
+> **Current execution mode:** the Founder applies the in-place update, executes the FD-058 campaign rows once on the installed candidate (F-05 residual, F-09..F-13, retained FD-050 rows, D3 waves, applicable #316/#317 native rows, retained #306 rows with the logout row LAST), then FRC-3 resumes in the Founder-directed order A→D→C→B (ledgers: `../operations/WORKING_MEMORY.md`, `../operations/UI_UX_TRIAGE_LEDGER.md`, `../operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md`). The transformation program runs in parallel at source level only (`../operations/TRANSFORMATION_HANDOFF.md`).
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 
@@ -28,10 +28,18 @@ completed product/experience reconstruction
 → #317 professional WhatsApp Inbox parity/certification ledger
 → #324/#325/#327/#329 durable outbound image/video/document/voice-PTT merges
 → #331 Inbox interaction parity merge (quotes, copy, progress/cancel, thumbnails, paste/drop)
-→ FD-049 Internal.28 signed publication + Founder-installed campaign (regressions: document→zip, received-message quote 409, voice button; repaired as #335/#336/#337, extended by #338/#339)
+→ FD-049 Internal.28 signed publication + Founder-installed campaign (regressions repaired as #335/#336/#337, extended by #338/#339)
 → FRC-2 AI/tools/order-extraction evidence matrix frozen (capability ledger + corpus frc2-1.0.0, #342/#343)
-→ FD-050 Internal.29 signed publication ← current (awaiting Founder in-place install + FD-050 campaign)
-→ FRC-3 Required capability/journey assurance ledger and demonstrated repairs
+→ FD-050 Internal.29 signed publication
+→ FD-051 Internal.30 + FD-053 Internal.31 + FD-055 Internal.32 signed publications and installed campaigns (round-2 / round-3 findings repaired on main)
+→ FD-056 Internal.33 signed publication + installed campaign (F-04..F-08 repaired via #391, INB-27 split via #392)
+→ FD-057 Internal.34 signed publication + installed campaign (F-09..F-13 + F-05 CRLF root cause repaired via #396/#397)
+→ FD-058 Internal.35 signed publication
+→ #399–#409 protected-main delta (i18n server-error rules, AAA eslint gates, FRC-3 ledger adoption, #303 security disposition, Phase 4 closure authority green)
+→ #411 behavioural UI evidence harness (render truth replaces source-text pinning on the agents/inbox surfaces)
+→ FD-059 Internal.36 signed publication (#412/#413) ← latest signed checkpoint
+→ FD-058 installed campaign on the Internal.36 candidate ← current gate (Founder action)
+→ FRC-3 Required capability/journey assurance ledger and demonstrated repairs (order A→D→C→B)
 → FRC-4 commerce official dev/test certification work
 → FRC-5 courier contract/sandbox or authorized-account certification work
 → close only exact FRC-1–5 evidence actually observed
@@ -41,24 +49,23 @@ completed product/experience reconstruction
 → explicit Stable promotion
 ```
 
-There were no open PRs immediately after Notification Center PR #319 merged. Re-fetch before acting.
+Running in parallel at source level only, carrying no release authority and converting no installed row:
+
+```text
+Founder directive 2026-09-09 (whole-app transformation)
+→ product/INTERFACE_SYSTEM.md + operations/TRANSFORMATION_REGISTER.md adopted (#414)
+→ W1 token authority + W2 primitive layer + W3/W4/W5 surface and accessibility rows + W6 wash-band tints
+→ SEC-01 dependency remediation and SEC-02 enforced coverage ratchet
+→ remaining: STR-01 god-component decomposition, TEST-01 contract conversion,
+  L10N-01 copy authority, STR-02/STR-03 triage, SYS-04, W8 conformance sweep
+  (`../operations/TRANSFORMATION_HANDOFF.md` §4)
+```
+
+Re-fetch open PRs before acting; there were no open PRs immediately after #414 merged.
 
 ## FD-048 batched source-first order
 
-The current development package is issue #317, not a release branch.
-#316 is source-merged through PR #319. Complete #317, then FRC-2 through FRC-5
-deterministic/source and available official environment evidence. Keep every
-row classified by evidence level and preserve external blockers.
-
-FD-049 (2026-08-27) supersedes this cadence for the next checkpoint: once #317
-is complete on protected `main`, one signed successor (Internal.28) is
-authorized for Founder-installed testing before FRC-2–5 resume. Only after the
-combined source frontier is frozen may a newer explicit release decision
-authorize one signed successor. Install it once through the normal
-updater and execute the retained #306 FRC-1 rows plus applicable AI,
-notification, Inbox and live-provider rows on that exact candidate. This avoids
-repeating complete MSI certification after small edits without weakening the
-final evidence bar.
+The FD-048 cadence is historically complete: #316 merged through PR #319, #317 completed, and FRC-2 frozen. FD-049 (2026-08-27) superseded its release cadence for Internal.28, and each subsequent checkpoint has followed the same discipline — freeze one exact protected-main candidate, separate release authority, one signed successor, one preserved in-place update, one installed campaign. Keep every row classified by evidence level and preserve external blockers.
 
 ## First Revenue Certification definition
 
@@ -75,17 +82,17 @@ Completion confidence means:
 ## FRC-1 — real-phone WhatsApp installed/provider proof
 
 Owner: issue #306. Retained installed evidence: Internal.27 plus the
-Founder-installed Internal.28 campaign (text/image/video send, automatic
-no-refresh inbound and reopen verified; three reproduced regressions repaired
-on main). Published candidate: Internal.29 / FD-050 — already authorized,
-signed and published; the remaining work is the Founder in-place update and
-the re-verification campaign.
+Founder-installed Internal.28–Internal.34 campaigns (text/image/video send,
+automatic no-refresh inbound and reopen verified; every reproduced regression
+repaired on main). Published candidate: Internal.36 / FD-059 — already
+authorized, signed and published; the remaining work is the Founder in-place
+update and the FD-058 re-verification campaign.
 
 Required sequence:
 
 1. retain Internal.27 QR/link/reopen, exact LID outbound and durable inbound evidence;
-2. treat #315 through #341 as packaged inside published Internal.28/Internal.29;
-3. verify exact protected main `a34917e582c4806aee35ad5aca12aaea82a0ddcf` and update in place through the normal updater;
+2. treat #315 through #413 as packaged inside the published checkpoints;
+3. verify the exact protected main behind the published candidate and update in place through the normal updater;
 4. preserve AppData, install/registry identity, keys and shop databases;
 5. verify exact installed version, normal launch and reopen;
 6. prove automatic no-refresh inbound, durable exact-once persistence and reopen;
@@ -119,10 +126,9 @@ registry, the proposal/approval authority, the streaming/failure matrix,
 #305 field-aware privacy minimization and the `frc2-1.0.0` synthetic/redacted
 AR/FR/EN/Darija/mixed extraction corpus with its contract suite. Remaining
 matrix rows are external-blocked: seller-owned live key proof, installed
-Windows observation and T470 reference-floor runs. Per FD-050 the frozen
-frontier was packaged and published as one signed successor (Internal.29,
-PR #344); the Founder campaign and ledger reconciliation are the gate before
-FRC-3.
+Windows observation and T470 reference-floor runs. The frozen frontier was
+packaged and published from Internal.29 onward; the Founder campaign and ledger
+reconciliation remain the gate before FRC-3 conversions.
 
 ## FRC-3 — Required complete-product assurance
 
@@ -194,11 +200,11 @@ The durable inbox/outbox/effect/proposal/automation architecture is source-compl
 
 ## Phase 5 — whole-product AAA desktop experience
 
-**Phase 5 closure** source baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Issue #221 is now closed/completed after Founder acceptance of installed Internal.24. Do not restart generic visual discovery; FRC-3 maps existing evidence and reopens only demonstrated defects.
+**Phase 5 closure** source baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Issue #221 is now closed/completed after Founder acceptance of installed Internal.24. Do not restart generic visual discovery; FRC-3 maps existing evidence and reopens only demonstrated defects, and the transformation program (#414) works from demonstrated findings with exact evidence pointers rather than speculative reconstruction.
 
 ## Phase 6 — Arabic, RTL and accessibility parity
 
-The shared source foundation and Founder human gate are retained. Each FRC installed/provider journey must still prove applicable AR/FR/EN, Arabic/RTL, accessibility, error/degraded and recovery presentation. Do not restart a generic RTL sweep.
+The shared source foundation and Founder human gate are retained. Each FRC installed/provider journey must still prove applicable AR/FR/EN, Arabic/RTL, accessibility, error/degraded and recovery presentation. Do not restart a generic RTL sweep. Any new typographic step needs a matching rule in `src/app/arabic-system.css`, or adopting it silently strips Arabic's reading floor.
 
 ## Phase 7 — performance and reliability
 
@@ -219,7 +225,7 @@ A `workers.dev` endpoint can support development but does not satisfy the sole p
 
 ## Phase 9 — release certification and launch readiness
 
-Internal.25 / FD-044 is a historical Internal Founder-offline checkpoint, not Beta or Stable. Internal.29 / FD-050 is the latest Founder-installed checkpoint and Internal.30 / FD-051 is the current signed/published checkpoint (Founder installation pending); neither is Beta or Stable.
+Internal.36 / FD-059 is the latest signed/published Internal Founder-offline checkpoint. Every Internal checkpoint from Internal.24 onward is an internal Founder-offline package: none is Beta or Stable, and none carries customer-online authority.
 
 Stable still requires:
 
@@ -236,7 +242,7 @@ Stable still requires:
 
 ## Audit/review/merge discipline
 
-For every FRC repair:
+For every FRC repair and every transformation slice:
 
 1. perform **complete reconnaissance** for the demonstrated package, not the whole repository;
 2. branch from current protected `main`;
@@ -257,5 +263,5 @@ No force merge, waiver, protection bypass, updater-key weakening, Rust `--locked
 - Historical Internal.15 `1.0.0-internal.15`, signed run `31657621918`.
 - Historical retained evidence set: issues #201, #214, #221, #226 and #230.
 - PR #250, PR #251 and `agent/internal-16-wave-4` remain history.
-- Internal.24 / FD-043 is the Founder-accepted installed checkpoint.
-- Internal.25 / FD-044 is the historical provider/security checkpoint superseded for current signed/published authority by Internal.29 / FD-050; Internal.28 / FD-049 is the latest Founder-installed checkpoint and Internal.27 / FD-047 remains retained history.
+- Internal.24 / FD-043 is the Founder-accepted installed checkpoint of that era.
+- Internal.25 / FD-044 through Internal.35 / FD-058 remain retained publication history; Internal.36 / FD-059 is the current signed/published authority.
