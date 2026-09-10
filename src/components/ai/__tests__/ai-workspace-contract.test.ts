@@ -21,6 +21,9 @@ describe("AI Class-AAA decision workspace contract", () => {
   it("uses two panes at common desktop width and progressive review evidence", () => {
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the conversation log into its own module; the inline
+    // proposals moved with it.
+    const log = read("src/components/ai/ai-message-log.tsx");
 
     expect(workspace).toContain('useMediaQuery("(min-width: 1500px)")');
     expect(workspace).toContain('grid-cols-[17.5rem_minmax(0,1fr)]');
@@ -30,7 +33,7 @@ describe("AI Class-AAA decision workspace contract", () => {
     expect(workspace).toContain("AiWorkHistory");
     expect(workspace).toContain("AiDecisionCanvas");
     expect(workspace).toContain("AiReviewEvidence");
-    expect(canvas).toContain('data-ai-inline-proposals="true"');
+    expect(log).toContain('data-ai-inline-proposals="true"');
     expect(canvas).toContain('<SheetContent side="end"');
     expect(canvas).not.toContain('locale === "ar" ? "left" : "right"');
   });
@@ -119,13 +122,17 @@ describe("AI Class-AAA decision workspace contract", () => {
     const hook = read("src/hooks/use-ai-workspace.ts");
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
+    // STR-01 moved the conversation log into its own module. The live region
+    // moved with the log it announces; the follow-tail authority stayed in
+    // the canvas, which owns the scroll root and the away-from-tail pill.
+    const log = read("src/components/ai/ai-message-log.tsx");
     const resultCard = read("src/components/ai/ai-tool-result-card.tsx");
     expect(hook).toContain("conversationGenerationRef");
     expect(hook).toContain("conversationAbortRef");
     expect(hook).toContain('eventType === "persistence_warning"');
     expect(hook).toContain('tool.state !== "running"');
     expect(workspace).toContain('data-ai-decision-workspace="true"');
-    expect(canvas).toContain('role="log"');
+    expect(log).toContain('role="log"');
     expect(canvas).toContain("followTailRef");
     expect(resultCard).not.toContain("JSON.stringify");
   });
@@ -149,6 +156,10 @@ describe("AI Class-AAA decision workspace contract", () => {
     const paths = [
       "src/components/ai/ai-work-history.tsx",
       "src/components/ai/ai-decision-canvas.tsx",
+      // STR-01 split the canvas into three modules; the sweep follows every
+      // piece so the split cannot become a blind spot.
+      "src/components/ai/ai-message-log.tsx",
+      "src/components/ai/ai-composer-deck.tsx",
       "src/components/ai/ai-review-evidence.tsx",
       "src/components/ai/ai-tool-result-card.tsx",
       "src/components/ai/ai-action-proposal-card.tsx",
