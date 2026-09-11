@@ -88,7 +88,7 @@ describe("production licensing authority inventory", () => {
     expect(release).toContain("name: Build Signed Internal Windows Update");
     expect(release).toContain("SF_LICENSE_SERVICE_URL: ${{ secrets.SF_LICENSE_SERVICE_URL || vars.SF_LICENSE_SERVICE_URL }}");
     expect(release).toContain("'SF_LICENSE_SERVICE_URL=' >> $env:GITHUB_ENV");
-    expect(release).toContain("exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, FD-038/Internal.19, FD-039/Internal.20, FD-040/Internal.21, FD-041/Internal.22, FD-042/Internal.23, FD-043/Internal.24, FD-044/Internal.25, FD-046/Internal.26, FD-047/Internal.27, FD-049/Internal.28, FD-050/Internal.29, FD-051/Internal.30, FD-053/Internal.31, FD-055/Internal.32, FD-056/Internal.33, FD-057/Internal.34, FD-058/Internal.35, or FD-059/Internal.36");
+    expect(release).toContain("exact FD-032/Internal.15, FD-034/Internal.16, FD-036/Internal.17, FD-037/Internal.18, FD-038/Internal.19, FD-039/Internal.20, FD-040/Internal.21, FD-041/Internal.22, FD-042/Internal.23, FD-043/Internal.24, FD-044/Internal.25, FD-046/Internal.26, FD-047/Internal.27, FD-049/Internal.28, FD-050/Internal.29, FD-051/Internal.30, FD-053/Internal.31, FD-055/Internal.32, FD-056/Internal.33, FD-057/Internal.34, FD-058/Internal.35, FD-059/Internal.36, or FD-060/Internal.37");
     expect(statusRoute).toContain("onlineTrialAvailable:");
     expect(trialRoute).toContain("LICENSE_TRIAL_DISABLED_FOR_FOUNDER_CHECKPOINT");
     expect(licensePanel).toContain("projection?.onlineTrialAvailable === true");
