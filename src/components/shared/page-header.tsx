@@ -71,8 +71,9 @@ export function PageHeader({
         ) : null}
         <div className={cn("min-w-0", workspace ? undefined : "space-y-1")}>
           {/*
-            Always visible. A page whose only heading is `sr-only` reads to a
-            sighted seller as a screen with no name.
+            Visible document identity. Workspaces that already name themselves
+            inside the canvas use PageShell identity="sr-only" instead of this
+            header, so this band is never a second title.
           */}
           <h1
             className={cn(

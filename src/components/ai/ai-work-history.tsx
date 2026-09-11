@@ -99,6 +99,13 @@ function previewRepeatsTitle(title: string, preview: string): boolean {
   return normalize(preview).startsWith(body);
 }
 
+function previewPlainText(value: string): string {
+  return value
+    .replace(/[*_#>`]+/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
 export function AiWorkHistory({
   workspace,
   navigationLocked,
@@ -239,26 +246,21 @@ export function AiWorkHistory({
           : ""}
       </p>
       <div className="flex flex-col gap-2.5 border-b px-3.5 pb-3 pt-4">
-        <div>
-          <div className="flex min-w-0 items-center justify-between gap-2">
-            <h2 className="truncate text-sm font-semibold tracking-tight">
-              {getAiDecisionCopy(locale, "workHistory")}
-            </h2>
-            {sessions.length > 0 ? (
-              <Badge
-                variant="secondary"
-                className="shrink-0 rounded-full px-2 text-caption font-semibold tabular-nums text-muted-foreground"
-              >
-                <span className="sr-only">
-                  {`${workspace.copy("sessions")}: `}
-                </span>
-                {sessions.length}
-              </Badge>
-            ) : null}
-          </div>
-          <p className="mt-1 text-caption leading-4 text-muted-foreground">
-            {getAiDecisionCopy(locale, "workHistoryDescription")}
-          </p>
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <h2 className="truncate text-sm font-semibold tracking-tight">
+            {getAiDecisionCopy(locale, "workHistory")}
+          </h2>
+          {sessions.length > 0 ? (
+            <Badge
+              variant="secondary"
+              className="shrink-0 rounded-full px-2 text-caption font-semibold tabular-nums text-muted-foreground"
+            >
+              <span className="sr-only">
+                {`${workspace.copy("sessions")}: `}
+              </span>
+              {sessions.length}
+            </Badge>
+          ) : null}
         </div>
         <div className="flex gap-2">
           <Button
@@ -427,7 +429,9 @@ export function AiWorkHistory({
                       const active = session.id === activeSessionId;
                       const sessionTitle =
                         session.title || workspace.copy("newSessionTitle");
-                      const rawPreview = sessionPreview(session);
+                      const rawPreview = previewPlainText(
+                        sessionPreview(session),
+                      );
                       const preview = previewRepeatsTitle(
                         session.title ?? "",
                         rawPreview,
@@ -517,7 +521,7 @@ export function AiWorkHistory({
                             disabled={navigationLocked}
                             onClick={() => onOpenSession(session.id)}
                             className={cn(
-                              "w-full rounded-surface border border-transparent px-3 py-2.5 text-start transition-colors",
+                              "w-full rounded-surface border border-transparent px-3 py-2 text-start transition-colors",
                               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                               "disabled:cursor-not-allowed disabled:opacity-50",
                               active
@@ -540,7 +544,7 @@ export function AiWorkHistory({
                                 {preview ? (
                                   <span
                                     dir="auto"
-                                    className="mt-1 block line-clamp-2 text-xs leading-5 text-muted-foreground"
+                                    className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground"
                                   >
                                     {preview}
                                   </span>

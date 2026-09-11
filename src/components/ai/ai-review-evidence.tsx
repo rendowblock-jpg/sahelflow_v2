@@ -34,6 +34,21 @@ function decisionClock(value: string, locale: string): string {
 }
 
 /**
+ * True when the review column would carry actual work. An empty rail is not
+ * a third of the Agents workspace — Founder-installed Internal.37 rejected
+ * that furniture. The sheet remains the reachability path at every width.
+ */
+export function aiReviewHasWork(
+  workspace: ReturnType<typeof useAiWorkspace>,
+): boolean {
+  const { proposals, inbox, inboxDecisions } = workspace;
+  if (proposals.length > 0 || inboxDecisions.length > 0) return true;
+  return inbox.some(
+    (entry) => !proposals.some((p) => p.proposal.id === entry.proposal.id),
+  );
+}
+
+/**
  * Ledger AI-20: the review surface shows REAL state only — session-scoped
  * proposals, the shop-wide cross-session pending inbox (AI-19), and the
  * recent approve/deny/execution timeline derived from proposal rows. Slices

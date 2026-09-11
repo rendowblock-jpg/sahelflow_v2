@@ -26,10 +26,12 @@ describe("AI Class-AAA decision workspace contract", () => {
     const log = read("src/components/ai/ai-message-log.tsx");
 
     expect(workspace).toContain('useMediaQuery("(min-width: 1500px)")');
-    expect(workspace).toContain('grid-cols-[17.5rem_minmax(0,1fr)]');
+    expect(workspace).toContain('grid-cols-[16rem_minmax(0,1fr)]');
     expect(workspace).toContain(
-      'grid-cols-[17.5rem_minmax(0,1fr)_20rem]',
+      'grid-cols-[16rem_minmax(0,1fr)_20rem]',
     );
+    expect(workspace).toContain("showReviewColumn");
+    expect(workspace).toContain("aiReviewHasWork");
     expect(workspace).toContain("AiWorkHistory");
     expect(workspace).toContain("AiDecisionCanvas");
     expect(workspace).toContain("AiReviewEvidence");

@@ -93,19 +93,16 @@ describe("Class-AAA Inbox composition contract", () => {
     const page = read("src/app/(dashboard)/inbox/page.tsx");
     const shell = read("src/components/system/page-shell.tsx");
 
-    // IA-01 converted this pin rather than deleting it. Its two halves were
-    // "localized semantic heading" and "without consuming layout space", and
-    // only the second one required `sr-only` — which is also what left Inbox
-    // with no visible identity at all.
-    //
-    // The workspace variant satisfies both: the heading is real and visible,
-    // while the panes still get every pixel below it because the shell body
-    // stays `min-h-0 flex-1 overflow-hidden` inside a full-height container.
-    // Both halves are asserted, so the guarantee survives the change.
+    // Founder-installed Internal.37 rejected a second visible title band on
+    // Inbox. The two halves of this pin stay: a localized semantic heading,
+    // and it must not consume pane space. `identity="sr-only"` is how the
+    // workspace variant now honours both — the canvas already names itself.
     expect(page).toContain("const { t } = await getI18n();");
     expect(page).toContain('title={t("metadata.title.inbox")}');
     expect(page).toContain('variant="workspace"');
-    expect(page).not.toContain('<h1 className="sr-only">');
+    expect(page).toContain('identity="sr-only"');
+    expect(shell).toContain('identity === "sr-only"');
+    expect(shell).toContain('<h1 className="sr-only">{title}</h1>');
     expect(shell).toContain('workspace: "app-workspace-content flex flex-col"');
     expect(shell).toContain('workspace ? "min-h-0 flex-1 overflow-hidden"');
   });

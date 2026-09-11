@@ -132,23 +132,24 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
     );
 
     await page.setViewportSize({ width: 1600, height: 900 });
-    await expect(workspace).toHaveAttribute("data-ai-layout", "wide");
-    await expect(reviewEvidence).toHaveCount(1);
-    await expect(reviewEvidence).toBeVisible();
-    await expect(page.getByRole("button", { name: "Revue & preuves" })).toHaveCount(0);
+    // Empty review does not earn a third column. The canvas stays dominant
+    // and review stays reachable through the same sheet control.
+    await expect(workspace).toHaveAttribute("data-ai-layout", "desktop");
+    await expect(page.getByRole("button", { name: "Revue & preuves" })).toHaveCount(1);
   });
 
-  test("wide desktop promotes review evidence without shrinking the decision canvas", async ({
+  test("wide desktop keeps the decision canvas dominant when review is empty", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1600, height: 900 });
     const workspace = page.locator('[data-ai-decision-workspace="true"]');
-    await expect(workspace).toHaveAttribute("data-ai-layout", "wide");
+    await expect(workspace).toHaveAttribute("data-ai-layout", "desktop");
     await expect(page.locator('[data-ai-work-history="true"]')).toBeVisible();
     await expect(page.locator('[data-ai-decision-canvas="true"]')).toBeVisible();
+    await expect(page.locator('[data-ai-review-evidence="true"]')).toHaveCount(0);
+    await page.getByRole("button", { name: "Revue & preuves" }).click();
     await expect(page.locator('[data-ai-review-evidence="true"]')).toHaveCount(1);
     await expect(page.locator('[data-ai-review-evidence="true"]')).toBeVisible();
-    await expect(page.getByRole("button", { name: "Revue & preuves" })).toHaveCount(0);
   });
 
   test("mobile drills history to decision canvas and Arabic remains semantically contained", async ({

@@ -363,7 +363,7 @@ export function AiComposerDeck({
               size="icon"
               variant="outline"
               aria-label={workspace.copy("stop")}
-              className="shrink-0 rounded-surface border-destructive/30 text-destructive hover:bg-destructive-soft hover:text-destructive"
+              className="shrink-0 rounded-full border-destructive/30 text-destructive hover:bg-destructive-soft hover:text-destructive"
               onClick={stop}
             >
               <Square className="size-4" aria-hidden="true" />
@@ -379,7 +379,7 @@ export function AiComposerDeck({
                 startingAnalysis ||
                 readingScreenshot
               }
-              className="shrink-0 rounded-surface shadow-sm"
+              className="shrink-0 rounded-full shadow-sm"
               onClick={() => void onSubmit()}
             >
               {startingAnalysis ? (
