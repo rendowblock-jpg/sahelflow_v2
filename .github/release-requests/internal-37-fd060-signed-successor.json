@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.37 FD-060 signed successor publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.37",
+  "windowsMsiVersion": "1.0.0.37",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-060",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "e9a64953882075b5af8d5728d5f8d1015b5475ac",
+    "phase5RunId": 34485792153,
+    "phase67RunId": 34485792154,
+    "ciRunId": 34485792321
+  },
+  "reason": "ADOPTED release authority — FD-060 (documentation/product/DECISIONS.md) adopted by the Founder's 2026-09-11 directive ('complete all the needed work and make the next signed release'). Authorizes exactly one combined signed successor (Internal.37) packaging the exact protected-main frontier since Internal.36 (release source 4e527f0549674789b4f679ae7c2368d2520ccb44): PR #413 docs-only Internal.36 publication record; PR #414 (29987b0f) whole-app transformation W1–W6 — interface system authority, primitive layer, FN-01 shop-creation repair, SEC-01 dependency remediation, SEC-02 enforced coverage ratchet; PR #415 docs-only re-anchor to Internal.36; PR #416 (730641b7) STR-01 slice 1 — AI composer deck extracted from ai-decision-canvas.tsx; PR #418 (319a06b5) STR-01 slice 2 — conversation log extracted into ai-message-log.tsx; PR #419 (c9b8c88b) STR-01 slice 3 — AI-22 keyboard surface extracted into use-ai-canvas-shortcuts.ts; PR #420 docs-only close of ai-decision-canvas under STR-01; PR #422 (9c200d4e) e2e governed Orders journey CI latency budget; PR #421 (e9a64953) TEST-01 behavioural evidence for the AI-22 keyboard surface (13 happy-dom tests). Remaining STR-01 god components (inbox-v3-thread, storefront-studio, automation-builder, inbox-v3-queue), TEST-01 conversion of remaining source-text pins, L10N-01 copy-authority migration and SYS-04 arbitrary-value retirement ride protected main after this package and carry no release authority. Certification product head e9a64953882075b5af8d5728d5f8d1015b5475ac (protected main after the PR #421 squash) is tree-identical (88dfc65d04065fa6ea1de9aeb91711e69b0a4e07) to the reviewed PR #421 head 96244f193e4882e91f4933bf802704a37e44237f, and the required-gate line passed at that exact head with zero failed checks: CI run 34485792321, Phase 5 run 34485792153, Phase 6-7 run 34485792154 (success / 0 failed; native/Windows lanes risk-classified skips on the test-only #421 head — the full installed-MSI battery is required on this release-authority head). Founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim; #230 unaffected. Sequencing: the Founder skips the uninstalled Internal.35 and Internal.36 candidates and runs the FD-058 campaign rows once on the installed Internal.37 candidate, which contains every Internal.35 repair, the Internal.36 frontier and the #414–#421 transformation/STR-01/TEST-01 line. Ledger rows convert only on installed observation per the FRC-3 conversion rules. The retained #306 logout row executes LAST, after every other row is green. The Founder rotates the chat-transited GitHub PAT after the merge window."
+}

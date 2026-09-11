@@ -1162,6 +1162,68 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is created.
   #230 and the zero-budget boundary are unaffected.
 
+## FD-060 — One signed successor (Internal.37) packaging the #413–#422 plus #421 protected-main frontier
+
+The Founder's 2026-09-11 directive ("complete all the needed work and make
+the next signed release"), issued after live verification that protected
+`main` at `e9a64953…` (PR #421 squash, tree `88dfc65d…`, tree-identical to
+the reviewed PR #421 head `96244f19…`) carries the required-gate line green
+at that exact reviewed head (CI run 34485792321, Phase 5 run 34485792153,
+Phase 6-7 run 34485792154 — success, 0 failed; native/Windows lanes
+risk-classified skips on the test-only #421 head, with the full
+installed-MSI battery required on this release-authority head), authorizes
+exactly one combined signed successor (Internal.37) packaging the
+protected-main frontier since Internal.36 (release source `4e527f05…`).
+FD-060 is ADOPTED by that same 2026-09-11 directive. The packaged frontier:
+
+- PR #413 (docs-only): Internal.36 FD-059 publication record.
+- PR #414 (`29987b0f…`): whole-app transformation W1–W6 — interface system
+  authority, primitive layer, FN-01 shop-creation repair, SEC-01 dependency
+  remediation, SEC-02 enforced coverage ratchet.
+- PR #415 (docs-only): re-anchor entry-point documents to Internal.36.
+- PR #416 (`730641b7…`): STR-01 slice 1 — AI composer deck extracted from
+  `ai-decision-canvas.tsx`.
+- PR #418 (`319a06b5…`): STR-01 slice 2 — conversation log extracted into
+  `ai-message-log.tsx`.
+- PR #419 (`c9b8c88b…`): STR-01 slice 3 — AI-22 keyboard surface extracted
+  into `use-ai-canvas-shortcuts.ts`.
+- PR #420 (docs-only): close `ai-decision-canvas` under STR-01.
+- PR #422 (`9c200d4e…`): e2e governed Orders journey CI latency budget.
+- PR #421 (`e9a64953…`): TEST-01 behavioural evidence for the AI-22
+  keyboard surface (13 happy-dom tests).
+
+Remaining STR-01 god components (`inbox-v3-thread`, `storefront-studio`,
+`automation-builder`, `inbox-v3-queue`), remaining TEST-01 source-text
+pin conversion, L10N-01 copy-authority migration and SYS-04 arbitrary-value
+retirement ride protected `main` after this package and carry no release
+authority.
+
+Binding boundaries:
+
+- The successor packages exactly the protected-main frontier at the release
+  head; certification cites the product head and its green CI/Phase 5/
+  Phase 6-7 runs at that exact head (tree-identity with the reviewed PR
+  #421 head recorded in the release request).
+- FD-045 evidence rules are unchanged: release-authority PR, exact-head
+  review, required gates, expected-head merge, signed run, in-place
+  preserved install.
+- Sequencing — one combined campaign. The Founder skips the uninstalled
+  Internal.35 and Internal.36 candidates and runs the FD-058 campaign rows
+  (F-05 residual, F-09..F-13, retained FD-050 rows, D3 waves, applicable
+  #316/#317 native rows, retained #306 rows) once, on the installed
+  Internal.37 candidate, which contains every Internal.35 repair, the
+  Internal.36 frontier and the #414–#421 line. This decision supersedes
+  only the sequencing boundary of FD-059; every FD-059 and FD-058
+  publication fact remains retained evidence. Ledger rows convert only on
+  that installed observation, per the FRC-3 conversion rules. The updater
+  channel serves Internal.37 to the installed Internal.34 after
+  publication.
+- The retained #306 logout row executes LAST, after every other row is
+  green, on the installed Internal.37 candidate. The Founder rotates the
+  chat-transited GitHub PAT after the merge window.
+- No customer-online, Beta, Stable or paid-deployment authority is created.
+  #230 and the zero-budget boundary are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

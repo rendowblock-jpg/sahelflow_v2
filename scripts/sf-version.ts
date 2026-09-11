@@ -106,10 +106,11 @@ const founderOfflineCheckpoint =
     (authority.version === "1.0.0-internal.33" && authority.licensing?.authorityDecision === "FD-056") ||
     (authority.version === "1.0.0-internal.34" && authority.licensing?.authorityDecision === "FD-057") ||
     (authority.version === "1.0.0-internal.35" && authority.licensing?.authorityDecision === "FD-058") ||
-    (authority.version === "1.0.0-internal.36" && authority.licensing?.authorityDecision === "FD-059"));
+    (authority.version === "1.0.0-internal.36" && authority.licensing?.authorityDecision === "FD-059") ||
+    (authority.version === "1.0.0-internal.37" && authority.licensing?.authorityDecision === "FD-060"));
 if (authority.licensing?.releaseMode === "founder-offline-only") {
   if (!founderOfflineCheckpoint) {
-    console.error("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, Internal.18/FD-037, Internal.19/FD-038, Internal.20/FD-039, Internal.21/FD-040, Internal.22/FD-041, Internal.23/FD-042, Internal.24/FD-043, Internal.25/FD-044, Internal.26/FD-046, Internal.27/FD-047, Internal.28/FD-049, Internal.29/FD-050, Internal.30/FD-051, Internal.31/FD-053, Internal.32/FD-055, Internal.33/FD-056, Internal.34/FD-057, Internal.35/FD-058, or Internal.36/FD-059 on the internal channel with no owned host suffix");
+    console.error("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, Internal.18/FD-037, Internal.19/FD-038, Internal.20/FD-039, Internal.21/FD-040, Internal.22/FD-041, Internal.23/FD-042, Internal.24/FD-043, Internal.25/FD-044, Internal.26/FD-046, Internal.27/FD-047, Internal.28/FD-049, Internal.29/FD-050, Internal.30/FD-051, Internal.31/FD-053, Internal.32/FD-055, Internal.33/FD-056, Internal.34/FD-057, Internal.35/FD-058, Internal.36/FD-059, or Internal.37/FD-060 on the internal channel with no owned host suffix");
     failed = true;
   }
 } else if (authority.licensing?.releaseMode === "customer-online") {
