@@ -183,6 +183,9 @@ describe("AI Class-AAA decision workspace contract", () => {
     expect(decisionCopy).toContain('reviewEvidence: "Review & evidence"');
     expect(decisionCopy).toContain('reviewEvidence: "Revue & preuves"');
     expect(decisionCopy).toContain('reviewEvidence: "المراجعة والأدلة"');
-    expect(decisionCopy).toContain("لهذا المتجر");
+    expect(decisionCopy).toContain('agentOrders: "Orders"');
+    expect(decisionCopy).toContain('agentOrders: "Commandes"');
+    expect(decisionCopy).toContain('agentOrders: "الطلبات"');
+    expect(decisionCopy).toContain("هذا المتجر");
   });
 });
