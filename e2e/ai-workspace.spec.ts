@@ -90,7 +90,10 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
     expect(status).not.toHaveProperty("apiKey");
     expect(status).not.toHaveProperty("secret");
 
-    await page.getByRole("button", { name: "Nouvelle analyse" }).click();
+    await page
+      .locator('[data-ai-work-history="true"]')
+      .getByRole("button", { name: "Nouveau" })
+      .click();
     await expect(page.locator("[data-ai-session]").first()).toBeVisible();
     await expect(page.locator('[data-ai-decision-canvas="true"]')).toContainText(
       "Nouvelle conversation",
@@ -124,18 +127,19 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
     }
 
     const reviewEvidence = page.locator('[data-ai-review-evidence="true"]');
-    await page.getByRole("button", { name: "Revue & preuves" }).click();
+    await page.locator('[data-ai-open-review="true"]').click();
     await expect(reviewEvidence).toHaveCount(1);
     await expect(reviewEvidence).toBeVisible();
     await expect(reviewEvidence).toContainText(
       "Fournisseur & confidentialité",
     );
 
+    await page.keyboard.press("Escape");
     await page.setViewportSize({ width: 1600, height: 900 });
     // Empty review does not earn a third column. The canvas stays dominant
     // and review stays reachable through the same sheet control.
     await expect(workspace).toHaveAttribute("data-ai-layout", "desktop");
-    await expect(page.getByRole("button", { name: "Revue & preuves" })).toHaveCount(1);
+    await expect(page.locator('[data-ai-open-review="true"]')).toHaveCount(1);
   });
 
   test("wide desktop keeps the decision canvas dominant when review is empty", async ({
@@ -147,7 +151,7 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
     await expect(page.locator('[data-ai-work-history="true"]')).toBeVisible();
     await expect(page.locator('[data-ai-decision-canvas="true"]')).toBeVisible();
     await expect(page.locator('[data-ai-review-evidence="true"]')).toHaveCount(0);
-    await page.getByRole("button", { name: "Revue & preuves" }).click();
+    await page.locator('[data-ai-open-review="true"]').click();
     await expect(page.locator('[data-ai-review-evidence="true"]')).toHaveCount(1);
     await expect(page.locator('[data-ai-review-evidence="true"]')).toBeVisible();
   });

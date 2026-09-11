@@ -81,7 +81,7 @@ describe("AI Class-AAA final review regressions", () => {
     expect(canvas).toContain('<SheetContent side="end"');
     expect(browser).toContain("await page.setViewportSize({ width: 1600, height: 900 });");
     expect(browser).toContain('data-ai-layout", "desktop"');
-    expect(browser).toContain('getByRole("button", { name: "Revue & preuves" })');
+    expect(browser).toContain('[data-ai-open-review="true"]');
     expect(browser).toContain("Empty review does not earn a third column");
   });
 

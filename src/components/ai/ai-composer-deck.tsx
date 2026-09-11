@@ -292,7 +292,7 @@ export function AiComposerDeck({
         ) : null}
         <div
           data-ai-composer="true"
-          className="flex w-full items-end gap-2 rounded-surface border border-border/70 bg-card p-2 shadow-[0_1px_2px_oklch(0_0_0/0.05),0_12px_32px_oklch(0_0_0/0.07)] focus-within:border-primary/40"
+          className="flex w-full items-end gap-2 rounded-[1.5rem] border border-border/70 bg-card px-2 py-1.5 shadow-[0_1px_2px_oklch(0_0_0/0.04),0_10px_28px_oklch(0_0_0/0.06)] focus-within:border-primary/40"
         >
           <input
             ref={screenshotInputRef}

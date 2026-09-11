@@ -24,7 +24,6 @@ import {
   getAiDecisionCopy,
   type AiDecisionLocale,
 } from "@/lib/i18n/ai-decision-workspace";
-import { getAiToolGroupLabel } from "@/lib/i18n/ai-tool-labels";
 import { cn } from "@/lib/utils";
 
 function sessionDateGroup(value: string): "today" | "yesterday" | "earlier" {
@@ -130,24 +129,8 @@ export function AiWorkHistory({
     deletingSessionId,
     renameSession,
     deleteSession,
-    capabilities,
     inbox,
-  } = workspace as ReturnType<typeof useAiWorkspace> & {
-    capabilities?: {
-      briefing?: {
-        pendingOrders?: number | null;
-        ordersToday?: number | null;
-        lowStockProducts?: number | null;
-        pendingDeliveries?: number | null;
-        pendingProposals?: number | null;
-      } | null;
-      groups?: Array<{
-        id: "orders" | "customers" | "products" | "delivery" | "insights" | "conversations";
-        tools: Array<{ name: string; executionClass: string }>;
-      }>;
-    } | null;
-    inbox?: Array<unknown>;
-  };
+  } = workspace;
   const [renaming, setRenaming] = useState<{
     id: string;
     value: string;
@@ -318,76 +301,12 @@ export function AiWorkHistory({
         ) : null}
       </div>
 
-      {/* Work rail pulse — the shop's live present state above the session
-          list. Every count is independently nullable: unmeasured renders
-          nothing, never a fabricated zero. Workforce groups reuse the same
-          capability truth the canvas AbilitiesPanel renders. */}
-      {capabilities?.briefing || (capabilities?.groups?.length ?? 0) > 0 || (inbox?.length ?? 0) > 0 ? (
-        <div data-ai-work-rail-pulse="true" className="border-b px-3.5 py-3">
-          {capabilities?.briefing ? (
-            <div className="grid grid-cols-3 gap-1.5">
-              {capabilities.briefing.pendingOrders != null ? (
-                <div className="rounded-surface border border-border/60 bg-card/70 px-2 py-1.5 text-center">
-                  <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.pendingOrders}</p>
-                  <p className="mt-0.5 truncate text-caption text-muted-foreground">
-                    {getAiDecisionCopy(locale, "starterCountPending", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
-                  </p>
-                </div>
-              ) : null}
-              {capabilities.briefing.ordersToday != null ? (
-                <div className="rounded-surface border border-border/60 bg-card/70 px-2 py-1.5 text-center">
-                  <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.ordersToday}</p>
-                  <p className="mt-0.5 truncate text-caption text-muted-foreground">
-                    {getAiDecisionCopy(locale, "starterCountToday", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
-                  </p>
-                </div>
-              ) : null}
-              {capabilities.briefing.lowStockProducts != null ? (
-                <div className="rounded-surface border border-border/60 bg-card/70 px-2 py-1.5 text-center">
-                  <p className="text-sm font-bold tabular-nums leading-5">{capabilities.briefing.lowStockProducts}</p>
-                  <p className="mt-0.5 truncate text-caption text-muted-foreground">
-                    {getAiDecisionCopy(locale, "starterCountLowStock", { count: "" }).replace(/\s*\d*\s*$/, "").trim() || "—"}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          {(inbox?.length ?? 0) > 0 ? (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-caption font-semibold text-warning">
-              <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
-              {getAiDecisionCopy(locale, "inboxStripCount", { count: inbox?.length ?? 0 })}
-            </p>
-          ) : null}
-          {(capabilities?.groups?.length ?? 0) > 0 ? (
-            <ul className="mt-2 space-y-1" aria-label={getAiDecisionCopy(locale, "abilitiesTitle")}>
-              {(capabilities?.groups ?? []).map((group) => {
-                const sensitive = group.tools.filter((tool) => tool.executionClass === "sensitive").length;
-                return (
-                  <li
-                    key={group.id}
-                    className="flex items-center justify-between gap-2 rounded-control px-1.5 py-1 text-caption text-muted-foreground"
-                  >
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span
-                        className={cn(
-                          "size-1.5 shrink-0 rounded-full",
-                          sensitive > 0 ? "bg-warning" : "bg-success",
-                        )}
-                        aria-hidden="true"
-                      />
-                      <span className="truncate font-medium text-foreground/80">
-                        {getAiToolGroupLabel(locale, group.id)}
-                      </span>
-                    </span>
-                    <span className="shrink-0 tabular-nums">
-                      {group.tools.length}
-                      {sensitive > 0 ? ` · ${sensitive} ✓` : ""}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
+      {(inbox?.length ?? 0) > 0 ? (
+        <div data-ai-work-rail-pulse="true" className="border-b px-3.5 py-2.5">
+          <p className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-caption font-semibold text-warning">
+            <span className="size-1.5 rounded-full bg-warning" aria-hidden="true" />
+            {getAiDecisionCopy(locale, "inboxStripCount", { count: inbox?.length ?? 0 })}
+          </p>
         </div>
       ) : null}
 

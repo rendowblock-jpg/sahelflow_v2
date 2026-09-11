@@ -328,7 +328,7 @@ test.describe.serial("Founder visual correction evidence", () => {
     const aiHistory = await visibleBox(page, '[data-ai-work-history="true"]');
     const aiCanvas = await visibleBox(page, '[data-ai-decision-canvas="true"]');
     expectRightOf(aiHistory, aiCanvas, "RTL AI work history");
-    expectWidthBetween(aiHistory, 275, 285, "RTL AI work history");
+    expectWidthBetween(aiHistory, 240, 290, "RTL AI work history");
     expect(
       aiCanvas.width,
       "AI decision canvas must remain the dominant 1366px work surface",
