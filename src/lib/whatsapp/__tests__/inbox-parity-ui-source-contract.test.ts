@@ -40,10 +40,10 @@ describe("inbox conversation-native interaction source contract", () => {
   });
 
   it("keeps safe message copy permission-preserving with a failure state", () => {
-    expect(thread).toContain("writeClipboardText");
-    expect(thread).toContain("navigator.clipboard?.writeText");
-    expect(thread).toContain("messageCopyFailed");
-    expect(thread).toContain("messageCopied");
+    expect(source("src/components/inbox/inbox-thread-message.tsx")).toContain("writeClipboardText");
+    expect(source("src/components/inbox/inbox-thread-message.tsx")).toContain("navigator.clipboard?.writeText");
+    expect(source("src/components/inbox/inbox-thread-message.tsx")).toContain("messageCopyFailed");
+    expect(source("src/components/inbox/inbox-thread-message.tsx")).toContain("messageCopied");
   });
 
   it("exposes truthful upload progress and pre-effect cancellation only", () => {
@@ -51,7 +51,7 @@ describe("inbox conversation-native interaction source contract", () => {
     expect(hook).toContain("cancellable: progress < 100");
     expect(hook).toContain('"AbortError"');
     expect(thread).toContain("cancelUpload");
-    expect(thread).toContain("uploadProgress");
+    expect(source("src/components/inbox/inbox-thread-message.tsx")).toContain("uploadProgress");
   });
 
   it("consumes only the derived bounded thumbnail variant", () => {

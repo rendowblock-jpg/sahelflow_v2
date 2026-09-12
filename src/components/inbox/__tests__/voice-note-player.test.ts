@@ -61,13 +61,15 @@ describe("Voice note player (R5-e) source contract", () => {
   it("serves outgoing and incoming voice notes through one rendering branch", () => {
     const thread = read("src/components/inbox/inbox-v3-thread.tsx");
     const media = read("src/components/inbox/inbox-media-attachment.tsx");
+    const bubble = read("src/components/inbox/inbox-thread-message.tsx");
 
     // MessageRow renders inbound and outbound through the same binaryMedia
     // branch, which delegates to InboxMediaAttachment — one shared path.
-    expect(thread).toContain('const inbound = message.direction === "inbound"');
-    expect(thread).toContain("<InboxMediaAttachment message={message} />");
-    expect(thread.match(/<InboxMediaAttachment/g)).toHaveLength(1);
+    expect(bubble).toContain('const inbound = message.direction === "inbound"');
+    expect(bubble).toContain("<InboxMediaAttachment message={message} />");
+    expect(bubble.match(/<InboxMediaAttachment/g)).toHaveLength(1);
     expect(thread).not.toContain("<audio");
+    expect(bubble).not.toContain("<audio");
     // Direction only styles the bubble, never the media renderer.
     expect(media).not.toContain("inbound");
     expect(media).not.toContain("fromMe");
