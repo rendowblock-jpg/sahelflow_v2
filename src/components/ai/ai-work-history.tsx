@@ -24,7 +24,6 @@ import {
   getAiDecisionCopy,
   type AiDecisionLocale,
 } from "@/lib/i18n/ai-decision-workspace";
-import { getAiToolGroupLabel } from "@/lib/i18n/ai-tool-labels";
 import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 function sessionDateGroup(value: string): "today" | "yesterday" | "earlier" {
