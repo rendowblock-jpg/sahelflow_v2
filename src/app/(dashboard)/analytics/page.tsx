@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import {
   Activity,
@@ -36,6 +37,7 @@ import {
 } from "@/components/charts/decision-visualizations";
 import { LineTrendChart } from "@/components/charts/line-trend-chart";
 import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -301,6 +303,19 @@ export default async function AnalyticsPage({
         description={t("analytics.depth")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {/*
+              `/analytics/extraction` is a complete, guarded, trilingual
+              dashboard with a working API, and NOTHING linked to it — a seller
+              could only reach it by typing the URL. It is a child of this page,
+              so it is linked from this page rather than by adding a 17th
+              sidebar item (the flat 16-item sidebar is a recorded product
+              decision, SF16-NAV-017).
+            */}
+            <Button asChild variant="outline" size="sm">
+              <Link href="/analytics/extraction">
+                {t("analytics.extraction.title")}
+              </Link>
+            </Button>
             <AnalyticsRangeControls />
             <AnalyticsExportButton
               summary={{

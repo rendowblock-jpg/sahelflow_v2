@@ -8,6 +8,7 @@ import {
   Check,
   CheckCheck,
   ChevronDown,
+  Compass,
   Globe,
   HelpCircle,
   LogOut,
@@ -282,6 +283,23 @@ export function Topbar({
               <span className="min-w-0 flex-1 truncate">
                 {t("shops.newShop")}
               </span>
+            </DropdownMenuItem>
+            {/*
+              `/onboarding` is the new-seller setup wizard — shop basics,
+              WhatsApp pairing, couriers and the AI key, with a resumable
+              checklist. It had NO link, redirect or nav entry anywhere, so a
+              seller could only reach their own onboarding by typing the URL.
+              It is offered here rather than as a 17th sidebar item, because
+              the flat 16-item sidebar is a recorded product decision
+              (SF16-NAV-017).
+            */}
+            <DropdownMenuItem asChild className="gap-2">
+              <Link href="/onboarding">
+                <Compass className="size-4" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate">
+                  {t("onboarding.title")}
+                </span>
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
