@@ -224,7 +224,7 @@ describe("Inbox Class-AAA operations desk contract", () => {
     const copy = read("src/lib/i18n/inbox-workspace.ts");
     expect(copy).toContain('queueMine: "Mine"');
     expect(copy).toContain('queueMine: "À moi"');
-    expect(copy).toContain('queueMine: "مسندة إليّ"');
+    expect(copy).toContain('queueMine: "لي"');
     expect(copy).toContain('composerShortcut: "Enter to send');
     expect(copy).toContain('composerShortcut: "Entrée pour envoyer');
     expect(copy).toContain('composerShortcut: "Enter للإرسال');

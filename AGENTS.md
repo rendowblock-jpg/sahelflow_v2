@@ -21,7 +21,7 @@ Do not restart a generic codebase audit, generic RTL sweep, the old Inbox → AI
 Do not re-open the transformation rows that were CORRECTED by evidence rather than repaired. Acting on their original wording makes the product worse, and each one looks like unfinished work from the outside:
 
 - **IA-02** — the flattened 16-item sidebar is a recorded product decision (`SF16-NAV-017`), not drift; the domain model is deliberately retained for route context, search and permissions.
-- **IA-03 / IA-04** — the Agents three-column layout and its 1500px branch are deliberate, behaviourally covered by `e2e/ai-workspace.spec.ts:127` and contract-locked; changing them is a Founder design decision, not a repair.
+- **IA-03 / IA-04** — the 1500px branch remains the width at which a *populated* review column may appear. Founder-installed Internal.37 (2026-09-11) is the design decision that an **empty** review column is not acceptable; review stays reachable via the sheet at every width. Do not restore the empty third column.
 - **IA-05b** — Settings already renders as flat hairline-separated sections; the proposed `Card` → `Panel` migration would give it borders and radii and make it more island-like, not less.
 - **UI-07** — the state primitives are one renderer (`StateSurface`) with two thin composition adapters; "consolidating" them would delete a useful trilingual copy catalog.
 - The storefront radius carve-out (`--radius-storefront-soft` / `-round`) is deliberate seller-owned theme data. Collapsing it onto the two canonical radii makes two of the seller's three theme options render identically.

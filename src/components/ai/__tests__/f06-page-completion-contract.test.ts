@@ -191,6 +191,8 @@ describe("F-06 AI page-completion wave", () => {
     // assertions follow the code they protect.
     const startSurface = read("src/components/ai/ai-start-surface.tsx");
 
+    expect(startSurface).toContain('data-ai-workforce="true"');
+    expect(startSurface).toContain("agentOrders");
     expect(startSurface).toContain('data-ai-abilities="true"');
     expect(startSurface).toContain("AbilityGroupCard");
     expect(startSurface).toContain("getAiToolGroupLabel");

@@ -252,7 +252,6 @@ const ConversationRow = memo(function ConversationRow({
 }) {
   const status = chat.workflow.status ?? "open";
   const priority = chat.workflow.priority;
-  const hasOperationalMeta = status !== "open" || Boolean(chat.workflow.assigneeId);
 
   return (
     <button
@@ -267,7 +266,7 @@ const ConversationRow = memo(function ConversationRow({
       aria-current={!selectMode && active ? "true" : undefined}
       aria-pressed={selectMode ? checked : undefined}
       className={cn(
-        "group relative flex min-h-[4.75rem] w-full items-start gap-2.5 overflow-hidden border-b border-border/55 px-3 py-2.5 text-start outline-none transition-colors last:border-b-0 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+        "group relative flex min-h-14 w-full items-start gap-2.5 overflow-hidden border-b border-border/55 px-3 py-2 text-start outline-none transition-colors last:border-b-0 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
         selectMode && checked
           ? "bg-primary-soft"
           : active
@@ -307,9 +306,8 @@ const ConversationRow = memo(function ConversationRow({
       <span className="min-w-0 flex-1 overflow-hidden">
         <span className="flex min-w-0 items-center gap-2 overflow-hidden">
           <bdi
-            dir="auto"
             className={cn(
-              "block min-w-0 flex-1 truncate text-start text-[13px] [unicode-bidi:plaintext]",
+              "block min-w-0 flex-1 truncate text-start text-[13px]",
               chat.unread > 0 ? "font-semibold text-foreground" : "font-medium",
             )}
           >
@@ -337,7 +335,7 @@ const ConversationRow = memo(function ConversationRow({
           </span>
         </span>
 
-        <span className="mt-1 flex min-w-0 items-center gap-1.5 overflow-hidden">
+        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden">
           {draftPreview ? (
             <span
               data-inbox-preview="true"
@@ -354,10 +352,9 @@ const ConversationRow = memo(function ConversationRow({
               ) : null}
               <PreviewGlyph type={chat.lastMessageType} />
               <bdi
-                dir="auto"
                 data-inbox-preview="true"
                 className={cn(
-                  "block min-w-0 max-w-full flex-1 truncate text-start text-xs leading-5 [unicode-bidi:plaintext]",
+                  "block min-w-0 max-w-full flex-1 truncate text-start text-xs leading-5",
                   chat.unread > 0
                     ? "font-medium text-foreground/90"
                     : "text-muted-foreground",
@@ -367,6 +364,12 @@ const ConversationRow = memo(function ConversationRow({
               </bdi>
             </>
           )}
+
+          {status !== "open" ? (
+            <span className="shrink-0 text-caption leading-4 text-muted-foreground">
+              {statusLabel(status, t)}
+            </span>
+          ) : null}
 
           {priority ? (
             <Flag
@@ -390,22 +393,6 @@ const ConversationRow = memo(function ConversationRow({
             </span>
           ) : null}
         </span>
-
-        {hasOperationalMeta ? (
-          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden text-caption leading-4 text-muted-foreground">
-            {status !== "open" ? (
-              <span className="truncate">{statusLabel(status, t)}</span>
-            ) : null}
-            {status !== "open" && chat.workflow.assigneeId ? (
-              <span aria-hidden="true">·</span>
-            ) : null}
-            {chat.workflow.assigneeId ? (
-              <span className="truncate">
-                {chat.workflow.assigneeName || copy("assignment")}
-              </span>
-            ) : null}
-          </span>
-        ) : null}
       </span>
     </button>
   );
@@ -833,10 +820,16 @@ export function InboxV3Queue({
                 type="button"
                 aria-label={copy("filterMenu")}
                 title={copy("filterMenu")}
-                aria-pressed={priorityFilter !== "" || labelFilter !== ""}
+                aria-pressed={
+                  priorityFilter !== "" ||
+                  labelFilter !== "" ||
+                  workflowFilter !== "all"
+                }
                 className={cn(
                   "inline-flex size-8 shrink-0 items-center justify-center rounded-full border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                  priorityFilter !== "" || labelFilter !== ""
+                  priorityFilter !== "" ||
+                  labelFilter !== "" ||
+                  workflowFilter !== "all"
                     ? "border-primary/25 bg-primary-soft text-primary"
                     : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                 )}
@@ -851,6 +844,27 @@ export function InboxV3Queue({
               className="w-60 p-3"
             >
               <p className="text-caption font-semibold text-foreground">
+                {copy("status")}
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {WORKFLOW_FILTERS.map((filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    aria-pressed={workflowFilter === filter}
+                    onClick={() => onWorkflowFilterChange(filter)}
+                    className={cn(
+                      "inline-flex h-7 items-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                      workflowFilter === filter
+                        ? "border-primary/25 bg-primary-soft text-primary"
+                        : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                    )}
+                  >
+                    {workflowLabel(filter, copy, t)}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-caption font-semibold text-foreground">
                 {copy("filterPriority")}
               </p>
               <div className="mt-1.5 flex flex-wrap gap-1">
@@ -1042,9 +1056,9 @@ export function InboxV3Queue({
             </button>
           </div>
         ) : (
-        <div className="mt-2 flex items-center gap-1.5">
+        <div className="mt-2 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div
-            className="flex min-w-0 flex-1 gap-1 rounded-full bg-muted/25 p-0.5"
+            className="flex w-max min-w-full gap-1 rounded-full bg-muted/25 p-0.5"
             role="group"
             aria-label={copy("workQueue")}
           >
@@ -1057,13 +1071,13 @@ export function InboxV3Queue({
                   aria-pressed={selected}
                   onClick={() => onQueueFilterChange(filter)}
                   className={cn(
-                    "inline-flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-1.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    "inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                     selected
                       ? "bg-background text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  <span className="truncate">{queueLabel(filter, copy)}</span>
+                  <span>{queueLabel(filter, copy)}</span>
                   <span
                     className={cn(
                       "shrink-0 tabular-nums",
@@ -1078,32 +1092,6 @@ export function InboxV3Queue({
           </div>
         </div>
         )}
-
-        <div
-          className="mt-2 flex flex-wrap gap-1"
-          role="group"
-          aria-label={copy("status")}
-        >
-          {WORKFLOW_FILTERS.map((filter) => {
-            const selected = workflowFilter === filter;
-            return (
-              <button
-                key={filter}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => onWorkflowFilterChange(filter)}
-                className={cn(
-                  "inline-flex h-7 items-center justify-center rounded-full border px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                  selected
-                    ? "border-primary/25 bg-primary-soft text-primary"
-                    : "border-border/65 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-                )}
-              >
-                {workflowLabel(filter, copy, t)}
-              </button>
-            );
-          })}
-        </div>
 
         {selectMode && deleteError ? (
           <p className="mt-1.5 text-caption text-destructive" role="alert">
@@ -1122,7 +1110,7 @@ export function InboxV3Queue({
             {[0, 1, 2, 3, 4].map((item) => (
               <div
                 key={item}
-                className="h-[4.75rem] animate-pulse rounded-surface bg-muted/45"
+                className="h-14 animate-pulse rounded-surface bg-muted/45"
               />
             ))}
           </div>

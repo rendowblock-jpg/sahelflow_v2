@@ -29,13 +29,8 @@ import { getAiToolGroupLabel, getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import { cn } from "@/lib/utils";
 
 /**
- * STR-01 — the Agents start surface, extracted verbatim from
- * `ai-decision-canvas.tsx`. Behaviour is unchanged; this is a move.
- *
- * This is everything the seller sees BEFORE a conversation exists: the setup
- * and error notices, the capability/abilities panel, the inbox strip and the
- * starter prompts. It was roughly a third of a 1,767-line file that also owned
- * the message log, the composer and the review sheet.
+ * STR-01 — the Agents start surface. Named workforce on one engine:
+ * greeting, four shop-grounded agents, and live capabilities as disclosure.
  *
  * The contract assertions that pinned these strings moved with the code rather
  * than being relaxed — see `ai-operational-launchpad-contract`,
@@ -83,6 +78,7 @@ function errorMessage(
 const STARTERS = [
   {
     id: "pending",
+    name: "agentOrders",
     title: "launchPendingTitle",
     description: "launchPendingDescription",
     prompt: "launchPendingPrompt",
@@ -90,6 +86,7 @@ const STARTERS = [
   },
   {
     id: "revenue",
+    name: "agentInsights",
     title: "launchRevenueTitle",
     description: "launchRevenueDescription",
     prompt: "launchRevenuePrompt",
@@ -97,6 +94,7 @@ const STARTERS = [
   },
   {
     id: "returns",
+    name: "agentReturns",
     title: "launchReturnsTitle",
     description: "launchReturnsDescription",
     prompt: "launchReturnsPrompt",
@@ -104,12 +102,22 @@ const STARTERS = [
   },
   {
     id: "products",
+    name: "agentCatalog",
     title: "launchProductsTitle",
     description: "launchProductsDescription",
     prompt: "launchProductsPrompt",
     icon: PackageSearch,
   },
 ] as const;
+
+function workforceGreeting(
+  locale: ReturnType<typeof useAiWorkspace>["locale"],
+): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return getAiDecisionCopy(locale, "greetingMorning");
+  if (hour < 18) return getAiDecisionCopy(locale, "greetingAfternoon");
+  return getAiDecisionCopy(locale, "greetingEvening");
+}
 
 function SetupNotice({
   workspace,
@@ -321,13 +329,10 @@ function AbilitiesPanel({
     workspace;
 
   return (
-    <section data-ai-abilities="true" className="mt-8 w-full text-start rounded-surface border border-border/60 bg-muted/[0.18] p-4 md:p-5">
+    <section data-ai-abilities="true" className="w-full text-start">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-sm font-bold tracking-tight">
+        <p className="text-sm font-semibold tracking-tight">
           {getAiDecisionCopy(locale, "abilitiesTitle")}
-        </p>
-        <p className="shrink-0 text-caption font-semibold uppercase tracking-wider text-muted-foreground">
-          {getAiDecisionCopy(locale, "durableSession")}
         </p>
       </div>
       {loadingCapabilities ? (
@@ -439,34 +444,27 @@ function StartSurface({
   onStart: (prompt: string) => Promise<boolean>;
 }) {
   const ready = workspace.setup?.ready === true;
-
+  const locale = workspace.locale;
   const pendingCount =
     workspace.capabilities?.briefing?.pendingProposals ?? workspace.inbox.length ?? 0;
   return (
-    <div data-ai-start-state="true" className="mx-auto flex w-full max-w-3xl flex-col items-stretch py-6 text-start md:py-8">
-      {/*
-        The start surface previously stacked five bordered/gradient/shadowed
-        containers before any content. Nothing had hierarchy because every
-        layer competed for the same attention. One elevation level now; the
-        heading and spacing do the work.
-      */}
-      <div className="flex items-start gap-4">
-        <IconTile icon={BrainCircuit} tone="primary" size="xl" />
+    <div data-ai-start-state="true" className="mx-auto flex w-full max-w-2xl flex-col items-stretch py-8 text-start md:py-12">
+      <div className="flex items-start gap-3.5">
+        <IconTile icon={BrainCircuit} tone="primary" size="lg" />
         <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-bold leading-8 tracking-tight">
-            {getAiDecisionCopy(workspace.locale, "startTitle")}
-          </h2>
-          <p className="mt-1.5 max-w-xl text-sm leading-6 text-muted-foreground">
-            {getAiDecisionCopy(workspace.locale, "startDescription")}
+          <p className="text-caption font-medium text-muted-foreground">
+            {workforceGreeting(locale)}
           </p>
-          <p className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
-            {getAiDecisionCopy(workspace.locale, "safeStartNote")}
+          <h2 className="mt-1 text-title-1 font-semibold tracking-tight">
+            {getAiDecisionCopy(locale, "startTitle")}
+          </h2>
+          <p className="mt-2 max-w-xl text-body text-muted-foreground">
+            {getAiDecisionCopy(locale, "startDescription")}
           </p>
         </div>
         {pendingCount > 0 ? (
           <p className="hidden shrink-0 rounded-full border border-warning/30 bg-warning-soft px-2.5 py-1 text-caption font-bold tabular-nums text-warning sm:block">
-            {getAiDecisionCopy(workspace.locale, "inboxStripCount", { count: pendingCount })}
+            {getAiDecisionCopy(locale, "inboxStripCount", { count: pendingCount })}
           </p>
         ) : null}
       </div>
@@ -528,15 +526,18 @@ function StartSurface({
         </div>
       ) : null}
 
-      <div className="mt-6 flex w-full items-baseline justify-between gap-3">
-        <p className="text-sm font-bold tracking-tight">
-          {getAiDecisionCopy(workspace.locale, "startJobsTitle")}
+      <div className="mt-8 flex w-full items-baseline justify-between gap-3">
+        <p className="text-sm font-semibold tracking-tight">
+          {getAiDecisionCopy(locale, "startJobsTitle")}
         </p>
         <p className="shrink-0 text-caption font-medium tabular-nums text-muted-foreground">
-          {getAiDecisionCopy(workspace.locale, "messagesMeta", { count: STARTERS.length })}
+          {getAiDecisionCopy(locale, "messagesMeta", { count: STARTERS.length })}
         </p>
       </div>
-      <div className="mt-3 grid w-full gap-3 sm:grid-cols-2">
+      <div
+        data-ai-workforce="true"
+        className="mt-3 grid w-full gap-2 sm:grid-cols-2"
+      >
         {STARTERS.map((starter) => {
           const Icon = starter.icon;
           const count = starterCount(starter.id, workspace.capabilities?.briefing);
@@ -547,53 +548,53 @@ function StartSurface({
               disabled={!ready || starting}
               onClick={() => void onStart(workspace.copy(starter.prompt))}
               className={cn(
-                "group/starter relative overflow-hidden rounded-surface border border-border/70 bg-gradient-to-b from-card to-card/60 p-4 text-start transition-all duration-200",
-                "hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_2px_4px_oklch(0_0_0/0.05),0_16px_36px_oklch(0_0_0/0.09)]",
+                "group/starter flex items-start gap-3 rounded-surface border border-border/70 bg-card/70 p-3.5 text-start transition-colors",
+                "hover:border-primary/30 hover:bg-primary-subtle",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 "disabled:pointer-events-none disabled:opacity-50",
               )}
             >
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 start-0 w-1 bg-gradient-to-b from-primary/50 to-primary-subtle opacity-0 transition-opacity duration-200 group-hover/starter:opacity-100"
-              />
-              <span className="flex items-start gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-surface border border-primary/20 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary shadow-sm">
-                  <Icon className="size-[18px]" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2">
-                    <span className="truncate text-sm font-bold tracking-tight">
-                      {workspace.copy(starter.title)}
-                    </span>
-                    {count ? (
-                      <span
-                        data-ai-briefing-count={starter.id}
-                        className="shrink-0 rounded-full border border-primary/25 bg-primary-soft px-2 py-0.5 text-caption font-bold tabular-nums text-primary"
-                      >
-                        {getAiDecisionCopy(workspace.locale, count.copyKey, {
-                          count: count.count,
-                        })}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                    {workspace.copy(starter.description)}
-                  </span>
-                </span>
-                <ArrowRight
-                  className="mt-1 size-4 shrink-0 text-primary opacity-0 transition-all duration-200 group-hover/starter:translate-x-0.5 group-hover/starter:opacity-80 rtl:-scale-x-100 rtl:group-hover/starter:-translate-x-0.5"
-                  aria-hidden="true"
-                />
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary-subtle text-primary">
+                <Icon className="size-4" aria-hidden="true" />
               </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="truncate text-sm font-semibold tracking-tight">
+                    {getAiDecisionCopy(locale, starter.name)}
+                  </span>
+                  {count ? (
+                    <span
+                      data-ai-briefing-count={starter.id}
+                      className="shrink-0 rounded-full bg-primary-soft px-2 py-0.5 text-caption font-semibold tabular-nums text-primary"
+                    >
+                      {getAiDecisionCopy(locale, count.copyKey, {
+                        count: count.count,
+                      })}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="mt-0.5 block text-caption leading-5 text-muted-foreground">
+                  {workspace.copy(starter.description)}
+                </span>
+              </span>
+              <ArrowRight
+                className="mt-1 size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/starter:opacity-80 rtl:-scale-x-100"
+                aria-hidden="true"
+              />
             </button>
           );
         })}
       </div>
 
-      {/* F-06: the workforce itself — what the agent can do on THIS shop,
-          live from the tool policy, with honest availability markers. */}
-      <AbilitiesPanel workspace={workspace} />
+      <details className="group/abilities mt-8 border-t border-border/60 pt-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+          {getAiDecisionCopy(locale, "abilitiesDisclosure")}
+          <ArrowRight className="size-3.5 shrink-0 transition-transform group-open/abilities:rotate-90 rtl:-scale-x-100 rtl:group-open/abilities:-rotate-90" />
+        </summary>
+        <div className="mt-3">
+          <AbilitiesPanel workspace={workspace} />
+        </div>
+      </details>
     </div>
   );
 }

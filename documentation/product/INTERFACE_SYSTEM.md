@@ -179,13 +179,17 @@ Rules:
 
 Every route renders through `PageShell` and therefore has:
 
-- a **visible** page title — the `sr-only` `<h1>` pattern on Agents and Inbox is retired;
+- a page title — **visible** on document routes. Full-height workspaces (Inbox,
+  Agents) whose canvas already carries identity keep an `sr-only` `<h1>` so the
+  heading exists for assistive tech without a second chrome band. Founder-installed
+  Internal.37 rejected the visible workspace `PageHeader` on those two surfaces;
 - a single place for page-level actions;
 - consistent gutter, max content width and section rhythm;
 - a skeleton that mirrors *this page's* layout, not a generic full-page shimmer.
 
-Full-height workspaces (Inbox, Agents) use the shell's workspace variant. They do not
-opt out of the page system.
+Full-height workspaces use the shell's workspace variant. They do not opt out of
+the page system, and they do not stack a page title on top of a surface that
+already names itself.
 
 ---
 

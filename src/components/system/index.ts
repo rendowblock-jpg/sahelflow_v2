@@ -13,7 +13,11 @@
  * is a defect, not a variant.
  */
 
-export { PageShell, type PageShellVariant } from "@/components/system/page-shell";
+export {
+  PageShell,
+  type PageShellIdentity,
+  type PageShellVariant,
+} from "@/components/system/page-shell";
 export { Section, SectionStack } from "@/components/system/section";
 export {
   Panel,

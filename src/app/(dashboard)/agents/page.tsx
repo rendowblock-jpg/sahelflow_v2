@@ -30,13 +30,15 @@ export default async function AgentsPage({
   const initialPrompt = sanitizeAskAiPrompt(params?.q);
 
   return (
-    // IA-01: Agents used to hide its only `<h1>` with `sr-only`, so the screen
-    // carried no visible identity — it was one of two routes opted out of the
-    // page grammar entirely. PageShell's `workspace` variant keeps the
-    // full-height, no-padding geometry (it still owns `app-workspace-content`,
-    // which the `#main-content:has(> …)` rule requires on the route's root)
-    // while restoring a real, visible page heading.
-    <PageShell variant="workspace" title={t("metadata.title.agents")}>
+    // Workspace identity lives in the canvas / history headers. Internal.37's
+    // visible PageHeader stacked a second title above the Agents workspace
+    // and is rejected. Geometry still belongs to PageShell so
+    // `app-workspace-content` stays on the route root.
+    <PageShell
+      variant="workspace"
+      identity="sr-only"
+      title={t("metadata.title.agents")}
+    >
       <FeatureGate feature="ai_chat">
         <AiWorkspaceShell initialPrompt={initialPrompt} />
       </FeatureGate>

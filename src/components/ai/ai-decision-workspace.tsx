@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import { AiDecisionCanvas } from "@/components/ai/ai-decision-canvas";
-import { AiReviewEvidence } from "@/components/ai/ai-review-evidence";
+import {
+  AiReviewEvidence,
+  aiReviewHasWork,
+} from "@/components/ai/ai-review-evidence";
 import { AiWorkHistory } from "@/components/ai/ai-work-history";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -24,7 +27,8 @@ export function AiDecisionWorkspace({
 }) {
   const workspace = useAiWorkspace();
   const mobile = useMobile();
-  const wideReview = useMediaQuery("(min-width: 1500px)");
+  const wideViewport = useMediaQuery("(min-width: 1500px)");
+  const showReviewColumn = wideViewport && aiReviewHasWork(workspace);
   const [mobilePane, setMobilePane] = useState<"history" | "canvas">("history");
   const [startingAnalysis, setStartingAnalysis] = useState(false);
   const pendingPromptRef = useRef<PendingPrompt | null>(null);
@@ -146,12 +150,12 @@ export function AiDecisionWorkspace({
   return (
     <div
       data-ai-decision-workspace="true"
-      data-ai-layout={wideReview ? "wide" : "desktop"}
+      data-ai-layout={showReviewColumn ? "wide" : "desktop"}
       className={cn(
         "grid h-full min-h-0 overflow-hidden bg-background",
-        wideReview
-          ? "grid-cols-[17.5rem_minmax(0,1fr)_20rem]"
-          : "grid-cols-[17.5rem_minmax(0,1fr)]",
+        showReviewColumn
+          ? "grid-cols-[16rem_minmax(0,1fr)_20rem]"
+          : "grid-cols-[16rem_minmax(0,1fr)]",
       )}
     >
       <AiWorkHistory
@@ -162,7 +166,7 @@ export function AiDecisionWorkspace({
       />
       <AiDecisionCanvas
         workspace={workspace}
-        wideReview={wideReview}
+        wideReview={showReviewColumn}
         mobile={false}
         startingAnalysis={startingAnalysis}
         initialDraft={initialPrompt}
@@ -170,7 +174,7 @@ export function AiDecisionWorkspace({
         onSend={sendPrompt}
         onStart={startPrompt}
       />
-      {wideReview ? (
+      {showReviewColumn ? (
         <div className="min-h-0 border-s">
           <AiReviewEvidence workspace={workspace} />
         </div>

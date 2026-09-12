@@ -29,13 +29,16 @@ export default async function InboxPage() {
     trustedActionAllowed(actorContext, "conversations.update", resource);
 
   return (
-    // IA-01: Inbox was the second route opted out of the page grammar, with its
-    // only <h1> hidden by `sr-only`. PageShell's `workspace` variant keeps the
-    // full-height geometry it needs — `app-workspace-content` still sits on the
-    // route root for the `#main-content:has(> …)` rule, and the body stays
-    // `min-h-0 flex-1 overflow-hidden` so the panes own the remaining space —
-    // while the screen finally states its own name.
-    <PageShell variant="workspace" title={t("metadata.title.inbox")}>
+    // Workspace identity lives in InboxV3Header. A second visible PageHeader
+    // (Internal.37) stacked two titles above the chat list and stole height
+    // from the queue. The shell still owns `app-workspace-content` on the
+    // route root for the `#main-content:has(> …)` rule; the <h1> stays for
+    // assistive tech without consuming pane pixels.
+    <PageShell
+      variant="workspace"
+      identity="sr-only"
+      title={t("metadata.title.inbox")}
+    >
       <InboxV3Workspace
         canViewIngress={canViewIngress}
         canRetryIngress={canRetryIngress}

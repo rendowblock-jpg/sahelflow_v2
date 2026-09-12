@@ -26,10 +26,12 @@ describe("AI Class-AAA decision workspace contract", () => {
     const log = read("src/components/ai/ai-message-log.tsx");
 
     expect(workspace).toContain('useMediaQuery("(min-width: 1500px)")');
-    expect(workspace).toContain('grid-cols-[17.5rem_minmax(0,1fr)]');
+    expect(workspace).toContain('grid-cols-[16rem_minmax(0,1fr)]');
     expect(workspace).toContain(
-      'grid-cols-[17.5rem_minmax(0,1fr)_20rem]',
+      'grid-cols-[16rem_minmax(0,1fr)_20rem]',
     );
+    expect(workspace).toContain("showReviewColumn");
+    expect(workspace).toContain("aiReviewHasWork");
     expect(workspace).toContain("AiWorkHistory");
     expect(workspace).toContain("AiDecisionCanvas");
     expect(workspace).toContain("AiReviewEvidence");
@@ -181,6 +183,9 @@ describe("AI Class-AAA decision workspace contract", () => {
     expect(decisionCopy).toContain('reviewEvidence: "Review & evidence"');
     expect(decisionCopy).toContain('reviewEvidence: "Revue & preuves"');
     expect(decisionCopy).toContain('reviewEvidence: "المراجعة والأدلة"');
-    expect(decisionCopy).toContain("لهذا المتجر");
+    expect(decisionCopy).toContain('agentOrders: "Orders"');
+    expect(decisionCopy).toContain('agentOrders: "Commandes"');
+    expect(decisionCopy).toContain('agentOrders: "الطلبات"');
+    expect(decisionCopy).toContain("هذا المتجر");
   });
 });
