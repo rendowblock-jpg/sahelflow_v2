@@ -15,7 +15,7 @@ import type { AiToolCallView } from "@/components/ai/ai-workspace-types";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatDZD, intlLocale } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
 import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import {
@@ -212,13 +212,14 @@ function formatValue(
 ): string | null {
   if (typeof value === "number") {
     if (MONEY_FIELDS.has(key)) {
-      return new Intl.NumberFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`, {
-        style: "currency",
-        currency: "DZD",
-        maximumFractionDigits: 0,
-      }).format(value);
+      // `formatDZD` is the canonical integer-DZD formatter for every
+      // seller-facing surface (`src/lib/utils.ts`). The previous
+      // `style: "currency"` bypass rendered "DZD 1,500" in English against
+      // "1,500 DA" everywhere else, and in Arabic emitted the CLDR symbol
+      // wrapped in RLM marks that fight the app's own bidi isolation.
+      return formatDZD(value, locale);
     }
-    return new Intl.NumberFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`).format(value);
+    return new Intl.NumberFormat(intlLocale(locale)).format(value);
   }
   if (typeof value === "string" && STATUS_FIELDS.has(key)) {
     return localizeStatus(

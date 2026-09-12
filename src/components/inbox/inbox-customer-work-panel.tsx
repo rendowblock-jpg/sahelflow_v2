@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useI18n } from "@/hooks/use-i18n";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
-import { cn } from "@/lib/utils";
+import { cn, formatDZD } from "@/lib/utils";
 
 type ContextResponse = {
   customer: {
@@ -75,14 +75,10 @@ function orderStatusLabel(status: string, t: (key: string) => string): string {
 }
 
 function formatMoney(value: number, locale: "ar" | "fr" | "en"): string {
-  return new Intl.NumberFormat(
-    locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-DZ" : "en-DZ",
-    {
-      style: "currency",
-      currency: "DZD",
-      maximumFractionDigits: 0,
-    },
-  ).format(value);
+  // Canonical integer-DZD display — see `formatDZD` in `src/lib/utils.ts`.
+  // The previous `style: "currency"` bypass disagreed with every other money
+  // surface in English ("DZD 1,500" vs "1,500 DA") and in Arabic.
+  return formatDZD(value, locale);
 }
 
 function riskClass(score: number, blacklisted: boolean): string {
