@@ -44,6 +44,7 @@ import {
   type SupportedLocale,
 } from "./backup-restore-copy";
 import { IconTile } from "@/components/system";
+import { intlLocale } from "@/lib/utils";
 
 interface BackupEntry {
   backupId: string;
@@ -288,12 +289,7 @@ export function BackupRestorePanel({
     }
   }
 
-  const dateLocale =
-    resolvedLocale === "ar"
-      ? "ar-DZ"
-      : resolvedLocale === "en"
-        ? "en-GB"
-        : "fr-DZ";
+  const dateLocale = intlLocale(resolvedLocale);
 
   return (
     <div dir={resolvedLocale === "ar" ? "rtl" : "ltr"}>

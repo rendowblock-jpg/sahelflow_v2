@@ -30,6 +30,41 @@ export function intlLocale(locale: string = "fr"): string {
   return LOCALE_MAP[supportedLocale(locale)];
 }
 
+/**
+ * THE clock convention for every seller-facing time in SahelFlow: 24-hour.
+ *
+ * Algeria writes time on a 24-hour clock in all three product languages, but
+ * CLDR does not agree with itself about that across our locale map — `ar-DZ`
+ * and `fr-DZ` both carry a 12-hour pattern (`02:05 م` / `02:05 PM`) while
+ * `en-GB` carries a 24-hour one. Shipping the raw CLDR preference made the app
+ * contradict ITSELF in French: `formatDateTime` rendered "02:05 PM" on the
+ * order and analytics surfaces while the Inbox rendered "14:05" for the same
+ * instant, because the Inbox had independently reached for `fr-FR`.
+ *
+ * The locale map stays Algeria-aware (it is contract-pinned in
+ * `locale-formatting-contract.test.ts`, and it is what makes Arabic digits,
+ * grouping and month names correct). Only the clock is pinned on top of it, so
+ * every surface agrees. Spread this into any `Intl.DateTimeFormat` options
+ * object that carries an `hour` field.
+ */
+export const DZ_CLOCK = { hour12: false } as const;
+
+/**
+ * Canonical locale-aware time-of-day ("14:05") on the 24-hour clock.
+ * Prefer this over hand-built `Intl.DateTimeFormat` calls in product code.
+ */
+export function formatTimeOfDay(
+  date: Date | string,
+  locale: SupportedLocale = "fr",
+): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat(LOCALE_MAP[locale], {
+    hour: "2-digit",
+    minute: "2-digit",
+    ...DZ_CLOCK,
+  }).format(value);
+}
+
 /** Canonical integer-DZD formatter for every seller-facing surface. */
 export function formatDZD(amount: number, locale: string = "fr"): string {
   const resolved = supportedLocale(locale);
@@ -108,6 +143,7 @@ export function formatDateTime(
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    ...DZ_CLOCK,
   }).format(value);
 }
 

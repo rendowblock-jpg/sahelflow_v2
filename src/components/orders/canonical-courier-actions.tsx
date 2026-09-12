@@ -25,6 +25,7 @@ import {
 import { useI18n } from "@/hooks/use-i18n";
 import { deliveryProviderConfig } from "@/lib/shared";
 import { mutatePrefix } from "@/lib/swr/mutate";
+import { DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 const PROVIDERS = ["yalidine", "maystro", "zrexpress", "ecotrack"] as const;
 const PROVIDER_LABELS: Record<(typeof PROVIDERS)[number], string> = {
@@ -160,9 +161,10 @@ async function fetcher(url: string): Promise<{ position: CourierPosition }> {
 
 function formatDate(value: string | null, locale: string): string {
   if (!value) return "—";
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     dateStyle: "medium",
     timeStyle: "short",
+    ...DZ_CLOCK,
   }).format(new Date(value));
 }
 

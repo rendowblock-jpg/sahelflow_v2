@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
+import { intlLocale } from "@/lib/utils";
 
 type InviteRole = "manager" | "operator" | "viewer";
 type InvitationState = "pending" | "expired" | "revoked" | "accepted";
@@ -432,7 +433,7 @@ export function TeamAccessAuthorityPanel() {
   const formatter = useMemo(
     () =>
       new Intl.DateTimeFormat(
-        locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-DZ" : "en-GB",
+        intlLocale(locale),
         { dateStyle: "medium", timeStyle: "short" },
       ),
     [locale],

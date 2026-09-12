@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Clock3, History, Loader2, RotateCcw } from "lucide-react";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useI18n } from "@/hooks/use-i18n";
+import { DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 type Release = Readonly<{
   releaseId: string;
@@ -143,7 +144,11 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
             const date = new Date(release.createdAt);
             const dateLabel = Number.isNaN(date.getTime())
               ? release.createdAt
-              : date.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
+              : date.toLocaleString(intlLocale(locale), {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                  ...DZ_CLOCK,
+                });
             const busy = rollingBack === release.releaseId;
             return (
               <article key={release.releaseId} className={`rounded-surface border p-3 ${release.isActive ? "border-primary/50 bg-primary-subtle" : "bg-muted/20"}`}>

@@ -27,6 +27,7 @@ import {
 } from "@/lib/i18n/automation-workspace";
 import { toast } from "@/lib/toast";
 import { IconTile } from "@/components/system";
+import { DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 interface AttemptHistory {
   id: string;
@@ -111,9 +112,10 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
     getAutomationWorkspaceCopy(locale, key);
   const formatter = useMemo(
     () =>
-      new Intl.DateTimeFormat(locale, {
+      new Intl.DateTimeFormat(intlLocale(locale), {
         dateStyle: "medium",
         timeStyle: "short",
+        ...DZ_CLOCK,
       }),
     [locale],
   );

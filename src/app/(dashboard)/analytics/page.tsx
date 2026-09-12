@@ -58,7 +58,7 @@ import {
   STATUS_CHART_COLORS,
   statusI18nKey,
 } from "@/lib/shared/status-colors";
-import { cn, formatDZD } from "@/lib/utils";
+import { cn, formatDZD, intlLocale } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -114,8 +114,7 @@ export default async function AnalyticsPage({
       getCourierPerformance(range, { includeFees }),
     ]);
 
-  const dateLocale =
-    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+  const dateLocale = intlLocale(locale);
   const integerFormatter = new Intl.NumberFormat(dateLocale, {
     maximumFractionDigits: 0,
   });

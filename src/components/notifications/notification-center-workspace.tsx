@@ -34,6 +34,7 @@ import {
 } from "@/hooks/use-notification-center";
 import { toast } from "@/lib/toast";
 import { mutatePrefix } from "@/lib/swr/mutate";
+import { DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 interface PageResponse {
   notifications: NotificationCenterItem[];
@@ -57,9 +58,10 @@ function formatMinute(minute: number): string {
 
 /** Localized time-of-day label for a mute deadline (PII-free). */
 function formatDeadline(iso: string, locale: "ar" | "en" | "fr"): string {
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     hour: "2-digit",
     minute: "2-digit",
+    ...DZ_CLOCK,
   }).format(new Date(iso));
 }
 

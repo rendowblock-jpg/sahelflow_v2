@@ -13,6 +13,7 @@ import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
+import { intlLocale } from "@/lib/utils";
 import {
   DZ_PHONE_PLACEHOLDER,
   formatDZPhone,
@@ -179,7 +180,7 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
                     {entry.phone}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {entry.reason} · {new Date(entry.at).toLocaleDateString()}
+                    {entry.reason} · {new Date(entry.at).toLocaleDateString(intlLocale(locale))}
                   </p>
                 </div>
               </div>

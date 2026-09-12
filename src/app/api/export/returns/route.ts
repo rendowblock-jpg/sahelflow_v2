@@ -11,6 +11,7 @@ import {
 } from "@/lib/import/paged-export";
 import { getI18n } from "@/lib/i18n-server";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
+import { intlLocale } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     },
   );
   const { t, locale } = await getI18n();
-  const localeTag = locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
+  const localeTag = intlLocale(locale);
   const columns = [
     { key: "orderNumber", label: t("export.returns.orderNumber") },
     { key: "customerName", label: t("export.returns.customer") },

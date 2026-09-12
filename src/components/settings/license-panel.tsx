@@ -20,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/hooks/use-i18n";
 import { useLicense } from "@/hooks/use-license";
 import type { LicenseClientStatus } from "@/stores/license-store";
+import { intlLocale } from "@/lib/utils";
 
 const statusKeys: Record<LicenseClientStatus, string> = {
   valid: "license.status.valid",
@@ -154,7 +155,7 @@ export function LicensePanel() {
             </span>
             <span className="text-sm font-medium">
               {new Date(projection.expiresAt).toLocaleDateString(
-                locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR",
+                intlLocale(locale),
               )}
             </span>
           </div>

@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/hooks/use-i18n";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import { toast } from "@/lib/toast";
-import { cn } from "@/lib/utils";
+import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 type Role = "owner" | "manager" | "operator" | "viewer";
 type Mode = "idle" | "loading" | "ready" | "offline" | "stale" | "denied" | "error";
@@ -446,8 +446,8 @@ export function ConversationCollaborationInline({
                     <span>{memberLabel(entry.authorMemberId)}</span>
                     <time dateTime={entry.createdAt}>
                       {new Intl.DateTimeFormat(
-                        locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB",
-                        { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" },
+                        intlLocale(locale),
+                        { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", ...DZ_CLOCK },
                       ).format(new Date(entry.createdAt))}
                     </time>
                   </div>

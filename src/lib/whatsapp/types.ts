@@ -175,11 +175,7 @@ export function normalizeWhatsAppJid(input: string): string {
   return `${digits}@s.whatsapp.net`;
 }
 
-/** Format a WhatsApp timestamp (unix seconds) for display. */
-export function formatMessageTime(ts: number): string {
-  if (!ts) return "";
-  return new Date(ts * 1000).toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+// `formatMessageTime` was removed: it had ZERO callers repo-wide and
+// hardcoded `fr-FR`, so it would have rendered French formatting for Arabic
+// and English sellers. The Inbox formats message times through
+// `intlLocale` + `DZ_CLOCK` in inbox-v3-thread.tsx.

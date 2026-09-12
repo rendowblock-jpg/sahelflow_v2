@@ -6,6 +6,7 @@ import { KeyRound, MonitorSmartphone, RefreshCw, ShieldCheck } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
+import { intlLocale } from "@/lib/utils";
 
 type AuthorityResponse = {
   authority: {
@@ -63,7 +64,7 @@ export function SecurityAuthorityPanel() {
   const dateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(
-        locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-DZ" : "en-GB",
+        intlLocale(locale),
         { dateStyle: "medium", timeStyle: "short" },
       ),
     [locale],

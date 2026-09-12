@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useI18n } from "@/hooks/use-i18n";
+import { intlLocale } from "@/lib/utils";
 
 interface ExtractionData {
   total: number;
@@ -45,7 +46,7 @@ export function ExtractionAnalytics() {
   // Locale-owned number formatting (Intl, never .toFixed — the locale decimal
   // separator and Eastern Arabic digits must follow the active language).
   const localeTag =
-    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+    intlLocale(locale);
   const percentFormatter = new Intl.NumberFormat(localeTag, {
     style: "percent",
     maximumFractionDigits: 1,

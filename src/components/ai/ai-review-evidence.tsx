@@ -23,13 +23,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
 import { getAiDecisionCopy } from "@/lib/i18n/ai-decision-workspace";
 import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
+import { DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 function decisionClock(value: string, locale: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return new Intl.DateTimeFormat(
-    locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB",
-    { dateStyle: "short", timeStyle: "short" },
+    intlLocale(locale),
+    { dateStyle: "short", timeStyle: "short", ...DZ_CLOCK },
   ).format(date);
 }
 

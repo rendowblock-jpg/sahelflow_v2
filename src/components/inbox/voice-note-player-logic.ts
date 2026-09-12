@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n";
+import { intlLocale } from "@/lib/utils";
 
 /**
  * Pure playback math for the VoiceNotePlayer (R5-e). Kept free of React and
@@ -13,9 +14,10 @@ export type VoiceNoteSpeed = (typeof VOICE_NOTE_SPEEDS)[number];
 /** Fixed bar count keeps the waveform stable across re-renders and widths. */
 export const VOICE_NOTE_BAR_COUNT = 44;
 
-function localeCode(locale: Locale): string {
-  return locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
-}
+// One locale authority: `intlLocale` in src/lib/utils.ts. The private copy
+// this file used to keep resolved French to `fr-FR` against the canonical
+// `fr-DZ`. (`@/lib/utils` is pure JS — clsx/tailwind-merge — so it keeps this
+// module free of React and DOM imports as the note above requires.)
 
 /**
  * Next speed in the WhatsApp cycle. Any unknown rate (including 0/NaN) resets
@@ -34,10 +36,10 @@ export function nextVoiceNoteSpeed(current: number): VoiceNoteSpeed {
  */
 export function formatVoiceNoteClock(seconds: number, locale: Locale): string {
   const safe = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
-  const digits = new Intl.NumberFormat(localeCode(locale), {
+  const digits = new Intl.NumberFormat(intlLocale(locale), {
     useGrouping: false,
   });
-  const padded = new Intl.NumberFormat(localeCode(locale), {
+  const padded = new Intl.NumberFormat(intlLocale(locale), {
     useGrouping: false,
     minimumIntegerDigits: 2,
   });

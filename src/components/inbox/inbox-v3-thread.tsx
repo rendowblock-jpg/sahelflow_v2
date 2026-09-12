@@ -85,7 +85,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { useMobile } from "@/hooks/use-mobile";
 import { toast } from "@/lib/toast";
-import { cn } from "@/lib/utils";
+import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
 import { useVoiceRecorder } from "@/components/inbox/use-voice-recorder";
 import { VoiceNotePlayer } from "@/components/inbox/voice-note-player";
 import { InboxLinkPreview, firstHttpUrlInText } from "@/components/inbox/link-preview-card";
@@ -96,14 +96,16 @@ import {
   VOICE_LOCK_RISE_PX,
 } from "@/components/inbox/voice-recording-gestures";
 
-function localeCode(locale: "ar" | "fr" | "en"): string {
-  return locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
-}
+// One locale authority: `intlLocale` in src/lib/utils.ts. This file used to
+// keep its own copy that resolved French to `fr-FR` while the canonical map
+// resolves it to `fr-DZ`, so the same instant rendered "14:05" here and
+// "02:05 PM" on the order surfaces.
 
 function messageTime(value: number, locale: "ar" | "fr" | "en"): string {
-  return new Intl.DateTimeFormat(localeCode(locale), {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     hour: "2-digit",
     minute: "2-digit",
+    ...DZ_CLOCK,
   }).format(new Date(value));
 }
 
@@ -133,11 +135,11 @@ function messageDayLabel(
   if (diffDays === 0) return copy("dayToday");
   if (diffDays === 1) return copy("dayYesterday");
   if (diffDays > 1 && diffDays < 7) {
-    return new Intl.DateTimeFormat(localeCode(locale), {
+    return new Intl.DateTimeFormat(intlLocale(locale), {
       weekday: "long",
     }).format(new Date(value));
   }
-  return new Intl.DateTimeFormat(localeCode(locale), {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     day: "numeric",
     month: "short",
     ...(diffDays >= 365 ? { year: "numeric" as const } : {}),
@@ -192,7 +194,7 @@ function relativeLastActive(
   locale: "ar" | "fr" | "en",
 ): string {
   const diff = Math.max(0, now - value);
-  const rtf = new Intl.RelativeTimeFormat(localeCode(locale), {
+  const rtf = new Intl.RelativeTimeFormat(intlLocale(locale), {
     numeric: "auto",
   });
   const minutes = Math.floor(diff / 60_000);
@@ -201,7 +203,7 @@ function relativeLastActive(
   if (hours < 24) return rtf.format(-hours, "hour");
   const days = Math.floor(hours / 24);
   if (days < 7) return rtf.format(-days, "day");
-  return new Intl.DateTimeFormat(localeCode(locale), {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     day: "numeric",
     month: "short",
   }).format(new Date(value));
@@ -310,7 +312,7 @@ function isMediaMessage(message: InboxMessage): boolean {
 
 function formatBytes(value: number, locale: "ar" | "fr" | "en"): string {
   if (value < 1_024) return `${value} B`;
-  const formatter = new Intl.NumberFormat(localeCode(locale), {
+  const formatter = new Intl.NumberFormat(intlLocale(locale), {
     maximumFractionDigits: 1,
   });
   if (value < 1_024 * 1_024) return `${formatter.format(value / 1_024)} KB`;

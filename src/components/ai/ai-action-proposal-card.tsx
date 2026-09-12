@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
-import { formatDZD, intlLocale } from "@/lib/utils";
+import { DZ_CLOCK, formatDZD, intlLocale } from "@/lib/utils";
 import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import {
   getAiWorkspaceCopy,
@@ -205,9 +205,10 @@ export function AiActionProposalCard({
 
   const createdLabel = (() => {
     try {
-      return new Intl.DateTimeFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`, {
+      return new Intl.DateTimeFormat(intlLocale(locale), {
         dateStyle: "short",
         timeStyle: "short",
+        ...DZ_CLOCK,
       }).format(new Date(proposal.createdAt));
     } catch {
       return null;
@@ -308,9 +309,10 @@ export function AiActionProposalCard({
             <div className="mt-1.5 flex items-center justify-between gap-3">
               <span>{copy("expires")}</span>
               <time dateTime={proposal.expiresAt} className="tabular-nums text-foreground">
-                {new Intl.DateTimeFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`, {
+                {new Intl.DateTimeFormat(intlLocale(locale), {
                   dateStyle: "short",
                   timeStyle: "short",
+                  ...DZ_CLOCK,
                 }).format(new Date(proposal.expiresAt))}
               </time>
             </div>

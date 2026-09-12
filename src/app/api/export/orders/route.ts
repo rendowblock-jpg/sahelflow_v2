@@ -19,6 +19,7 @@ import {
 } from "@/lib/orders/order-list-workbench";
 import { orderStatusSchema } from "@/lib/validation";
 import type { OrderStatus } from "@/types/domain";
+import { intlLocale } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +90,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     },
   );
 
-  const localeTag = locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
+  const localeTag = intlLocale(locale);
   const columns = [
     { key: "orderNumber", label: t("export.orders.orderNumber") },
     { key: "status", label: t("export.orders.status") },

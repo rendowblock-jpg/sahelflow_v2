@@ -15,6 +15,7 @@ import { toast } from "@/lib/toast";
 import { Download, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 import { isTauriEnv } from "@/lib/env";
+import { intlLocale } from "@/lib/utils";
 
 interface UpdateInfo {
   version: string;
@@ -229,7 +230,7 @@ export function UpdateChecker() {
                 <Badge variant="outline">v{updateAvailable.version}</Badge>
                 {updateAvailable.date && (
                   <span className="text-xs text-muted-foreground">
-                    {new Date(updateAvailable.date).toLocaleDateString(locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR")}
+                    {new Date(updateAvailable.date).toLocaleDateString(intlLocale(locale))}
                   </span>
                 )}
               </div>

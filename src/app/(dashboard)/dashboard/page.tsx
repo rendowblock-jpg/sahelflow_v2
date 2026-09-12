@@ -40,7 +40,7 @@ import {
 import { getRiskAnalyticsReport } from "@/lib/risk-engine";
 import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
-import { formatDZD } from "@/lib/utils";
+import { formatDZD, intlLocale } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 
 export default async function DashboardPage() {
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
   );
 
   const dateLocale =
-    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+    intlLocale(locale);
   const integerFormatter = new Intl.NumberFormat(dateLocale, {
     maximumFractionDigits: 0,
   });

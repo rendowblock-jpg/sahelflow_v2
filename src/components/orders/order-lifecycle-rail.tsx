@@ -75,7 +75,7 @@ import {
 } from "@/lib/orders/rejection-reasons";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { toast } from "@/lib/toast";
-import { cn } from "@/lib/utils";
+import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 import type { MutationAuthority } from "@/types/workbench";
 
@@ -202,9 +202,10 @@ function formatTimestamp(value: string | null, locale: string): string | null {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     dateStyle: "medium",
     timeStyle: "short",
+    ...DZ_CLOCK,
   }).format(date);
 }
 
