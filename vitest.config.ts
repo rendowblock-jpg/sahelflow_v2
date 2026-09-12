@@ -40,7 +40,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
-      include: ["src/lib/**/*.ts"],
+      include: [
+        "src/lib/**/*.{ts,tsx}",
+        // 108k lines of seller-facing surface had NO coverage floor at all:
+        // the include ended at src/lib, so deleting every component test would
+        // not have moved a single gate. Measured before being pinned (below).
+        "src/components/**/*.{ts,tsx}",
+        "src/app/**/*.{ts,tsx}",
+      ],
       exclude: [
         "src/lib/**/*.test.ts",
         "src/lib/**/__tests__/**",
@@ -48,6 +55,9 @@ export default defineConfig({
         // executable authority is the Rust/native source contract plus Windows
         // standalone and installed-MSI lanes, not Linux V8 line instrumentation.
         "src/lib/survivability/native-bridge.ts",
+        "src/components/**/__tests__/**",
+        "src/app/**/__tests__/**",
+        "src/**/*.test.{ts,tsx}",
       ],
       thresholds: {
         // SEC-02: these are a RATCHET pinned to measured truth, not an aspiration.
@@ -68,6 +78,28 @@ export default defineConfig({
         branches: 76,
         functions: 82,
         lines: 77,
+
+        // Seller-facing surface (src/components + src/app), measured
+        // 2026-09-12: statements/lines 30.34% (25,200/83,049), branches
+        // 72.68%, functions 38.09%. Pinned just below, same ratchet rule as
+        // above — raise when coverage rises, never lower to make a red run
+        // green.
+        //
+        // These numbers are LOW and that is stated plainly rather than dressed
+        // up: this tree's real guarantee is 24 Playwright specs plus the
+        // render-truth contract suites, which V8 line instrumentation does not
+        // see. The floor is here to catch WHOLESALE LOSS of component tests,
+        // which previously nothing could detect. It is not a claim that 30% is
+        // adequate.
+        //
+        // Vitest excludes glob-matched files from the global thresholds above,
+        // so src/lib keeps its own 77/76/82/77 ratchet untouched.
+        "src/{components,app}/**": {
+          statements: 29,
+          branches: 71,
+          functions: 36,
+          lines: 29,
+        },
       },
     },
   },
