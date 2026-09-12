@@ -16,6 +16,7 @@ import { ProfileEditor } from "@/components/profile/profile-editor";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
 import { BackupRestorePanel } from "@/components/settings/backup-restore-panel";
+import { ChangePinPanel } from "@/components/settings/change-pin-panel";
 import { CollaborationAdminPanel } from "@/components/settings/collaboration-admin-panel";
 import { CommerceIntegrationsPanel } from "@/components/settings/commerce-integrations-panel";
 import { CommerceSyncRecoveryPanel } from "@/components/settings/commerce-sync-recovery-panel";
@@ -44,6 +45,8 @@ export type SettingsWorkspaceAccess = {
   profile: boolean;
   profileManage: boolean;
   security: boolean;
+  /** Owner PIN change. The route additionally enforces owner-only authority. */
+  changePin: boolean;
   team: boolean;
   appearance: boolean;
   license: boolean;
@@ -130,7 +133,9 @@ function groupVisible(
     case "intelligence":
       return access.aiKey || access.aiConsent;
     case "access":
-      return access.security || access.team || access.license;
+      return (
+        access.security || access.changePin || access.team || access.license
+      );
     case "data":
       return (
         access.backupRead ||
@@ -415,6 +420,7 @@ export function SettingsWorkspace({
   const renderAccess = () => (
     <div className={styles.stack} data-settings-domain-stack="access">
       {access.security ? <SecurityAuthorityPanel /> : null}
+      {access.changePin ? <ChangePinPanel /> : null}
       {access.team ? (
         <>
           <TeamAccessAuthorityPanel />

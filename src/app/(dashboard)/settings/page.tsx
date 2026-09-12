@@ -48,6 +48,9 @@ export default async function SettingsPage({
     profile: true,
     profileManage,
     security: can("sessions.read") || can("devices.read"),
+    // The route enforces owner-only authority itself; this only decides
+    // whether the surface is offered at all.
+    changePin: can("members.manage"),
     team: can("members.read"),
     appearance: true,
     license: can("license.read"),
