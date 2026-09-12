@@ -6,18 +6,17 @@ The active documentation entry point is [`documentation/README.md`](documentatio
 
 ## Current repository truth
 
-- Resolve protected `main` before every write, review, merge, package or evidence claim. Best-known local `origin/main` is `9f3704f…` after PR #409 (Phase 4 closure authority green — 8 unclassified Prisma models classified, closure test CI-attached) on top of #408 (#303 disposition: phase4 triage = live VEX disposition authority), #406 (FRC-3 ledger adoption), #405 (P3 AI-ledger micro-repairs), docs-only #404 (the #401–#403 delta reconcile), #403 (trilingual server-error rules), #402 (AAA eslint gates), docs-only #401, #400 and release-authority #398. Protected `main` is now **ahead of** the published package — see `documentation/operations/WORKING_MEMORY.md`.
-- Latest signed/published package: **Internal.35** — app `1.0.0-internal.35`, MSI `1.0.0.35`, FD-058, `founder-offline-only`. The latest **Founder-installed** checkpoint remains Internal.34 / FD-057 until the Founder applies the in-place Internal.35 update.
-- Internal.35 release authority is PR #398; protected release source `f45e6e1c9ece903623dcbe71a22b6806b0562cde`; tag `sahelflow-v1.0.0-internal.35-f45e6e1c9ece903623dcbe71a22b6806b0562cde`. Internal.30 facts (PR #357, source `2eb8a337…`, MSI `sha256:bef15026…`) remain retained evidence.
-- Signed Internal.35 publication completed successfully; Internal.30's `33292273959`/`33292278832`/`33292285084` and Internal.29's `33212635887`/`33212648778`/`33212661580` remain retained evidence.
-- Published Internal.35 packages the Internal.34 campaign lines (#396 F-09..F-12 + F-05 CRLF root cause, #397 F-13 notifications).
-- Issue #221 is **closed/completed**: the Founder accepted installed Internal.24 for its retained whole-product human gate.
-- Issue #306 is **open**: real-phone WhatsApp installed/provider certification. The published Internal.35 candidate awaits the Founder in-place update and re-verification campaign (F-09..F-13, F-05 residual, FD-050 rows, delivery-receipt enum truth on a real outbound, C1 sleep/wake auto-receive, retained #306 rows).
-- Issues #316 and #317 are **open for installed/real-phone evidence only**: their source is complete and packaged in published Internal.35.
-- Issue #230 is **open/reopened P1**: customer-online trial/network readiness remains blocked until owned production-domain and representative-network evidence exist.
-- PR #400 (AI agents AAA command-center redesign) was **merged** at `41f7e149…` on top of docs-only #399. Its content is **NOT** inside published Internal.35; it rides protected `main` ahead of the next signed package and receives its first installed/Founder observation there.
-- PRs #401 (docs: frontier reconcile to Internal.35 + missing App Router boundaries), #402 (AAA eslint gates — api `no-console` error, exhaustive-deps warn), #403 (trilingual phone/license/shop-lifecycle server-error rules), docs-only #404 (the delta reconcile), #405 (P3 AI-ledger micro-repairs — F-2/F-3 source truth + AI-17/AI-23 row conversions), #406 (FRC-3 Required capability/journey ledger adoption), #408 (#303 disposition — phase4 triage = live VEX disposition authority, sf-audit-enforced contract) and #409 (Phase 4 closure authority green — 8 unclassified Prisma models classified, closure test CI-attached) were **merged** (`418d665…` → `c32b857…` → `c50f297…` → `b2db189…` → `9f3704f…`). This delta also rides protected `main` ahead of the next signed package.
-- Internal.35 and newer protected source do not authorize customer-online, Beta or Stable.
+> Re-resolve protected `main` from GitHub before every write, review, merge, package or evidence claim. Everything below is exact at the stated head and goes stale the moment `main` moves.
+
+- **Protected `main`:** `cd1114d` — PR #423, `release: authorize Internal.37 FD-060`, reviewed head `e9dc3e10`, product head `e9a64953` (tree-identical to reviewed #421 head `96244f19`). Required battery green at that head including installed-MSI (CI run 34595759973; one recorded transient — first installed-UI launch-3 readiness-before-visibility order — failed-jobs-only re-run green with zero code delta).
+- **Latest signed/published package:** **Internal.37** — app `1.0.0-internal.37`, MSI `1.0.0.37`, authority **FD-060**, mode `founder-offline-only`, channel `internal`, no owned host suffix, customer-online licensing disabled.
+- **Latest Founder-installed checkpoint:** resolve from `documentation/operations/WORKING_MEMORY.md` before making ANY installed claim. Publication is not installation, and no row converts without a recorded installed observation.
+- Retained publication evidence: Internal.36 / FD-059 (`4e527f05…`), Internal.35 / FD-058 (`f45e6e1c…`) and the Internal.30 facts (PR #357, source `2eb8a337…`, MSI `sha256:bef15026…`).
+- Issue #221 is **closed/completed**: the Founder accepted installed Internal.24 for its retained whole-product human gate. #226 is closed/completed with its budgets retained as regression criteria.
+- Issue #306 is **open**: real-phone WhatsApp installed/provider certification.
+- Issues #316 and #317 are **open for installed/real-phone evidence only** — their source is complete and packaged.
+- Issue #230 is **open/reopened P1**: customer-online readiness is blocked until a SahelFlow-owned production hostname and representative Algerian network evidence exist. The control plane in `control-plane/` is written but has never been deployed — every `wrangler.*.example` still carries placeholder D1 ids and keys, and `src-tauri/build.rs` refuses to compile `customer-online` without `SF_LICENSE_SERVICE_URL`.
+- No checkpoint from Internal.24 onward carries customer-online, Beta or Stable authority.
 
 ## What Internal.30 adds
 
