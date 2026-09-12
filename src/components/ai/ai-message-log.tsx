@@ -9,7 +9,7 @@ import {
   deriveFollowUpSuggestions,
 } from "@/components/ai/ai-follow-up-chips";
 import { MessageBubble } from "@/components/ai/ai-message-bubble";
-import { STARTERS, StartSurface } from "@/components/ai/ai-start-surface";
+import { StartSurface } from "@/components/ai/ai-start-surface";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
@@ -178,16 +178,12 @@ export function AiMessageLog({
             ) : null}
 
             {/* Ledger AI-14: grounded-control follow-up affordances under the last
-                completed answer; anchored dismissal resets on a new turn.
-                When the turn produced no grounded-control chips, fall back to two
-                shop job prompts so the thread never ends dead. */}
+                completed answer. Chips disappear when no grounded identity
+                exists — starter-prompt fallbacks turned the thread into a wall
+                of full questions (Founder Internal.37). */}
             {!sending && !editingMessageId && lastMessageId ? (
               <AiFollowUpChips
-                suggestions={
-                  followUpSuggestions.length > 0
-                    ? followUpSuggestions
-                    : [workspace.copy(STARTERS[0].prompt), workspace.copy(STARTERS[1].prompt)]
-                }
+                suggestions={followUpSuggestions}
                 copy={copy}
                 onPick={onPickSuggestion}
                 onDismiss={() => setChipsDismissedFor(lastMessageId)}

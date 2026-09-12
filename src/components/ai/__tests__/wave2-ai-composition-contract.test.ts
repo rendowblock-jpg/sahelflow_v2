@@ -12,26 +12,20 @@ describe("Class-AAA AI composition contract", () => {
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
 
-    // IA-01 converted this pin rather than deleting it. What it protects is
-    // that the Agents route renders as a full-height workspace and never a
-    // nested mini-app; it protected that by pinning the geometry class on the
-    // page itself, which also froze Agents outside the page grammar and left
-    // its only <h1> `sr-only`.
-    //
-    // The route now uses the shared workspace grammar, and the geometry class
-    // moved into the primitive that owns it — including staying on the route's
-    // ROOT element, which the `#main-content:has(> .app-workspace-content)`
-    // rule in experience-system.css depends on. Both halves are asserted, so
-    // the guarantee is unchanged and the exemption is gone.
+    // Founder-installed Internal.37 rejected a second visible title band on
+    // Agents. The route still uses the shared workspace grammar so
+    // `app-workspace-content` stays on the route root; identity is sr-only
+    // because the canvas already names the session.
     expect(page).toContain("PageShell");
     expect(page).toContain('variant="workspace"');
-    expect(page).not.toContain('<h1 className="sr-only">');
+    expect(page).toContain('identity="sr-only"');
     const pageShell = read("src/components/system/page-shell.tsx");
     expect(pageShell).toContain('workspace: "app-workspace-content flex flex-col"');
+    expect(pageShell).toContain('<h1 className="sr-only">{title}</h1>');
     expect(shell).toContain("AiDecisionWorkspace");
     expect(shell).toContain('className="h-full min-h-0 overflow-hidden"');
     expect(workspace).toContain('data-ai-decision-workspace="true"');
-    expect(workspace).toContain('data-ai-layout={wideReview ? "wide" : "desktop"}');
+    expect(workspace).toContain('data-ai-layout={showReviewColumn ? "wide" : "desktop"}');
     // Intent, not a token: the workspace root is a full-height decision surface,
     // never a nested card. Pinned as `rounded-xl border bg-card` before SYS-05
     // retired that utility; restated so no radius token reintroduces the card.
@@ -45,10 +39,12 @@ describe("Class-AAA AI composition contract", () => {
     // assertions follow the code they protect.
     const log = read("src/components/ai/ai-message-log.tsx");
 
-    expect(workspace).toContain('grid-cols-[17.5rem_minmax(0,1fr)]');
+    expect(workspace).toContain('grid-cols-[16rem_minmax(0,1fr)]');
     expect(workspace).toContain(
-      'grid-cols-[17.5rem_minmax(0,1fr)_20rem]',
+      'grid-cols-[16rem_minmax(0,1fr)_20rem]',
     );
+    expect(workspace).toContain("showReviewColumn");
+    expect(workspace).toContain("aiReviewHasWork");
     expect(workspace).toContain('useMediaQuery("(min-width: 1500px)")');
     expect(canvas).toContain('data-ai-decision-canvas="true"');
     expect(log).toContain('data-ai-inline-proposals="true"');

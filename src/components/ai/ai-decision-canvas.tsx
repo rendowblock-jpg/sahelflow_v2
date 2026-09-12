@@ -149,7 +149,7 @@ export function AiDecisionCanvas({
   useAiCanvasShortcuts({ workspace, composerRef });
 
   return (
-    <main data-ai-decision-canvas="true" className="relative flex h-full min-h-0 flex-col bg-gradient-to-b from-muted/[0.28] via-background to-background">
+    <main data-ai-decision-canvas="true" className="relative flex h-full min-h-0 flex-col bg-background">
       <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border/70 bg-card/70 px-4 backdrop-blur-sm md:px-6">
         <div className="flex min-w-0 items-center gap-3">
           {mobile ? (
@@ -193,8 +193,11 @@ export function AiDecisionCanvas({
           </span>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
-              <h2 className="truncate text-sm font-bold tracking-tight">
-                {activeSession?.title || workspace.copy("newSessionTitle")}
+              <h2 className="truncate text-sm font-semibold tracking-tight">
+                {activeSession?.title ||
+                  (activeSession
+                    ? workspace.copy("newSessionTitle")
+                    : getAiDecisionCopy(workspace.locale, "workHistory"))}
               </h2>
               {/* Ledger AI-01: seeded demo sessions are labelled honestly so
                   canned conversations are never mistaken for model output. */}
@@ -207,10 +210,12 @@ export function AiDecisionCanvas({
                 </Badge>
               ) : null}
             </div>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            <p className="mt-0.5 truncate text-caption text-muted-foreground">
               {activeSession
-                ? `${getAiDecisionCopy(workspace.locale, "durableSession")} · ${getAiDecisionCopy(workspace.locale, "messagesMeta", { count: messages.length })}`
-                : getAiDecisionCopy(workspace.locale, "newAnalysis")}
+                ? getAiDecisionCopy(workspace.locale, "messagesMeta", {
+                    count: messages.length,
+                  })
+                : getAiDecisionCopy(workspace.locale, "startJobsTitle")}
             </p>
           </div>
         </div>
@@ -237,6 +242,7 @@ export function AiDecisionCanvas({
               type="button"
               size="sm"
               variant="outline"
+              data-ai-open-review="true"
               onClick={() => setReviewOpen(true)}
             >
               <ShieldCheck className="size-4" aria-hidden="true" />

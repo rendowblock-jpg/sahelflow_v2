@@ -80,8 +80,9 @@ describe("AI Class-AAA final review regressions", () => {
     expect(canvas).toContain("!wideReview ? (\n        <Sheet open={reviewOpen}");
     expect(canvas).toContain('<SheetContent side="end"');
     expect(browser).toContain("await page.setViewportSize({ width: 1600, height: 900 });");
-    expect(browser).toContain("await expect(reviewEvidence).toHaveCount(1);");
-    expect(browser).toContain('data-ai-layout", "wide"');
+    expect(browser).toContain('data-ai-layout", "desktop"');
+    expect(browser).toContain('[data-ai-open-review="true"]');
+    expect(browser).toContain("Empty review does not earn a third column");
   });
 
   it("labels consent/key readiness as configuration truth rather than provider health", () => {
@@ -145,7 +146,9 @@ describe("AI Class-AAA final review regressions", () => {
     expect(founder).toContain('data-ai-work-history="true"');
     expect(founder).toContain('data-ai-decision-canvas="true"');
     expect(founder).toContain("RTL AI work history");
-    expect(founder).toContain("275, 285");
+    // Founder-installed Internal.37: canvas is the product; the session rail
+    // is 16rem (~256px), not a 280px admin column.
+    expect(founder).toContain("240, 290");
     expect(founder).not.toContain('data-ai-workspace="v2"');
     expect(founder).not.toContain('data-ai-sessions="true"');
     expect(founder).not.toContain('data-ai-thread="true"');

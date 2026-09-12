@@ -303,6 +303,11 @@ Broadcast or bulk messaging may be included only when provider policy, consent, 
 
 ### Assistant
 
+The Agents page is a **named workforce on one engine**, not a generic chat:
+
+- one seller-owned Gemini key and one certified model;
+- named jobs on the start surface (Orders, Insights, Returns, Catalog) grounded in live shop counts;
+- the conversation is the product; history is a session rail; review is a sheet unless it has real work;
 - typed tools and capability registry;
 - inline tool-result cards, not raw JSON;
 - source links and affected-record preview;
