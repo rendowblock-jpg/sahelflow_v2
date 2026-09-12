@@ -31,7 +31,13 @@ export function DangerZonePanel({
     getSettingsWorkspaceCopy(locale, key);
   const [confirmText, setConfirmText] = useState("");
   const [loading, setLoading] = useState(false);
-  const [reauthRequired, setReauthRequired] = useState(false);
+  // The re-authentication gate is shared: both the reset and the full data
+  // export are `requireRecentReauthentication()` actions server-side, so the
+  // gate remembers WHICH action to resume after the PIN is verified.
+  const [reauthAction, setReauthAction] = useState<
+    "reset" | "privacyExport" | null
+  >(null);
+  const [exporting, setExporting] = useState(false);
   const [pin, setPin] = useState("");
   const [reauthBusy, setReauthBusy] = useState(false);
   const [reauthError, setReauthError] = useState<string | null>(null);
@@ -78,7 +84,7 @@ export function DangerZonePanel({
         payload.code === "REAUTHENTICATION_REQUIRED" &&
         !proofRefreshed
       ) {
-        setReauthRequired(true);
+        setReauthAction("reset");
         return;
       }
       if (!response.ok) {
@@ -99,7 +105,67 @@ export function DangerZonePanel({
     }
   }
 
-  async function verifyPinAndReset() {
+  async function handlePrivacyExport(proofRefreshed = false) {
+    if (!canExport || exporting) return;
+    setExporting(true);
+    setReauthError(null);
+    try {
+      const response = await fetch("/api/privacy/export", {
+        method: "POST",
+        cache: "no-store",
+      });
+      if (
+        response.status === 403 &&
+        !proofRefreshed
+      ) {
+        const payload = (await response
+          .json()
+          .catch(() => ({}))) as ApiPayload;
+        if (payload.code === "REAUTHENTICATION_REQUIRED") {
+          setReauthAction("privacyExport");
+          return;
+        }
+        throw new Error(payload.error ?? copy("privacyExportFailed"));
+      }
+      if (!response.ok) {
+        const payload = (await response
+          .json()
+          .catch(() => ({}))) as ApiPayload;
+        throw new Error(payload.error ?? copy("privacyExportFailed"));
+      }
+
+      const blob = await response.blob();
+      if (blob.size <= 0) throw new Error(copy("privacyExportFailed"));
+      // Same download path the Inbox media attachments already ship, so it
+      // behaves identically inside the packaged WebView.
+      const objectUrl = URL.createObjectURL(blob);
+      try {
+        const anchor = document.createElement("a");
+        anchor.href = objectUrl;
+        anchor.download = `sahelflow-privacy-export-${activeShop?.id ?? "shop"}.json`;
+        anchor.rel = "noopener";
+        anchor.hidden = true;
+        document.body.append(anchor);
+        anchor.click();
+        anchor.remove();
+      } finally {
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+      }
+      toast.success(copy("privacyExportDone"));
+    } catch (error) {
+      toast.error(
+        translateServerError(
+          error instanceof Error ? error.message : "",
+          t,
+          copy("privacyExportFailed"),
+        ),
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function verifyPinAndResume() {
     if (!pin.trim() || reauthBusy) return;
     setReauthBusy(true);
     setReauthError(null);
@@ -120,9 +186,14 @@ export function DangerZonePanel({
         );
         return;
       }
-      setReauthRequired(false);
+      const resume = reauthAction;
+      setReauthAction(null);
       setPin("");
-      await handleReset(true);
+      if (resume === "privacyExport") {
+        await handlePrivacyExport(true);
+      } else {
+        await handleReset(true);
+      }
     } catch {
       setReauthError(copy("unavailableDescription"));
     } finally {
@@ -154,6 +225,43 @@ export function DangerZonePanel({
                 <Download className="size-4" aria-hidden="true" />
                 {t("common.export")}
               </a>
+            </Button>
+          </div>
+        ) : null}
+
+        {canExport ? (
+          <div className="flex flex-col gap-4 rounded-surface border p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium">{copy("privacyExport")}</p>
+              <p className="text-xs leading-5 text-muted-foreground">
+                {copy("privacyExportDescription")}
+              </p>
+            </div>
+            {/*
+              `POST /api/privacy/export` builds the complete shop export
+              (`createShopPrivacyExport`) behind trusted-action authority and a
+              recent-re-authentication gate, and writes a
+              `privacy.export.completed` audit entry. It had no caller anywhere
+              in the product, so the only export a seller could reach was the
+              orders CSV above. A POST cannot be a plain link, so the response
+              is streamed to a blob and saved through the same download path
+              the Inbox attachments already use.
+            */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handlePrivacyExport()}
+              disabled={exporting || reauthAction !== null}
+            >
+              {exporting ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="size-4" aria-hidden="true" />
+              )}
+              {exporting
+                ? copy("privacyExportBusy")
+                : copy("privacyExportAction")}
             </Button>
           </div>
         ) : null}
@@ -191,7 +299,7 @@ export function DangerZonePanel({
               variant="destructive"
               size="sm"
               onClick={() => void handleReset()}
-              disabled={loading || !confirmTextMatches || reauthRequired}
+              disabled={loading || !confirmTextMatches || reauthAction !== null}
             >
               {loading ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -203,63 +311,63 @@ export function DangerZonePanel({
                 : t("settings.dangerZone.resetEverything")}
             </Button>
 
-            {reauthRequired ? (
-              <div className="space-y-3 rounded-surface border bg-background p-3">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <KeyRound className="size-4" aria-hidden="true" />
-                  {copy("verificationRequired")}
-                </div>
-                <p id="danger-zone-reauth-hint" className="text-xs leading-5 text-muted-foreground">
-                  {copy("verificationDescription")}
-                </p>
-                <Input
-                  type="password"
-                  inputMode="numeric"
-                  aria-describedby={reauthError ? "danger-zone-reauth-hint danger-zone-reauth-error" : "danger-zone-reauth-hint"}
-                  aria-invalid={reauthError ? true : undefined}
-                  autoComplete="current-password"
-                  value={pin}
-                  onChange={(event) => setPin(event.target.value)}
-                  aria-label={copy("verificationRequired")}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") void verifyPinAndReset();
-                  }}
-                />
-                {reauthError ? (
-                  <p id="danger-zone-reauth-error" role="alert" className="text-xs text-destructive">
-                    {reauthError}
-                  </p>
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => void verifyPinAndReset()}
-                    disabled={!pin.trim() || reauthBusy}
-                  >
-                    {reauthBusy ? (
-                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                    ) : null}
-                    {copy("verify")}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setReauthRequired(false);
-                      setPin("");
-                      setReauthError(null);
-                    }}
-                    disabled={reauthBusy}
-                  >
-                    {t("common.cancel")}
-                  </Button>
-                </div>
-              </div>
-            ) : null}
           </div>
         ) : null}
+          {reauthAction ? (
+            <div className="space-y-3 rounded-surface border bg-background p-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <KeyRound className="size-4" aria-hidden="true" />
+                {copy("verificationRequired")}
+              </div>
+              <p id="danger-zone-reauth-hint" className="text-xs leading-5 text-muted-foreground">
+                {copy("verificationDescription")}
+              </p>
+              <Input
+                type="password"
+                inputMode="numeric"
+                aria-describedby={reauthError ? "danger-zone-reauth-hint danger-zone-reauth-error" : "danger-zone-reauth-hint"}
+                aria-invalid={reauthError ? true : undefined}
+                autoComplete="current-password"
+                value={pin}
+                onChange={(event) => setPin(event.target.value)}
+                aria-label={copy("verificationRequired")}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void verifyPinAndResume();
+                }}
+              />
+              {reauthError ? (
+                <p id="danger-zone-reauth-error" role="alert" className="text-xs text-destructive">
+                  {reauthError}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => void verifyPinAndResume()}
+                  disabled={!pin.trim() || reauthBusy}
+                >
+                  {reauthBusy ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : null}
+                  {copy("verify")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setReauthAction(null);
+                    setPin("");
+                    setReauthError(null);
+                  }}
+                  disabled={reauthBusy}
+                >
+                  {t("common.cancel")}
+                </Button>
+              </div>
+            </div>
+          ) : null}
       </CardContent>
     </Card>
   );

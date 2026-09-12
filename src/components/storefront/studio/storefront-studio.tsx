@@ -46,7 +46,7 @@ import {
 } from "@/lib/storefront/studio-history";
 import { storefrontStudioDraftSchema } from "@/lib/storefront/studio-schema";
 import { switchStorefrontTemplate } from "@/lib/storefront/theme-normalize";
-import { cn } from "@/lib/utils";
+import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 import { SaharaPreview } from "./sahara-preview";
 import { SECTION_LABEL_KEYS, SectionTree } from "./section-tree";
@@ -1531,9 +1531,10 @@ function SaveStatus({
   savedAt: Date | null;
 }) {
   const { t, locale } = useI18n();
-  const time = savedAt?.toLocaleTimeString(locale, {
+  const time = savedAt?.toLocaleTimeString(intlLocale(locale), {
     hour: "2-digit",
     minute: "2-digit",
+    ...DZ_CLOCK,
   });
   const label =
     state === "saving"

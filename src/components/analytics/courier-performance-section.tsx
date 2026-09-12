@@ -25,7 +25,7 @@ import {
   type CourierPerformanceMetrics,
   type WilayaCourierMatrix,
 } from "@/lib/analytics/courier-metrics";
-import { cn, formatDZD } from "@/lib/utils";
+import { cn, formatDZD, intlLocale } from "@/lib/utils";
 import wilayasData from "../../../data/wilayas.json";
 
 /**
@@ -89,7 +89,7 @@ export async function CourierPerformanceSection({
 }) {
   const { t, locale } = await getI18n();
   const dateLocale =
-    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+    intlLocale(locale);
   const integerFormatter = new Intl.NumberFormat(dateLocale, {
     maximumFractionDigits: 0,
   });

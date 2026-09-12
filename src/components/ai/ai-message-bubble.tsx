@@ -18,7 +18,7 @@ import type {
   AiMessageView,
 } from "@/components/ai/ai-workspace-types";
 import type { AiDecisionLocale } from "@/lib/i18n/ai-decision-workspace";
-import { cn } from "@/lib/utils";
+import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 /**
  * STR-01 — extracted verbatim from `ai-decision-canvas.tsx`, which had grown to
@@ -33,8 +33,8 @@ function messageClock(value: string, locale: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return new Intl.DateTimeFormat(
-    locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB",
-    { hour: "2-digit", minute: "2-digit" },
+    intlLocale(locale),
+    { hour: "2-digit", minute: "2-digit", ...DZ_CLOCK },
   ).format(date);
 }
 

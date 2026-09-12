@@ -23,7 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
 import { ConversationStatusBadge } from "./conversation-status-badge";
@@ -780,8 +780,8 @@ export function ActivityMessage({
         <span>{assignmentActivityText(body, t)}</span>
         <span className="opacity-60">
           {new Date(timestamp).toLocaleTimeString(
-            locale === "ar" ? "ar" : locale === "en" ? "en-US" : "fr-FR",
-            { hour: "2-digit", minute: "2-digit" },
+            intlLocale(locale),
+            { hour: "2-digit", minute: "2-digit", ...DZ_CLOCK },
           )}
         </span>
       </div>

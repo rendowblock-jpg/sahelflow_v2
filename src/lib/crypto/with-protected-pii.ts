@@ -108,6 +108,33 @@ async function resolveId(
   return row.id;
 }
 
+/**
+ * The two casts this module is allowed to make, named and confined here.
+ *
+ * Prisma's `$extends` surface hands operation arguments and results back as
+ * generic types with no index signature, and its delegates do not structurally
+ * match a hand-written raw-delegate shape. Any extension that inspects fields
+ * generically — which is exactly what field-level sealing must do — has to
+ * cross that boundary.
+ *
+ * It used to be crossed 106 times inline: 102 spellings of
+ * `as unknown as Record<string, unknown>` and 4 of `as unknown as RawDelegate`,
+ * which made this file over half of every `as unknown as` in the repository and
+ * read like scattered type erosion. It is one library-ergonomics boundary,
+ * crossed in two places. Reviewing the sealing logic should not mean reading
+ * past a hundred casts.
+ *
+ * Neither helper changes behaviour or weakens a check: both compile to the same
+ * assertion the inline casts made.
+ */
+function asFields(value: unknown): Record<string, unknown> {
+  return value as Record<string, unknown>;
+}
+
+function asRawDelegate(value: unknown): RawDelegate {
+  return value as RawDelegate;
+}
+
 function customerFilterWithIndexes(
   where: Record<string, unknown>,
   indexes: string[],
@@ -129,10 +156,10 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
   context: ShopContext,
 ) {
   const codec = createProtectedPiiCodec(client, context);
-  const customerDelegate = client.customer as unknown as RawDelegate;
-  const orderDelegate = client.order as unknown as RawDelegate;
-  const conversationDelegate = client.conversation as unknown as RawDelegate;
-  const messageDelegate = client.message as unknown as RawDelegate;
+  const customerDelegate = asRawDelegate(client.customer);
+  const orderDelegate = asRawDelegate(client.order);
+  const conversationDelegate = asRawDelegate(client.conversation);
+  const messageDelegate = asRawDelegate(client.message);
 
   const decryptCustomer = async (row: Record<string, unknown>) =>
     codec.decryptNested(await codec.decryptCustomerRow(row));
@@ -180,20 +207,20 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
     query: {
       customer: {
         async create({ args, query }) {
-          const data = args.data as unknown as Record<string, unknown>;
+          const data = asFields(args.data);
           assertNoNestedProtectedMutation(data);
           const id = codec.ensureRecordId(data);
           args.data = (await codec.encryptCustomerData(data, id)) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
+          prepareProtectedSelection(asFields(args), "Customer");
           return (await decryptCustomer(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async createMany({ args, query }) {
           const rows = Array.isArray(args.data) ? args.data : [args.data];
           const encrypted = [];
           for (const entry of rows) {
-            const data = entry as unknown as Record<string, unknown>;
+            const data = asFields(entry);
             assertNoNestedProtectedMutation(data);
             const id = codec.ensureRecordId(data);
             encrypted.push(await codec.encryptCustomerData(data, id));
@@ -203,13 +230,13 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
         },
         async update({ args, query }) {
           args.where = (await customerUniqueWhere(args.where)) as never;
-          const data = args.data as unknown as Record<string, unknown>;
+          const data = asFields(args.data);
           assertNoNestedProtectedMutation(data);
           const id = await resolveId(customerDelegate, args.where, "Customer");
           args.data = (await codec.encryptCustomerData(data, id)) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
+          prepareProtectedSelection(asFields(args), "Customer");
           return (await decryptCustomer(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async updateMany({ args, query }) {
@@ -228,8 +255,8 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             where: args.where,
             select: { id: true },
           });
-          const create = args.create as unknown as Record<string, unknown>;
-          const update = args.update as unknown as Record<string, unknown>;
+          const create = asFields(args.create);
+          const update = asFields(args.update);
           assertNoNestedProtectedMutation(create);
           assertNoNestedProtectedMutation(update);
           const createId = codec.ensureRecordId(create);
@@ -238,53 +265,53 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             update,
             existing?.id ?? createId,
           )) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
+          prepareProtectedSelection(asFields(args), "Customer");
           return (await decryptCustomer(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async findMany({ args, query }) {
           args.where = (await customerManyWhere(args.where)) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
+          prepareProtectedSelection(asFields(args), "Customer");
           const rows = await query(args);
           return (await Promise.all(
             rows.map((row) =>
-              decryptCustomer(row as unknown as Record<string, unknown>),
+              decryptCustomer(asFields(row)),
             ),
           )) as never;
         },
         async findUnique({ args, query }) {
           args.where = (await customerUniqueWhere(args.where)) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
+          prepareProtectedSelection(asFields(args), "Customer");
           const row = await query(args);
           return row
             ? ((await decryptCustomer(
-                row as unknown as Record<string, unknown>,
+asFields(row),
               )) as never)
             : null;
         },
         async findUniqueOrThrow({ args, query }) {
           args.where = (await customerUniqueWhere(args.where)) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
+          prepareProtectedSelection(asFields(args), "Customer");
           return (await decryptCustomer(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async findFirst({ args, query }) {
           args.where = (await customerManyWhere(args.where)) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
+          prepareProtectedSelection(asFields(args), "Customer");
           const row = await query(args);
           return row
             ? ((await decryptCustomer(
-                row as unknown as Record<string, unknown>,
+asFields(row),
               )) as never)
             : null;
         },
         async findFirstOrThrow({ args, query }) {
           args.where = (await customerManyWhere(args.where)) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
+          prepareProtectedSelection(asFields(args), "Customer");
           return (await decryptCustomer(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async count({ args, query }) {
@@ -297,9 +324,9 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
         },
         async delete({ args, query }) {
           args.where = (await customerUniqueWhere(args.where)) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Customer");
+          prepareProtectedSelection(asFields(args), "Customer");
           return (await decryptCustomer(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async deleteMany({ args, query }) {
@@ -310,7 +337,7 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
 
       order: {
         async create({ args, query }) {
-          const data = args.data as unknown as Record<string, unknown>;
+          const data = asFields(args.data);
           assertNoNestedProtectedMutation(data);
           const id = codec.ensureRecordId(data);
           args.data = (await codec.encryptFields(
@@ -320,16 +347,16 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             id,
             { sourceField: "phone", indexField: "phoneBlindIndex" },
           )) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
+          prepareProtectedSelection(asFields(args), "Order");
           return (await decryptOrder(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async createMany({ args, query }) {
           const rows = Array.isArray(args.data) ? args.data : [args.data];
           const encrypted = [];
           for (const entry of rows) {
-            const data = entry as unknown as Record<string, unknown>;
+            const data = asFields(entry);
             assertNoNestedProtectedMutation(data);
             const id = codec.ensureRecordId(data);
             encrypted.push(
@@ -346,7 +373,7 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
           return query(args);
         },
         async update({ args, query }) {
-          const data = args.data as unknown as Record<string, unknown>;
+          const data = asFields(args.data);
           assertNoNestedProtectedMutation(data);
           const id = await resolveId(orderDelegate, args.where, "Order");
           args.data = (await codec.encryptFields(
@@ -356,9 +383,9 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             id,
             { sourceField: "phone", indexField: "phoneBlindIndex" },
           )) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
+          prepareProtectedSelection(asFields(args), "Order");
           return (await decryptOrder(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async updateMany({ args, query }) {
@@ -370,8 +397,8 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             where: args.where,
             select: { id: true },
           });
-          const create = args.create as unknown as Record<string, unknown>;
-          const update = args.update as unknown as Record<string, unknown>;
+          const create = asFields(args.create);
+          const update = asFields(args.update);
           assertNoNestedProtectedMutation(create);
           assertNoNestedProtectedMutation(update);
           const createId = codec.ensureRecordId(create);
@@ -389,61 +416,61 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             existing?.id ?? createId,
             { sourceField: "phone", indexField: "phoneBlindIndex" },
           )) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
+          prepareProtectedSelection(asFields(args), "Order");
           return (await decryptOrder(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async findMany({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
+          prepareProtectedSelection(asFields(args), "Order");
           const rows = await query(args);
           return (await Promise.all(
             rows.map((row) =>
-              decryptOrder(row as unknown as Record<string, unknown>),
+              decryptOrder(asFields(row)),
             ),
           )) as never;
         },
         async findUnique({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
+          prepareProtectedSelection(asFields(args), "Order");
           const row = await query(args);
           return row
             ? ((await decryptOrder(
-                row as unknown as Record<string, unknown>,
+asFields(row),
               )) as never)
             : null;
         },
         async findUniqueOrThrow({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
+          prepareProtectedSelection(asFields(args), "Order");
           return (await decryptOrder(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async findFirst({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
+          prepareProtectedSelection(asFields(args), "Order");
           const row = await query(args);
           return row
             ? ((await decryptOrder(
-                row as unknown as Record<string, unknown>,
+asFields(row),
               )) as never)
             : null;
         },
         async findFirstOrThrow({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
+          prepareProtectedSelection(asFields(args), "Order");
           return (await decryptOrder(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async delete({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Order");
+          prepareProtectedSelection(asFields(args), "Order");
           return (await decryptOrder(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
       },
 
       conversation: {
         async create({ args, query }) {
-          const data = args.data as unknown as Record<string, unknown>;
+          const data = asFields(args.data);
           assertNoNestedProtectedMutation(data);
           const id = codec.ensureRecordId(data);
           args.data = (await codec.encryptFields(
@@ -453,18 +480,18 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             id,
           )) as never;
           prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
+asFields(args),
             "Conversation",
           );
           return (await decryptConversation(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async createMany({ args, query }) {
           const rows = Array.isArray(args.data) ? args.data : [args.data];
           const encrypted = [];
           for (const entry of rows) {
-            const data = entry as unknown as Record<string, unknown>;
+            const data = asFields(entry);
             assertNoNestedProtectedMutation(data);
             const id = codec.ensureRecordId(data);
             encrypted.push(
@@ -480,7 +507,7 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
           return query(args);
         },
         async update({ args, query }) {
-          const data = args.data as unknown as Record<string, unknown>;
+          const data = asFields(args.data);
           assertNoNestedProtectedMutation(data);
           const id = await resolveId(
             conversationDelegate,
@@ -494,11 +521,11 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             id,
           )) as never;
           prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
+asFields(args),
             "Conversation",
           );
           return (await decryptConversation(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async updateMany({ args, query }) {
@@ -514,8 +541,8 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             where: args.where,
             select: { id: true },
           });
-          const create = args.create as unknown as Record<string, unknown>;
-          const update = args.update as unknown as Record<string, unknown>;
+          const create = asFields(args.create);
+          const update = asFields(args.update);
           assertNoNestedProtectedMutation(create);
           assertNoNestedProtectedMutation(update);
           const createId = codec.ensureRecordId(create);
@@ -532,81 +559,81 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             existing?.id ?? createId,
           )) as never;
           prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
+asFields(args),
             "Conversation",
           );
           return (await decryptConversation(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async findMany({ args, query }) {
           prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
+asFields(args),
             "Conversation",
           );
           const rows = await query(args);
           return (await Promise.all(
             rows.map((row) =>
-              decryptConversation(row as unknown as Record<string, unknown>),
+              decryptConversation(asFields(row)),
             ),
           )) as never;
         },
         async findUnique({ args, query }) {
           prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
+asFields(args),
             "Conversation",
           );
           const row = await query(args);
           return row
             ? ((await decryptConversation(
-                row as unknown as Record<string, unknown>,
+asFields(row),
               )) as never)
             : null;
         },
         async findUniqueOrThrow({ args, query }) {
           prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
+asFields(args),
             "Conversation",
           );
           return (await decryptConversation(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async findFirst({ args, query }) {
           prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
+asFields(args),
             "Conversation",
           );
           const row = await query(args);
           return row
             ? ((await decryptConversation(
-                row as unknown as Record<string, unknown>,
+asFields(row),
               )) as never)
             : null;
         },
         async findFirstOrThrow({ args, query }) {
           prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
+asFields(args),
             "Conversation",
           );
           return (await decryptConversation(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async delete({ args, query }) {
           prepareProtectedSelection(
-            args as unknown as Record<string, unknown>,
+asFields(args),
             "Conversation",
           );
           return (await decryptConversation(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
       },
 
       message: {
         async create({ args, query }) {
-          const data = args.data as unknown as Record<string, unknown>;
+          const data = asFields(args.data);
           assertNoNestedProtectedMutation(data);
           const id = codec.ensureRecordId(data);
           args.data = (await codec.encryptFields(
@@ -615,16 +642,16 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             "Message",
             id,
           )) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
+          prepareProtectedSelection(asFields(args), "Message");
           return (await decryptMessage(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async createMany({ args, query }) {
           const rows = Array.isArray(args.data) ? args.data : [args.data];
           const encrypted = [];
           for (const entry of rows) {
-            const data = entry as unknown as Record<string, unknown>;
+            const data = asFields(entry);
             assertNoNestedProtectedMutation(data);
             const id = codec.ensureRecordId(data);
             encrypted.push(
@@ -640,7 +667,7 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
           return query(args);
         },
         async update({ args, query }) {
-          const data = args.data as unknown as Record<string, unknown>;
+          const data = asFields(args.data);
           assertNoNestedProtectedMutation(data);
           const id = await resolveId(messageDelegate, args.where, "Message");
           args.data = (await codec.encryptFields(
@@ -649,9 +676,9 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             "Message",
             id,
           )) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
+          prepareProtectedSelection(asFields(args), "Message");
           return (await decryptMessage(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async updateMany({ args, query }) {
@@ -663,8 +690,8 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             where: args.where,
             select: { id: true },
           });
-          const create = args.create as unknown as Record<string, unknown>;
-          const update = args.update as unknown as Record<string, unknown>;
+          const create = asFields(args.create);
+          const update = asFields(args.update);
           assertNoNestedProtectedMutation(create);
           assertNoNestedProtectedMutation(update);
           const createId = codec.ensureRecordId(create);
@@ -680,106 +707,106 @@ export function withProtectedPiiEncryption<T extends PrismaClient>(
             "Message",
             existing?.id ?? createId,
           )) as never;
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
+          prepareProtectedSelection(asFields(args), "Message");
           return (await decryptMessage(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async findMany({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
+          prepareProtectedSelection(asFields(args), "Message");
           const rows = await query(args);
           return (await Promise.all(
             rows.map((row) =>
-              decryptMessage(row as unknown as Record<string, unknown>),
+              decryptMessage(asFields(row)),
             ),
           )) as never;
         },
         async findUnique({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
+          prepareProtectedSelection(asFields(args), "Message");
           const row = await query(args);
           return row
             ? ((await decryptMessage(
-                row as unknown as Record<string, unknown>,
+asFields(row),
               )) as never)
             : null;
         },
         async findUniqueOrThrow({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
+          prepareProtectedSelection(asFields(args), "Message");
           return (await decryptMessage(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async findFirst({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
+          prepareProtectedSelection(asFields(args), "Message");
           const row = await query(args);
           return row
             ? ((await decryptMessage(
-                row as unknown as Record<string, unknown>,
+asFields(row),
               )) as never)
             : null;
         },
         async findFirstOrThrow({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
+          prepareProtectedSelection(asFields(args), "Message");
           return (await decryptMessage(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
         async delete({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>, "Message");
+          prepareProtectedSelection(asFields(args), "Message");
           return (await decryptMessage(
-            (await query(args)) as unknown as Record<string, unknown>,
+asFields((await query(args))),
           )) as never;
         },
       },
 
       delivery: {
         async findMany({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          prepareProtectedSelection(asFields(args));
           const rows = await query(args);
           return (await Promise.all(rows.map((row) => codec.decryptNested(row)))) as never;
         },
         async findUnique({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          prepareProtectedSelection(asFields(args));
           const row = await query(args);
           return row ? ((await codec.decryptNested(row)) as never) : null;
         },
         async findUniqueOrThrow({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          prepareProtectedSelection(asFields(args));
           return (await codec.decryptNested(await query(args))) as never;
         },
         async findFirst({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          prepareProtectedSelection(asFields(args));
           const row = await query(args);
           return row ? ((await codec.decryptNested(row)) as never) : null;
         },
         async findFirstOrThrow({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          prepareProtectedSelection(asFields(args));
           return (await codec.decryptNested(await query(args))) as never;
         },
       },
 
       return: {
         async findMany({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          prepareProtectedSelection(asFields(args));
           const rows = await query(args);
           return (await Promise.all(rows.map((row) => codec.decryptNested(row)))) as never;
         },
         async findUnique({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          prepareProtectedSelection(asFields(args));
           const row = await query(args);
           return row ? ((await codec.decryptNested(row)) as never) : null;
         },
         async findUniqueOrThrow({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          prepareProtectedSelection(asFields(args));
           return (await codec.decryptNested(await query(args))) as never;
         },
         async findFirst({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          prepareProtectedSelection(asFields(args));
           const row = await query(args);
           return row ? ((await codec.decryptNested(row)) as never) : null;
         },
         async findFirstOrThrow({ args, query }) {
-          prepareProtectedSelection(args as unknown as Record<string, unknown>);
+          prepareProtectedSelection(asFields(args));
           return (await codec.decryptNested(await query(args))) as never;
         },
       },

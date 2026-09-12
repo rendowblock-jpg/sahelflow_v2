@@ -1,3 +1,5 @@
+import { intlLocale } from "@/lib/utils";
+
 export type RiskWorkspaceLocale = "en" | "fr" | "ar";
 export type RiskWorkspaceCopyKey = keyof (typeof COPY)["en"];
 
@@ -26,7 +28,7 @@ const COPY = {
 } as const;
 
 function numberLocale(locale: RiskWorkspaceLocale): string {
-  return locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-DZ" : "en-GB";
+  return intlLocale(locale);
 }
 
 export function getRiskWorkspaceCopy(

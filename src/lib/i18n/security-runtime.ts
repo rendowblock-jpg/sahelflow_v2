@@ -39,6 +39,22 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.security.confirm": "Verify and revoke",
     "settings.security.incorrectPin": "The PIN could not be verified.",
     "settings.security.noSessions": "No sessions are recorded for this installation.",
+    "settings.changePin.title": "Owner PIN",
+    "settings.changePin.description":
+      "Your PIN encrypts this shop's data on this machine. Changing it signs every other session out.",
+    "settings.changePin.current": "Current PIN",
+    "settings.changePin.next": "New PIN",
+    "settings.changePin.confirm": "Confirm new PIN",
+    "settings.changePin.submit": "Change PIN",
+    "settings.changePin.submitting": "Changing PIN…",
+    "settings.changePin.changed": "PIN changed. Other sessions were signed out.",
+    "settings.changePin.mismatch": "The new PINs do not match.",
+    "settings.changePin.tooShort": "The new PIN must be at least 8 characters.",
+    "settings.changePin.same": "The new PIN must be different from the current one.",
+    "settings.changePin.failed": "The PIN could not be changed.",
+    "settings.changePin.ownerOnly": "Only the shop owner can change the owner PIN.",
+    "settings.changePin.irrecoverable":
+      "There is no recovery if you forget it. Store the new PIN safely before continuing.",
   },
   fr: {
     "settings.security.title": "Sécurité et sessions",
@@ -67,6 +83,26 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.security.confirm": "Vérifier et révoquer",
     "settings.security.incorrectPin": "Le PIN n’a pas pu être vérifié.",
     "settings.security.noSessions": "Aucune session n’est enregistrée pour cette installation.",
+    "settings.changePin.title": "Code PIN du propriétaire",
+    "settings.changePin.description":
+      "Votre code PIN chiffre les données de cette boutique sur cette machine. Le modifier déconnecte toutes les autres sessions.",
+    "settings.changePin.current": "Code PIN actuel",
+    "settings.changePin.next": "Nouveau code PIN",
+    "settings.changePin.confirm": "Confirmer le nouveau code PIN",
+    "settings.changePin.submit": "Modifier le code PIN",
+    "settings.changePin.submitting": "Modification du code PIN…",
+    "settings.changePin.changed":
+      "Code PIN modifié. Les autres sessions ont été déconnectées.",
+    "settings.changePin.mismatch": "Les nouveaux codes PIN ne correspondent pas.",
+    "settings.changePin.tooShort":
+      "Le nouveau code PIN doit contenir au moins 8 caractères.",
+    "settings.changePin.same":
+      "Le nouveau code PIN doit être différent de l’actuel.",
+    "settings.changePin.failed": "Le code PIN n’a pas pu être modifié.",
+    "settings.changePin.ownerOnly":
+      "Seul le propriétaire de la boutique peut modifier son code PIN.",
+    "settings.changePin.irrecoverable":
+      "Aucune récupération n’est possible en cas d’oubli. Conservez le nouveau code PIN en lieu sûr avant de continuer.",
   },
   ar: {
     "settings.security.title": "الأمان والجلسات",
@@ -95,6 +131,26 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.security.confirm": "تحقق ثم ألغِ الجلسة",
     "settings.security.incorrectPin": "تعذر التحقق من الرمز السري.",
     "settings.security.noSessions": "لا توجد جلسات مسجّلة لهذا التثبيت.",
+    "settings.changePin.title": "الرمز السري للمالك",
+    "settings.changePin.description":
+      "يشفّر رمزك السري بيانات هذا المتجر على هذا الجهاز. تغييره يسجّل خروج كل الجلسات الأخرى.",
+    "settings.changePin.current": "الرمز السري الحالي",
+    "settings.changePin.next": "الرمز السري الجديد",
+    "settings.changePin.confirm": "تأكيد الرمز السري الجديد",
+    "settings.changePin.submit": "تغيير الرمز السري",
+    "settings.changePin.submitting": "جارٍ تغيير الرمز السري…",
+    "settings.changePin.changed":
+      "تم تغيير الرمز السري. وسُجّل خروج الجلسات الأخرى.",
+    "settings.changePin.mismatch": "الرمزان الجديدان غير متطابقين.",
+    "settings.changePin.tooShort":
+      "يجب ألا يقل الرمز السري الجديد عن 8 محارف.",
+    "settings.changePin.same":
+      "يجب أن يختلف الرمز السري الجديد عن الحالي.",
+    "settings.changePin.failed": "تعذر تغيير الرمز السري.",
+    "settings.changePin.ownerOnly":
+      "يمكن لمالك المتجر وحده تغيير الرمز السري للمالك.",
+    "settings.changePin.irrecoverable":
+      "لا توجد وسيلة للاسترجاع إذا نسيته. احفظ الرمز السري الجديد في مكان آمن قبل المتابعة.",
   },
 };
 

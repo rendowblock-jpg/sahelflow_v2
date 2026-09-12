@@ -8,6 +8,7 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 import { type Locale } from '@/lib/i18n'
+import { DZ_CLOCK, intlLocale } from '@/lib/utils'
 import { type OrderStatus } from '@/types/domain'
 
 // Currency formatting (formatDZD, formatDZDShort, formatDZDBare) lives in
@@ -22,16 +23,17 @@ import { type OrderStatus } from '@/types/domain'
 // argument) instead. The functions below are kept for any future callers that
 // need a locale-aware variant from this module.
 
-const LOCALE_TAG: Record<Locale, string> = {
-  ar: 'ar-DZ',
-  fr: 'fr-DZ',
-  en: 'en-GB',
-}
+// The locale tag map used to be duplicated here. There is ONE authority —
+// `intlLocale` in src/lib/utils.ts — and it is contract-pinned in
+// `locale-formatting-contract.test.ts`. A second copy is exactly how the
+// Inbox ended up on `fr-FR` while these helpers were on `fr-DZ`, which made
+// the same instant render "14:05" on one surface and "02:05 PM" on another.
+// `DZ_CLOCK` pins the 24-hour clock Algeria actually writes.
 
 /** Locale-aware short date (e.g. "12 Jan 2025"). */
 export function formatDate(iso: string | Date, locale: Locale = 'fr'): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso
-  return d.toLocaleDateString(LOCALE_TAG[locale], {
+  return d.toLocaleDateString(intlLocale(locale), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -41,7 +43,7 @@ export function formatDate(iso: string | Date, locale: Locale = 'fr'): string {
 /** Locale-aware very-short date (e.g. "12 Jan"). */
 export function formatDateShort(iso: string | Date, locale: Locale = 'fr'): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso
-  return d.toLocaleDateString(LOCALE_TAG[locale], {
+  return d.toLocaleDateString(intlLocale(locale), {
     day: '2-digit',
     month: 'short',
   })
@@ -50,9 +52,10 @@ export function formatDateShort(iso: string | Date, locale: Locale = 'fr'): stri
 /** Locale-aware time (e.g. "14:32"). */
 export function formatTime(iso: string | Date, locale: Locale = 'fr'): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso
-  return d.toLocaleTimeString(LOCALE_TAG[locale], {
+  return d.toLocaleTimeString(intlLocale(locale), {
     hour: '2-digit',
     minute: '2-digit',
+    ...DZ_CLOCK,
   })
 }
 

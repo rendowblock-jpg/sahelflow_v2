@@ -63,7 +63,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { toast } from "@/lib/toast";
-import { cn } from "@/lib/utils";
+import { cn, intlLocale } from "@/lib/utils";
 
 const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread", "archived"];
 const WORKFLOW_FILTERS: WorkflowFilter[] = [
@@ -82,7 +82,7 @@ function relativeTime(
   if (!value) return "";
   const diff = Math.max(0, now - value);
   const rtf = new Intl.RelativeTimeFormat(
-    locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB",
+    intlLocale(locale),
     { numeric: "auto" },
   );
   const minutes = Math.floor(diff / 60_000);
@@ -93,7 +93,7 @@ function relativeTime(
   const days = Math.floor(hours / 24);
   if (days < 7) return rtf.format(-days, "day");
   return new Intl.DateTimeFormat(
-    locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB",
+    intlLocale(locale),
     { day: "numeric", month: "short" },
   ).format(new Date(value));
 }

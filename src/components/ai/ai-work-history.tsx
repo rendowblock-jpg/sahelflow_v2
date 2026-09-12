@@ -24,7 +24,7 @@ import {
   getAiDecisionCopy,
   type AiDecisionLocale,
 } from "@/lib/i18n/ai-decision-workspace";
-import { cn } from "@/lib/utils";
+import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 function sessionDateGroup(value: string): "today" | "yesterday" | "earlier" {
   const date = new Date(value);
@@ -47,13 +47,16 @@ function sessionStamp(value: string, locale: AiDecisionLocale): string {
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startYesterday = new Date(startToday);
   startYesterday.setDate(startYesterday.getDate() - 1);
-  const tag = locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-DZ" : "en-DZ";
+  // `en-DZ` here resolved English to a US-style 12-hour clock; the canonical
+  // map resolves it to `en-GB`, and DZ_CLOCK pins 24-hour for every language.
+  const tag = intlLocale(locale);
   // Today and yesterday keep the clock (the group label owns the day);
   // anything older would lie with a bare HH:mm — it shows a short date.
   if (date >= startYesterday) {
     return new Intl.DateTimeFormat(tag, {
       hour: "2-digit",
       minute: "2-digit",
+      ...DZ_CLOCK,
     }).format(date);
   }
   return new Intl.DateTimeFormat(tag, {

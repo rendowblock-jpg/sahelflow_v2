@@ -12,6 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
+import {
+  DZ_PHONE_PLACEHOLDER,
+  formatDZPhone,
+  normalizeDZPhone,
+} from "@/lib/validation/phone";
 
 interface Profile {
   name?: string;
@@ -32,7 +37,12 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
     const response = await fetch("/api/profile", { cache: "no-store" });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error ?? t("error.requestFailed"));
-    return data as Profile;
+    const stored = data as Profile;
+    // The phone is persisted canonically ("0555123456") and displayed masked
+    // ("05 55 12 34 56"), exactly as every other DZ phone field in the app.
+    return stored.phone
+      ? { ...stored, phone: formatDZPhone(stored.phone) }
+      : stored;
   }, [t]);
 
   useEffect(() => {
@@ -74,7 +84,13 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
       const response = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profile),
+        // `src/lib/validation/phone.ts` owns the contract: submit the
+        // normalized value, never the display mask.
+        body: JSON.stringify(
+          profile.phone
+            ? { ...profile, phone: normalizeDZPhone(profile.phone) }
+            : profile,
+        ),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? t("profile.saveFailed"));
@@ -138,7 +154,7 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">{t("profile.phone")}</Label>
-            <Input id="phone" type="tel" inputMode="tel" autoComplete="tel" value={profile.phone ?? ""} readOnly={!canManage} onChange={(event) => setProfile((current) => ({ ...current, phone: event.target.value }))} placeholder="06 00 00 00 00" dir="ltr" />
+            <Input id="phone" type="tel" inputMode="tel" autoComplete="tel-national" value={profile.phone ?? ""} readOnly={!canManage} onChange={(event) => setProfile((current) => ({ ...current, phone: formatDZPhone(event.target.value) }))} placeholder={DZ_PHONE_PLACEHOLDER} dir="ltr" />
           </div>
         </div>
 

@@ -48,6 +48,7 @@ import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { orderFormSchema, type OrderFormValues } from "@/lib/validation/order-schema";
 import type { RiskAssessment } from "@/lib/risk-engine/types";
+import { getOrderRiskFactorPresentation } from "@/lib/orders/order-risk-presentation";
 import {
   clearManualOrderCommand,
   resolveManualOrderCommand,
@@ -725,14 +726,28 @@ export function OrderFormDialog({
                       .filter((f) => f.direction === "risk" && f.points > 0)
                       .sort((a, b) => b.points - a.points)
                       .slice(0, 5)
-                      .map((f) => (
-                        <li key={f.id} className="flex items-start gap-2">
-                          <span className="font-mono text-amber-600 dark:text-amber-400">
-                            +{f.points}
-                          </span>
-                          <span>{f.explanation}</span>
-                        </li>
-                      ))}
+                      .map((f) => {
+                        // `factor.explanation` is engine-only English built in
+                        // `risk-engine/scoring.ts` ("very high value", "loyal
+                        // customer", "possible duplicate/fraud"). Rendering it
+                        // put English risk reasoning in front of Arabic and
+                        // French sellers. The orders detail surface already
+                        // routes through `getOrderRiskFactorPresentation`,
+                        // which maps every factor id onto a localized key and
+                        // its parameters; this dialog was the one call site
+                        // that bypassed it.
+                        const presentation = getOrderRiskFactorPresentation(f);
+                        return (
+                          <li key={f.id} className="flex items-start gap-2">
+                            <span className="font-mono text-amber-600 dark:text-amber-400">
+                              +{f.points}
+                            </span>
+                            <span>
+                              {t(presentation.key, presentation.params)}
+                            </span>
+                          </li>
+                        );
+                      })}
                   </ul>
                 )}
                 <p className="text-muted-foreground">

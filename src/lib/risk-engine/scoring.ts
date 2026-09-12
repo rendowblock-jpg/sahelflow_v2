@@ -1,3 +1,4 @@
+import { intlLocale } from "@/lib/utils";
 /**
  * Risk scoring engine — computes risk factors and aggregates them into a score.
  *
@@ -133,7 +134,7 @@ function factorOrderValue(
     value,
     points: weighted,
     direction: weighted > 0 ? "risk" : "protective",
-    explanation: `${value.toLocaleString()} DZD COD — ${value >= 15000 ? "very high" : value >= 8000 ? "high" : value >= 3000 ? "medium" : "low"} value`,
+    explanation: `${value.toLocaleString(intlLocale("en"))} DZD COD — ${value >= 15000 ? "very high" : value >= 8000 ? "high" : value >= 3000 ? "medium" : "low"} value`,
   };
 }
 

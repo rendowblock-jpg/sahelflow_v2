@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { DZ_CLOCK, formatDZD, intlLocale } from "@/lib/utils";
 import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import {
   getAiWorkspaceCopy,
@@ -105,13 +106,14 @@ function summaryValue(
 ): string | null {
   if (typeof value === "number") {
     if (MONEY_FIELDS.has(key)) {
-      return new Intl.NumberFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`, {
-        style: "currency",
-        currency: "DZD",
-        maximumFractionDigits: 0,
-      }).format(value);
+      // `formatDZD` is the canonical integer-DZD formatter for every
+      // seller-facing surface (`src/lib/utils.ts`). The previous
+      // `style: "currency"` bypass rendered "DZD 1,500" in English against
+      // "1,500 DA" everywhere else, and in Arabic emitted the CLDR symbol
+      // wrapped in RLM marks that fight the app's own bidi isolation.
+      return formatDZD(value, locale);
     }
-    return new Intl.NumberFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`).format(value);
+    return new Intl.NumberFormat(intlLocale(locale)).format(value);
   }
   if (typeof value === "boolean") return value ? "✓" : "—";
   if (typeof value === "string" && ORDER_STATUS_SUMMARY_FIELDS.has(key)) {
@@ -203,9 +205,10 @@ export function AiActionProposalCard({
 
   const createdLabel = (() => {
     try {
-      return new Intl.DateTimeFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`, {
+      return new Intl.DateTimeFormat(intlLocale(locale), {
         dateStyle: "short",
         timeStyle: "short",
+        ...DZ_CLOCK,
       }).format(new Date(proposal.createdAt));
     } catch {
       return null;
@@ -306,9 +309,10 @@ export function AiActionProposalCard({
             <div className="mt-1.5 flex items-center justify-between gap-3">
               <span>{copy("expires")}</span>
               <time dateTime={proposal.expiresAt} className="tabular-nums text-foreground">
-                {new Intl.DateTimeFormat(locale === "ar" ? "ar-DZ" : `${locale}-DZ`, {
+                {new Intl.DateTimeFormat(intlLocale(locale), {
                   dateStyle: "short",
                   timeStyle: "short",
+                  ...DZ_CLOCK,
                 }).format(new Date(proposal.expiresAt))}
               </time>
             </div>

@@ -23,7 +23,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { getInboxMediaCopy } from "@/lib/i18n/inbox-media";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import type { InboxLocalMediaProjection } from "@/lib/whatsapp/types";
-import { cn } from "@/lib/utils";
+import { cn, intlLocale } from "@/lib/utils";
 
 const PENDING_MEDIA_POLL_MS = 3_000;
 const MAX_PENDING_MEDIA_BATCH = 200;
@@ -36,9 +36,10 @@ let pendingMediaPollTimer: number | null = null;
 let pendingMediaInitialTimer: number | null = null;
 let pendingMediaPollInFlight = false;
 
-function localeCode(locale: "ar" | "fr" | "en"): string {
-  return locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-GB";
-}
+// One locale authority: `intlLocale` in src/lib/utils.ts. This file used to
+// keep its own copy that resolved French to `fr-FR` while the canonical map
+// resolves it to `fr-DZ`, so the same instant rendered "14:05" here and
+// "02:05 PM" on the order surfaces.
 
 function mediaLabel(
   kind: string | undefined,
@@ -180,7 +181,7 @@ export function documentKind(
 
 function formatBytes(value: number, locale: "ar" | "fr" | "en"): string {
   if (value < 1_024) return `${value} B`;
-  const formatter = new Intl.NumberFormat(localeCode(locale), {
+  const formatter = new Intl.NumberFormat(intlLocale(locale), {
     maximumFractionDigits: 1,
   });
   if (value < 1_024 * 1_024) return `${formatter.format(value / 1_024)} KB`;

@@ -2,8 +2,8 @@ import { openAutomationNotificationBody } from "@/lib/automations/notification-c
 import { db, shopContext } from "@/lib/db";
 import { trustedActionAllowed } from "@/lib/identity/authorization";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
-import type { Locale } from "@/lib/i18n";
 import { getI18n } from "@/lib/i18n-server";
+import { intlLocale } from "@/lib/utils";
 
 /** Convert snake_case delivery status to camelCase for i18n lookup. */
 function statusToCamel(status: string): string {
@@ -39,9 +39,9 @@ function formatRelativeTime(
   return translate("notif.time.days", { count: Math.round(hours / 24) });
 }
 
-function intlLocale(locale: Locale): string {
-  return locale === "ar" ? "ar-DZ" : locale === "en" ? "en-US" : "fr-FR";
-}
+// This module used to define its OWN function named `intlLocale` that
+// shadowed the canonical one and resolved English to `en-US` instead of
+// `en-GB` — same name, different answer. The canonical map is imported.
 
 /** Preserve the existing permission-filtered operational alert projection. */
 export async function listLegacyOperationalNotifications() {

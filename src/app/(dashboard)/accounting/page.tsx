@@ -29,7 +29,7 @@ import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
-import { formatDZD, formatDate } from "@/lib/utils";
+import { formatDate, formatDZD, intlLocale } from "@/lib/utils";
 import type { ExpenseCategory } from "@/lib/validation";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -48,7 +48,7 @@ export default async function AccountingPage() {
     can("orders.financials.read") && can("products.cost.read");
   const canUpdate = can("accounting.update");
   const canExport = can("data.export");
-  const dateLocale = locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-FR";
+  const dateLocale = intlLocale(locale);
   const now = new Date();
   const periodStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const period = { from: periodStart, to: now };

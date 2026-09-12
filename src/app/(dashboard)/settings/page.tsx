@@ -48,6 +48,12 @@ export default async function SettingsPage({
     profile: true,
     profileManage,
     security: can("sessions.read") || can("devices.read"),
+    // The route enforces owner-only authority itself; this only decides
+    // whether the surface is offered at all.
+    changePin: can("members.manage"),
+    // Rename/archive/recover need shops.create; permanent delete additionally
+    // needs shops.delete, which the native layer enforces per action.
+    shopsManage: can("shops.create") || can("shops.delete"),
     team: can("members.read"),
     appearance: true,
     license: can("license.read"),

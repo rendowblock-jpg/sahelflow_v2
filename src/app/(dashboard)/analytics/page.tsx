@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import {
   Activity,
@@ -36,6 +37,7 @@ import {
 } from "@/components/charts/decision-visualizations";
 import { LineTrendChart } from "@/components/charts/line-trend-chart";
 import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,7 +60,7 @@ import {
   STATUS_CHART_COLORS,
   statusI18nKey,
 } from "@/lib/shared/status-colors";
-import { cn, formatDZD } from "@/lib/utils";
+import { cn, formatDZD, intlLocale } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -114,8 +116,7 @@ export default async function AnalyticsPage({
       getCourierPerformance(range, { includeFees }),
     ]);
 
-  const dateLocale =
-    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+  const dateLocale = intlLocale(locale);
   const integerFormatter = new Intl.NumberFormat(dateLocale, {
     maximumFractionDigits: 0,
   });
@@ -302,6 +303,19 @@ export default async function AnalyticsPage({
         description={t("analytics.depth")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {/*
+              `/analytics/extraction` is a complete, guarded, trilingual
+              dashboard with a working API, and NOTHING linked to it — a seller
+              could only reach it by typing the URL. It is a child of this page,
+              so it is linked from this page rather than by adding a 17th
+              sidebar item (the flat 16-item sidebar is a recorded product
+              decision, SF16-NAV-017).
+            */}
+            <Button asChild variant="outline" size="sm">
+              <Link href="/analytics/extraction">
+                {t("analytics.extraction.title")}
+              </Link>
+            </Button>
             <AnalyticsRangeControls />
             <AnalyticsExportButton
               summary={{

@@ -23,6 +23,7 @@ import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 import { formatDZDBare as formatDZD } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n";
 import { loadTranslationsSync } from "@/lib/i18n-server";
+import { intlLocale } from "@/lib/utils";
 
 export interface DailyReport {
   date: Date; // the day being reported (yesterday)
@@ -38,12 +39,9 @@ export interface DailyReport {
   locale: Locale;
 }
 
-/** Locale tag for date formatting. */
-const LOCALE_TAG: Record<Locale, string> = {
-  ar: "ar-DZ",
-  fr: "fr-FR",
-  en: "en-GB",
-};
+// Locale tags come from the one authority, `intlLocale` in src/lib/utils.ts.
+// The private map this module kept resolved French to `fr-FR` against the
+// canonical `fr-DZ`.
 
 /** Format a date with weekday + day + month + year in the given locale.
  *  W2-9 (TZ fix): the date is rendered in the Africa/Algiers timezone so the
@@ -52,7 +50,7 @@ const LOCALE_TAG: Record<Locale, string> = {
  *  display "10 juillet" for the Algiers-midnight UTC instant 2026-07-10T23:00Z
  *  (which is "11 juillet" in Algiers). */
 function formatDateLocalized(date: Date, locale: Locale): string {
-  return date.toLocaleDateString(LOCALE_TAG[locale], {
+  return date.toLocaleDateString(intlLocale(locale), {
     timeZone: "Africa/Algiers",
     weekday: "short",
     day: "numeric",

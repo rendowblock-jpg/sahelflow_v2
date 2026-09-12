@@ -70,7 +70,7 @@ import {
   listBlacklistedCustomers,
   type RiskLevel,
 } from "@/lib/risk-engine";
-import { formatDZD } from "@/lib/utils";
+import { formatDZD, intlLocale } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -143,8 +143,7 @@ export default async function RiskPage({
   ]);
 
   const kpis = report.kpis;
-  const dateLocale =
-    locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ";
+  const dateLocale = intlLocale(locale);
   const integerFormatter = new Intl.NumberFormat(dateLocale, {
     maximumFractionDigits: 0,
   });

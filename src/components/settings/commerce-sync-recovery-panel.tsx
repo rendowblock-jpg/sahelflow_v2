@@ -20,6 +20,7 @@ import {
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
 import { toast } from "@/lib/toast";
+import { DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 interface CommerceAttemptHistory {
   id: string;
@@ -102,9 +103,10 @@ export function CommerceSyncRecoveryPanel() {
   const [retrying, setRetrying] = useState<string | null>(null);
   const formatter = useMemo(
     () =>
-      new Intl.DateTimeFormat(locale, {
+      new Intl.DateTimeFormat(intlLocale(locale), {
         dateStyle: "medium",
         timeStyle: "short",
+        ...DZ_CLOCK,
       }),
     [locale],
   );

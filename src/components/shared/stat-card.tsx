@@ -11,7 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useI18n } from "@/hooks/use-i18n";
-import { cn } from "@/lib/utils";
+import { cn, intlLocale } from "@/lib/utils";
 
 export type StatCardEmphasis = "standard" | "primary" | "supporting";
 export type StatCardTone =
@@ -126,7 +126,7 @@ export function StatCard({
   const trendText =
     hasTrend && !directionOnly
       ? new Intl.NumberFormat(
-          locale === "ar" ? "ar-DZ" : locale === "en" ? "en-GB" : "fr-DZ",
+          intlLocale(locale),
           {
             style: "percent",
             signDisplay: "exceptZero",
