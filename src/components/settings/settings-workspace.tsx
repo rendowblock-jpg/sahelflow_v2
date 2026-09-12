@@ -27,6 +27,7 @@ import { DemoDataPanel } from "@/components/settings/demo-data-panel";
 import { LicensePanel } from "@/components/settings/license-panel";
 import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
 import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
+import { ShopsPanel } from "@/components/settings/shops-panel";
 import { TeamAccessAuthorityPanel } from "@/components/settings/team-access-authority-panel";
 import { TeamMembersPanel } from "@/components/settings/team-members-panel";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,8 @@ export type SettingsWorkspaceAccess = {
   security: boolean;
   /** Owner PIN change. The route additionally enforces owner-only authority. */
   changePin: boolean;
+  /** Shop lifecycle administration (rename / archive / recover / delete). */
+  shopsManage: boolean;
   team: boolean;
   appearance: boolean;
   license: boolean;
@@ -125,7 +128,7 @@ function groupVisible(
 ): boolean {
   switch (group) {
     case "workspace":
-      return access.profile || access.appearance;
+      return access.profile || access.appearance || access.shopsManage;
     case "operations":
       return access.reports || access.phone;
     case "connections":
@@ -378,6 +381,17 @@ export function SettingsWorkspace({
           )}
         >
           <AppearancePanel />
+        </div>
+      ) : null}
+      {access.shopsManage ? (
+        <div
+          id="settings-tab-shops"
+          className={cn(
+            styles.cardReset,
+            (access.profile || access.appearance) && "border-t border-border",
+          )}
+        >
+          <ShopsPanel />
         </div>
       ) : null}
     </div>
