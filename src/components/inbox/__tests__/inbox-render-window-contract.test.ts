@@ -17,11 +17,12 @@ function source(path: string): string {
 describe("inbox thread render window (INB-11)", () => {
   it("bottom-anchors a growing window with scroll-true anchoring", () => {
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
+    const view = source("src/hooks/inbox/use-inbox-thread-view.ts");
 
-    expect(thread).toContain("RENDER_WINDOW_INITIAL = 80");
-    expect(thread).toContain("RENDER_WINDOW_STEP = 60");
-    expect(thread).toContain("const visibleMessages = useMemo(");
-    expect(thread).toContain("messages.slice(visibleStart)");
+    expect(view).toContain("RENDER_WINDOW_INITIAL = 80");
+    expect(view).toContain("RENDER_WINDOW_STEP = 60");
+    expect(view).toContain("const visibleMessages = useMemo(");
+    expect(view).toContain("messages.slice(visibleStart)");
     // Only the window renders; the full array never reaches the DOM loop.
     expect(thread).toContain("visibleMessages.map((message, index) => {");
     expect(thread).not.toContain("{messages.map((message, index) => {");
@@ -29,19 +30,19 @@ describe("inbox thread render window (INB-11)", () => {
     expect(thread).toContain("index + visibleStart === dividerIndex");
     // Growth is viewport-gated and re-anchors scroll by the height delta.
     expect(thread).toContain("data-inbox-render-window=\"true\"");
-    expect(thread).toContain("IntersectionObserver");
-    expect(thread).toContain(
+    expect(view).toContain("IntersectionObserver");
+    expect(view).toContain(
       "top: viewport.scrollTop + (viewport.scrollHeight - anchor),",
     );
     // A conversation switch resets the window to the WhatsApp reading size.
-    expect(thread).toContain("setRenderWindow(RENDER_WINDOW_INITIAL);");
+    expect(view).toContain("setRenderWindow(RENDER_WINDOW_INITIAL);");
   });
 
   it("materializes hidden history for search and quote jumps", () => {
-    const thread = source("src/components/inbox/inbox-v3-thread.tsx");
-    expect(thread).toContain("pendingJumpRef.current = messageId;");
-    expect(thread).toContain("setRenderWindow(messages.length);");
+    const view = source("src/hooks/inbox/use-inbox-thread-view.ts");
+    expect(view).toContain("pendingJumpRef.current = messageId;");
+    expect(view).toContain("setRenderWindow(messages.length);");
     // The deferred jump completes only after the DOM commits.
-    expect(thread).toContain("const pending = pendingJumpRef.current;");
+    expect(view).toContain("const pending = pendingJumpRef.current;");
   });
 });
