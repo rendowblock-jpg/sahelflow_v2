@@ -57,37 +57,40 @@ describe("courier provider deterministic conformance", () => {
           },
         ]);
       }
+      // Yalidine create answers with an OBJECT KEYED BY order_id.
       if (url.endsWith("/parcels/") && init?.method === "POST") {
-        return json([
-          {
-            tracking_id: "YAL-CONFORMANCE-1",
+        return json({
+          "ORDER-CONFORMANCE-1": {
+            success: true,
+            tracking: "YAL-CONFORMANCE-1",
             label: "https://labels.example/YAL-CONFORMANCE-1.pdf",
-            parcel_status: "Créé",
           },
-        ]);
+        });
       }
       if (url.includes("/parcels/YAL-CONFORMANCE-1/")) {
-        return json([
-          {
-            parcel_status: "Non livré",
-            delivery_date: "2026-08-08",
-          },
-        ]);
+        return json({
+          status: "Sorti en livraison",
+          delivery_date: "2026-08-08",
+        });
       }
+      // Histories are a paginated envelope; rows arrive newest-first.
       if (url.includes("/histories/")) {
-        return json([
-          {
-            status: "Créé",
-            date: "2026-08-04T08:00:00Z",
-            place: "Alger",
-          },
-          {
-            status: "Non livré",
-            date: "2026-08-05T08:00:00Z",
-            place: "Hydra",
-            remark: "Client unavailable",
-          },
-        ]);
+        return json({
+          data: [
+            {
+              status: "Sorti en livraison",
+              date_status: "2026-08-05T08:00:00Z",
+              center_name: "Hydra",
+            },
+            {
+              status: "En transit",
+              date_status: "2026-08-04T08:00:00Z",
+              center_name: "Centre Alger",
+            },
+          ],
+          has_more: false,
+          total_count: 2,
+        });
       }
       throw new Error(`Unexpected Yalidine request: ${url}`);
     });
@@ -123,14 +126,22 @@ describe("courier provider deterministic conformance", () => {
       "X-API-ID": "yal-id",
       "X-API-TOKEN": "yal-token",
     });
+    // Live-proven Yalidine body: name strings for wilaya/commune, split
+    // customer name, price = COD, plus do_insurance/declared_value/freeshipping.
     expect(JSON.parse(String(createInit.body))).toEqual([
       expect.objectContaining({
         order_id: "ORDER-CONFORMANCE-1",
-        firstname: "Client Conformance",
-        commune: 16001,
-        phone: "+213 555-12-34-56",
+        from_wilaya_name: "Alger",
+        firstname: "Client",
+        familyname: "Conformance",
+        contact_phone: "+213 555-12-34-56",
+        to_commune_name: "Hydra Conformance",
+        to_wilaya_name: "Alger",
+        product_list: "Widget Conformance x2",
         price: 2_500,
-        product: "Widget Conformance x2",
+        declared_value: 2_500,
+        do_insurance: false,
+        freeshipping: true,
       }),
     ]);
 
@@ -138,10 +149,12 @@ describe("courier provider deterministic conformance", () => {
       "YAL-CONFORMANCE-1",
       credentials,
     );
-    expect(tracking.status).toBe("failed");
+    expect(tracking.status).toBe("out_for_delivery");
+    // Oldest-first events: the transit no-op ("En transit") carries the
+    // initial pending state forward instead of guessing.
     expect(tracking.events.map((event) => event.status)).toEqual([
-      "failed",
-      "created",
+      "pending",
+      "out_for_delivery",
     ]);
     expect(tracking.estimatedDelivery).toBe("2026-08-08");
   });

@@ -5,14 +5,26 @@
  * Auth: X-API-ID + X-API-TOKEN headers (seller's credentials, stored encrypted
  * in the Secret table).
  *
- * Endpoints used:
- *   POST /parcels/          → create shipment
- *   GET  /parcels/{tracking} → get shipment status
- *   GET  /deliveryfees/      → estimate delivery cost
- *   GET  /histories/?tracking={id} → tracking events
+ * Contract corrected against the live-proven Yalidine integration in CodFlow
+ * (github.com/bighadj22/codflow @ 00f18fa, Apache-2.0).
  *
- * Commune codes: Yalidine uses numeric commune IDs. We resolve them via the
- * /communes/ endpoint (cached in-memory for the process lifetime).
+ * Live-proven deltas vs the pre-repair guesses:
+ *   - Create: POST /parcels/ takes an ARRAY of parcel objects; the response is
+ *     an OBJECT KEYED BY order_id ({ "<order_id>": { success, tracking, label,
+ *     message } }). Success only when success === true AND tracking non-empty.
+ *   - Wilaya/commune are NAME strings in the carrier's own spelling (resolved
+ *     against GET /communes/), never numeric ids.
+ *   - Delete: DELETE /parcels/{tracking} answers HTTP 200 even on failure with
+ *     [{ tracking, deleted }] — only deleted === true means deleted.
+ *   - Tracking: GET /histories/?tracking={id} returns a paginated envelope
+ *     { data: [...], has_more, total_count }, rows newest-first.
+ *
+ * Endpoints used:
+ *   POST /parcels/              → create shipment (array body)
+ *   GET  /parcels/{tracking}    → get shipment status
+ *   GET  /deliveryfees/         → estimate delivery cost
+ *   GET  /histories/?tracking={id} → tracking events
+ *   GET  /communes/?wilaya_name={w} → commune name resolution (cached)
  */
 import { env } from "@/lib/env";
 import "server-only";
@@ -29,14 +41,18 @@ import type {
   DeliveryStatus,
 } from "./types";
 import { retryFetch } from "./retry";
+import { mapYalidineStatus } from "./yalidine-status";
+import type { YalidineStatusVerdict } from "./yalidine-status";
+import type { YalidineCommune } from "./yalidine-geo";
+import { matchCommuneName } from "./yalidine-geo";
 
 const YALIDINE_BASE =
   env.yalidineApiBase || "https://api.yalidine.app/v1";
 
 const FETCH_TIMEOUT_MS = 15000;
 
-// In-memory commune-code cache: { "wilaya::commune" → code }
-const communeCodeCache = new Map<string, number>();
+// In-memory commune-name cache: wilaya → Yalidine's own commune list.
+const communeListCache = new Map<string, YalidineCommune[]>();
 
 function headers(creds: DeliveryCredentials): Record<string, string> {
   return {
@@ -46,54 +62,109 @@ function headers(creds: DeliveryCredentials): Record<string, string> {
   };
 }
 
-/** Map Yalidine's status strings to our normalized DeliveryStatus. */
-function mapStatus(raw: string): DeliveryStatus {
-  const s = raw.toLowerCase().trim();
-  // CRITICAL: "Livré" (delivered) vs "Non livré" (not delivered) — must
-  // check "non livré" BEFORE "livré" to avoid false-positive delivered.
-  if (s.includes("non livré") || s.includes("non livre")) return "failed";
-  if (s === "livré" || s === "delivered" || s.includes("livré (")) return "delivered";
-  // "Retour définitif" / "Retour" → returned
-  if (s.includes("retour") || s === "returned") return "returned";
-  if (s.includes("refus") || s === "refused") return "refused";
-  if (s.includes("échec") || s.includes("echec") || s === "failed") return "failed";
-  if (s.includes("ramass") || s.includes("picked")) return "picked_up";
-  if (s.includes("transit") || s.includes("voyage")) return "in_transit";
-  if (s.includes("centre") || s.includes("hub")) return "at_hub";
-  if (s.includes("livreur") || s.includes("out_for")) return "out_for_delivery";
-  if (s.includes("créé") || s.includes("cree") || s === "created") return "created";
-  return "pending";
+/** Yalidine create-response entry (object keyed by order_id; array = legacy). */
+interface YalidineCreateEntry {
+  success?: boolean;
+  tracking?: string;
+  tracking_id?: string;
+  label?: string;
+  message?: string;
+  error?: string;
 }
 
-/** Resolve a commune name to Yalidine's numeric commune code (cached). */
-async function getCommuneCode(
+/** Yalidine parcel-status row (GET /parcels/{tracking}). */
+interface YalidineParcelRow {
+  status?: string;
+  parcel_status?: string;
+  delivery_date?: string;
+}
+
+/** Yalidine history row (GET /histories/ — rows are newest-first). */
+interface YalidineHistoryRow {
+  date_status?: string;
+  status?: string;
+  reason?: string;
+  center_name?: string;
+}
+
+/**
+ * Pull the relevant entry out of a create response. Object keyed by order_id
+ * (own entry first, else the first entry); a bare array is legacy tolerance
+ * (element 0). Anything else → null.
+ */
+function extractCreateEntry(
+  payload: unknown,
+  orderNumber: string,
+): YalidineCreateEntry | null {
+  if (Array.isArray(payload)) {
+    return (payload[0] as YalidineCreateEntry | undefined) ?? null;
+  }
+  if (payload && typeof payload === "object") {
+    const keyed = payload as Record<string, unknown>;
+    const own = keyed[orderNumber];
+    if (own && typeof own === "object") {
+      return own as YalidineCreateEntry;
+    }
+    for (const value of Object.values(keyed)) {
+      if (value && typeof value === "object") {
+        return value as YalidineCreateEntry;
+      }
+    }
+  }
+  return null;
+}
+
+/** Pull the parcel-status row out of a GET /parcels/ body (defensive). */
+function extractParcelRow(payload: unknown): YalidineParcelRow | null {
+  if (Array.isArray(payload)) {
+    return (payload[0] as YalidineParcelRow | undefined) ?? null;
+  }
+  if (payload && typeof payload === "object") {
+    const data = (payload as Record<string, unknown>).data;
+    if (Array.isArray(data)) {
+      return (data[0] as YalidineParcelRow | undefined) ?? null;
+    }
+    return payload as YalidineParcelRow;
+  }
+  return null;
+}
+
+/**
+ * Resolve the request commune name to Yalidine's OWN spelling (cached per
+ * process). No match / fetch failure → the raw request string.
+ */
+async function resolveCommuneName(
   wilaya: string,
   commune: string,
   creds: DeliveryCredentials,
-): Promise<number | undefined> {
-  const cacheKey = `${wilaya}::${commune}`;
-  if (communeCodeCache.has(cacheKey)) {
-    return communeCodeCache.get(cacheKey);
-  }
-  try {
-    const res = await retryFetch(
-      `${YALIDINE_BASE}/communes/?wilaya_name=${encodeURIComponent(wilaya)}`,
-      { headers: headers(creds) },
-      FETCH_TIMEOUT_MS,
-    );
-    if (!res.ok) return undefined;
-    const data = (await res.json()) as Array<{ _id: number; name: string }>;
-    const match = data.find(
-      (c) => c.name.toLowerCase().trim() === commune.toLowerCase().trim(),
-    );
-    if (match) {
-      communeCodeCache.set(cacheKey, match._id);
-      return match._id;
+): Promise<string> {
+  const cacheKey = wilaya.trim();
+  let list = communeListCache.get(cacheKey);
+  if (!list) {
+    try {
+      const res = await retryFetch(
+        `${YALIDINE_BASE}/communes/?wilaya_name=${encodeURIComponent(cacheKey)}`,
+        { headers: headers(creds) },
+        FETCH_TIMEOUT_MS,
+      );
+      if (res.ok) {
+        const parsed: unknown = await res.json();
+        if (Array.isArray(parsed)) {
+          list = parsed.filter(
+            (entry): entry is YalidineCommune =>
+              !!entry &&
+              typeof entry === "object" &&
+              typeof (entry as YalidineCommune).name === "string",
+          );
+          communeListCache.set(cacheKey, list);
+        }
+      }
+    } catch {
+      // Unreachable/unparseable commune list → fall back to the raw name.
     }
-  } catch {
-    // fallback to string commune name
   }
-  return undefined;
+  if (!list || list.length === 0) return commune;
+  return matchCommuneName(list, commune)?.name ?? commune;
 }
 
 export const yalidineAdapter: DeliveryAdapter = {
@@ -220,30 +291,55 @@ export const yalidineAdapter: DeliveryAdapter = {
       };
     }
 
-    // Resolve commune code
-    let communeValue: string | number = request.customer.commune;
-    const code = await getCommuneCode(
+    // Yalidine requires firstname/familyname separately: first token =
+    // firstname, the rest joined = familyname; a single name is DUPLICATED
+    // into both.
+    const nameParts = request.customer.name.trim().split(/\s+/);
+    const firstname = nameParts[0] ?? "";
+    const familyname =
+      nameParts.length > 1 ? nameParts.slice(1).join(" ") : firstname;
+
+    // COD the carrier collects = product price + optional merchant-charged
+    // delivery fee (CodFlow merchant decision 2026-09).
+    const price = Math.round(request.totalPrice + (request.deliveryFee ?? 0));
+
+    // Commune/wilaya go as NAME strings — the carrier's own spelling wins
+    // (its address matching is by name, not id).
+    const toCommuneName = await resolveCommuneName(
       request.customer.wilaya,
       request.customer.commune,
       creds,
     );
-    if (code) communeValue = code;
+
+    const stopdeskId = request.stopDeskId
+      ? Number.parseInt(request.stopDeskId, 10)
+      : Number.NaN;
+    const isStopdesk = Number.isFinite(stopdeskId);
 
     const body = [
       {
         order_id: request.orderNumber,
-        firstname: request.customer.name,
-        lastname: "",
+        from_wilaya_name: request.fromWilaya ?? "Alger",
+        firstname,
+        familyname,
+        contact_phone: request.customer.phone,
         address: request.customer.address,
-        wilaya: request.customer.wilaya,
-        commune: communeValue,
-        phone: request.customer.phone,
-        phone_2: "",
-        product: request.items.map((i) => `${i.name} x${i.quantity}`).join(", "),
-        price: request.totalPrice,
-        weight: request.weight,
-        note: request.notes ?? "",
-        is_exchange: request.isExchange ?? false,
+        to_commune_name: toCommuneName,
+        to_wilaya_name: request.customer.wilaya,
+        product_list: request.items.map((i) => `${i.name} x${i.quantity}`).join(", "),
+        price,
+        do_insurance: false,
+        declared_value: price,
+        length: 1,
+        width: 1,
+        height: 1,
+        weight: request.weight ?? 1,
+        freeshipping: true,
+        is_stopdesk: isStopdesk,
+        // Only rides the body when a valid stop desk is set — JSON.stringify
+        // drops the undefined key.
+        stopdesk_id: isStopdesk ? stopdeskId : undefined,
+        has_exchange: request.isExchange ?? false,
       },
     ];
 
@@ -268,14 +364,9 @@ export const yalidineAdapter: DeliveryAdapter = {
         };
       }
 
-      const data = (await res.json()) as Array<{
-        tracking_id?: string;
-        label?: string;
-        parcel_status?: string;
-        error?: string;
-      }>;
-
-      if (!Array.isArray(data) || data.length === 0) {
+      const payload: unknown = await res.json().catch(() => null);
+      const entry = extractCreateEntry(payload, request.orderNumber);
+      if (!entry) {
         return {
           success: false,
           trackingId: "",
@@ -284,43 +375,44 @@ export const yalidineAdapter: DeliveryAdapter = {
         };
       }
 
-      const parcel = data[0];
-      if (!parcel) {
+      const tracking =
+        typeof entry.tracking === "string" && entry.tracking
+          ? entry.tracking
+          : typeof entry.tracking_id === "string"
+            ? entry.tracking_id
+            : "";
+      // Success only when success === true AND tracking is non-empty.
+      if (entry.success !== true || !tracking) {
+        const message =
+          (typeof entry.message === "string" && entry.message) ||
+          (typeof entry.error === "string" && entry.error) ||
+          "Création du colis Yalidine échouée.";
         return {
           success: false,
           trackingId: "",
           cost: 0,
-          error: "Réponse vide de Yalidine.",
-        };
-      }
-      if (parcel.error) {
-        return {
-          success: false,
-          trackingId: "",
-          cost: 0,
-          error: parcel.error,
+          error: message,
         };
       }
 
-      // Fetch the cost (the create response doesn't always include it)
-      let cost = 0;
-      if (parcel.tracking_id) {
-        const estimate = await yalidineAdapter.estimateCost(
-          {
-            wilaya: request.customer.wilaya,
-            weight: request.weight,
-            codAmount: request.totalPrice,
-          },
-          creds,
-        );
-        if (estimate.available) cost = estimate.cost;
-      }
+      // Fetch the cost (the create response doesn't include it)
+      const estimate = await yalidineAdapter.estimateCost(
+        {
+          wilaya: request.customer.wilaya,
+          weight: request.weight,
+          codAmount: price,
+        },
+        creds,
+      );
 
       return {
         success: true,
-        trackingId: parcel.tracking_id ?? "",
-        labelUrl: parcel.label,
-        cost,
+        trackingId: tracking,
+        labelUrl:
+          typeof entry.label === "string" && entry.label
+            ? entry.label
+            : undefined,
+        cost: estimate.available ? estimate.cost : 0,
       };
     } catch (err) {
       return {
@@ -354,39 +446,83 @@ export const yalidineAdapter: DeliveryAdapter = {
       ),
     ]);
 
-    let status: DeliveryStatus = "pending";
+    // Parcel GET: object envelope (defensive: array tolerated); read
+    // status ?? parcel_status.
+    let parcelVerdict: YalidineStatusVerdict | null = null;
     let estimatedDelivery: string | undefined;
-
     if (parcelRes.status === "fulfilled" && parcelRes.value.ok) {
-      const parcel = (await parcelRes.value.json()) as Array<{
-        parcel_status?: string;
-        delivery_date?: string;
-      }>;
-      if (Array.isArray(parcel) && parcel.length > 0 && parcel[0]) {
-        status = mapStatus(parcel[0].parcel_status ?? "");
-        estimatedDelivery = parcel[0].delivery_date ?? undefined;
+      try {
+        const row = extractParcelRow(await parcelRes.value.json());
+        if (row) {
+          const rawStatus =
+            typeof row.status === "string" && row.status
+              ? row.status
+              : typeof row.parcel_status === "string"
+                ? row.parcel_status
+                : "";
+          if (rawStatus) {
+            parcelVerdict = mapYalidineStatus(rawStatus);
+          }
+          if (typeof row.delivery_date === "string" && row.delivery_date) {
+            estimatedDelivery = row.delivery_date;
+          }
+        }
+      } catch {
+        // Unparseable parcel body — events decide the status.
       }
     }
 
+    // History: paginated envelope { data: [...], has_more, total_count }
+    // (defensive: bare array tolerated). Rows are typically newest-first;
+    // events are built oldest-first with CARRY-FORWARD semantics — transit
+    // no-ops and unmapped rows keep the last known meaningful status
+    // (starting from "pending") so nothing regresses and nothing is silently
+    // swallowed (the raw status always leads the details).
     const events: TrackingEvent[] = [];
+    let lastMeaningful: DeliveryStatus = "pending";
     if (historyRes.status === "fulfilled" && historyRes.value.ok) {
-      const history = (await historyRes.value.json()) as Array<{
-        status?: string;
-        date?: string;
-        place?: string;
-        remark?: string;
-      }>;
-      if (Array.isArray(history)) {
-        for (const h of history.reverse()) {
-          events.push({
-            status: mapStatus(h.status ?? ""),
-            timestamp: h.date ?? new Date().toISOString(),
-            location: h.place,
-            details: h.remark ?? h.status ?? "",
-          });
+      try {
+        const payload: unknown = await historyRes.value.json();
+        const rows: unknown[] = Array.isArray(payload)
+          ? payload
+          : payload && typeof payload === "object" && Array.isArray((payload as { data?: unknown }).data)
+            ? ((payload as { data: unknown[] }).data)
+            : [];
+        for (let i = rows.length - 1; i >= 0; i -= 1) {
+          const row = rows[i] as YalidineHistoryRow | null;
+          if (!row || typeof row !== "object") continue;
+          const rawStatus = typeof row.status === "string" ? row.status : "";
+          const reason =
+            typeof row.reason === "string" && row.reason ? row.reason : "";
+          const details = `${rawStatus}${reason ? ` — ${reason}` : ""}`;
+          const verdict = mapYalidineStatus(rawStatus);
+          const event: TrackingEvent = {
+            status: lastMeaningful,
+            timestamp:
+              typeof row.date_status === "string" && row.date_status
+                ? row.date_status
+                : new Date().toISOString(),
+            location:
+              typeof row.center_name === "string" ? row.center_name : undefined,
+            details,
+          };
+          if (verdict.status !== null) {
+            lastMeaningful = verdict.status;
+            event.status = verdict.status;
+          }
+          events.push(event);
         }
+      } catch {
+        // Unparseable history body — no events.
       }
     }
+
+    // Final status: the parcel GET's mapped verdict wins when meaningful;
+    // otherwise the last meaningful event verdict; otherwise "pending".
+    const status: DeliveryStatus =
+      parcelVerdict && parcelVerdict.status !== null
+        ? parcelVerdict.status
+        : lastMeaningful;
 
     return {
       trackingId,
@@ -417,7 +553,45 @@ export const yalidineAdapter: DeliveryAdapter = {
         const text = await res.text().catch(() => "");
         return { success: false, error: `Erreur ${res.status}: ${text.slice(0, 200)}` };
       }
-      return { success: true };
+      // Yalidine answers HTTP 200 EVEN WHEN THE DELETE FAILED — the truth is
+      // in the body: [{ tracking, deleted }]. Only deleted === true counts;
+      // HTTP 200 with deleted=false is a FAILURE. Missing/unparseable body is
+      // a failure too.
+      let payload: unknown = null;
+      try {
+        payload = await res.json();
+      } catch {
+        payload = null;
+      }
+      const rows: unknown[] = Array.isArray(payload)
+        ? payload
+        : payload && typeof payload === "object"
+          ? Array.isArray((payload as { data?: unknown }).data)
+            ? ((payload as { data: unknown[] }).data)
+            : [payload]
+          : [];
+      const matched = rows.find(
+        (row) =>
+          !!row &&
+          typeof row === "object" &&
+          (row as { tracking?: unknown }).tracking === trackingId,
+      );
+      const row = (matched ?? rows[0]) as
+        | { deleted?: unknown; message?: unknown; error?: unknown }
+        | undefined;
+      if (row && row.deleted === true) {
+        return { success: true };
+      }
+      const message =
+        (typeof row?.message === "string" && row.message) ||
+        (typeof row?.error === "string" && row.error) ||
+        "";
+      return {
+        success: false,
+        error:
+          message ||
+          "Suppression non confirmée par Yalidine (deleted != true ou réponse illisible).",
+      };
     } catch (err) {
       return {
         success: false,

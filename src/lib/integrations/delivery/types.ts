@@ -37,6 +37,16 @@ export interface ShipmentRequest {
   weight: number;
   notes?: string;
   isExchange?: boolean;
+  /**
+   * Optional carrier-collected delivery fee. When set, the COD the courier
+   * collects = totalPrice + deliveryFee (CodFlow merchant decision 2026-09:
+   * the carrier collects product price + delivery fee in one amount).
+   */
+  deliveryFee?: number;
+  /** Optional stop-desk (pickup center) id — presence books a stopdesk delivery. */
+  stopDeskId?: string;
+  /** Optional sender wilaya name override (Yalidine from_wilaya_name). */
+  fromWilaya?: string;
 }
 
 export interface ShipmentResult {
