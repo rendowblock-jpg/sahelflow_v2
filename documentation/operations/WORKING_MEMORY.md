@@ -1,14 +1,14 @@
 # SahelFlow — Working Memory
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
-> **Last updated:** 2026-09-11
+> **Last updated:** 2026-09-12
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
 ## Current truth
 
 - **Internal.37 Founder-installed visual rejection (2026-09-11, latest):** the Founder installed Internal.37 / FD-060 in place (AppData preserved; `runtime-ui-ready.json` `1.0.0-internal.37`, locale `ar`) and rejected the package visually before any campaign-row conversion. Screenshots: Inbox queue bigger/messy + Latin names on the timestamp side (`Screenshot 2026-09-11 160658.png`); Agents not a Class-AAA workspace in any layer (`Screenshot 2026-09-11 161704.png`). Repair is source-only on **PR #424** (F-14 inbox + F-15 Agents rebuilt as a named workforce on the existing engine) — not a release-authority PR; converts on the next installed observation. Do not restore the visible workspace `PageHeader` or the empty Agents review column.
-- **Transformation source frontier (2026-09-10 — source-level only, no release authority):** protected `main` is best-known **`730641b7fe4304691e43ae6138ec3e278516183a`**, the squash of **PR #416** (STR-01 slice 1: `AiComposerDeck` extracted from `ai-decision-canvas.tsx`, 964 → ~620 lines; 19 checks, 15 success / 4 risk-classified skips / 0 failed), on top of **PR #414** (whole-app transformation W1–W6, squash `29987b0f020fe0713dd790d9fdee519ba2506e8e`). Open: **PR #415** (docs-only frontier reconcile — `AGENTS.md`, `system/ROADMAP.md`, this file and `documentation/README.md`) and **PR #418** (STR-01 slice 2: the conversation log extracted into `ai-message-log.tsx`, canvas → ~430 lines). **STR-01 stays OPEN** — the canvas is not yet under the 400-line budget, so a third slice (canvas header or the shortcut hook) is owed, followed by the same decomposition for `inbox-v3-thread` (2,235), `storefront-studio` (1,752) and `inbox-v3-queue` (1,325). Row states live in `operations/TRANSFORMATION_REGISTER.md`; resume procedure and local test setup in `operations/TRANSFORMATION_HANDOFF.md`. **This entire track is source-level: it carries no release authority, is inside no signed package, and converts no installed, provider or customer row.** Two CI facts this program established by evidence and that must not be relearned: (1) `.github/workflows/ci.yml` triggers only on `pull_request` with `branches: [main]`, so a PR stacked onto a feature branch receives **zero check runs** and can never be verified — PR #417 lived its whole life at `total_count: 0` and was closed and replayed onto `main` as #418; retargeting the base afterwards does not help, because `edited` is not in the workflow's `types`; (2) `concurrency: cancel-in-progress: true` discards an in-flight run when the same branch is pushed again, so never push a second slice ahead of CI. Also recorded: `prettier --check` is not enforced over `src/components`, and this repo publishes **check runs**, not commit statuses (read CI with check-runs, not commit-status APIs).
+- **Transformation source frontier (2026-09-12, latest — source-level only, no release authority):** protected `main` is best-known **`eb0309a…`**, the squash of **PR #427** (STR-01 slice 2 on `inbox-v3-thread`: the in-thread view state — search state, the INB-11 render window, jumps — moved verbatim into `src/hooks/inbox/use-inbox-thread-view.ts` (229 lines); thread → 1,544; the hook receives the shared `messagesInnerRef` and `copy` and owns no JSX; the ten logic-owned render-window contract pins re-anchored to the hook, the four JSX-owned pins stay; first hosted run failed on two type errors the OOM-killed local tsc had missed (TS2304 counter reference, TS2322 reset-key type) — repaired in the same PR with honest exit-code evidence; gates 14 success / 5 risk-classified skips / 0 failed), on top of **PR #426** (STR-01 slice 1: the MessageBubble cluster moved verbatim into `inbox-thread-message.tsx` (559 lines); thread 2,238 → 1,668; 21 displaced source pins re-anchored, none relaxed), on top of **PR #425** (canonical money/phone formatters across four surfaces + the built-but-unreachable `change-pin` and shop-lifecycle authority wired into Settings, with route-auth/reachability/locale-formatting contracts; +1934/−332) and **PR #424** (the Internal.37 F-14/F-15 visual repairs). FD-060 (`cd1114de…`, release PR #423) packaged the #413–#422 frontier and the updater serves Internal.37 signed. *STR-01 stays OPEN** — `inbox-v3-thread` owes the header seam (D) next, then the composer and list seams; `storefront-studio` (1,752), `automation-builder` (1,491) and `inbox-v3-queue` (1,325) are untouched. Row states live in `operations/TRANSFORMATION_REGISTER.md`; resume procedure and local test setup in `operations/TRANSFORMATION_HANDOFF.md`. **This entire track is source-level: it carries no release authority, is inside no signed package, and converts no installed, provider or customer row.** Two CI facts this program established by evidence and that must not be relearned: (1) `.github/workflows/ci.yml` triggers only on `pull_request` with `branches: [main]`, so a PR stacked onto a feature branch receives **zero check runs** and can never be verified; (2) `concurrency: cancel-in-progress: true` discards an in-flight run when the same branch is pushed again, so never push more than one slice ahead of CI.
 - **Internal.36 FD-059 published (2026-09-08, latest):** the Founder adopted FD-059 ("continue and complete the work fully") and the signed successor shipped the same day. Release PR **#412** (branch `internal-36-fd059-release`, commits `e29814c…` prepare + `43af229…` adoption) merged by expected-head squash as **`4e527f05…`** — release-authority files only: `.github/release-requests/internal-36-fd059-signed-successor.json`, release.yml founder-offline allowlist +1 pair, DECISIONS.md FD-059 (ADOPTED, sequencing (b) resolved: one combined FD-058 campaign on the installed Internal.36 candidate; FD-058 publication facts remain retained evidence), version pins `1.0.0-internal.36`/MSI `1.0.0.36` across package.json/sahelflow.version.json/tauri.conf.json/Cargo.toml/build.rs/sf-version.ts/install-founder-windows.ps1, and the license-production-boundary pin test. Certification: product head `7052db9e…` (tree `1214fe83…` = reviewed PR #411 head `72cbef96…`) with CI 34271651655, Phase 5 34271651439, Phase 6-7 34271651432 green at that exact head; the release-PR battery went green at `43af229…` (CI + Phase 5 + Phase 6-7 + Native; Integration risk-classified skip — identical shape to PR #398) with one recorded transient: ready-battery Phase 5 run 34277049132 attempt 1 failed `ai-workspace.spec.ts:98` (`[data-ai-start-state]` visibility — session-creation propagation race) and the failed-jobs-only re-run passed; evidence comment recorded on PR #412 before any retry. Signed build: run **34281216710** success 36/36 (dispatched by `release-on-version-authority` automation on the release-authority merge; the duplicate manual dispatch 34281272230 was cancelled pre-start), tag **`sahelflow-v1.0.0-internal.36-4e527f0549674789b4f679ae7c2368d2520ccb44`**, MSI `SahelFlow_1.0.0-internal.36_x64_en-US.msi` digest **`sha256:5d5b03e284327dd2bc9fb4be674719bba8022506a46a7d3518236dc2700ab243`** (computed from the published asset), updater `latest.json` serves `1.0.0-internal.36`, observers 34281232614 + 34281432828 success. **Next: the Founder applies the in-place Internal.36 update through the normal updater (no logout, no AppData reset, no protected-auth clearing) and executes the FD-058 campaign rows once on the installed Internal.36 candidate — F-05 residual (chat must stream), F-09..F-13, retained FD-050 rows (B1–B5, D1, delivery-receipt enum truth, C1 sleep/wake auto-receive), D3 waves, applicable #316/#317 native rows, retained #306 rows — #306 logout executes LAST; ledger rows convert only on that installed observation; the Founder rotates the chat-transited GitHub PAT after this merge window; then resume FRC-3 in dependency order (A→D→C→B).**
 - **Phase 4 closure authority green + security-disposition merges (2026-09-08):** issues **#303** and **#407** are both CLOSED on protected `main` `9f3704f…`. **PR #408** (docs(security), merged by expected-head squash `b2db189…`) resolved #303: `documentation/security/phase4-vulnerability-triage.json` is the LIVE accepted-disposition authority (CycloneDX VEX input) — the stale manual `status: "pending-exact-head-audit"` claim was removed and replaced by the `authorityScope` / `exactHeadAuditAuthority` / `evidenceGeneration` policy contract (the only machine-proven exact-head audit truth remains the blocking `bun audit --production` GitHub Actions check at the exact audited commit: ci.yml + phase6-7-completion.yml); `sf-audit` now requires the file and enforces its contract markers; `documentation/README.md` gained the single "Security-evidence authority" interpretation section. **PR #409** (fix(privacy), merged by expected-head squash `9f3704f…` — full hosted battery 15 success / 5 risk-classified skips / 0 failed incl. Quality Gate, DPAPI authority, fresh-install browser lane) resolved #407: the 8 previously unclassified Prisma models are classified in `documentation/privacy/phase4-data-inventory.json` (7 into `operational-security-metadata`: AiMessageFeedback with a child-first deleteMany, the PII-free notification-center quadrant, SearchProjectionDirty/SearchProjectionToken wiped after the canonical deletes fire their projection triggers; SearchProjectionRevision RETAINED in a new `search-projection-watermark` group — it is migration-seeded, trigger-advanced counters, and deleting it would silently no-op the triggers and throw in `committedRevision()`), and `vitest.config.ts` now INCLUDES `scripts/__tests__/phase4-closure-authority.test.ts` so the Phase 4 closure gate is CI-gated for the first time. `verify-phase4-closure` is green at the merged head. Frontier docs re-anchored to best-known `9f3704f…`.
 
@@ -140,13 +140,15 @@ transformation delta (#414, #416). No implementation PR is blocking except the
 open docs #415 and STR-01 slice #418. Remaining order:
 
 1. Re-resolve protected `main`, open PRs and #164/#230/#306/#316/#317. The
-   Internal.32–Internal.36 campaigns stay open except the logout row; sidecar
-   rows (INB-13/14/19/32) stay BLOCKED. The UI/UX triage ledger has zero open
-   source rows after the INB-27 merge.
-2. The Founder applies the in-place Internal.36 update through the normal
-   updater (no logout, no AppData reset, no protected-auth clearing) and runs
-   the FD-058 campaign once on that installed candidate. Publication alone
-   converts nothing.
+   FD-058 campaign rows are unconverted after the recorded Internal.37 visual
+   rejection (2026-09-11); observing the merged #424–#427 repair line needs the
+   Founder's packaging decision. Sidecar rows (INB-13/14/19/32) stay BLOCKED.
+   The UI/UX triage ledger has zero open source rows after the #424 merge.
+2. The Founder already applied the in-place Internal.37 update (2026-09-11)
+   and rejected it visually before campaign conversion. Next: the Founder's
+   packaging decision for observing the #424–#427 line, then the FD-058
+   campaign rows on that installed candidate. Publication alone converts
+   nothing.
 3. On that installed build: convert F-04..F-13 on Founder observation (delete
    works including 69-char ids; AI chat streams instead of the dead-end copy;
    queue header/select toolbar hold at narrow widths; the AI agents page
@@ -165,8 +167,10 @@ open docs #415 and STR-01 slice #418. Remaining order:
    root that is not yet repaired opens exactly one bounded micro-repair —
    nothing else moves. Resolve the installed-Internal.36 contradiction between
    this file and `operations/TRANSFORMATION_REGISTER.md` from the observation.
-5. Founder-side preconditions: rotate the chat-transited GitHub PAT, and
-   record the SEC-01 VEX disposition for `GHSA-p293-qw3h-jr36`.
+5. Founder-side preconditions: rotate the chat-transited GitHub PAT (due now
+   that the #424–#427 merge window has closed), and record the SEC-01 VEX
+   disposition for `GHSA-p293-qw3h-jr36` if still required after the #414
+   dependency remediation.
 6. Execute the retained #306 logout row LAST (only after every other row is
    green), then resume FRC-3 (Required capability/journey assurance ledger)
    in dependency order; preserve external blockers.
@@ -191,10 +195,11 @@ open docs #415 and STR-01 slice #418. Remaining order:
 ## Current hard blockers and dependencies
 
 - WhatsApp FRC-1 requires the Founder’s retained real phone/account/session.
-  The exact signed successor (Internal.36) must be installed in place with
-  state preserved to re-verify the affected rows, the six-wave first
-  observations (D3), the applicable FRC-2 rows (R11) and the remaining FRC-1
-  rows.
+  The installed Internal.37 candidate carries the FD-060 package; observing
+  the merged #424–#427 repair line and re-verifying the affected rows, the
+  six-wave first observations (D3), the applicable FRC-2 rows (R11) and the
+  remaining FRC-1 rows needs the Founder’s packaging decision for the repair
+  line.
 - Real Gemini minimal inference requires a seller-owned key; free-tier work uses synthetic/redacted inputs only.
 - Commerce requires development/test environments and HTTPS ingress for webhook tests.
 - Courier live certification requires provider sandbox/demo or authorized seller credentials.
