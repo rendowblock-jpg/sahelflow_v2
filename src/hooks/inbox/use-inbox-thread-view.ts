@@ -18,7 +18,7 @@ type UseInboxThreadViewParams = {
   /** The conversation's durable message projection (already page-bounded). */
   messages: InboxMessage[];
   /** Render-phase reset key: the conversation the view is mounted for. */
-  activeConversationKey: string;
+  activeConversationKey: string | null;
   /** Shared list ref (INB-27): injected once by the workspace hook. */
   messagesInnerRef: RefObject<HTMLDivElement | null>;
   copy: InboxWorkspaceCopy;
@@ -213,6 +213,7 @@ export function useInboxThreadView({
     setThreadSearchOpen,
     threadSearchQuery,
     setThreadSearchQuery,
+    normalizedThreadQuery,
     setThreadSearchIndex,
     threadMatchIds,
     threadMatchCount,

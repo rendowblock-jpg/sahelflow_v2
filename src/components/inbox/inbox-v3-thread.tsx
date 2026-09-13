@@ -373,6 +373,7 @@ export function InboxV3Thread({
     setThreadSearchOpen,
     threadSearchQuery,
     setThreadSearchQuery,
+    normalizedThreadQuery,
     setThreadSearchIndex,
     threadMatchCount,
     safeThreadIndex,
