@@ -1,13 +1,13 @@
 # SahelFlow documentation authority
 
 > **Status:** Active non-archive documentation entry point
-> **Last reconciled:** 2026-09-10 (protected `main` `730641b7…` after PR #416; re-resolve live before acting)
+> **Last reconciled:** 2026-09-12 (protected `main` `9f1a58a…` after PR #426; re-resolve live before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
-> **Latest signed/published checkpoint:** Internal.36 / `1.0.0-internal.36` / MSI `1.0.0.36` / FD-059 — **published, not installed**; see "Installed truth" below
-> **Protected release source:** `4e527f0549674789b4f679ae7c2368d2520ccb44` / PR #412 (publication record #413)
+> **Latest signed/published checkpoint:** Internal.37 / `1.0.0-internal.37` / MSI `1.0.0.37` / FD-060 — **published, served by the updater and Founder-installed (2026-09-11), then visually rejected before campaign conversion** (F-14/F-15; repaired at source by #424); see "Installed truth" below
+> **Protected release source:** `cd1114defc59852a8f4a2258147dbe57b7fa4050` / PR #423 (release authority; tag `sahelflow-v1.0.0-internal.37-cd1114de…`)
 > **Latest recorded installed checkpoint:** Internal.34 / FD-057 (installed in place 2026-09-05) — unchanged by Internal.35 and Internal.36
-> **Current next outcome:** the FD-058 installed campaign on the Internal.36 candidate, then evidence reconciliation and FRC-3 resumption; the merged #414–#416 source delta rides protected `main` and receives its first installed/Founder observation on the next signed package
+> **Current next outcome:** reconcile the FD-058 campaign ledger against the recorded Internal.37 visual rejection (no row converted), and take the Founder's packaging decision that lets the merged #424–#427 line be observed on an installed candidate; then FRC-3 resumption. The chat-transited GitHub PAT is rotated now that the #424–#427 merge window has closed.
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 

@@ -4,8 +4,8 @@ Companion to `TRANSFORMATION_REGISTER.md` (the findings) and
 `documentation/product/INTERFACE_SYSTEM.md` (the design authority). This file
 answers one question only: **what does the next session do first?**
 
-Branch: `claude/explore-codebase-docs-l0ksvt` · PR **#414**
-Last verified: 2026-09-09 at `1a6a00b`
+Branch: docs-only reconcile · PR **#428**
+Last verified: 2026-09-12 at `eb0309a`
 
 ---
 
@@ -317,14 +317,22 @@ them — do not extend the fill scale over them without new tokens:
 Everything mechanical, page-level and accessibility-shaped is closed. What is
 left is the expensive half, and each item is a real project rather than a tidy-up.
 
-1. **STR-01 remainder — the canvas body.** 964 lines, still 2.4x the §13
-   400-line rule. The two easy seams are taken; what remains (message log,
-   composer, review sheet) is a genuine decomposition, not a move, because those
-   parts share state with the component. **Measure the pin exposure first** — the
-   method that worked twice: map every `expect(canvas).toContain(...)` string to
-   the block that owns it, and do not forget `indexOf` ordering assertions.
-   The same treatment is owed to `inbox-v3-thread` (2,235), `storefront-studio`
-   (1,752) and `inbox-v3-queue` (1,325).
+1. **STR-01 remainder — the canvas is CLOSED (324 lines; #416/#418/#419,
+   register closed by #420). The first target is now `inbox-v3-thread`**:
+   2,238 → 1,668 via merged PR #426 (`inbox-thread-message.tsx`, the verbatim
+   bubble module) and → 1,544 via merged PR #427 (`use-inbox-thread-view.ts`,
+   the view-state hook that receives `messagesInnerRef` + `copy` and owns no
+   JSX; its first hosted run failed on two type errors the OOM-killed local
+   tsc had missed — repaired inside the PR with honest exit-code evidence).
+   Owed next:
+   the **header seam** (avatar/status/search toggle/mark-unread/AI extraction +
+   the `ThreadLastActive` cluster — measure the liveness and workspace-contract
+   header pins first), then the composer and list seams. The same treatment is
+   then owed to `storefront-studio` (1,752), `automation-builder` (1,491) and
+   `inbox-v3-queue` (1,325). **Measure the pin exposure before every cut** — the
+   method that keeps working: map every `expect(...).toContain(...)` string to
+   the block that owns it, and do not forget `indexOf` ordering assertions and
+   count assertions (`toHaveLength`).
 2. **TEST-01 — the structural one.** 444 vitest files; **136 assert source text**
    via `readFileSync` carrying **3,980 `toContain`**; **3** render a component.
    This is why every repair above had to convert contracts by hand. Convert per
