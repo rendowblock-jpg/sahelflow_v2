@@ -1224,6 +1224,50 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is created.
   #230 and the zero-budget boundary are unaffected.
 
+## FD-061 — CodFlow extraction program (2026-09-13, ADOPTED)
+
+Founder directive, 2026-09-13 ("let's extract and implement all the things
+from CodFlow to SahelFlow fully and professionally"). CodFlow is the
+Founder-adjacent Apache-2.0 open-source COD commerce platform
+(`github.com/bighadj22/codflow`, extracted through the Founder's fork
+`rendowblock-jpg/codflow`, knowledge pinned at main `00f18fac…`, PR #114).
+CodFlow carries live-proven provider and commerce knowledge SahelFlow's
+research never obtained: real Algerian carrier contracts (Yalidine
+36-status truth, ZR Express, EcoTrack, NOEST), a working Meta Pixel +
+Conversions API delivery-optimized growth engine, and Cloudflare
+deployment patterns relevant to #230. This decision supersedes, for the
+choices it changes, the FRC rule sentence "open-source implementations are
+research/comparison inputs only": bounded, register-tracked extraction
+into protected source is now authorized.
+
+Binding boundaries:
+
+- Extraction executes through the scoped register
+  `documentation/operations/CODFLOW_EXTRACTION_REGISTER.md` (EX-0…), one
+  bounded reviewed PR per slice, CI green on the exact head before any
+  merge, expected-head discipline. The register is subordinate to
+  WORKING_MEMORY and converts no installed row.
+- Every extracted file or module adapted from CodFlow source carries a
+  provenance header naming the upstream repo, commit and Apache-2.0
+  license; substantial derivative regions stay attributable.
+- Extraction never weakens a protected invariant: provider effects stay
+  inside SahelFlow's outbox/audit/event/idempotency authority; AI stays
+  proposal-bound; per-shop data stays in the per-shop encrypted database;
+  no cloud receipt ever claims canonical commit — a storefront or
+  commerce receipt imports as `Queued`, never `Committed`.
+- Source work never claims provider certification, installed proof or
+  customer-online authority. CodFlow's live evidence is upstream's, not
+  SahelFlow's: FRC-5 rows still convert only on SahelFlow's own
+  installed/real-provider observation. CodFlow's Yalidine egress-block
+  findings are research-only here — the desktop calls carriers from the
+  installed machine, not from Cloudflare Workers.
+- No credential from either project enters chat, source, tests or
+  evidence. Zero-budget boundary and #230 are unaffected.
+- What CodFlow lacks stays missing until separately built: signed receipt
+  delegation, immutable storefront releases, licensing/entitlements,
+  desktop pairing, Maystro contract truth, NOEST/EcoTrack inbound
+  receivers, and the CAPI delivered-signal bridge from desktop truth.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

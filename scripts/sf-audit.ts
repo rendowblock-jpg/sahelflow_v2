@@ -262,11 +262,11 @@ const markdownFiles = walkMarkdown(repoRoot);
 const activeDocumentationFiles = walkMarkdown(
   resolve(repoRoot, "documentation"),
 );
-if (activeDocumentationFiles.length !== 18) {
+if (activeDocumentationFiles.length !== 20) {
   report(
     "drift",
     "documentation/",
-    `expected 18 active Markdown files, found ${activeDocumentationFiles.length}`,
+    `expected 20 active Markdown files, found ${activeDocumentationFiles.length}`,
   );
 }
 
