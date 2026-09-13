@@ -137,7 +137,7 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(outbox).toContain("monitorWhatsAppEffect");
     expect(outbox).toContain("retryFailedMessage");
     expect(thread).toContain("retryFailedMessage");
-    expect(thread).toContain("MessageStatus");
+    expect(read("src/components/inbox/inbox-thread-message.tsx")).toContain("MessageStatus");
     // INB-27: the facade stays the single composition root — every concern
     // hook is wired through it, no component imports a sub-hook directly.
     expect(facade).toContain("useInboxChatQueue(");
@@ -183,23 +183,21 @@ describe("Inbox Class-AAA operations desk contract", () => {
 
   it("represents persisted non-text message types honestly until durable media bytes exist", () => {
     const messages = read("src/app/api/whatsapp/chats/[jid]/messages/route.ts");
-    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
     const copy = read("src/lib/i18n/inbox-workspace.ts");
 
     expect(messages).toContain("messageType: true");
     expect(messages).toContain("messageType: message.messageType");
-    expect(thread).toContain("isMediaMessage");
-    expect(thread).toContain('copy("mediaMetadataOnly")');
+    expect(read("src/components/inbox/inbox-thread-message.tsx")).toContain("isMediaMessage");
+    expect(read("src/components/inbox/inbox-thread-message.tsx")).toContain('copy("mediaMetadataOnly")');
     expect(copy).toContain("does not expose durable local media bytes yet");
   });
 
   it("keeps one human-reviewed order candidate instead of extraction cards under every message", () => {
     const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
-    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
     const panel = read("src/components/inbox/inbox-customer-work-panel.tsx");
 
     expect(workspace).toContain("selectedCandidate");
-    expect(thread).toContain('copy("chooseOrderMessage")');
+    expect(read("src/components/inbox/inbox-thread-message.tsx")).toContain('copy("chooseOrderMessage")');
     expect(panel).toContain("MessageExtraction");
     expect(panel).toContain("orderCandidate");
   });

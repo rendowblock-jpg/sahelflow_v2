@@ -36,7 +36,6 @@ describe("inbox link preview surface (INB-16)", () => {
 
   it("renders the card client-side only after real metadata arrives", () => {
     const card = source("src/components/inbox/link-preview-card.tsx");
-    const thread = source("src/components/inbox/inbox-v3-thread.tsx");
 
     expect(card).toContain("IntersectionObserver");
     expect(card).toContain('"/api/inbox/link-preview"');
@@ -45,10 +44,10 @@ describe("inbox link preview surface (INB-16)", () => {
     expect(card).toContain('data-inbox-link-preview="true"');
     expect(card).not.toContain("dangerouslySetInnerHTML");
     // At most one preview per bubble, text bubbles only.
-    expect(thread).toContain("!media && linkUrl");
-    expect(thread).toContain("firstHttpUrlInText");
-    expect(thread).toContain("<InboxLinkPreview");
-    expect(thread).toContain('copy("linkPreviewLabel")');
+    expect(source("src/components/inbox/inbox-thread-message.tsx")).toContain("!media && linkUrl");
+    expect(source("src/components/inbox/inbox-thread-message.tsx")).toContain("firstHttpUrlInText");
+    expect(source("src/components/inbox/inbox-thread-message.tsx")).toContain("<InboxLinkPreview");
+    expect(source("src/components/inbox/inbox-thread-message.tsx")).toContain('copy("linkPreviewLabel")');
   });
 
   it("ships the link preview label in en/fr/ar", () => {

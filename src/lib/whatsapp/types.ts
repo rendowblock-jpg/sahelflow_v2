@@ -178,4 +178,5 @@ export function normalizeWhatsAppJid(input: string): string {
 // `formatMessageTime` was removed: it had ZERO callers repo-wide and
 // hardcoded `fr-FR`, so it would have rendered French formatting for Arabic
 // and English sellers. The Inbox formats message times through
-// `intlLocale` + `DZ_CLOCK` in inbox-v3-thread.tsx.
+// `intlLocale` + `DZ_CLOCK` in inbox-thread-message.tsx; day-divider
+// labels keep `intlLocale` in inbox-v3-thread.tsx.

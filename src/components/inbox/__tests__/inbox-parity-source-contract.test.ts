@@ -99,7 +99,6 @@ describe("WhatsApp Inbox parity source slice", () => {
     const route = source("src/app/api/conversations/[id]/route.ts");
     const inbound = source("src/lib/whatsapp/inbound-processor.ts");
     const metadata = source("src/lib/whatsapp/message-attachments.ts");
-    const thread = source("src/components/inbox/inbox-v3-thread.tsx");
 
     expect(route).toContain("attachments: undefined");
     expect(route).toContain(
@@ -115,8 +114,8 @@ describe("WhatsApp Inbox parity source slice", () => {
     expect(source("src/hooks/inbox/use-inbox-transport.ts")).toContain(
       "void loadMessages(activeChat, { background: true })",
     );
-    expect(thread).toContain("https://www.openstreetmap.org/");
-    expect(thread).toContain('rel="noopener noreferrer"');
+    expect(source("src/components/inbox/inbox-thread-message.tsx")).toContain("https://www.openstreetmap.org/");
+    expect(source("src/components/inbox/inbox-thread-message.tsx")).toContain('rel="noopener noreferrer"');
   });
 
   it("keeps authenticated media ranges bounded and pending media live", () => {
