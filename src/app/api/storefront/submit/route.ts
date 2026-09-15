@@ -8,6 +8,7 @@ import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import { db, shopContext } from "@/lib/db";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
+import { fireCapiStageForOrder } from "@/lib/meta/capi-triggers";
 import { storefrontService } from "@/lib/storefront/service";
 import { dzPhone } from "@/lib/validation";
 import wilayasData from "../../../../../data/wilayas.json";
@@ -220,6 +221,35 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       occurredAt: command.result.order.createdAt,
     },
   );
+
+  // FD-061 EX-3: Meta Pixel/CAPI placement capture + checkout-stage trigger.
+  // fbc/fbp ride the Meta cookie contract, IP/UA from the request; the
+  // metadata write is side-channel (never money truth) and the CAPI trigger
+  // is fire-and-forget — neither can block the checkout response.
+  try {
+    const fbc = req.cookies.get("_fbc")?.value ?? null;
+    const fbp = req.cookies.get("_fbp")?.value ?? null;
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      null;
+    const userAgent = req.headers.get("user-agent");
+    if (fbc || fbp || clientIp || userAgent) {
+      await db.order.update({
+        where: { id: command.result.order.id },
+        data: {
+          ...(fbc ? { fbc } : {}),
+          ...(fbp ? { fbp } : {}),
+          ...(clientIp ? { clientIp } : {}),
+          ...(userAgent ? { userAgent } : {}),
+        },
+        select: { id: true },
+      });
+    }
+  } catch {
+    // Placement capture is best-effort; the checkout response never depends on it.
+  }
+  void fireCapiStageForOrder(command.result.order.id, "checkout", "pending");
 
   return NextResponse.json(
     {

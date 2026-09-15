@@ -158,6 +158,14 @@ model Order {
   sourceOrderId   String?     // External ID (Shopify order #, YouCan ref, etc.) for dedup
   sourceMetadata  String?
   notes           String?
+  // FD-061 EX-3: Meta Pixel/CAPI placement tracking, captured at storefront
+  // checkout (fbc/fbp cookies + client IP/UA) for event_id dedup and
+  // user_data enrichment. Nullable — legacy orders carry no tracking.
+  fbc             String?
+  fbp             String?
+  clientIp        String?
+  userAgent       String?
+  capiEvents      CapiEventLedger[]
   confirmedAt     DateTime?
   packedAt        DateTime?
   shippedAt       DateTime?

@@ -8,6 +8,7 @@ import {
 import { db, shopContext } from "@/lib/db";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { executeManualOrderDecision } from "@/lib/orders/manual-confirmation";
+import { fireCapiStageForOrder } from "@/lib/meta/capi-triggers";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,11 @@ export const POST = withErrorHandler(
             triggerKey: `stock.low:${product.id}:order:${command.result.orderId}:v${command.result.version}`,
           },
         );
+      }
+      // FD-061 EX-3: fire-and-forget CAPI confirmed-stage trigger — a CAPI
+      // failure can never block the confirmation decision.
+      if (command.result.status === "confirmed") {
+        void fireCapiStageForOrder(command.result.orderId, "confirmed", "confirmed");
       }
     }
 
