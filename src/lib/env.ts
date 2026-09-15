@@ -166,6 +166,8 @@ export const env = {
   yalidineApiBase: optional("YALIDINE_API_BASE", "https://api.yalidine.app/v1"),
   maystroApiBase: optional("MAYSTRO_API_BASE", "https://backend.maystro-delivery.com/api"),
   zrExpressApiBase: optional("ZREXPRESS_API_BASE", "https://procolis.com/api_v1"),
+  /** ZR Express NEW platform (api.zrexpress.app) — FD-061 EX-2 extracted contract */
+  zrExpressV2ApiBase: optional("ZREXPRESS_V2_API_BASE", "https://api.zrexpress.app"),
 
   // ── Sidecar port ( informational ) ────────────────────────────────────
   whatsappSidecarPort: optionalInt("WHATSAPP_SIDECAR_PORT", 3001),

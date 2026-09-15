@@ -15,6 +15,7 @@ import { yalidineAdapter } from "./yalidine";
 import { maystroAdapter } from "./maystro";
 import { zrExpressAdapter } from "./zr-express";
 import { ecoTrackAdapter } from "./ecotrack";
+import { isEcotrackV1CreateUrl } from "./ecotrack-contract";
 import { getSecret } from "@/lib/secrets";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { SahelFlowError } from "@/types/errors";
@@ -77,9 +78,22 @@ async function readCredentialKeys(
   return credentials;
 }
 
-function completeEcoTrackCredentials(
-  credentials: DeliveryCredentials,
-): boolean {
+/**
+ * Dialect-aware credential completeness.
+ *
+ * When the configured create URL IS the canonical EcoTrack v1 path
+ * (/api/v1/create/order), the seller speaks the true EcoTrack contract
+ * (FD-061 EX-2, extracted from CodFlow): a Bearer token plus that URL is
+ * enough — the remaining canonical endpoints derive from the same origin and
+ * the NOEST-era userGuid is not part of that contract. Any other URL shape
+ * keeps the historical NOEST-profile completeness (all six fields).
+ */
+function completeEcoTrackCredentials(credentials: DeliveryCredentials): boolean {
+  if (isEcotrackV1CreateUrl(credentials.createOrderUrl)) {
+    return Boolean(
+      credentials.apiToken?.trim() && credentials.createOrderUrl?.trim(),
+    );
+  }
   return [
     "apiToken",
     "userGuid",
