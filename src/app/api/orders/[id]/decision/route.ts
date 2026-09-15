@@ -49,10 +49,14 @@ export const POST = withErrorHandler(
           },
         );
       }
-      // FD-061 EX-3: fire-and-forget CAPI confirmed-stage trigger — a CAPI
-      // failure can never block the confirmation decision.
+      // FD-061 EX-3: CAPI confirmed-stage trigger. fireCapiStageForOrder
+      // only claims the durable ledger (no network call — the drain does)
+      // and swallows its own failures, so a CAPI failure can never block
+      // the confirmation decision; awaiting it keeps the side-channel
+      // deterministic so the buyer's next action never races this write
+      // for SQLite's write lock.
       if (command.result.status === "confirmed") {
-        void fireCapiStageForOrder(command.result.orderId, "confirmed");
+        await fireCapiStageForOrder(command.result.orderId, "confirmed");
       }
     }
 

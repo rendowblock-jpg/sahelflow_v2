@@ -10,6 +10,7 @@ import { db, shopContext } from "@/lib/db";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
 import { captureOrderPlacement } from "@/lib/meta/capi-placement";
 import { fireCapiStageForOrder } from "@/lib/meta/capi-triggers";
+import { convertAbandonedCart } from "@/lib/storefront/abandoned-cart-service";
 import { storefrontService } from "@/lib/storefront/service";
 import { dzPhone } from "@/lib/validation";
 import wilayasData from "../../../../../data/wilayas.json";
@@ -77,6 +78,9 @@ async function verifyTurnstileToken(
 const submitSchema = z.object({
   slug: z.string().trim().min(1).max(120),
   submissionId: z.string().uuid().optional(),
+  // FD-061 EX-4: the storefront's cart-session id — converts this session's
+  // abandoned-cart capture after the canonical command commits.
+  cartSessionId: z.string().trim().regex(/^[0-9a-f-]{36}$/i).optional(),
   customer: z.object({
     name: z.string().trim().min(1).max(100),
     phone: dzPhone,
@@ -227,10 +231,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // fbc/fbp ride the Meta cookie contract, IP/UA from the request. The
   // placement write is a best-effort side-channel inside the Meta
   // attribution service (never money truth — Order mutations stay in the
-  // command kernel), fire-and-forget so it cannot block the checkout
-  // response; the checkout trigger is chained after it so the drain never
-  // snapshots an order whose placement has not landed yet.
-  void captureOrderPlacement(command.result.order.id, {
+  // command kernel) and the checkout trigger only claims the durable
+  // ledger — neither performs a network call here (the drain does), and
+  // both swallow their own failures, so awaiting them costs milliseconds of
+  // local SQLite while making the side-channels deterministic: the buyer's
+  // next action (or the test's) can never race these writes for SQLite's
+  // write lock, and the drain never snapshots an order whose placement has
+  // not landed.
+  await captureOrderPlacement(command.result.order.id, {
     fbc: request.cookies.get("_fbc")?.value ?? null,
     fbp: request.cookies.get("_fbp")?.value ?? null,
     clientIp:
@@ -238,7 +246,20 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       request.headers.get("x-real-ip") ||
       null,
     userAgent: request.headers.get("user-agent"),
-  }).then(() => fireCapiStageForOrder(command.result.order.id, "checkout"));
+  });
+  await fireCapiStageForOrder(command.result.order.id, "checkout");
+
+  // FD-061 EX-4: convert this session's abandoned-cart capture. Best-effort
+  // side-channel on the recovery ledger (never money truth, no Order
+  // mutation); convertAbandonedCart is idempotent and failure-isolated, so
+  // replays converge and nothing here can block the checkout response.
+  if (input.cartSessionId) {
+    await convertAbandonedCart({ prisma: db, shop: shopContext }, {
+      slug: input.slug,
+      sessionId: input.cartSessionId,
+      orderId: command.result.order.id,
+    });
+  }
 
   return NextResponse.json(
     {

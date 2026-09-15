@@ -216,3 +216,37 @@ model CapiAttemptLog {
   @@index([orderId, sentAt])
   @@index([sentAt])
 }
+
+/// Abandoned-cart recovery ledger (FD-061 EX-4). One row per storefront
+/// visitor session with typed contact data; the UNIQUE (storefrontSlug,
+/// sessionId) pair is the upsert idempotency authority. Status lifecycle:
+/// pending (captured, still shopping) -> abandoned (the 30-minute sweep) or
+/// converted (the session checked out; terminal and idempotent). Item
+/// prices are snapshotted from the live catalog at capture time — the
+/// revenue columns are recovery estimates, never money truth (orders stay
+/// in the command kernel).
+model AbandonedCart {
+  id               String    @id @default(cuid())
+  storefrontSlug   String
+  sessionId        String
+  customerName     String
+  customerPhone    String
+  wilaya           String?
+  commune          String?
+  address          String?
+  /// JSON snapshot: [{ productId, variantId, quantity }]
+  itemsJson        String
+  itemCount        Int
+  totalPrice       Int
+  status           String    @default("pending") // pending | abandoned | converted
+  capturedAt       DateTime  @default(now())
+  abandonedAt      DateTime?
+  convertedAt      DateTime?
+  convertedOrderId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([storefrontSlug, sessionId])
+  @@index([status, capturedAt])
+  @@index([storefrontSlug])
+}

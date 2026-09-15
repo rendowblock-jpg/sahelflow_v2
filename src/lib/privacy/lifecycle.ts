@@ -29,6 +29,7 @@ const PRIVACY_EXPORT_EXCLUDED_MODELS = [
  * exported.
  */
 const PRIVACY_EXPORT_MODEL_LOADERS = {
+  AbandonedCart: () => db.abandonedCart.findMany(),
   AiActionApproval: () => db.aiActionApproval.findMany(),
   AiActionExecution: () => db.aiActionExecution.findMany(),
   AiActionProposal: () => db.aiActionProposal.findMany(),
@@ -273,6 +274,10 @@ export async function executeShopErase(
       await tx.capiAttemptLog.deleteMany({});
       await tx.capiEventLedger.deleteMany({});
       await tx.metaPixelConfig.deleteMany({});
+
+      // Abandoned-cart recovery ledger holds prospective-customer contact
+      // data (FD-061 EX-4); cleared before the canonical orders.
+      await tx.abandonedCart.deleteMany({});
 
       await tx.canonicalRefundReversal.deleteMany({});
       await tx.canonicalRefund.deleteMany({});

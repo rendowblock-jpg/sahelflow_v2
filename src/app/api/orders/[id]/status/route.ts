@@ -19,10 +19,14 @@ export const PATCH = withErrorHandler(
 
     const order = await orderService.updateStatus({ prisma: db, shop: shopContext }, id, data.status);
 
-    // FD-061 EX-3: fire-and-forget CAPI stage triggers on the legacy
-    // transition path — a CAPI failure can never block the transition.
+    // FD-061 EX-3: CAPI stage triggers on the legacy transition path.
+    // fireCapiStageForOrder only claims the durable ledger (no network
+    // call — the drain does) and swallows its own failures, so a CAPI
+    // failure can never block the transition; awaiting it keeps the
+    // side-channel deterministic (no SQLite write-lock race with the
+    // caller's next action).
     if (data.status === "confirmed" || data.status === "delivered") {
-      void fireCapiStageForOrder(id, data.status);
+      await fireCapiStageForOrder(id, data.status);
     }
 
     return NextResponse.json({
