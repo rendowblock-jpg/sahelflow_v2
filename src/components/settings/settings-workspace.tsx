@@ -25,6 +25,7 @@ import { DangerZonePanel } from "@/components/settings/danger-zone-panel";
 import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
 import { DemoDataPanel } from "@/components/settings/demo-data-panel";
 import { LicensePanel } from "@/components/settings/license-panel";
+import { MetaPixelPanel } from "@/components/settings/meta-pixel-panel";
 import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
 import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
 import { ShopsPanel } from "@/components/settings/shops-panel";
@@ -56,6 +57,8 @@ export type SettingsWorkspaceAccess = {
   demo: boolean;
   aiKey: boolean;
   aiConsent: boolean;
+  /** Meta Pixel + CAPI management surface (FD-061 EX-3); route enforces settings.manage. */
+  metaPixelManage: boolean;
   delivery: boolean;
   reports: boolean;
   commerceRead: boolean;
@@ -417,6 +420,7 @@ export function SettingsWorkspace({
       ) : null}
       {access.commerceManage ? <CommerceSyncRecoveryPanel /> : null}
       {access.delivery ? <DeliveryCredentialsPanel /> : null}
+      {access.metaPixelManage ? <MetaPixelPanel /> : null}
     </div>
   );
 

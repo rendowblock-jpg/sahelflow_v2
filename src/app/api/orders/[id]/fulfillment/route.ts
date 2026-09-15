@@ -23,7 +23,7 @@ export const POST = withErrorHandler(
     // FD-061 EX-3: fire-and-forget CAPI delivered-stage trigger — a CAPI
     // failure can never block the delivery confirmation.
     if (!command.replayed && command.result.status === "delivered") {
-      void fireCapiStageForOrder(id, "delivered", "delivered");
+      void fireCapiStageForOrder(id, "delivered");
     }
 
     return NextResponse.json({

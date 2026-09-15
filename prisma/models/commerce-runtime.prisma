@@ -174,7 +174,7 @@ model MetaPixelConfig {
 }
 
 /// Claim + outcome ledger for CAPI sends. The UNIQUE (order, stage, event)
-/// triple is the idempotency authority (createMany skipDuplicates claim with a
+/// triple is the idempotency authority (create-on-conflict claim with a
 /// 10-minute in-flight lease); leaseUntil doubles as the exponential-backoff
 /// due time after a retryable failure.
 model CapiEventLedger {

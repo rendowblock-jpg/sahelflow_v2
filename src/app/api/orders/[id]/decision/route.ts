@@ -52,7 +52,7 @@ export const POST = withErrorHandler(
       // FD-061 EX-3: fire-and-forget CAPI confirmed-stage trigger — a CAPI
       // failure can never block the confirmation decision.
       if (command.result.status === "confirmed") {
-        void fireCapiStageForOrder(command.result.orderId, "confirmed", "confirmed");
+        void fireCapiStageForOrder(command.result.orderId, "confirmed");
       }
     }
 

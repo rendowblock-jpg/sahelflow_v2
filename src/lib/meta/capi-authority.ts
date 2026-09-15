@@ -2,10 +2,12 @@
  * Meta Pixel / CAPI configuration authority + trigger enqueue.
  *
  * FD-061 EX-3 (contracts extracted from CodFlow @ 00f18fa, Apache-2.0). The
- * desktop is authoritative: triggers ride the desktop outbox (OutboxIntent
- * with a deterministic effect key), never a Worker, and a CAPI failure can
- * never block order or delivery confirmation — every trigger is
- * fire-and-forget with the disposition recorded on the ledger.
+ * desktop is authoritative: triggers ride the dedicated durable CapiEventLedger
+ * queue (the WhatsAppOutboundEffect precedent) — never a Cloudflare Worker,
+ * and never the canonical OutboxIntent, which stays strictly command-kernel-
+ * owned. A CAPI failure can never block order or delivery confirmation —
+ * every trigger is fire-and-forget with the disposition recorded on the
+ * ledger.
  *
  * The access token rides the encrypted Secret authority under
  * `meta_capi_access_token`; the config model holds only non-secret fields.
@@ -14,20 +16,19 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
+import { Prisma } from "@prisma/client";
+
 import type { ServiceContext } from "@/lib/data/service-base";
 import { getSecret, setSecret } from "@/lib/secrets";
 import {
   resolveConversionForStage,
   resolveCapiDispatch,
-  getCapiEffectKey,
-  CAPI_LEASE_MS,
   type ConversionStage,
   type ConversionMode,
   type MetaEventName,
 } from "./capi-conversion";
 
 export const META_CAPI_TOKEN_SECRET_KEY = "meta_capi_access_token";
-export const META_CAPI_EFFECT_TYPE = "meta.capi.send.v1";
 
 export interface MetaPixelConfigData {
   id: string;
@@ -140,11 +141,22 @@ export interface QueueCapiDisposition {
   reason?: string;
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
+}
+
 /**
  * Fire-and-forget trigger for a business stage. Validates the conversion
- * gate, claims the ledger row (UNIQUE (order, stage, event) + skipDuplicates)
- * and enqueues the outbox intent. Never throws into the caller's flow: a
- * CAPI failure must never block order or delivery confirmation.
+ * gate and claims the ledger row (UNIQUE (order, stage, event) —
+ * create-on-conflict, because the SQLite connector has no skipDuplicates).
+ * The ledger claim IS the durable queue entry: it is born due (leaseUntil =
+ * now) so the desktop worker picks it up on its next tick; the canonical
+ * OutboxIntent stays strictly command-kernel-owned. Never throws into the
+ * caller's flow: a CAPI failure must never block order or delivery
+ * confirmation.
  */
 export async function queueCapiStage(
   context: ServiceContext,
@@ -152,7 +164,6 @@ export async function queueCapiStage(
     orderId: string;
     stage: ConversionStage;
     triggeredAt: Date;
-    triggerStatus: string;
   },
 ): Promise<QueueCapiDisposition> {
   try {
@@ -194,10 +205,9 @@ export async function queueCapiStage(
       return { queued: false, reason: dispatch.reason };
     }
 
-    const effectKey = getCapiEffectKey(input.orderId, input.stage, eventName);
-    const claimed = await context.prisma.capiEventLedger.createMany({
-      data: [
-        {
+    try {
+      await context.prisma.capiEventLedger.create({
+        data: {
           id: randomUUID(),
           orderId: input.orderId,
           eventName,
@@ -205,35 +215,19 @@ export async function queueCapiStage(
           eventId: input.orderId,
           status: "claimed",
           attempts: 0,
-          leaseUntil: new Date(Date.now() + CAPI_LEASE_MS),
+          // Born due: leaseUntil doubles as the drain due time.
+          leaseUntil: new Date(),
           triggeredAt: input.triggeredAt,
         },
-      ],
-      skipDuplicates: true,
-    });
-    if (claimed.count === 0) {
-      return { queued: false, reason: "already_claimed" };
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        // The UNIQUE (order, stage, event) triple is the idempotency
+        // authority: a concurrent trigger already owns this claim.
+        return { queued: false, reason: "already_claimed" };
+      }
+      throw error;
     }
-
-    await context.prisma.outboxIntent.upsert({
-      where: { effectKey },
-      create: {
-        id: randomUUID(),
-        effectKey,
-        commandId: `capi:${input.orderId}`,
-        effectType: META_CAPI_EFFECT_TYPE,
-        payloadJson: JSON.stringify({
-          orderId: input.orderId,
-          stage: input.stage,
-          eventName,
-          triggeredAt: Math.floor(input.triggeredAt.getTime() / 1000),
-          triggerStatus: input.triggerStatus,
-        }),
-        status: "queued",
-        nextAttemptAt: new Date(),
-      },
-      update: { nextAttemptAt: new Date() },
-    });
 
     return { queued: true };
   } catch (error) {

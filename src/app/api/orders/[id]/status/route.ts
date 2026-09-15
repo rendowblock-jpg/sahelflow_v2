@@ -22,7 +22,7 @@ export const PATCH = withErrorHandler(
     // FD-061 EX-3: fire-and-forget CAPI stage triggers on the legacy
     // transition path — a CAPI failure can never block the transition.
     if (data.status === "confirmed" || data.status === "delivered") {
-      void fireCapiStageForOrder(id, data.status, data.status);
+      void fireCapiStageForOrder(id, data.status);
     }
 
     return NextResponse.json({

@@ -63,12 +63,15 @@ type ApiBody = {
  * never block orders or deliveries.
  */
 export function MetaPixelPanel() {
-  const { t, locale: rawLocale } = useI18n();
+  const { locale: rawLocale } = useI18n();
   const locale = rawLocale as SettingsWorkspaceLocale;
-  const copy = (key: Parameters<typeof getSettingsWorkspaceCopy>[1]) =>
-    getSettingsWorkspaceCopy(locale, key);
+  const copy = useCallback(
+    (key: Parameters<typeof getSettingsWorkspaceCopy>[1]) =>
+      getSettingsWorkspaceCopy(locale, key),
+    [locale],
+  );
 
-  const [config, setConfig] = useState<MetaPixelConfigDto | null>(null);
+  const [, setConfig] = useState<MetaPixelConfigDto | null>(null);
   const [hasAccessToken, setHasAccessToken] = useState(false);
   const [pixelId, setPixelId] = useState("");
   const [adAccountName, setAdAccountName] = useState("");
@@ -105,9 +108,11 @@ export function MetaPixelPanel() {
   }, [copy]);
 
   useEffect(() => {
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const timeoutId = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [load]);
 
   const save = useCallback(async () => {
     setSaving(true);

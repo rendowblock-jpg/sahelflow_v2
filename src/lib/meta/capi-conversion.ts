@@ -3,8 +3,8 @@
  *
  * Contract transcribed verbatim from the live-proven CodFlow engine
  * (cod-server/src/workflows/conversion-model.ts + capi-helpers.ts @ 00f18fa,
- * Apache-2.0), with CodFlow's workflow-ID concept mapped onto SahelFlow's
- * deterministic outbox effect key.
+ * Apache-2.0), with CodFlow's workflow-ID concept mapped onto the ledger's
+ * UNIQUE (order, stage, event) claim uniqueness.
  *
  * One centralized business contract across:
  * - Storefront checkout (Pixel + CAPI)
@@ -12,6 +12,8 @@
  * - Courier logistics delivery (pull + reconcile tracking truth)
  * - CAPI engine execution, validation, and idempotency claims
  */
+
+import wilayasData from "../../../data/wilayas.json";
 
 export type ConversionStage = "checkout" | "confirmed" | "delivered";
 export type MetaEventName = "Lead" | "Purchase";
@@ -85,6 +87,37 @@ export function resolveConversionForStage(
 
 /** Southern wilayas with 5-10 day delivery — fire at out_for_delivery there to stay inside Meta's 7-day window. */
 export const LONG_HAUL_WILAYA_CODES = new Set([1, 8, 11, 33, 37, 44]);
+
+function wilayaNameKey(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+const WILAYA_CODE_BY_KEY = new Map<string, number>();
+for (const wilaya of wilayasData as ReadonlyArray<{
+  code: number;
+  name: string;
+  nameAr: string;
+}>) {
+  WILAYA_CODE_BY_KEY.set(wilayaNameKey(wilaya.name), wilaya.code);
+  WILAYA_CODE_BY_KEY.set(wilayaNameKey(wilaya.nameAr), wilaya.code);
+}
+
+/**
+ * Resolve a seller-facing wilaya label (French or Arabic name) to its
+ * canonical code, or null when unknown. Mirrors the location authority's
+ * normalization so carrier-truth wilaya names resolve consistently.
+ */
+export function resolveWilayaCodeByName(
+  value: string | null | undefined,
+): number | null {
+  if (!value) return null;
+  const code = WILAYA_CODE_BY_KEY.get(wilayaNameKey(value));
+  return typeof code === "number" ? code : null;
+}
 
 /** Deterministic whether the delivery-stage trigger fires for this transition. */
 export function shouldTriggerCapiConfirmed(newStatus: string): boolean {
@@ -177,15 +210,6 @@ export function resolveCapiDispatch(
 
 /** Meta's hard limit on event_time — older events are audited skips. */
 export const SEVEN_DAYS_SECONDS = 7 * 24 * 3600;
-
-/** Deterministic claim key: any trigger source targeting the same business conversion produces the same key. */
-export function getCapiEffectKey(
-  orderId: string,
-  stage: ConversionStage,
-  eventName: MetaEventName,
-): string {
-  return `meta-capi:${orderId}:${stage}:${eventName}`;
-}
 
 /** In-flight lease window (upstream: 10 minutes). */
 export const CAPI_LEASE_MS = 10 * 60 * 1000;

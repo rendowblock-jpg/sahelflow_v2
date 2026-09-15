@@ -227,13 +227,13 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // metadata write is side-channel (never money truth) and the CAPI trigger
   // is fire-and-forget — neither can block the checkout response.
   try {
-    const fbc = req.cookies.get("_fbc")?.value ?? null;
-    const fbp = req.cookies.get("_fbp")?.value ?? null;
+    const fbc = request.cookies.get("_fbc")?.value ?? null;
+    const fbp = request.cookies.get("_fbp")?.value ?? null;
     const clientIp =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
       null;
-    const userAgent = req.headers.get("user-agent");
+    const userAgent = request.headers.get("user-agent");
     if (fbc || fbp || clientIp || userAgent) {
       await db.order.update({
         where: { id: command.result.order.id },
@@ -249,7 +249,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   } catch {
     // Placement capture is best-effort; the checkout response never depends on it.
   }
-  void fireCapiStageForOrder(command.result.order.id, "checkout", "pending");
+  void fireCapiStageForOrder(command.result.order.id, "checkout");
 
   return NextResponse.json(
     {

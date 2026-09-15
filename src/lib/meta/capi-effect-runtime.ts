@@ -2,15 +2,19 @@
  * Meta CAPI outbox effect runtime — durable desktop delivery.
  *
  * FD-061 EX-3 (contracts extracted from CodFlow's CodCapiWorkflow @ 00f18fa,
- * Apache-2.0), re-scoped onto SahelFlow's desktop outbox: the Workflow steps
- * become one bounded drain of due OutboxIntents with the same claim-lease,
- * 7-day attribution guard, 5×30 s exponential retry matrix and terminal-failure
- * recording. Triggers ride the desktop outbox — never a Worker.
+ * Apache-2.0), re-scoped onto SahelFlow's desktop: the Workflow steps become
+ * one bounded drain of due CapiEventLedger claims. The ledger is the durable
+ * queue (the dedicated-table precedent of WhatsAppOutboundEffect): the
+ * canonical OutboxIntent stays strictly command-kernel-owned, so an
+ * autonomous fire-and-forget trigger never mints intents outside a committed
+ * BusinessCommand.
  *
- * Drain semantics per due intent:
- *   1. Load the ledger claim row; skip when it was already resolved.
- *   2. Load fresh order + pixel config + token (never trust stale payloads).
- *   3. Attribution guard: triggeredAt older than 7 days → audited skip.
+ * Drain semantics per due claim (status='claimed', leaseUntil due):
+ *   1. Dispatch resolution: disabled/missing config or token → audited skip.
+ *   2. Attribution guard: triggeredAt older than 7 days → audited skip.
+ *   3. In-flight re-lease (leaseUntil = now + CAPI_LEASE_MS) before the Meta
+ *      call, so a crash mid-send cannot re-send before the lease expires —
+ *      and Meta's own event_id dedup covers the crash window.
  *   4. Send via capi-client. Network/5xx throws → retryable: attempts + 1,
  *      leaseUntil = now + 30 s × 2^(attempt-1); the 5th failure is terminal.
  *   5. 4xx / malformed → terminal failed record. Success → sent + fbtrace_id.
@@ -31,13 +35,12 @@ import {
   CAPI_MAX_ATTEMPTS,
   capiRetryDelayMs,
   CAPI_LEASE_MS,
-  type ConversionStage,
   type MetaEventName,
+  type ConversionStage,
 } from "./capi-conversion";
 import {
   getMetaPixelConfig,
   META_CAPI_TOKEN_SECRET_KEY,
-  META_CAPI_EFFECT_TYPE,
 } from "./capi-authority";
 import { getSecret } from "@/lib/secrets";
 
@@ -47,31 +50,6 @@ export interface DrainCapiOutcome {
   failed: number;
   retried: number;
   skipped: number;
-}
-
-interface CapiIntentPayload {
-  orderId: string;
-  stage: ConversionStage;
-  eventName: MetaEventName;
-  triggeredAt: number; // unix seconds
-  triggerStatus: string;
-}
-
-function parsePayload(raw: string): CapiIntentPayload | null {
-  try {
-    const parsed = JSON.parse(raw) as Partial<CapiIntentPayload>;
-    if (
-      typeof parsed.orderId !== "string" ||
-      (parsed.stage !== "checkout" && parsed.stage !== "confirmed" && parsed.stage !== "delivered") ||
-      (parsed.eventName !== "Lead" && parsed.eventName !== "Purchase") ||
-      typeof parsed.triggeredAt !== "number"
-    ) {
-      return null;
-    }
-    return parsed as CapiIntentPayload;
-  } catch {
-    return null;
-  }
 }
 
 async function audit(
@@ -107,9 +85,9 @@ async function audit(
 }
 
 /**
- * Drain up to `limit` due CAPI intents. One lease per drain pass; failures
- * reschedule themselves onto the ledger (leaseUntil = backoff), so the next
- * tick picks them up without duplicating a send to Meta.
+ * Drain up to `limit` due CAPI ledger claims. One pass per worker tick;
+ * failures reschedule themselves onto the ledger (leaseUntil = backoff), so
+ * the next tick picks them up without duplicating a send to Meta.
  */
 export async function drainDueCapiSends(
   context: ServiceContext,
@@ -118,55 +96,22 @@ export async function drainDueCapiSends(
   const outcome: DrainCapiOutcome = { processed: 0, sent: 0, failed: 0, retried: 0, skipped: 0 };
   const now = new Date();
 
-  const dueIntents = await context.prisma.outboxIntent.findMany({
+  const dueClaims = await context.prisma.capiEventLedger.findMany({
     where: {
-      effectType: META_CAPI_EFFECT_TYPE,
-      status: "queued",
-      nextAttemptAt: { lte: now },
+      status: "claimed",
+      leaseUntil: { lte: now },
     },
-    orderBy: { nextAttemptAt: "asc" },
+    orderBy: { leaseUntil: "asc" },
     take: limit,
   });
-  if (dueIntents.length === 0) return outcome;
+  if (dueClaims.length === 0) return outcome;
 
   const config = await getMetaPixelConfig(context);
   const accessToken = config
     ? ((await getSecret(context, META_CAPI_TOKEN_SECRET_KEY)) ?? "")
     : "";
 
-  for (const intent of dueIntents) {
-    const payload = parsePayload(intent.payloadJson);
-    if (!payload) {
-      await context.prisma.outboxIntent.update({
-        where: { id: intent.id },
-        data: {
-          status: "dead_letter",
-          lastErrorCode: "MALFORMED_PAYLOAD",
-          outcomeState: "failed",
-        },
-      });
-      outcome.failed += 1;
-      continue;
-    }
-
-    const ledger = await context.prisma.capiEventLedger.findUnique({
-      where: {
-        orderId_stage_eventName: {
-          orderId: payload.orderId,
-          stage: payload.stage,
-          eventName: payload.eventName,
-        },
-      },
-    });
-    if (!ledger || ledger.status === "sent") {
-      await context.prisma.outboxIntent.update({
-        where: { id: intent.id },
-        data: { status: "done", outcomeState: ledger ? "sent" : "abandoned" },
-      });
-      outcome.skipped += 1;
-      continue;
-    }
-
+  for (const claim of dueClaims) {
     const dispatch = resolveCapiDispatch(
       config
         ? {
@@ -177,25 +122,19 @@ export async function drainDueCapiSends(
             testEventCode: config.testEventCode,
           }
         : null,
-      payload.eventName,
-      payload.stage,
+      claim.eventName as MetaEventName,
+      claim.stage as ConversionStage,
     );
     if (!dispatch.send) {
-      await context.prisma.$transaction([
-        context.prisma.capiEventLedger.update({
-          where: { id: ledger.id },
-          data: { status: "skipped", lastError: dispatch.message, sentAt: new Date() },
-        }),
-        context.prisma.outboxIntent.update({
-          where: { id: intent.id },
-          data: { status: "done", outcomeState: "skipped" },
-        }),
-      ]);
+      await context.prisma.capiEventLedger.update({
+        where: { id: claim.id },
+        data: { status: "skipped", lastError: dispatch.message, sentAt: new Date() },
+      });
       await audit(context, {
-        orderId: payload.orderId,
-        stage: payload.stage,
-        eventName: payload.eventName,
-        attempt: ledger.attempts,
+        orderId: claim.orderId,
+        stage: claim.stage,
+        eventName: claim.eventName,
+        attempt: claim.attempts,
         status: "skipped",
         error: dispatch.message,
       });
@@ -204,24 +143,19 @@ export async function drainDueCapiSends(
     }
 
     // 7-day Meta hard limit on event_time.
-    const ageSeconds = Math.floor(Date.now() / 1000) - payload.triggeredAt;
+    const triggeredAtSeconds = Math.floor(claim.triggeredAt.getTime() / 1000);
+    const ageSeconds = Math.floor(Date.now() / 1000) - triggeredAtSeconds;
     if (ageSeconds >= SEVEN_DAYS_SECONDS) {
-      const message = `event_time expired: order ${payload.orderId} is ${Math.round(ageSeconds / 3600)}h old — outside Meta 7-day window`;
-      await context.prisma.$transaction([
-        context.prisma.capiEventLedger.update({
-          where: { id: ledger.id },
-          data: { status: "skipped", lastError: message, sentAt: new Date() },
-        }),
-        context.prisma.outboxIntent.update({
-          where: { id: intent.id },
-          data: { status: "done", outcomeState: "skipped" },
-        }),
-      ]);
+      const message = `event_time expired: order ${claim.orderId} is ${Math.round(ageSeconds / 3600)}h old — outside Meta 7-day window`;
+      await context.prisma.capiEventLedger.update({
+        where: { id: claim.id },
+        data: { status: "skipped", lastError: message, sentAt: new Date() },
+      });
       await audit(context, {
-        orderId: payload.orderId,
-        stage: payload.stage,
-        eventName: payload.eventName,
-        attempt: ledger.attempts,
+        orderId: claim.orderId,
+        stage: claim.stage,
+        eventName: claim.eventName,
+        attempt: claim.attempts,
         status: "expired",
         error: message,
       });
@@ -229,13 +163,20 @@ export async function drainDueCapiSends(
       continue;
     }
 
-    const attempt = ledger.attempts + 1;
+    // In-flight re-lease before the network call: a crash mid-send leaves the
+    // claim parked for the lease window instead of being re-picked instantly.
+    const attempt = claim.attempts + 1;
+    await context.prisma.capiEventLedger.update({
+      where: { id: claim.id },
+      data: { leaseUntil: new Date(Date.now() + CAPI_LEASE_MS) },
+    });
+
     const pixelId = config?.pixelId;
     let result: CapiResult | null = null;
     let sendError: string | null = null;
     try {
       const order = await context.prisma.order.findUnique({
-        where: { id: payload.orderId },
+        where: { id: claim.orderId },
         select: {
           id: true,
           customerId: true,
@@ -250,15 +191,15 @@ export async function drainDueCapiSends(
           customer: { select: { name: true } },
         },
       });
-      if (!order) throw new Error(`Order ${payload.orderId} not found`);
+      if (!order) throw new Error(`Order ${claim.orderId} not found`);
       if (!pixelId) throw new Error("Meta pixel id is not configured");
 
       const nameParts = order.customer?.name?.trim().split(/\s+/) ?? [];
 
       result = await sendCapiEvent(pixelId, accessToken, {
-        eventName: payload.eventName,
-        eventId: payload.orderId,
-        eventTime: payload.triggeredAt,
+        eventName: claim.eventName as MetaEventName,
+        eventId: claim.eventId,
+        eventTime: triggeredAtSeconds,
         userData: {
           phone: order.phone,
           firstName: nameParts[0] || undefined,
@@ -271,7 +212,7 @@ export async function drainDueCapiSends(
           clientUserAgent: order.userAgent,
         },
         value:
-          payload.eventName === "Purchase"
+          claim.eventName === "Purchase"
             ? order.totalPrice + (order.deliveryCost ?? 0)
             : undefined,
         currency: "DZD",
@@ -281,37 +222,22 @@ export async function drainDueCapiSends(
       sendError = error instanceof Error ? error.message : String(error);
     }
 
-    await context.prisma.capiEventLedger.update({
-      where: { id: ledger.id },
-      data: { attempts: attempt },
-    });
-
     if (result?.success) {
-      await context.prisma.$transaction([
-        context.prisma.capiEventLedger.update({
-          where: { id: ledger.id },
-          data: {
-            status: "sent",
-            metaEventId: result.fbtraceId ?? null,
-            lastError: null,
-            sentAt: new Date(),
-            leaseUntil: null,
-          },
-        }),
-        context.prisma.outboxIntent.update({
-          where: { id: intent.id },
-          data: {
-            status: "done",
-            outcomeState: "sent",
-            receiptJson: JSON.stringify({ fbtraceId: result.fbtraceId ?? null }),
-            succeededAt: new Date(),
-          },
-        }),
-      ]);
+      await context.prisma.capiEventLedger.update({
+        where: { id: claim.id },
+        data: {
+          status: "sent",
+          attempts: attempt,
+          metaEventId: result.fbtraceId ?? null,
+          lastError: null,
+          sentAt: new Date(),
+          leaseUntil: null,
+        },
+      });
       await audit(context, {
-        orderId: payload.orderId,
-        stage: payload.stage,
-        eventName: payload.eventName,
+        orderId: claim.orderId,
+        stage: claim.stage,
+        eventName: claim.eventName,
         attempt,
         status: "sent",
         httpStatus: result.httpStatus,
@@ -323,25 +249,20 @@ export async function drainDueCapiSends(
 
     if (result) {
       // 4xx: Meta rejected the batch — terminal failure, never retried.
-      await context.prisma.$transaction([
-        context.prisma.capiEventLedger.update({
-          where: { id: ledger.id },
-          data: {
-            status: "failed",
-            lastError: result.error ?? "Meta rejected the event",
-            sentAt: new Date(),
-            leaseUntil: null,
-          },
-        }),
-        context.prisma.outboxIntent.update({
-          where: { id: intent.id },
-          data: { status: "done", outcomeState: "failed", lastErrorCode: "META_REJECTED" },
-        }),
-      ]);
+      await context.prisma.capiEventLedger.update({
+        where: { id: claim.id },
+        data: {
+          status: "failed",
+          attempts: attempt,
+          lastError: result.error ?? "Meta rejected the event",
+          sentAt: new Date(),
+          leaseUntil: null,
+        },
+      });
       await audit(context, {
-        orderId: payload.orderId,
-        stage: payload.stage,
-        eventName: payload.eventName,
+        orderId: claim.orderId,
+        stage: claim.stage,
+        eventName: claim.eventName,
         attempt,
         status: "failed",
         httpStatus: result.httpStatus,
@@ -354,28 +275,20 @@ export async function drainDueCapiSends(
     // Retryable failure (network / 5xx): attempts + backoff, terminal at 5.
     const terminal = attempt >= CAPI_MAX_ATTEMPTS;
     const delayMs = capiRetryDelayMs(attempt);
-    await context.prisma.$transaction([
-      context.prisma.capiEventLedger.update({
-        where: { id: ledger.id },
-        data: {
-          status: terminal ? "failed" : "claimed",
-          lastError: sendError,
-          attempts: attempt,
-          leaseUntil: terminal ? null : new Date(Date.now() + Math.min(delayMs, CAPI_LEASE_MS * 6)),
-          sentAt: terminal ? new Date() : null,
-        },
-      }),
-      context.prisma.outboxIntent.update({
-        where: { id: intent.id },
-        data: terminal
-          ? { status: "dead_letter", outcomeState: "failed", lastErrorCode: "CAPI_SEND_EXHAUSTED" }
-          : { status: "queued", nextAttemptAt: new Date(Date.now() + delayMs) },
-      }),
-    ]);
+    await context.prisma.capiEventLedger.update({
+      where: { id: claim.id },
+      data: {
+        status: terminal ? "failed" : "claimed",
+        attempts: attempt,
+        lastError: sendError,
+        leaseUntil: terminal ? null : new Date(Date.now() + Math.min(delayMs, CAPI_LEASE_MS * 6)),
+        sentAt: terminal ? new Date() : null,
+      },
+    });
     await audit(context, {
-      orderId: payload.orderId,
-      stage: payload.stage,
-      eventName: payload.eventName,
+      orderId: claim.orderId,
+      stage: claim.stage,
+      eventName: claim.eventName,
       attempt,
       status: terminal ? "failed" : "claimed",
       error: sendError,

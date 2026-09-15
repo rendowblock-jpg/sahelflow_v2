@@ -12,7 +12,7 @@ import "server-only";
 export async function fireCapiStageForOrder(
   orderId: string,
   stage: "checkout" | "confirmed" | "delivered",
-  triggerStatus: string,
+  triggeredAt: Date = new Date(),
 ): Promise<void> {
   try {
     const [{ db, shopContext }, { queueCapiStage }] = await Promise.all([
@@ -21,7 +21,7 @@ export async function fireCapiStageForOrder(
     ]);
     await queueCapiStage(
       { prisma: db, shop: shopContext },
-      { orderId, stage, triggeredAt: new Date(), triggerStatus },
+      { orderId, stage, triggeredAt },
     );
   } catch {
     // Never propagate into the caller's flow (defense in depth on top of
