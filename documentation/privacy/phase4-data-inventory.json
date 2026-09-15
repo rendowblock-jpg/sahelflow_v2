@@ -50,6 +50,7 @@
     {
       "id": "personal-data",
       "models": [
+        "AbandonedCart",
         "AiActionProposal", "AiChatMessage", "AiChatSession", "AuditLog", "AutomationNotification",
         "CollaborationAssignment", "CollaborationComment", "CollaborationHandover", "CollaborationMention",
         "CommerceSyncItem", "Conversation", "Customer", "Delivery", "Message", "Order", "OrderItem",
@@ -126,6 +127,8 @@
     "Order.fbp": {"classification": "personal-data", "protection": "plaintext-at-rest; forwarded-verbatim-to-meta-capi", "export": "included"},
     "Order.clientIp": {"classification": "personal-data", "protection": "plaintext-at-rest; forwarded-verbatim-to-meta-capi", "export": "included"},
     "Order.userAgent": {"classification": "personal-data", "protection": "plaintext-at-rest; forwarded-verbatim-to-meta-capi", "export": "included"},
+    "AbandonedCart.customerName": {"classification": "personal-data", "protection": "plaintext-at-rest; hardening candidate for the protected-client registry", "export": "included"},
+    "AbandonedCart.customerPhone": {"classification": "personal-data", "protection": "plaintext-at-rest; hardening candidate for the protected-client registry", "export": "included"},
     "Conversation.contactName": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
     "Conversation.contactPhone": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},
     "Message.body": {"classification": "personal-data", "protection": "contextual-aead", "export": "included"},

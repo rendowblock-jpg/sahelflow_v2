@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   Check,
@@ -94,6 +94,23 @@ function itemPrice(item: Pick<CartItem, "product" | "variant">): number {
   return item.variant?.price ?? item.product.price;
 }
 
+/**
+ * FD-061 EX-4: the visitor's cart-session id (sessionStorage-backed; falls
+ * back to a fresh UUID when storage is denied). The UNIQUE (slug, session)
+ * pair is the capture ledger's upsert authority.
+ */
+function cartSessionId(storageKey: string): string {
+  try {
+    const stored = window.sessionStorage.getItem(storageKey);
+    if (stored && /^[0-9a-f-]{36}$/i.test(stored)) return stored;
+    const created = crypto.randomUUID();
+    window.sessionStorage.setItem(storageKey, created);
+    return created;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
 export function StorefrontView({
   config,
   products,
@@ -153,6 +170,7 @@ function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
 
   const submissionStorageKey = `sf-storefront-submission:${config.slug}`;
   const cartStorageKey = `sf-storefront-cart:${config.slug}`;
+  const cartSessionStorageKey = `sf-storefront-cart-session:${config.slug}`;
   const wilayaCode = useMemo(() => (wilayasData as Array<{ code: number; name: string }>).find(
     (wilaya) => wilaya.name === form.wilaya,
   )?.code.toString().padStart(2, "0"), [form.wilaya]);
@@ -203,6 +221,79 @@ function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
       // Hardened browsers may deny storage; in-memory checkout remains usable.
     }
   }, [cart, cartReady, cartStorageKey]);
+
+  // FD-061 EX-4: abandoned-cart capture — a 3-second debounce on every
+  // cart/form change (fetch keepalive), plus a `pagehide` sendBeacon for
+  // the checkout-abandon exit. Capture is eligible once the cart is non-
+  // empty, the name has ≥ 2 chars and the phone is a valid DZ mobile (the
+  // research contract). Both transports are silent side-channels: a lost
+  // capture costs at most one recovery opportunity, never a checkout.
+  const capturePayloadRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!cartReady) return;
+    const phone = normalizeDZPhone(form.phone);
+    const eligible =
+      cart.length > 0 &&
+      form.name.trim().length >= 2 &&
+      isValidDZMobilePhone(phone);
+    capturePayloadRef.current = eligible
+      ? JSON.stringify({
+          slug: config.slug,
+          sessionId: cartSessionId(cartSessionStorageKey),
+          name: form.name.trim(),
+          phone,
+          wilaya: form.wilaya || undefined,
+          commune: form.commune || undefined,
+          address: form.address.trim() || undefined,
+          items: cart.map((item) => ({
+            productId: item.product.id,
+            variantId: item.variant?.id ?? null,
+            quantity: item.quantity,
+          })),
+        })
+      : null;
+    const timer = window.setTimeout(() => {
+      const body = capturePayloadRef.current;
+      if (!body) return;
+      void fetch("/api/storefront/cart-capture", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
+        body,
+        keepalive: true,
+      }).catch(() => {
+        // Silent side-channel: capture failures never surface.
+      });
+    }, 3_000);
+    return () => window.clearTimeout(timer);
+  }, [
+    cart,
+    cartReady,
+    cartSessionStorageKey,
+    config.slug,
+    form.address,
+    form.commune,
+    form.name,
+    form.phone,
+    form.wilaya,
+  ]);
+
+  useEffect(() => {
+    const onHide = () => {
+      const body = capturePayloadRef.current;
+      if (!body || typeof navigator.sendBeacon !== "function") return;
+      try {
+        navigator.sendBeacon(
+          "/api/storefront/cart-capture",
+          new Blob([body], { type: "text/plain;charset=UTF-8" }),
+        );
+      } catch {
+        // Hardened browsers may block beacons; checkout stays usable.
+      }
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => window.removeEventListener("pagehide", onHide);
+  }, []);
 
   function invalidateSubmission(): void {
     try {
@@ -307,6 +398,7 @@ function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
         body: JSON.stringify({
           slug: config.slug,
           submissionId: stableSubmissionId,
+          cartSessionId: cartSessionId(cartSessionStorageKey),
           customer: {
             name: form.name.trim(),
             phone,

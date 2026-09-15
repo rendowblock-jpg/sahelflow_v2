@@ -1,10 +1,12 @@
 import { getI18n } from "@/lib/i18n-server";
 import { storefrontService } from "@/lib/storefront/service";
-import { Card, CardContent } from "@/components/ui/card";
+import { getAbandonedCartRecoveryStats } from "@/lib/storefront/abandoned-cart-service";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { StorefrontsListClient } from "@/components/storefront/storefronts-list-client";
 import { EmptyState } from "@/components/shared/empty-state";
+import { formatDZD } from "@/lib/utils";
 import { Plus, Store } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -42,6 +44,10 @@ export default async function StorefrontsPage() {
   const canDelete = canMutate && canApprove;
   const { t } = await getI18n();
   const configs = await storefrontService.list({ prisma: db, shop: shopContext });
+  const recovery = await getAbandonedCartRecoveryStats({
+    prisma: db,
+    shop: shopContext,
+  });
 
   return (
     <div className="app-content page-sections">
@@ -57,6 +63,36 @@ export default async function StorefrontsPage() {
           </Button>
         ) : undefined}
       />
+
+      {configs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              {t("storefronts.recovery.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {(
+                [
+                  ["storefronts.recovery.pending", recovery.pending],
+                  ["storefronts.recovery.abandoned", recovery.abandoned],
+                  ["storefronts.recovery.converted", recovery.converted],
+                  [
+                    "storefronts.recovery.lostRevenue",
+                    formatDZD(recovery.estimatedLostRevenue),
+                  ],
+                ] as const
+              ).map(([key, value]) => (
+                <div key={key}>
+                  <p className="text-sm text-muted-foreground">{t(key)}</p>
+                  <p className="text-lg font-semibold tabular-nums">{value}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {configs.length === 0 ? (
         <Card>

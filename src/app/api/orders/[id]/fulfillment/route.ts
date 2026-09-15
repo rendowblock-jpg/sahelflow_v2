@@ -20,10 +20,14 @@ export const POST = withErrorHandler(
       orderId: id,
     });
 
-    // FD-061 EX-3: fire-and-forget CAPI delivered-stage trigger — a CAPI
-    // failure can never block the delivery confirmation.
+    // FD-061 EX-3: CAPI delivered-stage trigger. fireCapiStageForOrder
+    // only claims the durable ledger (no network call — the drain does)
+    // and swallows its own failures, so a CAPI failure can never block the
+    // delivery confirmation; awaiting it keeps the side-channel
+    // deterministic (no SQLite write-lock race with the caller's next
+    // action).
     if (!command.replayed && command.result.status === "delivered") {
-      void fireCapiStageForOrder(id, "delivered");
+      await fireCapiStageForOrder(id, "delivered");
     }
 
     return NextResponse.json({
