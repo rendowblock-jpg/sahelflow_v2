@@ -67,14 +67,14 @@
       "id": "operational-security-metadata",
       "models": [
         "AiActionApproval", "AiActionExecution", "AiMessageFeedback", "AutomationLog", "AutomationRun", "AutomationStepAttempt",
-        "AutomationStepRun", "BusinessAggregateVersion", "BusinessCommand", "CommerceSyncItemAttempt",
+        "AutomationStepRun", "BusinessAggregateVersion", "BusinessCommand", "CapiAttemptLog", "CapiEventLedger", "CommerceSyncItemAttempt",
         "CommerceSyncPage", "CommerceSyncRun", "CommerceSyncRunAttempt", "CompensationFact", "DomainEvent",
         "ExtractionMetric", "NotificationDeliveryAttempt", "NotificationEvent", "NotificationPreference",
         "OperationalNotification", "OutboxIntent", "ProjectionInvalidation", "ProviderCapabilityCertification",
         "ProviderIngressAttempt", "SearchProjectionDirty", "SearchProjectionToken", "WhatsAppOutboundEffect"
       ],
       "classification": "security-metadata",
-      "purpose": "Authorization, idempotency, durable effects, incident response, provider ingress, notification-center operational state, per-actor notification controls, search projection bookkeeping, AI quality analytics, recovery and audit.",
+      "purpose": "Authorization, idempotency, durable effects, incident response, provider ingress, Meta CAPI delivery ledger and attempt audit, notification-center operational state, per-actor notification controls, search projection bookkeeping, AI quality analytics, recovery and audit.",
       "retentionClass": "operational-security",
       "export": "included-when-subject-or-business-relevant; secrets excluded",
       "encryptedBackup": "included-encrypted",
@@ -101,7 +101,7 @@
         "CodCollection", "CodCollectionCorrection", "CodSettlement", "CodSettlementCorrection", "CodSettlementLine",
         "CodSettlementLineMatch", "CollaborationQueue", "CollaborationWorkgroup", "CollaborationWorkgroupMember",
         "Counter", "Expense", "FinancialMovement", "Integration", "InventoryMovement", "InventoryReservation",
-        "OrderChange", "Product", "ProductVariant", "ProfitabilityCostSnapshot", "Refund", "Setting", "WhatsAppTemplate"
+        "MetaPixelConfig", "OrderChange", "Product", "ProductVariant", "ProfitabilityCostSnapshot", "Refund", "Setting", "WhatsAppTemplate"
       ],
       "classification": "confidential-business",
       "purpose": "Catalog, inventory, COD accounting, returns, automations, provider configuration and operational business truth.",

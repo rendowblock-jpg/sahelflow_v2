@@ -8,6 +8,7 @@ import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import { db, shopContext } from "@/lib/db";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
+import { captureOrderPlacement } from "@/lib/meta/capi-placement";
 import { fireCapiStageForOrder } from "@/lib/meta/capi-triggers";
 import { storefrontService } from "@/lib/storefront/service";
 import { dzPhone } from "@/lib/validation";
@@ -223,33 +224,21 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   );
 
   // FD-061 EX-3: Meta Pixel/CAPI placement capture + checkout-stage trigger.
-  // fbc/fbp ride the Meta cookie contract, IP/UA from the request; the
-  // metadata write is side-channel (never money truth) and the CAPI trigger
-  // is fire-and-forget — neither can block the checkout response.
-  try {
-    const fbc = request.cookies.get("_fbc")?.value ?? null;
-    const fbp = request.cookies.get("_fbp")?.value ?? null;
-    const clientIp =
+  // fbc/fbp ride the Meta cookie contract, IP/UA from the request. The
+  // placement write is a best-effort side-channel inside the Meta
+  // attribution service (never money truth — Order mutations stay in the
+  // command kernel), fire-and-forget so it cannot block the checkout
+  // response; the checkout trigger is chained after it so the drain never
+  // snapshots an order whose placement has not landed yet.
+  void captureOrderPlacement(command.result.order.id, {
+    fbc: request.cookies.get("_fbc")?.value ?? null,
+    fbp: request.cookies.get("_fbp")?.value ?? null,
+    clientIp:
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       request.headers.get("x-real-ip") ||
-      null;
-    const userAgent = request.headers.get("user-agent");
-    if (fbc || fbp || clientIp || userAgent) {
-      await db.order.update({
-        where: { id: command.result.order.id },
-        data: {
-          ...(fbc ? { fbc } : {}),
-          ...(fbp ? { fbp } : {}),
-          ...(clientIp ? { clientIp } : {}),
-          ...(userAgent ? { userAgent } : {}),
-        },
-        select: { id: true },
-      });
-    }
-  } catch {
-    // Placement capture is best-effort; the checkout response never depends on it.
-  }
-  void fireCapiStageForOrder(command.result.order.id, "checkout");
+      null,
+    userAgent: request.headers.get("user-agent"),
+  }).then(() => fireCapiStageForOrder(command.result.order.id, "checkout"));
 
   return NextResponse.json(
     {
