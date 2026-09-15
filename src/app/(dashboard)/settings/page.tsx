@@ -60,6 +60,9 @@ export default async function SettingsPage({
     demo: can("settings.manage"),
     aiKey: can("integrations.manage"),
     aiConsent: can("settings.manage"),
+    // The Meta Pixel route enforces settings.manage itself; this only decides
+    // whether the write surface is offered in the Connections domain.
+    metaPixelManage: can("settings.manage"),
     delivery: can("delivery.credentials.manage"),
     reports: can("settings.manage"),
     commerceRead: can("integrations.read"),

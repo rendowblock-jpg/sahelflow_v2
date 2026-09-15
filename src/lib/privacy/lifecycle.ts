@@ -268,6 +268,12 @@ export async function executeShopErase(
       await tx.providerIngressEvent.deleteMany({});
       await tx.providerCapabilityCertification.deleteMany({});
 
+      // Meta CAPI attempt audit precedes its delivery ledger; both are
+      // cleared before their parent orders (FD-061 EX-3).
+      await tx.capiAttemptLog.deleteMany({});
+      await tx.capiEventLedger.deleteMany({});
+      await tx.metaPixelConfig.deleteMany({});
+
       await tx.canonicalRefundReversal.deleteMany({});
       await tx.canonicalRefund.deleteMany({});
       await tx.canonicalExchangeOrder.deleteMany({});

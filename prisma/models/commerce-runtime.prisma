@@ -145,3 +145,74 @@ model CommerceSyncItemAttempt {
   @@index([itemId, startedAt])
   @@index([state, startedAt])
 }
+
+// ─── FD-061 EX-3: Meta Pixel + Conversions API engine ────────────────────────
+// Contracts extracted from CodFlow (github.com/bighadj22/codflow @ 00f18fa,
+// Apache-2.0). Triggers ride the desktop outbox — never a Worker. The CAPI
+// access token is NOT stored here: it rides the encrypted Secret authority
+// (deliverySecretKeys-style key `meta_capi_access_token`), like every other
+// provider credential.
+
+/// Per-shop Meta Pixel configuration. One row per shop (the DB is the shop);
+/// no row = CAPI disabled (safe default). The access token lives in the
+/// Secret authority under `meta_capi_access_token`.
+model MetaPixelConfig {
+  id              String   @id
+  pixelId         String
+  /// Merchant's label for the Meta ad account — reference only, never sent to Meta.
+  adAccountName   String?
+  /// Which conversion the merchant optimizes for — chosen explicitly, never defaulted by the UI.
+  conversionEvent String   @default("Purchase") // Lead | Purchase | Purchase_Confirmed | Purchase_Delivered
+  /// When true, sends carry test_event_code to Meta's test stream instead of production measurement.
+  testMode        Boolean  @default(false)
+  testEventCode   String?
+  enabled         Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([enabled])
+}
+
+/// Claim + outcome ledger for CAPI sends. The UNIQUE (order, stage, event)
+/// triple is the idempotency authority (create-on-conflict claim with a
+/// 10-minute in-flight lease); leaseUntil doubles as the exponential-backoff
+/// due time after a retryable failure.
+model CapiEventLedger {
+  id          String    @id
+  orderId     String
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  eventName   String // Lead | Purchase
+  stage       String // checkout | confirmed | delivered
+  eventId     String // event_id sent to Meta (= orderId) — dedups with the browser pixel
+  status      String    @default("claimed") // claimed | sent | failed | skipped
+  attempts    Int       @default(0)
+  leaseUntil  DateTime?
+  metaEventId String? // fbtrace_id from Meta (success only)
+  lastError   String?
+  triggeredAt DateTime
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([orderId, stage, eventName])
+  @@index([status, leaseUntil])
+  @@index([orderId])
+}
+
+/// Fire-and-forget audit row for every CAPI attempt/outcome. An audit write
+/// failure must never propagate into order or delivery flows.
+model CapiAttemptLog {
+  id        String   @id
+  orderId   String
+  stage     String
+  eventName String
+  attempt   Int
+  status    String // sent | failed | skipped | claimed | expired
+  httpStatus Int?
+  fbtraceId String?
+  error     String?
+  sentAt    DateTime @default(now())
+
+  @@index([orderId, sentAt])
+  @@index([sentAt])
+}

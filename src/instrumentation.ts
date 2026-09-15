@@ -10,6 +10,7 @@ export async function register(): Promise<void> {
     { startConnectedCommandWorker },
     { startConnectedProjectionWorker },
     { startLogRetentionWorker },
+    { startMetaCapiWorker },
   ] = await Promise.all([
     import("./lib/whatsapp/outbox-worker"),
     import("./lib/whatsapp/inbound-worker"),
@@ -20,6 +21,7 @@ export async function register(): Promise<void> {
     import("./lib/connected-platform/remote-command-worker"),
     import("./lib/connected-platform/remote-projection-worker"),
     import("./lib/maintenance/log-retention"),
+    import("./lib/meta/capi-worker"),
   ]);
   startWhatsAppOutboxWorker();
   startWhatsAppInboundWorker();
@@ -30,4 +32,5 @@ export async function register(): Promise<void> {
   startConnectedCommandWorker();
   startConnectedProjectionWorker();
   startLogRetentionWorker();
+  startMetaCapiWorker();
 }

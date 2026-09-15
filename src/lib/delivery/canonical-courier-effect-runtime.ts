@@ -42,6 +42,11 @@ import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
 import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 import { executeCanonicalOrderRecovery } from "@/lib/orders/canonical-order-recovery";
 import {
+  resolveWilayaCodeByName,
+  shouldTriggerCapiPurchase,
+} from "@/lib/meta/capi-conversion";
+import { fireCapiStageForOrder } from "@/lib/meta/capi-triggers";
+import {
   ConflictError,
   NotFoundError,
   SahelFlowError,
@@ -1361,6 +1366,32 @@ export async function synchronizeCanonicalCourierTracking(
     );
     expectedVersion = Number(ingested.result.orderVersion);
     outcomes.push(ingested.result);
+
+    // FD-061 EX-3: fire-and-forget CAPI delivery-stage trigger on the
+    // carrier-truth transition — delivered always qualifies, and the
+    // long-haul wilaya set pre-fires at out_for_delivery to stay inside
+    // Meta's 7-day attribution window. The ledger claim dedups against the
+    // manual fulfillment path, and a CAPI failure can never block tracking
+    // ingestion (the trigger swallows its own errors).
+    const ingestedResult = ingested.result as {
+      orderId: string;
+      providerStatus: string;
+      outOfOrder: boolean;
+    };
+    if (
+      !ingestedResult.outOfOrder &&
+      (ingestedResult.providerStatus === "delivered" ||
+        ingestedResult.providerStatus === "out_for_delivery")
+    ) {
+      const orderRow = await context.prisma.order.findUnique({
+        where: { id: orderId },
+        select: { wilaya: true },
+      });
+      const wilayaCode = resolveWilayaCodeByName(orderRow?.wilaya);
+      if (shouldTriggerCapiPurchase(ingestedResult.providerStatus, wilayaCode)) {
+        void fireCapiStageForOrder(orderId, "delivered", new Date(event.timestamp));
+      }
+    }
   }
 
   return {
