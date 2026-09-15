@@ -279,7 +279,7 @@ describe("order-verified submission matrix", () => {
 
     const rows = await db.productReview.findMany({ where: { orderId: order.id } });
     expect(rows).toHaveLength(1);
-    expect(rows[0].rating).toBe(5);
+    expect(rows[0]?.rating).toBe(5);
   });
 });
 
