@@ -54,7 +54,7 @@
         "AiActionProposal", "AiChatMessage", "AiChatSession", "AuditLog", "AutomationNotification",
         "CollaborationAssignment", "CollaborationComment", "CollaborationHandover", "CollaborationMention",
         "CommerceSyncItem", "Conversation", "Customer", "Delivery", "Message", "Order", "OrderItem",
-        "PhoneReputation", "ProviderIngressEvent", "Return", "ReturnNote", "StorefrontConfig"
+        "PhoneReputation", "ProductReview", "ProviderIngressEvent", "Return", "ReturnNote", "StorefrontConfig"
       ],
       "classification": "personal-data",
       "purpose": "Seller-authorized commerce, support, fulfillment, fraud prevention, AI assistance, seller notifications and accountability.",

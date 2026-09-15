@@ -1,10 +1,12 @@
 import { getI18n } from "@/lib/i18n-server";
 import { storefrontService } from "@/lib/storefront/service";
 import { getAbandonedCartRecoveryStats } from "@/lib/storefront/abandoned-cart-service";
+import { listReviewsForModeration } from "@/lib/storefront/review-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { StorefrontsListClient } from "@/components/storefront/storefronts-list-client";
+import { StorefrontReviewsModeration } from "@/components/storefront/storefront-reviews-moderation";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatDZD } from "@/lib/utils";
 import { Plus, Store } from "lucide-react";
@@ -48,6 +50,8 @@ export default async function StorefrontsPage() {
     prisma: db,
     shop: shopContext,
   });
+  // FD-061 EX-4: the seller's review-moderation queue (pending first).
+  const reviews = await listReviewsForModeration({ prisma: db, shop: shopContext });
 
   return (
     <div className="app-content page-sections">
@@ -93,6 +97,8 @@ export default async function StorefrontsPage() {
           </CardContent>
         </Card>
       )}
+
+      <StorefrontReviewsModeration reviews={reviews} canModerate={canManage} />
 
       {configs.length === 0 ? (
         <Card>

@@ -78,6 +78,10 @@ const PRE_AUTH_ROUTES = new Map<string, string>([
     "Public abandoned-cart capture beacon. Zod-validated, IP rate-limited, best-effort 204; a shopper has no account.",
   ],
   [
+    "/api/storefront/reviews",
+    "Public order-verified review submission. Server-side (orderNumber, phone) verification, one review per order, IP rate-limited; a shopper has no account.",
+  ],
+  [
     "/api/whatsapp/message-status",
     "Provider status callback. Constant-time comparison of the sidecar secret.",
   ],

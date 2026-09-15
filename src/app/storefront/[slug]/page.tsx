@@ -12,6 +12,7 @@ import {
   STOREFRONT_LOCALE_QUERY_PARAM,
 } from "@/lib/i18n/storefront-locale";
 import { storefrontService } from "@/lib/storefront/service";
+import { listPublicStorefrontReviews } from "@/lib/storefront/review-service";
 import { projectPublicStorefrontConfig } from "@/lib/storefront/public-projection";
 
 export const dynamic = "force-dynamic";
@@ -118,10 +119,21 @@ export default async function StorefrontPage({
         })
       : [];
 
+  // FD-061 EX-4: approved order-verified reviews for the storefront's
+  // catalog — the public, order-identity-free projection.
+  const reviews =
+    products.length > 0
+      ? await listPublicStorefrontReviews(
+          { prisma: db, shop: shopContext },
+          { productIds: products.map((product) => product.id) },
+        )
+      : [];
+
   return (
     <StorefrontView
       config={projectPublicStorefrontConfig(config)}
       products={products}
+      reviews={reviews}
       initialLocale={buyerLocale}
     />
   );

@@ -250,3 +250,29 @@ model AbandonedCart {
   @@index([status, capturedAt])
   @@index([storefrontSlug])
 }
+
+/// Order-verified product review (FD-061 EX-4). The UNIQUE orderId is the
+/// research contract: one review per real order. The buyer-facing surface
+/// identifies the order by (orderNumber, phone) — the storefront never
+/// exposes order UUIDs. Moderation lifecycle: pending (default) ->
+/// approved | rejected; only approved reviews are publicly displayed.
+model ProductReview {
+  id             String    @id @default(cuid())
+  orderId        String    @unique
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storefrontSlug String
+  authorName     String
+  /// 1..5, buyer-chosen — never inferred.
+  rating         Int
+  body           String
+  status         String    @default("pending") // pending | approved | rejected
+  submittedAt    DateTime  @default(now())
+  moderatedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([productId, status, submittedAt])
+  @@index([storefrontSlug, status])
+}

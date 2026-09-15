@@ -61,6 +61,7 @@ model Product {
   updatedAt        DateTime   @updatedAt
   productVariants  ProductVariant[]
   orderItems       OrderItem[]
+  productReviews   ProductReview[]
 
   @@unique([sku])
   deletedAt DateTime?  // soft-delete (Phase 2) — null = active
@@ -166,6 +167,8 @@ model Order {
   clientIp        String?
   userAgent       String?
   capiEvents      CapiEventLedger[]
+  // FD-061 EX-4: order-verified reviews — one review per real order.
+  reviews         ProductReview[]
   confirmedAt     DateTime?
   packedAt        DateTime?
   shippedAt       DateTime?
