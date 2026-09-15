@@ -197,9 +197,15 @@ export function deliverySecretKeys(provider: string): string[] {
     case "maystro":
       return [deliverySecretKey("maystro", "apiToken")];
     case "zrexpress":
+      // Legacy/Procolis dialect: apiId (token) + apiKey (key).
+      // New api.zrexpress.app dialect (FD-061 EX-2): apiToken ("API Key")
+      // + tenant ("Tenant ID"). The adapter picks the dialect from the
+      // credential shape; both stay storable side by side.
       return [
         deliverySecretKey("zrexpress", "apiId"),
         deliverySecretKey("zrexpress", "apiKey"),
+        deliverySecretKey("zrexpress", "apiToken"),
+        deliverySecretKey("zrexpress", "tenant"),
       ];
     case "ecotrack":
       return canonicalEcoTrackSecretKeys();

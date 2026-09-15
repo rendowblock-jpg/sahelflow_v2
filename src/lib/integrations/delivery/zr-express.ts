@@ -29,9 +29,11 @@
  *   - Status strings (situation) are French and not fully documented. We map
  *     the known ones and default to "pending" for unknown values.
  *   - The new ZR Express platform (api.zrexpress.app, API Key + Tenant ID) is
- *     not yet publicly documented. This adapter targets the legacy/Procolis
- *     API, which most merchants still use. A future PR can add a new-platform
- *     adapter when docs are available.
+ *     implemented in `zr-express-v2.ts` (FD-061 EX-2, contract extracted from
+ *     the live-proven CodFlow integration @ 00f18fa). This adapter targets
+ *     the legacy/Procolis API and stays the default; the new-platform dialect
+ *     activates automatically when the seller stores apiToken ("API Key") +
+ *     tenant ("Tenant ID") credentials.
  */
 import { env } from "@/lib/env";
 import "server-only";
@@ -49,6 +51,14 @@ import type {
   CancelShipmentResult,
 } from "./types";
 import { retryFetch } from "./retry";
+import {
+  isZrV2Credentials,
+  zrV2CancelShipment,
+  zrV2CreateShipment,
+  zrV2EstimateCost,
+  zrV2SyncTracking,
+  zrV2TestConnection,
+} from "./zr-express-v2";
 
 const ZR_BASE =
   env.zrExpressApiBase || "https://procolis.com/api_v1";
@@ -165,12 +175,18 @@ async function loadPricingTable(
   }
 }
 
+/**
+ * Dialect switch: new-platform credentials (apiToken = "API Key" + tenant =
+ * "Tenant ID") route to the api.zrexpress.app adapter; every other credential
+ * shape keeps the legacy/Procolis behavior below, unchanged.
+ */
 export const zrExpressAdapter: DeliveryAdapter = {
   id: "zrexpress",
   name: "ZR Express",
   logo: "📦",
 
   async testConnection(creds): Promise<{ ok: boolean; message: string }> {
+    if (isZrV2Credentials(creds)) return zrV2TestConnection(creds);
     if (!creds.apiId || !creds.apiKey) {
       return { ok: false, message: "Identifiants ZR Express manquants." };
     }
@@ -204,6 +220,7 @@ export const zrExpressAdapter: DeliveryAdapter = {
     params: { wilaya: string; commune?: string; weight: number; codAmount: number },
     creds: DeliveryCredentials,
   ): Promise<DeliveryCostEstimate> {
+    if (isZrV2Credentials(creds)) return zrV2EstimateCost();
     if (!creds.apiId || !creds.apiKey) {
       return {
         provider: "zrexpress",
@@ -245,6 +262,7 @@ export const zrExpressAdapter: DeliveryAdapter = {
     request: ShipmentRequest,
     creds: DeliveryCredentials,
   ): Promise<ShipmentResult> {
+    if (isZrV2Credentials(creds)) return zrV2CreateShipment(request, creds);
     if (!creds.apiId || !creds.apiKey) {
       return { success: false, trackingId: "", cost: 0, error: "Identifiants ZR Express manquants." };
     }
@@ -362,6 +380,7 @@ export const zrExpressAdapter: DeliveryAdapter = {
     trackingId: string,
     creds: DeliveryCredentials,
   ): Promise<TrackingInfo> {
+    if (isZrV2Credentials(creds)) return zrV2SyncTracking(trackingId, creds);
     if (!creds.apiId || !creds.apiKey) {
       throw new Error("Identifiants ZR Express manquants.");
     }
@@ -424,9 +443,10 @@ export const zrExpressAdapter: DeliveryAdapter = {
   },
 
   async cancelShipment(
-    _trackingId: string,
-    _creds: DeliveryCredentials,
+    trackingId: string,
+    creds: DeliveryCredentials,
   ): Promise<CancelShipmentResult> {
+    if (isZrV2Credentials(creds)) return zrV2CancelShipment(trackingId, creds);
     // W3-11: ZR Express does not support cancellation via the legacy/Procolis
     // API. The seller must cancel from the ZR Express dashboard.
     //

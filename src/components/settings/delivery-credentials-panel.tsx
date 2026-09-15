@@ -80,8 +80,13 @@ const PROVIDERS: ProviderConfig[] = [
     credentialRouteId: "zrexpress",
     name: "ZR Express",
     fields: [
-      { key: "apiId", label: "API ID" },
-      { key: "apiKey", label: "API Key" },
+      // Legacy/Procolis dialect (token + key headers).
+      { key: "apiId", label: "Token — Procolis (legacy)" },
+      { key: "apiKey", label: "Key — Procolis (legacy)" },
+      // New api.zrexpress.app dialect (FD-061 EX-2): X-Api-Key + X-Tenant.
+      // The adapter picks the dialect from the credential shape.
+      { key: "apiToken", label: "API Key — api.zrexpress.app" },
+      { key: "tenant", label: "Tenant ID — api.zrexpress.app" },
     ],
   },
   {
