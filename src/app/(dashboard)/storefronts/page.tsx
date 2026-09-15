@@ -42,7 +42,7 @@ export default async function StorefrontsPage() {
   );
   const canMutate = canManage && canPublish;
   const canDelete = canMutate && canApprove;
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
   const configs = await storefrontService.list({ prisma: db, shop: shopContext });
   const recovery = await getAbandonedCartRecoveryStats({
     prisma: db,
@@ -80,7 +80,7 @@ export default async function StorefrontsPage() {
                   ["storefronts.recovery.converted", recovery.converted],
                   [
                     "storefronts.recovery.lostRevenue",
-                    formatDZD(recovery.estimatedLostRevenue),
+                    formatDZD(recovery.estimatedLostRevenue, locale),
                   ],
                 ] as const
               ).map(([key, value]) => (
