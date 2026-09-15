@@ -36,9 +36,9 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Current protected and signed truth
 
-Protected `main` is best-known `730641b7…` after PR #416 (STR-01 slice 1: the AI composer deck extracted from `ai-decision-canvas.tsx`), on top of #414 (whole-app transformation W1–W6), #413 (Internal.36 publication record), #412 (**Internal.36 / FD-059** release authority), #411 (behavioural UI evidence), #410 (delta reconcile) and #409 (Phase 4 closure authority). Revalidate live state before every write/merge.
+Protected `main` is best-known **`abed8cd2…`** after PR #430 (EX-1: the Yalidine adapter repaired to the live-proven CodFlow contract), on top of #429 (FD-061 CodFlow extraction program adoption), #428 (frontier reconcile to the Internal.37 / FD-060 reality), #427/#426 (STR-01 thread slices 2/1), #425 (canonical formatters + Settings authority surfaces) and #424 (the Internal.37 F-14/F-15 visual repairs), on top of #414 (whole-app transformation W1–W6), #413 (Internal.36 publication record), #412 (**Internal.36 / FD-059** release authority), #411 (behavioural UI evidence), #410 (delta reconcile) and #409 (Phase 4 closure authority). Revalidate live state before every write/merge.
 
-Internal.36 is the latest real signed/published offline package:
+**Internal.37 / FD-060 is the latest signed/published package** (release PR #423 / protected source `cd1114defc59852a8f4a2258147dbe57b7fa4050`, app `1.0.0-internal.37` / MSI `1.0.0.37`, updater-served 2026-09-11; the Founder installed it in place the same day and rejected it visually before campaign conversion — see the header above, `system/CURRENT_STATE.md` and `operations/WORKING_MEMORY.md`). Retained Internal.36 record:
 
 - app `1.0.0-internal.36`;
 - MSI `1.0.0.36`;
@@ -46,8 +46,7 @@ Internal.36 is the latest real signed/published offline package:
 - release PR #412 / protected source `4e527f0549674789b4f679ae7c2368d2520ccb44`;
 - tag `sahelflow-v1.0.0-internal.36-4e527f0549674789b4f679ae7c2368d2520ccb44`;
 - MSI digest `sha256:5d5b03e284327dd2bc9fb4be674719bba8022506a46a7d3518236dc2700ab243`;
-- signed run `34281216710`; publication record PR #413;
-- the source merged after it (#414, #415, #416) rides `main` ahead of the next package and carries no release authority.
+- signed run `34281216710`; publication record PR #413.
 
 Retained signed-checkpoint history (superseded as latest — see `operations/WORKING_MEMORY.md` and `system/CURRENT_STATE.md`):
 
