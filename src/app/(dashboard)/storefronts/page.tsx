@@ -3,12 +3,14 @@ import { storefrontService } from "@/lib/storefront/service";
 import { getAbandonedCartRecoveryStats } from "@/lib/storefront/abandoned-cart-service";
 import { listReviewsForModeration } from "@/lib/storefront/review-service";
 import { listQuantityTierOffers } from "@/lib/storefront/quantity-tier-service";
+import { listLandingPages } from "@/lib/storefront/landing-page-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { StorefrontsListClient } from "@/components/storefront/storefronts-list-client";
 import { StorefrontReviewsModeration } from "@/components/storefront/storefront-reviews-moderation";
 import { StorefrontOffersManager } from "@/components/storefront/storefront-offers-manager";
+import { StorefrontLandingPagesManager } from "@/components/storefront/storefront-landing-pages-manager";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatDZD } from "@/lib/utils";
 import { Plus, Store } from "lucide-react";
@@ -62,6 +64,8 @@ export default async function StorefrontsPage() {
     orderBy: { name: "asc" },
     take: 200,
   });
+  // FD-061 EX-4: per-product landing pages with their live stats.
+  const landingPages = await listLandingPages({ prisma: db, shop: shopContext });
 
   return (
     <div className="app-content page-sections">
@@ -112,6 +116,13 @@ export default async function StorefrontsPage() {
 
       <StorefrontOffersManager
         offers={offers}
+        storefronts={configs.map((config) => ({ slug: config.slug, name: config.name }))}
+        products={offerProducts}
+        canManage={canManage}
+      />
+
+      <StorefrontLandingPagesManager
+        pages={landingPages}
         storefronts={configs.map((config) => ({ slug: config.slug, name: config.name }))}
         products={offerProducts}
         canManage={canManage}

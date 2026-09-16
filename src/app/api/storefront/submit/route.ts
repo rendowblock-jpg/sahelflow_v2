@@ -103,6 +103,15 @@ const submitSchema = z.object({
   deliveryMode: z.enum(["home", "desk"]).default("home"),
   website: z.string().max(1000).optional(),
   "cf-turnstile-response": z.string().max(2048).optional(),
+  // FD-061 EX-4: landing-page attribution — best-effort. An
+  // unknown/draft/archived slug leaves the order unattributed and the
+  // order still succeeds (revenue first, attribution second). Rides the
+  // command's sourceDetails, so checkout replays converge.
+  landingPageSlug: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9-]{3,60}$/)
+    .optional(),
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
@@ -256,7 +265,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       address: input.customer.address,
       phone: input.customer.phone,
       deliveryCost,
-      sourceDetails: { deliveryMode: input.deliveryMode },
+      // FD-061 EX-4: landing-page attribution rides the input-derived
+      // sourceDetails (the research contract's best-effort attribution —
+      // the raw client slug is stored verbatim, so a replay converges even
+      // if the page's published state changed in between).
+      sourceDetails: {
+        deliveryMode: input.deliveryMode,
+        ...(input.landingPageSlug ? { landingPageSlug: input.landingPageSlug } : {}),
+      },
       notes: input.notes,
     },
   );

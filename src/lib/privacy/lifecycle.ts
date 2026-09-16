@@ -100,6 +100,10 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
   Integration: () => db.integration.findMany(),
   InventoryMovement: () => db.inventoryMovement.findMany(),
   InventoryReservation: () => db.inventoryReservation.findMany(),
+  // FD-061 EX-4: per-product landing pages and their image stacks
+  // (confidential-business — marketing content and counters, no buyer PII).
+  LandingPage: () => db.landingPage.findMany(),
+  LandingPageImage: () => db.landingPageImage.findMany(),
   Message: async () => {
     const messages = await db.message.findMany();
     const key = messages.some((message) => message.attachments)
@@ -276,6 +280,11 @@ export async function executeShopErase(
       await tx.capiEventLedger.deleteMany({});
       await tx.metaPixelConfig.deleteMany({});
       await tx.quantityTierOffer.deleteMany({});
+
+      // Landing-page marketing content holds no buyer PII (FD-061 EX-4);
+      // images are children of the page and are cleared first.
+      await tx.landingPageImage.deleteMany({});
+      await tx.landingPage.deleteMany({});
 
       // Abandoned-cart recovery ledger holds prospective-customer contact
       // data (FD-061 EX-4); cleared before the canonical orders.
