@@ -114,6 +114,19 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
+      // FD-061 EX-4: uploaded product images are content-addressed by a
+      // random UUID — a stored file is never rewritten in place, so the
+      // research contract's immutable cache control is safe: browsers may
+      // cache an upload for a year and revalidation never sees drift.
+      {
+        source: "/uploads/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
     ];
   },
 };
