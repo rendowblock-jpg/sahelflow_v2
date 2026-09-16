@@ -128,6 +128,7 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
   OutboxIntent: () => db.outboxIntent.findMany(),
   PhoneReputation: () => db.phoneReputation.findMany(),
   Product: () => db.product.findMany(),
+  ProductReview: () => db.productReview.findMany(),
   ProductVariant: () => db.productVariant.findMany(),
   ProfitabilityCostSnapshot: () =>
     db.profitabilityCostSnapshot.findMany(),
@@ -278,6 +279,10 @@ export async function executeShopErase(
       // Abandoned-cart recovery ledger holds prospective-customer contact
       // data (FD-061 EX-4); cleared before the canonical orders.
       await tx.abandonedCart.deleteMany({});
+
+      // Order-verified reviews hold buyer-authored content (FD-061 EX-4);
+      // child of Order, cleared before the canonical orders.
+      await tx.productReview.deleteMany({});
 
       await tx.canonicalRefundReversal.deleteMany({});
       await tx.canonicalRefund.deleteMany({});

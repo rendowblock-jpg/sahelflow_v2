@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
+  BadgeCheck,
   Check,
   CheckCircle2,
   Loader2,
@@ -13,6 +14,7 @@ import {
   Phone,
   Plus,
   ShoppingCart,
+  Star,
   Trash2,
 } from "lucide-react";
 
@@ -67,6 +69,8 @@ interface CartItem {
 interface StorefrontViewProps {
   config: StorefrontConfig;
   products: StorefrontProduct[];
+  /** FD-061 EX-4: approved order-verified reviews (public projection — never an order UUID). */
+  reviews: StorefrontReview[];
   /**
    * Buyer locale resolved by the storefront RSC
    * (?lang= > sf-storefront-locale cookie > Accept-Language > fr). The
@@ -80,10 +84,34 @@ interface StorefrontViewBodyProps {
   products: StorefrontProduct[];
 }
 
+/** FD-061 EX-4: public review projection (order-identity-free by construction). */
+interface StorefrontReview {
+  id: string;
+  productId: string;
+  productName: string;
+  authorName: string;
+  rating: number;
+  body: string;
+  submittedAt: string;
+}
+
+/**
+ * FD-061 EX-4: review context captured from a successful checkout — the
+ * facts a real buyer holds (order number + their own phone), never an
+ * order UUID.
+ */
+interface ReviewContext {
+  orderNumber: string;
+  phone: string;
+  name: string;
+  items: { productId: string; productName: string }[];
+}
+
 interface SubmitResult {
   ok: boolean;
   message: string;
   orderNumber?: string;
+  review?: ReviewContext;
 }
 
 function cartKey(productId: string, variantId: string | null): string {
@@ -114,6 +142,7 @@ function cartSessionId(storageKey: string): string {
 export function StorefrontView({
   config,
   products,
+  reviews,
   initialLocale,
 }: StorefrontViewProps) {
   return (
@@ -125,12 +154,16 @@ export function StorefrontView({
       <div className="flex justify-end px-4 pt-3">
         <StorefrontLanguageSwitcher />
       </div>
-      <StorefrontViewBody config={config} products={products} />
+      <StorefrontViewBody config={config} products={products} reviews={reviews} />
     </StorefrontLocaleProvider>
   );
 }
 
-function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
+function StorefrontViewBody({
+  config,
+  products,
+  reviews,
+}: StorefrontViewBodyProps & { reviews: StorefrontReview[] }) {
   const { t, locale } = useStorefrontI18n();
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [addedKey, setAddedKey] = useState<string | null>(null);
@@ -446,6 +479,20 @@ function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
           ? data.message ?? localizedSuccess
           : localizedSuccess,
         orderNumber: data.orderNumber,
+        // FD-061 EX-4: capture the review context BEFORE the form resets —
+        // the buyer's own (orderNumber, phone) pair is the review
+        // verification, and the ordered items bound the reviewable products.
+        review: data.orderNumber
+          ? {
+              orderNumber: data.orderNumber,
+              phone,
+              name: form.name.trim(),
+              items: cart.map((item) => ({
+                productId: item.product.id,
+                productName: item.product.name,
+              })),
+            }
+          : undefined,
       });
       setCart([]);
       setForm({
@@ -482,6 +529,13 @@ function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
                 <p className="text-xs text-muted-foreground">{t("storefront.view.orderNumber")}</p>
                 <p className="font-mono text-lg font-bold">{result.orderNumber}</p>
               </div>
+            ) : null}
+            {result.review ? (
+              <OrderReviewForm
+                slug={config.slug}
+                review={result.review}
+                primaryColor={config.theme.primaryColor}
+              />
             ) : null}
             <Button onClick={() => setResult(null)} variant="outline">
               {t("storefront.view.anotherOrder")}
@@ -673,6 +727,265 @@ function StorefrontViewBody({ config, products }: StorefrontViewBodyProps) {
       }}
       renderCheckout={checkout}
       renderSupport={support}
+      renderReviews={
+        reviews.length > 0 ? (
+          <StorefrontReviewsSection reviews={reviews} surfaceColor={draft.theme.surfaceColor} />
+        ) : null
+      }
     />
+  );
+}
+
+/** FD-061 EX-4: five-star picker bound to the review form's rating. */
+function RatingPicker({
+  value,
+  onChange,
+  primaryColor,
+}: {
+  value: number;
+  onChange: (rating: number) => void;
+  primaryColor: string;
+}) {
+  const { t } = useStorefrontI18n();
+  return (
+    <div className="flex items-center gap-1" role="radiogroup" aria-label={t("storefront.view.reviews.ratingLabel")}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          role="radio"
+          aria-checked={value === star}
+          aria-label={t("storefront.view.reviews.ratingAria", { count: star })}
+          onClick={() => onChange(star)}
+          className="rounded-control p-1 transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <Star
+            className="h-6 w-6"
+            style={star <= value ? { color: primaryColor, fill: primaryColor } : { color: "var(--muted-foreground, #9ca3af)" }}
+            aria-hidden="true"
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * FD-061 EX-4: the post-checkout review form on the order-confirmed
+ * screen. Verification rides the buyer's own (orderNumber, phone) pair —
+ * the form never sees an order UUID — and the reviewed product must be one
+ * the order actually contains.
+ */
+function OrderReviewForm({
+  slug,
+  review,
+  primaryColor,
+}: {
+  slug: string;
+  review: ReviewContext;
+  primaryColor: string;
+}) {
+  const { t } = useStorefrontI18n();
+  const [productId, setProductId] = useState(review.items[0]?.productId ?? "");
+  const [rating, setRating] = useState(0);
+  const [body, setBody] = useState("");
+  const [authorName, setAuthorName] = useState(review.name);
+  const [phone, setPhone] = useState(review.phone);
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent): Promise<void> {
+    event.preventDefault();
+    if (!rating || !productId || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/storefront/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          orderNumber: review.orderNumber,
+          phone: normalizeDZPhone(phone),
+          productId,
+          rating,
+          body: body.trim(),
+          authorName: authorName.trim(),
+        }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        code?: string;
+      };
+      if (response.ok && data.ok) {
+        setDone(true);
+        return;
+      }
+      // The storefront owns the localized copy (R4-c): branch on the coded
+      // contract, never on the API's English strings.
+      setError(
+        data.code === "REVIEW_ALREADY_SUBMITTED"
+          ? t("storefront.view.reviews.alreadySubmitted")
+          : data.code === "REVIEW_RATE_LIMITED"
+            ? t("storefront.view.reviews.rateLimited")
+            : t("storefront.view.reviews.verifyFailed"),
+      );
+    } catch {
+      setError(t("storefront.view.error.connectionFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (done) {
+    return (
+      <div className="rounded-surface bg-muted p-3 text-sm" role="status">
+        <p className="flex items-center justify-center gap-1.5 font-medium">
+          <BadgeCheck className="h-4 w-4" style={{ color: primaryColor }} />
+          {t("storefront.view.reviews.successTitle")}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t("storefront.view.reviews.successBody")}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3 rounded-surface border p-3 text-start">
+      <p className="flex items-center justify-center gap-1.5 text-sm font-semibold">
+        <Star className="h-4 w-4" style={{ color: primaryColor }} aria-hidden="true" />
+        {t("storefront.view.reviews.formTitle")}
+      </p>
+      {review.items.length > 1 ? (
+        <div className="space-y-1">
+          <Label htmlFor="review-product">{t("storefront.view.reviews.productLabel")}</Label>
+          <select
+            id="review-product"
+            value={productId}
+            onChange={(event) => setProductId(event.target.value)}
+            className="h-11 w-full rounded-control border bg-background px-3 text-sm"
+          >
+            {review.items.map((item) => (
+              <option key={item.productId} value={item.productId}>
+                {item.productName}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+      <div className="space-y-1">
+        <Label>{t("storefront.view.reviews.ratingLabel")}</Label>
+        <RatingPicker value={rating} onChange={setRating} primaryColor={primaryColor} />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="review-name">{t("storefront.view.fullName")}</Label>
+        <Input
+          id="review-name"
+          required
+          minLength={2}
+          maxLength={100}
+          value={authorName}
+          onChange={(event) => setAuthorName(event.target.value)}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="review-phone">{t("storefront.view.phone")}</Label>
+        <Input
+          id="review-phone"
+          required
+          type="tel"
+          inputMode="tel"
+          dir="ltr"
+          autoComplete="tel-national"
+          value={phone}
+          onChange={(event) => setPhone(formatDZPhone(event.target.value))}
+          placeholder={DZ_PHONE_PLACEHOLDER}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="review-body">{t("storefront.view.reviews.bodyLabel")}</Label>
+        <textarea
+          id="review-body"
+          required
+          maxLength={2000}
+          rows={3}
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          placeholder={t("storefront.view.reviews.bodyPlaceholder")}
+          className="w-full rounded-control border bg-background px-3 py-2 text-sm"
+        />
+      </div>
+      {error ? (
+        <div className="flex items-start gap-2 rounded-control bg-destructive-soft p-2 text-xs text-destructive" role="alert">
+          <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>{error}</span>
+        </div>
+      ) : null}
+      <Button
+        type="submit"
+        disabled={submitting || rating < 1 || !productId}
+        size="sm"
+        className="w-full"
+        style={{ backgroundColor: primaryColor }}
+      >
+        {submitting ? (
+          <><Loader2 className="me-1.5 h-4 w-4 animate-spin" />{t("storefront.view.reviews.submitting")}</>
+        ) : (
+          t("storefront.view.reviews.submit")
+        )}
+      </Button>
+    </form>
+  );
+}
+
+/**
+ * FD-061 EX-4: the public reviews section — approved order-verified
+ * reviews only. The projection is order-identity-free; the "verified
+ * order" badge is presentation, not an order reference.
+ */
+function StorefrontReviewsSection({
+  reviews,
+  surfaceColor,
+}: {
+  reviews: StorefrontReview[];
+  surfaceColor: string;
+}) {
+  const { t } = useStorefrontI18n();
+  return (
+    <section className="py-7" aria-labelledby="storefront-reviews-title">
+      <h2 id="storefront-reviews-title" className="mb-4 text-xl font-semibold tracking-tight">
+        {t("storefront.view.reviews.title")}
+      </h2>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {reviews.map((review) => (
+          <article key={review.id} className="rounded-surface border p-4" style={{ background: surfaceColor }}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-0.5" aria-label={t("storefront.view.reviews.ratingAria", { count: review.rating })}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className="h-3.5 w-3.5"
+                    style={star <= review.rating ? { fill: "currentColor", color: "var(--primary, #16a34a)" } : undefined}
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+              <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                {t("storefront.view.reviews.verifiedBadge")}
+              </span>
+            </div>
+            <p dir="auto" className="mt-2 whitespace-pre-wrap text-sm leading-6">{review.body}</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">{review.authorName}</span>
+              {" · "}
+              {review.productName}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }

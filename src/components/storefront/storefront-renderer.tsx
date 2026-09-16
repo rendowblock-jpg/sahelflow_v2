@@ -35,6 +35,8 @@ export interface StorefrontRendererProps extends StorefrontPreviewProps {
   renderProductFooter?: (product: StorefrontStudioProduct) => React.ReactNode;
   renderCheckout?: React.ReactNode;
   renderSupport?: React.ReactNode;
+  /** FD-061 EX-4: approved order-verified reviews section (public route only). */
+  renderReviews?: React.ReactNode;
   emptyCatalog?: React.ReactNode;
 }
 
@@ -59,6 +61,7 @@ export function StorefrontRenderer({
   renderProductFooter,
   renderCheckout,
   renderSupport,
+  renderReviews,
   emptyCatalog,
 }: StorefrontRendererProps) {
   const { t } = useStorefrontI18n();
@@ -573,6 +576,10 @@ export function StorefrontRenderer({
         }`}
       >
         {theme.builder.composition.sections.map(renderSection)}
+        {/* FD-061 EX-4: approved order-verified reviews ride below the
+            composed sections. Studio previews pass nothing, so the slot is
+            invisible to the seller authoring surface. */}
+        {renderReviews}
       </div>
     </div>
   );
