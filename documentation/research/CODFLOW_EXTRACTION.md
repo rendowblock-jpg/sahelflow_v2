@@ -97,3 +97,7 @@ Yalidine's Cloudflare zone 403-blocks all Cloudflare-Worker-originated traffic (
 - **WhatsApp OTP (dzverify):** `https://api.dzverify.com`, `X-API-Key`; send/verify + quota; anti-abuse 60 s per phone + 20/h per IP (fail-open on limiter errors); provider caps 5/recipient/hour, 200/account/hour; out-of-credits/5xx/network → fail-open with a 15-minute HMAC bypass token; rate-limit violations → no bypass; verified token's phone must equal the order phone.
 - **Order-verified reviews:** one review per real order (unique per order), moderation `pending → approved|rejected`, storefront never exposes order UUIDs.
 - **Quantity-tier offers:** trigger product/variant/quantity → reward product/variant/quantity or free shipping; highest trigger wins; reward stock checked; free-shipping zeroes the fee.
+
+## 7. MCP agentic surface (EX-5 study)
+
+Recorded separately at [`MCP_AGENTIC_SURFACE.md`](./MCP_AGENTIC_SURFACE.md) (2026-09-17): the 96-tool registry, scope-gated visibility, output envelopes + structuredContent, and the annotate-and-trust-client destructive doctrine at the `00f18fac…` pin — mapped as a composition onto SahelFlow's proposal-bound authority (sensitive verbs ride the digest-bound person-only proposal gate; delete verbs do not map). Study only; authorizes nothing.
