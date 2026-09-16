@@ -253,17 +253,20 @@ describe("Inbox Class-AAA operations desk contract", () => {
   });
 
   it("makes status and reviewed AI extraction first-class thread-header actions", () => {
+    // STR-01: the header actions live in the extracted thread-header module.
+    const header = read("src/components/inbox/inbox-thread-header.tsx");
     const thread = read("src/components/inbox/inbox-v3-thread.tsx");
-    expect(thread).toContain("<StatusControl");
-    expect(thread).toContain("conversationId={activeChat.conversationId}");
-    expect(thread).toContain('size="icon-sm"');
-    expect(thread).toContain(
+    expect(thread).toContain("<InboxThreadHeader");
+    expect(header).toContain("<StatusControl");
+    expect(header).toContain("conversationId={activeChat.conversationId}");
+    expect(header).toContain('size="icon-sm"');
+    expect(header).toContain(
       'aria-label={t("inbox.extractOrderProfessionally")}',
     );
-    expect(thread).toContain("<TooltipContent");
+    expect(header).toContain("<TooltipContent");
+    expect(header).toContain("<MessageExtraction");
+    expect(header).toContain("messageId={selectedCandidate.id}");
     expect(thread).not.toContain('className="hidden xl:inline"');
-    expect(thread).toContain("<MessageExtraction");
-    expect(thread).toContain("messageId={selectedCandidate.id}");
     for (const locale of ["en", "fr", "ar"]) {
       expect(read(`src/lib/i18n/locales/${locale}.json`)).toContain(
         '"inbox.aiOrderAssistant"',
