@@ -11,6 +11,7 @@ import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order"
 import { captureOrderPlacement } from "@/lib/meta/capi-placement";
 import { fireCapiStageForOrder } from "@/lib/meta/capi-triggers";
 import { convertAbandonedCart } from "@/lib/storefront/abandoned-cart-service";
+import { evaluateQuantityTierOffers } from "@/lib/storefront/quantity-tier-service";
 import { storefrontService } from "@/lib/storefront/service";
 import { dzPhone } from "@/lib/validation";
 import wilayasData from "../../../../../data/wilayas.json";
@@ -193,6 +194,49 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   if (shippingRules.length > 0 && !shippingRule) {
     return NextResponse.json({ error: "delivery_unavailable" }, { status: 409 });
   }
+
+  // FD-061 EX-4: quantity-tier evaluation is server-authoritative and
+  // deterministic (a pure function of offers + cart + live catalog), so
+  // checkout replays converge under the command idempotency key. A free
+  // product reward rides the sanctioned storefront line-pricing channel
+  // (unitPrice: 0) and free shipping zeroes the fee — both BEFORE the
+  // command, so money truth stays entirely inside the kernel; the client
+  // preview never dictates the reward.
+  const tier = await evaluateQuantityTierOffers(
+    { prisma: db, shop: shopContext },
+    {
+      slug: input.slug,
+      items: input.items.map((item) => ({
+        productId: item.productId,
+        variantId: item.productVariantId ?? null,
+        quantity: item.quantity,
+      })),
+    },
+  );
+  let deliveryCost = shippingRule?.feeDzd ?? 0;
+  const kernelItems: {
+    productId: string;
+    productVariantId: string | null;
+    quantity: number;
+    unitPrice?: number;
+  }[] = input.items.map((item) => ({
+    productId: item.productId,
+    productVariantId: item.productVariantId ?? null,
+    quantity: item.quantity,
+  }));
+  if (tier.applied) {
+    if (tier.reward.type === "free_shipping") {
+      deliveryCost = 0;
+    } else {
+      kernelItems.push({
+        productId: tier.reward.productId,
+        productVariantId: tier.reward.variantId,
+        quantity: tier.reward.quantity,
+        unitPrice: 0,
+      });
+    }
+  }
+
   const command = await createCanonicalSourceOrder(
     {
       prisma: db,
@@ -206,12 +250,12 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       sourceIdentity: config.slug,
       sourceOrderId,
       newCustomer: input.customer,
-      items: input.items,
+      items: kernelItems,
       wilaya: input.customer.wilaya,
       commune: input.customer.commune,
       address: input.customer.address,
       phone: input.customer.phone,
-      deliveryCost: shippingRule?.feeDzd ?? 0,
+      deliveryCost,
       sourceDetails: { deliveryMode: input.deliveryMode },
       notes: input.notes,
     },
@@ -268,6 +312,12 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       orderId: command.result.order.id,
       total: command.result.order.totalPrice,
       replayed: command.replayed,
+      // FD-061 EX-4: echo the earned reward so the confirmation can name it.
+      rewardApplied: tier.applied
+        ? tier.reward.type === "free_shipping"
+          ? { type: "free_shipping" }
+          : { type: "product", productName: tier.reward.productName, quantity: tier.reward.quantity }
+        : null,
       message: "Order placed successfully! The seller will contact you soon.",
     },
     { status: 201 },
