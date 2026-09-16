@@ -150,6 +150,9 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
       orderBy: { key: "asc" },
     }),
   StorefrontConfig: () => db.storefrontConfig.findMany(),
+  // FD-061 EX-4: checkout gate configuration (merchant settings, no PII;
+  // secrets live in the encrypted Secret authority, never here).
+  StorefrontGateConfig: () => db.storefrontGateConfig.findMany(),
   WhatsAppOutboundEffect: () => db.whatsAppOutboundEffect.findMany(),
   WhatsAppTemplate: () => db.whatsAppTemplate.findMany(),
 } as const;
@@ -285,6 +288,10 @@ export async function executeShopErase(
       // images are children of the page and are cleared first.
       await tx.landingPageImage.deleteMany({});
       await tx.landingPage.deleteMany({});
+
+      // Checkout gate configuration (FD-061 EX-4): merchant settings
+      // without secrets (those ride the encrypted Secret authority).
+      await tx.storefrontGateConfig.deleteMany({});
 
       // Abandoned-cart recovery ledger holds prospective-customer contact
       // data (FD-061 EX-4); cleared before the canonical orders.

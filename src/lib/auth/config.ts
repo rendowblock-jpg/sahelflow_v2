@@ -31,6 +31,10 @@ export const PUBLIC_API_ROUTES: readonly string[] = [
   "/api/auth/invitations/accept",
   "/api/health",
   "/api/storefront/submit",
+  // FD-061 EX-4: buyer-facing checkout gates (a shopper has no account).
+  "/api/storefront/gates/public",
+  "/api/storefront/otp/send",
+  "/api/storefront/otp/verify",
   "/api/reports/daily", // self-protects via x-cron-secret
 ];
 

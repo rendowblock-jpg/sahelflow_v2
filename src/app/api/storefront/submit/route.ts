@@ -12,6 +12,11 @@ import { captureOrderPlacement } from "@/lib/meta/capi-placement";
 import { fireCapiStageForOrder } from "@/lib/meta/capi-triggers";
 import { convertAbandonedCart } from "@/lib/storefront/abandoned-cart-service";
 import { evaluateQuantityTierOffers } from "@/lib/storefront/quantity-tier-service";
+import {
+  readTurnstileSecret,
+} from "@/lib/storefront/gates-service";
+import { decideOtpGate } from "@/lib/storefront/otp-service";
+import { decideTurnstileGate } from "@/lib/storefront/turnstile";
 import { storefrontService } from "@/lib/storefront/service";
 import { dzPhone } from "@/lib/validation";
 import wilayasData from "../../../../../data/wilayas.json";
@@ -53,29 +58,6 @@ function isTauriRequest(request: NextRequest): boolean {
   return /tauri/i.test(request.headers.get("user-agent") ?? "");
 }
 
-async function verifyTurnstileToken(
-  token: string,
-  ip: string,
-): Promise<boolean> {
-  const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return true;
-  try {
-    const response = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ secret, response: token, remoteip: ip }),
-        signal: AbortSignal.timeout(5_000),
-      },
-    );
-    const body = (await response.json()) as { success?: boolean };
-    return body.success === true;
-  } catch {
-    return false;
-  }
-}
-
 const submitSchema = z.object({
   slug: z.string().trim().min(1).max(120),
   submissionId: z.string().uuid().optional(),
@@ -103,6 +85,14 @@ const submitSchema = z.object({
   deliveryMode: z.enum(["home", "desk"]).default("home"),
   website: z.string().max(1000).optional(),
   "cf-turnstile-response": z.string().max(2048).optional(),
+  // FD-061 EX-4: WhatsApp OTP verification proof (the 15-minute HMAC token
+  // from /api/storefront/otp/verify, or a bypass token minted when the
+  // provider could not serve the send). Required only when the
+  // storefront's OTP gate is enabled.
+  otpToken: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : value),
+    z.string().min(10).max(1024).optional(),
+  ),
   // FD-061 EX-4: landing-page attribution — best-effort. An
   // unknown/draft/archived slug leaves the order unattributed and the
   // order still succeeds (revenue first, attribution second). Rides the
@@ -155,25 +145,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     );
   }
 
-  if (!isTauriRequest(request) && process.env.TURNSTILE_SECRET_KEY) {
-    const token = input["cf-turnstile-response"]?.trim();
-    if (!token) {
-      return NextResponse.json(
-        {
-          error:
-            "Anti-bot verification required. Please complete the challenge.",
-        },
-        { status: 400 },
-      );
-    }
-    if (!(await verifyTurnstileToken(token, ip))) {
-      return NextResponse.json(
-        { error: "Anti-bot verification failed. Please try again." },
-        { status: 400 },
-      );
-    }
-  }
-
   const config = await storefrontService.getBySlug(
     { prisma: db, shop: shopContext },
     input.slug,
@@ -183,6 +154,63 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       { error: "Storefront not found or inactive" },
       { status: 404 },
     );
+  }
+
+  if (!isTauriRequest(request)) {
+    // FD-061 EX-4: Turnstile gate — per-store config; missing token or
+    // in-band verification failure is fail-closed, transport failure is
+    // fail-open (revenue first); timeout-or-duplicate is the expired copy.
+    const turnstileSecret = await readTurnstileSecret(
+      { prisma: db, shop: shopContext },
+      config.slug,
+    );
+    const turnstile = await decideTurnstileGate(
+      { prisma: db, shop: shopContext },
+      {
+        slug: config.slug,
+        secret: turnstileSecret,
+        token: input["cf-turnstile-response"],
+        ip,
+      },
+    );
+    if (turnstile.action === "fail_closed") {
+      return NextResponse.json(
+        {
+          error:
+            turnstile.code === "TURNSTILE_TOKEN_INVALID" && turnstile.expired
+              ? "Your verification has expired — please retry submitting the order"
+              : "Verification failed — please retry submitting the order",
+          code: turnstile.code,
+        },
+        { status: 403 },
+      );
+    }
+
+    // FD-061 EX-4: WhatsApp OTP gate — verified ("v") or server-attested
+    // bypass ("b") tokens pass; the verified phone must equal the order
+    // phone (both E.164-normalized).
+    const otp = await decideOtpGate(
+      { prisma: db, shop: shopContext },
+      {
+        storefrontSlug: config.slug,
+        orderPhone: input.customer.phone,
+        otpToken: input.otpToken,
+      },
+    );
+    if (otp.action === "fail_closed") {
+      return NextResponse.json(
+        {
+          error:
+            otp.code === "OTP_PHONE_MISMATCH"
+              ? "The verified phone does not match the order's phone number"
+              : otp.code === "OTP_TOKEN_INVALID"
+                ? "Your verification code has expired — request a new one"
+                : "Phone verification is required — request a WhatsApp code and enter it to place your order",
+          code: otp.code,
+        },
+        { status: 403 },
+      );
+    }
   }
 
   const allowedProductIds = new Set(config.productIds);

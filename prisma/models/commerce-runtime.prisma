@@ -372,3 +372,32 @@ model LandingPageImage {
   @@index([landingPageId, position])
   @@index([url])
 }
+
+// ─── FD-061 EX-4 (slice 6): checkout bot/phone gates ─────────────────────────
+// Contracts extracted from CodFlow (github.com/bighadj22/codflow @ 00f18fa,
+// Apache-2.0). Per-storefront checkout gates (the research contract's
+// "per-store config"): Cloudflare Turnstile bot protection and WhatsApp
+// OTP phone verification (dzverify). Missing/disabled config is inert —
+// zero behavior change. Secrets (the dzverify API key, the Turnstile
+// widget secret) never sit in this row: they ride the shop's encrypted
+// Secret authority under per-storefront keys, write-only from the
+// dashboard. Fail-open/fail-closed semantics live in the gate services
+// per documentation/research/CODFLOW_EXTRACTION.md §6.
+
+/// Per-storefront checkout gate configuration (FD-061 EX-4).
+model StorefrontGateConfig {
+  id             String   @id @default(cuid())
+  storefrontSlug String   @unique
+  /// WhatsApp OTP phone verification (dzverify) enabled.
+  otpEnabled     Boolean  @default(false)
+  /// OTP WhatsApp message language: en | fr | ar (provider default ar).
+  otpLanguage    String   @default("ar")
+  /// Cloudflare Turnstile bot protection enabled.
+  turnstileEnabled Boolean @default(false)
+  /// Public widget site key — safe to expose to buyers.
+  turnstileSiteKey String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([storefrontSlug])
+}

@@ -86,6 +86,18 @@ const PRE_AUTH_ROUTES = new Map<string, string>([
     "Public read-only tier-reward preview. Pure evaluation of offers + cart against the live catalog; no writes, no personal data; a shopper has no account.",
   ],
   [
+    "/api/storefront/gates/public",
+    "Public buyer-facing gate probe. Returns booleans and the PUBLIC Turnstile site key only; no secrets, no personal data; a shopper has no account.",
+  ],
+  [
+    "/api/storefront/otp/send",
+    "Public WhatsApp OTP send (dzverify). Zod-validated, IP rate-limited, per-phone/per-IP guards; fail-open answers carry a server-attested HMAC bypass token; a shopper has no account.",
+  ],
+  [
+    "/api/storefront/otp/verify",
+    "Public WhatsApp OTP verify (dzverify). Zod-validated, IP rate-limited; mints the 15-minute HMAC checkout token; a shopper has no account.",
+  ],
+  [
     "/api/whatsapp/message-status",
     "Provider status callback. Constant-time comparison of the sidecar secret.",
   ],
