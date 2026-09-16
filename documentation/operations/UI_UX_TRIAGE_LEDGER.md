@@ -9,8 +9,9 @@
 >
 > **Conversion rule.** Everything here is SOURCE-level on `main`. Nothing is
 > "installed" until it ships in an authorized signed release (latest:
-> Internal.33 / FD-056, Founder-installed 2026-09-03; the #391/#392 lines ride
-> protected `main` and await the next signed successor). Rows move to the
+> Internal.38 / FD-062, published 2026-09-16 and updater-served to the installed
+> Internal.37 — the F-14/F-15 repair line rides inside it and awaits the once-only
+> FD-058 campaign on that installed candidate). Rows move to the
 > capability ledgers only after installed conversion.
 
 Status: `OPEN` · `DONE (source, <ref>)` · `BLOCKED (<reason>)`
@@ -132,7 +133,7 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 
 ## Rules
 
-1. **No row is "closed" until installed conversion** in an authorized signed release (latest: Internal.33). Source-merge ≠ shipped.
+1. **No row is "closed" until installed conversion** in an authorized signed release (latest: Internal.38 / FD-062, published 2026-09-16; installed remains Internal.37 pending the Founder's in-place update). Source-merge ≠ shipped.
 2. Sidecar-probe items (INB-13/14/19/32) need a capability probe + contract revision BEFORE UI work is scheduled.
 3. Contract tests are design law: adaptation goes code-side (see F-01: media direction-neutrality contract enforced by `voice-note-player.test.ts:72`).
 4. New Founder findings get an `F-xx` row with screenshot reference; never fold them silently into INB/AI rows.
