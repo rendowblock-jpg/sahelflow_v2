@@ -307,3 +307,68 @@ model QuantityTierOffer {
   @@index([storefrontSlug, isActive])
   @@index([triggerProductId, isActive])
 }
+
+// ─── FD-061 EX-4 (slice 5): per-product landing pages ────────────────────────
+// Contracts extracted from CodFlow (github.com/bighadj22/codflow @ 00f18fa,
+// Apache-2.0). A per-product marketing page: immutable image stack with a
+// single spacing setting, views counter, attributed orders and stats
+// (orders / revenue = product price only / CVR = orders ÷ views, null at
+// zero views), sibling comparison per product instead of formal A/B
+// experiments. A duplicate is a fresh draft with zeroed counters whose
+// image rows SHARE the same immutable upload objects; image deletes are
+// reference-counted so a shared object is only removed at its last
+// landing-page reference. Attribution rides the order's
+// sourceDetails.landingPageSlug (input-derived, so checkout replays
+// converge under the command idempotency key) — the Order model is not
+// modified. The productId reference is live-validated at use (the
+// AbandonedCart/QuantityTierOffer precedent — no FK chains on
+// configuration surfaces).
+
+/// Per-product landing page (FD-061 EX-4). Lifecycle: draft -> published
+/// (public at /storefront/<slug>/lp/<page>) -> archived; unpublish returns
+/// to draft. Deletion is guarded: a page with attributed orders cannot be
+/// deleted (archive it instead so history stays intact).
+model LandingPage {
+  id             String    @id @default(cuid())
+  storefrontSlug String
+  productId      String
+  /// Public URL identity — unique across the shop, immutable for life.
+  slug           String    @unique
+  name           String
+  /// draft | published | archived
+  status         String    @default("draft")
+  /// Pixels between stacked images — the only spacing setting.
+  imageGap       Int       @default(0)
+  metaTitle      String?
+  metaDescription String?
+  views          Int       @default(0)
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  images LandingPageImage[]
+
+  @@index([storefrontSlug, status])
+  @@index([productId])
+}
+
+/// One image of a landing page's stack (FD-061 EX-4). `url` is the
+/// content-addressed immutable /uploads/ object — duplicates reference the
+/// SAME object, so a delete only unlinks the file at its last
+/// landing-page reference (reference-counted deletes). Intrinsic width /
+/// height are optional and fail-open: an image without dimensions still
+/// renders, the page just cannot reserve its layout space.
+model LandingPageImage {
+  id            String      @id @default(cuid())
+  landingPageId String
+  landingPage   LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
+  url           String
+  altText       String?
+  position      Int         @default(1)
+  width         Int?
+  height        Int?
+  createdAt     DateTime    @default(now())
+
+  @@index([landingPageId, position])
+  @@index([url])
+}
