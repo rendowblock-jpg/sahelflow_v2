@@ -102,7 +102,7 @@
         "CodCollection", "CodCollectionCorrection", "CodSettlement", "CodSettlementCorrection", "CodSettlementLine",
         "CodSettlementLineMatch", "CollaborationQueue", "CollaborationWorkgroup", "CollaborationWorkgroupMember",
         "Counter", "Expense", "FinancialMovement", "Integration", "InventoryMovement", "InventoryReservation",
-        "LandingPage", "LandingPageImage", "MetaPixelConfig", "OrderChange", "Product", "ProductVariant", "ProfitabilityCostSnapshot", "QuantityTierOffer", "Refund", "Setting", "WhatsAppTemplate"
+        "LandingPage", "LandingPageImage", "MetaPixelConfig", "OrderChange", "Product", "ProductVariant", "ProfitabilityCostSnapshot", "QuantityTierOffer", "Refund", "Setting", "StorefrontGateConfig", "WhatsAppTemplate"
       ],
       "classification": "confidential-business",
       "purpose": "Catalog, inventory, COD accounting, returns, automations, provider configuration and operational business truth.",

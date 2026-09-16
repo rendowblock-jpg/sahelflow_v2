@@ -11,6 +11,7 @@ import { StorefrontsListClient } from "@/components/storefront/storefronts-list-
 import { StorefrontReviewsModeration } from "@/components/storefront/storefront-reviews-moderation";
 import { StorefrontOffersManager } from "@/components/storefront/storefront-offers-manager";
 import { StorefrontLandingPagesManager } from "@/components/storefront/storefront-landing-pages-manager";
+import { StorefrontGatesManager } from "@/components/storefront/storefront-gates-manager";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatDZD } from "@/lib/utils";
 import { Plus, Store } from "lucide-react";
@@ -125,6 +126,11 @@ export default async function StorefrontsPage() {
         pages={landingPages}
         storefronts={configs.map((config) => ({ slug: config.slug, name: config.name }))}
         products={offerProducts}
+        canManage={canManage}
+      />
+
+      <StorefrontGatesManager
+        storefronts={configs.map((config) => ({ slug: config.slug, name: config.name }))}
         canManage={canManage}
       />
 

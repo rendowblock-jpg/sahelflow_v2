@@ -25,6 +25,10 @@ import {
   StorefrontLocaleProvider,
   useStorefrontI18n,
 } from "@/components/storefront/storefront-locale-provider";
+import {
+  StorefrontCheckoutGates,
+  useStorefrontGates,
+} from "@/components/storefront/storefront-checkout-gates";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -196,6 +200,12 @@ function StorefrontViewBody({
     website: "",
     deliveryMode: "home" as "home" | "desk",
   });
+  // FD-061 EX-4: per-storefront checkout gates (Turnstile + WhatsApp OTP).
+  // Disabled gates render nothing and block nothing; enabled gates must
+  // produce tokens BEFORE the submit — the server re-decides authoritatively.
+  const gates = useStorefrontGates(config.slug);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [otpToken, setOtpToken] = useState<string | null>(null);
 
   const draft = useMemo(() => createStorefrontStudioDraft(config), [config]);
   const productById = useMemo(
@@ -502,9 +512,13 @@ function StorefrontViewBody({
           notes: form.notes.trim() || undefined,
           deliveryMode: form.deliveryMode,
           website: form.website,
-          "cf-turnstile-response": (
-            window as unknown as { __TURNSTILE_TOKEN__?: string }
-          ).__TURNSTILE_TOKEN__,
+          // FD-061 EX-4: gate proofs — the Turnstile widget token and the
+          // 15-minute OTP HMAC token. Required only when the storefront's
+          // gates are enabled; the server re-decides authoritatively.
+          "cf-turnstile-response":
+            turnstileToken ??
+            (window as unknown as { __TURNSTILE_TOKEN__?: string }).__TURNSTILE_TOKEN__,
+          otpToken: otpToken ?? undefined,
         }),
       });
       const data = (await response.json().catch(() => ({}))) as {
@@ -512,9 +526,18 @@ function StorefrontViewBody({
         message?: string;
         orderNumber?: string;
         error?: string;
+        code?: string;
         rewardApplied?: TierPreview["reward"];
       };
       if (!response.ok || !data.ok) {
+        // FD-061 EX-4: a coded gate rejection means a token expired or a
+        // verification fell out of sync — drop the local tokens so the
+        // buyer re-verifies instead of resending a dead proof.
+        if (data.code && (data.code.startsWith("TURNSTILE_") || data.code.startsWith("OTP_"))) {
+          setTurnstileToken(null);
+          setOtpToken(null);
+          (window as unknown as { __TURNSTILE_TOKEN__?: string }).__TURNSTILE_TOKEN__ = undefined;
+        }
         setResult({
           ok: false,
           message: data.error === "delivery_unavailable"
@@ -737,6 +760,14 @@ function StorefrontViewBody({
                   <span>{result.message}</span>
                 </div>
               ) : null}
+              <StorefrontCheckoutGates
+                gates={gates}
+                slug={config.slug}
+                phone={form.phone}
+                otpToken={otpToken}
+                onTurnstileToken={setTurnstileToken}
+                onOtpToken={setOtpToken}
+              />
               <Button type="submit" disabled={submitting} className="w-full" style={{ backgroundColor: config.theme.primaryColor }}>
                 {submitting ? (
                   <><Loader2 className="me-1.5 h-4 w-4 animate-spin" />{t("storefront.view.sending")}</>
