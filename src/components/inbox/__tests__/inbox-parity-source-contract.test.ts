@@ -79,13 +79,16 @@ describe("WhatsApp Inbox parity source slice", () => {
 
   it("marks unread without reducing an existing inbound unread count", () => {
     const route = source("src/app/api/conversations/[id]/unread/route.ts");
+    // STR-01: the mark-unread affordance lives in the extracted header module.
+    const header = source("src/components/inbox/inbox-thread-header.tsx");
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
     const queue = source("src/hooks/inbox/use-inbox-chat-queue.ts");
 
     expect(route).toContain("where: { id, unreadCount: 0 }");
     expect(route).toContain("data: { unreadCount: { increment: 1 } }");
-    expect(thread).toContain('copy("markUnread")');
-    expect(thread).toContain("if (updated) onBackToQueue()");
+    expect(thread).toContain("<InboxThreadHeader");
+    expect(header).toContain('copy("markUnread")');
+    expect(header).toContain("if (updated) onBackToQueue()");
     expect(queue).toContain("explicitUnreadHoldRef");
     expect(queue).toContain("readStateWriteQueueRef");
     expect(queue).toContain("messageLoadGenerationRef.current += 1");

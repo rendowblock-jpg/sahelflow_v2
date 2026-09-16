@@ -63,6 +63,8 @@ describe("Inbox final review invariants", () => {
   it("clears the mobile conversation URL before clearing active thread state", () => {
     const workspace = source("src/components/inbox/inbox-v3-workspace.tsx");
     const thread = source("src/components/inbox/inbox-v3-thread.tsx");
+    // STR-01: the mobile back affordance lives in the extracted header module.
+    const header = source("src/components/inbox/inbox-thread-header.tsx");
 
     expect(workspace).toContain(
       "const [returningToQueue, setReturningToQueue] = useState(false)",
@@ -72,7 +74,7 @@ describe("Inbox final review invariants", () => {
     expect(workspace).toContain("clearActiveChat();");
     expect(workspace).toContain("onBackToQueue={handleBackToQueue}");
     expect(thread).toContain("onBackToQueue: () => void");
-    expect(thread).toContain("onClick={onBackToQueue}");
+    expect(header).toContain("onClick={onBackToQueue}");
     expect(thread).not.toContain("onClick={clearActiveChat}");
   });
 

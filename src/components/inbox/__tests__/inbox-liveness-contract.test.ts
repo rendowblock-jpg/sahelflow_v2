@@ -134,13 +134,17 @@ describe("Inbox liveness (R4-a) contract", () => {
   });
 
   it("falls back to a last-active hint in the thread header (no sidecar presence)", () => {
-    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
-    expect(thread).toContain("ThreadLastActive");
-    expect(thread).toContain("LAST_ACTIVE_MIN_IDLE_MS = 5 * 60_000");
-    expect(thread).toContain('data-inbox-last-active="true"');
+    // STR-01: the liveness cluster lives in the extracted thread-header module.
+    const header = read("src/components/inbox/inbox-thread-header.tsx");
+    expect(header).toContain("ThreadLastActive");
+    expect(header).toContain("LAST_ACTIVE_MIN_IDLE_MS = 5 * 60_000");
+    expect(header).toContain('data-inbox-last-active="true"');
     // The hint derives from the persisted lastMessageAt, never a presence event.
-    expect(thread).toContain("activeChat.lastMessageAt");
-    expect(thread).toContain("inbox.liveness.lastActive");
+    expect(header).toContain("activeChat.lastMessageAt");
+    expect(header).toContain("inbox.liveness.lastActive");
+    // The thread composes the header seam.
+    const thread = read("src/components/inbox/inbox-v3-thread.tsx");
+    expect(thread).toContain("<InboxThreadHeader");
     // The socket layer has no presence contract to lean on.
     const socketTypes = read("src/lib/whatsapp/types.ts");
     expect(socketTypes).not.toMatch(/presence|typing|composing/i);

@@ -31,12 +31,16 @@ describe("Class-AAA Inbox composition contract", () => {
   });
 
   it("keeps the common desktop path two-pane and mounts context only at its active breakpoint", () => {
+    // STR-01: the context sheet rides the extracted thread-header module.
     const thread = read("src/components/inbox/inbox-v3-thread.tsx");
+    const header = read("src/components/inbox/inbox-thread-header.tsx");
     expect(thread).toContain("InboxCustomerWorkPanel");
     expect(thread).toContain("key={activeChat.conversationId}");
-    expect(thread).toContain("<Sheet>");
-    expect(thread).toContain('side="end"');
+    expect(thread).toContain("<InboxThreadHeader");
+    expect(header).toContain("<Sheet>");
+    expect(header).toContain('side="end"');
     expect(thread).not.toContain('side={locale === "ar" ? "left" : "right"}');
+    expect(header).not.toContain('side={locale === "ar" ? "left" : "right"}');
     expect(thread).not.toContain('className="min-[1500px]:hidden"');
   });
 
@@ -78,6 +82,7 @@ describe("Class-AAA Inbox composition contract", () => {
     const hook = read("src/hooks/inbox/use-inbox-thread.ts");
     const workspace = read("src/components/inbox/inbox-v3-workspace.tsx");
     const thread = read("src/components/inbox/inbox-v3-thread.tsx");
+    const header = read("src/components/inbox/inbox-thread-header.tsx");
 
     expect(hook).toContain("messages?limit=200");
     expect(hook).toContain("isNearBottomRef");
@@ -85,7 +90,8 @@ describe("Class-AAA Inbox composition contract", () => {
     expect(workspace).toContain("!isMobile || activeChat");
     expect(workspace).toContain("onBackToQueue={handleBackToQueue}");
     expect(thread).toContain("onBackToQueue: () => void");
-    expect(thread).toContain("onClick={onBackToQueue}");
+    // The mobile back affordance rides the header seam.
+    expect(header).toContain("onClick={onBackToQueue}");
     expect(thread).not.toContain("clearActiveChat");
   });
 
