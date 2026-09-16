@@ -258,7 +258,7 @@ function LandingPageBody({
 
       <section className="mt-6">
         <h1 className="text-2xl font-semibold">{page.product.name}</h1>
-        <p className="mt-1 text-xl font-semibold text-primary">{formatDZD(unitPrice)}</p>
+        <p className="mt-1 text-xl font-semibold text-primary">{formatDZD(unitPrice, locale)}</p>
         {available ? null : (
           <p className="mt-1 text-sm font-medium text-destructive">
             {t("storefront.view.landing.soldOut")}
@@ -398,11 +398,11 @@ function LandingPageBody({
               <Truck className="size-4" aria-hidden="true" />
               {t("storefront.view.shipping")}
             </span>
-            <span>{formatDZD(shippingDzd)}</span>
+            <span>{formatDZD(shippingDzd, locale)}</span>
           </div>
           <div className="flex items-center justify-between font-semibold">
             <span>{t("storefront.view.total")}</span>
-            <span>{formatDZD(total)}</span>
+            <span>{formatDZD(total, locale)}</span>
           </div>
         </div>
 
