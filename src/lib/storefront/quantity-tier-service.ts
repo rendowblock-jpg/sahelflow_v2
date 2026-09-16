@@ -25,38 +25,44 @@ import { z } from "zod";
 
 import type { ServiceContext } from "@/lib/data/service-base";
 
-export const offerSchema = z
-  .object({
-    storefrontSlug: z.string().trim().min(1).max(120),
-    triggerProductId: z.string().trim().min(1).max(100),
-    triggerVariantId: z.string().trim().min(1).max(100).nullable().optional(),
-    triggerQuantity: z.number().int().min(2).max(999),
-    rewardType: z.enum(["product", "free_shipping"]),
-    rewardProductId: z.string().trim().min(1).max(100).nullable().optional(),
-    rewardVariantId: z.string().trim().min(1).max(100).nullable().optional(),
-    rewardQuantity: z.number().int().min(1).max(999).nullable().optional(),
-    isActive: z.boolean().optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.rewardType === "product") {
-      if (!value.rewardProductId) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["rewardProductId"],
-          message: "A product reward requires a reward product",
-        });
-      }
-      if (!value.rewardQuantity) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["rewardQuantity"],
-          message: "A product reward requires a reward quantity",
-        });
-      }
-    }
-  });
+export const offerBaseSchema = z.object({
+  storefrontSlug: z.string().trim().min(1).max(120),
+  triggerProductId: z.string().trim().min(1).max(100),
+  triggerVariantId: z.string().trim().min(1).max(100).nullable().optional(),
+  triggerQuantity: z.number().int().min(2).max(999),
+  rewardType: z.enum(["product", "free_shipping"]),
+  rewardProductId: z.string().trim().min(1).max(100).nullable().optional(),
+  rewardVariantId: z.string().trim().min(1).max(100).nullable().optional(),
+  rewardQuantity: z.number().int().min(1).max(999).nullable().optional(),
+  isActive: z.boolean().optional(),
+});
 
-export type OfferInput = z.infer<typeof offerSchema>;
+export type OfferInput = z.infer<typeof offerBaseSchema>;
+
+/**
+ * The full create contract. The refinement lives here and NOT on the base
+ * schema: `.partial()` cannot be used on object schemas containing
+ * refinements, so the PATCH route composes its update schema from the
+ * refinement-free base.
+ */
+export const offerSchema = offerBaseSchema.superRefine((value, ctx) => {
+  if (value.rewardType === "product") {
+    if (!value.rewardProductId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["rewardProductId"],
+        message: "A product reward requires a reward product",
+      });
+    }
+    if (!value.rewardQuantity) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["rewardQuantity"],
+        message: "A product reward requires a reward quantity",
+      });
+    }
+  }
+});
 
 /** The cart items as the storefront checkout sends them. */
 export interface CartItemQuantity {

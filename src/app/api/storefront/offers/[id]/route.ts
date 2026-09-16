@@ -7,11 +7,16 @@ import {
   requireTrustedAction,
   trustedActorAuditIdentity,
 } from "@/lib/identity/authorization";
-import { offerSchema } from "@/lib/storefront/quantity-tier-service";
+import {
+  offerBaseSchema,
+} from "@/lib/storefront/quantity-tier-service";
 
 export const dynamic = "force-dynamic";
 
-const updateSchema = offerSchema.partial();
+// Composed from the refinement-free base: `.partial()` cannot be used on
+// object schemas containing refinements (a Next build page-data
+// collection failure, not a type error).
+const updateSchema = offerBaseSchema.partial();
 
 /**
  * FD-061 EX-4: seller mutation of one quantity-tier offer.
