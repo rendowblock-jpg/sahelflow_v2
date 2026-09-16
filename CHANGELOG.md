@@ -8,11 +8,12 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
-### 2026-09-16 — FD-062 adopted: Internal.38 signed successor authorized (release in flight)
+### 2026-09-16 — signed Internal.38 publication (FD-062)
 
 - The Founder's 2026-09-16 directive ("let's complete all the work and make the next signed release") adopts **FD-062** (`documentation/product/DECISIONS.md`): one signed successor, app `1.0.0-internal.38` / MSI `1.0.0.38`, packaging the protected-main frontier #424–#450 since Internal.37 (release source `cd1114de…`).
 - The packaged line: #424 Internal.37 Founder visual repair (F-14 inbox, F-15 canvas-first Agents — the source repair for the recorded 2026-09-11 installed rejection); #425 canonical money/phone formatters + change-pin/shop-lifecycle Settings authority; #426/#427/#450 STR-01 `inbox-v3-thread` seams 1–3 (message bubble 559 lines, view-state hook 229 lines, thread header cluster 332 lines — thread 2,238 → 1,283); #429–#449 the complete FD-061 CodFlow extraction register (EX-1 Yalidine 36-status truth, EX-2 ZR Express + EcoTrack, EX-3 Meta Pixel + Conversions API engine, EX-4 storefront slices 1–6 — abandoned-cart recovery, order-verified reviews, quantity-tier offers, WebP pipeline, per-product landing pages, Turnstile + WhatsApp OTP checkout gates — EX-5 MCP study, EX-6 control-plane deployment playbook).
 - Sequencing per FD-062: the FD-058 combined campaign executes once on the installed Internal.38 candidate (supersedes FD-060's candidate choice only); ledger rows convert only on that installed observation; the retained #306 logout row executes LAST; the chat-transited GitHub PAT rotates after the merge window. No customer-online, Beta, Stable or paid-deployment authority is created.
+- Publication: release PR #451 merged by expected-head squash `9bf89927…` after its head passed the FULL release battery (21 checks / 0 failed incl. installed-MSI evidence); certification cited product head `faf7f184…` (tree `be712df9…` tree-identical to the reviewed #450 head; CI `35133829685`, Phase 5 `35133829343`, Phase 6-7 `35133829347`); signed build run `35141403431` success (attempt 2; the recorded attempt-1 transient was an EBUSY temp-dir cleanup race in the staged-runtime smoke AFTER all readiness verifications passed — failed-jobs-only re-run, evidence recorded first); tag `sahelflow-v1.0.0-internal.38-9bf899274074f6f20935d224b96e8b1d14fc9690`; published 2026-09-16T20:25:03Z; updater `latest.json` serves `1.0.0-internal.38` to the installed Internal.37.
 
 ### 2026-08-31 — signed Internal.31 publication (FD-053)
 
