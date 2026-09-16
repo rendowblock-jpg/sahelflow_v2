@@ -26,7 +26,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   });
   const pages = await compareLandingPages(
     { prisma: db, shop: shopContext },
-    input,
+    { storefrontSlug: input.slug, productId: input.productId },
   );
   return NextResponse.json({ pages });
 }, "GET /api/storefront/landing-pages/compare");

@@ -80,6 +80,7 @@ function baseInput(overrides: Record<string, unknown> = {}) {
     storefrontSlug: SLUG,
     productId: "product-1",
     name: "Summer offer",
+    imageGap: 0,
     ...overrides,
   };
 }
@@ -354,7 +355,7 @@ describe("landing page images", () => {
 
     await reorderLandingPageImages(context(), {
       landingPageId: page.id,
-      imageIds: [images[1].id, images[0].id],
+      imageIds: [images[1]!.id, images[0]!.id],
     });
     const reordered = await db.landingPageImage.findMany({
       where: { landingPageId: page.id },
@@ -368,13 +369,13 @@ describe("landing page images", () => {
     await expect(
       reorderLandingPageImages(context(), {
         landingPageId: page.id,
-        imageIds: [images[0].id, images[0].id],
+        imageIds: [images[0]!.id, images[0]!.id],
       }),
     ).rejects.toMatchObject({ code: "LANDING_PAGE_IMAGE_REORDER_INVALID" });
     await expect(
       reorderLandingPageImages(context(), {
         landingPageId: page.id,
-        imageIds: [images[0].id],
+        imageIds: [images[0]!.id],
       }),
     ).rejects.toMatchObject({ code: "LANDING_PAGE_IMAGE_REORDER_INVALID" });
   });

@@ -481,7 +481,8 @@ function LandingPageImageEditor({
     const target = index + direction;
     if (target < 0 || target >= images.length) return;
     const next = [...images];
-    const [moved] = next.splice(index, 1);
+    const moved = next.splice(index, 1)[0];
+    if (!moved) return;
     next.splice(target, 0, moved);
     setImages(next);
     setBusy(true);
