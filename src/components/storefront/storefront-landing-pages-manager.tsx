@@ -292,7 +292,7 @@ export function StorefrontLandingPagesManager({ pages, storefronts, products, ca
                           </td>
                           <td className="py-2 tabular-nums">{t("storefronts.landing.views")}: {page.stats.views}</td>
                           <td className="py-2 tabular-nums">{t("storefronts.landing.orders")}: {page.stats.orders}</td>
-                          <td className="py-2 tabular-nums">CVR: {formatPercent(page.stats.conversionRate)}</td>
+                          <td className="py-2 tabular-nums">{t("storefronts.landing.cvr")}: {formatPercent(page.stats.conversionRate)}</td>
                           <td className="py-2 text-end tabular-nums">{formatDZD(page.stats.revenue, locale)}</td>
                         </tr>
                       ))}
