@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-26
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.37 / FD-060 is the latest signed/published (Founder-installed 2026-09-11 and visually rejected before campaign conversion — F-14/F-15, repaired at source by merged #424 which converts no row) — it packages the #413–#422 frontier (whole-app transformation W1–W6, the STR-01 canvas slices, TEST-01 behavioural evidence, SEC-01/SEC-02 closure) with FD-060 sequencing (Internal.35/.36 skipped): the FD-058 campaign rows remain unconverted after the recorded Internal.37 visual rejection; next is evidence reconciliation plus the Founder's packaging decision for observing the merged repair line, then FRC-3 resume; the merged #424–#426 delta and open PR #427 ride protected `main` (best-known `9f1a58a…`) and receive their first installed/Founder observation on the next signed package
+> **Current checkpoint:** Internal.38 / FD-062 is the latest signed/published (2026-09-16, updater-served to the installed Internal.37; the Founder in-place update is pending) — authorized by the Founder's 2026-09-16 directive, it packages the complete #424–#450 frontier (F-14/F-15 repairs, canonical formatters + Settings authority, STR-01 inbox-v3-thread slices 1–3 incl. the header seam, and the terminal FD-061 CodFlow register EX-0…EX-6): the FD-058 campaign rows remain unconverted (the Internal.37 observation was a visual rejection before conversion); next is the Founder's in-place Internal.38 update through the normal updater, the once-only FD-058 campaign on the installed Internal.38 candidate, then FRC-3 resume; protected `main` is best-known `486e0163…` after PR #452 (the publication record)
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -59,7 +59,7 @@ Operational rules:
 - issue bodies can retain evidence/work queues but do not replace active documentation authority;
 - source, signed artifact, hosted CI install, Founder install, live-provider evidence, representative beta and Stable are distinct truth levels.
 
-Current signed authority is Internal.35 / `1.0.0-internal.35` / MSI `1.0.0.35` / FD-058 / `founder-offline-only` (published 2026-09-06; Founder installation pending, installed remains Internal.34 — it packages #396/#397). FD-045/FD-058 change execution strategy and timing only; they do not create customer-online, Beta or Stable authority.
+Current signed authority is Internal.38 / `1.0.0-internal.38` / MSI `1.0.0.38` / FD-062 / `founder-offline-only` (published 2026-09-16; updater-served, Founder in-place update pending — installed remains Internal.37; it packages the #424–#450 frontier). FD-045/FD-062 change execution strategy and timing only; they do not create customer-online, Beta or Stable authority.
 
 ## 3. Complete phase/package audit
 

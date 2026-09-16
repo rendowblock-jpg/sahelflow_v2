@@ -1,12 +1,12 @@
 # SahelFlow — Final Roadmap
 
 > **Status:** Active dependency/completion program
-> **Last reconciled:** 2026-09-09 (protected `main` resolved live at `29987b0…`; re-resolve before acting)
+> **Last reconciled:** 2026-09-16 (protected `main` resolved live at `486e0163…`; re-resolve before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** resolve from GitHub before action; `29987b0…` after PR #414 (whole-app transformation W1–W6: interface system authority, primitive layer, FN-01 shop creation, SEC-01 dependency remediation, SEC-02 enforced coverage) on top of #413 (Internal.36 FD-059 publication record), #412 (Internal.36 FD-059 release authority), #411 (behavioural UI evidence on the agents surface), docs-only #410, #409 (Phase 4 closure authority green), #408, #406, #405, docs-only #404, #403, #402, docs-only #401, #400, #399 and release-authority #398
-> **Latest signed/published checkpoint:** Internal.37 / FD-060 (published 2026-09-11; tag `sahelflow-v1.0.0-internal.37-cd1114de…`; Founder-installed 2026-09-11, visually rejected before campaign conversion)
-> **Latest Founder-installed checkpoint:** Internal.37 / FD-060 (installed in place 2026-09-11) — resolve from `../operations/WORKING_MEMORY.md` before any installed claim; the visual rejection preceded campaign conversion, so no row converted
-> **Current execution mode:** the installed Internal.37 was visually rejected before campaign conversion (F-14/F-15, repaired at source by #424); the FD-058 campaign rows (F-05 residual, F-09..F-13, retained FD-050 rows, D3 waves, applicable #316/#317 native rows, retained #306 rows with the logout row LAST) convert only on an installed observation that also carries the merged repair line — a packaging decision that belongs to the Founder. FRC-3 then resumes in the Founder-directed order A→D→C→B (ledgers: `../operations/WORKING_MEMORY.md`, `../operations/UI_UX_TRIAGE_LEDGER.md`, `../operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md`). The chat-transited GitHub PAT is rotated now that the #424–#427 merge window has closed. The transformation program runs in parallel at source level only (`../operations/TRANSFORMATION_HANDOFF.md`).
+> **Live protected main:** resolve from GitHub before action; `486e0163…` after PR #452 (the Internal.38 / FD-062 publication record) on top of #451 (Internal.38 / FD-062 release authority), #450 (STR-01 slice 3 — the thread header cluster extracted into `inbox-thread-header.tsx`) and #449 (EX-6 control-plane deployment playbook §8; the FD-061 CodFlow extraction register fully terminal), completing the #424–#450 frontier packaged by FD-062, on top of #414 (whole-app transformation W1–W6: interface system authority, primitive layer, FN-01 shop creation, SEC-01 dependency remediation, SEC-02 enforced coverage) on top of #413 (Internal.36 FD-059 publication record), #412 (Internal.36 FD-059 release authority), #411 (behavioural UI evidence on the agents surface), docs-only #410, #409 (Phase 4 closure authority green), #408, #406, #405, docs-only #404, #403, #402, docs-only #401, #400, #399 and release-authority #398
+> **Latest signed/published checkpoint:** Internal.38 / FD-062 (published 2026-09-16; tag `sahelflow-v1.0.0-internal.38-9bf89927…`; updater-served to the installed Internal.37; not yet Founder-installed)
+> **Latest Founder-installed checkpoint:** Internal.37 / FD-060 (installed in place 2026-09-11, visually rejected before campaign conversion — no row converted) — resolve from `../operations/WORKING_MEMORY.md` before any installed claim; unchanged by the published Internal.38, whose in-place update is the next Founder action
+> **Current execution mode:** the Internal.37 visual rejection (F-14/F-15, repaired at source by #424) is now packaged: Internal.38 / FD-062 (published 2026-09-16) carries the merged repair line and the complete #424–#450 frontier. The FD-058 campaign rows (F-05 residual, F-09..F-13, retained FD-050 rows, D3 waves, applicable #316/#317 native rows, retained #306 rows with the logout row LAST) convert only on an installed observation of that candidate — the next Founder action is the in-place Internal.38 update through the normal updater, then the once-only campaign. FRC-3 then resumes in the Founder-directed order A→D→C→B (ledgers: `../operations/WORKING_MEMORY.md`, `../operations/UI_UX_TRIAGE_LEDGER.md`, `../operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md`). The chat-transited GitHub PAT is rotated after this merge window closes. The transformation program runs in parallel at source level only (`../operations/TRANSFORMATION_HANDOFF.md`).
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 
@@ -37,8 +37,10 @@ completed product/experience reconstruction
 → FD-058 Internal.35 signed publication
 → #399–#409 protected-main delta (i18n server-error rules, AAA eslint gates, FRC-3 ledger adoption, #303 security disposition, Phase 4 closure authority green)
 → #411 behavioural UI evidence harness (render truth replaces source-text pinning on the agents/inbox surfaces)
-→ FD-059 Internal.36 signed publication (#412/#413) ← latest signed checkpoint
-→ FD-058 installed campaign on the Internal.36 candidate ← current gate (Founder action)
+→ FD-059 Internal.36 signed publication (#412/#413)
+→ FD-060 Internal.37 signed publication (#423; Founder-installed 2026-09-11, visually rejected before campaign conversion; repairs merged as #424)
+→ FD-062 Internal.38 signed publication (#451; publication record #452) ← latest signed checkpoint
+→ FD-058 installed campaign on the Internal.38 candidate (Founder applies the in-place Internal.38 update, then runs the campaign once) ← current gate (Founder action)
 → FRC-3 Required capability/journey assurance ledger and demonstrated repairs (order A→D→C→B)
 → FRC-4 commerce official dev/test certification work
 → FRC-5 courier contract/sandbox or authorized-account certification work
@@ -84,9 +86,10 @@ Completion confidence means:
 Owner: issue #306. Retained installed evidence: Internal.27 plus the
 Founder-installed Internal.28–Internal.34 campaigns (text/image/video send,
 automatic no-refresh inbound and reopen verified; every reproduced regression
-repaired on main). Published candidate: Internal.36 / FD-059 — already
-authorized, signed and published; the remaining work is the Founder in-place
-update and the FD-058 re-verification campaign.
+repaired on main). Published candidate: Internal.38 / FD-062 — authorized
+(FD-062, PR #451), signed and published 2026-09-16 with the #424–#450 frontier
+inside; the remaining work is the Founder in-place update and the FD-058
+re-verification campaign on that installed candidate.
 
 Required sequence:
 
@@ -225,7 +228,7 @@ A `workers.dev` endpoint can support development but does not satisfy the sole p
 
 ## Phase 9 — release certification and launch readiness
 
-Internal.36 / FD-059 is the latest signed/published Internal Founder-offline checkpoint. Every Internal checkpoint from Internal.24 onward is an internal Founder-offline package: none is Beta or Stable, and none carries customer-online authority.
+Internal.38 / FD-062 is the latest signed/published Internal Founder-offline checkpoint. Every Internal checkpoint from Internal.24 onward is an internal Founder-offline package: none is Beta or Stable, and none carries customer-online authority.
 
 Stable still requires:
 
@@ -264,4 +267,4 @@ No force merge, waiver, protection bypass, updater-key weakening, Rust `--locked
 - Historical retained evidence set: issues #201, #214, #221, #226 and #230.
 - PR #250, PR #251 and `agent/internal-16-wave-4` remain history.
 - Internal.24 / FD-043 is the Founder-accepted installed checkpoint of that era.
-- Internal.25 / FD-044 through Internal.35 / FD-058 remain retained publication history; Internal.36 / FD-059 is the current signed/published authority.
+- Internal.25 / FD-044 through Internal.37 / FD-060 remain retained publication history; Internal.38 / FD-062 is the current signed/published authority.

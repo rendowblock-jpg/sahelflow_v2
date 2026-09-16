@@ -324,10 +324,12 @@ left is the expensive half, and each item is a real project rather than a tidy-u
    the view-state hook that receives `messagesInnerRef` + `copy` and owns no
    JSX; its first hosted run failed on two type errors the OOM-killed local
    tsc had missed — repaired inside the PR with honest exit-code evidence).
-   Owed next:
-   the **header seam** (avatar/status/search toggle/mark-unread/AI extraction +
-   the `ThreadLastActive` cluster — measure the liveness and workspace-contract
-   header pins first), then the composer and list seams. The same treatment is
+   The **header seam** then landed via merged PR #450
+   (`inbox-thread-header.tsx`, 332 lines — the header cluster plus the
+   `ThreadLastActive` liveness module moved verbatim; 1,544 → 1,283; the
+   liveness and workspace-contract header pins were measured first and
+   re-anchored by restating intent, none relaxed). Owed next:
+   the **composer seam**, then the list seam. The same treatment is
    then owed to `storefront-studio` (1,752), `automation-builder` (1,491) and
    `inbox-v3-queue` (1,325). **Measure the pin exposure before every cut** — the
    method that keeps working: map every `expect(...).toContain(...)` string to
