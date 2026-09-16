@@ -8,6 +8,12 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-09-16 — FD-062 adopted: Internal.38 signed successor authorized (release in flight)
+
+- The Founder's 2026-09-16 directive ("let's complete all the work and make the next signed release") adopts **FD-062** (`documentation/product/DECISIONS.md`): one signed successor, app `1.0.0-internal.38` / MSI `1.0.0.38`, packaging the protected-main frontier #424–#450 since Internal.37 (release source `cd1114de…`).
+- The packaged line: #424 Internal.37 Founder visual repair (F-14 inbox, F-15 canvas-first Agents — the source repair for the recorded 2026-09-11 installed rejection); #425 canonical money/phone formatters + change-pin/shop-lifecycle Settings authority; #426/#427/#450 STR-01 `inbox-v3-thread` seams 1–3 (message bubble 559 lines, view-state hook 229 lines, thread header cluster 332 lines — thread 2,238 → 1,283); #429–#449 the complete FD-061 CodFlow extraction register (EX-1 Yalidine 36-status truth, EX-2 ZR Express + EcoTrack, EX-3 Meta Pixel + Conversions API engine, EX-4 storefront slices 1–6 — abandoned-cart recovery, order-verified reviews, quantity-tier offers, WebP pipeline, per-product landing pages, Turnstile + WhatsApp OTP checkout gates — EX-5 MCP study, EX-6 control-plane deployment playbook).
+- Sequencing per FD-062: the FD-058 combined campaign executes once on the installed Internal.38 candidate (supersedes FD-060's candidate choice only); ledger rows convert only on that installed observation; the retained #306 logout row executes LAST; the chat-transited GitHub PAT rotates after the merge window. No customer-online, Beta, Stable or paid-deployment authority is created.
+
 ### 2026-08-31 — signed Internal.31 publication (FD-053)
 
 - Release PR #368 head `a1b4d56e5f723bbd3cacae104939ba668998e38b` passed the full Required battery on the exact head (21 checks: 20 success / 1 skipped / 0 failed, including installed-MSI evidence) and was squash-merged to protected `main` `38c95aa8f5e1f3d44326c727efd0d8fd54cba20a` under expected-head discipline. Certification cited product head `569e921…` (tree-identical to `f0fca29…`; CI `33368228685`, Phase 5 `33368228409`, Phase 6-7 `33368228448`).

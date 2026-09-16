@@ -1268,6 +1268,97 @@ Binding boundaries:
   desktop pairing, Maystro contract truth, NOEST/EcoTrack inbound
   receivers, and the CAPI delivered-signal bridge from desktop truth.
 
+## FD-062 — One signed successor (Internal.38) packaging the #424–#450 protected-main frontier
+
+The Founder's 2026-09-16 directive ("let's complete all the work and make
+the next signed release"), issued after live verification that protected
+`main` at `03105969…` (PR #449 squash) is the frontier on top of the FD-060
+packaged Internal.37 line — the #436–#446 EX-4 storefront slices each
+carried their full hosted battery green at the exact head (17 success /
+3 risk-classified skips / 0 failed), and the docs-only #447–#449 records
+ride the same tree — authorizes exactly one combined signed successor
+(Internal.38) packaging the protected-main frontier since Internal.37
+(release source `cd1114de…`). FD-062 is ADOPTED by that same 2026-09-16
+directive. The packaged frontier:
+
+- PR #424 (`27c0d72c…`): Internal.37 Founder visual repair — F-14 inbox
+  queue/header density and RTL names, F-15 canvas-first Agents
+  presentation. This is the source repair for the recorded 2026-09-11
+  visual rejection of the installed Internal.37.
+- PR #425 (`66cba527…`): canonical money/phone formatters; the
+  built-but-unreachable `change-pin` and shop-lifecycle Settings surfaces
+  wired with contract tests.
+- PR #426 (`9f1a58a8…`): STR-01 (1/4) — MessageBubble cluster extracted
+  into `inbox-thread-message.tsx`.
+- PR #427 (`eb0309a7…`): STR-01 (2/4) — thread view state extracted into
+  `use-inbox-thread-view.ts`.
+- PR #428 (docs-only): frontier reconciled to the Internal.37 / FD-060
+  reality.
+- PR #429 (docs-only): FD-061 adoption — CodFlow extraction register and
+  research record.
+- PR #430 (`abed8cd2…`): EX-1 — Yalidine adapter repaired to the
+  live-proven CodFlow contract (verbatim 36-status mapper,
+  order-id-keyed create response, `deleted===true` delete truth,
+  histories envelope, commune-name matching).
+- PR #432 (`7eee8d00…`): EX-2 — ZR Express (`zr-express-v2` dialect) and
+  EcoTrack (true v1 dialect) adapters reconciled to the live-proven
+  CodFlow contracts; webhooks deliberately not extracted.
+- PR #434 (`1904c8cc…`): EX-3 — Meta Pixel + Conversions API engine
+  (MetaPixelConfig / CapiEventLedger / CapiAttemptLog, `(order, stage,
+  event)` claim uniqueness, event_id dedup with the browser pixel,
+  SHA-256 PII hashing, 7-day attribution guard, test-mode routing,
+  durable outbox delivery with the 5×30s retry matrix, desktop-fired
+  `Purchase_Delivered`, write-only-token Settings panel).
+- PRs #436/#438/#440/#442/#444/#446 (`6b976ba0…`/`e0b65fce…`/`6e34f783…`/
+  `963f06d0…`/`0122ebca…`/`b5f9fbba…`): EX-4 storefront enrichment in six
+  slices — abandoned-cart recovery ledger; order-verified reviews;
+  quantity-tier offers; WebP image pipeline; per-product landing pages;
+  Turnstile + WhatsApp OTP checkout gates (StorefrontGateConfig with the
+  secrets in the encrypted Secret authority and fail-closed arming).
+- PRs #431/#433/#435/#437/#439/#441/#443/#445/#447/#448/#449 (docs-only):
+  the CodFlow extraction register records, the EX-5 MCP agentic surface
+  study (research/CODFLOW_EXTRACTION.md §7) and the EX-6 control-plane
+  deployment playbook (§8).
+- PR #450 (`1ea580b6…`): STR-01 (3/4) — thread header cluster extracted
+  into `inbox-thread-header.tsx`.
+
+Remaining STR-01 seams (`inbox-v3-thread` composer and list, then
+`storefront-studio`, `automation-builder`, `inbox-v3-queue`), remaining
+TEST-01 source-text pin conversion, L10N-01 copy-authority migration and
+SYS-04 arbitrary-value retirement ride protected `main` after this package
+and carry no release authority.
+
+Binding boundaries:
+
+- The successor packages exactly the protected-main frontier at the
+  release head; certification cites the product head and its green
+  CI/Phase 5/Phase 6-7 runs at that exact head (tree-identity with the
+  reviewed release-PR head recorded in the release request).
+- FD-045 evidence rules are unchanged: release-authority PR, exact-head
+  review, required gates, expected-head merge, signed run, in-place
+  preserved install.
+- Sequencing — one combined campaign. The Founder skips the uninstalled
+  Internal.35 and Internal.36 candidates and runs the FD-058 campaign
+  rows (F-04..F-13 including the F-05 CRLF residual, the retained FD-050
+  rows B1–B5, D1, delivery-receipt enum truth and C1, the D3 waves, the
+  deep-audit register's audit-affected rows, applicable #316/#317 native
+  rows and the retained #306 rows) once, on the installed Internal.38
+  candidate, which contains every Internal.35/36/37 repair, the FD-060
+  packaged frontier and the #424–#450 line — including the F-14/F-15
+  repairs whose absence caused the recorded 2026-09-11 visual rejection
+  of Internal.37. This decision supersedes only the candidate-choice
+  boundary of FD-060 (the installed Internal.37 was visually rejected
+  before any campaign-row conversion and cannot be republished); every
+  FD-060 publication fact remains retained evidence. Ledger rows convert
+  only on that installed observation, per the FRC-3 conversion rules.
+  The updater channel serves Internal.38 to the installed Internal.37
+  after publication.
+- The retained #306 logout row executes LAST, after every other row is
+  green, on the installed Internal.38 candidate. The Founder rotates the
+  chat-transited GitHub PAT after the merge window.
+- No customer-online, Beta, Stable or paid-deployment authority is
+  created. #230 and the zero-budget boundary are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states
