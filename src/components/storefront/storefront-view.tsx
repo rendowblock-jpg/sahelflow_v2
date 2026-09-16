@@ -6,6 +6,7 @@ import {
   BadgeCheck,
   Check,
   CheckCircle2,
+  Gift,
   Loader2,
   Mail,
   MapPin,
@@ -107,11 +108,21 @@ interface ReviewContext {
   items: { productId: string; productName: string }[];
 }
 
+/** FD-061 EX-4: buyer-facing tier preview (from /api/storefront/offers/evaluate). */
+interface TierPreview {
+  applied: boolean;
+  reward:
+    | { type: "free_shipping" }
+    | { type: "product"; productName: string; quantity: number }
+    | null;
+}
+
 interface SubmitResult {
   ok: boolean;
   message: string;
   orderNumber?: string;
   review?: ReviewContext;
+  rewardApplied?: TierPreview["reward"];
 }
 
 function cartKey(productId: string, variantId: string | null): string {
@@ -171,6 +182,10 @@ function StorefrontViewBody({
   const [cartReady, setCartReady] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<SubmitResult | null>(null);
+  // FD-061 EX-4: server-computed tier preview — the cart renders the
+  // reward BEFORE checkout; the server re-evaluates authoritatively at
+  // submit, so a stale preview can only ever understate the reward.
+  const [tierPreview, setTierPreview] = useState<TierPreview | null>(null);
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -254,6 +269,37 @@ function StorefrontViewBody({
       // Hardened browsers may deny storage; in-memory checkout remains usable.
     }
   }, [cart, cartReady, cartStorageKey]);
+
+  // FD-061 EX-4: debounced reward preview — a read-only evaluation keyed to
+  // the exact cart. Failures are silent (the preview is best-effort; the
+  // server settles the reward at submit).
+  useEffect(() => {
+    if (!cartReady) return;
+    const timer = window.setTimeout(() => {
+      if (cart.length === 0) {
+        setTierPreview(null);
+        return;
+      }
+      void fetch("/api/storefront/offers/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: config.slug,
+          items: cart.map((item) => ({
+            productId: item.product.id,
+            variantId: item.variant?.id ?? null,
+            quantity: item.quantity,
+          })),
+        }),
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => setTierPreview((data ?? null) as TierPreview | null))
+        .catch(() => {
+          // Silent: an absent preview never blocks checkout.
+        });
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [cart, cartReady, config.slug]);
 
   // FD-061 EX-4: abandoned-cart capture — a 3-second debounce on every
   // cart/form change (fetch keepalive), plus a `pagehide` sendBeacon for
@@ -395,7 +441,16 @@ function StorefrontViewBody({
     (sum, item) => sum + itemPrice(item) * item.quantity,
     0,
   );
-  const cartTotal = cartSubtotal + shippingDzd;
+  // FD-061 EX-4: the preview's free-shipping reward zeroes the displayed
+  // fee so the buyer's total matches what the server will charge.
+  const freeShippingApplied =
+    tierPreview?.applied === true && tierPreview.reward?.type === "free_shipping";
+  const giftReward =
+    tierPreview?.applied === true && tierPreview.reward?.type === "product"
+      ? tierPreview.reward
+      : null;
+  const effectiveShippingDzd = freeShippingApplied ? 0 : shippingDzd;
+  const cartTotal = cartSubtotal + effectiveShippingDzd;
 
   async function handleSubmit(event: React.FormEvent): Promise<void> {
     event.preventDefault();
@@ -457,6 +512,7 @@ function StorefrontViewBody({
         message?: string;
         orderNumber?: string;
         error?: string;
+        rewardApplied?: TierPreview["reward"];
       };
       if (!response.ok || !data.ok) {
         setResult({
@@ -479,6 +535,7 @@ function StorefrontViewBody({
           ? data.message ?? localizedSuccess
           : localizedSuccess,
         orderNumber: data.orderNumber,
+        rewardApplied: data.rewardApplied ?? null,
         // FD-061 EX-4: capture the review context BEFORE the form resets —
         // the buyer's own (orderNumber, phone) pair is the review
         // verification, and the ordered items bound the reviewable products.
@@ -528,6 +585,16 @@ function StorefrontViewBody({
               <div className="rounded-surface bg-muted p-3">
                 <p className="text-xs text-muted-foreground">{t("storefront.view.orderNumber")}</p>
                 <p className="font-mono text-lg font-bold">{result.orderNumber}</p>
+              </div>
+            ) : null}
+            {result.rewardApplied ? (
+              <div className="rounded-surface bg-muted p-3 text-sm" role="status">
+                <p className="flex items-center justify-center gap-1.5 font-medium">
+                  <Gift className="h-4 w-4" style={{ color: config.theme.primaryColor }} />
+                  {result.rewardApplied.type === "free_shipping"
+                    ? t("storefront.view.tier.freeShippingEarned")
+                    : t("storefront.view.tier.freeGift", { name: result.rewardApplied.productName, count: result.rewardApplied.quantity })}
+                </p>
               </div>
             ) : null}
             {result.review ? (
@@ -583,7 +650,23 @@ function StorefrontViewBody({
                   </div>
                 </div>
               ))}
-              {shippingDzd > 0 ? <div className="flex justify-between border-t pt-2 text-sm"><span>{t("storefront.view.shipping")}</span><span>{formatDZD(shippingDzd, locale)}</span></div> : null}
+              {giftReward ? (
+                <div className="flex items-center justify-between gap-2 rounded-surface bg-muted p-2 text-xs" data-testid="tier-gift-line">
+                  <span className="flex items-center gap-1 font-medium">
+                    <Gift className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t("storefront.view.tier.freeGift", { name: giftReward.productName, count: giftReward.quantity })}
+                  </span>
+                  <span>{t("storefront.view.tier.free")}</span>
+                </div>
+              ) : null}
+              {effectiveShippingDzd > 0 ? (
+                <div className="flex justify-between border-t pt-2 text-sm"><span>{t("storefront.view.shipping")}</span><span>{formatDZD(effectiveShippingDzd, locale)}</span></div>
+              ) : freeShippingApplied ? (
+                <div className="flex justify-between border-t pt-2 text-sm" data-testid="tier-shipping-line">
+                  <span className="flex items-center gap-1"><BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />{t("storefront.view.shipping")}</span>
+                  <span>{t("storefront.view.tier.free")}</span>
+                </div>
+              ) : null}
               <div className="flex justify-between font-bold"><span>{t("storefront.view.total")}</span><span>{formatDZD(cartTotal, locale)}</span></div>
             </>
           )}

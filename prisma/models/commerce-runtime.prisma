@@ -276,3 +276,34 @@ model ProductReview {
   @@index([productId, status, submittedAt])
   @@index([storefrontSlug, status])
 }
+
+/// Quantity-tier offer (FD-061 EX-4). Per-storefront upsell configuration:
+/// when the cart holds `triggerQuantity`+ of the trigger product (optionally
+/// one specific variant), the buyer earns the reward — a free product line
+/// (reward product/variant/quantity) or free shipping. Evaluation is
+/// server-authoritative at checkout: among the eligible matches the
+/// highest trigger wins, and a product reward whose live stock cannot
+/// cover `rewardQuantity` is disqualified. References are live-validated
+/// at evaluation time (the AbandonedCart precedent — no FK chains on
+/// configuration surfaces); the reward line enters the command kernel as
+/// a storefront-authoritative `unitPrice: 0` item.
+model QuantityTierOffer {
+  id               String   @id @default(cuid())
+  storefrontSlug   String
+  triggerProductId String
+  /// null = every variant of the trigger product qualifies.
+  triggerVariantId String?
+  triggerQuantity  Int
+  /// product | free_shipping
+  rewardType       String
+  rewardProductId  String?
+  rewardVariantId  String?
+  /// Required for product rewards.
+  rewardQuantity   Int?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([storefrontSlug, isActive])
+  @@index([triggerProductId, isActive])
+}
