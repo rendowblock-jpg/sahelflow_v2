@@ -63,7 +63,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       connectionId,
     });
   } catch (error) {
-    const status = error instanceof SahelFlowError ? error.status : 401;
+    const status = error instanceof SahelFlowError ? error.statusCode : 401;
     const code = error instanceof SahelFlowError ? error.code : "UNAUTHORIZED";
     return NextResponse.json(
       { error: "Unauthorized", code },
