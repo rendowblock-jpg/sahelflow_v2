@@ -119,7 +119,7 @@ function walkMarkdown(directory: string): string[] {
     const absolutePath = resolve(directory, name);
     const relativePath = absolutePath
       .slice(repoRoot.length + 1)
-      .replaceAll("\\\\", "/");
+      .replaceAll("\\", "/");
     if (relativePath.startsWith("documentation/archive/")) continue;
     const metadata = statSync(absolutePath);
     if (metadata.isDirectory()) output.push(...walkMarkdown(absolutePath));
@@ -275,7 +275,7 @@ const markdownLinkPattern = /\[[^\]]*\]\(([^)]+)\)/g;
 for (const absoluteFile of markdownFiles) {
   const relativeFile = absoluteFile
     .slice(repoRoot.length + 1)
-    .replaceAll("\\\\", "/");
+    .replaceAll("\\", "/");
   const content = readFileSync(absoluteFile, "utf8");
   let match: RegExpExecArray | null;
   while ((match = markdownLinkPattern.exec(content)) !== null) {
@@ -284,7 +284,7 @@ for (const absoluteFile of markdownFiles) {
     const target = normalizeLink(rawTarget);
     if (!target) continue;
     const absoluteTarget = isAbsolute(target)
-      ? resolve(repoRoot, target.replace(/^[/\\\\]+/, ""))
+      ? resolve(repoRoot, target.replace(/^[/\\]+/, ""))
       : resolve(dirname(absoluteFile), target);
     if (!existsSync(absoluteTarget)) {
       report("link", relativeFile, `broken relative link: ${rawTarget}`);
@@ -308,7 +308,7 @@ requireMarkers("README.md", [
   "documentation/README.md",
   "Phase 5 closure",
   "PR #220",
-  "Phase 6 \u2014 Arabic, RTL and accessibility parity",
+  "Phase 6 — Arabic, RTL and accessibility parity",
   "issues #201, #214, #221, #226 and #230",
   "`1.0.0-internal.15`",
   "31657621918",
@@ -328,7 +328,7 @@ requireMarkers("documentation/README.md", [
   "agent/internal-16-wave-4",
   "`1.0.0-internal.15`",
   "31657621918",
-  "Phase 6 \u2014 Arabic, RTL and accessibility parity",
+  "Phase 6 — Arabic, RTL and accessibility parity",
   "PR #220",
   "Issues #221, #226 and #230 remain open",
 ]);
@@ -343,10 +343,10 @@ requireMarkers("documentation/product/DECISIONS.md", [
   "The Founder decides whether the Web Agent or Desktop Agent is active",
 ]);
 requireMarkers("documentation/system/ROADMAP.md", [
-  "## Phase 3 \u2014 providers, inbox, AI and automations",
-  "## Phase 5 \u2014 whole-product AAA desktop experience",
-  "## Phase 6 \u2014 Arabic, RTL and accessibility parity",
-  "## Phase 9 \u2014 release certification and launch readiness",
+  "## Phase 3 — providers, inbox, AI and automations",
+  "## Phase 5 — whole-product AAA desktop experience",
+  "## Phase 6 — Arabic, RTL and accessibility parity",
+  "## Phase 9 — release certification and launch readiness",
   "complete reconnaissance",
   "expected-head merge",
 ]);
@@ -363,14 +363,14 @@ requireMarkers("documentation/operations/WORKFLOW.md", [
   "one active implementation agent; audit-first; batch remediation; tiered CI",
   "Complete phase/package audit",
   "Phase Problem Register",
-  "Level 1 \u2014 Task Gate",
+  "Level 1 — Task Gate",
   "Frozen review and batch repair",
-  "Level 2 \u2014 Phase Checkpoint",
-  "Level 3 \u2014 Major Full Checkpoint",
+  "Level 2 — Phase Checkpoint",
+  "Level 3 — Major Full Checkpoint",
   "Whole-product AAA frontend program",
 ]);
 requireMarkers("documentation/operations/WORKING_MEMORY.md", [
-  "Wave 4 \u2014 what is implemented",
+  "Wave 4 — what is implemented",
   "Exact next-session order",
   "Hard rules",
   "#221, #226, #230",
@@ -378,7 +378,7 @@ requireMarkers("documentation/operations/WORKING_MEMORY.md", [
   "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734",
 ]);
 requireMarkers("documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md", [
-  "Section 6 \u2014 Conversion rules (how a row changes class)",
+  "Section 6 — Conversion rules (how a row changes class)",
   "Installed conversion only by observation",
   "No cross-SHA evidence mixing",
   "J-01",
@@ -402,7 +402,7 @@ requireMarkers("scripts/sf-verify.ts", [
   ".sf-vitest-failures.txt",
 ]);
 
-const expectedPhase = "Phase 6 \u2014 Arabic, RTL and accessibility parity";
+const expectedPhase = "Phase 6 — Arabic, RTL and accessibility parity";
 for (const relativePath of [
   "documentation/README.md",
   "documentation/system/ROADMAP.md",
@@ -478,7 +478,7 @@ for (const relativePath of [
 }
 
 const stalePhase5FrontierMarkers = [
-  "Active product phase:** Phase 5 \u2014 whole-product AAA UI/UX",
+  "Active product phase:** Phase 5 — whole-product AAA UI/UX",
   "Phase 5 package not yet opened",
   "begin Phase 5 from protected main",
   "Active Phase 5 package:** not yet opened",
@@ -732,7 +732,7 @@ if (inventory) {
 const staleMarkers: Array<[string, string]> = [
   ["AGENTS.md", "Active draft: PR #200"],
   ["AGENTS.md", "Active package is PR #200"],
-  ["AGENTS.md", "Authorized package rules \u2014 truthful durable automations"],
+  ["AGENTS.md", "Authorized package rules — truthful durable automations"],
   ["documentation/README.md", "Active draft:** PR #200"],
   ["documentation/system/ROADMAP.md", "Active product phase:** Phase 2"],
   [
@@ -741,15 +741,15 @@ const staleMarkers: Array<[string, string]> = [
   ],
   [
     "documentation/operations/WORKING_MEMORY.md",
-    "Authorized Task 4 \u2014 truthful durable automations",
+    "Authorized Task 4 — truthful durable automations",
   ],
   [
     "documentation/operations/WORKING_MEMORY.md",
-    "Authorized Task 5 \u2014 proposal-bound sensitive AI actions",
+    "Authorized Task 5 — proposal-bound sensitive AI actions",
   ],
   [
     "documentation/operations/WORKING_MEMORY.md",
-    "Authorized Task 6 \u2014 courier/commerce convergence and provider certification",
+    "Authorized Task 6 — courier/commerce convergence and provider certification",
   ],
   [
     "AGENTS.md",
