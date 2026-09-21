@@ -73,10 +73,12 @@ export const MCP_FORBIDDEN_PERMISSIONS = Object.freeze([
  * in-app chat already sits behind `ai.use`. An MCP client is a *different*
  * caller, so each read tool declares the real domain scope it consumes. This is
  * additive hardening in the existing vocabulary, not a new one.
+ *
+ * The table is annotated directly rather than relying on reverse inference
+ * through `Object.freeze`, so every entry is checked against the real
+ * `Phase2Action` vocabulary at the point of declaration.
  */
-export const MCP_READ_SCOPES: Readonly<
-  Record<string, readonly Phase2Action[]>
-> = Object.freeze({
+const MCP_READ_SCOPE_TABLE: Record<string, readonly Phase2Action[]> = {
   search_products: ["products.read"],
   search_customers: ["customers.read", "customers.contact.read"],
   get_stats: ["analytics.read"],
@@ -98,7 +100,11 @@ export const MCP_READ_SCOPES: Readonly<
   search_orders: ["orders.read"],
   estimate_delivery_cost: ["deliveries.read"],
   get_delivery_cost_comparison: ["deliveries.read"],
-});
+};
+
+export const MCP_READ_SCOPES: Readonly<
+  Record<string, readonly Phase2Action[]>
+> = Object.freeze(MCP_READ_SCOPE_TABLE);
 
 /**
  * Idempotent membership set. A repeat call with identical arguments converges
