@@ -1,13 +1,13 @@
 # SahelFlow documentation authority
 
 > **Status:** Active non-archive documentation entry point
-> **Last reconciled:** 2026-09-16 (protected `main` `486e0163…` after PR #452; re-resolve live before acting)
+> **Last reconciled:** 2026-09-24 (MCP Agent surface rebuilt; assessment recorded at `product/ASSESSMENT.md`)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** always resolve GitHub `main` before a write, review, merge, release or evidence claim
 > **Latest signed/published checkpoint:** Internal.38 / `1.0.0-internal.38` / MSI `1.0.0.38` / FD-062 — **published 2026-09-16 and served by the updater to the installed Internal.37; not yet Founder-installed** (publication record PR #452); see "Installed truth" below
 > **Protected release source:** `9bf899274074f6f20935d224b96e8b1d14fc9690` / PR #451 (release authority; tag `sahelflow-v1.0.0-internal.38-9bf89927…`)
 > **Latest recorded installed checkpoint:** Internal.37 / FD-060 (installed in place 2026-09-11, visually rejected before campaign conversion — F-14/F-15, repaired at source by #424) — unchanged by Internal.38, whose in-place update is the next Founder action
-> **Current next outcome:** the Founder applies the in-place Internal.38 update through the normal updater (no logout, no AppData reset, no protected-auth clearing) and executes the FD-058 combined campaign ONCE on the installed Internal.38 candidate (F-04..F-13 incl. the F-05 CRLF residual, retained FD-050 rows, D3 waves, deep-audit affected rows, applicable #316/#317 native rows, retained #306 rows with logout LAST); then FRC-3 resumption in the order A→D→C→B. The chat-transited GitHub PAT is rotated after this merge window closes.
+> **Current next outcome:** the Founder applies the in-place Internal.38 update through the normal updater (no logout, no AppData reset, no protected-auth clearing) and executes the FD-058 combined campaign ONCE on the installed Internal.38 candidate (F-04..F-13 incl. the F-05 CRLF residual, retained FD-050 rows, D3 waves, deep-audit affected rows, applicable #316/#317 native rows, retained #306 rows with logout LAST); then FRC-3 resumption in the order A→D→C→B. The chat-transited GitHub PAT is rotated after this merge window closes. **Commercial readiness context:** the Founder wants to start selling with flawless UX — see `product/ASSESSMENT.md`.
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 
