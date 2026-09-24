@@ -121,7 +121,7 @@ jobs:
           path: .sf-inventory/phase6-7-completion
           if-no-files-found: warn
           include-hidden-files: true
-          retention-days: 14
+          retention-days: 7
 
   source-quality-diagnostics:
     name: Complete source-quality diagnostics
@@ -274,7 +274,7 @@ jobs:
             .sf-inventory/phase7-performance
           if-no-files-found: warn
           include-hidden-files: true
-          retention-days: 14
+          retention-days: 7
 
   phase67-gate:
     name: Required Phase 6-7 completion gate
