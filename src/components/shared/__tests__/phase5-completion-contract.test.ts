@@ -118,11 +118,17 @@ describe("Phase 5 whole-product completion contract", () => {
     // inbox header actually renders (inbox-v3-header.tsx), and it carries the
     // same retry authority this assertion exists to protect.
     const recovery = read("src/components/inbox/whatsapp-ingress-recovery-dock.tsx");
-    const agents = read("src/app/(dashboard)/agents/page.tsx");
+    // Re-anchored to the MCP-native agent surface: the chat route
+    // authenticates the caller, and the MCP registry hides and rejects any
+    // tool whose requiredPermissions the actor lacks (scope-filtered
+    // visibility) — server-authoritative per tool call.
+    const agentsChat = read("src/app/api/agents/chat/route.ts");
+    const mcpRegistry = read("src/lib/mcp/registry.ts");
     const extraction = read("src/app/(dashboard)/analytics/extraction/page.tsx");
     expect(inbox).toContain('requireTrustedAction("conversations.read")');
     expect(recovery).toContain("canRetry");
-    expect(agents).toContain('requireTrustedAction("ai.use")');
+    expect(agentsChat).toContain("requireAuth()");
+    expect(mcpRegistry).toContain("getVisibleTool(name, ctx.actor.permissions)");
     expect(extraction).toContain('requireTrustedAction("analytics.read")');
   });
 

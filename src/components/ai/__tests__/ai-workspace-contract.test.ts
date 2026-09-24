@@ -6,13 +6,21 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("AI Class-AAA decision workspace contract", () => {
-  it("routes Agents through the decision workspace without legacy composition", () => {
+  it("routes Agents through the MCP-native workspace without legacy composition", () => {
+    // Re-anchored to the shipping MCP-native agent surface (32f60d90): the
+    // Agents route renders the AgentWorkspace behind its error boundary and
+    // wires the active UI locale — the legacy decision-shell composition
+    // stays out. The shell's own contract below remains unchanged.
     const page = read("src/app/(dashboard)/agents/page.tsx");
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
 
-    expect(page).toContain("AiWorkspaceShell");
-    expect(page).toContain('requireTrustedAction("ai.use")');
-    expect(page).toContain('<FeatureGate feature="ai_chat">');
+    expect(page).toContain("AgentWorkspace");
+    expect(page).toContain("AgentErrorBoundary");
+    expect(page).toContain("useAgentWorkspace");
+    expect(page).toContain("useI18n");
+    expect(page).toContain("locale={locale}");
+    expect(page).not.toContain('locale="en"');
+    expect(page).not.toContain("AiWorkspaceShell");
     expect(shell).toContain("AiDecisionWorkspace");
     expect(shell).not.toContain("AiOperationalLaunchpad");
     expect(shell).not.toContain("<AiWorkspace");

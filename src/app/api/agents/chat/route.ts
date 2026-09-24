@@ -38,10 +38,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    // Build tool context
+    // Build tool context. ShopContext carries no display name; the
+    // orchestrator falls back to the stable shopId in its system prompt.
     const ctx: McpToolContext = {
       db,
-      shop: { shopId: shopContext.shopId, shopName: shopContext.shopName },
+      shop: { shopId: shopContext.shopId },
       actor: {
         memberId: auth.memberId,
         memberName: auth.memberName,

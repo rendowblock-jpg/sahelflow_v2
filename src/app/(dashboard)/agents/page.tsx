@@ -10,6 +10,7 @@
 import { AgentWorkspace } from "@/components/agents/agent-workspace";
 import { AgentErrorBoundary } from "@/components/agents/agent-error-boundary";
 import { useAgentWorkspace } from "@/hooks/use-agent-workspace";
+import { useI18n } from "@/hooks/use-i18n";
 
 export default function AgentsPage({
   searchParams,
@@ -17,6 +18,7 @@ export default function AgentsPage({
   searchParams: { q?: string };
 }) {
   const workspace = useAgentWorkspace(searchParams?.q ?? "");
+  const { locale } = useI18n();
 
   return (
     <AgentErrorBoundary>
@@ -35,7 +37,7 @@ export default function AgentsPage({
         onApproveProposal={workspace.approveProposal}
         onRejectProposal={workspace.rejectProposal}
         initialPrompt={workspace.initialPrompt}
-        locale="en"
+        locale={locale}
       />
     </AgentErrorBoundary>
   );
