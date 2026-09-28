@@ -394,13 +394,21 @@ export function Topbar({
             >
               <Bell className="size-4" aria-hidden="true" />
               {unreadCount > 0 ? (
-                <span className="absolute end-0 top-0 flex min-w-3.5 -translate-y-0.5 translate-x-0.5 items-center justify-center rounded-full bg-background px-1 text-caption font-bold leading-3.5 text-destructive ring-1 ring-destructive rtl:-translate-x-0.5">
+                // Theme-aware count: the brand primary follows the active
+                // preset and mode, and the background ring separates the pill
+                // from the glyph. `dir="ltr"` keeps "9+" from rendering as
+                // "+9" inside the Arabic shell.
+                <span
+                  data-slot="notification-count"
+                  dir="ltr"
+                  className="pointer-events-none absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-caption font-semibold leading-none tabular-nums text-primary-foreground ring-2 ring-background"
+                >
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               ) : null}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 shadow-dropdown">
+          <DropdownMenuContent align="end" className="w-96 shadow-dropdown">
             <DropdownMenuLabel className="flex items-center justify-between gap-3">
               <span>{t("common.notifications")}</span>
               {unreadCount > 0 ? (
@@ -441,12 +449,14 @@ export function Topbar({
                               aria-hidden="true"
                             />
                           ) : null}
-                          <span className="truncate text-sm font-medium">
+                          {/* Two lines, not a one-line truncate: an RTL
+                              ellipsis clipped the START of Latin names. */}
+                          <span className="line-clamp-2 text-sm font-medium">
                             {notification.title}
                           </span>
                         </span>
                         {notification.body ? (
-                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          <span className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                             {notification.body}
                           </span>
                         ) : null}

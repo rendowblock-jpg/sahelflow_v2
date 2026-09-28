@@ -43,7 +43,12 @@ describe("application RTL direction authority", () => {
     expect(sidebar).toContain("border-e border-sidebar-border");
     expect(sidebar).toContain("absolute inset-y-2 start-0");
     expect(sidebar).toContain("ms-4 border-s border-sidebar-border ps-2");
-    expect(topbar).toContain('<DropdownMenuContent align="end" className="w-80 shadow-dropdown">');
+    // The notifications popup anchors to the LOGICAL end edge so the direction
+    // provider mirrors it in Arabic; its width is presentation, not authority.
+    expect(topbar).toMatch(
+      /<DropdownMenuContent align="end" className="w-\d+ shadow-dropdown">/,
+    );
+    expect(topbar).not.toMatch(/align="(left|right)"/);
     expect(dropdown).toContain("data-[inset]:ps-8");
     expect(dropdown).toContain("absolute start-2");
     expect(dropdown).toContain("ms-auto");
