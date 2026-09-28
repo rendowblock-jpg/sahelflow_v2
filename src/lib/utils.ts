@@ -1,5 +1,32 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/**
+ * The system type ramp (`INTERFACE_SYSTEM.md` §4) registered as font sizes.
+ *
+ * tailwind-merge only knows Tailwind's stock sizes, so it classified
+ * `text-caption`, `text-body-sm` and `text-title-*` as colours: any `cn()` that
+ * also set a text colour silently dropped the size, and the element fell back
+ * to its inherited size.
+ */
+export const TYPE_RAMP_SIZES = [
+  "2xs",
+  "caption",
+  "body-sm",
+  "body",
+  "title-3",
+  "title-2",
+  "title-1",
+  "display",
+] as const;
+
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [{ text: [...TYPE_RAMP_SIZES] }],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
