@@ -4,7 +4,9 @@
  * `POST /api/mcp` — stateless Streamable HTTP, loopback only, bearer-token
  * gated, and bound to the durable Founder session the sidecar forwards. Without
  * a real person session there is no agent session and therefore zero tools:
- * fail-closed, exactly like CodFlow's unauthenticated registration.
+ * fail-closed, exactly like CodFlow's unauthenticated registration. Without an
+ * active MCP-12 agent grant (`x-sahelflow-agent-grant`) there is no session
+ * either, so revoking a grant cuts its agent off on the very next request.
  *
  * This route carries no approval path. Approval lives in the Agents workspace
  * under `approvals.approve`, which the MCP surface may never require.
@@ -12,9 +14,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-
 import { requireAuth } from "@/lib/auth/server";
-import { openMcpAgentSession } from "@/lib/mcp/agent-session";
+import { db } from "@/lib/db";
+import { normalizeMcpClient, openMcpAgentSession } from "@/lib/mcp/agent-session";
+import { resolveMcpAgentGrant } from "@/lib/mcp/grants";
 import {
   JSON_RPC_INVALID_REQUEST,
   JSON_RPC_PARSE_ERROR,
@@ -33,9 +36,8 @@ const MAX_BODY_BYTES = 256 * 1024;
 // authority before any agent traffic is served; JSON-RPC shapes are produced
 // inside the handler, so only unexpected failures reach the wrapper.
 export const POST = withErrorHandler(async (request: NextRequest): Promise<NextResponse> => {
-  let connectionId: string;
   try {
-    ({ connectionId } = await authorizeMcpTransport(request));
+    await authorizeMcpTransport(request);
   } catch (error) {
     const code = error instanceof SahelFlowError ? error.code : "UNAUTHORIZED";
     return NextResponse.json({ error: "Unauthorized", code }, { status: 401 });
@@ -62,11 +64,13 @@ export const POST = withErrorHandler(async (request: NextRequest): Promise<NextR
   let session;
   try {
     const actorContext = await requireAuth("ai.use");
-    session = openMcpAgentSession({
-      actorContext,
-      client: extractClientInfo(payload),
-      connectionId,
-    });
+    const clientInfo = extractClientInfo(payload);
+    const grant = await resolveMcpAgentGrant(
+      db,
+      request.headers.get("x-sahelflow-agent-grant"),
+      normalizeMcpClient(clientInfo),
+    );
+    session = openMcpAgentSession({ actorContext, client: clientInfo, grant });
   } catch (error) {
     const status = error instanceof SahelFlowError ? error.statusCode : 401;
     const code = error instanceof SahelFlowError ? error.code : "UNAUTHORIZED";

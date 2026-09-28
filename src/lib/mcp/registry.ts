@@ -95,7 +95,8 @@ export async function buildMcpRegistry(): Promise<McpRegistryEntry[]> {
 
 /**
  * Project the registry for one agent session, hiding everything the caller is
- * not authorized for.
+ * not authorized for: a tool must be both inside the agent's grant (MCP-12)
+ * and inside the person session's authority.
  */
 export async function buildMcpToolsForSession(
   session: McpAgentSession,
@@ -103,9 +104,11 @@ export async function buildMcpToolsForSession(
   const registry = await buildMcpRegistry();
   const shopId = session.actorContext.shop.shopId;
   return registry.flatMap((entry) => {
-    const permitted = entry.requires.every((action) =>
-      trustedActionAllowed(session.actorContext, action, { shopId }),
-    );
+    const permitted =
+      session.grant.tools.has(entry.name) &&
+      entry.requires.every((action) =>
+        trustedActionAllowed(session.actorContext, action, { shopId }),
+      );
     if (!permitted) return [];
     const tool = getTool(entry.name);
     if (!tool) return [];
@@ -127,6 +130,7 @@ export async function resolveMcpToolForSession(
   const shopId = session.actorContext.shop.shopId;
   if (
     !entry ||
+    !session.grant.tools.has(entry.name) ||
     !entry.requires.every((action) =>
       trustedActionAllowed(session.actorContext, action, { shopId }),
     )

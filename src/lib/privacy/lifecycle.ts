@@ -104,6 +104,9 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
   // (confidential-business — marketing content and counters, no buyer PII).
   LandingPage: () => db.landingPage.findMany(),
   LandingPageImage: () => db.landingPageImage.findMany(),
+  // FD-063 MCP-12 agent grants: who may act and with which tools. The secret
+  // hash is authority material, never portable data.
+  McpAgentGrant: () => db.mcpAgentGrant.findMany({ omit: { secretHash: true } }),
   Message: async () => {
     const messages = await db.message.findMany();
     const key = messages.some((message) => message.attachments)
@@ -253,6 +256,8 @@ export async function executeShopErase(
       await tx.aiActionApproval.deleteMany({});
       await tx.aiActionExecution.deleteMany({});
       await tx.aiActionProposal.deleteMany({});
+      // Erasing the shop's records disconnects every external agent.
+      await tx.mcpAgentGrant.deleteMany({});
 
       // Durable notification effects precede their owning automation runs.
       await tx.automationNotification.deleteMany({});

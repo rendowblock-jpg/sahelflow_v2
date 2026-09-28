@@ -72,8 +72,8 @@ function assertLoopback(request: Request): void {
 }
 
 /**
- * Authorize one MCP transport request and return a stable connection id used to
- * derive the agent's non-person audit identity.
+ * Authorize one MCP transport request. The returned connection label is
+ * informational; since MCP-12 the agent's audit identity derives from its grant.
  */
 export async function authorizeMcpTransport(
   request: Request,

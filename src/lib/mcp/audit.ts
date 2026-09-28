@@ -59,6 +59,8 @@ export interface McpInvocationAuditRecord {
   agentActor: string;
   /** Person audit identity whose session authorized the agent. */
   onBehalfOf: string;
+  /** The MCP-12 grant the agent's session opened under. */
+  grantId: string;
   clientName: string | null;
   clientVersion: string | null;
   outcome: "succeeded" | "failed" | "proposed" | "denied" | "rate_limited";
@@ -86,6 +88,7 @@ export async function writeMcpInvocationAudit(
           via: "mcp",
           executionClass: record.executionClass,
           onBehalfOf: record.onBehalfOf,
+          grantId: record.grantId,
           client: {
             name: record.clientName,
             version: record.clientVersion,

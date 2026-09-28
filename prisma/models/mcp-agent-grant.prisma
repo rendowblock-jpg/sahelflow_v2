@@ -1,0 +1,23 @@
+// FD-063 MCP-12: durable MCP agent grants.
+//
+// A grant is the only way an external agent may open an MCP session. It names
+// the agent, narrows it to an explicit tool list (never wider than the person
+// session it borrows) and can be revoked instantly. Only a hash of the grant
+// secret is stored; the secret itself is shown to the seller exactly once.
+
+model McpAgentGrant {
+  id                String    @id @default(cuid())
+  label             String
+  secretHash        String    @unique
+  secretHint        String
+  toolsJson         String
+  createdBy         String
+  createdAt         DateTime  @default(now())
+  lastUsedAt        DateTime?
+  lastClientName    String?
+  lastClientVersion String?
+  revokedAt         DateTime?
+  revokedBy         String?
+
+  @@index([revokedAt, createdAt])
+}
