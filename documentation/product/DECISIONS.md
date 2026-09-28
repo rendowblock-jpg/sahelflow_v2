@@ -1359,6 +1359,42 @@ Binding boundaries:
 - No customer-online, Beta, Stable or paid-deployment authority is
   created. #230 and the zero-budget boundary are unaffected.
 
+## FD-063 — Local MCP agentic surface (EX-5 conversion, 2026-09-21, ADOPTED)
+
+Founder agent-surface decision, 2026-09-21, converting the EX-5 study
+(`documentation/research/CODFLOW_EXTRACTION.md` §7) into implementation
+under FD-061. It settles the five points the study left open; row-level
+state lives in `documentation/operations/MCP_AGENT_SURFACE_LEDGER.md`
+(MCP-01…MCP-15), which is subordinate to WORKING_MEMORY and converts no
+installed row. Recorded in this register on 2026-09-28, alongside the
+Founder's directive of the same day to complete the Agents surface on every
+layer, which this decision's engine carries.
+
+Binding boundaries:
+
+- Transport is a local sidecar: loopback Streamable HTTP inside the
+  packaged app plus a stdio bridge. No listening port is opened for agents,
+  and there is no #230 dependency. The control-plane-hosted OAuth transport
+  stays #230-gated with EX-6.
+- The eight sensitive verbs stay exactly as they are: no deletes, no
+  settlements. Each addition needs its own decision, policy entry, executor
+  case, target snapshot and test pin.
+- Scopes reuse `Phase2Action`; there is no parallel `mcp:*` scope space. The
+  owner role is the ceiling, and `approvals.approve` never appears in any
+  MCP requirement (never-approver).
+- The server-side proposal gate is the only human gate. A sensitive verb
+  over MCP executes nothing; it persists one immutable `AiActionProposal`.
+  Reads cross the boundary only through the fail-closed remote projection.
+- Audit is per invocation (`mcp.tool_called.v1`, `via: "mcp"`, redacted with
+  1024-character elision and depth 8) on the existing audit channel.
+- The Gemini-backed order-extraction path is out of scope and stays
+  untouched. The replacement target is the agent surface only.
+- Retiring the in-app Gemini agent loop (MCP-14) is the destructive half of
+  the replace and needs its own reviewed slice. The in-app workspace stays
+  until the MCP control surface (MCP-13) supersedes it.
+- Source work never claims installed, provider or customer evidence. The
+  zero-budget boundary and #230 are unaffected.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

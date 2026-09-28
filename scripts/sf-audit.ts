@@ -199,6 +199,7 @@ const requiredFiles = [
   "documentation/operations/TRANSFORMATION_REGISTER.md",
   "documentation/product/INTERFACE_SYSTEM.md",
   "documentation/operations/TRANSFORMATION_HANDOFF.md",
+  "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md",
   "documentation/security/phase4-vulnerability-triage.json",
   "documentation/research/RESEARCH.md",
   ".github/phase-checkpoints/phase3-durable-effects.json",
@@ -262,11 +263,11 @@ const markdownFiles = walkMarkdown(repoRoot);
 const activeDocumentationFiles = walkMarkdown(
   resolve(repoRoot, "documentation"),
 );
-if (activeDocumentationFiles.length !== 20) {
+if (activeDocumentationFiles.length !== 21) {
   report(
     "drift",
     "documentation/",
-    `expected 20 active Markdown files, found ${activeDocumentationFiles.length}`,
+    `expected 21 active Markdown files, found ${activeDocumentationFiles.length}`,
   );
 }
 

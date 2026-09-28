@@ -88,10 +88,21 @@ describe("proposal-bound AI production source contract", () => {
   });
 
   it("keeps registered tool resolution confined to the central agent path", () => {
+    // Two proposal-bound paths may resolve registered tools: the in-app agent
+    // loop and the FD-063 MCP surface, whose registry re-checks authority and
+    // whose executor turns every sensitive verb into a proposal. Any third
+    // caller would be a way to reach a tool around both gates.
     const matches = walk("src")
       .filter((path) => !path.endsWith("src/lib/ai/chat/tools/registry.ts"))
       .filter((path) => source(path).includes("getTool("));
-    expect(matches).toEqual(["src/lib/ai/chat/agent.ts"]);
+    expect(matches).toEqual([
+      "src/lib/ai/chat/agent.ts",
+      "src/lib/mcp/execute.ts",
+      "src/lib/mcp/registry.ts",
+    ]);
+    const mcpExecute = source("src/lib/mcp/execute.ts");
+    expect(mcpExecute).toContain("resolveMcpToolForSession(session, toolName)");
+    expect(mcpExecute).toContain("assertMcpNeverApprover(entry.requires)");
   });
 
   it("keeps approval digests out of persisted and Gemini tool history", () => {
