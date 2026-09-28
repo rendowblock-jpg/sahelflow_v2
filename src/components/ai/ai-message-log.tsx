@@ -127,7 +127,7 @@ export function AiMessageLog({
             onStart={onStart}
           />
         ) : (
-          <div className="space-y-6">
+          <div className="mx-auto w-full max-w-3xl space-y-7">
             {historyCapped ? (
               <div className="flex justify-center" data-ai-load-older="true">
                 <Button
