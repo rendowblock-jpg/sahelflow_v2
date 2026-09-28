@@ -9,7 +9,9 @@
  * This route carries no approval path. Approval lives in the Agents workspace
  * under `approvals.approve`, which the MCP surface may never require.
  */
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
+import { withErrorHandler } from "@/lib/api/with-error-handler";
 
 import { requireAuth } from "@/lib/auth/server";
 import { openMcpAgentSession } from "@/lib/mcp/agent-session";
@@ -27,7 +29,10 @@ export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 256 * 1024;
 
-export async function POST(request: Request): Promise<NextResponse> {
+// The shared API boundary applies the installation license lockout and shop
+// authority before any agent traffic is served; JSON-RPC shapes are produced
+// inside the handler, so only unexpected failures reach the wrapper.
+export const POST = withErrorHandler(async (request: NextRequest): Promise<NextResponse> => {
   let connectionId: string;
   try {
     ({ connectionId } = await authorizeMcpTransport(request));
@@ -85,7 +90,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   const response = await handleMcpRequest(session, payload);
   if (!response) return new NextResponse(null, { status: 202 });
   return NextResponse.json(response);
-}
+}, "POST /api/mcp");
 
 function extractClientInfo(
   payload: unknown,
