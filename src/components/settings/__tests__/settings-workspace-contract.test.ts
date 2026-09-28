@@ -153,7 +153,14 @@ describe("Settings Class-AAA control-center contract", () => {
   });
 
   it("projects exact read, manage, sync, backup and destructive capabilities", () => {
-    const page = read("src/app/(dashboard)/settings/page.tsx");
+    // The page and the intercepted Settings modal share ONE server authority
+    // for what is offered; both must route through it.
+    const page = read("src/lib/settings/workspace-access.ts");
+    const fullPage = read("src/app/(dashboard)/settings/page.tsx");
+    const modalPage = read("src/app/(dashboard)/@modal/(.)settings/page.tsx");
+    expect(fullPage).toContain("resolveSettingsWorkspaceProps(params.group)");
+    expect(modalPage).toContain("resolveSettingsWorkspaceProps(params.group)");
+    expect(page).toContain('requireTrustedAction("settings.read")');
     const workspace = read("src/components/settings/settings-workspace.tsx");
     expect(page).toContain('aiKey: can("integrations.manage")');
     expect(page).toContain('aiConsent: can("settings.manage")');

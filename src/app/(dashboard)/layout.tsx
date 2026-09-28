@@ -20,8 +20,11 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardRouteLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  /** Intercepted modal routes (Settings) rendered over the current page. */
+  modal: React.ReactNode;
 }) {
   if (!(await isAuthSetup())) redirect("/setup");
   if (!(await isAuthenticated())) redirect("/login");
@@ -48,6 +51,7 @@ export default async function DashboardRouteLayout({
         <RuntimeUiReadyBeacon />
         <SpeculationRules />
         {children}
+        {modal}
       </DashboardLayout>
     </LicenseBoundary>
   );

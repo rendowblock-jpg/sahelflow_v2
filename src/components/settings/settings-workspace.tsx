@@ -159,14 +159,58 @@ function SettingsDirectory({
   active,
   copy,
   mobile,
+  compact = false,
   onSelect,
 }: {
   groups: GroupDefinition[];
   active: SettingsWorkspaceGroup;
   copy: SettingsCopy;
   mobile: boolean;
+  /** Modal rail: icon + label rows; the description lives in the pane header. */
+  compact?: boolean;
   onSelect: (group: SettingsWorkspaceGroup) => void;
 }) {
+  if (compact && !mobile) {
+    return (
+      <nav
+        data-settings-directory="true"
+        aria-label={copy("workspaceHint")}
+        className="space-y-0.5"
+      >
+        {groups.map((group) => {
+          const Icon = group.icon;
+          const selected = active === group.id;
+          return (
+            <button
+              key={group.id}
+              type="button"
+              data-settings-group={group.id}
+              aria-pressed={selected}
+              aria-describedby={`settings-group-hint-${group.id}`}
+              onClick={() => onSelect(group.id)}
+              className={cn(
+                "flex h-10 w-full items-center gap-3 rounded-control px-2.5 text-start text-body-sm outline-none transition-colors duration-150 motion-reduce:transition-none",
+                "focus-visible:ring-2 focus-visible:ring-ring",
+                selected
+                  ? "bg-accent font-medium text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <Icon
+                className={cn("size-4 shrink-0", selected && "text-primary")}
+                aria-hidden="true"
+              />
+              <span className="min-w-0 flex-1 truncate">{copy(group.id)}</span>
+              <span id={`settings-group-hint-${group.id}`} className="sr-only">
+                {copy(group.descriptionKey)}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+    );
+  }
+
   return (
     <nav
       data-settings-directory="true"
@@ -236,11 +280,15 @@ export function SettingsWorkspace({
   integrations,
   access,
   initialGroup,
+  variant = "page",
 }: {
   integrations: Array<{ platform: string; status: string }>;
   access: SettingsWorkspaceAccess;
   initialGroup?: SettingsWorkspaceGroup;
+  /** `modal` fills the intercepted Settings modal instead of the page body. */
+  variant?: "page" | "modal";
 }) {
+  const inModal = variant === "modal";
   const { locale: rawLocale } = useI18n();
   const locale = rawLocale as SettingsWorkspaceLocale;
   const mobile = useMobile();
@@ -491,19 +539,27 @@ export function SettingsWorkspace({
       data-settings-control-center="true"
       data-settings-layout={mobile ? "mobile" : "desktop"}
       data-settings-mobile-pane={mobile ? mobilePane : undefined}
+      data-settings-variant={variant}
       className={cn(
         styles.controlCenter,
-        "border-y border-border/80 bg-background",
-        mobile
-          ? "min-h-[calc(100dvh-9rem)]"
-          : "h-[calc(100dvh-10.5rem)] min-h-[36rem]",
+        "bg-background",
+        inModal
+          ? "h-full min-h-0 flex-1"
+          : cn(
+              "border-y border-border/80",
+              mobile
+                ? "min-h-[calc(100dvh-9rem)]"
+                : "h-[calc(100dvh-10.5rem)] min-h-[36rem]",
+            ),
       )}
     >
       <div
         className={cn(
           "min-h-0 overflow-hidden",
           mobile
-            ? "min-h-[calc(100dvh-9rem)]"
+            ? inModal
+              ? "h-full overflow-y-auto"
+              : "min-h-[calc(100dvh-9rem)]"
             : "grid h-full md:grid-cols-[15.625rem_minmax(0,1fr)]",
         )}
       >
@@ -517,24 +573,27 @@ export function SettingsWorkspace({
               : "min-h-0 overflow-y-auto border-e border-border/80 bg-muted/[0.025] px-3 py-4",
           )}
         >
-          <div className={mobile ? "px-1 pb-4" : "px-2 pb-4"}>
+          <div className={mobile ? "px-1 pb-4" : inModal ? "px-2.5 pb-3 pt-1" : "px-2 pb-4"}>
             <p className="text-title-3 text-foreground">
               {copy("controlCenter")}
             </p>
-            <p
-              className={cn(
-                "mt-1 text-body-sm text-muted-foreground",
-                mobile ? "max-w-xl" : undefined,
-              )}
-            >
-              {copy("workspaceHint")}
-            </p>
+            {inModal && !mobile ? null : (
+              <p
+                className={cn(
+                  "mt-1 text-body-sm text-muted-foreground",
+                  mobile ? "max-w-xl" : undefined,
+                )}
+              >
+                {copy("workspaceHint")}
+              </p>
+            )}
           </div>
           <SettingsDirectory
             groups={visibleGroups}
             active={effectiveActive}
             copy={copy}
             mobile={mobile}
+            compact={inModal}
             onSelect={selectGroup}
           />
         </aside>

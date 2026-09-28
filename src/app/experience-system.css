@@ -381,3 +381,26 @@ html[dir="rtl"][data-locale-transition="pending"] body::before {
 [data-universal-search="v2"] [data-slot="command-input"]:focus-visible {
   outline: none;
 }
+
+/*
+ * The Settings modal: a large centered window over the current page on the
+ * desktop, full-screen on narrow viewports. Sized here so the dialog stays on
+ * system values instead of arbitrary per-call-site geometry.
+ */
+[data-settings-modal="true"].settings-modal {
+  width: min(76rem, calc(100vw - 3rem));
+  max-width: none;
+  height: min(54rem, calc(100dvh - 3rem));
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 767px) {
+  [data-settings-modal="true"].settings-modal {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    border: 0;
+  }
+}

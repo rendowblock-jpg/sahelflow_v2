@@ -49,8 +49,17 @@ function dashboardRoutes(): string[] {
         continue;
       }
       if (entry.name === "api") continue;
-      // Route groups like (dashboard) do not contribute a path segment.
-      if (entry.name.startsWith("(") && entry.name.endsWith(")")) {
+      const intercepted = /^(?:\(\.{1,3}\))+(.+)$/.exec(entry.name);
+      if (intercepted) {
+        // An intercepting route like @modal/(.)settings renders the page it
+        // intercepts, so it is reachable exactly when that URL is; it maps to
+        // that URL rather than standing as a destination of its own.
+        walk(path, `${base}/${intercepted[1]}`);
+      } else if (entry.name.startsWith("@")) {
+        // Parallel-route slots like @modal do not contribute a path segment.
+        walk(path, base);
+      } else if (entry.name.startsWith("(") && entry.name.endsWith(")")) {
+        // Route groups like (dashboard) do not contribute a path segment.
         walk(path, base);
       } else {
         walk(path, `${base}/${entry.name}`);
@@ -58,7 +67,7 @@ function dashboardRoutes(): string[] {
     }
   };
   walk(resolve(root, "src/app"), "");
-  return routes.sort();
+  return [...new Set(routes)].sort();
 }
 
 function productSources(): string[] {
