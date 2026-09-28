@@ -20,6 +20,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
 import { useI18n } from "@/hooks/use-i18n";
+import { parseMcpRequestLine } from "@/lib/ai/mcp-request-line";
+import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
+import { getConnectedAgentsCopy } from "@/lib/i18n/connected-agents";
 import {
   getAiDecisionCopy,
   type AiDecisionLocale,
@@ -354,9 +357,13 @@ export function AiWorkHistory({
                       const active = session.id === activeSessionId;
                       const sessionTitle =
                         session.title || workspace.copy("newSessionTitle");
-                      const rawPreview = previewPlainText(
-                        sessionPreview(session),
-                      );
+                      const latest = sessionPreview(session);
+                      const agentRequest = parseMcpRequestLine(latest);
+                      const rawPreview = agentRequest
+                        ? getConnectedAgentsCopy(locale, "agentRequest", {
+                            tool: getAiToolLabel(locale, agentRequest.tool),
+                          })
+                        : previewPlainText(latest);
                       const preview = previewRepeatsTitle(
                         session.title ?? "",
                         rawPreview,
@@ -458,7 +465,12 @@ export function AiWorkHistory({
                           >
                             <span className="flex items-start justify-between gap-2">
                               <span className="min-w-0 flex-1 pe-12">
+                                {/* Seller-named titles (and agent names) keep their own
+                                    direction, so a Latin title truncates at its end,
+                                    while aligning with the rail. */}
                                 <span
+                                  dir="auto"
+                                  data-sf-seller-label="true"
                                   className={cn(
                                     "block truncate text-sm text-foreground",
                                     active ? "font-semibold" : "font-medium",
@@ -469,6 +481,7 @@ export function AiWorkHistory({
                                 {preview ? (
                                   <span
                                     dir="auto"
+                                    data-sf-seller-label="true"
                                     className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground"
                                   >
                                     {preview}
