@@ -289,6 +289,18 @@ html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid > :is(aside, mai
   unicode-bidi: plaintext;
 }
 
+/*
+ * One-line seller data inside a list column — customer, contact and product
+ * names, titles. Rendered with dir="auto" so the value keeps its own direction
+ * (a long Latin name truncates at ITS end instead of losing its first letters),
+ * while `match-parent` aligns it with the surrounding interface: a Latin name
+ * sits on the same edge as its Arabic neighbours in an RTL column instead of
+ * drifting to the opposite side.
+ */
+[data-sf-seller-label="true"] {
+  text-align: match-parent;
+}
+
 /* ── Locale transition presentation ─────────────────────────────────────── */
 html[data-locale-transition="pending"] body {
   cursor: default;
@@ -357,4 +369,15 @@ html[dir="rtl"][data-locale-transition="pending"] body::before {
     opacity: 0.7;
     animation: none !important;
   }
+}
+
+/*
+ * The command-center query field is the dialog's single text target and holds
+ * focus for as long as the palette is open; the caret and the header band make
+ * that focus self-evident. The global `*:focus-visible` outline would only draw
+ * a heavy box around the whole header, so this one field is exempt. Every
+ * other control in the palette keeps the standard ring.
+ */
+[data-universal-search="v2"] [data-slot="command-input"]:focus-visible {
+  outline: none;
 }
