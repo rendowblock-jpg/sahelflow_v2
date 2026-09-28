@@ -139,7 +139,16 @@ export async function listMcpAgentGrants(db: DbClient): Promise<McpAgentGrantVie
 
 export async function createMcpAgentGrant(
   db: DbClient,
-  input: { label: string; tools: readonly string[]; createdBy: string },
+  input: {
+    label: string;
+    tools: readonly string[];
+    createdBy: string;
+    /**
+     * Bind the new grant's durable identity (MCP-11). A grant whose identity
+     * cannot be bound is deleted again: an unbound grant could never act.
+     */
+    bindIdentity: (grantId: string) => Promise<unknown>;
+  },
 ): Promise<{ grant: McpAgentGrantView; secret: string }> {
   const active = await db.mcpAgentGrant.count({ where: { revokedAt: null } });
   if (active >= MCP_GRANT_ACTIVE_LIMIT) {
@@ -159,6 +168,12 @@ export async function createMcpAgentGrant(
       createdBy: input.createdBy,
     },
   });
+  try {
+    await input.bindIdentity(row.id);
+  } catch (error) {
+    await db.mcpAgentGrant.delete({ where: { id: row.id } }).catch(() => undefined);
+    throw error;
+  }
   return { grant: toView(row), secret };
 }
 
@@ -166,16 +181,23 @@ export async function revokeMcpAgentGrant(
   db: DbClient,
   id: string,
   revokedBy: string,
+  /** Revoke the grant's durable identity binding as well (MCP-11). */
+  revokeIdentity: (grantId: string) => Promise<unknown>,
 ): Promise<McpAgentGrantView> {
   const existing = await db.mcpAgentGrant.findUnique({ where: { id } });
   if (!existing) {
     throw new SahelFlowError("Agent not found", "MCP_GRANT_NOT_FOUND", 404);
   }
-  if (existing.revokedAt) return toView(existing);
-  const row = await db.mcpAgentGrant.update({
-    where: { id },
-    data: { revokedAt: new Date(), revokedBy },
-  });
+  // The row is revoked first: ingress checks it on every request, so access
+  // ends even if the identity write below is interrupted, and a retry of this
+  // idempotent call finishes the binding revocation.
+  const row = existing.revokedAt
+    ? existing
+    : await db.mcpAgentGrant.update({
+        where: { id },
+        data: { revokedAt: new Date(), revokedBy },
+      });
+  await revokeIdentity(id);
   return toView(row);
 }
 

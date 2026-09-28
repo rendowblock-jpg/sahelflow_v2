@@ -2,11 +2,11 @@
  * Local MCP endpoint (FD-063).
  *
  * `POST /api/mcp` — stateless Streamable HTTP, loopback only, bearer-token
- * gated, and bound to the durable Founder session the sidecar forwards. Without
- * a real person session there is no agent session and therefore zero tools:
- * fail-closed, exactly like CodFlow's unauthenticated registration. Without an
- * active MCP-12 agent grant (`x-sahelflow-agent-grant`) there is no session
- * either, so revoking a grant cuts its agent off on the very next request.
+ * gated. Every session opens under an active MCP-12 agent grant
+ * (`x-sahelflow-agent-grant`) whose own durable identity binding (MCP-11) is
+ * re-read on each request: a revoked grant, owner or device, or a policy
+ * change, cuts the agent off on its very next call. No grant, no tools —
+ * fail-closed, exactly like CodFlow's unauthenticated registration.
  *
  * This route carries no approval path. Approval lives in the Agents workspace
  * under `approvals.approve`, which the MCP surface may never require.
@@ -14,8 +14,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth } from "@/lib/auth/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
+import { assertTrustedAction } from "@/lib/identity/authorization";
+import { trustedActorForAgentGrant } from "@/lib/identity/trusted-actor";
 import { normalizeMcpClient, openMcpAgentSession } from "@/lib/mcp/agent-session";
 import { resolveMcpAgentGrant } from "@/lib/mcp/grants";
 import {
@@ -63,17 +64,23 @@ export const POST = withErrorHandler(async (request: NextRequest): Promise<NextR
 
   let session;
   try {
-    const actorContext = await requireAuth("ai.use");
     const clientInfo = extractClientInfo(payload);
     const grant = await resolveMcpAgentGrant(
       db,
       request.headers.get("x-sahelflow-agent-grant"),
       normalizeMcpClient(clientInfo),
     );
+    // The grant's own durable identity binding is the agent's authority; no
+    // browser session is borrowed (MCP-11).
+    const actorContext = await trustedActorForAgentGrant(grant.id, shopContext);
+    assertTrustedAction(actorContext, "ai.use", { shopId: shopContext.shopId });
     session = openMcpAgentSession({ actorContext, client: clientInfo, grant });
   } catch (error) {
     const status = error instanceof SahelFlowError ? error.statusCode : 401;
     const code = error instanceof SahelFlowError ? error.code : "UNAUTHORIZED";
+    if (status >= 500) {
+      return NextResponse.json({ error: "Unavailable", code }, { status: 503 });
+    }
     return NextResponse.json(
       { error: "Unauthorized", code },
       { status: status === 403 ? 403 : 401 },

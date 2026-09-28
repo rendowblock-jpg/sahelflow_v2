@@ -62,7 +62,7 @@ export function ConnectAgentDialog({
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [secret, setSecret] = React.useState<string | null>(null);
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = React.useState<"key" | "config" | null>(null);
 
   const groups = React.useMemo(() => groupTools(agents.catalog), [agents.catalog]);
   const readOnly = React.useMemo(
@@ -75,7 +75,7 @@ export function ConnectAgentDialog({
     setSelected(new Set());
     setError(null);
     setSecret(null);
-    setCopied(false);
+    setCopied(null);
     setSubmitting(false);
   };
 
@@ -112,13 +112,30 @@ export function ConnectAgentDialog({
     }
   };
 
-  const copySecret = async () => {
-    if (!secret) return;
+  // A ready-to-paste stdio server entry, offered once the installed bridge is
+  // known (MCP-11). The key appears here and nowhere else after this dialog.
+  const clientConfig =
+    secret && agents.bridgePath
+      ? JSON.stringify(
+          {
+            mcpServers: {
+              sahelflow: {
+                command: agents.bridgePath,
+                env: { SAHELFLOW_AGENT_GRANT: secret },
+              },
+            },
+          },
+          null,
+          2,
+        )
+      : null;
+
+  const copyText = async (value: string, which: "key" | "config") => {
     try {
-      await navigator.clipboard.writeText(secret);
-      setCopied(true);
+      await navigator.clipboard.writeText(value);
+      setCopied(which);
     } catch {
-      // Clipboard permission denied: the key stays selectable on screen.
+      // Clipboard permission denied: the text stays selectable on screen.
     }
   };
 
@@ -142,15 +159,45 @@ export function ConnectAgentDialog({
               >
                 {secret}
               </code>
-              <Button type="button" size="sm" variant="outline" onClick={() => void copySecret()}>
-                {copied ? (
+              <Button type="button" size="sm" variant="outline" onClick={() => void copyText(secret, "key")}>
+                {copied === "key" ? (
                   <Check className="size-4 text-success" aria-hidden="true" />
                 ) : (
                   <Copy className="size-4" aria-hidden="true" />
                 )}
-                {copied ? copy("copied") : copy("copy")}
+                {copied === "key" ? copy("copied") : copy("copy")}
               </Button>
             </div>
+            {clientConfig ? (
+              <section className="space-y-2" data-agent-client-config="true">
+                <div className="flex items-end justify-between gap-3">
+                  <div className="min-w-0 space-y-0.5">
+                    <h3 className="text-body-sm font-semibold">{copy("configTitle")}</h3>
+                    <p className="text-caption text-muted-foreground">{copy("configDescription")}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0"
+                    onClick={() => void copyText(clientConfig, "config")}
+                  >
+                    {copied === "config" ? (
+                      <Check className="size-4 text-success" aria-hidden="true" />
+                    ) : (
+                      <Copy className="size-4" aria-hidden="true" />
+                    )}
+                    {copied === "config" ? copy("copied") : copy("copyConfig")}
+                  </Button>
+                </div>
+                <pre
+                  dir="ltr"
+                  className="max-h-48 overflow-auto rounded-surface border border-border bg-muted/40 p-3 text-start font-mono text-caption text-foreground"
+                >
+                  {clientConfig}
+                </pre>
+              </section>
+            ) : null}
             <DialogFooter>
               <Button type="button" onClick={() => close(false)}>
                 {copy("done")}

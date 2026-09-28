@@ -36,4 +36,11 @@ export async function register(): Promise<void> {
   startLogRetentionWorker();
   startMetaCapiWorker();
   startAbandonedCartWorker();
+
+  // FD-063 MCP-11: tell a client-launched stdio bridge where this launch
+  // listens. Best-effort: without it agents simply cannot connect.
+  const { publishMcpEndpoint } = await import("./lib/mcp/endpoint");
+  await publishMcpEndpoint().catch((error: unknown) => {
+    console.warn("[sahelflow] MCP endpoint could not be published", error);
+  });
 }

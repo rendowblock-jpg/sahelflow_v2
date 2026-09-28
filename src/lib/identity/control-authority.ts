@@ -1089,6 +1089,100 @@ export async function revokeIdentitySessionBinding(
   });
 }
 
+/** Identity binding label for one MCP agent grant (FD-063 MCP-11). */
+export function agentGrantIdentitySessionId(grantId: string): string {
+  if (!/^[A-Za-z0-9_-]{8,64}$/.test(grantId)) {
+    throw identityError("Agent grant identity is invalid", "IDENTITY_AGENT_GRANT_INVALID", 400);
+  }
+  return `mcp-grant:${grantId}`;
+}
+
+/**
+ * Bind an MCP agent grant to its creator's durable identity.
+ *
+ * The grant gets its own binding, copied from the creating owner's live
+ * session binding (same person, member, device and revocation epochs), so an
+ * agent acts without borrowing a browser session that expires. Because it is a
+ * binding like any other, every existing control applies unchanged: the drift
+ * check cuts the agent off when the owner, member or device is revoked,
+ * "revoke all other sessions" disconnects it, and proposal approval re-resolves
+ * the requester exactly as for a person. No Session row exists for the label,
+ * so it can never be presented as a browser session.
+ */
+export async function bindAgentGrantIdentity(
+  creatorSessionId: string,
+  grantId: string,
+  shop: ShopContext,
+): Promise<DurableIdentityActor> {
+  exactSessionIdSchema.parse(creatorSessionId);
+  const grantSessionId = agentGrantIdentitySessionId(grantId);
+
+  return withAuthorityLock(async () => {
+    const { envelope, marker } = readRequiredAuthority(shop);
+    const payload = structuredClone(envelope.payload) as IdentityPayload;
+    const creator = actorFromPayload(payload, creatorSessionId, shop);
+    assertOwner(creator);
+    const source = payload.sessionBindings.find(
+      (binding) => binding.sessionId === creatorSessionId && binding.revokedAt === null,
+    );
+    if (!source) {
+      throw identityError(
+        "The authenticated session has no durable identity binding",
+        "IDENTITY_SESSION_BINDING_REQUIRED",
+        401,
+      );
+    }
+    if (payload.sessionBindings.some((binding) => binding.sessionId === grantSessionId)) {
+      throw identityError(
+        "This agent grant is already bound",
+        "IDENTITY_AGENT_GRANT_ALREADY_BOUND",
+        409,
+      );
+    }
+
+    payload.sessionBindings.push({
+      ...source,
+      sessionId: grantSessionId,
+      boundAt: new Date().toISOString(),
+      revokedAt: null,
+    });
+    payload.sessionBindings.sort((left, right) =>
+      left.boundAt < right.boundAt ? -1 : left.boundAt > right.boundAt ? 1 : 0,
+    );
+    if (payload.sessionBindings.length > MAX_SESSION_BINDINGS) {
+      payload.sessionBindings = payload.sessionBindings.slice(-MAX_SESSION_BINDINGS);
+    }
+    payload.revision += 1;
+    atomicWrite(identityAuthorityPath(), createEnvelope(payload));
+    if (!marker) atomicWrite(identityAuthorityMarkerPath(), createMarker(shop));
+    return actorFromPayload(payload, grantSessionId, shop);
+  });
+}
+
+/** Revoke an agent grant's identity binding. Idempotent; a missing binding is a no-op. */
+export async function revokeAgentGrantIdentity(
+  grantId: string,
+  shop: ShopContext,
+): Promise<void> {
+  const grantSessionId = agentGrantIdentitySessionId(grantId);
+  await withAuthorityLock(async () => {
+    const envelope = readAuthority();
+    if (!envelope) return;
+    const marker = readMarker();
+    assertContext(envelope.payload, shop);
+    assertMarkerContext(marker, envelope.payload, shop);
+    const payload = structuredClone(envelope.payload) as IdentityPayload;
+    const target = payload.sessionBindings.find(
+      (binding) => binding.sessionId === grantSessionId,
+    );
+    if (!target || target.revokedAt) return;
+    target.revokedAt = new Date().toISOString();
+    payload.revision += 1;
+    atomicWrite(identityAuthorityPath(), createEnvelope(payload));
+    if (!marker) atomicWrite(identityAuthorityMarkerPath(), createMarker(shop));
+  });
+}
+
 /**
  * Re-authenticate installation identity files during master-key rotation.
  *

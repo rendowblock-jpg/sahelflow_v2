@@ -5,58 +5,95 @@
  * direction, the desktop's loopback `POST /api/mcp` in the other. Every
  * authority decision — scope hiding, privacy projection, the proposal gate,
  * rate limiting, audit — lives in the Next.js runtime. This process holds no
- * business logic and no credentials beyond the launch-scoped transport token it
- * is handed.
+ * business logic and holds only the agent's grant key.
  *
  * Why a bridge rather than a second server: desktop MCP clients overwhelmingly
  * speak stdio, and SahelFlow must not open a listening port to give an agent
- * access to a seller's shop.
+ * access to a seller's shop. The MCP client launches this bridge itself; the
+ * bridge finds the running app through the `mcp/endpoint.json` the app
+ * publishes in its data directory at every launch (MCP-11).
  *
  * Environment:
- *   SAHELFLOW_BASE_URL          loopback origin of the packaged app
- *                               (default http://127.0.0.1:3000)
- *   MCP_SIDECAR_TOKEN           transport bearer token, or
- *   MCP_SIDECAR_TOKEN_FILE      a file containing it
- *   SAHELFLOW_SESSION_COOKIE    the durable Founder session cookie the desktop
- *                               shell forwards; without it the app answers with
- *                               zero tools, by design
- *   SAHELFLOW_AGENT_GRANT       the agent's grant secret (MCP-12), created and
- *                               revocable in the Agents workspace; without an
- *                               active grant the app opens no session
- *   MCP_CONNECTION_ID           stable label for this connection's audit rows
+ *   SAHELFLOW_AGENT_GRANT       required: the agent's key, created and revocable
+ *                               in AI Agents → Connected agents
+ *   SAHELFLOW_DATA_DIR          optional: the app's data directory when it is
+ *                               not the platform default for com.sahelflow.desktop
+ *   SAHELFLOW_BASE_URL          optional override of the published app origin
+ *   MCP_SIDECAR_TOKEN(_FILE)    optional override of the published transport token
+ *   MCP_CONNECTION_ID           optional label for this connection's audit rows
  */
 
-const BASE_URL = (
-  process.env.SAHELFLOW_BASE_URL ?? "http://127.0.0.1:3000"
-).replace(/\/+$/, "");
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+const APP_IDENTIFIER = "com.sahelflow.desktop";
 const CONNECTION_ID = process.env.MCP_CONNECTION_ID ?? "stdio";
 const REQUEST_TIMEOUT_MS = 30_000;
-
-function loadToken(): string {
-  const inline = process.env.MCP_SIDECAR_TOKEN?.trim();
-  if (inline) return inline;
-  const path = process.env.MCP_SIDECAR_TOKEN_FILE?.trim();
-  if (path) {
-    try {
-      return require("node:fs").readFileSync(path, "utf8").trim();
-    } catch {
-      return "";
-    }
-  }
-  return "";
-}
-
-const TOKEN = loadToken();
+const GRANT = process.env.SAHELFLOW_AGENT_GRANT?.trim() ?? "";
 
 function fatal(message: string): never {
   process.stderr.write(`[sahelflow-mcp] ${message}\n`);
   process.exit(1);
 }
 
-if (!TOKEN) {
+if (!GRANT) {
   fatal(
-    "no transport token: set MCP_SIDECAR_TOKEN or MCP_SIDECAR_TOKEN_FILE. Refusing to start.",
+    "no agent key: create one in SahelFlow → AI Agents → Connected agents and set it as SAHELFLOW_AGENT_GRANT.",
   );
+}
+
+/** The desktop app's data directory, where it publishes mcp/endpoint.json. */
+function appDataDirectory(): string {
+  const configured = process.env.SAHELFLOW_DATA_DIR?.trim();
+  if (configured) return configured;
+  if (process.platform === "win32") {
+    return join(process.env.APPDATA ?? join(homedir(), "AppData", "Roaming"), APP_IDENTIFIER);
+  }
+  if (process.platform === "darwin") {
+    return join(homedir(), "Library", "Application Support", APP_IDENTIFIER);
+  }
+  return join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"), APP_IDENTIFIER);
+}
+
+function readText(path: string): string {
+  try {
+    return readFileSync(path, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+interface Endpoint {
+  url: string;
+  token: string;
+}
+
+/**
+ * Resolve where the running app listens. Re-read on every request: the app
+ * chooses a new loopback port and transport token at each launch, and an agent
+ * session often outlives an app restart.
+ */
+function resolveEndpoint(): Endpoint | null {
+  let descriptor: { url?: unknown; tokenFile?: unknown } = {};
+  const published = readText(join(appDataDirectory(), "mcp", "endpoint.json"));
+  if (published) {
+    try {
+      descriptor = JSON.parse(published) as typeof descriptor;
+    } catch {
+      descriptor = {};
+    }
+  }
+  const url = (
+    process.env.SAHELFLOW_BASE_URL?.trim() ||
+    (typeof descriptor.url === "string" ? descriptor.url : "")
+  ).replace(/\/+$/, "");
+  const tokenFile =
+    process.env.MCP_SIDECAR_TOKEN_FILE?.trim() ||
+    (typeof descriptor.tokenFile === "string" ? descriptor.tokenFile : "");
+  const token =
+    process.env.MCP_SIDECAR_TOKEN?.trim() || (tokenFile ? readText(tokenFile) : "");
+  return url && token ? { url, token } : null;
 }
 
 function write(value: unknown): void {
@@ -81,21 +118,26 @@ async function forward(message: unknown): Promise<void> {
     typeof message === "object" &&
     "id" in (message as Record<string, unknown>);
 
+  const endpoint = resolveEndpoint();
+  if (!endpoint) {
+    if (hasId) {
+      transportError(id, "SahelFlow is not running. Open the SahelFlow desktop app and retry.");
+    }
+    return;
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
     const headers: Record<string, string> = {
       "content-type": "application/json",
       accept: "application/json",
-      authorization: `Bearer ${TOKEN}`,
+      authorization: `Bearer ${endpoint.token}`,
       "x-sahelflow-mcp-connection": CONNECTION_ID,
+      "x-sahelflow-agent-grant": GRANT,
     };
-    const cookie = process.env.SAHELFLOW_SESSION_COOKIE?.trim();
-    if (cookie) headers.cookie = cookie;
-    const grant = process.env.SAHELFLOW_AGENT_GRANT?.trim();
-    if (grant) headers["x-sahelflow-agent-grant"] = grant;
 
-    const response = await fetch(`${BASE_URL}/api/mcp`, {
+    const response = await fetch(`${endpoint.url}/api/mcp`, {
       method: "POST",
       headers,
       body: JSON.stringify(message),
@@ -103,11 +145,11 @@ async function forward(message: unknown): Promise<void> {
     });
 
     if (response.status === 202) return;
-    if (!response.ok && response.status === 401) {
+    if (!response.ok && (response.status === 401 || response.status === 403)) {
       if (hasId) {
         transportError(
           id,
-          "SahelFlow rejected the agent session. Reconnect from the desktop app.",
+          "SahelFlow refused this agent: its key was revoked or is not valid. Create a new key in AI Agents → Connected agents.",
         );
       }
       return;
