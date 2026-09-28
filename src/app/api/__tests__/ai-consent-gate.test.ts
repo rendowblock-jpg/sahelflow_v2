@@ -80,7 +80,10 @@ afterAll(async () => {
 });
 
 describe("POST /api/extraction — consent gate", () => {
-  it("returns 403 consent_required when the setting is unset without a Gemini call", async () => {
+  // FD-064: consent governs what leaves the device. Without it the offline
+  // reader still works, the stored Gemini key is never used, and the response
+  // carries the coded reason so review can offer to enable AI.
+  it("reads locally without a Gemini call when the setting is unset", async () => {
     const fetchSpy = vi.fn().mockResolvedValue(geminiOkResponse("{}"));
     vi.stubGlobal("fetch", fetchSpy);
     try {
@@ -89,28 +92,33 @@ describe("POST /api/extraction — consent gate", () => {
           body: "2x iPhone 14 Alger 0661234567",
         }),
       );
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
       const body = await getJson(res);
-      expect(body.error).toBe("consent_required");
-      expect(body.message).toMatch(/Settings/i);
+      expect((body.result as Record<string, unknown>).method).toBe("regex");
+      expect(body.ai).toMatchObject({ consent: false, available: false });
       expect(fetchSpy).not.toHaveBeenCalled();
     } finally {
       vi.unstubAllGlobals();
     }
   });
 
-  it("returns 403 consent_required when consent is explicitly false", async () => {
+  it("never uses a stored Gemini key when consent is explicitly false", async () => {
     await setConsent(false);
+    await rawDb.setting.upsert({
+      where: { key: "gemini_api_key" },
+      update: { value: "AIzaSYNTHETIC-NOT-A-KEY" },
+      create: { key: "gemini_api_key", value: "AIzaSYNTHETIC-NOT-A-KEY" },
+    });
     const fetchSpy = vi.fn().mockResolvedValue(geminiOkResponse("{}"));
     vi.stubGlobal("fetch", fetchSpy);
     try {
       const res = await POSTExtraction(
         mockPost("http://localhost/api/extraction", {
-          body: "2x iPhone 14 Alger 0661234567",
+          body: "salam, la robe li f la photo, Mostaganem",
         }),
       );
-      expect(res.status).toBe(403);
-      expect((await getJson(res)).error).toBe("consent_required");
+      expect(res.status).toBe(200);
+      expect((await getJson(res)).ai).toMatchObject({ consent: false, available: false });
       expect(fetchSpy).not.toHaveBeenCalled();
     } finally {
       vi.unstubAllGlobals();
@@ -137,18 +145,15 @@ describe("POST /api/extraction — consent gate", () => {
     }
   });
 
-  it("carries the coded AI_CONSENT_REQUIRED field on the 403 body (audit S2-6)", async () => {
+  it("carries the coded AI_CONSENT_REQUIRED reason when AI is not consented (audit S2-6)", async () => {
     const res = await POSTExtraction(
       mockPost("http://localhost/api/extraction", {
         body: "2x iPhone 14 Alger 0661234567",
       }),
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
     const body = await getJson(res);
-    expect(body).toMatchObject({
-      error: "consent_required",
-      code: "AI_CONSENT_REQUIRED",
-    });
+    expect(body.ai).toMatchObject({ consent: false, code: "AI_CONSENT_REQUIRED" });
   });
 
   it("rejects oversized extraction bodies with coded 400 REQUEST_VALIDATION_FAILED (audit S2-6)", async () => {

@@ -144,3 +144,40 @@ export async function resolveCanonicalNamedItems(
   }
   return [...grouped.values()];
 }
+
+/** Upper bound on catalog identities handed to extraction per request. */
+export const EXTRACTION_CATALOG_LIMIT = 500;
+
+/**
+ * FD-064: the exact identities `resolveCanonicalNamedItems` accepts, for the
+ * extractor to aim at — a product name when it has no active variant, else
+ * one "Product Variant" identity per active variant.
+ */
+export async function listExtractionCatalog(
+  context: Pick<BusinessPrincipalContext, "prisma">,
+): Promise<Array<{ name: string; price: number }>> {
+  const products = await context.prisma.product.findMany({
+    where: { isActive: true, deletedAt: null },
+    select: {
+      name: true,
+      price: true,
+      productVariants: {
+        where: { isActive: true },
+        select: { name: true, price: true },
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      },
+    },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    take: EXTRACTION_CATALOG_LIMIT,
+  });
+  return products
+    .flatMap((product) =>
+      product.productVariants.length === 0
+        ? [{ name: product.name, price: product.price }]
+        : product.productVariants.map((variant) => ({
+            name: `${product.name} ${variant.name}`,
+            price: variant.price ?? product.price,
+          })),
+    )
+    .slice(0, EXTRACTION_CATALOG_LIMIT);
+}

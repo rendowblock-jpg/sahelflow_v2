@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { GeminiProviderError, requestGemini } from "@/lib/ai/gemini/provider";
 import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_USER_PROMPT } from "../prompts/extraction";
+import { matchCatalog } from "./catalog";
+import { normalizePhone } from "./fields";
+import { canonicalWilaya } from "./geography";
 import type { ExtractedOrder, ExtractionInput, ExtractionResult } from "./types";
 
 export { verifyGeminiKey } from "@/lib/ai/gemini/provider";
@@ -58,6 +61,45 @@ const fail = (code: string): ExtractionResult => ({
 
 export interface GeminiExtractorOptions { apiKey: string; timeoutMs?: number }
 
+/**
+ * A model answer is held to the same canonical forms as the offline reader
+ * (FD-064): 0XXXXXXXXX phones, official wilaya names, catalog item names.
+ * A value that cannot be made canonical is dropped and reported missing
+ * rather than passed on to order creation.
+ */
+export function canonicalizeOrder(
+  order: z.infer<typeof ExtractedOrderSchema>,
+  input: Pick<ExtractionInput, "catalog" | "knownPhone">,
+): ExtractedOrder {
+  const phone = normalizePhone(order.phone) ?? normalizePhone(input.knownPhone);
+  const wilaya = canonicalWilaya(order.wilaya);
+  const clean = (value: string | undefined) => value?.replace(/\s+/g, " ").trim() || undefined;
+  const items = order.items
+    .map((item) => ({ ...item, productName: item.productName.replace(/\s+/g, " ").trim() }))
+    .filter((item) => item.productName)
+    .map((item) => {
+      const quantity = Math.min(Math.max(item.quantity, 1), 999);
+      const match = matchCatalog(item.productName, input.catalog);
+      return {
+        productName: match?.name ?? item.productName,
+        quantity,
+        ...(item.unitPrice !== undefined ? { unitPrice: Math.round(item.unitPrice) } : {}),
+        ...(match ? { catalogMatch: match.kind } : {}),
+        ...(match && match.name !== item.productName ? { sourceText: item.productName } : {}),
+      };
+    });
+  return {
+    items,
+    ...(clean(order.customerName) ? { customerName: clean(order.customerName) } : {}),
+    ...(phone ? { phone } : {}),
+    ...(wilaya ? { wilaya } : {}),
+    ...(clean(order.commune) ? { commune: clean(order.commune) } : {}),
+    ...(clean(order.address) ? { address: clean(order.address) } : {}),
+    ...(order.totalPrice !== undefined ? { totalPrice: Math.round(order.totalPrice) } : {}),
+    ...(clean(order.notes) ? { notes: clean(order.notes) } : {}),
+  };
+}
+
 export async function extractWithGemini(
   input: ExtractionInput,
   options: GeminiExtractorOptions,
@@ -68,7 +110,10 @@ export async function extractWithGemini(
       timeoutMs: options.timeoutMs ?? 15_000,
       body: {
         systemInstruction: { parts: [{ text: EXTRACTION_SYSTEM_PROMPT }] },
-        contents: [{ role: "user", parts: [{ text: EXTRACTION_USER_PROMPT(input.body) }] }],
+        contents: [{
+          role: "user",
+          parts: [{ text: EXTRACTION_USER_PROMPT(input.body, input.catalog?.map((entry) => entry.name)) }],
+        }],
         generationConfig: {
           maxOutputTokens: 1024,
           responseMimeType: "application/json",
@@ -83,7 +128,7 @@ export async function extractWithGemini(
     try { parsed = JSON.parse(text); } catch { return fail("GEMINI_INVALID_EXTRACTION"); }
     const validated = ExtractedOrderSchema.safeParse(parsed);
     if (!validated.success) return fail("GEMINI_INVALID_EXTRACTION");
-    const order: ExtractedOrder = validated.data;
+    const order = canonicalizeOrder(validated.data, input);
     const missingFields: string[] = [];
     if (order.items.length === 0) missingFields.push("items");
     if (!order.wilaya) missingFields.push("wilaya");

@@ -5,11 +5,19 @@
  * so the smart router can treat them interchangeably.
  */
 
+import type { ExtractionCatalogEntry } from "./catalog";
+
+export type { ExtractionCatalogEntry };
+
 /** A single extracted order item */
 export interface ExtractedItem {
   productName: string;
   quantity: number;
   unitPrice?: number; // DZD, may be absent if not mentioned
+  /** Set when the name was mapped onto the seller's catalog (FD-064). */
+  catalogMatch?: "exact" | "close";
+  /** What the customer actually wrote, when it was mapped onto the catalog. */
+  sourceText?: string;
 }
 
 /** The result of extracting an order from a message */
@@ -47,6 +55,10 @@ export interface ExtractionResult {
   isComplete: boolean;
   /** What's missing (if incomplete) */
   missingFields?: string[];
+  /** No item was found, but these customer/delivery details were (FD-064). */
+  partial?: ExtractedOrder;
+  /** Why Gemini could not help this time (the offline reading was kept). */
+  aiFailure?: string;
   /** Raw extraction metadata (for debugging) */
   raw?: unknown;
 }
@@ -59,6 +71,8 @@ export interface ExtractionInput {
   channel?: string;
   /** Existing customer phone (if the conversation has one) — helps matching */
   knownPhone?: string;
+  /** The seller's active catalog identities, so items land on real products. */
+  catalog?: ExtractionCatalogEntry[];
 }
 
 /** Ledger AI-21 — input to the visual (screenshot) extractor. The MIME type

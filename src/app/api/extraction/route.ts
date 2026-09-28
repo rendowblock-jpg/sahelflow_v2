@@ -9,8 +9,10 @@ import { getBool, SETTING_KEYS } from "@/lib/settings";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth, getCurrentUserKey } from "@/lib/auth/server";
+import { trustedActionAllowed } from "@/lib/identity/authorization";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { db, shopContext } from "@/lib/db";
+import { listExtractionCatalog } from "@/lib/orders/canonical-named-items";
 
 export const dynamic = "force-dynamic";
 
@@ -30,42 +32,31 @@ const extractionSchema = z.object({
 
 /** POST /api/extraction — extract an order from a message body.
  *
- * The Gemini key is resolved in this order:
- *   1. Explicit `geminiApiKey` in the request (for testing / overrides)
- *   2. The stored encrypted secret ("gemini_api_key")
- *   3. undefined → regex-only mode
+ * The offline reader always runs. The Gemini key is used only when the seller
+ * consented, from the stored encrypted secret ("gemini_api_key"); otherwise
+ * the route is local-only. The response carries the seller's catalog so the
+ * review sheet can confirm or correct every item against real products.
  *
  * The key never needs to be present on the client in normal use.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth(["ai.use", "customers.contact.read"]);
+  const actorContext = await requireAuth(["ai.use", "customers.contact.read"]);
+  // The catalog steers matching server-side for everyone who may extract; it
+  // is returned for review only to people who may read products.
+  const mayReadCatalog = trustedActionAllowed(actorContext, "products.read", {
+    shopId: actorContext.shop.shopId,
+  });
 
-  // fix-B6: Informed-consent gate. The extraction pipeline sends raw WhatsApp
-  // message bodies (containing customer phone, name, address) to Google
-  // Gemini's free-tier API — Google's free-tier terms may use inputs for
-  // model training. The seller MUST explicitly consent (Settings → AI →
-  // consent checkbox) before any message leaves their device. Without
-  // consent, return 403 with a specific error code the UI can catch.
-  // (Wave 1: gate the entire route. Wave 2 may allow regex-only without
-  // consent since regex extraction is fully local.)
+  // fix-B6 / FD-064: informed consent governs what LEAVES the device. The
+  // offline reader runs locally and sends nothing anywhere, so it works
+  // without consent; only the Gemini path requires the seller's explicit
+  // consent (Settings → AI). Without it the key is never resolved, and the
+  // response says so, so review can offer to enable AI for harder messages.
   const consent = await getBool(
     { prisma: db, shop: shopContext },
     SETTING_KEYS.geminiConsentAccepted,
     false,
   );
-  if (!consent) {
-    // Audit S2-6: coded 403. The legacy `error` value and `message` text stay
-    // verbatim — the inbox extraction UI branches on `error === "consent_required"`.
-    return NextResponse.json(
-      {
-        error: "consent_required",
-        code: "AI_CONSENT_REQUIRED",
-        message:
-          "AI extraction consent not given. Visit Settings → AI to enable.",
-      },
-      { status: 403 },
-    );
-  }
 
   const body = await req.json();
   const input = extractionSchema.parse(body);
@@ -100,13 +91,19 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // Provider selection and credentials remain server authority. Request bodies
   // cannot redirect customer data to an arbitrary external account or force a
   // provider path.
-  const geminiApiKey =
-    (await getSecret({ prisma: db, shop: shopContext }, "gemini_api_key")) ??
-    undefined;
+  const geminiApiKey = consent
+    ? (await getSecret({ prisma: db, shop: shopContext }, "gemini_api_key")) ?? undefined
+    : undefined;
+  const catalog = await listExtractionCatalog({ prisma: db });
 
   const start = Date.now();
   const result = await extractOrder(
-    { body: input.body, channel: input.channel, knownPhone: input.knownPhone },
+    {
+      body: input.body,
+      channel: input.channel,
+      knownPhone: input.knownPhone,
+      catalog: catalog.map((entry) => ({ name: entry.name })),
+    },
     { geminiApiKey },
   );
 
@@ -126,5 +123,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     modelVersion: result.method === "gemini" ? "gemini" : undefined,
   }).catch(() => { /* best-effort */ });
 
-  return NextResponse.json({ result });
+  return NextResponse.json({
+    result,
+    catalog: mayReadCatalog ? catalog : [],
+    ai: {
+      consent,
+      available: Boolean(geminiApiKey),
+      ...(consent ? {} : { code: "AI_CONSENT_REQUIRED" }),
+    },
+  });
 }, "POST /api/extraction");

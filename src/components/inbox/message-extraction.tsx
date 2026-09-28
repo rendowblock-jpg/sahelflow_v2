@@ -1,29 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { AlertCircle, ArrowRight, CheckCircle2, Loader2, RefreshCw, ShieldAlert, Sparkles } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Loader2,
-  Sparkles,
-  CheckCircle2,
-  AlertCircle,
-  ArrowRight,
-  ShieldAlert,
-} from "lucide-react";
-import type { ExtractedOrder } from "@/lib/ai/extraction";
-import {
-  DZ_PHONE_PLACEHOLDER,
-  formatDZPhone,
-  isValidDZMobilePhone,
-  normalizeDZPhone,
-} from "@/lib/validation/phone";
+import { Button } from "@/components/ui/button";
+import { ExtractionReview, type ReviewedOrder } from "@/components/inbox/extraction/extraction-review";
+import type { CatalogOption } from "@/components/inbox/extraction/extraction-item-row";
 import { useI18n } from "@/hooks/use-i18n";
-import { toast } from "@/lib/toast";
+import type { ExtractionResult } from "@/lib/ai/extraction";
+import {
+  getOrderExtractionCopy,
+  type OrderExtractionCopyKey,
+  type OrderExtractionLocale,
+} from "@/lib/i18n/order-extraction";
 
 interface MessageExtractionProps {
   conversationId?: string;
@@ -32,12 +23,10 @@ interface MessageExtractionProps {
   knownPhone?: string;
 }
 
-interface ExtractionResult {
-  order: ExtractedOrder | null;
-  method: "regex" | "gemini" | "none";
-  confidence: number;
-  isComplete: boolean;
-  missingFields?: string[];
+interface ExtractionResponse {
+  result: ExtractionResult;
+  catalog: CatalogOption[];
+  ai: { consent: boolean; available: boolean };
 }
 
 function algerianPhoneToWhatsAppJid(phone: string): string {
@@ -50,312 +39,172 @@ function algerianPhoneToWhatsAppJid(phone: string): string {
   return `${international}@s.whatsapp.net`;
 }
 
+/**
+ * FD-064 order extraction: read the customer's message (on this device, and
+ * with Gemini when the seller enabled it), then let the seller confirm or
+ * correct every field against the real catalog before the order exists.
+ */
 export function MessageExtraction({
   conversationId,
   messageId,
   messageBody,
   knownPhone,
 }: MessageExtractionProps) {
-  const { t } = useI18n();
+  const { locale } = useI18n();
   const router = useRouter();
-  const [result, setResult] = useState<ExtractionResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const fieldId = useId();
+  const copy = (key: OrderExtractionCopyKey, params?: Record<string, string | number>) =>
+    getOrderExtractionCopy(locale as OrderExtractionLocale, key, params);
+  const [response, setResponse] = useState<ExtractionResponse | null>(null);
+  const [reading, setReading] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [phone, setPhone] = useState<string>("");
-  const [phoneTouched, setPhoneTouched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
 
-  async function handleExtract() {
-    setLoading(true);
+  async function handleRead() {
+    setReading(true);
     setError(null);
     try {
       const res = await fetch("/api/extraction", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          body: messageBody,
-          channel: "whatsapp",
-          knownPhone,
-          messageId,
-        }),
+        body: JSON.stringify({ body: messageBody, channel: "whatsapp", knownPhone, messageId }),
       });
-      if (!res.ok) {
-        let errData: { error?: string; message?: string } = {};
-        try {
-          errData = await res.json();
-        } catch {
-          // Ignore malformed error responses.
-        }
-        if (res.status === 403 && errData.error === "consent_required") {
-          toast.error(t("inbox.extractionConsentRequired"), {
-            duration: 9000,
-            action: {
-              label: t("inbox.extractionConsentGoToSettings"),
-              onClick: () => router.push("/settings"),
-            },
-          });
-          setError(t("inbox.extractionConsentRequired"));
-          return;
-        }
-        throw new Error(t("inbox.extractionFailed"));
-      }
-      const data = (await res.json()) as { result: ExtractionResult };
-      setResult(data.result);
-      setPhone(formatDZPhone(data.result?.order?.phone || knownPhone || ""));
-      setPhoneTouched(false);
+      if (!res.ok) throw new Error(copy("failed"));
+      setResponse((await res.json()) as ExtractionResponse);
+      setRevision((value) => value + 1);
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : t("inbox.extractionError"),
-      );
+      setError(caught instanceof Error ? caught.message : copy("failed"));
     } finally {
-      setLoading(false);
+      setReading(false);
     }
   }
 
-  async function handleCreateOrder() {
-    if (!result?.order || result.method === "none") return;
-    setPhoneTouched(true);
-    // Canonical validation (src/lib/validation/phone.ts) — accepts the masked
-    // display value and yields the digits-only form the API expects.
-    const normalizedPhone = normalizeDZPhone(phone);
-    if (!isValidDZMobilePhone(normalizedPhone)) {
-      setError(t("inbox.invalidPhoneFormat"));
-      return;
-    }
-    const sourceConversationId =
-      conversationId ?? algerianPhoneToWhatsAppJid(normalizedPhone);
-
+  async function handleCreate(reviewed: ReviewedOrder) {
+    if (!response) return;
+    const { result } = response;
     setCreating(true);
     setError(null);
     try {
-      const response = await fetch("/api/orders/source/whatsapp", {
+      const res = await fetch("/api/orders/source/whatsapp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          conversationId: sourceConversationId,
+          conversationId: conversationId ?? algerianPhoneToWhatsAppJid(reviewed.customer.phone),
           messageId,
-          extractionMethod: result.method,
+          // A hand-built order is still anchored to this message; its method
+          // records how the draft was produced.
+          extractionMethod: result.method === "gemini" ? "gemini" : "regex",
           extractionConfidence: result.confidence,
           customer: {
-            name:
-              result.order.customerName || t("inbox.customerDefaultName"),
-            phone: normalizedPhone,
-            wilaya: result.order.wilaya || "",
-            commune: result.order.commune || "",
-            address: result.order.address || "",
+            ...reviewed.customer,
+            name: reviewed.customer.name || copy("customerTitle"),
           },
-          items: result.order.items.map((item) => ({
-            productName: item.productName,
-            quantity: item.quantity,
-          })),
+          items: reviewed.items,
           deliveryCost: 600,
-          notes: result.order.notes,
+          notes: reviewed.notes,
         }),
       });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) {
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
         const message = body.error?.message ?? body.error;
-        throw new Error(
-          typeof message === "string" ? message : t("inbox.orderCreateFailed"),
-        );
+        throw new Error(typeof message === "string" ? message : copy("failed"));
       }
       router.push(`/orders/${body.order.id}`);
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : t("inbox.extractionError"),
-      );
+      setError(caught instanceof Error ? caught.message : copy("failed"));
     } finally {
       setCreating(false);
     }
   }
 
-  const phoneIsValid = isValidDZMobilePhone(phone);
-
-  return (
-    <div className="space-y-3">
-      {!result && !loading && (
-        <Button variant="outline" size="sm" onClick={handleExtract}>
-          <Sparkles className="h-4 w-4 me-1.5" />
-          {t("inbox.extractOrder")}
-        </Button>
-      )}
-
-      {loading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {t("inbox.extractionInProgress")}
-        </div>
-      )}
-
-      {error && (
-        <div className="space-y-2" role="alert">
-          <p className="text-sm text-destructive flex items-start gap-1.5">
-            <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>{error}</span>
-          </p>
-          {error === t("inbox.extractionConsentRequired") && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push("/settings")}
-            >
-              {t("inbox.extractionConsentGoToSettings")}
-              <ArrowRight className="h-3.5 w-3.5 ms-1.5 rtl:rotate-180" />
-            </Button>
+  if (!response) {
+    return (
+      <div className="space-y-2">
+        <Button variant="outline" size="sm" onClick={handleRead} disabled={reading}>
+          {reading ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Sparkles className="size-4" aria-hidden="true" />
           )}
+          {reading ? copy("reading") : copy("read")}
+        </Button>
+        {error ? (
+          <p className="flex items-start gap-1.5 text-sm text-destructive" role="alert">
+            <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            {error}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  const { result, catalog, ai } = response;
+  return (
+    <div className="space-y-4" data-extraction-method={result.method}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          {result.order ? (
+            <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden="true" />
+          ) : (
+            <AlertCircle className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          )}
+          <p className="text-sm font-medium">
+            {result.order ? copy("foundTitle") : copy("notFoundTitle")}
+          </p>
         </div>
+        <Button variant="ghost" size="sm" onClick={handleRead} disabled={reading} aria-label={copy("readAgain")}>
+          <RefreshCw className={reading ? "size-4 animate-spin" : "size-4"} aria-hidden="true" />
+        </Button>
+      </div>
+
+      {result.order ? (
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline">
+            {result.method === "gemini" ? copy("methodGemini") : copy("methodOffline")}
+          </Badge>
+          <Badge variant="outline" className="tabular-nums">
+            {copy("confidence", { value: Math.round(result.confidence * 100) })}
+          </Badge>
+        </div>
+      ) : (
+        <p className="text-caption text-muted-foreground">{copy("notFoundHint")}</p>
       )}
 
-      {result && (
-        <Card className="border-primary/20 bg-primary-subtle">
-          <CardContent className="space-y-3 pt-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {result.order ? (
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                ) : (
-                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                )}
-                <span className="text-sm font-medium">
-                  {result.order
-                    ? t("inbox.orderExtractedLabel")
-                    : t("inbox.extractionFailedLabel")}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  {result.method === "regex"
-                    ? t("inbox.extractionMethodRegex")
-                    : result.method === "gemini"
-                      ? t("inbox.extractionMethodGemini")
-                      : "—"}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {Math.round(result.confidence * 100)}%
-                </Badge>
-              </div>
-            </div>
+      {result.aiFailure ? (
+        <p className="text-caption text-muted-foreground" role="status">{copy("aiFailed")}</p>
+      ) : !ai.consent && !result.isComplete ? (
+        <p className="text-caption text-muted-foreground">
+          {copy("aiOff")}{" "}
+          <button
+            type="button"
+            onClick={() => router.push("/settings?group=intelligence")}
+            className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {copy("aiSettings")}
+            <ArrowRight className="size-3 icon-rtl-flip" aria-hidden="true" />
+          </button>
+        </p>
+      ) : null}
 
-            {result.order && (
-              <div className="space-y-1.5 text-sm">
-                {result.order.customerName && (
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground min-w-[80px]">
-                      {t("inbox.customerLabel")}
-                    </span>
-                    <span className="font-medium">
-                      {result.order.customerName}
-                    </span>
-                  </div>
-                )}
-                {result.order.phone && (
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground min-w-[80px]">
-                      {t("inbox.phoneLabel")}
-                    </span>
-                    <span className="font-mono">{result.order.phone}</span>
-                  </div>
-                )}
-                {result.order.wilaya && (
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground min-w-[80px]">
-                      {t("inbox.wilayaLabel")}
-                    </span>
-                    <span>{result.order.wilaya}</span>
-                  </div>
-                )}
-                {result.order.items.length > 0 && (
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground">
-                      {t("inbox.itemsLabel")}
-                    </span>
-                    {result.order.items.map((item, index) => (
-                      <div key={index} className="ms-4 flex justify-between">
-                        <span>
-                          {item.quantity}× {item.productName}
-                        </span>
-                        {item.unitPrice ? (
-                          <span className="font-medium">{item.unitPrice} DA</span>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+      <ExtractionReview
+        key={revision}
+        order={result.order ?? result.partial ?? null}
+        knownPhone={knownPhone}
+        catalog={catalog}
+        locale={locale}
+        copy={copy}
+        fieldId={fieldId}
+        creating={creating}
+        onCreate={handleCreate}
+      />
 
-            {result.missingFields && result.missingFields.length > 0 && (
-              <div className="flex items-center gap-1.5 text-xs text-warning">
-                <AlertCircle className="h-3 w-3" />
-                <span>
-                  {t("inbox.missingFields", {
-                    fields: result.missingFields.join(", "),
-                  })}
-                </span>
-              </div>
-            )}
-
-            {result.order && (
-              <div className="space-y-2">
-                <Label htmlFor={`phone-${messageId}`} className="text-xs">
-                  {t("inbox.phoneRequired")} {" "}
-                  <span className="text-destructive">*</span>
-                </Label>
-                {/* Phone digits are technical LTR content — the tel
-                    attributes keep the "05 55 12 34 56" groups from
-                    reordering in the Arabic UI. */}
-                <Input
-                  id={`phone-${messageId}`}
-                  type="tel"
-                  inputMode="tel"
-                  dir="ltr"
-                  autoComplete="tel-national"
-                  value={phone}
-                  onChange={(event) => setPhone(formatDZPhone(event.target.value))}
-                  onBlur={() => setPhoneTouched(true)}
-                  placeholder={DZ_PHONE_PLACEHOLDER}
-                  className="font-mono h-8"
-                  aria-invalid={phoneTouched && !phoneIsValid}
-                  aria-describedby={
-                    phoneTouched && !phoneIsValid
-                      ? `phone-error-${messageId}`
-                      : undefined
-                  }
-                />
-                {phoneTouched && !phoneIsValid && (
-                  <p
-                    id={`phone-error-${messageId}`}
-                    className="text-xs text-destructive"
-                    role="alert"
-                  >
-                    {t("inbox.invalidFormatExpected")}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {result.order && result.order.items.length > 0 && (
-              <Button
-                size="sm"
-                onClick={handleCreateOrder}
-                disabled={creating || !phoneIsValid}
-              >
-                {creating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 me-1.5 animate-spin" />
-                    {t("inbox.creating")}
-                  </>
-                ) : (
-                  <>
-                    {t("inbox.createOrder")}
-                    <ArrowRight className="h-4 w-4 ms-1.5 rtl:rotate-180" />
-                  </>
-                )}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {error ? (
+        <p className="flex items-start gap-1.5 text-sm text-destructive" role="alert">
+          <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

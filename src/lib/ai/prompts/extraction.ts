@@ -142,8 +142,19 @@ Output: {"phone":"0551234567","wilaya":"Constantine","items":[{"productName":"ca
 Input: "nheb nchri parfum, thmano خمسة الاف, livraison l'Oran, num 0612345678"
 Output: {"phone":"0612345678","wilaya":"Oran","items":[{"productName":"parfum","quantity":1,"unitPrice":5000}],"totalPrice":5000}`;
 
-export const EXTRACTION_USER_PROMPT = (message: string) =>
-  `Extract the order from this Algerian COD message. Remember: normalize Arabic-Indic digits to Latin, map wilaya numbers to French names, and return ONLY valid JSON.\n\nMessage:\n"${message}"\n\nReturn only the JSON.`;
+/** Catalog names sent with a message are bounded: at most this many. */
+export const EXTRACTION_PROMPT_CATALOG_LIMIT = 150;
+
+export const EXTRACTION_USER_PROMPT = (message: string, catalogNames: readonly string[] = []) => {
+  const catalog = catalogNames
+    .slice(0, EXTRACTION_PROMPT_CATALOG_LIMIT)
+    .map((name) => `- ${name.replace(/\s+/g, " ").slice(0, 80)}`)
+    .join("\n");
+  const catalogBlock = catalog
+    ? `\n\nThe seller's catalog (FD-064). When the customer clearly means one of these products, return its name EXACTLY as written here; when it is unclear, return the customer's own words:\n${catalog}`
+    : "";
+  return `Extract the order from this Algerian COD message. Remember: normalize Arabic-Indic digits to Latin, map wilaya numbers to French names, and return ONLY valid JSON.${catalogBlock}\n\nMessage:\n"${message}"\n\nReturn only the JSON.`;
+};
 
 /**
  * Ledger AI-21 — visual extraction bridge. Sellers screenshot conversations
