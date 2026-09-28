@@ -406,6 +406,14 @@ html[dir="rtl"][data-locale-transition="pending"] body::before {
 }
 
 /*
+ * The Connect-an-agent form keeps its header and footer in view and scrolls
+ * the tool list, so a long catalog never pushes the Create action off screen.
+ */
+[data-connect-agent-form="true"] {
+  max-height: min(46rem, calc(100dvh - 3rem));
+}
+
+/*
  * Radix ScrollArea wraps content in an inline `display: table` element, which
  * grows to the widest unbroken line: a 324px chat list rendered 770px wide and
  * every ellipsis/timestamp was clipped. Our ScrollArea only scrolls vertically,

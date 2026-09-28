@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { db } from "@/lib/db";
-import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
+import {
+  trustedActionAllowed,
+  trustedActorAuditIdentity,
+} from "@/lib/identity/authorization";
 import { buildMcpGrantCatalog } from "@/lib/mcp/control-surface";
 import {
   createMcpAgentGrant,
@@ -24,7 +27,10 @@ export const GET = withErrorHandler(async () => {
     listMcpAgentGrants(db),
     buildMcpGrantCatalog(actorContext),
   ]);
-  return NextResponse.json({ grants, catalog });
+  const canManage = trustedActionAllowed(actorContext, "integrations.manage", {
+    shopId: actorContext.shop.shopId,
+  });
+  return NextResponse.json({ grants, catalog, canManage });
 }, "GET /api/mcp/grants");
 
 /**

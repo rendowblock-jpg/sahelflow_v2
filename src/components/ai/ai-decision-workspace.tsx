@@ -8,7 +8,10 @@ import {
   aiReviewHasWork,
 } from "@/components/ai/ai-review-evidence";
 import { AiWorkHistory } from "@/components/ai/ai-work-history";
+import { ConnectedAgentsRailEntry } from "@/components/ai/connected/connected-agents-rail-entry";
+import { ConnectedAgentsSurface } from "@/components/ai/connected/connected-agents-surface";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
+import { useConnectedAgents } from "@/hooks/use-connected-agents";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -21,15 +24,27 @@ type PendingPrompt = {
 
 export function AiDecisionWorkspace({
   initialPrompt = "",
+  initialView = "session",
 }: {
   /** Composer prefill from a /agents?q= deep link (record-surface "Ask AI"). */
   initialPrompt?: string;
+  /** `/agents?view=connected` opens the Connected agents surface (MCP-13). */
+  initialView?: "session" | "connected";
 }) {
   const workspace = useAiWorkspace();
   const mobile = useMobile();
+  // The canvas shows either the in-app agent conversation or the control
+  // surface for external MCP agents; the rail entry switches between them.
+  const [view, setView] = useState<"session" | "connected">(initialView);
+  const agents = useConnectedAgents(view === "connected");
+  const connectedOffered = !agents.forbidden;
+  const showConnected = view === "connected" && connectedOffered;
   const wideViewport = useMediaQuery("(min-width: 1500px)");
-  const showReviewColumn = wideViewport && aiReviewHasWork(workspace);
-  const [mobilePane, setMobilePane] = useState<"history" | "canvas">("history");
+  const showReviewColumn =
+    !showConnected && wideViewport && aiReviewHasWork(workspace);
+  const [mobilePane, setMobilePane] = useState<"history" | "canvas">(
+    initialView === "connected" ? "canvas" : "history",
+  );
   const [startingAnalysis, setStartingAnalysis] = useState(false);
   const pendingPromptRef = useRef<PendingPrompt | null>(null);
   const navigationLocked = workspace.creatingSession;
@@ -62,9 +77,24 @@ export function AiDecisionWorkspace({
       pendingPromptRef.current = null;
       setStartingAnalysis(false);
     }
+    setView("session");
     workspace.selectSession(sessionId);
     if (mobile) setMobilePane("canvas");
   };
+
+  const openConnected = () => {
+    setView("connected");
+    if (mobile) setMobilePane("canvas");
+  };
+
+  const railFooter = connectedOffered ? (
+    <ConnectedAgentsRailEntry
+      locale={workspace.locale}
+      activeCount={agents.activeCount}
+      selected={showConnected}
+      onOpen={openConnected}
+    />
+  ) : null;
 
   const newAnalysis = async () => {
     if (
@@ -75,6 +105,7 @@ export function AiDecisionWorkspace({
     ) {
       return;
     }
+    setView("session");
     setStartingAnalysis(true);
     const sessionId = await workspace.createSession();
     setStartingAnalysis(false);
@@ -130,6 +161,14 @@ export function AiDecisionWorkspace({
             navigationLocked={navigationLocked}
             onOpenSession={openSession}
             onNewAnalysis={() => void newAnalysis()}
+            footer={railFooter}
+          />
+        ) : showConnected ? (
+          <ConnectedAgentsSurface
+            agents={agents}
+            locale={workspace.locale}
+            onOpenSession={openSession}
+            onBack={() => setMobilePane("history")}
           />
         ) : (
           <AiDecisionCanvas
@@ -163,7 +202,15 @@ export function AiDecisionWorkspace({
         navigationLocked={navigationLocked}
         onOpenSession={openSession}
         onNewAnalysis={() => void newAnalysis()}
+        footer={railFooter}
       />
+      {showConnected ? (
+        <ConnectedAgentsSurface
+          agents={agents}
+          locale={workspace.locale}
+          onOpenSession={openSession}
+        />
+      ) : (
       <AiDecisionCanvas
         workspace={workspace}
         wideReview={showReviewColumn}
@@ -174,6 +221,7 @@ export function AiDecisionWorkspace({
         onSend={sendPrompt}
         onStart={startPrompt}
       />
+      )}
       {showReviewColumn ? (
         <div className="min-h-0 border-s">
           <AiReviewEvidence workspace={workspace} />

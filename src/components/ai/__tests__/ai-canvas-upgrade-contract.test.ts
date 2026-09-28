@@ -192,8 +192,14 @@ describe("R4-e AI canvas upgrade — contextual Ask AI deep links", () => {
 
     expect(page).toContain("searchParams");
     expect(page).toContain("sanitizeAskAiPrompt(params?.q)");
-    expect(page).toContain("<AiWorkspaceShell initialPrompt={initialPrompt} />");
-    expect(shell).toContain("<AiDecisionWorkspace initialPrompt={initialPrompt} />");
+    // The page also threads `?view=connected` (MCP-13); the prefill path is
+    // unchanged and still reaches the workspace verbatim.
+    expect(page).toContain(
+      "<AiWorkspaceShell initialPrompt={initialPrompt} initialView={initialView} />",
+    );
+    expect(shell).toContain(
+      "<AiDecisionWorkspace initialPrompt={initialPrompt} initialView={initialView} />",
+    );
     expect(workspace.match(/initialDraft=\{initialPrompt\}/g)?.length).toBe(2);
     expect(canvas).toContain("useState(initialDraft)");
     // Prefill only ever fills an EMPTY composer — never clobbers seller input

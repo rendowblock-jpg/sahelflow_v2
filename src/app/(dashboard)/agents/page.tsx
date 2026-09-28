@@ -22,12 +22,13 @@ export default async function AgentsPage({
    * "Ask AI" buttons). The payload is sanitized to a short sentence —
    * record identifiers only, never customer PII.
    */
-  searchParams: Promise<{ q?: string | string[] }>;
+  searchParams: Promise<{ q?: string | string[]; view?: string | string[] }>;
 }) {
   await requireTrustedAction("ai.use");
   const { t } = await getI18n();
   const params = await searchParams;
   const initialPrompt = sanitizeAskAiPrompt(params?.q);
+  const initialView = params?.view === "connected" ? "connected" : "session";
 
   return (
     // Workspace identity lives in the canvas / history headers. Internal.37's
@@ -40,7 +41,7 @@ export default async function AgentsPage({
       title={t("metadata.title.agents")}
     >
       <FeatureGate feature="ai_chat">
-        <AiWorkspaceShell initialPrompt={initialPrompt} />
+        <AiWorkspaceShell initialPrompt={initialPrompt} initialView={initialView} />
       </FeatureGate>
     </PageShell>
   );

@@ -44,7 +44,10 @@ describe("AI Class-AAA decision workspace contract", () => {
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
 
-    expect(workspace).toContain('useState<"history" | "canvas">("history")');
+    // Mobile opens on the history rail; only the `?view=connected` deep link
+    // (MCP-13) drills straight into the canvas it names.
+    expect(workspace).toContain('useState<"history" | "canvas">(');
+    expect(workspace).toContain('initialView === "connected" ? "canvas" : "history"');
     expect(workspace).toContain('setMobilePane("canvas")');
     expect(workspace).toContain('mobilePane === "history"');
     expect(canvas).toContain("onBack");
