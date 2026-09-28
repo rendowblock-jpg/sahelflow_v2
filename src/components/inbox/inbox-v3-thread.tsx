@@ -29,7 +29,6 @@ import { InboxCustomerWorkPanel } from "@/components/inbox/inbox-customer-work-p
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { InboxThreadHeader } from "@/components/inbox/inbox-thread-header";
 import { MessageBubble } from "@/components/inbox/inbox-thread-message";
-import { WhatsAppPairingDialog } from "@/components/inbox/whatsapp-pairing-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -590,15 +589,17 @@ export function InboxV3Thread({
         </div>
       ) : null}
 
+      {/* The scroll region owns the jump-to-latest control, so it stays
+          anchored above the last message whatever the composer's height (a
+          disconnected notice used to push the composer up under it). */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
       <ScrollArea
-        className={cn(
-          "min-h-0 flex-1",
-          // Short conversations anchor to the composer like WhatsApp — the
-          // dead space between the last message and the composer is closed.
-          messages.length > 0 &&
-            !loadingMessages &&
-            "[&_[data-slot=scroll-area-viewport]>div]:flex [&_[data-slot=scroll-area-viewport]>div]:min-h-full [&_[data-slot=scroll-area-viewport]>div]:flex-col [&_[data-slot=scroll-area-viewport]>div]:justify-end",
-        )}
+        className="min-h-0 flex-1"
+        // Short conversations anchor to the composer like WhatsApp — the dead
+        // space between the last message and the composer is closed. Uses the
+        // system anchoring attribute: Radix puts an inline `display: table` on
+        // the viewport wrapper, which silently beat the old class variants.
+        data-anchor-end={messages.length > 0 && !loadingMessages ? "true" : undefined}
       >
         <div
           ref={messagesInnerRef}
@@ -760,7 +761,7 @@ export function InboxV3Thread({
       </ScrollArea>
 
       {isAwayFromBottom && messages.length > 0 && !loadingMessages ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-20 z-10 flex justify-center">
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center">
           <button
             type="button"
             onClick={scrollToLatestMessages}
@@ -776,6 +777,7 @@ export function InboxV3Thread({
           </button>
         </div>
       ) : null}
+      </div>
 
       <footer className="border-t border-border/60 bg-background/98 px-3 py-2 sm:px-4">
         {canCompose ? (
@@ -786,14 +788,21 @@ export function InboxV3Thread({
                   className="size-3.5 shrink-0 text-warning"
                   aria-hidden="true"
                 />
+                {/* The one Connect action lives in the Inbox header; this
+                    notice only explains why Send is unavailable. */}
                 <span className="min-w-0 flex-1">{copy("replyLiveOnly")}</span>
-                <WhatsAppPairingDialog workspace={workspace} />
               </div>
             ) : null}
 
             <div
-              className="rounded-surface border border-border/75 bg-muted/15 p-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/15 data-[drag-active=true]:border-primary data-[drag-active=true]:bg-primary-subtle"
+              className={cn(
+                "rounded-surface border border-border/75 bg-muted/15 p-2 shadow-sm transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/15 data-[drag-active=true]:border-primary data-[drag-active=true]:bg-primary-subtle",
+                // Drafts can still be written while WhatsApp is offline, but
+                // the composer must not read as ready to send.
+                !canSend && "border-dashed bg-muted/40 shadow-none",
+              )}
               data-drag-active={dragActive ? "true" : "false"}
+              data-send-available={canSend ? "true" : "false"}
               onDragOver={(event) => {
                 if (!canSend) return;
                 event.preventDefault();

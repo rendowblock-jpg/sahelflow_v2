@@ -39,9 +39,12 @@ describe("Inbox liveness (R4-a) contract", () => {
     expect(sidebar).toContain("useNewMessageAlerts()");
     expect(sidebar).toContain('data-inbox-unread-badge="true"');
     expect(sidebar).toContain('unreadCount > 99 ? "99+" : unreadCount');
-    expect(sidebar).toContain("inbox.liveness.unreadMessages");
+    // The badge counts unread chats, the same number the Inbox "Unread" tab
+    // shows, so the shell and the Inbox cannot disagree.
+    expect(sidebar).toContain("const { conversations: inboxUnreadChats } = useInboxUnread()");
+    expect(sidebar).toContain("inbox.liveness.unreadChats");
     // The sidebar owns the single poll: both hooks mount there.
-    expect(sidebar).toContain("item.unreadBadge ? inboxUnreadTotal : undefined");
+    expect(sidebar).toContain("item.unreadBadge ? inboxUnreadChats : undefined");
   });
 
   it("exposes a cheap read-only unread summary without touching the owned routes", () => {

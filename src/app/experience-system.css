@@ -404,3 +404,21 @@ html[dir="rtl"][data-locale-transition="pending"] body::before {
     border: 0;
   }
 }
+
+/*
+ * Radix ScrollArea wraps content in an inline `display: table` element, which
+ * grows to the widest unbroken line: a 324px chat list rendered 770px wide and
+ * every ellipsis/timestamp was clipped. Our ScrollArea only scrolls vertically,
+ * so the wrapper is a plain block that respects its column.
+ */
+[data-slot="scroll-area-viewport"] > div {
+  display: block !important;
+}
+
+/* Opt-in bottom anchoring (chat threads): short content sits on the composer. */
+[data-slot="scroll-area"][data-anchor-end="true"] > [data-slot="scroll-area-viewport"] > div {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 100%;
+}

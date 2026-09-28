@@ -697,10 +697,15 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <MediaIcon kind={message.messageType} />
-            <span>{label}</span>
-          </div>
+          {/* WhatsApp-style: a visible preview IS the message, so the kind
+              label ("Image message") only appears when there is no preview.
+              The accessible name still comes from alt / aria-label. */}
+          {showInlinePreview ? null : (
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <MediaIcon kind={message.messageType} />
+              <span>{label}</span>
+            </div>
+          )}
 
           {showInlinePreview &&
           (message.messageType === "image" ||
@@ -718,8 +723,8 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
             >
               <div
                 className={cn(
-                  "overflow-hidden rounded-surface border border-border/60 bg-muted/20",
-                  message.messageType === "sticker" && "w-fit",
+                  "overflow-hidden rounded-surface bg-muted/20",
+                  message.messageType === "sticker" && "w-fit bg-transparent",
                 )}
               >
                 {/* The authenticated endpoint is dynamic and intentionally bypasses Next image optimization. */}
@@ -770,15 +775,21 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
             </p>
           ) : null}
 
-          {attachment.fileName ? (
-            <p className="break-all text-xs font-medium" dir="auto">
-              {attachment.fileName}
-            </p>
-          ) : null}
-          {metadata ? (
-            <p className="text-xs text-muted-foreground" dir="ltr">
-              {metadata}
-            </p>
+          {/* Photos and stickers carry no file identity line (a camera file
+              name is noise); other media keep name and size. */}
+          {message.messageType !== "image" && message.messageType !== "sticker" ? (
+            <>
+              {attachment.fileName ? (
+                <p className="break-all text-xs font-medium" dir="auto">
+                  {attachment.fileName}
+                </p>
+              ) : null}
+              {metadata ? (
+                <p className="text-xs text-muted-foreground" dir="ltr">
+                  {metadata}
+                </p>
+              ) : null}
+            </>
           ) : null}
         </>
       )}
@@ -796,9 +807,6 @@ export function InboxMediaAttachment({ message }: { message: InboxMessage }) {
           }
           compact
         />
-        <span className="text-caption leading-4 text-muted-foreground">
-          {getInboxMediaCopy(locale, "ready")}
-        </span>
       </div>
 
       {lightboxOpen && readUrl ? (

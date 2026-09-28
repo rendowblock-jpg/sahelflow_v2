@@ -93,7 +93,9 @@ export const GET = withErrorHandler(async (_req: NextRequest) => {
 
   return NextResponse.json({
     total: aggregate._sum.unreadCount ?? 0,
-    conversations: aggregate._count,
+    // `_count: { _all: true }` resolves to `{ _all: n }`, not a number —
+    // returning the object made every "unread chats" consumer read NaN/0.
+    conversations: aggregate._count._all,
     latest,
   });
 }, "GET /api/conversations/unread-summary");
