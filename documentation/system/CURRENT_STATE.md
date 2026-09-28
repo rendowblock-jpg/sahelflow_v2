@@ -260,6 +260,15 @@ key, installed observation, T470 runs). Open findings are recorded in the ledger
 (extraction route license gate question, stale quota comments, legacy tool body
 note). Per FD-050 the frozen frontier was packaged and published as one signed successor (Internal.29, PR #344, exact main `a34917e582c4806aee35ad5aca12aaea82a0ddcf`); the Founder in-place install and campaign are the current gate before FRC-3.
 
+**FD-064 source slice (2026-09-28, source only).** The Founder kept the in-app
+Gemini agent and chat selectable (FD-063's MCP-14 retirement is withdrawn) and
+made order extraction Gemini's primary role. The offline reader was rebuilt and
+the corpus moved to `frc2-2.0.0` with every `frc2-1.0.0` gap closed; items aim at
+the exact catalog; model answers are canonicalized and completed from the
+offline reading; consent now gates only what leaves the device; the review sheet
+lets the seller correct every field before creation. No live-key, installed or
+Founder evidence exists for it.
+
 ## 8. Complete-product assurance boundary — FRC-3
 
 FRC-3 is not a generic codebase audit. It is a finite evidence ledger mapping:

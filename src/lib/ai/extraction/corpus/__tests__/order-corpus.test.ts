@@ -312,16 +312,67 @@ describe("order corpus — smart-router routing rows", () => {
     });
   });
 
-  it("promotes a wilaya-number case to Gemini and returns the canonical Oran answer", async () => {
+  it("resolves a wilaya-number case offline without touching the provider (FD-064)", async () => {
     const c = cases.find((candidate) => candidate.id === "AR-009");
+    expect(c).toBeTruthy();
+    if (!c) return;
+    await withGeminiReply("{}", async (fetchSpy) => {
+      const result = await extractOrder(corpusInputFor(c), { geminiApiKey: "AIzaSYNTHETIC-CORPUS-KEY" });
+      expect(result.method).toBe("regex");
+      expect(result.order?.wilaya).toBe("Oran");
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  it("promotes an offline-incomplete case to Gemini and completes it from the offline reading", async () => {
+    const c = cases.find((candidate) => candidate.id === "GE-006");
     expect(c?.gemini).toBeTruthy();
     if (!c?.gemini) return;
+    // The model omits the phone; the merged answer keeps the offline one.
     await withGeminiReply(JSON.stringify(c.gemini.order), async (fetchSpy) => {
       const result = await extractOrder(corpusInputFor(c), { geminiApiKey: "AIzaSYNTHETIC-CORPUS-KEY" });
       expect(result.method).toBe("gemini");
-      expect(result.order?.wilaya).toBe("Oran");
+      expect(result.order?.items[0]?.productName).toBe("robe");
+      expect(result.order?.wilaya).toBe("Mostaganem");
+      expect(result.order?.phone).toBe("0500000056");
+      expect(result.isComplete).toBe(true);
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("canonicalizes a model answer: wilaya numbers, +213 phones and catalog names", async () => {
+    await withGeminiReply(
+      JSON.stringify({
+        phone: "+213 500 00 00 57",
+        wilaya: "31",
+        items: [{ productName: "casque bluetooth", quantity: 2 }],
+      }),
+      async () => {
+        const result = await extractOrder(
+          { body: "la robe li f la photo", catalog: [{ name: "Casque Bluetooth Pro" }, { name: "Casque Gaming" }] },
+          { geminiApiKey: "AIzaSYNTHETIC-CORPUS-KEY" },
+        );
+        expect(result.order).toMatchObject({
+          phone: "0500000057",
+          wilaya: "Oran",
+          items: [{ productName: "Casque Bluetooth Pro", quantity: 2, catalogMatch: "close" }],
+        });
+      },
+    );
+  });
+
+  it("keeps the offline reading and the failure code when Gemini is unavailable", async () => {
+    const c = cases.find((candidate) => candidate.id === "GE-006");
+    if (!c) return;
+    const fetchSpy = vi.fn().mockResolvedValue(new Response("quota", { status: 429 }));
+    vi.stubGlobal("fetch", fetchSpy);
+    try {
+      const result = await extractOrder(corpusInputFor(c), { geminiApiKey: "AIzaSYNTHETIC-CORPUS-KEY" });
+      expect(result.method).toBe("none");
+      expect(result.aiFailure).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("honors forceGemini even for a complete regex case", async () => {

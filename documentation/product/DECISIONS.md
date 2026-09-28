@@ -1395,6 +1395,42 @@ Binding boundaries:
 - Source work never claims installed, provider or customer evidence. The
   zero-budget boundary and #230 are unaffected.
 
+## FD-064 — Gemini stays selectable; its primary role is order extraction (2026-09-28, ADOPTED)
+
+Founder AI-role decision, 2026-09-28. It supersedes two parts of FD-063, and
+only those two:
+
+- **MCP-14 is withdrawn.** The in-app Gemini agent and chat are not retired.
+  They remain a fully working agent and chat the seller can choose, beside the
+  connected MCP agents, under the same proposal gate.
+- **Extraction is no longer out of scope.** FD-063 froze the order-extraction
+  path; FD-064 makes order extraction Gemini's primary purpose and requires it
+  to be flawless: the whole message → order → review → canonical order journey
+  must read real Algerian COD messages correctly and let the seller confirm or
+  correct every field before an order exists.
+
+Binding boundaries:
+
+- The offline reader runs first, on the device, for free. A complete and
+  confident reading never leaves the device. Gemini reads what the offline
+  reader cannot, and its answer is completed from the offline reading, so the
+  merged result is never worse than either reader alone.
+- Informed consent (fix-B6) governs what leaves the device. Local reading
+  works without consent; Gemini is never called without it, and the stored key
+  is never resolved without it.
+- Extracted items aim at the seller's exact catalog identities (the names
+  `resolveCanonicalNamedItems` accepts). A match is taken only when it is exact
+  or clearly best; between equals the seller chooses in review. A wrong product
+  is worse than an unmatched one.
+- Model output is held to the same canonical forms as the offline reader
+  (0XXXXXXXXX phones, official wilaya names, catalog names); a value that cannot
+  be made canonical is dropped and reported missing.
+- Nothing becomes an order without the seller's review. Canonical creation,
+  its idempotency and the proposal-bound AI actions are unchanged.
+- The frozen corpus moves only by a version bump that restates each changed
+  expectation (`frc2-2.0.0`). Gemini work keeps synthetic/redacted inputs; no
+  live-provider or installed claim is made from source, mocks or CI.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

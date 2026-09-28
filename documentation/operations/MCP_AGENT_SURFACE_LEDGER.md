@@ -29,7 +29,7 @@ decision points the study left open:
    arguments passed through `redactForAudit` (1024-character elision, depth 8),
    on the existing audit channel.
 
-**Scope boundary the Founder also set:** the Gemini-backed AI **order extraction**
+**Scope boundary the Founder also set (superseded for extraction by FD-064):** the Gemini-backed AI **order extraction**
 path is out of scope and stays untouched — `src/app/api/extraction/**`,
 `src/lib/ai/extraction/**` and `src/lib/ai/gemini/provider.ts`. Extraction keeps
 its regex-first router with Gemini fallback, and screenshot extraction stays
@@ -50,10 +50,10 @@ Gemini-only. The replacement target is the **agent** surface, not extraction.
 | MCP-09 | stdio bridge sidecar | **DONE (source)** | `sidecars/mcp/index.ts` |
 | MCP-10 | Golden contract tests: class split, never-approver, annotations, read scopes, audit bounds, limits | **DONE (source)** | `src/lib/mcp/__tests__/surface-contract.test.ts` |
 | MCP-11a | Grant-bound agent identity, endpoint discovery, client configuration | **DONE (source)** | each grant carries its own identity binding `mcp-grant:<id>` cloned from the owner's live binding (`bindAgentGrantIdentity` / `revokeAgentGrantIdentity`, `trustedActorForAgentGrant`); the agent needs no cookie and loses access on grant revocation or "revoke all other sessions"; creating a grant is owner-only; the app publishes `SF_DATA_DIR/mcp/endpoint.json` plus a per-launch transport token (`src/lib/mcp/endpoint.ts`); the bridge re-reads both on every request, so it needs only `SAHELFLOW_AGENT_GRANT`; the proxy admits `/api/mcp` on loopback with a valid transport token; the connect dialog shows a copyable client config when the bridge path is known. Tests: `agent-grant-identity.test.ts`, `endpoint.test.ts`, `agent-grants.test.ts` |
-| MCP-11b | Package the bridge: compiled `sahelflow-mcp` sidecar in `externalBin`, `SF_MCP_BRIDGE_PATH` from the shell | **OPEN** | needs the Rust change and the Windows installed-MSI lane |
+| MCP-11b | Package the bridge: compiled `sahelflow-mcp` sidecar in `externalBin`, `SF_MCP_BRIDGE_PATH` from the shell | **DONE (source)** | `scripts/build-sidecar.ts` compiles `sidecars/mcp/index.ts` beside the WhatsApp sidecar; `tauri.conf.json` `externalBin`; `src-tauri/src/lib.rs` `bundled_mcp_bridge()` sets `SF_MCP_BRIDGE_PATH` only when the bridge is installed; Linux cargo lanes carry the placeholder; `bridge-packaging-contract.test.ts`. The installed-MSI lane is CI evidence only; no Founder-installed observation |
 | MCP-12 | Durable `McpAgentGrant` model: per-agent scope narrowing, instant revocation, connected-agent list | **DONE (source)** | additive migration `2026092800000000_fd063_mcp_agent_grants`; `src/lib/mcp/grants.ts` (hash-only secret storage, fail-closed ingress, narrowing in listing and execution, 20 active grants cap); `/api/mcp/grants`, `/api/mcp/grants/[id]/revoke`, `/api/mcp/invocations`; `src/lib/mcp/__tests__/agent-grants.test.ts` |
 | MCP-13 | `/agents` Connected agents control surface: connected agents with create/revoke, tool catalog with permission + annotation badges, invocation log, approval routing | **DONE (source)** | pinned rail entry + canvas surface (`src/components/ai/connected/**`, `/agents?view=connected`); grants shown by hint only, secret revealed once; proposed calls open the agent's transcript session, where the existing approval authority lives; trilingual copy `src/lib/i18n/connected-agents.ts`; `connected-agents-contract.test.ts` |
-| MCP-14 | Retire the Gemini chat agent loop and its routes/components/tests | **OPEN** | the destructive half of the full replace — see below |
+| MCP-14 | Retire the Gemini chat agent loop and its routes/components/tests | **WITHDRAWN (FD-064)** | the Founder keeps the in-app Gemini agent and chat selectable beside connected agents; Gemini's primary role becomes order extraction |
 | MCP-15 | Installed observation on a signed candidate | **BLOCKED** | no candidate; Internal.38 campaign comes first |
 
 ## What slice 1 changes and does not change
@@ -98,10 +98,10 @@ routes, the agent loop, the canvas/composer/message-log components and roughly
    and is re-checked on every request, so revocation is instant. The owner's
    authority is still the ceiling: a grant can only narrow it, never widen it.
    Only the owner may create grants in this slice.
-2. **No packaging.** The bridge runs under `bun sidecars/mcp/index.ts`. It is
-   not yet compiled or declared in `externalBin` (MCP-11b), so the connect
-   dialog shows the client config only where `SF_MCP_BRIDGE_PATH` is set, and
-   there is no installed evidence of any kind.
+2. **Packaged in source, never observed installed.** Since MCP-11b the bridge
+   is compiled into the installer and the shell advertises its path, so the
+   connect dialog shows a ready client config. No signed candidate carries it
+   yet and there is no Founder-installed evidence of any kind.
 3. **Protocol is hand-rolled.** No `@modelcontextprotocol/sdk` dependency was
    added, because the installed runtime is a packaged standalone build behind a
    pinned lockfile. Adopting the SDK is a separate lockfile decision.

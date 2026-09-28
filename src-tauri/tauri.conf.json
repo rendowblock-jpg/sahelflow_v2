@@ -41,7 +41,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/sahelflow-whatsapp"],
+    "externalBin": ["binaries/sahelflow-whatsapp", "binaries/sahelflow-mcp"],
     "resources": {
       "../prisma/": "prisma/",
       "resources/standalone/": "standalone/",

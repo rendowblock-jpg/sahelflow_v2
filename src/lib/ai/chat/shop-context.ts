@@ -75,12 +75,14 @@ export async function loadShopBriefing(
         }),
       ),
       countOrNull(() =>
-        prisma.$queryRaw<{ count: number }[]>`
+        // SQLite returns COUNT(*) as a BigInt through $queryRaw, which JSON
+        // cannot serialize — the capabilities route answered 500 with it.
+        prisma.$queryRaw<{ count: bigint | number }[]>`
           SELECT COUNT(*) AS count
           FROM "AiActionProposal"
           WHERE "shopIncarnationId" = ${shop.shopIncarnationId}
             AND "status" = 'pending'
-        `.then((rows) => rows[0]?.count ?? 0),
+        `.then((rows) => Number(rows[0]?.count ?? 0)),
       ),
     ]);
 

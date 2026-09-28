@@ -151,22 +151,26 @@ migration-deployed sandbox; 378/378 across `src/lib/ai` + consent gate).
 | Schema parity | every regex + Gemini expectation and all 7 prompt few-shot outputs validate under `ExtractedOrderSchema` |
 | Provider | Gemini round-trips fully mocked; zero network in tests |
 
-**Known gaps frozen as observed truth** (each documented in the case `note`):
-phone-like tails parsed as phantom unit-price items (DZ-005/MX-001/MX-002/MX-003/GE-003/GE-004);
-wilaya chosen by list order when several are mentioned (DZ-001 → Blida);
-accented Latin starts truncate product names (FR-001/MX-003);
-Darija number words unsupported (GE-004); Persian-variant digits unsupported (GE-005);
-wilaya numbers unsupported by regex (AR-009); "My name is" name intro unsupported (EN-002);
-non-x-notation multi-item messages lose items (MX-004). These are exactly the
-shapes the smart router delegates to Gemini and the human review sheet guards.
+**FD-064 (2026-09-28): the frozen gaps are closed.** Corpus `frc2-2.0.0` (41
+cases, GE-006 added) restates every regex expectation. The offline reader
+(`src/lib/ai/extraction/{text,lexicon,geography,fields,clause,items,catalog}.ts`)
+blanks phones, names, wilayas, communes and addresses before reading items, so
+phone tails are never phantom prices; it chooses the wilaya by delivery cue and
+wilaya number instead of list order; keeps accented product names; reads Darija,
+French and English number words, Persian digits, spaced thousands, per-unit and
+total prices, "My name is", itemized "+" lists and bare signatures; and maps
+items onto the seller's catalog only when the match is exact or clearly best.
+Most regex expectations now equal the canonical Gemini answer. GE-006 (a product
+referenced by photo) remains beyond the offline reader and is the corpus
+promotion row for Gemini. Behavioural suite: `extraction/__tests__/offline-reader.test.ts`.
 
 ## H. Message → extraction → review → exactly-one canonical order
 
 | Row | Capability | Evidence | State |
 |---|---|---|---|
 | H1 | Seller-driven trigger: Inbox thread header AI-order entry selects the last inbound candidate | `inbox-v3-thread.tsx:746-800`; `inbox-v3-workspace.tsx:214-232` | source+tests (installed observation pending) |
-| H2 | Smart router: regex ≥0.6+complete wins; no-key+≥0.3 partial; else Gemini; Gemini failure → regex fallback | `smart-router.ts:29-63` | source+tests (+ corpus routing rows) |
-| H3 | Review sheet shows method/confidence, missing-fields warning, phone correction with validation | `message-extraction.tsx:216-314` | source (installed AR/RTL observation pending) |
+| H2 | Smart router (FD-064): the offline reading wins when complete and confident (nothing leaves the device); otherwise Gemini with the catalog, canonicalized and completed from the offline reading; Gemini failure → offline reading plus `aiFailure` | `smart-router.ts`, `gemini-extractor.ts` (`canonicalizeOrder`) | source+tests (+ corpus routing rows) |
+| H3 | Review sheet (FD-064): every item chosen from the exact catalog with quantity, customer name/phone, wilaya select, commune/address, subtotal, "still needed" gate; says when Gemini was unavailable or when enabling AI would help; local reading works without consent, Gemini never without it | `message-extraction.tsx`, `extraction/extraction-review.tsx`, `extraction/extraction-item-row.tsx`, `src/lib/i18n/order-extraction.ts`; `ai-consent-gate.test.ts` | source (installed AR/RTL observation pending) |
 | H4 | Canonical creation re-reads the exact provider message from the sidecar, rejects ambiguous item names (`resolveCanonicalNamedItems`), stores method/confidence in sourceDetails | `orders/source/whatsapp/route.ts:52-142` | source+tests (`canonical-whatsapp-intake-route.test.ts`) |
 | H5 | Exactly-one order per (conversation,message): `whatsapp-order:digest` command idempotency; duplicate attempts replay (200 vs 201) | `canonical-source-order.ts:113-404`; replay integration test | source+tests |
 | H6 | AI-chat `create_order` proposals create source:"ai_chat" draft orders bound to the proposal digest — never silent canonical orders | `executor.ts:305-323` | source+tests |

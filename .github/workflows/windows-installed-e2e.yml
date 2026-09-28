@@ -620,6 +620,7 @@ jobs:
                 $_.Name -ieq 'sahelflow.exe' -or
                 $_.Name -ieq 'node.exe' -or
                 $_.Name -ieq 'sahelflow-whatsapp.exe' -or
+                $_.Name -ieq 'sahelflow-mcp.exe' -or
                 $_.Name -ieq 'msedgewebview2.exe'
               } |
               Select-Object Name, ProcessId, ParentProcessId, ExecutablePath, CommandLine, CreationDate

@@ -1,11 +1,12 @@
 /**
  * Smart router — decides whether to use regex or Gemini.
  *
- * Strategy (design system v2.1):
- *   1. Try regex first (instant, offline, free)
- *   2. If regex confidence >= 0.6 AND isComplete → use regex result
- *   3. Otherwise → try Gemini (uses seller's API key)
- *   4. If Gemini also fails → return best result + missing fields
+ * Strategy (FD-064):
+ *   1. The offline reader runs first (instant, on-device, free)
+ *   2. Complete and confident → that is the answer; nothing leaves the device
+ *   3. Otherwise, with the seller's key → Gemini, completed from the offline
+ *      reading wherever the model left a field empty
+ *   4. Gemini unavailable → the offline reading, carrying the failure code
  *
  * This protects the seller-owned Gemini quota (the shared session/user rate
  * limiter caps chat + extraction at 20/session/hour and 100/user/day): ~70%
@@ -13,10 +14,10 @@
  */
 
 import type { ServiceContext } from "@/lib/data/service-base";
-import { extractWithRegex } from "./regex-extractor";
+import { extractWithRegex, readOrderFields } from "./regex-extractor";
 import { extractWithGemini } from "./gemini-extractor";
 import { extractWithGeminiFromImage } from "./image-extractor";
-import type { ExtractionImageInput, ExtractionInput, ExtractionResult } from "./types";
+import type { ExtractedOrder, ExtractionImageInput, ExtractionInput, ExtractionResult } from "./types";
 
 /** Minimum regex confidence to skip Gemini */
 const REGEX_CONFIDENCE_THRESHOLD = 0.6;
@@ -34,36 +35,63 @@ export async function extractOrder(
   input: ExtractionInput,
   options: SmartRouterOptions = {},
 ): Promise<ExtractionResult> {
-  // Step 1: Try regex first (unless forced to Gemini)
-  if (!options.forceGemini) {
-    const regexResult = extractWithRegex(input);
+  const regexResult = extractWithRegex(input);
 
-    // If regex is confident and complete, use it
-    if (regexResult.confidence >= REGEX_CONFIDENCE_THRESHOLD && regexResult.isComplete) {
-      return regexResult;
-    }
-
-    // If regex has decent confidence but incomplete, still try Gemini for the missing fields
-    // (but keep regex as a fallback)
-    if (regexResult.confidence >= 0.3 && !options.geminiApiKey) {
-      // No Gemini key — return the partial regex result
-      return regexResult;
-    }
+  // A complete, confident offline reading never leaves the device.
+  if (
+    !options.forceGemini &&
+    regexResult.confidence >= REGEX_CONFIDENCE_THRESHOLD &&
+    regexResult.isComplete
+  ) {
+    return regexResult;
   }
+  if (!options.geminiApiKey) return regexResult;
 
-  // Step 2: Try Gemini (for complex messages or when regex is incomplete)
-  if (options.geminiApiKey) {
-    const geminiResult = await extractWithGemini(input, { apiKey: options.geminiApiKey });
+  const geminiResult = await extractWithGemini(input, { apiKey: options.geminiApiKey });
+  if (geminiResult.order) return completeFromOfflineReading(geminiResult, input);
 
-    // If Gemini succeeded, use it
-    if (geminiResult.order) {
-      return geminiResult;
-    }
+  // Gemini unavailable: the offline reading stands, and the reason travels
+  // with it so review can say why the AI did not help this time.
+  const failure = geminiResult.missingFields?.[0];
+  return failure ? { ...regexResult, aiFailure: failure } : regexResult;
+}
+
+/**
+ * FD-064: Gemini reads the hard part, the offline reader keeps what it is
+ * certain of. Any field the model left empty (a phone after a label, a wilaya
+ * number, an address line) is filled from the offline reading, so the merged
+ * answer is never worse than either reader alone.
+ */
+function completeFromOfflineReading(
+  geminiResult: ExtractionResult,
+  input: ExtractionInput,
+): ExtractionResult {
+  const offline = readOrderFields(input).order;
+  const model = geminiResult.order!;
+  const order: ExtractedOrder = {
+    ...model,
+    items: model.items.length > 0 ? model.items : offline.items,
+    customerName: model.customerName ?? offline.customerName,
+    phone: model.phone ?? offline.phone,
+    wilaya: model.wilaya ?? offline.wilaya,
+    commune: model.commune ?? offline.commune,
+    address: model.address ?? offline.address,
+    totalPrice: model.totalPrice ?? offline.totalPrice,
+    notes: model.notes ?? offline.notes,
+  };
+  for (const key of Object.keys(order) as Array<keyof ExtractedOrder>) {
+    if (order[key] === undefined) delete order[key];
   }
-
-  // Step 3: Fall back to regex result (even if incomplete)
-  const regexFallback = extractWithRegex(input);
-  return regexFallback;
+  const missingFields: string[] = [];
+  if (order.items.length === 0) missingFields.push("items");
+  if (!order.wilaya) missingFields.push("wilaya");
+  if (!order.phone) missingFields.push("phone");
+  return {
+    ...geminiResult,
+    order,
+    isComplete: missingFields.length === 0,
+    missingFields: missingFields.length ? missingFields : undefined,
+  };
 }
 
 /**
