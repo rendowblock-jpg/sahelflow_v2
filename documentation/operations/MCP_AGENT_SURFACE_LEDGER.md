@@ -29,7 +29,7 @@ decision points the study left open:
    arguments passed through `redactForAudit` (1024-character elision, depth 8),
    on the existing audit channel.
 
-**Scope boundary the Founder also set:** the Gemini-backed AI **order extraction**
+**Scope boundary the Founder also set (superseded for extraction by FD-064):** the Gemini-backed AI **order extraction**
 path is out of scope and stays untouched — `src/app/api/extraction/**`,
 `src/lib/ai/extraction/**` and `src/lib/ai/gemini/provider.ts`. Extraction keeps
 its regex-first router with Gemini fallback, and screenshot extraction stays
@@ -53,7 +53,7 @@ Gemini-only. The replacement target is the **agent** surface, not extraction.
 | MCP-11b | Package the bridge: compiled `sahelflow-mcp` sidecar in `externalBin`, `SF_MCP_BRIDGE_PATH` from the shell | **OPEN** | needs the Rust change and the Windows installed-MSI lane |
 | MCP-12 | Durable `McpAgentGrant` model: per-agent scope narrowing, instant revocation, connected-agent list | **DONE (source)** | additive migration `2026092800000000_fd063_mcp_agent_grants`; `src/lib/mcp/grants.ts` (hash-only secret storage, fail-closed ingress, narrowing in listing and execution, 20 active grants cap); `/api/mcp/grants`, `/api/mcp/grants/[id]/revoke`, `/api/mcp/invocations`; `src/lib/mcp/__tests__/agent-grants.test.ts` |
 | MCP-13 | `/agents` Connected agents control surface: connected agents with create/revoke, tool catalog with permission + annotation badges, invocation log, approval routing | **DONE (source)** | pinned rail entry + canvas surface (`src/components/ai/connected/**`, `/agents?view=connected`); grants shown by hint only, secret revealed once; proposed calls open the agent's transcript session, where the existing approval authority lives; trilingual copy `src/lib/i18n/connected-agents.ts`; `connected-agents-contract.test.ts` |
-| MCP-14 | Retire the Gemini chat agent loop and its routes/components/tests | **OPEN** | the destructive half of the full replace — see below |
+| MCP-14 | Retire the Gemini chat agent loop and its routes/components/tests | **WITHDRAWN (FD-064)** | the Founder keeps the in-app Gemini agent and chat selectable beside connected agents; Gemini's primary role becomes order extraction |
 | MCP-15 | Installed observation on a signed candidate | **BLOCKED** | no candidate; Internal.38 campaign comes first |
 
 ## What slice 1 changes and does not change
