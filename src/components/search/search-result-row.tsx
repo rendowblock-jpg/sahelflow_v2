@@ -67,7 +67,8 @@ interface SearchResultRowProps {
   query: string;
   kindLabel: string;
   openLabel: string;
-  /** Show the family label — only where one group mixes families (Recent). */
+  /** Show the family label visibly — only where one group mixes families
+   *  (Recent). Otherwise it is still present for assistive technology. */
   showKind?: boolean;
   dimmed?: boolean;
   onSelect: (row: SearchRow) => void;
@@ -132,7 +133,12 @@ export function SearchResultRow({
         <span className="shrink-0 text-caption text-muted-foreground group-data-[selected=true]:hidden">
           {kindLabel}
         </span>
-      ) : null}
+      ) : (
+        // Inside a family group the heading carries the kind visually, but an
+        // option is announced on its own, without its group heading: every row
+        // still names what it is for assistive technology.
+        <span className="sr-only">{kindLabel}</span>
+      )}
       <span
         className="hidden shrink-0 items-center gap-1 text-caption text-muted-foreground group-data-[selected=true]:inline-flex"
         aria-hidden="true"

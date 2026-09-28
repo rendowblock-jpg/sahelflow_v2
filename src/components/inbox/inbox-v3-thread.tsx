@@ -29,6 +29,7 @@ import { InboxCustomerWorkPanel } from "@/components/inbox/inbox-customer-work-p
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { InboxThreadHeader } from "@/components/inbox/inbox-thread-header";
 import { MessageBubble } from "@/components/inbox/inbox-thread-message";
+import { WhatsAppPairingDialog } from "@/components/inbox/whatsapp-pairing-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -788,9 +789,10 @@ export function InboxV3Thread({
                   className="size-3.5 shrink-0 text-warning"
                   aria-hidden="true"
                 />
-                {/* The one Connect action lives in the Inbox header; this
-                    notice only explains why Send is unavailable. */}
+                {/* The reason Send is unavailable sits beside the way to fix
+                    it: offline compose keeps its Connect action in the thread. */}
                 <span className="min-w-0 flex-1">{copy("replyLiveOnly")}</span>
+                <WhatsAppPairingDialog workspace={workspace} />
               </div>
             ) : null}
 
