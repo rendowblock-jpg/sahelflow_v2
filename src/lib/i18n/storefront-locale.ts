@@ -1,8 +1,7 @@
 import {
   getDirection,
   getTranslations,
-  interpolateTranslation,
-  stabilizeBidiText,
+  renderTranslation,
   type Locale,
 } from "@/lib/i18n";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
@@ -182,7 +181,6 @@ export function createStorefrontTranslator(
         getRuntimeTranslation(locale, pluralKey) ??
         value;
     }
-    value = interpolateTranslation(value, params);
-    return stabilizeBidiText(value, locale);
+    return renderTranslation(value, params, locale);
   };
 }

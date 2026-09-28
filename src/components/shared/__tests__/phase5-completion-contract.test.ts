@@ -90,7 +90,8 @@ describe("Phase 5 whole-product completion contract", () => {
     const cod = read("src/app/(dashboard)/accounting/cod-reconciliation/page.tsx");
     const deliveryStatus = read("src/components/deliveries/delivery-status-badge.tsx");
     const returnStatus = read("src/components/returns/return-status-badge.tsx");
-    const settings = read("src/app/(dashboard)/settings/page.tsx");
+    // Settings authority is shared by the page and the Settings modal.
+    const settings = read("src/lib/settings/workspace-access.ts");
     const workspace = read("src/components/settings/settings-workspace.tsx");
     const profile = read("src/app/(dashboard)/profile/page.tsx");
     expect(automations).toContain('"automations.manage"');

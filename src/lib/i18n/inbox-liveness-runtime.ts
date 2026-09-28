@@ -14,6 +14,7 @@ import type { Locale } from "@/lib/i18n";
 const translations: Record<Locale, Record<string, string>> = {
   en: {
     "inbox.liveness.unreadMessages": "Unread messages: {{count}}",
+    "inbox.liveness.unreadChats": "Unread chats: {{count}}",
     "inbox.liveness.newMessageTitle": "New WhatsApp message",
     "inbox.liveness.newMessageBody": "{{name}}: {{preview}}",
     "inbox.liveness.openInbox": "Open inbox",
@@ -24,6 +25,7 @@ const translations: Record<Locale, Record<string, string>> = {
   },
   fr: {
     "inbox.liveness.unreadMessages": "Messages non lus : {{count}}",
+    "inbox.liveness.unreadChats": "Discussions non lues : {{count}}",
     "inbox.liveness.newMessageTitle": "Nouveau message WhatsApp",
     "inbox.liveness.newMessageBody": "{{name}} : {{preview}}",
     "inbox.liveness.openInbox": "Ouvrir la boîte de réception",
@@ -34,6 +36,7 @@ const translations: Record<Locale, Record<string, string>> = {
   },
   ar: {
     "inbox.liveness.unreadMessages": "رسائل غير مقروءة: {{count}}",
+    "inbox.liveness.unreadChats": "محادثات غير مقروءة: {{count}}",
     "inbox.liveness.newMessageTitle": "رسالة واتساب جديدة",
     "inbox.liveness.newMessageBody": "{{name}}: {{preview}}",
     "inbox.liveness.openInbox": "افتح صندوق الوارد",

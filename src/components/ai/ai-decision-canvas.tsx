@@ -163,7 +163,7 @@ export function AiDecisionCanvas({
               <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
             </Button>
           ) : null}
-          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-surface border border-primary/15 bg-gradient-to-b from-primary-strong to-primary-subtle text-primary shadow-sm">
+          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary">
             <Bot className="size-4" aria-hidden="true" />
             {workspace.setup ? (
               // Configuration truth on the avatar (AI-26): consent+key state
@@ -221,20 +221,21 @@ export function AiDecisionCanvas({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {workspace.setup ? (
+          {/* The chip states the ready fact only. When setup needs attention
+              the SetupNotice banner directly below says so in full, with the
+              way to fix it; a second "needs attention" chip repeated it. */}
+          {workspace.setup && setupReady ? (
             <Badge
               variant="outline"
               data-ai-config-chip="true"
               className="hidden items-center gap-1.5 text-caption font-medium text-muted-foreground sm:inline-flex"
             >
               <span
-                data-ai-status-dot={setupReady ? "ready" : "attention"}
+                data-ai-status-dot="ready"
                 aria-hidden="true"
                 className="size-1.5 rounded-full"
               />
-              {setupReady
-                ? getAiDecisionCopy(workspace.locale, "providerReady")
-                : getAiDecisionCopy(workspace.locale, "setupAttention")}
+              {getAiDecisionCopy(workspace.locale, "providerReady")}
             </Badge>
           ) : null}
           {!wideReview ? (

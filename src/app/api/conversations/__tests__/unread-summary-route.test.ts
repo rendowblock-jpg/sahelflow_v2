@@ -63,7 +63,8 @@ describe("GET /api/conversations/unread-summary", () => {
     });
     harness.aggregate.mockReset().mockResolvedValue({
       _sum: { unreadCount: 7 },
-      _count: 3,
+      // The real Prisma shape for `_count: { _all: true }`.
+      _count: { _all: 3 },
     });
     harness.findMany.mockReset().mockResolvedValue([latestRow()]);
     harness.project
@@ -194,7 +195,7 @@ describe("GET /api/conversations/unread-summary", () => {
   it("reports a clean zero state when everything is read", async () => {
     harness.aggregate.mockResolvedValue({
       _sum: { unreadCount: 0 },
-      _count: 0,
+      _count: { _all: 0 },
     });
     harness.findMany.mockResolvedValue([]);
 

@@ -2,23 +2,24 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import {
-  AlertTriangle,
-  ArrowUpRight,
-  Hash,
-  Loader2,
-  MessageSquare,
-  Package,
-  Plus,
-  RotateCcw,
-  Search,
-  SearchX,
-  Truck,
-  Users,
-} from "lucide-react";
+import { AlertTriangle, ListFilter, Loader2, Plus, SearchX } from "lucide-react";
 
-import { TechnicalValue } from "@/components/i18n/technical-value";
 import { flattenNavigationItems } from "@/components/layout/navigation";
+import {
+  CREATE_ACTIONS,
+  GROUP_COPY,
+  GROUP_PREVIEW_LIMIT,
+  KIND_COPY,
+  QUICK_NAV_IDS,
+  RECORD_ICONS,
+  groupResults,
+  type SearchScope,
+} from "@/components/search/search-palette-model";
+import { SearchResultRow, type SearchRow } from "@/components/search/search-result-row";
+import { SearchScopeBar } from "@/components/search/search-scope-bar";
+import { SearchStartPanel } from "@/components/search/search-start-panel";
+import { SearchStateMessage } from "@/components/search/search-state-message";
+import { IconTile } from "@/components/system";
 import {
   Command,
   CommandGroup,
@@ -27,12 +28,10 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { buildCreateHref } from "@/hooks/use-create-param";
 import { useI18n } from "@/hooks/use-i18n";
-import {
-  RECENT_RECORDS_VISIBLE,
-  useRecentRecords,
-} from "@/hooks/use-recent-records";
+import { RECENT_RECORDS_VISIBLE, useRecentRecords } from "@/hooks/use-recent-records";
+import { useRecentSearches } from "@/hooks/use-recent-searches";
+import { useUniversalRecordSearch } from "@/hooks/use-universal-record-search";
 import {
   searchCommandCopy,
   type SearchCommandCopyKey,
@@ -41,8 +40,6 @@ import { warmUniversalSearchClient } from "@/lib/search/universal-search-client"
 import {
   normalizeSearchText,
   rankUniversalSearchCandidates,
-  type UniversalSearchCandidate,
-  type UniversalSearchKind,
 } from "@/lib/search/universal-search";
 import { cn } from "@/lib/utils";
 
@@ -52,166 +49,18 @@ interface CommandPaletteProps {
   onAction?: (action: string) => void;
 }
 
-type RecordKind = Exclude<UniversalSearchKind, "navigation" | "action">;
-
-type ApiRecordResult = UniversalSearchCandidate & {
-  kind: RecordKind;
-  score: number;
-};
-
-type VisibleResult = UniversalSearchCandidate & {
-  score: number;
-  icon: React.ComponentType<{ className?: string }>;
-};
-
-/** Row shape shared by record matches, create actions and recents. */
-type ResultRow = UniversalSearchCandidate & {
-  icon: React.ComponentType<{ className?: string }>;
-};
-
-const GROUP_HEADING_STYLES =
-  "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-1 [&_[cmdk-group-heading]]:text-caption [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.08em]";
-
-interface SearchResponse {
-  query: string;
-  results: ApiRecordResult[];
-  degradedFamilies: RecordKind[];
-  tookMs: number;
-}
-
-interface RecordState {
-  query: string;
-  results: ApiRecordResult[];
-  degradedFamilies: RecordKind[];
-  searching: boolean;
-  failed: boolean;
-}
-
-const EMPTY_RECORD_STATE: RecordState = {
-  query: "",
-  results: [],
-  degradedFamilies: [],
-  searching: false,
-  failed: false,
-};
-
-// Page/workspace matches are local and update on every keystroke. Record search
-// settles briefly so ordinary typing coalesces before we spend protected SQLite
-// projection work on the server. The server path itself is warm and parallel.
-const SEARCH_DEBOUNCE_MS = 160;
-const MAX_VISIBLE_RESULTS = 14;
-
-const QUICK_NAV_IDS = [
-  "home",
-  "sell",
-  "inbox",
-  "products",
-  "customers",
-  "grow",
-] as const;
-
-const RECORD_ICONS = {
-  order: Hash,
-  customer: Users,
-  product: Package,
-  conversation: MessageSquare,
-  delivery: Truck,
-  return: RotateCcw,
-} as const satisfies Record<
-  RecordKind,
-  React.ComponentType<{ className?: string }>
->;
+const GROUP_HEADING =
+  "[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-caption [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground";
 
 /**
- * R4-f create actions. Navigation-only palettes force the seller back to the
- * list surface before any create flow can start (d5/d7-a); these three
- * commands deep-link straight into the surface's create dialog via
- * `?create=1`. Permissions stay server-side — each surface renders its create
- * dialog only when the actor's authority allows it, so an action without
- * permission lands on the plain list instead of a dead-end.
+ * The SahelFlow command center: one place to find any record, page or action.
+ *
+ * Records come from the local-first universal authority (`/api/search`, via
+ * `useUniversalRecordSearch`); pages, create actions and recents are ranked
+ * locally by the same relevance authority (`rankUniversalSearchCandidates`),
+ * so Arabic normalization applies to every row. Results are grouped by family
+ * — the most relevant family first — and Tab scopes the palette to one family.
  */
-interface PaletteCreateAction {
-  id: string;
-  labelKey: SearchCommandCopyKey;
-  href: string;
-  keywords: readonly string[];
-}
-
-const CREATE_ACTIONS: readonly PaletteCreateAction[] = [
-  {
-    id: "create-order",
-    labelKey: "actionCreateOrder",
-    href: buildCreateHref("/orders"),
-    keywords: [
-      "new order",
-      "create order",
-      "add order",
-      "nouvelle commande",
-      "créer commande",
-      "ajouter commande",
-      "طلب جديد",
-      "إنشاء طلب",
-      "إضافة طلب",
-    ],
-  },
-  {
-    id: "create-customer",
-    labelKey: "actionCreateCustomer",
-    href: buildCreateHref("/customers"),
-    keywords: [
-      "new customer",
-      "create customer",
-      "add customer",
-      "nouveau client",
-      "créer client",
-      "ajouter client",
-      "عميل جديد",
-      "إنشاء عميل",
-      "إضافة عميل",
-    ],
-  },
-  {
-    id: "create-product",
-    labelKey: "actionCreateProduct",
-    href: buildCreateHref("/products"),
-    keywords: [
-      "new product",
-      "create product",
-      "add product",
-      "nouveau produit",
-      "créer produit",
-      "ajouter produit",
-      "منتج جديد",
-      "إنشاء منتج",
-      "إضافة منتج",
-    ],
-  },
-];
-
-const KIND_COPY: Record<UniversalSearchKind, SearchCommandCopyKey> = {
-  navigation: "typePage",
-  action: "typeAction",
-  order: "typeOrder",
-  customer: "typeCustomer",
-  product: "typeProduct",
-  conversation: "typeConversation",
-  delivery: "typeDelivery",
-  return: "typeReturn",
-};
-
-function hasTechnicalLabel(kind: UniversalSearchKind): boolean {
-  return kind === "order" || kind === "delivery" || kind === "return";
-}
-
-function hasTechnicalSublabel(
-  kind: UniversalSearchKind,
-  value: string,
-): boolean {
-  if (kind === "customer" || kind === "product") return true;
-  if (kind !== "conversation") return false;
-  return /^[0-9\s()+\-./]+$/u.test(value);
-}
-
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
   const { t, locale } = useI18n();
@@ -220,18 +69,22 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     [locale],
   );
   const [query, setQuery] = React.useState("");
-  const [recordState, setRecordState] = React.useState<RecordState>(
-    EMPTY_RECORD_STATE,
-  );
+  const [scope, setScope] = React.useState<SearchScope>("all");
   const normalizedQuery = normalizeSearchText(query);
   const technicalQuery =
     normalizedQuery.length > 0 && /^[0-9\s()+\-./]+$/u.test(normalizedQuery);
 
-  // R4-f recents: local-first journal written by record detail pages; re-read
-  // on every open so the newest visits appear without a remount.
   const recents = useRecentRecords(open);
+  const recentSearches = useRecentSearches(open);
+  const records = useUniversalRecordSearch(normalizedQuery, open);
 
-  const createActionItems = React.useMemo<ResultRow[]>(
+  React.useEffect(() => {
+    void warmUniversalSearchClient().catch(() => {
+      // Warmup is latency preparation only; live search stays authoritative.
+    });
+  }, []);
+
+  const createActionItems = React.useMemo<SearchRow[]>(
     () =>
       CREATE_ACTIONS.map((action) => ({
         id: action.id,
@@ -244,20 +97,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       })),
     [copy],
   );
+  const visibleActions = React.useMemo<SearchRow[]>(
+    () =>
+      normalizedQuery
+        ? rankUniversalSearchCandidates(normalizedQuery, createActionItems, createActionItems.length)
+        : createActionItems,
+    [createActionItems, normalizedQuery],
+  );
 
-  // Actions and recents stay first-class cmdk items: the palette owns
-  // filtering (shouldFilter=false), so the shared ranking authority — Arabic
-  // normalization included — applies to them exactly like record matches.
-  const visibleActions = React.useMemo<ResultRow[]>(() => {
-    if (!normalizedQuery) return createActionItems;
-    return rankUniversalSearchCandidates(
-      normalizedQuery,
-      createActionItems,
-      createActionItems.length,
-    );
-  }, [createActionItems, normalizedQuery]);
-
-  const recentItems = React.useMemo<ResultRow[]>(
+  const recentItems = React.useMemo<SearchRow[]>(
     () =>
       recents.slice(0, RECENT_RECORDS_VISIBLE).map((record) => ({
         id: `${record.kind}:${record.id}`,
@@ -269,18 +117,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       })),
     [recents],
   );
-
-  const visibleRecent = React.useMemo<ResultRow[]>(() => {
-    if (!normalizedQuery) return recentItems;
-    return rankUniversalSearchCandidates(
-      normalizedQuery,
-      recentItems,
-      recentItems.length,
-    );
-  }, [recentItems, normalizedQuery]);
-
-  const hasInstantMatches =
-    visibleActions.length > 0 || visibleRecent.length > 0;
+  const visibleRecent = React.useMemo<SearchRow[]>(
+    () =>
+      normalizedQuery
+        ? rankUniversalSearchCandidates(normalizedQuery, recentItems, recentItems.length)
+        : recentItems,
+    [recentItems, normalizedQuery],
+  );
+  const hasInstantMatches = visibleActions.length > 0 || visibleRecent.length > 0;
 
   const navigation = React.useMemo(
     () =>
@@ -293,118 +137,52 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       })),
     [t],
   );
-
-  const navigationMatches = React.useMemo(() => {
-    if (!normalizedQuery) return [];
-    return rankUniversalSearchCandidates(normalizedQuery, navigation, 6);
-  }, [navigation, normalizedQuery]);
-
-  const quickNavigation = React.useMemo(() => {
-    return QUICK_NAV_IDS.map((id) =>
-      navigation.find((item) => item.id === id),
-    ).filter((item): item is NonNullable<typeof item> => Boolean(item));
-  }, [navigation]);
-
-  // Dashboard idle warmup and an immediately opened command center share one
-  // browser promise. If the shell has already started or completed warmup this is
-  // a no-op; if the seller opens Search immediately, this starts that same work
-  // early without issuing a duplicate projection rebuild.
-  React.useEffect(() => {
-    void warmUniversalSearchClient().catch(() => {
-      // Warmup is only latency preparation. The live search remains authoritative
-      // and retries projection work itself if preparation was unavailable.
-    });
-  }, []);
-
-  React.useEffect(() => {
-    if (!open || normalizedQuery.length < 2) return;
-
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => {
-      setRecordState({
-        query: normalizedQuery,
-        results: [],
-        degradedFamilies: [],
-        searching: true,
-        failed: false,
-      });
-
-      void fetch(
-        `/api/search?q=${encodeURIComponent(normalizedQuery)}&limit=16`,
-        {
-          cache: "no-store",
-          signal: controller.signal,
-        },
-      )
-        .then(async (response) => {
-          if (!response.ok) throw new Error(`Search returned ${response.status}`);
-          return (await response.json()) as SearchResponse;
-        })
-        .then((response) => {
-          if (controller.signal.aborted) return;
-          setRecordState({
-            query: normalizedQuery,
-            results: response.results,
-            degradedFamilies: response.degradedFamilies ?? [],
-            searching: false,
-            failed: false,
-          });
-        })
-        .catch((error: unknown) => {
-          if (controller.signal.aborted) return;
-          if (error instanceof DOMException && error.name === "AbortError") return;
-          setRecordState({
-            query: normalizedQuery,
-            results: [],
-            degradedFamilies: [],
-            searching: false,
-            failed: true,
-          });
-        });
-    }, SEARCH_DEBOUNCE_MS);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [normalizedQuery, open]);
-
-  const liveRecordState =
-    recordState.query === normalizedQuery ? recordState : EMPTY_RECORD_STATE;
-
-  const visibleResults = React.useMemo<VisibleResult[]>(() => {
-    if (!normalizedQuery) return [];
-    const records: VisibleResult[] = liveRecordState.results.map((result) => ({
-      ...result,
-      icon: RECORD_ICONS[result.kind],
-    }));
-    const pages: VisibleResult[] = navigationMatches.map((result) => ({
-      ...result,
-      icon: result.icon,
-    }));
-    return [...records, ...pages]
-      .sort((left, right) => right.score - left.score)
-      .slice(0, MAX_VISIBLE_RESULTS);
-  }, [liveRecordState.results, navigationMatches, normalizedQuery]);
-
-  const recordResults = visibleResults.filter(
-    (result) => result.kind !== "navigation",
+  const quickNavigation = React.useMemo(
+    () =>
+      QUICK_NAV_IDS.map((id) => navigation.find((item) => item.id === id)).filter(
+        (item): item is NonNullable<typeof item> => Boolean(item),
+      ),
+    [navigation],
   );
-  const pageResults = visibleResults.filter(
-    (result) => result.kind === "navigation",
+  const pageResults = React.useMemo(
+    () => (normalizedQuery ? rankUniversalSearchCandidates(normalizedQuery, navigation, 8) : []),
+    [navigation, normalizedQuery],
+  );
+  const recordResults = React.useMemo(
+    () => records.results.map((result) => ({ ...result, icon: RECORD_ICONS[result.kind] })),
+    [records.results],
+  );
+  const groups = React.useMemo(
+    () => groupResults([...recordResults, ...pageResults]),
+    [recordResults, pageResults],
   );
 
-  function handleQueryChange(value: string) {
-    setQuery(value);
-    if (normalizeSearchText(value).length < 2) {
-      setRecordState(EMPTY_RECORD_STATE);
-    }
-  }
+  const scopes = React.useMemo<SearchScope[]>(
+    () => ["all", ...groups.map((group) => group.kind)],
+    [groups],
+  );
+  const activeScope: SearchScope = scopes.includes(scope) ? scope : "all";
+  const visibleGroups =
+    activeScope === "all" ? groups : groups.filter((group) => group.kind === activeScope);
+  const resultCount = groups.reduce((sum, group) => sum + group.rows.length, 0);
+
+  const searching = normalizedQuery.length >= 2 && records.searching;
+  const degraded = records.degradedFamilies.length > 0;
+  const partiallyDegraded = degraded && resultCount > 0;
+  const degradedEmpty =
+    normalizedQuery.length > 0 && !searching && !records.failed && degraded && resultCount === 0;
+  const noResults =
+    normalizedQuery.length > 0 &&
+    !searching &&
+    !records.failed &&
+    !degraded &&
+    resultCount === 0 &&
+    !hasInstantMatches;
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
       setQuery("");
-      setRecordState(EMPTY_RECORD_STATE);
+      setScope("all");
     }
     onOpenChange(nextOpen);
   }
@@ -414,333 +192,190 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     router.push(href);
   }
 
-  function renderResult(result: ResultRow) {
-    const Icon = result.icon;
-    return (
-      <CommandItem
-        key={result.id}
-        value={`${result.kind}:${result.id}:${result.label}`}
-        onSelect={() => openHref(result.href)}
-        className="group min-h-[3.65rem] rounded-surface border border-transparent px-3 py-2.5 transition-colors data-[selected=true]:border-primary/20 data-[selected=true]:bg-accent/80"
-      >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/60 bg-background/75 shadow-sm">
-          <Icon className="size-4" aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1">
-          {hasTechnicalLabel(result.kind) ? (
-            <TechnicalValue className="block truncate text-start text-[13px] font-semibold">
-              {result.label}
-            </TechnicalValue>
-          ) : (
-            <bdi
-              dir="auto"
-              className="block truncate text-start text-[13px] font-semibold [unicode-bidi:plaintext]"
-            >
-              {result.label}
-            </bdi>
-          )}
-          {result.sublabel ? (
-            hasTechnicalSublabel(result.kind, result.sublabel) ? (
-              <TechnicalValue className="mt-0.5 block truncate text-start text-caption leading-4 text-muted-foreground">
-                {result.sublabel}
-              </TechnicalValue>
-            ) : (
-              <bdi
-                dir="auto"
-                className="mt-0.5 block truncate text-start text-caption leading-4 text-muted-foreground [unicode-bidi:plaintext]"
-              >
-                {result.sublabel}
-              </bdi>
-            )
-          ) : null}
-        </span>
-        <span className="ms-2 shrink-0 rounded-full border border-border/55 bg-muted/25 px-2 py-0.5 text-caption font-medium text-muted-foreground">
-          {copy(KIND_COPY[result.kind])}
-        </span>
-        <ArrowUpRight
-          className="ms-0.5 size-3.5 shrink-0 text-muted-foreground/45 transition-transform group-data-[selected=true]:translate-x-0.5 group-data-[selected=true]:text-foreground rtl:-scale-x-100"
-          aria-hidden="true"
-        />
-      </CommandItem>
-    );
+  function openRow(row: SearchRow) {
+    if (normalizedQuery.length >= 2 && row.kind !== "action") {
+      recentSearches.remember(query);
+    }
+    openHref(row.href);
   }
 
-  const waitingForRequest =
-    normalizedQuery.length >= 2 && recordState.query !== normalizedQuery;
-  const searching =
-    normalizedQuery.length >= 2 &&
-    (waitingForRequest || liveRecordState.searching);
-  const degraded = liveRecordState.degradedFamilies.length > 0;
-  const partiallyDegraded = degraded && visibleResults.length > 0;
-  const degradedEmpty =
-    normalizedQuery.length > 0 &&
-    !searching &&
-    !liveRecordState.failed &&
-    degraded &&
-    visibleResults.length === 0;
-  const noResults =
-    normalizedQuery.length > 0 &&
-    !searching &&
-    !liveRecordState.failed &&
-    !degraded &&
-    visibleResults.length === 0 &&
-    !hasInstantMatches;
+  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Tab" || !normalizedQuery || scopes.length < 2) return;
+    event.preventDefault();
+    const index = scopes.indexOf(activeScope);
+    const step = event.shiftKey ? -1 : 1;
+    const next = scopes[(index + step + scopes.length) % scopes.length];
+    if (next) setScope(next);
+  }
+
+  const renderRow = (item: SearchRow, showKind = false) => (
+    <SearchResultRow
+      key={`${item.kind}:${item.id}`}
+      row={item}
+      query={normalizedQuery}
+      kindLabel={copy(KIND_COPY[item.kind])}
+      openLabel={copy("open")}
+      showKind={showKind}
+      dimmed={records.stale && item.kind !== "navigation"}
+      onSelect={openRow}
+    />
+  );
+  const row = (item: SearchRow) => renderRow(item);
+  const mixedRow = (item: SearchRow) => renderRow(item, true);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         data-universal-search="v2"
         dir={locale === "ar" ? "rtl" : "ltr"}
-        className="gap-0 overflow-hidden rounded-[22px] border-border/70 bg-popover/96 p-0 shadow-[0_30px_90px_rgba(0,0,0,0.38)] backdrop-blur-2xl sm:max-w-[45rem]"
+        className="gap-0 overflow-hidden border-border p-0 shadow-(--elevation-3) sm:max-w-2xl sm:p-0"
         showCloseButton={false}
       >
         <DialogTitle className="sr-only">{copy("title")}</DialogTitle>
-
         <Command
           shouldFilter={false}
-          className={cn(
-            "rounded-[22px] bg-transparent",
-            "[&_[data-slot=command-input-wrapper]]:h-14 [&_[data-slot=command-input-wrapper]]:gap-3 [&_[data-slot=command-input-wrapper]]:rounded-surface [&_[data-slot=command-input-wrapper]]:border [&_[data-slot=command-input-wrapper]]:border-border/65 [&_[data-slot=command-input-wrapper]]:bg-background/70 [&_[data-slot=command-input-wrapper]]:px-4 [&_[data-slot=command-input-wrapper]]:shadow-sm",
-            "[&_[data-slot=command-input-wrapper]_svg]:size-[18px] [&_[data-slot=command-input-wrapper]_svg]:opacity-55",
-            "[&_[cmdk-input]]:h-14 [&_[cmdk-input]]:text-[15px] [&_[cmdk-input]]:font-medium",
-          )}
+          loop
+          onKeyDown={handleKeyDown}
+          className="bg-popover **:data-[slot=command-input-wrapper]:h-14 **:data-[slot=command-input-wrapper]:gap-3 **:data-[slot=command-input-wrapper]:px-4"
         >
-          <div className="border-b border-border/60 bg-muted/10 p-3">
-            <div className="relative">
-              <CommandInput
-                autoFocus
-                dir={technicalQuery ? "ltr" : "auto"}
-                className="[unicode-bidi:plaintext]"
-                placeholder={copy("placeholder")}
-                value={query}
-                onValueChange={handleQueryChange}
+          <div className="relative">
+            <CommandInput
+              autoFocus
+              dir={technicalQuery ? "ltr" : "auto"}
+              className="h-14 text-title-3 font-normal"
+              placeholder={copy("placeholder")}
+              value={query}
+              onValueChange={setQuery}
+            />
+            {searching ? (
+              <Loader2
+                className="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground motion-reduce:animate-none"
+                aria-hidden="true"
               />
-              {searching ? (
-                <Loader2
-                  className="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 animate-spin text-primary"
-                  aria-hidden="true"
-                />
-              ) : null}
-            </div>
+            ) : null}
           </div>
 
-          <CommandList
-            className="max-h-[min(32rem,66dvh)] px-2.5 py-2.5"
-            aria-live="polite"
-          >
+          {normalizedQuery && scopes.length > 1 ? (
+            <SearchScopeBar
+              scopes={scopes}
+              active={activeScope}
+              counts={Object.fromEntries(groups.map((group) => [group.kind, group.rows.length]))}
+              total={resultCount}
+              label={(value) => (value === "all" ? copy("scopeAll") : copy(GROUP_COPY[value]))}
+              ariaLabel={copy("scopeLabel")}
+              onChange={setScope}
+            />
+          ) : null}
+
+          <CommandList className="max-h-96 scroll-py-2 px-2 py-2" aria-live="polite">
             {!normalizedQuery ? (
-              <>
-                <div className="px-2 pb-3 pt-1">
-                  <div className="flex items-start gap-3 rounded-surface border border-border/50 bg-muted/12 px-4 py-3.5">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/55 bg-background/75 shadow-sm">
-                      <Search className="size-4 text-primary" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold tracking-[-0.01em] text-foreground">
-                        {copy("startTitle")}
-                      </p>
-                      <p className="mt-1 max-w-[34rem] text-xs leading-5 text-muted-foreground">
-                        {copy("startHint")}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-end justify-between gap-4 px-3 pb-1.5 pt-0.5">
-                  <div>
-                    <p className="text-caption font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                      {copy("quickAccess")}
-                    </p>
-                    <p className="mt-0.5 text-caption text-muted-foreground/75">
-                      {copy("quickHint")}
-                    </p>
-                  </div>
-                </div>
-
-                <CommandGroup className="px-1 pb-2">
-                  <div className="grid gap-1.5 sm:grid-cols-2">
-                    {quickNavigation.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <CommandItem
-                          key={item.id}
-                          value={`quick-${item.id}`}
-                          onSelect={() => openHref(item.href)}
-                          className="group min-h-[4.1rem] rounded-surface border border-border/45 bg-muted/10 px-3.5 py-3 transition-colors data-[selected=true]:border-primary/25 data-[selected=true]:bg-accent/75"
-                        >
-                          <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/55 bg-background/75 shadow-sm">
-                            <Icon className="size-4" aria-hidden="true" />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-start text-[13px] font-semibold">
-                              {item.label}
-                            </span>
-                            <span className="mt-0.5 block text-start text-caption text-muted-foreground">
-                              {copy("open")}
-                            </span>
-                          </span>
-                          <ArrowUpRight
-                            className="size-3.5 shrink-0 text-muted-foreground/45 group-data-[selected=true]:text-foreground rtl:-scale-x-100"
-                            aria-hidden="true"
-                          />
-                        </CommandItem>
-                      );
-                    })}
-                  </div>
-                </CommandGroup>
-              </>
+              <SearchStartPanel
+                copy={copy}
+                quickNavigation={quickNavigation}
+                recentSearches={recentSearches.entries}
+                onClearRecentSearches={recentSearches.clear}
+                onPickRecentSearch={setQuery}
+                onOpen={openHref}
+                recentRows={visibleRecent.map(mixedRow)}
+                actionRows={visibleActions.map(row)}
+              />
             ) : null}
 
-            {visibleActions.length > 0 ? (
-              <CommandGroup
-                heading={copy("actionsSection")}
-                className={GROUP_HEADING_STYLES}
-              >
-                <div className="space-y-0.5">
-                  {visibleActions.map(renderResult)}
-                </div>
+            {normalizedQuery && activeScope === "all" && visibleActions.length > 0 ? (
+              <CommandGroup heading={copy("actionsSection")} className={GROUP_HEADING}>
+                {visibleActions.map(row)}
               </CommandGroup>
             ) : null}
 
-            {visibleRecent.length > 0 ? (
-              <CommandGroup
-                heading={copy("recentSection")}
-                className={cn(
-                  "mt-1 border-t border-border/45 pt-1",
-                  GROUP_HEADING_STYLES,
-                  "[&_[cmdk-group-heading]]:pt-2",
-                )}
-              >
-                <div className="space-y-0.5">
-                  {visibleRecent.map(renderResult)}
-                </div>
+            {normalizedQuery && activeScope === "all" && visibleRecent.length > 0 ? (
+              <CommandGroup heading={copy("recentSection")} className={GROUP_HEADING}>
+                {visibleRecent.map(mixedRow)}
               </CommandGroup>
             ) : null}
 
             {partiallyDegraded ? (
-              <div
-                className="mx-1 mb-2 flex items-start gap-2 rounded-surface border border-warning/20 bg-warning-subtle px-3 py-2 text-caption leading-5 text-warning"
+              <p
+                className="mx-1 my-1 flex items-start gap-2 rounded-control bg-warning-subtle px-3 py-2 text-caption text-warning"
                 role="status"
               >
-                <AlertTriangle
-                  className="mt-0.5 size-3.5 shrink-0"
-                  aria-hidden="true"
-                />
-                <span>{copy("partialResults")}</span>
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                {copy("partialResults")}
+              </p>
+            ) : null}
+
+            {visibleGroups.map((group) => {
+              const preview = activeScope === "all" && group.rows.length > GROUP_PREVIEW_LIMIT;
+              const rows = preview ? group.rows.slice(0, GROUP_PREVIEW_LIMIT) : group.rows;
+              return (
+                <CommandGroup
+                  key={group.kind}
+                  heading={copy(GROUP_COPY[group.kind])}
+                  className={GROUP_HEADING}
+                >
+                  {rows.map(row)}
+                  {preview ? (
+                    <CommandItem
+                      value={`show-all:${group.kind}`}
+                      onSelect={() => setScope(group.kind)}
+                      className="gap-3 rounded-control px-2.5 text-body-sm text-muted-foreground data-[selected=true]:bg-accent"
+                    >
+                      <IconTile icon={ListFilter} size="sm" />
+                      {copy("showAll").replace("{count}", String(group.rows.length))}
+                    </CommandItem>
+                  ) : null}
+                </CommandGroup>
+              );
+            })}
+
+            {searching && resultCount === 0 && !hasInstantMatches ? (
+              <div className="space-y-1 px-1 py-1" role="status" aria-label={copy("searching")}>
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="flex items-center gap-3 px-2.5 py-2">
+                    <span className="size-8 shrink-0 animate-pulse rounded-control bg-muted motion-reduce:animate-none" />
+                    <span className="h-3 flex-1 animate-pulse rounded-full bg-muted motion-reduce:animate-none" />
+                  </div>
+                ))}
               </div>
             ) : null}
 
-            {normalizedQuery && recordResults.length > 0 ? (
-              <CommandGroup
-                heading={copy("recordResults")}
-                className={GROUP_HEADING_STYLES}
-              >
-                <div className="space-y-0.5">
-                  {recordResults.map(renderResult)}
-                </div>
-              </CommandGroup>
+            {records.failed && resultCount === 0 ? (
+              <SearchStateMessage icon={SearchX} title={copy("unavailable")} hint={copy("unavailableHint")} />
             ) : null}
-
-            {normalizedQuery && pageResults.length > 0 ? (
-              <CommandGroup
-                heading={copy("pageResults")}
-                className={cn(
-                  "mt-1 border-t border-border/45 pt-1",
-                  GROUP_HEADING_STYLES,
-                  "[&_[cmdk-group-heading]]:pt-2",
-                )}
-              >
-                <div className="space-y-0.5">{pageResults.map(renderResult)}</div>
-              </CommandGroup>
-            ) : null}
-
-            {searching && visibleResults.length === 0 && !hasInstantMatches ? (
-              <div
-                className="flex min-h-36 flex-col items-center justify-center px-6 text-center"
-                role="status"
-              >
-                <Loader2
-                  className="size-5 animate-spin text-primary"
-                  aria-hidden="true"
-                />
-                <p className="mt-3 text-sm font-medium">{copy("searching")}</p>
-              </div>
-            ) : null}
-
-            {liveRecordState.failed && visibleResults.length === 0 ? (
-              <div
-                className="flex min-h-40 flex-col items-center justify-center px-6 text-center"
-                role="status"
-              >
-                <SearchX
-                  className="size-6 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <p className="mt-3 text-sm font-semibold">
-                  {copy("unavailable")}
-                </p>
-                <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
-                  {copy("unavailableHint")}
-                </p>
-              </div>
-            ) : null}
-
             {degradedEmpty ? (
-              <div
-                className="flex min-h-40 flex-col items-center justify-center px-6 text-center"
-                role="status"
-              >
-                <AlertTriangle
-                  className="size-6 text-warning"
-                  aria-hidden="true"
-                />
-                <p className="mt-3 text-sm font-semibold">
-                  {copy("degradedTitle")}
-                </p>
-                <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
-                  {copy("degradedHint")}
-                </p>
-              </div>
+              <SearchStateMessage icon={AlertTriangle} tone="warning" title={copy("degradedTitle")} hint={copy("degradedHint")} />
             ) : null}
-
             {noResults ? (
-              <div className="flex min-h-40 flex-col items-center justify-center px-6 text-center">
-                <SearchX
-                  className="size-6 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <p className="mt-3 text-sm font-semibold">
-                  {copy("noResults")}
-                </p>
-                <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
-                  {copy("noResultsHint")}
-                </p>
-              </div>
+              <SearchStateMessage icon={SearchX} title={copy("noResults")} hint={copy("noResultsHint")} />
             ) : null}
           </CommandList>
 
-          <div className="flex min-h-11 items-center gap-2 border-t border-border/60 bg-muted/10 px-3.5 text-caption text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <kbd className="rounded-control border border-border/65 bg-background/80 px-1.5 py-0.5 font-mono shadow-sm">
-                ↑↓
-              </kbd>
-              {copy("navigate")}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <kbd className="rounded-control border border-border/65 bg-background/80 px-1.5 py-0.5 font-mono shadow-sm">
-                ↵
-              </kbd>
-              {copy("open")}
-            </span>
-            <span className="ms-auto inline-flex items-center gap-1.5">
-              <kbd className="rounded-control border border-border/65 bg-background/80 px-1.5 py-0.5 font-mono shadow-sm">
-                Esc
-              </kbd>
-              {copy("close")}
+          <div
+            className={cn(
+              "flex h-10 items-center gap-4 border-t border-border px-4 text-caption text-muted-foreground",
+            )}
+          >
+            <KeyHint keys="↑↓" label={copy("navigate")} />
+            <KeyHint keys="↵" label={copy("open")} />
+            {normalizedQuery && scopes.length > 1 ? (
+              <KeyHint keys="Tab" label={copy("filter")} />
+            ) : null}
+            <span className="ms-auto">
+              <KeyHint keys="Esc" label={copy("close")} />
             </span>
           </div>
         </Command>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function KeyHint({ keys, label }: { keys: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-control border border-border bg-muted px-1 font-sans text-caption text-muted-foreground">
+        {keys}
+      </kbd>
+      {label}
+    </span>
   );
 }

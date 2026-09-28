@@ -32,8 +32,27 @@ const STATIC_TRANSLATIONS = {
 
 const LRI = "\u2066";
 const PDI = "\u2069";
-const LTR_INLINE_RUN =
-  /(?:[0-9٠-٩۰-۹]+(?:[.,،][0-9٠-٩۰-۹]+)?\s*[%٪]?\s*[-–—]\s*[0-9٠-٩۰-۹]+(?:[.,،][0-9٠-٩۰-۹]+)?\s*[%٪]?|[A-Za-z0-9٠-٩۰-۹]+(?:[._:+/@#-][A-Za-z0-9٠-٩۰-۹]+)*(?:\s*[%٪])?)/g;
+const FSI = "⁨";
+
+/**
+ * One Latin/numeric word, including accented Latin letters (`Décoratif`) and
+ * technical joiners (`SF-00012`, `api.v2`).
+ */
+const LATIN_TOKEN = String.raw`[\p{Script=Latin}0-9٠-٩۰-۹]+(?:[._:+/@#'’-][\p{Script=Latin}0-9٠-٩۰-۹]+)*`;
+
+/**
+ * A numeric range (`25-40%`) or a run of Latin words separated only by spaces
+ * (`Gemini API`, `Google AI Studio`). Consecutive words form ONE island: when
+ * each word was isolated on its own, the RTL paragraph laid the islands out
+ * right-to-left and reversed the word order of every multi-word name.
+ */
+const LTR_INLINE_RUN = new RegExp(
+  String.raw`(?:[0-9٠-٩۰-۹]+(?:[.,،][0-9٠-٩۰-۹]+)?\s*[%٪]?\s*[-–—]\s*[0-9٠-٩۰-۹]+(?:[.,،][0-9٠-٩۰-۹]+)?\s*[%٪]?|${LATIN_TOKEN}(?:[  ]+${LATIN_TOKEN})*(?:\s*[%٪])?)`,
+  "gu",
+);
+
+/** `{{name}}` and the retained single-brace `{name}` placeholder syntax. */
+const PLACEHOLDER = /(\{\{[A-Za-z0-9_]+\}\}|\{[A-Za-z0-9_]+\})/;
 
 export function isRTL(locale: Locale): boolean {
   return RTL_LOCALES.includes(locale);
@@ -52,7 +71,42 @@ export function getDirection(locale: Locale): "ltr" | "rtl" {
  */
 export function stabilizeBidiText(value: string, locale: Locale): string {
   if (locale !== "ar" || !value) return value;
-  return value.replace(LTR_INLINE_RUN, (run) => `${LRI}${run}${PDI}`);
+  // Placeholders pass through untouched so a template can be stabilized
+  // before its values are inserted (see `renderTranslation`).
+  return value
+    .split(PLACEHOLDER)
+    .map((part) =>
+      PLACEHOLDER.test(part)
+        ? part
+        : part.replace(LTR_INLINE_RUN, (run) => `${LRI}${run}${PDI}`),
+    )
+    .join("");
+}
+
+/**
+ * Resolve a translation template for display.
+ *
+ * Arabic stabilizes the product's own copy, then inserts every interpolated
+ * value as ONE first-strong isolate. Values are seller data — customer and
+ * product names, cities, order numbers, amounts — and can be Latin, Arabic or
+ * mixed. Stabilizing after insertion (the former order) split a value such as
+ * `Miroir Mural Décoratif` into per-word islands and broke it at the accented
+ * letter, so it rendered as `coratifDé Mural Miroir`. An FSI keeps the value
+ * intact and lets its own first strong character choose its direction.
+ */
+export function renderTranslation(
+  template: string,
+  params: Record<string, string | number> | undefined,
+  locale: Locale,
+): string {
+  if (locale !== "ar") return interpolateTranslation(template, params);
+  const stable = stabilizeBidiText(template, locale);
+  if (!params) return stable;
+  const isolated: Record<string, string> = {};
+  for (const [param, value] of Object.entries(params)) {
+    isolated[param] = `${FSI}${String(value)}${PDI}`;
+  }
+  return interpolateTranslation(stable, isolated);
 }
 
 /**

@@ -289,6 +289,18 @@ html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid > :is(aside, mai
   unicode-bidi: plaintext;
 }
 
+/*
+ * One-line seller data inside a list column — customer, contact and product
+ * names, titles. Rendered with dir="auto" so the value keeps its own direction
+ * (a long Latin name truncates at ITS end instead of losing its first letters),
+ * while `match-parent` aligns it with the surrounding interface: a Latin name
+ * sits on the same edge as its Arabic neighbours in an RTL column instead of
+ * drifting to the opposite side.
+ */
+[data-sf-seller-label="true"] {
+  text-align: match-parent;
+}
+
 /* ── Locale transition presentation ─────────────────────────────────────── */
 html[data-locale-transition="pending"] body {
   cursor: default;
@@ -357,4 +369,56 @@ html[dir="rtl"][data-locale-transition="pending"] body::before {
     opacity: 0.7;
     animation: none !important;
   }
+}
+
+/*
+ * The command-center query field is the dialog's single text target and holds
+ * focus for as long as the palette is open; the caret and the header band make
+ * that focus self-evident. The global `*:focus-visible` outline would only draw
+ * a heavy box around the whole header, so this one field is exempt. Every
+ * other control in the palette keeps the standard ring.
+ */
+[data-universal-search="v2"] [data-slot="command-input"]:focus-visible {
+  outline: none;
+}
+
+/*
+ * The Settings modal: a large centered window over the current page on the
+ * desktop, full-screen on narrow viewports. Sized here so the dialog stays on
+ * system values instead of arbitrary per-call-site geometry.
+ */
+[data-settings-modal="true"].settings-modal {
+  width: min(76rem, calc(100vw - 3rem));
+  max-width: none;
+  height: min(54rem, calc(100dvh - 3rem));
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 767px) {
+  [data-settings-modal="true"].settings-modal {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    border: 0;
+  }
+}
+
+/*
+ * Radix ScrollArea wraps content in an inline `display: table` element, which
+ * grows to the widest unbroken line: a 324px chat list rendered 770px wide and
+ * every ellipsis/timestamp was clipped. Our ScrollArea only scrolls vertically,
+ * so the wrapper is a plain block that respects its column.
+ */
+[data-slot="scroll-area-viewport"] > div {
+  display: block !important;
+}
+
+/* Opt-in bottom anchoring (chat threads): short content sits on the composer. */
+[data-slot="scroll-area"][data-anchor-end="true"] > [data-slot="scroll-area-viewport"] > div {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 100%;
 }

@@ -87,8 +87,9 @@ describe("F-06 AI page-completion wave", () => {
     expect(canvas).toContain('data-ai-status-dot={setupReady ? "ready" : "attention"}');
     expect(canvas).toContain('data-ai-config-chip="true"');
     expect(canvas).toContain('getAiDecisionCopy(workspace.locale, "providerReady")');
-    // The chip renders only after setup resolved — the checking banner owns loading.
-    expect(canvas).toContain("{workspace.setup ? (");
+    // The chip renders only after setup resolved and only for the ready fact —
+    // the checking banner owns loading and the setup notice owns attention.
+    expect(canvas).toContain("{workspace.setup && setupReady ? (");
   });
 
   it("streams with a visible caret and keeps the newest turn actionable", () => {
@@ -101,7 +102,7 @@ describe("F-06 AI page-completion wave", () => {
     const log = read("src/components/ai/ai-message-log.tsx");
     expect(bubble).toContain('data-ai-streaming-caret="true"');
     expect(log).toContain("isLatest={message.id === lastMessageId}");
-    expect(bubble).toContain("isLatest ? \"opacity-100\" : \"opacity-0\"");
+    expect(bubble).toContain("isLatest || message.feedback ? \"opacity-100\" : \"opacity-0\"");
   });
 
   it("loads conversations and history with structure-matching skeletons (§26.8)", () => {

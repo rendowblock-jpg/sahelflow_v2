@@ -7,6 +7,7 @@ import {
   Copy,
   Loader2,
   PencilLine,
+  Sparkles,
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
@@ -77,9 +78,21 @@ const MessageBubble = memo(function MessageBubble({
   return (
     <article
       data-ai-message={message.role}
-      className={cn("group/message flex", assistant ? "justify-start" : "justify-end")}
+      className={cn("group/message flex gap-3", assistant ? "justify-start" : "justify-end")}
     >
-      <div className={cn("min-w-0", assistant ? "w-full max-w-3xl" : "max-w-[85%] md:max-w-[78%]") }>
+      {assistant ? (
+        // Agent identity: one quiet mark per turn so the conversation reads as
+        // a dialogue with a named workspace, not loose text on the canvas. Its
+        // 32px column is what the `ms-11` follow-up/proposal offsets align to.
+        <span
+          data-ai-agent-mark="true"
+          aria-hidden="true"
+          className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary"
+        >
+          <Sparkles className="size-4" />
+        </span>
+      ) : null}
+      <div className={cn("min-w-0", assistant ? "w-full max-w-3xl flex-1" : "max-w-[85%] md:max-w-[78%]") }>
         {assistant ? (
           // Assistant turns read as decision blocks — a layered card on the
           // canvas grammar. The seller's turn stays the only filled bubble,
@@ -88,7 +101,7 @@ const MessageBubble = memo(function MessageBubble({
           // container: no border, no fill, no shadow. The seller's turn is the
           // only enclosed surface, which is what makes role ownership readable
           // at a glance without an avatar or a per-turn label.
-          <div className="text-sm leading-6 text-foreground">
+          <div className="text-body leading-7 text-foreground">
             {message.content ? (
               <div>
                 {/* Assistant output is model-emitted markdown: rendered through
@@ -111,14 +124,16 @@ const MessageBubble = memo(function MessageBubble({
             ) : null}
           </div>
         ) : (
-          <div className="rounded-surface rounded-ee-control bg-primary px-4 py-2.5 text-sm leading-6 text-primary-foreground">
+          // The seller's turn is a quiet enclosed bubble: ownership reads from
+          // its shape and alignment, not from a saturated brand fill.
+          <div className="rounded-surface rounded-ee-control bg-muted px-4 py-2.5 text-body leading-7 text-foreground">
             {message.content ? (
               // Seller input is echoed verbatim — no markdown interpretation.
               <p dir="auto" className="whitespace-pre-wrap break-words">
                 {message.content}
               </p>
             ) : message.streaming ? (
-              <div className="flex items-center gap-2 text-xs opacity-80">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 {copy("working")}
               </div>
@@ -173,50 +188,13 @@ const MessageBubble = memo(function MessageBubble({
           </div>
         ) : null}
 
-        {assistant && onFeedback && !message.streaming && message.content ? (
-          // Ledger AI-13: truthful thumbs — the opposite thumb overwrites,
-          // the active thumb clears; nothing auto-sends or decorates.
-          <div className="mt-1.5 flex items-center gap-1">
-            <button
-              type="button"
-              data-ai-feedback-up="true"
-              aria-pressed={message.feedback === "up"}
-              aria-label={copy("feedbackUp")}
-              title={copy("feedbackUp")}
-              disabled={message.feedback === "up"}
-              onClick={() => onFeedback(message.id, "up")}
-              className={cn(
-                "inline-flex size-7 items-center justify-center rounded-control text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
-                message.feedback === "up" && "bg-primary-soft text-primary opacity-100",
-              )}
-            >
-              <ThumbsUp className="size-3" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              data-ai-feedback-down="true"
-              aria-pressed={message.feedback === "down"}
-              aria-label={copy("feedbackDown")}
-              title={copy("feedbackDown")}
-              disabled={message.feedback === "down"}
-              onClick={() => onFeedback(message.id, "down")}
-              className={cn(
-                "inline-flex size-7 items-center justify-center rounded-control text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100",
-                message.feedback === "down" && "bg-destructive-soft text-destructive opacity-100",
-              )}
-            >
-              <ThumbsDown className="size-3" aria-hidden="true" />
-            </button>
-          </div>
-        ) : null}
-
-        {message.content && !message.streaming ? (
-          // Hover action row (ChatGPT-class): edit + copy + clock under every
-          // completed message; the newest-message row stays visible.
+        {!message.streaming && message.content ? (
+          // Hover action row (ChatGPT-class): edit/feedback + copy + clock under every
+          // completed message; the newest row, and a row carrying a vote, stay visible.
           <div
             className={cn(
               "mt-1.5 flex items-center gap-1.5 transition-opacity focus-within:opacity-100 group-hover/message:opacity-100",
-              isLatest ? "opacity-100" : "opacity-0",
+              isLatest || message.feedback ? "opacity-100" : "opacity-0",
               assistant ? "justify-start" : "justify-end",
             )}
           >
@@ -244,6 +222,43 @@ const MessageBubble = memo(function MessageBubble({
                 <Copy className="size-3.5" aria-hidden="true" />
               )}
             </button>
+            {assistant && onFeedback ? (
+              // Ledger AI-13: truthful thumbs — the opposite thumb overwrites,
+              // the active thumb clears; nothing auto-sends or decorates. They
+              // share the one action row so a turn carries a single toolbar.
+              <>
+                <button
+                  type="button"
+                  data-ai-feedback-up="true"
+                  aria-pressed={message.feedback === "up"}
+                  aria-label={copy("feedbackUp")}
+                  title={copy("feedbackUp")}
+                  disabled={message.feedback === "up"}
+                  onClick={() => onFeedback(message.id, "up")}
+                  className={cn(
+                    "inline-flex size-7 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                    message.feedback === "up" && "bg-primary-soft text-primary",
+                  )}
+                >
+                  <ThumbsUp className="size-3.5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  data-ai-feedback-down="true"
+                  aria-pressed={message.feedback === "down"}
+                  aria-label={copy("feedbackDown")}
+                  title={copy("feedbackDown")}
+                  disabled={message.feedback === "down"}
+                  onClick={() => onFeedback(message.id, "down")}
+                  className={cn(
+                    "inline-flex size-7 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                    message.feedback === "down" && "bg-destructive-soft text-destructive",
+                  )}
+                >
+                  <ThumbsDown className="size-3.5" aria-hidden="true" />
+                </button>
+              </>
+            ) : null}
             {clock ? (
               <span className="text-caption tabular-nums text-muted-foreground" dir="ltr">
                 {clock}

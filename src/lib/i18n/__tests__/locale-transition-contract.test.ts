@@ -61,8 +61,13 @@ describe("Arabic bidi stability", () => {
     );
 
     expect(result).toContain(`${LRI}DZ-DEMO-0001${PDI}`);
-    expect(result).toContain(`${LRI}Gemini${PDI}`);
-    expect(result).toContain(`${LRI}API${PDI}`);
+    // A multi-word Latin name is ONE island. Isolating each word on its own
+    // made the RTL paragraph lay the islands out right-to-left, so the name
+    // rendered as "API Gemini".
+    expect(result).toContain(`${LRI}Gemini API${PDI}`);
+    expect(result.replaceAll(LRI, "").replaceAll(PDI, "")).toBe(
+      "المسار DZ-DEMO-0001 يستخدم Gemini API الآن.",
+    );
   });
 
   it("leaves non-Arabic locale text unchanged", () => {

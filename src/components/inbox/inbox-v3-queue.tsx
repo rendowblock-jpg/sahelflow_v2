@@ -305,9 +305,12 @@ const ConversationRow = memo(function ConversationRow({
 
       <span className="min-w-0 flex-1 overflow-hidden">
         <span className="flex min-w-0 items-center gap-2 overflow-hidden">
+          {/* The name keeps its own direction (a long Latin name truncates at
+              ITS end) but aligns with the RTL column, beside the avatar. */}
           <bdi
+            data-sf-seller-label="true"
             className={cn(
-              "block min-w-0 flex-1 truncate text-start text-[13px]",
+              "block min-w-0 flex-1 truncate text-[13px]",
               chat.unread > 0 ? "font-semibold text-foreground" : "font-medium",
             )}
           >
@@ -353,8 +356,9 @@ const ConversationRow = memo(function ConversationRow({
               <PreviewGlyph type={chat.lastMessageType} />
               <bdi
                 data-inbox-preview="true"
+                data-sf-seller-label="true"
                 className={cn(
-                  "block min-w-0 max-w-full flex-1 truncate text-start text-xs leading-5",
+                  "block min-w-0 max-w-full flex-1 truncate text-xs leading-5",
                   chat.unread > 0
                     ? "font-medium text-foreground/90"
                     : "text-muted-foreground",

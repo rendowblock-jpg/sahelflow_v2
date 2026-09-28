@@ -238,7 +238,7 @@ export function AiComposerDeck({
       {editing ? (
         <div
           data-ai-editing="true"
-          className="mx-auto mb-2 flex w-full max-w-4xl items-center justify-between gap-3 rounded-surface border border-warning/30 bg-warning-soft px-3.5 py-2.5"
+          className="mx-auto mb-2 flex w-full max-w-3xl items-center justify-between gap-3 rounded-surface border border-warning/30 bg-warning-soft px-3.5 py-2.5"
         >
           <p className="min-w-0 truncate text-xs text-foreground">
             {copy("editingNotice")}
@@ -254,7 +254,7 @@ export function AiComposerDeck({
           </Button>
         </div>
       ) : null}
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-3xl">
         {screenshot ? (
           <div
             data-ai-screenshot-chip="true"
@@ -292,7 +292,7 @@ export function AiComposerDeck({
         ) : null}
         <div
           data-ai-composer="true"
-          className="flex w-full items-end gap-2 rounded-[1.5rem] border border-border/70 bg-card px-2 py-1.5 shadow-[0_1px_2px_oklch(0_0_0/0.04),0_10px_28px_oklch(0_0_0/0.06)] focus-within:border-primary/40"
+          className="flex w-full items-end gap-2 rounded-surface border border-border bg-card px-2 py-1.5 shadow-(--elevation-1) transition-colors focus-within:border-primary/40"
         >
           <input
             ref={screenshotInputRef}
@@ -355,7 +355,7 @@ export function AiComposerDeck({
             dir="auto"
             maxLength={AI_CHAT_MESSAGE_MAX_LENGTH}
             disabled={!setupReady || sending || startingAnalysis}
-            className="max-h-36 min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-sm shadow-none focus-visible:ring-0"
+            className="max-h-36 min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-sm shadow-none dark:bg-transparent focus-visible:ring-0"
           />
           {sending ? (
             <Button
@@ -424,7 +424,7 @@ export function AiComposerDeck({
       */}
       <details
         data-ai-shortcut-disclosure="true"
-        className="group mx-auto mt-1.5 hidden w-full max-w-4xl px-1 md:block"
+        className="group mx-auto mt-1.5 hidden w-full max-w-3xl px-1 md:block"
       >
         <summary className="inline-flex w-fit cursor-pointer list-none items-center gap-1 rounded-control text-caption text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
           <ChevronRight

@@ -302,19 +302,26 @@ export function InboxThreadHeader({
         </Sheet>
 
         <Sheet>
-          <SheetTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={copy("conversationContext")}
-            >
-              <PanelRight
-                className="size-4 icon-rtl-flip"
-                aria-hidden="true"
-              />
-            </Button>
-          </SheetTrigger>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={copy("conversationContext")}
+                >
+                  <PanelRight
+                    className="size-4 icon-rtl-flip"
+                    aria-hidden="true"
+                  />
+                </Button>
+              </SheetTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={6}>
+              {copy("conversationContext")}
+            </TooltipContent>
+          </Tooltip>
           <SheetContent
             side="end"
             className="w-[min(400px,94vw)] p-0 sm:max-w-none"

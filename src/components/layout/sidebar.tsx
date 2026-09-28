@@ -154,10 +154,12 @@ export function Sidebar({
   // owns the shared unread-summary poll (15s, focus-revalidated, paused while
   // hidden) and the global new-message toast/sound. Both hooks share one SWR
   // key — a single network cadence feeds the badge and the alerts.
-  const { total: inboxUnreadTotal } = useInboxUnread();
+  // The badge counts unread CHATS — the same number as the Inbox "Unread"
+  // tab (WhatsApp's convention) — so the shell and the Inbox never disagree.
+  const { conversations: inboxUnreadChats } = useInboxUnread();
   useNewMessageAlerts();
-  const inboxUnreadLabel = t("inbox.liveness.unreadMessages", {
-    count: inboxUnreadTotal,
+  const inboxUnreadLabel = t("inbox.liveness.unreadChats", {
+    count: inboxUnreadChats,
   });
 
   return (
@@ -219,7 +221,7 @@ export function Sidebar({
                     collapsed={collapsed}
                     isRtl={isRtl}
                     nested={item.sidebarNested}
-                    unreadCount={item.unreadBadge ? inboxUnreadTotal : undefined}
+                    unreadCount={item.unreadBadge ? inboxUnreadChats : undefined}
                     unreadLabel={
                       item.unreadBadge ? inboxUnreadLabel : undefined
                     }
@@ -245,7 +247,7 @@ export function Sidebar({
                   current={selected}
                   collapsed={collapsed}
                   isRtl={isRtl}
-                  unreadCount={item.unreadBadge ? inboxUnreadTotal : undefined}
+                  unreadCount={item.unreadBadge ? inboxUnreadChats : undefined}
                   unreadLabel={
                     item.unreadBadge ? inboxUnreadLabel : undefined
                   }

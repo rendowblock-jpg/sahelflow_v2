@@ -9,19 +9,24 @@ function source(relativeUrl: string): string {
 describe("universal command search contract", () => {
   it("uses one cancellable browser request instead of six domain fan-out requests", () => {
     const palette = source("../../command-palette.tsx");
+    // The request lifecycle lives in the record-search hook the palette uses.
+    const recordSearch = source("../../../hooks/use-universal-record-search.ts");
 
-    expect(palette).toContain("/api/search?q=");
-    expect(palette).toContain("new AbortController()");
-    expect(palette).toContain("controller.abort()");
-    for (const legacyEndpoint of [
+    expect(palette).toContain("useUniversalRecordSearch(normalizedQuery, open)");
+    expect(recordSearch).toContain("/api/search?q=");
+    expect(recordSearch).toContain("new AbortController()");
+    expect(recordSearch).toContain("controller.abort()");
+    for (const source_ of [palette, recordSearch]) {
+      for (const legacyEndpoint of [
       "/api/orders/search",
       "/api/customers/search",
       "/api/products/search",
       "/api/conversations/search",
       "/api/delivery?",
       "/api/returns?",
-    ]) {
-      expect(palette).not.toContain(legacyEndpoint);
+      ]) {
+        expect(source_).not.toContain(legacyEndpoint);
+      }
     }
   });
 
@@ -32,9 +37,15 @@ describe("universal command search contract", () => {
     expect(palette).toContain('data-universal-search="v2"');
     expect(palette).toContain("recordResults");
     expect(palette).toContain("pageResults");
-    expect(palette).toContain("quickAccess");
-    expect(palette).toContain("quickHint");
+    // Quick access and the per-family copy moved into the start panel and the
+    // shared palette model; the palette still composes both.
+    const startPanel = source("../../search/search-start-panel.tsx");
+    const model = source("../../search/search-palette-model.ts");
+    expect(startPanel).toContain('copy("quickAccess")');
+    expect(startPanel).toContain('copy("quickHint")');
+    expect(palette).toContain("<SearchStartPanel");
     expect(palette).toContain("KIND_COPY");
+    expect(model).toContain("export const KIND_COPY");
     expect(palette).toContain('dir={locale === "ar" ? "rtl" : "ltr"}');
     expect(palette).not.toContain("{item.href}");
   });
@@ -165,10 +176,9 @@ describe("universal command search contract", () => {
 
   it("keeps the latency-sensitive search families parallel while coalescing ordinary typing", () => {
     const server = source("../../../lib/search/universal-search-server.ts");
-    const palette = source("../../command-palette.tsx");
-
-    expect(palette).toContain("SEARCH_DEBOUNCE_MS = 160");
-    expect(palette).toContain("Page/workspace matches are local");
+    const recordSearch = source("../../../hooks/use-universal-record-search.ts");
+    expect(recordSearch).toContain("SEARCH_DEBOUNCE_MS = 160");
+    expect(recordSearch).toContain("Page/workspace matches are local");
     expect(server).toContain("] = await Promise.all([");
     expect(server).toContain("technicalOrders");
     expect(server).toContain("exactPhoneOrders");
@@ -194,11 +204,14 @@ describe("universal command search contract", () => {
 
   it("uses the shared technical-value boundary for RTL-safe result identifiers", () => {
     const palette = source("../../command-palette.tsx");
+    // Every palette result renders through the one result row.
+    const row = source("../../search/search-result-row.tsx");
 
-    expect(palette).toContain('from "@/components/i18n/technical-value"');
-    expect(palette).toContain("<TechnicalValue");
-    expect(palette).toContain("hasTechnicalLabel");
-    expect(palette).toContain("hasTechnicalSublabel");
+    expect(palette).toContain("<SearchResultRow");
+    expect(row).toContain('from "@/components/i18n/technical-value"');
+    expect(row).toContain("<TechnicalValue");
+    expect(row).toContain("hasTechnicalLabel");
+    expect(row).toContain("hasTechnicalSublabel");
   });
 
   it("prewarms only permitted projections through one shared browser promise", () => {
@@ -265,17 +278,18 @@ describe("universal command search contract", () => {
     // authority (Arabic normalization included), not navigation-only chrome.
     expect(palette).toContain('heading={copy("actionsSection")}');
     expect(palette).toContain('heading={copy("recentSection")}');
+    const paletteModel = source("../../search/search-palette-model.ts");
     expect(palette).toContain("CREATE_ACTIONS");
-    expect(palette).toContain('buildCreateHref("/orders")');
-    expect(palette).toContain('buildCreateHref("/customers")');
-    expect(palette).toContain('buildCreateHref("/products")');
+    expect(paletteModel).toContain('buildCreateHref("/orders")');
+    expect(paletteModel).toContain('buildCreateHref("/customers")');
+    expect(paletteModel).toContain('buildCreateHref("/products")');
     expect(palette).toContain("useRecentRecords(open)");
     expect(palette).toContain("RECENT_RECORDS_VISIBLE");
     expect(palette).toContain("hasInstantMatches");
-    expect(palette).toContain('action: "typeAction"');
+    expect(paletteModel).toContain('action: "typeAction"');
     // Matching actions/recents count as results — "no result" stays truthful.
     expect(palette).toContain("!degraded &&");
-    expect(palette).toContain("&& !hasInstantMatches");
+    expect(palette).toMatch(/&&\s+!hasInstantMatches/);
 
     // One create deep-link contract shared by the palette and all surfaces.
     expect(createParamHook).toContain('export const CREATE_PARAM = "create"');

@@ -46,6 +46,9 @@ const translations: Record<Locale, Record<string, string>> = {
     // Topbar unread badge (base uses {{n}}; migrated to count).
     "topbar.newNotifications_one": "{{count}} new",
     "topbar.newNotifications_other": "{{count}} new",
+    // Sidebar inbox badge — unread chats, the same count as the Unread tab.
+    "inbox.liveness.unreadChats_one": "{{count}} unread chat",
+    "inbox.liveness.unreadChats_other": "{{count}} unread chats",
     // Data table pagination footer ("1 items" in the base is wrong).
     "dataTable.pageOf_one": "Page {{current}} of {{total}} ({{count}} item)",
     "dataTable.pageOf_other": "Page {{current}} of {{total}} ({{count}} items)",
@@ -92,6 +95,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "inbox.liveness.unreadMessages_one": "{{count}} message non lu",
     "inbox.liveness.unreadMessages_other": "{{count}} messages non lus",
     "inbox.liveness.unreadMessages_many": "{{count}} messages non lus",
+    "inbox.liveness.unreadChats_one": "{{count}} discussion non lue",
+    "inbox.liveness.unreadChats_other": "{{count}} discussions non lues",
+    "inbox.liveness.unreadChats_many": "{{count}} discussions non lues",
     "inbox.labels.count_one": "{{count}} étiquette",
     "inbox.labels.count_other": "{{count}} étiquettes",
     // Vitrines.
@@ -167,6 +173,12 @@ const translations: Record<Locale, Record<string, string>> = {
     "inbox.liveness.unreadMessages_few": "{{count}} رسائل غير مقروءة",
     "inbox.liveness.unreadMessages_many": "{{count}} رسالة غير مقروءة",
     "inbox.liveness.unreadMessages_other": "{{count}} رسالة غير مقروءة",
+    "inbox.liveness.unreadChats_zero": "لا محادثات غير مقروءة",
+    "inbox.liveness.unreadChats_one": "محادثة واحدة غير مقروءة",
+    "inbox.liveness.unreadChats_two": "محادثتان غير مقروءتان",
+    "inbox.liveness.unreadChats_few": "{{count}} محادثات غير مقروءة",
+    "inbox.liveness.unreadChats_many": "{{count}} محادثة غير مقروءة",
+    "inbox.liveness.unreadChats_other": "{{count}} محادثة غير مقروءة",
     "inbox.labels.count_zero": "لا تصنيفات",
     "inbox.labels.count_one": "تصنيف واحد",
     "inbox.labels.count_two": "تصنيفان",

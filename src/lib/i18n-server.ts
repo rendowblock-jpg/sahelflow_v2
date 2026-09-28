@@ -28,7 +28,7 @@ import type { Locale } from "@/lib/i18n";
 import {
   getDirection,
   DEFAULT_LOCALE,
-  stabilizeBidiText,
+  renderTranslation,
 } from "@/lib/i18n";
 import { parseAcceptLanguageLocale } from "@/lib/i18n/storefront-locale";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
@@ -125,15 +125,7 @@ export async function getI18n() {
         getRuntimeTranslation(locale, pluralKey) ??
         value;
     }
-    if (params) {
-      for (const [param, val] of Object.entries(params)) {
-        value = value.replace(
-          new RegExp(`\\{\\{${param}\\}\\}`, "g"),
-          String(val),
-        );
-      }
-    }
-    return stabilizeBidiText(value, locale);
+    return renderTranslation(value, params, locale);
   };
 
   return { t, locale, dir };

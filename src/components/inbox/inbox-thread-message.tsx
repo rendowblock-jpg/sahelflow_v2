@@ -528,8 +528,14 @@ export const MessageBubble = memo(function MessageBubble({
                 : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",
             )}
           >
-            <Sparkles className="size-3" aria-hidden="true" />
-            {copy("chooseOrderMessage")}
+            {candidate ? (
+              <Check className="size-3" aria-hidden="true" />
+            ) : (
+              <Sparkles className="size-3" aria-hidden="true" />
+            )}
+            {/* Selected state names itself; the action label would read as an
+                instruction still waiting to be done. */}
+            {candidate ? copy("orderMessageSelected") : copy("chooseOrderMessage")}
           </button>
         </div>
       ) : null}

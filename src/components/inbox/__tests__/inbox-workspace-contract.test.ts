@@ -247,9 +247,12 @@ describe("Inbox Class-AAA operations desk contract", () => {
     // No standalone shortcut hint line under the composer.
     expect(thread).not.toContain('copy("composerShortcut")');
     // Short conversations anchor to the composer (no dead space below).
-    expect(thread).toContain(
-      "[&_[data-slot=scroll-area-viewport]>div]:justify-end",
-    );
+    // (Via the system anchoring attribute; the former class variants lost to
+    // Radix's inline `display: table` and never took effect.)
+    expect(thread).toContain("data-anchor-end={messages.length > 0 && !loadingMessages");
+    const systemCss = read("src/app/experience-system.css");
+    expect(systemCss).toContain('[data-slot="scroll-area"][data-anchor-end="true"]');
+    expect(systemCss).toContain("justify-content: flex-end");
   });
 
   it("makes status and reviewed AI extraction first-class thread-header actions", () => {

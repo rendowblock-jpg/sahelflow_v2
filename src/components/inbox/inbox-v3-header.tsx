@@ -208,7 +208,6 @@ export function InboxV3Header({
   const {
     t,
     copy,
-    queueCounts,
     transport,
     dataDegraded,
     refreshChats,
@@ -222,22 +221,26 @@ export function InboxV3Header({
     <div className="shrink-0 border-b bg-background/95 backdrop-blur-sm">
       <header className="flex min-h-14 items-center justify-between gap-3 px-3.5 py-2 sm:px-4">
         <div className="flex min-w-0 items-center gap-2">
-          <h2 className="truncate text-[15px] font-semibold tracking-tight">
+          {/* The unread count lives on the queue's Unread tab (and the
+              sidebar badge, which counts the same chats); repeating it beside
+              the title made three different surfaces show a number. */}
+          <h2 className="truncate text-title-3 tracking-tight">
             {t("nav.inbox")}
           </h2>
-          {queueCounts.unread > 0 ? (
-            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary-soft px-1.5 text-caption font-bold leading-5 tabular-nums text-primary">
-              {queueCounts.unread > 99 ? "99+" : queueCounts.unread}
-            </span>
-          ) : null}
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
-          <ConnectionState
-            transport={transport}
-            copy={copy}
-            onRetry={reconnect}
-          />
+          {/* When the Connect/Pair button is offered it already names the
+              state; the chip would only say the same thing a second time. */}
+          {canManageWhatsApp &&
+          (transport.status === "disconnected" || transport.status === "qr") &&
+          transport.reachable !== false ? null : (
+            <ConnectionState
+              transport={transport}
+              copy={copy}
+              onRetry={reconnect}
+            />
+          )}
           <Button
             type="button"
             variant="ghost"
