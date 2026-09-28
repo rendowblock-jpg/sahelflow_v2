@@ -1,0 +1,11 @@
+{
+  "name": "sahelflow-mcp-sidecar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SahelFlow local MCP agent surface: stdio <-> loopback Streamable HTTP bridge (FD-063)",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts"
+  }
+}
