@@ -13,8 +13,7 @@ import { useRouter } from "next/navigation";
 import {
   getDirection,
   getTranslations,
-  interpolateTranslation,
-  stabilizeBidiText,
+  renderTranslation,
   type Locale,
 } from "@/lib/i18n";
 import { getRuntimeTranslation } from "@/lib/i18n/runtime-translations";
@@ -106,8 +105,7 @@ export function useI18n() {
           getRuntimeTranslation(locale, pluralKey) ??
           value;
       }
-      value = interpolateTranslation(value, params);
-      return stabilizeBidiText(value, locale);
+      return renderTranslation(value, params, locale);
     },
     [translations, locale],
   );
