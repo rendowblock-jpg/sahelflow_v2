@@ -34,6 +34,8 @@ import { resetMcpRateLimit } from "@/lib/mcp/rate-limit";
 import { buildMcpToolsForSession, resolveMcpToolForSession } from "@/lib/mcp/registry";
 import { mcpTranscriptSessionId, recordMcpToolRequest } from "@/lib/mcp/transcript";
 import { authorizeMcpTransport, resetMcpTransportToken } from "@/lib/mcp/transport-auth";
+import type { McpAgentGrantBinding } from "@/lib/mcp/grants";
+import { EXPECTED_AI_TOOL_NAMES } from "@/lib/ai/actions/contracts";
 
 const EVERYTHING = PHASE2_ACTIONS.filter((action) => action !== "approvals.approve");
 
@@ -58,14 +60,18 @@ function actorContext(
   } as unknown as TrustedActorContext;
 }
 
+function grant(id = "grant-1", tools: readonly string[] = EXPECTED_AI_TOOL_NAMES): McpAgentGrantBinding {
+  return { id, label: "Claude Desktop", tools: new Set(tools) };
+}
+
 function session(
   permissions: readonly Phase2Action[] = EVERYTHING,
-  connectionId = "stdio",
+  binding: McpAgentGrantBinding = grant(),
 ): McpAgentSession {
   return openMcpAgentSession({
     actorContext: actorContext(permissions),
     client: { name: "claude-ai", version: "0.12.4" },
-    connectionId,
+    grant: binding,
   });
 }
 
@@ -79,20 +85,20 @@ async function codeOf(promise: Promise<unknown>): Promise<string | undefined> {
 }
 
 describe("agent session identity", () => {
-  it("gives the agent a stable non-person identity bound to the person session", () => {
+  it("gives each grant one stable non-person identity bound to the person session", () => {
     const first = session();
     const again = session();
     expect(first.agentId).toBe(again.agentId);
     expect(first.agentActor).toBe(`agent:${first.agentId}`);
     expect(first.onBehalfOf).not.toBe(first.agentActor);
-    expect(session(EVERYTHING, "other").agentId).not.toBe(first.agentId);
+    expect(session(EVERYTHING, grant("grant-2")).agentId).not.toBe(first.agentId);
   });
 
   it("refuses anything but a durable person session", () => {
     expect(() =>
       openMcpAgentSession({
         actorContext: actorContext(EVERYTHING, "device"),
-        connectionId: "stdio",
+        grant: grant(),
       }),
     ).toThrow(expect.objectContaining({ code: "MCP_DURABLE_PERSON_REQUIRED" }));
   });
@@ -101,7 +107,7 @@ describe("agent session identity", () => {
     const labelled = openMcpAgentSession({
       actorContext: actorContext(EVERYTHING),
       client: { name: "<script>", version: "x".repeat(40) },
-      connectionId: "stdio",
+      grant: grant(),
     });
     expect(labelled.client).toEqual({ name: null, version: null });
   });
@@ -124,6 +130,16 @@ describe("registry scope hiding", () => {
       expect(tool.annotations).toBeDefined();
       expect(tool.outputSchema).toBeDefined();
     }
+  });
+
+  it("narrows an owner to exactly the tools the grant names", async () => {
+    const narrowGrant = session(EVERYTHING, grant("grant-read", ["search_orders"]));
+    expect((await buildMcpToolsForSession(narrowGrant)).map((tool) => tool.name)).toEqual([
+      "search_orders",
+    ]);
+    expect(await codeOf(resolveMcpToolForSession(narrowGrant, "create_order"))).toBe(
+      "MCP_TOOL_NOT_FOUND",
+    );
   });
 
   it("hides every tool the person cannot use and reports hidden calls as unknown", async () => {
@@ -267,6 +283,7 @@ describe("execution", () => {
       via: "mcp",
       outcome: "succeeded",
       onBehalfOf: agent.onBehalfOf,
+      grantId: "grant-1",
     });
   });
 

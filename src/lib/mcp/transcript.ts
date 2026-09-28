@@ -20,7 +20,6 @@ import type { DbClient } from "@/lib/db";
 import { redactForAudit } from "./audit";
 import type { McpAgentSession } from "./agent-session";
 
-const TRANSCRIPT_TITLE_PREFIX = "MCP agent";
 
 export function mcpTranscriptSessionId(session: McpAgentSession): string {
   return `mcp_${session.agentId}`;
@@ -31,7 +30,9 @@ async function ensureTranscriptSession(
   session: McpAgentSession,
 ): Promise<string> {
   const id = mcpTranscriptSessionId(session);
-  const title = `${TRANSCRIPT_TITLE_PREFIX} — ${session.client.name ?? "unknown client"}`;
+  // The session is named after the grant the seller created, so a pending
+  // approval in the work history reads as the agent the seller recognises.
+  const title = session.grant.label;
   await db.aiChatSession.upsert({
     where: { id },
     create: { id, title },

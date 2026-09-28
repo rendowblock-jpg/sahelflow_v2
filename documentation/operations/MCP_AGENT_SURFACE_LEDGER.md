@@ -50,8 +50,8 @@ Gemini-only. The replacement target is the **agent** surface, not extraction.
 | MCP-09 | stdio bridge sidecar | **DONE (source)** | `sidecars/mcp/index.ts` |
 | MCP-10 | Golden contract tests: class split, never-approver, annotations, read scopes, audit bounds, limits | **DONE (source)** | `src/lib/mcp/__tests__/surface-contract.test.ts` |
 | MCP-11 | Sidecar packaging: `build:mcp-sidecar`, `externalBin`, Tauri supervision with 5 s / 15 s / 60 s backoff | **OPEN** | needs a Rust change + Windows CI lane |
-| MCP-12 | Durable `McpAgentGrant` model: per-agent scope narrowing, instant revocation, connected-agent list | **OPEN** | needs an additive migration |
-| MCP-13 | `/agents` conversion to the MCP control surface: connected sessions, tool catalog with permission + annotation badges, invocation log, approval inbox | **OPEN** | depends on MCP-11/12 |
+| MCP-12 | Durable `McpAgentGrant` model: per-agent scope narrowing, instant revocation, connected-agent list | **DONE (source)** | additive migration `2026092800000000_fd063_mcp_agent_grants`; `src/lib/mcp/grants.ts` (hash-only secret storage, fail-closed ingress, narrowing in listing and execution, 20 active grants cap); `/api/mcp/grants`, `/api/mcp/grants/[id]/revoke`, `/api/mcp/invocations`; `src/lib/mcp/__tests__/agent-grants.test.ts` |
+| MCP-13 | `/agents` Connected agents control surface: connected agents with create/revoke, tool catalog with permission + annotation badges, invocation log, approval routing | **DONE (source)** | pinned rail entry + canvas surface (`src/components/ai/connected/**`, `/agents?view=connected`); grants shown by hint only, secret revealed once; proposed calls open the agent's transcript session, where the existing approval authority lives; trilingual copy `src/lib/i18n/connected-agents.ts`; `connected-agents-contract.test.ts` |
 | MCP-14 | Retire the Gemini chat agent loop and its routes/components/tests | **OPEN** | the destructive half of the full replace — see below |
 | MCP-15 | Installed observation on a signed candidate | **BLOCKED** | no candidate; Internal.38 campaign comes first |
 
@@ -90,10 +90,11 @@ routes, the agent loop, the canvas/composer/message-log components and roughly
 
 ## Known gaps, stated plainly
 
-1. **Ingress is session-forwarded, not granted.** Slice 1 binds the agent to the
-   durable Founder session the desktop shell forwards. The agent gets its own
-   non-person audit identity but borrows the person's ceiling. Per-agent scope
-   narrowing and revocation arrive with MCP-12.
+1. **Ingress is granted and session-bounded.** Since MCP-12 every MCP session
+   must present an active agent grant (`x-sahelflow-agent-grant`). The grant
+   narrows the agent to an explicit tool list and is re-checked on every
+   request, so revocation is instant. The forwarded durable Founder session is
+   still the ceiling: a grant can only narrow it, never widen it.
 2. **No packaging.** The sidecar runs under `bun sidecars/mcp/index.ts`. It is
    not yet compiled, declared in `externalBin` or supervised by Tauri (MCP-11),
    so there is no installed evidence of any kind.

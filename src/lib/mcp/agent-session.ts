@@ -19,8 +19,11 @@
  *   - `assertMcpNeverApprover()` is the structural rule: this surface may not
  *     even consider approval authority.
  *
- * A durable `McpAgentGrant` record with per-agent scope narrowing and instant
- * revocation is slice 2; it changes who may open a session, not the gate.
+ * MCP-12 adds the durable `McpAgentGrant`: a session opens only for a named,
+ * unrevoked grant, its agent identity is derived from that grant (so one agent
+ * keeps one audit identity across reconnects), and the grant's tool list
+ * narrows what the session can see and call. It changes who may open a
+ * session and how far it reaches, never the gate itself.
  */
 import "server-only";
 
@@ -31,6 +34,7 @@ import type { Phase2Action } from "@/lib/identity/permissions";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 import { SahelFlowError } from "@/types/errors";
 import { MCP_FORBIDDEN_PERMISSIONS } from "./contracts";
+import type { McpAgentGrantBinding } from "./grants";
 
 export interface McpClientIdentity {
   name: string | null;
@@ -49,6 +53,8 @@ export interface McpAgentSession {
   actorContext: TrustedActorContext;
   /** Rate-limit subject. */
   rateLimitSubject: string;
+  /** The grant this session opened under; its tools bound what it may reach. */
+  grant: McpAgentGrantBinding;
 }
 
 function boundedLabel(value: unknown, max = 64): string | null {
@@ -56,6 +62,16 @@ function boundedLabel(value: unknown, max = 64): string | null {
   const trimmed = value.trim();
   if (!trimmed || trimmed.length > max) return null;
   return /^[\w .:@+/-]+$/.test(trimmed) ? trimmed : null;
+}
+
+/** Bound and sanitize the client's self-declared name and version. */
+export function normalizeMcpClient(
+  client: { name?: unknown; version?: unknown } | undefined,
+): McpClientIdentity {
+  return {
+    name: boundedLabel(client?.name),
+    version: boundedLabel(client?.version, 32),
+  };
 }
 
 /**
@@ -87,7 +103,7 @@ export function assertMcpNeverApprover(
 export function openMcpAgentSession(input: {
   actorContext: TrustedActorContext;
   client?: { name?: unknown; version?: unknown };
-  connectionId: string;
+  grant: McpAgentGrantBinding;
 }): McpAgentSession {
   if (input.actorContext.actor.kind !== "person") {
     throw new SahelFlowError(
@@ -96,17 +112,12 @@ export function openMcpAgentSession(input: {
       403,
     );
   }
-  const client: McpClientIdentity = {
-    name: boundedLabel(input.client?.name),
-    version: boundedLabel(input.client?.version, 32),
-  };
+  const client = normalizeMcpClient(input.client);
   const agentId = createHash("sha256")
     .update("sahelflow.mcp.agent-session.v1\0", "utf8")
     .update(input.actorContext.shop.shopIncarnationId, "utf8")
     .update("\0", "utf8")
-    .update(input.connectionId, "utf8")
-    .update("\0", "utf8")
-    .update(client.name ?? "unknown-client", "utf8")
+    .update(input.grant.id, "utf8")
     .digest("hex")
     .slice(0, 32);
 
@@ -117,5 +128,6 @@ export function openMcpAgentSession(input: {
     client,
     actorContext: input.actorContext,
     rateLimitSubject: `mcp:${agentId}`,
+    grant: input.grant,
   };
 }

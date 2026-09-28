@@ -20,6 +20,9 @@
  *   SAHELFLOW_SESSION_COOKIE    the durable Founder session cookie the desktop
  *                               shell forwards; without it the app answers with
  *                               zero tools, by design
+ *   SAHELFLOW_AGENT_GRANT       the agent's grant secret (MCP-12), created and
+ *                               revocable in the Agents workspace; without an
+ *                               active grant the app opens no session
  *   MCP_CONNECTION_ID           stable label for this connection's audit rows
  */
 
@@ -89,6 +92,8 @@ async function forward(message: unknown): Promise<void> {
     };
     const cookie = process.env.SAHELFLOW_SESSION_COOKIE?.trim();
     if (cookie) headers.cookie = cookie;
+    const grant = process.env.SAHELFLOW_AGENT_GRANT?.trim();
+    if (grant) headers["x-sahelflow-agent-grant"] = grant;
 
     const response = await fetch(`${BASE_URL}/api/mcp`, {
       method: "POST",

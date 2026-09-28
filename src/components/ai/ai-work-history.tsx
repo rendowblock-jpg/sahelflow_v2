@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
   Bot,
@@ -113,11 +113,14 @@ export function AiWorkHistory({
   navigationLocked,
   onOpenSession,
   onNewAnalysis,
+  footer,
 }: {
   workspace: ReturnType<typeof useAiWorkspace>;
   navigationLocked: boolean;
   onOpenSession: (sessionId: string) => void;
   onNewAnalysis: () => void;
+  /** Pinned entry below the history (the Connected agents surface). */
+  footer?: ReactNode;
 }) {
   const { t } = useI18n();
   const {
@@ -568,6 +571,7 @@ export function AiWorkHistory({
           ) : null}
         </div>
       </ScrollArea>
+      {footer}
     </aside>
   );
 }
