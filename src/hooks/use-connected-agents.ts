@@ -53,6 +53,8 @@ interface ControlState {
   grants: ConnectedAgentGrant[];
   catalog: GrantableTool[];
   canManage: boolean;
+  /** Installed stdio bridge, or null outside the packaged app. */
+  bridgePath: string | null;
   invocations: AgentInvocation[];
 }
 
@@ -162,6 +164,7 @@ export function useConnectedAgents(live: boolean) {
     grants: state?.grants ?? [],
     catalog: state?.catalog ?? [],
     canManage: state?.canManage ?? false,
+    bridgePath: state?.bridgePath ?? null,
     invocations: state?.invocations ?? [],
     activeCount: state?.grants.filter((grant) => grant.status === "active").length ?? 0,
     loading,

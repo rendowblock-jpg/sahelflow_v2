@@ -16,8 +16,10 @@ import { readFile } from "node:fs/promises";
 import { timingSafeEqual } from "node:crypto";
 
 import { SahelFlowError } from "@/types/errors";
+import { defaultMcpTransportTokenFile } from "./endpoint";
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
+const LOOPBACK_FORWARDED = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1", "localhost"]);
 
 let cachedToken: string | null = null;
 
@@ -39,8 +41,10 @@ async function resolveExpectedToken(): Promise<string | null> {
     cachedToken = inline;
     return cachedToken;
   }
-  const path = process.env.MCP_SIDECAR_TOKEN_FILE?.trim();
-  if (!path) return null;
+  // A shell-provided token file wins; otherwise the per-launch token that
+  // `publishMcpEndpoint()` minted at server start.
+  const path =
+    process.env.MCP_SIDECAR_TOKEN_FILE?.trim() || defaultMcpTransportTokenFile();
   try {
     const contents = (await readFile(path, "utf8")).trim();
     cachedToken = contents || null;
@@ -63,7 +67,17 @@ function assertLoopback(request: Request): void {
       "MCP_TRANSPORT_NOT_LOOPBACK",
     );
   }
-  if (request.headers.get("x-forwarded-for")) {
+  // Next.js itself records the loopback socket in x-forwarded-for, so the
+  // header's presence proves nothing. Any hop that is not loopback means the
+  // request was relayed from elsewhere, and is refused.
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (
+    forwarded &&
+    forwarded
+      .split(",")
+      .map((hop) => hop.trim().toLowerCase())
+      .some((hop) => !LOOPBACK_FORWARDED.has(hop))
+  ) {
     throw unauthorized(
       "The MCP surface refuses proxied requests",
       "MCP_TRANSPORT_PROXIED",

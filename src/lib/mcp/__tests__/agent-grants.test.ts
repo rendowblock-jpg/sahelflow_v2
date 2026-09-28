@@ -7,7 +7,7 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { db } from "@/lib/db";
 import { listMcpInvocations } from "@/lib/mcp/control-surface";
@@ -22,6 +22,8 @@ import {
 } from "@/lib/mcp/grants";
 
 const CLIENT = { name: "claude-desktop", version: "1.0" };
+const bindIdentity = vi.fn(async (_grantId: string) => undefined);
+const revokeIdentity = vi.fn(async (_grantId: string) => undefined);
 const GRANTABLE = new Set(["search_orders", "get_order_details", "create_order"]);
 
 function source(path: string): string {
@@ -38,6 +40,8 @@ async function errorCode(promise: Promise<unknown>): Promise<string | undefined>
 }
 
 beforeEach(async () => {
+  bindIdentity.mockClear();
+  revokeIdentity.mockClear();
   await db.mcpAgentGrant.deleteMany();
   await db.auditLog.deleteMany({ where: { action: "mcp.tool_called.v1" } });
 });
@@ -71,6 +75,7 @@ describe("grant lifecycle", () => {
       label: "Claude",
       tools: ["search_orders"],
       createdBy: "person:owner",
+      bindIdentity,
     });
     expect(secret).toMatch(/^sfa_[A-Za-z0-9_-]{43}$/);
     expect(grant.secretHint).toBe(secret.slice(-4));
@@ -86,6 +91,7 @@ describe("grant lifecycle", () => {
       label: "Claude",
       tools: ["get_order_details", "search_orders"],
       createdBy: "person:owner",
+      bindIdentity,
     });
 
     const binding = await resolveMcpAgentGrant(db, secret, CLIENT);
@@ -114,18 +120,47 @@ describe("grant lifecycle", () => {
       label: "Claude",
       tools: ["search_orders"],
       createdBy: "person:owner",
+      bindIdentity,
     });
-    const revoked = await revokeMcpAgentGrant(db, grant.id, "person:owner");
+    const revoked = await revokeMcpAgentGrant(db, grant.id, "person:owner", revokeIdentity);
     expect(revoked.status).toBe("revoked");
     expect(await errorCode(resolveMcpAgentGrant(db, secret, CLIENT))).toBe(
       "MCP_AGENT_GRANT_INACTIVE",
     );
 
-    const again = await revokeMcpAgentGrant(db, grant.id, "person:other");
+    // A retry keeps the first revocation and still finishes the identity side.
+    const again = await revokeMcpAgentGrant(db, grant.id, "person:other", revokeIdentity);
     expect(again.revokedAt).toBe(revoked.revokedAt);
-    expect(await errorCode(revokeMcpAgentGrant(db, "missing", "person:owner"))).toBe(
-      "MCP_GRANT_NOT_FOUND",
-    );
+    expect(revokeIdentity).toHaveBeenCalledTimes(2);
+    expect(revokeIdentity).toHaveBeenCalledWith(grant.id);
+    expect(
+      await errorCode(revokeMcpAgentGrant(db, "missing", "person:owner", revokeIdentity)),
+    ).toBe("MCP_GRANT_NOT_FOUND");
+  });
+
+  it("binds the grant's identity and deletes a grant it could not bind", async () => {
+    const { grant } = await createMcpAgentGrant(db, {
+      label: "Claude",
+      tools: ["search_orders"],
+      createdBy: "person:owner",
+      bindIdentity,
+    });
+    expect(bindIdentity).toHaveBeenCalledWith(grant.id);
+
+    const failing = vi.fn(async () => {
+      throw Object.assign(new Error("owner only"), { code: "ACTION_FORBIDDEN" });
+    });
+    expect(
+      await errorCode(
+        createMcpAgentGrant(db, {
+          label: "Unbound",
+          tools: ["search_orders"],
+          createdBy: "person:manager",
+          bindIdentity: failing,
+        }),
+      ),
+    ).toBe("ACTION_FORBIDDEN");
+    expect(await db.mcpAgentGrant.count({ where: { label: "Unbound" } })).toBe(0);
   });
 
   it("caps active agents and lists active before revoked", async () => {
@@ -136,6 +171,7 @@ describe("grant lifecycle", () => {
           label: `Agent ${index}`,
           tools: ["search_orders"],
           createdBy: "person:owner",
+          bindIdentity,
         }),
       );
     }
@@ -145,11 +181,12 @@ describe("grant lifecycle", () => {
           label: "One too many",
           tools: ["search_orders"],
           createdBy: "person:owner",
+          bindIdentity,
         }),
       ),
     ).toBe("MCP_GRANT_LIMIT_REACHED");
 
-    await revokeMcpAgentGrant(db, created[0]!.grant.id, "person:owner");
+    await revokeMcpAgentGrant(db, created[0]!.grant.id, "person:owner", revokeIdentity);
     const listed = await listMcpAgentGrants(db);
     expect(listed.at(-1)?.status).toBe("revoked");
     expect(listed.filter((entry) => entry.status === "active")).toHaveLength(
@@ -193,11 +230,25 @@ describe("invocation log", () => {
 });
 
 describe("grant wiring", () => {
-  it("requires an active grant at MCP ingress", () => {
+  it("requires an active grant at MCP ingress and acts under its own identity", () => {
     const route = source("src/app/api/mcp/route.ts");
     expect(route).toContain('request.headers.get("x-sahelflow-agent-grant")');
     expect(route).toContain("resolveMcpAgentGrant(");
+    expect(route).toContain("trustedActorForAgentGrant(grant.id, shopContext)");
+    expect(route).toContain('assertTrustedAction(actorContext, "ai.use"');
+    // No browser session is borrowed.
+    expect(route).not.toContain("requireAuth(");
     expect(route).toContain("openMcpAgentSession({ actorContext, client: clientInfo, grant })");
+  });
+
+  it("lets only the owner connect an agent and binds or revokes its identity", () => {
+    const grants = source("src/app/api/mcp/grants/route.ts");
+    expect(grants).toContain('actor.role !== "owner"');
+    expect(grants).toContain("MCP_GRANT_OWNER_ONLY");
+    expect(grants).toContain("bindAgentGrantIdentity(actor.sessionId, grantId, shopContext)");
+    expect(source("src/app/api/mcp/grants/[id]/revoke/route.ts")).toContain(
+      "revokeAgentGrantIdentity(grantId, shopContext)",
+    );
   });
 
   it("narrows both listing and execution by the grant", () => {

@@ -7,12 +7,19 @@ import {
   Copy,
   Loader2,
   PencilLine,
+  Plug,
   Sparkles,
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
 
 import { AiMarkdown } from "@/components/ai/markdown/ai-markdown";
+import { parseMcpRequestLine } from "@/lib/ai/mcp-request-line";
+import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
+import {
+  getConnectedAgentsCopy,
+  type ConnectedAgentsLocale,
+} from "@/lib/i18n/connected-agents";
 import { AiToolResultCard } from "@/components/ai/ai-tool-result-card";
 import type {
   AiCopyFn,
@@ -63,6 +70,7 @@ const MessageBubble = memo(function MessageBubble({
   const assistant = message.role === "assistant";
   const [copied, setCopied] = useState(false);
   const clock = message.createdAt ? messageClock(message.createdAt, locale) : "";
+  const mcpRequest = assistant ? null : parseMcpRequestLine(message.content);
 
   const copyMessage = async () => {
     if (!message.content) return;
@@ -127,7 +135,16 @@ const MessageBubble = memo(function MessageBubble({
           // The seller's turn is a quiet enclosed bubble: ownership reads from
           // its shape and alignment, not from a saturated brand fill.
           <div className="rounded-surface rounded-ee-control bg-muted px-4 py-2.5 text-body leading-7 text-foreground">
-            {message.content ? (
+            {mcpRequest ? (
+              // An external agent's call is shown as what it asked for; the
+              // sealed arguments stay in the proposal the seller reviews.
+              <p data-ai-agent-request="true" className="flex items-center gap-2 text-body-sm font-medium">
+                <Plug className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                {getConnectedAgentsCopy(locale as ConnectedAgentsLocale, "agentRequest", {
+                  tool: getAiToolLabel(locale as ConnectedAgentsLocale, mcpRequest.tool),
+                })}
+              </p>
+            ) : message.content ? (
               // Seller input is echoed verbatim — no markdown interpretation.
               <p dir="auto" className="whitespace-pre-wrap break-words">
                 {message.content}

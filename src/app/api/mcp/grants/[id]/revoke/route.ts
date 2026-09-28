@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
-import { db } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
+import { revokeAgentGrantIdentity } from "@/lib/identity/control-authority";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { revokeMcpAgentGrant } from "@/lib/mcp/grants";
 
@@ -23,6 +24,7 @@ export const POST = withErrorHandler(
       db,
       id,
       trustedActorAuditIdentity(actorContext.actor),
+      (grantId) => revokeAgentGrantIdentity(grantId, shopContext),
     );
     return NextResponse.json({ grant });
   },

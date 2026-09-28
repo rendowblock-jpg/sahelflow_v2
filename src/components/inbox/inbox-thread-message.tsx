@@ -272,6 +272,7 @@ export const MessageBubble = memo(function MessageBubble({
       ),
   );
   const canExtract = inbound && message.body.trim().length > 10;
+  const hasActions = Boolean(message.body.trim() || message.attachment?.fileName);
 
   // Chat geometry is direction-independent on purpose: inbound bubbles sit on
   // the physical left and outbound on the physical right in every locale —
@@ -471,7 +472,9 @@ export const MessageBubble = memo(function MessageBubble({
         </div>
       </div>
 
-      {message.body.trim() || message.attachment?.fileName ? (
+      {hasActions || canExtract ? (
+        // One row for the hover actions and the order-message chip, so the two
+        // can never be laid over each other.
         // The controls were `opacity-0` but still in flow, so this row reserved
         // its full height under EVERY bubble — permanent dead space that reads
         // as loose, un-WhatsApp-like density.
@@ -480,13 +483,23 @@ export const MessageBubble = memo(function MessageBubble({
         // of controls that stay in the tab order — a focusable element with no
         // dimensions. Absolute positioning removes the row from flow while the
         // controls keep their real size whenever they are revealed.
+        // The selected candidate keeps its chip visible (it is a persistent
+        // state, not a hover affordance), so the row stays in flow whenever
+        // `candidate` is true and only floats in the unselected case; each
+        // hover control carries its own reveal, so it stays hidden until hover.
         <div
           className={cn(
-            "pointer-events-none absolute -bottom-1 z-10 flex gap-1 opacity-0 transition-opacity duration-150 group-hover/message:pointer-events-auto group-hover/message:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 motion-reduce:transition-none",
-            inbound ? "start-0" : "end-0",
+            "flex items-center gap-1",
+            inbound ? "flex-row" : "flex-row-reverse",
+            candidate
+              ? "pt-1"
+              : cn(
+                  "pointer-events-none absolute -bottom-1 z-10 opacity-0 transition-opacity duration-150 group-hover/message:pointer-events-auto group-hover/message:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 motion-reduce:transition-none",
+                  inbound ? "start-0" : "end-0",
+                ),
           )}
         >
-          {canInteract ? (
+          {hasActions && canInteract ? (
             <button
               type="button"
               onClick={() => onReply(message)}
@@ -497,46 +510,34 @@ export const MessageBubble = memo(function MessageBubble({
               {copy("replyToMessage")}
             </button>
           ) : null}
-          <CopyMessageButton
-            text={message.body.trim() || message.attachment?.fileName || ""}
-            copy={copy}
-          />
-        </div>
-      ) : null}
-
-      {canExtract ? (
-        // The selected candidate keeps its chip visible (it is a persistent
-        // state, not a hover affordance), so the row stays expanded whenever
-        // `candidate` is true and only collapses in the unselected case.
-        <div
-          className={cn(
-            "flex",
-            candidate
-              ? "pt-1"
-              : "pointer-events-none absolute -bottom-1 z-10 opacity-0 transition-opacity duration-150 group-hover/message:pointer-events-auto group-hover/message:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 motion-reduce:transition-none",
-            candidate ? (inbound ? "justify-start" : "justify-end") : inbound ? "start-24" : "end-24",
-          )}
-        >
-          <button
-            type="button"
-            onClick={() => onChooseCandidate(message.id)}
-            aria-pressed={candidate}
-            className={cn(
-              "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
-              candidate
-                ? "bg-primary-soft text-primary"
-                : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",
-            )}
-          >
-            {candidate ? (
-              <Check className="size-3" aria-hidden="true" />
-            ) : (
-              <Sparkles className="size-3" aria-hidden="true" />
-            )}
-            {/* Selected state names itself; the action label would read as an
-                instruction still waiting to be done. */}
-            {candidate ? copy("orderMessageSelected") : copy("chooseOrderMessage")}
-          </button>
+          {hasActions ? (
+            <CopyMessageButton
+              text={message.body.trim() || message.attachment?.fileName || ""}
+              copy={copy}
+            />
+          ) : null}
+          {canExtract ? (
+            <button
+              type="button"
+              onClick={() => onChooseCandidate(message.id)}
+              aria-pressed={candidate}
+              className={cn(
+                "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
+                candidate
+                  ? "bg-primary-soft text-primary"
+                  : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",
+              )}
+            >
+              {candidate ? (
+                <Check className="size-3" aria-hidden="true" />
+              ) : (
+                <Sparkles className="size-3" aria-hidden="true" />
+              )}
+              {/* Selected state names itself; the action label would read as an
+                  instruction still waiting to be done. */}
+              {candidate ? copy("orderMessageSelected") : copy("chooseOrderMessage")}
+            </button>
+          ) : null}
         </div>
       ) : null}
 

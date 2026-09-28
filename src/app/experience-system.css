@@ -293,12 +293,22 @@ html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid > :is(aside, mai
  * One-line seller data inside a list column — customer, contact and product
  * names, titles. Rendered with dir="auto" so the value keeps its own direction
  * (a long Latin name truncates at ITS end instead of losing its first letters),
- * while `match-parent` aligns it with the surrounding interface: a Latin name
+ * while the rule below aligns it with the surrounding interface: a Latin name
  * sits on the same edge as its Arabic neighbours in an RTL column instead of
  * drifting to the opposite side.
+ *
+ * The parent-matching keyword would say this directly, but the CSS pipeline
+ * drops it as an unknown value (the rule compiled to an empty block, so Latin
+ * names still drifted left in Arabic), and it lowers `:dir()` into a language
+ * list. The interface direction is set on <html>, so the alignment is stated
+ * against it explicitly.
  */
-[data-sf-seller-label="true"] {
-  text-align: match-parent;
+html[dir="rtl"] [data-sf-seller-label="true"] {
+  text-align: right;
+}
+
+html[dir="ltr"] [data-sf-seller-label="true"] {
+  text-align: left;
 }
 
 /* ── Locale transition presentation ─────────────────────────────────────── */

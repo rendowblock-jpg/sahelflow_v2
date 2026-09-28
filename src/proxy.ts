@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIE, isPublicApiRoute, isPublicPage } from "@/lib/auth/config";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { verifySessionToken } from "@/lib/auth/crypto";
+import { authorizeMcpTransport } from "@/lib/mcp/transport-auth";
 import {
   classifySetupRequestPath,
   isAuthenticationStaticPath,
@@ -51,6 +52,29 @@ function hasWhatsAppSidecarCallbackAuthority(request: NextRequest): boolean {
       supplied &&
       constantTimeEqual(supplied, expected),
   );
+}
+
+/**
+ * FD-063 MCP-11: a client-launched MCP bridge is not a browser either. Admit
+ * only loopback `POST /api/mcp` carrying an agent key and the per-launch
+ * transport bearer; the route repeats the transport check and then requires an
+ * active grant, its durable identity binding and the license boundary.
+ */
+async function hasMcpAgentTransportAuthority(request: NextRequest): Promise<boolean> {
+  if (
+    request.method !== "POST" ||
+    !isLoopbackRequest(request) ||
+    request.nextUrl.pathname !== "/api/mcp" ||
+    !request.headers.get("x-sahelflow-agent-grant")
+  ) {
+    return false;
+  }
+  try {
+    await authorizeMcpTransport(request);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function sameOriginRedirect(
@@ -153,6 +177,9 @@ export async function proxy(request: NextRequest) {
   // exact loopback POST callbacks here; each route repeats this token check
   // before reading or mutating provider data.
   if (hasWhatsAppSidecarCallbackAuthority(request)) {
+    return NextResponse.next();
+  }
+  if (await hasMcpAgentTransportAuthority(request)) {
     return NextResponse.next();
   }
 

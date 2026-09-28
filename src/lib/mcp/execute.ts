@@ -23,6 +23,8 @@ import { runWithAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtim
 import { serializeToolResultForRemoteModel } from "@/lib/ai/redact";
 import { getTool } from "@/lib/ai/chat/tools/registry";
 import { db, shopContext } from "@/lib/db";
+import { ZodError } from "zod";
+
 import { SahelFlowError } from "@/types/errors";
 import { writeMcpInvocationAudit } from "./audit";
 import { assertMcpNeverApprover, type McpAgentSession } from "./agent-session";
@@ -52,7 +54,23 @@ function failure(error: string): McpCallOutcome {
   return envelope({ success: false, error });
 }
 
+/**
+ * An agent can only correct a call it understands: argument validation
+ * failures name each offending field (never its value), capped at five.
+ */
+function failureMessageOf(error: unknown): string {
+  if (error instanceof SahelFlowError) return error.message;
+  if (error instanceof ZodError) {
+    const issues = error.issues
+      .slice(0, 5)
+      .map((issue) => `${issue.path.join(".") || "(arguments)"}: ${issue.message}`);
+    return `Invalid arguments — ${issues.join("; ")}`;
+  }
+  return "Tool failed";
+}
+
 function errorCodeOf(error: unknown): string {
+  if (error instanceof ZodError) return "MCP_TOOL_ARGUMENTS_INVALID";
   if (error instanceof SahelFlowError) return error.code;
   if (error instanceof Error && error.name) return error.name;
   return "MCP_TOOL_FAILED";
@@ -165,9 +183,7 @@ export async function callMcpTool(
   } catch (error) {
     auditOutcome = "failed";
     errorCode = errorCodeOf(error);
-    outcome = failure(
-      error instanceof SahelFlowError ? error.message : "Tool failed",
-    );
+    outcome = failure(failureMessageOf(error));
   }
 
   await writeMcpInvocationAudit(db, {

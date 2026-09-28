@@ -2,7 +2,10 @@ import "server-only";
 
 import { getCurrentSessionAuthority } from "@/lib/auth/server";
 import { shopContext } from "@/lib/db";
-import { resolveDurableIdentityActor } from "@/lib/identity/control-authority";
+import {
+  agentGrantIdentitySessionId,
+  resolveDurableIdentityActor,
+} from "@/lib/identity/control-authority";
 import { resolveRemoteIdentityActor } from "@/lib/identity/identity-authority";
 import type { Phase2Action } from "@/lib/identity/permissions";
 import type { ShopContext } from "@/lib/shops/context";
@@ -140,6 +143,35 @@ export async function trustedActorForRemoteCommand(
   });
   trustedActorContexts.add(context);
   return context as TrustedActorContext;
+}
+
+/**
+ * Mint the person context an MCP agent grant acts under (FD-063 MCP-11).
+ *
+ * The grant's own durable identity binding is re-read on every request, so a
+ * revoked grant, a revoked owner/device or a policy change cuts the agent off
+ * immediately. No browser session is involved.
+ */
+export async function trustedActorForAgentGrant(
+  grantId: string,
+  shop: ShopContext,
+): Promise<TrustedActorContext> {
+  const sessionId = agentGrantIdentitySessionId(grantId);
+  let identity: Awaited<ReturnType<typeof resolveDurableIdentityActor>>;
+  try {
+    identity = await resolveDurableIdentityActor(sessionId, shop);
+  } catch (error) {
+    if (error instanceof SahelFlowError && error.statusCode >= 500) throw error;
+    identity = null;
+  }
+  if (!identity) {
+    throw new SahelFlowError(
+      "This agent's identity binding is not active",
+      "MCP_AGENT_IDENTITY_REVOKED",
+      401,
+    );
+  }
+  return createPersonContext(sessionId, shop, identity);
 }
 
 /**
