@@ -191,6 +191,10 @@ struct PreparedRuntime {
 }
 
 const SIDECAR_NAME: &str = "sahelflow-whatsapp";
+/// FD-063 MCP-11b: the stdio bridge an MCP client launches. The desktop app
+/// never runs it; it only tells the web runtime where it is installed so the
+/// Connected agents dialog can hand the seller a ready client configuration.
+const MCP_BRIDGE_NAME: &str = "sahelflow-mcp";
 const PROCESS_TREE_STOP_TIMEOUT: Duration = Duration::from_secs(10);
 const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const RUNTIME_STDERR_CLASSIFICATIONS: &[(&str, &str)] = &[
@@ -787,6 +791,12 @@ fn server_env(
     }
     if let Some(secret) = auth.secret() {
         environment.push(("AUTH_SECRET".to_string(), secret.to_string()));
+    }
+    if let Some(bridge) = bundled_mcp_bridge() {
+        environment.push((
+            "SF_MCP_BRIDGE_PATH".to_string(),
+            bridge.to_string_lossy().into_owned(),
+        ));
     }
     for (name, value) in compiled_license_configuration() {
         if !value.is_empty() {
@@ -1683,6 +1693,18 @@ fn bundled_sidecar() -> Result<PathBuf, IoError> {
         ));
     }
     Ok(candidate)
+}
+
+/// The installed MCP bridge beside the desktop executable, when present.
+fn bundled_mcp_bridge() -> Option<PathBuf> {
+    let executable = if cfg!(target_os = "windows") {
+        format!("{MCP_BRIDGE_NAME}.exe")
+    } else {
+        MCP_BRIDGE_NAME.to_string()
+    };
+    let current = std::env::current_exe().ok()?;
+    let candidate = current.parent()?.join(executable);
+    candidate.is_file().then_some(candidate)
 }
 
 fn process_environment(values: &[(String, String)]) -> Vec<(OsString, OsString)> {
