@@ -8,7 +8,7 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("SahelFlow canonical brand mark", () => {
-  it("keeps the exact Founder-provided PNG as the shared web and application identity", () => {
+  it("keeps the exact Founder-approved PNG as the shared web and application identity", () => {
     const icon = readFileSync(resolve(root, "public/icons/sahelflow-mark.png"));
     const digest = createHash("sha256").update(icon).digest("hex");
     const component = read("src/components/brand/sahelflow-mark.tsx");
@@ -17,7 +17,7 @@ describe("SahelFlow canonical brand mark", () => {
     const manifest = read("src/app/manifest.ts");
 
     expect(digest).toBe(
-      "9aa05dff2a20f40027653db5bc146206ac7863d455ef9698dc5021f61f62253e",
+      "168582b3dfecfa125ed15aaa9ec5551e6345eef29e698db4747f139cc5338acc",
     );
     expect(component).toContain('/icons/sahelflow-mark.png');
     expect(sidebar).toContain("SahelFlowMark");

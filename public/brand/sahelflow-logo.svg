@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="9 7 50 50" width="512" height="512" role="img" aria-label="SahelFlow">
   <defs>
-    <linearGradient id="sand" x1="17" y1="9" x2="42" y2="34" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#F9CB5B"/>
-      <stop offset="1" stop-color="#E4803A"/>
+    <linearGradient id="sky" x1="17" y1="9" x2="42" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7DD3FC"/>
+      <stop offset="1" stop-color="#0EA5E9"/>
     </linearGradient>
-    <linearGradient id="oasis" x1="22" y1="30" x2="47" y2="55" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#40DE9A"/>
-      <stop offset="1" stop-color="#0D9867"/>
+    <linearGradient id="deep" x1="22" y1="30" x2="47" y2="55" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0284C7"/>
+      <stop offset="1" stop-color="#0C4A6E"/>
     </linearGradient>
     <mask id="top">
       <rect width="64" height="64" fill="#000"/>
@@ -21,7 +21,7 @@
       <rect x="0" y="0" width="32.5" height="41" fill="#000"/>
     </mask>
   </defs>
-  <rect width="64" height="64" fill="url(#sand)" mask="url(#top)"/>
-  <rect width="64" height="64" fill="url(#oasis)" mask="url(#bottom)"/>
-  <circle cx="47.2" cy="12.4" r="3.1" fill="#F9CB5B"/>
+  <rect width="64" height="64" fill="url(#sky)" mask="url(#top)"/>
+  <rect width="64" height="64" fill="url(#deep)" mask="url(#bottom)"/>
+  <circle cx="47.2" cy="12.4" r="3.1" fill="#7DD3FC"/>
 </svg>

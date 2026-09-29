@@ -180,7 +180,7 @@ export function Sidebar({
         )}
       >
         <SahelFlowMark
-          className="size-9 shrink-0 rounded-surface shadow-sm ring-1 ring-white/8"
+          className="size-9 shrink-0"
           accessibleTitle={collapsed ? "SahelFlow" : undefined}
         />
         {!collapsed && (
