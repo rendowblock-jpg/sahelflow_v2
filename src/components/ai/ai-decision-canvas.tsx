@@ -240,6 +240,7 @@ export function AiDecisionCanvas({
               size="sm"
               variant="ghost"
               data-ai-open-review="true"
+              aria-label={getAiDecisionCopy(workspace.locale, "reviewEvidence")}
               onClick={() => setReviewOpen(true)}
               className="text-muted-foreground hover:text-foreground"
             >

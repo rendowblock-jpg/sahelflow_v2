@@ -92,7 +92,7 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
 
     await page
       .locator('[data-ai-work-history="true"]')
-      .getByRole("button", { name: "Nouveau" })
+      .getByRole("button", { name: "Nouvelle discussion" })
       .click();
     await expect(page.locator("[data-ai-session]").first()).toBeVisible();
     await expect(page.locator('[data-ai-decision-canvas="true"]')).toContainText(
