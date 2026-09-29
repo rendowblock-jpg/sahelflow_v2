@@ -42,8 +42,8 @@ type DashboardProjectionSource = Readonly<{
     customer?: Readonly<{ name: string | null }> | null;
   }>[];
   analytics: Readonly<{
-    revenueSeries: readonly Readonly<{ revenue: number; orders: number }>[];
-    customerGrowth?: readonly Readonly<{ newCustomers: number }>[];
+    revenueSeries: readonly Readonly<{ date?: string; revenue: number; orders: number }>[];
+    customerGrowth?: readonly Readonly<{ date?: string; newCustomers: number }>[];
     deliveryPerformance: Readonly<{
       deliveryRate: number;
       delivered: number;
@@ -154,6 +154,9 @@ export function projectDashboardForTrustedActor(
         ? Object.freeze(
             source.analytics.revenueSeries.map((entry) =>
               Object.freeze({
+                // The day is presentation metadata (the chart read-out), never
+                // a financial or customer field.
+                date: entry.date,
                 orders: entry.orders,
                 revenue: fieldAccess.analyticsFinancials
                   ? entry.revenue
@@ -166,7 +169,10 @@ export function projectDashboardForTrustedActor(
         fieldAccess.analytics && fieldAccess.customers
           ? Object.freeze(
               (source.analytics.customerGrowth ?? []).map((entry) =>
-                Object.freeze({ newCustomers: entry.newCustomers }),
+                Object.freeze({
+                  date: entry.date,
+                  newCustomers: entry.newCustomers,
+                }),
               ),
             )
           : Object.freeze([]),

@@ -26,6 +26,7 @@
  */
 import { db as prisma } from "./db";
 import { hashPin } from "@/lib/auth/crypto";
+import { deriveAiSessionTitle } from "@/lib/ai/chat/session-title";
 
 // Ensure master key is set for encryption.
 // CRITICAL: write the key to data/master.key so the dev server (which reads
@@ -606,7 +607,9 @@ async function main() {
   const sessions = [];
   for (let i = 0; i < 3; i++) {
     const session = await prisma.aiChatSession.create({
-      data: { title: `Session ${i + 1}`, createdAt: daysAgo(randomInt(1, 7)) },
+      // Titled after each session's first question below, exactly like the
+      // live routes do — never a generic "Session N" in any locale.
+      data: { title: null, createdAt: daysAgo(randomInt(1, 7)) },
     });
     sessions.push(session);
   }
@@ -634,6 +637,16 @@ async function main() {
         toolCalls: msg.toolCalls,
         createdAt: daysAgo(randomInt(1, 7)),
       },
+    });
+  }
+  for (let s = 0; s < sessions.length; s++) {
+    const firstQuestion = AI_MESSAGES.find(
+      (msg, index) => index % sessions.length === s && msg.role === "user",
+    );
+    if (!firstQuestion) continue;
+    await prisma.aiChatSession.update({
+      where: { id: sessions[s]!.id },
+      data: { title: deriveAiSessionTitle(firstQuestion.content) },
     });
   }
   console.log(`  ✅ ${sessions.length} AI chat sessions + ${AI_MESSAGES.length} messages`);

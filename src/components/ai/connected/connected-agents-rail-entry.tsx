@@ -26,7 +26,7 @@ export function ConnectedAgentsRailEntry({
   onOpen: () => void;
 }) {
   return (
-    <div className="border-t border-border/70 p-2.5">
+    <div className="border-t border-sidebar-border p-2">
       <button
         type="button"
         data-connected-agents-entry="true"
@@ -34,7 +34,7 @@ export function ConnectedAgentsRailEntry({
         onClick={onOpen}
         className={cn(
           "flex w-full min-w-0 items-center gap-2.5 rounded-surface px-2.5 py-2 text-start outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-          selected ? "bg-primary-soft" : "hover:bg-muted/60",
+          selected ? "bg-accent" : "hover:bg-muted/60",
         )}
       >
         <IconTile icon={Plug} tone={selected ? "primary" : "neutral"} size="sm" />

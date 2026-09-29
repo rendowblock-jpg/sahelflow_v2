@@ -124,82 +124,79 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 }
 
 /* ── AI Agents ─────────────────────────────────────────────────────────── */
-/* F-06: the session rail and the review inspector share the Inbox queue's
- * quiet vertical gradient so all three flagship panes read as one product. */
+/* The Agents workspace is deliberately flat: hairline structure, one neutral
+ * selection fill, and colour reserved for meaning (status, approval, error).
+ * The rail and the review inspector sit one surface step below the canvas so
+ * the conversation is always the brightest plane on the page. */
+[data-ai-decision-workspace="true"] {
+  background: var(--background);
+  box-shadow: none;
+}
+
+.dark [data-ai-decision-workspace="true"] {
+  box-shadow: none;
+}
+
 [data-ai-work-history="true"],
 [data-ai-review-evidence="true"] {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklch, var(--surface-2) 58%, var(--card)),
-      color-mix(in oklch, var(--surface-2) 24%, var(--card)) 24rem,
-      var(--card)
-    );
+  background: var(--sidebar);
 }
 
 [data-ai-session] {
   position: relative;
-  transition-property: background-color, border-color, transform, box-shadow;
+  transition-property: background-color, color;
   transition-duration: var(--sf-motion-state);
   transition-timing-function: var(--sf-motion-ease-state);
 }
 
-[data-ai-session]:hover {
-  transform: translateY(-1px);
-}
-
-[data-ai-session][class*="bg-primary"] {
-  box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--primary) 14%, transparent) inset,
-    0 5px 16px color-mix(in oklch, var(--primary) 7%, transparent);
-}
-
-/* Active session marker: a logical-direction primary bar owns selection
- * truth the same way the Inbox conversation does (F-06 hierarchy wave). */
+/* Active conversation: a neutral fill plus a short logical-start tick, the
+ * same selection grammar the app sidebar uses. */
 [data-ai-session][aria-current="page"]::before {
   content: "";
   position: absolute;
-  inset-inline-start: 0;
-  top: 0.5rem;
-  bottom: 0.5rem;
-  width: 3px;
+  inset-inline-start: -0.5rem;
+  top: 0.625rem;
+  bottom: 0.625rem;
+  width: 2px;
   border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    var(--primary),
-    color-mix(in oklch, var(--primary) 55%, var(--success))
-  );
+  background: var(--primary);
 }
 
+/* One reading column shared by the log, the notices and the composer, so
+ * their edges align at every canvas width (sidebar expanded or collapsed). */
 [data-ai-decision-canvas="true"] {
-  background:
-    radial-gradient(
-      circle at 50% -8rem,
-      color-mix(in oklch, var(--primary) 8%, transparent),
-      transparent 30rem
-    ),
-    var(--background);
+  container-name: ai-canvas;
+  container-type: inline-size;
+  background: var(--background);
 }
 
-[data-ai-decision-canvas="true"] > header {
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--card) 55%, transparent),
-    transparent
-  );
-  border-bottom-color: color-mix(in oklch, var(--border) 85%, transparent);
+.sf-ai-column {
+  width: 100%;
+  margin-inline: auto;
+  max-width: 46rem;
+  padding-inline: 1rem;
 }
 
-/* Provider configuration truth on the canvas header (AI-26 vocabulary:
- * configuration state, never fabricated provider health). */
+@container ai-canvas (min-width: 44rem) {
+  .sf-ai-column {
+    padding-inline: 1.5rem;
+  }
+}
+
+@container ai-canvas (min-width: 72rem) {
+  .sf-ai-column {
+    max-width: 52rem;
+  }
+}
+
+/* Provider configuration truth (AI-26 vocabulary: configuration state, never
+ * fabricated provider health). */
 [data-ai-status-dot="ready"] {
   background: var(--success);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--success) 18%, transparent);
 }
 
 [data-ai-status-dot="attention"] {
   background: var(--warning);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--warning) 22%, transparent);
 }
 
 /* Structure-matching conversation skeletons (§26.8 perceived performance). */
@@ -224,21 +221,19 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   0%,
   100% {
     opacity: 1;
-    transform: scaleY(1);
   }
   50% {
-    opacity: 0.35;
-    transform: scaleY(0.8);
+    opacity: 0.25;
   }
 }
 
 [data-ai-streaming-caret="true"] {
   display: inline-block;
-  width: 0.5rem;
-  height: 1.05rem;
+  width: 0.45rem;
+  height: 1rem;
   margin-inline-start: 0.15rem;
   border-radius: 1px;
-  background: var(--primary);
+  background: var(--foreground);
   vertical-align: text-bottom;
   animation: sf-ai-caret 1s var(--sf-motion-ease-state, ease-in-out) infinite;
 }
@@ -248,61 +243,37 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   animation: sf-workspace-item-in var(--sf-motion-surface) var(--sf-motion-ease-out) both;
 }
 
-/* Work-rail pulse: shop present-state + workforce above the session list. */
-[data-ai-work-rail-pulse="true"] {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklch, var(--primary) 5%, transparent),
-      transparent 70%
-    );
-}
-
-/* Start command-center: hero, job commands, workforce panel share one
- * layered grammar instead of scattered flat cards. */
-[data-ai-start-state="true"] [data-ai-abilities="true"] {
-  box-shadow:
-    0 1px 2px oklch(0 0 0 / 0.04),
-    0 14px 36px oklch(0 0 0 / 0.05);
-}
 [data-ai-ability-group] {
-  transition-property: border-color, box-shadow, transform;
+  transition-property: border-color;
   transition-duration: var(--sf-motion-state);
   transition-timing-function: var(--sf-motion-ease-state);
 }
+
 [data-ai-ability-group]:hover {
   border-color: color-mix(in oklch, var(--primary) 28%, var(--border));
-  box-shadow: 0 8px 24px oklch(0 0 0 / 0.07);
-}
-[data-ai-inbox-strip="true"] {
-  backdrop-filter: blur(12px) saturate(1.05);
-  -webkit-backdrop-filter: blur(12px) saturate(1.05);
 }
 
-/* The floating composer sits on a blurred footer deck so long threads slide
- * beneath it instead of colliding with it (F-06 composer wave). */
+/* The composer deck is transparent over the canvas; the input card alone is
+ * raised (one elevation step) so it reads as the page's primary control. */
 [data-ai-composer-deck="true"] {
-  background: color-mix(in oklch, var(--background) 90%, transparent);
-  backdrop-filter: blur(16px) saturate(1.06);
-  -webkit-backdrop-filter: blur(16px) saturate(1.06);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    var(--background) 1.25rem
+  );
 }
 
 [data-ai-composer="true"] {
-  border-color: color-mix(in oklch, var(--border) 90%, transparent);
-  background: color-mix(in oklch, var(--card) 92%, transparent);
-  box-shadow:
-    0 1px 2px oklch(0 0 0 / 0.06),
-    0 10px 34px oklch(0 0 0 / 0.09);
-  transition-property: border-color, box-shadow, background-color;
+  box-shadow: var(--elevation-1);
+  transition-property: border-color, box-shadow;
   transition-duration: var(--sf-motion-state);
   transition-timing-function: var(--sf-motion-ease-state);
 }
 
 [data-ai-composer="true"]:focus-within {
-  border-color: color-mix(in oklch, var(--primary) 52%, var(--border));
   box-shadow:
     0 0 0 3px color-mix(in oklch, var(--primary) 12%, transparent),
-    0 12px 38px oklch(0 0 0 / 0.11);
+    var(--elevation-1);
 }
 
 [data-ai-review-evidence="true"] section,
@@ -361,9 +332,6 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   [data-ai-message="user"] {
     animation: none !important;
   }
-  [data-ai-session]:hover {
-    transform: none;
-  }
   [data-ai-streaming-caret="true"] {
     animation: none !important;
     opacity: 0.6;
@@ -371,5 +339,42 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   [data-ai-skeleton="true"] {
     animation: none !important;
     opacity: 0.7;
+  }
+}
+
+/*
+ * One reading column for the Inbox thread. The message log and the composer
+ * dock share the same measure and gutters, so their edges line up at every
+ * pane width — when the sidebar collapses to its rail the column widens with
+ * the thread instead of leaving the log and composer on different axes.
+ */
+[data-inbox-thread] {
+  container-name: inbox-thread;
+  container-type: inline-size;
+}
+
+.sf-thread-column {
+  width: 100%;
+  margin-inline: auto;
+  max-width: 50rem;
+  padding-inline: 0.75rem;
+}
+
+@container inbox-thread (min-width: 40rem) {
+  .sf-thread-column {
+    padding-inline: 1.5rem;
+  }
+}
+
+@container inbox-thread (min-width: 64rem) {
+  .sf-thread-column {
+    max-width: 60rem;
+    padding-inline: 2rem;
+  }
+}
+
+@container inbox-thread (min-width: 80rem) {
+  .sf-thread-column {
+    max-width: 68rem;
   }
 }

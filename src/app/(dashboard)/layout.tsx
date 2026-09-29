@@ -51,7 +51,18 @@ export default async function DashboardRouteLayout({
         <RuntimeUiReadyBeacon />
         <SpeculationRules />
         {children}
-        {modal}
+        {/*
+          The route template wraps EVERY slot, so the empty `@modal` slot
+          still arrives as a full-height transition box. Left in flow it
+          doubled #main-content's scroll height: document pages gained a
+          blank screen below their content and the Inbox/Agents
+          scroll-to-latest pulled the workspace up into that void. The
+          Settings modal portals to <body>, so its slot box never needs
+          layout space.
+        */}
+        <div hidden data-shell-slot="modal">
+          {modal}
+        </div>
       </DashboardLayout>
     </LicenseBoundary>
   );

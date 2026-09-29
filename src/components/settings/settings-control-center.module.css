@@ -61,3 +61,22 @@
 .stack > :not(.cardReset) > :global([data-slot="card"]):first-child > :global([data-slot="card-content"]) {
   padding-inline: 0;
 }
+
+/*
+ * One heading grammar for every panel in the Control center. The 19 panels were
+ * written at different times with different CardTitle sizes; inside the stack
+ * they all speak at the system's panel-title level with a quiet description, so
+ * the pane reads as one document instead of a pile of cards.
+ */
+.stack :global([data-slot="card-title"]) {
+  font-size: var(--text-title-3);
+  line-height: var(--text-title-3--line-height);
+  font-weight: 600;
+  letter-spacing: normal;
+}
+
+.stack :global([data-slot="card-description"]) {
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  color: var(--muted-foreground);
+}

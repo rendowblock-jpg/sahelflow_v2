@@ -119,17 +119,11 @@ export function DualBarChart({
               borderRadius: [7, 7, 2, 2],
               opacity: 0.94,
             },
-            label: {
-              show: true,
-              position: "top" as const,
-              distance: 6,
-              color: theme.mutedForeground,
-              fontSize: 10,
-              formatter: (params: { value?: unknown }) => {
-                const value = Number(params.value ?? 0);
-                return value > 0 ? compactMoneyValue(value) : "";
-              },
-            },
+            // Paired bars sit side by side, so per-bar value labels collided
+            // with each other (and with the hover pointer). Values are read
+            // from the axis tooltip, which lists revenue, expenses and net for
+            // the hovered month together.
+            label: { show: false },
             emphasis: { focus: "series" as const, itemStyle: { opacity: 1 } },
             tooltip: {
               valueFormatter: (value: unknown) =>
@@ -148,17 +142,11 @@ export function DualBarChart({
               borderRadius: [7, 7, 2, 2],
               opacity: 0.88,
             },
-            label: {
-              show: true,
-              position: "top" as const,
-              distance: 6,
-              color: theme.mutedForeground,
-              fontSize: 10,
-              formatter: (params: { value?: unknown }) => {
-                const value = Number(params.value ?? 0);
-                return value > 0 ? compactMoneyValue(value) : "";
-              },
-            },
+            // Paired bars sit side by side, so per-bar value labels collided
+            // with each other (and with the hover pointer). Values are read
+            // from the axis tooltip, which lists revenue, expenses and net for
+            // the hovered month together.
+            label: { show: false },
             emphasis: { focus: "series" as const, itemStyle: { opacity: 1 } },
             tooltip: {
               valueFormatter: (value: unknown) =>

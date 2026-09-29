@@ -110,6 +110,29 @@ export interface ProductsWorkbenchFilters {
   q?: string | null;
 }
 
+/**
+ * The product-list filter shared by the workbench page and its API. `lowStock`
+ * uses the same definition as the summary's low-stock count: active, and stock
+ * at or below the product's own threshold (a column-to-column comparison).
+ */
+export function productListWhere(opts: {
+  activeOnly?: boolean;
+  q?: string | null;
+  lowStock?: boolean;
+}) {
+  const q = opts.q?.trim() ?? "";
+  return {
+    deletedAt: null,
+    ...(opts.activeOnly ? { isActive: true } : {}),
+    ...(opts.lowStock
+      ? { isActive: true, stock: { lte: db.product.fields.lowStockThreshold } }
+      : {}),
+    ...(q
+      ? { OR: [{ name: { contains: q } }, { sku: { contains: q } }] }
+      : {}),
+  };
+}
+
 async function queryProducts(
   actorContext: TrustedActorContext,
   opts: {
@@ -117,17 +140,12 @@ async function queryProducts(
     skip: number;
     activeOnly?: boolean;
     q?: string | null;
+    /** Active products at or below their own restock threshold. */
+    lowStock?: boolean;
   },
 ) {
   const access = resolveProductWorkbenchAccess(actorContext);
-  const q = opts.q?.trim() ?? "";
-  const where = {
-    deletedAt: null,
-    ...(opts.activeOnly ? { isActive: true } : {}),
-    ...(q
-      ? { OR: [{ name: { contains: q } }, { sku: { contains: q } }] }
-      : {}),
-  };
+  const where = productListWhere(opts);
   const sourceRows = await db.product.findMany({
     where,
     select: {
@@ -170,6 +188,7 @@ export async function getProductsWorkbenchPage(
     pageSize?: number;
     activeOnly?: boolean;
     q?: string | null;
+    lowStock?: boolean;
   } = {},
 ): Promise<ProductsWorkbenchResponse> {
   const page = clampPage(query.page);
@@ -179,13 +198,17 @@ export async function getProductsWorkbenchPage(
     skip: (page - 1) * pageSize,
     activeOnly: query.activeOnly,
     q: query.q,
+    lowStock: query.lowStock,
   });
   const total = await db.product.count({ where });
 
   return {
     products: rows.map((row) => projectRow(row, access)),
     fieldAccess: access,
-    appliedFilters: { q: query.q?.trim() || null },
+    appliedFilters: {
+      q: query.q?.trim() || null,
+      lowStock: query.lowStock === true,
+    },
     total,
     hasNextPage: page * pageSize < total,
     page,

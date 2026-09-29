@@ -112,7 +112,7 @@ describe("AI Class-AAA decision workspace contract", () => {
     const hook = read("src/hooks/use-ai-workspace.ts");
     // STR-01 moved the start surface into its own module; these
     // assertions follow the code they protect.
-    const startSurface = read("src/components/ai/ai-start-surface.tsx");
+    const startSurface = read("src/components/ai/ai-start-surface.tsx") + read("src/components/ai/ai-canvas-notices.tsx") + read("src/components/ai/ai-abilities-panel.tsx");
     const review = read("src/components/ai/ai-review-evidence.tsx");
     expect(hook).toContain("AiSetupState | null");
     expect(hook).toContain("setupError");
@@ -161,6 +161,15 @@ describe("AI Class-AAA decision workspace contract", () => {
     const paths = [
       "src/components/ai/ai-work-history.tsx",
       "src/components/ai/ai-decision-canvas.tsx",
+      // The Agents rebuild split the rail and the start surface into focused
+      // modules; every new module is swept too.
+      "src/components/ai/ai-session-row.tsx",
+      "src/components/ai/ai-canvas-session-menu.tsx",
+      "src/components/ai/ai-canvas-notices.tsx",
+      "src/components/ai/ai-abilities-panel.tsx",
+      "src/components/ai/ai-shortcuts-popover.tsx",
+      "src/components/ai/ai-start-surface.tsx",
+      "src/components/ai/ai-message-bubble.tsx",
       // STR-01 split the canvas into three modules; the sweep follows every
       // piece so the split cannot become a blind spot.
       "src/components/ai/ai-message-log.tsx",

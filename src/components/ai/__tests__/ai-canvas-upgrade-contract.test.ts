@@ -36,6 +36,15 @@ describe("R4-e AI canvas upgrade — markdown rendering", () => {
       "src/components/ai/ai-decision-workspace.tsx",
       "src/components/ai/ai-workspace-shell.tsx",
       "src/components/ai/ai-work-history.tsx",
+      // The Agents rebuild split the rail and the start surface into focused
+      // modules; every new module is swept too.
+      "src/components/ai/ai-session-row.tsx",
+      "src/components/ai/ai-canvas-session-menu.tsx",
+      "src/components/ai/ai-canvas-notices.tsx",
+      "src/components/ai/ai-abilities-panel.tsx",
+      "src/components/ai/ai-shortcuts-popover.tsx",
+      "src/components/ai/ai-start-surface.tsx",
+      "src/components/ai/ai-message-bubble.tsx",
       "src/components/ai/ai-tool-result-card.tsx",
       "src/components/ai/ai-action-proposal-card.tsx",
       "src/components/ai/ai-review-evidence.tsx",
@@ -158,7 +167,7 @@ describe("R4-e AI canvas upgrade — session management", () => {
 
   it("wires rename and two-step delete into the history panel with honest failure feedback", () => {
     const hook = read("src/hooks/use-ai-workspace.ts");
-    const history = read("src/components/ai/ai-work-history.tsx");
+    const history = read("src/components/ai/ai-work-history.tsx") + read("src/components/ai/ai-session-row.tsx");
     expect(hook).toContain("const renameSession = useCallback");
     expect(hook).toContain("const deleteSession = useCallback");
     expect(hook).toContain('method: "PATCH"');
@@ -171,7 +180,7 @@ describe("R4-e AI canvas upgrade — session management", () => {
   });
 
   it("keeps the locked-navigation and preview contracts of the history panel", () => {
-    const history = read("src/components/ai/ai-work-history.tsx");
+    const history = read("src/components/ai/ai-work-history.tsx") + read("src/components/ai/ai-session-row.tsx");
     expect(history).toContain("border-e");
     expect(history).toContain("navigationLocked: boolean;");
     expect(history).toContain("disabled={navigationLocked}");

@@ -34,12 +34,22 @@ export const AI_SESSION_TITLE_MAX_LENGTH = 50;
 export const LEGACY_AI_SESSION_TITLE = "Nouvelle conversation";
 
 /**
+ * Placeholder titles an older development seed wrote ("Session 1", "Session 2"…).
+ * They carry no seller meaning and are Latin inside every locale, so they are
+ * treated exactly like an untitled session.
+ */
+const LEGACY_SEED_SESSION_TITLE = /^Session \d+$/u;
+
+/**
  * True when a session still carries no seller-meaningful title and should take
  * one from its first message.
  */
 export function isDerivableAiSessionTitle(title: string | null): boolean {
   if (!title) return true;
-  return title.trim() === LEGACY_AI_SESSION_TITLE;
+  const trimmed = title.trim();
+  return (
+    trimmed === LEGACY_AI_SESSION_TITLE || LEGACY_SEED_SESSION_TITLE.test(trimmed)
+  );
 }
 
 /**

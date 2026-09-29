@@ -154,6 +154,7 @@ export function useAiWorkspace() {
   const [sending, setSending] = useState(false);
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [pinningSessionId, setPinningSessionId] = useState<string | null>(null);
   const [approvingProposalId, setApprovingProposalId] = useState<string | null>(null);
   const [rejectingProposalId, setRejectingProposalId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -976,6 +977,46 @@ export function useAiWorkspace() {
     }
   }, []);
 
+  // Agents rail: durable pin. Optimistic, reverted on failure; pinning is not
+  // activity, so the server keeps the session's recency untouched.
+  const pinSession = useCallback(async (sessionId: string, pinned: boolean) => {
+    let previous: string | null | undefined;
+    setPinningSessionId(sessionId);
+    setSessions((current) =>
+      current.map((session) => {
+        if (session.id !== sessionId) return session;
+        previous = session.pinnedAt ?? null;
+        return {
+          ...session,
+          pinnedAt: pinned ? new Date().toISOString() : null,
+        };
+      }),
+    );
+    try {
+      const response = await fetch(
+        `/api/ai/sessions/${encodeURIComponent(sessionId)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pinned }),
+        },
+      );
+      if (!response.ok) throw new Error(`pin:${response.status}`);
+      return true;
+    } catch {
+      setSessions((current) =>
+        current.map((session) =>
+          session.id === sessionId
+            ? { ...session, pinnedAt: previous ?? null }
+            : session,
+        ),
+      );
+      return false;
+    } finally {
+      setPinningSessionId(null);
+    }
+  }, []);
+
   const deleteSession = useCallback(
     async (sessionId: string) => {
       setDeletingSessionId(sessionId);
@@ -1151,6 +1192,7 @@ export function useAiWorkspace() {
     rejectingProposalId,
     renamingSessionId,
     deletingSessionId,
+    pinningSessionId,
     error,
     canRegenerate,
     selectSession,
@@ -1159,6 +1201,7 @@ export function useAiWorkspace() {
     stop,
     regenerate,
     renameSession,
+    pinSession,
     deleteSession,
     sendFeedback,
     approveProposal,

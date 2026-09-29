@@ -82,9 +82,9 @@ export function PhotoUpload({
         }}
         aria-label={disabled ? undefined : t("profile.uploadPhoto")}
       >
-        <Avatar className={cn("size-full ring-2 ring-border", !disabled && "group-hover:ring-primary")}>
+        <Avatar className={cn("size-full ring-1 ring-border", !disabled && "group-hover:ring-primary")}>
           {value ? <AvatarImage src={value} alt="" /> : null}
-          <AvatarFallback className="bg-primary-soft text-2xl font-semibold text-primary">
+          <AvatarFallback className="bg-primary-soft text-title-2 text-primary">
             {fallback.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
@@ -100,7 +100,7 @@ export function PhotoUpload({
       </div>
 
       {!disabled ? (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="outline"

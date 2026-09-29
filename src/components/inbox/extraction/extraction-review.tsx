@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertCircle, ArrowRight, Loader2, Plus } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, Loader2, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,9 @@ export interface ReviewedOrder {
 
 type Copy = (key: OrderExtractionCopyKey, params?: Record<string, string | number>) => string;
 
+/** The delivery charge a reviewed WhatsApp order is created with (shown before creation). */
+export const EXTRACTION_DELIVERY_COST = 600;
+
 let draftKey = 0;
 const nextKey = () => `item-${(draftKey += 1)}`;
 
@@ -59,7 +62,10 @@ export function ExtractionReview({
   fieldId,
   creating,
   onCreate,
+  variant = "inline",
 }: {
+  /** `workspace` scrolls the sections and pins the summary + Create bar. */
+  variant?: "inline" | "workspace";
   order: ExtractedOrder | null;
   knownPhone?: string;
   catalog: readonly CatalogOption[];
@@ -93,7 +99,9 @@ export function ExtractionReview({
 
   return (
     <form
-      className="space-y-5"
+      className={
+        variant === "workspace" ? "flex min-h-0 flex-1 flex-col" : "space-y-5"
+      }
       onSubmit={(event) => {
         event.preventDefault();
         setPhoneTouched(true);
@@ -111,6 +119,13 @@ export function ExtractionReview({
         });
       }}
     >
+      <div
+        className={
+          variant === "workspace"
+            ? "min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5"
+            : "space-y-5"
+        }
+      >
       <section aria-labelledby={`${fieldId}-items`} className="space-y-2">
         <h3 id={`${fieldId}-items`} className="text-caption font-medium text-muted-foreground">
           {copy("itemsTitle")}
@@ -140,7 +155,7 @@ export function ExtractionReview({
           <Plus className="size-4" aria-hidden="true" />
           {copy("addItem")}
         </Button>
-        {subtotal > 0 ? (
+        {subtotal > 0 && variant !== "workspace" ? (
           <p className="flex justify-between text-sm">
             <span className="text-muted-foreground">{copy("subtotal")}</span>
             <span className="font-medium tabular-nums">{formatDZD(subtotal, locale)}</span>
@@ -216,14 +231,52 @@ export function ExtractionReview({
         ) : null}
       </section>
 
-      <div className="space-y-2 border-t border-border/70 pt-4">
+      </div>
+
+      <div
+        data-extraction-summary="true"
+        className={
+          variant === "workspace"
+            ? "shrink-0 space-y-3 border-t border-border bg-card px-5 py-4"
+            : "space-y-2 border-t border-border/70 pt-4"
+        }
+      >
+        {variant === "workspace" ? (
+          <dl className="space-y-1 text-body-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">{copy("subtotal")}</dt>
+              <dd className="tabular-nums">{formatDZD(subtotal, locale)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">{copy("deliveryFee")}</dt>
+              <dd className="tabular-nums">{formatDZD(EXTRACTION_DELIVERY_COST, locale)}</dd>
+            </div>
+            <div className="flex justify-between gap-3 text-title-3">
+              <dt>{copy("total")}</dt>
+              <dd className="tabular-nums">
+                {formatDZD(subtotal + EXTRACTION_DELIVERY_COST, locale)}
+              </dd>
+            </div>
+          </dl>
+        ) : null}
         {missing.length > 0 ? (
           <p className="flex items-start gap-1.5 text-caption text-warning" role="status">
             <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             {copy("stillNeeded", { fields: missing.join(" · ") })}
           </p>
         ) : null}
-        <Button type="submit" size="sm" disabled={creating || missing.length > 0} className="w-full">
+        {variant === "workspace" && missing.length === 0 ? (
+          <p className="flex items-center gap-1.5 text-caption text-success" role="status">
+            <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
+            {copy("ready")}
+          </p>
+        ) : null}
+        <Button
+          type="submit"
+          size={variant === "workspace" ? "default" : "sm"}
+          disabled={creating || missing.length > 0}
+          className="w-full"
+        >
           {creating ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />

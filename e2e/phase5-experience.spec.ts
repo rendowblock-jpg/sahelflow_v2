@@ -206,7 +206,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
     await page.keyboard.press("Control+K");
-    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.locator('[data-universal-search-panel="true"]')).toBeVisible();
     await page.keyboard.press("Escape");
   });
 

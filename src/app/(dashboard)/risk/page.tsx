@@ -240,14 +240,87 @@ export default async function RiskPage({
       data-risk-analytics-generation="class-aaa"
       data-risk-seller-workspace="v3"
     >
-      <PageHeader title={t("risk.title")} description={t("risk.subtitle")} />
+      {/* Page grammar: identity with its period control, then the KPIs, then
+          the workspace tabs — the numbers lead, whichever tab is open. */}
+      <PageHeader
+        title={t("risk.title")}
+        description={t("risk.subtitle")}
+        actions={
+          <div className="flex w-fit max-w-full flex-wrap items-center gap-1 rounded-surface border bg-background p-1">
+            {RANGES.map((range) => (
+              <Link
+                key={range.days}
+                href={`/risk?days=${range.days}&tab=${activeTab}`}
+                className={`rounded-control px-3 py-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
+                  days === range.days
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {t(range.labelKey)}
+              </Link>
+            ))}
+          </div>
+        }
+      />
+
+      <div
+        data-risk-overview-kpis="true"
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        <StatCard
+          label={t("risk.kpi.avgScore")}
+          value={integerFormatter.format(kpis.avgRiskScore)}
+          icon={<ShieldAlert />}
+          subtitle={
+            <RiskLevelBadgeServer
+              level={avgRiskLevel}
+              label={t(`risk.level.${avgRiskLevel}`)}
+            />
+          }
+          emphasis="standard"
+          tone="neutral"
+        />
+        <StatCard
+          label={t("risk.kpi.highRiskOrders")}
+          value={integerFormatter.format(kpis.highRiskOrderCount)}
+          icon={
+            <AlertTriangle
+              className={
+                kpis.highRiskOrderCount > 0 ? "text-destructive" : undefined
+              }
+            />
+          }
+          subtitle={
+            report.totalOrders > 0
+              ? `${pct(highRiskShare)} ${t("risk.confirmationByLevel.total")}`
+              : undefined
+          }
+          emphasis="standard"
+          tone="neutral"
+        />
+        <StatCard
+          label={t("risk.kpi.confirmationRate")}
+          value={pct(kpis.confirmationRate)}
+          icon={<TrendingUp />}
+          emphasis="standard"
+          tone="neutral"
+        />
+        <StatCard
+          label={t("risk.kpi.potentialSavings")}
+          value={formatDZD(kpis.potentialSavingsDzd, locale)}
+          icon={<PiggyBank />}
+          emphasis="standard"
+          tone="neutral"
+        />
+      </div>
 
       <Tabs defaultValue={activeTab} className="w-full space-y-5">
         <div
           data-risk-workspace-toolbar="true"
-          className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-center lg:justify-between"
+          className="flex flex-wrap items-center gap-3 border-b border-border/70 pb-4"
         >
-          <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto lg:w-auto">
+          <TabsList className="h-auto w-full flex-wrap justify-start gap-1 lg:w-auto">
             <TabsTrigger value="overview" asChild>
               <Link href={`/risk?days=${days}&tab=overview`}>
                 {t("risk.overview")}
@@ -279,75 +352,9 @@ export default async function RiskPage({
             ) : null}
           </TabsList>
 
-          <div className="flex w-fit max-w-full flex-wrap items-center gap-1 rounded-surface border bg-background p-1">
-            {RANGES.map((range) => (
-              <Link
-                key={range.days}
-                href={`/risk?days=${range.days}&tab=${activeTab}`}
-                className={`rounded-control px-3 py-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
-                  days === range.days
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                {t(range.labelKey)}
-              </Link>
-            ))}
-          </div>
         </div>
 
         <TabsContent value="overview" className="mt-0 space-y-5">
-          <div
-            data-risk-overview-kpis="true"
-            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-          >
-            <StatCard
-              label={t("risk.kpi.avgScore")}
-              value={integerFormatter.format(kpis.avgRiskScore)}
-              icon={<ShieldAlert />}
-              subtitle={
-                <RiskLevelBadgeServer
-                  level={avgRiskLevel}
-                  label={t(`risk.level.${avgRiskLevel}`)}
-                />
-              }
-              emphasis="standard"
-              tone="neutral"
-            />
-            <StatCard
-              label={t("risk.kpi.highRiskOrders")}
-              value={integerFormatter.format(kpis.highRiskOrderCount)}
-              icon={
-                <AlertTriangle
-                  className={
-                    kpis.highRiskOrderCount > 0 ? "text-destructive" : undefined
-                  }
-                />
-              }
-              subtitle={
-                report.totalOrders > 0
-                  ? `${pct(highRiskShare)} ${t("risk.confirmationByLevel.total")}`
-                  : undefined
-              }
-              emphasis="standard"
-              tone="neutral"
-            />
-            <StatCard
-              label={t("risk.kpi.confirmationRate")}
-              value={pct(kpis.confirmationRate)}
-              icon={<TrendingUp />}
-              emphasis="standard"
-              tone="neutral"
-            />
-            <StatCard
-              label={t("risk.kpi.potentialSavings")}
-              value={formatDZD(kpis.potentialSavingsDzd, locale)}
-              icon={<PiggyBank />}
-              emphasis="standard"
-              tone="neutral"
-            />
-          </div>
-
           <div data-risk-primary-trend="true">
             <ChartCard
               title={t("risk.trend.title")}

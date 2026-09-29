@@ -2,8 +2,14 @@
 
 import * as React from "react";
 
+export interface SparklinePoint {
+  value: number;
+  /** ISO day the point describes — enables the interactive read-out. */
+  date?: string;
+}
+
 interface SparklineProps {
-  data: Array<{ value: number }>;
+  data: SparklinePoint[];
   color?: string;
   height?: number;
   width?: number | string;
@@ -13,6 +19,20 @@ interface SparklineProps {
    * generic callers that genuinely need extent-only geometry.
    */
   zeroBaseline?: boolean;
+  /**
+   * Hover / arrow-key exploration. The chart reports the explored index and
+   * draws a guide + marker; the caller owns what the index means (the stat
+   * card turns it into the headline value and date).
+   */
+  interactive?: boolean;
+  activeIndex?: number | null;
+  onActiveIndexChange?: (index: number | null) => void;
+  /** Accessible name for the explorable chart. */
+  label?: string;
+  /** Floating read-out for the active point (already localized by the caller). */
+  readout?: React.ReactNode;
+  /** Spoken value for the explored point (aria-valuetext). */
+  valueText?: string;
 }
 
 const VIEW_WIDTH = 100;
@@ -26,8 +46,15 @@ export function Sparkline({
   height = 40,
   width = "100%",
   zeroBaseline = false,
+  interactive = false,
+  activeIndex = null,
+  onActiveIndexChange,
+  label,
+  readout,
+  valueText,
 }: SparklineProps) {
   const gradientId = React.useId().replace(/:/g, "");
+  const frameRef = React.useRef<HTMLDivElement | null>(null);
   if (data.length < 2) return null;
 
   const values = data.map((entry) =>
@@ -54,7 +81,7 @@ export function Sparkline({
   const firstPoint = points[0]!;
   const lastPoint = points.at(-1)!;
 
-  return (
+  const chart = (
     <svg
       viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
       preserveAspectRatio="none"
@@ -112,5 +139,92 @@ export function Sparkline({
         data-sparkline-latest="true"
       />
     </svg>
+  );
+
+  if (!interactive) return chart;
+
+  const indexFromPointer = (clientX: number) => {
+    const frame = frameRef.current;
+    if (!frame) return null;
+    const rect = frame.getBoundingClientRect();
+    if (rect.width <= 0) return null;
+    const ratio = (clientX - rect.left) / rect.width;
+    const viewX = ratio * VIEW_WIDTH;
+    const step = usableWidth / Math.max(values.length - 1, 1);
+    const index = Math.round((viewX - PAD_X) / step);
+    return Math.min(values.length - 1, Math.max(0, index));
+  };
+  const active =
+    activeIndex !== null ? (points[activeIndex] ?? null) : null;
+  const leftPct = active ? (active[0] / VIEW_WIDTH) * 100 : 0;
+  const topPct = active ? (active[1] / VIEW_HEIGHT) * 100 : 0;
+
+  return (
+    <div
+      ref={frameRef}
+      role="slider"
+      tabIndex={0}
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={values.length - 1}
+      aria-valuenow={activeIndex ?? values.length - 1}
+      aria-valuetext={valueText ?? (typeof readout === "string" ? readout : undefined)}
+      data-sparkline-interactive="true"
+      className="relative cursor-crosshair touch-none rounded-control outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      style={{ width, height }}
+      onPointerMove={(event) => onActiveIndexChange?.(indexFromPointer(event.clientX))}
+      onPointerDown={(event) => onActiveIndexChange?.(indexFromPointer(event.clientX))}
+      onPointerLeave={() => onActiveIndexChange?.(null)}
+      onBlur={() => onActiveIndexChange?.(null)}
+      onKeyDown={(event) => {
+        const current = activeIndex ?? values.length - 1;
+        // The time axis runs oldest → latest left to right in every locale.
+        if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+          event.preventDefault();
+          onActiveIndexChange?.(Math.max(0, current - 1));
+        } else if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+          event.preventDefault();
+          onActiveIndexChange?.(Math.min(values.length - 1, current + 1));
+        } else if (event.key === "Home") {
+          event.preventDefault();
+          onActiveIndexChange?.(0);
+        } else if (event.key === "End") {
+          event.preventDefault();
+          onActiveIndexChange?.(values.length - 1);
+        } else if (event.key === "Escape") {
+          onActiveIndexChange?.(null);
+        }
+      }}
+    >
+      {chart}
+      {active ? (
+        <>
+          <span
+            aria-hidden="true"
+            data-sparkline-guide="true"
+            className="pointer-events-none absolute inset-y-0 w-px bg-foreground/25"
+            style={{ left: `${leftPct}%` }}
+          />
+          <span
+            aria-hidden="true"
+            data-sparkline-marker="true"
+            className="pointer-events-none absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card"
+            style={{ left: `${leftPct}%`, top: `${topPct}%`, background: color }}
+          />
+          {readout ? (
+            <span
+              data-sparkline-readout="true"
+              className="pointer-events-none absolute bottom-full z-10 mb-1.5 whitespace-nowrap rounded-control border border-border bg-popover px-2 py-1 text-caption font-medium text-popover-foreground shadow-(--elevation-2)"
+              style={{
+                left: `${Math.min(Math.max(leftPct, 12), 88)}%`,
+                transform: "translateX(-50%)",
+              }}
+            >
+              {readout}
+            </span>
+          ) : null}
+        </>
+      ) : null}
+    </div>
   );
 }

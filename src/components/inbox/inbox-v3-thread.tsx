@@ -604,7 +604,7 @@ export function InboxV3Thread({
       >
         <div
           ref={messagesInnerRef}
-          className="mx-auto w-full max-w-[56rem] px-3 py-4 sm:px-6 lg:px-8"
+          className="sf-thread-column py-4"
           role="log"
           aria-live="polite"
           aria-label={copy("messages")}
@@ -780,9 +780,9 @@ export function InboxV3Thread({
       ) : null}
       </div>
 
-      <footer className="border-t border-border/60 bg-background/98 px-3 py-2 sm:px-4">
+      <footer className="border-t border-border/60 bg-background/98 py-2">
         {canCompose ? (
-          <div className="mx-auto max-w-[56rem]">
+          <div className="sf-thread-column">
             {!canSend ? (
               <div className="mb-2 flex flex-wrap items-center gap-2 rounded-surface border border-warning/15 bg-warning-subtle px-3 py-2 text-xs text-muted-foreground">
                 <WifiOff
@@ -1255,20 +1255,22 @@ export function InboxV3Thread({
             </div>
           </div>
         ) : (
-          <div className="mx-auto flex max-w-[56rem] items-center gap-2 rounded-surface border border-border/70 bg-muted/20 px-3 py-2.5 text-sm text-muted-foreground">
-            {canReply ? (
-              <WifiOff className="size-4 shrink-0" aria-hidden="true" />
-            ) : (
-              <Info className="size-4 shrink-0" aria-hidden="true" />
-            )}
-            <span>
-              {canReply ? copy("replyLiveOnly") : copy("replyRestricted")}
-            </span>
+          <div className="sf-thread-column">
+            <div className="flex items-center gap-2 rounded-surface border border-border/70 bg-muted/20 px-3 py-2.5 text-sm text-muted-foreground">
+              {canReply ? (
+                <WifiOff className="size-4 shrink-0" aria-hidden="true" />
+              ) : (
+                <Info className="size-4 shrink-0" aria-hidden="true" />
+              )}
+              <span>
+                {canReply ? copy("replyLiveOnly") : copy("replyRestricted")}
+              </span>
+            </div>
           </div>
         )}
 
         {sendError ? (
-          <div className="mx-auto mt-2 flex max-w-[56rem] items-center gap-2 text-xs text-destructive">
+          <div className="sf-thread-column mt-2 flex items-center gap-2 text-xs text-destructive">
             <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
             <span>{sendError}</span>
           </div>

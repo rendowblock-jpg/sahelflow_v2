@@ -3,6 +3,8 @@ import type { AiWorkspaceCopyKey } from "@/lib/i18n/ai-workspace";
 export interface AiSessionSummary {
   id: string;
   title: string | null;
+  /** Seller pin (ISO time) — null/absent when the session is not pinned. */
+  pinnedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   messages?: Array<{

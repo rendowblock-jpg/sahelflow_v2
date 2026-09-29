@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,6 +18,7 @@ import {
   Settings,
   Store,
   User,
+  X,
 } from "lucide-react";
 
 import {
@@ -39,7 +40,11 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/hooks/use-i18n";
-import { useNotificationCenter } from "@/hooks/use-notification-center";
+import {
+  dismissNotification,
+  useNotificationCenter,
+  type NotificationCenterItem,
+} from "@/hooks/use-notification-center";
 import type { Locale } from "@/lib/i18n";
 import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { toast } from "@/lib/toast";
@@ -56,6 +61,8 @@ const LOCALE_OPTIONS: Array<{ value: Locale; label: string; flag: string }> = [
 ];
 
 interface TopbarProps {
+  /** The in-place universal search field (owned by the shell). */
+  search: ReactNode;
   onCommandPaletteOpen: () => void;
   /** Open the offline keyboard-shortcuts cheatsheet (the in-app Help surface). */
   onCheatsheetOpen: () => void;
@@ -78,6 +85,7 @@ type MemberIdentity = {
  * actions stay out of the application frame.
  */
 export function Topbar({
+  search,
   onCommandPaletteOpen,
   onCheatsheetOpen,
   serverLocale,
@@ -98,6 +106,33 @@ export function Topbar({
 
   const { notifications, unreadCount, applyLifecycle, readAll } =
     useNotificationCenter();
+
+  const dismissOne = async (notification: NotificationCenterItem) => {
+    const { ok, undo } = await dismissNotification(notification);
+    if (!ok) {
+      toast.error(t("notifications.dismissFailed"));
+      return;
+    }
+    toast.success(t("notifications.dismissed"), {
+      action: { label: t("common.undo"), onClick: () => void undo() },
+    });
+  };
+
+  const dismissVisible = async () => {
+    const visible = notifications.slice(0, 6);
+    const results = await Promise.all(visible.map((item) => dismissNotification(item)));
+    const done = results.filter((result) => result.ok);
+    if (done.length === 0) {
+      toast.error(t("notifications.dismissFailed"));
+      return;
+    }
+    toast.success(t("notifications.clearedAll", { count: done.length }), {
+      action: {
+        label: t("common.undo"),
+        onClick: () => void Promise.all(done.map((result) => result.undo())),
+      },
+    });
+  };
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [createShopOpen, setCreateShopOpen] = useState(false);
   const [memberIdentity, setMemberIdentity] = useState<MemberIdentity | null>(
@@ -310,26 +345,7 @@ export function Topbar({
         />
       </div>
 
-      <button
-        type="button"
-        data-command-trigger="true"
-        onClick={onCommandPaletteOpen}
-        className="mx-auto hidden h-8 min-h-(--sf-touch-target) min-w-0 max-w-xl flex-1 items-center gap-2 rounded-surface border border-border/80 bg-muted/30 px-2.5 text-sm text-muted-foreground outline-none transition-[background-color,border-color,box-shadow,color] hover:border-border hover:bg-muted/55 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:flex"
-        aria-label={t("topbar.searchPlaceholder")}
-        aria-keyshortcuts="Control+K"
-      >
-        <Search className="size-3.5 shrink-0" aria-hidden="true" />
-        <span className="min-w-0 flex-1 truncate text-start">
-          {t("topbar.searchPlaceholder")}
-        </span>
-        <kbd
-          dir="ltr"
-          className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-control border border-border/80 bg-background/80 px-1.5 font-mono text-caption font-medium text-muted-foreground shadow-sm [unicode-bidi:isolate]"
-        >
-          <span aria-hidden="true">Ctrl</span>
-          <span aria-hidden="true">K</span>
-        </kbd>
-      </button>
+      {search}
 
       <div className="ms-auto flex shrink-0 items-center gap-0.5">
         <Button
@@ -467,12 +483,8 @@ export function Topbar({
                     </>
                   );
 
-                  return notification.link ? (
-                    <DropdownMenuItem
-                      key={notification.id}
-                      asChild
-                      className="cursor-pointer p-0"
-                    >
+                  const row = notification.link ? (
+                    <DropdownMenuItem asChild className="cursor-pointer p-0">
                       <Link
                         href={notification.link}
                         onClick={() => {
@@ -480,35 +492,69 @@ export function Topbar({
                             void applyLifecycle(notification.id, "read");
                           }
                         }}
-                        className="flex w-full items-start gap-3 p-3"
+                        className="flex w-full items-start gap-3 p-3 pe-10"
                       >
                         {content}
                       </Link>
                     </DropdownMenuItem>
                   ) : (
-                    <DropdownMenuItem
-                      key={notification.id}
-                      className="flex items-start gap-3 p-3"
-                    >
+                    <DropdownMenuItem className="flex items-start gap-3 p-3 pe-10">
                       {content}
                     </DropdownMenuItem>
+                  );
+
+                  return (
+                    <div
+                      key={notification.id}
+                      className="group/notification relative"
+                      data-notification-row={notification.id}
+                    >
+                      {row}
+                      {/* Remove from the center (archive for stored alerts,
+                          state-bound hide for computed ones) with Undo. */}
+                      <DropdownMenuItem
+                        aria-label={t("notifications.dismiss")}
+                        title={t("notifications.dismiss")}
+                        data-notification-dismiss={notification.id}
+                        onSelect={(event) => {
+                          event.preventDefault();
+                          void dismissOne(notification);
+                        }}
+                        className="absolute end-2 top-2.5 flex size-7 min-h-0 items-center justify-center rounded-control p-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus:opacity-100 group-hover/notification:opacity-100 data-[highlighted]:opacity-100"
+                      >
+                        <X className="size-3.5" aria-hidden="true" />
+                      </DropdownMenuItem>
+                    </div>
                   );
                 })
               )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <div className="flex items-center justify-between gap-2 p-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs"
-                disabled={unreadCount === 0}
-                onClick={() => void readAll()}
-              >
-                <CheckCheck className="me-1.5 size-3.5" aria-hidden="true" />
-                {t("notifications.readAll")}
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs"
+                  disabled={unreadCount === 0}
+                  onClick={() => void readAll()}
+                >
+                  <CheckCheck className="me-1.5 size-3.5" aria-hidden="true" />
+                  {t("notifications.readAll")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs"
+                  disabled={notifications.length === 0}
+                  onClick={() => void dismissVisible()}
+                >
+                  <X className="me-1.5 size-3.5" aria-hidden="true" />
+                  {t("notifications.clearAll")}
+                </Button>
+              </div>
               <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
                 <Link href="/notifications">
                   {t("topbar.viewAllNotifications")}

@@ -15,7 +15,7 @@ describe("AI Class-AAA start-state authority", () => {
     // conversation log — including the empty-state branch that chooses the
     // start surface — out of the canvas. These assertions follow the code
     // they protect rather than being relaxed.
-    const startSurface = read("src/components/ai/ai-start-surface.tsx");
+    const startSurface = read("src/components/ai/ai-start-surface.tsx") + read("src/components/ai/ai-canvas-notices.tsx") + read("src/components/ai/ai-abilities-panel.tsx");
     const log = read("src/components/ai/ai-message-log.tsx");
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
     const copy = read("src/lib/i18n/ai-workspace.ts");
@@ -43,7 +43,7 @@ describe("AI Class-AAA start-state authority", () => {
   it("explains AI capabilities on the unconfigured start surface (AI-25)", () => {
     // STR-01 moved the start surface into its own module; these
     // assertions follow the code they protect.
-    const startSurface = read("src/components/ai/ai-start-surface.tsx");
+    const startSurface = read("src/components/ai/ai-start-surface.tsx") + read("src/components/ai/ai-canvas-notices.tsx") + read("src/components/ai/ai-abilities-panel.tsx");
 
     expect(startSurface).toContain(
       'getAiDecisionCopy(workspace.locale, "setupRequiredTitle")',

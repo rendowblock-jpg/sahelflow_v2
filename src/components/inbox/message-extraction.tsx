@@ -1,12 +1,17 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowRight, CheckCircle2, Loader2, RefreshCw, ShieldAlert, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExtractionReview, type ReviewedOrder } from "@/components/inbox/extraction/extraction-review";
+import {
+  EXTRACTION_DELIVERY_COST,
+  ExtractionReview,
+  type ReviewedOrder,
+} from "@/components/inbox/extraction/extraction-review";
+import { ExtractionSourcePane } from "@/components/inbox/extraction/extraction-source-pane";
 import type { CatalogOption } from "@/components/inbox/extraction/extraction-item-row";
 import { useI18n } from "@/hooks/use-i18n";
 import type { ExtractionResult } from "@/lib/ai/extraction";
@@ -21,6 +26,12 @@ interface MessageExtractionProps {
   messageId: string;
   messageBody: string;
   knownPhone?: string;
+  /**
+   * `workspace` is the two-pane review (customer message beside the order)
+   * used by the review dialog; it reads the message as soon as it opens.
+   */
+  layout?: "inline" | "workspace";
+  contactName?: string;
 }
 
 interface ExtractionResponse {
@@ -49,6 +60,8 @@ export function MessageExtraction({
   messageId,
   messageBody,
   knownPhone,
+  layout = "inline",
+  contactName,
 }: MessageExtractionProps) {
   const { locale } = useI18n();
   const router = useRouter();
@@ -101,7 +114,7 @@ export function MessageExtraction({
             name: reviewed.customer.name || copy("customerTitle"),
           },
           items: reviewed.items,
-          deliveryCost: 600,
+          deliveryCost: EXTRACTION_DELIVERY_COST,
           notes: reviewed.notes,
         }),
       });
@@ -116,6 +129,122 @@ export function MessageExtraction({
     } finally {
       setCreating(false);
     }
+  }
+
+  // The review workspace opens because the seller asked for this order to be
+  // read, so it reads immediately instead of asking a second time.
+  const autoReadRef = useRef(false);
+  useEffect(() => {
+    if (layout !== "workspace" || autoReadRef.current) return;
+    autoReadRef.current = true;
+    void handleRead();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per mount
+  }, [layout]);
+
+  if (layout === "workspace") {
+    const read = response?.result ?? null;
+    const draft = read ? read.order ?? read.partial ?? null : null;
+    return (
+      <div
+        data-extraction-workspace="true"
+        data-extraction-method={read?.method}
+        className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:grid-rows-1"
+      >
+        <ExtractionSourcePane
+          body={messageBody}
+          contactName={contactName}
+          order={draft}
+          copy={copy}
+        >
+          {read ? (
+            <div className="space-y-2 border-t border-border pt-4">
+              <p className="flex items-center gap-2 text-body-sm font-medium">
+                {read.order ? (
+                  <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden="true" />
+                ) : (
+                  <AlertCircle className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                )}
+                {read.order ? copy("foundTitle") : copy("notFoundTitle")}
+              </p>
+              {read.order ? (
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">
+                    {read.method === "gemini" ? copy("methodGemini") : copy("methodOffline")}
+                  </Badge>
+                  <Badge variant="outline" className="tabular-nums">
+                    {copy("confidence", { value: Math.round(read.confidence * 100) })}
+                  </Badge>
+                </div>
+              ) : (
+                <p className="text-caption text-muted-foreground">{copy("notFoundHint")}</p>
+              )}
+              {read.aiFailure ? (
+                <p className="text-caption text-muted-foreground" role="status">{copy("aiFailed")}</p>
+              ) : !response?.ai.consent && !read.isComplete ? (
+                <p className="text-caption text-muted-foreground">
+                  {copy("aiOff")}{" "}
+                  <button
+                    type="button"
+                    onClick={() => router.push("/settings?group=intelligence")}
+                    className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    {copy("aiSettings")}
+                    <ArrowRight className="size-3 icon-rtl-flip" aria-hidden="true" />
+                  </button>
+                </p>
+              ) : null}
+              <Button type="button" variant="ghost" size="sm" onClick={handleRead} disabled={reading} className="-ms-2">
+                <RefreshCw className={reading ? "size-4 animate-spin" : "size-4"} aria-hidden="true" />
+                {copy("readAgain")}
+              </Button>
+            </div>
+          ) : null}
+          {error ? (
+            <p className="flex items-start gap-1.5 text-body-sm text-destructive" role="alert">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              {error}
+            </p>
+          ) : null}
+        </ExtractionSourcePane>
+
+        <div className="flex min-h-0 flex-col">
+          {response ? (
+            <ExtractionReview
+              key={revision}
+              variant="workspace"
+              order={response.result.order ?? response.result.partial ?? null}
+              knownPhone={knownPhone}
+              catalog={response.catalog}
+              locale={locale}
+              copy={copy}
+              fieldId={fieldId}
+              creating={creating}
+              onCreate={handleCreate}
+            />
+          ) : (
+            <div className="space-y-5 p-5" role="status" aria-label={copy("reading")}>
+              <p className="flex items-center gap-2 text-body-sm text-muted-foreground">
+                {reading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+                {reading ? copy("reading") : copy("failed")}
+              </p>
+              {reading
+                ? [0, 1, 2].map((row) => (
+                    <div key={row} className="space-y-2">
+                      <span className="block h-3 w-24 animate-pulse rounded-full bg-muted" />
+                      <span className="block h-9 animate-pulse rounded-control bg-muted/60" />
+                    </div>
+                  ))
+                : (
+                  <Button type="button" variant="outline" size="sm" onClick={handleRead}>
+                    <RefreshCw className="size-4" aria-hidden="true" />
+                    {copy("readAgain")}
+                  </Button>
+                )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   if (!response) {

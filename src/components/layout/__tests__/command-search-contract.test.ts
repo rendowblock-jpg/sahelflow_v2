@@ -250,10 +250,16 @@ describe("universal command search contract", () => {
 
   it("uses the Windows-native Ctrl+K shortcut language", () => {
     const topbar = source("../topbar.tsx");
+    // Search is in place now: the top-bar field is the command center itself.
+    const palette = source("../../command-palette.tsx");
 
     expect(topbar).toContain('aria-keyshortcuts="Control+K"');
-    expect(topbar).toContain(">Ctrl</span>");
+    expect(palette).toContain('aria-keyshortcuts="Control+K"');
+    expect(palette).toContain('"Ctrl K"');
     expect(topbar).not.toContain("<Command");
+    // No modal: results drop down under the field, the page stays visible.
+    expect(palette).not.toContain("<Dialog");
+    expect(palette).toContain('data-universal-search-panel="true"');
   });
 
   it("exposes create actions and recents alongside search and navigation (R4-f)", () => {

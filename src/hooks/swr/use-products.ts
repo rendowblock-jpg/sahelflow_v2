@@ -21,13 +21,19 @@ export function useProducts(
     shallow: true,
   });
   const [q] = useQueryState("q", { defaultValue: "", shallow: true });
+  // `?stock=low` — the Low stock card's filter (server-rendered, so not shallow).
+  const [stock] = useQueryState("stock", { defaultValue: "" });
+  const lowStock = stock === "low";
   const currentPage = Number.parseInt(page, 10) || 1;
   const pageSize = opts.pageSize ?? 25;
   const trimmedQ = q.trim();
   const qParam = trimmedQ ? `&q=${encodeURIComponent(trimmedQ)}` : "";
-  const key = `/api/products?page=${currentPage}&pageSize=${pageSize}${qParam}`;
+  const stockParam = lowStock ? "&stock=low" : "";
+  const key = `/api/products?page=${currentPage}&pageSize=${pageSize}${qParam}${stockParam}`;
   const applied = opts.fallback?.appliedFilters;
-  const filtersMatch = (applied?.q ?? null) === (trimmedQ || null);
+  const filtersMatch =
+    (applied?.q ?? null) === (trimmedQ || null) &&
+    (applied?.lowStock ?? false) === lowStock;
   const fallbackData =
     opts.fallback &&
     filtersMatch &&

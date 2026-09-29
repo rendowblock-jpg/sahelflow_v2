@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Archive, Check, RotateCcw } from "lucide-react";
+import { Archive, Check, RotateCcw, X } from "lucide-react";
 
 import {
   getNotificationPresentation,
@@ -23,6 +23,8 @@ interface NotificationFeedListProps {
   groups: NotificationDayGroup[];
   busy: boolean;
   onAction: (id: string, action: NotificationItemAction) => void;
+  /** Remove a computed (non-stored) alert from the center, with Undo. */
+  onDismiss?: (item: NotificationCenterItem) => void;
 }
 
 /**
@@ -37,6 +39,7 @@ export function NotificationFeedList({
   groups,
   busy,
   onAction,
+  onDismiss,
 }: NotificationFeedListProps) {
   const { t } = useI18n();
 
@@ -62,6 +65,7 @@ export function NotificationFeedList({
                 key={item.id}
                 item={item}
                 onAction={onAction}
+                onDismiss={onDismiss}
               />
             ))}
           </ul>
@@ -74,9 +78,11 @@ export function NotificationFeedList({
 function NotificationFeedRow({
   item,
   onAction,
+  onDismiss,
 }: {
   item: NotificationCenterItem;
   onAction: (id: string, action: NotificationItemAction) => void;
+  onDismiss?: (item: NotificationCenterItem) => void;
 }) {
   const { t } = useI18n();
   const presentation = getNotificationPresentation(item);
@@ -161,6 +167,14 @@ function NotificationFeedRow({
               onClick={() => onAction(item.id, "archive")}
             />
           )}
+        </div>
+      ) : onDismiss ? (
+        <div className="absolute end-3 top-2.5 z-10 flex gap-0.5 rounded-control bg-card/95 p-0.5 opacity-0 shadow-sm ring-1 ring-border transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 motion-reduce:transition-none">
+          <RowAction
+            label={t("notifications.dismiss")}
+            icon={X}
+            onClick={() => onDismiss(item)}
+          />
         </div>
       ) : null}
     </li>

@@ -10,6 +10,16 @@ export type OrderExtractionLocale = "en" | "fr" | "ar";
 type Params = Record<string, string | number>;
 
 const EN = {
+  sourceTitle: "Customer message",
+  sourceHint: "Highlighted parts were read into the order.",
+  legendProduct: "Product",
+  legendCustomer: "Customer",
+  legendPlace: "Place",
+  reviewTitle: "Review the order",
+  reviewHint: "Check every field — nothing becomes an order until you create it.",
+  deliveryFee: "Delivery",
+  total: "Total",
+  ready: "Ready to create",
   read: "Read this order",
   readAgain: "Read again",
   reading: "Reading the order…",
@@ -55,6 +65,16 @@ const EN = {
 export type OrderExtractionCopyKey = keyof typeof EN;
 
 const FR = {
+  sourceTitle: "Message du client",
+  sourceHint: "Les passages surlignés ont été lus dans la commande.",
+  legendProduct: "Produit",
+  legendCustomer: "Client",
+  legendPlace: "Lieu",
+  reviewTitle: "Vérifier la commande",
+  reviewHint: "Vérifiez chaque champ — rien ne devient une commande tant que vous ne la créez pas.",
+  deliveryFee: "Livraison",
+  total: "Total",
+  ready: "Prête à créer",
   read: "Lire cette commande",
   readAgain: "Relire",
   reading: "Lecture de la commande…",
@@ -98,6 +118,16 @@ const FR = {
 } as const satisfies Record<OrderExtractionCopyKey, string>;
 
 const AR = {
+  sourceTitle: "رسالة الزبون",
+  sourceHint: "الأجزاء المظلّلة هي التي قُرئت في الطلب.",
+  legendProduct: "المنتج",
+  legendCustomer: "الزبون",
+  legendPlace: "المكان",
+  reviewTitle: "راجع الطلب",
+  reviewHint: "تحقّق من كل حقل — لا يصبح أي شيء طلبًا حتى تنشئه بنفسك.",
+  deliveryFee: "التوصيل",
+  total: "المجموع",
+  ready: "جاهز للإنشاء",
   read: "اقرأ هذا الطلب",
   readAgain: "أعد القراءة",
   reading: "جارٍ قراءة الطلب…",

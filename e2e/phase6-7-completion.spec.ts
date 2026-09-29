@@ -484,7 +484,8 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
     await expect(page.locator("#main-content")).toBeFocused();
 
     await page.keyboard.press("Control+K");
-    const dialog = page.getByRole("dialog");
+    // Search opens in place under the top-bar field (no modal dialog).
+    const dialog = page.locator('[data-universal-search-panel="true"]');
     await expect(dialog).toBeVisible();
     const motion = await dialog.evaluate((element) => {
       const style = getComputedStyle(element);

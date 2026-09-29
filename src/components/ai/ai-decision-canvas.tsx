@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowLeft, Bot, ShieldCheck } from "lucide-react";
+import { ArrowDown, ArrowLeft, ShieldCheck } from "lucide-react";
 
+import { AiCanvasSessionMenu } from "@/components/ai/ai-canvas-session-menu";
 import { AiComposerDeck } from "@/components/ai/ai-composer-deck";
 import { AiMessageLog } from "@/components/ai/ai-message-log";
 import {
   ErrorNotice,
   InboxStrip,
   SetupNotice,
-} from "@/components/ai/ai-start-surface";
+} from "@/components/ai/ai-canvas-notices";
 import { AiReviewEvidence } from "@/components/ai/ai-review-evidence";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -148,10 +149,14 @@ export function AiDecisionCanvas({
   // composer ref it focuses.
   useAiCanvasShortcuts({ workspace, composerRef });
 
+  const lastSignalModel =
+    [...messages].reverse().find((message) => message.signal?.model)?.signal
+      ?.model ?? null;
+
   return (
     <main data-ai-decision-canvas="true" className="relative flex h-full min-h-0 flex-col bg-background">
-      <header className="flex min-h-14 items-center justify-between gap-3 border-b border-border/70 bg-card/70 px-4 backdrop-blur-sm md:px-6">
-        <div className="flex min-w-0 items-center gap-3">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border/70 px-3 md:px-5">
+        <div className="flex min-w-0 items-center gap-2.5">
           {mobile ? (
             <Button
               type="button"
@@ -163,102 +168,103 @@ export function AiDecisionCanvas({
               <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
             </Button>
           ) : null}
-          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary">
-            <Bot className="size-4" aria-hidden="true" />
-            {workspace.setup ? (
-              // Configuration truth on the avatar (AI-26): consent+key state
-              // from the setup probe — never a fabricated provider heartbeat.
-              //
-              // UI-04: this dot and the labelled config chip in the same header
-              // are bound to the same `setupReady`, so above `sm` the screen
-              // stated one fact twice — once in words, once as an unlabelled
-              // dot forty pixels away. The chip is `hidden sm:inline-flex`, so
-              // the dot is scoped to the width where the chip is absent: one
-              // indicator at every viewport, and never zero.
-              <>
-                <span
-                  data-ai-status-dot={setupReady ? "ready" : "attention"}
-                  aria-hidden="true"
-                  className="absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full border-2 border-background sm:hidden"
-                />
-                {/* Below `sm` the dot is the only provider signal, and a bare
-                    colour is not a signal to assistive tech. */}
-                <span className="sr-only sm:hidden">
-                  {setupReady
-                    ? getAiDecisionCopy(workspace.locale, "providerReady")
-                    : getAiDecisionCopy(workspace.locale, "setupAttention")}
-                </span>
-              </>
-            ) : null}
-          </span>
+          {workspace.setup ? (
+            // Configuration truth (AI-26): consent + key state from the setup
+            // probe — never a fabricated provider heartbeat. Below `sm` the dot
+            // is the only indicator; above it the labelled chip takes over, so
+            // one fact is stated once at every width.
+            <>
+              <span
+                data-ai-status-dot={setupReady ? "ready" : "attention"}
+                aria-hidden="true"
+                className="size-2 shrink-0 rounded-full sm:hidden"
+              />
+              <span className="sr-only sm:hidden">
+                {setupReady
+                  ? getAiDecisionCopy(workspace.locale, "providerReady")
+                  : getAiDecisionCopy(workspace.locale, "setupAttention")}
+              </span>
+            </>
+          ) : null}
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
-              <h2 className="truncate text-sm font-semibold tracking-tight">
+              <h2 dir="auto" className="truncate text-title-3">
                 {activeSession?.title ||
                   (activeSession
                     ? workspace.copy("newSessionTitle")
-                    : getAiDecisionCopy(workspace.locale, "workHistory"))}
+                    : getAiDecisionCopy(workspace.locale, "newChat"))}
               </h2>
               {/* Ledger AI-01: seeded demo sessions are labelled honestly so
                   canned conversations are never mistaken for model output. */}
               {activeSession?.id.startsWith("demo-") ? (
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 text-caption font-medium"
-                >
+                <Badge variant="secondary" className="shrink-0 text-caption font-medium">
                   {getAiDecisionCopy(workspace.locale, "demoBadge")}
                 </Badge>
               ) : null}
             </div>
-            <p className="mt-0.5 truncate text-caption text-muted-foreground">
-              {activeSession
-                ? getAiDecisionCopy(workspace.locale, "messagesMeta", {
+            <p className="truncate text-caption text-muted-foreground">
+              {activeSession && messages.length > 0 ? (
+                <>
+                  {getAiDecisionCopy(workspace.locale, "messagesMeta", {
                     count: messages.length,
-                  })
-                : getAiDecisionCopy(workspace.locale, "startJobsTitle")}
+                  })}
+                  {lastSignalModel ? (
+                    <>
+                      {" · "}
+                      <span dir="ltr">{lastSignalModel}</span>
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                getAiDecisionCopy(workspace.locale, "agentRole")
+              )}
             </p>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          {/* The chip states the ready fact only. When setup needs attention
-              the SetupNotice banner directly below says so in full, with the
-              way to fix it; a second "needs attention" chip repeated it. */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {/* The chip states the ready fact only; the setup notice below the
+              header owns the "needs attention" explanation and its fix. */}
           {workspace.setup && setupReady ? (
-            <Badge
-              variant="outline"
+            <span
               data-ai-config-chip="true"
-              className="hidden items-center gap-1.5 text-caption font-medium text-muted-foreground sm:inline-flex"
+              className="hidden items-center gap-1.5 rounded-full px-2 py-1 text-caption font-medium text-muted-foreground sm:inline-flex"
             >
-              <span
-                data-ai-status-dot="ready"
-                aria-hidden="true"
-                className="size-1.5 rounded-full"
-              />
+              <span data-ai-status-dot="ready" aria-hidden="true" className="size-1.5 rounded-full" />
               {getAiDecisionCopy(workspace.locale, "providerReady")}
-            </Badge>
+            </span>
           ) : null}
           {!wideReview ? (
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="ghost"
               data-ai-open-review="true"
               onClick={() => setReviewOpen(true)}
+              className="text-muted-foreground hover:text-foreground"
             >
               <ShieldCheck className="size-4" aria-hidden="true" />
-              {getAiDecisionCopy(workspace.locale, "reviewEvidence")}
+              <span className="hidden md:inline">
+                {getAiDecisionCopy(workspace.locale, "reviewEvidence")}
+              </span>
               {reviewBadgeCount > 0 ? (
-                <Badge variant="secondary" className="ms-1 rounded-full px-2 text-caption tabular-nums">
+                <span className="rounded-full bg-warning-soft px-1.5 text-caption font-semibold tabular-nums text-warning">
                   {reviewBadgeCount}
-                </Badge>
+                </span>
               ) : null}
             </Button>
+          ) : null}
+          {activeSession ? (
+            <AiCanvasSessionMenu workspace={workspace} session={activeSession} />
           ) : null}
         </div>
       </header>
 
-      <SetupNotice workspace={workspace} />
+      {/* On an empty conversation the start surface carries the full setup
+          checklist, so the one-line notice would only repeat it. */}
+      {messages.length > 0 || workspace.loadingConversation || !setup ? (
+        <SetupNotice workspace={workspace} />
+      ) : null}
       <ErrorNotice workspace={workspace} />
       {/* Ledger F-06: pending agent work across ALL sessions, surfaced where
           the seller works — the approval loop is the page's main output. */}
@@ -268,7 +274,7 @@ export function AiDecisionCanvas({
         onOpenReview={() => setReviewOpen(true)}
       />
 
-      <div ref={scrollRootRef} className="min-h-0 flex-1">
+      <div ref={scrollRootRef} className="relative min-h-0 flex-1">
         <AiMessageLog
           workspace={workspace}
           startingAnalysis={startingAnalysis}
@@ -280,24 +286,23 @@ export function AiDecisionCanvas({
             composerRef.current?.focus();
           }}
         />
+        {awayFromTail && messages.length > 0 ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                followTailRef.current = true;
+                setAwayFromTail(false);
+                tailRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+              }}
+              aria-label={workspace.copy("scrollToLatest")}
+              className="pointer-events-auto inline-flex size-9 items-center justify-center rounded-full border border-border bg-popover text-foreground shadow-(--elevation-2) outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ArrowDown className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+        ) : null}
       </div>
-
-      {awayFromTail && messages.length > 0 ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-28 z-10 flex justify-center">
-          <button
-            type="button"
-            onClick={() => {
-              followTailRef.current = true;
-              setAwayFromTail(false);
-              tailRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-            }}
-            aria-label={workspace.copy("scrollToLatest")}
-            className="pointer-events-auto inline-flex size-9 items-center justify-center rounded-full border border-border/60 bg-card/90 text-foreground shadow-md outline-none backdrop-blur-sm transition-colors hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ArrowDown className="size-4" aria-hidden="true" />
-          </button>
-        </div>
-      ) : null}
 
       <AiComposerDeck
         workspace={workspace}

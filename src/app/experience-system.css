@@ -49,8 +49,13 @@
   overflow: hidden;
 }
 
-[data-sahelflow-shell="desktop"] #main-content:has(> .app-workspace-content) {
-  overflow: hidden;
+/* The (dashboard) route template wraps the page in one transition box, so the
+ * workspace root sits one level below #main-content. Both shapes lock the
+ * shell scroller: a workspace owns its own pane scrolling and must never let a
+ * descendant scrollIntoView() move the whole frame. */
+[data-sahelflow-shell="desktop"] #main-content:has(> .app-workspace-content),
+[data-sahelflow-shell="desktop"] #main-content:has(> * > .app-workspace-content) {
+  overflow: clip;
 }
 
 [data-sahelflow-shell="desktop"] .app-workspace-inset {
@@ -439,4 +444,24 @@ html[dir="rtl"][data-locale-transition="pending"] body::before {
   flex-direction: column;
   justify-content: flex-end;
   min-height: 100%;
+}
+
+/*
+ * The order review workspace (AI order extraction): wide enough for the
+ * customer's message beside the order being reviewed, full-screen on phones.
+ */
+[data-order-review="true"].order-review-dialog {
+  width: min(64rem, calc(100vw - 2rem));
+  max-width: none;
+  height: min(44rem, calc(100dvh - 2rem));
+  max-height: none;
+}
+
+@media (max-width: 767px) {
+  [data-order-review="true"].order-review-dialog {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    border: 0;
+  }
 }

@@ -88,6 +88,13 @@ describe("isDerivableAiSessionTitle", () => {
     expect(isDerivableAiSessionTitle(` ${LEGACY_AI_SESSION_TITLE} `)).toBe(true);
   });
 
+  it("treats the old development seed's numbered placeholders as derivable", () => {
+    expect(isDerivableAiSessionTitle("Session 1")).toBe(true);
+    expect(isDerivableAiSessionTitle(" Session 12 ")).toBe(true);
+    // Only the exact placeholder shape — a seller's own words stay theirs.
+    expect(isDerivableAiSessionTitle("Session livreur Oran")).toBe(false);
+  });
+
   it("never overwrites a title the seller chose", () => {
     expect(isDerivableAiSessionTitle("Litige livreur Oran")).toBe(false);
   });

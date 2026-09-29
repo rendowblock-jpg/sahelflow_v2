@@ -87,6 +87,8 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
           label={t("customers.totalSpent")}
           value={summary.totalSpent === null ? "—" : formatDZD(summary.totalSpent, locale)}
           icon={<TrendingUp />}
+          href="/analytics"
+          hrefLabel={t("nav.analytics")}
           subtitle={
             avgSpent === null
               ? undefined
@@ -103,6 +105,8 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
           label={t("customers.atRisk")}
           value={summary.atRisk ?? "—"}
           icon={<AlertTriangle />}
+          href="/risk"
+          hrefLabel={t("nav.risk")}
           trend={atRiskPct !== null && atRiskPct > 20 ? -1 : 0}
           trendLabel={
             atRiskPct === null
