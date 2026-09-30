@@ -8,6 +8,11 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-09-30 — source frontier #464; documentation reconciled
+
+- PR #464 merged to protected `main` `bc840ca7…`: F-29…F-33 (chart hover, Agents, Settings, heading layer, Arabic placeholders), on #463 (F-16…F-28). Source only. Not a release and not an installed observation.
+- Active frontier docs (AGENTS, README, documentation entry, current state, roadmap, workflow, working memory) re-anchored so they no longer instruct an Internal.36/Internal.37 install or treat post-package source as if it were inside Internal.38.
+
 ### 2026-09-16 — signed Internal.38 publication (FD-062)
 
 - The Founder's 2026-09-16 directive ("let's complete all the work and make the next signed release") adopts **FD-062** (`documentation/product/DECISIONS.md`): one signed successor, app `1.0.0-internal.38` / MSI `1.0.0.38`, packaging the protected-main frontier #424–#450 since Internal.37 (release source `cd1114de…`).

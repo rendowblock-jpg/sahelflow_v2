@@ -42,31 +42,28 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-At the 2026-09-12 reconciliation (protected `main` resolved live at `9f1a58a…` after PR #426; re-resolve live before acting):
+Reconciled 2026-09-30 after PR #464. Re-resolve protected `main` before acting. `documentation/operations/WORKING_MEMORY.md` is the installed-truth authority. Dated "Next:" lines inside older bullets are not instructions.
 
-- protected `main`: `9f1a58a…` / PR #426 (STR-01 slice 1 — the MessageBubble cluster extracted from `inbox-v3-thread.tsx` into `inbox-thread-message.tsx`, 21 pins re-anchored) on top of #425 (canonical money/phone formatters + the built-but-unreachable `change-pin` and shop-lifecycle Settings surfaces wired with contract tests), #424 (Internal.37 Founder visual repair — F-14 inbox queue/header density and RTL names, canvas-first Agents presentation), #423 (Internal.37 / FD-060 release authority, `cd1114de…`), #422/#421/#420/#419/#418/#415/#414 (the FD-060 packaged frontier and STR-01 canvas slices), #413 (Internal.36 publication record), #412 (Internal.36 release authority) and the retained #399–#411 line;
-- latest signed/published checkpoint: **Internal.37** / **FD-060**, mode `founder-offline-only`; release PR #423 / protected source `cd1114defc59852a8f4a2258147dbe57b7fa4050`; tag `sahelflow-v1.0.0-internal.37-cd1114defc59852a8f4a2258147dbe57b7fa4050`; app `1.0.0-internal.37` / MSI `1.0.0.37`; the updater `latest.json` (published 2026-09-11T12:56:24Z) serves signed Internal.37 manifests; the Founder installed Internal.37 in place on 2026-09-11 and rejected it visually before any campaign-row conversion (F-14 inbox, F-15 Agents — repaired at source by merged PR #424, which converts no row);
-- Internal.37 packages the line through PR #421 plus the #413–#422 frontier per FD-060; the merged #424–#427 delta rides protected `main` ahead of the next signed package and has received no installed or Founder observation;
-- **installed truth:** the Founder-installed checkpoint is Internal.37 / FD-060 (2026-09-11, in place, AppData preserved) — visually rejected before campaign conversion, so **no ledger row converts from it**. The FD-058 campaign rows remain owed on an installed candidate that also carries the merged repairs; observing the #424–#427 source line requires a packaging decision that belongs to the Founder. Treat `documentation/operations/WORKING_MEMORY.md` as the authority for what is installed;
-- Internal.35 release source `f45e6e1c9ece903623dcbe71a22b6806b0562cde` (PR #398) and the retained Internal.30 facts (`2eb8a337…`, dispatcher `33292273959`, run `33292278832`, MSI `sha256:bef15026…`) remain retained evidence — see `documentation/operations/WORKING_MEMORY.md` and `documentation/system/CURRENT_STATE.md`;
+- **Protected `main`:** `bc840ca7ec46061abaf998b6516e8e01e6a1abbb` / PR #464 (F-29…F-33: chart-hover colour fix, structural Agents rebuild, Settings as 15 pages, heading defaults in `@layer base`, Arabic placeholders follow the document direction), on #463 (F-16…F-28).
+- **Latest signed/published checkpoint:** **Internal.38** / **FD-062**, mode `founder-offline-only`; release PR #451 / protected source `9bf899274074f6f20935d224b96e8b1d14fc9690`; tag `sahelflow-v1.0.0-internal.38-9bf899274074f6f20935d224b96e8b1d14fc9690`; app `1.0.0-internal.38` / MSI `1.0.0.38`; published 2026-09-16. It packages through #450 only. It does **not** contain #453–#464.
+- **Installed truth:** Internal.37 / FD-060 (in place 2026-09-11, AppData preserved) was visually rejected before campaign conversion (F-14/F-15). **No ledger row converts** from Internal.35, Internal.36 or Internal.37. Internal.38 is updater-served and not Founder-installed. Publication is not installation.
+- **Source after the signed package, all uninstalled:** #453 docs reconcile, #458 premium wave, #459/#454 FD-063 MCP engine, #460 MCP-12/13, #461 MCP-11a, #462 FD-064 extraction plus MCP-11b packaging, #463 F-16…F-28, #464 F-29…F-33. MCP-14 stays withdrawn. None of this is live-provider-certified.
 - issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint; #226 remains closed/completed with its budgets retained as regression criteria;
 - open issues are #164 (Phase 0–9 execution epic), #230 (customer-online readiness), #306 (real-phone WhatsApp certification), #316 and #317 (installed/real-phone evidence only; their source is complete and packaged);
+- open PRs #456 (artifact hygiene) and #457 (2026-09-25 working-memory note) are stale against this main. Do not merge #457: it would restore a pre-#458 handoff. Internal.36 is retained publication evidence, not the signed or installed frontier.
 
-Internal.36 is the signed/published authority. Do not describe Internal.36, the #414 transformation delta or any source work as installed, live-provider-certified or Founder-accepted until an in-place update and campaign produce that evidence. Preserve the Founder's installation state until that campaign.
+Do not describe Internal.38, #463, #464 or any source work as installed, live-provider-certified or Founder-accepted until an in-place update and campaign produce that evidence. Preserve the Founder's installation state until that campaign.
 
 ## Exact next outcome
 
-Execute the **FD-058 installed Founder campaign once, on the Internal.37 candidate**, per FD-060's sequencing (the Founder skips the uninstalled Internal.35 and Internal.36), while preserving every FD-045 evidence rule. The chat-transited GitHub PAT must be rotated now that the #424–#427 merge window has closed.
+The UI the Founder just reviewed (F-16…F-33) is on protected `main` and is **not** inside published Internal.38. Installing Internal.38 cannot observe those rows.
 
-1. Re-resolve protected `main`, open PRs and issues #306/#316/#317/#230.
-2. Confirm Internal.37 / FD-060 remains the latest signed/published checkpoint (release PR #423) and confirm the current installed checkpoint from `documentation/operations/WORKING_MEMORY.md` before making any installed claim.
-3. The Founder applies the in-place update through the normal updater without logging out, resetting AppData or clearing protected auth.
-4. On the installed candidate, re-verify the F-09..F-13 rows, the F-05 CRLF residual (chat must stream), the retained FD-050 rows (B1–B5, D1, delivery-receipt enum truth, C1 sleep/wake auto-receive), the D3 waves, the deep-audit register's audit-affected rows, the retained #306 real-phone rows (automatic no-refresh inbound, reopen persistence, EN/AR observation, governed status, reviewed extraction, logout last) plus applicable #316/#317 native rows and representative media/parity exercises.
-5. Reconcile the capability ledgers and current-state documentation with the installed evidence; convert `implemented-unproven` rows only where the campaign actually proved them.
-6. Resume FRC-3 (Required capability/journey assurance ledger) after that installed Founder observation, in the Founder-directed order A→D→C→B; FRC-4/FRC-5 keep their external blockers.
-7. Continue the transformation program from `documentation/operations/TRANSFORMATION_HANDOFF.md` §4 in parallel at source level only — it carries no release authority and converts no installed row.
-8. Publicly promise only exact live-certified provider/actions. Unverified providers stay hidden, disabled or conditional.
-9. Keep #306, #230, customer-online, paid deployment, Beta and Stable separate until their own evidence and authority close them.
+1. Re-resolve protected `main`, open PRs and issues #164/#230/#306/#316/#317.
+2. The next signed candidate is a Founder packaging decision. A candidate that can observe the current UI must include `bc840ca7…` (#464). Internal.38 stays the updater-served package until that decision. Do not cut a release from this documentation change.
+3. On the candidate that is actually installed, run the FD-058 campaign once with state preserved (no logout, no AppData reset, no protected-auth clearing). Convert a row only when that candidate contains it and the observation proves it. #306 logout stays LAST. Then resume FRC-3 in order A→D→C→B. FRC-4/FRC-5 keep their external blockers.
+4. Transformation work stays source-only, from `documentation/operations/TRANSFORMATION_HANDOFF.md` §4 (STR-01 composer seam, then the list seam). It converts no installed row.
+5. Publicly promise only exact live-certified provider/actions. Unverified providers stay hidden, disabled or conditional.
+6. Keep #306, #230, customer-online, paid deployment, Beta and Stable separate until their own evidence and authority close them.
 
 ## First Revenue Certification rules
 

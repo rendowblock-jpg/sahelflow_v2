@@ -54,7 +54,7 @@ Gemini-only. The replacement target is the **agent** surface, not extraction.
 | MCP-12 | Durable `McpAgentGrant` model: per-agent scope narrowing, instant revocation, connected-agent list | **DONE (source)** | additive migration `2026092800000000_fd063_mcp_agent_grants`; `src/lib/mcp/grants.ts` (hash-only secret storage, fail-closed ingress, narrowing in listing and execution, 20 active grants cap); `/api/mcp/grants`, `/api/mcp/grants/[id]/revoke`, `/api/mcp/invocations`; `src/lib/mcp/__tests__/agent-grants.test.ts` |
 | MCP-13 | `/agents` Connected agents control surface: connected agents with create/revoke, tool catalog with permission + annotation badges, invocation log, approval routing | **DONE (source)** | pinned rail entry + canvas surface (`src/components/ai/connected/**`, `/agents?view=connected`); grants shown by hint only, secret revealed once; proposed calls open the agent's transcript session, where the existing approval authority lives; trilingual copy `src/lib/i18n/connected-agents.ts`; `connected-agents-contract.test.ts` |
 | MCP-14 | Retire the Gemini chat agent loop and its routes/components/tests | **WITHDRAWN (FD-064)** | the Founder keeps the in-app Gemini agent and chat selectable beside connected agents; Gemini's primary role becomes order extraction |
-| MCP-15 | Installed observation on a signed candidate | **BLOCKED** | no candidate; Internal.38 campaign comes first |
+| MCP-15 | Installed observation on a signed candidate | **BLOCKED** | Internal.38 does not contain the MCP source (#459–#462). Observation waits on a later signed candidate |
 
 ## What slice 1 changes and does not change
 
@@ -63,10 +63,9 @@ Gemini-only. The replacement target is the **agent** surface, not extraction.
 **Changes nothing existing.** No file under `src/lib/ai/**`, `src/app/api/ai/**`,
 `src/components/ai/**` or `prisma/**` is modified, so the in-app Gemini chat,
 the proposal cards and every pinned AI contract test keep passing unchanged.
-That is deliberate: the removal half of the full replace (MCP-14) deletes 13
-routes, the agent loop, the canvas/composer/message-log components and roughly
-30 pinned contract tests, including the STR-01 decomposition merged in #426,
-#427 and #450. It gets its own branch, its own review and its own CI run.
+FD-064 withdrew MCP-14. Do not delete the in-app Gemini chat, its routes,
+or the STR-01 canvas slices. The paragraph above describes slice 1 as landed;
+the deletion plan is not work.
 
 ## Invariants this surface must keep
 

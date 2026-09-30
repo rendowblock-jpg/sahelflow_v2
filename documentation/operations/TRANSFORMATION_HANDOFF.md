@@ -4,8 +4,13 @@ Companion to `TRANSFORMATION_REGISTER.md` (the findings) and
 `documentation/product/INTERFACE_SYSTEM.md` (the design authority). This file
 answers one question only: **what does the next session do first?**
 
-Branch: docs-only reconcile · PR **#428**
-Last verified: 2026-09-12 at `eb0309a`
+Branch pointer below is historical (docs-only reconcile · PR **#428**,
+last verified 2026-09-12 at `eb0309a`).
+
+> **2026-09-30.** Do not check out that branch. STR-01 slices #426, #427 and
+> #450 are already on protected `main`. The Founder UI line through #464
+> (`bc840ca7…`) is a separate track and converts no transformation row.
+> Resume at §4. §0's "START HERE" describes the 2026-09-12 checkout.
 
 ---
 
