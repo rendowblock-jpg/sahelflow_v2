@@ -403,12 +403,22 @@ html[dir="rtl"][data-locale-transition="pending"] body::before {
  * system values instead of arbitrary per-call-site geometry.
  */
 [data-settings-modal="true"].settings-modal {
-  width: min(76rem, calc(100vw - 3rem));
+  width: min(66rem, calc(100vw - 4rem));
   max-width: none;
-  height: min(54rem, calc(100dvh - 3rem));
+  height: min(46rem, calc(100dvh - 4rem));
   max-height: none;
   display: flex;
   flex-direction: column;
+}
+
+[data-settings-modal="true"].settings-modal:focus {
+  outline: none;
+}
+
+/* The app recedes behind the Settings window. */
+[data-slot="dialog-overlay"]:has(+ [data-settings-modal="true"]) {
+  background: oklch(0.12 0.01 250 / 0.62);
+  backdrop-filter: blur(6px);
 }
 
 @media (max-width: 767px) {
