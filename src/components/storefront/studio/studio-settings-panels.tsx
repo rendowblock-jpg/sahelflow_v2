@@ -64,7 +64,7 @@ export function SeoPanel({ draft, commit }: { draft: StorefrontStudioDraft; comm
       <div className="rounded-surface border bg-background p-3" aria-label={t("storefront.studio.seoPreview")}>
         <p className="mb-2 text-caption font-medium text-muted-foreground">{t("storefront.studio.seoPreview")}</p>
         <p dir="ltr" className="truncate text-caption text-muted-foreground">
-          sahelflow.app › storefront › {draft.slug}
+          {["sahelflow.app", "storefront", draft.slug].join(" › ")}
         </p>
         <p dir="auto" className="mt-0.5 line-clamp-1 text-body font-medium text-info">{title}</p>
         <p dir="auto" className="mt-0.5 line-clamp-2 text-caption leading-5 text-muted-foreground">{description}</p>
