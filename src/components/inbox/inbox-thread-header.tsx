@@ -120,6 +120,7 @@ function ThreadLastActive({
 export function InboxThreadHeader({
   activeChat,
   selectedCandidate,
+  threadMessages,
   isMobile,
   isWhatsAppConversation,
   canUpdateConversation,
@@ -135,6 +136,8 @@ export function InboxThreadHeader({
 }: {
   activeChat: NonNullable<ReturnType<typeof useInboxWorkspace>["activeChat"]>;
   selectedCandidate: InboxMessage | null;
+  /** The open thread, so the order review can read several messages. */
+  threadMessages: InboxMessage[];
   isMobile: boolean;
   isWhatsAppConversation: boolean;
   canUpdateConversation: boolean;
@@ -298,6 +301,7 @@ export function InboxThreadHeader({
                 messageId={selectedCandidate.id}
                 messageBody={selectedCandidate.body}
                 knownPhone={activeChat.phone}
+                sourceMessages={threadMessages}
               />
             ) : null}
           </DialogContent>

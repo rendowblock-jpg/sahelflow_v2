@@ -94,6 +94,7 @@ async function cleanTestDatabase(db: PrismaClient): Promise<void> {
     db.integration.deleteMany(),
     db.automationLog.deleteMany(),
     db.automation.deleteMany(),
+    db.aiChatAttachment.deleteMany(),
     db.aiChatMessage.deleteMany(),
     db.aiChatSession.deleteMany(),
     db.extractionMetric.deleteMany(),

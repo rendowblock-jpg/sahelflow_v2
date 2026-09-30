@@ -118,9 +118,8 @@ export function Topbar({
     });
   };
 
-  const dismissVisible = async () => {
-    const visible = notifications.slice(0, 6);
-    const results = await Promise.all(visible.map((item) => dismissNotification(item)));
+  const dismissAll = async () => {
+    const results = await Promise.all(notifications.map((item) => dismissNotification(item)));
     const done = results.filter((result) => result.ok);
     if (done.length === 0) {
       toast.error(t("notifications.dismissFailed"));
@@ -434,7 +433,12 @@ export function Topbar({
               ) : null}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
+            {/* Every notification is reachable: the list scrolls between the
+                fixed header and actions instead of stopping at six. */}
+            <DropdownMenuGroup
+              data-notification-list="true"
+              className="max-h-[min(28rem,calc(100dvh-12rem))] overflow-y-auto overscroll-contain"
+            >
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
                   <Bell
@@ -446,7 +450,7 @@ export function Topbar({
                   </p>
                 </div>
               ) : (
-                notifications.slice(0, 6).map((notification) => {
+                notifications.map((notification) => {
                   const presentation =
                     getNotificationPresentation(notification);
                   const Icon = presentation.icon;
@@ -549,7 +553,7 @@ export function Topbar({
                   size="sm"
                   className="h-8 text-xs"
                   disabled={notifications.length === 0}
-                  onClick={() => void dismissVisible()}
+                  onClick={() => void dismissAll()}
                 >
                   <X className="me-1.5 size-3.5" aria-hidden="true" />
                   {t("notifications.clearAll")}

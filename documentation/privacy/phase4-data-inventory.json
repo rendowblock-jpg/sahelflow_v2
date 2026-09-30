@@ -51,7 +51,7 @@
       "id": "personal-data",
       "models": [
         "AbandonedCart",
-        "AiActionProposal", "AiChatMessage", "AiChatSession", "AuditLog", "AutomationNotification",
+        "AiActionProposal", "AiChatAttachment", "AiChatMessage", "AiChatSession", "AuditLog", "AutomationNotification",
         "CollaborationAssignment", "CollaborationComment", "CollaborationHandover", "CollaborationMention",
         "CommerceSyncItem", "Conversation", "Customer", "Delivery", "Message", "Order", "OrderItem",
         "PhoneReputation", "ProductReview", "ProviderIngressEvent", "Return", "ReturnNote", "StorefrontConfig"

@@ -60,6 +60,9 @@ interface GeminiResponse {
 export interface AgentMessage {
   role: "user" | "assistant";
   content: string;
+  /** Images the seller attached to this earlier turn (history carries the
+   *  count only; the bytes are sent with the turn they belong to). */
+  imageCount?: number;
   toolCalls?: Array<{
     name: string;
     args: Record<string, unknown>;
@@ -162,11 +165,41 @@ function renderHistory(history: AgentMessage[]): Content[] {
       }
       return { role: "model", parts };
     }
+    const imageNote =
+      message.role === "user" && message.imageCount
+        ? `[The seller attached ${message.imageCount} image(s) to this message.]`
+        : "";
     return {
       role: message.role === "assistant" ? "model" : "user",
-      parts: [{ text: message.content }],
+      parts: [
+        { text: [message.content, imageNote].filter(Boolean).join("\n") || imageNote },
+      ],
     };
   });
+}
+
+/** The current seller turn: text plus any attached images as inline data. */
+export interface AgentUserImage {
+  mediaType: string;
+  bytes: Buffer;
+}
+
+function userTurn(userMessage: string, images: AgentUserImage[] = []): Content {
+  const text =
+    userMessage.trim() ||
+    (images.length > 0 ? "The seller sent the attached image(s) without text." : "");
+  return {
+    role: "user",
+    parts: [
+      { text },
+      ...images.map((image) => ({
+        inlineData: {
+          mimeType: image.mediaType,
+          data: image.bytes.toString("base64"),
+        },
+      })),
+    ],
+  };
 }
 
 async function execute(
@@ -556,6 +589,7 @@ export async function* runAgentStream(
   toolContext: ToolContext = { db, shop: shopContext },
   locale?: AiChatLocale,
   shopContextNote?: string,
+  userImages: AgentUserImage[] = [],
 ): AsyncGenerator<AgentStreamEvent> {
   const apiKey = await getSecret(
     { prisma: db, shop: shopContext },
@@ -570,7 +604,7 @@ export async function* runAgentStream(
   const allToolCalls: AgentResult["toolCalls"] = [];
   const contents: Content[] = [
     ...renderHistory(conversationHistory),
-    { role: "user", parts: [{ text: userMessage }] },
+    userTurn(userMessage, userImages),
   ];
   // Ledger AI-26: the model id that actually served the turn — requestGemini
   // resolves fallbacks internally, so the reported model is request truth.

@@ -85,8 +85,9 @@ describe("R4-e AI canvas upgrade — regenerate", () => {
     const hook = read("src/hooks/use-ai-workspace.ts");
     expect(hook).toContain("const lastUserPrompt = useMemo(");
     expect(hook).toContain("const canRegenerate =");
-    expect(hook).toContain("if (!canRegenerate || !lastUserPrompt) return false;");
-    expect(hook).toContain("return send(lastUserPrompt);");
+    expect(hook).toContain("if (!canRegenerate || lastUserPrompt === null) return false;");
+    // Image turns re-send their images through the same stream path.
+    expect(hook).toContain("return send(lastUserPrompt, images);");
     // No bespoke regenerate endpoint — the established SSE send path is reused.
     expect(hook).toContain("messages/stream");
     expect(hook).not.toContain("/regenerate");

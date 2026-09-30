@@ -42,7 +42,7 @@ describe("AI Class-AAA final review regressions", () => {
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
 
     expect(workspace).toContain("pendingPromptRef.current = null;");
-    expect(workspace).toContain("void workspace.send(pending.prompt).finally(() => {");
+    expect(workspace).toContain("void workspace.send(pending.prompt, pending.images).finally(() => {");
     expect(workspace).not.toContain("window.setTimeout");
   });
 

@@ -3,6 +3,14 @@ import { z } from "zod";
 
 import { runWithAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
 import { AI_CHAT_MESSAGE_MAX_LENGTH } from "@/lib/ai/chat-limits";
+import type { AiChatAttachmentMeta } from "@/lib/ai/chat/attachment-limits";
+import {
+  AiChatAttachmentError,
+  aiChatAttachmentsInputSchema,
+  decodeAiChatImages,
+  storeAiChatAttachments,
+  type AiChatImage,
+} from "@/lib/ai/chat/attachments";
 import {
   deriveAiSessionTitle,
   isDerivableAiSessionTitle,
@@ -32,10 +40,18 @@ import { getBool, SETTING_KEYS } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
-const sendSchema = z.object({
-  message: z.string().trim().min(1).max(AI_CHAT_MESSAGE_MAX_LENGTH),
-  locale: z.enum(["en", "fr", "ar"]).optional().default("fr"),
-});
+const sendSchema = z
+  .object({
+    message: z.string().trim().max(AI_CHAT_MESSAGE_MAX_LENGTH),
+    locale: z.enum(["en", "fr", "ar"]).optional().default("fr"),
+    // Agents image input: up to AI_CHAT_ATTACHMENT_MAX_COUNT images per turn,
+    // re-authenticated from their bytes before anything is stored.
+    attachments: aiChatAttachmentsInputSchema,
+  })
+  .refine((input) => input.message.length > 0 || input.attachments.length > 0, {
+    message: "A message needs text or at least one image",
+    path: ["message"],
+  });
 
 type WorkspaceStreamEvent =
   | AgentStreamEvent
@@ -44,7 +60,7 @@ type WorkspaceStreamEvent =
       code: "AI_RESPONSE_NOT_PERSISTED";
     }
   | { type: "error"; message: string; code: string }
-  | { type: "user_persisted"; id: string };
+  | { type: "user_persisted"; id: string; attachments: AiChatAttachmentMeta[] };
 
 /**
  * Audit S1-3: the stream has already returned 200, so withErrorHandler never
@@ -68,6 +84,7 @@ function historyFrom(
     role: string;
     content: string;
     toolCalls: string | null;
+    attachments?: unknown[];
   }>,
 ): AgentMessage[] {
   return messages.map((message) => {
@@ -86,6 +103,9 @@ function historyFrom(
       role: message.role === "assistant" ? "assistant" : "user",
       content: message.content,
       ...(toolCalls && toolCalls.length > 0 ? { toolCalls } : {}),
+      ...(message.attachments?.length
+        ? { imageCount: message.attachments.length }
+        : {}),
     };
   });
 }
@@ -161,6 +181,16 @@ export const POST = withErrorHandler(
       return jsonError(400, "AI_INVALID_REQUEST");
     }
 
+    let images: AiChatImage[];
+    try {
+      images = decodeAiChatImages(input.attachments);
+    } catch (error) {
+      if (error instanceof AiChatAttachmentError) {
+        return jsonError(400, "AI_ATTACHMENT_INVALID", { code: "AI_ATTACHMENT_INVALID" });
+      }
+      throw error;
+    }
+
     const session = await db.aiChatSession.findUnique({ where: { id } });
     if (!session) {
       return jsonError(404, "AI_SESSION_NOT_FOUND");
@@ -170,6 +200,11 @@ export const POST = withErrorHandler(
     const userMessage = await context.prisma.aiChatMessage.create({
       data: { sessionId: id, role: "user", content: input.message },
     });
+    const storedAttachments = await storeAiChatAttachments(
+      context,
+      userMessage.id,
+      images,
+    );
     const history = historyFrom(recentMessages);
     await touchSessionAfterUserMessage(
       session,
@@ -210,7 +245,11 @@ export const POST = withErrorHandler(
         // address truncation at a real persisted row instead of the client's
         // optimistic local id.
         try {
-          send({ type: "user_persisted", id: userMessage.id });
+          send({
+            type: "user_persisted",
+            id: userMessage.id,
+            attachments: storedAttachments,
+          });
         } catch {
           // The client may already have aborted before the first event.
         }
@@ -244,6 +283,7 @@ export const POST = withErrorHandler(
                 },
                 input.locale,
                 shopContextNote,
+                images,
               )) {
                 send(event);
                 if (event.type === "text_delta") {

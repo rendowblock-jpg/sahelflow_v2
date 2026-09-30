@@ -7,7 +7,7 @@ import {
   LockKeyhole,
   MessageSquare,
   Package,
-  PiggyBank,
+  ShieldCheck,
   ShoppingCart,
   TrendingDown,
   Truck,
@@ -520,7 +520,7 @@ export default async function DashboardPage() {
 
               <div className="flex items-center justify-between gap-3 border-t border-border/70 bg-muted/20 px-3 py-2.5">
                 <span className="inline-flex min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <PiggyBank className="size-3.5 shrink-0" aria-hidden="true" />
+                  <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
                   <span className="truncate">{t("risk.kpi.potentialSavings")}</span>
                 </span>
                 <span className="shrink-0 text-sm font-semibold tabular-nums">
