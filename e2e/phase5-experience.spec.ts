@@ -380,6 +380,10 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
       )
       .toBe("compact");
 
+    // Close the Settings window to reach the top bar behind it.
+    await page.keyboard.press("Escape");
+    await expect(page.locator('[data-settings-modal="true"]')).toHaveCount(0);
+
     // The locale menu is Radix-portaled under <body>, outside the dashboard shell.
     // It must inherit the same root density variable rather than falling back to
     // the historical compact control height.
@@ -401,6 +405,9 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
       timeout: 2_000,
     });
     await page.emulateMedia({ reducedMotion: "reduce" });
+    // Reopen the Settings window from the sidebar, back on Appearance.
+    await page.locator('a[href="/settings"]').first().click();
+    await page.locator('[data-settings-group="appearance"]').click();
     await page.locator('[data-theme-mode="dark"]').click();
     await expect(html).toHaveClass(/\bdark\b/);
     await expect(html).not.toHaveAttribute("data-appearance-transition", "active");
@@ -442,6 +449,10 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
           ),
         )
         .toBe("3rem");
+
+      // Close the Settings window to reach the top bar behind it.
+      await page.keyboard.press("Escape");
+      await expect(page.locator('[data-settings-modal="true"]')).toHaveCount(0);
 
       const localeTrigger = page.getByRole("button", { name: "Français" });
       const shopTrigger = page.locator('button[aria-live="polite"]').first();

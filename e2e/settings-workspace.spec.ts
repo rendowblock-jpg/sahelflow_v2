@@ -315,12 +315,22 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     const outsideFocus = page.locator(
       '[data-settings-test-outside-focus="true"]',
     );
+    // Settings is a modal window: focus cannot leave it for the page
+    // behind, and a breakpoint change keeps it (and the draft) inside.
     await dataButton.focus();
     await outsideFocus.focus();
+    await expect(outsideFocus).not.toBeFocused();
     await page.setViewportSize({ width: 640, height: 768 });
     await expect(workspace).toHaveAttribute("data-settings-layout", "mobile");
     await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
-    await expect(outsideFocus).toBeFocused();
+    await expect(outsideFocus).not.toBeFocused();
+    expect(
+      await page.evaluate(() =>
+        Boolean(
+          document.activeElement?.closest('[data-settings-modal="true"]'),
+        ),
+      ),
+    ).toBe(true);
     await expect(resetDraft).toHaveValue("RES");
 
     await expectNoHorizontalOverflow(page);
