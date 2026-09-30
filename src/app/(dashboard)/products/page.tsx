@@ -5,7 +5,6 @@ import { ProductsDataTable } from "@/components/products/products-data-table";
 import { CreateParamDialog } from "@/components/shared/create-param-dialog";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
-import { StateSurface } from "@/components/shared/state-surface";
 import { StatCard } from "@/components/shared/stat-card";
 import { productService } from "@/lib/data";
 import { db, shopContext } from "@/lib/db";
@@ -20,13 +19,14 @@ import { formatDZD } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 type ProductsPageProps = {
-  searchParams: Promise<{ page?: string; q?: string; create?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; create?: string; stock?: string }>;
 };
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const { t, locale } = await getI18n();
   const actorContext = await requireTrustedAction("products.read");
-  const { page: pageRaw, q: qRaw } = await searchParams;
+  const { page: pageRaw, q: qRaw, stock: stockRaw } = await searchParams;
+  const lowStockOnly = stockRaw === "low";
   const requestedPage = Number.parseInt(pageRaw ?? "1", 10);
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0
     ? requestedPage
@@ -34,17 +34,21 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const q = qRaw?.trim() || undefined;
 
   const [fallback, summary, categories] = await Promise.all([
-    getProductsWorkbenchPage(actorContext, { page, pageSize: 25, q }),
+    getProductsWorkbenchPage(actorContext, {
+      page,
+      pageSize: 25,
+      q,
+      lowStock: lowStockOnly,
+    }),
     getProductWorkbenchSummary(actorContext),
     productService.listCategories({ prisma: db, shop: shopContext }),
   ]);
   const lastPage = Math.max(1, Math.ceil(fallback.total / fallback.pageSize));
   if (page > lastPage) {
-    redirect(
-      q
-        ? `/products?page=${lastPage}&q=${encodeURIComponent(q)}`
-        : `/products?page=${lastPage}`,
-    );
+    const params = new URLSearchParams({ page: String(lastPage) });
+    if (q) params.set("q", q);
+    if (lowStockOnly) params.set("stock", "low");
+    redirect(`/products?${params.toString()}`);
   }
 
   const access = fallback.fieldAccess;
@@ -52,20 +56,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   return (
     <div className="app-content page-sections">
-      {summary.lowStock > 0 ? (
-        <StateSurface
-          icon={AlertTriangle}
-          title={
-            summary.lowStock > 1
-              ? t("products.lowStockAlertMany", { count: summary.lowStock })
-              : t("products.lowStockAlertOne", { count: summary.lowStock })
-          }
-          description={t("products.lowStockAlertHint")}
-          tone="warning"
-          size="inline"
-        />
-      ) : null}
-
       <PageHeader
         title={t("products.title")}
         description={`${t("products.totalStock")}: ${summary.total} · ${t("products.inventoryValue")}: ${formatDZD(summary.inventoryValue, locale)}`}
@@ -89,6 +79,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           label={t("products.total")}
           value={summary.total}
           icon={<Package />}
+          href="/products"
+          hrefLabel={t("products.total")}
+          selected={!lowStockOnly}
         />
         <StatCard
           label={t("common.active")}
@@ -96,10 +89,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           icon={<Boxes />}
           subtitle={t("products.activeOutOf", { total: summary.total })}
         />
+        {/* The low-stock signal lives here — the card filters the table to
+            exactly those products — instead of a warning box above the page. */}
         <StatCard
           label={t("products.lowStock")}
           value={summary.lowStock}
           icon={<AlertTriangle />}
+          tone={summary.lowStock > 0 ? "warning" : "neutral"}
+          href={lowStockOnly ? "/products" : "/products?stock=low"}
+          hrefLabel={t("products.lowStock")}
+          selected={lowStockOnly}
           trend={summary.lowStock > 0 ? -1 : 0}
           trendLabel={
             summary.lowStock > 0

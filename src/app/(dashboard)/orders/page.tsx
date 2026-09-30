@@ -331,21 +331,32 @@ export default async function OrdersPage({
           label={t("orders.activeOrders")}
           value={activeOrders}
           icon={<ShoppingBag />}
+          href={statusTabHref("all")}
+          hrefLabel={t("orders.activeOrders")}
+          selected={!statusFilter}
         />
         <StatCard
           label={t("orders.pendingLabel")}
           value={pendingCount}
           icon={<Clock />}
+          href={statusTabHref("pending")}
+          hrefLabel={t("orders.pendingLabel")}
+          selected={statusFilter === "pending"}
         />
         <StatCard
           label={t("orders.deliveredToday")}
           value={deliveredTodayCount}
           icon={<CheckCircle2 />}
+          href={statusTabHref("delivered")}
+          hrefLabel={t("orders.deliveredToday")}
+          selected={statusFilter === "delivered"}
         />
         <StatCard
           label={t("orders.todayRevenue")}
           value={todayRevenue === null ? "—" : formatDZD(todayRevenue, locale)}
           icon={<TrendingUp />}
+          href="/analytics"
+          hrefLabel={t("nav.analytics")}
         />
       </div>
 

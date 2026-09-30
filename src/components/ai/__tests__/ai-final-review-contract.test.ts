@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 describe("AI Class-AAA final review regressions", () => {
   it("does not create a first session before durable history hydration", () => {
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
-    const history = read("src/components/ai/ai-work-history.tsx");
+    const history = read("src/components/ai/ai-work-history.tsx") + read("src/components/ai/ai-session-row.tsx");
 
     expect(workspace).toContain("workspace.loadingSessions ||");
     expect(workspace).toContain("workspace.creatingSession ||");
@@ -20,7 +20,7 @@ describe("AI Class-AAA final review regressions", () => {
 
   it("locks history navigation for the complete session POST and releases it for streaming", () => {
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
-    const history = read("src/components/ai/ai-work-history.tsx");
+    const history = read("src/components/ai/ai-work-history.tsx") + read("src/components/ai/ai-session-row.tsx");
 
     expect(workspace).toContain(
       "const navigationLocked = workspace.creatingSession;",

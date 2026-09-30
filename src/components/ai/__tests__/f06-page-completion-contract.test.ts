@@ -110,7 +110,7 @@ describe("F-06 AI page-completion wave", () => {
     // STR-01 moved the conversation log into its own module; the hydration
     // skeleton moved with it.
     const log = read("src/components/ai/ai-message-log.tsx");
-    const history = read("src/components/ai/ai-work-history.tsx");
+    const history = read("src/components/ai/ai-work-history.tsx") + read("src/components/ai/ai-session-row.tsx");
 
     expect(log).toContain('data-ai-conversation-skeleton="true"');
     expect(history).toContain('data-ai-history-skeleton="true"');
@@ -122,7 +122,7 @@ describe("F-06 AI page-completion wave", () => {
   });
 
   it("announces the armed two-step delete to assistive tech (AI-23 residual)", () => {
-    const history = read("src/components/ai/ai-work-history.tsx");
+    const history = read("src/components/ai/ai-work-history.tsx") + read("src/components/ai/ai-session-row.tsx");
 
     expect(history).toContain('role="status"');
     expect(history).toContain('aria-live="polite"');
@@ -130,7 +130,7 @@ describe("F-06 AI page-completion wave", () => {
   });
 
   it("stamps older sessions with dates a clock would lie about", () => {
-    const history = read("src/components/ai/ai-work-history.tsx");
+    const history = read("src/components/ai/ai-work-history.tsx") + read("src/components/ai/ai-session-row.tsx");
 
     expect(history).toContain("function sessionStamp(");
     expect(history).toContain("sessionStamp(session.updatedAt, locale)");
@@ -190,7 +190,7 @@ describe("F-06 AI page-completion wave", () => {
   it("presents the agents workforce from live capability truth (F-06)", () => {
     // STR-01 moved the start surface into its own module; these
     // assertions follow the code they protect.
-    const startSurface = read("src/components/ai/ai-start-surface.tsx");
+    const startSurface = read("src/components/ai/ai-start-surface.tsx") + read("src/components/ai/ai-canvas-notices.tsx") + read("src/components/ai/ai-abilities-panel.tsx");
 
     expect(startSurface).toContain('data-ai-workforce="true"');
     expect(startSurface).toContain("agentOrders");
@@ -210,7 +210,7 @@ describe("F-06 AI page-completion wave", () => {
   it("grounds the start surface in the shop's real counts (F-06)", () => {
     // STR-01 moved the start surface into its own module; these
     // assertions follow the code they protect.
-    const startSurface = read("src/components/ai/ai-start-surface.tsx");
+    const startSurface = read("src/components/ai/ai-start-surface.tsx") + read("src/components/ai/ai-canvas-notices.tsx") + read("src/components/ai/ai-abilities-panel.tsx");
 
     expect(startSurface).toContain("starterCount(");
     expect(startSurface).toContain('data-ai-briefing-count={starter.id}');
@@ -228,7 +228,7 @@ describe("F-06 AI page-completion wave", () => {
     // STR-01 moved the start surface and then the conversation log into their
     // own modules; these assertions follow the code they protect. The header
     // badge stays canvas-owned.
-    const startSurface = read("src/components/ai/ai-start-surface.tsx");
+    const startSurface = read("src/components/ai/ai-start-surface.tsx") + read("src/components/ai/ai-canvas-notices.tsx") + read("src/components/ai/ai-abilities-panel.tsx");
     const log = read("src/components/ai/ai-message-log.tsx");
 
     // The strip names pending work from ALL sessions and opens the review.

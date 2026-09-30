@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Check,
   Copy,
+  Info,
   Loader2,
   PencilLine,
   Plug,
@@ -25,7 +26,11 @@ import type {
   AiCopyFn,
   AiMessageView,
 } from "@/components/ai/ai-workspace-types";
-import type { AiDecisionLocale } from "@/lib/i18n/ai-decision-workspace";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  getAiDecisionCopy,
+  type AiDecisionLocale,
+} from "@/lib/i18n/ai-decision-workspace";
 import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 /**
@@ -83,206 +88,210 @@ const MessageBubble = memo(function MessageBubble({
     }
   };
 
+  const actionButton =
+    "inline-flex size-7 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring";
+
+  const actionRow =
+    !message.streaming && message.content ? (
+      // Hover action row: the newest turn, and a turn carrying a vote, keep it
+      // visible; older turns reveal it on hover/focus so the thread stays quiet.
+      <div
+        className={cn(
+          "mt-1 flex items-center gap-0.5 transition-opacity focus-within:opacity-100 group-hover/message:opacity-100",
+          isLatest || message.feedback ? "opacity-100" : "opacity-0",
+          assistant ? "justify-start -ms-1.5" : "justify-end",
+        )}
+      >
+        {!assistant && onEditMessage ? (
+          <button
+            type="button"
+            onClick={() => onEditMessage(message.id)}
+            aria-label={copy("editMessage")}
+            title={copy("editMessage")}
+            className={actionButton}
+          >
+            <PencilLine className="size-3.5" aria-hidden="true" />
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => void copyMessage()}
+          aria-label={copied ? copy("messageCopied") : copy("copyMessage")}
+          title={copy("copyMessage")}
+          className={actionButton}
+        >
+          {copied ? (
+            <Check className="size-3.5 text-success" aria-hidden="true" />
+          ) : (
+            <Copy className="size-3.5" aria-hidden="true" />
+          )}
+        </button>
+        {assistant && onFeedback ? (
+          // Ledger AI-13: truthful thumbs — the opposite thumb overwrites, the
+          // active thumb clears; nothing auto-sends or decorates.
+          <>
+            <button
+              type="button"
+              data-ai-feedback-up="true"
+              aria-pressed={message.feedback === "up"}
+              aria-label={copy("feedbackUp")}
+              title={copy("feedbackUp")}
+              disabled={message.feedback === "up"}
+              onClick={() => onFeedback(message.id, "up")}
+              className={cn(actionButton, message.feedback === "up" && "bg-primary-soft text-primary")}
+            >
+              <ThumbsUp className="size-3.5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              data-ai-feedback-down="true"
+              aria-pressed={message.feedback === "down"}
+              aria-label={copy("feedbackDown")}
+              title={copy("feedbackDown")}
+              disabled={message.feedback === "down"}
+              onClick={() => onFeedback(message.id, "down")}
+              className={cn(
+                actionButton,
+                message.feedback === "down" && "bg-destructive-soft text-destructive",
+              )}
+            >
+              <ThumbsDown className="size-3.5" aria-hidden="true" />
+            </button>
+          </>
+        ) : null}
+        {/* Ledger AI-26: truthful provider signal — present only when the
+            provider actually reported the turn (model + usage). Technical
+            identifiers stay LTR. */}
+        {assistant && message.signal ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label={getAiDecisionCopy(locale, "turnDetails")}
+                title={getAiDecisionCopy(locale, "turnDetails")}
+                className={actionButton}
+              >
+                <Info className="size-3.5" aria-hidden="true" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-60 p-3">
+              <p className="text-caption font-medium text-muted-foreground">
+                {getAiDecisionCopy(locale, "turnDetails")}
+              </p>
+              <dl data-ai-model-signal="true" className="mt-2 space-y-1.5 text-body-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">{getAiDecisionCopy(locale, "modelLabel")}</dt>
+                  <dd dir="ltr" className="truncate font-medium">{message.signal.model}</dd>
+                </div>
+                {message.signal.totalTokens != null ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-muted-foreground">{getAiDecisionCopy(locale, "tokensLabel")}</dt>
+                    <dd dir="ltr" className="font-medium tabular-nums">
+                      {message.signal.totalTokens.toLocaleString(intlLocale(locale))}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </PopoverContent>
+          </Popover>
+        ) : null}
+        {clock ? (
+          <span className="px-1.5 text-caption tabular-nums text-muted-foreground" dir="ltr">
+            {clock}
+          </span>
+        ) : null}
+      </div>
+    ) : null;
+
+  const persistenceWarning = message.persistenceWarning ? (
+    <div className="mt-3 flex items-start gap-2.5 rounded-surface border border-warning/25 bg-warning-subtle px-3.5 py-3">
+      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+      <div>
+        <p className="text-body-sm font-semibold">{copy("responseNotPersisted")}</p>
+        <p className="mt-0.5 text-caption text-muted-foreground">
+          {copy("responseNotPersistedDescription")}
+        </p>
+      </div>
+    </div>
+  ) : null;
+
+  if (!assistant) {
+    return (
+      <article data-ai-message={message.role} className="group/message flex flex-col items-end">
+        <div className="max-w-[85%] rounded-surface bg-muted px-4 py-2.5 text-body text-foreground">
+          {mcpRequest ? (
+            // An external agent's call is shown as what it asked for; the
+            // sealed arguments stay in the proposal the seller reviews.
+            <p data-ai-agent-request="true" className="flex items-center gap-2 text-body-sm font-medium">
+              <Plug className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              {getConnectedAgentsCopy(locale as ConnectedAgentsLocale, "agentRequest", {
+                tool: getAiToolLabel(locale as ConnectedAgentsLocale, mcpRequest.tool),
+              })}
+            </p>
+          ) : message.content ? (
+            // Seller input is echoed verbatim — no markdown interpretation.
+            <p dir="auto" className="whitespace-pre-wrap break-words">
+              {message.content}
+            </p>
+          ) : message.streaming ? (
+            <span className="flex items-center gap-2 text-caption text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              {copy("working")}
+            </span>
+          ) : null}
+        </div>
+        {persistenceWarning}
+        {actionRow}
+      </article>
+    );
+  }
+
   return (
-    <article
-      data-ai-message={message.role}
-      className={cn("group/message flex gap-3", assistant ? "justify-start" : "justify-end")}
-    >
-      {assistant ? (
-        // Agent identity: one quiet mark per turn so the conversation reads as
-        // a dialogue with a named workspace, not loose text on the canvas. Its
-        // 32px column is what the `ms-11` follow-up/proposal offsets align to.
+    <article data-ai-message={message.role} className="group/message">
+      {/* One quiet identity line per assistant turn: the workspace speaks as a
+          named agent, and the body below reads at full column width. */}
+      <div className="mb-1.5 flex items-center gap-2">
         <span
           data-ai-agent-mark="true"
           aria-hidden="true"
-          className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary"
+          className="flex size-6 shrink-0 items-center justify-center rounded-control bg-primary-soft text-primary"
         >
-          <Sparkles className="size-4" />
+          <Sparkles className="size-3.5" />
         </span>
-      ) : null}
-      <div className={cn("min-w-0", assistant ? "w-full max-w-3xl flex-1" : "max-w-[85%] md:max-w-[78%]") }>
-        {assistant ? (
-          // Assistant turns read as decision blocks — a layered card on the
-          // canvas grammar. The seller's turn stays the only filled bubble,
-          // so role ownership is unmistakable at a glance.
-          // The assistant turn is the workspace's own voice, so it carries no
-          // container: no border, no fill, no shadow. The seller's turn is the
-          // only enclosed surface, which is what makes role ownership readable
-          // at a glance without an avatar or a per-turn label.
-          <div className="text-body leading-7 text-foreground">
-            {message.content ? (
-              <div>
-                {/* Assistant output is model-emitted markdown: rendered through
-                    the token-tree renderer — raw HTML can only become text. */}
-                <AiMarkdown content={message.content} />
-                {message.streaming ? (
-                  <span
-                    data-ai-streaming-caret="true"
-                    aria-hidden="true"
-                  />
-                ) : null}
-              </div>
-            ) : message.streaming ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                {copy("working")}
-              </div>
-            ) : message.interrupted ? (
-              <p className="text-xs text-muted-foreground">{copy("stopped")}</p>
-            ) : null}
-          </div>
-        ) : (
-          // The seller's turn is a quiet enclosed bubble: ownership reads from
-          // its shape and alignment, not from a saturated brand fill.
-          <div className="rounded-surface rounded-ee-control bg-muted px-4 py-2.5 text-body leading-7 text-foreground">
-            {mcpRequest ? (
-              // An external agent's call is shown as what it asked for; the
-              // sealed arguments stay in the proposal the seller reviews.
-              <p data-ai-agent-request="true" className="flex items-center gap-2 text-body-sm font-medium">
-                <Plug className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                {getConnectedAgentsCopy(locale as ConnectedAgentsLocale, "agentRequest", {
-                  tool: getAiToolLabel(locale as ConnectedAgentsLocale, mcpRequest.tool),
-                })}
-              </p>
-            ) : message.content ? (
-              // Seller input is echoed verbatim — no markdown interpretation.
-              <p dir="auto" className="whitespace-pre-wrap break-words">
-                {message.content}
-              </p>
-            ) : message.streaming ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                {copy("working")}
-              </div>
-            ) : null}
-          </div>
-        )}
+        <span className="text-body-sm font-semibold">
+          {getAiDecisionCopy(locale, "agentName")}
+        </span>
+      </div>
+      <div className="ps-8">
+        <div className="text-body leading-7 text-foreground">
+          {message.content ? (
+            <div>
+              {/* Assistant output is model-emitted markdown: rendered through
+                  the token-tree renderer — raw HTML can only become text. */}
+              <AiMarkdown content={message.content} />
+              {message.streaming ? (
+                <span data-ai-streaming-caret="true" aria-hidden="true" />
+              ) : null}
+            </div>
+          ) : message.streaming ? (
+            <div className="flex items-center gap-2 text-body-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              {copy("working")}
+            </div>
+          ) : message.interrupted ? (
+            <p className="text-body-sm text-muted-foreground">{copy("stopped")}</p>
+          ) : null}
+        </div>
 
-        {assistant && message.toolCalls.length > 0 ? (
+        {message.toolCalls.length > 0 ? (
           <div className="space-y-2 pt-3">
             {message.toolCalls.map((tool) => (
               <AiToolResultCard key={tool.id} tool={tool} />
             ))}
           </div>
         ) : null}
-
-        {/* Ledger AI-26: truthful provider signal — rendered only when the
-            provider actually reported the turn (model + usage). Line stays
-            LTR: model ids and token counts are technical identifiers. */}
-        {assistant && !message.streaming && message.signal ? (
-          <p
-            data-ai-model-signal="true"
-            className="mt-1.5 text-caption text-muted-foreground"
-            dir="ltr"
-          >
-            {message.signal.totalTokens != null
-              ? copy("modelSignal", {
-                  model: message.signal.model,
-                  tokens: message.signal.totalTokens,
-                })
-              : copy("modelSignalModelOnly", {
-                  model: message.signal.model,
-                })}
-          </p>
-        ) : null}
-
-        {message.persistenceWarning ? (
-          <div className="mt-3 rounded-surface border border-warning/25 bg-warning-soft px-3.5 py-3">
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle
-                className="mt-0.5 size-4 shrink-0 text-warning"
-                aria-hidden="true"
-              />
-              <div>
-                <p className="text-sm font-semibold">
-                  {copy("responseNotPersisted")}
-                </p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {copy("responseNotPersistedDescription")}
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {!message.streaming && message.content ? (
-          // Hover action row (ChatGPT-class): edit/feedback + copy + clock under every
-          // completed message; the newest row, and a row carrying a vote, stay visible.
-          <div
-            className={cn(
-              "mt-1.5 flex items-center gap-1.5 transition-opacity focus-within:opacity-100 group-hover/message:opacity-100",
-              isLatest || message.feedback ? "opacity-100" : "opacity-0",
-              assistant ? "justify-start" : "justify-end",
-            )}
-          >
-            {!assistant && onEditMessage ? (
-              <button
-                type="button"
-                onClick={() => onEditMessage(message.id)}
-                aria-label={copy("editMessage")}
-                title={copy("editMessage")}
-                className="inline-flex size-7 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <PencilLine className="size-3.5" aria-hidden="true" />
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => void copyMessage()}
-              aria-label={copied ? copy("messageCopied") : copy("copyMessage")}
-              title={clock ? `${copy("copyMessage")} · ${clock}` : copy("copyMessage")}
-              className="inline-flex size-7 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {copied ? (
-                <Check className="size-3.5 text-success" aria-hidden="true" />
-              ) : (
-                <Copy className="size-3.5" aria-hidden="true" />
-              )}
-            </button>
-            {assistant && onFeedback ? (
-              // Ledger AI-13: truthful thumbs — the opposite thumb overwrites,
-              // the active thumb clears; nothing auto-sends or decorates. They
-              // share the one action row so a turn carries a single toolbar.
-              <>
-                <button
-                  type="button"
-                  data-ai-feedback-up="true"
-                  aria-pressed={message.feedback === "up"}
-                  aria-label={copy("feedbackUp")}
-                  title={copy("feedbackUp")}
-                  disabled={message.feedback === "up"}
-                  onClick={() => onFeedback(message.id, "up")}
-                  className={cn(
-                    "inline-flex size-7 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                    message.feedback === "up" && "bg-primary-soft text-primary",
-                  )}
-                >
-                  <ThumbsUp className="size-3.5" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  data-ai-feedback-down="true"
-                  aria-pressed={message.feedback === "down"}
-                  aria-label={copy("feedbackDown")}
-                  title={copy("feedbackDown")}
-                  disabled={message.feedback === "down"}
-                  onClick={() => onFeedback(message.id, "down")}
-                  className={cn(
-                    "inline-flex size-7 items-center justify-center rounded-control text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                    message.feedback === "down" && "bg-destructive-soft text-destructive",
-                  )}
-                >
-                  <ThumbsDown className="size-3.5" aria-hidden="true" />
-                </button>
-              </>
-            ) : null}
-            {clock ? (
-              <span className="text-caption tabular-nums text-muted-foreground" dir="ltr">
-                {clock}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
+        {persistenceWarning}
+        {actionRow}
       </div>
     </article>
   );

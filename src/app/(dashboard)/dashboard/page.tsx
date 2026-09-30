@@ -84,14 +84,17 @@ export default async function DashboardPage() {
     style: "percent",
     maximumFractionDigits: 0,
   });
+  // Each point keeps its day so the card charts can be explored day by day.
   const revenueSpark = analytics.revenueSeries.flatMap((point) =>
-    point.revenue === null ? [] : [{ value: point.revenue }],
+    point.revenue === null ? [] : [{ value: point.revenue, date: point.date }],
   );
   const ordersSpark = analytics.revenueSeries.map((point) => ({
     value: point.orders,
+    date: point.date,
   }));
   const customersSpark = analytics.customerGrowth.map((point) => ({
     value: point.newCustomers,
+    date: point.date,
   }));
 
   const hour = new Date().getHours();
@@ -186,6 +189,8 @@ export default async function DashboardPage() {
           trendDirectionOnly={false}
           trendLabel={t("dashboard.vsYesterday")}
           spark={ordersSpark}
+          href="/orders"
+          hrefLabel={t("nav.orders")}
           sparkColor="var(--color-chart-1)"
           sparkContext={t("dashboard.last7Days")}
           sparkZeroBaseline
@@ -211,6 +216,9 @@ export default async function DashboardPage() {
           }
           tooltip={t("dashboard.grossRevenueTooltip")}
           spark={revenueSpark}
+          sparkFormat="currency"
+          href="/analytics"
+          hrefLabel={t("nav.analytics")}
           sparkColor="var(--color-chart-2)"
           sparkContext={t("dashboard.last7Days")}
           sparkZeroBaseline
@@ -224,6 +232,8 @@ export default async function DashboardPage() {
           }
           icon={<Users />}
           spark={customersSpark}
+          href="/customers"
+          hrefLabel={t("nav.customers")}
           sparkColor="var(--color-chart-3)"
           sparkContext={t("dashboard.last7Days")}
           sparkZeroBaseline
@@ -236,6 +246,8 @@ export default async function DashboardPage() {
               : "—"
           }
           icon={<Truck />}
+          href="/deliveries"
+          hrefLabel={t("nav.delivery")}
           subtitle={
             stats.pendingDeliveries === null
               ? undefined

@@ -189,15 +189,21 @@ function SettingsDirectory({
               aria-describedby={`settings-group-hint-${group.id}`}
               onClick={() => onSelect(group.id)}
               className={cn(
-                "flex h-10 w-full items-center gap-3 rounded-control px-2.5 text-start text-body-sm outline-none transition-colors duration-150 motion-reduce:transition-none",
+                "relative flex h-9 w-full items-center gap-2.5 rounded-control px-2.5 text-start text-body-sm outline-none transition-colors duration-150 motion-reduce:transition-none",
                 "focus-visible:ring-2 focus-visible:ring-ring",
                 selected
                   ? "bg-accent font-medium text-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
               )}
             >
+              {selected ? (
+                <span
+                  className="absolute inset-y-2 -start-3 w-0.5 rounded-full bg-primary"
+                  aria-hidden="true"
+                />
+              ) : null}
               <Icon
-                className={cn("size-4 shrink-0", selected && "text-primary")}
+                className={cn("size-4 shrink-0", selected ? "text-foreground" : "text-muted-foreground")}
                 aria-hidden="true"
               />
               <span className="min-w-0 flex-1 truncate">{copy(group.id)}</span>
@@ -570,11 +576,16 @@ export function SettingsWorkspace({
               ? mobilePane === "directory"
                 ? "block px-3 py-4 sm:px-4"
                 : "hidden"
-              : "min-h-0 overflow-y-auto border-e border-border/80 bg-muted/[0.025] px-3 py-4",
+              : "min-h-0 overflow-y-auto border-e border-border bg-sidebar px-3 py-4",
           )}
         >
-          <div className={mobile ? "px-1 pb-4" : inModal ? "px-2.5 pb-3 pt-1" : "px-2 pb-4"}>
-            <p className="text-title-3 text-foreground">
+          <div className={mobile ? "px-1 pb-4" : inModal ? "px-2.5 pb-4 pt-1" : "px-2 pb-4"}>
+            <p
+              className={cn(
+                "text-foreground",
+                inModal && !mobile ? "text-title-2" : "text-title-3",
+              )}
+            >
               {copy("controlCenter")}
             </p>
             {inModal && !mobile ? null : (
@@ -614,10 +625,10 @@ export function SettingsWorkspace({
         >
           <header
             className={cn(
-              "relative flex items-start gap-3 border-b border-border/80 bg-background/95 backdrop-blur",
+              "relative flex items-start gap-3 border-b border-border bg-background",
               mobile
                 ? "sticky top-0 z-10 px-3 py-3"
-                : "shrink-0 px-6 py-5",
+                : cn("shrink-0 px-8 py-5", inModal && "pe-16"),
             )}
           >
             <Button
@@ -636,31 +647,22 @@ export function SettingsWorkspace({
             >
               <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
             </Button>
-            <span
-              className={cn(
-                "mt-0.5 flex shrink-0 items-center justify-center rounded-surface border border-primary/20 bg-primary-soft text-primary",
-                mobile ? "size-9" : "size-10",
-              )}
-            >
-              <EffectiveIcon
-                className={mobile ? "size-4" : "size-4.5"}
-                aria-hidden="true"
-              />
-            </span>
+            {mobile ? (
+              <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-surface bg-muted text-foreground">
+                <EffectiveIcon className="size-4" aria-hidden="true" />
+              </span>
+            ) : null}
             <div className="min-w-0">
               <h2
                 ref={detailHeadingRef}
                 id={`settings-control-center-${effectiveActive}`}
                 data-settings-detail-heading="true"
                 tabIndex={-1}
-                className={cn(
-                  "outline-none",
-                  mobile ? "text-title-2" : "text-title-1",
-                )}
+                className="text-title-2 outline-none"
               >
                 {copy(effectiveActive)}
               </h2>
-              <p className="mt-1 max-w-prose text-body text-muted-foreground">
+              <p className="mt-0.5 max-w-prose text-body-sm text-muted-foreground">
                 {copy(effectiveGroup.descriptionKey)}
               </p>
             </div>
@@ -669,8 +671,8 @@ export function SettingsWorkspace({
           <div className={mobile ? undefined : "min-h-0 flex-1 overflow-y-auto"}>
             <div
               className={cn(
-                "mx-auto w-full",
-                mobile ? "max-w-3xl px-4 pb-10" : "max-w-5xl px-6 pb-12",
+                "w-full",
+                mobile ? "mx-auto max-w-3xl px-4 pb-10" : "max-w-3xl px-8 pb-12",
               )}
             >
               {content}

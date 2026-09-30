@@ -154,7 +154,7 @@ export interface ProductsWorkbenchResponse {
   products: ProductWorkbenchItem[];
   fieldAccess: ProductWorkbenchFieldAccess;
   /** Echo of the free-text search actually applied server-side. */
-  appliedFilters?: { q?: string | null };
+  appliedFilters?: { q?: string | null; lowStock?: boolean };
   total: number;
   hasNextPage: boolean;
   page: number;

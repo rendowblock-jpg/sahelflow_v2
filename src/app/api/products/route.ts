@@ -28,6 +28,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const activeOnly = searchParams.get("activeOnly") === "true";
   const pageParam = searchParams.get("page");
   const q = searchParams.get("q") ?? undefined;
+  const lowStock = searchParams.get("stock") === "low";
   const page = pageParam ? Number.parseInt(pageParam, 10) : 1;
 
   // The paginated contract now also serves the scoped-catalog search (q); the
@@ -38,6 +39,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       pageSize: Number.parseInt(searchParams.get("pageSize") ?? "25", 10),
       activeOnly,
       q,
+      lowStock,
     });
     return NextResponse.json(result);
   }

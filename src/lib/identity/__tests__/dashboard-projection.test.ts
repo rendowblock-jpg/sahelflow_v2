@@ -70,8 +70,8 @@ const SOURCE = {
     },
   ],
   analytics: {
-    revenueSeries: [{ revenue: 12_000, orders: 4 }],
-    customerGrowth: [{ newCustomers: 2 }],
+    revenueSeries: [{ date: "2026-09-28", revenue: 12_000, orders: 4 }],
+    customerGrowth: [{ date: "2026-09-28", newCustomers: 2 }],
     deliveryPerformance: {
       deliveryRate: 80,
       delivered: 8,
@@ -101,7 +101,9 @@ describe("server dashboard projection", () => {
       totalPrice: null,
       itemCount: 1,
     });
+    // The day survives (chart read-out metadata); money is still redacted.
     expect(projected.analytics.revenueSeries[0]).toEqual({
+      date: "2026-09-28",
       orders: 4,
       revenue: null,
     });

@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/hooks/use-i18n";
 import {
+  dismissNotification,
   useNotificationFeed,
   type NotificationCenterItem,
   type NotificationCenterPreference,
@@ -295,6 +296,17 @@ export function NotificationCenterWorkspace() {
               groups={groups}
               busy={loadingMore}
               onAction={(id, action) => void mutateItem(id, action)}
+              onDismiss={(item) => {
+                void dismissNotification(item).then(({ ok, undo }) => {
+                  if (!ok) {
+                    toast.error(t("notifications.dismissFailed"));
+                    return;
+                  }
+                  toast.success(t("notifications.dismissed"), {
+                    action: { label: t("common.undo"), onClick: () => void undo() },
+                  });
+                });
+              }}
             />
           ) : null}
 

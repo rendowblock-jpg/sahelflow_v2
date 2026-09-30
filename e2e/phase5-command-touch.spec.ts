@@ -69,7 +69,7 @@ async function assertTargetFloor(
 async function openSearch(page: Page) {
   await page.keyboard.press("Control+K");
   const dialog = page.locator('[data-universal-search="v2"]');
-  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('[data-universal-search-panel="true"]')).toBeVisible();
   return dialog;
 }
 
@@ -101,12 +101,13 @@ test("coarse-pointer command entry and portaled results preserve 44px targets", 
       "touch evidence context should expose a coarse primary pointer",
     ).toBe(true);
 
-    const commandTrigger = page.locator("header > button").first();
-    await assertTargetFloor(commandTrigger, "desktop command center trigger");
+    // The search is in place: the top-bar field itself is the entry point.
+    const commandTrigger = page.locator('[data-search-field="true"]').first();
+    await assertTargetFloor(commandTrigger, "desktop command center field");
     await commandTrigger.click();
 
     const dialog = page.locator('[data-universal-search="v2"]');
-    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('[data-universal-search-panel="true"]')).toBeVisible();
     await assertTargetFloor(
       dialog.locator('[data-slot="command-item"]').first(),
       "portaled command center result",
@@ -163,7 +164,10 @@ test("Founder Arabic command center is clean, relevant and finds protected recor
     await expect(phoneMatch).toBeVisible({ timeout: 10_000 });
     await expect(phoneMatch).toContainText("0555123456");
 
-    const geometry = await dialog.boundingBox();
+    // Results drop down beneath the field instead of covering the page.
+    const geometry = await dialog
+      .locator('[data-universal-search-panel="true"]')
+      .boundingBox();
     expect(geometry).not.toBeNull();
     expect(geometry!.width).toBeGreaterThanOrEqual(640);
     expect(geometry!.width).toBeLessThanOrEqual(720);

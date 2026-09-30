@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 
@@ -85,6 +85,104 @@ async function lifecycle(id: string, action: "read" | "archive" | "recover") {
   });
 }
 
+/*
+ * Dismissal of computed operational alerts ("Low stock: X", "9 orders need
+ * confirmation"). They are derived from live shop state, not stored rows, so a
+ * dismissal is remembered for the exact state it was shown for: the id plus
+ * its rendered text. When the situation changes (stock drops further, more
+ * orders pile up) the text changes and the alert returns — a real problem is
+ * never hidden forever. Durable notifications use the server archive instead.
+ */
+const DISMISSED_STORAGE_KEY = "sahelflow-dismissed-notifications";
+const DISMISSED_LIMIT = 200;
+type DismissedMap = Record<string, string>;
+const dismissedListeners = new Set<() => void>();
+let dismissedCache: DismissedMap | null = null;
+const EMPTY_DISMISSED: DismissedMap = {};
+
+function readDismissed(): DismissedMap {
+  if (dismissedCache) return dismissedCache;
+  try {
+    const raw = window.localStorage.getItem(DISMISSED_STORAGE_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : null;
+    dismissedCache =
+      parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as DismissedMap)
+        : {};
+  } catch {
+    dismissedCache = {};
+  }
+  return dismissedCache;
+}
+
+function writeDismissed(next: DismissedMap) {
+  const entries = Object.entries(next).slice(-DISMISSED_LIMIT);
+  dismissedCache = Object.fromEntries(entries);
+  try {
+    window.localStorage.setItem(DISMISSED_STORAGE_KEY, JSON.stringify(dismissedCache));
+  } catch {
+    // Storage unavailable: the dismissal still holds for this session.
+  }
+  for (const listener of dismissedListeners) listener();
+}
+
+function subscribeDismissed(listener: () => void) {
+  dismissedListeners.add(listener);
+  return () => dismissedListeners.delete(listener);
+}
+
+function operationalFingerprint(notification: NotificationCenterItem): string {
+  return `${notification.title}\u0000${notification.body}`;
+}
+
+/** The dismissal map, shared by the bell and the notifications workspace. */
+function useDismissedOperational(): DismissedMap {
+  return useSyncExternalStore(
+    subscribeDismissed,
+    readDismissed,
+    () => EMPTY_DISMISSED,
+  );
+}
+
+function isHidden(notification: NotificationCenterItem, dismissed: DismissedMap) {
+  return (
+    !notification.durable &&
+    dismissed[notification.id] === operationalFingerprint(notification)
+  );
+}
+
+/**
+ * Remove one notification from the center. Returns an `undo` that restores it
+ * (server recover for durable rows, forget-the-dismissal for computed alerts).
+ */
+export async function dismissNotification(
+  notification: NotificationCenterItem,
+): Promise<{ ok: boolean; undo: () => Promise<void> }> {
+  if (notification.durable) {
+    const response = await lifecycle(notification.id, "archive");
+    await revalidateNotifications();
+    return {
+      ok: response.ok,
+      undo: async () => {
+        await lifecycle(notification.id, "recover");
+        await revalidateNotifications();
+      },
+    };
+  }
+  writeDismissed({
+    ...readDismissed(),
+    [notification.id]: operationalFingerprint(notification),
+  });
+  return {
+    ok: true,
+    undo: async () => {
+      const next = { ...readDismissed() };
+      delete next[notification.id];
+      writeDismissed(next);
+    },
+  };
+}
+
 /** Revalidate every mounted notification query (live + filter views). */
 function revalidateNotifications(): Promise<void> {
   return mutatePrefix(NOTIFICATIONS_SWR_PREFIX);
@@ -111,8 +209,16 @@ export function useNotificationCenter() {
     },
   );
 
-  const notifications = data?.notifications ?? [];
-  const unreadCount = data?.unreadCount ?? 0;
+  const dismissed = useDismissedOperational();
+  const allNotifications = data?.notifications;
+  const notifications = useMemo(
+    () => (allNotifications ?? []).filter((item) => !isHidden(item, dismissed)),
+    [allNotifications, dismissed],
+  );
+  const hiddenUnread = (allNotifications ?? []).filter(
+    (item) => !item.read && isHidden(item, dismissed),
+  ).length;
+  const unreadCount = Math.max(0, (data?.unreadCount ?? 0) - hiddenUnread);
 
   const nativeInFlightRef = useRef(new Set<string>());
 
@@ -256,11 +362,20 @@ export function useNotificationFeed(state: NotificationFeedState) {
       dedupingInterval: 1_000,
       keepPreviousData: true,
     });
+  const dismissed = useDismissedOperational();
+  const allNotifications = data?.notifications;
+  const notifications = useMemo(
+    () => (allNotifications ?? []).filter((item) => !isHidden(item, dismissed)),
+    [allNotifications, dismissed],
+  );
+  const hiddenUnread = (allNotifications ?? []).filter(
+    (item) => !item.read && isHidden(item, dismissed),
+  ).length;
 
   return {
     key,
-    notifications: data?.notifications ?? [],
-    unreadCount: data?.unreadCount ?? 0,
+    notifications,
+    unreadCount: Math.max(0, (data?.unreadCount ?? 0) - hiddenUnread),
     preference: data?.preference ?? null,
     nextCursor: data?.nextCursor ?? null,
     error,

@@ -3,7 +3,9 @@
 import * as React from "react";
 import { ArrowDownRight, ArrowUpRight, Info } from "lucide-react";
 
-import { Sparkline } from "@/components/charts/sparkline";
+import Link from "next/link";
+
+import { Sparkline, type SparklinePoint } from "@/components/charts/sparkline";
 import { InfoHint } from "@/components/shared/info-hint";
 import {
   Tooltip,
@@ -11,7 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useI18n } from "@/hooks/use-i18n";
-import { cn, intlLocale } from "@/lib/utils";
+import { cn, formatDZD, intlLocale } from "@/lib/utils";
 
 export type StatCardEmphasis = "standard" | "primary" | "supporting";
 export type StatCardTone =
@@ -38,7 +40,14 @@ interface StatCardProps {
   trendDirectionOnly?: boolean;
   trendLabel?: React.ReactNode;
   subtitle?: React.ReactNode;
-  spark?: Array<{ value: number }>;
+  /**
+   * Mini-trend points, oldest → latest. When every point carries its `date`,
+   * the trend becomes explorable: hover or arrow keys read out that day and
+   * the headline value follows it.
+   */
+  spark?: SparklinePoint[];
+  /** How an explored spark value is written (the headline stays caller-owned). */
+  sparkFormat?: "count" | "currency";
   sparkColor?: string;
   /**
    * Explicit period/context copy for the small operational trend. Sample count
@@ -63,6 +72,14 @@ interface StatCardProps {
   action?: React.ReactNode;
   /** Visual selected state for an action/filter that is selected by its caller. */
   selected?: boolean;
+  /**
+   * Destination behind the metric. The whole card becomes the link (a
+   * stretched hit area under the card's own controls), with the same hover and
+   * focus colour treatment as the Analytics KPIs.
+   */
+  href?: string;
+  /** Accessible name for `href` (what opening the card shows). */
+  hrefLabel?: string;
 }
 
 const toneClasses: Record<
@@ -113,15 +130,47 @@ export function StatCard({
   tone = "neutral",
   action,
   selected = false,
+  href,
+  hrefLabel,
+  sparkFormat = "count",
 }: StatCardProps) {
   const { locale } = useI18n();
+  const [activeSpark, setActiveSpark] = React.useState<number | null>(null);
+  const sparkDated =
+    Boolean(spark && spark.length > 1) &&
+    (spark ?? []).every((point) => typeof point.date === "string");
+  const dayFormatter = React.useMemo(
+    () =>
+      new Intl.DateTimeFormat(intlLocale(locale), {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      }),
+    [locale],
+  );
+  const rangeFormatter = React.useMemo(
+    () => new Intl.DateTimeFormat(intlLocale(locale), { day: "numeric", month: "short" }),
+    [locale],
+  );
+  const formatDay = (value: string | undefined, formatter: Intl.DateTimeFormat) => {
+    if (!value) return "";
+    const date = new Date(value.length === 10 ? `${value}T12:00:00` : value);
+    return Number.isNaN(date.getTime()) ? "" : formatter.format(date);
+  };
+  const formatSparkValue = (value: number) =>
+    sparkFormat === "currency"
+      ? formatDZD(value, locale)
+      : new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 0 }).format(value);
+  const explored =
+    sparkDated && activeSpark !== null ? spark?.[activeSpark] ?? null : null;
+  const exploredDay = explored ? formatDay(explored.date, dayFormatter) : "";
   const hasTrend =
     typeof trend === "number" && Number.isFinite(trend) && trend !== 0;
   const positive = hasTrend && trend > 0;
   const negative = hasTrend && trend < 0;
   const directionOnly =
     trendDirectionOnly ?? (hasTrend && Math.abs(trend) === 1);
-  const actionable = action !== undefined && action !== null;
+  const actionable = (action !== undefined && action !== null) || Boolean(href);
   const toneStyle = toneClasses[tone];
   const trendText =
     hasTrend && !directionOnly
@@ -139,11 +188,11 @@ export function StatCard({
   return (
     <section
       className={cn(
-        "min-w-0 rounded-surface border border-border/80 bg-card",
+        "relative min-w-0 rounded-surface border border-border/80 bg-card",
         emphasis === "primary" ? "px-5 py-4" : "px-4 py-3.5",
         toneStyle.surface,
         actionable &&
-          "transition-[background-color,border-color,box-shadow] duration-150 hover:border-primary/35 hover:bg-primary-subtle focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-ring/25 motion-reduce:transition-none",
+          "group/stat transition-[background-color,border-color,box-shadow] duration-150 hover:border-primary/35 hover:bg-primary-subtle focus-within:border-primary/45 focus-within:ring-2 focus-within:ring-ring/25 motion-reduce:transition-none",
         selected &&
           "border-primary/45 bg-primary-subtle ring-1 ring-primary/15",
         className,
@@ -164,7 +213,7 @@ export function StatCard({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    className="relative z-10 inline-flex size-6 shrink-0 items-center justify-center rounded-control text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={tooltip}
                   >
                     <Info className="size-3.5" aria-hidden="true" />
@@ -175,7 +224,11 @@ export function StatCard({
                 </TooltipContent>
               </Tooltip>
             ) : null}
-            {hint ? <InfoHint content={hint} size="sm" /> : null}
+            {hint ? (
+              <span className="relative z-10 inline-flex">
+                <InfoHint content={hint} size="sm" />
+              </span>
+            ) : null}
           </div>
 
           <div
@@ -188,10 +241,18 @@ export function StatCard({
                   : "text-[1.75rem] leading-9",
             )}
           >
-            {value}
+            {explored ? formatSparkValue(explored.value) : value}
           </div>
 
-          {subtitle || trendLabel || hasTrend ? (
+          {explored ? (
+            <div
+              className="mt-1.5 flex min-h-5 items-center text-xs leading-5 text-muted-foreground"
+              aria-live="polite"
+              data-stat-explored-day="true"
+            >
+              {exploredDay}
+            </div>
+          ) : subtitle || trendLabel || hasTrend ? (
             <div className="mt-1.5 flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-muted-foreground">
               {hasTrend ? (
                 <span
@@ -216,12 +277,18 @@ export function StatCard({
         </div>
 
         <div className="flex shrink-0 items-start gap-2">
-          {actionable ? <div data-stat-action="true">{action}</div> : null}
+          {action ? (
+            <div data-stat-action="true" className="relative z-10">
+              {action}
+            </div>
+          ) : null}
           <div
             className={cn(
               "flex shrink-0 items-center justify-center rounded-surface border [&_svg]:size-[18px]",
               emphasis === "primary" ? "size-10" : "size-9",
               toneStyle.icon,
+              actionable &&
+                "transition-colors group-hover/stat:border-primary/30 group-hover/stat:bg-primary-soft group-hover/stat:text-primary",
             )}
           >
             {icon}
@@ -230,34 +297,70 @@ export function StatCard({
       </div>
 
       {spark && spark.length > 1 ? (
-        <div className="mt-2.5" data-stat-sparkline="true">
-          <div className="h-7 overflow-hidden opacity-90" aria-hidden="true">
+        <div className="relative z-10 mt-2.5" data-stat-sparkline="true">
+          {sparkDated ? (
             <Sparkline
               data={spark}
               color={sparkColor}
               height={28}
               zeroBaseline={sparkZeroBaseline}
+              interactive
+              activeIndex={activeSpark}
+              onActiveIndexChange={setActiveSpark}
+              label={typeof label === "string" ? label : undefined}
+              // The card itself is the visual read-out (headline value + day
+              // line above), so no floating tooltip competes with it.
+              valueText={
+                explored ? `${exploredDay}: ${formatSparkValue(explored.value)}` : undefined
+              }
             />
-          </div>
+          ) : (
+            <div className="h-7 overflow-hidden opacity-90" aria-hidden="true">
+              <Sparkline
+                data={spark}
+                color={sparkColor}
+                height={28}
+                zeroBaseline={sparkZeroBaseline}
+              />
+            </div>
+          )}
           {sparkContext ? (
             <div
-              className="mt-1 flex items-center justify-between gap-2 text-caption leading-4 text-muted-foreground/80"
+              className="mt-1 flex items-center justify-between gap-2 text-caption leading-4 text-muted-foreground"
               data-stat-sparkline-context="true"
             >
               <span>{sparkContext}</span>
+              {/* Oldest → latest, stated as the real dates rather than an
+                  abstract dot-and-line glyph. */}
               <span
-                className="inline-flex shrink-0 items-center gap-1.5"
+                className="inline-flex shrink-0 items-center gap-1 tabular-nums"
                 dir="ltr"
-                aria-hidden="true"
                 data-stat-sparkline-direction="oldest-to-latest"
               >
-                <span className="size-1 rounded-full bg-current opacity-45" />
-                <span className="h-px w-4 bg-current opacity-35" />
-                <span className="size-1.5 rounded-full bg-current opacity-85" />
+                {sparkDated ? (
+                  <>
+                    {formatDay(spark[0]?.date, rangeFormatter)}
+                    <span aria-hidden="true">–</span>
+                    {formatDay(spark.at(-1)?.date, rangeFormatter)}
+                  </>
+                ) : null}
               </span>
             </div>
           ) : null}
         </div>
+      ) : null}
+      {href ? (
+        <>
+          {/* The whole card is the link: a transparent layer over the card's
+              text, beneath its own controls (tooltip, hint, trend, action),
+              which sit on a raised layer so they stay independently usable. */}
+          <Link
+            href={href}
+            aria-label={hrefLabel ?? (typeof label === "string" ? label : undefined)}
+            data-stat-link="true"
+            className="absolute inset-0 rounded-surface outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </>
       ) : null}
     </section>
   );

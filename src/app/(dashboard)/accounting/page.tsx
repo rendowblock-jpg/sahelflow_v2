@@ -154,18 +154,35 @@ export default async function AccountingPage() {
         />
       ) : profitability ? (
         <>
-          {!profitability.profitabilityComplete ? (
-            <StateSurface
-              icon={AlertTriangle}
-              title={t("accounting.missingCostsWarning")}
-              tone="warning"
-              size="inline"
-            />
-          ) : null}
-
           <div className="card-grid-4">
-            <StatCard label={t("accounting.netRevenue")} value={formatDZD(profitability.netRevenue, locale)} icon={<TrendingUp />} />
-            <StatCard label={t("accounting.cogs")} value={formatDZD(profitability.cogs, locale)} icon={<Package />} />
+            <StatCard
+              label={t("accounting.netRevenue")}
+              value={formatDZD(profitability.netRevenue, locale)}
+              icon={<TrendingUp />}
+              href="/analytics"
+              hrefLabel={t("nav.analytics")}
+            />
+            {/* Missing cost prices are a fact about this number, so the card
+                carries it (and leads to the products to fix) instead of a
+                warning box above the page. */}
+            <StatCard
+              label={t("accounting.cogs")}
+              value={formatDZD(profitability.cogs, locale)}
+              icon={profitability.profitabilityComplete ? <Package /> : <AlertTriangle />}
+              tone={profitability.profitabilityComplete ? "neutral" : "warning"}
+              subtitle={
+                profitability.profitabilityComplete
+                  ? undefined
+                  : t("accounting.missingCostsCard")
+              }
+              tooltip={
+                profitability.profitabilityComplete
+                  ? undefined
+                  : t("accounting.missingCostsWarning")
+              }
+              href={profitability.profitabilityComplete ? undefined : "/products"}
+              hrefLabel={t("nav.products")}
+            />
             <StatCard label={t("accounting.expenses")} value={formatDZD(totalExpenses ?? 0, locale)} icon={<Receipt />} />
             <StatCard
               label={t("accounting.netProfit")}

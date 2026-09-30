@@ -109,9 +109,30 @@ export default async function DeliveriesPage({
       />
 
       <div className="card-grid-4">
-        <StatCard label={t("deliveries.activeDeliveries")} value={activeCount} icon={<Truck />} />
-        <StatCard label={t("deliveries.delivered")} value={deliveredCount} icon={<PackageCheck />} />
-        <StatCard label={t("deliveries.returnsFailed")} value={returnedCount} icon={<AlertCircle />} />
+        <StatCard
+          label={t("deliveries.activeDeliveries")}
+          value={activeCount}
+          icon={<Truck />}
+          href="/deliveries?status=in_transit"
+          hrefLabel={t("deliveries.activeDeliveries")}
+          selected={status === "in_transit"}
+        />
+        <StatCard
+          label={t("deliveries.delivered")}
+          value={deliveredCount}
+          icon={<PackageCheck />}
+          href="/deliveries?status=delivered"
+          hrefLabel={t("deliveries.delivered")}
+          selected={status === "delivered"}
+        />
+        <StatCard
+          label={t("deliveries.returnsFailed")}
+          value={returnedCount}
+          icon={<AlertCircle />}
+          href="/deliveries?status=returned"
+          hrefLabel={t("deliveries.returnsFailed")}
+          selected={status === "returned"}
+        />
         <StatCard
           label={t("deliveries.totalCost")}
           value={totalCost === null ? "—" : formatDZD(totalCost, locale)}

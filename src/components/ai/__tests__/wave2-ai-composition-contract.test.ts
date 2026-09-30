@@ -52,7 +52,7 @@ describe("Class-AAA AI composition contract", () => {
   });
 
   it("uses logical RTL geometry instead of locale-coded physical sides", () => {
-    const history = read("src/components/ai/ai-work-history.tsx");
+    const history = read("src/components/ai/ai-work-history.tsx") + read("src/components/ai/ai-session-row.tsx");
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
 
@@ -67,7 +67,7 @@ describe("Class-AAA AI composition contract", () => {
     // STR-01 moved the start surface and then the conversation log into their
     // own modules; these assertions follow the code they protect.
     const log = read("src/components/ai/ai-message-log.tsx");
-    const startSurface = read("src/components/ai/ai-start-surface.tsx");
+    const startSurface = read("src/components/ai/ai-start-surface.tsx") + read("src/components/ai/ai-canvas-notices.tsx") + read("src/components/ai/ai-abilities-panel.tsx");
     const shell = read("src/components/ai/ai-workspace-shell.tsx");
 
     expect(startSurface).toContain('data-ai-start-state="true"');

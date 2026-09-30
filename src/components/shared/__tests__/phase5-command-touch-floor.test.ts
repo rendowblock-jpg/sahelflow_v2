@@ -8,13 +8,13 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 describe("Phase 5 command touch floor", () => {
   it("keeps the command entry and portaled results on the coarse-pointer authority", () => {
     const command = read("src/components/ui/command.tsx");
-    const topbar = read("src/components/layout/topbar.tsx");
+    // The top-bar trigger became the in-place search field itself.
+    const palette = read("src/components/command-palette.tsx");
 
     expect(command).toContain(
       "relative flex min-h-(--sf-touch-target) cursor-default items-center",
     );
-    expect(topbar).toContain(
-      "h-8 min-h-(--sf-touch-target) min-w-0 max-w-xl",
-    );
+    expect(palette).toContain("flex h-8 min-h-(--sf-touch-target) items-center");
+    expect(palette).toContain("relative mx-auto min-w-0 max-w-xl flex-1");
   });
 });

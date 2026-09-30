@@ -136,7 +136,9 @@ describe("installed Windows runtime contract", () => {
 
     expect(dashboardLayout).toContain('import dynamic from "next/dynamic"');
     expect(dashboardLayout).toContain('import("@/components/command-palette")');
-    expect(dashboardLayout).toContain("{commandOpen && (");
+    // The universal search now lives in place in the top bar, so the frame
+    // always renders it; its ranking code still arrives as a lazy chunk.
+    expect(dashboardLayout).toContain("open={commandOpen}");
     expect(dashboardLayout).toContain("{cheatsheetOpen && (");
 
     expect(uiRoute).toContain('UI_DIAGNOSTIC_FILE = "runtime-ui-diagnostic.json"');

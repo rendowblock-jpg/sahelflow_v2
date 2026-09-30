@@ -10,6 +10,14 @@ import { MessageExtraction } from "@/components/inbox/message-extraction";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -242,11 +250,14 @@ export function InboxThreadHeader({
             </TooltipContent>
           </Tooltip>
         ) : null}
-        <Sheet>
+        {/* The order review is a workspace, not a side drawer: the customer's
+            message and the order being built sit side by side, so the
+            conversation is never hidden behind a cramped form. */}
+        <Dialog>
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="inline-flex">
-                <SheetTrigger asChild>
+                <DialogTrigger asChild>
                   <Button
                     type="button"
                     variant="outline"
@@ -256,50 +267,41 @@ export function InboxThreadHeader({
                   >
                     <Sparkles className="size-4" aria-hidden="true" />
                   </Button>
-                </SheetTrigger>
+                </DialogTrigger>
               </span>
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={6}>
               {t("inbox.extractOrderProfessionally")}
             </TooltipContent>
           </Tooltip>
-          <SheetContent
-            side="end"
-            className="w-[min(440px,94vw)] overflow-y-auto sm:max-w-none"
+          <DialogContent
+            data-order-review="true"
+            className="order-review-dialog flex flex-col gap-0 overflow-hidden p-0 sm:p-0"
           >
-            <SheetHeader>
-              <SheetTitle className="flex items-center gap-2">
-                <Sparkles className="size-4 text-primary" aria-hidden="true" />
+            <DialogHeader className="shrink-0 border-b border-border px-5 py-4 pe-14 text-start">
+              <DialogTitle className="flex items-center gap-2.5 text-title-3">
+                <span className="flex size-8 items-center justify-center rounded-control bg-primary-soft text-primary">
+                  <Sparkles className="size-4" aria-hidden="true" />
+                </span>
                 {t("inbox.aiOrderAssistant")}
-              </SheetTitle>
-              <SheetDescription>
+              </DialogTitle>
+              <DialogDescription className="text-body-sm">
                 {copy("orderCandidateHint")}
-              </SheetDescription>
-            </SheetHeader>
+              </DialogDescription>
+            </DialogHeader>
             {selectedCandidate && activeChat.transportId ? (
-              <div className="mt-5 space-y-4">
-                <div className="rounded-surface border border-border/70 bg-muted/20 p-3">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {copy("orderCandidate")}
-                  </p>
-                  <p
-                    dir="auto"
-                    className="mt-2 line-clamp-4 whitespace-pre-wrap text-sm leading-6 [unicode-bidi:plaintext]"
-                  >
-                    {selectedCandidate.body}
-                  </p>
-                </div>
-                <MessageExtraction
-                  key={`${activeChat.conversationId}:${selectedCandidate.id}:header`}
-                  conversationId={activeChat.transportId}
-                  messageId={selectedCandidate.id}
-                  messageBody={selectedCandidate.body}
-                  knownPhone={activeChat.phone}
-                />
-              </div>
+              <MessageExtraction
+                key={`${activeChat.conversationId}:${selectedCandidate.id}:header`}
+                layout="workspace"
+                contactName={activeChat.name}
+                conversationId={activeChat.transportId}
+                messageId={selectedCandidate.id}
+                messageBody={selectedCandidate.body}
+                knownPhone={activeChat.phone}
+              />
             ) : null}
-          </SheetContent>
-        </Sheet>
+          </DialogContent>
+        </Dialog>
 
         <Sheet>
           <Tooltip>

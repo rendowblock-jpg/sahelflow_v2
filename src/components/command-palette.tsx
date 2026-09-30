@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ListFilter, Loader2, Plus, SearchX } from "lucide-react";
+import { Command as CommandPrimitive } from "cmdk";
+import { AlertTriangle, ListFilter, Loader2, Plus, Search, SearchX, X } from "lucide-react";
 
 import { flattenNavigationItems } from "@/components/layout/navigation";
 import {
@@ -20,14 +21,7 @@ import { SearchScopeBar } from "@/components/search/search-scope-bar";
 import { SearchStartPanel } from "@/components/search/search-start-panel";
 import { SearchStateMessage } from "@/components/search/search-state-message";
 import { IconTile } from "@/components/system";
-import {
-  Command,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { useI18n } from "@/hooks/use-i18n";
 import { RECENT_RECORDS_VISIBLE, useRecentRecords } from "@/hooks/use-recent-records";
 import { useRecentSearches } from "@/hooks/use-recent-searches";
@@ -53,7 +47,10 @@ const GROUP_HEADING =
   "[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-caption [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground";
 
 /**
- * The SahelFlow command center: one place to find any record, page or action.
+ * The SahelFlow command center, in place: the top-bar field IS the search. It
+ * widens into a focused field and its results drop down directly beneath it —
+ * no modal, no backdrop — so the page stays visible while the seller searches.
+ * One place to find any record, page or action.
  *
  * Records come from the local-first universal authority (`/api/search`, via
  * `useUniversalRecordSearch`); pages, create actions and recents are ranked
@@ -70,6 +67,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   );
   const [query, setQuery] = React.useState("");
   const [scope, setScope] = React.useState<SearchScope>("all");
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
   const normalizedQuery = normalizeSearchText(query);
   const technicalQuery =
     normalizedQuery.length > 0 && /^[0-9\s()+\-./]+$/u.test(normalizedQuery);
@@ -183,6 +182,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     if (!nextOpen) {
       setQuery("");
       setScope("all");
+      inputRef.current?.blur();
     }
     onOpenChange(nextOpen);
   }
@@ -200,6 +200,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      // First Escape clears a typed query; the second closes the results.
+      if (query) setQuery("");
+      else handleOpenChange(false);
+      return;
+    }
     if (event.key !== "Tab" || !normalizedQuery || scopes.length < 2) return;
     event.preventDefault();
     const index = scopes.indexOf(activeScope);
@@ -207,6 +215,25 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     const next = scopes[(index + step + scopes.length) % scopes.length];
     if (next) setScope(next);
   }
+
+  // Ctrl+K (owned by the shell) opens the field in place and focuses it.
+  React.useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  // A press anywhere outside the field and its results closes them — there is
+  // no backdrop, so the page underneath stays visible and usable.
+  React.useEffect(() => {
+    if (!open) return;
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (rootRef.current?.contains(event.target as Node)) return;
+      setQuery("");
+      setScope("all");
+      onOpenChange(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePress, true);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePress, true);
+  }, [onOpenChange, open]);
 
   const renderRow = (item: SearchRow, showKind = false) => (
     <SearchResultRow
@@ -224,148 +251,199 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const mixedRow = (item: SearchRow) => renderRow(item, true);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        data-universal-search="v2"
-        dir={locale === "ar" ? "rtl" : "ltr"}
-        className="gap-0 overflow-hidden border-border p-0 shadow-(--elevation-3) sm:max-w-2xl sm:p-0"
-        showCloseButton={false}
+    <div
+      ref={rootRef}
+      data-universal-search="v2"
+      data-command-trigger="true"
+      data-search-open={open ? "true" : "false"}
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      className={cn(
+        "relative mx-auto min-w-0 max-w-xl flex-1",
+        open
+          ? "max-sm:fixed max-sm:inset-x-2 max-sm:top-2 max-sm:z-50 max-sm:block"
+          : "hidden sm:block",
+      )}
+    >
+      <CommandPrimitive
+        shouldFilter={false}
+        loop
+        label={copy("title")}
+        onKeyDown={handleKeyDown}
+        className="w-full text-popover-foreground"
       >
-        <DialogTitle className="sr-only">{copy("title")}</DialogTitle>
-        <Command
-          shouldFilter={false}
-          loop
-          onKeyDown={handleKeyDown}
-          className="bg-popover **:data-[slot=command-input-wrapper]:h-14 **:data-[slot=command-input-wrapper]:gap-3 **:data-[slot=command-input-wrapper]:px-4"
+        <div
+          data-search-field="true"
+          className={cn(
+            "flex h-8 min-h-(--sf-touch-target) items-center gap-2 rounded-surface border px-2.5 transition-[background-color,border-color,box-shadow]",
+            open
+              ? "border-primary/40 bg-popover shadow-(--elevation-1) ring-3 ring-primary/10"
+              : "border-border/80 bg-muted/30 hover:border-border hover:bg-muted/55",
+          )}
         >
-          <div className="relative">
-            <CommandInput
-              autoFocus
-              dir={technicalQuery ? "ltr" : "auto"}
-              className="h-14 text-title-3 font-normal"
-              placeholder={copy("placeholder")}
-              value={query}
-              onValueChange={setQuery}
+          {searching ? (
+            <Loader2
+              className="size-3.5 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none"
+              aria-hidden="true"
             />
-            {searching ? (
-              <Loader2
-                className="pointer-events-none absolute end-4 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground motion-reduce:animate-none"
-                aria-hidden="true"
-              />
-            ) : null}
-          </div>
+          ) : (
+            <Search className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          )}
+          <CommandPrimitive.Input
+            ref={inputRef}
+            data-slot="command-input"
+            dir={technicalQuery ? "ltr" : "auto"}
+            value={query}
+            onValueChange={(value) => {
+              setQuery(value);
+              if (!open) onOpenChange(true);
+            }}
+            onFocus={() => {
+              if (!open) onOpenChange(true);
+            }}
+            placeholder={copy("placeholder")}
+            aria-keyshortcuts="Control+K"
+            className="h-full min-w-0 flex-1 bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          {open && query ? (
+            <button
+              type="button"
+              aria-label={copy("clear")}
+              title={copy("clear")}
+              onClick={() => {
+                setQuery("");
+                inputRef.current?.focus();
+              }}
+              className="inline-flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X className="size-3" aria-hidden="true" />
+            </button>
+          ) : (
+            <kbd
+              dir="ltr"
+              className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-control border border-border/80 bg-background/80 px-1.5 font-sans text-caption font-medium text-muted-foreground"
+            >
+              {open ? "Esc" : "Ctrl K"}
+            </kbd>
+          )}
+        </div>
 
-          {normalizedQuery && scopes.length > 1 ? (
-            <SearchScopeBar
-              scopes={scopes}
-              active={activeScope}
-              counts={Object.fromEntries(groups.map((group) => [group.kind, group.rows.length]))}
-              total={resultCount}
-              label={(value) => (value === "all" ? copy("scopeAll") : copy(GROUP_COPY[value]))}
-              ariaLabel={copy("scopeLabel")}
-              onChange={setScope}
-            />
-          ) : null}
-
-          <CommandList className="max-h-96 scroll-py-2 px-2 py-2" aria-live="polite">
-            {!normalizedQuery ? (
-              <SearchStartPanel
-                copy={copy}
-                quickNavigation={quickNavigation}
-                recentSearches={recentSearches.entries}
-                onClearRecentSearches={recentSearches.clear}
-                onPickRecentSearch={setQuery}
-                onOpen={openHref}
-                recentRows={visibleRecent.map(mixedRow)}
-                actionRows={visibleActions.map(row)}
-              />
-            ) : null}
-
-            {normalizedQuery && activeScope === "all" && visibleActions.length > 0 ? (
-              <CommandGroup heading={copy("actionsSection")} className={GROUP_HEADING}>
-                {visibleActions.map(row)}
-              </CommandGroup>
-            ) : null}
-
-            {normalizedQuery && activeScope === "all" && visibleRecent.length > 0 ? (
-              <CommandGroup heading={copy("recentSection")} className={GROUP_HEADING}>
-                {visibleRecent.map(mixedRow)}
-              </CommandGroup>
-            ) : null}
-
-            {partiallyDegraded ? (
-              <p
-                className="mx-1 my-1 flex items-start gap-2 rounded-control bg-warning-subtle px-3 py-2 text-caption text-warning"
-                role="status"
-              >
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                {copy("partialResults")}
-              </p>
-            ) : null}
-
-            {visibleGroups.map((group) => {
-              const preview = activeScope === "all" && group.rows.length > GROUP_PREVIEW_LIMIT;
-              const rows = preview ? group.rows.slice(0, GROUP_PREVIEW_LIMIT) : group.rows;
-              return (
-                <CommandGroup
-                  key={group.kind}
-                  heading={copy(GROUP_COPY[group.kind])}
-                  className={GROUP_HEADING}
-                >
-                  {rows.map(row)}
-                  {preview ? (
-                    <CommandItem
-                      value={`show-all:${group.kind}`}
-                      onSelect={() => setScope(group.kind)}
-                      className="gap-3 rounded-control px-2.5 text-body-sm text-muted-foreground data-[selected=true]:bg-accent"
-                    >
-                      <IconTile icon={ListFilter} size="sm" />
-                      {copy("showAll").replace("{count}", String(group.rows.length))}
-                    </CommandItem>
-                  ) : null}
-                </CommandGroup>
-              );
-            })}
-
-            {searching && resultCount === 0 && !hasInstantMatches ? (
-              <div className="space-y-1 px-1 py-1" role="status" aria-label={copy("searching")}>
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="flex items-center gap-3 px-2.5 py-2">
-                    <span className="size-8 shrink-0 animate-pulse rounded-control bg-muted motion-reduce:animate-none" />
-                    <span className="h-3 flex-1 animate-pulse rounded-full bg-muted motion-reduce:animate-none" />
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            {records.failed && resultCount === 0 ? (
-              <SearchStateMessage icon={SearchX} title={copy("unavailable")} hint={copy("unavailableHint")} />
-            ) : null}
-            {degradedEmpty ? (
-              <SearchStateMessage icon={AlertTriangle} tone="warning" title={copy("degradedTitle")} hint={copy("degradedHint")} />
-            ) : null}
-            {noResults ? (
-              <SearchStateMessage icon={SearchX} title={copy("noResults")} hint={copy("noResultsHint")} />
-            ) : null}
-          </CommandList>
-
+        {open ? (
           <div
+            data-universal-search-panel="true"
             className={cn(
-              "flex h-10 items-center gap-4 border-t border-border px-4 text-caption text-muted-foreground",
+              "absolute start-1/2 top-full z-50 mt-2 w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-surface border border-border bg-popover shadow-(--elevation-2) rtl:translate-x-1/2",
+              "max-sm:static max-sm:w-full max-sm:translate-x-0 rtl:max-sm:translate-x-0",
+              "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1",
             )}
           >
-            <KeyHint keys="↑↓" label={copy("navigate")} />
-            <KeyHint keys="↵" label={copy("open")} />
             {normalizedQuery && scopes.length > 1 ? (
-              <KeyHint keys="Tab" label={copy("filter")} />
+              <SearchScopeBar
+                scopes={scopes}
+                active={activeScope}
+                counts={Object.fromEntries(groups.map((group) => [group.kind, group.rows.length]))}
+                total={resultCount}
+                label={(value) => (value === "all" ? copy("scopeAll") : copy(GROUP_COPY[value]))}
+                ariaLabel={copy("scopeLabel")}
+                onChange={setScope}
+              />
             ) : null}
-            <span className="ms-auto">
-              <KeyHint keys="Esc" label={copy("close")} />
-            </span>
+
+            <CommandList className="max-h-[min(28rem,calc(100dvh-9rem))] scroll-py-2 px-2 py-2" aria-live="polite">
+              {!normalizedQuery ? (
+                <SearchStartPanel
+                  copy={copy}
+                  quickNavigation={quickNavigation}
+                  recentSearches={recentSearches.entries}
+                  onClearRecentSearches={recentSearches.clear}
+                  onPickRecentSearch={setQuery}
+                  onOpen={openHref}
+                  recentRows={visibleRecent.map(mixedRow)}
+                  actionRows={visibleActions.map(row)}
+                />
+              ) : null}
+
+              {normalizedQuery && activeScope === "all" && visibleActions.length > 0 ? (
+                <CommandGroup heading={copy("actionsSection")} className={GROUP_HEADING}>
+                  {visibleActions.map(row)}
+                </CommandGroup>
+              ) : null}
+
+              {normalizedQuery && activeScope === "all" && visibleRecent.length > 0 ? (
+                <CommandGroup heading={copy("recentSection")} className={GROUP_HEADING}>
+                  {visibleRecent.map(mixedRow)}
+                </CommandGroup>
+              ) : null}
+
+              {partiallyDegraded ? (
+                <p
+                  className="mx-1 my-1 flex items-start gap-2 rounded-control bg-warning-subtle px-3 py-2 text-caption text-warning"
+                  role="status"
+                >
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                  {copy("partialResults")}
+                </p>
+              ) : null}
+
+              {visibleGroups.map((group) => {
+                const preview = activeScope === "all" && group.rows.length > GROUP_PREVIEW_LIMIT;
+                const rows = preview ? group.rows.slice(0, GROUP_PREVIEW_LIMIT) : group.rows;
+                return (
+                  <CommandGroup
+                    key={group.kind}
+                    heading={copy(GROUP_COPY[group.kind])}
+                    className={GROUP_HEADING}
+                  >
+                    {rows.map(row)}
+                    {preview ? (
+                      <CommandItem
+                        value={`show-all:${group.kind}`}
+                        onSelect={() => setScope(group.kind)}
+                        className="gap-3 rounded-control px-2.5 text-body-sm text-muted-foreground data-[selected=true]:bg-accent"
+                      >
+                        <IconTile icon={ListFilter} size="sm" />
+                        {copy("showAll").replace("{count}", String(group.rows.length))}
+                      </CommandItem>
+                    ) : null}
+                  </CommandGroup>
+                );
+              })}
+
+              {searching && resultCount === 0 && !hasInstantMatches ? (
+                <div className="space-y-1 px-1 py-1" role="status" aria-label={copy("searching")}>
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="flex items-center gap-3 px-2.5 py-2">
+                      <span className="size-8 shrink-0 animate-pulse rounded-control bg-muted motion-reduce:animate-none" />
+                      <span className="h-3 flex-1 animate-pulse rounded-full bg-muted motion-reduce:animate-none" />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {records.failed && resultCount === 0 ? (
+                <SearchStateMessage icon={SearchX} title={copy("unavailable")} hint={copy("unavailableHint")} />
+              ) : null}
+              {degradedEmpty ? (
+                <SearchStateMessage icon={AlertTriangle} tone="warning" title={copy("degradedTitle")} hint={copy("degradedHint")} />
+              ) : null}
+              {noResults ? (
+                <SearchStateMessage icon={SearchX} title={copy("noResults")} hint={copy("noResultsHint")} />
+              ) : null}
+            </CommandList>
+
+            <div className="flex h-9 items-center gap-4 border-t border-border px-4 text-caption text-muted-foreground">
+              <KeyHint keys="↑↓" label={copy("navigate")} />
+              <KeyHint keys="↵" label={copy("open")} />
+              {normalizedQuery && scopes.length > 1 ? (
+                <KeyHint keys="Tab" label={copy("filter")} />
+              ) : null}
+              <span className="ms-auto">
+                <KeyHint keys="Esc" label={copy("close")} />
+              </span>
+            </div>
           </div>
-        </Command>
-      </DialogContent>
-    </Dialog>
+        ) : null}
+      </CommandPrimitive>
+    </div>
   );
 }
 

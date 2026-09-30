@@ -90,7 +90,7 @@ export function AiMessageLog({
         aria-relevant="additions text"
         aria-busy={sending}
         aria-label={workspace.copy("messageLog")}
-        className="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-8"
+        className="sf-ai-column py-6 md:py-8"
       >
         {loadingConversation ? (
           // Structure-matching skeleton (§26.8): the shape of a turn pair
@@ -98,7 +98,7 @@ export function AiMessageLog({
           <div
             data-ai-conversation-skeleton="true"
             aria-hidden="true"
-            className="mx-auto w-full max-w-3xl space-y-7 py-2"
+            className="space-y-7 py-2"
           >
             <div className="flex gap-3">
               <span data-ai-skeleton="true" className="mt-0.5 size-8 shrink-0 rounded-surface" />
@@ -127,7 +127,7 @@ export function AiMessageLog({
             onStart={onStart}
           />
         ) : (
-          <div className="mx-auto w-full max-w-3xl space-y-7">
+          <div className="space-y-8">
             {historyCapped ? (
               <div className="flex justify-center" data-ai-load-older="true">
                 <Button
@@ -163,12 +163,12 @@ export function AiMessageLog({
             ))}
 
             {canRegenerate ? (
-              <div data-ai-regenerate="true" className="ms-11 flex">
+              <div data-ai-regenerate="true" className="-mt-6 flex ps-6">
                 <Button
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                  className="h-7 text-caption text-muted-foreground hover:text-foreground"
                   onClick={() => void regenerate()}
                 >
                   <RotateCcw className="me-1.5 size-3.5" aria-hidden="true" />
@@ -196,15 +196,15 @@ export function AiMessageLog({
             {proposals.length > 0 ? (
               <section
                 data-ai-inline-proposals="true"
-                className="ms-11 max-w-3xl rounded-surface border border-primary/25 bg-primary-subtle p-4"
+                className="ms-8 rounded-surface border border-border bg-card p-4"
                 aria-labelledby="ai-proposed-changes-title"
               >
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 id="ai-proposed-changes-title" className="text-sm font-bold tracking-tight">
+                    <h2 id="ai-proposed-changes-title" className="text-title-3">
                       {getAiDecisionCopy(workspace.locale, "proposedChanges")}
                     </h2>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    <p className="mt-0.5 text-caption text-muted-foreground">
                       {getAiDecisionCopy(workspace.locale, "proposedChangesDescription")}
                     </p>
                   </div>

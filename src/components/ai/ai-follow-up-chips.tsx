@@ -142,7 +142,7 @@ export function AiFollowUpChips({
   return (
     <div
       data-ai-follow-ups="true"
-      className={cn("ms-11 flex flex-wrap items-center gap-1.5", className)}
+      className={cn("ms-8 flex flex-wrap items-center gap-1.5", className)}
     >
       {suggestions.map((prompt) => (
         <button
@@ -151,7 +151,7 @@ export function AiFollowUpChips({
           dir="auto"
           title={prompt}
           onClick={() => onPick(prompt)}
-          className="max-w-full truncate rounded-full border border-border/60 bg-card/70 px-3 py-1.5 text-start text-xs text-foreground shadow-sm transition-colors hover:border-primary/25 hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="max-w-full truncate rounded-full border border-border bg-card px-3 py-1.5 text-start text-body-sm text-foreground transition-colors hover:border-primary/30 hover:bg-primary-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {prompt}
         </button>

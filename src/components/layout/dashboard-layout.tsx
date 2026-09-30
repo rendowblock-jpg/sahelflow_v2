@@ -14,10 +14,22 @@ import { warmUniversalSearchClient } from "@/lib/search/universal-search-client"
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
-const CommandPalette = dynamic(() =>
-  import("@/components/command-palette").then(
-    (module) => module.CommandPalette,
-  ),
+// The in-place search is part of the frame, but its ranking/grouping code is
+// still a separate chunk: the placeholder below holds the exact field geometry
+// until it arrives, so the top bar never shifts.
+const CommandPalette = dynamic(
+  () =>
+    import("@/components/command-palette").then(
+      (module) => module.CommandPalette,
+    ),
+  {
+    loading: () => (
+      <div
+        aria-hidden="true"
+        className="mx-auto hidden h-8 min-h-(--sf-touch-target) min-w-0 max-w-xl flex-1 rounded-surface border border-border/80 bg-muted/30 sm:block"
+      />
+    ),
+  },
 );
 const CheatsheetModal = dynamic(() =>
   import("@/components/shared/cheatsheet-modal").then(
@@ -166,6 +178,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         {!storefrontFocusMode ? (
           <Topbar
+            search={
+              <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+            }
             onCommandPaletteOpen={() => setCommandOpen(true)}
             onCheatsheetOpen={() => setCheatsheetOpen(true)}
             serverLocale={locale}
@@ -184,10 +199,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </main>
       </div>
-
-      {commandOpen && (
-        <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-      )}
 
       {cheatsheetOpen && (
         <CheatsheetModal

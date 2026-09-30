@@ -497,6 +497,8 @@ model Integration {
 model AiChatSession {
   id        String             @id @default(cuid())
   title     String?
+  /// Seller pin (Agents rail). Null = unpinned; set = pinned since then.
+  pinnedAt  DateTime?
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
   messages  AiChatMessage[]
