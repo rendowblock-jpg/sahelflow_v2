@@ -33,7 +33,13 @@ describe("F-06 AI page-completion wave", () => {
     expect(workspaceCss).toContain('[data-ai-status-dot="attention"]');
     expect(workspaceCss).toContain('[data-ai-streaming-caret="true"]');
     expect(workspaceCss).toContain('[data-ai-skeleton="true"]');
-    expect(workspaceCss).toContain('[data-ai-session][aria-current="page"]::before');
+    // Agents rebuild: the sidebar is navigation, so the active conversation
+    // is one neutral fill on the row (aria-current + bg-accent) — the old
+    // accent tick on the rail edge is gone and must not come back.
+    expect(workspaceCss).not.toContain('[data-ai-session][aria-current="page"]::before');
+    const row = read("src/components/ai/ai-session-row.tsx");
+    expect(row).toContain('aria-current={session.active ? "page" : undefined}');
+    expect(row).toContain('"bg-accent text-accent-foreground"');
 
     // No dead legacy selectors may remain for the AI surfaces.
     for (const dead of [
@@ -81,15 +87,19 @@ describe("F-06 AI page-completion wave", () => {
   });
 
   it("shows configuration truth, never fabricated provider health (AI-26)", () => {
-    const canvas = read("src/components/ai/ai-decision-canvas.tsx");
-
-    // Header avatar dot + config chip both derive from the setup probe only.
-    expect(canvas).toContain('data-ai-status-dot={setupReady ? "ready" : "attention"}');
-    expect(canvas).toContain('data-ai-config-chip="true"');
-    expect(canvas).toContain('getAiDecisionCopy(workspace.locale, "providerReady")');
-    // The chip renders only after setup resolved and only for the ready fact —
-    // the checking banner owns loading and the setup notice owns attention.
-    expect(canvas).toContain("{workspace.setup && setupReady ? (");
+    // Agents rebuild: the one provider-state line lives in the sidebar
+    // footer ("Gemini · Ready"). It derives from the setup probe only — no
+    // heartbeat — and states nothing until setup has resolved.
+    const history =
+      read("src/components/ai/ai-work-history.tsx") +
+      read("src/components/ai/ai-sidebar-nav.tsx");
+    expect(history).toContain(
+      'data-ai-status-dot={!setup ? undefined : setup.ready ? "ready" : "attention"}',
+    );
+    expect(history).toContain('? "statusChecking"');
+    expect(history).toContain("getAiDecisionCopy(locale, statusKey)");
+    expect(history).not.toContain("setInterval(");
+    expect(history).not.toContain("/api/ai/health");
   });
 
   it("streams with a visible caret and keeps the newest turn actionable", () => {
@@ -193,7 +203,10 @@ describe("F-06 AI page-completion wave", () => {
     const startSurface = read("src/components/ai/ai-start-surface.tsx") + read("src/components/ai/ai-canvas-notices.tsx") + read("src/components/ai/ai-abilities-panel.tsx");
 
     expect(startSurface).toContain('data-ai-workforce="true"');
-    expect(startSurface).toContain("agentOrders");
+    // The seller jobs come from the one quick-jobs catalog the "/" menu
+    // also uses, so both always offer the same work.
+    expect(startSurface).toContain("STARTERS.map");
+    expect(read("src/components/ai/ai-quick-jobs.ts")).toContain("export function buildAiQuickJobs("); 
     expect(startSurface).toContain('data-ai-abilities="true"');
     expect(startSurface).toContain("AbilityGroupCard");
     expect(startSurface).toContain("getAiToolGroupLabel");
@@ -212,8 +225,11 @@ describe("F-06 AI page-completion wave", () => {
     // assertions follow the code they protect.
     const startSurface = read("src/components/ai/ai-start-surface.tsx") + read("src/components/ai/ai-canvas-notices.tsx") + read("src/components/ai/ai-abilities-panel.tsx");
 
-    expect(startSurface).toContain("starterCount(");
-    expect(startSurface).toContain('data-ai-briefing-count={starter.id}');
+    // The live briefing renders as one-tap questions; a count that could not
+    // be measured is filtered out (typeof number), never shown as zero.
+    expect(startSurface).toContain('data-ai-briefing-count={entry.id}');
+    expect(startSurface).toContain('typeof entry.value === "number"');
+    expect(read("src/components/ai/ai-quick-jobs.ts")).toContain("function briefingCount("); 
     // The start surface hosts the workforce panel. STR-01 moved both halves of
     // this ordering check into the same new module, so the relationship it
     // protects — abilities rendered INSIDE the start state, not above it — is

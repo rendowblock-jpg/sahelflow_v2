@@ -104,7 +104,7 @@ describe("R4-e AI canvas upgrade — regenerate", () => {
     expect(log).toContain('data-ai-regenerate="true"');
     expect(log).toContain('t("ai.canvas.regenerate")');
     expect(log).toContain("onClick={() => void regenerate()}");
-    expect(deck).toContain('aria-label={workspace.copy("stop")}');
+    expect(deck).toContain('aria-label={copy("stop")}');
     expect(deck).toContain("onClick={stop}");
     // The canvas still hands the stream control down — one stop authority.
     expect(canvas).toContain("stop={stop}");
@@ -209,7 +209,9 @@ describe("R4-e AI canvas upgrade — contextual Ask AI deep links", () => {
     expect(shell).toContain(
       "<AiDecisionWorkspace initialPrompt={initialPrompt} initialView={initialView} />",
     );
-    expect(workspace.match(/initialDraft=\{initialPrompt\}/g)?.length).toBe(2);
+    // The Agents rebuild renders ONE canvas element for both layouts (mobile
+    // drill-in and desktop), so the prefill is threaded exactly once.
+    expect(workspace.match(/initialDraft=\{initialPrompt\}/g)?.length).toBe(1);
     expect(canvas).toContain("useState(initialDraft)");
     // Prefill only ever fills an EMPTY composer — never clobbers seller input
     // (render-phase adjust-state-on-prop-change, no setState in an effect).

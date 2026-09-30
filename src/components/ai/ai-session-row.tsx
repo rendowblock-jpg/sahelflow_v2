@@ -48,7 +48,7 @@ export function sessionStamp(value: string, locale: AiDecisionLocale): string {
 export interface AiSessionRowModel {
   id: string;
   title: string;
-  preview: string;
+  /** Last activity (clock for today/yesterday, a date for older). */
   stamp: string;
   pinned: boolean;
   active: boolean;
@@ -171,57 +171,36 @@ export function AiSessionRow({
         aria-current={session.active ? "page" : undefined}
         disabled={navigationLocked}
         onClick={onOpen}
+        title={session.stamp ? `${session.title} · ${session.stamp}` : session.title}
         className={cn(
-          "block w-full rounded-control px-2.5 py-2 text-start outline-none transition-colors",
+          "flex h-9 w-full items-center gap-2 rounded-control px-2.5 text-start outline-none transition-colors",
           "focus-visible:ring-2 focus-visible:ring-ring",
           "disabled:cursor-not-allowed disabled:opacity-50",
           session.active
             ? "bg-accent text-accent-foreground"
-            : "text-foreground hover:bg-muted/60",
+            : "text-foreground/85 hover:bg-muted/70 hover:text-foreground",
           deleteArmed && "bg-destructive-subtle",
         )}
       >
-        <span className="flex min-w-0 items-center gap-2 pe-7">
-          {session.pinned ? (
-            <Pin
-              className="size-3 shrink-0 rotate-45 text-muted-foreground"
-              aria-hidden="true"
-            />
-          ) : null}
-          {/* Seller-named titles keep their own direction so a Latin title
-              truncates at its own end while the row aligns with the rail. */}
-          <span
-            dir="auto"
-            data-sf-seller-label="true"
-            className={cn(
-              "min-w-0 flex-1 truncate text-body-sm",
-              session.active ? "font-semibold" : "font-medium",
-            )}
-          >
-            {session.title}
-          </span>
-          {session.reviewCount > 0 ? (
-            <span className="shrink-0 rounded-full bg-warning-soft px-1.5 text-caption font-semibold tabular-nums text-warning">
-              <span className="sr-only">
-                {`${getAiDecisionCopy(locale, "needsReview")}: `}
-              </span>
-              {session.reviewCount}
-            </span>
-          ) : null}
-          <span
-            dir="ltr"
-            className="shrink-0 text-caption tabular-nums text-muted-foreground transition-opacity group-hover/session:opacity-0 group-focus-within/session:opacity-0"
-          >
-            {session.stamp}
-          </span>
+        {/* Seller-named titles keep their own direction so a Latin title
+            truncates at its own end while the row aligns with the rail. */}
+        <span
+          dir="auto"
+          data-sf-seller-label="true"
+          className={cn(
+            "min-w-0 flex-1 truncate text-body-sm",
+            session.active ? "font-medium" : "font-normal",
+            "group-hover/session:pe-6 group-focus-within/session:pe-6 max-md:pe-6",
+          )}
+        >
+          {session.title}
         </span>
-        {session.preview ? (
-          <span
-            dir="auto"
-            data-sf-seller-label="true"
-            className="mt-0.5 block truncate text-caption text-muted-foreground"
-          >
-            {session.preview}
+        {session.reviewCount > 0 ? (
+          <span className="shrink-0 rounded-full bg-warning-soft px-1.5 text-caption font-semibold tabular-nums text-warning group-hover/session:hidden">
+            <span className="sr-only">
+              {`${getAiDecisionCopy(locale, "needsReview")}: `}
+            </span>
+            {session.reviewCount}
           </span>
         ) : null}
       </button>
@@ -263,7 +242,7 @@ export function AiSessionRow({
               aria-label={getAiDecisionCopy(locale, "sessionActions")}
               disabled={actionsLocked}
               className={cn(
-                "absolute end-1 top-1.5 size-7 text-muted-foreground hover:text-foreground",
+                "absolute end-1 top-1 size-7 text-muted-foreground hover:text-foreground",
                 "opacity-0 group-hover/session:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100",
                 "max-md:opacity-100",
               )}

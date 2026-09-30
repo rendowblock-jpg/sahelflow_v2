@@ -26,10 +26,11 @@ describe("AI Class-AAA decision workspace contract", () => {
     const log = read("src/components/ai/ai-message-log.tsx");
 
     expect(workspace).toContain('useMediaQuery("(min-width: 1500px)")');
-    expect(workspace).toContain('grid-cols-[16rem_minmax(0,1fr)]');
-    expect(workspace).toContain(
-      'grid-cols-[16rem_minmax(0,1fr)_20rem]',
-    );
+    // Agents rebuild: a collapsible sidebar (icon rail when collapsed, the
+    // choice remembered) beside the canvas; the review column still appears
+    // only at ≥1500px and only when it has work (IA-03/IA-04).
+    expect(workspace).toContain('railCollapsed ? "w-14" : "w-66"');
+    expect(workspace).toContain('<div className="h-full w-80 shrink-0 border-s">');
     expect(workspace).toContain("showReviewColumn");
     expect(workspace).toContain("aiReviewHasWork");
     expect(workspace).toContain("AiWorkHistory");
@@ -44,10 +45,13 @@ describe("AI Class-AAA decision workspace contract", () => {
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
     const canvas = read("src/components/ai/ai-decision-canvas.tsx");
 
-    // Mobile opens on the history rail; only the `?view=connected` deep link
-    // (MCP-13) drills straight into the canvas it names.
+    // Mobile opens on the history rail; the `?view=connected` deep link
+    // (MCP-13) and a record-surface `?q=` prompt drill straight into the
+    // canvas they name.
     expect(workspace).toContain('useState<"history" | "canvas">(');
-    expect(workspace).toContain('initialView === "connected" ? "canvas" : "history"');
+    expect(workspace).toContain(
+      'initialView === "connected" || initialPrompt ? "canvas" : "history"',
+    );
     expect(workspace).toContain('setMobilePane("canvas")');
     expect(workspace).toContain('mobilePane === "history"');
     expect(canvas).toContain("onBack");

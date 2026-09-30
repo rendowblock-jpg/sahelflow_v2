@@ -829,12 +829,18 @@ html { scroll-behavior: smooth; }
   }
 }
 
-/* Heading hierarchy — consistent across all pages
-   Clearer contrast: h1 (24/30px page title) → h2 (20px section) → h3 (16px card).
-   h1 gets text-foreground for max contrast on dark bg (VLM: "headings lack contrast"). */
-h1 { @apply text-2xl font-semibold tracking-tight text-foreground sm:text-3xl; }
-h2 { @apply text-xl font-semibold tracking-tight text-foreground; }
-h3 { @apply text-base font-semibold text-foreground; }
+/* Heading hierarchy — the default for a bare heading on every page:
+   h1 (24/30px page title) → h2 (20px section) → h3 (16px card), foreground
+   for contrast on dark surfaces (VLM: "headings lack contrast").
+   These live in the base layer on purpose. Unlayered, they outranked every
+   Tailwind utility, so a heading's own classes (size, weight, colour) were
+   silently ignored app-wide; in the base layer they are the default and a
+   heading that states its own type role gets it. */
+@layer base {
+  h1 { @apply text-2xl font-semibold tracking-tight text-foreground sm:text-3xl; }
+  h2 { @apply text-xl font-semibold tracking-tight text-foreground; }
+  h3 { @apply text-base font-semibold text-foreground; }
+}
 
 /* ═══════════════════════════════════════════════════════════════════════
    Table RTL + consistency — ensure tables fully respect direction

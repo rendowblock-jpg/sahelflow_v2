@@ -26,7 +26,8 @@ describe("AI Class-AAA final review regressions", () => {
       "const navigationLocked = workspace.creatingSession;",
     );
     expect(workspace).toContain("if (navigationLocked) return;");
-    expect(workspace.match(/navigationLocked=\{navigationLocked\}/g)?.length).toBe(2);
+    // One sidebar factory serves the mobile and desktop layouts.
+    expect(workspace.match(/navigationLocked=\{navigationLocked\}/g)?.length).toBe(1);
     expect(workspace).not.toContain(
       "const navigationLocked = startingAnalysis || workspace.creatingSession;",
     );

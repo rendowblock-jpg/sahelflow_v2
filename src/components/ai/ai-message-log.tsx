@@ -9,7 +9,6 @@ import {
   deriveFollowUpSuggestions,
 } from "@/components/ai/ai-follow-up-chips";
 import { MessageBubble } from "@/components/ai/ai-message-bubble";
-import { StartSurface } from "@/components/ai/ai-start-surface";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
@@ -20,8 +19,7 @@ import { getAiDecisionCopy } from "@/lib/i18n/ai-decision-workspace";
  * STR-01 — the conversation log, extracted from ai-decision-canvas.tsx.
  *
  * This owns everything between the notices and the composer: the
- * structure-matching hydration skeleton, the empty-state start surface, the
- * load-earlier control, the message list, regenerate, the grounded follow-up
+ * structure-matching hydration skeleton, the load-earlier control, the message list, regenerate, the grounded follow-up
  * chips and the chronological (non-interactive) proposal objects.
  *
  * What deliberately stayed in the canvas: the scroll root, the follow-tail
@@ -31,16 +29,12 @@ import { getAiDecisionCopy } from "@/lib/i18n/ai-decision-workspace";
  */
 export function AiMessageLog({
   workspace,
-  startingAnalysis,
   tailRef,
-  onStart,
   onOpenReview,
   onPickSuggestion,
 }: {
   workspace: ReturnType<typeof useAiWorkspace>;
-  startingAnalysis: boolean;
   tailRef: RefObject<HTMLDivElement | null>;
-  onStart: (prompt: string) => Promise<boolean>;
   onOpenReview: () => void;
   /** Writes the canvas-owned draft and returns focus to the composer. */
   onPickSuggestion: (prompt: string) => void;
@@ -121,11 +115,9 @@ export function AiMessageLog({
             </div>
           </div>
         ) : messages.length === 0 ? (
-          <StartSurface
-            workspace={workspace}
-            starting={startingAnalysis || sending}
-            onStart={onStart}
-          />
+          // An empty conversation is the canvas home (hero composer); the log
+          // only ever renders turns.
+          null
         ) : (
           <div className="space-y-8">
             {historyCapped ? (
