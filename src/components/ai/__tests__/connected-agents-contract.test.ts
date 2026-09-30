@@ -17,9 +17,13 @@ function read(path: string): string {
 describe("Connected agents surface", () => {
   it("opens from a pinned rail entry, not a tab band above the workspace", () => {
     const workspace = read("src/components/ai/ai-decision-workspace.tsx");
-    expect(workspace).toContain("<ConnectedAgentsRailEntry");
-    expect(workspace).toContain("footer={railFooter}");
-    expect(workspace.match(/<ConnectedAgentsSurface/g)).toHaveLength(2);
+    // Agents rebuild: Connected agents is one of the sidebar's destinations
+    // (beside New chat, Search and Approvals), not a tab band.
+    const history = read("src/components/ai/ai-work-history.tsx");
+    expect(history).toContain('dataAttr={{ "data-connected-agents-entry": "true" }}');
+    expect(history).toContain('getConnectedAgentsCopy(locale, "railTitle")');
+    expect(workspace).toContain("connectedOffered={connectedOffered}");
+    expect(workspace.match(/<ConnectedAgentsSurface/g)).toHaveLength(1);
     // The review column never sits beside the control surface.
     expect(workspace).toContain("!showConnected && wideViewport && aiReviewHasWork(workspace)");
   });

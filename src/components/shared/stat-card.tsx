@@ -206,8 +206,8 @@ export function StatCard({
     >
       <div className="flex min-w-0 items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-1.5 text-sm font-medium leading-5 text-muted-foreground">
-            <span className="min-w-0 truncate">{label}</span>
+          <div className="flex min-h-9 min-w-0 items-center gap-1.5 text-sm font-medium leading-5 text-muted-foreground">
+            <span className="line-clamp-2 min-w-0 break-words">{label}</span>
             {tooltip ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -230,50 +230,6 @@ export function StatCard({
               </span>
             ) : null}
           </div>
-
-          <div
-            className={cn(
-              "mt-1.5 font-semibold tracking-tight tabular-nums text-foreground rtl:tracking-normal",
-              emphasis === "primary"
-                ? "text-[2rem] leading-10"
-                : emphasis === "supporting"
-                  ? "text-2xl leading-8"
-                  : "text-[1.75rem] leading-9",
-            )}
-          >
-            {explored ? formatSparkValue(explored.value) : value}
-          </div>
-
-          {explored ? (
-            <div
-              className="mt-1.5 flex min-h-5 items-center text-xs leading-5 text-muted-foreground"
-              aria-live="polite"
-              data-stat-explored-day="true"
-            >
-              {exploredDay}
-            </div>
-          ) : subtitle || trendLabel || hasTrend ? (
-            <div className="mt-1.5 flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-muted-foreground">
-              {hasTrend ? (
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-0.5 font-medium tabular-nums",
-                    positive && "text-success",
-                    negative && "text-destructive",
-                  )}
-                >
-                  {positive ? (
-                    <ArrowUpRight className="size-3.5" aria-hidden="true" />
-                  ) : (
-                    <ArrowDownRight className="size-3.5" aria-hidden="true" />
-                  )}
-                  {trendText}
-                </span>
-              ) : null}
-              {trendLabel ? <span>{trendLabel}</span> : null}
-              {subtitle ? <span>{subtitle}</span> : null}
-            </div>
-          ) : null}
         </div>
 
         <div className="flex shrink-0 items-start gap-2">
@@ -294,6 +250,54 @@ export function StatCard({
             {icon}
           </div>
         </div>
+      </div>
+
+      {/* The figure spans the full card width: it never shares a row
+          with the action and icon, so amounts stay on one line. */}
+      <div className="min-w-0">
+        <div
+          className={cn(
+            "mt-1 whitespace-nowrap font-semibold tracking-tight tabular-nums text-foreground rtl:tracking-normal",
+            emphasis === "primary"
+              ? "text-[2rem] leading-10"
+              : emphasis === "supporting"
+                ? "text-2xl leading-8"
+                : "text-[1.75rem] leading-9",
+          )}
+        >
+          {explored ? formatSparkValue(explored.value) : value}
+        </div>
+
+        {explored ? (
+          <div
+            className="mt-1.5 flex min-h-5 items-center text-xs leading-5 text-muted-foreground"
+            aria-live="polite"
+            data-stat-explored-day="true"
+          >
+            {exploredDay}
+          </div>
+        ) : subtitle || trendLabel || hasTrend ? (
+          <div className="mt-1.5 flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-muted-foreground">
+            {hasTrend ? (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-0.5 font-medium tabular-nums",
+                  positive && "text-success",
+                  negative && "text-destructive",
+                )}
+              >
+                {positive ? (
+                  <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                ) : (
+                  <ArrowDownRight className="size-3.5" aria-hidden="true" />
+                )}
+                {trendText}
+              </span>
+            ) : null}
+            {trendLabel ? <span>{trendLabel}</span> : null}
+            {subtitle ? <span>{subtitle}</span> : null}
+          </div>
+        ) : null}
       </div>
 
       {spark && spark.length > 1 ? (

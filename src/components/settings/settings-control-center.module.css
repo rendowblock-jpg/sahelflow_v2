@@ -80,3 +80,12 @@
   line-height: var(--text-body-sm--line-height);
   color: var(--muted-foreground);
 }
+
+/*
+ * Single-panel pages: the page header already names the page, so the panel's
+ * opening header (a restated title) is not shown twice. Multi-panel pages
+ * keep every panel header as a section heading.
+ */
+.stack.leadless > :global([data-slot="card"]):first-child > :global([data-slot="card-header"]):first-child {
+  display: none;
+}

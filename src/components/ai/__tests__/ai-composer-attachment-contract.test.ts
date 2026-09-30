@@ -66,7 +66,12 @@ describe("AI composer screenshot attachment (AI-21)", () => {
     // STR-01 moved the composer deck into its own module; these assertions
     // follow the code they protect rather than being relaxed. Every string
     // pinned here is unchanged — only the file that must carry it moved.
-    const deck = source("src/components/ai/ai-composer-deck.tsx");
+    // The Agents rebuild moved the extraction pipeline into its own hook
+    // and chip (`ai-screenshot-attachment.tsx`); the deck keeps the controls.
+    // Both are read together so every pinned string still has to exist.
+    const deck =
+      source("src/components/ai/ai-composer-deck.tsx") +
+      source("src/components/ai/ai-screenshot-attachment.tsx");
     const canvas = source("src/components/ai/ai-decision-canvas.tsx");
 
     expect(deck).toContain('data-ai-composer-attach="true"');

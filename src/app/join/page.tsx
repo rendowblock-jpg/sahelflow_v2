@@ -104,7 +104,7 @@ export default function JoinPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="login-id">{t("phase5.join.login")}</Label>
-                <Input id="login-id" dir="ltr" value={loginId} onChange={(event) => setLoginId(event.target.value.toLowerCase())} placeholder={t("phase5.join.loginPlaceholder")} pattern="[a-z0-9][a-z0-9._-]{2,31}" autoComplete="username" disabled={loading || success} required />
+                <Input id="login-id" dir="ltr" data-sf-placeholder-dir="document" value={loginId} onChange={(event) => setLoginId(event.target.value.toLowerCase())} placeholder={t("phase5.join.loginPlaceholder")} pattern="[a-z0-9][a-z0-9._-]{2,31}" autoComplete="username" disabled={loading || success} required />
                 <p className="text-xs text-muted-foreground">{t("phase5.join.loginHelp")}</p>
               </div>
             </div>

@@ -62,7 +62,7 @@ test.describe("Backup + restore round-trip", () => {
     expect(sentinel.id).toBeTruthy();
 
     // ── 2. UI: visit /settings — backup-restore panel renders ──────────────
-    await page.goto("/settings");
+    await page.goto("/settings?group=backup");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 10_000 });
 
@@ -96,7 +96,7 @@ test.describe("Backup + restore round-trip", () => {
     // ── 6. Restore the backup via the UI (exercises the real user path) ────
     // The /settings page was loaded before the backup was created, so the
     // panel's list is stale. Reload to pick up the new backup row.
-    await page.goto("/settings");
+    await page.goto("/settings?group=backup");
     await page.waitForLoadState("networkidle");
 
     // Find the row for our backup file and click its Restore button.

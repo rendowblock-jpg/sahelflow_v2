@@ -22,9 +22,12 @@ const SHORTCUTS = [
 export function AiShortcutsPopover({
   copy,
   label,
+  leading = [],
 }: {
   copy: AiCopyFn;
   label: string;
+  /** Workspace-level shortcuts listed before the canvas ones: [keys, label]. */
+  leading?: ReadonlyArray<readonly [string, string]>;
 }) {
   return (
     <Popover>
@@ -38,12 +41,15 @@ export function AiShortcutsPopover({
           <Keyboard className="size-3.5" aria-hidden="true" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" side="top" className="w-64 p-3">
+      <PopoverContent align="end" side="top" className="w-72 p-3">
         <p className="text-caption font-medium text-muted-foreground">{label}</p>
         <dl className="mt-2 space-y-1.5 text-body-sm">
-          {SHORTCUTS.map(([keys, key]) => (
-            <div key={keys} className="flex items-center justify-between gap-3">
-              <dt>{copy(key)}</dt>
+          {[
+            ...leading,
+            ...SHORTCUTS.map(([keys, key]) => [keys, copy(key)] as const),
+          ].map(([keys, text]) => (
+            <div key={`${keys}-${text}`} className="flex items-center justify-between gap-3">
+              <dt>{text}</dt>
               <dd dir="ltr">
                 <kbd className="rounded-control border border-border bg-muted px-1.5 py-0.5 font-sans text-caption">
                   {keys}

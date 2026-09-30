@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  useId,
+  useMemo,
   useRef,
   useState,
   type Dispatch,
@@ -11,15 +13,26 @@ import {
   ArrowUp,
   ImagePlus,
   Loader2,
+  Slash,
   Square,
-  X,
 } from "lucide-react";
 
+import {
+  matchesQuickJob,
+  type AiQuickJob,
+} from "@/components/ai/ai-quick-jobs";
 import {
   AiComposerEditNotice,
   AiComposerFooter,
   AiShortcutsPopover,
 } from "@/components/ai/ai-shortcuts-popover";
+import { AiSlashMenu } from "@/components/ai/ai-slash-menu";
+import {
+  AiDropOverlay,
+  AiScreenshotChip,
+  SCREENSHOT_ACCEPT,
+  useAiScreenshotAttachment,
+} from "@/components/ai/ai-screenshot-attachment";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
@@ -29,72 +42,21 @@ import {
   AI_CHAT_MESSAGE_MAX_LENGTH,
 } from "@/lib/ai/chat-limits";
 import { getAiDecisionCopy } from "@/lib/i18n/ai-decision-workspace";
-import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 /**
- * STR-01 — the composer deck: screenshot attachment (AI-21), edit notice
- * (AI-15), the input card with send/stop, the near-limit counter (AI-17) and
- * the on-demand shortcut reference (UI-03). The draft is owned by the canvas —
- * deep-link prefill, edit prefill and follow-up chips all write it — so this
- * deck receives `draft`/`setDraft`/`composerRef` rather than a second copy.
+ * The composer. One component in two placements: `hero` sits in the middle of
+ * a new chat as the page's main control; `docked` sits under a conversation.
  *
- * AI-21: a screenshot is read by the proven extraction pipeline and the result
- * is appended to the draft for review; the seller always sends it themselves.
- * These client bounds only gate the picker/paste — the route re-authenticates
- * them from the sniffed bytes (pinned equal by the attachment contract).
+ * - "/" at the start of an empty line (or the slash button) opens the quick
+ *   jobs, filtered as the seller types; ↑/↓ move, Enter or Tab insert, Esc
+ *   closes. Picking a job writes its prompt into the draft — never sends it.
+ * - Screenshots arrive by button, paste or drop and are read into the draft
+ *   for review (AI-21, `ai-screenshot-attachment.tsx`).
+ * - The draft is owned by the canvas — deep-link prefill, edit prefill,
+ *   follow-up chips and quick jobs all write it — so the deck receives
+ *   `draft`/`setDraft`/`composerRef` rather than keeping a second copy.
  */
-const SCREENSHOT_MAX_BYTES = 10 * 1024 * 1024;
-const SCREENSHOT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const SCREENSHOT_ACCEPT = "image/jpeg,image/png,image/webp";
-
-interface ScreenshotExtractionResult {
-  order: {
-    customerName?: string;
-    phone?: string;
-    wilaya?: string;
-    commune?: string;
-    address?: string;
-    items: Array<{ productName: string; quantity: number; unitPrice?: number }>;
-    totalPrice?: number;
-    notes?: string;
-  } | null;
-  method: string;
-  confidence: number;
-  isComplete: boolean;
-  missingFields?: string[];
-}
-
-/**
- * The block is addressed to the chat model, so the field labels stay in the
- * model contract language (English) while every surrounding UI string is
- * localized — the seller reviews and edits the draft before sending.
- */
-function screenshotSummary(result: ScreenshotExtractionResult): string {
-  const order = result.order!;
-  const lines: string[] = [
-    `Order request extracted from a screenshot (${Math.round(result.confidence * 100)}% confidence):`,
-  ];
-  if (order.customerName) lines.push(`customer: ${order.customerName}`);
-  if (order.phone) lines.push(`phone: ${order.phone}`);
-  if (order.wilaya) lines.push(`wilaya: ${order.wilaya}`);
-  if (order.commune) lines.push(`commune: ${order.commune}`);
-  if (order.address) lines.push(`address: ${order.address}`);
-  for (const item of order.items) {
-    lines.push(
-      `item: ${item.quantity} × ${item.productName}${
-        item.unitPrice != null ? ` @ ${item.unitPrice} DZD` : ""
-      }`,
-    );
-  }
-  if (order.totalPrice != null) lines.push(`total: ${order.totalPrice} DZD`);
-  if (order.notes) lines.push(`notes: ${order.notes}`);
-  if (result.missingFields?.length) {
-    lines.push(`missing: ${result.missingFields.join(", ")}`);
-  }
-  return lines.join("\n");
-}
-
 export function AiComposerDeck({
   workspace,
   draft,
@@ -107,6 +69,8 @@ export function AiComposerDeck({
   stop,
   onCancelEdit,
   onSubmit,
+  quickJobs,
+  variant = "docked",
 }: {
   workspace: ReturnType<typeof useAiWorkspace>;
   draft: string;
@@ -120,112 +84,63 @@ export function AiComposerDeck({
   stop: () => void;
   onCancelEdit: () => void;
   onSubmit: () => void | Promise<void>;
+  quickJobs: AiQuickJob[];
+  variant?: "hero" | "docked";
 }) {
   const { t } = useI18n();
-  const { copy } = workspace;
-  // Ledger AI-21: one bounded screenshot in flight; the chip above the
-  // composer shows the honest reading state until the extraction resolves.
-  const [screenshot, setScreenshot] = useState<{
-    file: File;
-    previewUrl: string;
-  } | null>(null);
-  const [readingScreenshot, setReadingScreenshot] = useState(false);
+  const { copy, locale } = workspace;
+  const menuId = useId();
   const screenshotInputRef = useRef<HTMLInputElement | null>(null);
-  // The live preview URL is revoked through this ref — never inside a state
-  // updater, which React may invoke twice (StrictMode) or skip entirely.
-  const screenshotUrlRef = useRef<string | null>(null);
+  const [menuFromButton, setMenuFromButton] = useState(false);
+  const [menuIndex, setMenuIndex] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const { screenshot, readingScreenshot, ingestScreenshot, clearScreenshot } =
+    useAiScreenshotAttachment({ copy, setDraft, composerRef });
   // Ledger AI-17 residual: the counter owns the last stretch before the
   // bound — an always-visible counter is noise for the common short prompt.
   const counterVisibleFrom = Math.ceil(
     AI_CHAT_MESSAGE_MAX_LENGTH * AI_CHAT_COUNTER_VISIBLE_SHARE,
   );
+  const inputLocked = !setupReady || sending || startingAnalysis;
+  const hero = variant === "hero";
 
-  const clearScreenshot = () => {
-    if (screenshotUrlRef.current) {
-      URL.revokeObjectURL(screenshotUrlRef.current);
-      screenshotUrlRef.current = null;
-    }
-    setScreenshot(null);
+  const slashQuery =
+    !editing && draft.startsWith("/") && !draft.includes("\n")
+      ? draft.slice(1)
+      : null;
+  const menuOpen = !inputLocked && (menuFromButton || slashQuery !== null);
+  const filteredJobs = useMemo(
+    () =>
+      menuOpen
+        ? quickJobs.filter((job) => matchesQuickJob(job, slashQuery ?? ""))
+        : [],
+    [menuOpen, quickJobs, slashQuery],
+  );
+  const activeIndex = Math.min(menuIndex, Math.max(filteredJobs.length - 1, 0));
+
+  const closeMenu = () => {
+    setMenuFromButton(false);
+    setMenuIndex(0);
   };
 
-  const extractScreenshot = async (shot: {
-    file: File;
-    previewUrl: string;
-  }): Promise<void> => {
-    setReadingScreenshot(true);
-    try {
-      const form = new FormData();
-      form.set("image", shot.file, shot.file.name || "screenshot");
-      form.set("fileName", shot.file.name || "screenshot");
-      const response = await fetch("/api/extraction/image", {
-        method: "POST",
-        body: form,
-      });
-      // The consent and rate-limit codes reuse the exact copy the chat send
-      // path shows for the same failure (one truth per failure cause).
-      if (response.status === 403) {
-        toast.error(copy("consentMissing"));
-        return;
-      }
-      if (response.status === 429) {
-        toast.error(copy("rateLimited"));
-        return;
-      }
-      if (!response.ok) {
-        toast.error(copy("screenshotExtractFailed"));
-        return;
-      }
-      const payload = (await response.json()) as {
-        result?: ScreenshotExtractionResult;
-      };
-      const result = payload.result;
-      if (!result || !result.order) {
-        toast.error(copy("screenshotExtractFailed"));
-        return;
-      }
-      const summary = screenshotSummary(result);
-      setDraft((current) =>
-        current.trim() ? `${current}\n\n${summary}` : summary,
-      );
-      clearScreenshot();
-      composerRef.current?.focus();
-    } catch {
-      toast.error(copy("screenshotExtractFailed"));
-    } finally {
-      setReadingScreenshot(false);
-    }
-  };
-
-  const ingestScreenshot = (file: File): void => {
-    const mediaType = file.type.split(";", 1)[0]?.trim().toLowerCase() ?? "";
-    if (!SCREENSHOT_TYPES.has(mediaType)) {
-      toast.error(copy("screenshotUnsupported"));
-      return;
-    }
-    if (file.size <= 0 || file.size > SCREENSHOT_MAX_BYTES) {
-      toast.error(
-        copy("screenshotTooLarge", {
-          limit: Math.round(SCREENSHOT_MAX_BYTES / (1024 * 1024)),
-        }),
-      );
-      return;
-    }
-    if (screenshotUrlRef.current) {
-      URL.revokeObjectURL(screenshotUrlRef.current);
-    }
-    const previewUrl = URL.createObjectURL(file);
-    screenshotUrlRef.current = previewUrl;
-    const shot = { file, previewUrl };
-    setScreenshot(shot);
-    void extractScreenshot(shot);
+  const pickJob = (job: AiQuickJob) => {
+    setDraft(job.prompt);
+    closeMenu();
+    composerRef.current?.focus();
   };
 
   const sendDisabled =
     !setupReady || !draft.trim() || startingAnalysis || readingScreenshot;
 
+  const acceptsDrop = setupReady && !sending && !readingScreenshot;
+
   return (
-    <div data-ai-composer-deck="true" className="shrink-0 pb-3 pt-2">
-      <div className="sf-ai-column">
+    <div
+      data-ai-composer-deck="true"
+      data-ai-composer-variant={variant}
+      className={cn("shrink-0", hero ? "w-full" : "pb-3 pt-2")}
+    >
+      <div className={cn(!hero && "sf-ai-column")}>
         {editing ? (
           <AiComposerEditNotice
             notice={copy("editingNotice")}
@@ -234,164 +149,249 @@ export function AiComposerDeck({
           />
         ) : null}
         {screenshot ? (
-          <div
-            data-ai-screenshot-chip="true"
-            className="mb-2 flex items-center gap-3 rounded-surface border border-border bg-card px-3 py-2"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview, never persisted */}
-            <img
-              src={screenshot.previewUrl}
-              alt={screenshot.file.name || copy("attachScreenshot")}
-              className="size-10 shrink-0 rounded-control border border-border object-cover"
-            />
-            {readingScreenshot ? (
-              <Loader2
-                className="size-3.5 shrink-0 animate-spin text-muted-foreground"
-                aria-hidden="true"
-              />
-            ) : null}
-            <p className="min-w-0 flex-1 truncate text-body-sm text-muted-foreground">
-              {readingScreenshot
-                ? copy("readingScreenshot")
-                : screenshot.file.name || copy("attachScreenshot")}
-            </p>
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              aria-label={copy("screenshotRemove")}
-              data-ai-screenshot-remove="true"
-              disabled={readingScreenshot}
-              onClick={clearScreenshot}
-            >
-              <X className="size-3.5" aria-hidden="true" />
-            </Button>
-          </div>
+          <AiScreenshotChip
+            screenshot={screenshot}
+            reading={readingScreenshot}
+            copy={copy}
+            onRemove={clearScreenshot}
+          />
         ) : null}
-        <div
-          data-ai-composer="true"
-          className="rounded-surface border border-border bg-card transition-colors focus-within:border-primary/40"
-        >
-          <input
-            ref={screenshotInputRef}
-            type="file"
-            accept={SCREENSHOT_ACCEPT}
-            aria-label={copy("attachScreenshot")}
-            className="sr-only"
-            tabIndex={-1}
-            data-ai-screenshot-input="true"
-            onChange={(event) => {
-              const file = event.currentTarget.files?.[0] ?? null;
-              event.currentTarget.value = "";
-              if (file) ingestScreenshot(file);
+        <div className="relative">
+          <div
+            data-ai-composer="true"
+            onDragOver={(event) => {
+              if (!acceptsDrop || !event.dataTransfer.types.includes("Files")) return;
+              event.preventDefault();
+              setDragging(true);
             }}
-          />
-          <Textarea
-            ref={composerRef}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onPaste={(event) => {
-              // Ledger AI-21: screenshots arrive as paste too (WhatsApp/
-              // Facebook screenshot workflows); one decision per image.
-              const file = event.clipboardData?.files?.[0];
-              if (file && setupReady && !sending && !readingScreenshot) {
-                event.preventDefault();
-                ingestScreenshot(file);
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                setDragging(false);
               }
             }}
-            onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                !event.shiftKey &&
-                !event.nativeEvent.isComposing
-              ) {
-                event.preventDefault();
-                void onSubmit();
-              }
+            onDrop={(event) => {
+              setDragging(false);
+              const file = event.dataTransfer.files?.[0];
+              if (!file || !acceptsDrop) return;
+              event.preventDefault();
+              ingestScreenshot(file);
             }}
-            placeholder={workspace.copy("composerPlaceholder")}
-            aria-label={workspace.copy("composerPlaceholder")}
-            rows={1}
-            dir="auto"
-            maxLength={AI_CHAT_MESSAGE_MAX_LENGTH}
-            disabled={!setupReady || sending || startingAnalysis}
-            className="max-h-48 min-h-12 w-full resize-none border-0 bg-transparent px-3.5 pb-1 pt-3 text-body shadow-none dark:bg-transparent focus-visible:ring-0"
-          />
-          <div className="flex items-center gap-1 px-2 pb-2">
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
+            className={cn(
+              "relative rounded-surface border bg-card shadow-(--elevation-1) transition",
+              "focus-within:border-ring/60 focus-within:shadow-(--elevation-2)",
+              dragging ? "border-primary border-dashed" : "border-border",
+            )}
+          >
+            <input
+              ref={screenshotInputRef}
+              type="file"
+              accept={SCREENSHOT_ACCEPT}
               aria-label={copy("attachScreenshot")}
-              title={copy("attachScreenshot")}
-              data-ai-composer-attach="true"
-              disabled={!setupReady || sending || readingScreenshot || startingAnalysis}
-              onClick={() => screenshotInputRef.current?.click()}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              {readingScreenshot ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <ImagePlus className="size-4" aria-hidden="true" />
+              className="sr-only"
+              tabIndex={-1}
+              data-ai-screenshot-input="true"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0] ?? null;
+                event.currentTarget.value = "";
+                if (file) ingestScreenshot(file);
+              }}
+            />
+            <Textarea
+              ref={composerRef}
+              value={draft}
+              // Stays a textbox for assistive tech (a chat field, not a
+              // picker); the quick-jobs list is linked while it is open.
+              aria-controls={menuOpen ? menuId : undefined}
+              aria-autocomplete="list"
+              aria-activedescendant={
+                menuOpen && filteredJobs[activeIndex]
+                  ? `${menuId}-${filteredJobs[activeIndex].id}`
+                  : undefined
+              }
+              onChange={(event) => {
+                setDraft(event.target.value);
+                setMenuIndex(0);
+              }}
+              onBlur={() => setMenuFromButton(false)}
+              onPaste={(event) => {
+                // Ledger AI-21: screenshots arrive as paste too (WhatsApp/
+                // Facebook screenshot workflows); one decision per image.
+                const file = event.clipboardData?.files?.[0];
+                if (file && setupReady && !sending && !readingScreenshot) {
+                  event.preventDefault();
+                  ingestScreenshot(file);
+                }
+              }}
+              onKeyDown={(event) => {
+                if (menuOpen) {
+                  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                    event.preventDefault();
+                    if (filteredJobs.length === 0) return;
+                    const step = event.key === "ArrowDown" ? 1 : -1;
+                    setMenuIndex(
+                      (activeIndex + step + filteredJobs.length) % filteredJobs.length,
+                    );
+                    return;
+                  }
+                  if ((event.key === "Enter" || event.key === "Tab") && !event.shiftKey) {
+                    const job = filteredJobs[activeIndex];
+                    if (job) {
+                      event.preventDefault();
+                      pickJob(job);
+                      return;
+                    }
+                  }
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (slashQuery !== null) setDraft("");
+                    closeMenu();
+                    return;
+                  }
+                }
+                if (
+                  event.key === "Enter" &&
+                  !event.shiftKey &&
+                  !event.nativeEvent.isComposing
+                ) {
+                  event.preventDefault();
+                  void onSubmit();
+                }
+              }}
+              placeholder={copy("composerPlaceholder")}
+              aria-label={copy("composerPlaceholder")}
+              rows={hero ? 2 : 1}
+              dir="auto"
+              maxLength={AI_CHAT_MESSAGE_MAX_LENGTH}
+              disabled={inputLocked}
+              className={cn(
+                "w-full resize-none rounded-none border-0 bg-transparent px-4 pb-1 text-body shadow-none outline-none dark:bg-transparent focus-visible:border-transparent focus-visible:ring-0",
+                hero ? "max-h-80 min-h-20 pt-4" : "max-h-60 min-h-12 pt-3",
               )}
-            </Button>
-            <span className="flex-1" />
-            {draft.length >= counterVisibleFrom ? (
-              // Ledger AI-17 residual: honest near-limit counter, one bound
-              // with both server schemas (chat-limits.ts). Numbers stay LTR.
-              <span
-                data-ai-composer-counter="true"
-                dir="ltr"
-                className={cn(
-                  "px-1.5 text-caption tabular-nums",
-                  draft.length >= AI_CHAT_MESSAGE_MAX_LENGTH
-                    ? "font-semibold text-warning"
-                    : "text-muted-foreground",
-                )}
-              >
-                {getAiDecisionCopy(workspace.locale, "composerCounter", {
-                  count: draft.length,
-                  max: AI_CHAT_MESSAGE_MAX_LENGTH,
-                })}
-              </span>
-            ) : null}
-            {sending ? (
+            />
+            <div className="flex items-center gap-1 px-2 pb-2">
               <Button
                 type="button"
                 size="icon-sm"
-                variant="outline"
-                aria-label={workspace.copy("stop")}
-                title={workspace.copy("stop")}
-                className="rounded-full border-destructive/30 text-destructive hover:bg-destructive-soft hover:text-destructive"
-                onClick={stop}
+                variant="ghost"
+                aria-label={copy("attachScreenshot")}
+                title={copy("attachScreenshot")}
+                data-ai-composer-attach="true"
+                disabled={inputLocked || readingScreenshot}
+                onClick={() => screenshotInputRef.current?.click()}
+                className="text-muted-foreground hover:text-foreground"
               >
-                <Square className="size-3.5 fill-current" aria-hidden="true" />
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                size="icon-sm"
-                aria-label={workspace.copy("send")}
-                title={workspace.copy("send")}
-                disabled={sendDisabled}
-                className="rounded-full"
-                onClick={() => void onSubmit()}
-              >
-                {startingAnalysis ? (
+                {readingScreenshot ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <ArrowUp className="size-4" aria-hidden="true" />
+                  <ImagePlus className="size-4" aria-hidden="true" />
                 )}
               </Button>
-            )}
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label={getAiDecisionCopy(locale, "quickJobs")}
+                title={getAiDecisionCopy(locale, "quickJobsHint")}
+                data-ai-quick-jobs-button="true"
+                aria-pressed={menuOpen}
+                disabled={inputLocked}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  if (menuOpen) {
+                    closeMenu();
+                  } else {
+                    setMenuFromButton(true);
+                    setMenuIndex(0);
+                  }
+                  composerRef.current?.focus();
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Slash className="size-4" aria-hidden="true" />
+              </Button>
+              <span className="flex-1" />
+              {draft.length >= counterVisibleFrom ? (
+                // Ledger AI-17 residual: honest near-limit counter, one bound
+                // with both server schemas (chat-limits.ts). Numbers stay LTR.
+                <span
+                  data-ai-composer-counter="true"
+                  dir="ltr"
+                  className={cn(
+                    "px-1.5 text-caption tabular-nums",
+                    draft.length >= AI_CHAT_MESSAGE_MAX_LENGTH
+                      ? "font-semibold text-warning"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {getAiDecisionCopy(locale, "composerCounter", {
+                    count: draft.length,
+                    max: AI_CHAT_MESSAGE_MAX_LENGTH,
+                  })}
+                </span>
+              ) : null}
+              {sending ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  aria-label={copy("stop")}
+                  title={copy("stop")}
+                  className="size-8 rounded-full"
+                  onClick={stop}
+                >
+                  <Square className="size-3 fill-current" aria-hidden="true" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="icon"
+                  aria-label={copy("send")}
+                  title={copy("send")}
+                  data-ai-send="true"
+                  disabled={sendDisabled}
+                  className="size-8 rounded-full disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+                  onClick={() => void onSubmit()}
+                >
+                  {startingAnalysis ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <ArrowUp className="size-4" aria-hidden="true" />
+                  )}
+                </Button>
+              )}
+            </div>
+            {dragging ? (
+              <AiDropOverlay label={getAiDecisionCopy(locale, "dropScreenshot")} />
+            ) : null}
           </div>
+          {menuOpen ? (
+            <AiSlashMenu
+              id={menuId}
+              title={getAiDecisionCopy(locale, "quickJobs")}
+              emptyLabel={getAiDecisionCopy(locale, "quickJobsEmpty")}
+              jobs={filteredJobs}
+              activeIndex={activeIndex}
+              placement={hero ? "below" : "above"}
+              onHover={setMenuIndex}
+              onPick={pickJob}
+            />
+          ) : null}
         </div>
         <AiComposerFooter
-          trust={getAiDecisionCopy(workspace.locale, "composerTrust")}
-          sendLabel={getAiDecisionCopy(workspace.locale, "composerHintSend")}
-          newlineLabel={getAiDecisionCopy(workspace.locale, "composerHintNewline")}
+          trust={getAiDecisionCopy(locale, "composerTrust")}
+          sendLabel={getAiDecisionCopy(locale, "composerHintSend")}
+          newlineLabel={getAiDecisionCopy(locale, "composerHintNewline")}
         >
-          <AiShortcutsPopover copy={copy} label={t("common.cheatsheet")} />
+          <AiShortcutsPopover
+            copy={copy}
+            label={t("common.cheatsheet")}
+            leading={[
+              ["Ctrl+Shift+O", getAiDecisionCopy(locale, "shortcutNewChat")],
+              ["Ctrl+Shift+S", getAiDecisionCopy(locale, "shortcutToggleSidebar")],
+              ["/", getAiDecisionCopy(locale, "quickJobs")],
+            ]}
+          />
         </AiComposerFooter>
       </div>
     </div>

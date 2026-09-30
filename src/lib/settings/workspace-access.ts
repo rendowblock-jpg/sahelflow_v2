@@ -1,28 +1,20 @@
 import "server-only";
 
-import type {
-  SettingsWorkspaceAccess,
-  SettingsWorkspaceGroup,
-} from "@/components/settings/settings-workspace";
+import {
+  resolveSettingsTarget,
+  type SettingsWorkspaceAccess,
+} from "@/components/settings/settings-ia";
 import { db } from "@/lib/db";
 import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
 
-const SETTINGS_GROUPS = new Set<SettingsWorkspaceGroup>([
-  "workspace",
-  "operations",
-  "connections",
-  "intelligence",
-  "access",
-  "data",
-]);
-
 export interface SettingsWorkspaceProps {
   access: SettingsWorkspaceAccess;
   integrations: Array<{ platform: string; status: string }>;
-  initialGroup?: SettingsWorkspaceGroup;
+  /** A settings page id; legacy `?group=` domains resolve to their page. */
+  initialGroup?: string;
 }
 
 /**
@@ -98,9 +90,7 @@ export async function resolveSettingsWorkspaceProps(
           select: { platform: true, isActive: true },
         })
       : [];
-  const initialGroup = SETTINGS_GROUPS.has(requestedGroup as SettingsWorkspaceGroup)
-    ? (requestedGroup as SettingsWorkspaceGroup)
-    : undefined;
+  const initialGroup = resolveSettingsTarget(requestedGroup);
 
   return {
     access,

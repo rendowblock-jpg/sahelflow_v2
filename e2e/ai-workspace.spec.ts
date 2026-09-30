@@ -94,9 +94,15 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
       .locator('[data-ai-work-history="true"]')
       .getByRole("button", { name: "Nouvelle discussion" })
       .click();
+    // New chat is a draft (no durable session until the first message): the
+    // stored history stays listed and the canvas opens on the home.
     await expect(page.locator("[data-ai-session]").first()).toBeVisible();
+    await expect(page.locator('[data-ai-decision-canvas="true"]')).toHaveAttribute(
+      "data-ai-canvas-mode",
+      "home",
+    );
     await expect(page.locator('[data-ai-decision-canvas="true"]')).toContainText(
-      "Nouvelle conversation",
+      "Comment puis-je vous aider ?",
     );
     // The canvas shows the new session's title as soon as the session is
     // active, but the start surface is behind `loadingConversation` — the
@@ -121,8 +127,10 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
       await expect(composer).toBeEnabled();
     } else {
       await expect(composer).toBeDisabled();
-      await expect(workspace).toContainText(
-        "La configuration IA demande votre attention",
+      // The new-chat home states the setup truth once, in its setup panel.
+      await expect(page.locator('[data-ai-setup-panel="true"]')).toBeVisible();
+      await expect(page.locator('[data-ai-setup-panel="true"]')).toContainText(
+        "Connectez Gemini pour commencer avec l'agent",
       );
     }
 

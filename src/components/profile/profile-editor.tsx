@@ -145,18 +145,13 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
 
   return (
     <section aria-labelledby="settings-profile-title" className="py-7">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h3 id="settings-profile-title" className="text-title-3">
-            {t("profile.basicInfo")}
-          </h3>
-          <p className="mt-0.5 text-body-sm text-muted-foreground">
-            {t("profile.basicInfoDesc")}
-          </p>
-        </div>
-      </div>
+      {/* The Settings page header ("Profile") is the visible title; the
+          section keeps its own name for assistive tech. */}
+      <h3 id="settings-profile-title" className="sr-only">
+        {t("profile.basicInfo")}
+      </h3>
 
-      <div className="mt-5 flex items-center gap-4 rounded-surface border border-border bg-card p-4">
+      <div className="flex items-center gap-4 rounded-surface border border-border bg-card p-4">
         <PhotoUpload
           value={profile.photo ?? null}
           onChange={(url) => setField("photo", url ?? undefined)}

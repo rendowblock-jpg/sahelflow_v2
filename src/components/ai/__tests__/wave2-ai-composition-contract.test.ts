@@ -39,10 +39,10 @@ describe("Class-AAA AI composition contract", () => {
     // assertions follow the code they protect.
     const log = read("src/components/ai/ai-message-log.tsx");
 
-    expect(workspace).toContain('grid-cols-[16rem_minmax(0,1fr)]');
-    expect(workspace).toContain(
-      'grid-cols-[16rem_minmax(0,1fr)_20rem]',
-    );
+    // The canvas takes every pixel the collapsible sidebar leaves it; the
+    // review column is additive and progressive (≥1500px with work only).
+    expect(workspace).toContain('<div className="min-w-0 flex-1">{canvas}</div>');
+    expect(workspace).toContain('railCollapsed ? "w-14" : "w-66"');
     expect(workspace).toContain("showReviewColumn");
     expect(workspace).toContain("aiReviewHasWork");
     expect(workspace).toContain('useMediaQuery("(min-width: 1500px)")');

@@ -6,9 +6,11 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("Settings Class-AAA control-center contract", () => {
-  it("routes Settings through six task-shaped domains without the rejected nested mega-card shell", () => {
+  it("routes Settings through focused pages grouped Account → Shop → Connections → Data", () => {
     const page = read("src/app/(dashboard)/settings/page.tsx");
     const workspace = read("src/components/settings/settings-workspace.tsx");
+    const pages = read("src/components/settings/settings-pages.tsx");
+    const ia = read("src/components/settings/settings-ia.ts");
     const surfaces = read(
       "src/components/settings/settings-control-center.module.css",
     );
@@ -23,15 +25,25 @@ describe("Settings Class-AAA control-center contract", () => {
     );
     expect(workspace).not.toContain("data-settings-premium-shell");
     expect(workspace).not.toContain("text-[11px]");
-    expect(workspace).toContain('id: "workspace"');
-    expect(workspace).toContain('id: "operations"');
-    expect(workspace).toContain('id: "connections"');
-    expect(workspace).toContain('id: "intelligence"');
-    expect(workspace).toContain('id: "access"');
-    expect(workspace).toContain('id: "data"');
-    expect(workspace).toContain("AppearancePanel");
-    expect(workspace).toContain("SecurityAuthorityPanel");
-    expect(workspace).toContain("LicensePanel");
+    // Settings rebuild: one page per concern, grouped in four sections, with
+    // a directory search; the legacy six domains still resolve for deep links.
+    for (const section of ["account", "shop", "connections", "data"]) {
+      expect(ia).toContain(`{ id: "${section}", label:`);
+    }
+    for (const id of [
+      "profile", "appearance", "security", "shops", "reports", "phone", "team",
+      "license", "commerce", "delivery", "meta-pixel", "ai", "backup", "demo", "danger",
+    ]) {
+      expect(pages).toContain(`id: "${id}",`);
+    }
+    expect(ia).toContain(`workspace: "profile"`);
+    expect(ia).toContain(`intelligence: "ai"`);
+    expect(ia).toContain(`connections: "commerce"`);
+    expect(workspace).toContain('data-settings-search="true"');
+    expect(workspace).toContain("settingsPageMatches(");
+    expect(pages).toContain("AppearancePanel");
+    expect(pages).toContain("SecurityAuthorityPanel");
+    expect(pages).toContain("LicensePanel");
     expect(surfaces).toContain('> :global([data-slot="card"])');
     expect(surfaces).toContain("border-radius: 0");
     expect(surfaces).toContain("box-shadow: none");
@@ -179,11 +191,13 @@ describe("Settings Class-AAA control-center contract", () => {
     expect(page).toContain(
       'dangerReset: can("settings.manage") && can("approvals.approve")',
     );
-    expect(workspace).toContain("canManageKey={access.aiKey}");
-    expect(workspace).toContain("canManageConsent={access.aiConsent}");
-    expect(workspace).toContain("canRead={access.backupRead}");
-    expect(workspace).toContain("canCreate={access.backupCreate}");
-    expect(workspace).toContain("canRestore={access.backupRestore}");
+    const pages = read("src/components/settings/settings-pages.tsx");
+    expect(workspace).toContain("page.visible(access)");
+    expect(pages).toContain("canManageKey={access.aiKey}");
+    expect(pages).toContain("canManageConsent={access.aiConsent}");
+    expect(pages).toContain("canRead={access.backupRead}");
+    expect(pages).toContain("canCreate={access.backupCreate}");
+    expect(pages).toContain("canRestore={access.backupRestore}");
   });
 
   it("preserves the generic settings service as non-secret reserved-key authority", () => {

@@ -9,7 +9,6 @@ import {
   Loader2,
   PencilLine,
   Plug,
-  Sparkles,
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
@@ -21,7 +20,8 @@ import {
   getConnectedAgentsCopy,
   type ConnectedAgentsLocale,
 } from "@/lib/i18n/connected-agents";
-import { AiToolResultCard } from "@/components/ai/ai-tool-result-card";
+import { AiToolActivity } from "@/components/ai/ai-tool-activity";
+import { SahelFlowMark } from "@/components/brand/sahelflow-mark";
 import type {
   AiCopyFn,
   AiMessageView,
@@ -218,7 +218,7 @@ const MessageBubble = memo(function MessageBubble({
   if (!assistant) {
     return (
       <article data-ai-message={message.role} className="group/message flex flex-col items-end">
-        <div className="max-w-[85%] rounded-surface bg-muted px-4 py-2.5 text-body text-foreground">
+        <div className="max-w-[85%] rounded-surface bg-muted px-4 py-2.5 text-body leading-7 text-foreground">
           {mcpRequest ? (
             // An external agent's call is shown as what it asked for; the
             // sealed arguments stay in the proposal the seller reviews.
@@ -251,13 +251,7 @@ const MessageBubble = memo(function MessageBubble({
       {/* One quiet identity line per assistant turn: the workspace speaks as a
           named agent, and the body below reads at full column width. */}
       <div className="mb-1.5 flex items-center gap-2">
-        <span
-          data-ai-agent-mark="true"
-          aria-hidden="true"
-          className="flex size-6 shrink-0 items-center justify-center rounded-control bg-primary-soft text-primary"
-        >
-          <Sparkles className="size-3.5" />
-        </span>
+        <SahelFlowMark data-ai-agent-mark="true" className="size-6 shrink-0" />
         <span className="text-body-sm font-semibold">
           {getAiDecisionCopy(locale, "agentName")}
         </span>
@@ -284,11 +278,7 @@ const MessageBubble = memo(function MessageBubble({
         </div>
 
         {message.toolCalls.length > 0 ? (
-          <div className="space-y-2 pt-3">
-            {message.toolCalls.map((tool) => (
-              <AiToolResultCard key={tool.id} tool={tool} />
-            ))}
-          </div>
+          <AiToolActivity tools={message.toolCalls} locale={locale} />
         ) : null}
         {persistenceWarning}
         {actionRow}

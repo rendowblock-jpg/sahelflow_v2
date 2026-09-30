@@ -149,18 +149,8 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
   transition-timing-function: var(--sf-motion-ease-state);
 }
 
-/* Active conversation: a neutral fill plus a short logical-start tick, the
- * same selection grammar the app sidebar uses. */
-[data-ai-session][aria-current="page"]::before {
-  content: "";
-  position: absolute;
-  inset-inline-start: -0.5rem;
-  top: 0.625rem;
-  bottom: 0.625rem;
-  width: 2px;
-  border-radius: 999px;
-  background: var(--primary);
-}
+/* Active conversation: one neutral fill (bg-accent on the row) — the
+ * sidebar is navigation, so selection carries no accent colour. */
 
 /* One reading column shared by the log, the notices and the composer, so
  * their edges align at every canvas width (sidebar expanded or collapsed). */

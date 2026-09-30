@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
+import DashboardPage from "@/app/(dashboard)/dashboard/page";
+import { SettingsModal } from "@/components/settings/settings-modal";
 import { SettingsWorkspace } from "@/components/settings/settings-workspace";
-import { PageHeader } from "@/components/shared/page-header";
 import { getI18n } from "@/lib/i18n-server";
 import { resolveSettingsWorkspaceProps } from "@/lib/settings/workspace-access";
 
@@ -13,13 +14,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * The full-page Settings route.
+ * A direct load of /settings (refresh, deep link, bookmark, the /profile
+ * alias).
  *
- * In-app navigation to /settings is intercepted by `@modal/(.)settings`, so a
- * seller normally meets Settings as a modal over the page they were on. This
- * page renders only on a direct load or refresh of the URL (deep links,
- * bookmarks, the /profile alias) and shares every authority decision with the
- * modal through `resolveSettingsWorkspaceProps`.
+ * Settings is never an in-app page: in-app navigation is intercepted by
+ * `@modal/(.)settings`, and a direct load opens the same Settings window over
+ * the dashboard, closing onto it. Both share every authority decision through
+ * `resolveSettingsWorkspaceProps`.
  */
 export default async function SettingsPage({
   searchParams,
@@ -32,14 +33,23 @@ export default async function SettingsPage({
     await resolveSettingsWorkspaceProps(params.group);
 
   return (
-    <div className="app-content page-sections">
-      <PageHeader title={t("nav.settings")} description={t("settings.subtitle")} />
-      <SettingsWorkspace
-        key={initialGroup ?? "default"}
-        access={access}
-        initialGroup={initialGroup}
-        integrations={integrations}
-      />
-    </div>
+    <>
+      <div inert aria-hidden="true" data-settings-backdrop-page="dashboard">
+        <DashboardPage />
+      </div>
+      <SettingsModal
+        title={t("nav.settings")}
+        description={t("settings.subtitle")}
+        closeHref="/dashboard"
+      >
+        <SettingsWorkspace
+          key={initialGroup ?? "default"}
+          variant="modal"
+          access={access}
+          initialGroup={initialGroup}
+          integrations={integrations}
+        />
+      </SettingsModal>
+    </>
   );
 }

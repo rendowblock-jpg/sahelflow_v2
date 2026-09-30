@@ -92,7 +92,8 @@ describe("Phase 5 whole-product completion contract", () => {
     const returnStatus = read("src/components/returns/return-status-badge.tsx");
     // Settings authority is shared by the page and the Settings modal.
     const settings = read("src/lib/settings/workspace-access.ts");
-    const workspace = read("src/components/settings/settings-workspace.tsx");
+    // Settings rebuild: panels are mounted by the settings page registry.
+    const workspace = read("src/components/settings/settings-pages.tsx");
     const profile = read("src/app/(dashboard)/profile/page.tsx");
     expect(automations).toContain('"automations.manage"');
     expect(automations).toContain("canManage");

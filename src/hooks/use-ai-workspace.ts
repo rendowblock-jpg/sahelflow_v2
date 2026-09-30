@@ -159,6 +159,11 @@ export function useAiWorkspace() {
   const [rejectingProposalId, setRejectingProposalId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [error, setError] = useState<AiWorkspaceError | null>(null);
+  // A new chat is a draft until its first message: no durable session exists
+  // yet, so opening "New chat" repeatedly never piles up empty conversations.
+  // The workspace opens on a draft, like every mature chat product.
+  const [composingNewChat, setComposingNewChat] = useState(true);
+  const composingNewChatRef = useRef(true);
 
   const streamAbortRef = useRef<AbortController | null>(null);
   const conversationAbortRef = useRef<AbortController | null>(null);
@@ -200,6 +205,9 @@ export function useAiWorkspace() {
         setSessions(next);
         setActiveSessionId((current) => {
           if (current && next.some((session) => session.id === current)) return current;
+          // A draft stays a draft: the list refresh never promotes a stored
+          // session over the new chat the seller opened.
+          if (composingNewChatRef.current) return null;
           return next[0]?.id ?? null;
         });
         if (next.length === 0) {
@@ -435,8 +443,31 @@ export function useAiWorkspace() {
     [],
   );
 
+  const markComposingNewChat = useCallback((value: boolean) => {
+    composingNewChatRef.current = value;
+    setComposingNewChat(value);
+  }, []);
+
+  /** Open a draft conversation — nothing is persisted until it is sent. */
+  const startNewChat = useCallback(() => {
+    streamAbortRef.current?.abort();
+    conversationAbortRef.current?.abort();
+    setSending(false);
+    setMessages([]);
+    setProposals([]);
+    setActionHistoryError(false);
+    setHistoryCapped(false);
+    setHistoryCursor(null);
+    setEditingMessageId(null);
+    setLoadingConversation(false);
+    setError(null);
+    markComposingNewChat(true);
+    setActiveSessionId(null);
+  }, [markComposingNewChat]);
+
   const selectSession = useCallback(
     (sessionId: string) => {
+      markComposingNewChat(false);
       streamAbortRef.current?.abort();
       setSending(false);
       if (sessionId !== activeSessionId) {
@@ -449,7 +480,7 @@ export function useAiWorkspace() {
       }
       setActiveSessionId(sessionId);
     },
-    [activeSessionId],
+    [activeSessionId, markComposingNewChat],
   );
 
   const createSession = useCallback(async () => {
@@ -463,6 +494,7 @@ export function useAiWorkspace() {
       });
       if (!response.ok) throw new Error(`create:${response.status}`);
       const data = (await response.json()) as { session: AiSessionSummary };
+      markComposingNewChat(false);
       setSessions((current) => [data.session, ...current]);
       setActiveSessionId(data.session.id);
       setMessages([]);
@@ -476,7 +508,7 @@ export function useAiWorkspace() {
     } finally {
       setCreatingSession(false);
     }
-  }, [creatingSession]);
+  }, [creatingSession, markComposingNewChat]);
 
   const stop = useCallback(() => {
     streamAbortRef.current?.abort();
@@ -1035,8 +1067,10 @@ export function useAiWorkspace() {
           setMessages([]);
           setProposals([]);
           setActionHistoryError(false);
-          // Re-run the list authority so the next remaining session (if any)
-          // becomes active and its conversation loads.
+          // Deleting the open conversation returns to a fresh draft rather
+          // than silently opening another stored conversation.
+          markComposingNewChat(true);
+          setActiveSessionId(null);
           await loadSessions({ preserveError: true });
         }
         return true;
@@ -1046,7 +1080,7 @@ export function useAiWorkspace() {
         setDeletingSessionId(null);
       }
     },
-    [activeSessionId, loadSessions],
+    [activeSessionId, loadSessions, markComposingNewChat],
   );
 
   const approveProposal = useCallback(
@@ -1164,6 +1198,8 @@ export function useAiWorkspace() {
     sessions,
     activeSession,
     activeSessionId,
+    composingNewChat,
+    startNewChat,
     messages,
     proposals,
     inbox,
