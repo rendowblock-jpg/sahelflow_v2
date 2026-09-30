@@ -120,3 +120,20 @@ html[dir="rtl"] [data-sahelflow-shell="desktop"] th {
 html[dir="rtl"] .icon-rtl-flip {
   transform: scaleX(-1);
 }
+
+/*
+ * Empty fields in Arabic. `dir="auto"` resolves direction from the typed
+ * value, so an EMPTY field has nothing to resolve and the browser falls back to
+ * LTR — the Arabic placeholder then starts from the left edge. While the
+ * placeholder is showing, the field takes the document direction; as soon as
+ * the seller types, `dir="auto"` resolves their own text as before. Masked
+ * fields (password/PIN) show no readable text, so their placeholder follows
+ * the document direction too. A technical LTR field whose placeholder is
+ * localized prose (e.g. "مثال: amina.ops") opts in with
+ * `data-sf-placeholder-dir="document"`; typed values stay LTR.
+ */
+html[dir="rtl"] :is(input, textarea)[dir="auto"]:placeholder-shown,
+html[dir="rtl"] input[type="password"]:placeholder-shown,
+html[dir="rtl"] input[data-sf-placeholder-dir="document"]:placeholder-shown {
+  direction: rtl;
+}

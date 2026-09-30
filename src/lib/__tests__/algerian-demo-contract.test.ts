@@ -156,14 +156,20 @@ describe("Algerian Founder demo contract", () => {
     expect(demoCopy).toContain("رسالة واتساب حديثة من فاطمة الزهراء");
     expect(demoCopy).toContain("365 يومًا حتى اليوم");
 
-    expect(settings).toContain(
+    // Settings rebuild: the legacy group union lives in the IA module; pages
+    // are filtered by their own visibility rule and the demo page is shown
+    // only with demo authority.
+    const ia = read("src/components/settings/settings-ia.ts");
+    const pages = read("src/components/settings/settings-pages.tsx");
+    expect(ia).toContain(
       'export type SettingsWorkspaceGroup =\n  | "workspace"\n  | "operations"\n  | "connections"\n  | "intelligence"\n  | "access"\n  | "data"',
     );
     expect(settings).toContain(
-      "GROUPS.filter((group) => groupVisible(group.id, access))",
+      "SETTINGS_PAGES.filter((page) => page.visible(access))",
     );
-    expect(settings).toContain("visibleGroups[0]?.id");
-    expect(settings).toContain("{access.demo ? <DemoDataPanel /> : null}");
+    expect(settings).toContain("visiblePages[0]?.id");
+    expect(pages).toContain("visible: (access) => access.demo,");
+    expect(pages).toContain("render: () => <DemoDataPanel />,");
   });
 
   it("serializes settings, erase and report effects with demo lifecycle authority", () => {

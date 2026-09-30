@@ -149,7 +149,7 @@ async function neutralStructure(page: Page) {
 async function enableDarkMode(page: Page) {
   await page.goto("/settings", { waitUntil: "domcontentloaded" });
   await waitForHydration(page);
-  await page.locator("#settings-tab-appearance").click();
+  await page.locator('[data-settings-group="appearance"]').click();
   await page.locator('[data-theme-mode="dark"]').click();
   await expect(page.locator("html")).toHaveClass(/\bdark\b/);
 }
@@ -240,7 +240,7 @@ test.describe.serial("Founder visual correction evidence", () => {
       "RTL Settings content must remain the dominant work surface",
     ).toBeGreaterThan(settingsNavigation.width * 2);
 
-    await page.locator("#settings-tab-appearance").click();
+    await page.locator('[data-settings-group="appearance"]').click();
     await page.locator('[data-theme-mode="dark"]').click();
     await expect(page.locator("html")).toHaveClass(/\bdark\b/);
 

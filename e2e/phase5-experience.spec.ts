@@ -345,7 +345,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
     await page.goto("/settings", { waitUntil: "domcontentloaded" });
     await waitForHydration(page);
 
-    await page.locator("#settings-tab-appearance").click();
+    await page.locator('[data-settings-group="appearance"]').click();
 
     const html = page.locator("html");
     const shell = page.locator('[data-sahelflow-shell="desktop"]');
@@ -430,7 +430,7 @@ test.describe.serial("Phase 5 desktop experience evidence", () => {
 
       await page.goto("/settings", { waitUntil: "domcontentloaded" });
       await waitForHydration(page);
-      await page.locator("#settings-tab-appearance").click();
+      await page.locator('[data-settings-group="appearance"]').click();
       await page.locator('[data-density-option="compact"]').click();
 
       const html = page.locator("html");

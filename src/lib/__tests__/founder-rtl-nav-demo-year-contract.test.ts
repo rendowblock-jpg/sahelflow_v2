@@ -61,14 +61,17 @@ describe("Founder RTL, navigation and annual demo contracts", () => {
 
   it("makes Settings the canonical Profile implementation without adding sidebar logout", () => {
     const navigation = read("src/components/layout/navigation.ts");
-    const settings = read("src/components/settings/settings-workspace.tsx");
+    // Settings rebuild: Profile is its own page in the settings registry;
+    // /profile's legacy `group: "workspace"` resolves to it.
+    const settings = read("src/components/settings/settings-pages.tsx");
     const profile = read("src/app/(dashboard)/profile/page.tsx");
     const topbar = read("src/components/layout/topbar.tsx");
 
     expect(navigation).not.toContain('item("profile", "nav.profile", "/profile"');
     expect(navigation).toContain('href === "/settings" && pathname === "/profile"');
     expect(settings).toContain('<ProfileEditor canManage={access.profileManage} />');
-    expect(settings).toContain('id="settings-profile"');
+    expect(settings).toContain('id: "profile",');
+    expect(read("src/components/settings/settings-ia.ts")).toContain('workspace: "profile"');
     expect(profile).toContain('import SettingsPage from "@/app/(dashboard)/settings/page"');
     expect(profile).toContain('group: "workspace"');
     expect(profile).not.toContain("<ProfileEditor");

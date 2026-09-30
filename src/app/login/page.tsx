@@ -108,6 +108,7 @@ export default function LoginPage() {
                 <Input
                   id="login-id"
                   dir="ltr"
+                  data-sf-placeholder-dir="document"
                   value={loginId}
                   onChange={(event) => setLoginId(event.target.value.toLowerCase())}
                   placeholder={t("phase5.auth.loginPlaceholder")}
