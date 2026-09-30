@@ -61,10 +61,10 @@ export function radius(value: StorefrontRadius): string {
 /** Vertical rhythm per density: airy stores breathe, compact ones pack. */
 export function sectionSpace(density: StorefrontDensity): string {
   return density === "compact"
-    ? "py-8 sm:py-10"
+    ? "py-8 @min-[40rem]:py-10"
     : density === "balanced"
-      ? "py-10 sm:py-14"
-      : "py-12 sm:py-16";
+      ? "py-10 @min-[40rem]:py-14"
+      : "py-12 @min-[40rem]:py-16";
 }
 
 export function Container({
@@ -75,7 +75,7 @@ export function Container({
   className?: string;
 }) {
   return (
-    <div className={cn("mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8", className)}>
+    <div className={cn("mx-auto w-full max-w-6xl px-4 @min-[40rem]:px-6 @5xl:px-8", className)}>
       {children}
     </div>
   );
@@ -94,7 +94,7 @@ export function SectionHeading({
 }) {
   const Heading = embedded ? "h3" : "h2";
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3 sm:mb-8">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3 @min-[40rem]:mb-8">
       <div className="min-w-0">
         {eyebrow ? (
           <p
@@ -105,7 +105,7 @@ export function SectionHeading({
             {eyebrow}
           </p>
         ) : null}
-        <Heading dir="auto" className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        <Heading dir="auto" className="text-2xl font-semibold tracking-tight @min-[40rem]:text-3xl">
           {title}
         </Heading>
       </div>
@@ -186,7 +186,7 @@ export function StorefrontContactBlock({
     });
   }
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 @min-[40rem]:grid-cols-2 @5xl:grid-cols-4">
       {channels.map((channel) => {
         const content = (
           <>
@@ -300,11 +300,11 @@ export function StorefrontHeader({
           </b>
         </a>
         <nav className="flex items-center gap-1 text-sm font-medium">
-          <a href="#storefront-catalog" className="hidden rounded-full px-3 py-2 text-muted-foreground hover:text-foreground sm:inline-flex">
+          <a href="#storefront-catalog" className="hidden rounded-full px-3 py-2 text-muted-foreground hover:text-foreground @min-[40rem]:inline-flex">
             {t("storefront.view.navProducts")}
           </a>
           {hasContact(theme.builder.contact) ? (
-            <a href="#storefront-contact" className="hidden rounded-full px-3 py-2 text-muted-foreground hover:text-foreground sm:inline-flex">
+            <a href="#storefront-contact" className="hidden rounded-full px-3 py-2 text-muted-foreground hover:text-foreground @min-[40rem]:inline-flex">
               {t("storefront.view.navContact")}
             </a>
           ) : null}
@@ -334,15 +334,15 @@ export function StorefrontTrustStrip({
   return (
     <section {...inspectProps} className={cn(inspectProps.className, "py-4")}>
       <Container>
-        <ul className={cn(radius(theme.radius), "grid grid-cols-2 border bg-card sm:grid-cols-4")}>
+        <ul className={cn(radius(theme.radius), "grid grid-cols-2 border bg-card @min-[40rem]:grid-cols-4")}>
           {badges.map((badge, index) => (
             <li
               key={badge.label}
               className={cn(
                 "flex items-center gap-3 px-4 py-4",
-                index > 0 && "sm:border-s",
-                index > 1 && "max-sm:border-t",
-                index % 2 === 1 && "max-sm:border-s",
+                index > 0 && "@min-[40rem]:border-s",
+                index > 1 && "@max-[40rem]:border-t",
+                index % 2 === 1 && "@max-[40rem]:border-s",
               )}
             >
               <span

@@ -234,21 +234,21 @@ export function StorefrontRenderer({
         return (
           <section key={section.id} {...props} className={cn(props.className, space)}>
             <Container>
-              <div className={cn(radius(theme.radius), "grid items-stretch overflow-hidden border bg-card", hasImage && "md:grid-cols-2")}>
+              <div className={cn(radius(theme.radius), "grid items-stretch overflow-hidden border bg-card", hasImage && "@3xl:grid-cols-2")}>
                 {hasImage ? (
-                  <div data-sf-media="true" className={cn("relative min-h-64", align === "media-end" && "md:order-2")}>
+                  <div data-sf-media="true" className={cn("relative min-h-64", align === "media-end" && "@3xl:order-2")}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- merchant-authored HTTPS media */}
                     <img src={imageUrl} alt={imageAlt || title || draft.name} className="absolute inset-0 size-full object-cover" loading="lazy" />
                   </div>
                 ) : null}
-                <div className="flex flex-col justify-center p-8 sm:p-12">
+                <div className="flex flex-col justify-center p-8 @min-[40rem]:p-12">
                   {eyebrow ? (
                     <p dir="auto" className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--sf-brand-text-on-surface)" }}>
                       {eyebrow}
                     </p>
                   ) : null}
                   {title ? (
-                    <h2 dir="auto" className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h2>
+                    <h2 dir="auto" className="mt-3 text-2xl font-semibold tracking-tight @min-[40rem]:text-3xl">{title}</h2>
                   ) : null}
                   {body ? (
                     <p dir="auto" className="mt-4 whitespace-pre-wrap text-base leading-7 text-muted-foreground">{body}</p>
@@ -272,7 +272,7 @@ export function StorefrontRenderer({
           <section key={section.id} {...props} className={cn(props.className, space)}>
             <Container>
               <SectionHeading title={title || t("storefront.view.reviewsTitle")} embedded={isEmbeddedPreview} />
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 @3xl:grid-cols-2 @7xl:grid-cols-3">
                 {entries.map((entry) => {
                   const name = blockText(entry, "name");
                   const role = blockText(entry, "role");
@@ -386,7 +386,7 @@ export function StorefrontRenderer({
       data-storefront-root="true"
       data-sf-scheme={storefrontScheme(theme)}
       data-storefront-template={theme.template}
-      className="min-h-full"
+      className="@container min-h-full"
       style={storefrontThemeStyle(theme)}
     >
       {bodySections.map(renderSection)}

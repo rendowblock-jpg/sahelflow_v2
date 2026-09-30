@@ -4,6 +4,22 @@ import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
+/**
+ * The Studio is one orchestrator plus its panels; contracts hold across the
+ * whole editor, with the orchestrator first (it owns persist/publish).
+ */
+const STUDIO_FILES = [
+  "storefront-studio.tsx",
+  "studio-top-bar.tsx",
+  "section-inspector.tsx",
+  "studio-settings-panels.tsx",
+  "studio-design-panels.tsx",
+  "section-tree.tsx",
+];
+const readStudio = () =>
+  STUDIO_FILES.map((file) =>
+    read(`src/components/storefront/studio/${file}`),
+  ).join("\n");
 
 describe("Founder Storefront V2 acceptance repair", () => {
   it("keeps creation private while seeding the first draft for a real publish", () => {
@@ -21,9 +37,7 @@ describe("Founder Storefront V2 acceptance repair", () => {
     const bootstrap = read(
       "src/components/storefront/studio/storefront-studio-bootstrap.tsx",
     );
-    const studio = read(
-      "src/components/storefront/studio/storefront-studio.tsx",
-    );
+    const studio = readStudio();
     const renderer = read(
       "src/components/storefront/storefront-renderer.tsx",
     );
@@ -37,9 +51,7 @@ describe("Founder Storefront V2 acceptance repair", () => {
   });
 
   it("makes rich Studio sections genuinely authorable and publish-renderable", () => {
-    const studio = read(
-      "src/components/storefront/studio/storefront-studio.tsx",
-    );
+    const studio = readStudio();
     const renderer = read(
       "src/components/storefront/storefront-renderer.tsx",
     );
@@ -87,22 +99,18 @@ describe("Founder Storefront V2 acceptance repair", () => {
   });
 
   it("blocks active publish without a delivery rule and opens the actionable checkout panel", () => {
-    const studio = read(
-      "src/components/storefront/studio/storefront-studio.tsx",
-    );
+    const studio = readStudio();
     expect(studio).toContain(
       "draft.isActive && draft.theme.builder.shippingRules.length === 0",
     );
     expect(studio).toContain('setPanel("checkout")');
     expect(studio).toContain(
-      'setMessage(t("storefront.studio.shippingEmpty"))',
+      'setMessage(t("storefront.studio.shippingEmpty")',
     );
   });
 
   it("exposes active/pause intent in Studio and never reports a pause as published", () => {
-    const studio = read(
-      "src/components/storefront/studio/storefront-studio.tsx",
-    );
+    const studio = readStudio();
     expect(studio).toContain("checked={draft.isActive}");
     expect(studio).toContain('t("storefront.active")');
     expect(studio).toContain('t("storefront.inactive")');

@@ -2,14 +2,28 @@
 
 import { useState } from "react";
 import {
+  BadgeCheck,
   ChevronDown,
   ChevronUp,
   Copy,
   Eye,
   EyeOff,
   GripVertical,
+  HelpCircle,
+  Image as ImageIcon,
+  LayoutGrid,
+  LayoutTemplate,
+  Megaphone,
+  MessageSquareQuote,
+  Navigation,
+  PanelBottom,
   Plus,
+  Headphones,
+  Sparkles,
+  Tags,
   Trash2,
+  Truck,
+  type LucideIcon,
 } from "lucide-react";
 
 import {
@@ -40,6 +54,22 @@ export const SECTION_LABEL_KEYS: Record<StorefrontSectionType, string> = {
   "cod-checkout": "storefront.studio.section.codCheckout",
   support: "storefront.studio.section.support",
   footer: "storefront.studio.section.footer",
+};
+
+export const SECTION_ICONS: Record<StorefrontSectionType, LucideIcon> = {
+  announcement: Megaphone,
+  navbar: Navigation,
+  hero: LayoutTemplate,
+  trust: BadgeCheck,
+  "featured-products": Sparkles,
+  "product-grid": LayoutGrid,
+  categories: Tags,
+  media: ImageIcon,
+  testimonials: MessageSquareQuote,
+  faq: HelpCircle,
+  "cod-checkout": Truck,
+  support: Headphones,
+  footer: PanelBottom,
 };
 
 type Props = {
@@ -77,7 +107,7 @@ export function SectionTree({
   return (
     <div className="space-y-2.5">
       <div
-        className="space-y-1.5"
+        className="space-y-0.5"
         role="list"
         aria-label={t("storefront.studio.sectionsLabel")}
       >
@@ -86,6 +116,7 @@ export function SectionTree({
           const dragging = draggingId === section.id;
           const dropTarget =
             draggingId !== null && draggingId !== section.id && dropIndex === index;
+          const Icon = SECTION_ICONS[section.type];
           return (
             <div
               key={section.id}
@@ -115,13 +146,12 @@ export function SectionTree({
               }}
               onDragEnd={clearDrag}
               className={cn(
-                "group relative overflow-hidden rounded-surface border bg-background transition-[border-color,background-color,box-shadow,opacity,transform]",
+                "group relative overflow-hidden rounded-control border transition-[border-color,background-color,box-shadow,opacity,transform]",
                 active
-                  ? "border-primary/45 bg-primary-subtle shadow-sm"
-                  : "border-border/75 hover:border-primary/20 hover:bg-muted/30",
-                !section.enabled && "opacity-65",
+                  ? "border-primary/35 bg-primary-subtle"
+                  : "border-transparent hover:bg-muted/60",
                 dragging && "scale-[0.985] opacity-55",
-                dropTarget && "border-primary bg-primary-soft shadow-sm",
+                dropTarget && "border-primary bg-primary-soft",
               )}
             >
               {active || dropTarget ? (
@@ -131,9 +161,9 @@ export function SectionTree({
                 />
               ) : null}
 
-              <div className="flex min-w-0 items-center gap-1 px-1.5 py-1.5">
+              <div className="flex min-w-0 items-center gap-0.5 px-1 py-0.5">
                 <span
-                  className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-control text-muted-foreground/60 active:cursor-grabbing"
+                  className="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-control text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
                   title={t("storefront.studio.sectionsLabel")}
                   aria-hidden="true"
                 >
@@ -154,23 +184,30 @@ export function SectionTree({
                       onMove(section.id, 1);
                     }
                   }}
-                  className="min-w-0 flex-1 rounded-surface px-1.5 py-1.5 text-start outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={cn(
+                    "min-w-0 flex-1 rounded-control px-1 py-1.5 text-start outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    !section.enabled && "text-muted-foreground",
+                  )}
                   aria-current={active ? "true" : undefined}
                   aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
                 >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-control bg-muted px-1 text-caption font-medium tabular-nums text-muted-foreground">
-                      {index + 1}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-xs font-semibold">
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <Icon
+                      className={cn(
+                        "size-4 shrink-0",
+                        active ? "text-primary" : "text-muted-foreground",
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span
+                      className={cn(
+                        "min-w-0 flex-1 truncate text-body-sm",
+                        active ? "font-semibold" : "font-medium",
+                        !section.enabled && "line-through decoration-muted-foreground/50",
+                      )}
+                    >
                       {t(SECTION_LABEL_KEYS[section.type])}
                     </span>
-                    {!section.enabled ? (
-                      <EyeOff
-                        className="size-3.5 shrink-0 text-muted-foreground"
-                        aria-hidden="true"
-                      />
-                    ) : null}
                   </span>
                 </button>
 
@@ -181,13 +218,17 @@ export function SectionTree({
                       : "storefront.studio.showSection",
                   )}
                   onClick={() => onToggle(section.id)}
+                  className={cn(
+                    section.enabled && !active &&
+                      "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                  )}
                 >
                   {section.enabled ? <Eye /> : <EyeOff />}
                 </TreeAction>
               </div>
 
               {active ? (
-                <div className="flex items-center justify-between gap-2 border-t border-border/70 bg-muted/15 px-2 py-1.5">
+                <div className="flex items-center justify-between gap-2 border-t border-primary/15 px-1.5 py-1">
                   <div className="flex items-center gap-1">
                     <TreeAction
                       label={t("storefront.studio.moveUp")}
@@ -229,23 +270,27 @@ export function SectionTree({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex min-h-9 w-full items-center justify-center gap-2 rounded-surface border border-dashed border-border px-3 py-2 text-xs font-semibold text-muted-foreground outline-none transition-[border-color,background-color,color] hover:border-primary/45 hover:bg-primary-subtle hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex min-h-9 w-full items-center gap-2.5 rounded-control px-2.5 py-2 text-body-sm font-medium text-primary outline-none transition-colors hover:bg-primary-subtle focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Plus className="size-3.5" aria-hidden="true" />
+            <Plus className="size-4" aria-hidden="true" />
             {t("storefront.studio.addSection")}
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          side="top"
+          side="bottom"
           align="start"
-          sideOffset={8}
-          className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto"
+          sideOffset={6}
+          className="max-h-80 w-[var(--radix-dropdown-menu-trigger-width)] min-w-56 overflow-y-auto"
         >
-          {STOREFRONT_SECTION_TYPES.map((type) => (
-            <DropdownMenuItem key={type} onSelect={() => onAdd(type)}>
-              {t(SECTION_LABEL_KEYS[type])}
-            </DropdownMenuItem>
-          ))}
+          {STOREFRONT_SECTION_TYPES.map((type) => {
+            const Icon = SECTION_ICONS[type];
+            return (
+              <DropdownMenuItem key={type} onSelect={() => onAdd(type)} className="gap-2.5">
+                <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
+                {t(SECTION_LABEL_KEYS[type])}
+              </DropdownMenuItem>
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -257,12 +302,14 @@ function TreeAction({
   disabled,
   destructive = false,
   onClick,
+  className,
   children,
 }: {
   label: string;
   disabled?: boolean;
   destructive?: boolean;
   onClick: () => void;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -277,6 +324,7 @@ function TreeAction({
         destructive
           ? "text-muted-foreground hover:bg-destructive-soft hover:text-destructive"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        className,
       )}
     >
       {children}

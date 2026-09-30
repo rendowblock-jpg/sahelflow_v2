@@ -156,7 +156,7 @@ describe("Storefront Builder V2", () => {
 
   it("keeps Studio autosaves private until an explicit compare-and-set publish", () => {
     const root = process.cwd();
-    const studio = readFileSync(join(root, "src/components/storefront/studio/storefront-studio.tsx"), "utf8");
+    const studio = ["storefront-studio.tsx", "studio-top-bar.tsx", "section-inspector.tsx", "studio-settings-panels.tsx", "section-tree.tsx"].map((file) => readFileSync(join(root, "src/components/storefront/studio", file), "utf8")).join("\n");
     const service = readFileSync(join(root, "src/lib/storefront/service.ts"), "utf8");
     const publicPage = readFileSync(join(root, "src/app/storefront/[slug]/page.tsx"), "utf8");
     expect(studio).toContain('method: "PATCH"');
@@ -173,7 +173,7 @@ describe("Storefront Builder V2", () => {
     const root = process.cwd();
     const page = readFileSync(join(root, "src/app/(dashboard)/storefronts/new/page.tsx"), "utf8");
     const bootstrap = readFileSync(join(root, "src/components/storefront/studio/storefront-studio-bootstrap.tsx"), "utf8");
-    const studio = readFileSync(join(root, "src/components/storefront/studio/storefront-studio.tsx"), "utf8");
+    const studio = ["storefront-studio.tsx", "studio-top-bar.tsx", "section-inspector.tsx", "studio-settings-panels.tsx", "section-tree.tsx"].map((file) => readFileSync(join(root, "src/components/storefront/studio", file), "utf8")).join("\n");
     const service = readFileSync(join(root, "src/lib/storefront/service.ts"), "utf8");
 
     expect(page).toContain("StorefrontStudioBootstrap");

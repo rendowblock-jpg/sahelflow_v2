@@ -13,7 +13,11 @@ describe("Storefront mutation authority", () => {
   });
 
   it("does not expose live activation/deactivation mutations from the list", () => {
-    const list = read("src/components/storefront/storefronts-list-client.tsx");
+    // The list renders one card per store; both carry the list's authority.
+    const list = [
+      read("src/components/storefront/storefronts-list-client.tsx"),
+      read("src/components/storefront/storefront-card.tsx"),
+    ].join("\n");
     expect(list).not.toContain('method: "PUT"');
     expect(list).not.toContain("toggleActive");
     expect(list).toContain("/studio");

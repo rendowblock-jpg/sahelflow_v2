@@ -41,8 +41,8 @@ export function StorefrontProductGrid({
   return (
     <ul
       className={cn(
-        "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4",
-        theme.density === "compact" ? "gap-3" : "gap-x-4 gap-y-8 sm:gap-x-6",
+        "grid grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4",
+        theme.density === "compact" ? "gap-3" : "gap-x-4 gap-y-8 @min-[40rem]:gap-x-6",
       )}
     >
       {products.map((product) => {
@@ -108,10 +108,10 @@ export function StorefrontProductGrid({
               <div
                 className={cn(
                   "flex flex-1 flex-col gap-1.5",
-                  card === "minimal" ? "pt-3" : "p-3 sm:p-4",
+                  card === "minimal" ? "pt-3" : "p-3 @min-[40rem]:p-4",
                 )}
               >
-                <Title dir="auto" className="line-clamp-2 text-sm font-medium leading-5 sm:text-[15px]">
+                <Title dir="auto" className="line-clamp-2 text-sm font-medium leading-5 @min-[40rem]:text-[15px]">
                   {product.name}
                 </Title>
                 {theme.catalog.showSku && product.sku ? (

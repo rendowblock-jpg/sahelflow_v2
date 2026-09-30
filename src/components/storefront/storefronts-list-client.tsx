@@ -1,19 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
-import {
-  ExternalLink,
-  History,
-  KeyRound,
-  Loader2,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { KeyRound, Loader2, Search } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { StorefrontCard } from "@/components/storefront/storefront-card";
+import type { StorefrontStudioProduct } from "@/components/storefront/studio/studio-types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -29,10 +21,16 @@ import {
   type StorefrontStudioContentLocale,
 } from "@/lib/i18n/storefront-studio-content";
 import type { StorefrontConfig } from "@/lib/storefront/service";
+import type { StorefrontPerformance } from "@/lib/storefront/storefront-performance";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 
 interface Props {
   configs: StorefrontConfig[];
+  /** Active products the stores reference (for the live miniatures). */
+  products: StorefrontStudioProduct[];
+  /** Per-store sales over the last 30 days, keyed by slug. */
+  performance: Record<string, StorefrontPerformance>;
   canManage: boolean;
   canPublish: boolean;
   canDelete: boolean;
@@ -42,6 +40,8 @@ type ApiPayload = { error?: string; code?: string };
 
 export function StorefrontsListClient({
   configs: initial,
+  products,
+  performance,
   canManage,
   canPublish,
   canDelete,
@@ -54,6 +54,12 @@ export function StorefrontsListClient({
     getStorefrontStudioContentCopy(language, key);
   const canMutate = canManage && canPublish;
   const [configs, setConfigs] = useState(initial);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "live" | "offline">("all");
+  const productsById = useMemo(
+    () => new Map(products.map((product) => [product.id, product])),
+    [products],
+  );
   const [deleteTarget, setDeleteTarget] = useState<StorefrontConfig | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [reauthRequired, setReauthRequired] = useState(false);
@@ -143,113 +149,87 @@ export function StorefrontsListClient({
     }
   }
 
+  const query = search.trim().toLocaleLowerCase();
+  const visible = configs.filter((config) => {
+    if (filter === "live" && !config.isActive) return false;
+    if (filter === "offline" && config.isActive) return false;
+    if (!query) return true;
+    return (
+      config.name.toLocaleLowerCase().includes(query) ||
+      config.slug.toLocaleLowerCase().includes(query)
+    );
+  });
+
+  async function copyLink(config: StorefrontConfig) {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/storefront/${config.slug}`);
+      toast.success(t("storefront.list.linkCopied"));
+    } catch {
+      toast.error(t("storefront.list.error.generic"));
+    }
+  }
+
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {configs.map((config) => (
-          <Card key={config.id} className="flex flex-col">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle className="line-clamp-1 text-base font-semibold">
-                  {config.name}
-                </CardTitle>
-                {config.isActive ? (
-                  <Badge>{t("storefront.list.active")}</Badge>
-                ) : (
-                  <Badge variant="outline">
-                    {t("storefront.list.inactive")}
-                  </Badge>
-                )}
-              </div>
-              <p
-                dir="ltr"
-                className="font-mono text-xs text-muted-foreground"
-              >
-                /storefront/{config.slug}
-              </p>
-            </CardHeader>
-
-            <CardContent className="flex flex-1 flex-col gap-3">
-              {config.description ? (
-                <p className="line-clamp-2 text-sm text-muted-foreground">
-                  {config.description}
-                </p>
-              ) : null}
-
-              <div className="space-y-1 text-xs text-muted-foreground">
-                <div>
-                  {t("storefront.list.productsCount", {
-                    count: config.productIds.length,
-                  })}
-                  {" · "}
-                  <span className="font-medium capitalize">
-                    {config.theme.template}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-auto flex items-center gap-1.5 pt-2">
-                {canMutate ? (
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <Link href={`/storefronts/${config.id}/studio`}>
-                      <Pencil className="me-1.5 size-3.5" aria-hidden="true" />
-                      {t("storefront.list.edit")}
-                    </Link>
-                  </Button>
-                ) : null}
-
-                {canMutate ? (
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="ghost"
-                    title={studioCopy("releaseManagement")}
-                    aria-label={studioCopy("releaseManagement")}
-                  >
-                    <Link href={`/storefronts/${config.id}/history`}>
-                      <History className="size-3.5" aria-hidden="true" />
-                    </Link>
-                  </Button>
-                ) : null}
-
-                <Button
-                  asChild
-                  size="sm"
-                  variant="ghost"
-                  title={t("storefront.list.publicPreview")}
-                  aria-label={t("storefront.list.publicPreview")}
-                >
-                  <a
-                    href={`/storefront/${config.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="size-3.5" aria-hidden="true" />
-                  </a>
-                </Button>
-
-                {canDelete ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    title={t("storefront.list.delete")}
-                    aria-label={t("storefront.list.delete")}
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => openDelete(config)}
-                  >
-                    <Trash2 className="size-3.5" aria-hidden="true" />
-                  </Button>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center gap-3" data-storefront-list-toolbar="true">
+        <div className="relative min-w-56 flex-1 sm:max-w-sm">
+          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t("storefront.list.search")}
+            aria-label={t("storefront.list.search")}
+            className="ps-9"
+          />
+        </div>
+        <div role="group" aria-label={t("storefront.list.search")} className="inline-flex rounded-control border bg-muted/40 p-0.5">
+          {(["all", "live", "offline"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={filter === value}
+              onClick={() => setFilter(value)}
+              className={cn(
+                "min-h-8 rounded-control px-3 text-body-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                filter === value ? "bg-background text-foreground shadow-(--elevation-1)" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {t(value === "all" ? "storefront.list.filterAll" : value === "live" ? "storefront.list.filterLive" : "storefront.list.filterOffline")}
+              <span className="ms-1.5 tabular-nums text-muted-foreground">
+                {value === "all"
+                  ? configs.length
+                  : configs.filter((config) => config.isActive === (value === "live")).length}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
+
+      {visible.length === 0 ? (
+        <p className="rounded-surface border border-dashed p-10 text-center text-body-sm text-muted-foreground">
+          {t("storefront.list.noMatch")}
+        </p>
+      ) : (
+        <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3" data-storefront-list="true">
+          {visible.map((config) => (
+            <li key={config.id}>
+              <StorefrontCard
+                config={config}
+                products={config.productIds.flatMap((id) => {
+                  const product = productsById.get(id);
+                  return product ? [product] : [];
+                })}
+                performance={performance[config.slug]}
+                canMutate={canMutate}
+                canDelete={canDelete}
+                onCopyLink={() => void copyLink(config)}
+                onDelete={() => openDelete(config)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
 
       <Dialog
         open={canDelete && deleteTarget !== null}
