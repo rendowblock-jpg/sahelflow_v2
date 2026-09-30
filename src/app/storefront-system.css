@@ -1,0 +1,51 @@
+/*
+ * Storefront system — the seller's published store.
+ *
+ * `data-storefront-root` carries the store palette as the shared design
+ * tokens (see src/lib/storefront/storefront-tokens.ts), so every primitive
+ * inside a store takes the store's colours, never the dashboard theme's.
+ * Studio previews and the public route use the same root.
+ */
+[data-storefront-root] {
+  color-scheme: var(--sf-color-scheme, light);
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+[data-storefront-root] ::selection {
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+/* Native selects and their option lists follow the store surface. */
+[data-storefront-root] select,
+[data-storefront-root] option {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+/* Product-card media keeps its frame while an image loads or is missing. */
+[data-storefront-root] [data-sf-media] {
+  background: var(--sf-placeholder);
+}
+
+/* Smooth in-page jumps (hero CTA → catalog, mobile cart bar → checkout). */
+@media (prefers-reduced-motion: no-preference) {
+  html:has([data-storefront-root][data-storefront-public]) {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Studio preview: sections are inspectable. The outline colour is resolved on
+   the Studio canvas (outside the store root) so it stays the app's focus
+   colour, never the seller's palette. */
+[data-storefront-root] [data-studio-section] {
+  transition: box-shadow 150ms ease;
+}
+[data-storefront-root] [data-studio-section]:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sf-studio-outline, currentColor) 60%, transparent);
+}
+[data-storefront-root] [data-studio-section][data-studio-selected="true"] {
+  box-shadow: inset 0 0 0 2px var(--sf-studio-outline, currentColor);
+}

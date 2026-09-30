@@ -1,7 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/* Dark styles follow the app theme, except inside a seller storefront, whose
+   own palette decides (data-sf-scheme on the store root, or on <body> for the
+   public store so its portalled menus match too). */
+@custom-variant dark (&:is(.dark *, [data-sf-scheme="dark"] *):not(:where([data-sf-scheme="light"] *)));
 
 /* ════════════════════════════════════════════════════════════════════════════
    SahelFlow Design System — AAA-Class Theme

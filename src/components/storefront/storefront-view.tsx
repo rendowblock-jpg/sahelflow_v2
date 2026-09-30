@@ -43,7 +43,9 @@ import {
   isValidDZMobilePhone,
   normalizeDZPhone,
 } from "@/lib/validation/phone";
-import { formatDZD } from "@/lib/utils";
+import { storefrontScheme, storefrontThemeStyle } from "@/lib/storefront/storefront-tokens";
+import { cn, formatDZD } from "@/lib/utils";
+import { studioImageUrl } from "./studio/studio-types";
 import wilayasData from "../../../data/wilayas.json";
 
 interface StorefrontVariant {
@@ -162,14 +164,19 @@ export function StorefrontView({
 }: StorefrontViewProps) {
   return (
     <StorefrontLocaleProvider initialLocale={initialLocale}>
-      {/*
-        Utility strip: the buyer language switcher stays reachable no matter
-        which sections the seller enabled in the storefront composition.
-      */}
-      <div className="flex justify-end px-4 pt-3">
-        <StorefrontLanguageSwitcher />
+      {/* The whole public page is a storefront theme root: the order
+          confirmation, checkout and every control render in the seller's
+          palette, never the dashboard theme. */}
+      <PublicStorefrontDocument theme={config.theme} />
+      <div
+        data-storefront-root="true"
+        data-storefront-public="true"
+        data-sf-scheme={storefrontScheme(config.theme)}
+        className="min-h-dvh"
+        style={storefrontThemeStyle(config.theme)}
+      >
+        <StorefrontViewBody config={config} products={products} reviews={reviews} />
       </div>
-      <StorefrontViewBody config={config} products={products} reviews={reviews} />
     </StorefrontLocaleProvider>
   );
 }
@@ -598,8 +605,8 @@ function StorefrontViewBody({
 
   if (result?.ok) {
     return (
-      <div className="flex min-h-full items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
+      <div className="flex min-h-dvh items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-[0_24px_60px_-30px_rgb(0_0_0/0.35)]">
           <CardContent className="space-y-4 pt-6 text-center">
             <CheckCircle2 className="mx-auto h-16 w-16 text-success" />
             <h1 className="text-2xl font-bold">{t("storefront.view.orderConfirmed")}</h1>
@@ -636,9 +643,27 @@ function StorefrontViewBody({
     );
   }
 
-  const checkout = (
-    <div className="grid items-start gap-4 lg:grid-cols-2">
-      <Card>
+  const checkout = cart.length === 0 ? (
+    <div
+      data-storefront-empty-cart="true"
+      className="flex flex-col items-center gap-3 rounded-storefront-soft border border-dashed bg-card px-6 py-12 text-center"
+    >
+      <span
+        className="flex size-12 items-center justify-center rounded-full"
+        style={{ background: "var(--accent)", color: "var(--sf-brand-text-on-surface)" }}
+        aria-hidden="true"
+      >
+        <ShoppingCart className="size-5" />
+      </span>
+      <p className="text-base font-semibold">{t("storefront.view.emptyCart")}</p>
+      <p className="max-w-sm text-sm text-muted-foreground">{t("storefront.view.completeOrderHint")}</p>
+      <Button asChild variant="outline" className="mt-2">
+        <a href="#storefront-catalog">{t("storefront.studio.shopNow")}</a>
+      </Button>
+    </div>
+  ) : (
+    <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <Card className="lg:sticky lg:top-24">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <ShoppingCart className="h-4 w-4" />
@@ -653,9 +678,10 @@ function StorefrontViewBody({
           ) : (
             <>
               {cart.map((item) => (
-                <div key={item.key} className="flex items-center justify-between gap-2 text-sm">
+                <div key={item.key} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-sm">
+                  <CartThumb images={item.product.images} name={item.product.name} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{item.product.name}</p>
+                    <p dir="auto" className="truncate font-medium">{item.product.name}</p>
                     {item.variant ? <p className="truncate text-xs text-muted-foreground">{item.variant.name}</p> : null}
                     <p className="text-xs text-muted-foreground">{formatDZD(itemPrice(item), locale)}</p>
                   </div>
@@ -768,7 +794,7 @@ function StorefrontViewBody({
                 onTurnstileToken={setTurnstileToken}
                 onOtpToken={setOtpToken}
               />
-              <Button type="submit" disabled={submitting} className="w-full" style={{ backgroundColor: config.theme.primaryColor }}>
+              <Button type="submit" disabled={submitting} className="w-full">
                 {submitting ? (
                   <><Loader2 className="me-1.5 h-4 w-4 animate-spin" />{t("storefront.view.sending")}</>
                 ) : t("storefront.view.confirmOrder")}
@@ -792,8 +818,46 @@ function StorefrontViewBody({
     </Card>
   ) : null;
 
+  const hasNavbar = draft.theme.builder.composition.sections.some(
+    (section) => section.type === "navbar" && section.enabled,
+  );
+  const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
+  const cartButton = (
+    <a
+      href="#storefront-checkout"
+      aria-label={t("storefront.view.viewCart")}
+      className="relative ms-1 inline-flex size-10 items-center justify-center rounded-full border bg-card transition-colors hover:border-primary"
+    >
+      <ShoppingCart className="size-4" aria-hidden="true" />
+      {itemCount > 0 ? (
+        <span
+          dir="ltr"
+          className="absolute -end-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground"
+        >
+          {itemCount > 99 ? "99+" : itemCount}
+        </span>
+      ) : null}
+    </a>
+  );
+
   return (
+    <>
+    {/* The buyer language switcher stays reachable no matter which sections
+        the seller enabled: in the header when there is one, else on a strip. */}
+    {hasNavbar ? null : (
+      <div className="flex justify-end gap-2 px-4 pt-3">
+        <StorefrontLanguageSwitcher />
+      </div>
+    )}
     <StorefrontRenderer
+      renderHeaderActions={
+        hasNavbar ? (
+          <>
+            <StorefrontLanguageSwitcher />
+            {cartButton}
+          </>
+        ) : undefined
+      }
       draft={draft}
       products={renderedProducts}
       emptyCatalog={<p className="text-muted-foreground">{t("storefront.view.noProducts")}</p>}
@@ -831,7 +895,7 @@ function StorefrontViewBody({
               disabled={(variants.length > 0 && !selectedVariant) || renderedProduct.stock <= 0}
               size="sm"
               className="w-full"
-              style={{ backgroundColor: config.theme.primaryColor }}
+             
             >
               {addedKey === key ? <Check className="me-1 h-4 w-4" /> : <Plus className="me-1 h-4 w-4" />}
               {addedKey === key ? t("storefront.view.added") : t("storefront.view.addToCart")}
@@ -847,6 +911,48 @@ function StorefrontViewBody({
         ) : null
       }
     />
+    {itemCount > 0 ? (
+      // Phones: the cart stays one tap away while browsing the catalog.
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 p-3 backdrop-blur-md sm:hidden">
+        <a
+          href="#storefront-checkout"
+          className="flex min-h-12 items-center justify-between gap-3 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground"
+        >
+          <span className="flex items-center gap-2">
+            <ShoppingCart className="size-4" aria-hidden="true" />
+            {t("storefront.view.cartItems", { count: itemCount })}
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="tabular-nums">{formatDZD(cartTotal, locale)}</span>
+            <span aria-hidden="true">·</span>
+            {t("storefront.view.viewCart")}
+          </span>
+        </a>
+      </div>
+    ) : null}
+    </>
+  );
+}
+
+/** A cart line's product photo, or its initial on the store placeholder. */
+function CartThumb({ images, name }: { images: string | null; name: string }) {
+  const url = studioImageUrl(images);
+  return (
+    <span
+      data-sf-media="true"
+      className={cn(
+        "relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-storefront-soft text-sm font-semibold",
+      )}
+      style={{ color: "var(--sf-placeholder-ink)" }}
+      aria-hidden="true"
+    >
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element -- seller media, bounded by storefront media authority
+        <img src={url} alt="" className="absolute inset-0 size-full object-cover" />
+      ) : (
+        name.trim().charAt(0).toUpperCase()
+      )}
+    </span>
   );
 }
 
@@ -1102,4 +1208,32 @@ function StorefrontReviewsSection({
       </div>
     </section>
   );
+}
+
+/**
+ * The public store owns its whole document: the store palette is set on
+ * <body> too, so menus Radix portals under <body> (wilaya/commune pickers)
+ * match the store instead of the visitor's system or dashboard theme.
+ */
+function PublicStorefrontDocument({ theme }: { theme: StorefrontConfig["theme"] }) {
+  useEffect(() => {
+    const body = document.body;
+    const style = storefrontThemeStyle(theme) as Record<string, string>;
+    const previousScheme = body.getAttribute("data-sf-scheme");
+    const applied: string[] = [];
+    for (const [name, value] of Object.entries(style)) {
+      if (!name.startsWith("--")) continue;
+      body.style.setProperty(name, value);
+      applied.push(name);
+    }
+    body.setAttribute("data-sf-scheme", storefrontScheme(theme));
+    body.style.setProperty("background", theme.backgroundColor);
+    return () => {
+      for (const name of applied) body.style.removeProperty(name);
+      body.style.removeProperty("background");
+      if (previousScheme === null) body.removeAttribute("data-sf-scheme");
+      else body.setAttribute("data-sf-scheme", previousScheme);
+    };
+  }, [theme]);
+  return null;
 }
