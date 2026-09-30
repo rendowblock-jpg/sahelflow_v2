@@ -127,8 +127,10 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
       await expect(composer).toBeEnabled();
     } else {
       await expect(composer).toBeDisabled();
-      await expect(workspace).toContainText(
-        "La configuration IA demande votre attention",
+      // The new-chat home states the setup truth once, in its setup panel.
+      await expect(page.locator('[data-ai-setup-panel="true"]')).toBeVisible();
+      await expect(page.locator('[data-ai-setup-panel="true"]')).toContainText(
+        "Connectez Gemini pour commencer avec l'agent",
       );
     }
 
