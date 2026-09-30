@@ -291,7 +291,9 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await expect(resetDraft).toHaveValue("RES");
 
     await page.setViewportSize({ width: 900, height: 768 });
+    await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
     await dataButton.focus();
+    await expect(dataButton).toBeFocused();
     await dataButton.evaluate((element) => (element as HTMLElement).blur());
     await expect
       .poll(() => page.evaluate(() => document.activeElement === document.body))

@@ -78,6 +78,9 @@ function configuredColor(
   return resolveChartColor(requested, theme, index);
 }
 
+/** Width of a reference-line label in the right gutter (px). */
+const REFERENCE_LABEL_WIDTH = 92;
+
 export function TimeSeriesChart({
   data,
   xKey,
@@ -159,7 +162,11 @@ export function TimeSeriesChart({
                   show: true,
                   color: theme.mutedForeground,
                   fontSize: 11,
-                  position: "insideEndTop",
+                  // In the reserved right gutter, never on the plotted data.
+                  position: "end",
+                  distance: 6,
+                  width: REFERENCE_LABEL_WIDTH,
+                  overflow: "truncate",
                   formatter: (params: { name?: string }) => params.name ?? "",
                   backgroundColor: theme.card,
                   borderColor: theme.border,
@@ -289,7 +296,10 @@ export function TimeSeriesChart({
         legend: hasLegend ? chartLegend(theme, dir) : undefined,
         grid: {
           left: 8,
-          right: hasEndLabel ? 82 : 18,
+          right: Math.max(
+            hasEndLabel ? 82 : 18,
+            referenceLines.length ? REFERENCE_LABEL_WIDTH + 24 : 0,
+          ),
           top: hasLegend ? 38 : 14,
           bottom: zoom ? 45 : 12,
           containLabel: true,
