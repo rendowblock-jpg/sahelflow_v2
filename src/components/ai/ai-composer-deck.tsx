@@ -199,8 +199,8 @@ export function AiComposerDeck({
             <Textarea
               ref={composerRef}
               value={draft}
-              role="combobox"
-              aria-expanded={menuOpen}
+              // Stays a textbox for assistive tech (a chat field, not a
+              // picker); the quick-jobs list is linked while it is open.
               aria-controls={menuOpen ? menuId : undefined}
               aria-autocomplete="list"
               aria-activedescendant={

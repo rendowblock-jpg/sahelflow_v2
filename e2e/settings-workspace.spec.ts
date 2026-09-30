@@ -63,12 +63,13 @@ async function settingsGeometry(page: Page) {
   };
 }
 
-async function expectFlatDataDomain(page: Page) {
+/** Settings pages are flat documents: panel cards lose border, radius, shadow. */
+async function expectFlatPanels(page: Page, pageId: string) {
   const topLevelCards = page.locator(
-    '[data-settings-domain-stack="data"] > [data-slot="card"], ' +
-      '[data-settings-domain-stack="data"] > * > [data-slot="card"]:first-child',
+    `[data-settings-domain-stack="${pageId}"] > [data-slot="card"], ` +
+      `[data-settings-domain-stack="${pageId}"] > * > [data-slot="card"]:first-child`,
   );
-  await expect(topLevelCards).toHaveCount(3);
+  expect(await topLevelCards.count()).toBeGreaterThan(0);
   const styles = await topLevelCards.evaluateAll((cards) =>
     cards.map((card) => {
       const style = getComputedStyle(card);
@@ -126,11 +127,13 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     );
     await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
 
+    // One page per concern (Account → Shop → Connections → Data); the owner
+    // sees the full directory and lands on Profile.
     const groups = page.locator("[data-settings-group]");
-    await expect(groups).toHaveCount(6);
-    await expect(page.locator('[data-settings-group="workspace"]')).toHaveAttribute(
-      "aria-pressed",
-      "true",
+    expect(await groups.count()).toBeGreaterThanOrEqual(12);
+    await expect(page.locator('[data-settings-group="profile"]')).toHaveAttribute(
+      "aria-current",
+      "page",
     );
 
     const radius = await workspace.evaluate((element) =>
@@ -148,23 +151,33 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     }
 
     for (const group of [
-      "operations",
-      "connections",
-      "intelligence",
-      "access",
-      "data",
-      "workspace",
+      "reports",
+      "commerce",
+      "ai",
+      "security",
+      "backup",
+      "danger",
+      "profile",
     ] as const) {
       await page.locator(`[data-settings-group="${group}"]`).click();
       await expect(
         page.locator(`[data-settings-group-panel="${group}"]`),
       ).toBeVisible();
       await expect(page.locator(`[data-settings-group="${group}"]`)).toHaveAttribute(
-        "aria-pressed",
-        "true",
+        "aria-current",
+        "page",
       );
-      if (group === "data") await expectFlatDataDomain(page);
+      if (group === "danger") await expectFlatPanels(page, group);
     }
+
+    // The directory search filters pages and Enter opens the first match.
+    const search = page.locator('[data-settings-search="true"]');
+    await search.fill("gemini");
+    await expect(page.locator('[data-settings-group="ai"]')).toBeVisible();
+    await expect(page.locator('[data-settings-group="profile"]')).toHaveCount(0);
+    await search.press("Enter");
+    await expect(page.locator('[data-settings-group-panel="ai"]')).toBeVisible();
+    await search.fill("");
 
     await expectNoHorizontalOverflow(page);
   });
@@ -187,12 +200,12 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await expect(page.locator('[data-settings-domain-canvas="true"]')).not.toBeVisible();
 
     const connectionsButton = page.locator(
-      '[data-settings-group="connections"]',
+      '[data-settings-group="commerce"]',
     );
     await connectionsButton.focus();
     await page.keyboard.press("Enter");
     await expect(workspace).toHaveAttribute("data-settings-mobile-pane", "detail");
-    await expect(page.locator('[data-settings-group-panel="connections"]')).toBeVisible();
+    await expect(page.locator('[data-settings-group-panel="commerce"]')).toBeVisible();
     await expect(page.locator('[data-settings-directory="true"]')).not.toBeVisible();
     await expect(page.locator('[data-settings-detail-heading="true"]')).toBeFocused();
 
@@ -208,9 +221,9 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await expect(page.locator('[data-settings-directory="true"]')).toBeVisible();
     await expect(connectionsButton).toBeFocused();
 
-    await page.locator('[data-settings-group="data"]').click();
-    await expect(page.locator('[data-settings-group-panel="data"]')).toBeVisible();
-    await expectFlatDataDomain(page);
+    await page.locator('[data-settings-group="danger"]').click();
+    await expect(page.locator('[data-settings-group-panel="danger"]')).toBeVisible();
+    await expectFlatPanels(page, "danger");
     await expectNoHorizontalOverflow(page);
   });
 
@@ -218,7 +231,7 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     page,
   }) => {
     const workspace = page.locator('[data-settings-control-center="true"]');
-    const dataButton = page.locator('[data-settings-group="data"]');
+    const dataButton = page.locator('[data-settings-group="danger"]');
     const detailHeading = page.locator('[data-settings-detail-heading="true"]');
 
     await dataButton.click();
@@ -325,8 +338,8 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     await expect(workspace).toBeVisible();
     await expect(workspace).toHaveAttribute("data-settings-layout", "desktop");
 
-    await page.locator('[data-settings-group="access"]').click();
-    await expect(page.locator('[data-settings-group-panel="access"]')).toBeVisible();
+    await page.locator('[data-settings-group="security"]').click();
+    await expect(page.locator('[data-settings-group-panel="security"]')).toBeVisible();
 
     let geometry = await settingsGeometry(page);
     expect(geometry.rail).not.toBeNull();

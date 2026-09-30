@@ -12,8 +12,9 @@ describe("authority-driven team access UI", () => {
       ),
       "utf8",
     );
+    // Settings rebuild: panels are mounted by the page registry.
     const settings = readFileSync(
-      resolve(process.cwd(), "src/components/settings/settings-workspace.tsx"),
+      resolve(process.cwd(), "src/components/settings/settings-pages.tsx"),
       "utf8",
     );
 

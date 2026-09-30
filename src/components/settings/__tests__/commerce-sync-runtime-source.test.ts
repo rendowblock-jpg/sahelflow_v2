@@ -8,7 +8,8 @@ function source(path: string): string {
 
 describe("commerce sync settings source contract", () => {
   it("queues durable runs and renders sanitized recovery history", () => {
-    const workspace = source("src/components/settings/settings-workspace.tsx");
+    // Settings rebuild: panels are mounted by the page registry.
+    const workspace = source("src/components/settings/settings-pages.tsx");
     const panel = source(
       "src/components/settings/commerce-integrations-panel.tsx",
     );
