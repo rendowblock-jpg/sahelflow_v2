@@ -7,12 +7,11 @@
 > residuals into ONE ledger"). The Founder's original pre-freeze findings list
 > can still be ingested as additional rows — structure is ready.
 >
-> **Conversion rule.** Everything here is SOURCE-level on `main`. Nothing is
-> "installed" until it ships in an authorized signed release (latest:
-> Internal.38 / FD-062, published 2026-09-16 and updater-served to the installed
-> Internal.37 — the F-14/F-15 repair line rides inside it and awaits the once-only
-> FD-058 campaign on that installed candidate). Rows move to the
-> capability ledgers only after installed conversion.
+> **Conversion rule.** Rows are source-level until an installed observation of a
+> signed candidate that contains them. Internal.38 / FD-062 (published 2026-09-16)
+> contains the line through #450, including F-14/F-15, and does **not** contain
+> F-16…F-33 (#463/#464, on protected `main` `bc840ca7…`). Nothing in this ledger
+> converts from publication alone.
 
 Status: `OPEN` · `DONE (source, <ref>)` · `BLOCKED (<reason>)`
 Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · `P2` depth · `P3` perf/power/quality
