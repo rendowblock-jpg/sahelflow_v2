@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { ComponentType } from "react";
 import { useState } from "react";
 import {
   CheckCircle2,
@@ -11,11 +10,7 @@ import {
   Plug,
 } from "lucide-react";
 
-import {
-  ShopifyIcon,
-  WooCommerceIcon,
-  YouCanIcon,
-} from "@/components/brand/brand-icons";
+import { BrandLogo } from "@/components/brand/brand-icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,9 +35,6 @@ interface CommerceDefinition {
   id: "youcan" | "shopify" | "woocommerce";
   name: string;
   description: string;
-  icon: ComponentType<{ className?: string }>;
-  iconClassName: string;
-  iconContainerClassName: string;
   fields: Array<{
     key: string;
     label: string;
@@ -87,9 +79,6 @@ export function CommerceIntegrationsPanel({
       id: "youcan",
       name: "YouCan",
       description: t("integrations.youcanDesc"),
-      icon: YouCanIcon,
-      iconContainerClassName: "bg-emerald-500/10 dark:bg-emerald-500/15",
-      iconClassName: "text-success",
       docsUrl: "https://partners.youcan.shop",
       fields: [
         {
@@ -104,9 +93,6 @@ export function CommerceIntegrationsPanel({
       id: "shopify",
       name: "Shopify",
       description: t("integrations.shopifyDesc"),
-      icon: ShopifyIcon,
-      iconContainerClassName: "bg-emerald-500/10 dark:bg-emerald-500/15",
-      iconClassName: "text-success",
       fields: [
         {
           key: "shopDomain",
@@ -126,9 +112,6 @@ export function CommerceIntegrationsPanel({
       id: "woocommerce",
       name: "WooCommerce",
       description: t("integrations.woocommerceDesc"),
-      icon: WooCommerceIcon,
-      iconContainerClassName: "bg-violet-500/10 dark:bg-violet-500/15",
-      iconClassName: "text-violet-600 dark:text-violet-400",
       fields: [
         {
           key: "siteUrl",
@@ -300,7 +283,6 @@ export function CommerceIntegrationsPanel({
       <CardContent className="space-y-4">
         <div className="grid gap-3 md:grid-cols-3">
           {definitions.map((definition) => {
-            const Icon = definition.icon;
             const isConnected = connected(definition.id);
             return (
               <div
@@ -308,14 +290,7 @@ export function CommerceIntegrationsPanel({
                 className="rounded-surface border bg-background/70 p-4"
               >
                 <div className="flex items-start gap-3">
-                  <span
-                    className={`flex size-10 shrink-0 items-center justify-center rounded-surface ${definition.iconContainerClassName}`}
-                  >
-                    <Icon
-                      className={`size-5 ${definition.iconClassName}`}
-                      aria-hidden="true"
-                    />
-                  </span>
+                  <BrandLogo id={definition.id} size="md" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-semibold">{definition.name}</p>

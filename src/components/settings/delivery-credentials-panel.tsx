@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { BrandLogo } from "@/components/brand/brand-icons";
 import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceLocale,
@@ -292,7 +293,10 @@ export function DeliveryCredentialsPanel() {
             return (
               <section key={provider.id} className="space-y-3 rounded-surface border p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="font-medium">{provider.name}</p>
+                  <span className="flex min-w-0 items-center gap-3">
+                    <BrandLogo id={provider.id} size="md" />
+                    <span className="truncate font-medium">{provider.name}</span>
+                  </span>
                   <div className="flex gap-2">
                     {certified ? <Badge><ShieldCheck className="me-1 size-3" aria-hidden="true" />{t("delivery.certified")}</Badge> : null}
                     <Badge variant={configured ? "default" : "outline"}>
