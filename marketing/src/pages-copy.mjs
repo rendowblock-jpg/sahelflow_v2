@@ -104,6 +104,9 @@ const en = {
       badge: "Most sellers",
       ask: "Price on WhatsApp",
       per: "one-time payment",
+      offer: (seats) => `Launch offer · first ${seats} sellers`,
+      then: (regular) => `then ${regular}`,
+      save: "−50%",
       points: ["Permanent licence for one PC", "12 months of updates and priority support", "1 shop, up to 5 team members", "Every module and every integration", "Pay by BaridiMob or CCP"],
       cta: "Get my licence",
     },
@@ -147,7 +150,7 @@ const en = {
       ["Your storefront", "only what you publish"],
     ],
   },
-  pricingTeaser: { title: "Free for 7 days. Then one payment.", text: "No subscription treadmill: a permanent licence for your PC, with a year of updates and support." },
+  pricingTeaser: { title: "Free for 7 days. Then one payment.", text: "No subscription treadmill: a permanent licence for your PC, with a year of updates and support. Launch offer: half price for the first 20 sellers." },
 };
 
 const fr = {
@@ -251,6 +254,9 @@ const fr = {
       badge: "Le choix des vendeurs",
       ask: "Prix sur WhatsApp",
       per: "paiement unique",
+      offer: (seats) => `Offre de lancement · ${seats} premiers vendeurs`,
+      then: (regular) => `puis ${regular}`,
+      save: "−50 %",
       points: ["Licence permanente pour un PC", "12 mois de mises à jour et support prioritaire", "1 boutique, jusqu'à 5 membres", "Tous les modules et toutes les intégrations", "Paiement BaridiMob ou CCP"],
       cta: "Obtenir ma licence",
     },
@@ -294,7 +300,7 @@ const fr = {
       ["Votre boutique", "uniquement ce que vous publiez"],
     ],
   },
-  pricingTeaser: { title: "Gratuit 7 jours. Puis un seul paiement.", text: "Pas d'abonnement sans fin : une licence permanente pour votre PC, avec un an de mises à jour et de support." },
+  pricingTeaser: { title: "Gratuit 7 jours. Puis un seul paiement.", text: "Pas d'abonnement sans fin : une licence permanente pour votre PC, avec un an de mises à jour et de support. Offre de lancement : moitié prix pour les 20 premiers vendeurs." },
 };
 
 const ar = {
@@ -398,6 +404,9 @@ const ar = {
       badge: "اختيار التجار",
       ask: "السعر على واتساب",
       per: "دفعة واحدة",
+      offer: (seats) => `عرض الإطلاق · لأول ${seats} تاجراً`,
+      then: (regular) => `ثم ${regular}`,
+      save: "‎−50%",
       points: ["ترخيص دائم لحاسوب واحد", "12 شهراً من التحديثات والدعم ذي الأولوية", "متجر واحد، حتى 5 أعضاء في الفريق", "كل الوحدات وكل التكاملات", "الدفع عبر BaridiMob أو CCP"],
       cta: "احصل على ترخيصي",
     },
@@ -441,7 +450,7 @@ const ar = {
       ["متجرك الإلكتروني", "فقط ما تنشره"],
     ],
   },
-  pricingTeaser: { title: "مجاني 7 أيام. ثم دفعة واحدة.", text: "لا اشتراك لا ينتهي: ترخيص دائم لحاسوبك، مع سنة من التحديثات والدعم." },
+  pricingTeaser: { title: "مجاني 7 أيام. ثم دفعة واحدة.", text: "لا اشتراك لا ينتهي: ترخيص دائم لحاسوبك، مع سنة من التحديثات والدعم. عرض الإطلاق: نصف السعر لأول 20 تاجراً." },
 };
 
 export const PAGES = { ar, fr, en };
