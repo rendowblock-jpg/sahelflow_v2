@@ -43,7 +43,7 @@ export const canonicalImportRowSchema = z
   });
 
 export type CanonicalImportRow = z.infer<typeof canonicalImportRowSchema>;
-export type CanonicalFileSource = "csv" | "xlsx";
+export type CanonicalFileSource = "csv" | "xlsx" | "google_sheets";
 
 interface CatalogVariant {
   id: string;
@@ -229,6 +229,12 @@ export async function prepareCanonicalFileImport(
     fileHash: string;
     rows: MappedRow<CanonicalImportRow>[];
     structuralInvalid?: ValidationFailure[];
+    /**
+     * A live source (a Google Sheet) keeps one identity across reads, so its
+     * order ids must not depend on the content hash of one read.
+     */
+    sourceIdentity?: string;
+    sourceOrderIdFor?: (groupKey: string) => string;
   },
 ): Promise<PreparedCanonicalFileImport> {
   const products = await context.prisma.product.findMany({
@@ -319,7 +325,9 @@ export async function prepareCanonicalFileImport(
     const items = [...itemMap.values()];
     groups.push({
       groupKey,
-      sourceOrderId: stableSourceOrderId(input.fileHash, groupKey),
+      sourceOrderId:
+        input.sourceOrderIdFor?.(groupKey) ??
+        stableSourceOrderId(input.fileHash, groupKey),
       rowIndices: rows.map((row) => row.rowIndex),
       customer: {
         name: first.customerName,
@@ -346,7 +354,7 @@ export async function prepareCanonicalFileImport(
   return {
     source: input.source,
     fileHash: input.fileHash,
-    sourceIdentity: `file:${input.fileHash}`,
+    sourceIdentity: input.sourceIdentity ?? `file:${input.fileHash}`,
     groups,
     preview: preview.sort((left, right) => left.rowIndex - right.rowIndex),
     invalid: invalid.sort((left, right) => left.rowIndex - right.rowIndex),

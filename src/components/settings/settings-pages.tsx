@@ -28,6 +28,7 @@ import { ChangePinPanel } from "@/components/settings/change-pin-panel";
 import { CollaborationAdminPanel } from "@/components/settings/collaboration-admin-panel";
 import { CommerceIntegrationsPanel } from "@/components/settings/commerce-integrations-panel";
 import { CommerceSyncRecoveryPanel } from "@/components/settings/commerce-sync-recovery-panel";
+import { GoogleSheetsBridgePanel } from "@/components/settings/google-sheets-bridge-panel";
 import { DailyReportPanel } from "@/components/settings/daily-report-panel";
 import { DangerZonePanel } from "@/components/settings/danger-zone-panel";
 import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
@@ -192,7 +193,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     icon: ShoppingBag,
     label: "pageCommerce",
     description: "pageCommerceDescription",
-    keywords: "shopify woocommerce youcan sync synchronisation مزامنة store",
+    keywords: "shopify woocommerce youcan google sheets feuille ورقة sync synchronisation مزامنة store",
     visible: (access) => access.commerceRead || access.commerceManage,
     render: ({ access, integrations }) => (
       <>
@@ -201,6 +202,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
           canManage={access.commerceManage}
           canSync={access.commerceSync}
         />
+        <GoogleSheetsBridgePanel canManage={access.commerceManage} />
         {access.commerceManage ? <CommerceSyncRecoveryPanel /> : null}
       </>
     ),

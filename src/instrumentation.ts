@@ -15,6 +15,7 @@ async function startBackgroundWorkers(): Promise<void> {
     { startLogRetentionWorker },
     { startMetaCapiWorker },
     { startAbandonedCartWorker },
+    { startGoogleSheetsBridgeWorker },
   ] = await Promise.all([
     import("./lib/whatsapp/outbox-worker"),
     import("./lib/whatsapp/inbound-worker"),
@@ -27,6 +28,7 @@ async function startBackgroundWorkers(): Promise<void> {
     import("./lib/maintenance/log-retention"),
     import("./lib/meta/capi-worker"),
     import("./lib/storefront/abandoned-cart-worker"),
+    import("./lib/integrations/google-sheets/bridge-worker"),
   ]);
   startWhatsAppOutboxWorker();
   startWhatsAppInboundWorker();
@@ -39,6 +41,7 @@ async function startBackgroundWorkers(): Promise<void> {
   startLogRetentionWorker();
   startMetaCapiWorker();
   startAbandonedCartWorker();
+  startGoogleSheetsBridgeWorker();
 }
 
 export async function register(): Promise<void> {
