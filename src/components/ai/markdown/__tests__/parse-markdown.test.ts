@@ -60,6 +60,33 @@ describe("AI markdown parser — XSS safety", () => {
     }
   });
 
+  it("opens allowlisted in-app pages in place and nothing else relative", () => {
+    for (const href of [
+      "/orders/confirmation-queue",
+      "/settings?group=delivery",
+      "/storefronts/new",
+    ]) {
+      const link = parseInline(`[page](${href})`).find((token) => token.kind === "link");
+      expect(link && link.kind === "link" && link.safe, href).toBe(true);
+      expect(link && link.kind === "link" && link.internal, href).toBe(true);
+      expect(link && link.kind === "link" && link.href).toBe(href);
+    }
+    for (const href of [
+      "//evil.example/orders",
+      "/api/backup/restore",
+      "/orders/../api",
+      "/orders%2F..%2Fapi",
+      "/orders#x",
+      "/Orders",
+      "orders",
+      "/settings?group=<script>",
+    ]) {
+      const link = parseInline(`[page](${href})`).find((token) => token.kind === "link");
+      expect(link && link.kind === "link" && link.internal, href).toBeFalsy();
+      expect(link && link.kind === "link" && link.safe, href).toBe(false);
+    }
+  });
+
   it("rejects hrefs with control characters or embedded whitespace", () => {
     expect(isSafeMarkdownHref("https://a.b/\u0000evil")).toBe(false);
     expect(isSafeMarkdownHref("https://a.b/x y")).toBe(false);

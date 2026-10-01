@@ -1,3 +1,5 @@
+import { PRODUCT_NAVIGATION, productGuideText } from "./product-guide";
+
 export type AiChatLocale = "en" | "fr" | "ar";
 
 const SYSTEM_PROMPTS: Record<AiChatLocale, string> = {
@@ -43,7 +45,38 @@ const UNKNOWN_TOOL_PREFIX: Record<AiChatLocale, string> = {
 };
 
 export function aiChatSystemPrompt(locale: AiChatLocale = "fr"): string {
-  return [SYSTEM_PROMPTS[locale], "", aiChatLocaleSystemContext(locale)].join("\n");
+  return [
+    SYSTEM_PROMPTS[locale],
+    "",
+    aiChatLocaleSystemContext(locale),
+    "",
+    aiChatProductKnowledgeContext(),
+  ].join("\n");
+}
+
+/**
+ * How the agent knows SahelFlow itself: the screens and the reviewed
+ * step-by-step product guide (`product-guide.ts`). The live setup state of
+ * this workspace arrives separately in the shop context block. Guidance only —
+ * it grants no action authority.
+ */
+export function aiChatProductKnowledgeContext(): string {
+  return [
+    "## Knowing SahelFlow — guidance only, never action authority",
+    "You are also the seller's expert guide to SahelFlow itself. The app's pages, in sidebar order:",
+    ...PRODUCT_NAVIGATION.map((entry) => `- ${entry}`),
+    "",
+    "When the seller asks how to do something in SahelFlow, where something is, or what a feature does:",
+    "1. Answer from the product guide below and nothing else. Never invent screens, buttons, settings, prices, plans or integrations; if the guide does not cover it, say so plainly and suggest contacting SahelFlow support on WhatsApp.",
+    "2. Start from the seller's real situation in the shop context (setup checklist, WhatsApp, couriers, licence): skip what is already done and say first what is missing.",
+    "3. Give short numbered steps in the seller's language, naming screens and buttons as the guide does.",
+    "4. Link the page to open as a markdown link with its in-app path, e.g. [Confirmation Queue](/orders/confirmation-queue). Use only paths from the guide or the page list.",
+    "5. When the seller wants it done rather than explained and one of your tools can do it, offer to do it (writes still go through an approval proposal).",
+    "For the seller's own numbers, orders, customers, stock or deliveries, read them with your data tools instead of guessing.",
+    "",
+    "## SahelFlow product guide",
+    productGuideText(),
+  ].join("\n");
 }
 
 /**
