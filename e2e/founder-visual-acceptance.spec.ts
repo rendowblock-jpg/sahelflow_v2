@@ -351,7 +351,7 @@ test.describe.serial("Founder visual correction evidence", () => {
       '[data-storefront-studio="bootstrap"] > div.grid > main',
     );
     expectRightOf(storefrontSetup, storefrontPreview, "RTL Storefront setup rail");
-    expectWidthBetween(storefrontSetup, 325, 345, "RTL Storefront setup rail");
+    expectWidthBetween(storefrontSetup, 390, 410, "RTL Storefront setup steps");
     expect(
       storefrontPreview.width,
       "Storefront live preview must dominate the focused authoring frame",

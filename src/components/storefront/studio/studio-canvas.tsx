@@ -30,17 +30,18 @@ export function StudioCanvas({
   draft,
   products,
   device,
-  selectedSectionId,
-  revealSectionId,
+  selectedSectionId = null,
+  revealSectionId = null,
   onInspectSection,
 }: {
   draft: StorefrontStudioDraft;
   products: readonly StorefrontStudioProduct[];
   device: StorefrontStudioDevice;
-  selectedSectionId: string | null;
+  selectedSectionId?: string | null;
   /** Changes when the selection came from outside the canvas (scroll to it). */
-  revealSectionId: { id: string; nonce: number } | null;
-  onInspectSection: (id: string) => void;
+  revealSectionId?: { id: string; nonce: number } | null;
+  /** Omit for a read-only preview (sections are not selectable). */
+  onInspectSection?: (id: string) => void;
 }) {
   const { t, dir } = useI18n();
   const viewportRef = useRef<HTMLDivElement | null>(null);

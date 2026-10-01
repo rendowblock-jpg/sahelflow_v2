@@ -38,7 +38,7 @@ export default async function NewStorefrontPage() {
   });
 
   return (
-    <div className="app-workspace-content">
+    <div className="app-workspace-content flex flex-col">
       <StorefrontStudioBootstrap products={products} />
     </div>
   );
