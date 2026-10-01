@@ -1,32 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  Activity,
-  AlertTriangle,
-  Bot,
-  CheckCircle2,
-  Clock3,
-  Sparkles,
-  Zap,
-} from "lucide-react";
+import { Activity, AlertTriangle, Bot, CheckCircle2, Sparkles, Zap } from "lucide-react";
 
+import { AutomationActions } from "@/components/automations/automation-actions";
+import type { AutomationCardData } from "@/components/automations/automation-card";
 import { AutomationRunRecoveryPanel } from "@/components/automations/automation-run-recovery-panel";
+import { AutomationTemplatesGallery } from "@/components/automations/automation-templates-gallery";
+import { AutomationsListClient } from "@/components/automations/automations-list-client";
 import { PageHeader } from "@/components/shared/page-header";
-import { StateSurface } from "@/components/shared/state-surface";
 import { StatCard } from "@/components/shared/stat-card";
-import { Badge } from "@/components/ui/badge";
+import { StateSurface } from "@/components/shared/state-surface";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  getSellerActionSpec,
-  getSellerTriggerSpec,
-  type SellerAutomationAction,
-} from "@/lib/automations/catalog";
+  AUTOMATION_PERFORMANCE_DAYS,
+  emptyAutomationPerformance,
+  successRate,
+  summarizeAutomationRuns,
+} from "@/lib/automations/automation-performance";
+import { whatsappConnected } from "@/lib/automations/automation-readiness";
+import { getSellerActionSpec, getSellerTriggerSpec } from "@/lib/automations/catalog";
 import {
   parseStoredAutomationDefinition,
   type CanonicalAutomationDefinition,
@@ -40,12 +33,8 @@ import {
   getAutomationWorkspaceCopy,
   type AutomationWorkspaceCopyKey,
 } from "@/lib/i18n/automation-workspace";
-import {
-  requireTrustedAction,
-  trustedActionAllowed,
-} from "@/lib/identity/authorization";
+import { requireTrustedAction, trustedActionAllowed } from "@/lib/identity/authorization";
 import { formatDate } from "@/lib/utils";
-import { AutomationActions } from "./automation-actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -53,13 +42,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const dynamic = "force-dynamic";
-
-const ATTENTION_STATES = new Set([
-  "failed",
-  "dead_letter",
-  "ambiguous",
-  "partially_completed",
-]);
 
 function readStructuralDefinition(
   automation: Parameters<typeof parseStoredAutomationDefinition>[0],
@@ -71,6 +53,7 @@ function readStructuralDefinition(
   }
 }
 
+/** A definition the seller policy accepts; anything else needs repair. */
 function readDefinition(
   automation: Parameters<typeof parseStoredAutomationDefinition>[0],
 ): CanonicalAutomationDefinition | null {
@@ -98,9 +81,13 @@ function readDefinition(
 
 function conditionCount(definition: CanonicalAutomationDefinition | null): number {
   if (!definition?.conditions) return 0;
-  return "all" in definition.conditions
-    ? definition.conditions.all.length
-    : definition.conditions.any.length;
+  return "all" in definition.conditions ? definition.conditions.all.length : definition.conditions.any.length;
+}
+
+/** Retired engine identifiers ("low_stock") read as words, never as raw keys. */
+function humanize(value: string): string {
+  const words = value.replace(/[._]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export default async function AutomationsPage({
@@ -110,19 +97,13 @@ export default async function AutomationsPage({
 }) {
   const actorContext = await requireTrustedAction("automations.read");
   const { t, locale } = await getI18n();
-  const c = (
-    key: AutomationWorkspaceCopyKey,
-    params?: Record<string, string | number>,
-  ) => getAutomationWorkspaceCopy(locale, key, params);
-  const canManage = trustedActionAllowed(
-    actorContext,
-    "automations.manage",
-    { shopId: actorContext.shop.shopId },
-  );
+  const c = (key: AutomationWorkspaceCopyKey, params?: Record<string, string | number>) =>
+    getAutomationWorkspaceCopy(locale, key, params);
+  const canManage = trustedActionAllowed(actorContext, "automations.manage", {
+    shopId: actorContext.shop.shopId,
+  });
   const params = await searchParams;
-  const activeTab = ["my", "templates", "activity"].includes(params.tab ?? "")
-    ? params.tab!
-    : "my";
+  const activeTab = params.tab && ["my", "templates", "activity"].includes(params.tab) ? params.tab : "my";
 
   // The deterministic Founder demo predates the durable automation contract.
   // Repair only its three exact known legacy IDs, and only for an actor who may
@@ -131,161 +112,84 @@ export default async function AutomationsPage({
     await normalizeLegacyDemoAutomations(db);
   }
 
-  const [automations, recentRunStats, recentRuns, recentLogs] = await Promise.all([
+  const now = new Date();
+  const since = new Date(now);
+  since.setUTCDate(since.getUTCDate() - AUTOMATION_PERFORMANCE_DAYS);
+
+  const [automations, runs, recentRuns, recentLogs, waConnected] = await Promise.all([
     db.automation.findMany({
       where: { deletedAt: null },
       orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }, { id: "desc" }],
     }),
     db.automationRun.findMany({
-      take: 20,
+      where: { createdAt: { gte: since } },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      select: { status: true },
+      take: 5000,
+      select: { automationId: true, status: true, createdAt: true },
     }),
-    canManage
-      ? listAutomationRunHistory({ prisma: db, shop: shopContext }, 20)
-      : Promise.resolve([]),
+    canManage ? listAutomationRunHistory({ prisma: db, shop: shopContext }, 20) : Promise.resolve([]),
     db.automationLog.findMany({
       take: 20,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       include: { automation: { select: { name: true } } },
     }),
+    whatsappConnected(),
   ]);
 
-  const activeCount = automations.filter((automation) => automation.isActive).length;
-  const attentionCount = recentRunStats.filter((run) =>
-    ATTENTION_STATES.has(run.status),
-  ).length;
-  const terminalRuns = recentRunStats.filter((run) =>
-    [
-      "succeeded",
-      "failed",
-      "dead_letter",
-      "ambiguous",
-      "partially_completed",
-    ].includes(run.status),
-  );
-  const successCount = terminalRuns.filter((run) => run.status === "succeeded").length;
-  const successRateValue = terminalRuns.length
-    ? `${Math.round((successCount / terminalRuns.length) * 100)}%`
-    : "—";
+  const { total, byAutomation } = summarizeAutomationRuns(runs, now);
+  const totalSuccess = successRate(total);
 
-  const templateMessage = (kind: "confirm" | "shipped" | "thanks") => {
-    if (locale === "ar") {
-      if (kind === "confirm") {
-        return "مرحباً {{customerName}}، استلمنا طلبك {{orderNumber}} وسنتواصل معك لتأكيده.";
-      }
-      if (kind === "shipped") {
-        return "تم شحن طلبك {{orderNumber}} وهو في الطريق إليك.";
-      }
-      return "شكراً لاختيارك متجرنا! نتمنى أن تكون راضياً عن طلبك {{orderNumber}}.";
-    }
-    if (locale === "fr") {
-      if (kind === "confirm") {
-        return "Bonjour {{customerName}}, nous avons bien reçu votre commande {{orderNumber}} et nous allons la confirmer avec vous.";
-      }
-      if (kind === "shipped") {
-        return "Votre commande {{orderNumber}} a été expédiée et est en route.";
-      }
-      return "Merci pour votre confiance ! Nous espérons que votre commande {{orderNumber}} vous satisfait.";
-    }
-    if (kind === "confirm") {
-      return "Hi {{customerName}}, we received your order {{orderNumber}} and will confirm it with you shortly.";
-    }
-    if (kind === "shipped") {
-      return "Your order {{orderNumber}} has shipped and is on its way.";
-    }
-    return "Thank you for choosing us! We hope you are happy with order {{orderNumber}}.";
-  };
+  const cards: AutomationCardData[] = automations.map((automation) => {
+    const structural = readStructuralDefinition(automation);
+    const definition = readDefinition(automation);
+    const trigger = definition?.trigger ?? automation.trigger;
+    const triggerSpec = getSellerTriggerSpec(trigger);
+    const steps = definition?.steps ?? structural?.steps ?? [];
+    const actionKeys = steps.length ? steps.map((step) => step.action as string) : [automation.action];
+    const performance = byAutomation.get(automation.id) ?? emptyAutomationPerformance(now);
+    return {
+      id: automation.id,
+      name: automation.name,
+      isActive: automation.isActive,
+      dryRun: automation.dryRun,
+      repairRequired: !definition,
+      trigger,
+      triggerLabel: triggerSpec ? t(triggerSpec.labelKey) : humanize(trigger),
+      conditionCount: conditionCount(definition ?? structural),
+      actions: actionKeys.map((action) => {
+        const spec = getSellerActionSpec(action);
+        return { action, label: spec ? c(spec.copyKey as AutomationWorkspaceCopyKey) : humanize(action) };
+      }),
+      lastRunAt: automation.lastRunAt ? automation.lastRunAt.toISOString() : null,
+      whatsappBlocked: !waConnected && actionKeys.includes("send_whatsapp"),
+      statusStepGoverned: actionKeys.includes("update_status"),
+      stats: {
+        runs: performance.runs,
+        successRate: successRate(performance),
+        attention: performance.attention,
+        trend: performance.trend,
+      },
+      raw: {
+        id: automation.id,
+        name: automation.name,
+        trigger: automation.trigger,
+        action: automation.action,
+        isActive: automation.isActive,
+        conditions: automation.conditions,
+        config: automation.config,
+        steps: automation.steps,
+        dryRun: automation.dryRun,
+        maxRetries: automation.maxRetries,
+        retryDelayMs: automation.retryDelayMs,
+      },
+    };
+  });
 
-  const templates = [
-    {
-      key: "confirmation",
-      name: c("template.confirmation.name"),
-      description: c("template.confirmation.desc"),
-      preset: {
-        name: c("template.confirmation.name"),
-        trigger: "order.created" as const,
-        steps: [
-          {
-            action: "send_whatsapp" as const,
-            onFailure: "stop" as const,
-            config: { messageTemplate: templateMessage("confirm") },
-          },
-        ],
-      },
-    },
-    {
-      key: "delivery",
-      name: c("template.delivery.name"),
-      description: c("template.delivery.desc"),
-      preset: {
-        name: c("template.delivery.name"),
-        trigger: "order.shipped" as const,
-        steps: [
-          {
-            action: "send_whatsapp" as const,
-            onFailure: "stop" as const,
-            config: { messageTemplate: templateMessage("shipped") },
-          },
-        ],
-      },
-    },
-    {
-      key: "thanks",
-      name: c("template.thanks.name"),
-      description: c("template.thanks.desc"),
-      preset: {
-        name: c("template.thanks.name"),
-        trigger: "order.delivered" as const,
-        steps: [
-          {
-            action: "send_whatsapp" as const,
-            onFailure: "stop" as const,
-            config: { messageTemplate: templateMessage("thanks") },
-          },
-        ],
-      },
-    },
-    {
-      key: "high-value",
-      name: c("template.highValue.name"),
-      description: c("template.highValue.desc"),
-      preset: {
-        name: c("template.highValue.name"),
-        trigger: "order.created" as const,
-        conditions: {
-          all: [
-            {
-              field: "totalPrice",
-              operator: "greater_than" as const,
-              value: "7000",
-            },
-          ],
-        },
-        steps: [
-          {
-            action: "tag_customer" as const,
-            onFailure: "stop" as const,
-            config: {
-              noteText:
-                locale === "ar"
-                  ? "طلب مرتفع القيمة {{orderNumber}} — {{totalPrice}} دج"
-                  : locale === "fr"
-                    ? "Commande COD à forte valeur {{orderNumber}} — {{totalPrice}} DZD"
-                    : "High-value COD order {{orderNumber}} — {{totalPrice}} DZD",
-            },
-          },
-        ],
-      },
-    },
-  ];
+  // An automation that needs repair cannot run, so it never counts as active.
+  const activeCount = cards.filter((card) => card.isActive && !card.repairRequired).length;
 
   return (
-    <div
-      className="app-content page-sections"
-      data-automation-workspace="seller-v2"
-      data-automation-builder="when-if-then"
-    >
+    <div className="app-content page-sections" data-automation-workspace="seller-v2" data-automation-builder="when-if-then">
       <PageHeader
         title={c("workspace.title")}
         description={c("workspace.subtitle")}
@@ -293,279 +197,63 @@ export default async function AutomationsPage({
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={c("workspace.active")} value={activeCount} icon={<Zap />} />
         <StatCard
-          label={c("workspace.attention")}
-          value={attentionCount}
-          icon={<AlertTriangle />}
+          label={c("workspace.kpiActive")}
+          value={String(activeCount)}
+          icon={<Zap />}
+          subtitle={c("workspace.activeOf", { active: activeCount, total: automations.length })}
         />
         <StatCard
-          label={c("workspace.recentRuns")}
-          value={recentRunStats.length}
+          label={c("workspace.kpiRuns")}
+          value={String(total.runs)}
           icon={<Activity />}
+          spark={total.trend.some((point) => point.value > 0) ? total.trend : undefined}
+          sparkZeroBaseline
         />
         <StatCard
-          label={c("workspace.successRate")}
-          value={successRateValue}
+          label={c("workspace.kpiSuccess")}
+          value={totalSuccess === null ? "—" : `${totalSuccess}%`}
           icon={<CheckCircle2 />}
+          tone={totalSuccess !== null && totalSuccess < 90 ? "warning" : "neutral"}
+        />
+        <StatCard
+          label={c("workspace.kpiAttention")}
+          value={String(total.attention)}
+          icon={<AlertTriangle />}
+          tone={total.attention > 0 ? "danger" : "neutral"}
+          href={total.attention > 0 ? "/automations?tab=activity" : undefined}
+          hrefLabel={c("workspace.activity")}
         />
       </div>
 
       <Tabs value={activeTab} className="w-full space-y-5">
-        <div className="border-b border-border/70 pb-3">
-          <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto sm:w-auto">
-            <TabsTrigger value="my" asChild>
-              <Link href="/automations?tab=my">
-                <Bot className="me-1.5 size-4" />
-                {c("workspace.my")}
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value="templates" asChild>
-              <Link href="/automations?tab=templates">
-                <Sparkles className="me-1.5 size-4" />
-                {c("workspace.templates")}
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value="activity" asChild>
-              <Link href="/automations?tab=activity">
-                <Activity className="me-1.5 size-4" />
-                {c("workspace.activity")}
-              </Link>
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList variant="line" className="w-full justify-start border-b [&>[data-slot=tabs-trigger]]:flex-none">
+          <TabsTrigger value="my" asChild>
+            <Link href="/automations?tab=my">
+              <Bot className="me-1.5 size-4" />
+              {c("workspace.my")}
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="templates" asChild>
+            <Link href="/automations?tab=templates">
+              <Sparkles className="me-1.5 size-4" />
+              {c("workspace.templates")}
+            </Link>
+          </TabsTrigger>
+          <TabsTrigger value="activity" asChild>
+            <Link href="/automations?tab=activity">
+              <Activity className="me-1.5 size-4" />
+              {c("workspace.activity")}
+            </Link>
+          </TabsTrigger>
+        </TabsList>
 
-        <TabsContent value="my" className="space-y-4">
-          {automations.length === 0 ? (
-            <StateSurface
-              icon={Bot}
-              title={c("workspace.noAutomations")}
-              description={c("workspace.noAutomationsHint")}
-              actions={canManage ? <AutomationActions variant="create" /> : undefined}
-              size="panel"
-            />
-          ) : (
-            <div className="grid gap-3">
-              {automations.map((automation) => {
-                const structuralDefinition = readStructuralDefinition(automation);
-                const definition = readDefinition(automation);
-                const repairRequired = !definition;
-                const trigger = definition?.trigger ?? automation.trigger;
-                const triggerSpec = getSellerTriggerSpec(trigger);
-                const triggerLabel = triggerSpec ? t(triggerSpec.labelKey) : trigger;
-                const steps = definition?.steps ?? structuralDefinition?.steps ?? [];
-                const visibleActions = steps.length
-                  ? steps.map((step) => step.action)
-                  : ([automation.action] as string[]);
-                const actions = visibleActions.map((action) => {
-                  const spec = getSellerActionSpec(action);
-                  return spec
-                    ? c(spec.copyKey as AutomationWorkspaceCopyKey)
-                    : action;
-                });
-                const conditions = conditionCount(definition ?? structuralDefinition);
-                const rawBuilderAutomation = {
-                  id: automation.id,
-                  name: automation.name,
-                  trigger: automation.trigger,
-                  action: automation.action,
-                  isActive: automation.isActive,
-                  conditions: automation.conditions,
-                  config: automation.config,
-                  steps: automation.steps,
-                  dryRun: automation.dryRun,
-                  maxRetries: automation.maxRetries,
-                  retryDelayMs: automation.retryDelayMs,
-                };
-                const repairNote =
-                  locale === "ar"
-                    ? "أعد بناء هذه الأتمتة باستخدام القواعد المدعومة"
-                    : locale === "fr"
-                      ? "Reconstruire cette automatisation avec les règles prises en charge"
-                      : "Rebuild this automation with supported rules";
-                const repairStep = {
-                  action: "tag_customer" as const,
-                  onFailure: "stop" as const,
-                  config: { noteText: repairNote },
-                };
-                const builderAutomation =
-                  repairRequired && !structuralDefinition
-                    ? {
-                        ...rawBuilderAutomation,
-                        trigger: "order.created",
-                        action: "tag_customer",
-                        isActive: false,
-                        conditions: null,
-                        config: JSON.stringify(repairStep.config),
-                        steps: JSON.stringify([repairStep]),
-                        dryRun: true,
-                      }
-                    : rawBuilderAutomation;
-
-                return (
-                  <Card
-                    key={automation.id}
-                    data-automation-card={automation.id}
-                    className="overflow-hidden border-border/70 transition-colors hover:border-border"
-                  >
-                    <CardContent className="p-0">
-                      <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="flex min-w-0 items-start gap-4">
-                          <span className="flex size-11 shrink-0 items-center justify-center rounded-surface border border-primary/15 bg-primary-soft text-primary">
-                            <Zap className="size-5" />
-                          </span>
-                          <div className="min-w-0 space-y-3">
-                            <div className="space-y-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="font-semibold leading-tight">
-                                  {automation.name}
-                                </h3>
-                                {repairRequired ? (
-                                  <Badge variant="destructive">
-                                    {c("workspace.needsRepair")}
-                                  </Badge>
-                                ) : (
-                                  <Badge
-                                    variant={automation.isActive ? "default" : "outline"}
-                                  >
-                                    {automation.isActive
-                                      ? c("workspace.active")
-                                      : t("common.inactive")}
-                                  </Badge>
-                                )}
-                                {automation.dryRun ? (
-                                  <Badge variant="outline">{c("workspace.dryRun")}</Badge>
-                                ) : null}
-                              </div>
-                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                                <span>
-                                  {automation.runCount} {c("workspace.runs")}
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                  <Clock3 className="size-3" />
-                                  {automation.lastRunAt
-                                    ? `${c("workspace.lastRun")}: ${formatDate(
-                                        automation.lastRunAt,
-                                        locale,
-                                      )}`
-                                    : c("workspace.never")}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-2 text-xs">
-                              <Badge variant="secondary" className="gap-1.5">
-                                <span className="text-muted-foreground">
-                                  {c("workspace.when")}
-                                </span>
-                                <span>{triggerLabel}</span>
-                              </Badge>
-                              <span className="icon-rtl-flip text-muted-foreground">
-                                →
-                              </span>
-                              <Badge variant="outline" className="gap-1.5">
-                                <span className="text-muted-foreground">
-                                  {c("workspace.onlyIf")}
-                                </span>
-                                <span>
-                                  {conditions > 0
-                                    ? c("builder.conditionCount", {
-                                        count: conditions,
-                                      })
-                                    : c("workspace.always")}
-                                </span>
-                              </Badge>
-                              <span className="icon-rtl-flip text-muted-foreground">
-                                →
-                              </span>
-                              <div className="flex flex-wrap gap-1.5">
-                                {actions.slice(0, 2).map((label, index) => (
-                                  <Badge key={`${label}-${index}`} variant="secondary">
-                                    {label}
-                                  </Badge>
-                                ))}
-                                {actions.length > 2 ? (
-                                  <Badge variant="outline">
-                                    {c("workspace.andMore", {
-                                      count: actions.length - 2,
-                                    })}
-                                  </Badge>
-                                ) : null}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {canManage ? (
-                          <div className="flex shrink-0 items-center gap-2 self-end lg:self-center">
-                            <AutomationActions
-                              variant="edit"
-                              automation={builderAutomation}
-                            />
-                            <AutomationActions
-                              variant="menu"
-                              automation={rawBuilderAutomation}
-                              repairRequired={repairRequired}
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+        <TabsContent value="my">
+          <AutomationsListClient automations={cards} canManage={canManage} />
         </TabsContent>
 
-        <TabsContent value="templates" className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-2">
-            {templates.map((template) => {
-              const triggerSpec = getSellerTriggerSpec(template.preset.trigger);
-              const action = template.preset.steps[0]?.action as
-                | SellerAutomationAction
-                | undefined;
-              const actionSpec = action ? getSellerActionSpec(action) : undefined;
-              return (
-                <Card key={template.key} className="border-border/70">
-                  <CardContent className="space-y-4 p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-surface bg-primary-soft text-primary">
-                        <Sparkles className="size-4" />
-                      </span>
-                      {canManage ? (
-                        <AutomationActions
-                          variant="template"
-                          preset={template.preset}
-                        />
-                      ) : null}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{template.name}</h3>
-                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                        {template.description}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <Badge variant="outline">
-                        {triggerSpec
-                          ? t(triggerSpec.labelKey)
-                          : template.preset.trigger}
-                      </Badge>
-                      <span className="icon-rtl-flip text-muted-foreground">
-                        →
-                      </span>
-                      <Badge variant="secondary">
-                        {actionSpec
-                          ? c(actionSpec.copyKey as AutomationWorkspaceCopyKey)
-                          : action}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+        <TabsContent value="templates">
+          <AutomationTemplatesGallery canManage={canManage} />
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-4">
@@ -575,34 +263,18 @@ export default async function AutomationsPage({
             <Card>
               <CardContent className="divide-y p-0">
                 {recentLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="flex items-start justify-between gap-4 p-4"
-                  >
+                  <div key={log.id} className="flex items-start justify-between gap-4 p-4">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {log.automation.name}
-                      </p>
-                      {log.message ? (
-                        <p className="mt-1 truncate text-xs text-muted-foreground">
-                          {log.message}
-                        </p>
-                      ) : null}
+                      <p className="truncate text-sm font-medium">{log.automation.name}</p>
+                      {log.message ? <p className="mt-1 truncate text-xs text-muted-foreground">{log.message}</p> : null}
                     </div>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {formatDate(log.createdAt, locale)}
-                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{formatDate(log.createdAt, locale)}</span>
                   </div>
                 ))}
               </CardContent>
             </Card>
           ) : (
-            <StateSurface
-              icon={Activity}
-              title={c("workspace.latest")}
-              description={c("workspace.noActivity")}
-              size="panel"
-            />
+            <StateSurface icon={Activity} title={c("workspace.latest")} description={c("workspace.noActivity")} size="panel" />
           )}
         </TabsContent>
       </Tabs>

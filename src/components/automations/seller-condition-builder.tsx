@@ -23,6 +23,9 @@ import {
   type AutomationWorkspaceCopyKey,
 } from "@/lib/i18n/automation-workspace";
 import { cn } from "@/lib/utils";
+import wilayasData from "../../../data/wilayas.json";
+
+const WILAYAS = wilayasData as Array<{ code: number; name: string; nameAr: string }>;
 
 export type SellerConditionDraft = {
   field: string;
@@ -40,9 +43,11 @@ interface Props {
   value: SellerConditionGroupDraft;
   onChange: (value: SellerConditionGroupDraft) => void;
   disabled?: boolean;
+  /** "inspector": no card chrome or heading, rows stacked for a narrow panel. */
+  variant?: "card" | "inspector";
 }
 
-function operatorLabelKey(operator: SellerConditionOperator): string {
+export function operatorLabelKey(operator: SellerConditionOperator): string {
   if (operator === "greater_than_or_equal") return "conditionBuilder.op.gte";
   if (operator === "less_than_or_equal") return "conditionBuilder.op.lte";
   return `conditionBuilder.op.${operator}`;
@@ -57,7 +62,9 @@ export function SellerConditionBuilder({
   value,
   onChange,
   disabled = false,
+  variant = "card",
 }: Props) {
+  const inspector = variant === "inspector";
   const { t, locale } = useI18n();
   const c = (key: AutomationWorkspaceCopyKey) =>
     getAutomationWorkspaceCopy(locale, key);
@@ -104,12 +111,14 @@ export function SellerConditionBuilder({
   };
 
   return (
-    <div className="space-y-4 rounded-surface border border-border/70 bg-muted/10 p-4">
+    <div className={cn("space-y-4", !inspector && "rounded-surface border border-border/70 bg-muted/10 p-4")}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <Label>{c("builder.ifTitle")}</Label>
-          <p className="text-xs text-muted-foreground">{c("builder.ifHint")}</p>
-        </div>
+        {inspector ? null : (
+          <div className="space-y-1">
+            <Label>{c("builder.ifTitle")}</Label>
+            <p className="text-xs text-muted-foreground">{c("builder.ifHint")}</p>
+          </div>
+        )}
         {conditions.length > 0 ? (
           <div
             className="flex items-center gap-1 rounded-surface border border-border/70 bg-background p-1"
@@ -177,7 +186,12 @@ export function SellerConditionBuilder({
             return (
               <div
                 key={`${condition.field}-${index}`}
-                className="grid gap-2 rounded-surface border border-border/60 bg-background p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)_auto] sm:items-end"
+                className={cn(
+                  "grid gap-2 rounded-surface border border-border/60 bg-background p-3",
+                  inspector
+                    ? "grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end [&>*:nth-child(3)]:col-span-2 [&>*:nth-child(3)]:row-start-2"
+                    : "sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)_auto] sm:items-end",
+                )}
               >
                 <div className="space-y-1.5">
                   <Label
@@ -253,6 +267,8 @@ export function SellerConditionBuilder({
                       </Label>
                       <Input
                         id={valueControlId}
+                        list={currentField?.value === "wilaya" ? "automation-wilaya-options" : undefined}
+                        autoComplete="off"
                         value={conditionValueForEditor(condition.value)}
                         disabled={disabled}
                         dir={technical ? "ltr" : undefined}
@@ -300,6 +316,14 @@ export function SellerConditionBuilder({
           })}
         </div>
       )}
+
+      {fields.some((item) => item.value === "wilaya") ? (
+        <datalist id="automation-wilaya-options">
+          {WILAYAS.map((wilaya) => (
+            <option key={wilaya.code} value={wilaya.name} label={`${String(wilaya.code).padStart(2, "0")} · ${wilaya.nameAr}`} />
+          ))}
+        </datalist>
+      ) : null}
 
       <Button
         type="button"

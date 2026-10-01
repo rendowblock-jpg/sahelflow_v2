@@ -12,6 +12,7 @@ import "./motion-system.css";
 import "./experience-system.css";
 import "./locale-transition-system.css";
 import "./storefront-system.css";
+import "./automation-system.css";
 import { AppDirectionProvider } from "@/components/i18n/app-direction-provider";
 import { DesktopResumeRecovery } from "@/components/runtime/desktop-resume-recovery";
 import { TooltipProvider } from "@/components/ui/tooltip";

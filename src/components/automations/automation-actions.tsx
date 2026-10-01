@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -12,11 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-import {
-  AutomationBuilder,
-  type AutomationBuilderAutomation,
-  type AutomationBuilderPreset,
-} from "@/components/automations/automation-builder";
+import type { AutomationBuilderAutomation } from "@/components/automations/automation-builder";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,9 +41,10 @@ import {
 import { toast } from "@/lib/toast";
 
 interface AutomationActionsProps {
-  variant: "create" | "edit" | "menu" | "template";
+  variant: "create" | "edit" | "menu" | "template" | "toggle";
   automation?: AutomationBuilderAutomation;
-  preset?: AutomationBuilderPreset;
+  /** A key from AUTOMATION_TEMPLATES; the builder opens prefilled with it. */
+  templateKey?: string;
   repairRequired?: boolean;
 }
 
@@ -70,7 +69,7 @@ function duplicateAutomationName(name: string, suffixLabel: string): string {
 export function AutomationActions({
   variant,
   automation,
-  preset,
+  templateKey,
   repairRequired = false,
 }: AutomationActionsProps) {
   const { t, locale } = useI18n();
@@ -82,41 +81,36 @@ export function AutomationActions({
 
   if (variant === "create") {
     return (
-      <AutomationBuilder>
-        <Button data-automation-create="true">
+      <Button asChild>
+        <Link href="/automations/new" data-automation-create="true">
           <Plus className="me-1.5 size-4" />
           {c("workspace.new")}
-        </Button>
-      </AutomationBuilder>
+        </Link>
+      </Button>
     );
   }
 
   if (variant === "template") {
-    if (!preset) return null;
+    if (!templateKey) return null;
     return (
-      <AutomationBuilder preset={preset}>
-        <Button variant="outline" size="sm" data-automation-template={preset.trigger}>
+      <Button asChild variant="outline" size="sm">
+        <Link href={`/automations/new?template=${encodeURIComponent(templateKey)}`} data-automation-template={templateKey}>
           <Plus className="me-1.5 size-4" />
           {c("template.use")}
-        </Button>
-      </AutomationBuilder>
+        </Link>
+      </Button>
     );
   }
 
   if (variant === "edit") {
     if (!automation) return null;
     return (
-      <AutomationBuilder automation={automation}>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          data-automation-edit={automation.id}
-        >
+      <Button asChild variant="outline" size="sm" className="gap-1.5">
+        <Link href={`/automations/${encodeURIComponent(automation.id)}`} data-automation-edit={automation.id}>
           <Pencil className="size-3.5" />
           {c("workspace.edit")}
-        </Button>
-      </AutomationBuilder>
+        </Link>
+      </Button>
     );
   }
 
@@ -144,6 +138,19 @@ export function AutomationActions({
       setLoading(false);
     }
   };
+
+  if (variant === "toggle") {
+    return (
+      <Switch
+        checked={automation.isActive}
+        disabled={loading || (!automation.isActive && repairRequired)}
+        onCheckedChange={() => void toggle()}
+        aria-label={automation.isActive ? c("workspace.turnOff") : c("workspace.turnOn")}
+        title={automation.isActive ? c("workspace.turnOff") : c("workspace.turnOn")}
+        data-automation-toggle={automation.id}
+      />
+    );
+  }
 
   const duplicate = async () => {
     if (repairRequired) return;
