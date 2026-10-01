@@ -1,13 +1,13 @@
 # SahelFlow documentation authority
 
 > **Status:** Active non-archive documentation entry point
-> **Last reconciled:** 2026-09-30 (protected `main` `bc840ca7…` after PR #464; re-resolve live before acting)
+> **Last reconciled:** 2026-10-01 (protected `main` `cbb27fbc…` after PR #469; re-resolve live before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** `bc840ca7ec46061abaf998b6516e8e01e6a1abbb` / #464. Always re-resolve GitHub `main` before a write, review, merge, release or evidence claim
-> **Latest signed/published checkpoint:** Internal.38 / `1.0.0-internal.38` / MSI `1.0.0.38` / FD-062 — published 2026-09-16, updater-served, **not Founder-installed**, and **does not contain #453–#464**
-> **Protected release source:** `9bf899274074f6f20935d224b96e8b1d14fc9690` / PR #451 (release authority; tag `sahelflow-v1.0.0-internal.38-9bf89927…`)
+> **Live protected main:** `cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e` / #469. Always re-resolve GitHub `main` before a write, review, merge, release or evidence claim
+> **Adopted signed successor:** Internal.39 / `1.0.0-internal.39` / MSI `1.0.0.39` / FD-065 — packages this main. Publication is the signed train on merge, not a claim already made. Until that run succeeds, updater-served remains Internal.38 / FD-062 (published 2026-09-16, through #450 only, **not Founder-installed**)
+> **Retained published source:** `9bf899274074f6f20935d224b96e8b1d14fc9690` / PR #451 (tag `sahelflow-v1.0.0-internal.38-9bf89927…`)
 > **Latest recorded installed checkpoint:** Internal.37 / FD-060 (installed in place 2026-09-11, visually rejected before campaign conversion — F-14/F-15). No row converted
-> **Current next outcome:** the Founder decides the next signed candidate. Observing F-16…F-33 requires a candidate that includes #464. Installing published Internal.38 does not observe that UI. Campaign rules stay: one preserved in-place update, convert only proved rows, #306 logout LAST, then FRC-3 in order A→D→C→B
+> **Current next outcome:** merge the FD-065 release-authority PR by expected head after the full battery, then the Founder installs Internal.39 in place. Installing published Internal.38 does not observe F-16…F-42. Campaign rules stay: one preserved in-place update, convert only proved rows, #306 logout LAST, then FRC-3 in order A→D→C→B
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 

@@ -1,13 +1,15 @@
 # SahelFlow — Working Memory
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
-> **Last updated:** 2026-09-30
+> **Last updated:** 2026-10-01
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
 ## Current truth
 
-> **Read this first.** The live order is **Exact next-session order** below. Everything else in this section is a dated record. A "Next:" or "latest" inside a bullet from before 2026-09-30 is what was true that day.
+> **Read this first.** The live order is **Exact next-session order** below. Everything else in this section is a dated record. A "Next:" or "latest" inside a bullet from before 2026-10-01 is what was true that day.
+
+- **FD-065 adopts Internal.39 (2026-10-01, release authority — not yet a publish-time claim):** the Founder's directive ("make the next signed release") adopts one signed successor, app `1.0.0-internal.39` / MSI `1.0.0.39` / `founder-offline-only`, packaging protected `main` `cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e` (#469). That commit is tree-identical (`9b32b86a…`) to reviewed head `e37de858…`. Source gates at that head: CI `36811358867`, Phase 5 `36811358707`, Phase 6-7 `36811358722`, zero failed. The packaged line is #452–#469 (FD-063 MCP, FD-064 extraction, F-16…F-42, storefront Studio, automation flow builder). Internal.38 stays the retained published package until the signed run succeeds. Installed truth remains Internal.37. No row converts from this adoption. Publication is not installation.
 
 - **Protected `main` is PR #464 (2026-09-30, source only — nothing installed, nothing Founder-observed):** squash `bc840ca7ec46061abaf998b6516e8e01e6a1abbb`. F-29…F-33 on top of #463 `d82d172…` (F-16…F-28). The Founder reported charts vanishing on hover (F-29 — `lab()` tokens from the CSS build reaching ZRender; fixed at the chart colour boundary), and rejected the Agents (F-30) and Settings (F-31) passes as restyles. Agents is rebuilt structurally (draft new chats, collapsible rail, home + hero composer, "/" quick jobs, grouped tool steps, export/rename/delete, shortcuts); Settings is rebuilt as 15 focused pages with search (`settings-ia.ts` + `settings-pages.tsx`, legacy `?group=` still resolves). F-32: global `h1/h2/h3` moved into `@layer base` (they had silently overridden every heading's own classes). F-33: Arabic placeholders on empty fields now follow the document direction (`arabic-system.css`). Rows in `operations/UI_UX_TRIAGE_LEDGER.md`. No release authority; converts no installed row.
 - **Founder screenshot review F-16…F-28 (2026-09-29, source only — nothing installed, nothing Founder-observed):** merged as PR #463 (`d82d172…`) on top of #462. The branch name is history. Rows live in `operations/UI_UX_TRIAGE_LEDGER.md`. Root fix worth knowing: the `(dashboard)` route template wraps the empty `@modal` slot too, which doubled `#main-content`'s scroll height on every page (the Inbox/Agents "scroll into empty space"); the slot now renders in a `hidden` box and workspace roots clip the shell scroller. Also: Agents rebuilt (durable session pins — additive migration `2026092900000000_ai_session_pins`), Settings shell + Profile rebuilt, two-pane order-review dialog, in-place top-bar search (no palette dialog), explorable stat-card sparklines + clickable/filtering stat cards (`StatCard href`, Products `?stock=low`), notification remove + Undo, warning boxes folded into their cards (Products, Accounting), Risk KPIs first, Accounting bar labels removed. F-28 (new logo): the Founder chose the blue **Deep Ocean** palette; the canonical `public/icons/sahelflow-mark.png` (brand-contract digest updated) and tracked Tauri icons are regenerated from the vector master `public/brand/sahelflow-logo.svg`. Local gates: full-project `tsc` clean, `eslint .` 0 errors, vitest 4,003/4,003 in a migrated sandbox, `sf-version`/`sf-audit`/inventory green. No release authority; converts no installed row.
@@ -144,18 +146,21 @@ Binding rules:
 
 ## Exact next-session order
 
-Protected `main` is `bc840ca7…` / #464. No product implementation PR is the
-frontier. #456 and #457 are stale; do not merge #457.
+Protected `main` is `cbb27fbc…` / #469. FD-065 is the packaging decision.
+#456 and #457 are stale; do not merge #457.
 
 1. Re-resolve protected `main`, open PRs and #164/#230/#306/#316/#317.
-   Sidecar rows INB-13/14/19/32 stay BLOCKED. F-16…F-33 are DONE at source
-   and convert on an installed observation only.
-2. The Founder decides whether the next signed candidate includes #464.
-   Internal.38 cannot show F-16…F-33. This file does not authorize a release.
-3. On the installed candidate, one campaign, state preserved. Convert only
-   rows that build contains and the observation proves, including the F-04…F-33
-   rows present in it, the retained FD-050 rows, the D3 waves, and applicable
-   #316/#317 rows. Record results in the UI, AI and WhatsApp ledgers.
+   Sidecar rows INB-13/14/19/32 stay BLOCKED. F-16…F-42 are DONE at source
+   and convert on an installed Internal.39 observation only.
+2. The release-authority PR merges by expected head only after the full
+   Required battery, including installed-MSI evidence, is green. The signed
+   train publishes Internal.39. Record the tag, digest and publish time after
+   that run. Do not invent them here.
+3. On the installed Internal.39 candidate, one campaign, state preserved.
+   Convert only rows that build contains and the observation proves, including
+   the F-04…F-42 rows present in it, the retained FD-050 rows, the D3 waves,
+   and applicable #316/#317 rows. Record results in the UI, AI and WhatsApp
+   ledgers.
 4. #306 logout executes LAST, after the other rows on that candidate are
    green. Then resume FRC-3 in order A→D→C→B. Keep external blockers.
 5. Source-only, in parallel, from `operations/TRANSFORMATION_HANDOFF.md` §4:
@@ -178,10 +183,9 @@ frontier. #456 and #457 are stale; do not merge #457.
 ## Current hard blockers and dependencies
 
 - WhatsApp FRC-1 requires the Founder’s retained real phone/account/session.
-  Internal.37 is what is installed. Internal.38 is what the updater serves and
-  stops at #450. F-16…F-33 exist only from #463/#464. Observing the current UI
-  needs a signed candidate that includes `bc840ca7…`. Until that install, no
-  ledger row converts.
+  Internal.37 is what is installed. FD-065's Internal.39 is the candidate that
+  contains F-16…F-42. Until that candidate is installed, no ledger row converts.
+  Internal.38 remains retained publication evidence and cannot show that UI.
 - Real Gemini minimal inference requires a seller-owned key; free-tier work uses synthetic/redacted inputs only.
 - Commerce requires development/test environments and HTTPS ingress for webhook tests.
 - Courier live certification requires provider sandbox/demo or authorized seller credentials.

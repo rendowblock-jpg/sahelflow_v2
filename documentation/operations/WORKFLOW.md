@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-26
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** signed/published Internal.38 / FD-062 (2026-09-16, through #450, updater-served, not Founder-installed). Protected `main` is `bc840ca7…` / #464 (F-29…F-33 on #463 F-16…F-28) and is not in that package. Installed truth remains the rejected Internal.37, with no campaign conversion. Next product gate is a Founder packaging decision for a candidate that includes #464; the FD-058 campaign runs once on the candidate that is actually installed, then FRC-3 (A→D→C→B). Re-resolve `main` before acting.
+> **Current checkpoint:** FD-065 adopts Internal.39 (`1.0.0-internal.39` / MSI `1.0.0.39`, founder-offline-only) packaging protected `main` `cbb27fbc…` / #469. Signed publication is the release train on that merge; Internal.38 / FD-062 stays the retained published package until the run succeeds. Installed truth remains the rejected Internal.37, with no campaign conversion. The FD-058 campaign runs once on the installed Internal.39 candidate, then FRC-3 (A→D→C→B). Re-resolve `main` before acting.
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 

@@ -1,10 +1,10 @@
 # SahelFlow — Current State
 
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
-> **Last assessed:** 2026-09-30
+> **Last assessed:** 2026-10-01
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** `bc840ca7ec46061abaf998b6516e8e01e6a1abbb` after PR #464. Re-resolve before acting. Signed package Internal.38 stops at #450. #453–#464 are source-only.
-> **Current signed release:** Internal.38 / `1.0.0-internal.38` / MSI `1.0.0.38` / FD-062 (release PR #451, squash `9bf89927…`, tag `sahelflow-v1.0.0-internal.38-9bf899274074f6f20935d224b96e8b1d14fc9690`, published 2026-09-16). Updater-served. Not Founder-installed. Does not contain F-16…F-33.
+> **Live protected main:** `cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e` after PR #469. Re-resolve before acting.
+> **Adopted signed successor:** Internal.39 / `1.0.0-internal.39` / MSI `1.0.0.39` / FD-065. Packages this main, including F-16…F-42. Signed publication follows the release train; no tag or digest is claimed here. Retained updater-served package until that run: Internal.38 / FD-062 (PR #451, `9bf89927…`, published 2026-09-16, through #450 only, not Founder-installed).
 > **Latest Founder-installed checkpoint:** Internal.37 / FD-060 (in place 2026-09-11, AppData preserved, locale `ar`). Visually rejected before campaign conversion (F-14/F-15). No row converted. Authority for installed truth: `../operations/WORKING_MEMORY.md`.
 > **Current execution:** follow `../operations/WORKING_MEMORY.md` section "Exact next-session order" only. The chronology under §1 and below keeps publication evidence. A "next" or "the Founder has not yet installed" sentence inside a retained Internal.30–Internal.37 subsection is the state on that date, not the live order.
 
@@ -12,7 +12,7 @@ This document distinguishes protected source, automated evidence, signed publica
 
 ## 1. Exact release authority
 
-Internal.38 is the latest signed/published artifact (header truth; §§1–2b below retain the Internal.30–Internal.29 history and remain valid as retained evidence — see `operations/WORKING_MEMORY.md` for the Internal.31–Internal.38 train). FD-062 (the Founder's 2026-09-16 directive) authorized exactly this Internal.38 signed successor packaging the #424–#450 protected-main frontier; publication facts are in the header above:
+Internal.39 / FD-065 is the adopted signed successor (header truth). Internal.38 / FD-062 remains the retained published artifact until the Internal.39 signed run succeeds. §§1–2b below retain the Internal.30–Internal.29 history — see `operations/WORKING_MEMORY.md`. Publication facts for Internal.38 stay retained evidence; Internal.39's tag and digest are recorded only after the signed run:
 
 Retained Internal.30 release facts (superseded as latest):
 

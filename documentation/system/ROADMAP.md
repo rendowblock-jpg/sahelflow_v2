@@ -1,12 +1,12 @@
 # SahelFlow — Final Roadmap
 
 > **Status:** Active dependency/completion program
-> **Last reconciled:** 2026-09-30 (protected `main` `bc840ca7…` / PR #464; re-resolve before acting)
+> **Last reconciled:** 2026-10-01 (protected `main` `cbb27fbc…` / PR #469; re-resolve before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** `bc840ca7ec46061abaf998b6516e8e01e6a1abbb` after #464. Internal.38 / FD-062 remains the signed package and stops at #450.
-> **Latest signed/published checkpoint:** Internal.38 / FD-062 (published 2026-09-16; tag `sahelflow-v1.0.0-internal.38-9bf89927…`; updater-served; not Founder-installed; does not contain #453–#464)
+> **Live protected main:** `cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e` after #469.
+> **Adopted signed successor:** Internal.39 / FD-065 (packages this main, including F-16…F-42). Publication is the signed train. Until it succeeds, updater-served remains Internal.38 / FD-062 (published 2026-09-16; through #450 only; not Founder-installed).
 > **Latest Founder-installed checkpoint:** Internal.37 / FD-060 (installed 2026-09-11, visually rejected before campaign conversion — no row converted). Authority: `../operations/WORKING_MEMORY.md`.
-> **Current execution mode:** F-16…F-33 are source-merged (#463/#464) and unpackaged. The next product gate is a Founder decision to sign a candidate that includes `bc840ca7…` if those rows are to be observed. The FD-058 campaign still runs once, on that installed candidate, then FRC-3 in order A→D→C→B. Do not treat an Internal.38 install as observation of the post-#450 UI.
+> **Current execution mode:** FD-065 is the packaging decision. The FD-058 campaign runs once on the installed Internal.39 candidate, then FRC-3 in order A→D→C→B. Do not treat an Internal.38 install as observation of F-16…F-42.
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 
