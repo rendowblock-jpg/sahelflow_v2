@@ -31,14 +31,14 @@ describe("Risk Engine seller workspace contract", () => {
     expect(page).not.toContain("savingsTone");
   });
 
-  it("gives the return-rate trend the full overview width on a 0–100% scale", () => {
+  it("gives the orders-and-returns trend the full overview width", () => {
     const page = source("../../../app/(dashboard)/risk/page.tsx");
 
     expect(page).toContain('data-risk-primary-trend="true"');
     expect(page).toContain('className="w-full"');
     expect(page).toContain('xKey="week"');
-    expect(page).toContain('formatY="percent"');
-    expect(page).toContain("yDomain={[0, 100]}");
+    expect(page).toContain('key: "cameBack"');
+    expect(page).toContain("<RankedMetricList");
     expect(page).not.toContain("riskReferenceBands");
     expect(page).not.toContain("referenceBands={");
   });

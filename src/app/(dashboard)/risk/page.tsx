@@ -5,6 +5,7 @@ import { Banknote, PhoneCall, ShieldAlert, TrendingDown, TrendingUp, Truck } fro
 import { AreaTrendChart } from "@/components/charts/area-trend-chart";
 import { ChartCard, ChartEmpty } from "@/components/charts/chart-primitives";
 import type { ChartConfig } from "@/components/charts/chart-types";
+import { RankedMetricList, type RankedMetricDatum } from "@/components/charts/decision-visualizations";
 import { RiskBlacklistPanel } from "@/components/risk/risk-blacklist-panel";
 import { RiskControlPanel } from "@/components/risk/risk-control-panel";
 import { RiskLevelBadgeServer } from "@/components/risk/risk-badges";
@@ -102,13 +103,25 @@ export default async function RiskPage({
   const sourceLabel = (source: string) => (SOURCE_KEYS[source] ? t(SOURCE_KEYS[source]) : source.charAt(0).toUpperCase() + source.slice(1));
 
   const weekLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
-  const trendData = report.insights.returnTrend.map((row) => ({
+  const trendData = report.insights.weekly.map((row) => ({
     week: weekLabel(row.week),
-    returnRate: Math.round(row.returnRate * 1000) / 10,
+    orders: row.orders,
+    cameBack: row.cameBack,
   }));
   const trendConfig: ChartConfig = {
-    returnRate: { label: riskCopy("kpiReturnRate"), color: "var(--color-chart-1)" },
+    orders: { label: riskCopy("seriesOrders"), color: "var(--color-chart-1)" },
+    cameBack: { label: riskCopy("seriesCameBack"), color: "var(--color-destructive)" },
   };
+  const wilayaRanked: RankedMetricDatum[] = report.insights.wilayaActivity.map((row) => ({
+    key: row.wilaya,
+    label: row.wilaya,
+    value: row.orders,
+    displayValue: integerFormatter.format(row.orders),
+    detail: row.finished
+      ? `${riskCopy("colReturnRate")} ${pct(row.returnRate)} · ${riskCopy("finished", { count: integerFormatter.format(row.finished) })}`
+      : riskCopy("finished", { count: "0" }),
+    color: row.finished && row.returnRate >= 0.3 ? "var(--color-destructive)" : "var(--color-chart-1)",
+  }));
   const topFactor = report.attentionFactors[0];
 
   return (
@@ -226,10 +239,12 @@ export default async function RiskPage({
                 <AreaTrendChart
                   data={trendData}
                   xKey="week"
-                  series={[{ key: "returnRate", label: riskCopy("kpiReturnRate"), format: "percent" }]}
+                  series={[
+                    { key: "orders", label: riskCopy("seriesOrders"), format: "number" },
+                    { key: "cameBack", label: riskCopy("seriesCameBack"), format: "number" },
+                  ]}
                   config={trendConfig}
-                  formatY="percent"
-                  yDomain={[0, 100]}
+                  formatY="number"
                 />
               ) : (
                 <ChartEmpty message={riskCopy("lossEmpty")} />
@@ -239,6 +254,15 @@ export default async function RiskPage({
         </TabsContent>
 
         <TabsContent value="analysis" className="mt-0 space-y-6">
+          <ChartCard
+            title={riskCopy("wilayaActivityTitle")}
+            description={riskCopy("wilayaActivityHint")}
+            summary={`${riskCopy("colPlace")}: ${integerFormatter.format(wilayaRanked.length)}`}
+            icon={<TrendingDown className="size-4" />}
+            config={{}}
+          >
+            {wilayaRanked.length > 0 ? <RankedMetricList data={wilayaRanked} /> : <ChartEmpty message={riskCopy("lossEmpty")} />}
+          </ChartCard>
           <WhereYouLoseMoney report={report} copy={copy} format={format} sourceLabel={sourceLabel} />
 
           <details className="group rounded-surface border bg-card" data-risk-score-details="true">

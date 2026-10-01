@@ -63,6 +63,10 @@ export interface SellerInsights {
     preventableReturns: number;
   };
   returnTrend: Array<{ week: string; completed: number; returnRate: number }>;
+  /** Every week in range: orders placed and how many of them came back. */
+  weekly: Array<{ week: string; orders: number; cameBack: number }>;
+  /** Every wilaya with orders in range, busiest first. */
+  wilayaActivity: Array<{ wilaya: string; orders: number; finished: number; cameBack: number; returnRate: number }>;
   scoreCheck: {
     byLevel: Array<{ level: RiskLevel; completed: number; returnRate: number }>;
     /** How many times more often high/critical orders came back than low ones. */
@@ -197,7 +201,44 @@ export function buildSellerInsights(rows: readonly InsightOrderRow[]): SellerIns
     }
   }
 
+  const weekly = new Map<string, { orders: number; cameBack: number }>();
+  const wilayaActivity = new Map<string, { orders: number; finished: number; cameBack: number }>();
+  for (const row of rows) {
+    const key = weekKey(row.createdAt);
+    const entry = weekly.get(key) ?? { orders: 0, cameBack: 0 };
+    entry.orders += 1;
+    if (CAME_BACK.has(row.status)) entry.cameBack += 1;
+    weekly.set(key, entry);
+    const place = wilayaActivity.get(row.wilaya) ?? { orders: 0, finished: 0, cameBack: 0 };
+    place.orders += 1;
+    if (row.status === DELIVERED || CAME_BACK.has(row.status)) place.finished += 1;
+    if (CAME_BACK.has(row.status)) place.cameBack += 1;
+    wilayaActivity.set(row.wilaya, place);
+  }
+  // Fill quiet weeks so the chart's time axis is honest.
+  const weekKeys = [...weekly.keys()].sort();
+  if (weekKeys.length > 1) {
+    const cursor = new Date(`${weekKeys[0]}T00:00:00Z`);
+    const last = weekKeys.at(-1) ?? weekKeys[0];
+    while (cursor.toISOString().slice(0, 10) < (last ?? "")) {
+      cursor.setUTCDate(cursor.getUTCDate() + 7);
+      const key = cursor.toISOString().slice(0, 10);
+      if (!weekly.has(key)) weekly.set(key, { orders: 0, cameBack: 0 });
+    }
+  }
+
   return {
+    weekly: [...weekly.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([week, entry]) => ({ week, ...entry })),
+    wilayaActivity: [...wilayaActivity.entries()]
+      .map(([wilaya, entry]) => ({
+        wilaya,
+        ...entry,
+        returnRate: entry.finished > 0 ? entry.cameBack / entry.finished : 0,
+      }))
+      .sort((left, right) => right.orders - left.orders || left.wilaya.localeCompare(right.wilaya))
+      .slice(0, 10),
     outcomes: {
       completed: finished.length,
       delivered,
