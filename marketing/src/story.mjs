@@ -30,7 +30,7 @@ const ar = {
   },
   loop: {
     eyebrow: "المسار الكامل",
-    title: "من «السلام عليكم» إلى مال مُحصَّل. تلقائياً.",
+    title: "يوم عمل واحد: من الرسالة إلى التحويل.",
     steps: [
       { k: "message", title: "الرسالة تصل", text: "الزبون يكتب على واتساب — بالدارجة أو الفرنسية، في رسالة واحدة أو خمس." },
       { k: "extract", title: "الذكاء الاصطناعي يستخرج الطلب", text: "الاسم والهاتف والولاية والمنتجات تُملأ تلقائياً، وأنت تراجع قبل الحفظ." },
@@ -54,7 +54,7 @@ const ar = {
   ],
   tour: { eyebrow: "داخل التطبيق", title: "هذا هو المنتج الحقيقي، لا نموذجاً تسويقياً." },
   vault: { offline: "يعمل دون إنترنت", encrypted: "مشفَّر AES-256" },
-  final: { title: "توقّف عن إدارة الفوضى. ابدأ إدارة شركة." },
+  final: { title: "ثبّته على حاسوبك. جرّبه سبعة أيام على طلباتك." },
 };
 
 const fr = {
@@ -84,7 +84,7 @@ const fr = {
   },
   loop: {
     eyebrow: "Le parcours complet",
-    title: "Du « Salam » à l'argent encaissé. Automatiquement.",
+    title: "Une journée de travail : du message au virement.",
     steps: [
       { k: "message", title: "Le message arrive", text: "Le client écrit sur WhatsApp — en darja ou en français, en un message ou en cinq." },
       { k: "extract", title: "L'IA extrait la commande", text: "Nom, téléphone, wilaya et produits se remplissent seuls ; vous vérifiez avant d'enregistrer." },
@@ -108,7 +108,7 @@ const fr = {
   ],
   tour: { eyebrow: "Dans l'application", title: "Voici le vrai produit. Pas une maquette." },
   vault: { offline: "Fonctionne hors ligne", encrypted: "Chiffré AES-256" },
-  final: { title: "Arrêtez de gérer le chaos. Dirigez une entreprise." },
+  final: { title: "Installez-le sur votre PC. Essayez-le sept jours sur vos vraies commandes." },
 };
 
 const en = {
@@ -138,7 +138,7 @@ const en = {
   },
   loop: {
     eyebrow: "The whole journey",
-    title: "From “Salam” to settled cash. Automatically.",
+    title: "One working day: from the message to the transfer.",
     steps: [
       { k: "message", title: "The message arrives", text: "Your customer writes on WhatsApp — in Darja or French, in one message or five." },
       { k: "extract", title: "AI extracts the order", text: "Name, phone, wilaya and products fill themselves in; you review before saving." },
@@ -162,7 +162,7 @@ const en = {
   ],
   tour: { eyebrow: "Inside the app", title: "This is the real product. Not a mock-up." },
   vault: { offline: "Works offline", encrypted: "AES-256 encrypted" },
-  final: { title: "Stop managing chaos. Start running a company." },
+  final: { title: "Install it on your PC. Try it for seven days on your real orders." },
 };
 
 export const STORY = { ar, fr, en };

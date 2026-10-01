@@ -75,10 +75,10 @@ ${alternates}<link rel="alternate" hreflang="x-default" href="${SITE.origin}${hr
 <link rel="icon" href="/img/mark.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/img/icon-180.png">
 <link rel="preload" href="/fonts/readex-${locale === "ar" ? "arabic" : "latin"}.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css">
+<link rel="stylesheet" href="/assets/site.css?v=${SITE.asset}">
 ${preload ? `<link rel="preload" as="image" href="${preload}">` : ""}
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
-<script defer src="/assets/site.js"></script>
+<script defer src="/assets/site.js?v=${SITE.asset}"></script>
 </head>`;
 }
 
@@ -90,22 +90,6 @@ function header(t, locale, page) {
   const p = PAGES[locale];
   const wa = whatsappHref(t.whatsappMessage);
   const current = (id) => (page === id ? ' aria-current="page"' : "");
-  const mega = `<div class="mega" id="mega-product" data-mega>
-    <div class="mega-grid">${MODULES.map((key) => {
-      const item = featureByKey(t, key);
-      return `<a class="mega-item" href="${href(locale, "product")}#${key}"><span class="mega-ic">${ICONS[key]}</span><span><strong>${esc(item.title)}</strong><small>${esc(p.modules[key])}</small></span></a>`;
-    }).join("")}</div>
-    <aside class="mega-side">
-      <a class="mega-spot" href="${href(locale, "integrations")}#google-sheets">
-        <span class="badge-new">${esc(p.nav.newBadge)}</span>
-        <span class="mega-spot-ic">${ICONS.sheet}</span>
-        <strong>${esc(p.nav.spotlightTitle)}</strong>
-        <small>${esc(p.nav.spotlightText)}</small>
-        <span class="spot-sheet" aria-hidden="true">${[0, 1, 2, 3].map((r) => `<span style="--r:${r}"><i></i><i></i><b></b></span>`).join("")}</span>
-      </a>
-      <a class="mega-all" href="${href(locale, "product")}"><span>${esc(p.nav.allFeatures)}</span>${ICONS.arrow}</a>
-    </aside>
-  </div>`;
   const langs = SITE.locales
     .map(
       (l) =>
@@ -118,13 +102,9 @@ function header(t, locale, page) {
       <img src="/img/mark.svg" alt="" width="28" height="28"><span>SahelFlow</span>
     </a>
     <nav class="main-nav" aria-label="${esc(t.nav.menu)}" data-nav>
-      <div class="nav-item has-mega" data-mega-root>
-        <button class="nav-link" type="button" aria-expanded="false" aria-controls="mega-product" data-mega-toggle${page === "product" ? ' aria-current="page"' : ""}><span>${esc(p.nav.product)}</span>${ICONS.chevron}</button>
-        ${mega}
-      </div>
-      <a class="nav-link" href="${href(locale, "integrations")}"${current("integrations")}>${esc(p.nav.integrations)}</a>
-      <a class="nav-link" href="${href(locale, "security")}"${current("security")}>${esc(p.nav.security)}</a>
+      <a class="nav-link" href="${href(locale, "product")}"${current("product")}>${esc(p.nav.product)}</a>
       <a class="nav-link" href="${href(locale, "pricing")}"${current("pricing")}>${esc(p.nav.pricing)}</a>
+      <a class="nav-link" href="${href(locale, "download")}"${current("download")}>${esc(t.nav.download)}</a>
       <a class="nav-link" href="${href(locale)}#faq">${esc(p.nav.faq)}</a>
       <div class="nav-mobile-cta">
         <a class="btn btn-primary" href="${href(locale, "download")}">${ICONS.download}<span>${esc(p.nav.start)}</span></a>
@@ -504,10 +484,7 @@ function statement(t) {
   return `<section class="section statement">
   <div class="container narrow">
     <p class="eyebrow reveal">${esc(t.problem.eyebrow)}</p>
-    <h2 class="scrub" data-scrub>${t.problem.title
-      .split(" ")
-      .map((w) => `<span>${esc(w)}</span>`)
-      .join(" ")}</h2>
+    <h2 class="h-lg">${esc(t.problem.title)}</h2>
   </div>
   <div class="container pains">${t.problem.items
     .map((item, i) => `<article class="pain reveal" style="--d:${i * 90}ms"><span class="pain-n">0${i + 1}</span><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></article>`)
@@ -650,23 +627,70 @@ const EXTRA = {
   en: { storeCta: "Order now · cash on delivery", agentQ: "Which products are about to run out?", agentA: "3 products: white djellaba (4), black abaya (2), leather bag (1)." },
 };
 
-export function homePage(locale, shot) {
-  const t = CONTENT[locale];
-  const s = { ...STORY[locale], ...EXTRA[locale] };
-  const body = `
-${hero(t, s, locale)}
-${marquee(t)}
+function salesHome(t, s, locale, shot) {
+  const wa = whatsappHref(t.whatsappMessage);
+  const stops = [
+    ["inbox", 1],
+    ["orders", 2],
+    ["delivery", 3],
+    ["accounting", 4],
+  ];
+  return `
+<section class="home-hero">
+  <div class="container home-hero-grid">
+    <div class="home-hero-copy">
+      <p class="eyebrow"><span class="dot"></span>${esc(t.hero.eyebrow)}</p>
+      <h1>${esc(t.hero.title[0])}<span>${esc(t.hero.title[1])}</span></h1>
+      <p class="lead">${esc(t.hero.lead)}</p>
+      <div class="cta-row">
+        <a class="btn btn-primary btn-lg" href="${href(locale, "download")}">${ICONS.download}<span>${esc(t.hero.primary)}</span></a>
+        <a class="btn btn-glass btn-lg" href="${wa}" rel="noopener">${ICONS.whatsapp}<span>${esc(t.hero.secondary)}</span></a>
+      </div>
+      <p class="hero-note">${esc(call(t.hero.note))}</p>
+      <ul class="trust-row">${t.hero.trust.map((item) => `<li>${ICONS.check}<span>${esc(item)}</span></li>`).join("")}</ul>
+    </div>
+    <figure class="shot-frame">
+      <img src="${shot("inbox")}" alt="${esc(t.features.items.find((item) => item.key === "inbox").title)}" width="1440" height="900">
+    </figure>
+  </div>
+</section>
 ${statement(t)}
-${journey(s)}
-${bento(t, s, locale)}
-${mapSection(t, s, locale)}
-${tour(t, s, shot)}
-${vault(t, s, locale)}
-${readySteps(t)}
+<section class="section path" id="how">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">${esc(s.loop.eyebrow)}</p>
+      <h2 class="h-xl">${esc(s.loop.title)}</h2>
+    </div>
+    ${stops
+      .map(([key, index], i) => {
+        const step = s.loop.steps[index];
+        const flip = i % 2 === 1 ? " flip" : "";
+        return `<article class="path-row${flip}">
+          <div class="path-copy">
+            <span class="big-n">${i + 1}</span>
+            <h3 class="h-md">${esc(step.title)}</h3>
+            <p>${esc(step.text)}</p>
+          </div>
+          <figure class="shot-frame">
+            <img src="${shot(key)}" alt="${esc(step.title)}" width="1440" height="900" loading="lazy">
+          </figure>
+        </article>`;
+      })
+      .join("")}
+  </div>
+</section>
 ${pricingTeaser(t, locale)}
 ${faq(t)}
 ${finalCta(t, s, locale)}`;
-  return shell({ t, locale, page: "", title: t.meta.title, description: t.meta.description }, body);
+}
+
+export function homePage(locale, shot) {
+  const t = CONTENT[locale];
+  const s = { ...STORY[locale], ...EXTRA[locale] };
+  return shell(
+    { t, locale, page: "", title: t.meta.title, description: t.meta.description, preload: shot("inbox") },
+    salesHome(t, s, locale, shot),
+  );
 }
 
 export function downloadPage(locale) {
