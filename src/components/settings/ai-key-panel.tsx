@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
-  Bot,
   CheckCircle2,
   ExternalLink,
   KeyRound,
@@ -31,12 +30,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useI18n } from "@/hooks/use-i18n";
+import { BrandLogo } from "@/components/brand/brand-icons";
 import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
 import { toast } from "@/lib/toast";
-import { IconTile } from "@/components/system";
 
 const GEMINI_CONSENT_KEY = "gemini_consent_accepted";
 
@@ -345,7 +344,7 @@ export function AiKeyPanel({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <IconTile icon={Bot} tone="primary" size="sm" />
+            <BrandLogo id="gemini" size="sm" />
             {t("aiKey.title")}
           </CardTitle>
           <CardDescription>{t("aiKey.description")}</CardDescription>

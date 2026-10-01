@@ -11,7 +11,7 @@ import {
   Unplug,
 } from "lucide-react";
 
-import { GoogleSheetsIcon } from "@/components/brand/brand-icons";
+import { BrandLogo } from "@/components/brand/brand-icons";
 import { Panel, PanelDescription, PanelHeader, PanelTitle } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -290,9 +290,7 @@ export function GoogleSheetsBridgePanel({ canManage }: { canManage: boolean }) {
     <Panel data-google-sheets-bridge={state?.connected ? "connected" : "setup"} className="p-5">
       <PanelHeader>
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-surface bg-success-soft text-success">
-            <GoogleSheetsIcon className="size-5" />
-          </span>
+          <BrandLogo id="google_sheets" size="md" />
           <div className="min-w-0">
             <PanelTitle>{copy.title}</PanelTitle>
             <PanelDescription>{copy.description}</PanelDescription>
