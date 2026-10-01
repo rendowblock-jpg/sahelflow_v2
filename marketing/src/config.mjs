@@ -10,6 +10,9 @@ export const SITE = {
   // the newest signed installer from the updater manifest.
   downloadUrl: "/get/windows",
   trialDays: 7,
+  // Licence price in DZD shown on /pricing. null shows "price on WhatsApp";
+  // set a number (e.g. 25000) once the Founder fixes the price.
+  licencePrice: null,
   locales: ["ar", "fr", "en"],
   defaultLocale: "ar",
 };

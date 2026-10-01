@@ -6,7 +6,17 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { SITE } from "./src/config.mjs";
-import { downloadPage, homePage, legalPage, notFoundPage, rootRedirect } from "./src/templates.mjs";
+import {
+  downloadPage,
+  homePage,
+  integrationsPage,
+  legalPage,
+  notFoundPage,
+  pricingPage,
+  productPage,
+  rootRedirect,
+  securityPage,
+} from "./src/templates.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const dist = join(root, "dist");
@@ -39,9 +49,22 @@ const pages = [];
 for (const locale of SITE.locales) {
   write(`${locale}/index.html`, homePage(locale, shotsFor(locale)));
   write(`${locale}/download/index.html`, downloadPage(locale));
+  write(`${locale}/product/index.html`, productPage(locale, shotsFor(locale)));
+  write(`${locale}/integrations/index.html`, integrationsPage(locale));
+  write(`${locale}/pricing/index.html`, pricingPage(locale));
+  write(`${locale}/security/index.html`, securityPage(locale));
   write(`${locale}/privacy/index.html`, legalPage(locale, "privacy"));
   write(`${locale}/terms/index.html`, legalPage(locale, "terms"));
-  pages.push(`${locale}/`, `${locale}/download/`, `${locale}/privacy/`, `${locale}/terms/`);
+  pages.push(
+    `${locale}/`,
+    `${locale}/product/`,
+    `${locale}/integrations/`,
+    `${locale}/pricing/`,
+    `${locale}/security/`,
+    `${locale}/download/`,
+    `${locale}/privacy/`,
+    `${locale}/terms/`,
+  );
 }
 write("index.html", rootRedirect());
 write("404.html", notFoundPage());

@@ -1,5 +1,6 @@
 import { CONTENT, INTEGRATIONS } from "./content.mjs";
 import { STORY } from "./story.mjs";
+import { PAGES } from "./pages-copy.mjs";
 import { ICONS } from "./icons.mjs";
 import { LEGAL_UPDATED, PRIVACY, TERMS } from "./legal.mjs";
 import { SITE, whatsappHref } from "./config.mjs";
@@ -10,6 +11,8 @@ const esc = (value) =>
 /** Icons nested inside an SVG scene need explicit geometry. */
 const sized = (icon, n = 24) => icon.replace("<svg ", `<svg width="${n}" height="${n}" `);
 const call = (value) => (typeof value === "function" ? value(SITE.trialDays) : value);
+const moreLink = (url, label, cls = "") =>
+  `<a class="more-link ${cls}" href="${url}"><span>${esc(label)}</span>${ICONS.arrow}</a>`;
 
 /** Locale-aware path: /ar/, /fr/download/ … */
 const href = (locale, page = "") => `/${locale}/${page ? `${page}/` : ""}`;
@@ -61,16 +64,30 @@ ${preload ? `<link rel="preload" as="image" href="${preload}">` : ""}
 </head>`;
 }
 
+/** Product modules in the order a seller meets them. */
+const MODULES = ["inbox", "orders", "delivery", "risk", "accounting", "automations", "storefront", "agents"];
+const featureByKey = (t, key) => t.features.items.find((item) => item.key === key);
+
 function header(t, locale, page) {
-  const links = [
-    ["how", t.nav.how],
-    ["features", t.nav.features],
-    ["integrations", t.nav.integrations],
-    ["security", t.nav.security],
-    ["faq", t.nav.faq],
-  ]
-    .map(([id, label]) => `<a href="${href(locale)}#${id}">${esc(label)}</a>`)
-    .join("");
+  const p = PAGES[locale];
+  const wa = whatsappHref(t.whatsappMessage);
+  const current = (id) => (page === id ? ' aria-current="page"' : "");
+  const mega = `<div class="mega" id="mega-product" data-mega>
+    <div class="mega-grid">${MODULES.map((key) => {
+      const item = featureByKey(t, key);
+      return `<a class="mega-item" href="${href(locale, "product")}#${key}"><span class="mega-ic">${ICONS[key]}</span><span><strong>${esc(item.title)}</strong><small>${esc(p.modules[key])}</small></span></a>`;
+    }).join("")}</div>
+    <aside class="mega-side">
+      <a class="mega-spot" href="${href(locale, "integrations")}#google-sheets">
+        <span class="badge-new">${esc(p.nav.newBadge)}</span>
+        <span class="mega-spot-ic">${ICONS.sheet}</span>
+        <strong>${esc(p.nav.spotlightTitle)}</strong>
+        <small>${esc(p.nav.spotlightText)}</small>
+        <span class="spot-sheet" aria-hidden="true">${[0, 1, 2, 3].map((r) => `<span style="--r:${r}"><i></i><i></i><b></b></span>`).join("")}</span>
+      </a>
+      <a class="mega-all" href="${href(locale, "product")}"><span>${esc(p.nav.allFeatures)}</span>${ICONS.arrow}</a>
+    </aside>
+  </div>`;
   const langs = SITE.locales
     .map(
       (l) =>
@@ -82,20 +99,35 @@ function header(t, locale, page) {
     <a class="brand" href="${href(locale)}" aria-label="SahelFlow">
       <img src="/img/mark.svg" alt="" width="28" height="28"><span>SahelFlow</span>
     </a>
-    <nav class="main-nav" aria-label="${esc(t.nav.menu)}" data-nav>${links}<a class="nav-cta-mobile" href="${href(locale, "download")}">${esc(t.nav.trial)}</a></nav>
+    <nav class="main-nav" aria-label="${esc(t.nav.menu)}" data-nav>
+      <div class="nav-item has-mega" data-mega-root>
+        <button class="nav-link" type="button" aria-expanded="false" aria-controls="mega-product" data-mega-toggle${page === "product" ? ' aria-current="page"' : ""}><span>${esc(p.nav.product)}</span>${ICONS.chevron}</button>
+        ${mega}
+      </div>
+      <a class="nav-link" href="${href(locale, "integrations")}"${current("integrations")}>${esc(p.nav.integrations)}</a>
+      <a class="nav-link" href="${href(locale, "security")}"${current("security")}>${esc(p.nav.security)}</a>
+      <a class="nav-link" href="${href(locale, "pricing")}"${current("pricing")}>${esc(p.nav.pricing)}</a>
+      <a class="nav-link" href="${href(locale)}#faq">${esc(p.nav.faq)}</a>
+      <div class="nav-mobile-cta">
+        <a class="btn btn-primary" href="${href(locale, "download")}">${ICONS.download}<span>${esc(p.nav.start)}</span></a>
+        <a class="btn btn-glass" href="${wa}" rel="noopener">${ICONS.whatsapp}<span>${esc(p.nav.talk)}</span></a>
+      </div>
+    </nav>
     <div class="header-actions">
       <details class="lang-menu">
         <summary aria-label="${esc(t.nav.language)}">${ICONS.globe}<span>${esc(locale.toUpperCase())}</span></summary>
         <div class="lang-list">${langs}</div>
       </details>
-      <a class="btn btn-primary btn-sm hide-sm" href="${href(locale, "download")}"><span>${esc(t.nav.trial)}</span></a>
-      <button class="nav-toggle" type="button" aria-expanded="false" aria-label="${esc(t.nav.menu)}" data-nav-toggle>${ICONS.menu}</button>
+      <a class="btn btn-ghost btn-sm hide-md" href="${wa}" rel="noopener">${ICONS.whatsapp}<span>${esc(p.nav.talk)}</span></a>
+      <a class="btn btn-primary btn-sm hide-sm" href="${href(locale, "download")}"><span>${esc(p.nav.start)}</span></a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-label="${esc(t.nav.menu)}" data-nav-toggle>${ICONS.menu}${ICONS.close}</button>
     </div>
   </div>
 </header>`;
 }
 
 function footer(t, locale) {
+  const p = PAGES[locale];
   const year = new Date().getFullYear();
   return `<footer class="site-footer">
   <div class="container footer-grid">
@@ -103,22 +135,25 @@ function footer(t, locale) {
       <a class="brand" href="${href(locale)}"><img src="/img/mark.svg" alt="" width="30" height="30"><span>SahelFlow</span></a>
       <p>${esc(t.footer.tagline)}</p>
       <a class="footer-wa" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${ICONS.whatsapp}<span dir="ltr">+213 791 99 91 57</span></a>
+      <a class="btn btn-primary btn-sm footer-cta" href="${href(locale, "download")}">${ICONS.download}<span>${esc(p.nav.start)}</span></a>
     </div>
     <div>
-      <h3>${esc(t.footer.product)}</h3>
-      <a href="${href(locale)}#how">${esc(t.nav.how)}</a>
-      <a href="${href(locale)}#features">${esc(t.nav.features)}</a>
-      <a href="${href(locale)}#integrations">${esc(t.nav.integrations)}</a>
+      <h3>${esc(p.nav.product)}</h3>
+      ${MODULES.map((key) => `<a href="${href(locale, "product")}#${key}">${esc(featureByKey(t, key).title)}</a>`).join("")}
+    </div>
+    <div>
+      <h3>SahelFlow</h3>
+      <a href="${href(locale, "integrations")}">${esc(p.nav.integrations)}</a>
+      <a href="${href(locale, "security")}">${esc(p.nav.security)}</a>
+      <a href="${href(locale, "pricing")}">${esc(p.nav.pricing)}</a>
       <a href="${href(locale, "download")}">${esc(t.nav.download)}</a>
+      <a href="${href(locale)}#faq">${esc(p.nav.faq)}</a>
     </div>
     <div>
       <h3>${esc(t.footer.contact)}</h3>
       <a href="${whatsappHref(t.whatsappMessage)}" rel="noopener">WhatsApp</a>
       <a href="mailto:${SITE.email}">${SITE.email}</a>
-      <a href="${href(locale)}#faq">${esc(t.nav.faq)}</a>
-    </div>
-    <div>
-      <h3>${esc(t.footer.legal)}</h3>
+      <h3 class="footer-sub">${esc(t.footer.legal)}</h3>
       <a href="${href(locale, "privacy")}">${esc(t.footer.privacy)}</a>
       <a href="${href(locale, "terms")}">${esc(t.footer.terms)}</a>
     </div>
@@ -370,7 +405,7 @@ function bentoVisual(key, s) {
 }
 
 
-function bento(t, s) {
+function bento(t, s, locale) {
   const extras = { storeCta: s.storeCta, agentQ: s.agentQ, agentA: s.agentA };
   const sx = { ...s, ...extras };
   return `<section class="section bento-section" id="features">
@@ -388,6 +423,7 @@ function bento(t, s) {
     </article>`,
       )
       .join("")}</div>
+    <div class="section-foot reveal">${moreLink(href(locale, "product"), PAGES[locale].more.product)}</div>
   </div>
 </section>`;
 }
@@ -418,7 +454,7 @@ function algeriaMap() {
 </svg>`;
 }
 
-function mapSection(t, s) {
+function mapSection(t, s, locale) {
   return `<section class="section map-section" id="integrations">
   <div class="container map-grid">
     <div class="map-copy reveal">
@@ -429,6 +465,7 @@ function mapSection(t, s) {
         .map((st) => `<div><dt><span data-count="${st.value}">${st.value}</span></dt><dd>${esc(st.label)}</dd></div>`)
         .join("")}</dl>
       <p class="map-legend"><i></i>${esc(s.map.legend)}</p>
+      ${moreLink(href(locale, "integrations"), PAGES[locale].more.integrations)}
     </div>
     <div class="map-art reveal">${algeriaMap()}</div>
   </div>
@@ -506,7 +543,7 @@ function vaultArt(s) {
 </svg>`;
 }
 
-function vault(t, s) {
+function vault(t, s, locale) {
   const icons = [ICONS.lock, ICONS.wifiOff, ICONS.backup, ICONS.team];
   return `<section class="section vault" id="security">
   <div class="container vault-grid">
@@ -518,6 +555,33 @@ function vault(t, s) {
       <ul class="vault-list">${t.security.items
         .map((item, i) => `<li class="reveal" style="--d:${i * 70}ms"><span class="vl-ic">${icons[i]}</span><div><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></div></li>`)
         .join("")}</ul>
+      ${moreLink(href(locale, "security"), PAGES[locale].more.security, "reveal")}
+    </div>
+  </div>
+</section>`;
+}
+
+function pricingTeaser(t, locale) {
+  const p = PAGES[locale];
+  const price = SITE.licencePrice
+    ? `${new Intl.NumberFormat("fr-FR").format(SITE.licencePrice)} ${locale === "ar" ? "دج" : "DA"}`
+    : p.pricing.licence.ask;
+  return `<section class="section teaser">
+  <div class="container">
+    <div class="teaser-card reveal">
+      <div class="teaser-copy">
+        <p class="eyebrow">${esc(p.nav.pricing)}</p>
+        <h2 class="h-lg">${esc(p.pricingTeaser.title)}</h2>
+        <p class="lead">${esc(p.pricingTeaser.text)}</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="${href(locale, "download")}">${ICONS.download}<span>${esc(p.pricing.trial.cta)}</span></a>
+          ${moreLink(href(locale, "pricing"), p.more.pricing)}
+        </div>
+      </div>
+      <div class="teaser-plans" aria-hidden="true">
+        <div class="mini-plan"><small>${esc(p.pricing.trial.name)}</small><strong>${esc(p.pricing.trial.price)}</strong><span>${esc(p.pricing.trial.per)}</span></div>
+        <div class="mini-plan is-featured${SITE.licencePrice ? "" : " is-ask"}"><small>${esc(p.pricing.licence.name)}</small><strong dir="auto">${esc(price)}</strong><span>${esc(p.pricing.licence.per)}</span></div>
+      </div>
     </div>
   </div>
 </section>`;
@@ -578,11 +642,12 @@ ${hero(t, s, locale)}
 ${marquee(t)}
 ${statement(t)}
 ${journey(s)}
-${bento(t, s)}
-${mapSection(t, s)}
+${bento(t, s, locale)}
+${mapSection(t, s, locale)}
 ${tour(t, s, shot)}
-${vault(t, s)}
+${vault(t, s, locale)}
 ${readySteps(t)}
+${pricingTeaser(t, locale)}
 ${faq(t)}
 ${finalCta(t, s, locale)}`;
   return shell({ t, locale, page: "", title: t.meta.title, description: t.meta.description }, body);
@@ -641,4 +706,183 @@ export function rootRedirect() {
 <script>(function(){var l="${SITE.defaultLocale}";try{var s=localStorage.getItem("sf-lang");if(s==="ar"||s==="fr"||s==="en")l=s}catch(e){}location.replace("/"+l+"/"+location.hash)})()</script>
 <meta http-equiv="refresh" content="0; url=/${SITE.defaultLocale}/">
 </head><body style="background:#04070d"></body></html>`;
+}
+
+/* ─────────────────────────── inner pages ─────────────────────────── */
+
+function innerHero({ t, locale, eyebrow, title, lead, art = "", id }) {
+  const p = PAGES[locale];
+  return `<section class="page-hero inner-hero${art ? " has-art" : ""}">
+  <div class="hero-sky" aria-hidden="true">${stars(70, id.length * 7)}<div class="sun"></div></div>
+  <div class="container inner-hero-grid">
+    <div class="page-hero-copy">
+      <p class="eyebrow">${esc(eyebrow)}</p>
+      <h1 class="display-2">${esc(title)}</h1>
+      <p class="lead">${esc(lead)}</p>
+      <div class="cta-row">
+        <a class="btn btn-primary btn-lg btn-glow" href="${href(locale, "download")}">${ICONS.download}<span>${esc(t.hero.primary)}</span></a>
+        <a class="btn btn-glass btn-lg" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${ICONS.whatsapp}<span>${esc(p.nav.talk)}</span></a>
+      </div>
+    </div>
+    ${art ? `<div class="inner-hero-art">${art}</div>` : ""}
+  </div>
+  ${dunes(`ih-${id}`)}
+</section>`;
+}
+
+export function productPage(locale, shot) {
+  const t = CONTENT[locale];
+  const p = PAGES[locale];
+  const s = { ...STORY[locale], ...EXTRA[locale] };
+  const subnav = `<nav class="subnav" aria-label="${esc(p.product.subnav)}" data-subnav><div class="container subnav-row">${MODULES.map(
+    (key) => `<a href="#${key}" data-spy="${key}"><span class="sn-ic">${ICONS[key]}</span><span>${esc(featureByKey(t, key).title)}</span></a>`,
+  ).join("")}</div></nav>`;
+  const rows = MODULES.map((key, i) => {
+    const item = featureByKey(t, key);
+    return `<section class="feature-row${i % 2 ? " flip" : ""}" id="${key}">
+    <div class="feature-copy reveal">
+      <p class="feature-index"><span class="fi-ic">${ICONS[key]}</span><span dir="ltr">0${i + 1}</span></p>
+      <h2 class="h-lg">${esc(item.title)}</h2>
+      <p class="lead">${esc(item.text)}</p>
+      <ul class="checks">${item.points.map((point) => `<li>${ICONS.check}<span>${esc(point)}</span></li>`).join("")}</ul>
+    </div>
+    <figure class="feature-media reveal">
+      <div class="screen-frame"><div class="screen-bar" aria-hidden="true"><i></i><i></i><i></i></div><img src="${shot(key)}" alt="${esc(item.title)}" loading="${i < 2 ? "eager" : "lazy"}" decoding="async" width="1440" height="900"></div>
+      <div class="feature-glow" aria-hidden="true"></div>
+    </figure>
+  </section>`;
+  }).join("");
+  const extras = `<section class="section extras">
+  <div class="container">
+    <div class="section-head reveal"><h2 class="h-xl">${esc(p.product.extrasTitle)}</h2></div>
+    <div class="extras-grid">${p.product.extras
+      .map(([title, text], i) => `<article class="extra reveal" style="--d:${(i % 3) * 70}ms"><h3>${esc(title)}</h3><p>${esc(text)}</p></article>`)
+      .join("")}</div>
+  </div>
+</section>`;
+  const body = `${innerHero({ t, locale, eyebrow: p.nav.product, title: p.product.title, lead: p.product.lead, id: "product" })}
+${subnav}
+<div class="container feature-rows">${rows}</div>
+${extras}
+${finalCta(t, s, locale)}`;
+  return shell({ t, locale, page: "product", title: `${p.nav.product} — SahelFlow`, description: p.product.lead }, body);
+}
+
+/** Brand accents for the integration marks (wordmark initials, or an icon). */
+const BRANDS = {
+  whatsapp: { color: "#25d366", icon: "whatsapp" },
+  yalidine: { color: "#ef4444", mark: "Y" },
+  "zr-express": { color: "#f59e0b", mark: "ZR" },
+  ecotrack: { color: "#22c55e", mark: "E" },
+  "maystro-delivery": { color: "#8b5cf6", mark: "M" },
+  "google-sheets": { color: "#34a853", icon: "sheet" },
+  shopify: { color: "#95bf47", mark: "S" },
+  youcan: { color: "#6366f1", mark: "YC" },
+  woocommerce: { color: "#a78bfa", mark: "W" },
+  "sahelflow-storefront": { color: "#38bdf8", icon: "storefront" },
+  "boutique-sahelflow": { color: "#38bdf8", icon: "storefront" },
+  "meta-pixel-conversions-api": { color: "#3b82f6", mark: "∞" },
+  "meta-pixel-et-api-conversions": { color: "#3b82f6", mark: "∞" },
+  sahelflow: { color: "#38bdf8", icon: "storefront" },
+  "google-gemini": { color: "#60a5fa", icon: "sparkle" },
+  "excel-csv": { color: "#22c55e", icon: "sheet" },
+};
+const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+export function integrationsPage(locale) {
+  const t = CONTENT[locale];
+  const p = PAGES[locale];
+  const s = { ...STORY[locale], ...EXTRA[locale] };
+  const groups = p.integrations.groups
+    .map(
+      (group) => `<section class="int-group reveal">
+    <h2 class="int-title">${esc(group.title)}</h2>
+    <div class="int-grid">${group.items
+      .map(([name, text, flag]) => {
+        const brand = BRANDS[slug(name)] ?? {};
+        const initials = name.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase() || "SF";
+        const mark = brand.icon ? ICONS[brand.icon] : esc(brand.mark ?? initials);
+        return `<article class="int-card${flag ? " is-new" : ""}" id="${slug(name)}">
+        <header><span class="int-logo" dir="ltr" style="--brand:${brand.color ?? "#38bdf8"}">${mark}</span><h3 dir="ltr">${esc(name)}</h3>${flag ? `<span class="badge-new">${esc(p.nav.newBadge)}</span>` : ""}</header>
+        <p>${esc(text)}</p>
+      </article>`;
+      })
+      .join("")}</div>
+  </section>`,
+    )
+    .join("");
+  const body = `${innerHero({ t, locale, eyebrow: p.nav.integrations, title: p.integrations.title, lead: p.integrations.lead, id: "integrations" })}
+<section class="section int-section"><div class="container">${groups}
+  <div class="help-row reveal"><span>${esc(p.integrations.missing)}</span> <a class="btn btn-glass" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${ICONS.whatsapp}<span>WhatsApp</span></a></div>
+</div></section>
+${finalCta(t, s, locale)}`;
+  return shell({ t, locale, page: "integrations", title: `${p.nav.integrations} — SahelFlow`, description: p.integrations.lead }, body);
+}
+
+export function pricingPage(locale) {
+  const t = CONTENT[locale];
+  const p = PAGES[locale];
+  const s = { ...STORY[locale], ...EXTRA[locale] };
+  const wa = whatsappHref(t.whatsappMessage);
+  const price = SITE.licencePrice
+    ? `${new Intl.NumberFormat("fr-FR").format(SITE.licencePrice)} ${locale === "ar" ? "دج" : "DA"}`
+    : p.pricing.licence.ask;
+  const plan = (key, data, priceText, cta, url, featured = false) => `<article class="plan${featured ? " is-featured" : ""} reveal" data-plan="${key}">
+    ${featured ? `<span class="plan-badge">${esc(data.badge)}</span>` : ""}
+    <h2 class="plan-name">${esc(data.name)}</h2>
+    <p class="plan-price${key === "licence" && !SITE.licencePrice ? " is-ask" : ""}"><strong dir="auto">${esc(priceText)}</strong><span>${esc(data.per)}</span></p>
+    <ul class="checks">${data.points.map((point) => `<li>${ICONS.check}<span>${esc(point)}</span></li>`).join("")}</ul>
+    <a class="btn ${featured ? "btn-primary btn-glow" : "btn-glass"} plan-cta" href="${url}"${url.startsWith("http") ? ' rel="noopener"' : ""}>${url.startsWith("http") ? ICONS.whatsapp : ICONS.download}<span>${esc(cta)}</span></a>
+  </article>`;
+  const body = `${innerHero({ t, locale, eyebrow: p.nav.pricing, title: p.pricing.title, lead: p.pricing.lead, id: "pricing" })}
+<section class="section plans-section">
+  <div class="container">
+    <div class="plans">
+      ${plan("trial", p.pricing.trial, p.pricing.trial.price, p.pricing.trial.cta, href(locale, "download"))}
+      ${plan("licence", p.pricing.licence, price, p.pricing.licence.cta, wa, true)}
+      ${plan("custom", p.pricing.custom, p.pricing.custom.price, p.pricing.custom.cta, wa)}
+    </div>
+  </div>
+</section>
+<section class="section ready">
+  <div class="container">
+    <div class="section-head center reveal"><h2 class="h-xl">${esc(p.pricing.howTitle)}</h2></div>
+    <ol class="ready-row">${p.pricing.how
+      .map(([title, text], i) => `<li class="reveal" style="--d:${i * 90}ms"><span class="big-n">${i + 1}</span><h3>${esc(title)}</h3><p>${esc(text)}</p></li>`)
+      .join("")}</ol>
+  </div>
+</section>
+<section class="section faq">
+  <div class="container faq-grid">
+    <div class="section-head reveal"><p class="eyebrow">${esc(t.faq.eyebrow)}</p><h2 class="h-xl">${esc(p.nav.pricing)}</h2></div>
+    <div class="faq-list">${p.pricing.faq
+      .map(([q, a]) => `<details class="reveal"><summary><span>${esc(q)}</span><i aria-hidden="true">${ICONS.plus}</i></summary><div class="faq-a"><p>${esc(a)}</p></div></details>`)
+      .join("")}</div>
+  </div>
+</section>
+${finalCta(t, s, locale)}`;
+  return shell({ t, locale, page: "pricing", title: `${p.nav.pricing} — SahelFlow`, description: p.pricing.lead }, body);
+}
+
+export function securityPage(locale) {
+  const t = CONTENT[locale];
+  const p = PAGES[locale];
+  const s = { ...STORY[locale], ...EXTRA[locale] };
+  const icons = [ICONS.lock, ICONS.key, ICONS.team, ICONS.backup, ICONS.sparkle, ICONS.shield];
+  const body = `${innerHero({ t, locale, eyebrow: p.nav.security, title: p.security.title, lead: p.security.lead, art: vaultArt(s), id: "security" })}
+<section class="section sec-section">
+  <div class="container">
+    <div class="sec-grid">${p.security.items
+      .map(([title, text], i) => `<article class="sec-card reveal" style="--d:${(i % 3) * 70}ms"><span class="vl-ic">${icons[i]}</span><h2>${esc(title)}</h2><p>${esc(text)}</p></article>`)
+      .join("")}</div>
+    <div class="flows reveal">
+      <h2 class="h-md">${esc(p.security.flowsTitle)}</h2>
+      <ul>${p.security.flows
+        .map(([name, what]) => `<li><strong dir="auto">${esc(name)}</strong><span>${esc(what)}</span></li>`)
+        .join("")}</ul>
+    </div>
+  </div>
+</section>
+${finalCta(t, s, locale)}`;
+  return shell({ t, locale, page: "security", title: `${p.nav.security} — SahelFlow`, description: p.security.lead }, body);
 }
