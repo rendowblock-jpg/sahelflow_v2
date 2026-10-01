@@ -23,7 +23,11 @@ import {
   trustedActorAuditIdentity,
 } from "@/lib/identity/authorization";
 import { storefrontService } from "@/lib/storefront/service";
-import { ConflictError, NotFoundError } from "@/types/errors";
+import {
+  ConflictError,
+  ConnectedPlatformNotEnrolledError,
+  NotFoundError,
+} from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -94,8 +98,20 @@ export const GET = withErrorHandler(async (
   if (!(await storefrontService.getById(context, id))) {
     throw new NotFoundError("Storefront", id);
   }
-  const history = await loadReleaseHistory(id, 50);
-  return NextResponse.json({ history }, { headers: { "Cache-Control": "no-store" } });
+  try {
+    const history = await loadReleaseHistory(id, 50);
+    return NextResponse.json({ history }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    // A store that was never published online has no hosted history yet:
+    // that is a normal state for every new installation, not a server fault.
+    if (error instanceof ConnectedPlatformNotEnrolledError) {
+      return NextResponse.json(
+        { history: { storefrontId: id, releases: [], activeAllocations: [] }, connected: false },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    throw error;
+  }
 }, "GET /api/storefront/config/[id]/releases");
 
 /**

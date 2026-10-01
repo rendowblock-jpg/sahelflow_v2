@@ -1,0 +1,47 @@
+# Production licensing Worker for license.sahelflow.com.
+# Deploy steps: see DEPLOY.md in this folder. The trial private key is never
+# stored here; it is set with `npx wrangler secret put TRIAL_PRIVATE_KEY_PKCS8`.
+name = "sahelflow-licensing"
+main = "worker.ts"
+compatibility_date = "2026-08-01"
+workers_dev = false
+
+# SahelFlow-owned production hostname (requires the sahelflow.com zone on this
+# Cloudflare account). workers.dev is never customer licensing authority.
+# Primary and recovery ingress: customer builds compile both origins
+# (SF_LICENSE_SERVICE_URL = "https://license.sahelflow.com|https://activate.sahelflow.com").
+[[routes]]
+pattern = "license.sahelflow.com"
+custom_domain = true
+
+[[routes]]
+pattern = "activate.sahelflow.com"
+custom_domain = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sahelflow-licensing"
+database_id = "b494ff92-7b47-4577-92ea-aa06b8e9eb2b"
+
+[vars]
+TRIAL_KEY_ID = "trial-2026-10"
+# Public keyring (not secret). Paste the line printed by
+# `bun scripts/licensing-keygen.ts trial trial-2026-10 <dir>` — it must be the
+# pair of the TRIAL_PRIVATE_KEY_PKCS8 secret. /healthz proves they match.
+SF_LICENSE_TRIAL_PUBLIC_KEYS = '{"trial-2026-10":"PASTE-PUBLIC-KEY-FROM-KEYGEN"}'
+PRODUCT_MAJOR = "1"
+TRIAL_SHOP_SLOTS = "1"
+TRIAL_MEMBER_LIMIT = "25"
+TRIAL_BACKUP_BYTES = "20000000000"
+
+[[ratelimits]]
+name = "TRIAL_RATE_LIMITER"
+namespace_id = "1001"
+
+[ratelimits.simple]
+limit = 10
+period = 60
+
+[observability]
+enabled = true
+head_sampling_rate = 1

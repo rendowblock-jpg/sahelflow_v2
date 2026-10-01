@@ -74,6 +74,7 @@
     "playwright-report",
     "test-results",
     "sidecars",
+    "marketing",
     "e2e",
     "playwright.config.ts",
     "sf-audit",

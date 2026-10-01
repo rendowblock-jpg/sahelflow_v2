@@ -22,6 +22,7 @@ type HistoryResponse = Readonly<{
     storefrontId: string;
     releases: readonly Release[];
   }>;
+  connected?: boolean;
   error?: string;
 }>;
 
@@ -33,6 +34,7 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
   const [rollingBack, setRollingBack] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [rollbackTarget, setRollbackTarget] = useState<Release | null>(null);
+  const [notConnected, setNotConnected] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,6 +45,7 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
       );
       const body = await response.json() as HistoryResponse;
       if (!response.ok || !body.history) throw new Error(body.error ?? "release_history_unavailable");
+      setNotConnected(body.connected === false);
       setReleases(body.history.releases);
       setMessage(null);
     } catch {
@@ -63,10 +66,11 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
         if (!response.ok || !body.history) {
           throw new Error(body.error ?? "release_history_unavailable");
         }
-        return body.history.releases;
+        return { releases: body.history.releases, connected: body.connected !== false };
       })
-      .then((nextReleases) => {
+      .then(({ releases: nextReleases, connected }) => {
         if (controller.signal.aborted) return;
+        setNotConnected(!connected);
         setReleases(nextReleases);
         setMessage(null);
       })
@@ -137,7 +141,9 @@ export function StorefrontReleaseHistory({ storefrontId }: { storefrontId: strin
           {t("storefront.releaseHistory.loading")}
         </div>
       ) : releases.length === 0 ? (
-        <p className="mt-3 text-xs text-muted-foreground">{t("storefront.releaseHistory.empty")}</p>
+        <p className="mt-3 text-xs text-muted-foreground">
+          {t(notConnected ? "storefront.releaseHistory.notConnected" : "storefront.releaseHistory.empty")}
+        </p>
       ) : (
         <div className="mt-3 grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
           {releases.slice(0, 12).map((release) => {

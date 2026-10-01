@@ -558,8 +558,8 @@ async function main() {
         ? randomFrom(WHATSAPP_MESSAGES)
         : randomFrom([
             "Salam! Commande confirmée. Livraison prévue demain 📦",
-            "Merci pour votre commande! Le total est de {{total}} DA",
-            "Bonjour, votre colis est en route. Numéro de suivi: {{tracking}}",
+            "Merci pour votre commande! Le total est de 4 500 DA",
+            "Bonjour, votre colis est en route. Numéro de suivi: YAL-58213940",
             "Commande livrée avec succès! Merci de votre confiance 🙏",
           ]);
       await prisma.message.create({

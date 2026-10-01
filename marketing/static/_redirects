@@ -1,0 +1,6 @@
+# Language-less paths go to the Arabic default; the root page honours a saved choice.
+/download   /ar/download/   301
+/privacy    /ar/privacy/    301
+/terms      /ar/terms/      301
+# Static-host fallback when the edge Worker is not in front (Worker handles /get/* first).
+/get/windows  https://github.com/rendowblock-jpg/sahelflow_v2/releases/latest  302

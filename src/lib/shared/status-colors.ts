@@ -30,3 +30,8 @@ export const STATUS_PIPELINE: OrderStatus[] = [
 export function statusI18nKey(status: string): string {
   return `orders.status.${status}`;
 }
+
+/** Courier statuses are stored snake_case (`picked_up`); their copy keys are camelCase. */
+export function deliveryStatusI18nKey(status: string): string {
+  return `deliveries.status.${status.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())}`;
+}

@@ -1485,6 +1485,41 @@ Binding boundaries:
   #230 and the zero-budget boundary are unaffected. Publication is not
   installation.
 
+## FD-066 — Launch to first paying clients on sahelflow.com (2026-10-01, ADOPTED)
+
+The Founder's 2026-10-01 directive ("the most important final deep dive …
+after it I start selling the app … production grade finished work for
+launch") with these explicit choices:
+
+- **Licensing:** customer-online licensing on the owned domain
+  `sahelflow.com`. Trials are issued by the licensing Worker at
+  `license.sahelflow.com` (primary) and `activate.sahelflow.com` (recovery);
+  paid licences stay offline-signed after BaridiMob/CCP payment
+  (`scripts/sign-license-entitlement.ts`). D1 `sahelflow-licensing` exists on
+  the Founder's Cloudflare account. Deployment needs the Founder's own steps
+  (zone, trial key generated off-repo, `wrangler deploy`):
+  `control-plane/licensing/DEPLOY.md`.
+- **Marketing site:** a static site at `sahelflow.com` (`marketing/`), Arabic by
+  default with French and English, no public prices: free trial plus WhatsApp
+  contact.
+- **Advertised integrations:** "everything we built" (WhatsApp, Yalidine,
+  ZR Express, EcoTrack, Maystro, Shopify, YouCan, WooCommerce, Meta Pixel,
+  Gemini). This supersedes, for marketing copy only, the rule that unverified
+  providers stay hidden. The integrity risk is recorded: none of these is
+  live-provider-certified (FRC-1/4/5), WhatsApp runs on an unofficial
+  provider, and the first customers must be onboarded knowing which
+  integration they rely on. In-app provider truth (degraded/unsupported
+  states) is unchanged.
+- **Release:** the next signed release is the first customer release. It
+  requires `releaseMode: customer-online`, `ownedHostSuffix: sahelflow.com` and
+  `SF_LICENSE_SERVICE_URL` with both origins. It is cut only after both
+  `/healthz` endpoints report ready on the Founder's deployment.
+
+Unchanged: Golden COD and every protected boundary in `AGENTS.md`. The
+Stable label still requires the ROADMAP Phase 9 evidence. Until then the
+customer release is a **Founder-authorized launch release**, not a Stable
+claim.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states
