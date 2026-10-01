@@ -18,7 +18,7 @@ import { studioImageUrl, type StorefrontStudioProduct } from "./studio-types";
 type Commit = (draft: StorefrontStudioDraft) => void;
 
 /** Curated palettes: each passes 4.5:1 for body text and button labels. */
-const PALETTES: ReadonlyArray<{ id: string } & StorefrontPalette> = [
+export const STOREFRONT_PALETTES: ReadonlyArray<{ id: string } & StorefrontPalette> = [
   { id: "emerald", primaryColor: "#166534", accentColor: "#F0A35E", backgroundColor: "#FFF8F1", surfaceColor: "#FFFFFF", textColor: "#211A17" },
   { id: "ocean", primaryColor: "#0369A1", accentColor: "#22D3EE", backgroundColor: "#F4F8FB", surfaceColor: "#FFFFFF", textColor: "#0F172A" },
   { id: "sunset", primaryColor: "#C2410C", accentColor: "#FACC15", backgroundColor: "#FFF7ED", surfaceColor: "#FFFFFF", textColor: "#27150C" },
@@ -33,7 +33,7 @@ export function ThemePanel({ draft, commit }: { draft: StorefrontStudioDraft; co
   const patchTheme = (patch: Partial<StorefrontStudioDraft["theme"]>) =>
     commit({ ...draft, theme: { ...theme, ...patch } });
   const option = <T extends string>(value: T) => ({ value, label: t(`storefront.studio.option.${value}`) });
-  const activePalette = PALETTES.find(
+  const activePalette = STOREFRONT_PALETTES.find(
     (palette) =>
       palette.primaryColor === theme.primaryColor.toUpperCase() &&
       palette.backgroundColor === theme.backgroundColor.toUpperCase(),
@@ -60,7 +60,7 @@ export function ThemePanel({ draft, commit }: { draft: StorefrontStudioDraft; co
         <div>
           <p className="mb-2 text-body-sm font-medium">{t("storefront.studio.palettes")}</p>
           <div className="grid grid-cols-3 gap-2">
-            {PALETTES.map((palette) => (
+            {STOREFRONT_PALETTES.map((palette) => (
               <button
                 key={palette.id}
                 type="button"

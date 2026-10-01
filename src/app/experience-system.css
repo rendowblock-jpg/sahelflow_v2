@@ -181,71 +181,11 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-resizable-panes="true"] 
  * the removed legacy data-ai-workspace="v2" template-area hacks targeted
  * a composition that no longer renders. */
 
-/* ── Storefront Studio deterministic pane order ─────────────────────────── */
-[data-storefront-studio="v2"] > div.grid {
-  direction: ltr;
-  grid-template-areas: "controls preview";
-  grid-template-columns: var(--rail-sm) minmax(0, 1fr) !important;
-}
-
-[data-storefront-studio="v2"] > div.grid > aside:first-child {
-  grid-area: controls;
-}
-
-[data-storefront-studio="v2"] > div.grid > main {
-  grid-area: preview;
-}
-
-[data-storefront-studio="v2"] > div.grid > aside:last-child {
-  grid-area: inspector;
-}
-
-html[dir="rtl"] [data-storefront-studio="v2"] > div.grid {
-  grid-template-areas: "preview controls";
-  grid-template-columns: minmax(0, 1fr) var(--rail-sm) !important;
-}
-
-html[dir="rtl"] [data-storefront-studio="v2"] > div.grid > :is(aside, main) {
-  direction: rtl;
-}
-
-[data-storefront-studio="bootstrap"] > div.grid {
-  direction: ltr;
-}
-
-html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid > :is(aside, main) {
-  direction: rtl;
-}
-
-@media (min-width: 1280px) {
-  [data-storefront-studio="v2"] > div.grid {
-    grid-template-areas: "controls preview inspector";
-    grid-template-columns: var(--rail-sm) minmax(0, 1fr) var(--rail-2xl) !important;
-  }
-
-  html[dir="rtl"] [data-storefront-studio="v2"] > div.grid {
-    grid-template-areas: "inspector preview controls";
-    grid-template-columns: var(--rail-2xl) minmax(0, 1fr) var(--rail-sm) !important;
-  }
-
-  [data-storefront-studio="bootstrap"] > div.grid {
-    grid-template-areas: "setup preview";
-    grid-template-columns: var(--rail-5xl) minmax(0, 1fr) !important;
-  }
-
-  [data-storefront-studio="bootstrap"] > div.grid > aside {
-    grid-area: setup;
-  }
-
-  [data-storefront-studio="bootstrap"] > div.grid > main {
-    grid-area: preview;
-  }
-
-  html[dir="rtl"] [data-storefront-studio="bootstrap"] > div.grid {
-    grid-template-areas: "preview setup";
-    grid-template-columns: minmax(0, 1fr) var(--rail-5xl) !important;
-  }
-}
+/* ── Storefront Studio and setup ────────────────────────────────────────
+ * Both own their geometry in the component (flex body / two-column grid).
+ * CSS Grid and flex follow document direction, so RTL mirrors without a
+ * forced-direction layer; the removed template-area overrides targeted a
+ * composition that no longer renders. */
 
 /* ── Settings deterministic navigation geometry ─────────────────────────── */
 @media (min-width: 1024px) {

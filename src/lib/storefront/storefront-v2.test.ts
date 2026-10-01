@@ -178,7 +178,8 @@ describe("Storefront Builder V2", () => {
 
     expect(page).toContain("StorefrontStudioBootstrap");
     expect(page).not.toContain("StorefrontBuilder");
-    expect(bootstrap).toContain("StorefrontRenderer");
+    // The setup preview is the Studio canvas, which renders the shared StorefrontRenderer.
+    expect(bootstrap).toContain("StudioCanvas");
     expect(bootstrap).toContain("createDefaultStorefrontTheme");
     expect(bootstrap).toContain("storefront.studio.template.sahara");
     expect(bootstrap).toContain("storefront.studio.template.atlas");
