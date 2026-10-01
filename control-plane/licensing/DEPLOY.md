@@ -12,8 +12,13 @@ Everything below is done in a browser. No terminal, no local tooling.
 ## 1. Add the domain to Cloudflare (you)
 
 1. dash.cloudflare.com → **Add a domain** → `sahelflow.com` → Free plan.
-2. Cloudflare imports the existing DNS records. If the domain already has email
-   (MX records) or a site at Hostinger, check those records are in the list.
+2. Cloudflare imports the existing DNS records. Then:
+   - delete the Hostinger parking records for `sahelflow.com` (A) and `www`
+     (CNAME): the deploy attaches the site to those names and refuses a name
+     that already has a CNAME;
+   - set the Hostinger mail records (`autoconfig`, `autodiscover`,
+     `hostingermail-*._domainkey`) to **DNS only** (grey cloud);
+   - keep the MX and TXT (SPF, DMARC) records as they are.
 3. Cloudflare shows **two nameservers** (like `xxx.ns.cloudflare.com`). Send
    them to the domain owner.
 
@@ -33,9 +38,12 @@ Cloudflare emails when the domain is **Active** (minutes to a few hours).
 
 ## 3. Contact mailbox (you, in Cloudflare)
 
-The site's email link is `contact@sahelflow.com`. With no mailbox at Hostinger,
-use **Email → Email Routing** in Cloudflare: create `contact@sahelflow.com` →
-forward to your Gmail, and accept the verification email.
+The site's email link is `contact@sahelflow.com`. Use one mail system, not both:
+
+- Hostinger email plan: create `contact@sahelflow.com` in hPanel → **Emails**.
+- No Hostinger email plan: Cloudflare **Email → Email Routing** → create
+  `contact@sahelflow.com` → forward to your Gmail; accept its offer to replace
+  the Hostinger MX records.
 
 ## 4. Give GitHub permission to deploy (you)
 
