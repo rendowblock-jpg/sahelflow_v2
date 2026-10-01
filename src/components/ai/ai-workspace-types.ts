@@ -1,3 +1,4 @@
+import type { AiChatAttachmentMeta } from "@/lib/ai/chat/attachment-limits";
 import type { AiWorkspaceCopyKey } from "@/lib/i18n/ai-workspace";
 
 export interface AiSessionSummary {
@@ -38,12 +39,29 @@ export interface AiTurnSignal {
   totalTokens?: number;
 }
 
+/** An image on a chat turn: stored metadata, plus a local preview while the
+ *  turn is still optimistic (so the thumbnail never flickers on persist). */
+export interface AiAttachmentView extends AiChatAttachmentMeta {
+  previewUrl?: string;
+}
+
+/** An image ready to send: the bytes (base64) and what the composer showed. */
+export interface AiOutgoingImage {
+  mediaType: string;
+  data: string;
+  width: number | null;
+  height: number | null;
+  sizeBytes: number;
+  previewUrl: string;
+}
+
 export interface AiMessageView {
   id: string;
   role: "user" | "assistant";
   content: string;
   createdAt: string;
   toolCalls: AiToolCallView[];
+  attachments?: AiAttachmentView[];
   streaming?: boolean;
   persistenceWarning?: boolean;
   interrupted?: boolean;
@@ -169,6 +187,7 @@ export type AiWorkspaceErrorCode =
   | "AI_RATE_LIMITED"
   | "AI_INVALID_MESSAGE"
   | "AI_INVALID_REQUEST"
+  | "AI_ATTACHMENT_INVALID"
   | "AI_SESSION_NOT_FOUND"
   | "AI_RESPONSE_NOT_PERSISTED"
   | "AI_PROVIDER_UNAVAILABLE"

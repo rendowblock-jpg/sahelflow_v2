@@ -25,7 +25,8 @@ import { mutatePrefix } from "@/lib/swr/mutate";
  */
 const NOTIFICATION_POLL_MS = 3_000;
 const NOTIFICATIONS_SWR_PREFIX = "/api/notifications";
-const NOTIFICATION_PAGE_LIMIT = 20;
+// The topbar list scrolls, so it carries the API maximum page.
+const NOTIFICATION_PAGE_LIMIT = 50;
 const LIVE_QUERY_KEY = `${NOTIFICATIONS_SWR_PREFIX}?state=active&limit=${NOTIFICATION_PAGE_LIMIT}`;
 
 export type NotificationFeedState = "active" | "unread" | "read" | "archived";

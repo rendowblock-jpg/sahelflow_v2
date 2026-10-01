@@ -35,7 +35,7 @@ describe("AI Class-AAA start-state authority", () => {
     expect(workspace).toContain("queuePromptInNewSession");
     expect(workspace).toContain("pendingPromptRef");
     expect(workspace).toContain("sawConversationLoad");
-    expect(workspace).toContain("workspace.send(pending.prompt)");
+    expect(workspace).toContain("workspace.send(pending.prompt, pending.images)");
     expect(workspace).not.toContain("window.location.reload");
     expect(workspace).not.toContain("window.location.assign");
   });

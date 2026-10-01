@@ -4,7 +4,10 @@ import { getAbandonedCartRecoveryStats } from "@/lib/storefront/abandoned-cart-s
 import { listReviewsForModeration } from "@/lib/storefront/review-service";
 import { listQuantityTierOffers } from "@/lib/storefront/quantity-tier-service";
 import { listLandingPages } from "@/lib/storefront/landing-page-service";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StatCard } from "@/components/shared/stat-card";
+import { collectStorefrontPerformance } from "@/lib/storefront/storefront-performance";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { StorefrontsListClient } from "@/components/storefront/storefronts-list-client";
@@ -14,7 +17,7 @@ import { StorefrontLandingPagesManager } from "@/components/storefront/storefron
 import { StorefrontGatesManager } from "@/components/storefront/storefront-gates-manager";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatDZD } from "@/lib/utils";
-import { Plus, Store } from "lucide-react";
+import { Banknote, Plus, ShoppingBag, ShoppingCart, Store } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { db, shopContext } from "@/lib/db";
@@ -29,7 +32,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const dynamic = "force-dynamic";
 
-export default async function StorefrontsPage() {
+const STOREFRONT_TABS = ["stores", "landing", "offers", "reviews", "protection"] as const;
+type StorefrontTab = (typeof STOREFRONT_TABS)[number];
+
+export default async function StorefrontsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const actorContext = await requireTrustedAction("storefront.read");
   const resource = { shopId: actorContext.shop.shopId };
   const canManage = trustedActionAllowed(
@@ -68,92 +78,156 @@ export default async function StorefrontsPage() {
   // FD-061 EX-4: per-product landing pages with their live stats.
   const landingPages = await listLandingPages({ prisma: db, shop: shopContext });
 
+  // Live miniatures on the store cards render the real store with its products.
+  const previewProductIds = [...new Set(configs.flatMap((config) => config.productIds))];
+  const previewProducts =
+    previewProductIds.length > 0
+      ? await db.product.findMany({
+          where: { id: { in: previewProductIds }, isActive: true, deletedAt: null },
+          select: { id: true, name: true, price: true, sku: true, stock: true, images: true },
+        })
+      : [];
+  // Per-store sales over the last 30 days, attributed by the canonical order
+  // authority (the store slug recorded at checkout).
+  const performance = await collectStorefrontPerformance(
+    { prisma: db, shop: shopContext },
+    configs.map((config) => config.slug),
+  );
+  const performanceBySlug = Object.fromEntries(performance);
+  const totals = [...performance.values()].reduce(
+    (sum, entry) => ({
+      orders: sum.orders + entry.orders,
+      revenue: sum.revenue + entry.revenue,
+    }),
+    { orders: 0, revenue: 0 },
+  );
+  const trend = [...performance.values()].reduce<Array<{ date: string; value: number }>>(
+    (sum, entry) =>
+      entry.trend.map((point, index) => ({
+        date: point.date,
+        value: (sum[index]?.value ?? 0) + point.value,
+      })),
+    [],
+  );
+  const liveCount = configs.filter((config) => config.isActive).length;
+  const params = await searchParams;
+  const tab = STOREFRONT_TABS.includes(params.tab as StorefrontTab)
+    ? (params.tab as StorefrontTab)
+    : "stores";
+  const storefronts = configs.map((config) => ({ slug: config.slug, name: config.name }));
+
   return (
-    <div className="app-content page-sections">
+    <div className="app-content page-sections" data-storefronts-hub="true">
       <PageHeader
         title={t("nav.storefrontBuilder")}
         description={t("storefronts.subtitle")}
         actions={canMutate ? (
           <Button asChild>
             <Link href="/storefronts/new">
-              <Plus className="h-4 w-4 me-2" />
+              <Plus className="size-4" aria-hidden="true" />
               {t("storefronts.newShop")}
             </Link>
           </Button>
         ) : undefined}
       />
 
-      {configs.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {t("storefronts.recovery.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {(
-                [
-                  ["storefronts.recovery.pending", recovery.pending],
-                  ["storefronts.recovery.abandoned", recovery.abandoned],
-                  ["storefronts.recovery.converted", recovery.converted],
-                  [
-                    "storefronts.recovery.lostRevenue",
-                    formatDZD(recovery.estimatedLostRevenue, locale),
-                  ],
-                ] as const
-              ).map(([key, value]) => (
-                <div key={key}>
-                  <p className="text-sm text-muted-foreground">{t(key)}</p>
-                  <p className="text-lg font-semibold tabular-nums">{value}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {configs.length > 0 ? (
+        <div className="card-grid-4" data-storefronts-kpis="true">
+          <StatCard
+            label={t("storefronts.kpi.liveStores")}
+            value={String(liveCount)}
+            icon={<Store />}
+            subtitle={t("storefronts.kpi.liveOf", { live: liveCount, total: configs.length })}
+          />
+          <StatCard
+            label={t("storefronts.kpi.orders")}
+            value={String(totals.orders)}
+            icon={<ShoppingBag />}
+            subtitle={t("storefronts.kpi.last30")}
+            spark={trend.some((point) => point.value > 0) ? trend : undefined}
+            sparkZeroBaseline
+          />
+          <StatCard
+            label={t("storefronts.kpi.revenue")}
+            value={formatDZD(totals.revenue, locale)}
+            icon={<Banknote />}
+            subtitle={t("storefronts.kpi.last30")}
+          />
+          <StatCard
+            label={t("storefronts.kpi.abandoned")}
+            value={String(recovery.abandoned + recovery.pending)}
+            icon={<ShoppingCart />}
+            subtitle={t("storefronts.kpi.abandonedHint", {
+              amount: formatDZD(recovery.estimatedLostRevenue, locale),
+              converted: recovery.converted,
+            })}
+          />
+        </div>
+      ) : null}
 
-      <StorefrontReviewsModeration reviews={reviews} canModerate={canManage} />
+      <Tabs defaultValue={tab} className="gap-5">
+        <TabsList variant="line" className="w-full justify-start gap-1 overflow-x-auto border-b [&>[data-slot=tabs-trigger]]:flex-none [&>[data-slot=tabs-trigger]]:px-3">
+          <TabsTrigger value="stores">
+            {t("storefronts.tabs.stores")}
+            <span className="ms-1 tabular-nums text-muted-foreground">{configs.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="landing">{t("storefronts.tabs.landing")}</TabsTrigger>
+          <TabsTrigger value="offers">{t("storefronts.tabs.offers")}</TabsTrigger>
+          <TabsTrigger value="reviews">{t("storefronts.tabs.reviews")}</TabsTrigger>
+          <TabsTrigger value="protection">{t("storefronts.tabs.protection")}</TabsTrigger>
+        </TabsList>
 
-      <StorefrontOffersManager
-        offers={offers}
-        storefronts={configs.map((config) => ({ slug: config.slug, name: config.name }))}
-        products={offerProducts}
-        canManage={canManage}
-      />
-
-      <StorefrontLandingPagesManager
-        pages={landingPages}
-        storefronts={configs.map((config) => ({ slug: config.slug, name: config.name }))}
-        products={offerProducts}
-        canManage={canManage}
-      />
-
-      <StorefrontGatesManager
-        storefronts={configs.map((config) => ({ slug: config.slug, name: config.name }))}
-        canManage={canManage}
-      />
-
-      {configs.length === 0 ? (
-        <Card>
-          <CardContent>
-            <EmptyState
-              icon={Store}
-              title={t("storefronts.empty.title")}
-              description={t("storefronts.empty.description")}
-              actionLabel={canMutate ? t("storefronts.empty.action") : undefined}
-              actionHref={canMutate ? "/storefronts/new" : undefined}
+        <TabsContent value="stores">
+          {configs.length === 0 ? (
+            <Card>
+              <CardContent>
+                <EmptyState
+                  icon={Store}
+                  title={t("storefronts.empty.title")}
+                  description={t("storefronts.empty.description")}
+                  actionLabel={canMutate ? t("storefronts.empty.action") : undefined}
+                  actionHref={canMutate ? "/storefronts/new" : undefined}
+                />
+              </CardContent>
+            </Card>
+          ) : (
+            <StorefrontsListClient
+              configs={configs}
+              products={previewProducts}
+              performance={performanceBySlug}
+              canManage={canManage}
+              canPublish={canPublish}
+              canDelete={canDelete}
             />
-          </CardContent>
-        </Card>
-      ) : (
-        <StorefrontsListClient
-          configs={configs}
-          canManage={canManage}
-          canPublish={canPublish}
-          canDelete={canDelete}
-        />
-      )}
+          )}
+        </TabsContent>
+
+        <TabsContent value="landing">
+          <StorefrontLandingPagesManager
+            pages={landingPages}
+            storefronts={storefronts}
+            products={offerProducts}
+            canManage={canManage}
+          />
+        </TabsContent>
+
+        <TabsContent value="offers">
+          <StorefrontOffersManager
+            offers={offers}
+            storefronts={storefronts}
+            products={offerProducts}
+            canManage={canManage}
+          />
+        </TabsContent>
+
+        <TabsContent value="reviews">
+          <StorefrontReviewsModeration reviews={reviews} canModerate={canManage} />
+        </TabsContent>
+
+        <TabsContent value="protection">
+          <StorefrontGatesManager storefronts={storefronts} canManage={canManage} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

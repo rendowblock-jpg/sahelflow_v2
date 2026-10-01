@@ -1,5 +1,6 @@
 import "server-only";
 
+import { AI_CHAT_ATTACHMENT_META_SELECT } from "@/lib/ai/chat/attachments";
 import type { DbClient } from "@/lib/db";
 
 export const AI_CHAT_HISTORY_LIMIT = 20;
@@ -22,6 +23,10 @@ export async function loadRecentAiChatMessages(
       content: true,
       toolCalls: true,
       createdAt: true,
+      attachments: {
+        select: AI_CHAT_ATTACHMENT_META_SELECT,
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
@@ -69,6 +74,10 @@ export async function loadAiChatMessagesBefore(
       content: true,
       toolCalls: true,
       createdAt: true,
+      attachments: {
+        select: AI_CHAT_ATTACHMENT_META_SELECT,
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 

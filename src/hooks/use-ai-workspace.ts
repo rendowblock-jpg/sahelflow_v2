@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { reloadAiImages } from "@/components/ai/ai-image-input";
 import type {
   AiActionDecisionView,
   AiActionProposalHandle,
@@ -9,12 +10,14 @@ import type {
   AiActionProposalProjection,
   AiCapabilitiesPayload,
   AiMessageView,
+  AiOutgoingImage,
   AiSessionSummary,
   AiSetupState,
   AiToolCallView,
   AiWorkspaceError,
   AiWorkspaceErrorCode,
 } from "@/components/ai/ai-workspace-types";
+import type { AiChatAttachmentMeta } from "@/lib/ai/chat/attachment-limits";
 import { parseTurnSignal } from "@/components/ai/ai-workspace-types";
 import { useI18n } from "@/hooks/use-i18n";
 import {
@@ -68,6 +71,7 @@ function errorCode(value: unknown, fallback: AiWorkspaceErrorCode): AiWorkspaceE
     "AI_RATE_LIMITED",
     "AI_INVALID_MESSAGE",
     "AI_INVALID_REQUEST",
+    "AI_ATTACHMENT_INVALID",
     "AI_SESSION_NOT_FOUND",
     "AI_RESPONSE_NOT_PERSISTED",
     "AI_PROVIDER_UNAVAILABLE",
@@ -330,6 +334,7 @@ export function useAiWorkspace() {
             content: string;
             toolCalls: string | null;
             createdAt: string;
+            attachments?: AiChatAttachmentMeta[];
           }>;
         };
         hasMore?: boolean;
@@ -343,6 +348,9 @@ export function useAiWorkspace() {
             content: message.content,
             createdAt: message.createdAt,
             toolCalls: parseToolCalls(message.id, message.toolCalls),
+            ...(message.attachments?.length
+              ? { attachments: message.attachments }
+              : {}),
           }),
         ),
       );
@@ -406,6 +414,7 @@ export function useAiWorkspace() {
             content: string;
             toolCalls: string | null;
             createdAt: string;
+            attachments?: AiChatAttachmentMeta[];
           }>;
         };
         hasMore?: boolean;
@@ -419,6 +428,9 @@ export function useAiWorkspace() {
           content: message.content,
           createdAt: message.createdAt,
           toolCalls: parseToolCalls(message.id, message.toolCalls),
+          ...(message.attachments?.length
+            ? { attachments: message.attachments }
+            : {}),
         }),
       );
       if (older.length > 0) {
@@ -564,11 +576,11 @@ export function useAiWorkspace() {
   );
 
   const send = useCallback(
-    async (rawMessage: string) => {
+    async (rawMessage: string, images: AiOutgoingImage[] = []) => {
       const userMessage = rawMessage.trim();
       const sessionId = activeSessionId;
       if (
-        !userMessage ||
+        (!userMessage && images.length === 0) ||
         !sessionId ||
         sending ||
         setup?.ready !== true
@@ -589,6 +601,18 @@ export function useAiWorkspace() {
           content: userMessage,
           createdAt: new Date(now).toISOString(),
           toolCalls: [],
+          ...(images.length > 0
+            ? {
+                attachments: images.map((image, index) => ({
+                  id: `${userId}:image:${index}`,
+                  mediaType: image.mediaType,
+                  sizeBytes: image.sizeBytes,
+                  width: image.width,
+                  height: image.height,
+                  previewUrl: image.previewUrl,
+                })),
+              }
+            : {}),
         },
         {
           id: assistantId,
@@ -624,7 +648,16 @@ export function useAiWorkspace() {
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: userMessage, locale }),
+            body: JSON.stringify({
+              message: userMessage,
+              locale,
+              attachments: images.map(({ mediaType, data, width, height }) => ({
+                mediaType,
+                data,
+                ...(width ? { width } : {}),
+                ...(height ? { height } : {}),
+              })),
+            }),
             signal: controller.signal,
           },
         );
@@ -665,10 +698,29 @@ export function useAiWorkspace() {
                   // the durable row id so regenerate/edit truncation targets
                   // a real persisted message.
                   const persistedUserId = payload.id;
+                  const persistedAttachments = Array.isArray(payload.attachments)
+                    ? (payload.attachments as AiChatAttachmentMeta[])
+                    : [];
                   setMessages((current) =>
                     current.map((message) =>
                       message.id === userId
-                        ? { ...message, id: persistedUserId }
+                        ? {
+                            ...message,
+                            id: persistedUserId,
+                            // Durable ids for the images; the local preview
+                            // stays so the thumbnail never reloads.
+                            ...(message.attachments && persistedAttachments.length
+                              ? {
+                                  attachments: persistedAttachments.map(
+                                    (attachment, index) => ({
+                                      ...attachment,
+                                      previewUrl:
+                                        message.attachments?.[index]?.previewUrl,
+                                    }),
+                                  ),
+                                }
+                              : {}),
+                          }
                         : message,
                     ),
                   );
@@ -905,7 +957,7 @@ export function useAiWorkspace() {
    * stream path as a fresh exchange.
    */
   const regenerate = useCallback(async () => {
-    if (!canRegenerate || !lastUserPrompt) return false;
+    if (!canRegenerate || lastUserPrompt === null) return false;
     const sessionId = activeSessionId;
     if (!sessionId) return false;
     let lastUserIndex = -1;
@@ -917,6 +969,12 @@ export function useAiWorkspace() {
     }
     const target = lastUserIndex >= 0 ? messages[lastUserIndex] : null;
     if (!target) return false;
+    // The truncation deletes the stored turn, so its images are re-read first.
+    const images = await reloadAiImages(target.attachments);
+    if (images === null) {
+      setError({ code: "AI_INTERNAL_ERROR" });
+      return false;
+    }
     const snapshot = messages;
     setMessages(messages.slice(0, lastUserIndex));
     const truncated = await truncateAfter(sessionId, target.id, true);
@@ -925,7 +983,7 @@ export function useAiWorkspace() {
       setError({ code: "AI_INTERNAL_ERROR" });
       return false;
     }
-    return send(lastUserPrompt);
+    return send(lastUserPrompt, images);
   }, [
     activeSessionId,
     canRegenerate,
@@ -957,13 +1015,20 @@ export function useAiWorkspace() {
     async (messageId: string, rawContent: string) => {
       const content = rawContent.trim();
       const sessionId = activeSessionId;
-      if (!content || !sessionId || sending || setup?.ready !== true) {
+      if (!sessionId || sending || setup?.ready !== true) {
         return false;
       }
       const targetIndex = messages.findIndex(
         (message) => message.id === messageId && message.role === "user",
       );
       if (targetIndex < 0) return false;
+      // An edited turn keeps its images: they are re-read before truncation.
+      const images = await reloadAiImages(messages[targetIndex]?.attachments);
+      if (images === null) {
+        setError({ code: "AI_INTERNAL_ERROR" });
+        return false;
+      }
+      if (!content && images.length === 0) return false;
       const snapshot = messages;
       setEditingMessageId(null);
       setMessages(messages.slice(0, targetIndex));
@@ -973,7 +1038,7 @@ export function useAiWorkspace() {
         setError({ code: "AI_INTERNAL_ERROR" });
         return false;
       }
-      return send(content);
+      return send(content, images);
     },
     [activeSessionId, messages, send, sending, setup?.ready, truncateAfter],
   );

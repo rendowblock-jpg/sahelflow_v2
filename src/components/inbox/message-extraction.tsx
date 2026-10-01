@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowRight, CheckCircle2, Loader2, RefreshCw, ShieldAlert, Sparkles } from "lucide-react";
 
@@ -12,6 +12,13 @@ import {
   type ReviewedOrder,
 } from "@/components/inbox/extraction/extraction-review";
 import { ExtractionSourcePane } from "@/components/inbox/extraction/extraction-source-pane";
+import {
+  ORDER_SOURCE_MAX_SELECTED,
+  composeOrderSource,
+  defaultOrderSelection,
+  orderSourceWindow,
+  type OrderSourceMessage,
+} from "@/components/inbox/extraction/order-source-messages";
 import type { CatalogOption } from "@/components/inbox/extraction/extraction-item-row";
 import { useI18n } from "@/hooks/use-i18n";
 import type { ExtractionResult } from "@/lib/ai/extraction";
@@ -32,6 +39,12 @@ interface MessageExtractionProps {
    */
   layout?: "inline" | "workspace";
   contactName?: string;
+  /**
+   * The conversation's messages. With them the order is read from a SET of
+   * customer messages — by default the burst around `messageId` — that the
+   * seller can adjust, instead of a single message.
+   */
+  sourceMessages?: OrderSourceMessage[];
 }
 
 interface ExtractionResponse {
@@ -62,6 +75,7 @@ export function MessageExtraction({
   knownPhone,
   layout = "inline",
   contactName,
+  sourceMessages,
 }: MessageExtractionProps) {
   const { locale } = useI18n();
   const router = useRouter();
@@ -73,18 +87,50 @@ export function MessageExtraction({
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
+  const sourceWindow = useMemo(
+    () => (sourceMessages ? orderSourceWindow(sourceMessages) : null),
+    [sourceMessages],
+  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() =>
+    sourceMessages
+      ? new Set(defaultOrderSelection(orderSourceWindow(sourceMessages), messageId))
+      : new Set(),
+  );
+  const composed = sourceWindow
+    ? composeOrderSource(sourceWindow, selectedIds)
+    : { body: messageBody, anchorId: messageId, count: 1 };
+  const selectionKey = [...selectedIds].sort().join(",");
+  // What the current reading came from: its selection and anchor message.
+  const [readSource, setReadSource] = useState<{ key: string; anchorId: string } | null>(null);
+
+  const toggleSource = (id: string) =>
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < ORDER_SOURCE_MAX_SELECTED) next.add(id);
+      return next;
+    });
 
   async function handleRead() {
+    if (composed.count === 0 || !composed.anchorId) return;
+    const anchorId = composed.anchorId;
+    const key = selectionKey;
     setReading(true);
     setError(null);
     try {
       const res = await fetch("/api/extraction", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: messageBody, channel: "whatsapp", knownPhone, messageId }),
+        body: JSON.stringify({
+          body: composed.body,
+          channel: "whatsapp",
+          knownPhone,
+          messageId: anchorId,
+        }),
       });
       if (!res.ok) throw new Error(copy("failed"));
       setResponse((await res.json()) as ExtractionResponse);
+      setReadSource({ key, anchorId });
       setRevision((value) => value + 1);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : copy("failed"));
@@ -104,7 +150,8 @@ export function MessageExtraction({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversationId: conversationId ?? algerianPhoneToWhatsAppJid(reviewed.customer.phone),
-          messageId,
+          // Anchored to the latest message the reading came from.
+          messageId: readSource?.anchorId ?? messageId,
           // A hand-built order is still anchored to this message; its method
           // records how the draft was produced.
           extractionMethod: result.method === "gemini" ? "gemini" : "regex",
@@ -151,10 +198,22 @@ export function MessageExtraction({
         className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:grid-rows-1"
       >
         <ExtractionSourcePane
-          body={messageBody}
+          body={composed.body}
           contactName={contactName}
           order={draft}
           copy={copy}
+          selection={
+            sourceWindow && sourceWindow.length > 0
+              ? {
+                  messages: sourceWindow,
+                  selectedIds,
+                  onToggle: toggleSource,
+                  dirty: response !== null && readSource?.key !== selectionKey,
+                  reading,
+                  onRead: () => void handleRead(),
+                }
+              : undefined
+          }
         >
           {read ? (
             <div className="space-y-2 border-t border-border pt-4">

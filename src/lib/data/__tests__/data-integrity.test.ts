@@ -236,6 +236,7 @@ async function cleanAll() {
     rawDb.integration.deleteMany(),
     rawDb.automation.deleteMany(),
     rawDb.automationLog.deleteMany(),
+    rawDb.aiChatAttachment.deleteMany(),
     rawDb.aiChatMessage.deleteMany(),
     rawDb.aiChatSession.deleteMany(),
     rawDb.extractionMetric.deleteMany(),

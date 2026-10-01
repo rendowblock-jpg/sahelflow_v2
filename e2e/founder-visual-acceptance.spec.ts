@@ -373,24 +373,24 @@ test.describe.serial("Founder visual correction evidence", () => {
     });
     const studioControls = await visibleBox(
       page,
-      '[data-storefront-studio="v2"] > div.grid > aside:first-child',
+      '[data-storefront-studio="v2"] [data-studio-body] > aside:first-child',
     );
     const studioPreview = await visibleBox(
       page,
-      '[data-storefront-studio="v2"] > div.grid > main',
+      '[data-storefront-studio="v2"] [data-studio-body] > main',
     );
     const studioInspector = await visibleBox(
       page,
-      '[data-storefront-studio="v2"] > div.grid > aside:last-child',
+      '[data-storefront-studio="v2"] [data-studio-inspector="true"]',
     );
     expectRightOf(studioControls, studioPreview, "RTL Storefront Studio controls");
     expectLeftOf(studioInspector, studioPreview, "RTL Storefront Studio inspector");
-    expectWidthBetween(studioControls, 200, 216, "RTL Storefront Studio controls");
-    expectWidthBetween(studioInspector, 255, 275, "RTL Storefront Studio inspector");
+    expectWidthBetween(studioControls, 330, 342, "RTL Storefront Studio rail and panel");
+    expectWidthBetween(studioInspector, 295, 305, "RTL Storefront Studio inspector");
     expect(
       studioPreview.width,
       "Saved Studio preview must remain the dominant authoring surface",
-    ).toBeGreaterThan(studioControls.width * 3);
+    ).toBeGreaterThan(studioControls.width + studioInspector.width);
     await expectNoHorizontalOverflow(page);
     await shot(page, testInfo, "founder-rtl-storefront-saved-studio");
   });

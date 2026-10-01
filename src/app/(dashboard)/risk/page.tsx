@@ -6,7 +6,7 @@ import {
   ArrowRight,
   Ban,
   MapPin,
-  PiggyBank,
+  ShieldCheck,
   ShieldAlert,
   TrendingDown,
   TrendingUp,
@@ -309,7 +309,7 @@ export default async function RiskPage({
         <StatCard
           label={t("risk.kpi.potentialSavings")}
           value={formatDZD(kpis.potentialSavingsDzd, locale)}
-          icon={<PiggyBank />}
+          icon={<ShieldCheck />}
           emphasis="standard"
           tone="neutral"
         />

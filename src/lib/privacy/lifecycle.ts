@@ -33,6 +33,20 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
   AiActionApproval: () => db.aiActionApproval.findMany(),
   AiActionExecution: () => db.aiActionExecution.findMany(),
   AiActionProposal: () => db.aiActionProposal.findMany(),
+  // Chat-image metadata only: the sealed image bytes would overrun the
+  // bounded export (EXPORT_MAX_BYTES) and are never handed out as ciphertext.
+  AiChatAttachment: () =>
+    db.aiChatAttachment.findMany({
+      select: {
+        id: true,
+        messageId: true,
+        mediaType: true,
+        sizeBytes: true,
+        width: true,
+        height: true,
+        createdAt: true,
+      },
+    }),
   AiChatMessage: () => db.aiChatMessage.findMany(),
   AiChatSession: () => db.aiChatSession.findMany(),
   AuditLog: () => db.auditLog.findMany(),
@@ -366,6 +380,7 @@ export async function executeShopErase(
       await tx.automation.deleteMany({});
       // AI quality feedback precedes its cascading chat-message parent.
       await tx.aiMessageFeedback.deleteMany({});
+      await tx.aiChatAttachment.deleteMany({});
       await tx.aiChatMessage.deleteMany({});
       await tx.aiChatSession.deleteMany({});
       await tx.phoneReputation.deleteMany({});

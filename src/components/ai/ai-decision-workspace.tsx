@@ -9,6 +9,7 @@ import {
 } from "@/components/ai/ai-review-evidence";
 import { AiWorkHistory } from "@/components/ai/ai-work-history";
 import { ConnectedAgentsSurface } from "@/components/ai/connected/connected-agents-surface";
+import type { AiOutgoingImage } from "@/components/ai/ai-workspace-types";
 import { useAiWorkspace } from "@/hooks/use-ai-workspace";
 import { useConnectedAgents } from "@/hooks/use-connected-agents";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 type PendingPrompt = {
   sessionId: string;
   prompt: string;
+  images: AiOutgoingImage[];
   sawConversationLoad: boolean;
 };
 
@@ -116,7 +118,7 @@ export function AiDecisionWorkspace({
     if (!pending.sawConversationLoad) return;
 
     pendingPromptRef.current = null;
-    void workspace.send(pending.prompt).finally(() => {
+    void workspace.send(pending.prompt, pending.images).finally(() => {
       setStartingAnalysis(false);
     });
   }, [
@@ -167,7 +169,10 @@ export function AiDecisionWorkspace({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [mobile, newChat, toggleRail]);
 
-  const queuePromptInNewSession = async (prompt: string) => {
+  const queuePromptInNewSession = async (
+    prompt: string,
+    images: AiOutgoingImage[] = [],
+  ) => {
     if (
       workspace.loadingSessions ||
       startingAnalysis ||
@@ -186,17 +191,18 @@ export function AiDecisionWorkspace({
     pendingPromptRef.current = {
       sessionId,
       prompt,
+      images,
       sawConversationLoad: false,
     };
     if (mobile) setMobilePane("canvas");
     return true;
   };
 
-  const sendPrompt = async (message: string) => {
+  const sendPrompt = async (message: string, images: AiOutgoingImage[] = []) => {
     if (workspace.activeSessionId && !workspace.composingNewChat) {
-      return workspace.send(message);
+      return workspace.send(message, images);
     }
-    return queuePromptInNewSession(message);
+    return queuePromptInNewSession(message, images);
   };
 
   const startPrompt = async (prompt: string) => {

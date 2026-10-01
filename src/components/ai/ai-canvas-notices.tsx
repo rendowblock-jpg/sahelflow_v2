@@ -33,6 +33,8 @@ function errorMessage(
     case "AI_INVALID_MESSAGE":
     case "AI_INVALID_REQUEST":
       return workspace.copy("invalidMessage");
+    case "AI_ATTACHMENT_INVALID":
+      return workspace.copy("imageRejected");
     case "AI_SESSION_NOT_FOUND":
       return workspace.copy("sessionMissing");
     case "AI_RESPONSE_NOT_PERSISTED":

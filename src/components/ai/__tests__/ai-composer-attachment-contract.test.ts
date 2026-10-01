@@ -16,7 +16,7 @@ const LOCALES = ["en", "fr", "ar"] as const;
  * through one bounded, consent-gated, rate-limited visual route; the canvas
  * never auto-sends an extracted order (review-before-send stays design law).
  */
-describe("AI composer screenshot attachment (AI-21)", () => {
+describe("AI composer images and screenshot reading (AI-21)", () => {
   it("extracts screenshots through the same bounded extraction authority", () => {
     const extractor = source("src/lib/ai/extraction/image-extractor.ts");
     const router = source("src/lib/ai/extraction/smart-router.ts");
@@ -62,50 +62,80 @@ describe("AI composer screenshot attachment (AI-21)", () => {
     expect(route).toContain("requireAuth");
   });
 
-  it("wires the composer attach/paste path with a review-first summary", () => {
-    // STR-01 moved the composer deck into its own module; these assertions
-    // follow the code they protect rather than being relaxed. Every string
-    // pinned here is unchanged — only the file that must carry it moved.
-    // The Agents rebuild moved the extraction pipeline into its own hook
-    // and chip (`ai-screenshot-attachment.tsx`); the deck keeps the controls.
-    // Both are read together so every pinned string still has to exist.
-    const deck =
-      source("src/components/ai/ai-composer-deck.tsx") +
-      source("src/components/ai/ai-screenshot-attachment.tsx");
+  it("keeps read-as-order review-first inside the image tray", () => {
+    // Agents image input: images attach to the message; reading one as an
+    // order stays an explicit per-image action whose summary lands in the
+    // DRAFT for review — nothing is ever sent from the extraction path.
+    const deck = source("src/components/ai/ai-composer-deck.tsx");
+    const tray = source("src/components/ai/ai-image-tray.tsx");
     const canvas = source("src/components/ai/ai-decision-canvas.tsx");
 
     expect(deck).toContain('data-ai-composer-attach="true"');
-    expect(deck).toContain('data-ai-screenshot-input="true"');
-    expect(deck).toContain('data-ai-screenshot-chip="true"');
-    expect(deck).toContain('data-ai-screenshot-remove="true"');
-    expect(deck).toContain('accept={SCREENSHOT_ACCEPT}');
-    expect(deck).toContain("ingestScreenshot(file)");
-    expect(deck).toContain('"/api/extraction/image"');
+    expect(deck).toContain('data-ai-image-input="true"');
+    expect(deck).toContain("accept={AI_CHAT_ATTACHMENT_ACCEPT}");
+    expect(deck).toContain("tray.addFiles(files)");
+    expect(tray).toContain('data-ai-image-chip="true"');
+    expect(tray).toContain('data-ai-image-remove="true"');
+    expect(tray).toContain('data-ai-image-extract="true"');
+    expect(tray).toContain('"/api/extraction/image"');
     // Consent and rate-limit failures reuse the exact chat-send copy.
-    expect(deck).toContain('copy("consentMissing")');
-    expect(deck).toContain('copy("rateLimited")');
-    // The extraction result is appended to the DRAFT for review; nothing is
-    // auto-sent from the extraction flow. Asserted on both halves of the
-    // split so neither module can regain a send.
-    expect(deck).toContain("function screenshotSummary");
-    expect(deck).toContain("setDraft((current) =>");
-    expect(deck).not.toContain("onSend(summary)");
+    expect(tray).toContain('copy("consentMissing")');
+    expect(tray).toContain('copy("rateLimited")');
+    expect(tray).toContain("function screenshotSummary");
+    expect(tray).toContain("setDraft((current) =>");
+    expect(tray).not.toContain("onSend(summary)");
     expect(canvas).not.toContain("onSend(summary)");
     // The canvas owns the draft and hands it to the deck — one text truth.
     expect(canvas).toContain("<AiComposerDeck");
     expect(canvas).toContain("setDraft={setDraft}");
-    // Client picker boundaries mirror the route authority (pinned values).
-    expect(deck).toContain("const SCREENSHOT_MAX_BYTES = 10 * 1024 * 1024;");
-    expect(deck).toContain('"image/jpeg", "image/png", "image/webp"');
+  });
+
+  it("sends images with the turn under one bound, sniffed and sealed", () => {
+    const limits = source("src/lib/ai/chat/attachment-limits.ts");
+    const store = source("src/lib/ai/chat/attachments.ts");
+    const route = source("src/app/api/ai/sessions/[id]/messages/stream/route.ts");
+    const agent = source("src/lib/ai/chat/agent.ts");
+    const read = source("src/app/api/ai/attachments/[id]/route.ts");
+
+    // One bound for picker and route.
+    expect(limits).toContain("AI_CHAT_ATTACHMENT_MAX_COUNT = 4");
+    expect(limits).toContain("AI_CHAT_ATTACHMENT_MAX_BYTES = 4 * 1024 * 1024");
+    expect(limits).toContain('"image/jpeg"');
+    expect(limits).toContain('"image/png"');
+    expect(limits).toContain('"image/webp"');
+    // Container truth: the declared type must match the sniffed bytes.
+    expect(store).toContain("sniffAiChatImageType(bytes) !== input.mediaType");
+    // Sealed at rest, bound to row id + media type.
+    expect(store).toContain('"aes-256-gcm"');
+    expect(store).toContain("getBusinessEnvelopeKey");
+    expect(store).toContain("setAAD(attachmentAad(");
+    // The route validates before anything is stored or sent.
+    expect(route).toContain("decodeAiChatImages(input.attachments)");
+    expect(route.indexOf("decodeAiChatImages(input.attachments)")).toBeLessThan(
+      route.indexOf("aiChatMessage.create"),
+    );
+    expect(route).toContain('"AI_ATTACHMENT_INVALID"');
+    // Consent gate precedes any image handling.
+    expect(route.indexOf("SETTING_KEYS.geminiConsentAccepted")).toBeLessThan(
+      route.indexOf("decodeAiChatImages(input.attachments)"),
+    );
+    // The model receives the pixels as inline data with the turn.
+    expect(agent).toContain("inlineData");
+    // Reading an image back needs the same authority as the conversation.
+    expect(read).toContain('requireAuth("ai.use")');
+    expect(read).toContain("nosniff");
   });
 
   it("ships every composer-attachment key in en/fr/ar", () => {
     const keys = [
-      "attachScreenshot",
-      "readingScreenshot",
-      "screenshotRemove",
-      "screenshotUnsupported",
-      "screenshotTooLarge",
+      "attachImages",
+      "imageRemove",
+      "imageAlt",
+      "imageUnsupported",
+      "imageTooLarge",
+      "imageLimit",
+      "imageRejected",
+      "extractOrderFromImage",
       "screenshotExtractFailed",
     ] as const;
     for (const key of keys) {
@@ -113,9 +143,7 @@ describe("AI composer screenshot attachment (AI-21)", () => {
         expect(getAiWorkspaceCopy(locale, key), `${locale}:${key}`).toBeTruthy();
       }
     }
-    expect(getAiWorkspaceCopy("fr", "screenshotTooLarge")).toContain("{limit}");
-    expect(getAiWorkspaceCopy("en", "attachScreenshot")).toBe(
-      "Attach screenshot",
-    );
+    expect(getAiWorkspaceCopy("fr", "imageTooLarge")).toContain("{limit}");
+    expect(getAiWorkspaceCopy("en", "attachImages")).toBe("Attach images");
   });
 });

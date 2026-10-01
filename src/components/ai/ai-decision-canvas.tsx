@@ -17,6 +17,7 @@ import {
 } from "@/components/ai/ai-canvas-notices";
 import { AiReviewEvidence } from "@/components/ai/ai-review-evidence";
 import { StartSurface } from "@/components/ai/ai-start-surface";
+import type { AiOutgoingImage } from "@/components/ai/ai-workspace-types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -62,7 +63,7 @@ export function AiDecisionCanvas({
   onReviewOpenChange: (open: boolean) => void;
   onBack: () => void;
   onNewChat: () => void;
-  onSend: (message: string) => Promise<boolean>;
+  onSend: (message: string, images?: AiOutgoingImage[]) => Promise<boolean>;
   onStart: (prompt: string) => Promise<boolean>;
 }) {
   const {
@@ -159,18 +160,22 @@ export function AiDecisionCanvas({
     tailRef.current?.scrollIntoView({ block: "end" });
   }, [messages, sending]);
 
-  const submit = async () => {
+  const submit = async (images: AiOutgoingImage[] = []) => {
     const value = draft.trim();
-    if (!value || sending || !setupReady || startingAnalysis) return;
+    if ((!value && images.length === 0) || sending || !setupReady || startingAnalysis) {
+      return false;
+    }
     if (editingMessageId) {
-      // Ledger AI-15: an edited send truncates the durable tail, then re-sends.
+      // Ledger AI-15: an edited send truncates the durable tail, then re-sends
+      // (the edited turn keeps its stored images).
       const accepted = await editAndResend(editingMessageId, value);
       if (accepted) setDraft("");
-      return;
+      return accepted;
     }
     setDraft("");
-    const accepted = await onSend(value);
+    const accepted = await onSend(value, images);
     if (!accepted) setDraft((current) => current || value);
+    return accepted;
   };
 
   const saveTitle = async () => {

@@ -513,8 +513,27 @@ model AiChatMessage {
   toolCalls String?
   createdAt DateTime      @default(now())
   feedback  AiMessageFeedback?
+  attachments AiChatAttachment[]
 
   @@index([sessionId, createdAt])
+}
+
+/// Images the seller attached to a chat turn. The bytes are sealed with the
+/// shop's business envelope key (never stored in the clear) and deleted with
+/// their message. Metadata stays readable so history can lay out the
+/// thumbnails before the image itself is requested.
+model AiChatAttachment {
+  id         String        @id @default(cuid())
+  messageId  String
+  message    AiChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  mediaType  String
+  sizeBytes  Int
+  width      Int?
+  height     Int?
+  payload    String
+  createdAt  DateTime      @default(now())
+
+  @@index([messageId])
 }
 
 /// Ledger AI-13 — per-answer quality feedback. One row per assistant message

@@ -196,7 +196,8 @@ function WilayaCommuneSelectCore({
     : "flex flex-col gap-3";
 
   const labelClass = size === "sm" ? "text-xs" : "text-xs";
-  const triggerClass = size === "sm" ? "h-8" : "";
+  // Each picker fills its grid cell, like every other form field.
+  const triggerClass = size === "sm" ? "h-8 w-full" : "w-full";
 
   return (
     <div className={containerClass}>

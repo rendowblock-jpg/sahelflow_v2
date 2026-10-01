@@ -297,6 +297,11 @@ export function StatCard({
             {trendLabel ? <span>{trendLabel}</span> : null}
             {subtitle ? <span>{subtitle}</span> : null}
           </div>
+        ) : sparkDated ? (
+          // Reserve the read-out line: exploring the chart swaps the date in
+          // here, and the card must not grow under the pointer (which would
+          // move the chart away and end the hover in a flicker loop).
+          <div className="mt-1.5 min-h-5" aria-hidden="true" data-stat-readout-slot="true" />
         ) : null}
       </div>
 

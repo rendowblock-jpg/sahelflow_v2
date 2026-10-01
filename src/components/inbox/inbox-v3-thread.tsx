@@ -479,6 +479,7 @@ export function InboxV3Thread({
       key={activeChat.conversationId}
       chat={activeChat}
       orderCandidate={selectedCandidate}
+      threadMessages={messages}
       canUpdateConversation={canUpdateConversation}
       refreshChats={refreshChats}
     />
@@ -493,6 +494,7 @@ export function InboxV3Thread({
       <InboxThreadHeader
         activeChat={activeChat}
         selectedCandidate={selectedCandidate}
+        threadMessages={messages}
         isMobile={isMobile}
         isWhatsAppConversation={isWhatsAppConversation}
         canUpdateConversation={canUpdateConversation}

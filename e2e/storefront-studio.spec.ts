@@ -32,7 +32,7 @@ async function addSection(page: Page, name: RegExp) {
 
 async function inspector(page: Page) {
   const result = page.locator(
-    '[data-storefront-studio="v2"] > div.grid > aside:last-child',
+    '[data-storefront-studio="v2"] [data-studio-inspector="true"]',
   );
   await expect(result).toBeVisible();
   return result;

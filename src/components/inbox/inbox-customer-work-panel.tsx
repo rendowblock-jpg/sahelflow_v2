@@ -94,11 +94,14 @@ function riskClass(score: number, blacklisted: boolean): string {
 export function InboxCustomerWorkPanel({
   chat,
   orderCandidate,
+  threadMessages,
   canUpdateConversation,
   refreshChats,
 }: {
   chat: InboxChat;
   orderCandidate: InboxMessage | null;
+  /** The open thread: the order is read from the customer's message burst. */
+  threadMessages?: InboxMessage[];
   canUpdateConversation: boolean;
   refreshChats: () => Promise<void>;
 }) {
@@ -365,6 +368,7 @@ export function InboxCustomerWorkPanel({
                     messageId={orderCandidate.id}
                     messageBody={orderCandidate.body}
                     knownPhone={chat.phone}
+                    sourceMessages={threadMessages}
                   />
                 </div>
               ) : (
