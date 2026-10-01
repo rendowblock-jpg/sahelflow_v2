@@ -1,0 +1,85 @@
+/*
+ * Automation motion. The flow is a pipeline, so it moves like one: a signal
+ * runs down the connectors of a live automation, blocks settle in when they
+ * are added, and a running automation breathes. Everything here stops under
+ * prefers-reduced-motion.
+ */
+
+@keyframes sf-flow-signal {
+  to {
+    background-position: 0 16px;
+  }
+}
+
+@keyframes sf-node-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sf-live-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 45%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--primary) 0%, transparent);
+  }
+}
+
+@keyframes sf-flow-step {
+  0%,
+  100% {
+    transform: none;
+  }
+  35% {
+    transform: translateY(-3px) scale(1.12);
+  }
+}
+
+/* Connector: a dashed line; on a live automation the dashes travel downward. */
+.sf-flow-line {
+  background-image: linear-gradient(to bottom, var(--border) 55%, transparent 45%);
+  background-size: 2px 8px;
+  background-repeat: repeat-y;
+}
+
+.sf-flow-line[data-live="true"] {
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--primary) 75%, transparent) 55%,
+    transparent 45%
+  );
+  animation: sf-flow-signal 0.9s linear infinite;
+}
+
+.sf-node-in {
+  animation: sf-node-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--sf-i, 0) * 45ms);
+}
+
+.sf-live-ring {
+  animation: sf-live-ring 2.4s ease-out infinite;
+}
+
+/* Template previews: on hover the steps light up in run order. */
+.group:hover .sf-flow-step,
+.group:focus-within .sf-flow-step {
+  animation: sf-flow-step 0.7s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+  animation-delay: calc(var(--sf-i, 0) * 110ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-flow-line[data-live="true"],
+  .sf-node-in,
+  .sf-live-ring,
+  .group:hover .sf-flow-step,
+  .group:focus-within .sf-flow-step {
+    animation: none !important;
+  }
+}

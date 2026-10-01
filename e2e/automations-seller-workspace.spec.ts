@@ -155,9 +155,13 @@ test.describe("Automations seller workspace", () => {
       await card.locator(`[data-automation-edit="${automation.id}"]`).click();
 
       await expect(page.locator("#automation-name-v2")).toHaveValue(name);
+      // The flow builder opens on the first step; each step is edited by
+      // selecting its block on the canvas.
       await expect(page.locator("#automation-wait-0")).toHaveValue("45");
-      await expect(page.locator("#automation-recheck-1")).toBeVisible();
+      await page.locator('[data-flow-node="step-2"]').click();
       await expect(page.locator("#automation-message-2")).toHaveValue(message);
+      await page.locator('[data-flow-node="step-1"]').click();
+      await expect(page.locator("#automation-recheck-1")).toBeVisible();
 
       await page.locator("#automation-recheck-1").click();
       await expect(
@@ -165,6 +169,32 @@ test.describe("Automations seller workspace", () => {
       ).toBeVisible();
     } finally {
       await page.request.delete(`/api/automations/${automation.id}`);
+    }
+  });
+
+  test("a template opens prefilled in the flow builder and saves as a live automation", async ({
+    page,
+  }) => {
+    const name = `E2E Template Flow ${Date.now().toString().slice(-7)}`;
+    await page.goto("/automations/new?template=confirm-reminder");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.locator('[data-flow-node="trigger"]')).toBeVisible();
+    await expect(page.locator('[data-flow-node="step-3"]')).toBeVisible();
+    await page.locator("#automation-name-v2").fill(name);
+    await page.locator('[data-automation-save="true"]').click();
+
+    await page.waitForURL(/\/automations\?tab=my/, { timeout: 30_000 });
+    const listResponse = await page.request.get("/api/automations");
+    const created = ((await listResponse.json()).automations as Array<{ id: string; name: string; steps: string | null }>).find(
+      (candidate) => candidate.name === name,
+    );
+    expect(created).toBeTruthy();
+    try {
+      expect(JSON.parse(created!.steps ?? "[]")).toHaveLength(4);
+      await expect(page.locator(`[data-automation-card="${created!.id}"]`)).toContainText(name);
+    } finally {
+      await page.request.delete(`/api/automations/${created!.id}`);
     }
   });
 });
