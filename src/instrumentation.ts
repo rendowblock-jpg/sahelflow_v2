@@ -1,5 +1,8 @@
-export async function register(): Promise<void> {
-  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+// The packaged desktop starts the workers after the workspace hydrates, or
+// after this bounded fallback if the UI-ready signal never arrives.
+const PACKAGED_WORKER_START_FALLBACK_MS = 45_000;
+
+async function startBackgroundWorkers(): Promise<void> {
   const [
     { startWhatsAppOutboxWorker },
     { startWhatsAppInboundWorker },
@@ -36,6 +39,33 @@ export async function register(): Promise<void> {
   startLogRetentionWorker();
   startMetaCapiWorker();
   startAbandonedCartWorker();
+}
+
+export async function register(): Promise<void> {
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  const {
+    isPackagedDesktopRuntime,
+    onBackgroundStartRequested,
+    requestBackgroundStart,
+  } = await import("./lib/runtime/background-start");
+  if (isPackagedDesktopRuntime()) {
+    // Next.js awaits register() before answering the first request, so the
+    // workers must not load here: see lib/runtime/background-start.ts.
+    const startDeferred = () => {
+      void startBackgroundWorkers().catch((error: unknown) => {
+        console.error("[sahelflow] background workers failed to start", error);
+      });
+      void import("./lib/runtime/compile-cache").then(
+        ({ schedulePackagedCompileCacheFlush }) =>
+          schedulePackagedCompileCacheFlush(),
+      );
+    };
+    onBackgroundStartRequested(startDeferred);
+    setTimeout(requestBackgroundStart, PACKAGED_WORKER_START_FALLBACK_MS).unref?.();
+  } else {
+    await startBackgroundWorkers();
+  }
 
   // FD-063 MCP-11: tell a client-launched stdio bridge where this launch
   // listens. Best-effort: without it agents simply cannot connect.

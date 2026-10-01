@@ -3,7 +3,6 @@ import "@/app/rtl-form-controls.css";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { LicenseBoundary } from "@/components/license/license-boundary";
 import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
-import { SpeculationRules } from "@/components/shared/speculation-rules";
 import { isAuthenticated, isAuthSetup } from "@/lib/auth/server";
 import { getLicenseAuthorityProjection } from "@/lib/license/license-authority";
 import { redirect } from "next/navigation";
@@ -49,7 +48,6 @@ export default async function DashboardRouteLayout({
           finish behind their route loading surface.
         */}
         <RuntimeUiReadyBeacon />
-        <SpeculationRules />
         {children}
         {/*
           The route template wraps EVERY slot, so the empty `@modal` slot
