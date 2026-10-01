@@ -1,8 +1,8 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useInboxRouteParams } from "@/hooks/inbox/use-inbox-route-params";
 import { useI18n } from "@/hooks/use-i18n";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import type { WhatsAppStatus } from "@/lib/whatsapp/types";
@@ -45,9 +45,9 @@ export type {
  * exact historical surface, so no component consumer changes.
  */
 export function useInboxWorkspace() {
-  const searchParams = useSearchParams();
+  const { params: inboxParams } = useInboxRouteParams();
   const requestedConversationId = normalizeDeepLinkConversationId(
-    searchParams.get("conversation"),
+    inboxParams.get("conversation"),
   );
   const { t, locale } = useI18n();
   const copy = useCallback<InboxWorkspaceCopy>(

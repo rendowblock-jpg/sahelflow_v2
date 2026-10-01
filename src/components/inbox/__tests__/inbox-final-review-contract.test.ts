@@ -69,7 +69,7 @@ describe("Inbox final review invariants", () => {
     expect(workspace).toContain(
       "const [returningToQueue, setReturningToQueue] = useState(false)",
     );
-    expect(workspace).toContain("if (!returningToQueue || requestedConversationId) return");
+    expect(workspace).toContain("if (!ownsUrl || !returningToQueue || requestedConversationId) return");
     expect(workspace).toContain('router.replace("/inbox")');
     expect(workspace).toContain("clearActiveChat();");
     expect(workspace).toContain("onBackToQueue={handleBackToQueue}");
