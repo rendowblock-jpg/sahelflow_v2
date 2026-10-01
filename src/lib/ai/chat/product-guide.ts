@@ -284,6 +284,23 @@ export const PRODUCT_GUIDES: readonly ProductGuide[] = [
     ],
   },
   {
+    id: "google-sheets",
+    title: "Import orders from Google Sheets and write statuses back",
+    route: "/settings?group=commerce",
+    steps: [
+      "Open Settings → Commerce channels (/settings?group=commerce) and find Google Sheets. No Google Cloud setup is needed.",
+      "Press \"Copy script\" (SahelFlow asks for the PIN). In the orders sheet: Extensions → Apps Script, replace everything with the script, Save.",
+      "Deploy → New deployment → Web app. Execute as: Me; Who has access: Anyone. Deploy, authorize (Advanced → Go to the project → Allow), then copy the Web app URL.",
+      "Paste the URL in SahelFlow and press \"Connect\". Check the detected columns (customer, phone, wilaya and product are required) and press \"Check rows\" to preview.",
+      "Match any product names that differ from your SahelFlow products once; SahelFlow remembers them.",
+      "New rows then arrive automatically (every 2–30 minutes) as orders waiting in the Confirmation Queue, never twice; each row's \"SahelFlow Status\" column shows the live status, order number and tracking.",
+    ],
+    notes: [
+      "The script runs on the seller's own Google account and only writes the four \"SahelFlow …\" columns it adds.",
+      "Rows that cannot be imported get a short reason in the SahelFlow Status column.",
+    ],
+  },
+  {
     id: "meta-pixel",
     title: "Meta Pixel for storefronts",
     route: "/settings?group=meta-pixel",

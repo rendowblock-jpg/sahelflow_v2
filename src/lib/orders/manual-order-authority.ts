@@ -13,6 +13,7 @@ export const CANONICAL_ORDER_SOURCES = [
   "ai_chat",
   "csv",
   "xlsx",
+  "google_sheets",
 ] as const;
 
 export type CanonicalOrderSource = (typeof CANONICAL_ORDER_SOURCES)[number];

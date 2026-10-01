@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 import {
-  GoogleSheetsIcon,
   ShopifyIcon,
   WooCommerceIcon,
   YouCanIcon,
@@ -364,10 +363,6 @@ export function CommerceIntegrationsPanel({
           })}
         </div>
 
-        <div className="flex items-center gap-2 rounded-surface border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-          <GoogleSheetsIcon className="size-4 shrink-0" aria-hidden="true" />
-          <span>{t("common.comingSoon")}: Google Sheets</span>
-        </div>
       </CardContent>
 
       <Dialog

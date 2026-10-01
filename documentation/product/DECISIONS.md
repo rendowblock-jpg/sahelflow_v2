@@ -1549,3 +1549,30 @@ rotation. Creating it can fail without affecting startup. Contract:
 A Founder decision can be changed only by a new numbered decision that states
 exactly what it supersedes. Engineering documents, code comments, agents, tests,
 issues and external research cannot silently amend this register.
+
+## FD-069 — Google Sheets through a seller-owned Apps Script bridge (2026-10-01, ADOPTED)
+
+The Founder's 2026-10-01 directive ("implementing a full professional Google
+Sheets integration"), with the constraints "I can't get the GCP and need to start
+selling tomorrow" and "don't want friction for the user". Launch scope: import
+orders from a sheet and write status back.
+
+Sellers connect a sheet without any Google Cloud project, app verification or
+SahelFlow-held Google credential. SahelFlow generates an Apps Script carrying a
+per-installation random key; the seller pastes it into their sheet and deploys
+it as a web app that runs as them. The desktop app calls only that web app
+(strict `script.google.com/…/exec` allowlist, key in the POST body, schema-checked
+answers). The previous service-account path stays unshipped: one shared key
+inside every installation would expose every customer's sheets.
+
+Each row gets a stable `SahelFlow ID` written by the script, so sorting or
+deleting rows never breaks de-duplication or write-back. Rows enter through the
+existing canonical file-import authority as source `google_sheets` (pending,
+server catalog prices, one order per sheet order, idempotent); unmatched product
+names are matched once by the seller. Write-back fills only the four
+`SahelFlow …` columns: localized status, order number, tracking, or a plain
+reason when a row could not be imported.
+
+Not live-certified until the Founder runs one real sheet end to end (connect,
+import, confirm, ship, observe the sheet). Until then it is presented as a setup
+guide, not as a certified provider claim.
