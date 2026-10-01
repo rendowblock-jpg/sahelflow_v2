@@ -284,13 +284,38 @@ describe("buildAssessmentInputFromOrder", () => {
     expect(input!.order.totalPrice).toBe(3000);
     expect(input!.order.wilaya).toBe("Alger");
     expect(input!.customerHistory).toBeDefined();
-    expect(input!.customerHistory!.totalOrders).toBe(3);
+    // History is what the customer had done before this order: the two
+    // earlier orders, never the assessed order itself.
+    expect(input!.customerHistory!.totalOrders).toBe(2);
     expect(input!.customerHistory!.deliveredCount).toBe(1);
     expect(input!.customerHistory!.returnedCount).toBe(1);
     expect(input!.customerHistory!.isBlacklisted).toBe(false);
     expect(input!.wilayaRisk).not.toBeNull();
     expect(input!.wilayaRisk!.riskLevel).toBe(2);
     expect(input!.wilayaRisk!.confirmationRate).toBe(0.78);
+  });
+
+  it("never lets the order itself or later orders leak into its history", async () => {
+    const customer = await seedTestCustomer(db);
+    const first = await seedOrderForCustomer(customer.id, { status: "returned", totalPrice: 2000 });
+    await db.order.update({ where: { id: first.id }, data: { createdAt: new Date("2026-01-01T10:00:00Z") } });
+    const assessed = await seedOrderForCustomer(customer.id, { status: "returned", totalPrice: 3000 });
+    await db.order.update({ where: { id: assessed.id }, data: { createdAt: new Date("2026-02-01T10:00:00Z") } });
+    const later = await seedOrderForCustomer(customer.id, { status: "refused", totalPrice: 4000 });
+    await db.order.update({ where: { id: later.id }, data: { createdAt: new Date("2026-03-01T10:00:00Z") } });
+
+    const input = await buildAssessmentInputFromOrder(assessed.id);
+    expect(input!.customerHistory!.totalOrders).toBe(1);
+    expect(input!.customerHistory!.returnedCount).toBe(1);
+    expect(input!.customerHistory!.refusedCount).toBe(0);
+    expect(input!.customerHistory!.lastOrderDate?.toISOString()).toBe("2026-01-01T10:00:00.000Z");
+
+    // A first-time buyer has no history at all, so "new customer" can fire.
+    const fresh = await seedTestCustomer(db);
+    const firstOrder = await seedOrderForCustomer(fresh.id);
+    const freshInput = await buildAssessmentInputFromOrder(firstOrder.id);
+    expect(freshInput!.customerHistory!.totalOrders).toBe(0);
+    expect(freshInput!.customerHistory!.lastOrderDate).toBeNull();
   });
 
   it("returns null wilayaRisk when no profile is seeded for the wilaya", async () => {
@@ -651,7 +676,7 @@ describe("soft-delete exclusion (AUDIT Pattern 5)", () => {
     await db.order.update({ where: { id: historyOrder.id }, data: { deletedAt: new Date() } });
     const input = await buildAssessmentInputFromOrder(order.id);
     expect(input).not.toBeNull();
-    expect(input!.customerHistory!.totalOrders).toBe(2); // 3 created, 1 soft-deleted
+    expect(input!.customerHistory!.totalOrders).toBe(1); // 2 earlier orders, 1 soft-deleted
     expect(input!.customerHistory!.returnedCount).toBe(0); // the returned one was soft-deleted
   });
 

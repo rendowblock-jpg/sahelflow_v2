@@ -2,6 +2,13 @@ import "server-only";
 
 import type { ServiceContext } from "@/lib/data/service-base";
 import { getRiskConfig, getRiskRules } from "./service";
+import { customerHistoryBefore, type HistoryOrderRow } from "./history";
+import {
+  buildSellerInsights,
+  openRiskyOrders,
+  type InsightOrderRow,
+  type SellerInsights,
+} from "./seller-insights";
 import { assessRisk } from "./scoring";
 import type {
   RiskAssessment,
@@ -53,6 +60,11 @@ export interface RiskAnalyticsReport {
     triggerCount: number;
     enabled: boolean;
   }>;
+  /** Seller view: real outcomes, losses and whether the score predicts returns. */
+  insights: SellerInsights;
+  /** Open orders the score flags high/critical, highest first. */
+  openRisky: ReturnType<typeof openRiskyOrders>;
+  openRiskyCount: number;
   kpis: {
     avgRiskScore: number;
     confirmationRate: number;
@@ -63,16 +75,23 @@ export interface RiskAnalyticsReport {
   };
 }
 
-interface HistoryAccumulator {
-  totalOrders: number;
-  deliveredCount: number;
-  returnedCount: number;
-  refusedCount: number;
-  cancelledCount: number;
-  totalSpent: number;
-  firstOrderDate: Date | null;
-  lastOrderDate: Date | null;
-}
+const ORDER_SELECT = {
+  id: true,
+  orderNumber: true,
+  status: true,
+  totalPrice: true,
+  deliveryCost: true,
+  wilaya: true,
+  commune: true,
+  address: true,
+  phone: true,
+  source: true,
+  createdAt: true,
+  customerId: true,
+  customer: { select: { name: true } },
+  delivery: { select: { cost: true } },
+  items: { select: { productId: true, productName: true } },
+} as const;
 
 /**
  * Compute risk analytics with a bounded query count.
@@ -91,35 +110,34 @@ export async function getRiskAnalyticsReport(
   const since = new Date();
   since.setDate(since.getDate() - days);
 
-  const [config, rules, orders] = await Promise.all([
+  const [config, rules, orders, openOrders] = await Promise.all([
     getRiskConfig(context),
     getRiskRules(context),
     db.order.findMany({
       where: { createdAt: { gte: since }, deletedAt: null },
-      select: {
-        id: true,
-        status: true,
-        totalPrice: true,
-        wilaya: true,
-        commune: true,
-        address: true,
-        phone: true,
-        source: true,
-        createdAt: true,
-        customerId: true,
-      },
+      select: ORDER_SELECT,
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    }),
+    // Open orders are actionable whatever the reporting window.
+    db.order.findMany({
+      where: { status: { in: ["draft", "pending", "confirmed"] }, deletedAt: null },
+      select: ORDER_SELECT,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 300,
     }),
   ]);
 
-  const customerIds = [...new Set(orders.map((order) => order.customerId))];
-  const wilayas = [...new Set(orders.map((order) => order.wilaya))];
+  const inWindow = new Set(orders.map((order) => order.id));
+  const scoredOrders = [...orders, ...openOrders.filter((open) => !inWindow.has(open.id))];
+  const customerIds = [...new Set(scoredOrders.map((order) => order.customerId))];
+  const wilayas = [...new Set(scoredOrders.map((order) => order.wilaya))];
   const [historyRows, customers, wilayaProfiles, blacklistedCustomerCount] =
     await Promise.all([
       customerIds.length
         ? db.order.findMany({
             where: { customerId: { in: customerIds }, deletedAt: null },
             select: {
+              id: true,
               customerId: true,
               status: true,
               totalPrice: true,
@@ -152,29 +170,11 @@ export async function getRiskAnalyticsReport(
       db.customer.count({ where: { isBlacklisted: true, deletedAt: null } }),
     ]);
 
-  const historyMap = new Map<string, HistoryAccumulator>();
+  const historyByCustomer = new Map<string, HistoryOrderRow[]>();
   for (const row of historyRows) {
-    const history = historyMap.get(row.customerId) ?? {
-      totalOrders: 0,
-      deliveredCount: 0,
-      returnedCount: 0,
-      refusedCount: 0,
-      cancelledCount: 0,
-      totalSpent: 0,
-      firstOrderDate: null,
-      lastOrderDate: null,
-    };
-    history.totalOrders += 1;
-    if (row.status === "delivered") history.deliveredCount += 1;
-    if (row.status === "returned") history.returnedCount += 1;
-    if (row.status === "refused") history.refusedCount += 1;
-    if (row.status === "cancelled") history.cancelledCount += 1;
-    if (!["cancelled", "draft"].includes(row.status)) {
-      history.totalSpent += row.totalPrice;
-    }
-    history.firstOrderDate ??= row.createdAt;
-    history.lastOrderDate = row.createdAt;
-    historyMap.set(row.customerId, history);
+    const list = historyByCustomer.get(row.customerId) ?? [];
+    list.push(row);
+    historyByCustomer.set(row.customerId, list);
   }
   const blacklistMap = new Map(
     customers.map((customer) => [customer.id, customer.isBlacklisted]),
@@ -191,8 +191,19 @@ export async function getRiskAnalyticsReport(
     createdAt: Date;
     totalPrice: number;
   }> = [];
-  for (const order of orders) {
-    const history = historyMap.get(order.customerId);
+  const insightRows: InsightOrderRow[] = [];
+  const openRows: InsightOrderRow[] = [];
+  for (const order of scoredOrders) {
+    // History as it stood when the order was placed — never the order
+    // itself or later outcomes (that leaked results into their own scores).
+    const isBlacklisted = blacklistMap.get(order.customerId) ?? false;
+    const prior = customerHistoryBefore(
+      historyByCustomer.get(order.customerId) ?? [],
+      order,
+      order.customerId,
+      isBlacklisted,
+    );
+    const history = prior.totalOrders > 0 || isBlacklisted ? prior : undefined;
     const profile = wilayaMap.get(order.wilaya);
     const input: RiskAssessmentInput = {
       order: {
@@ -204,13 +215,7 @@ export async function getRiskAnalyticsReport(
         source: order.source,
         createdAt: order.createdAt,
       },
-      customerHistory: history
-        ? {
-            customerId: order.customerId,
-            ...history,
-            isBlacklisted: blacklistMap.get(order.customerId) ?? false,
-          }
-        : undefined,
+      customerHistory: history,
       wilayaRisk: profile
         ? {
             riskLevel: profile.riskLevel,
@@ -219,15 +224,53 @@ export async function getRiskAnalyticsReport(
           }
         : null,
     };
+    const assessment = assessRisk(input, config, rules);
+    const row: InsightOrderRow = {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      wilaya: order.wilaya,
+      source: order.source,
+      totalPrice: order.totalPrice,
+      cost: order.delivery?.cost ?? order.deliveryCost ?? null,
+      products: order.items.map((item) => ({
+        key: item.productId ?? item.productName,
+        name: item.productName,
+      })),
+      customerId: order.customerId,
+      customerName: order.customer?.name ?? null,
+      isBlacklisted,
+      level: assessment.level,
+      score: assessment.score,
+      factors: assessment.factors.map((factor) => ({
+        id: factor.id,
+        labelKey: factor.labelKey,
+        points: factor.points,
+      })),
+      overrides: assessment.triggeredRules.map((ruleId) =>
+        ruleId === "auto_blacklist"
+          ? "risk.rules.blacklistHold"
+          : rules.find((rule) => rule.id === ruleId)?.labelKey ?? ruleId,
+      ),
+      createdAt: order.createdAt,
+    };
+    if (["draft", "pending", "confirmed"].includes(order.status)) openRows.push(row);
+    if (!inWindow.has(order.id)) continue;
+    insightRows.push(row);
     assessments.push({
       orderId: order.id,
-      assessment: assessRisk(input, config, rules),
+      assessment,
       status: order.status,
       wilaya: order.wilaya,
       createdAt: order.createdAt,
       totalPrice: order.totalPrice,
     });
   }
+  const insights = buildSellerInsights(insightRows);
+  const openRisky = openRiskyOrders(openRows);
+  const openRiskyCount = openRows.filter(
+    (row) => row.level === "high" || row.level === "critical",
+  ).length;
 
   const totalOrders = assessments.length;
   const levels: RiskLevel[] = ["low", "medium", "high", "critical"];
@@ -409,12 +452,6 @@ export async function getRiskAnalyticsReport(
     (row) =>
       row.assessment.level === "high" || row.assessment.level === "critical",
   ).length;
-  const returnedHighRisk = assessments.filter(
-    (row) =>
-      (row.assessment.level === "high" ||
-        row.assessment.level === "critical") &&
-      (row.status === "returned" || row.status === "refused"),
-  ).length;
 
   return {
     totalOrders,
@@ -425,13 +462,18 @@ export async function getRiskAnalyticsReport(
     attentionFactors,
     trend,
     ruleTriggers,
+    insights,
+    openRisky,
+    openRiskyCount,
     kpis: {
       avgRiskScore,
       confirmationRate,
       returnRate,
       highRiskOrderCount,
       blacklistedCustomerCount,
-      potentialSavingsDzd: returnedHighRisk * 600,
+      // Real delivery cost lost on parcels the score had flagged before
+      // shipping (replaces a fixed 600 DZD-per-return estimate).
+      potentialSavingsDzd: insights.outcomes.preventableLossDzd,
     },
   };
 }

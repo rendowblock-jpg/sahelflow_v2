@@ -10,6 +10,8 @@
  */
 import "server-only";
 
+import { customerHistoryBefore } from "./history";
+
 import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { resolveWilayaProfileKey } from "@/lib/wilaya-risk/canonicalize";
@@ -186,21 +188,12 @@ export async function buildAssessmentInputFromOrder(
   });
   if (!order) return null;
 
-  // Customer history
+  // Customer history as it stood when this order was placed.
   const customerOrders = await db.order.findMany({
     where: { customerId: order.customerId, deletedAt: null },
-    select: { status: true, totalPrice: true, createdAt: true },
+    select: { id: true, status: true, totalPrice: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
-
-  const totalOrders = customerOrders.length;
-  const deliveredCount = customerOrders.filter((o) => o.status === "delivered").length;
-  const returnedCount = customerOrders.filter((o) => o.status === "returned").length;
-  const refusedCount = customerOrders.filter((o) => o.status === "refused").length;
-  const cancelledCount = customerOrders.filter((o) => o.status === "cancelled").length;
-  const totalSpent = customerOrders
-    .filter((o) => !["cancelled", "draft"].includes(o.status))
-    .reduce((sum, o) => sum + o.totalPrice, 0);
 
   // Customer blacklist flag (stored in customer notes or a dedicated field)
   const customer = await db.customer.findFirst({
@@ -226,18 +219,12 @@ export async function buildAssessmentInputFromOrder(
       source: order.source,
       createdAt: order.createdAt,
     },
-    customerHistory: {
-      customerId: order.customerId,
-      totalOrders,
-      deliveredCount,
-      returnedCount,
-      refusedCount,
-      cancelledCount,
-      totalSpent,
-      firstOrderDate: totalOrders > 0 ? customerOrders[0]!.createdAt : null,
-      lastOrderDate: totalOrders > 0 ? customerOrders[customerOrders.length - 1]!.createdAt : null,
+    customerHistory: customerHistoryBefore(
+      customerOrders,
+      { id: orderId, createdAt: order.createdAt },
+      order.customerId,
       isBlacklisted,
-    },
+    ),
     wilayaRisk: wilayaRiskRow
       ? {
           riskLevel: wilayaRiskRow.riskLevel,
