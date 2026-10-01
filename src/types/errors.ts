@@ -71,6 +71,17 @@ export class ConflictError extends SahelFlowError {
   }
 }
 
+/** The hosted connected platform has not been enrolled on this installation yet (409). */
+export class ConnectedPlatformNotEnrolledError extends SahelFlowError {
+  constructor() {
+    super(
+      "Connected platform is not enrolled for this installation",
+      "CONNECTED_PLATFORM_NOT_ENROLLED",
+      409,
+    );
+  }
+}
+
 /** External service error (502). */
 export class ExternalServiceError extends SahelFlowError {
   constructor(

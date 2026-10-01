@@ -25,6 +25,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.releaseHistory.empty": "No published releases yet.",
     "storefront.releaseHistory.loading": "Loading release history…",
     "storefront.releaseHistory.loadFailed": "Could not load release history.",
+    "storefront.releaseHistory.notConnected":
+      "Release history appears here once this store is published online with SahelFlow.",
     "storefront.releaseHistory.rollbackFailed":
       "Rollback failed. The current live release was kept.",
     "storefront.releaseHistory.rolledBack":
@@ -45,6 +47,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.releaseHistory.loading": "Chargement de l’historique…",
     "storefront.releaseHistory.loadFailed":
       "Impossible de charger l’historique des versions.",
+    "storefront.releaseHistory.notConnected":
+      "L’historique des versions apparaît ici dès que cette boutique est publiée en ligne avec SahelFlow.",
     "storefront.releaseHistory.rollbackFailed":
       "La restauration a échoué. La version active actuelle a été conservée.",
     "storefront.releaseHistory.rolledBack":
@@ -64,6 +68,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.releaseHistory.empty": "لا توجد إصدارات منشورة بعد.",
     "storefront.releaseHistory.loading": "جارٍ تحميل سجل الإصدارات…",
     "storefront.releaseHistory.loadFailed": "تعذر تحميل سجل الإصدارات.",
+    "storefront.releaseHistory.notConnected":
+      "يظهر سجل الإصدارات هنا بمجرد نشر هذا المتجر على الإنترنت عبر SahelFlow.",
     "storefront.releaseHistory.rollbackFailed":
       "فشل الاسترجاع. تم الإبقاء على الإصدار الحي الحالي.",
     "storefront.releaseHistory.rolledBack":

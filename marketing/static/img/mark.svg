@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="9 7 50 50" width="512" height="512" role="img" aria-label="SahelFlow">
+  <defs>
+    <linearGradient id="sky" x1="17" y1="9" x2="42" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7DD3FC"/>
+      <stop offset="1" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <linearGradient id="deep" x1="22" y1="30" x2="47" y2="55" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0284C7"/>
+      <stop offset="1" stop-color="#0C4A6E"/>
+    </linearGradient>
+    <mask id="top">
+      <rect width="64" height="64" fill="#000"/>
+      <circle cx="31.5" cy="23" r="14" fill="#fff"/>
+      <circle cx="35.4" cy="25.6" r="10.6" fill="#000"/>
+      <rect x="31.5" y="23" width="33" height="41" fill="#000"/>
+    </mask>
+    <mask id="bottom">
+      <rect width="64" height="64" fill="#000"/>
+      <circle cx="32.5" cy="41" r="14" fill="#fff"/>
+      <circle cx="28.6" cy="38.4" r="10.6" fill="#000"/>
+      <rect x="0" y="0" width="32.5" height="41" fill="#000"/>
+    </mask>
+  </defs>
+  <rect width="64" height="64" fill="url(#sky)" mask="url(#top)"/>
+  <rect width="64" height="64" fill="url(#deep)" mask="url(#bottom)"/>
+  <circle cx="47.2" cy="12.4" r="3.1" fill="#7DD3FC"/>
+</svg>

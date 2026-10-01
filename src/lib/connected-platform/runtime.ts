@@ -13,6 +13,7 @@ import {
   updateConnectedInstallationTokens,
 } from "./installation-authority";
 import { generateConnectedKeyPair } from "./payload-crypto";
+import { ConnectedPlatformNotEnrolledError } from "@/types/errors";
 
 export const CONNECTED_CONTROL_TOKEN_SECRET = LEGACY_CONNECTED_CONTROL_TOKEN_SECRET;
 export const CONNECTED_BACKUP_TOKEN_SECRET = LEGACY_CONNECTED_BACKUP_TOKEN_SECRET;
@@ -196,7 +197,7 @@ export async function loadStorefrontRuntime(
   receiptKeys: StorefrontReceiptKeys;
 }>> {
   const authority = await ensureConnectedInstallationAuthority(context);
-  if (!authority.controlToken) throw new Error("Connected platform is not enrolled for this installation");
+  if (!authority.controlToken) throw new ConnectedPlatformNotEnrolledError();
   const storedKeys = await getSecret(context, STOREFRONT_RECEIPT_KEYS_SECRET);
   const receiptKeys = storedKeys
     ? parseReceiptKeys(storedKeys)

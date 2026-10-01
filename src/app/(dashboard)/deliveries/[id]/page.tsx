@@ -14,7 +14,7 @@ import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import { assertTrustedAction, requireTrustedAction } from "@/lib/identity/authorization";
 import { deliveryProviderConfig, orderStatusStyles } from "@/lib/shared";
-import { statusI18nKey } from "@/lib/shared/status-colors";
+import { deliveryStatusI18nKey, statusI18nKey } from "@/lib/shared/status-colors";
 import { formatDZD, formatDate } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -53,7 +53,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
   const terminalFailure = ["returned", "refused", "failed"].includes(delivery.status);
   const timelineItems = statusOrder.map((status, index) => ({
     id: status,
-    title: t(`deliveries.status.${status}`),
+    title: t(deliveryStatusI18nKey(status)),
     timestamp: index === 0 ? formatDate(delivery.createdAt, locale) : undefined,
     icon: index === currentIdx ? ("truck" as const) : ("package" as const),
     tone:
@@ -101,13 +101,13 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
         }
         actions={
           <Badge variant={delivery.status === "delivered" ? "default" : terminalFailure ? "destructive" : "secondary"}>
-            {t(`deliveries.status.${delivery.status}`)}
+            {t(deliveryStatusI18nKey(delivery.status))}
           </Badge>
         }
       />
 
       <div className="card-grid-4">
-        <StatCard label={t("deliveries.table.status")} value={t(`deliveries.status.${delivery.status}`)} icon={<Package />} />
+        <StatCard label={t("deliveries.table.status")} value={t(deliveryStatusI18nKey(delivery.status))} icon={<Package />} />
         <StatCard label={t("deliveries.table.cost")} value={delivery.cost == null ? "—" : formatDZD(delivery.cost, locale)} icon={<Banknote />} />
         <StatCard label={t("orders.total")} value={formatDZD(delivery.order.totalPrice, locale)} icon={<Banknote />} />
         <StatCard label={t("deliveries.estimatedDelivery")} value={delivery.estimatedDelivery ? formatDate(delivery.estimatedDelivery, locale) : "—"} icon={<Calendar />} />

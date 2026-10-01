@@ -120,7 +120,7 @@ jobs:
           path: .sf-inventory/phase5-experience
           if-no-files-found: error
           include-hidden-files: true
-          retention-days: 14
+          retention-days: 7
 
   fresh-auth:
     name: Fresh install + owner login (1366x768)
@@ -170,7 +170,7 @@ jobs:
           path: test-results
           if-no-files-found: warn
           include-hidden-files: true
-          retention-days: 14
+          retention-days: 7
 
   representative-desktop:
     name: Representative LTR + Arabic RTL workbenches
@@ -225,7 +225,7 @@ jobs:
           path: test-results
           if-no-files-found: warn
           include-hidden-files: true
-          retention-days: 14
+          retention-days: 7
 
   phase5-experience-gate:
     name: Required Phase 5 Experience gate

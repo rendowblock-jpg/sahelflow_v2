@@ -56,6 +56,8 @@ const eslintConfig = [
       "data/**",
       "scripts/**",
       "sidecars/**",
+      // Static marketing site (sahelflow.com): plain build script + assets
+      "marketing/**",
       // Agent tooling (standalone bun scripts, not app code)
       "sf-audit/**",
       "sf-browser/**",

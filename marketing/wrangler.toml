@@ -1,0 +1,19 @@
+# sahelflow.com on Cloudflare (Workers static assets). Deployed by the "Deploy sahelflow.com" workflow.
+name = "sahelflow-site"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+# Apex + www on the SahelFlow-owned zone.
+[[routes]]
+pattern = "sahelflow.com"
+custom_domain = true
+
+[[routes]]
+pattern = "www.sahelflow.com"
+custom_domain = true
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "404-page"
+run_worker_first = ["/get/*"]
