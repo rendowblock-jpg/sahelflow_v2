@@ -18,18 +18,94 @@
 
   const toggle = document.querySelector("[data-nav-toggle]");
   const nav = document.querySelector("[data-nav]");
+  const desktop = window.matchMedia("(min-width: 961px)");
+  const closeNav = () => {
+    if (!toggle || !nav) return;
+    nav.classList.remove("is-open");
+    toggle.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("nav-open");
+  };
   if (toggle && nav) {
     toggle.addEventListener("click", () => {
       const open = nav.classList.toggle("is-open");
       toggle.setAttribute("aria-expanded", String(open));
+      document.body.classList.toggle("nav-open", open);
     });
     nav.addEventListener("click", (event) => {
-      if (event.target.closest("a")) {
-        nav.classList.remove("is-open");
-        toggle.setAttribute("aria-expanded", "false");
-      }
+      if (event.target.closest("a")) closeNav();
     });
   }
+
+  /* Product mega menu: hover intent on desktop, click everywhere, Esc and
+     outside clicks close it, arrow keys move between modules. */
+  const megaRoot = document.querySelector("[data-mega-root]");
+  const megaToggle = document.querySelector("[data-mega-toggle]");
+  if (megaRoot && megaToggle) {
+    let hoverTimer = 0;
+    const setMega = (open) => {
+      megaRoot.classList.toggle("is-open", open);
+      megaToggle.setAttribute("aria-expanded", String(open));
+    };
+    megaToggle.addEventListener("click", () => setMega(!megaRoot.classList.contains("is-open")));
+    megaRoot.addEventListener("pointerenter", (event) => {
+      if (!desktop.matches || event.pointerType === "touch") return;
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => setMega(true), 90);
+    });
+    megaRoot.addEventListener("pointerleave", (event) => {
+      if (!desktop.matches || event.pointerType === "touch") return;
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => setMega(false), 220);
+    });
+    megaRoot.addEventListener("focusout", (event) => {
+      if (!megaRoot.contains(event.relatedTarget)) setMega(false);
+    });
+    megaRoot.addEventListener("keydown", (event) => {
+      const items = [...megaRoot.querySelectorAll(".mega a")];
+      const index = items.indexOf(document.activeElement);
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setMega(true);
+        items[index < 0 ? 0 : (index + 1) % items.length]?.focus();
+      } else if (event.key === "ArrowUp" && index >= 0) {
+        event.preventDefault();
+        items[(index - 1 + items.length) % items.length]?.focus();
+      }
+    });
+    document.addEventListener("click", (event) => {
+      if (!megaRoot.contains(event.target)) setMega(false);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (megaRoot.classList.contains("is-open")) {
+        setMega(false);
+        megaToggle.focus();
+      }
+      closeNav();
+    });
+  }
+
+  /* Product page: the module chips follow the section in view. */
+  const subnav = document.querySelector("[data-subnav]");
+  if (subnav) {
+    const links = new Map([...subnav.querySelectorAll("[data-spy]")].map((link) => [link.dataset.spy, link]));
+    const spy = new IntersectionObserver(
+      (entries) =>
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          links.forEach((link) => link.classList.remove("is-active"));
+          const active = links.get(entry.target.id);
+          if (!active) return;
+          active.classList.add("is-active");
+          const row = active.parentElement;
+          const target = active.offsetLeft - (row.clientWidth - active.clientWidth) / 2;
+          row.scrollTo({ left: target, behavior: reduced ? "auto" : "smooth" });
+        }),
+      { rootMargin: "-45% 0px -50% 0px" },
+    );
+    document.querySelectorAll(".feature-row[id]").forEach((row) => spy.observe(row));
+  }
+
   document.querySelectorAll("[data-set-lang]").forEach((link) =>
     link.addEventListener("click", () => {
       try {
