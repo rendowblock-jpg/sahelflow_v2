@@ -171,7 +171,9 @@ fn founder_offline_checkpoint(authority: &serde_json::Value) -> bool {
                 .and_then(serde_json::Value::as_str);
             let exact_customer = authority.get("channel").and_then(serde_json::Value::as_str)
                 == Some("internal")
-                && licensing.get("ownedHostSuffix").and_then(serde_json::Value::as_str)
+                && licensing
+                    .get("ownedHostSuffix")
+                    .and_then(serde_json::Value::as_str)
                     == Some("sahelflow.com")
                 && matches!(
                     (version, decision),
