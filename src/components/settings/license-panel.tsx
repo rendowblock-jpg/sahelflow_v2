@@ -1,28 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Calendar, Key, Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
 
+import { LicenseRequestCode } from "@/components/license/license-request-code";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/hooks/use-i18n";
 import { useLicense } from "@/hooks/use-license";
 import type { LicenseClientStatus } from "@/stores/license-store";
 import { intlLocale } from "@/lib/utils";
 
-const statusKeys: Record<LicenseClientStatus, string> = {
+export const licenseStatusKeys: Record<LicenseClientStatus, string> = {
   valid: "license.status.valid",
   missing: "license.status.missing",
   unavailable: "license.status.unavailable",
@@ -37,27 +39,29 @@ const statusKeys: Record<LicenseClientStatus, string> = {
   transfer_required: "license.status.transferRequired",
 };
 
-export function LicensePanel() {
-  const { t, locale } = useI18n();
-  const { projection, isLoading, error: authorityError, refresh } = useLicense();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [keyInput, setKeyInput] = useState("");
+/**
+ * The two licence mutations, shared by the Settings panel and the first-run
+ * lockout. Each refreshes the client entitlement projection on success.
+ */
+export function useLicenseActions() {
+  const { t } = useI18n();
+  const { refresh } = useLicense();
   const [error, setError] = useState<string | null>(null);
   const [activating, setActivating] = useState(false);
   const [requestingTrial, setRequestingTrial] = useState(false);
 
-  async function activate() {
+  async function activate(keyText: string): Promise<boolean> {
     setError(null);
     let entitlement: unknown;
     try {
-      entitlement = JSON.parse(keyInput);
+      entitlement = JSON.parse(keyText);
     } catch {
       setError(t("license.invalidJson"));
-      return;
+      return false;
     }
     if (!entitlement || typeof entitlement !== "object") {
       setError(t("license.invalidFormat"));
-      return;
+      return false;
     }
     setActivating(true);
     try {
@@ -70,17 +74,17 @@ export function LicensePanel() {
         body: JSON.stringify(entitlement),
       });
       if (!response.ok) throw new Error(t("license.activationFailed"));
-      setDialogOpen(false);
-      setKeyInput("");
       await refresh();
+      return true;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t("license.activationFailed"));
+      return false;
     } finally {
       setActivating(false);
     }
   }
 
-  async function startOrRecoverTrial() {
+  async function startOrRecoverTrial(): Promise<boolean> {
     setError(null);
     setRequestingTrial(true);
     try {
@@ -90,12 +94,87 @@ export function LicensePanel() {
       });
       if (!response.ok) throw new Error(t("license.trialFailed"));
       await refresh();
+      return true;
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t("license.trialFailed"));
+      return false;
     } finally {
       setRequestingTrial(false);
     }
   }
+
+  return { error, setError, activating, requestingTrial, activate, startOrRecoverTrial };
+}
+
+type LicenseActions = ReturnType<typeof useLicenseActions>;
+
+/** Paste-and-activate dialog for a Founder-signed licence. */
+export function LicenseKeyDialog({
+  actions,
+  trigger,
+}: {
+  actions: LicenseActions;
+  trigger: ReactNode;
+}) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [keyInput, setKeyInput] = useState("");
+
+  async function submit() {
+    if (await actions.activate(keyInput)) {
+      setOpen(false);
+      setKeyInput("");
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) actions.setError(null);
+      }}
+    >
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("license.activatePermanent")}</DialogTitle>
+          <DialogDescription>{t("license.protectedBindingHelp")}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          <Label htmlFor="license-entitlement">{t("license.licenseKey")}</Label>
+          <Textarea
+            id="license-entitlement"
+            value={keyInput}
+            onChange={(event) => setKeyInput(event.target.value)}
+            placeholder={t("license.pasteJsonPlaceholder")}
+            className="min-h-32 font-mono text-caption"
+            dir="ltr"
+            spellCheck={false}
+            autoComplete="off"
+          />
+          {actions.error ? (
+            <p className="text-body-sm text-destructive" role="alert">{actions.error}</p>
+          ) : null}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            {t("common.cancel")}
+          </Button>
+          <Button onClick={() => void submit()} disabled={!keyInput.trim() || actions.activating}>
+            {actions.activating && <Loader2 className="me-1.5 h-4 w-4 animate-spin" aria-hidden="true" />}
+            {t("license.activate")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function LicensePanel() {
+  const { t, locale } = useI18n();
+  const { projection, isLoading, error: authorityError } = useLicense();
+  const actions = useLicenseActions();
 
   if (isLoading) {
     return (
@@ -133,7 +212,7 @@ export function LicensePanel() {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-muted-foreground">{t("license.statusLabel")}</span>
-          <Badge variant={valid ? "default" : "destructive"}>{t(statusKeys[status])}</Badge>
+          <Badge variant={valid ? "default" : "destructive"}>{t(licenseStatusKeys[status])}</Badge>
         </div>
 
         {projection?.type && (
@@ -184,10 +263,10 @@ export function LicensePanel() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => void startOrRecoverTrial()}
-            disabled={requestingTrial}
+            onClick={() => void actions.startOrRecoverTrial()}
+            disabled={actions.requestingTrial}
           >
-            {requestingTrial && (
+            {actions.requestingTrial && (
               <Loader2 className="me-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
             )}
             {t("license.startOrRecoverTrial")}
@@ -201,43 +280,25 @@ export function LicensePanel() {
         )}
 
         {permanentActivationAvailable && (
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
+          <LicenseKeyDialog
+            actions={actions}
+            trigger={
               <Button size="sm">
                 <Key className="me-1.5 h-4 w-4" aria-hidden="true" />
                 {t("license.enterKey")}
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t("license.activatePermanent")}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-2 py-4">
-                <Label htmlFor="license-entitlement">{t("license.licenseKey")}</Label>
-                <Input
-                  id="license-entitlement"
-                  value={keyInput}
-                  onChange={(event) => setKeyInput(event.target.value)}
-                  placeholder={t("license.pasteJsonPlaceholder")}
-                  className="font-mono text-xs"
-                  autoComplete="off"
-                />
-                <p className="text-xs text-muted-foreground">{t("license.protectedBindingHelp")}</p>
-                {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  {t("common.cancel")}
-                </Button>
-                <Button onClick={() => void activate()} disabled={!keyInput.trim() || activating}>
-                  {activating && <Loader2 className="me-1.5 h-4 w-4 animate-spin" aria-hidden="true" />}
-                  {t("license.activate")}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            }
+          />
         )}
-        {error && !dialogOpen && <p className="text-sm text-destructive" role="alert">{error}</p>}
+        {actions.error ? <p className="text-sm text-destructive" role="alert">{actions.error}</p> : null}
+
+        {!permanent ? (
+          <div className="space-y-2 rounded-control border bg-surface-1 p-3">
+            <p className="text-sm font-medium text-foreground">{t("license.request.panelTitle")}</p>
+            <p className="text-xs text-muted-foreground">{t("license.lockout.buyDescription")}</p>
+            <LicenseRequestCode />
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

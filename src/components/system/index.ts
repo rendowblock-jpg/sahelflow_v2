@@ -31,6 +31,7 @@ export { Row, RowGroup, type RowTone } from "@/components/system/row";
 export { Field, type FieldControlProps } from "@/components/system/field";
 export { IconTile, type IconTileSize, type IconTileTone } from "@/components/system/icon-tile";
 export { Toolbar, ToolbarGroup, ToolbarSpacer } from "@/components/system/toolbar";
+export { EntryShell, type EntryPoint } from "@/components/system/entry-shell";
 
 /**
  * The canonical empty / loading / failure surface.

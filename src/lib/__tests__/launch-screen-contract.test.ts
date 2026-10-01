@@ -9,7 +9,7 @@ function read(path: string): string {
 // FD-068: the launch screen covers the wait but never becomes a second
 // startup authority. FD-025's hidden main window still decides readiness.
 describe("FD-068 launch screen", () => {
-  const module = read("src-tauri/src/launch_screen.rs");
+  const launchModule = read("src-tauri/src/launch_screen.rs");
   const template = read("src-tauri/src/launch_screen.html");
   const desktop = read("src-tauri/src/lib.rs");
   const capability = JSON.parse(read("src-tauri/capabilities/default.json")) as {
@@ -17,25 +17,25 @@ describe("FD-068 launch screen", () => {
   };
 
   it("is presentation only: no navigation, scripts, IPC or business data", () => {
-    expect(module).toContain('LAUNCH_WINDOW_LABEL: &str = "launch"');
-    expect(module).not.toContain(".navigate(");
-    expect(module).not.toContain("set_cookie");
-    expect(module).not.toContain("runtime-endpoint");
+    expect(launchModule).toContain('LAUNCH_WINDOW_LABEL: &str = "launch"');
+    expect(launchModule).not.toContain(".navigate(");
+    expect(launchModule).not.toContain("set_cookie");
+    expect(launchModule).not.toContain("runtime-endpoint");
     expect(template.toLowerCase()).not.toContain("<script");
     expect(template).not.toMatch(/https?:\/\//);
     expect(capability.windows).toEqual(["main"]);
   });
 
   it("never shares the workspace title that installed evidence keys on", () => {
-    expect(module).toContain('LAUNCH_WINDOW_TITLE: &str = "SahelFlow - Starting"');
-    expect(module).not.toMatch(/\.title\("SahelFlow"\)/);
+    expect(launchModule).toContain('LAUNCH_WINDOW_TITLE: &str = "SahelFlow - Starting"');
+    expect(launchModule).not.toMatch(/\.title\("SahelFlow"\)/);
   });
 
   it("closes as soon as the main window is visible, success or recovery", () => {
-    const loop = module.slice(module.indexOf("fn follow_startup"));
+    const loop = launchModule.slice(launchModule.indexOf("fn follow_startup"));
     expect(loop).toContain("if workspace_visible(&app)");
     expect(loop).toContain("window.destroy()");
-    expect(module).toContain('WORKSPACE_WINDOW_LABEL: &str = "main"');
+    expect(launchModule).toContain('WORKSPACE_WINDOW_LABEL: &str = "main"');
   });
 
   it("opens after the startup trace resets and never during root rotation", () => {

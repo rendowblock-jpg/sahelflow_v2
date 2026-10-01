@@ -79,10 +79,19 @@ Set the repository variable
 (primary|recovery). The customer release compiles both in and the build
 refuses anything outside `sahelflow.com`.
 
-## Paid licences (later, before the first paying customer)
+## Paid licences
 
-The permanent signing key must stay offline with the Founder, so this one is
-done on your own PC:
-`bun scripts/licensing-keygen.ts permanent permanent-2026-10 %USERPROFILE%\sahelflow-keys`.
-Merge its public entry into `SF_LICENSE_PERMANENT_PUBLIC_KEYS` and keep the
-private file offline for `scripts/sign-license-entitlement.ts`.
+1. Once, on your own PC (the permanent key never leaves it):
+   `bun scripts/licensing-keygen.ts permanent permanent-2026-10 %USERPROFILE%\sahelflow-keys`
+   and merge its public entry into the repository variable
+   `SF_LICENSE_PERMANENT_PUBLIC_KEYS` (it ships in the next release).
+2. For each customer, after BaridiMob/CCP payment, they send you their
+   **request code** (`SFLR1.…`) from the licence screen or Settings → Licence.
+3. Turn it into a licence and sign it:
+   `bun scripts/license-request-to-claims.ts "SFLR1.…" --members 5 > claims.json`
+   `bun scripts/sign-license-entitlement.ts claims.json %USERPROFILE%\sahelflow-keys\permanent-2026-10.private > licence.json`
+4. Send `licence.json`'s contents back on WhatsApp; the customer pastes it
+   into **Activate my licence**.
+
+The request code names the installation only; it grants nothing without your
+signature, and activation re-checks every claim.

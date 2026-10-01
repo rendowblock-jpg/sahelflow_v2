@@ -2,24 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Loader2, Lock, ShieldCheck } from "lucide-react";
+import { ArrowRight, Check, Circle, Loader2, ShieldCheck } from "lucide-react";
 
+import { useEntryBrand } from "@/components/auth/entry-brand";
+import { PinInput } from "@/components/auth/pin-input";
 import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
+import { EntryShell } from "@/components/system";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { cn } from "@/lib/utils";
+
+function Rule({ met, label }: { met: boolean; label: string }) {
+  return (
+    <li className={cn("flex items-center gap-2 text-body-sm transition-colors", met ? "text-success" : "text-muted-foreground")}>
+      {met ? <Check className="size-4" aria-hidden="true" /> : <Circle className="size-4" aria-hidden="true" />}
+      <span>{label}</span>
+    </li>
+  );
+}
 
 export default function SetupPage() {
   const router = useRouter();
   const { t } = useI18n();
+  const brand = useEntryBrand();
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,6 +39,9 @@ export default function SetupPage() {
       })
       .catch(() => undefined);
   }, [router]);
+
+  const longEnough = pin.length >= 8;
+  const matches = longEnough && pin === confirmPin;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -68,84 +77,69 @@ export default function SetupPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-background p-4">
-      <RuntimeUiReadyBeacon />
-      <Card className="w-full max-w-sm border shadow-none">
-        <CardHeader className="pb-4 text-center">
-          <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-control border bg-muted text-muted-foreground">
-            <Lock className="size-5" aria-hidden="true" />
-          </div>
-          <CardTitle className="text-xl font-semibold tracking-tight">
-            {t("auth.setupTitle")}
-          </CardTitle>
-          <CardDescription>{t("auth.setupDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="pin">{t("auth.createPin")}</Label>
-              <Input
-                id="pin"
-                type="password"
-                value={pin}
-                onChange={(event) => setPin(event.target.value)}
-                placeholder="••••••••"
-                autoFocus
-                autoComplete="new-password"
-                disabled={loading}
-                className="h-11 text-center text-lg tracking-[0.3em]"
-                inputMode="numeric"
-                minLength={8}
-                required
-              />
-            </div>
+    <EntryShell
+      {...brand}
+      title={t("auth.setupHeading")}
+      description={t("auth.setupLede")}
+      beforeContent={<RuntimeUiReadyBeacon />}
+    >
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <div className="space-y-2">
+          <Label htmlFor="pin">{t("auth.createPin")}</Label>
+          <PinInput
+            id="pin"
+            value={pin}
+            onChange={(event) => setPin(event.target.value)}
+            placeholder="••••••••"
+            autoFocus
+            autoComplete="new-password"
+            disabled={loading}
+            minLength={8}
+            required
+          />
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPin">{t("auth.confirmPin")}</Label>
-              <Input
-                id="confirmPin"
-                type="password"
-                value={confirmPin}
-                onChange={(event) => setConfirmPin(event.target.value)}
-                placeholder="••••••••"
-                autoComplete="new-password"
-                disabled={loading}
-                className="h-11 text-center text-lg tracking-[0.3em]"
-                inputMode="numeric"
-                minLength={8}
-                required
-              />
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirmPin">{t("auth.confirmPin")}</Label>
+          <PinInput
+            id="confirmPin"
+            value={confirmPin}
+            onChange={(event) => setConfirmPin(event.target.value)}
+            placeholder="••••••••"
+            autoComplete="new-password"
+            disabled={loading}
+            minLength={8}
+            required
+          />
+        </div>
 
-            {error ? (
-              <p className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive" role="alert">
-                {error}
-              </p>
-            ) : null}
+        <ul className="space-y-1.5" aria-live="polite">
+          <Rule met={longEnough} label={t("auth.rule.length")} />
+          <Rule met={matches} label={t("auth.rule.match")} />
+        </ul>
 
-            <Button
-              type="submit"
-              className="h-10 w-full"
-              disabled={loading || pin.length < 8 || confirmPin.length < 8}
-            >
-              {loading ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <>
-                  <Check className="me-2 size-4" aria-hidden="true" />
-                  {t("auth.createPinButton")}
-                  <ArrowRight className="ms-2 size-4 rtl:rotate-180" aria-hidden="true" />
-                </>
-              )}
-            </Button>
+        {error ? (
+          <p className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
 
-            <div className="flex items-start gap-2 rounded-control border bg-muted/20 p-3 text-xs text-muted-foreground">
-              <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              <span>{t("auth.pinSecurityNote")}</span>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </main>
+        <Button type="submit" size="lg" className="w-full" disabled={loading || !longEnough || confirmPin.length < 8}>
+          {loading ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <>
+              {t("auth.createPinButton")}
+              <ArrowRight className="ms-2 size-4 rtl:rotate-180" aria-hidden="true" />
+            </>
+          )}
+        </Button>
+
+        <div className="flex items-start gap-2.5 rounded-control border bg-surface-1 p-3 text-body-sm text-muted-foreground">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+          <span>{t("auth.pinSecurityNote")}</span>
+        </div>
+      </form>
+    </EntryShell>
   );
 }

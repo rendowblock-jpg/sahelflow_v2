@@ -165,6 +165,7 @@ run to 2,235 lines. These primitives are the layer that ends that.
 | `Rail` | The always-present Agents/Inbox rails | Disclosure-capable side surface that is present only when it carries content |
 | `Toolbar` | Per-surface filter/action rows | Consistent control grouping, wrap behaviour, RTL-safe |
 | `DataTable` | Per-page table markup; the dead `premium-table` | Sorting, selection, empty/loading/error, sticky header, virtualization hook |
+| `EntryShell` | Four bespoke centred cards on setup, sign-in, join and the licence lockout | One brand rail (identity, promise, three proof points, support line) beside one task column with the language switch; the rail folds into an identity row below the large breakpoint |
 
 Rules:
 
