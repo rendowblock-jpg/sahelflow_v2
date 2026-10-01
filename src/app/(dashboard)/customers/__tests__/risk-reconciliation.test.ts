@@ -81,7 +81,8 @@ describe("customer detail risk reconciliation (R3-c)", () => {
     expect(page).toContain("risk.assessment.action");
     // Same level/action vocabularies as the orders surface.
     expect(page).toContain("risk.level.${level}");
-    expect(page).toContain("risk.action.${action}");
+    expect(page).toContain("riskActionCopyKey");
+    expect(page).not.toContain("risk.action.${action}");
   });
 
   it("shows a subtle note only when the two tiers disagree", () => {
