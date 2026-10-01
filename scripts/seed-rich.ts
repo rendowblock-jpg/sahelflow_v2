@@ -33,8 +33,9 @@ import { deriveAiSessionTitle } from "@/lib/ai/chat/session-title";
 // the keyfile when SF_MASTER_KEY env isn't set) uses the SAME key as the seed.
 // Without this, the dev server generates/uses a different key → PII decryption
 // fails → customer names show as ciphertext blobs in tables.
+import { randomBytes } from "crypto";
 import { existsSync, writeFileSync, mkdirSync } from "fs";
-import { join } from "path";
+import { join, resolve } from "path";
 
 // Generate a random dev master key if not provided (NEVER hardcode a key
 // in source — a leaked repo would let anyone decrypt every dev DB's PII).
@@ -45,13 +46,13 @@ process.env.SF_MASTER_KEY = SEED_KEY;
 
 function randomHexKey(): string {
   // 32 bytes = 64 hex chars = AES-256 key
-  const bytes = new Uint8Array(32);
-  for (let i = 0; i < 32; i++) bytes[i] = Math.floor(Math.random() * 256);
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return randomBytes(32).toString("hex");
 }
 
-// Persist the key to data/master.key (the keyfile the dev server reads)
-const dataDir = join(process.cwd(), "data");
+// Persist the key to <data root>/master.key — the keyfile the server reads.
+// Honour SF_DATA_DIR exactly like the app's data root, so a seeded sandbox and
+// the server that opens it always share one key.
+const dataDir = process.env.SF_DATA_DIR ? resolve(process.env.SF_DATA_DIR) : join(process.cwd(), "data");
 const keyFilePath = join(dataDir, "master.key");
 if (!existsSync(keyFilePath)) {
   mkdirSync(dataDir, { recursive: true });
