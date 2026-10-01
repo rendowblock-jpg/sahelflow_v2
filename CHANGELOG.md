@@ -8,6 +8,12 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-01 — FD-065 authorizes Internal.39
+
+- The Founder's directive ("make the next signed release") adopts **FD-065**: one signed successor, app `1.0.0-internal.39` / MSI `1.0.0.39`, packaging protected `main` `cbb27fbc…` (#469) since Internal.38. Tree-identical to reviewed head `e37de858…`. Source gates: CI `36811358867`, Phase 5 `36811358707`, Phase 6-7 `36811358722`.
+- The line includes FD-063 MCP, FD-064 order extraction, F-16…F-42, storefront Studio (#466/#467) and the automation flow builder (#468).
+- Publication facts (tag, MSI digest, signed-run id, publish time) are recorded only after the signed train succeeds. Until then Internal.38 remains the updater-served package. Installed truth remains Internal.37. No ledger row converts.
+
 ### 2026-09-30 — source frontier #464; documentation reconciled
 
 - PR #464 merged to protected `main` `bc840ca7…`: F-29…F-33 (chart hover, Agents, Settings, heading layer, Arabic placeholders), on #463 (F-16…F-28). Source only. Not a release and not an installed observation.

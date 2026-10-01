@@ -1431,6 +1431,60 @@ Binding boundaries:
   expectation (`frc2-2.0.0`). Gemini work keeps synthetic/redacted inputs; no
   live-provider or installed claim is made from source, mocks or CI.
 
+
+## FD-065 — One signed successor (Internal.39) packaging protected main through #469
+
+The Founder's 2026-10-01 directive ("make the next signed release"), issued
+after live verification that protected `main` is `cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e`
+(PR #469) and that this commit is tree-identical (`9b32b86a15753bcbfb3d2c969514e789c7ed8aa8`)
+to the reviewed PR #469 head `e37de85834dd51d80b2d753960bab8f24f61a031`,
+authorizes exactly one combined signed successor (Internal.39) packaging the
+protected-main frontier since Internal.38 (release source
+`9bf899274074f6f20935d224b96e8b1d14fc9690`). FD-065 is ADOPTED by that same
+2026-10-01 directive. The packaged frontier is that exact tree, including:
+
+- #452/#453: Internal.38 publication record and frontier reconcile.
+- #454/#459–#462: FD-063 local MCP agentic surface and FD-064 order extraction
+  (offline reader first, Gemini as the incomplete-reading completer, seller
+  review before an order exists). MCP-14 stays withdrawn.
+- #458: premium wave (bidi, notifications, search, settings modal, inbox, agents).
+- #463/#464: Founder review F-16…F-33 (Agents, Settings, in-place search,
+  interactive stat cards, Deep Ocean mark, chart-hover colour boundary,
+  Arabic placeholders).
+- #465: documentation reconcile to #464.
+- #466/#467: storefront Studio, storefronts hub, themed public store, and the
+  four-step new-store setup with a live preview. Dependency audit cleared
+  (Next.js 16.3.6).
+- #468: automation flow builder, live hub, and templates that run as promised.
+- #469: risk scoring without look-ahead, and a Risk page built around seller
+  decisions (F-42).
+
+Required source gates at the reviewed head, zero failed checks: CI run
+`36811358867`, Phase 5 run `36811358707`, Phase 6-7 run `36811358722`.
+Native and installed-MSI lanes were risk-classified skips on that source-only
+head. The full installed-MSI battery is required on this release-authority
+head. Certification cites product head
+`cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e`.
+
+Binding boundaries:
+
+- The successor packages exactly the protected-main frontier at the release
+  head. FD-045 evidence rules are unchanged: release-authority PR, exact-head
+  review, required gates, expected-head merge, signed run, in-place preserved
+  install.
+- Sequencing — one combined campaign. Internal.38 was published and not
+  Founder-installed, so it cannot observe F-16…F-42. This decision supersedes
+  only FD-062's candidate choice. Every FD-062 publication fact remains
+  retained evidence. The Founder installs Internal.39 in place (no logout, no
+  AppData reset, no protected-auth clearing) and runs the FD-058 campaign
+  once on that installed candidate. Ledger rows convert only on that
+  observation, and only for rows the candidate contains.
+- The retained #306 logout row executes LAST. The Founder rotates the
+  chat-transited GitHub PAT after the merge window.
+- No customer-online, Beta, Stable or paid-deployment authority is created.
+  #230 and the zero-budget boundary are unaffected. Publication is not
+  installation.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

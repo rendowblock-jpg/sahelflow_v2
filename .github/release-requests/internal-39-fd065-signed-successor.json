@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.39 FD-065 signed successor publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.39",
+  "windowsMsiVersion": "1.0.0.39",
+  "channel": "internal",
+  "releaseMode": "founder-offline-only",
+  "ownedHostSuffix": null,
+  "authorityDecision": "FD-065",
+  "licenseServiceUrl": null,
+  "certification": {
+    "productSha": "cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e",
+    "phase5RunId": 36811358707,
+    "phase67RunId": 36811358722,
+    "ciRunId": 36811358867
+  },
+  "reason": "ADOPTED release authority — FD-065 (documentation/product/DECISIONS.md) adopted by the Founder's 2026-10-01 directive ('make the next signed release'). Authorizes exactly one combined signed successor (Internal.39) packaging the exact protected-main frontier since Internal.38 (release source 9bf899274074f6f20935d224b96e8b1d14fc9690) through PR #469. Product head cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e is tree-identical (9b32b86a15753bcbfb3d2c969514e789c7ed8aa8) to the reviewed PR #469 head e37de85834dd51d80b2d753960bab8f24f61a031. The packaged line includes #452/#453 publication reconcile, #454/#459–#462 FD-063 MCP and FD-064 order extraction, #458 premium wave, #463/#464 Founder review F-16…F-33, #465 docs reconcile, #466/#467 storefront Studio and four-step new-store setup, #468 automation flow builder, and #469 F-42 risk scoring without look-ahead. Required source gates passed at that exact head with zero failed checks: CI run 36811358867, Phase 5 run 36811358707, Phase 6-7 run 36811358722 (native/Windows lanes risk-classified skips on the source-only head — the full installed-MSI battery is required on this release-authority head). Founder-offline-only: no owned host, no SF_LICENSE_SERVICE_URL, no customer trial, no Beta or Stable claim; #230 unaffected. Sequencing: Internal.38 was published and not installed, so it cannot observe F-16…F-42. This decision supersedes only FD-062's candidate choice. The Founder installs Internal.39 in place and runs the FD-058 campaign once on that candidate. Ledger rows convert only on installed observation. The retained #306 logout row executes LAST. Publication is not installation."
+}

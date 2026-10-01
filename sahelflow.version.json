@@ -2,8 +2,8 @@
   "formatVersion": 1,
   "product": "SahelFlow",
   "productMajor": 1,
-  "version": "1.0.0-internal.38",
-  "windowsMsiVersion": "1.0.0.38",
+  "version": "1.0.0-internal.39",
+  "windowsMsiVersion": "1.0.0.39",
   "channel": "internal",
   "updater": {
     "enabled": true,
@@ -19,7 +19,7 @@
   },
   "licensing": {
     "releaseMode": "founder-offline-only",
-    "authorityDecision": "FD-062",
+    "authorityDecision": "FD-065",
     "ownedHostSuffix": null
   },
   "runtimeProtocolVersion": 1,
