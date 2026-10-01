@@ -152,8 +152,11 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 /* Active conversation: one neutral fill (bg-accent on the row) — the
  * sidebar is navigation, so selection carries no accent colour. */
 
-/* One reading column shared by the log, the notices and the composer, so
- * their edges align at every canvas width (sidebar expanded or collapsed). */
+/* One column shared by the log, the notices and the composer, so their edges
+ * align at every canvas width (sidebar expanded or collapsed). It fills the
+ * canvas: the gutters grow with the width instead of a fixed measure leaving
+ * dead bands on both sides (Founder, Internal.39 — F-45). Bubbles carry their
+ * own maximum width, so long lines stay readable. */
 [data-ai-decision-canvas="true"] {
   container-name: ai-canvas;
   container-type: inline-size;
@@ -162,20 +165,12 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 
 .sf-ai-column {
   width: 100%;
-  margin-inline: auto;
-  max-width: 46rem;
   padding-inline: 1rem;
 }
 
 @container ai-canvas (min-width: 44rem) {
   .sf-ai-column {
-    padding-inline: 1.5rem;
-  }
-}
-
-@container ai-canvas (min-width: 72rem) {
-  .sf-ai-column {
-    max-width: 52rem;
+    padding-inline: clamp(1.5rem, 3cqi, 3rem);
   }
 }
 
@@ -333,10 +328,9 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 }
 
 /*
- * One reading column for the Inbox thread. The message log and the composer
- * dock share the same measure and gutters, so their edges line up at every
- * pane width — when the sidebar collapses to its rail the column widens with
- * the thread instead of leaving the log and composer on different axes.
+ * One column for the Inbox thread. The message log and the composer dock
+ * share the same gutters, so their edges line up at every pane width — when
+ * the sidebar collapses to its rail the column widens with the thread.
  */
 [data-inbox-thread] {
   container-name: inbox-thread;
@@ -345,26 +339,14 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-conversation][aria-curre
 
 .sf-thread-column {
   width: 100%;
-  margin-inline: auto;
-  max-width: 50rem;
   padding-inline: 0.75rem;
 }
 
+/* The column fills the thread pane like a messaging app: incoming bubbles sit
+ * on the start edge, outgoing on the end edge, and the gutters grow with the
+ * pane rather than a capped centred measure (Founder, Internal.39 — F-45). */
 @container inbox-thread (min-width: 40rem) {
   .sf-thread-column {
-    padding-inline: 1.5rem;
-  }
-}
-
-@container inbox-thread (min-width: 64rem) {
-  .sf-thread-column {
-    max-width: 60rem;
-    padding-inline: 2rem;
-  }
-}
-
-@container inbox-thread (min-width: 80rem) {
-  .sf-thread-column {
-    max-width: 68rem;
+    padding-inline: clamp(1.25rem, 3cqi, 3rem);
   }
 }

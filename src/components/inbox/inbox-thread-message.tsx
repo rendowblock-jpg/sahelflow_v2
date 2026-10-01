@@ -310,7 +310,7 @@ export const MessageBubble = memo(function MessageBubble({
       <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
         <div
           className={cn(
-            "max-w-[min(38rem,80%)] rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
+            "max-w-[min(46rem,75%)] rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
             inbound
               ? "border-border/70 bg-background text-foreground"
               : "border-primary/20 bg-primary-soft text-foreground",

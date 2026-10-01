@@ -225,7 +225,7 @@ const MessageBubble = memo(function MessageBubble({
         {message.content ||
         mcpRequest ||
         (message.streaming && !message.attachments?.length) ? (
-          <div className="max-w-[85%] rounded-surface bg-muted px-4 py-2.5 text-body leading-7 text-foreground">
+          <div className="max-w-[min(85%,46rem)] rounded-surface bg-muted px-4 py-2.5 text-body leading-7 text-foreground">
             {mcpRequest ? (
               // An external agent's call is shown as what it asked for; the
               // sealed arguments stay in the proposal the seller reviews.
