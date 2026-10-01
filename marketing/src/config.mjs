@@ -10,9 +10,12 @@ export const SITE = {
   // the newest signed installer from the updater manifest.
   downloadUrl: "/get/windows",
   trialDays: 7,
-  // Licence price in DZD shown on /pricing. null shows "price on WhatsApp";
-  // set a number (e.g. 25000) once the Founder fixes the price.
-  licencePrice: null,
+  // Licence pricing in DZD (Founder, 2026-10-01): 35 000 DA, with a launch
+  // offer at 17 000 DA for the first 20 sellers. Set launchOfferPrice to null
+  // when the offer ends; set licencePrice to null to show "price on WhatsApp".
+  licencePrice: 35000,
+  launchOfferPrice: 17000,
+  launchOfferSeats: 20,
   locales: ["ar", "fr", "en"],
   defaultLocale: "ar",
 };

@@ -777,6 +777,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .plan.is-featured { background: radial-gradient(120% 80% at 50% 0%, rgba(56, 189, 248, .18), transparent 60%), #0b1729; border-color: rgba(56, 189, 248, .45); box-shadow: 0 40px 90px -40px rgba(14, 165, 233, .55); transform: translateY(-10px); }
 .plan-badge { position: absolute; top: -13px; inset-inline-start: 30px; height: 26px; display: inline-flex; align-items: center; padding-inline: 12px; border-radius: 999px; background: var(--sky); color: #021320; font-size: 12.5px; font-weight: 600; }
 .plan-name { font-size: 18px; font-weight: 600; }
+.plan-offer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--sand); font-size: 14px; font-weight: 500; }
+.offer-tag { display: inline-flex; align-items: center; height: 24px; padding-inline: 9px; border-radius: 999px; background: rgba(245, 184, 91, .16); border: 1px solid rgba(245, 184, 91, .45); color: var(--sand); font-size: 12.5px; font-weight: 700; direction: ltr; }
+.plan-price del, .mini-plan del { color: var(--muted); font-size: .5em; font-weight: 500; text-decoration-thickness: 2px; text-decoration-color: rgba(248, 113, 113, .8); }
+.mini-plan del { font-size: 14px; }
+.mini-plan { position: relative; }
+.mini-plan .offer-tag { justify-self: start; margin-bottom: 2px; }
+.plan-price strong, .mini-plan strong, .mini-plan del { white-space: nowrap; }
 .plan-price { display: grid; gap: 4px; }
 .plan-price strong { font-size: clamp(30px, 3.2vw, 40px); font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
 .plan-price span { color: var(--muted); font-size: 14px; }

@@ -11,6 +11,24 @@ const esc = (value) =>
 /** Icons nested inside an SVG scene need explicit geometry. */
 const sized = (icon, n = 24) => icon.replace("<svg ", `<svg width="${n}" height="${n}" `);
 const call = (value) => (typeof value === "function" ? value(SITE.trialDays) : value);
+const money = (amount, locale) =>
+  `${new Intl.NumberFormat("fr-FR").format(amount).replace(/[\u202f\u00a0 ]/g, "\u00a0")}\u00a0${locale === "ar" ? "دج" : "DA"}`;
+/** Current licence price and the launch offer, from SITE (never invented). */
+function licencePricing(locale) {
+  const p = PAGES[locale].pricing.licence;
+  if (!SITE.licencePrice) return { price: p.ask, ask: true, offer: null };
+  if (!SITE.launchOfferPrice) return { price: money(SITE.licencePrice, locale), ask: false, offer: null };
+  return {
+    price: money(SITE.launchOfferPrice, locale),
+    ask: false,
+    offer: {
+      regular: money(SITE.licencePrice, locale),
+      label: p.offer(SITE.launchOfferSeats),
+      then: p.then(money(SITE.licencePrice, locale)),
+      save: p.save,
+    },
+  };
+}
 const moreLink = (url, label, cls = "") =>
   `<a class="more-link ${cls}" href="${url}"><span>${esc(label)}</span>${ICONS.arrow}</a>`;
 
@@ -563,9 +581,7 @@ function vault(t, s, locale) {
 
 function pricingTeaser(t, locale) {
   const p = PAGES[locale];
-  const price = SITE.licencePrice
-    ? `${new Intl.NumberFormat("fr-FR").format(SITE.licencePrice)} ${locale === "ar" ? "دج" : "DA"}`
-    : p.pricing.licence.ask;
+  const pricing = licencePricing(locale);
   return `<section class="section teaser">
   <div class="container">
     <div class="teaser-card reveal">
@@ -580,7 +596,7 @@ function pricingTeaser(t, locale) {
       </div>
       <div class="teaser-plans" aria-hidden="true">
         <div class="mini-plan"><small>${esc(p.pricing.trial.name)}</small><strong>${esc(p.pricing.trial.price)}</strong><span>${esc(p.pricing.trial.per)}</span></div>
-        <div class="mini-plan is-featured${SITE.licencePrice ? "" : " is-ask"}"><small>${esc(p.pricing.licence.name)}</small><strong dir="auto">${esc(price)}</strong><span>${esc(p.pricing.licence.per)}</span></div>
+        <div class="mini-plan is-featured${pricing.ask ? " is-ask" : ""}">${pricing.offer ? `<span class="offer-tag">${esc(pricing.offer.save)}</span>` : ""}<small>${esc(p.pricing.licence.name)}</small><strong dir="auto">${esc(pricing.price)}</strong>${pricing.offer ? `<del dir="auto">${esc(pricing.offer.regular)}</del>` : ""}<span>${esc(pricing.offer ? pricing.offer.label : p.pricing.licence.per)}</span></div>
       </div>
     </div>
   </div>
@@ -824,13 +840,12 @@ export function pricingPage(locale) {
   const p = PAGES[locale];
   const s = { ...STORY[locale], ...EXTRA[locale] };
   const wa = whatsappHref(t.whatsappMessage);
-  const price = SITE.licencePrice
-    ? `${new Intl.NumberFormat("fr-FR").format(SITE.licencePrice)} ${locale === "ar" ? "دج" : "DA"}`
-    : p.pricing.licence.ask;
+  const pricing = licencePricing(locale);
   const plan = (key, data, priceText, cta, url, featured = false) => `<article class="plan${featured ? " is-featured" : ""} reveal" data-plan="${key}">
     ${featured ? `<span class="plan-badge">${esc(data.badge)}</span>` : ""}
     <h2 class="plan-name">${esc(data.name)}</h2>
-    <p class="plan-price${key === "licence" && !SITE.licencePrice ? " is-ask" : ""}"><strong dir="auto">${esc(priceText)}</strong><span>${esc(data.per)}</span></p>
+    ${key === "licence" && pricing.offer ? `<p class="plan-offer"><span class="offer-tag">${esc(pricing.offer.save)}</span><span>${esc(pricing.offer.label)}</span></p>` : ""}
+    <p class="plan-price${key === "licence" && pricing.ask ? " is-ask" : ""}"><strong dir="auto">${esc(priceText)}${key === "licence" && pricing.offer ? ` <del dir="auto">${esc(pricing.offer.regular)}</del>` : ""}</strong><span>${esc(key === "licence" && pricing.offer ? `${data.per} · ${pricing.offer.then}` : data.per)}</span></p>
     <ul class="checks">${data.points.map((point) => `<li>${ICONS.check}<span>${esc(point)}</span></li>`).join("")}</ul>
     <a class="btn ${featured ? "btn-primary btn-glow" : "btn-glass"} plan-cta" href="${url}"${url.startsWith("http") ? ' rel="noopener"' : ""}>${url.startsWith("http") ? ICONS.whatsapp : ICONS.download}<span>${esc(cta)}</span></a>
   </article>`;
@@ -839,7 +854,7 @@ export function pricingPage(locale) {
   <div class="container">
     <div class="plans">
       ${plan("trial", p.pricing.trial, p.pricing.trial.price, p.pricing.trial.cta, href(locale, "download"))}
-      ${plan("licence", p.pricing.licence, price, p.pricing.licence.cta, wa, true)}
+      ${plan("licence", p.pricing.licence, pricing.price, p.pricing.licence.cta, wa, true)}
       ${plan("custom", p.pricing.custom, p.pricing.custom.price, p.pricing.custom.cta, wa)}
     </div>
   </div>
