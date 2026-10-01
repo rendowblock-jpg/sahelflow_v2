@@ -26,7 +26,7 @@ export type MarkdownInline =
   | { kind: "strong"; children: MarkdownInline[] }
   | { kind: "emphasis"; children: MarkdownInline[] }
   | { kind: "delete"; children: MarkdownInline[] }
-  | { kind: "link"; text: string; href: string; safe: boolean };
+  | { kind: "link"; text: string; href: string; safe: boolean; internal?: boolean };
 
 export type MarkdownTableAlign = "start" | "center" | "end" | null;
 
@@ -50,6 +50,45 @@ export type MarkdownBlock =
   | { kind: "hr" };
 
 const PROTOCOL_ALLOWLIST = /^(?:https?:\/\/|mailto:)/i;
+
+/**
+ * In-app destinations the assistant may link to (product guide answers point
+ * at the screen to open). Only a root-relative path under one of these
+ * top-level pages, made of plain path segments and a simple query string,
+ * qualifies; anything else (protocol-relative `//`, encoded slashes, dots,
+ * fragments, unknown roots) stays plain text. Opening a page performs no
+ * action by itself.
+ */
+const IN_APP_ROOTS = new Set([
+  "dashboard",
+  "orders",
+  "inbox",
+  "products",
+  "customers",
+  "deliveries",
+  "returns",
+  "analytics",
+  "accounting",
+  "risk",
+  "storefronts",
+  "automations",
+  "agents",
+  "imports",
+  "settings",
+  "notifications",
+  "onboarding",
+  "profile",
+]);
+const IN_APP_PATH =
+  /^\/([a-z-]+)((?:\/[A-Za-z0-9_-]+)*)\/?(?:\?[A-Za-z0-9_-]+=[A-Za-z0-9_-]*(?:&[A-Za-z0-9_-]+=[A-Za-z0-9_-]*)*)?$/;
+
+/** Root-relative in-app path the renderer may open in place, else null. */
+export function inAppMarkdownHref(raw: string): string | null {
+  const trimmed = raw.trim();
+  const match = IN_APP_PATH.exec(trimmed);
+  if (!match || !IN_APP_ROOTS.has(match[1] ?? "")) return null;
+  return trimmed;
+}
 const ESCAPABLE = /[\\`*_~[\]()#!>|-]/;
 
 /**
@@ -433,13 +472,15 @@ export function parseInline(text: string): MarkdownInline[] {
       if (link) {
         const label = link[1] ?? "";
         const rawHref = (link[2] ?? "").trim().split(/\s+/)[0] ?? "";
-        const safeHref = safeHrefOrNull(rawHref);
+        const inAppHref = inAppMarkdownHref(rawHref);
+        const safeHref = inAppHref ?? safeHrefOrNull(rawHref);
         flush();
         tokens.push({
           kind: "link",
           text: label,
           href: safeHref ?? rawHref,
           safe: safeHref !== null,
+          ...(inAppHref ? { internal: true } : {}),
         });
         i += link[0].length;
         continue;

@@ -9,9 +9,11 @@ import {
   Bot,
   CheckCircle2,
   CircleDashed,
+  Loader2,
+  MapPin,
   MessageCircle,
+  Phone,
   Rocket,
-  SkipForward,
   Store,
   Truck,
 } from "lucide-react";
@@ -24,6 +26,7 @@ import {
 import {
   ONBOARDING_FINISH_STEP,
   ONBOARDING_PROGRESS_SETTING_KEY,
+  ONBOARDING_STEP_COUNT,
   clampOnboardingStep,
   parseOnboardingProgress,
   serializeOnboardingProgress,
@@ -34,7 +37,6 @@ import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
 import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
@@ -45,7 +47,12 @@ import {
   isValidDZMobilePhone,
   normalizeDZPhone,
 } from "@/lib/validation/phone";
-import { IconTile } from "@/components/system";
+import { SahelFlowMark } from "@/components/brand/sahelflow-mark";
+import { Panel } from "@/components/system";
+import { cn } from "@/lib/utils";
+import wilayasData from "../../../data/wilayas.json";
+
+const WILAYAS = wilayasData as Array<{ code: number | string; name: string; nameAr: string }>;
 
 /**
  * Checklist-driven onboarding wizard (R4-b).
@@ -94,7 +101,7 @@ const JSON_HEADERS = {
 } as const;
 
 export function OnboardingWizard({ access }: OnboardingWizardProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -287,6 +294,8 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
   }, []);
 
   function goToStep(next: number) {
+    // A deliberate navigation always wins over a resume point still loading.
+    resumedRef.current = true;
     const clamped = clampOnboardingStep(next);
     setStep(clamped);
     void persistProgress({
@@ -386,8 +395,30 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
     { id: "ai", step: 3, done: status.ai },
   ];
 
-  const CurrentIcon = steps[step]?.icon ?? Store;
+  const doneCount = checklistItems.filter((item) => item.done).length;
+  const allDone = doneCount === checklistItems.length;
+  const onSummary = step === ONBOARDING_FINISH_STEP;
   const currentStepMeta = steps[step];
+  const headerTitle = onSummary
+    ? allDone
+      ? t("onboarding.youreAllSet")
+      : t("onboarding.summary.partialTitle")
+    : currentStepMeta?.title;
+  const headerDescription = onSummary
+    ? allDone
+      ? t("onboarding.summary.allDoneBody")
+      : t("onboarding.summary.partialBody", {
+          left: checklistItems.length - doneCount,
+          total: checklistItems.length,
+        })
+    : currentStepMeta?.description;
+
+  const selectedWilaya = WILAYAS.find((entry) => entry.name === businessWilaya);
+  const previewWilaya = selectedWilaya
+    ? `${String(selectedWilaya.code).padStart(2, "0")} · ${
+        locale === "ar" ? selectedWilaya.nameAr || selectedWilaya.name : selectedWilaya.name
+      }`
+    : null;
 
   const summaryRows: Array<{
     id: OnboardingChecklistItem["id"];
@@ -429,178 +460,244 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
   return (
     <div
       data-onboarding-wizard="v2"
-      className="flex min-h-full items-start justify-center bg-muted/30 p-4 lg:items-center"
+      data-sf-entry=""
+      className="min-h-full bg-surface-0"
     >
-      <div className="grid w-full max-w-4xl gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
-        <OnboardingChecklist
-          items={checklistItems}
-          currentStep={step}
-          finished={finishedAt != null}
-          onSelectStep={(target) => goToStep(target)}
-          onSelectFinish={() => goToStep(ONBOARDING_FINISH_STEP)}
-        />
+      <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 pt-6 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:pt-10">
+        <div className="min-w-0 lg:col-span-4">
+          <OnboardingChecklist
+            items={checklistItems}
+            currentStep={step}
+            finished={finishedAt != null}
+            onSelectStep={(target) => goToStep(target)}
+            onSelectFinish={() => goToStep(ONBOARDING_FINISH_STEP)}
+          />
+        </div>
 
-        <main className="min-w-0">
-          {/* Step header */}
-          <div className="mb-4 flex items-start gap-3">
-            <IconTile icon={CurrentIcon} tone="primary" size="lg" />
-            <div>
-              <h1 className="text-lg font-semibold tracking-tight">
-                {currentStepMeta?.title}
-              </h1>
-              <p className="mt-0.5 text-sm leading-6 text-muted-foreground">
-                {currentStepMeta?.description}
+        <section className="flex min-w-0 flex-col lg:col-span-8">
+          <div key={step} data-sf-entry-reveal="" className="flex-1 space-y-6">
+            {/* Step header */}
+            <header className="space-y-4">
+              <p className="text-caption font-medium text-primary">
+                {onSummary
+                  ? t("onboarding.eyebrow")
+                  : `${t("onboarding.eyebrow")} · ${t("onboarding.stepOf", {
+                      step: step + 1,
+                      total: ONBOARDING_STEP_COUNT,
+                    })}`}
               </p>
-            </div>
-          </div>
+              <div className="space-y-2">
+                <h1 className="text-title-1 text-foreground">{headerTitle}</h1>
+                <p className="max-w-2xl text-body text-muted-foreground">
+                  {headerDescription}
+                </p>
+              </div>
+              <div className="flex gap-1.5" aria-hidden="true">
+                {checklistItems.map((item) => (
+                  <span
+                    key={item.id}
+                    className={cn(
+                      "h-1 flex-1 rounded-full transition-colors duration-300",
+                      item.done
+                        ? "bg-success"
+                        : item.step === step
+                          ? "bg-primary"
+                          : "bg-border",
+                    )}
+                  />
+                ))}
+              </div>
+            </header>
 
-          {step === 0 && (
-            <Card data-onboarding-step="shop">
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="biz-name">{t("onboarding.business.name")}</Label>
-                  <Input
-                    id="biz-name"
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    placeholder={t("onboarding.storeNamePlaceholder")}
-                    autoComplete="organization"
+            {step === 0 && (
+              <Panel data-onboarding-step="shop" flush className="grid md:grid-cols-5">
+                <div className="space-y-5 p-5 sm:p-6 md:col-span-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="biz-name">{t("onboarding.business.name")}</Label>
+                    <Input
+                      id="biz-name"
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      placeholder={t("onboarding.storeNamePlaceholder")}
+                      autoComplete="organization"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="biz-phone">{t("onboarding.business.phone")}</Label>
+                    {/* Canonical DZ phone field (audit d6 #1): digits are LTR
+                        technical content — type=tel + dir=ltr keep the mask
+                        stable inside the Arabic RTL layout. */}
+                    <Input
+                      id="biz-phone"
+                      type="tel"
+                      inputMode="tel"
+                      dir="ltr"
+                      autoComplete="tel-national"
+                      className="text-start"
+                      value={businessPhone}
+                      onChange={(e) => setBusinessPhone(formatDZPhone(e.target.value))}
+                      placeholder={DZ_PHONE_PLACEHOLDER}
+                      aria-invalid={phoneInvalid || undefined}
+                      aria-describedby={phoneInvalid ? "biz-phone-error" : undefined}
+                    />
+                    {phoneInvalid ? (
+                      <p id="biz-phone-error" role="alert" className="text-caption text-destructive">
+                        {t("onboarding.phone.invalid")}
+                      </p>
+                    ) : null}
+                  </div>
+                  {/* Localized wilaya/commune pair replaces the old free-text
+                      wilaya Input (d5 finding). */}
+                  <WilayaCommuneSelect
+                    wilaya={businessWilaya}
+                    commune={businessCommune}
+                    onWilayaChange={setBusinessWilaya}
+                    onCommuneChange={setBusinessCommune}
+                    wilayaLabel={t("onboarding.business.wilaya")}
+                    communeLabel={t("orders.commune")}
+                    required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="biz-phone">{t("onboarding.business.phone")}</Label>
-                  {/* Canonical DZ phone field (audit d6 #1): digits are LTR
-                      technical content — type=tel + dir=ltr keep the mask
-                      stable inside the Arabic RTL layout. */}
-                  <Input
-                    id="biz-phone"
-                    type="tel"
-                    inputMode="tel"
-                    dir="ltr"
-                    autoComplete="tel-national"
-                    className="text-start"
-                    value={businessPhone}
-                    onChange={(e) => setBusinessPhone(formatDZPhone(e.target.value))}
-                    placeholder={DZ_PHONE_PLACEHOLDER}
-                    aria-invalid={phoneInvalid || undefined}
-                    aria-describedby={phoneInvalid ? "biz-phone-error" : undefined}
-                  />
-                  {phoneInvalid ? (
-                    <p id="biz-phone-error" role="alert" className="text-xs text-destructive">
-                      {t("onboarding.phone.invalid")}
+
+                {/* Live preview of where these basics appear. */}
+                <div
+                  data-onboarding-shop-preview=""
+                  className="flex flex-col gap-3 border-t bg-surface-1 p-5 sm:p-6 md:col-span-2 md:border-s md:border-t-0"
+                >
+                  <p className="text-caption font-medium text-muted-foreground">
+                    {t("onboarding.preview.title")}
+                  </p>
+                  <div className="rounded-surface border bg-card p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-caption text-muted-foreground">
+                        {t("onboarding.preview.sender")}
+                      </span>
+                      <SahelFlowMark className="size-5" />
+                    </div>
+                    <p
+                      className={cn(
+                        "mt-2 truncate text-title-3",
+                        businessName.trim() ? "text-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      {businessName.trim() || t("onboarding.preview.namePlaceholder")}
                     </p>
-                  ) : null}
+                    <div className="mt-3 space-y-1.5 border-t border-dashed pt-3 text-body-sm">
+                      <p className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span dir="ltr" className="numeric-value bidi-isolate text-foreground">
+                          {businessPhone.trim() || DZ_PHONE_PLACEHOLDER}
+                        </span>
+                      </p>
+                      <p className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span className={previewWilaya ? "text-foreground" : undefined}>
+                          {previewWilaya ?? "—"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                {/* Localized wilaya/commune pair replaces the old free-text
-                    wilaya Input (d5 finding). */}
-                <WilayaCommuneSelect
-                  wilaya={businessWilaya}
-                  commune={businessCommune}
-                  onWilayaChange={setBusinessWilaya}
-                  onCommuneChange={setBusinessCommune}
-                  wilayaLabel={t("onboarding.business.wilaya")}
-                  communeLabel={t("orders.commune")}
-                  required
+              </Panel>
+            )}
+
+            {step === 1 && (
+              <div data-onboarding-step="whatsapp" className="space-y-4">
+                <OnboardingPairingPanel onConnectedChange={handleConnectedChange} />
+                {status.whatsapp ? <FlagshipLoopExplainer variant="compact" /> : null}
+              </div>
+            )}
+
+            {step === 2 && (
+              <div data-onboarding-step="couriers" className="space-y-4">
+                {/* Registry-driven provider list (Yalidine / Maystro / ZR Express
+                    / EcoTrack) with credentials + test-connection, reused from
+                    the settings integrations surface. */}
+                <DeliveryCredentialsPanel />
+              </div>
+            )}
+
+            {step === 3 && (
+              <div data-onboarding-step="ai" className="space-y-4">
+                {/* Reuses the settings AI key flow: typed password key,
+                    test-and-save validation, consent checkbox, reauth gate. */}
+                <AiKeyPanel
+                  canManageKey={access.aiKey}
+                  canManageConsent={access.aiConsent}
                 />
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
 
-          {step === 1 && (
-            <div data-onboarding-step="whatsapp" className="space-y-4">
-              <OnboardingPairingPanel onConnectedChange={handleConnectedChange} />
-              {status.whatsapp ? <FlagshipLoopExplainer variant="compact" /> : null}
-            </div>
-          )}
-
-          {step === 2 && (
-            <div data-onboarding-step="couriers" className="space-y-4">
-              {/* Registry-driven provider list (Yalidine / Maystro / ZR Express
-                  / EcoTrack) with credentials + test-connection, reused from
-                  the settings integrations surface. */}
-              <DeliveryCredentialsPanel />
-            </div>
-          )}
-
-          {step === 3 && (
-            <div data-onboarding-step="ai" className="space-y-4">
-              {/* Reuses the settings AI key flow: typed password key,
-                  test-and-save validation, consent checkbox, reauth gate. */}
-              <AiKeyPanel
-                canManageKey={access.aiKey}
-                canManageConsent={access.aiConsent}
-              />
-            </div>
-          )}
-
-          {step === 4 && (
-            <div data-onboarding-step="summary" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">
+            {step === 4 && (
+              <div data-onboarding-step="summary" className="space-y-6">
+                <section aria-labelledby="onboarding-summary-title" className="space-y-3">
+                  <h2 id="onboarding-summary-title" className="text-title-3 text-foreground">
                     {t("onboarding.summary.title")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
+                  </h2>
+                  <ul className="divide-y divide-border/70 rounded-surface border border-border/80 bg-card">
                     {summaryRows.map((row) => (
                       <li
                         key={row.id}
                         data-onboarding-summary-item={row.id}
                         data-done={row.done}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-surface border p-3"
+                        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5"
                       >
-                        <span className="flex items-center gap-2 text-sm font-medium">
+                        <span className="flex min-w-0 items-center gap-3">
                           {row.done ? (
-                            <CheckCircle2 className="size-4 text-success" aria-hidden="true" />
+                            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success-soft text-success">
+                              <CheckCircle2 className="size-4" aria-hidden="true" />
+                            </span>
                           ) : (
-                            <CircleDashed className="size-4 text-muted-foreground" aria-hidden="true" />
+                            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-1 text-muted-foreground">
+                              <CircleDashed className="size-4" aria-hidden="true" />
+                            </span>
                           )}
-                          {row.label}
-                        </span>
-                        {row.done && row.id !== "whatsapp" ? (
-                          <span className="text-xs text-success">
-                            {t("onboarding.completed")}
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-3">
-                            <span className="text-xs text-muted-foreground">
+                          <span className="min-w-0">
+                            <span className="block text-body-sm font-medium text-foreground">
+                              {row.label}
+                            </span>
+                            <span
+                              className={cn(
+                                "block text-caption",
+                                row.done ? "text-success" : "text-muted-foreground",
+                              )}
+                            >
                               {row.done
-                                ? t("onboarding.completed")
+                                ? t("onboarding.status.done")
                                 : t("onboarding.summary.skipped")}
                             </span>
-                            {row.id === "shop" ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => goToStep(0)}
-                              >
-                                {row.actionLabel}
-                              </Button>
-                            ) : (
-                              <Button asChild variant="outline" size="sm">
-                                <Link href={row.href}>{row.actionLabel}</Link>
-                              </Button>
-                            )}
                           </span>
+                        </span>
+                        {row.done && row.id !== "whatsapp" ? null : row.id === "shop" ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => goToStep(0)}
+                          >
+                            {row.actionLabel}
+                          </Button>
+                        ) : (
+                          <Button asChild variant={row.done ? "ghost" : "outline"} size="sm">
+                            <Link href={row.href}>{row.actionLabel}</Link>
+                          </Button>
                         )}
                       </li>
                     ))}
                   </ul>
-                </CardContent>
-              </Card>
+                </section>
 
-              {/* The flagship loop the old wizard never taught. */}
-              <FlagshipLoopExplainer variant="full" />
-            </div>
-          )}
+                {/* The flagship loop the old wizard never taught. */}
+                <FlagshipLoopExplainer variant="full" />
+              </div>
+            )}
+          </div>
 
           {/* Navigation */}
-          <div className="mt-4 flex items-center justify-between">
+          <div className="sticky bottom-0 z-10 mt-8 flex items-center justify-between gap-3 border-t bg-surface-0 py-4">
             {step > 0 ? (
-              <Button variant="ghost" size="sm" onClick={() => goToStep(step - 1)}>
-                <ArrowLeft className="h-4 w-4 icon-rtl-flip me-1" aria-hidden="true" />
+              <Button variant="ghost" onClick={() => goToStep(step - 1)}>
+                <ArrowLeft className="size-4 icon-rtl-flip" aria-hidden="true" />
                 {t("common.back")}
               </Button>
             ) : (
@@ -611,17 +708,16 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
               {step < ONBOARDING_FINISH_STEP ? (
                 <Button
                   variant="ghost"
-                  size="sm"
                   onClick={skipStep}
                   data-onboarding-skip={steps[step]?.id}
+                  className="text-muted-foreground"
                 >
-                  <SkipForward className="h-4 w-4 icon-rtl-flip me-1" aria-hidden="true" />
                   {t("common.skip")}
                 </Button>
               ) : null}
               {step === ONBOARDING_FINISH_STEP ? (
                 <Button onClick={() => void launchDashboard()} disabled={loading}>
-                  <Rocket className="h-4 w-4 me-1" aria-hidden="true" />
+                  <Rocket className="size-4" aria-hidden="true" />
                   {t("onboarding.launchDashboard")}
                 </Button>
               ) : (
@@ -631,17 +727,17 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
                     loading ||
                     (step === 0 && (!businessName.trim() || phoneInvalid))
                   }
-                  size="sm"
                 >
+                  {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
                   {step === ONBOARDING_FINISH_STEP - 1
                     ? t("onboarding.finish")
                     : t("common.next")}
-                  <ArrowRight className="h-4 w-4 icon-rtl-flip ms-1" aria-hidden="true" />
+                  <ArrowRight className="size-4 icon-rtl-flip" aria-hidden="true" />
                 </Button>
               )}
             </div>
           </div>
-        </main>
+        </section>
       </div>
     </div>
   );

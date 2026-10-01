@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, memo, useMemo, type ReactNode } from "react";
+import Link from "next/link";
 import { Check, Square } from "lucide-react";
 
 import {
@@ -25,7 +26,8 @@ import { cn } from "@/lib/utils";
  * Tokens from the pure parser map 1:1 onto React elements — raw model
  * HTML can only ever become literal text. Links open externally with
  * `rel="noopener noreferrer nofollow"` and are protocol-allowlisted by the
- * parser; code runs LTR inside RTL conversations.
+ * parser; allowlisted in-app paths open in place; code runs LTR inside RTL
+ * conversations.
  */
 
 function inlineNodes(
@@ -57,6 +59,19 @@ function inlineNodes(
         if (!token.safe) {
           // Unsafe scheme (javascript:, data:, …) — plain text, never an anchor.
           return <span key={key}>{token.text}</span>;
+        }
+        if (token.internal) {
+          return (
+            <Link
+              key={key}
+              href={token.href}
+              dir="auto"
+              data-ai-in-app-link=""
+              className="font-medium text-primary underline underline-offset-2 hover:underline"
+            >
+              {token.text}
+            </Link>
+          );
         }
         return (
           <a
