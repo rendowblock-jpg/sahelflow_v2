@@ -1,16 +1,22 @@
 import { CONTENT, INTEGRATIONS } from "./content.mjs";
+import { STORY } from "./story.mjs";
 import { ICONS } from "./icons.mjs";
 import { LEGAL_UPDATED, PRIVACY, TERMS } from "./legal.mjs";
 import { SITE, whatsappHref } from "./config.mjs";
+import { CITIES, MAP_HEIGHT, MAP_WIDTH, arcPath, mapDots, outlinePath, project } from "./algeria.mjs";
 
 const esc = (value) =>
   String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+/** Icons nested inside an SVG scene need explicit geometry. */
+const sized = (icon, n = 24) => icon.replace("<svg ", `<svg width="${n}" height="${n}" `);
 const call = (value) => (typeof value === "function" ? value(SITE.trialDays) : value);
 
 /** Locale-aware path: /ar/, /fr/download/ … */
 const href = (locale, page = "") => `/${locale}/${page ? `${page}/` : ""}`;
 
-function head({ t, locale, page, title, description, screenshot }) {
+/* ─────────────────────────── document shell ─────────────────────────── */
+
+function head({ t, locale, page, title, description, preload }) {
   const canonical = `${SITE.origin}${href(locale, page)}`;
   const alternates = SITE.locales
     .map((l) => `<link rel="alternate" hreflang="${l}" href="${SITE.origin}${href(l, page)}">`)
@@ -27,13 +33,14 @@ function head({ t, locale, page, title, description, screenshot }) {
     offers: { "@type": "Offer", price: "0", priceCurrency: "DZD", description: `${SITE.trialDays}-day free trial` },
   };
   return `<!doctype html>
-<html lang="${t.lang}" dir="${t.dir}">
+<html lang="${t.lang}" dir="${t.dir}" class="no-js">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<meta name="theme-color" content="#05070d">
+<meta name="theme-color" content="#04070d">
+<meta name="color-scheme" content="dark">
 <link rel="canonical" href="${canonical}">
 ${alternates}<link rel="alternate" hreflang="x-default" href="${SITE.origin}${href(SITE.defaultLocale, page)}">
 <meta property="og:type" content="website">
@@ -46,11 +53,9 @@ ${alternates}<link rel="alternate" hreflang="x-default" href="${SITE.origin}${hr
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/img/mark.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/img/icon-180.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="preload" href="/fonts/readex-${locale === "ar" ? "arabic" : "latin"}.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/site.css">
-${screenshot ? `<link rel="preload" as="image" href="${screenshot}">` : ""}
+${preload ? `<link rel="preload" as="image" href="${preload}">` : ""}
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 <script defer src="/assets/site.js"></script>
 </head>`;
@@ -58,8 +63,8 @@ ${screenshot ? `<link rel="preload" as="image" href="${screenshot}">` : ""}
 
 function header(t, locale, page) {
   const links = [
-    ["features", t.nav.features],
     ["how", t.nav.how],
+    ["features", t.nav.features],
     ["integrations", t.nav.integrations],
     ["security", t.nav.security],
     ["faq", t.nav.faq],
@@ -73,17 +78,17 @@ function header(t, locale, page) {
     )
     .join("");
   return `<header class="site-header" data-header>
-  <div class="container header-row">
+  <div class="nav-pill">
     <a class="brand" href="${href(locale)}" aria-label="SahelFlow">
-      <img src="/img/mark.svg" alt="" width="30" height="30"><span>SahelFlow</span>
+      <img src="/img/mark.svg" alt="" width="28" height="28"><span>SahelFlow</span>
     </a>
-    <nav class="main-nav" aria-label="${esc(t.nav.menu)}" data-nav>${links}</nav>
+    <nav class="main-nav" aria-label="${esc(t.nav.menu)}" data-nav>${links}<a class="nav-cta-mobile" href="${href(locale, "download")}">${esc(t.nav.trial)}</a></nav>
     <div class="header-actions">
       <details class="lang-menu">
-        <summary aria-label="${esc(t.nav.language)}">${ICONS.globe}<span>${esc(t.name)}</span></summary>
+        <summary aria-label="${esc(t.nav.language)}">${ICONS.globe}<span>${esc(locale.toUpperCase())}</span></summary>
         <div class="lang-list">${langs}</div>
       </details>
-      <a class="btn btn-primary btn-sm hide-sm" href="${href(locale, "download")}">${esc(t.nav.trial)}</a>
+      <a class="btn btn-primary btn-sm hide-sm" href="${href(locale, "download")}"><span>${esc(t.nav.trial)}</span></a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-label="${esc(t.nav.menu)}" data-nav-toggle>${ICONS.menu}</button>
     </div>
   </div>
@@ -95,14 +100,15 @@ function footer(t, locale) {
   return `<footer class="site-footer">
   <div class="container footer-grid">
     <div class="footer-brand">
-      <a class="brand" href="${href(locale)}"><img src="/img/mark.svg" alt="" width="28" height="28"><span>SahelFlow</span></a>
+      <a class="brand" href="${href(locale)}"><img src="/img/mark.svg" alt="" width="30" height="30"><span>SahelFlow</span></a>
       <p>${esc(t.footer.tagline)}</p>
+      <a class="footer-wa" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${ICONS.whatsapp}<span dir="ltr">+213 791 99 91 57</span></a>
     </div>
     <div>
       <h3>${esc(t.footer.product)}</h3>
+      <a href="${href(locale)}#how">${esc(t.nav.how)}</a>
       <a href="${href(locale)}#features">${esc(t.nav.features)}</a>
       <a href="${href(locale)}#integrations">${esc(t.nav.integrations)}</a>
-      <a href="${href(locale)}#security">${esc(t.nav.security)}</a>
       <a href="${href(locale, "download")}">${esc(t.nav.download)}</a>
     </div>
     <div>
@@ -117,6 +123,7 @@ function footer(t, locale) {
       <a href="${href(locale, "terms")}">${esc(t.footer.terms)}</a>
     </div>
   </div>
+  <div class="footer-word" aria-hidden="true">SahelFlow</div>
   <div class="container footer-base"><span>© ${year} SahelFlow. ${esc(t.footer.rights)}</span><span class="footer-langs">${SITE.locales
     .map((l) => `<a href="${href(l)}" data-set-lang="${l}" lang="${l}">${esc(CONTENT[l].name)}</a>`)
     .join("")}</span></div>
@@ -125,7 +132,7 @@ function footer(t, locale) {
 
 function shell(ctx, body) {
   return `${head(ctx)}
-<body class="locale-${ctx.locale}">
+<body class="locale-${ctx.locale} page-${ctx.page || "home"}">
 <a class="skip" href="#main">${ctx.locale === "ar" ? "تخطَّ إلى المحتوى" : ctx.locale === "fr" ? "Aller au contenu" : "Skip to content"}</a>
 ${header(ctx.t, ctx.locale, ctx.page)}
 <main id="main">${body}</main>
@@ -134,144 +141,451 @@ ${footer(ctx.t, ctx.locale)}
 </html>`;
 }
 
-function shotFrame(src, alt, extra = "") {
-  return `<figure class="shot ${extra}">
-  <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i><span>SahelFlow</span></div>
-  <img src="${src}" alt="${esc(alt)}" loading="lazy" decoding="async" width="1440" height="900">
-</figure>`;
+/* ─────────────────────────── shared art ─────────────────────────── */
+
+function dunes(id, tone = "dusk") {
+  // Three Sahel ridgelines; the furthest catches the horizon light.
+  return `<svg class="dunes dunes-${tone}" viewBox="0 0 1600 360" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="${id}-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b3352"/><stop offset="1" stop-color="#0a1424"/></linearGradient>
+    <linearGradient id="${id}-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#122540"/><stop offset="1" stop-color="#070e1a"/></linearGradient>
+    <linearGradient id="${id}-c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1626"/><stop offset="1" stop-color="#04070d"/></linearGradient>
+    <linearGradient id="${id}-rim" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f5b85b" stop-opacity="0"/><stop offset=".5" stop-color="#f5b85b" stop-opacity=".55"/><stop offset="1" stop-color="#f5b85b" stop-opacity="0"/></linearGradient>
+  </defs>
+  <path data-depth="0.15" fill="url(#${id}-a)" d="M0 170C160 120 300 112 470 138S760 196 930 160 1260 92 1420 110 1600 150 1600 150V360H0Z"/>
+  <path data-depth="0.15" fill="none" stroke="url(#${id}-rim)" stroke-width="1.5" d="M0 170C160 120 300 112 470 138S760 196 930 160 1260 92 1420 110 1600 150 1600 150"/>
+  <path data-depth="0.3" fill="url(#${id}-b)" d="M0 238C210 188 380 196 560 226S880 262 1080 220 1420 186 1600 214V360H0Z"/>
+  <path data-depth="0.5" fill="url(#${id}-c)" d="M0 300C240 262 470 280 700 296S1100 318 1330 286 1600 270 1600 270V360H0Z"/>
+</svg>`;
 }
 
-export function homePage(locale, shots) {
-  const t = CONTENT[locale];
+function stars(count = 70, seed = 7) {
+  let x = seed;
+  const rand = () => ((x = (x * 9301 + 49297) % 233280) / 233280);
+  let dots = "";
+  for (let i = 0; i < count; i++) {
+    const r = rand() < 0.12 ? 1.4 : 0.8;
+    dots += `<circle cx="${(rand() * 1600).toFixed(0)}" cy="${(rand() * 520).toFixed(0)}" r="${r}" style="--tw:${(2 + rand() * 4).toFixed(1)}s;--td:${(rand() * 4).toFixed(1)}s"/>`;
+  }
+  return `<svg class="stars" viewBox="0 0 1600 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g fill="#cfe6ff">${dots}</g><path class="shooting" d="M1180 70 L1380 20" stroke="url(#shoot)" stroke-width="1.6" stroke-linecap="round"/><defs><linearGradient id="shoot" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff"/></linearGradient></defs></svg>`;
+}
+
+/* ─────────────────────────── hero ─────────────────────────── */
+
+function heroDemo(s, locale) {
+  const d = s.demo;
+  const nav = [
+    ["inbox", ICONS.inbox, d.app.inbox],
+    ["orders", ICONS.orders, d.app.orders],
+    ["delivery", ICONS.delivery, d.app.delivery],
+    ["accounting", ICONS.accounting, d.app.accounting],
+    ["agents", ICONS.agents, d.app.agents],
+  ];
+  return `<div class="device" data-demo aria-label="${esc(d.label)}" role="img">
+  <div class="device-bar"><i></i><i></i><i></i><span>SahelFlow</span><b>${ICONS.search}</b></div>
+  <div class="device-body">
+    <aside class="d-side">
+      <img src="/img/mark.svg" alt="" width="22" height="22">
+      ${nav.map(([k, icon, label], i) => `<span class="d-nav${i === 0 ? " is-active" : ""}" title="${esc(label)}">${icon}<em>${esc(label)}</em></span>`).join("")}
+    </aside>
+    <section class="d-chat">
+      <header class="d-chat-head"><span class="d-avatar">A</span><div><strong>${esc(d.customer)}</strong><small><i></i>${esc(d.online)}</small></div><span class="d-wa">${ICONS.whatsapp}</span></header>
+      <div class="d-thread">
+        <p class="bubble in b1">${esc(d.msg1)}<time dir="ltr">10:42</time></p>
+        <p class="bubble in b2">${esc(d.msg2)}<time dir="ltr">10:42</time></p>
+        <p class="typing" aria-hidden="true"><i></i><i></i><i></i></p>
+        <p class="bubble out b3">${esc(d.reply)}<time dir="ltr">10:43 ✓✓</time></p>
+      </div>
+      <div class="d-compose"><span></span><b>${ICONS.sparkle}</b></div>
+    </section>
+    <section class="d-panel">
+      <div class="d-kpis">${d.kpis.map(([k, v]) => `<div><small>${esc(k)}</small><strong dir="auto">${esc(v)}</strong></div>`).join("")}</div>
+      <article class="d-extract">
+        <header>${ICONS.sparkle}<span>${esc(d.ai)}</span><i class="scan"></i></header>
+        <dl>${d.fields.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd dir="auto">${esc(v)}</dd></div>`).join("")}<div class="total"><dt>${esc(d.total[0])}</dt><dd dir="auto">${esc(d.total[1])}</dd></div></dl>
+      </article>
+      <article class="d-order">
+        <header><strong dir="auto">${esc(d.order)}</strong><span class="status" data-status>${d.statuses.map((st, i) => `<em data-s="${i}">${esc(st)}</em>`).join("")}</span></header>
+        <div class="track"><i></i><i></i><i></i><i></i><b></b></div>
+        <footer><span>${ICONS.delivery}${esc(d.courier)}</span><span class="cash">${ICONS.coins}${esc(d.cash)}</span></footer>
+      </article>
+    </section>
+  </div>
+</div>`;
+}
+
+function hero(t, s, locale) {
   const wa = whatsappHref(t.whatsappMessage);
-  const heroShot = shots("dashboard");
-  const marquee = [...INTEGRATIONS, ...INTEGRATIONS]
-    .map((name) => `<li>${esc(name)}</li>`)
-    .join("");
-  const features = t.features.items
-    .map(
-      (item, index) => `<article class="feature${index % 2 ? " flip" : ""} reveal" id="feature-${item.key}">
-  <div class="feature-copy">
-    <span class="feature-icon">${ICONS[item.key] ?? ""}</span>
-    <h3>${esc(item.title)}</h3>
-    <p>${esc(item.text)}</p>
-    <ul class="checks">${item.points.map((p) => `<li>${ICONS.check}<span>${esc(p)}</span></li>`).join("")}</ul>
-  </div>
-  <div class="feature-media">${shotFrame(shots(item.key), item.title)}</div>
-</article>`,
-    )
-    .join("\n");
-  const body = `
-<section class="hero">
-  <div class="hero-bg" aria-hidden="true"><span class="orb orb-a"></span><span class="orb orb-b"></span><span class="orb orb-c"></span><span class="grid"></span></div>
-  <div class="container hero-inner">
-    <p class="eyebrow reveal">${esc(t.hero.eyebrow)}</p>
-    <h1 class="reveal"><span>${esc(t.hero.title[0])}</span> <span class="gradient">${esc(t.hero.title[1])}</span></h1>
-    <p class="lead reveal">${esc(t.hero.lead)}</p>
-    <div class="cta-row reveal">
-      <a class="btn btn-primary btn-lg" href="${href(locale, "download")}">${ICONS.download}<span>${esc(t.hero.primary)}</span></a>
-      <a class="btn btn-ghost btn-lg" href="${wa}" rel="noopener">${ICONS.whatsapp}<span>${esc(t.hero.secondary)}</span></a>
-    </div>
-    <p class="note reveal">${esc(call(t.hero.note))}</p>
-    <ul class="trust reveal">${t.hero.trust.map((x) => `<li>${ICONS.check}<span>${esc(x)}</span></li>`).join("")}</ul>
-  </div>
-  <div class="container hero-visual reveal" data-tilt>
-    ${shotFrame(heroShot, t.meta.title, "hero-shot")}
-    <div class="float float-a" aria-hidden="true">${ICONS.inbox}<span>${locale === "ar" ? "طلب جديد من واتساب" : locale === "fr" ? "Nouvelle commande WhatsApp" : "New WhatsApp order"}</span></div>
-    <div class="float float-b" aria-hidden="true">${ICONS.check}<span>${locale === "ar" ? "تم التأكيد · الجزائر 16" : locale === "fr" ? "Confirmée · Alger 16" : "Confirmed · Algiers 16"}</span></div>
-    <div class="float float-c" aria-hidden="true">${ICONS.delivery}<span>${locale === "ar" ? "مُسلَّم · 4 500 دج" : locale === "fr" ? "Livrée · 4 500 DA" : "Delivered · 4,500 DZD"}</span></div>
-  </div>
-</section>
-
-<section class="strip" id="integrations" aria-label="${esc(t.nav.integrations)}">
-  <p class="container strip-title">${esc(t.strip)}</p>
-  <div class="marquee"><ul>${marquee}</ul></div>
-</section>
-
-<section class="section problem">
-  <div class="container">
-    <p class="eyebrow reveal">${esc(t.problem.eyebrow)}</p>
-    <h2 class="reveal">${esc(t.problem.title)}</h2>
-    <div class="cards three">${t.problem.items
-      .map((item, i) => `<article class="card reveal" style="--d:${i * 80}ms"><span class="card-num">0${i + 1}</span><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></article>`)
-      .join("")}</div>
-  </div>
-</section>
-
-<section class="section features" id="features">
-  <div class="container">
-    <div class="section-head">
-      <p class="eyebrow reveal">${esc(t.features.eyebrow)}</p>
-      <h2 class="reveal">${esc(t.features.title)}</h2>
-      <p class="lead reveal">${esc(t.features.lead)}</p>
-    </div>
-    <nav class="feature-tabs reveal" aria-label="${esc(t.nav.features)}">${t.features.items
-      .map((item) => `<a href="#feature-${item.key}">${ICONS[item.key] ?? ""}<span>${esc(item.title)}</span></a>`)
-      .join("")}</nav>
-    ${features}
-  </div>
-</section>
-
-<section class="section how" id="how">
-  <div class="container">
-    <div class="section-head">
-      <p class="eyebrow reveal">${esc(t.how.eyebrow)}</p>
-      <h2 class="reveal">${esc(t.how.title)}</h2>
-    </div>
-    <ol class="steps">${t.how.steps
-      .map((s, i) => `<li class="reveal" style="--d:${i * 100}ms"><span class="step-num">${i + 1}</span><h3>${esc(s.title)}</h3><p>${esc(s.text)}</p></li>`)
-      .join("")}</ol>
-  </div>
-</section>
-
-<section class="section algeria">
-  <div class="container">
-    <div class="section-head">
-      <p class="eyebrow reveal">${esc(t.algeria.eyebrow)}</p>
-      <h2 class="reveal">${esc(t.algeria.title)}</h2>
-    </div>
-    <div class="cards four">${t.algeria.items
-      .map((item, i) => `<article class="card stat reveal" style="--d:${i * 70}ms"><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></article>`)
-      .join("")}</div>
-  </div>
-</section>
-
-<section class="section security" id="security">
-  <div class="container security-grid">
-    <div>
-      <p class="eyebrow reveal">${esc(t.security.eyebrow)}</p>
-      <h2 class="reveal">${esc(t.security.title)}</h2>
-      <p class="lead reveal">${esc(t.security.lead)}</p>
-    </div>
-    <div class="cards two">${t.security.items
-      .map((item, i) => `<article class="card reveal" style="--d:${i * 70}ms"><span class="feature-icon">${[ICONS.lock, ICONS.wifiOff, ICONS.backup, ICONS.team][i]}</span><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></article>`)
-      .join("")}</div>
-  </div>
-</section>
-
-<section class="section trial-band">
-  <div class="container trial-card reveal">
-    <h2>${esc(t.trial.title)}</h2>
-    <p>${esc(call(t.trial.text))}</p>
+  const words = (line) =>
+    line
+      .split(" ")
+      .map((w, i) => `<span class="w" style="--i:${i}">${esc(w)}</span>`)
+      .join(" ");
+  return `<section class="hero" data-hero>
+  <div class="hero-sky" aria-hidden="true">${stars(90, 11)}<div class="sun"></div></div>
+  <canvas class="flow" data-flow aria-hidden="true"></canvas>
+  <div class="hero-copy">
+    <a class="eyebrow-pill" href="#how"><span class="dot"></span><span>${esc(s.heroEyebrow)}</span>${ICONS.arrow}</a>
+    <h1 class="display" data-split><span class="line">${words(t.hero.title[0])}</span><span class="line grad">${words(t.hero.title[1])}</span></h1>
+    <p class="lead hero-lead">${esc(t.hero.lead)}</p>
     <div class="cta-row">
-      <a class="btn btn-primary btn-lg" href="${href(locale, "download")}">${ICONS.download}<span>${esc(t.trial.primary)}</span></a>
-      <a class="btn btn-ghost btn-lg" href="${wa}" rel="noopener">${ICONS.whatsapp}<span>${esc(t.trial.secondary)}</span></a>
+      <a class="btn btn-primary btn-lg btn-glow" href="${href(locale, "download")}">${ICONS.download}<span>${esc(t.hero.primary)}</span></a>
+      <a class="btn btn-glass btn-lg" href="${wa}" rel="noopener">${ICONS.whatsapp}<span>${esc(t.hero.secondary)}</span></a>
+    </div>
+    <p class="hero-note">${esc(call(t.hero.note))}</p>
+  </div>
+  <div class="stage" data-stage>
+    <div class="stage-inner" data-tilt>
+      ${heroDemo(s, locale)}
+      <div class="float f-ai" aria-hidden="true">${ICONS.sparkle}<span>${esc(s.demo.ai)}</span></div>
+      <div class="float f-ship" aria-hidden="true">${ICONS.delivery}<span>${esc(s.demo.courier)}</span><b>${esc(s.demo.statuses[2])}</b></div>
+      <div class="float f-cash" aria-hidden="true">${ICONS.coins}<span dir="auto">+ ${esc(s.demo.total[1])}</span></div>
+    </div>
+    <div class="stage-glow" aria-hidden="true"></div>
+  </div>
+  ${dunes("hd")}
+</section>`;
+}
+
+/* ─────────────────────────── journey (isometric scene) ─────────────────────────── */
+
+const ISO_C = Math.cos(Math.PI / 6);
+const iso = (x, y, z = 0) => [+((x - y) * ISO_C).toFixed(1), +((x + y) * 0.5 - z).toFixed(1)];
+const pts = (list) => list.map((p) => p.join(",")).join(" ");
+
+function isoPlatform(cx, cy, size, h, idx) {
+  const s = size / 2;
+  const at = (x, y, z) => {
+    const [px, py] = iso(x, y, z);
+    return [+(cx + px).toFixed(1), +(cy + py).toFixed(1)];
+  };
+  const top = [at(-s, -s, h), at(s, -s, h), at(s, s, h), at(-s, s, h)];
+  const left = [at(-s, s, h), at(s, s, h), at(s, s, 0), at(-s, s, 0)];
+  const right = [at(s, -s, h), at(s, s, h), at(s, s, 0), at(s, -s, 0)];
+  const inner = [at(-s * 0.62, -s * 0.62, h), at(s * 0.62, -s * 0.62, h), at(s * 0.62, s * 0.62, h), at(-s * 0.62, s * 0.62, h)];
+  return `<g class="plat" data-plat="${idx}">
+    <polygon class="pl-left" points="${pts(left)}"/>
+    <polygon class="pl-right" points="${pts(right)}"/>
+    <polygon class="pl-top" points="${pts(top)}"/>
+    <polygon class="pl-ring" points="${pts(inner)}"/>
+  </g>`;
+}
+
+function journeyScene(steps) {
+  const icons = [ICONS.message, ICONS.sparkle, ICONS.check, ICONS.delivery, ICONS.coins];
+  const centers = [
+    [190, 150],
+    [470, 210],
+    [250, 360],
+    [540, 440],
+    [330, 600],
+  ];
+  const path = `M${centers.map(([x, y]) => `${x},${y - 30}`).join(" L")}`;
+  const plats = centers.map(([x, y], i) => isoPlatform(x, y - 18, 128, 18, i)).join("");
+  const nodes = centers
+    .map(
+      ([x, y], i) => `<g class="node" data-node="${i}" transform="translate(${x} ${y - 92})">
+      <ellipse class="node-shadow" cx="0" cy="62" rx="34" ry="11"/>
+      <g class="node-bob"><rect class="node-card" x="-34" y="-34" width="68" height="68" rx="18"/><g class="node-icon" transform="translate(-15 -15) scale(1.25)">${sized(icons[i])}</g></g>
+      <text class="node-num" x="0" y="96" text-anchor="middle">0${i + 1}</text>
+    </g>`,
+    )
+    .join("");
+  return `<svg class="iso" viewBox="0 0 760 700" aria-hidden="true">
+  <defs>
+    <linearGradient id="pl-top" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#16314f"/><stop offset="1" stop-color="#0d1d33"/></linearGradient>
+    <linearGradient id="pl-top-on" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1f6fa8"/><stop offset="1" stop-color="#0f3c63"/></linearGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#f5b85b"/></linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g class="grid-floor">${Array.from({ length: 13 }, (_, i) => {
+    const a = iso(-420 + i * 70, -420, 0);
+    const b = iso(-420 + i * 70, 420, 0);
+    const c = iso(-420, -420 + i * 70, 0);
+    const d = iso(420, -420 + i * 70, 0);
+    return `<line x1="${380 + a[0]}" y1="${380 + a[1]}" x2="${380 + b[0]}" y2="${380 + b[1]}"/><line x1="${380 + c[0]}" y1="${380 + c[1]}" x2="${380 + d[0]}" y2="${380 + d[1]}"/>`;
+  }).join("")}</g>
+  ${plats}
+  <path class="rail" d="${path}"/>
+  <path class="rail-lit" d="${path}" data-rail pathLength="1"/>
+  ${nodes}
+  <g class="parcel" data-parcel filter="url(#glow)"><polygon points="${pts([iso(-12, -12, 24), iso(12, -12, 24), iso(12, 12, 24), iso(-12, 12, 24)])}" class="pc-top"/><polygon points="${pts([iso(-12, 12, 24), iso(12, 12, 24), iso(12, 12, 0), iso(-12, 12, 0)])}" class="pc-left"/><polygon points="${pts([iso(12, -12, 24), iso(12, 12, 24), iso(12, 12, 0), iso(12, -12, 0)])}" class="pc-right"/></g>
+</svg>`;
+}
+
+function journey(s) {
+  return `<section class="journey" id="how" data-journey style="--steps:${s.loop.steps.length}">
+  <div class="journey-sticky">
+    <div class="container journey-grid">
+      <div class="journey-copy">
+        <p class="eyebrow">${esc(s.loop.eyebrow)}</p>
+        <h2 class="h-xl">${esc(s.loop.title)}</h2>
+        <ol class="steps" data-steps>${s.loop.steps
+          .map((st, i) => `<li data-step="${i}"><span class="n">0${i + 1}</span><div><h3>${esc(st.title)}</h3><p>${esc(st.text)}</p></div></li>`)
+          .join("")}</ol>
+        <div class="journey-bar"><i data-journey-bar></i></div>
+      </div>
+      <div class="journey-art">${journeyScene(s.loop.steps)}</div>
     </div>
   </div>
-</section>
+</section>`;
+}
 
-<section class="section faq" id="faq">
-  <div class="container narrow">
-    <div class="section-head">
-      <p class="eyebrow reveal">${esc(t.faq.eyebrow)}</p>
-      <h2 class="reveal">${esc(t.faq.title)}</h2>
+/* ─────────────────────────── bento (live micro-visuals) ─────────────────────────── */
+
+function bentoVisual(key, s) {
+  const d = s.demo;
+  switch (key) {
+    case "orders":
+      return `<div class="v-queue">${[
+        ["AB", d.fields[0][1], "16", "4 800", 0],
+        ["YB", "Yacine Brahimi", "31", "26 200", 1],
+        ["SM", "Sofiane Mazouz", "25", "18 600", 2],
+        ["LM", "Leila Mansouri", "19", "2 000", 3],
+      ]
+        .map(
+          ([ini, name, w, amt, i]) =>
+            `<div class="q-row" style="--i:${i}"><span class="q-av">${ini}</span><span class="q-name" dir="auto">${esc(name)}</span><span class="q-w" dir="ltr">${w}</span><span class="q-amt" dir="ltr">${amt} DA</span><span class="q-st"><em>${esc(d.statuses[0])}</em><em>${esc(d.statuses[1])}</em></span></div>`,
+        )
+        .join("")}</div>`;
+    case "inbox":
+      return `<div class="v-chat"><p class="vb in">${esc(d.msg1)}</p><p class="vb in two">${esc(d.msg2)}</p><span class="v-ai">${ICONS.sparkle}<span>${esc(d.ai)}</span></span></div>`;
+    case "delivery":
+      return `<svg class="v-route" viewBox="0 0 320 150" aria-hidden="true"><path class="rt" d="M28 120 C 90 30, 200 150, 292 36"/><path class="rt-lit" d="M28 120 C 90 30, 200 150, 292 36" pathLength="1"/><circle class="pin" cx="28" cy="120" r="6"/><circle class="pin end" cx="292" cy="36" r="6"/><circle class="pin-pulse" cx="292" cy="36" r="6"/><g class="truck"><circle r="7"/><animateMotion dur="4.5s" repeatCount="indefinite" path="M28 120 C 90 30, 200 150, 292 36"/></g></svg>`;
+    case "risk":
+      return `<div class="v-gauge"><svg viewBox="0 0 200 120" aria-hidden="true"><defs><linearGradient id="gauge" x1="0" x2="1"><stop offset="0" stop-color="#34d399"/><stop offset=".55" stop-color="#f5b85b"/><stop offset="1" stop-color="#f87171"/></linearGradient></defs><path class="g-track" d="M20 105 A80 80 0 0 1 180 105"/><path class="g-arc" d="M20 105 A80 80 0 0 1 180 105" pathLength="1"/><g class="g-needle"><line x1="100" y1="105" x2="100" y2="42"/><circle cx="100" cy="105" r="7"/></g></svg><span class="g-val" dir="ltr">72</span></div>`;
+    case "storefront":
+      return `<div class="v-phone"><div class="ph-notch"></div><div class="ph-screen"><div class="ph-hero"></div><div class="ph-grid"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="ph-buy">${esc(s.storeCta)}</div></div></div>`;
+    case "automations":
+      return `<svg class="v-flow" viewBox="0 0 360 130" aria-hidden="true"><path class="fl" d="M70 65 H150"/><path class="fl" d="M210 65 H290"/><g class="fn" transform="translate(40 65)"><circle r="28"/><g transform="translate(-12 -12)">${sized(ICONS.orders)}</g></g><g class="fn mid" transform="translate(180 65)"><circle r="28"/><text y="6" text-anchor="middle" dir="ltr">10′</text></g><g class="fn end" transform="translate(320 65)"><circle r="28"/><g transform="translate(-12 -12)">${sized(ICONS.whatsapp)}</g></g></svg>`;
+    case "accounting":
+      return `<div class="v-chart"><svg viewBox="0 0 320 130" aria-hidden="true"><g class="bars">${[38, 62, 48, 80, 66, 96, 74, 110]
+        .map((h, i) => `<rect x="${14 + i * 38}" y="${122 - h}" width="22" height="${h}" rx="5" style="--i:${i}"/>`)
+        .join("")}</g><path class="line" pathLength="1" d="M25 92 L63 70 L101 80 L139 52 L177 60 L215 36 L253 48 L291 22"/></svg><strong class="v-amt" dir="ltr" data-count="126400">126 400</strong><span class="v-cur">DA</span></div>`;
+    case "agents":
+      return `<div class="v-agent"><p class="vq" dir="auto">${esc(s.agentQ)}</p><p class="va" dir="auto"><span>${esc(s.agentA)}</span><i></i></p></div>`;
+    default:
+      return "";
+  }
+}
+
+
+function bento(t, s) {
+  const extras = { storeCta: s.storeCta, agentQ: s.agentQ, agentA: s.agentA };
+  const sx = { ...s, ...extras };
+  return `<section class="section bento-section" id="features">
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">${esc(s.bento.eyebrow)}</p>
+      <h2 class="h-xl">${esc(s.bento.title)}</h2>
+      <p class="lead">${esc(t.features.lead)}</p>
     </div>
-    <div class="faq-list">${t.faq.items
-      .map((item) => `<details class="reveal"><summary>${esc(item.q)}</summary><p>${esc(call(item.a))}</p></details>`)
+    <div class="bento">${t.features.items
+      .map(
+        (item, i) => `<article class="tile t-${item.key} reveal" data-spot style="--d:${(i % 4) * 70}ms">
+      <div class="tile-art">${bentoVisual(item.key, sx)}</div>
+      <div class="tile-copy"><span class="tile-icon">${ICONS[item.key]}</span><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></div>
+    </article>`,
+      )
       .join("")}</div>
   </div>
 </section>`;
-  return shell({ t, locale, page: "", title: t.meta.title, description: t.meta.description, screenshot: heroShot }, body);
+}
+
+/* ─────────────────────────── Algeria map ─────────────────────────── */
+
+const ROUTES = ["oran", "constantine", "annaba", "bejaia", "setif", "ghardaia", "ouargla", "tamanrasset", "bechar", "adrar", "tlemcen", "biskra", "illizi", "tindouf", "eloued"];
+
+function algeriaMap() {
+  const dots = mapDots()
+    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6"/>`)
+    .join("");
+  const [hx, hy] = project(CITIES.algiers);
+  const arcs = ROUTES.map((city, i) => {
+    const d = arcPath("algiers", city);
+    const [x, y] = project(CITIES[city]);
+    const dur = (3.2 + (i % 5) * 0.55).toFixed(2);
+    const begin = ((i * 0.37) % 3).toFixed(2);
+    return `<path class="arc" d="${d}" pathLength="1" style="--d:${begin}s"/><circle class="parcel-dot" r="4"><animateMotion dur="${dur}s" begin="${begin}s" repeatCount="indefinite" path="${d}" keyPoints="0;1" keyTimes="0;1" calcMode="spline" keySplines=".45 0 .25 1"/></circle><circle class="city" cx="${x}" cy="${y}" r="5"/><circle class="city-ring" cx="${x}" cy="${y}" r="5" style="--d:${begin}s"/>`;
+  }).join("");
+  return `<svg class="dz-map" viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" aria-hidden="true">
+  <defs><radialGradient id="dz-glow" cx="${(hx / MAP_WIDTH).toFixed(2)}" cy="${(hy / MAP_HEIGHT).toFixed(2)}" r=".7"><stop offset="0" stop-color="#38bdf8" stop-opacity=".25"/><stop offset="1" stop-color="#38bdf8" stop-opacity="0"/></radialGradient></defs>
+  <path class="dz-shape" d="${outlinePath()}"/>
+  <g class="dz-dots">${dots}</g>
+  <rect width="${MAP_WIDTH}" height="${MAP_HEIGHT}" fill="url(#dz-glow)"/>
+  <g class="dz-arcs">${arcs}</g>
+  <g class="hub"><circle class="hub-ring" cx="${hx}" cy="${hy}" r="10"/><circle class="hub-core" cx="${hx}" cy="${hy}" r="7"/></g>
+</svg>`;
+}
+
+function mapSection(t, s) {
+  return `<section class="section map-section" id="integrations">
+  <div class="container map-grid">
+    <div class="map-copy reveal">
+      <p class="eyebrow">${esc(s.map.eyebrow)}</p>
+      <h2 class="h-xl">${esc(s.map.title)}</h2>
+      <p class="lead">${esc(s.map.text)}</p>
+      <dl class="stats">${s.stats
+        .map((st) => `<div><dt><span data-count="${st.value}">${st.value}</span></dt><dd>${esc(st.label)}</dd></div>`)
+        .join("")}</dl>
+      <p class="map-legend"><i></i>${esc(s.map.legend)}</p>
+    </div>
+    <div class="map-art reveal">${algeriaMap()}</div>
+  </div>
+</section>`;
+}
+
+function marquee(t) {
+  const row = INTEGRATIONS.map((name) => `<span class="mq-item">${esc(name)}</span>`).join("");
+  return `<section class="marquee" aria-label="${esc(t.strip)}">
+  <p class="marquee-label">${esc(t.strip)}</p>
+  <div class="mq-track"><div class="mq-row">${row}${row}</div></div>
+</section>`;
+}
+
+/* ─────────────────────────── statement, tour, vault, faq, final ─────────────────────────── */
+
+function statement(t) {
+  return `<section class="section statement">
+  <div class="container narrow">
+    <p class="eyebrow reveal">${esc(t.problem.eyebrow)}</p>
+    <h2 class="scrub" data-scrub>${t.problem.title
+      .split(" ")
+      .map((w) => `<span>${esc(w)}</span>`)
+      .join(" ")}</h2>
+  </div>
+  <div class="container pains">${t.problem.items
+    .map((item, i) => `<article class="pain reveal" style="--d:${i * 90}ms"><span class="pain-n">0${i + 1}</span><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></article>`)
+    .join("")}</div>
+</section>`;
+}
+
+function tour(t, s, shot) {
+  const items = t.features.items;
+  return `<section class="section tour" data-tour>
+  <div class="container">
+    <div class="section-head reveal">
+      <p class="eyebrow">${esc(s.tour.eyebrow)}</p>
+      <h2 class="h-xl">${esc(s.tour.title)}</h2>
+    </div>
+    <div class="tour-tabs" role="tablist">${items
+      .map((item, i) => `<button type="button" role="tab" aria-selected="${i === 0}" data-tab="${i}"><span class="tab-ic">${ICONS[item.key]}</span><span>${esc(item.title)}</span><i class="tab-progress"></i></button>`)
+      .join("")}</div>
+    <div class="tour-stage" data-tilt-soft>
+      <div class="laptop">
+        <div class="laptop-screen">${items
+          .map((item, i) => `<img src="${shot(item.key)}" alt="${esc(item.title)}" loading="lazy" decoding="async" width="1440" height="900" data-shot="${i}"${i === 0 ? ' class="is-on"' : ""}>`)
+          .join("")}</div>
+        <div class="laptop-base" aria-hidden="true"></div>
+      </div>
+      <div class="tour-caption">${items
+        .map((item, i) => `<div data-caption="${i}"${i === 0 ? ' class="is-on"' : ""}><ul>${item.points.map((p) => `<li>${ICONS.check}<span>${esc(p)}</span></li>`).join("")}</ul></div>`)
+        .join("")}</div>
+    </div>
+  </div>
+</section>`;
+}
+
+function vaultArt(s) {
+  const at = (x, y, z) => {
+    const [px, py] = iso(x, y, z);
+    return [+(260 + px).toFixed(1), +(250 + py).toFixed(1)];
+  };
+  const box = (x0, y0, x1, y1, z0, z1, cls) =>
+    `<g class="${cls}"><polygon class="f-left" points="${pts([at(x0, y1, z1), at(x1, y1, z1), at(x1, y1, z0), at(x0, y1, z0)])}"/><polygon class="f-right" points="${pts([at(x1, y0, z1), at(x1, y1, z1), at(x1, y1, z0), at(x1, y0, z0)])}"/><polygon class="f-top" points="${pts([at(x0, y0, z1), at(x1, y0, z1), at(x1, y1, z1), at(x0, y1, z1)])}"/></g>`;
+  return `<svg class="vault-art" viewBox="0 0 520 480" aria-hidden="true">
+  <defs><radialGradient id="v-halo"><stop offset="0" stop-color="#38bdf8" stop-opacity=".35"/><stop offset="1" stop-color="#38bdf8" stop-opacity="0"/></radialGradient></defs>
+  <ellipse cx="260" cy="300" rx="230" ry="120" fill="url(#v-halo)"/>
+  <g class="orbit o1"><ellipse cx="260" cy="250" rx="210" ry="74"/><circle class="sat" r="5"><animateMotion dur="9s" repeatCount="indefinite" path="M50,250 a210,74 0 1,0 420,0 a210,74 0 1,0 -420,0"/></circle></g>
+  <g class="orbit o2"><ellipse cx="260" cy="250" rx="160" ry="56"/><circle class="sat gold" r="4"><animateMotion dur="6.5s" repeatCount="indefinite" path="M420,250 a160,56 0 1,0 -320,0 a160,56 0 1,0 320,0"/></circle></g>
+  ${box(-110, -110, 110, 110, 0, 26, "v-base")}
+  ${box(-70, -70, 70, 70, 26, 150, "v-safe")}
+  <g class="v-lock" transform="translate(${at(70, 0, 88).join(" ")})"><path d="M-14 -4 v-10 a14 14 0 0 1 28 0 v10" fill="none"/><rect x="-20" y="-4" width="40" height="32" rx="7"/><circle cx="0" cy="11" r="4"/></g>
+  <g class="v-chip c1" transform="translate(60 92)"><rect width="150" height="40" rx="20"/><text x="75" y="25" text-anchor="middle">${esc(s.vault.encrypted)}</text></g>
+  <g class="v-chip c2" transform="translate(320 360)"><rect width="150" height="40" rx="20"/><text x="75" y="25" text-anchor="middle">${esc(s.vault.offline)}</text></g>
+</svg>`;
+}
+
+function vault(t, s) {
+  const icons = [ICONS.lock, ICONS.wifiOff, ICONS.backup, ICONS.team];
+  return `<section class="section vault" id="security">
+  <div class="container vault-grid">
+    <div class="vault-visual reveal">${vaultArt(s)}</div>
+    <div class="vault-copy">
+      <p class="eyebrow reveal">${esc(t.security.eyebrow)}</p>
+      <h2 class="h-xl reveal">${esc(t.security.title)}</h2>
+      <p class="lead reveal">${esc(t.security.lead)}</p>
+      <ul class="vault-list">${t.security.items
+        .map((item, i) => `<li class="reveal" style="--d:${i * 70}ms"><span class="vl-ic">${icons[i]}</span><div><h3>${esc(item.title)}</h3><p>${esc(item.text)}</p></div></li>`)
+        .join("")}</ul>
+    </div>
+  </div>
+</section>`;
+}
+
+function readySteps(t) {
+  return `<section class="section ready">
+  <div class="container">
+    <div class="section-head center reveal"><p class="eyebrow">${esc(t.how.eyebrow)}</p><h2 class="h-xl">${esc(t.how.title)}</h2></div>
+    <ol class="ready-row">${t.how.steps
+      .map((st, i) => `<li class="reveal" style="--d:${i * 90}ms"><span class="big-n">${i + 1}</span><h3>${esc(st.title)}</h3><p>${esc(st.text)}</p></li>`)
+      .join("")}</ol>
+  </div>
+</section>`;
+}
+
+function faq(t) {
+  return `<section class="section faq" id="faq">
+  <div class="container faq-grid">
+    <div class="section-head reveal"><p class="eyebrow">${esc(t.faq.eyebrow)}</p><h2 class="h-xl">${esc(t.faq.title)}</h2></div>
+    <div class="faq-list">${t.faq.items
+      .map((item) => `<details class="reveal"><summary><span>${esc(item.q)}</span><i aria-hidden="true">${ICONS.plus}</i></summary><div class="faq-a"><p>${esc(call(item.a))}</p></div></details>`)
+      .join("")}</div>
+  </div>
+</section>`;
+}
+
+function finalCta(t, s, locale) {
+  const wa = whatsappHref(t.whatsappMessage);
+  return `<section class="final">
+  <div class="final-sky" aria-hidden="true">${stars(60, 29)}<div class="sun big"></div></div>
+  <div class="container narrow center final-copy">
+    <img class="final-mark" src="/img/mark.svg" alt="" width="64" height="64">
+    <h2 class="display-2 reveal">${esc(s.final.title)}</h2>
+    <p class="lead reveal">${esc(call(t.trial.text))}</p>
+    <div class="cta-row center reveal">
+      <a class="btn btn-primary btn-lg btn-glow" href="${href(locale, "download")}">${ICONS.download}<span>${esc(t.trial.primary)}</span></a>
+      <a class="btn btn-glass btn-lg" href="${wa}" rel="noopener">${ICONS.whatsapp}<span>${esc(t.trial.secondary)}</span></a>
+    </div>
+  </div>
+  ${dunes("fd", "night")}
+</section>`;
+}
+
+/* ─────────────────────────── pages ─────────────────────────── */
+
+const EXTRA = {
+  ar: { storeCta: "اطلب الآن · الدفع عند الاستلام", agentQ: "ما المنتجات التي توشك على النفاد؟", agentA: "3 منتجات: جلابة بيضاء (4)، عباية سوداء (2)، حقيبة جلدية (1)." },
+  fr: { storeCta: "Commander · paiement à la livraison", agentQ: "Quels produits sont presque en rupture ?", agentA: "3 produits : djellaba blanche (4), abaya noire (2), sac en cuir (1)." },
+  en: { storeCta: "Order now · cash on delivery", agentQ: "Which products are about to run out?", agentA: "3 products: white djellaba (4), black abaya (2), leather bag (1)." },
+};
+
+export function homePage(locale, shot) {
+  const t = CONTENT[locale];
+  const s = { ...STORY[locale], ...EXTRA[locale] };
+  const body = `
+${hero(t, s, locale)}
+${marquee(t)}
+${statement(t)}
+${journey(s)}
+${bento(t, s)}
+${mapSection(t, s)}
+${tour(t, s, shot)}
+${vault(t, s)}
+${readySteps(t)}
+${faq(t)}
+${finalCta(t, s, locale)}`;
+  return shell({ t, locale, page: "", title: t.meta.title, description: t.meta.description }, body);
 }
 
 export function downloadPage(locale) {
@@ -279,23 +593,24 @@ export function downloadPage(locale) {
   const d = t.download;
   const body = `
 <section class="page-hero">
-  <div class="hero-bg" aria-hidden="true"><span class="orb orb-a"></span><span class="orb orb-b"></span></div>
-  <div class="container narrow center">
+  <div class="hero-sky" aria-hidden="true">${stars(60, 5)}<div class="sun"></div></div>
+  <div class="container narrow center page-hero-copy">
     <span class="windows-badge">${ICONS.windows}</span>
-    <h1 class="reveal">${esc(d.title)}</h1>
-    <p class="lead reveal">${esc(d.lead)}</p>
-    <div class="cta-row center reveal">
-      <a class="btn btn-primary btn-lg" href="${SITE.downloadUrl}" rel="noopener">${ICONS.download}<span>${esc(d.button)}</span></a>
+    <h1 class="display-2">${esc(d.title)}</h1>
+    <p class="lead">${esc(d.lead)}</p>
+    <div class="cta-row center">
+      <a class="btn btn-primary btn-lg btn-glow" href="${SITE.downloadUrl}" rel="noopener">${ICONS.download}<span>${esc(d.button)}</span></a>
     </div>
-    <p class="note reveal">${esc(call(t.hero.note))}</p>
+    <p class="hero-note">${esc(call(t.hero.note))}</p>
   </div>
+  ${dunes("dd")}
 </section>
 <section class="section">
   <div class="container download-grid">
-    <article class="card reveal"><h2 class="h3">${esc(d.stepsTitle)}</h2><ol class="numbered">${d.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></article>
-    <article class="card reveal"><h2 class="h3">${esc(d.requirementsTitle)}</h2><ul class="checks">${d.requirements.map((r) => `<li>${ICONS.check}<span>${esc(r)}</span></li>`).join("")}</ul></article>
+    <article class="panel reveal"><h2 class="h-md">${esc(d.stepsTitle)}</h2><ol class="numbered">${d.steps.map((st) => `<li>${esc(st)}</li>`).join("")}</ol></article>
+    <article class="panel reveal"><h2 class="h-md">${esc(d.requirementsTitle)}</h2><ul class="checks">${d.requirements.map((r) => `<li>${ICONS.check}<span>${esc(r)}</span></li>`).join("")}</ul></article>
   </div>
-  <div class="container center help-row reveal"><span>${esc(d.help)}</span> <a class="btn btn-ghost" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${ICONS.whatsapp}<span>WhatsApp</span></a></div>
+  <div class="container center help-row reveal"><span>${esc(d.help)}</span> <a class="btn btn-glass" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${ICONS.whatsapp}<span>WhatsApp</span></a></div>
 </section>`;
   return shell({ t, locale, page: "download", title: `${d.title} — SahelFlow`, description: d.lead }, body);
 }
@@ -305,7 +620,7 @@ export function legalPage(locale, kind) {
   const title = kind === "privacy" ? t.legal.privacyTitle : t.legal.termsTitle;
   const sections = (kind === "privacy" ? PRIVACY : TERMS)[locale];
   const body = `
-<section class="page-hero compact"><div class="container narrow"><h1>${esc(title)}</h1><p class="note">${esc(t.legal.updated)}: ${LEGAL_UPDATED}</p></div></section>
+<section class="page-hero compact"><div class="container narrow page-hero-copy"><h1 class="display-2">${esc(title)}</h1><p class="hero-note">${esc(t.legal.updated)}: ${LEGAL_UPDATED}</p></div></section>
 <section class="section legal"><div class="container narrow">${sections
     .map(([h, p]) => `<h2>${esc(h)}</h2><p>${esc(p)}</p>`)
     .join("")}</div></section>`;
@@ -314,8 +629,8 @@ export function legalPage(locale, kind) {
 
 export function notFoundPage() {
   const t = CONTENT[SITE.defaultLocale];
-  const body = `<section class="page-hero"><div class="container narrow center"><p class="eyebrow">404</p><h1>${esc(t.notFound.title)}</h1><p class="lead">${esc(t.notFound.text)}</p><div class="cta-row center"><a class="btn btn-primary" href="/">${esc(t.notFound.back)}</a></div></div></section>`;
-  return shell({ t, locale: SITE.defaultLocale, page: "", title: `404 — SahelFlow`, description: t.notFound.text }, body);
+  const body = `<section class="page-hero"><div class="hero-sky" aria-hidden="true">${stars(60, 3)}</div><div class="container narrow center page-hero-copy"><p class="eyebrow">404</p><h1 class="display-2">${esc(t.notFound.title)}</h1><p class="lead">${esc(t.notFound.text)}</p><div class="cta-row center"><a class="btn btn-primary" href="/">${esc(t.notFound.back)}</a></div></div>${dunes("nf")}</section>`;
+  return shell({ t, locale: SITE.defaultLocale, page: "404", title: `404 — SahelFlow`, description: t.notFound.text }, body);
 }
 
 export function rootRedirect() {
@@ -325,5 +640,5 @@ export function rootRedirect() {
 <link rel="canonical" href="${SITE.origin}/${SITE.defaultLocale}/">
 <script>(function(){var l="${SITE.defaultLocale}";try{var s=localStorage.getItem("sf-lang");if(s==="ar"||s==="fr"||s==="en")l=s}catch(e){}location.replace("/"+l+"/"+location.hash)})()</script>
 <meta http-equiv="refresh" content="0; url=/${SITE.defaultLocale}/">
-</head><body style="background:#05070d"></body></html>`;
+</head><body style="background:#04070d"></body></html>`;
 }

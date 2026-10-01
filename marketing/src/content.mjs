@@ -6,7 +6,7 @@ const ar = {
   lang: "ar",
   name: "العربية",
   meta: {
-    title: "SahelFlow — إدارة تجارة الدفع عند الاستلام في الجزائر",
+    title: "SahelFlow — نظام تشغيل تجارة الدفع عند الاستلام في الجزائر",
     description:
       "SahelFlow يجمع طلباتك، واتساب، التوصيل، المرتجعات والمحاسبة في تطبيق واحد على حاسوبك. مصمَّم للتجار الجزائريين الذين يبيعون بالدفع عند الاستلام.",
   },
@@ -23,18 +23,18 @@ const ar = {
   },
   hero: {
     eyebrow: "مصمَّم لتجارة الدفع عند الاستلام في الجزائر",
-    title: ["كل طلب، من رسالة واتساب", "إلى المال في يدك."],
+    title: ["بِع أكثر. استرجع أقل.", "واعرف مصير كل دينار."],
     lead:
-      "SahelFlow يحوّل الفوضى اليومية — رسائل، مكالمات تأكيد، شركات توصيل، مرتجعات — إلى مسار واحد واضح على حاسوبك. أقل مرتجعات، تأكيد أسرع، وأرباح تعرفها بالدينار.",
-    primary: "حمّل التجربة المجانية",
-    secondary: "تحدّث معنا على واتساب",
+      "SahelFlow نظام تشغيل تجارة الدفع عند الاستلام: طلبات واتساب يلتقطها الذكاء الاصطناعي، تأكيدات مرتّبة حسب المخاطر، شركات توصيل متزامنة، ومال مُطابَق حتى آخر دينار — على حاسوبك، وحتى دون إنترنت.",
+    primary: "ابدأ مجاناً — 7 أيام",
+    secondary: "تحدّث مع إنسان على واتساب",
     note: (days) => `${days} أيام مجاناً · Windows 10 و 11 · بدون بطاقة بنكية`,
     trust: ["يعمل حتى بدون إنترنت", "عربية · Français · English", "بياناتك تبقى على حاسوبك"],
   },
   strip: "يعمل مع الأدوات التي تستعملها يومياً",
   problem: {
     eyebrow: "المشكلة",
-    title: "التجارة بالدفع عند الاستلام تُدار اليوم من عشرة أماكن.",
+    title: "متجرك يعمل اليوم على واتساب، وثلاث لوحات توصيل، ودفتر، وذاكرتك. هناك يتسرّب ربحك.",
     items: [
       { title: "طلبات ضائعة في واتساب", text: "زبون يرسل الاسم والولاية والهاتف في ثلاث رسائل، وأنت تنسخها يدوياً في جدول." },
       { title: "مرتجعات تأكل الربح", text: "طرد يعود يعني مصاريف توصيل ضائعة وسلعة مجمَّدة، ولا أحد يقول لك من أين تأتي الخسارة." },
@@ -98,7 +98,7 @@ const ar = {
   },
   how: {
     eyebrow: "كيف يعمل",
-    title: "جاهز للعمل في نفس اليوم.",
+    title: "شغّال في اليوم نفسه.",
     steps: [
       { title: "حمّل وثبّت", text: "ثبّت SahelFlow على Windows في دقيقتين وأنشئ رمزك السري." },
       { title: "اربط أدواتك", text: "امسح رمز واتساب، أضف شركة التوصيل ومنتجاتك — أو استورد من Excel أو Shopify أو YouCan." },
@@ -117,9 +117,9 @@ const ar = {
   },
   security: {
     eyebrow: "الأمان والملكية",
-    title: "بياناتك ملكك. حرفياً.",
+    title: "بياناتك تعيش على حاسوبك.",
     lead:
-      "SahelFlow تطبيق سطح مكتب: قاعدة بيانات متجرك تعيش على حاسوبك، لا على خادم شخص آخر.",
+      "مشفّرة بـ AES-256، تعمل دون إنترنت، وملكك وحدك. SahelFlow يحفظ قاعدة بيانات متجرك على جهازك أنت، لا على خادم شخص آخر.",
     items: [
       { title: "تشفير AES-256-GCM", text: "أرقام الهواتف والعناوين والمحادثات مشفّرة على القرص." },
       { title: "يعمل بدون إنترنت", text: "واصل البيع والتأكيد والمحاسبة حتى عند انقطاع الشبكة." },
@@ -181,7 +181,7 @@ const fr = {
   lang: "fr",
   name: "Français",
   meta: {
-    title: "SahelFlow — Le système du e-commerce paiement à la livraison en Algérie",
+    title: "SahelFlow — Le système d'exploitation du e-commerce COD en Algérie",
     description:
       "SahelFlow réunit vos commandes, WhatsApp, la livraison, les retours et la comptabilité dans une seule application sur votre PC. Conçu pour les vendeurs algériens en paiement à la livraison.",
   },
@@ -198,18 +198,18 @@ const fr = {
   },
   hero: {
     eyebrow: "Conçu pour le paiement à la livraison en Algérie",
-    title: ["Chaque commande, du message WhatsApp", "à l'argent encaissé."],
+    title: ["Vendez plus. Retournez moins.", "Maîtrisez chaque dinar."],
     lead:
-      "SahelFlow transforme le chaos quotidien — messages, appels de confirmation, sociétés de livraison, retours — en un seul flux clair sur votre PC. Moins de retours, des confirmations plus rapides, et un bénéfice que vous connaissez au dinar près.",
-    primary: "Télécharger l'essai gratuit",
-    secondary: "Nous écrire sur WhatsApp",
+      "SahelFlow est le système d'exploitation du e-commerce COD : commandes WhatsApp captées par l'IA, confirmations priorisées par le risque, livreurs synchronisés et encaissements rapprochés au dinar près — sur votre PC, même hors ligne.",
+    primary: "Commencer gratuitement — 7 jours",
+    secondary: "Parler à un humain sur WhatsApp",
     note: (days) => `${days} jours gratuits · Windows 10 et 11 · sans carte bancaire`,
     trust: ["Fonctionne hors ligne", "العربية · Français · English", "Vos données restent sur votre PC"],
   },
   strip: "Fonctionne avec les outils que vous utilisez chaque jour",
   problem: {
     eyebrow: "Le problème",
-    title: "Le paiement à la livraison se gère aujourd'hui depuis dix endroits.",
+    title: "Aujourd'hui, votre boutique tourne sur WhatsApp, trois tableaux de livreurs, un cahier et votre mémoire. C'est là que fuit votre marge.",
     items: [
       { title: "Des commandes perdues dans WhatsApp", text: "Un client envoie nom, wilaya et téléphone en trois messages, et vous recopiez tout à la main." },
       { title: "Des retours qui mangent la marge", text: "Un colis qui revient, ce sont des frais perdus et du stock bloqué — sans savoir d'où vient la perte." },
@@ -292,8 +292,8 @@ const fr = {
   },
   security: {
     eyebrow: "Sécurité et propriété",
-    title: "Vos données vous appartiennent. Littéralement.",
-    lead: "SahelFlow est une application de bureau : la base de données de votre boutique vit sur votre PC, pas sur le serveur de quelqu'un d'autre.",
+    title: "Vos données vivent sur votre PC.",
+    lead: "Chiffrées en AES-256, disponibles hors ligne, et à vous seul. SahelFlow garde la base de données de votre boutique sur votre machine, pas sur le serveur de quelqu'un d'autre.",
     items: [
       { title: "Chiffrement AES-256-GCM", text: "Téléphones, adresses et conversations sont chiffrés sur le disque." },
       { title: "Fonctionne hors ligne", text: "Continuez à vendre, confirmer et compter même sans réseau." },
@@ -351,7 +351,7 @@ const en = {
   lang: "en",
   name: "English",
   meta: {
-    title: "SahelFlow — The operating system for cash-on-delivery commerce in Algeria",
+    title: "SahelFlow — The operating system for COD commerce in Algeria",
     description:
       "SahelFlow brings your orders, WhatsApp, delivery, returns and accounting together in one app on your PC. Built for Algerian cash-on-delivery sellers.",
   },
@@ -368,18 +368,18 @@ const en = {
   },
   hero: {
     eyebrow: "Built for cash-on-delivery commerce in Algeria",
-    title: ["Every order, from a WhatsApp message", "to cash in hand."],
+    title: ["Sell more. Return less.", "Know every dinar."],
     lead:
-      "SahelFlow turns the daily chaos — messages, confirmation calls, couriers, returns — into one clear flow on your PC. Fewer returns, faster confirmations, and profit you know to the dinar.",
-    primary: "Download the free trial",
-    secondary: "Talk to us on WhatsApp",
+      "SahelFlow is the operating system for cash-on-delivery commerce: WhatsApp orders captured by AI, confirmations ranked by risk, couriers in sync and cash reconciled to the last dinar — on your PC, even offline.",
+    primary: "Start free — 7 days",
+    secondary: "Talk to a human on WhatsApp",
     note: (days) => `${days}-day free trial · Windows 10 and 11 · no card needed`,
     trust: ["Works offline", "العربية · Français · English", "Your data stays on your PC"],
   },
   strip: "Works with the tools you already use every day",
   problem: {
     eyebrow: "The problem",
-    title: "Cash-on-delivery is run from ten different places today.",
+    title: "Today your shop runs on WhatsApp, three courier dashboards, a notebook and your memory. That's where your margin leaks.",
     items: [
       { title: "Orders lost in WhatsApp", text: "A customer sends their name, wilaya and phone across three messages, and you copy it all by hand." },
       { title: "Returns that eat the margin", text: "Every parcel that comes back is lost delivery fees and frozen stock — and nobody tells you where the loss comes from." },
@@ -462,8 +462,8 @@ const en = {
   },
   security: {
     eyebrow: "Security and ownership",
-    title: "Your data is yours. Literally.",
-    lead: "SahelFlow is a desktop app: your shop's database lives on your PC, not on someone else's server.",
+    title: "Your data lives on your PC.",
+    lead: "AES-256 encrypted, ready to work offline, and yours alone. SahelFlow keeps your shop's database on your machine, not on someone else's server.",
     items: [
       { title: "AES-256-GCM encryption", text: "Phone numbers, addresses and conversations are encrypted on disk." },
       { title: "Works offline", text: "Keep selling, confirming and counting even when the network drops." },

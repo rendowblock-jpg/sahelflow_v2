@@ -1520,6 +1520,30 @@ Stable label still requires the ROADMAP Phase 9 evidence. Until then the
 customer release is a **Founder-authorized launch release**, not a Stable
 claim.
 
+## FD-068 — Branded launch screen while the workspace starts (2026-10-01, ADOPTED)
+
+The Founder's 2026-10-01 directive ("since the installed app will take time to
+open … create a top tier animated engaging startup page that opens instantly
+when the user opens SahelFlow … until SahelFlow opens"). FD-067 is reserved for
+the customer-online release authority named in FD-066.
+
+Supersedes only FD-025's "no splash" clause. On a normal launch a small
+undecorated **launch window** (`launch`, title `SahelFlow - Starting`) paints
+from the first frame: the assembling SahelFlow mark, the seller's last
+workspace language (else the Windows language, else French), and progress
+mirrored honestly from the durable startup trace (preparing data, starting,
+retrying, opening the workspace). It never reaches 100 % before the workspace
+is visible and explains slow first launches after an update.
+
+Unchanged from FD-025: the single configured `main` window stays hidden until
+the authenticated workspace has hydrated and remains the only readiness
+authority; the launch window has no IPC capability, never navigates, holds no
+business data, and closes as soon as `main` becomes visible — the workspace or
+the bounded recovery document. It is never shown during installation-root
+rotation. Creating it can fail without affecting startup. Contract:
+`src/lib/__tests__/launch-screen-contract.test.ts`; module:
+`src-tauri/src/launch_screen.rs`.
+
 ## Change control
 
 A Founder decision can be changed only by a new numbered decision that states

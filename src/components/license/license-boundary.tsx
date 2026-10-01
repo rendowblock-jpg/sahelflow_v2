@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { needsLicensedServerTreeRefresh } from "@/components/license/license-boundary-state";
-import { LicensePanel } from "@/components/settings/license-panel";
+import { LicenseLockout } from "@/components/license/license-lockout";
 import { useI18n } from "@/hooks/use-i18n";
 import { useLicense } from "@/hooks/use-license";
 
@@ -39,15 +39,5 @@ export function LicenseBoundary({ children }: { children: ReactNode }) {
   if (projection?.status === "valid") return <>{children}</>;
   if (pathname === "/login") return <>{children}</>;
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-4 sm:p-6">
-      <section className="w-full max-w-xl space-y-4" aria-labelledby="license-lockout-title">
-        <div className="space-y-1 text-center">
-          <h1 id="license-lockout-title" className="text-2xl font-semibold">SahelFlow</h1>
-          <p className="text-sm text-muted-foreground">{t("license.lockoutTitle")}</p>
-        </div>
-        <LicensePanel />
-      </section>
-    </main>
-  );
+  return <LicenseLockout />;
 }

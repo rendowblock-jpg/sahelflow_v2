@@ -169,6 +169,17 @@ html[dir="rtl"],
   animation: sf-state-arrive var(--sf-motion-state) var(--sf-motion-ease-out) both;
 }
 
+/* Entry surfaces (setup, sign-in, join, licence) arrive once, then hold. */
+[data-sf-entry] [data-sf-entry-reveal] {
+  animation: sf-surface-enter 200ms var(--sf-motion-ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sf-entry] [data-sf-entry-reveal] {
+    animation: none;
+  }
+}
+
 @keyframes sf-page-section-enter {
   from {
     opacity: 0.72;

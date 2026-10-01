@@ -625,6 +625,37 @@ export async function requiresAuthenticatedEntitlementActivation(input: unknown)
   }
 }
 
+/**
+ * Read-only epoch facts a Founder needs to sign a permanent entitlement that
+ * this installation will accept (the licence request code). Never mutates or
+ * relaxes authority; unreadable state reports zeros and activation still
+ * enforces every rule.
+ */
+export function licenseRequestEpochs(): Readonly<{
+  transferEpoch: number;
+  revocationEpoch: number;
+  recoveryEpoch: number;
+}> {
+  let current: LicenseAuthorityEnvelope | null = null;
+  try {
+    current = readAuthority();
+  } catch {
+    current = null;
+  }
+  let recoveryEpoch = 0;
+  try {
+    recoveryEpoch = nativeMinimumPermanentRecoveryEpoch(true);
+  } catch {
+    recoveryEpoch = 0;
+  }
+  const claims = current?.state.entitlement.claims;
+  return Object.freeze({
+    transferEpoch: claims?.transferEpoch ?? 0,
+    revocationEpoch: Math.max(current?.state.minimumRevocationEpoch ?? 0, claims?.revocationEpoch ?? 0),
+    recoveryEpoch,
+  });
+}
+
 export async function getLicenseAuthorityProjection(
   shop: ShopContext = shopContext,
   now: Date = new Date(),

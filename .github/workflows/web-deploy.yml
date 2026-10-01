@@ -67,6 +67,8 @@ jobs:
     if: github.ref == 'refs/heads/main' && inputs.target != 'site'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # The trusted trial keyring lives with the release variables.
+    environment: internal-updater
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
