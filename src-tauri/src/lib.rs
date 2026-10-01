@@ -13,6 +13,8 @@ mod child_containment;
 mod device_binding;
 mod installation_root_key;
 mod installation_root_rotation;
+#[cfg_attr(debug_assertions, allow(dead_code))]
+mod launch_screen;
 mod license_clock;
 mod migration_coordinator;
 mod packaged_auth;
@@ -308,8 +310,10 @@ pub fn run() {
                 if window.is_visible().unwrap_or(false) {
                     let _ = window.show();
                     let _ = window.set_focus();
+                    return;
                 }
             }
+            launch_screen::focus(app);
         }))
     };
     let application = builder
@@ -355,6 +359,11 @@ pub fn run() {
                     "workspace-window-pending",
                     None,
                 );
+                // FD-068: paint the launch screen from the first frame. The
+                // hidden main window stays the only readiness authority.
+                if !rotate_installation_root {
+                    launch_screen::open(&app_handle, &app_data_dir);
+                }
 
                 // Migration, runtime-tree verification and service startup can
                 // take materially longer on HDD systems. Keep them off Tauri's

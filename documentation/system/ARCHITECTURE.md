@@ -758,8 +758,10 @@ Normal desktop startup has one configured window. It remains non-visible while
 migration, protected-runtime readiness, session authentication and workspace
 hydration complete. The authenticated workspace is the first visible
 normal-launch surface. A startup failure navigates that same main window to the
-bounded recovery document; no splash, placeholder workspace or second startup
-window participates in the successful path.
+bounded recovery document; no placeholder workspace or second startup
+authority participates in the successful path. The FD-068 launch window
+(`src-tauri/src/launch_screen.rs`) only mirrors the startup trace and closes as
+soon as `main` is visible; it has no capability, navigation or data.
 
 The installed server's executable, entrypoint, dependencies and native engine
 remain under protected `Program Files`. Its process working directory is a

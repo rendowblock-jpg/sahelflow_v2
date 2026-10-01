@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="{{LANG}}" dir="{{DIR}}" data-stage="preparing">
+<head>
+<meta charset="utf-8">
+<title>SahelFlow</title>
+<style>
+:root {
+  color-scheme: dark;
+  --p: 0.06;
+  --bg: #050a11;
+  --ink: #e8f0f7;
+  --muted: #8195a8;
+  --faint: #4c5c6c;
+  --sky: #38bdf8;
+  --sky-deep: #0284c7;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", Tahoma, system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+  -webkit-font-smoothing: antialiased;
+}
+html[lang="ar"] body { font-family: "Segoe UI", Tahoma, "Segoe UI Variable Text", system-ui, sans-serif; }
+
+/* Light: a slow sky aura behind the mark and a hairline frame. */
+.aura {
+  position: fixed;
+  inset: -35%;
+  background:
+    radial-gradient(34% 30% at 50% 40%, rgba(14, 165, 233, .20), transparent 70%),
+    radial-gradient(26% 24% at 64% 62%, rgba(2, 132, 199, .12), transparent 72%),
+    radial-gradient(24% 22% at 36% 64%, rgba(125, 211, 252, .07), transparent 72%);
+  animation: drift 9s ease-in-out infinite alternate;
+}
+.grid {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 197, 233, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 197, 233, .045) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(60% 55% at 50% 42%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(60% 55% at 50% 42%, #000 0%, transparent 75%);
+  opacity: 0;
+  animation: fade 1.2s .2s var(--ease) forwards;
+}
+.frame {
+  position: fixed;
+  inset: 0;
+  border: 1px solid rgba(148, 197, 233, .10);
+  pointer-events: none;
+}
+
+.stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(-6px);
+}
+
+/* The mark assembles: two crescents sweep into the S, the dot lands last. */
+.mark {
+  width: 88px;
+  height: 88px;
+  overflow: visible;
+  filter: drop-shadow(0 12px 28px rgba(14, 165, 233, .32));
+  animation: hover 4.8s 1.6s ease-in-out infinite;
+}
+.mark .top { transform-origin: 31.5px 23px; animation: sweep-top 1s var(--ease) both; }
+.mark .bottom { transform-origin: 32.5px 41px; animation: sweep-bottom 1s .12s var(--ease) both; }
+.mark .dot { transform-origin: 47.2px 12.4px; animation: land .55s .78s cubic-bezier(.3, 1.6, .5, 1) both; }
+.halo {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+  border-radius: 50%;
+  border: 1px solid rgba(56, 189, 248, .22);
+  opacity: 0;
+  animation: ring 2.8s 1.1s var(--ease) infinite;
+}
+
+.word {
+  margin-top: 22px;
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -.015em;
+  direction: ltr;
+  animation: rise .8s .45s var(--ease) both;
+}
+.word b {
+  font-weight: inherit;
+  background: linear-gradient(100deg, #7dd3fc, #0ea5e9 60%, #38bdf8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.tag {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  animation: rise .8s .58s var(--ease) both;
+}
+
+.progress {
+  position: relative;
+  width: 232px;
+  height: 3px;
+  margin-top: 34px;
+  border-radius: 3px;
+  background: rgba(148, 197, 233, .10);
+  overflow: hidden;
+  animation: rise .8s .7s var(--ease) both;
+}
+.progress i {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--sky-deep), var(--sky));
+  transform: scaleX(var(--p));
+  transform-origin: left center;
+  transition: transform .9s var(--ease);
+}
+[dir="rtl"] .progress i { transform-origin: right center; background: linear-gradient(270deg, var(--sky-deep), var(--sky)); }
+.progress::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .35), transparent);
+  animation: sheen 1.8s 1.2s ease-in-out infinite;
+}
+
+.status {
+  position: relative;
+  width: 360px;
+  height: 20px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: center;
+  animation: rise .8s .8s var(--ease) both;
+}
+.status span {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity .45s var(--ease), transform .45s var(--ease);
+}
+html[data-stage="preparing"] .status [data-stage="preparing"],
+html[data-stage="starting"] .status [data-stage="starting"],
+html[data-stage="retrying"] .status [data-stage="retrying"],
+html[data-stage="opening"] .status [data-stage="opening"] { opacity: 1; transform: none; }
+
+.hint {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 40px;
+  padding: 0 32px;
+  color: var(--faint);
+  font-size: 12px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity .8s var(--ease);
+}
+html[data-slow="1"] .hint { opacity: 1; }
+.version {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 14px;
+  color: var(--faint);
+  font-size: 11px;
+  text-align: center;
+  direction: ltr;
+  letter-spacing: .02em;
+}
+
+@keyframes sweep-top { from { opacity: 0; transform: rotate(-70deg) scale(.82); } to { opacity: 1; transform: none; } }
+@keyframes sweep-bottom { from { opacity: 0; transform: rotate(-70deg) scale(.82); } to { opacity: 1; transform: none; } }
+@keyframes land { from { opacity: 0; transform: translate(-6px, 6px) scale(.2); } to { opacity: 1; transform: none; } }
+@keyframes ring { 0% { opacity: 0; transform: scale(.55); } 25% { opacity: .9; } 100% { opacity: 0; transform: scale(1.25); } }
+@keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fade { to { opacity: 1; } }
+@keyframes drift { from { transform: translate3d(-1.5%, -1%, 0) scale(1); } to { transform: translate3d(1.5%, 1%, 0) scale(1.06); } }
+@keyframes sheen { from { transform: translateX(-120%); } to { transform: translateX(280%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .grid { opacity: 1; }
+  .halo, .progress::after { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="aura" aria-hidden="true"></div>
+<div class="grid" aria-hidden="true"></div>
+<div class="frame" aria-hidden="true"></div>
+<main class="stage" role="status" aria-live="polite">
+  <div class="halo" aria-hidden="true"></div>
+  <svg class="mark" viewBox="9 7 50 50" aria-hidden="true">
+    <defs>
+      <linearGradient id="sky" x1="17" y1="9" x2="42" y2="34" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#7DD3FC"/><stop offset="1" stop-color="#0EA5E9"/></linearGradient>
+      <linearGradient id="deep" x1="22" y1="30" x2="47" y2="55" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0284C7"/><stop offset="1" stop-color="#0C4A6E"/></linearGradient>
+      <mask id="m-top"><rect width="64" height="64" fill="#000"/><circle cx="31.5" cy="23" r="14" fill="#fff"/><circle cx="35.4" cy="25.6" r="10.6" fill="#000"/><rect x="31.5" y="23" width="33" height="41" fill="#000"/></mask>
+      <mask id="m-bottom"><rect width="64" height="64" fill="#000"/><circle cx="32.5" cy="41" r="14" fill="#fff"/><circle cx="28.6" cy="38.4" r="10.6" fill="#000"/><rect x="0" y="0" width="32.5" height="41" fill="#000"/></mask>
+    </defs>
+    <g class="top"><rect width="64" height="64" fill="url(#sky)" mask="url(#m-top)"/></g>
+    <g class="bottom"><rect width="64" height="64" fill="url(#deep)" mask="url(#m-bottom)"/></g>
+    <circle class="dot" cx="47.2" cy="12.4" r="3.1" fill="#7DD3FC"/>
+  </svg>
+  <div class="word">Sahel<b>Flow</b></div>
+  <div class="tag">{{TAGLINE}}</div>
+  <div class="progress" aria-hidden="true"><i></i></div>
+  <div class="status">
+    <span data-stage="preparing">{{PREPARING}}</span>
+    <span data-stage="starting">{{STARTING}}</span>
+    <span data-stage="retrying">{{RETRYING}}</span>
+    <span data-stage="opening">{{OPENING}}</span>
+  </div>
+</main>
+<p class="hint">{{SLOW_HINT}}</p>
+<p class="version">{{VERSION}}</p>
+</body>
+</html>
