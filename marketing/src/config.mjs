@@ -18,6 +18,8 @@ export const SITE = {
   launchOfferSeats: 20,
   locales: ["ar", "fr", "en"],
   defaultLocale: "ar",
+  // Bump when CSS or JS changes so phones do not keep yesterday's stylesheet.
+  asset: "20261002",
 };
 
 export function whatsappHref(message) {

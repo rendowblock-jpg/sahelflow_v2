@@ -6,9 +6,9 @@ const ar = {
   lang: "ar",
   name: "العربية",
   meta: {
-    title: "SahelFlow — نظام تشغيل تجارة الدفع عند الاستلام في الجزائر",
+    title: "SahelFlow — طلبات الدفع عند الاستلام، من واتساب حتى الدينار",
     description:
-      "SahelFlow يجمع طلباتك، واتساب، التوصيل، المرتجعات والمحاسبة في تطبيق واحد على حاسوبك. مصمَّم للتجار الجزائريين الذين يبيعون بالدفع عند الاستلام.",
+      "تطبيق على حاسوبك للتجار الجزائريين: رسالة واتساب تصبح طلباً، تعرف من تتصل به قبل الشحن، وشركات التوصيل تُتابَع حتى مطابقة المال. تجربة 7 أيام.",
   },
   nav: {
     features: "المزايا",
@@ -22,19 +22,19 @@ const ar = {
     language: "اللغة",
   },
   hero: {
-    eyebrow: "مصمَّم لتجارة الدفع عند الاستلام في الجزائر",
-    title: ["بِع أكثر. استرجع أقل.", "واعرف مصير كل دينار."],
+    eyebrow: "للتجار في الجزائر الذين يبيعون بالدفع عند الاستلام",
+    title: ["من رسالة واتساب", "إلى دينار وصل حسابك."],
     lead:
-      "SahelFlow نظام تشغيل تجارة الدفع عند الاستلام: طلبات واتساب يلتقطها الذكاء الاصطناعي، تأكيدات مرتّبة حسب المخاطر، شركات توصيل متزامنة، ومال مُطابَق حتى آخر دينار — على حاسوبك، وحتى دون إنترنت.",
-    primary: "ابدأ مجاناً — 7 أيام",
-    secondary: "تحدّث مع إنسان على واتساب",
-    note: (days) => `${days} أيام مجاناً · Windows 10 و 11 · بدون بطاقة بنكية`,
+      "SahelFlow يحوّل رسالة الزبون إلى طلب، يقول لك من تتصل به قبل أن تشحن، ويتابع Yalidine و ZR Express و EcoTrack و Maystro حتى تطابق ما حصّلوه. يشتغل على Windows، حتى لو انقطع النت.",
+    primary: "ابدأ 7 أيام مجاناً",
+    secondary: "اسألنا على واتساب",
+    note: (days) => `${days} أيام على حاسوبك · بدون بطاقة · الترخيص يُشترى مرة واحدة`,
     trust: ["يعمل حتى بدون إنترنت", "عربية · Français · English", "بياناتك تبقى على حاسوبك"],
   },
   strip: "يعمل مع الأدوات التي تستعملها يومياً",
   problem: {
     eyebrow: "المشكلة",
-    title: "متجرك يعمل اليوم على واتساب، وثلاث لوحات توصيل، ودفتر، وذاكرتك. هناك يتسرّب ربحك.",
+    title: "الربح يضيع بين واتساب، وشركات التوصيل، والدفتر.",
     items: [
       { title: "طلبات ضائعة في واتساب", text: "زبون يرسل الاسم والولاية والهاتف في ثلاث رسائل، وأنت تنسخها يدوياً في جدول." },
       { title: "مرتجعات تأكل الربح", text: "طرد يعود يعني مصاريف توصيل ضائعة وسلعة مجمَّدة، ولا أحد يقول لك من أين تأتي الخسارة." },
@@ -181,9 +181,9 @@ const fr = {
   lang: "fr",
   name: "Français",
   meta: {
-    title: "SahelFlow — Le système d'exploitation du e-commerce COD en Algérie",
+    title: "SahelFlow — Les commandes COD, de WhatsApp jusqu'au dinar",
     description:
-      "SahelFlow réunit vos commandes, WhatsApp, la livraison, les retours et la comptabilité dans une seule application sur votre PC. Conçu pour les vendeurs algériens en paiement à la livraison.",
+      "Une application Windows pour les vendeurs algériens : le message WhatsApp devient une commande, vous savez qui appeler avant d'expédier, et les livreurs sont suivis jusqu'au rapprochement. Essai de 7 jours.",
   },
   nav: {
     features: "Fonctionnalités",
@@ -197,19 +197,19 @@ const fr = {
     language: "Langue",
   },
   hero: {
-    eyebrow: "Conçu pour le paiement à la livraison en Algérie",
-    title: ["Vendez plus. Retournez moins.", "Maîtrisez chaque dinar."],
+    eyebrow: "Pour les vendeurs en paiement à la livraison, en Algérie",
+    title: ["Du message WhatsApp", "au dinar encaissé."],
     lead:
-      "SahelFlow est le système d'exploitation du e-commerce COD : commandes WhatsApp captées par l'IA, confirmations priorisées par le risque, livreurs synchronisés et encaissements rapprochés au dinar près — sur votre PC, même hors ligne.",
-    primary: "Commencer gratuitement — 7 jours",
-    secondary: "Parler à un humain sur WhatsApp",
-    note: (days) => `${days} jours gratuits · Windows 10 et 11 · sans carte bancaire`,
+      "SahelFlow transforme le message du client en commande, vous dit qui appeler avant d'expédier, et suit Yalidine, ZR Express, EcoTrack et Maystro jusqu'au rapprochement. Sur Windows, même sans connexion.",
+    primary: "Essayer 7 jours, gratuit",
+    secondary: "Nous écrire sur WhatsApp",
+    note: (days) => `${days} jours sur votre PC · sans carte · une licence, un seul paiement`,
     trust: ["Fonctionne hors ligne", "العربية · Français · English", "Vos données restent sur votre PC"],
   },
   strip: "Fonctionne avec les outils que vous utilisez chaque jour",
   problem: {
     eyebrow: "Le problème",
-    title: "Aujourd'hui, votre boutique tourne sur WhatsApp, trois tableaux de livreurs, un cahier et votre mémoire. C'est là que fuit votre marge.",
+    title: "La marge se perd entre WhatsApp, les livreurs et le cahier.",
     items: [
       { title: "Des commandes perdues dans WhatsApp", text: "Un client envoie nom, wilaya et téléphone en trois messages, et vous recopiez tout à la main." },
       { title: "Des retours qui mangent la marge", text: "Un colis qui revient, ce sont des frais perdus et du stock bloqué — sans savoir d'où vient la perte." },
@@ -351,9 +351,9 @@ const en = {
   lang: "en",
   name: "English",
   meta: {
-    title: "SahelFlow — The operating system for COD commerce in Algeria",
+    title: "SahelFlow — COD orders, from WhatsApp to the dinar",
     description:
-      "SahelFlow brings your orders, WhatsApp, delivery, returns and accounting together in one app on your PC. Built for Algerian cash-on-delivery sellers.",
+      "A Windows app for Algerian sellers: a WhatsApp message becomes an order, you know who to call before you ship, and couriers are tracked through to cash reconciliation. 7-day trial.",
   },
   nav: {
     features: "Features",
@@ -367,19 +367,19 @@ const en = {
     language: "Language",
   },
   hero: {
-    eyebrow: "Built for cash-on-delivery commerce in Algeria",
-    title: ["Sell more. Return less.", "Know every dinar."],
+    eyebrow: "For cash-on-delivery sellers in Algeria",
+    title: ["From a WhatsApp message", "to cash you can count."],
     lead:
-      "SahelFlow is the operating system for cash-on-delivery commerce: WhatsApp orders captured by AI, confirmations ranked by risk, couriers in sync and cash reconciled to the last dinar — on your PC, even offline.",
-    primary: "Start free — 7 days",
-    secondary: "Talk to a human on WhatsApp",
-    note: (days) => `${days}-day free trial · Windows 10 and 11 · no card needed`,
+      "SahelFlow turns the customer's message into an order, tells you who to call before you ship, and follows Yalidine, ZR Express, EcoTrack and Maystro through to reconciliation. On Windows, even when the connection drops.",
+    primary: "Start 7 days free",
+    secondary: "Ask us on WhatsApp",
+    note: (days) => `${days} days on your PC · no card · one licence, paid once`,
     trust: ["Works offline", "العربية · Français · English", "Your data stays on your PC"],
   },
   strip: "Works with the tools you already use every day",
   problem: {
     eyebrow: "The problem",
-    title: "Today your shop runs on WhatsApp, three courier dashboards, a notebook and your memory. That's where your margin leaks.",
+    title: "The margin leaks between WhatsApp, the couriers and the notebook.",
     items: [
       { title: "Orders lost in WhatsApp", text: "A customer sends their name, wilaya and phone across three messages, and you copy it all by hand." },
       { title: "Returns that eat the margin", text: "Every parcel that comes back is lost delivery fees and frozen stock — and nobody tells you where the loss comes from." },
