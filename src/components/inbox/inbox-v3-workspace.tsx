@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { parseAsStringLiteral, useQueryStates } from "nuqs";
 import {
   useCallback,
@@ -17,6 +17,7 @@ import type {
   WorkflowFilter,
 } from "@/components/inbox/inbox-desk-types";
 import { InboxV3Header } from "@/components/inbox/inbox-v3-header";
+import { useInboxRouteParams } from "@/hooks/inbox/use-inbox-route-params";
 import { InboxPaneResizer } from "@/components/inbox/inbox-pane-resizer";
 import {
   clampInboxQueueWidth,
@@ -32,6 +33,21 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { useMobile } from "@/hooks/use-mobile";
 
+const DESK_QUEUE_VALUES = [
+  "all",
+  "mine",
+  "unassigned",
+  "unread",
+  "archived",
+] as const satisfies readonly DeskQueueFilter[];
+const WORKFLOW_VALUES = [
+  "all",
+  "open",
+  "pending",
+  "resolved",
+  "snoozed",
+] as const satisfies readonly WorkflowFilter[];
+
 export function InboxV3Workspace({
   canViewIngress,
   canRetryIngress,
@@ -42,8 +58,10 @@ export function InboxV3Workspace({
   const workspace = useInboxWorkspace();
   const isMobile = useMobile();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const requestedConversationId = searchParams.get("conversation");
+  // While Settings (an intercepted modal route) owns the URL, the Inbox keeps
+  // its last params and must not write the URL: see useInboxRouteParams.
+  const { active: ownsUrl, params: inboxParams } = useInboxRouteParams();
+  const requestedConversationId = inboxParams.get("conversation");
   const {
     chats,
     loadingChats,
@@ -62,23 +80,15 @@ export function InboxV3Workspace({
   // Audit F10: the two desk filters live in the URL like every other
   // workbench — refresh and back-navigation keep the operator's scope.
   const [deskFilters, setDeskFilters] = useQueryStates({
-    queue: parseAsStringLiteral([
-      "all",
-      "mine",
-      "unassigned",
-      "unread",
-      "archived",
-    ]).withDefault("all"),
-    workflow: parseAsStringLiteral([
-      "all",
-      "open",
-      "pending",
-      "resolved",
-      "snoozed",
-    ]).withDefault("all"),
+    queue: parseAsStringLiteral(DESK_QUEUE_VALUES).withDefault("all"),
+    workflow: parseAsStringLiteral(WORKFLOW_VALUES).withDefault("all"),
   });
-  const queueFilter = deskFilters.queue;
-  const workflowFilter = deskFilters.workflow;
+  const queueFilter = ownsUrl
+    ? deskFilters.queue
+    : (DESK_QUEUE_VALUES.find((value) => value === inboxParams.get("queue")) ?? "all");
+  const workflowFilter = ownsUrl
+    ? deskFilters.workflow
+    : (WORKFLOW_VALUES.find((value) => value === inboxParams.get("workflow")) ?? "all");
   const setQueueFilter = useCallback(
     (filter: DeskQueueFilter) => {
       void setDeskFilters({ queue: filter });
@@ -166,7 +176,7 @@ export function InboxV3Workspace({
   }, []);
 
   useEffect(() => {
-    if (defaultQueueResolved || loadingChats || !authority) return;
+    if (!ownsUrl || defaultQueueResolved || loadingChats || !authority) return;
 
     const timer = window.setTimeout(() => {
       if (!queueTouchedRef.current) {
@@ -181,7 +191,7 @@ export function InboxV3Workspace({
       setDefaultQueueResolved(true);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [authority, chats, defaultQueueResolved, loadingChats]);
+  }, [authority, chats, defaultQueueResolved, loadingChats, ownsUrl]);
 
   const visibleQueueChats = useMemo(() => {
     return chats
@@ -208,6 +218,7 @@ export function InboxV3Workspace({
 
   useEffect(() => {
     if (
+      !ownsUrl ||
       !defaultQueueResolved ||
       isMobile ||
       loadingChats ||
@@ -233,6 +244,7 @@ export function InboxV3Workspace({
     defaultQueueResolved,
     isMobile,
     loadingChats,
+    ownsUrl,
     queueFilter,
     requestedConversationId,
     router,
@@ -242,13 +254,13 @@ export function InboxV3Workspace({
   ]);
 
   useEffect(() => {
-    if (!returningToQueue || requestedConversationId) return;
+    if (!ownsUrl || !returningToQueue || requestedConversationId) return;
     const timer = window.setTimeout(() => {
       clearActiveChat();
       setReturningToQueue(false);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [clearActiveChat, requestedConversationId, returningToQueue]);
+  }, [clearActiveChat, ownsUrl, requestedConversationId, returningToQueue]);
 
   const selectedCandidate = useMemo(() => {
     if (!activeChat) return null;

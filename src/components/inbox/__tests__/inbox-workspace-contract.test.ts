@@ -115,7 +115,7 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(search).toContain(
       'href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`',
     );
-    expect(facade).toContain('searchParams.get("conversation")');
+    expect(facade).toContain('inboxParams.get("conversation")');
     expect(queue).toContain("pinnedDeepLinkChatRef");
     expect(queueSurface).toContain("/api/conversations/search?q=");
     expect(queueSurface).toContain("selectChat(canonical ?? chat)");

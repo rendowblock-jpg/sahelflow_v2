@@ -377,4 +377,29 @@ test.describe.serial("Settings Class-AAA control center evidence", () => {
     }
     await expectNoHorizontalOverflow(page);
   });
+  test("Settings opens over the Inbox and closes back to the same conversation", async ({
+    page,
+  }) => {
+    // F-43 regression: the mounted Inbox used to rewrite the URL to its
+    // conversation while the intercepted /settings modal was open, so the
+    // click reloaded the Inbox instead of opening Settings.
+    await page.goto("/inbox", { waitUntil: "domcontentloaded" });
+    await waitForHydration(page);
+    await page.waitForURL(/\/inbox\?conversation=/, { timeout: 30_000 });
+    const conversation = new URL(page.url()).searchParams.get("conversation");
+    expect(conversation).toBeTruthy();
+
+    await page.locator('aside a[href="/settings"]').first().click();
+    await page.waitForURL((url) => url.pathname === "/settings");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    // The modal must keep the URL: nothing behind it may navigate away.
+    await page.waitForTimeout(1_500);
+    expect(new URL(page.url()).pathname).toBe("/settings");
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await page.waitForURL((url) => url.pathname === "/inbox");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.get("conversation")).toBe(conversation);
+  });
 });
