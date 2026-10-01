@@ -1,57 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  Activity,
-  AlertTriangle,
-  ArrowRight,
-  Ban,
-  MapPin,
-  ShieldCheck,
-  ShieldAlert,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
+import { Banknote, PhoneCall, ShieldAlert, TrendingDown, TrendingUp, Truck } from "lucide-react";
 
 import { AreaTrendChart } from "@/components/charts/area-trend-chart";
-import {
-  ChartCard,
-  ChartEmpty,
-} from "@/components/charts/chart-primitives";
+import { ChartCard, ChartEmpty } from "@/components/charts/chart-primitives";
 import type { ChartConfig } from "@/components/charts/chart-types";
-import {
-  RankedMetricList,
-  SegmentedBreakdown,
-  type BreakdownDatum,
-  type RankedMetricDatum,
-} from "@/components/charts/decision-visualizations";
+import { RankedMetricList, type RankedMetricDatum } from "@/components/charts/decision-visualizations";
 import { RiskBlacklistPanel } from "@/components/risk/risk-blacklist-panel";
 import { RiskControlPanel } from "@/components/risk/risk-control-panel";
 import { RiskLevelBadgeServer } from "@/components/risk/risk-badges";
 import { RiskRulesPanel } from "@/components/risk/risk-rules-panel";
+import { CheckBeforeShipping, ScoreCheck, WhereYouLoseMoney } from "@/components/risk/risk-seller-sections";
 import { PageHeader } from "@/components/shared/page-header";
 import { StateSurface } from "@/components/shared/state-surface";
 import { StatCard } from "@/components/shared/stat-card";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { db, shopContext } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import {
@@ -59,17 +23,8 @@ import {
   getRiskWorkspaceCopy,
   type RiskWorkspaceCopyKey,
 } from "@/lib/i18n/risk-workspace";
-import {
-  requireTrustedAction,
-  trustedActionAllowed,
-} from "@/lib/identity/authorization";
-import {
-  getRiskAnalyticsReport,
-  getRiskConfig,
-  getRiskRules,
-  listBlacklistedCustomers,
-  type RiskLevel,
-} from "@/lib/risk-engine";
+import { requireTrustedAction, trustedActionAllowed } from "@/lib/identity/authorization";
+import { getRiskAnalyticsReport, getRiskConfig, getRiskRules, listBlacklistedCustomers } from "@/lib/risk-engine";
 import { formatDZD, intlLocale } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -85,11 +40,12 @@ const RANGES = [
   { days: 30, labelKey: "risk.ranges.last30" },
   { days: 90, labelKey: "risk.ranges.last90" },
 ] as const;
-const LEVEL_COLORS: Record<RiskLevel, string> = {
-  low: "var(--color-success)",
-  medium: "var(--color-warning)",
-  high: "var(--status-returned)",
-  critical: "var(--color-destructive)",
+
+const SOURCE_KEYS: Record<string, string> = {
+  manual: "orders.source.manual",
+  storefront: "orders.source.storefront",
+  webstore: "orders.source.webstore",
+  ai_chat: "orders.source.aiChat",
 };
 
 export default async function RiskPage({
@@ -100,25 +56,15 @@ export default async function RiskPage({
   const actorContext = await requireTrustedAction("risk.read");
   const { t, locale } = await getI18n();
   const resource = { shopId: actorContext.shop.shopId };
-  const can = (action: Parameters<typeof trustedActionAllowed>[1]) =>
-    trustedActionAllowed(actorContext, action, resource);
-  const canAssess =
-    can("customers.read") &&
-    can("customers.contact.read") &&
-    can("orders.financials.read");
+  const can = (action: Parameters<typeof trustedActionAllowed>[1]) => trustedActionAllowed(actorContext, action, resource);
+  const canAssess = can("customers.read") && can("customers.contact.read") && can("orders.financials.read");
   const canManage = can("risk.manage");
 
   if (!canAssess) {
     return (
       <div className="app-content page-sections">
         <PageHeader title={t("risk.title")} description={t("risk.subtitle")} />
-        <StateSurface
-          icon={ShieldAlert}
-          title={t("error.forbidden")}
-          description={t("error.forbiddenDesc")}
-          tone="warning"
-          size="panel"
-        />
+        <StateSurface icon={ShieldAlert} title={t("error.forbidden")} description={t("error.forbiddenDesc")} tone="warning" size="panel" />
       </div>
     );
   }
@@ -126,14 +72,8 @@ export default async function RiskPage({
   const params = await searchParams;
   const requestedDays = Number(params.days);
   const days = [7, 14, 30, 90].includes(requestedDays) ? requestedDays : 30;
-  const allowedTabs = new Set([
-    "overview",
-    "analysis",
-    "blacklist",
-    ...(canManage ? ["control", "rules"] : []),
-  ]);
-  const activeTab =
-    params.tab && allowedTabs.has(params.tab) ? params.tab : "overview";
+  const allowedTabs = new Set(["overview", "analysis", "blacklist", ...(canManage ? ["control", "rules"] : [])]);
+  const activeTab = params.tab && allowedTabs.has(params.tab) ? params.tab : "overview";
   const context = { prisma: db, shop: shopContext };
   const [report, config, blacklisted, rules] = await Promise.all([
     getRiskAnalyticsReport(context, days),
@@ -143,108 +83,54 @@ export default async function RiskPage({
   ]);
 
   const kpis = report.kpis;
+  const outcomes = report.insights.outcomes;
   const dateLocale = intlLocale(locale);
-  const integerFormatter = new Intl.NumberFormat(dateLocale, {
-    maximumFractionDigits: 0,
-  });
-  const percentFormatter = new Intl.NumberFormat(dateLocale, {
-    style: "percent",
-    maximumFractionDigits: 1,
-  });
-  const signedPointsFormatter = new Intl.NumberFormat(dateLocale, {
-    signDisplay: "exceptZero",
-    maximumFractionDigits: 1,
-  });
-  const shortDate = (iso: string) =>
-    new Date(iso).toLocaleDateString(dateLocale, {
-      month: "short",
-      day: "numeric",
-    });
+  const integerFormatter = new Intl.NumberFormat(dateLocale, { maximumFractionDigits: 0 });
+  const percentFormatter = new Intl.NumberFormat(dateLocale, { style: "percent", maximumFractionDigits: 1 });
+  const decimalFormatter = new Intl.NumberFormat(dateLocale, { maximumFractionDigits: 1 });
+  const signedPointsFormatter = new Intl.NumberFormat(dateLocale, { signDisplay: "exceptZero", maximumFractionDigits: 1 });
   const pct = (value: number) => percentFormatter.format(value);
-  const riskCopy = (key: RiskWorkspaceCopyKey) =>
-    getRiskWorkspaceCopy(locale, key);
+  const riskCopy = (key: RiskWorkspaceCopyKey, values?: Record<string, string | number>) =>
+    getRiskWorkspaceCopy(locale, key, values);
+  const copy = (key: string, values?: Record<string, string | number>) => riskCopy(key as RiskWorkspaceCopyKey, values);
+  const format = {
+    t: (key: string) => t(key),
+    pct,
+    dzd: (value: number) => formatDZD(value, locale),
+    int: (value: number) => integerFormatter.format(value),
+    dec: (value: number) => decimalFormatter.format(value),
+  };
+  const sourceLabel = (source: string) => (SOURCE_KEYS[source] ? t(SOURCE_KEYS[source]) : source.charAt(0).toUpperCase() + source.slice(1));
 
-  const distributionData: BreakdownDatum[] = report.distribution.map((row) => ({
-    key: row.level,
-    label: t(`risk.level.${row.level}`),
-    value: row.count,
-    color: LEVEL_COLORS[row.level],
-  }));
-  const distributionConfig: ChartConfig = Object.fromEntries(
-    report.distribution.map((row) => [
-      row.level,
-      {
-        label: t(`risk.level.${row.level}`),
-        color: LEVEL_COLORS[row.level],
-      },
-    ]),
-  );
-  const trendData = report.trend.map((row) => ({
-    date: shortDate(row.date),
-    score: row.avgScore,
-    critical: row.criticalCount,
+  const weekLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
+  const trendData = report.insights.weekly.map((row) => ({
+    week: weekLabel(row.week),
+    orders: row.orders,
+    cameBack: row.cameBack,
   }));
   const trendConfig: ChartConfig = {
-    score: {
-      label: t("risk.kpi.avgScore"),
-      color: "var(--color-chart-1)",
-    },
+    orders: { label: riskCopy("seriesOrders"), color: "var(--color-chart-1)" },
+    cameBack: { label: riskCopy("seriesCameBack"), color: "var(--color-destructive)" },
   };
-  const riskLevelForScore = (score: number): RiskLevel =>
-    score >= config.thresholds.high
-      ? "critical"
-      : score >= config.thresholds.medium
-        ? "high"
-        : score >= config.thresholds.low
-          ? "medium"
-          : "low";
-  const avgRiskLevel = riskLevelForScore(kpis.avgRiskScore);
-  const highRiskShare =
-    report.totalOrders > 0 ? kpis.highRiskOrderCount / report.totalOrders : 0;
-  const wilayaData: RankedMetricDatum[] = report.riskByWilaya.map((row) => {
-    const level = riskLevelForScore(row.avgScore);
-    return {
-      key: row.wilaya,
-      label: row.wilaya,
-      value: row.avgScore,
-      displayValue: `${integerFormatter.format(row.avgScore)}/100`,
-      detail: t(`risk.level.${level}`),
-      color: LEVEL_COLORS[level],
-    };
-  });
-  const highestRiskWilaya = [...report.riskByWilaya].sort(
-    (left, right) => right.avgScore - left.avgScore,
-  )[0];
+  const wilayaRanked: RankedMetricDatum[] = report.insights.wilayaActivity.map((row) => ({
+    key: row.wilaya,
+    label: row.wilaya,
+    value: row.orders,
+    displayValue: integerFormatter.format(row.orders),
+    detail: row.finished
+      ? `${riskCopy("colReturnRate")} ${pct(row.returnRate)} · ${riskCopy("finished", { count: integerFormatter.format(row.finished) })}`
+      : riskCopy("finished", { count: "0" }),
+    color: row.finished && row.returnRate >= 0.3 ? "var(--color-destructive)" : "var(--color-chart-1)",
+  }));
   const topFactor = report.attentionFactors[0];
-  const riskReferenceLines = [
-    {
-      value: config.thresholds.low,
-      label: t("risk.level.low"),
-      color: LEVEL_COLORS.low,
-    },
-    {
-      value: config.thresholds.medium,
-      label: t("risk.level.medium"),
-      color: LEVEL_COLORS.medium,
-    },
-    {
-      value: config.thresholds.high,
-      label: t("risk.level.high"),
-      color: LEVEL_COLORS.critical,
-    },
-  ];
 
   return (
-    <div
-      className="app-content page-sections"
-      data-risk-analytics-generation="class-aaa"
-      data-risk-seller-workspace="v3"
-    >
+    <div className="app-content page-sections" data-risk-analytics-generation="class-aaa" data-risk-seller-workspace="v4">
       {/* Page grammar: identity with its period control, then the KPIs, then
           the workspace tabs — the numbers lead, whichever tab is open. */}
       <PageHeader
         title={t("risk.title")}
-        description={t("risk.subtitle")}
+        description={riskCopy("subtitle")}
         actions={
           <div className="flex w-fit max-w-full flex-wrap items-center gap-1 rounded-surface border bg-background p-1">
             {RANGES.map((range) => (
@@ -252,9 +138,7 @@ export default async function RiskPage({
                 key={range.days}
                 href={`/risk?days=${range.days}&tab=${activeTab}`}
                 className={`rounded-control px-3 py-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
-                  days === range.days
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  days === range.days ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 {t(range.labelKey)}
@@ -264,374 +148,184 @@ export default async function RiskPage({
         }
       />
 
-      <div
-        data-risk-overview-kpis="true"
-        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-      >
+      <div data-risk-overview-kpis="true" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label={t("risk.kpi.avgScore")}
-          value={integerFormatter.format(kpis.avgRiskScore)}
-          icon={<ShieldAlert />}
+          label={riskCopy("kpiDelivered")}
+          value={outcomes.completed ? pct(outcomes.deliverySuccessRate) : "—"}
+          icon={<Truck />}
+          subtitle={riskCopy("kpiDeliveredHint", { delivered: integerFormatter.format(outcomes.delivered), completed: integerFormatter.format(outcomes.completed) })}
+          emphasis="standard"
+          tone="neutral"
+        />
+        <StatCard
+          label={riskCopy("kpiReturnRate")}
+          value={outcomes.completed ? pct(outcomes.returnRate) : "—"}
+          icon={<TrendingDown />}
+          subtitle={riskCopy("kpiReturnHint", { count: integerFormatter.format(outcomes.cameBack) })}
+          emphasis="standard"
+          tone="neutral"
+        />
+        <StatCard
+          label={riskCopy("kpiLost")}
+          value={formatDZD(outcomes.lostToReturnsDzd, locale)}
+          icon={<Banknote />}
           subtitle={
-            <RiskLevelBadgeServer
-              level={avgRiskLevel}
-              label={t(`risk.level.${avgRiskLevel}`)}
-            />
+            outcomes.unknownCostReturns > 0
+              ? riskCopy("kpiLostUnknown", { count: integerFormatter.format(outcomes.unknownCostReturns) })
+              : riskCopy("kpiLostHint")
           }
           emphasis="standard"
           tone="neutral"
         />
         <StatCard
-          label={t("risk.kpi.highRiskOrders")}
-          value={integerFormatter.format(kpis.highRiskOrderCount)}
-          icon={
-            <AlertTriangle
-              className={
-                kpis.highRiskOrderCount > 0 ? "text-destructive" : undefined
-              }
-            />
-          }
-          subtitle={
-            report.totalOrders > 0
-              ? `${pct(highRiskShare)} ${t("risk.confirmationByLevel.total")}`
-              : undefined
-          }
-          emphasis="standard"
-          tone="neutral"
-        />
-        <StatCard
-          label={t("risk.kpi.confirmationRate")}
-          value={pct(kpis.confirmationRate)}
-          icon={<TrendingUp />}
-          emphasis="standard"
-          tone="neutral"
-        />
-        <StatCard
-          label={t("risk.kpi.potentialSavings")}
-          value={formatDZD(kpis.potentialSavingsDzd, locale)}
-          icon={<ShieldCheck />}
+          label={riskCopy("kpiToCheck")}
+          value={integerFormatter.format(report.openRiskyCount)}
+          icon={<PhoneCall />}
+          subtitle={riskCopy("kpiToCheckHint")}
           emphasis="standard"
           tone="neutral"
         />
       </div>
 
       <Tabs defaultValue={activeTab} className="w-full space-y-5">
-        <div
-          data-risk-workspace-toolbar="true"
-          className="flex flex-wrap items-center gap-3 border-b border-border/70 pb-4"
-        >
+        <div data-risk-workspace-toolbar="true" className="flex flex-wrap items-center gap-3 border-b border-border/70 pb-4">
           <TabsList className="h-auto w-full flex-wrap justify-start gap-1 lg:w-auto">
             <TabsTrigger value="overview" asChild>
-              <Link href={`/risk?days=${days}&tab=overview`}>
-                {t("risk.overview")}
-              </Link>
+              <Link href={`/risk?days=${days}&tab=overview`}>{t("risk.overview")}</Link>
             </TabsTrigger>
             <TabsTrigger value="analysis" asChild>
-              <Link href={`/risk?days=${days}&tab=analysis`}>
-                {t("risk.analysis")}
-              </Link>
+              <Link href={`/risk?days=${days}&tab=analysis`}>{riskCopy("tabLoss")}</Link>
             </TabsTrigger>
             <TabsTrigger value="blacklist" asChild>
               <Link href={`/risk?days=${days}&tab=blacklist`}>
                 {t("risk.blacklist")}
+                {kpis.blacklistedCustomerCount > 0 ? (
+                  <span className="ms-1.5 rounded-full bg-muted px-1.5 text-[11px] tabular-nums text-muted-foreground">
+                    {integerFormatter.format(kpis.blacklistedCustomerCount)}
+                  </span>
+                ) : null}
               </Link>
             </TabsTrigger>
             {canManage ? (
               <TabsTrigger value="control" asChild>
-                <Link href={`/risk?days=${days}&tab=control`}>
-                  {t("risk.control")}
-                </Link>
+                <Link href={`/risk?days=${days}&tab=control`}>{t("risk.control")}</Link>
               </TabsTrigger>
             ) : null}
             {canManage ? (
               <TabsTrigger value="rules" asChild>
-                <Link href={`/risk?days=${days}&tab=rules`}>
-                  {t("risk.rules")}
-                </Link>
+                <Link href={`/risk?days=${days}&tab=rules`}>{t("risk.rules")}</Link>
               </TabsTrigger>
             ) : null}
           </TabsList>
-
         </div>
 
         <TabsContent value="overview" className="mt-0 space-y-5">
+          <div data-risk-seller-signals="true" className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)]">
+            <CheckBeforeShipping report={report} copy={copy} format={format} />
+            <ScoreCheck report={report} copy={copy} format={format} />
+          </div>
+
           <div data-risk-primary-trend="true">
             <ChartCard
-              title={t("risk.trend.title")}
-              description={t("risk.trend.subtitle")}
-              summary={`${t("risk.kpi.avgScore")}: ${integerFormatter.format(kpis.avgRiskScore)} · ${t("risk.confirmationByLevel.total")}: ${integerFormatter.format(report.totalOrders)}`}
+              title={riskCopy("trendTitle")}
+              description={riskCopy("trendHint")}
+              summary={`${riskCopy("kpiReturnRate")}: ${outcomes.completed ? pct(outcomes.returnRate) : "—"}`}
               icon={<TrendingUp className="size-4" />}
               config={trendConfig}
               className="w-full"
-              height="clamp(20rem, 30vw, 25rem)"
+              height="clamp(18rem, 26vw, 22rem)"
             >
               {trendData.length > 0 ? (
                 <AreaTrendChart
                   data={trendData}
-                  xKey="date"
+                  xKey="week"
                   series={[
-                    {
-                      key: "score",
-                      label: t("risk.kpi.avgScore"),
-                      format: "number",
-                    },
+                    { key: "orders", label: riskCopy("seriesOrders"), format: "number" },
+                    { key: "cameBack", label: riskCopy("seriesCameBack"), format: "number" },
                   ]}
                   config={trendConfig}
                   formatY="number"
-                  yDomain={[0, 100]}
-                  referenceLines={riskReferenceLines}
                 />
               ) : (
-                <ChartEmpty message="—" />
+                <ChartEmpty message={riskCopy("lossEmpty")} />
               )}
             </ChartCard>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
-            <ChartCard
-              title={t("risk.distribution.title")}
-              description={t("risk.distribution.subtitle")}
-              summary={`${t("risk.confirmationByLevel.total")}: ${integerFormatter.format(report.totalOrders)}`}
-              icon={<Activity className="size-4" />}
-              config={distributionConfig}
-            >
-              {distributionData.some((row) => row.value > 0) ? (
-                <SegmentedBreakdown
-                  data={distributionData}
-                  total={report.totalOrders}
-                  formatValue={(value) => integerFormatter.format(value)}
-                  formatPercent={(fraction) =>
-                    percentFormatter.format(fraction)
-                  }
-                />
-              ) : (
-                <ChartEmpty message="—" />
-              )}
-            </ChartCard>
-
-            <Card
-              data-risk-seller-signals="true"
-              className="border shadow-none"
-            >
-              <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
-                <div className="min-w-0">
-                  <CardTitle className="text-base">
-                    {riskCopy("attentionTitle")}
-                  </CardTitle>
-                  <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                    {riskCopy("attentionDescription")}
-                  </p>
-                </div>
-                <Button asChild variant="ghost" size="icon-sm">
-                  <Link
-                    href={`/risk?days=${days}&tab=analysis`}
-                    aria-label={riskCopy("openAnalysis")}
-                  >
-                    <ArrowRight
-                      className="size-4 rtl:rotate-180"
-                      aria-hidden="true"
-                    />
-                  </Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="divide-y divide-border/70">
-                  <div className="flex min-w-0 items-center gap-3 py-3 first:pt-1">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/35 text-muted-foreground">
-                      <TrendingDown className="size-4" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {t("risk.kpi.returnRate")}
-                      </p>
-                      <p className="mt-0.5 text-base font-semibold tabular-nums">
-                        {pct(kpis.returnRate)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex min-w-0 items-center gap-3 py-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/35 text-muted-foreground">
-                      <Ban className="size-4" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {t("risk.kpi.blacklistedCustomers")}
-                      </p>
-                      <p className="mt-0.5 text-base font-semibold tabular-nums">
-                        {integerFormatter.format(kpis.blacklistedCustomerCount)}
-                      </p>
-                    </div>
-                    <Button asChild variant="ghost" size="icon-sm">
-                      <Link
-                        href={`/risk?days=${days}&tab=blacklist`}
-                        aria-label={t("risk.blacklist")}
-                      >
-                        <ArrowRight
-                          className="size-4 rtl:rotate-180"
-                          aria-hidden="true"
-                        />
-                      </Link>
-                    </Button>
-                  </div>
-
-                  <div className="flex min-w-0 items-center gap-3 py-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/35 text-muted-foreground">
-                      <Activity className="size-4" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {riskCopy("highestImpactFactor")}
-                      </p>
-                      <p className="mt-0.5 truncate text-sm font-semibold">
-                        {topFactor ? t(topFactor.labelKey) : "—"}
-                      </p>
-                      {topFactor ? (
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {formatPositiveRiskPoints(locale, topFactor.positivePoints)}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="flex min-w-0 items-center gap-3 py-3 last:pb-1">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-surface border border-border/70 bg-muted/35 text-muted-foreground">
-                      <MapPin className="size-4" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {t("risk.byWilaya.title")}
-                      </p>
-                      <p className="mt-0.5 truncate text-sm font-semibold">
-                        {highestRiskWilaya?.wilaya ?? "—"}
-                      </p>
-                    </div>
-                    {highestRiskWilaya ? (
-                      <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
-                        {integerFormatter.format(highestRiskWilaya.avgScore)}/100
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="analysis" className="mt-0 space-y-6">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard
-              title={t("risk.byWilaya.title")}
-              description={t("risk.byWilaya.subtitle")}
-              summary={`${t("risk.byWilaya.title")}: ${integerFormatter.format(wilayaData.length)}`}
-              icon={<MapPin className="size-4" />}
-              config={{}}
-            >
-              {wilayaData.length > 0 ? (
-                <RankedMetricList data={wilayaData} maxValue={100} />
-              ) : (
-                <ChartEmpty message="—" />
-              )}
-            </ChartCard>
-            <Card className="shadow-none">
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {t("risk.topFactors.title")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="overflow-x-auto">
+          <ChartCard
+            title={riskCopy("wilayaActivityTitle")}
+            description={riskCopy("wilayaActivityHint")}
+            summary={`${riskCopy("colPlace")}: ${integerFormatter.format(wilayaRanked.length)}`}
+            icon={<TrendingDown className="size-4" />}
+            config={{}}
+          >
+            {wilayaRanked.length > 0 ? <RankedMetricList data={wilayaRanked} /> : <ChartEmpty message={riskCopy("lossEmpty")} />}
+          </ChartCard>
+          <WhereYouLoseMoney report={report} copy={copy} format={format} sourceLabel={sourceLabel} />
+
+          <details className="group rounded-surface border bg-card" data-risk-score-details="true">
+            <summary className="cursor-pointer list-none px-4 py-3.5 text-body font-semibold outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
+              {riskCopy("scoreDetails")}
+            </summary>
+            <div className="space-y-5 border-t p-4">
+              {topFactor ? (
+                <p className="text-body-sm">
+                  <span className="font-semibold">{riskCopy("highestImpactFactor")}: </span>
+                  {t(topFactor.labelKey)} · {formatPositiveRiskPoints(locale, topFactor.positivePoints)}
+                </p>
+              ) : null}
+              <div className="overflow-x-auto" data-risk-confirmation-table="true">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("risk.confirmationByLevel.level")}</TableHead>
+                      <TableHead className="text-end">{t("risk.confirmationByLevel.total")}</TableHead>
+                      <TableHead className="text-end">{t("risk.confirmationByLevel.delivered")}</TableHead>
+                      <TableHead className="text-end">{t("risk.confirmationByLevel.returned")}</TableHead>
+                      <TableHead className="text-end">{riskCopy("kpiDelivered")}</TableHead>
+                      <TableHead className="text-end">{t("risk.confirmationByLevel.returnRate")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {report.confirmationByLevel.map((row) => (
+                      <TableRow key={row.level}>
+                        <TableCell>
+                          <RiskLevelBadgeServer level={row.level} label={t(`risk.level.${row.level}`)} />
+                        </TableCell>
+                        <TableCell className="text-end tabular-nums">{integerFormatter.format(row.total)}</TableCell>
+                        <TableCell className="text-end tabular-nums">{integerFormatter.format(row.delivered)}</TableCell>
+                        <TableCell className="text-end tabular-nums">{integerFormatter.format(row.returned + row.refused)}</TableCell>
+                        <TableCell className="text-end tabular-nums">{pct(row.confirmationRate)}</TableCell>
+                        <TableCell className="text-end tabular-nums">{pct(row.returnRate)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {report.topFactors.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("risk.topFactors.factor")}</TableHead>
-                      <TableHead className="text-end">
-                        {t("risk.topFactors.occurrences")}
-                      </TableHead>
-                      <TableHead className="text-end">
-                        {t("risk.topFactors.avgPoints")}
-                      </TableHead>
+                      <TableHead className="text-end">{t("risk.topFactors.occurrences")}</TableHead>
+                      <TableHead className="text-end">{t("risk.topFactors.avgPoints")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {report.topFactors.map((factor) => (
                       <TableRow key={factor.factorId}>
-                        <TableCell className="font-medium">
-                          {t(factor.labelKey)}
-                        </TableCell>
-                        <TableCell className="text-end tabular-nums">
-                          {integerFormatter.format(factor.occurrenceCount)}
-                        </TableCell>
-                        <TableCell className="text-end tabular-nums">
-                          {signedPointsFormatter.format(factor.avgPoints)}
-                        </TableCell>
+                        <TableCell>{t(factor.labelKey)}</TableCell>
+                        <TableCell className="text-end tabular-nums">{integerFormatter.format(factor.occurrenceCount)}</TableCell>
+                        <TableCell className="text-end tabular-nums">{signedPointsFormatter.format(factor.avgPoints)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card data-risk-confirmation-table="true" className="shadow-none">
-            <CardHeader>
-              <CardTitle className="text-base">
-                {t("risk.confirmationByLevel.title")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      {t("risk.confirmationByLevel.level")}
-                    </TableHead>
-                    <TableHead className="text-end">
-                      {t("risk.confirmationByLevel.total")}
-                    </TableHead>
-                    <TableHead className="text-end">
-                      {t("risk.confirmationByLevel.delivered")}
-                    </TableHead>
-                    <TableHead className="text-end">
-                      {t("risk.confirmationByLevel.returned")}
-                    </TableHead>
-                    <TableHead className="text-end">
-                      {t("risk.confirmationByLevel.confirmationRate")}
-                    </TableHead>
-                    <TableHead className="text-end">
-                      {t("risk.confirmationByLevel.returnRate")}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {report.confirmationByLevel.map((row) => (
-                    <TableRow key={row.level}>
-                      <TableCell>
-                        <RiskLevelBadgeServer
-                          level={row.level}
-                          label={t(`risk.level.${row.level}`)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
-                        {integerFormatter.format(row.total)}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
-                        {integerFormatter.format(row.delivered)}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
-                        {integerFormatter.format(row.returned + row.refused)}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
-                        {pct(row.confirmationRate)}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
-                        {pct(row.returnRate)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+              ) : null}
+            </div>
+          </details>
         </TabsContent>
 
         <TabsContent value="blacklist" className="mt-0">

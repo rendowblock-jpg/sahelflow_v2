@@ -22,8 +22,8 @@ describe("Wave 2 visible locale and layout closure", () => {
     const risk = read("src/app/(dashboard)/risk/page.tsx");
 
     expect(risk).toContain('style: "percent"');
-    expect(risk).toContain("formatDZD(kpis.potentialSavingsDzd, locale)");
-    expect(risk).toContain("integerFormatter.format(kpis.avgRiskScore)");
+    expect(risk).toContain("formatDZD(outcomes.lostToReturnsDzd, locale)");
+    expect(risk).toContain("integerFormatter.format(report.openRiskyCount)");
     expect(risk).toContain("integerFormatter.format(row.total)");
     expect(risk).toContain("signedPointsFormatter.format(factor.avgPoints)");
     expect(risk).toContain("ChartEmpty");

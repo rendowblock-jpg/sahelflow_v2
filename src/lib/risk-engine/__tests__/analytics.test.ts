@@ -51,6 +51,7 @@ async function seedOrder(
     totalPrice?: number;
     wilaya?: string;
     createdAt?: Date;
+    deliveryCost?: number;
   } = {},
 ) {
   const counter = await db.counter.upsert({
@@ -70,6 +71,7 @@ async function seedOrder(
       phone: uniquePhone(),
       source: "whatsapp",
       ...(opts.createdAt ? { createdAt: opts.createdAt } : {}),
+      ...(opts.deliveryCost !== undefined ? { deliveryCost: opts.deliveryCost } : {}),
     },
   });
 }
@@ -281,15 +283,45 @@ describe("getRiskAnalyticsReport — seeded orders", () => {
     expect(report.kpis.blacklistedCustomerCount).toBe(1);
   });
 
-  it("KPIs: potentialSavingsDzd = (high-risk returned) × 600", async () => {
+  it("KPIs: potentialSavingsDzd is the real delivery cost lost on flagged returns", async () => {
     await seedWilaya("Alger", 5, 0.5, 0.28);
     const c = await seedTestCustomer(db, { phone: uniquePhone() });
     await db.customer.update({ where: { id: c.id }, data: { isBlacklisted: true } });
-    // Blacklisted → critical. Mark returned → counts toward savings.
-    await seedOrder(c.id, { status: "returned", totalPrice: 3000 });
+    // Blacklisted → critical before shipping; it came back with a 450 DZD delivery cost.
+    await seedOrder(c.id, { status: "returned", totalPrice: 3000, deliveryCost: 450 });
 
     const report = await getRiskAnalyticsReport(30);
-    expect(report.kpis.potentialSavingsDzd).toBe(600);
+    expect(report.kpis.potentialSavingsDzd).toBe(450);
+    expect(report.insights.outcomes.lostToReturnsDzd).toBe(450);
+    expect(report.insights.outcomes.preventableReturns).toBe(1);
+  });
+
+  it("never lets an order's own outcome raise its own score", async () => {
+    await seedWilaya("Alger", 2, 0.78, 0.12);
+    const buyer = await seedTestCustomer(db, { phone: uniquePhone() });
+    // A first-time buyer whose single order came back: at order time there
+    // was no history, so it is scored as a new customer, not a returner.
+    await seedOrder(buyer.id, { status: "returned", deliveryCost: 400 });
+
+    const report = await getRiskAnalyticsReport(30);
+    const factors = report.topFactors.map((factor) => factor.factorId);
+    expect(factors).toContain("new_customer");
+    expect(factors).not.toContain("customer_return_rate");
+    expect(factors).not.toContain("order_frequency");
+    expect(report.insights.outcomes.cameBack).toBe(1);
+    expect(report.insights.lossByWilaya[0]).toMatchObject({ key: "Alger", cameBack: 1, lostDzd: 400 });
+  });
+
+  it("queues open high-risk orders to check before shipping", async () => {
+    await seedWilaya("Alger", 5, 0.5, 0.28);
+    const risky = await seedTestCustomer(db, { phone: uniquePhone() });
+    await db.customer.update({ where: { id: risky.id }, data: { isBlacklisted: true } });
+    const order = await seedOrder(risky.id, { status: "pending" });
+
+    const report = await getRiskAnalyticsReport(30);
+    expect(report.openRiskyCount).toBe(1);
+    expect(report.openRisky[0]?.orderId).toBe(order.id);
+    expect(report.openRisky[0]?.reasons.length).toBeGreaterThan(0);
   });
 
   it("respects the days window (excludes older orders)", async () => {

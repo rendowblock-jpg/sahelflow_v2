@@ -19,7 +19,7 @@ describe("Risk Engine seller workspace contract", () => {
   it("keeps the overview calm and decision-first", () => {
     const page = source("../../../app/(dashboard)/risk/page.tsx");
 
-    expect(page).toContain('data-risk-seller-workspace="v3"');
+    expect(page).toContain('data-risk-seller-workspace="v4"');
     expect(page).toContain('data-risk-overview-kpis="true"');
     expect(page.match(/<StatCard/g) ?? []).toHaveLength(4);
     expect(page.match(/tone="neutral"/g) ?? []).toHaveLength(4);
@@ -31,21 +31,33 @@ describe("Risk Engine seller workspace contract", () => {
     expect(page).not.toContain("savingsTone");
   });
 
-  it("gives the primary trend the full overview width with every semantic threshold and no decorative bands", () => {
+  it("gives the orders-and-returns trend the full overview width", () => {
     const page = source("../../../app/(dashboard)/risk/page.tsx");
 
     expect(page).toContain('data-risk-primary-trend="true"');
     expect(page).toContain('className="w-full"');
-    expect(page).toContain('height="clamp(20rem, 30vw, 25rem)"');
-    expect(page).toContain("referenceLines={riskReferenceLines}");
-    expect(page).toContain("value: config.thresholds.low");
-    expect(page).toContain("value: config.thresholds.medium");
-    expect(page).toContain("value: config.thresholds.high");
+    expect(page).toContain('xKey="week"');
+    expect(page).toContain('key: "cameBack"');
+    expect(page).toContain("<RankedMetricList");
     expect(page).not.toContain("riskReferenceBands");
     expect(page).not.toContain("referenceBands={");
   });
 
-  it("promotes exact positive risk impact in the seller attention panel", () => {
+  it("leads with what the seller acts on and measures money from real costs", () => {
+    const page = source("../../../app/(dashboard)/risk/page.tsx");
+    const sections = source("../risk-seller-sections.tsx");
+    const analytics = source("../../../lib/risk-engine/analytics.ts");
+
+    expect(page).toContain("<CheckBeforeShipping");
+    expect(page).toContain("<ScoreCheck");
+    expect(page).toContain("<WhereYouLoseMoney");
+    expect(sections).toContain('data-risk-check-queue="true"');
+    expect(sections).toContain('data-risk-score-check="true"');
+    expect(analytics).toContain("customerHistoryBefore(");
+    expect(analytics).not.toContain("* 600");
+  });
+
+  it("keeps the exact positive risk impact in the score details", () => {
     const page = source("../../../app/(dashboard)/risk/page.tsx");
     const analytics = source("../../../lib/risk-engine/analytics.ts");
 
@@ -77,18 +89,16 @@ describe("Risk Engine seller workspace contract", () => {
     expect(page).toContain('TabsContent value="rules"');
   });
 
-  it("uses dedicated seller-facing AR/FR/EN copy for the attention panel", () => {
+  it("uses dedicated seller-facing AR/FR/EN copy", () => {
     const page = source("../../../app/(dashboard)/risk/page.tsx");
     const copy = source("../../../lib/i18n/risk-workspace.ts");
 
     expect(page).toContain("getRiskWorkspaceCopy");
     expect(page).toContain("formatPositiveRiskPoints");
-    expect(page).toContain('riskCopy("attentionTitle")');
-    expect(page).toContain('riskCopy("attentionDescription")');
     expect(page).toContain('riskCopy("highestImpactFactor")');
-    expect(copy).toContain('attentionTitle: "What needs your attention"');
-    expect(copy).toContain('attentionTitle: "Ce qui mérite votre attention"');
-    expect(copy).toContain('attentionTitle: "ما يحتاج انتباهك الآن"');
+    expect(copy).toContain('checkTitle: "Check before you ship"');
+    expect(copy).toContain('checkTitle: "À vérifier avant d’expédier"');
+    expect(copy).toContain('checkTitle: "تحقّق قبل الشحن"');
     expect(copy).toContain('highestImpactFactor: "Highest-impact risk factor"');
     expect(copy).toContain('highestImpactFactor: "Facteur de risque le plus impactant"');
     expect(copy).toContain('highestImpactFactor: "عامل الخطر الأعلى تأثيرًا"');

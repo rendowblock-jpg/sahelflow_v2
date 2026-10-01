@@ -34,7 +34,10 @@ describe("Wave 2 metric hierarchy contract", () => {
     expect(card).toContain("toneStyle.icon");
   });
 
-  it("orders the Risk overview as KPIs, dominant trend, then supporting seller signals", () => {
+  // Founder 2026-10-01: the overview leads with the actions a seller takes
+  // (orders to check before shipping, whether the score can be trusted), then
+  // the full-width return-rate trend.
+  it("orders the Risk overview as KPIs, seller actions, then the full-width return trend", () => {
     const risk = read("src/app/(dashboard)/risk/page.tsx");
     const kpisMarker = 'data-risk-overview-kpis="true"';
     const trendMarker = 'data-risk-primary-trend="true"';
@@ -44,17 +47,17 @@ describe("Wave 2 metric hierarchy contract", () => {
     const signalsIndex = risk.indexOf(signalsMarker);
 
     expect(kpisIndex).toBeGreaterThan(-1);
-    expect(trendIndex).toBeGreaterThan(kpisIndex);
-    expect(signalsIndex).toBeGreaterThan(trendIndex);
+    expect(signalsIndex).toBeGreaterThan(kpisIndex);
+    expect(trendIndex).toBeGreaterThan(signalsIndex);
     expect(risk.match(/<StatCard/g)?.length ?? 0).toBe(4);
     expect(risk.match(/emphasis="standard"/g)?.length ?? 0).toBe(4);
     expect(risk.match(/tone="neutral"/g)?.length ?? 0).toBe(4);
     expect(risk).not.toContain('data-risk-kpi-primary="true"');
     expect(risk).not.toContain('data-risk-kpi-supporting="true"');
 
-    const trendSection = risk.slice(trendIndex, signalsIndex);
+    const trendSection = risk.slice(trendIndex, risk.indexOf("</ChartCard>", trendIndex));
     expect(trendSection).toContain('className="w-full"');
-    expect(trendSection).toContain('height="clamp(20rem, 30vw, 25rem)"');
+    expect(trendSection).toContain('height="clamp(18rem, 26vw, 22rem)"');
     expect(trendSection).not.toContain("lg:grid-cols-2");
   });
 
