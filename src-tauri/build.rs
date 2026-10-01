@@ -164,7 +164,24 @@ fn founder_offline_checkpoint(authority: &serde_json::Value) -> bool {
             }
             true
         }
-        "customer-online" => false,
+        "customer-online" => {
+            let version = authority.get("version").and_then(serde_json::Value::as_str);
+            let decision = licensing
+                .get("authorityDecision")
+                .and_then(serde_json::Value::as_str);
+            let exact_customer = authority.get("channel").and_then(serde_json::Value::as_str)
+                == Some("internal")
+                && licensing.get("ownedHostSuffix").and_then(serde_json::Value::as_str)
+                    == Some("sahelflow.com")
+                && matches!(
+                    (version, decision),
+                    (Some("1.0.0-internal.40"), Some("FD-066"))
+                );
+            if !exact_customer {
+                panic!("customer-online licensing is authorized only for exact FD-066/Internal.40 on the internal channel with owned host sahelflow.com");
+            }
+            false
+        }
         _ => panic!("unsupported sahelflow.version.json licensing.releaseMode"),
     }
 }

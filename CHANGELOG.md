@@ -8,6 +8,12 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-01 — FD-066 authorizes the customer launch (Internal.40)
+
+- The Founder's directive to sell adopts the already-recorded **FD-066** customer launch: app `1.0.0-internal.40` / MSI `1.0.0.40`, mode `customer-online`, owned host `sahelflow.com`, trial origins `license.sahelflow.com` and `activate.sahelflow.com`. This is not a Stable claim.
+- Both licence hosts returned `{"status":"ok"}` before this authority. Paid licences stay offline-signed.
+- A missing risk action no longer renders `risk.action.undefined`, and a rule label that is not in the dictionaries no longer renders as a raw key.
+
 ### 2026-10-01 — FD-065 authorizes Internal.39
 
 - The Founder's directive ("make the next signed release") adopts **FD-065**: one signed successor, app `1.0.0-internal.39` / MSI `1.0.0.39`, packaging protected `main` `cbb27fbc…` (#469) since Internal.38. Tree-identical to reviewed head `e37de858…`. Source gates: CI `36811358867`, Phase 5 `36811358707`, Phase 6-7 `36811358722`.
