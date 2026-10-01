@@ -117,7 +117,9 @@ pub fn render_html(locale: Locale, version: &str) -> String {
 fn escape_text(value: &str) -> String {
     value
         .chars()
-        .filter(|character| character.is_ascii_alphanumeric() || matches!(character, '.' | '-' | '+'))
+        .filter(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '.' | '-' | '+')
+        })
         .collect()
 }
 
@@ -203,28 +205,32 @@ pub fn next_progress(shown: f32, floor: f32, ceiling: f32) -> f32 {
 /// startup failure: the workspace handoff continues exactly as before.
 pub fn open(app: &AppHandle, app_data_dir: &Path) {
     let html = render_html(launch_locale(app_data_dir), env!("CARGO_PKG_VERSION"));
-    let Ok(url) = format!("data:text/html;charset=utf-8,{}", urlencoding::encode(&html)).parse()
-    else {
+    let Ok(url) = format!(
+        "data:text/html;charset=utf-8,{}",
+        urlencoding::encode(&html)
+    )
+    .parse() else {
         return;
     };
-    let window = match WebviewWindowBuilder::new(app, LAUNCH_WINDOW_LABEL, WebviewUrl::External(url))
-        .title(LAUNCH_WINDOW_TITLE)
-        .inner_size(600.0, 380.0)
-        .resizable(false)
-        .maximizable(false)
-        .decorations(false)
-        .shadow(true)
-        .center()
-        .focused(true)
-        .background_color(tauri::window::Color(5, 10, 17, 255))
-        .build()
-    {
-        Ok(window) => window,
-        Err(error) => {
-            eprintln!("[sahelflow] launch screen unavailable: {error}");
-            return;
-        }
-    };
+    let window =
+        match WebviewWindowBuilder::new(app, LAUNCH_WINDOW_LABEL, WebviewUrl::External(url))
+            .title(LAUNCH_WINDOW_TITLE)
+            .inner_size(600.0, 380.0)
+            .resizable(false)
+            .maximizable(false)
+            .decorations(false)
+            .shadow(true)
+            .center()
+            .focused(true)
+            .background_color(tauri::window::Color(5, 10, 17, 255))
+            .build()
+        {
+            Ok(window) => window,
+            Err(error) => {
+                eprintln!("[sahelflow] launch screen unavailable: {error}");
+                return;
+            }
+        };
     let app = app.clone();
     let trace_path = app_data_dir.join(STARTUP_TRACE_FILE);
     let _ = thread::Builder::new()
@@ -312,7 +318,10 @@ mod tests {
         }
         assert!(shown >= floor && shown <= ceiling);
         assert!(stage_band(Some("runtime-ready")).2 < 1.0);
-        assert_eq!(stage_band(Some("runtime-attempt-failed")).0, Phase::Retrying);
+        assert_eq!(
+            stage_band(Some("runtime-attempt-failed")).0,
+            Phase::Retrying
+        );
         assert_eq!(stage_band(None).0, Phase::Preparing);
     }
 }
