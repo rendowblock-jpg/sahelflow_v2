@@ -1,6 +1,6 @@
 # Production licensing Worker for license.sahelflow.com.
-# Deploy steps: see DEPLOY.md in this folder. The trial private key is never
-# stored here; it is set with `npx wrangler secret put TRIAL_PRIVATE_KEY_PKCS8`.
+# Deploy: GitHub Actions "Deploy sahelflow.com" (see DEPLOY.md). The trial private key is never
+# stored here; the workflow creates it straight into the Worker secret TRIAL_PRIVATE_KEY_PKCS8.
 name = "sahelflow-licensing"
 main = "worker.ts"
 compatibility_date = "2026-08-01"
@@ -25,10 +25,10 @@ database_id = "b494ff92-7b47-4577-92ea-aa06b8e9eb2b"
 
 [vars]
 TRIAL_KEY_ID = "trial-2026-10"
-# Public keyring (not secret). Paste the line printed by
-# `bun scripts/licensing-keygen.ts trial trial-2026-10 <dir>` — it must be the
+# Public keyring (not secret). The deploy workflow replaces this line with the
+# repository variable SF_LICENSE_TRIAL_PUBLIC_KEYS; it must hold the
 # pair of the TRIAL_PRIVATE_KEY_PKCS8 secret. /healthz proves they match.
-SF_LICENSE_TRIAL_PUBLIC_KEYS = '{"trial-2026-10":"PASTE-PUBLIC-KEY-FROM-KEYGEN"}'
+SF_LICENSE_TRIAL_PUBLIC_KEYS = '{"trial-2026-10":"SET-BY-DEPLOY-WORKFLOW"}'
 PRODUCT_MAJOR = "1"
 TRIAL_SHOP_SLOTS = "1"
 TRIAL_MEMBER_LIMIT = "25"

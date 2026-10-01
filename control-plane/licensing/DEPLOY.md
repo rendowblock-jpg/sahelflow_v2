@@ -1,34 +1,80 @@
-# Deploying license.sahelflow.com
+# Putting sahelflow.com and the licence service online
 
 The trial service issues signed 7-day trials, one per device. Paid licences are
 signed offline (`scripts/sign-license-entitlement.ts`) after BaridiMob/CCP
 payment, and never touch this Worker.
 
-Already done on the Cloudflare account:
+Already done on the Cloudflare account: D1 database `sahelflow-licensing`
+(`b494ff92-7b47-4577-92ea-aa06b8e9eb2b`, WEUR) with `schema.sql` applied.
 
-- D1 database `sahelflow-licensing` (`b494ff92-7b47-4577-92ea-aa06b8e9eb2b`, WEUR) with `schema.sql` applied.
+Everything below is done in a browser. No terminal, no local tooling.
 
-Founder steps (one time, on your own PC — the private key must never leave it):
+## 1. Add the domain to Cloudflare (you)
 
-1. Add `sahelflow.com` to Cloudflare (Websites → Add a site) and switch the
-   domain's nameservers at your registrar to the two Cloudflare nameservers.
-2. Generate the trial signing key, outside the repository:
-   `bun scripts/licensing-keygen.ts trial trial-2026-10 %USERPROFILE%\sahelflow-keys`
-   Paste the printed public entry into `wrangler.toml` →
-   `SF_LICENSE_TRIAL_PUBLIC_KEYS`, and merge it into the GitHub repository
-   variable `SF_LICENSE_TRIAL_PUBLIC_KEYS` (keep existing entries).
-3. From this folder:
-   `npx wrangler login`
-   `npx wrangler secret put TRIAL_PRIVATE_KEY_PKCS8` (paste the contents of `trial-2026-10.private`)
-   `npx wrangler deploy`
-4. Check both `https://license.sahelflow.com/healthz` and
-   `https://activate.sahelflow.com/healthz` return `{"status":"ready",...}`.
-5. Set the GitHub repository variable
-   `SF_LICENSE_SERVICE_URL=https://license.sahelflow.com|https://activate.sahelflow.com`
-   (primary|recovery). The customer release compiles both in and the build
-   refuses anything outside `sahelflow.com`.
+1. dash.cloudflare.com → **Add a domain** → `sahelflow.com` → Free plan.
+2. Cloudflare imports the existing DNS records. If the domain already has email
+   (MX records) or a site at Hostinger, check those records are in the list.
+3. Cloudflare shows **two nameservers** (like `xxx.ns.cloudflare.com`). Send
+   them to the domain owner.
 
-Paid licences: generate the permanent key once
-(`bun scripts/licensing-keygen.ts permanent permanent-2026-10 %USERPROFILE%\sahelflow-keys`),
-merge its public entry into `SF_LICENSE_PERMANENT_PUBLIC_KEYS`, and keep the
+## 2. Point the domain at Cloudflare (domain owner, at Hostinger)
+
+The domain stays registered to its owner at Hostinger; only the nameservers
+change.
+
+1. hPanel → **Domains** → `sahelflow.com` → **Manage**.
+2. If **DNSSEC** is on, turn it off first.
+3. **DNS / Nameservers** → **Change nameservers** → **Use custom nameservers**
+   → paste the two Cloudflare nameservers → **Save**.
+4. Make sure **auto-renew** is on: if the domain lapses, every customer's
+   trial activation and the website stop working.
+
+Cloudflare emails when the domain is **Active** (minutes to a few hours).
+
+## 3. Contact mailbox (you, in Cloudflare)
+
+The site's email link is `contact@sahelflow.com`. With no mailbox at Hostinger,
+use **Email → Email Routing** in Cloudflare: create `contact@sahelflow.com` →
+forward to your Gmail, and accept the verification email.
+
+## 4. Give GitHub permission to deploy (you)
+
+1. Cloudflare → **Manage account → Account API tokens → Create token** →
+   template **Edit Cloudflare Workers** → Account: your account, Zone:
+   `sahelflow.com` → create, and copy the token (shown once).
+2. Cloudflare home → your account → copy the **Account ID**.
+3. GitHub → repository **Settings → Secrets and variables → Actions → Secrets**
+   → add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+
+Never paste the token in a chat or a file.
+
+## 5. Deploy (you, in GitHub)
+
+GitHub → **Actions → Deploy sahelflow.com → Run workflow** (branch `main`):
+
+- First time: target **both**, tick **create trial key**.
+- The run summary prints a line for the repository **variable**
+  `SF_LICENSE_TRIAL_PUBLIC_KEYS`. Set it exactly (Settings → Secrets and
+  variables → Actions → **Variables**). It is the public half; the private
+  half was created inside the runner and exists only in Cloudflare.
+- The summary also shows `https://license.sahelflow.com/healthz` and
+  `https://activate.sahelflow.com/healthz` → `ok`.
+
+Later deploys (website copy, a new screenshot): run it again with **create
+trial key** unticked. It refuses to replace a trial key that installed apps
+already trust.
+
+## 6. Switch on the customer release (you)
+
+Set the repository variable
+`SF_LICENSE_SERVICE_URL=https://license.sahelflow.com|https://activate.sahelflow.com`
+(primary|recovery). The customer release compiles both in and the build
+refuses anything outside `sahelflow.com`.
+
+## Paid licences (later, before the first paying customer)
+
+The permanent signing key must stay offline with the Founder, so this one is
+done on your own PC:
+`bun scripts/licensing-keygen.ts permanent permanent-2026-10 %USERPROFILE%\sahelflow-keys`.
+Merge its public entry into `SF_LICENSE_PERMANENT_PUBLIC_KEYS` and keep the
 private file offline for `scripts/sign-license-entitlement.ts`.

@@ -1,4 +1,4 @@
-# sahelflow.com on Cloudflare (Workers static assets). Deploy: npx wrangler deploy (from marketing/ after `node build.mjs`).
+# sahelflow.com on Cloudflare (Workers static assets). Deployed by the "Deploy sahelflow.com" workflow.
 name = "sahelflow-site"
 main = "worker.js"
 compatibility_date = "2026-09-01"

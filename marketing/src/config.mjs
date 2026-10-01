@@ -4,7 +4,7 @@
 export const SITE = {
   origin: "https://sahelflow.com",
   // International format without "+" or spaces, e.g. "213555123456".
-  whatsapp: "",
+  whatsapp: "213791999157",
   email: "contact@sahelflow.com",
   // Where the "Download" buttons point: the edge Worker (worker.js) resolves
   // the newest signed installer from the updater manifest.
