@@ -383,12 +383,12 @@ if (!dataTable.includes('<table className="w-full"') || dataTable.includes("tabI
   errors.push("data table: semantic HTML table / non-focusable row contract regressed");
 }
 
-const speculation = source("src/components/shared/speculation-rules.tsx");
-if (speculation.includes("prerender:")) {
-  errors.push("performance: whole-document speculative prerender remains enabled");
-}
-if (!speculation.includes("prefetch:")) {
-  errors.push("performance: bounded intent prefetch contract is missing");
+// Workspace navigation is client-side (next/link fetches the RSC payload), so a
+// document-level speculation rule only made the server render whole pages that
+// were never used, each time the seller hovered a sidebar link.
+const dashboardRouteLayout = source("src/app/(dashboard)/layout.tsx");
+if (/speculationrules|SpeculationRules/.test(dashboardRouteLayout)) {
+  errors.push("performance: document-level speculation duplicates client-side navigation");
 }
 
 const runtimeReady = source("src/components/runtime/runtime-ui-ready-beacon.tsx");

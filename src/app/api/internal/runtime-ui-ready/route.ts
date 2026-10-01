@@ -12,6 +12,7 @@ import { dirname, resolve } from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { RUNTIME_COOKIE, RUNTIME_PROTOCOL_VERSION } from "@/lib/runtime-auth";
+import { requestBackgroundStart } from "@/lib/runtime/background-start";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -189,6 +190,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // The workspace is visible: the deferred background workers may start now.
+  requestBackgroundStart();
   return NextResponse.json(
     { status: "ready", instanceId },
     { status: 200, headers: noStoreHeaders() },

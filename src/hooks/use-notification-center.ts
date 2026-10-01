@@ -23,7 +23,11 @@ import { mutatePrefix } from "@/lib/swr/mutate";
  * socket bridge and by lifecycle mutations via `mutatePrefix`, so there is
  * exactly one interval-driven network cadence app-wide.
  */
-const NOTIFICATION_POLL_MS = 3_000;
+// The WhatsApp socket bridge below revalidates within 250 ms of a new inbound
+// message, so this interval is only the fallback. At 3 s it ran a sync write
+// plus a list read every 3 s on every page, which a low-end laptop paid for on
+// every click.
+const NOTIFICATION_POLL_MS = 15_000;
 const NOTIFICATIONS_SWR_PREFIX = "/api/notifications";
 // The topbar list scrolls, so it carries the API maximum page.
 const NOTIFICATION_PAGE_LIMIT = 50;
