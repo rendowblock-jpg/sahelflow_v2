@@ -1,4 +1,4 @@
-import type { RiskFactor } from "@/lib/risk-engine/types";
+import type { RiskAction, RiskFactor } from "@/lib/risk-engine/types";
 
 export interface OrderRiskFactorPresentation {
   key: string;
@@ -78,4 +78,24 @@ const KNOWN_RULE_LABEL_KEYS: Readonly<Record<string, string>> = {
 
 export function getOrderRiskRuleLabelKey(ruleId: string): string | undefined {
   return KNOWN_RULE_LABEL_KEYS[ruleId];
+}
+
+const RISK_ACTIONS = new Set<string>([
+  "auto_confirm",
+  "standard",
+  "call_first",
+  "review",
+  "hold",
+  "blacklisted",
+]);
+
+/** Copy key for an engine action. A missing or unknown action must not render as `risk.action.undefined`. */
+export function riskActionCopyKey(action: RiskAction | string | null | undefined): string {
+  if (action && RISK_ACTIONS.has(action)) return `risk.action.${action}`;
+  return "risk.action.unknown";
+}
+
+/** A stored rule label that is not in the dictionaries falls back instead of showing the raw key. */
+export function riskRuleCopyKey(labelKey: string, translated: string): string {
+  return translated === labelKey ? "risk.rules.unlisted" : labelKey;
 }

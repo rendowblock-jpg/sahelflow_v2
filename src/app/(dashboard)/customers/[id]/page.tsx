@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getCustomerDetailWorkbench } from "@/lib/customers/customer-detail-workbench";
+import { riskActionCopyKey } from "@/lib/orders/order-risk-presentation";
 import {
   CUSTOMER_SIGNALS_SCALE,
   getCustomerSignalsLevel,
@@ -225,7 +226,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             engineMeterAria: (score: number) =>
               t("customerRisk.engine.meterAria", { score }),
             engineLevelLabel: (level: RiskLevel) => t(`risk.level.${level}`),
-            engineActionLabel: (action: RiskAction) => t(`risk.action.${action}`),
+            engineActionLabel: (action: RiskAction) => t(riskActionCopyKey(action)),
             signalsLabel: t("customerRisk.signals.label"),
             signalsScaleHint: t("customerRisk.signals.scaleHint", {
               medium: CUSTOMER_SIGNALS_SCALE.mediumThreshold,

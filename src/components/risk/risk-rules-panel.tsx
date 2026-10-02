@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/hooks/use-i18n";
+import { riskRuleCopyKey } from "@/lib/orders/order-risk-presentation";
 import type { RiskRule } from "@/lib/risk-engine/types";
 
 interface Props {
@@ -72,7 +73,9 @@ export function RiskRulesPanel({ rules: initialRules }: Props) {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium truncate">{t(rule.labelKey)}</span>
+                    <span className="text-sm font-medium truncate">
+                      {t(riskRuleCopyKey(rule.labelKey, t(rule.labelKey)))}
+                    </span>
                     <Badge variant={rule.enabled ? "default" : "secondary"} className="text-xs">
                       {rule.enabled ? t("risk.rules.enabled") : t("risk.rules.disabled")}
                     </Badge>

@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import {
   getOrderRiskFactorPresentation,
   getOrderRiskRuleLabelKey,
+  riskActionCopyKey,
+  riskRuleCopyKey,
 } from "../order-risk-presentation";
 import type { RiskFactor } from "@/lib/risk-engine/types";
 
@@ -80,6 +82,18 @@ describe("Orders risk presentation", () => {
       "orders.workspace.risk.rule.autoBlacklist",
     );
     expect(getOrderRiskRuleLabelKey("unknown_rule")).toBeUndefined();
+  });
+
+  it("does not render a translation key when the action or rule label is missing", () => {
+    expect(riskActionCopyKey("review")).toBe("risk.action.review");
+    expect(riskActionCopyKey(undefined)).toBe("risk.action.unknown");
+    expect(riskActionCopyKey("not-an-action")).toBe("risk.action.unknown");
+    expect(riskRuleCopyKey("risk.rules.blacklistHold", "Blacklisted customer")).toBe(
+      "risk.rules.blacklistHold",
+    );
+    expect(
+      riskRuleCopyKey("risk.rules.blacklistedCustomer", "risk.rules.blacklistedCustomer"),
+    ).toBe("risk.rules.unlisted");
   });
   /**
    * `RiskFactor.explanation` is engine-only English assembled in

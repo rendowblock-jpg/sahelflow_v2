@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.40 FD-066 customer launch publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.40",
+  "windowsMsiVersion": "1.0.0.40",
+  "channel": "internal",
+  "releaseMode": "customer-online",
+  "ownedHostSuffix": "sahelflow.com",
+  "authorityDecision": "FD-066",
+  "licenseServiceUrl": "https://license.sahelflow.com|https://activate.sahelflow.com",
+  "certification": {
+    "productSha": "f9f4c4461cb9d8a62cfaf45fa38eb868969bb038",
+    "phase5RunId": 36918184061,
+    "phase67RunId": 36918184060,
+    "ciRunId": 36918184642
+  },
+  "reason": "ADOPTED release authority — FD-066 (documentation/product/DECISIONS.md). The Founder's 2026-10-01 directive to sell authorizes one signed customer launch, app 1.0.0-internal.40 / MSI 1.0.0.40, mode customer-online, owned host sahelflow.com. Both license.sahelflow.com/healthz and activate.sahelflow.com/healthz returned {\"status\":\"ok\"}, which is the worker's ready response, and a malformed trial POST returned {\"error\":\"invalid_request\"}. This is not a Stable claim. Product frontier is protected main f9f4c4461cb9d8a62cfaf45fa38eb868969bb038 (#480). Source gates passed on the reviewed logos head a20605e2c5eb9279a3842f872bfb0f97d99b0aea: CI 36918184642, Phase 5 36918184061, Phase 6-7 36918184060. The packaged delta also includes the missing-risk-action copy guard. Online trials use the two sahelflow.com origins. Paid licences stay offline-signed."
+}

@@ -238,7 +238,7 @@ async function main() {
   await prisma.setting.create({ data: { key: "risk_engine_rules", value: JSON.stringify([
     { id: "rule-1", labelKey: "risk.rules.highReturnRate", enabled: true, condition: { type: "customer_return_rate_gte", value: 0.5 }, effect: { type: "set_action", value: "review" }, triggerCount: 3 },
     { id: "rule-2", labelKey: "risk.rules.newCustomerHighValue", enabled: true, condition: { type: "order_value_gte", value: 10000 }, effect: { type: "set_action", value: "call_first" }, triggerCount: 1 },
-    { id: "rule-3", labelKey: "risk.rules.blacklistedCustomer", enabled: true, condition: { type: "customer_blacklisted", value: true }, effect: { type: "set_action", value: "blacklisted" }, triggerCount: 0 },
+    { id: "rule-3", labelKey: "risk.rules.blacklistHold", enabled: true, condition: { type: "customer_blacklisted", value: true }, effect: { type: "set_action", value: "blacklisted" }, triggerCount: 0 },
   ]) } });
   console.log("  ✅ Settings: daily report, risk engine config + rules");
 

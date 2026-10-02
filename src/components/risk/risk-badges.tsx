@@ -19,6 +19,7 @@
  */
 import { cn } from "@/lib/utils";
 import type { RiskLevel, RiskAction } from "@/lib/risk-engine/types";
+import { riskActionCopyKey } from "@/lib/orders/order-risk-presentation";
 import { useI18n } from "@/hooks/use-i18n";
 
 const LEVEL_STYLES: Record<RiskLevel, string> = {
@@ -54,12 +55,19 @@ export function RiskLevelBadgeServer({ level, score, label }: { level: RiskLevel
   );
 }
 
-export function RiskActionBadgeServer({ action, label }: { action: RiskAction; label: string }) {
+export function RiskActionBadgeServer({
+  action,
+  label,
+}: {
+  action: RiskAction | null | undefined;
+  label: string;
+}) {
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-xs font-medium",
-        ACTION_STYLES[action],
+        (action && ACTION_STYLES[action]) ||
+          "bg-muted text-muted-foreground border-border",
       )}
     >
       {label}
@@ -74,7 +82,7 @@ export function RiskLevelBadge({ level, score }: { level: RiskLevel; score?: num
   return <RiskLevelBadgeServer level={level} score={score} label={t(`risk.level.${level}`)} />;
 }
 
-export function RiskActionBadge({ action }: { action: RiskAction }) {
+export function RiskActionBadge({ action }: { action: RiskAction | null | undefined }) {
   const { t } = useI18n();
-  return <RiskActionBadgeServer action={action} label={t(`risk.action.${action}`)} />;
+  return <RiskActionBadgeServer action={action} label={t(riskActionCopyKey(action))} />;
 }

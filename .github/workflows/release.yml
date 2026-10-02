@@ -372,6 +372,14 @@ jobs:
               "SF_RELEASE_SCOPE=founder-offline-only ($($authority.licensing.authorityDecision); online trial disabled)" >> $env:GITHUB_ENV
             }
             'customer-online' {
+              if (
+                $authority.version -cne '1.0.0-internal.40' -or
+                $authority.licensing.authorityDecision -cne 'FD-066' -or
+                $authority.channel -cne 'internal' -or
+                $authority.licensing.ownedHostSuffix -cne 'sahelflow.com'
+              ) {
+                throw 'customer-online licensing is authorized only for exact FD-066/Internal.40 on the internal channel with owned host sahelflow.com'
+              }
               if ([string]::IsNullOrWhiteSpace($authority.licensing.ownedHostSuffix)) {
                 throw 'customer-online releases require licensing.ownedHostSuffix'
               }

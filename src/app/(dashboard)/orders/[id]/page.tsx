@@ -69,6 +69,7 @@ import {
 import {
   getOrderRiskFactorPresentation,
   getOrderRiskRuleLabelKey,
+  riskActionCopyKey,
 } from "@/lib/orders/order-risk-presentation";
 
 export const dynamic = "force-dynamic";
@@ -487,7 +488,7 @@ export default async function OrderDetailPage({
                     </p>
                     <RiskActionBadgeServer
                       action={riskAssessment.action}
-                      label={t(`risk.action.${riskAssessment.action}`)}
+                      label={t(riskActionCopyKey(riskAssessment.action))}
                     />
                   </div>
                 </div>
