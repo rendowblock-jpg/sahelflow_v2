@@ -877,3 +877,57 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .mq-row { animation: none; }
 }
 .section.legal { padding-top: 48px; }
+
+/* ── sales home: copy beside a real screenshot, no clipped stage ── */
+.home-hero {
+  padding: clamp(118px, 14vh, 152px) 0 64px;
+  background:
+    radial-gradient(60% 46% at 100% 0%, rgba(14, 165, 233, .18), transparent 62%),
+    linear-gradient(180deg, #040810 0%, #07101c 100%);
+}
+.home-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, .96fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: center;
+}
+.home-hero-copy { display: grid; justify-items: start; gap: 18px; text-align: start; }
+.home-hero .eyebrow { margin: 0; }
+.home-hero h1 {
+  font-size: clamp(36px, 4.2vw, 62px);
+  line-height: 1.12;
+  letter-spacing: -.03em;
+  font-weight: 600;
+}
+.locale-ar .home-hero h1 { line-height: 1.38; letter-spacing: 0; }
+.home-hero h1 span {
+  display: block;
+  background: linear-gradient(100deg, var(--sky-3) 0%, var(--sky) 42%, var(--sand) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.home-hero .lead { margin: 0; text-align: start; }
+.home-hero .cta-row { justify-content: flex-start; }
+.trust-row { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 2px 0 0; }
+.trust-row li { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 13.5px; }
+.trust-row svg { width: 15px; height: 15px; color: var(--ok); flex: none; }
+.shot-frame {
+  margin: 0; border-radius: 18px; overflow: hidden; background: #0b1422;
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 36px 80px -40px #000;
+}
+.shot-frame img { width: 100%; height: auto; display: block; }
+.path-row {
+  display: grid;
+  grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr);
+  gap: clamp(18px, 4vw, 48px);
+  align-items: center;
+  margin-top: 36px;
+}
+.path-row.flip { grid-template-columns: minmax(0, 1.22fr) minmax(0, .78fr); }
+.path-row.flip .path-copy { order: 2; }
+.path-copy { display: grid; justify-items: start; gap: 8px; }
+.path-copy p { color: var(--ink-2); font-size: 16.5px; max-width: 42ch; }
+@media (max-width: 960px) {
+  .home-hero-grid, .path-row, .path-row.flip { grid-template-columns: 1fr; }
+  .path-row.flip .path-copy { order: 0; }
+}
