@@ -69,13 +69,19 @@ jobs:
             }
           }
           foreach ($name in @('SF_LICENSE_TRIAL_PUBLIC_KEYS', 'SF_LICENSE_PERMANENT_PUBLIC_KEYS')) {
+            $value = [Environment]::GetEnvironmentVariable($name)
+            # A key rotation pasted as adjacent JSON objects is one keyring.
+            $normalized = [regex]::Replace($value.Trim(), '\}\s*,\s*\{', ',')
             try {
-              $parsed = [Environment]::GetEnvironmentVariable($name) | ConvertFrom-Json
+              $parsed = $normalized | ConvertFrom-Json
             } catch {
               throw "$name is not valid JSON"
             }
             if ($null -eq $parsed -or $parsed.PSObject.Properties.Count -lt 1) {
               throw "$name must be a non-empty JSON object"
+            }
+            if ($normalized -cne $value) {
+              Add-Content -Path $env:GITHUB_ENV -Value "$name=$normalized"
             }
           }
 
