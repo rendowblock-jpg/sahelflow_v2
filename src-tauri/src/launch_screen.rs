@@ -209,13 +209,10 @@ fn launch_url(app_data_dir: &Path, html: &str) -> Option<WebviewUrl> {
             return Some(WebviewUrl::External(parsed));
         }
     }
-    format!(
-        "data:text/html;charset=utf-8,{}",
-        urlencoding::encode(html)
-    )
-    .parse()
-    .ok()
-    .map(WebviewUrl::External)
+    format!("data:text/html;charset=utf-8,{}", urlencoding::encode(html))
+        .parse()
+        .ok()
+        .map(WebviewUrl::External)
 }
 
 /// Paint the launch window immediately. Failure to create it is never a
@@ -225,27 +222,26 @@ pub fn open(app: &AppHandle, app_data_dir: &Path) {
     let Some(url) = launch_url(app_data_dir, &html) else {
         return;
     };
-    let window =
-        match WebviewWindowBuilder::new(app, LAUNCH_WINDOW_LABEL, url)
-            .title(LAUNCH_WINDOW_TITLE)
-            .inner_size(720.0, 460.0)
-            .resizable(false)
-            .maximizable(false)
-            .decorations(false)
-            .shadow(true)
-            .center()
-            .always_on_top(true)
-            .visible(true)
-            .focused(true)
-            .background_color(tauri::window::Color(5, 10, 17, 255))
-            .build()
-        {
-            Ok(window) => window,
-            Err(error) => {
-                eprintln!("[sahelflow] launch screen unavailable: {error}");
-                return;
-            }
-        };
+    let window = match WebviewWindowBuilder::new(app, LAUNCH_WINDOW_LABEL, url)
+        .title(LAUNCH_WINDOW_TITLE)
+        .inner_size(720.0, 460.0)
+        .resizable(false)
+        .maximizable(false)
+        .decorations(false)
+        .shadow(true)
+        .center()
+        .always_on_top(true)
+        .visible(true)
+        .focused(true)
+        .background_color(tauri::window::Color(5, 10, 17, 255))
+        .build()
+    {
+        Ok(window) => window,
+        Err(error) => {
+            eprintln!("[sahelflow] launch screen unavailable: {error}");
+            return;
+        }
+    };
     let app = app.clone();
     let trace_path = app_data_dir.join(STARTUP_TRACE_FILE);
     let _ = thread::Builder::new()
