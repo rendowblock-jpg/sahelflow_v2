@@ -23,6 +23,9 @@ describe("FD-068 launch screen", () => {
     expect(launchModule).not.toContain("runtime-endpoint");
     expect(template.toLowerCase()).not.toContain("<script");
     expect(template).not.toMatch(/https?:\/\//);
+    expect(template).toContain("data-pct");
+    expect(launchModule).toContain(".always_on_top(true)");
+    expect(launchModule).toContain("launch-screen.html");
     expect(capability.windows).toEqual(["main"]);
   });
 

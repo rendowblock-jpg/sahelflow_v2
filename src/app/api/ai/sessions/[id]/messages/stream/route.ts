@@ -55,6 +55,7 @@ const sendSchema = z
 
 type WorkspaceStreamEvent =
   | AgentStreamEvent
+  | { type: "heartbeat" }
   | {
       type: "persistence_warning";
       code: "AI_RESPONSE_NOT_PERSISTED";
@@ -216,6 +217,7 @@ export const POST = withErrorHandler(
     const encoder = new TextEncoder();
     let agentAbort = new AbortController();
     let onAbort: (() => void) | null = null;
+    let heartbeatId: ReturnType<typeof setInterval> | undefined;
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         agentAbort = new AbortController();
@@ -239,6 +241,17 @@ export const POST = withErrorHandler(
             ),
           );
         }
+
+        // Thinking-enabled Gemini can spend a long time on internal thought
+        // before the first visible token. Keep the client inactivity watchdog
+        // alive so a working key is not reported as a stream timeout.
+        heartbeatId = setInterval(() => {
+          try {
+            send({ type: "heartbeat" });
+          } catch {
+            // Controller already closed.
+          }
+        }, 8_000);
 
         // Ledger AI-07/AI-15: announce the durable id of the user turn before
         // the agent runs, so regenerate-in-place and edit-and-resend can
@@ -371,6 +384,7 @@ export const POST = withErrorHandler(
           }
         }
 
+        if (heartbeatId) clearInterval(heartbeatId);
         try {
           controller.enqueue(encoder.encode("event: close\ndata: {}\n\n"));
           controller.close();
@@ -380,6 +394,7 @@ export const POST = withErrorHandler(
         if (onAbort) request.signal.removeEventListener("abort", onAbort);
       },
       cancel() {
+        if (heartbeatId) clearInterval(heartbeatId);
         if (onAbort) request.signal.removeEventListener("abort", onAbort);
         agentAbort.abort();
       },

@@ -113,15 +113,27 @@ html[lang="ar"] body { font-family: "Segoe UI", Tahoma, "Segoe UI Variable Text"
   animation: rise .8s .58s var(--ease) both;
 }
 
+.meter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 34px;
+  animation: rise .8s .7s var(--ease) both;
+}
 .progress {
   position: relative;
-  width: 232px;
-  height: 3px;
-  margin-top: 34px;
-  border-radius: 3px;
+  width: 260px;
+  height: 6px;
+  border-radius: 6px;
   background: rgba(148, 197, 233, .10);
   overflow: hidden;
-  animation: rise .8s .7s var(--ease) both;
+}
+.pct {
+  color: var(--ink);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
 }
 .progress i {
   position: absolute;
@@ -223,7 +235,10 @@ html[data-slow="1"] .hint { opacity: 1; }
   </svg>
   <div class="word">Sahel<b>Flow</b></div>
   <div class="tag">{{TAGLINE}}</div>
-  <div class="progress" aria-hidden="true"><i></i></div>
+  <div class="meter">
+    <div class="progress" aria-hidden="true"><i></i></div>
+    <div class="pct" data-pct>6%</div>
+  </div>
   <div class="status">
     <span data-stage="preparing">{{PREPARING}}</span>
     <span data-stage="starting">{{STARTING}}</span>

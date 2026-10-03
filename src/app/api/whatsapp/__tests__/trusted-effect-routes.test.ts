@@ -122,7 +122,7 @@ describe("WhatsApp trusted effect routes", () => {
         text: "Trusted send",
       }),
     ));
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(202);
     const context = harness.queue.mock.calls[0]?.[0] as {
       shop: { shopId: string };
       businessPrincipal: { auditActor: string; subjectId: string };

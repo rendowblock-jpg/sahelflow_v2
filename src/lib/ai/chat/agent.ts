@@ -11,6 +11,8 @@ import {
   type GeminiProviderError,
   requestGemini,
 } from "@/lib/ai/gemini/provider";
+import type { GeminiThinkingLevel } from "@/lib/ai/gemini/catalog";
+import { loadGeminiRuntimePreferences } from "@/lib/ai/gemini/runtime-preferences";
 import { serializeToolResultForRemoteModel } from "@/lib/ai/redact";
 import { db, shopContext } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -35,6 +37,8 @@ const MAX_ITERATIONS = 5;
 interface GeminiFunctionCall {
   name: string;
   args: Record<string, unknown>;
+  /** Gemini 2.5/3 thinking models require this echoed on the next turn. */
+  thoughtSignature?: string;
 }
 interface GeminiUsageMetadata {
   promptTokenCount?: number;
@@ -46,6 +50,8 @@ interface GeminiResponse {
     content?: {
       parts?: Array<{
         text?: string;
+        thought?: boolean;
+        thoughtSignature?: string;
         functionCall?: GeminiFunctionCall;
       }>;
     };
@@ -67,6 +73,7 @@ export interface AgentMessage {
     name: string;
     args: Record<string, unknown>;
     result: unknown;
+    thoughtSignature?: string;
   }>;
 }
 export interface AgentResult {
@@ -75,6 +82,7 @@ export interface AgentResult {
     name: string;
     args: Record<string, unknown>;
     result: unknown;
+    thoughtSignature?: string;
   }>;
   error?: string;
   actionProposal?: AiActionProposalToolResult;
@@ -148,6 +156,34 @@ function historySafeToolResult(toolName: string, value: unknown): unknown {
   return serializeToolResultForRemoteModel(toolName, value);
 }
 
+function modelFunctionCallPart(call: GeminiFunctionCall): Record<string, unknown> {
+  return {
+    functionCall: { name: call.name, args: call.args },
+    ...(call.thoughtSignature
+      ? { thoughtSignature: call.thoughtSignature }
+      : {}),
+  };
+}
+
+function collectFunctionCalls(
+  parts: Array<{
+    functionCall?: GeminiFunctionCall;
+    thoughtSignature?: string;
+  }>,
+): GeminiFunctionCall[] {
+  const calls: GeminiFunctionCall[] = [];
+  for (const part of parts) {
+    if (!part.functionCall) continue;
+    const signature = part.thoughtSignature ?? part.functionCall.thoughtSignature;
+    calls.push({
+      name: part.functionCall.name,
+      args: part.functionCall.args,
+      ...(signature ? { thoughtSignature: signature } : {}),
+    });
+  }
+  return calls;
+}
+
 function renderHistory(history: AgentMessage[]): Content[] {
   return history.map((message) => {
     if (message.role === "assistant" && message.toolCalls?.length) {
@@ -155,7 +191,15 @@ function renderHistory(history: AgentMessage[]): Content[] {
         ? [{ text: message.content }]
         : [];
       for (const call of message.toolCalls) {
-        parts.push({ functionCall: { name: call.name, args: call.args } });
+        parts.push(
+          modelFunctionCallPart({
+            name: call.name,
+            args: call.args,
+            ...(call.thoughtSignature
+              ? { thoughtSignature: call.thoughtSignature }
+              : {}),
+          }),
+        );
         parts.push({
           functionResponse: {
             name: call.name,
@@ -242,6 +286,7 @@ function requestBody(
   /** F-06: presentation-only shop snapshot (date + read-only counts). Never
    *  action authority; an empty string omits the block entirely. */
   shopContextNote?: string,
+  thinkingLevel: GeminiThinkingLevel = "MINIMAL",
 ) {
   return {
     systemInstruction: {
@@ -252,15 +297,13 @@ function requestBody(
     },
     contents,
     tools: [{ functionDeclarations: tools }],
-    // F-05 (Internal.33 installed campaign): the served flash models are
-    // thinking-enabled — they spend generation output on internal thought
-    // BEFORE any visible text. The 2048 budget starved visible answers into
-    // empty candidates (finishReason MAX_TOKENS) and the UI showed the
-    // dead-end "rephrase" copy even though the key had authenticated and the
-    // model had answered — the identical failure the D1 round-3 verify probe
-    // fixed at 8 tokens. 8192 gives thought + answer headroom within the
-    // documented output window.
-    generationConfig: { maxOutputTokens: 8192 },
+    // maxOutputTokens stays 8192 so a tool-using turn cannot starve visible
+    // text the way the Internal.32 8-token probe did. thinkingLevel is the
+    // seller's Settings choice (default MINIMAL for everyday chat speed).
+    generationConfig: {
+      maxOutputTokens: 8192,
+      thinkingConfig: { thinkingLevel },
+    },
   };
 }
 
@@ -339,6 +382,10 @@ export async function runAgent(
   if (!apiKey) return { response: missingKey(locale), toolCalls: [] };
 
   const tools = getAllToolDefinitions();
+  const runtime = await loadGeminiRuntimePreferences({
+    prisma: db,
+    shop: shopContext,
+  });
   const allToolCalls: AgentResult["toolCalls"] = [];
   let buffered = "";
   const contents: Content[] = [
@@ -350,7 +397,14 @@ export async function runAgent(
     let response: GeminiResponse;
     try {
       const result = await requestGemini(apiKey, {
-        body: requestBody(contents, locale, tools, shopContextNote),
+        preferredModel: runtime.model,
+        body: requestBody(
+          contents,
+          locale,
+          tools,
+          shopContextNote,
+          runtime.thinkingLevel,
+        ),
       });
       response = (await result.response.json()) as GeminiResponse;
     } catch (error) {
@@ -362,13 +416,14 @@ export async function runAgent(
     }
 
     const parts = response.candidates?.[0]?.content?.parts ?? [];
-    const text = parts.map((part) => part.text ?? "").join("");
+    const text = parts
+      .filter((part) => !part.thought)
+      .map((part) => part.text ?? "")
+      .join("");
     // Ledger AI-16: one model turn may carry several parallel function calls.
     // `parts.find` silently dropped every call after the first — collect ALL
     // of them, execute each, and return every result to the model.
-    const functionCalls = parts.flatMap((part) =>
-      part.functionCall ? [part.functionCall] : [],
-    );
+    const functionCalls = collectFunctionCalls(parts);
     if (functionCalls.length > 0) {
       const executed: Array<{ call: GeminiFunctionCall; outcome: ToolExecutionResult }> = [];
       for (const call of functionCalls) {
@@ -378,6 +433,9 @@ export async function runAgent(
           name: call.name,
           args: call.args,
           result: outcome.result,
+          ...(call.thoughtSignature
+            ? { thoughtSignature: call.thoughtSignature }
+            : {}),
         });
       }
       const proposalOutcome = executed.find(
@@ -399,7 +457,7 @@ export async function runAgent(
         role: "model",
         parts: [
           ...(text ? [{ text }] : []),
-          ...functionCalls.map((call) => ({ functionCall: call })),
+          ...functionCalls.map((call) => modelFunctionCallPart(call)),
         ],
       });
       contents.push({
@@ -551,11 +609,15 @@ async function* parseStream(
           const chunkBlockReason = chunk.promptFeedback?.blockReason;
           if (chunkBlockReason) blockReason = chunkBlockReason;
           for (const part of parts) {
-            if (part.text) {
+            if (part.text && !part.thought) {
               fullText += part.text;
               yield { type: "text_delta", text: part.text };
             }
-            if (part.functionCall) functionCalls.push(part.functionCall);
+            if (part.functionCall) {
+              functionCalls.push(
+                ...collectFunctionCalls([part]),
+              );
+            }
           }
         }
       }
@@ -601,6 +663,10 @@ export async function* runAgentStream(
   }
 
   const tools = getAllToolDefinitions();
+  const runtime = await loadGeminiRuntimePreferences({
+    prisma: db,
+    shop: shopContext,
+  });
   const allToolCalls: AgentResult["toolCalls"] = [];
   const contents: Content[] = [
     ...renderHistory(conversationHistory),
@@ -616,7 +682,14 @@ export async function* runAgentStream(
     try {
       const result = await requestGemini(apiKey, {
         stream: true,
-        body: requestBody(contents, locale, tools, shopContextNote),
+        preferredModel: runtime.model,
+        body: requestBody(
+          contents,
+          locale,
+          tools,
+          shopContextNote,
+          runtime.thinkingLevel,
+        ),
       });
       stream = result.response.body;
       servedModel = result.model;
@@ -659,6 +732,9 @@ export async function* runAgentStream(
           name: call.name,
           args: call.args,
           result: outcome.result,
+          ...(call.thoughtSignature
+            ? { thoughtSignature: call.thoughtSignature }
+            : {}),
         });
         yield { type: "tool_result", name: call.name, result: outcome.result };
         executed.push({ call, outcome });
@@ -678,7 +754,7 @@ export async function* runAgentStream(
         role: "model",
         parts: [
           ...(fullText ? [{ text: fullText }] : []),
-          ...functionCalls.map((call) => ({ functionCall: call })),
+          ...functionCalls.map((call) => modelFunctionCallPart(call)),
         ],
       });
       contents.push({

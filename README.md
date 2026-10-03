@@ -8,16 +8,15 @@ The active documentation entry point is [`documentation/README.md`](documentatio
 
 > Re-resolve protected `main` from GitHub before every write, review, merge, package or evidence claim. Everything below is exact at the stated head and goes stale the moment `main` moves.
 
-- **Protected `main`:** `cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e` — PR #469 (F-42) on #468 and #466/#467. Re-resolve live before acting.
-- **Adopted signed successor:** **Internal.39** — app `1.0.0-internal.39`, MSI `1.0.0.39`, authority **FD-065**, mode `founder-offline-only`, channel `internal`, no owned host suffix, customer-online licensing disabled. It packages this exact main (F-16…F-42, FD-063/FD-064, storefront Studio, automation flow builder). The signed train publishes it when the release-authority PR merges. Until that run succeeds, the updater-served package remains Internal.38 / FD-062 (PR #451, `9bf89927…`, published 2026-09-16, through #450 only).
-- **Not installed:** nothing from #453 through #469 is Founder-installed or live-provider-certified. MCP-14 stays withdrawn.
-- **Latest Founder-installed checkpoint:** Internal.37 / FD-060 (2026-09-11), visually rejected before campaign conversion. Confirm in `documentation/operations/WORKING_MEMORY.md` before any installed claim. Publication is not installation.
-- Retained publication evidence: Internal.37 / FD-060 (`cd1114de…`, updater 2026-09-11T12:56:24Z), Internal.36 / FD-059 (`4e527f05…`), Internal.35 / FD-058 (`f45e6e1c…`) and the Internal.30 facts (PR #357, source `2eb8a337…`, MSI `sha256:bef15026…`).
+- **Protected `main`:** `0c15e77a04c9de52247afeac258b365b14a55928` — PR #483 on Internal.40 / FD-066 (`6e96dafc…` / PR #481). Re-resolve live before acting.
+- **Published signed package:** **Internal.40** — app `1.0.0-internal.40`, MSI `1.0.0.40`, authority **FD-066**, mode `customer-online`, channel `internal`, owned host `sahelflow.com`. Tag `sahelflow-v1.0.0-internal.40-6e96dafca29f1d11260286196888d54332b1ca0c`, published 2026-10-02T15:05:29Z. Founder-authorized launch candidate, not Stable or Beta.
+- **Latest Founder-installed checkpoint:** Internal.40 / FD-066 (2026-10-03), AppData preserved. Confirm in `documentation/operations/WORKING_MEMORY.md` before any installed claim. Source on this campaign is ahead of that MSI.
+- Retained publication evidence: Internal.39 / FD-065 (`ac4fe24c…`), Internal.38 / FD-062 (`9bf89927…`, published 2026-09-16), Internal.37 / FD-060 (`cd1114de…`), Internal.36 / FD-059 (`4e527f05…`), Internal.35 / FD-058 (`f45e6e1c…`) and the Internal.30 facts (PR #357, source `2eb8a337…`, MSI `sha256:bef15026…`).
 - Issue #221 is **closed/completed**: the Founder accepted installed Internal.24 for its retained whole-product human gate. #226 is closed/completed with its budgets retained as regression criteria.
-- Issue #306 is **open**: real-phone WhatsApp installed/provider certification.
+- Issue #306 is **open**: real-phone WhatsApp installed/provider certification; logout stays LAST.
 - Issues #316 and #317 are **open for installed/real-phone evidence only** — their source is complete and packaged.
-- Issue #230 is **open/reopened P1**: customer-online readiness is blocked until a SahelFlow-owned production hostname and representative Algerian network evidence exist. The control plane in `control-plane/` is written but has never been deployed — every `wrangler.*.example` still carries placeholder D1 ids and keys, and `src-tauri/build.rs` refuses to compile `customer-online` without `SF_LICENSE_SERVICE_URL`.
-- No checkpoint from Internal.24 onward carries customer-online, Beta or Stable authority.
+- Issue #230 is **open**: Algerian-network installed trial evidence. Licence hosts `license.sahelflow.com` and `activate.sahelflow.com` returned `/healthz` ready; that does not close #230.
+- Internal.40 carries customer-online launch authority under FD-066. It does not create Beta or Stable authority.
 
 ## What Internal.30 adds
 

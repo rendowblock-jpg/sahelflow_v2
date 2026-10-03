@@ -37,6 +37,8 @@ describe("universal command search contract", () => {
     expect(palette).toContain('data-universal-search="v2"');
     expect(palette).toContain("recordResults");
     expect(palette).toContain("pageResults");
+    expect(palette).toContain("normalizedQuery.length >= 2");
+    expect(palette).toContain('autoComplete="off"');
     // Quick access and the per-family copy moved into the start panel and the
     // shared palette model; the palette still composes both.
     const startPanel = source("../../search/search-start-panel.tsx");
@@ -139,7 +141,7 @@ describe("universal command search contract", () => {
     expect(projection).toContain('ORDER_TOKEN_FAMILY = "order"');
     expect(projection).toContain("buildDeliveryIndex");
     expect(migration).toContain("SELECT 'order', \"id\", 0 FROM \"Order\"");
-    expect(migration).toContain("'order',\n    NEW.\"id\"");
+    expect(migration.replace(/\r\n/g, "\n")).toContain("'order',\n    NEW.\"id\"");
   });
 
   it("preserves exact protected order-phone search through blind-index authority", () => {

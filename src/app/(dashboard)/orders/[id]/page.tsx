@@ -649,7 +649,10 @@ export default async function OrderDetailPage({
               </p>
             </CardContent>
           </Card>
+        </div>
+      </div>
 
+      <div className="space-y-6">
           <Card id="order-tracking">
             <CardHeader>
               <CardTitle className="text-base">
@@ -769,7 +772,6 @@ export default async function OrderDetailPage({
                 </CardContent>
               </Card>
             )}
-        </div>
       </div>
     </div>
   );

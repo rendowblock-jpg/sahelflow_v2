@@ -19,6 +19,7 @@ const sendSchema = z.object({
   clientMessageId: z.string().uuid(),
   to: z.string().min(1).max(256),
   text: z.string().trim().min(1).max(4000),
+  conversationId: z.string().min(8).max(128).optional(),
   quotedMessageId: z
     .string()
     .regex(/^[A-Za-z0-9_-]{6,96}$/)
@@ -45,24 +46,28 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     businessPrincipal: businessPrincipalFromTrustedActor(actorContext),
   };
   const queued = await queueWhatsAppText(context, input);
-  const effect = await processWhatsAppEffect(context, queued.effectKey);
-  const accepted = effect.state === "queued" || effect.state === "processing" || effect.state === "retrying";
-  const succeeded = effect.state === "succeeded";
-  const status = succeeded ? 200 : accepted ? 202 : 409;
+  // Accept as soon as the command is durable. Waiting here for the sidecar
+  // made a connected inbox look broken: the client aborted at 30s, the
+  // optimistic bubble failed, and no OutboxIntent was left when the
+  // request died before commit. Dispatch continues in this process; the
+  // 10s outbox worker is the crash-recovery path.
+  void processWhatsAppEffect(context, queued.effectKey).catch(() => {
+    // Queued/retrying/ambiguous state remains authoritative.
+  });
   return NextResponse.json(
     {
-      ok: succeeded,
-      accepted: succeeded || accepted,
+      ok: false,
+      accepted: true,
       replayed: queued.replayed,
-      id: effect.providerMessageId,
+      id: null,
       messageId: queued.messageId,
       effectKey: queued.effectKey,
-      state: effect.state,
-      attemptCount: effect.attemptCount,
-      nextAttemptAt: effect.nextAttemptAt,
-      errorCode: effect.errorCode,
-      requiresDuplicateConfirmation: effect.requiresDuplicateConfirmation,
+      state: "queued",
+      attemptCount: 0,
+      nextAttemptAt: null,
+      errorCode: null,
+      requiresDuplicateConfirmation: false,
     },
-    { status },
+    { status: 202 },
   );
 }, "POST /api/whatsapp/send");

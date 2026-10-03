@@ -201,36 +201,47 @@ pub fn next_progress(shown: f32, floor: f32, ceiling: f32) -> f32 {
     }
 }
 
+fn launch_url(app_data_dir: &Path, html: &str) -> Option<WebviewUrl> {
+    let path = app_data_dir.join("launch-screen.html");
+    if fs::write(&path, html.as_bytes()).is_ok() {
+        let href = format!("file:///{}", path.to_string_lossy().replace('\\', "/"));
+        if let Ok(parsed) = href.parse() {
+            return Some(WebviewUrl::External(parsed));
+        }
+    }
+    format!("data:text/html;charset=utf-8,{}", urlencoding::encode(html))
+        .parse()
+        .ok()
+        .map(WebviewUrl::External)
+}
+
 /// Paint the launch window immediately. Failure to create it is never a
 /// startup failure: the workspace handoff continues exactly as before.
 pub fn open(app: &AppHandle, app_data_dir: &Path) {
     let html = render_html(launch_locale(app_data_dir), env!("CARGO_PKG_VERSION"));
-    let Ok(url) = format!(
-        "data:text/html;charset=utf-8,{}",
-        urlencoding::encode(&html)
-    )
-    .parse() else {
+    let Some(url) = launch_url(app_data_dir, &html) else {
         return;
     };
-    let window =
-        match WebviewWindowBuilder::new(app, LAUNCH_WINDOW_LABEL, WebviewUrl::External(url))
-            .title(LAUNCH_WINDOW_TITLE)
-            .inner_size(600.0, 380.0)
-            .resizable(false)
-            .maximizable(false)
-            .decorations(false)
-            .shadow(true)
-            .center()
-            .focused(true)
-            .background_color(tauri::window::Color(5, 10, 17, 255))
-            .build()
-        {
-            Ok(window) => window,
-            Err(error) => {
-                eprintln!("[sahelflow] launch screen unavailable: {error}");
-                return;
-            }
-        };
+    let window = match WebviewWindowBuilder::new(app, LAUNCH_WINDOW_LABEL, url)
+        .title(LAUNCH_WINDOW_TITLE)
+        .inner_size(720.0, 460.0)
+        .resizable(false)
+        .maximizable(false)
+        .decorations(false)
+        .shadow(true)
+        .center()
+        .always_on_top(true)
+        .visible(true)
+        .focused(true)
+        .background_color(tauri::window::Color(5, 10, 17, 255))
+        .build()
+    {
+        Ok(window) => window,
+        Err(error) => {
+            eprintln!("[sahelflow] launch screen unavailable: {error}");
+            return;
+        }
+    };
     let app = app.clone();
     let trace_path = app_data_dir.join(STARTUP_TRACE_FILE);
     let _ = thread::Builder::new()
@@ -257,10 +268,12 @@ fn follow_startup(app: AppHandle, window: WebviewWindow, trace_path: PathBuf) {
         }
         let (phase, floor, ceiling) = stage_band(latest_stage(&trace_path).as_deref());
         shown = next_progress(shown, floor, ceiling);
+        let percent = ((shown * 100.0).round() as i32).clamp(1, 99);
         let mut script = format!(
-            "document.documentElement.dataset.stage='{}';document.documentElement.style.setProperty('--p','{:.3}');",
+            "document.documentElement.dataset.stage='{}';document.documentElement.style.setProperty('--p','{:.3}');var n=document.querySelector('[data-pct]');if(n)n.textContent='{}%';",
             phase.attribute(),
-            shown
+            shown,
+            percent
         );
         if !slow_hint_shown && started_at.elapsed() >= SLOW_HINT_AFTER {
             slow_hint_shown = true;

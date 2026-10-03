@@ -144,7 +144,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     [navigation],
   );
   const pageResults = React.useMemo(
-    () => (normalizedQuery ? rankUniversalSearchCandidates(normalizedQuery, navigation, 8) : []),
+    () =>
+      normalizedQuery.length >= 2
+        ? rankUniversalSearchCandidates(normalizedQuery, navigation, 8)
+        : [],
     [navigation, normalizedQuery],
   );
   const recordResults = React.useMemo(
@@ -301,6 +304,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               if (!open) onOpenChange(true);
             }}
             placeholder={copy("placeholder")}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             aria-keyshortcuts="Control+K"
             className="h-full min-w-0 flex-1 bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted-foreground"
           />

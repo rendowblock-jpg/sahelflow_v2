@@ -1,4 +1,6 @@
 import { GeminiProviderError, requestGemini } from "@/lib/ai/gemini/provider";
+import { loadGeminiRuntimePreferences } from "@/lib/ai/gemini/runtime-preferences";
+import { db, shopContext } from "@/lib/db";
 import {
   EXTRACTION_IMAGE_USER_PROMPT,
   EXTRACTION_SYSTEM_PROMPT,
@@ -63,8 +65,13 @@ export async function extractWithGeminiFromImage(
     return fail("EXTRACTION_IMAGE_TOO_LARGE");
   }
   try {
+    const runtime = await loadGeminiRuntimePreferences({
+      prisma: db,
+      shop: shopContext,
+    });
     const { response, model } = await requestGemini(options.apiKey, {
       timeoutMs: options.timeoutMs ?? 20_000,
+      preferredModel: runtime.model,
       body: {
         systemInstruction: { parts: [{ text: EXTRACTION_SYSTEM_PROMPT }] },
         contents: [
@@ -85,6 +92,7 @@ export async function extractWithGeminiFromImage(
           maxOutputTokens: 1024,
           responseMimeType: "application/json",
           responseJsonSchema: responseSchema,
+          thinkingConfig: { thinkingLevel: runtime.thinkingLevel },
         },
       },
     });

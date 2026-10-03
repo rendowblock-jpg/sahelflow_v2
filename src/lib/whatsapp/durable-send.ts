@@ -206,6 +206,7 @@ export interface QueueWhatsAppTextInput {
   clientMessageId: string;
   to: string;
   text: string;
+  conversationId?: string | null;
   quotedMessageId?: string | null;
 }
 
@@ -709,13 +710,25 @@ async function resolveQuotedReplyContext(
   };
 }
 
+const INBOUND_PROVENANCE_DIRECTIONS = ["inbound", "incoming"] as const;
+
 export async function queueWhatsAppText(
   context: TrustedWhatsAppCommandContext,
   input: QueueWhatsAppTextInput,
 ): Promise<{ effectKey: string; messageId: string; replayed: boolean }> {
   const clientMessageId = z.string().uuid().parse(input.clientMessageId);
   const text = z.string().trim().min(1).max(4000).parse(input.text);
-  const jid = normalizeRecipient(input.to);
+  let jid = normalizeRecipient(input.to);
+  const conversationId = input.conversationId?.trim() || null;
+  if (conversationId) {
+    const owned = await context.prisma.conversation.findFirst({
+      where: { id: conversationId, channel: "whatsapp" },
+      select: { sourceId: true },
+    });
+    if (owned?.sourceId) {
+      jid = normalizeRecipient(owned.sourceId);
+    }
+  }
   const quoted = await resolveQuotedReplyContext(context, jid, input.quotedMessageId);
 
   // The quote target is part of the request identity: two sends that differ
@@ -763,9 +776,9 @@ export async function queueWhatsAppText(
         select: {
           id: true,
           messages: {
-            where: { direction: "inbound" },
-            select: { id: true },
-            take: 1,
+            where: { direction: { in: [...INBOUND_PROVENANCE_DIRECTIONS] } },
+            select: { id: true, direction: true },
+            take: 8,
           },
         },
       });
@@ -992,9 +1005,9 @@ export async function queueWhatsAppImage(
         select: {
           id: true,
           messages: {
-            where: { direction: "inbound" },
-            select: { id: true },
-            take: 1,
+            where: { direction: { in: [...INBOUND_PROVENANCE_DIRECTIONS] } },
+            select: { id: true, direction: true },
+            take: 8,
           },
         },
       });
@@ -1256,9 +1269,9 @@ export async function queueWhatsAppVideo(
         select: {
           id: true,
           messages: {
-            where: { direction: "inbound" },
-            select: { id: true },
-            take: 1,
+            where: { direction: { in: [...INBOUND_PROVENANCE_DIRECTIONS] } },
+            select: { id: true, direction: true },
+            take: 8,
           },
         },
       });
@@ -1517,9 +1530,9 @@ export async function queueWhatsAppDocument(
         select: {
           id: true,
           messages: {
-            where: { direction: "inbound" },
-            select: { id: true },
-            take: 1,
+            where: { direction: { in: [...INBOUND_PROVENANCE_DIRECTIONS] } },
+            select: { id: true, direction: true },
+            take: 8,
           },
         },
       });
@@ -1824,9 +1837,9 @@ export async function queueWhatsAppVoice(
         select: {
           id: true,
           messages: {
-            where: { direction: "inbound" },
-            select: { id: true },
-            take: 1,
+            where: { direction: { in: [...INBOUND_PROVENANCE_DIRECTIONS] } },
+            select: { id: true, direction: true },
+            take: 8,
           },
         },
       });

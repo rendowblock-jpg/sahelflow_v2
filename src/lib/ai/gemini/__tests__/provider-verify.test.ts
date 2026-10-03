@@ -182,9 +182,13 @@ describe("verifyGeminiKey probe truthfulness (campaign D1 round 3)", () => {
     const call = vi.mocked(fetch).mock.calls[0];
     const init = call?.[1] as RequestInit | undefined;
     const body = JSON.parse(String(init?.body)) as {
-      generationConfig: { maxOutputTokens: number };
+      generationConfig: {
+        maxOutputTokens: number;
+        thinkingConfig?: { thinkingLevel?: string };
+      };
     };
     expect(body.generationConfig.maxOutputTokens).toBeGreaterThanOrEqual(128);
+    expect(body.generationConfig.thinkingConfig?.thinkingLevel).toBe("MINIMAL");
   });
 });
 

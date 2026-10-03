@@ -178,4 +178,6 @@ export const SETTING_KEYS = {
    * seller explicitly opts in via Settings → AI.
    */
   geminiConsentAccepted: "gemini_consent_accepted",
+  geminiModel: "gemini_model",
+  geminiThinkingLevel: "gemini_thinking_level",
 } as const;

@@ -2,17 +2,18 @@
 
 import * as React from "react";
 
+import { AlgeriaLiveRail } from "@/components/brand/algeria-live-rail";
 import { SahelFlowMark } from "@/components/brand/sahelflow-mark";
-import { IconTile } from "@/components/system/icon-tile";
 import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
  * The entry-surface grammar: setup, sign-in, joining a team and licence
- * activation. One brand rail (identity, promise, three proof points) beside
- * one focused task column. Below the large breakpoint the rail folds into a
- * compact identity row so the task stays first.
+ * activation. One brand rail (identity, the live Algeria map filling the
+ * column, support line) beside one focused task column. Proof-point copy
+ * stays for assistive technology. Below the large breakpoint the rail
+ * folds into a compact identity row so the task stays first.
  *
  * INTERFACE_SYSTEM.md §6. Copy arrives as props; the language names in the
  * switcher are endonyms, not translatable copy.
@@ -82,11 +83,23 @@ function EntryLanguageSwitch({ label }: { label: string }) {
   );
 }
 
-function BrandIdentity({ className }: { className?: string }) {
+function BrandIdentity({
+  className,
+  tone = "theme",
+}: {
+  className?: string;
+  tone?: "theme" | "night";
+}) {
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
+    <div className={cn("relative flex items-center gap-2.5", className)}>
       <SahelFlowMark className="size-8" priority />
-      <span className="text-title-3 text-foreground" dir="ltr">
+      <span
+        className={cn(
+          "text-title-3",
+          tone === "night" ? "text-[#eef5fb]" : "text-foreground",
+        )}
+        dir="ltr"
+      >
         SahelFlow
       </span>
     </div>
@@ -106,32 +119,42 @@ export function EntryShell({
   children,
   className,
 }: EntryShellProps) {
+  const { t } = useI18n();
   return (
     <main
       data-sf-entry=""
       className={cn("grid min-h-dvh bg-surface-0 lg:grid-cols-12", className)}
     >
       {beforeContent}
-      <aside className="hidden flex-col justify-between gap-10 border-e bg-surface-1 p-10 lg:sticky lg:top-0 lg:col-span-5 lg:flex lg:h-dvh xl:p-12">
-        <BrandIdentity />
-        <div className="max-w-md space-y-8" data-sf-entry-reveal="">
-          <div className="space-y-3">
-            <p className="text-display text-foreground">{headline}</p>
-            <p className="text-body text-muted-foreground">{lede}</p>
-          </div>
-          <ul className="space-y-5">
+      <aside
+        data-sf-entry-rail="live-map"
+        className="relative hidden isolate overflow-hidden border-e border-[rgba(148,197,233,0.12)] bg-[#04070d] px-6 py-8 lg:sticky lg:top-0 lg:col-span-5 lg:grid lg:h-dvh lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:gap-5 xl:px-8 xl:py-9"
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(70% 55% at 50% 42%, rgba(14,165,233,0.14), transparent 72%)",
+          }}
+        />
+        <BrandIdentity className="shrink-0" tone="night" />
+        <div className="relative h-full min-h-0" data-sf-entry-reveal="">
+          <h2 className="sr-only">{headline}</h2>
+          <p className="sr-only">{lede}</p>
+          <ul className="sr-only">
             {points.map((point) => (
-              <li key={point.title} className="flex items-start gap-3.5">
-                <IconTile icon={point.icon} tone="primary" size="md" />
-                <div className="min-w-0 space-y-0.5">
-                  <p className="text-title-3 text-foreground">{point.title}</p>
-                  <p className="text-body-sm text-muted-foreground">{point.description}</p>
-                </div>
+              <li key={point.title}>
+                {point.title}: {point.description}
               </li>
             ))}
           </ul>
+          <AlgeriaLiveRail
+            label={t("entry.liveMap.label")}
+            caption={t("entry.liveMap.caption")}
+          />
         </div>
-        <p className="max-w-md text-caption text-muted-foreground">{assurance}</p>
+        <p className="relative max-w-md shrink-0 text-caption text-[#7f93a7]">{assurance}</p>
       </aside>
 
       <section className="flex min-w-0 flex-col lg:col-span-7">

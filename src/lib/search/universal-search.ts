@@ -125,9 +125,10 @@ export function scoreUniversalSearchCandidate(
   else if (sublabel.startsWith(query)) score = 900;
   else if (keywords.some((entry) => entry.startsWith(query))) score = 880;
   else if (tokenPrefixMatch(label, query)) score = 850;
-  else if (label.includes(query)) score = 760;
-  else if (sublabel.includes(query)) score = 680;
-  else if (keywords.some((entry) => entry.includes(query))) score = 620;
+  else if (query.length >= 2 && label.includes(query)) score = 760;
+  else if (query.length >= 2 && sublabel.includes(query)) score = 680;
+  else if (query.length >= 2 && keywords.some((entry) => entry.includes(query)))
+    score = 620;
   else if (
     queryTokens.length > 1 &&
     queryTokens.every((token) => haystack.includes(token))

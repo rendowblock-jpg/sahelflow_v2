@@ -19,6 +19,13 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("@/lib/ai/gemini/runtime-preferences", () => ({
+  loadGeminiRuntimePreferences: vi.fn(async () => ({
+    model: "gemini-3.5-flash",
+    thinkingLevel: "MINIMAL",
+  })),
+}));
+
 vi.mock("../tools/registry", () => ({
   getAllToolDefinitions: vi.fn<() => unknown[]>().mockReturnValue([]),
   getTool: vi.fn<(name: string) => unknown>().mockReturnValue(undefined),
@@ -194,6 +201,53 @@ describe("runAgent — tool calls", () => {
     expect(result.toolCalls[0]!.result).toEqual([{ id: "p1", name: "iPhone 14", price: 85000 }]);
     expect(execute).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledTimes(2);
+    const first = vi.mocked(fetch).mock.calls[0]![1] as { body: string };
+    const firstBody = JSON.parse(first.body) as {
+      generationConfig: { thinkingConfig?: { thinkingLevel?: string } };
+    };
+    expect(firstBody.generationConfig.thinkingConfig?.thinkingLevel).toBe(
+      "MINIMAL",
+    );
+  });
+
+  it("echoes Gemini thoughtSignature on the follow-up function-call turn", async () => {
+    vi.mocked(getSecret).mockResolvedValue("test-key");
+    const execute = vi.fn().mockResolvedValue({ success: true, data: { totalOrders: 3 } });
+    vi.mocked(getTool).mockReturnValue(mockTool("get_stats", execute));
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        geminiJsonResponse({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    functionCall: { name: "get_stats", args: {} },
+                    thoughtSignature: "sig-order-details",
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(geminiTextResponse("3 commandes."));
+    await runAgent([], "Stats?");
+    const followUp = vi.mocked(fetch).mock.calls[1]![1] as { body: string };
+    const body = JSON.parse(followUp.body) as {
+      contents: Array<{ role: string; parts: Array<Record<string, unknown>> }>;
+    };
+    const modelTurn = body.contents.find((entry) =>
+      entry.parts.some((part) => part.functionCall),
+    );
+    expect(modelTurn?.parts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          functionCall: { name: "get_stats", args: {} },
+          thoughtSignature: "sig-order-details",
+        }),
+      ]),
+    );
   });
 
   it("handles a failed tool execution by feeding the error back", async () => {

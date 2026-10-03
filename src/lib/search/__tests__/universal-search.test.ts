@@ -19,6 +19,18 @@ describe("universal search normalization and ranking", () => {
     expect(compactSearchText("0555 12-34-56")).toBe("0555123456");
   });
 
+  it("does not match a one-letter query against keyword contains", () => {
+    const accounting: UniversalSearchCandidate = {
+      id: "accounting",
+      kind: "navigation",
+      label: "المحاسبة",
+      href: "/accounting",
+      keywords: ["money", "finance", "accounting", "profit"],
+    };
+    expect(scoreUniversalSearchCandidate("g", accounting)).toBe(0);
+    expect(scoreUniversalSearchCandidate("acc", accounting)).toBeGreaterThan(0);
+  });
+
   it("ranks exact primary matches above metadata, prefixes and contains", () => {
     const exact: UniversalSearchCandidate = {
       id: "exact",

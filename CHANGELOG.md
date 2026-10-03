@@ -8,6 +8,19 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-03 — Internal.40 installed-campaign repair line (source)
+
+- Gemini chat: round-trip `thoughtSignature` on tool follow-ups, skip thought text in the seller thread, stream heartbeats, 90s inactivity timeout. Settings → AI lets the seller pick Gemini 3.5/3.6 Flash and thinking effort (MINIMAL…HIGH).
+- WhatsApp send: persist the outbox then return 202; dispatch in the background. LID replies accept inbound and legacy incoming provenance; optional `conversationId`; sidecar text timeout 25s.
+- Search palette: 1-character contains off; records before pages. Combobox lists scroll. Order detail tracking/activity/refunds sit full-width under the two-column grid. Launch screen uses file HTML, stays on top, and shows a numeric percent.
+- PIN/setup/join brand rail: the cinematic Algeria live map fills the column (standalone, no device chrome), parcels leaving Algiers for wilayas.
+- Active frontier docs re-anchored from Internal.39/FD-065 to published and Founder-installed Internal.40 / FD-066. This line is not inside the signed Internal.40 MSI.
+
+### 2026-10-02 — signed Internal.40 publication (FD-066)
+
+- Tag `sahelflow-v1.0.0-internal.40-6e96dafca29f1d11260286196888d54332b1ca0c`, published 2026-10-02T15:05:29Z, assets `SahelFlow_1.0.0-internal.40_x64_en-US.msi` + `.sig` + updater `latest.json`.
+- PR #483 later accepted concatenated license keyrings on the same version (`0c15e77a…`). That is release-workflow only.
+
 ### 2026-10-01 — FD-066 authorizes the customer launch (Internal.40)
 
 - The Founder's directive to sell adopts the already-recorded **FD-066** customer launch: app `1.0.0-internal.40` / MSI `1.0.0.40`, mode `customer-online`, owned host `sahelflow.com`, trial origins `license.sahelflow.com` and `activate.sahelflow.com`. This is not a Stable claim.

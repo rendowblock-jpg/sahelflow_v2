@@ -216,16 +216,31 @@ export function AsyncCombobox<T extends AsyncComboboxOption>({
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className={cn("w-(--radix-popover-trigger-width) p-0", popoverClassName)}
+          onWheel={(event) => event.stopPropagation()}
+          className={cn(
+            "w-(--radix-popover-trigger-width) overflow-hidden p-0",
+            popoverClassName,
+          )}
         >
-          <Command shouldFilter={false} data-testid="combobox-command">
+          <Command
+            shouldFilter={false}
+            className="!h-auto max-h-72"
+            data-testid="combobox-command"
+          >
             <CommandInput
               value={query}
               onValueChange={setQuery}
               placeholder={searchPlaceholder}
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className="outline-none ring-0 focus-visible:ring-0 focus-visible:outline-none"
               data-testid="combobox-input"
             />
-            <CommandList data-testid="combobox-list">
+            <CommandList
+              data-testid="combobox-list"
+              className="max-h-56 min-h-0 overflow-y-auto overscroll-contain"
+            >
               {showSkeletons ? (
                 <div
                   className="space-y-1 p-1"

@@ -1,12 +1,13 @@
 import "server-only";
 
 import { logger } from "@/lib/logger";
+import {
+  GEMINI_MODELS,
+  geminiModelFallbackOrder,
+  type GeminiModel,
+} from "@/lib/ai/gemini/catalog";
 
-export const GEMINI_MODELS = [
-  "gemini-3.5-flash",
-  "gemini-3.6-flash",
-] as const;
-export type GeminiModel = (typeof GEMINI_MODELS)[number];
+export { GEMINI_MODELS, type GeminiModel };
 
 const GEMINI_API_ROOT =
   "https://generativelanguage.googleapis.com/v1beta/models";
@@ -268,6 +269,7 @@ export interface GeminiRequestOptions {
   stream?: boolean;
   timeoutMs?: number;
   maxAttemptsPerModel?: number;
+  preferredModel?: GeminiModel;
 }
 
 export async function requestGemini(
@@ -278,7 +280,7 @@ export async function requestGemini(
   const attempts = Math.max(1, options.maxAttemptsPerModel ?? 2);
   let lastError: GeminiProviderError | null = null;
 
-  for (const model of GEMINI_MODELS) {
+  for (const model of geminiModelFallbackOrder(options.preferredModel)) {
     const suffix = options.stream
       ? ":streamGenerateContent?alt=sse"
       : ":generateContent";
@@ -538,7 +540,10 @@ export async function verifyGeminiKey(
         // read as "provider unavailable" even though the key had
         // authenticated and the model had answered. A generous budget lets a
         // benign probe answer in text.
-        generationConfig: { maxOutputTokens: 256 },
+        generationConfig: {
+          maxOutputTokens: 256,
+          thinkingConfig: { thinkingLevel: "MINIMAL" },
+        },
       },
     });
     let data: MinimalGeminiResponse;

@@ -135,5 +135,10 @@ export function groupResults(
     }
     group.rows.push(row);
   }
-  return [...byKind.values()];
+  return [...byKind.values()].sort((left, right) => {
+    const leftNav = left.kind === "navigation" ? 1 : 0;
+    const rightNav = right.kind === "navigation" ? 1 : 0;
+    if (leftNav !== rightNav) return leftNav - rightNav;
+    return (right.rows[0]?.score ?? 0) - (left.rows[0]?.score ?? 0);
+  });
 }

@@ -289,16 +289,20 @@ export const sidecar = {
     requestBinding?: string,
     quoted?: WhatsAppQuotedContext | null,
   ) =>
-    sidecarFetch<{ ok: boolean; id: string; status: string }>("/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        to,
-        text,
-        ...(effectKey && requestBinding ? { effectKey, requestBinding } : {}),
-        ...(quoted ? { quoted } : {}),
-      }),
-    }),
+    sidecarFetch<{ ok: boolean; id: string; status: string }>(
+      "/send",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to,
+          text,
+          ...(effectKey && requestBinding ? { effectKey, requestBinding } : {}),
+          ...(quoted ? { quoted } : {}),
+        }),
+      },
+      25_000,
+    ),
 
   /**
    * Dispatch one already-authenticated local image to the loopback sidecar.

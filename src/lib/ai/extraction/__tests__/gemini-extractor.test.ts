@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/ai/gemini/runtime-preferences", () => ({
+  loadGeminiRuntimePreferences: vi.fn(async () => ({
+    model: "gemini-3.5-flash",
+    thinkingLevel: "MINIMAL",
+  })),
+}));
+
 import {
   extractWithGemini,
   verifyGeminiKey,
