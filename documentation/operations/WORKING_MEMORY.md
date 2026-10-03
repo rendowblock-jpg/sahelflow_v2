@@ -156,7 +156,7 @@ Binding rules:
 
 ## Exact next-session order
 
-Protected `main` is `0c15e77a…` / #483. Internal.40 / FD-066 is published
+Protected `main` is `4bebfd83…` / #484. Internal.40 / FD-066 is published
 and Founder-installed. #456 is stale.
 
 1. Re-resolve protected `main`, open PRs and #164/#230/#306/#316/#317.
