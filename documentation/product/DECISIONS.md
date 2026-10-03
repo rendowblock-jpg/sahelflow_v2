@@ -1520,6 +1520,30 @@ Stable label still requires the ROADMAP Phase 9 evidence. Until then the
 customer release is a **Founder-authorized launch release**, not a Stable
 claim.
 
+## FD-067 — One signed successor Internal.41 under the FD-066 customer launch (2026-10-03, ADOPTED)
+
+FD-067 is the customer-online release authority slot that FD-066 reserved.
+The Founder's 2026-10-03 resumption directive to prepare the Internal.41
+release-authority envelope adopts it as one signed successor:
+
+- **Package:** app `1.0.0-internal.41` / MSI `1.0.0.41`, channel `internal`,
+  mode `customer-online`, owned host `sahelflow.com`, trial origins
+  `license.sahelflow.com` (primary) and `activate.sahelflow.com` (recovery);
+  paid licences stay offline-signed after BaridiMob/CCP payment.
+- **Content:** protected `main` `4bebfd83…` (PR #484) — the Internal.40
+  installed-campaign repair line (Gemini `thoughtSignature` round-trip with
+  seller-chosen model and thinking effort, WhatsApp send queued at 202 then
+  dispatched in the background, search/combobox/order-detail/launch-screen
+  repairs, the PIN-rail Algeria live map) plus #483's acceptance of
+  concatenated license keyrings.
+- **Gates:** the release-authority PR merges only after its full Required
+  battery, including installed-MSI evidence, is green; the signed train
+  publishes from exact protected `main`; the tag, digest and publish time
+  are recorded only after that run succeeds.
+- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
+  no ledger row; rows convert only on the Founder's installed Internal.41
+  observation, with #306 logout LAST.
+
 ## FD-068 — Branded launch screen while the workspace starts (2026-10-01, ADOPTED)
 
 The Founder's 2026-10-01 directive ("since the installed app will take time to

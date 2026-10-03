@@ -118,11 +118,11 @@ if (authority.licensing?.releaseMode === "founder-offline-only") {
 } else if (authority.licensing?.releaseMode === "customer-online") {
   const customerLaunch =
     authority.channel === "internal" &&
-    authority.version === "1.0.0-internal.40" &&
-    authority.licensing?.authorityDecision === "FD-066" &&
+    authority.version === "1.0.0-internal.41" &&
+    authority.licensing?.authorityDecision === "FD-067" &&
     authority.licensing?.ownedHostSuffix === "sahelflow.com";
   if (!customerLaunch) {
-    console.error("customer-online licensing is authorized only for exact FD-066/Internal.40 on the internal channel with owned host sahelflow.com");
+    console.error("customer-online licensing is authorized only for exact FD-067/Internal.41 on the internal channel with owned host sahelflow.com");
     failed = true;
   }
   if (typeof authority.licensing.ownedHostSuffix !== "string" || authority.licensing.ownedHostSuffix.trim() === "") {

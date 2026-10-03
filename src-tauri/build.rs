@@ -177,10 +177,10 @@ fn founder_offline_checkpoint(authority: &serde_json::Value) -> bool {
                     == Some("sahelflow.com")
                 && matches!(
                     (version, decision),
-                    (Some("1.0.0-internal.40"), Some("FD-066"))
+                    (Some("1.0.0-internal.41"), Some("FD-067"))
                 );
             if !exact_customer {
-                panic!("customer-online licensing is authorized only for exact FD-066/Internal.40 on the internal channel with owned host sahelflow.com");
+                panic!("customer-online licensing is authorized only for exact FD-067/Internal.41 on the internal channel with owned host sahelflow.com");
             }
             false
         }
