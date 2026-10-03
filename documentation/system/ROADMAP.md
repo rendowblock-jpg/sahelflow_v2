@@ -1,12 +1,12 @@
 # SahelFlow — Final Roadmap
 
 > **Status:** Active dependency/completion program
-> **Last reconciled:** 2026-10-03 (protected `main` `0c15e77a…` / PR #483; re-resolve before acting)
+> **Last reconciled:** 2026-10-03 (protected `main` `4bebfd83…` / PR #484; re-resolve before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** `0c15e77a04c9de52247afeac258b365b14a55928` after #483.
+> **Live protected main:** `4bebfd838fbaf814187b82e176623505f23b3ecd` after #484.
 > **Published signed package:** Internal.40 / FD-066 / `customer-online` (tag `sahelflow-v1.0.0-internal.40-6e96dafc…`, published 2026-10-02T15:05:29Z). Founder-authorized launch candidate, not Stable.
 > **Latest Founder-installed checkpoint:** Internal.40 / FD-066 (installed 2026-10-03, AppData preserved). Authority: `../operations/WORKING_MEMORY.md`.
-> **Current execution mode:** merge the Internal.40 installed-campaign source, then a separate Internal.41 release-authority PR. Convert rows only on the installed Internal.41 observation. #306 logout LAST, then FRC-3 in order A→D→C→B.
+> **Current execution mode:** the Internal.40 installed-campaign source merged via #484; the separate Internal.41 release-authority PR (#485, FD-067) is open. Convert rows only on the installed Internal.41 observation. #306 logout LAST, then FRC-3 in order A→D→C→B.
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 

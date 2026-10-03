@@ -1,13 +1,13 @@
 # SahelFlow documentation authority
 
 > **Status:** Active non-archive documentation entry point
-> **Last reconciled:** 2026-10-03 (protected `main` `0c15e77a…` after PR #483; re-resolve live before acting)
+> **Last reconciled:** 2026-10-03 (protected `main` `4bebfd83…` after PR #484; re-resolve live before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** `0c15e77a04c9de52247afeac258b365b14a55928` / #483. Always re-resolve GitHub `main` before a write, review, merge, release or evidence claim
+> **Live protected main:** `4bebfd838fbaf814187b82e176623505f23b3ecd` / #484. Always re-resolve GitHub `main` before a write, review, merge, release or evidence claim
 > **Published signed package:** Internal.40 / `1.0.0-internal.40` / MSI `1.0.0.40` / FD-066 / `customer-online` — tag `sahelflow-v1.0.0-internal.40-6e96dafca29f1d11260286196888d54332b1ca0c`, published 2026-10-02T15:05:29Z. Founder-authorized launch candidate, not Stable
 > **Retained published source:** Internal.39 / FD-065 tag `sahelflow-v1.0.0-internal.39-ac4fe24c…`; Internal.38 / FD-062 `9bf899274074f6f20935d224b96e8b1d14fc9690`
 > **Latest recorded installed checkpoint:** Internal.40 / FD-066 (Founder-installed 2026-10-03, AppData preserved). Campaign rows convert only on named observation
-> **Current next outcome:** merge the Internal.40 installed-campaign repair line, then a separate Internal.41 release-authority PR. Campaign rules stay: one preserved in-place update, convert only proved rows, #306 logout LAST, then FRC-3 in order A→D→C→B
+> **Current next outcome:** the Internal.40 installed-campaign repair line merged via #484 (`4bebfd83…`); the Internal.41 release-authority PR (#485, FD-067) is open and merges only after its full Required battery including installed-MSI evidence. Campaign rules stay: one preserved in-place update, convert only proved rows, #306 logout LAST, then FRC-3 in order A→D→C→B
 
 This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
 

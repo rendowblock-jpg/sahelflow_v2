@@ -3,7 +3,7 @@
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
 > **Last assessed:** 2026-10-03
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** `0c15e77a04c9de52247afeac258b365b14a55928` after PR #483. Re-resolve before acting.
+> **Live protected main:** `4bebfd838fbaf814187b82e176623505f23b3ecd` after PR #484. Re-resolve before acting.
 > **Published signed package:** Internal.40 / `1.0.0-internal.40` / MSI `1.0.0.40` / FD-066 / `customer-online`. Tag `sahelflow-v1.0.0-internal.40-6e96dafca29f1d11260286196888d54332b1ca0c`, published 2026-10-02T15:05:29Z. Founder-authorized launch candidate, not Stable.
 > **Latest Founder-installed checkpoint:** Internal.40 / FD-066 (in place 2026-10-03, AppData preserved). Campaign rows convert only on named observation. Authority for installed truth: `../operations/WORKING_MEMORY.md`.
 > **Current execution:** follow `../operations/WORKING_MEMORY.md` section "Exact next-session order" only. The chronology under §1 and below keeps publication evidence. A "next" or "the Founder has not yet installed" sentence inside a retained Internal.30–Internal.39 subsection is the state on that date, not the live order.
@@ -12,7 +12,7 @@ This document distinguishes protected source, automated evidence, signed publica
 
 ## 1. Exact release authority
 
-Internal.40 / FD-066 is the published signed package (header truth). Internal.39 / FD-065 and Internal.38 / FD-062 remain retained published artifacts. §§1–2b below retain the Internal.30–Internal.29 history — see `operations/WORKING_MEMORY.md`. Publication facts for Internal.40: tag `sahelflow-v1.0.0-internal.40-6e96dafca29f1d11260286196888d54332b1ca0c`, published 2026-10-02T15:05:29Z. Source on this campaign is ahead of that package and converts on the next installed observation:
+Internal.40 / FD-066 is the published signed package (header truth). Internal.39 / FD-065 and Internal.38 / FD-062 remain retained published artifacts. §§1–2b below retain the Internal.30–Internal.29 history — see `operations/WORKING_MEMORY.md`. Publication facts for Internal.40: tag `sahelflow-v1.0.0-internal.40-6e96dafca29f1d11260286196888d54332b1ca0c`, published 2026-10-02T15:05:29Z. The campaign source merged via PR #484 (`4bebfd83…`) and converts on the next installed observation:
 
 Retained Internal.30 release facts (superseded as latest):
 

@@ -9,6 +9,14 @@
 
 > **Read this first.** The live order is **Exact next-session order** below. Everything else in this section is a dated record. A "Next:" or "latest" inside a bullet from before 2026-10-03 is what was true that day.
 
+- **Campaign merged (2026-10-03):** protected `main` is `4bebfd838fbaf814187b82e176623505f23b3ecd`
+  (PR #484, expected-head merge after a green Required battery: CI
+  `37101139061`, Phase 5 `37101138786`, Phase 6-7 `37101138902`). The
+  Internal.40 installed-campaign repair line is on protected `main`, ahead
+  of the installed Internal.40 MSI, and converts only on the installed
+  Internal.41 observation. The Internal.41 release authority (FD-067) is
+  drafted as PR #485.
+
 - **Internal.40 installed + campaign source (2026-10-03):** protected `main` is `0c15e77a04c9de52247afeac258b365b14a55928` (PR #483, license keyring concatenation) on Internal.40 / FD-066. **Internal.40 is published:** tag `sahelflow-v1.0.0-internal.40-6e96dafca29f1d11260286196888d54332b1ca0c`, published 2026-10-02T15:05:29Z, app `1.0.0-internal.40` / MSI `1.0.0.40` / `customer-online` / `sahelflow.com`. **Internal.40 is Founder-installed** (2026-10-03, AppData preserved, path `com.sahelflow.desktop`). This is a Founder-authorized launch candidate, not Stable or Beta. The Founder named installed defects on that MSI; the repair line is **source on this branch and is not inside the signed Internal.40 package**: Gemini `thoughtSignature` round-trip, seller-chosen model and thinking effort, WhatsApp send queued then 202, search/combobox/order-detail/launch-screen repairs, and the PIN-rail Algeria live map filling the brand column. No ledger row converts from this source until a later installed candidate contains it and the observation proves it. Open PR #456 is stale. #306 logout stays LAST.
 
 - **FD-065 adopts Internal.39 (2026-10-01, release authority — not yet a publish-time claim):** the Founder's directive ("make the next signed release") adopts one signed successor, app `1.0.0-internal.39` / MSI `1.0.0.39` / `founder-offline-only`, packaging protected `main` `cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e` (#469). That commit is tree-identical (`9b32b86a…`) to reviewed head `e37de858…`. Source gates at that head: CI `36811358867`, Phase 5 `36811358707`, Phase 6-7 `36811358722`, zero failed. The packaged line is #452–#469 (FD-063 MCP, FD-064 extraction, F-16…F-42, storefront Studio, automation flow builder). Internal.38 stays the retained published package until the signed run succeeds. Installed truth remains Internal.37. No row converts from this adoption. Publication is not installation.
@@ -153,13 +161,14 @@ and Founder-installed. #456 is stale.
 
 1. Re-resolve protected `main`, open PRs and #164/#230/#306/#316/#317.
    Sidecar rows INB-13/14/19/32 stay BLOCKED.
-2. Merge the Internal.40 installed-campaign repair line by expected head
-   after its Required battery is green.
-3. Cut Internal.41 as a **separate** release-authority PR (FD-067 remains
-   the reserved customer-online packaging slot). It merges only after the
-   full Required battery, including installed-MSI evidence, is green. The
-   signed train then publishes Internal.41. Record the tag, digest and
-   publish time after that run. Do not invent them here.
+2. DONE (2026-10-03): the Internal.40 installed-campaign repair line merged
+   by expected head as PR #484; protected `main` is `4bebfd83…`; battery
+   green (CI 37101139061, Phase 5 37101138786, Phase 6-7 37101138902).
+3. The Internal.41 release-authority PR (FD-067, the reserved customer-online
+   packaging slot) is open as PR #485. It merges only after the full
+   Required battery, including installed-MSI evidence, is green. The signed
+   train then publishes Internal.41. Record the tag, digest and publish
+   time after that run. Do not invent them here.
 4. On the installed Internal.41 candidate, one campaign, state preserved.
    Convert only rows that build contains and the observation proves.
    Record results in the UI, AI and WhatsApp ledgers.
