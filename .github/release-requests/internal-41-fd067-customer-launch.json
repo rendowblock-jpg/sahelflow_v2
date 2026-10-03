@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.41 FD-067 customer launch publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.41",
+  "windowsMsiVersion": "1.0.0.41",
+  "channel": "internal",
+  "releaseMode": "customer-online",
+  "ownedHostSuffix": "sahelflow.com",
+  "authorityDecision": "FD-067",
+  "licenseServiceUrl": "https://license.sahelflow.com|https://activate.sahelflow.com",
+  "certification": {
+    "productSha": "4bebfd838fbaf814187b82e176623505f23b3ecd",
+    "phase5RunId": 37101138786,
+    "phase67RunId": 37101138902,
+    "ciRunId": 37101139061
+  },
+  "reason": "ADOPTED release authority — FD-067 (documentation/product/DECISIONS.md), the customer-online slot reserved by FD-066. The Founder's 2026-10-03 resumption directive to prepare the Internal.41 release-authority envelope adopts one signed customer launch, app 1.0.0-internal.41 / MSI 1.0.0.41, mode customer-online, owned host sahelflow.com, packaging protected main 4bebfd838fbaf814187b82e176623505f23b3ecd (#484): the Internal.40 installed-campaign repair line (Gemini thoughtSignature round-trip with seller-chosen model and thinking effort, WhatsApp send queued at 202 then dispatched, search/combobox/order-detail/launch-screen repairs, the PIN-rail Algeria live map) plus #483's acceptance of concatenated license keyrings. Source gates on that product head (PR #484 reviewed tree): CI 37101139061, Phase 5 37101138786, Phase 6-7 37101138902 — 16 success / 4 skipped Windows-MSI lanes / 0 failed. The certification block must be re-pointed at this envelope PR's own green Required battery, including installed-MSI evidence, before merge. Both license.sahelflow.com/healthz and activate.sahelflow.com/healthz returned ready at FD-066 (recorded in the Internal.40 authority request). Paid licences stay offline-signed. This is a Founder-authorized launch release, not a Stable claim; it converts no ledger row."
+}

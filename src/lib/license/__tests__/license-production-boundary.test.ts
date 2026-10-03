@@ -58,9 +58,9 @@ describe("production licensing authority inventory", () => {
     expect(build).toContain("std::net::IpAddr");
     expect(build).toContain("public DNS hostnames, not IP/reserved/private-style destinations");
     expect(build).toContain("provisioned SahelFlow-owned host suffix");
-    expect(versionAuthority).toContain('\"version\": \"1.0.0-internal.40\"');
+    expect(versionAuthority).toContain('\"version\": \"1.0.0-internal.41\"');
     expect(versionAuthority).toContain('\"releaseMode\": \"customer-online\"');
-    expect(versionAuthority).toContain('\"authorityDecision\": \"FD-066\"');
+    expect(versionAuthority).toContain('\"authorityDecision\": \"FD-067\"');
     expect(versionAuthority).toContain('\"ownedHostSuffix\": \"sahelflow.com\"');
     expect(versionAudit).toContain("founder-offline-only licensing is authorized only for Internal.15/FD-032, Internal.16/FD-034, Internal.17/FD-036, Internal.18/FD-037, Internal.19/FD-038, Internal.20/FD-039, Internal.21/FD-040, Internal.22/FD-041, Internal.23/FD-042, Internal.24/FD-043, Internal.25/FD-044, Internal.26/FD-046, Internal.27/FD-047, Internal.28/FD-049, Internal.29/FD-050, Internal.30/FD-051, Internal.31/FD-053, Internal.32/FD-055, Internal.33/FD-056, Internal.34/FD-057, Internal.35/FD-058, Internal.36/FD-059, Internal.37/FD-060, or Internal.38/FD-062, or Internal.39/FD-065 on the internal channel with no owned host suffix");
     expect(build).toContain('Some(\"1.0.0-internal.15\"), Some(\"FD-032\")');
