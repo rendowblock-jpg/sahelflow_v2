@@ -8,9 +8,9 @@ The active documentation entry point is [`documentation/README.md`](documentatio
 
 > Re-resolve protected `main` from GitHub before every write, review, merge, package or evidence claim. Everything below is exact at the stated head and goes stale the moment `main` moves.
 
-- **Protected `main`:** `0c15e77a04c9de52247afeac258b365b14a55928` — PR #483 on Internal.40 / FD-066 (`6e96dafc…` / PR #481). Re-resolve live before acting.
+- **Protected `main`:** `4bebfd838fbaf814187b82e176623505f23b3ecd` — PR #484 (Internal.40 installed-campaign repairs + frontier docs) on Internal.40 / FD-066 (`6e96dafc…` / PR #481). Re-resolve live before acting.
 - **Published signed package:** **Internal.40** — app `1.0.0-internal.40`, MSI `1.0.0.40`, authority **FD-066**, mode `customer-online`, channel `internal`, owned host `sahelflow.com`. Tag `sahelflow-v1.0.0-internal.40-6e96dafca29f1d11260286196888d54332b1ca0c`, published 2026-10-02T15:05:29Z. Founder-authorized launch candidate, not Stable or Beta.
-- **Latest Founder-installed checkpoint:** Internal.40 / FD-066 (2026-10-03), AppData preserved. Confirm in `documentation/operations/WORKING_MEMORY.md` before any installed claim. Source on this campaign is ahead of that MSI.
+- **Latest Founder-installed checkpoint:** Internal.40 / FD-066 (2026-10-03), AppData preserved. Confirm in `documentation/operations/WORKING_MEMORY.md` before any installed claim. The merged campaign source (PR #484, `4bebfd83…`) is ahead of that MSI and packages in Internal.41.
 - Retained publication evidence: Internal.39 / FD-065 (`ac4fe24c…`), Internal.38 / FD-062 (`9bf89927…`, published 2026-09-16), Internal.37 / FD-060 (`cd1114de…`), Internal.36 / FD-059 (`4e527f05…`), Internal.35 / FD-058 (`f45e6e1c…`) and the Internal.30 facts (PR #357, source `2eb8a337…`, MSI `sha256:bef15026…`).
 - Issue #221 is **closed/completed**: the Founder accepted installed Internal.24 for its retained whole-product human gate. #226 is closed/completed with its budgets retained as regression criteria.
 - Issue #306 is **open**: real-phone WhatsApp installed/provider certification; logout stays LAST.
