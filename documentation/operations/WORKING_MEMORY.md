@@ -1,13 +1,15 @@
 # SahelFlow — Working Memory
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
-> **Last updated:** 2026-10-01
+> **Last updated:** 2026-10-03
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
 ## Current truth
 
-> **Read this first.** The live order is **Exact next-session order** below. Everything else in this section is a dated record. A "Next:" or "latest" inside a bullet from before 2026-10-01 is what was true that day.
+> **Read this first.** The live order is **Exact next-session order** below. Everything else in this section is a dated record. A "Next:" or "latest" inside a bullet from before 2026-10-03 is what was true that day.
+
+- **Internal.40 installed + campaign source (2026-10-03):** protected `main` is `0c15e77a04c9de52247afeac258b365b14a55928` (PR #483, license keyring concatenation) on Internal.40 / FD-066. **Internal.40 is published:** tag `sahelflow-v1.0.0-internal.40-6e96dafca29f1d11260286196888d54332b1ca0c`, published 2026-10-02T15:05:29Z, app `1.0.0-internal.40` / MSI `1.0.0.40` / `customer-online` / `sahelflow.com`. **Internal.40 is Founder-installed** (2026-10-03, AppData preserved, path `com.sahelflow.desktop`). This is a Founder-authorized launch candidate, not Stable or Beta. The Founder named installed defects on that MSI; the repair line is **source on this branch and is not inside the signed Internal.40 package**: Gemini `thoughtSignature` round-trip, seller-chosen model and thinking effort, WhatsApp send queued then 202, search/combobox/order-detail/launch-screen repairs, and the PIN-rail Algeria live map filling the brand column. No ledger row converts from this source until a later installed candidate contains it and the observation proves it. Open PR #456 is stale. #306 logout stays LAST.
 
 - **FD-065 adopts Internal.39 (2026-10-01, release authority — not yet a publish-time claim):** the Founder's directive ("make the next signed release") adopts one signed successor, app `1.0.0-internal.39` / MSI `1.0.0.39` / `founder-offline-only`, packaging protected `main` `cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e` (#469). That commit is tree-identical (`9b32b86a…`) to reviewed head `e37de858…`. Source gates at that head: CI `36811358867`, Phase 5 `36811358707`, Phase 6-7 `36811358722`, zero failed. The packaged line is #452–#469 (FD-063 MCP, FD-064 extraction, F-16…F-42, storefront Studio, automation flow builder). Internal.38 stays the retained published package until the signed run succeeds. Installed truth remains Internal.37. No row converts from this adoption. Publication is not installation.
 
@@ -146,24 +148,24 @@ Binding rules:
 
 ## Exact next-session order
 
-Protected `main` is `cbb27fbc…` / #469. FD-065 is the packaging decision.
-#456 and #457 are stale; do not merge #457.
+Protected `main` is `0c15e77a…` / #483. Internal.40 / FD-066 is published
+and Founder-installed. #456 is stale.
 
 1. Re-resolve protected `main`, open PRs and #164/#230/#306/#316/#317.
-   Sidecar rows INB-13/14/19/32 stay BLOCKED. F-16…F-42 are DONE at source
-   and convert on an installed Internal.39 observation only.
-2. The release-authority PR merges by expected head only after the full
-   Required battery, including installed-MSI evidence, is green. The signed
-   train publishes Internal.39. Record the tag, digest and publish time after
-   that run. Do not invent them here.
-3. On the installed Internal.39 candidate, one campaign, state preserved.
-   Convert only rows that build contains and the observation proves, including
-   the F-04…F-42 rows present in it, the retained FD-050 rows, the D3 waves,
-   and applicable #316/#317 rows. Record results in the UI, AI and WhatsApp
-   ledgers.
-4. #306 logout executes LAST, after the other rows on that candidate are
+   Sidecar rows INB-13/14/19/32 stay BLOCKED.
+2. Merge the Internal.40 installed-campaign repair line by expected head
+   after its Required battery is green.
+3. Cut Internal.41 as a **separate** release-authority PR (FD-067 remains
+   the reserved customer-online packaging slot). It merges only after the
+   full Required battery, including installed-MSI evidence, is green. The
+   signed train then publishes Internal.41. Record the tag, digest and
+   publish time after that run. Do not invent them here.
+4. On the installed Internal.41 candidate, one campaign, state preserved.
+   Convert only rows that build contains and the observation proves.
+   Record results in the UI, AI and WhatsApp ledgers.
+5. #306 logout executes LAST, after the other rows on that candidate are
    green. Then resume FRC-3 in order A→D→C→B. Keep external blockers.
-5. Source-only, in parallel, from `operations/TRANSFORMATION_HANDOFF.md` §4:
+6. Source-only, in parallel, from `operations/TRANSFORMATION_HANDOFF.md` §4:
    STR-01 composer seam, then the list seam, then `storefront-studio`,
    `automation-builder` and `inbox-v3-queue`. Then TEST-01, L10N-01,
    STR-02/STR-03 and SYS-04. Never present that track as campaign progress.
@@ -183,9 +185,10 @@ Protected `main` is `cbb27fbc…` / #469. FD-065 is the packaging decision.
 ## Current hard blockers and dependencies
 
 - WhatsApp FRC-1 requires the Founder’s retained real phone/account/session.
-  Internal.37 is what is installed. FD-065's Internal.39 is the candidate that
-  contains F-16…F-42. Until that candidate is installed, no ledger row converts.
-  Internal.38 remains retained publication evidence and cannot show that UI.
+  Internal.40 is what is installed. The Internal.40 campaign source (this
+  branch) is not in that MSI. Until Internal.41 is installed, those campaign
+  rows do not convert. Internal.38/Internal.39 remain retained publication
+  evidence.
 - Real Gemini minimal inference requires a seller-owned key; free-tier work uses synthetic/redacted inputs only.
 - Commerce requires development/test environments and HTTPS ingress for webhook tests.
 - Courier live certification requires provider sandbox/demo or authorized seller credentials.

@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-08-26
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** FD-065 adopts Internal.39 (`1.0.0-internal.39` / MSI `1.0.0.39`, founder-offline-only) packaging protected `main` `cbb27fbc…` / #469. Signed publication is the release train on that merge; Internal.38 / FD-062 stays the retained published package until the run succeeds. Installed truth remains the rejected Internal.37, with no campaign conversion. The FD-058 campaign runs once on the installed Internal.39 candidate, then FRC-3 (A→D→C→B). Re-resolve `main` before acting.
+> **Current checkpoint:** Internal.40 / FD-066 (`1.0.0-internal.40` / MSI `1.0.0.40`, customer-online, sahelflow.com) is published (tag `sahelflow-v1.0.0-internal.40-6e96dafc…`, 2026-10-02T15:05:29Z) and Founder-installed. Protected `main` is `0c15e77a…` / #483. The Internal.40 installed-campaign repair line is source ahead of that package. The next signed successor is a separate Internal.41 release-authority PR after that campaign merges. Re-resolve `main` before acting.
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -59,7 +59,7 @@ Operational rules:
 - issue bodies can retain evidence/work queues but do not replace active documentation authority;
 - source, signed artifact, hosted CI install, Founder install, live-provider evidence, representative beta and Stable are distinct truth levels.
 
-Current signed authority is Internal.38 / `1.0.0-internal.38` / MSI `1.0.0.38` / FD-062 / `founder-offline-only` (published 2026-09-16; updater-served, Founder in-place update pending — installed remains Internal.37; it packages the #424–#450 frontier). FD-045/FD-062 change execution strategy and timing only; they do not create customer-online, Beta or Stable authority.
+Current signed authority is Internal.40 / `1.0.0-internal.40` / MSI `1.0.0.40` / FD-066 / `customer-online` (published 2026-10-02; Founder-installed 2026-10-03; it packages the FD-066 customer launch). FD-045/FD-066 change execution strategy and timing only; they do not create Beta or Stable authority. This campaign's source is ahead of Internal.40 and rides the next signed package.
 
 ## 3. Complete phase/package audit
 

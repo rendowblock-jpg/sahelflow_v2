@@ -41,6 +41,10 @@ describe("Settings Class-AAA control-center contract", () => {
     expect(ia).toContain(`connections: "commerce"`);
     expect(workspace).toContain('data-settings-search="true"');
     expect(workspace).toContain("settingsPageMatches(");
+    expect(pages).toContain("GeminiRuntimePanel");
+    expect(read("src/components/settings/gemini-runtime-panel.tsx")).toContain(
+      'role="radiogroup"',
+    );
     expect(pages).toContain("AppearancePanel");
     expect(pages).toContain("SecurityAuthorityPanel");
     expect(pages).toContain("LicensePanel");

@@ -16,6 +16,13 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("@/lib/ai/gemini/runtime-preferences", () => ({
+  loadGeminiRuntimePreferences: vi.fn(async () => ({
+    model: "gemini-3.5-flash",
+    thinkingLevel: "MINIMAL",
+  })),
+}));
+
 vi.mock("../tools/registry", () => ({
   getAllToolDefinitions: vi.fn<() => unknown[]>().mockReturnValue([]),
   getTool: vi.fn<(name: string) => unknown>().mockReturnValue(undefined),

@@ -1,12 +1,12 @@
 # SahelFlow — Final Roadmap
 
 > **Status:** Active dependency/completion program
-> **Last reconciled:** 2026-10-01 (protected `main` `cbb27fbc…` / PR #469; re-resolve before acting)
+> **Last reconciled:** 2026-10-03 (protected `main` `0c15e77a…` / PR #483; re-resolve before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** `cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e` after #469.
-> **Adopted signed successor:** Internal.39 / FD-065 (packages this main, including F-16…F-42). Publication is the signed train. Until it succeeds, updater-served remains Internal.38 / FD-062 (published 2026-09-16; through #450 only; not Founder-installed).
-> **Latest Founder-installed checkpoint:** Internal.37 / FD-060 (installed 2026-09-11, visually rejected before campaign conversion — no row converted). Authority: `../operations/WORKING_MEMORY.md`.
-> **Current execution mode:** FD-065 is the packaging decision. The FD-058 campaign runs once on the installed Internal.39 candidate, then FRC-3 in order A→D→C→B. Do not treat an Internal.38 install as observation of F-16…F-42.
+> **Live protected main:** `0c15e77a04c9de52247afeac258b365b14a55928` after #483.
+> **Published signed package:** Internal.40 / FD-066 / `customer-online` (tag `sahelflow-v1.0.0-internal.40-6e96dafc…`, published 2026-10-02T15:05:29Z). Founder-authorized launch candidate, not Stable.
+> **Latest Founder-installed checkpoint:** Internal.40 / FD-066 (installed 2026-10-03, AppData preserved). Authority: `../operations/WORKING_MEMORY.md`.
+> **Current execution mode:** merge the Internal.40 installed-campaign source, then a separate Internal.41 release-authority PR. Convert rows only on the installed Internal.41 observation. #306 logout LAST, then FRC-3 in order A→D→C→B.
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 

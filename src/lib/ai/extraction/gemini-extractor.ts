@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { GeminiProviderError, requestGemini } from "@/lib/ai/gemini/provider";
+import { loadGeminiRuntimePreferences } from "@/lib/ai/gemini/runtime-preferences";
+import { db, shopContext } from "@/lib/db";
 import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_USER_PROMPT } from "../prompts/extraction";
 import { matchCatalog } from "./catalog";
 import { normalizePhone } from "./fields";
@@ -106,8 +108,13 @@ export async function extractWithGemini(
 ): Promise<ExtractionResult> {
   if (!options.apiKey) return fail("GEMINI_KEY_MISSING");
   try {
+    const runtime = await loadGeminiRuntimePreferences({
+      prisma: db,
+      shop: shopContext,
+    });
     const { response, model } = await requestGemini(options.apiKey, {
       timeoutMs: options.timeoutMs ?? 15_000,
+      preferredModel: runtime.model,
       body: {
         systemInstruction: { parts: [{ text: EXTRACTION_SYSTEM_PROMPT }] },
         contents: [{
@@ -118,6 +125,7 @@ export async function extractWithGemini(
           maxOutputTokens: 1024,
           responseMimeType: "application/json",
           responseJsonSchema: responseSchema,
+          thinkingConfig: { thinkingLevel: runtime.thinkingLevel },
         },
       },
     });

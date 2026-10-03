@@ -38,8 +38,30 @@ export type MediaSendResponse = {
   id?: string | null;
   effectKey?: string;
   state?: InboxMessage["outboxState"];
+  errorCode?: string | null;
   requiresDuplicateConfirmation?: boolean;
 };
+
+export function whatsappSendFailureCopy(
+  t: (key: string) => string,
+  data: Pick<MediaSendResponse, "errorCode" | "requiresDuplicateConfirmation">,
+): string {
+  if (data.requiresDuplicateConfirmation) return t("inbox.whatsappAmbiguous");
+  if (data.errorCode === "WHATSAPP_NOT_CONNECTED") {
+    return t("inbox.sendError.notConnected");
+  }
+  if (data.errorCode === "VALIDATION_ERROR") {
+    return t("inbox.sendError.invalidRecipient");
+  }
+  if (
+    data.errorCode === "SIDECAR_UNAVAILABLE" ||
+    data.errorCode === "SIDECAR_REJECTED" ||
+    data.errorCode === "SIDECAR_NETWORK_AMBIGUOUS"
+  ) {
+    return t("inbox.sendError.sidecarUnavailable");
+  }
+  return t("inbox.sendFailed");
+}
 
 /** The localized workspace copy accessor produced by the workspace hook. */
 export type InboxWorkspaceCopy = (

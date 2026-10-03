@@ -1,0 +1,111 @@
+.map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.shape {
+  fill: rgba(56, 189, 248, 0.03);
+  stroke: rgba(125, 211, 252, 0.28);
+  stroke-width: 1.5;
+}
+
+.dots circle {
+  fill: #20354f;
+}
+
+.dots {
+  animation: breathe 6s ease-in-out infinite;
+}
+
+.arc {
+  fill: none;
+  stroke: rgba(125, 211, 252, 0.55);
+  stroke-width: 1.6;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 3.6s cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0s) infinite;
+}
+
+.parcel {
+  fill: #fff;
+  filter: drop-shadow(0 0 6px #38bdf8);
+}
+
+.city {
+  fill: #f5b85b;
+}
+
+.cityRing {
+  fill: none;
+  stroke: #f5b85b;
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ring 3.6s ease-out var(--d, 0s) infinite;
+}
+
+.hubCore {
+  fill: #38bdf8;
+  filter: drop-shadow(0 0 10px #38bdf8);
+}
+
+.hubRing {
+  fill: none;
+  stroke: #38bdf8;
+  stroke-width: 2;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ring 2.2s ease-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.75;
+  }
+}
+
+@keyframes draw {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 1;
+  }
+  55% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dots,
+  .arc,
+  .cityRing,
+  .hubRing {
+    animation: none;
+  }
+
+  .arc {
+    stroke-dashoffset: 0;
+    opacity: 0.55;
+  }
+
+  .parcel {
+    display: none;
+  }
+}

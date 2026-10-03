@@ -22,6 +22,7 @@ import {
 
 import { ProfileEditor } from "@/components/profile/profile-editor";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
+import { GeminiRuntimePanel } from "@/components/settings/gemini-runtime-panel";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
 import { BackupRestorePanel } from "@/components/settings/backup-restore-panel";
 import { ChangePinPanel } from "@/components/settings/change-pin-panel";
@@ -236,10 +237,13 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     icon: Bot,
     label: "pageAi",
     description: "pageAiDescription",
-    keywords: "ai ia gemini google key clé مفتاح consent consentement موافقة agent",
+    keywords: "ai ia gemini google key clé مفتاح consent consentement موافقة agent model thinking modèle réflexion",
     visible: (access) => access.aiKey || access.aiConsent,
     render: ({ access }) => (
-      <AiKeyPanel canManageKey={access.aiKey} canManageConsent={access.aiConsent} />
+      <div className="space-y-6">
+        <GeminiRuntimePanel canManage={access.aiConsent || access.aiKey} />
+        <AiKeyPanel canManageKey={access.aiKey} canManageConsent={access.aiConsent} />
+      </div>
     ),
   },
   {

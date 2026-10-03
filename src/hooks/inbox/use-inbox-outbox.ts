@@ -14,6 +14,7 @@ import {
   type MediaSendResponse,
   type MediaSendSpec,
   postFormWithUploadProgress,
+  whatsappSendFailureCopy,
 } from "./inbox-workspace-shared";
 import type { InboxSharedRefs } from "./use-inbox-shared-refs";
 
@@ -358,15 +359,21 @@ export function useInboxOutbox({
         // DOMException that the existing failure reconciliation already
         // converts into a failed-with-retry bubble (durable outbox truth is
         // unaffected: the effectKey contract owns actual delivery state).
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(45_000),
         body: JSON.stringify({
           clientMessageId: tempId,
+          conversationId: chat.conversationId,
           to: chat.transportId,
           text: body,
           ...(trimmedQuotedId ? { quotedMessageId: trimmedQuotedId } : {}),
         }),
       });
-      const data = (await response.json()) as MediaSendResponse;
+      const data = (await response.json()) as MediaSendResponse & {
+        code?: string;
+      };
+      if (!data.errorCode && data.code) {
+        data.errorCode = data.code;
+      }
       if (response.status === 202 && data.accepted && data.effectKey) {
         clearAcceptedDraft();
         mutateMessages(chat.conversationId, (current) =>
@@ -400,11 +407,7 @@ export function useInboxOutbox({
               : message,
           ),
         );
-        throw new Error(
-          data.requiresDuplicateConfirmation
-            ? t("inbox.whatsappAmbiguous")
-            : t("inbox.sendFailed"),
-        );
+        throw new Error(whatsappSendFailureCopy(t, data));
       }
       mutateMessages(chat.conversationId, (current) =>
         reconcileInboxProviderMessage(current, tempId, data.id, {
@@ -424,8 +427,15 @@ export function useInboxOutbox({
         ),
       );
       if (activeChatRef.current?.conversationId === chat.conversationId) {
+        const timedOut =
+          error instanceof DOMException &&
+          (error.name === "TimeoutError" || error.name === "AbortError");
         setSendError(
-          error instanceof Error ? error.message : t("inbox.sendFailed"),
+          timedOut
+            ? t("inbox.sendError.timeout")
+            : error instanceof Error
+              ? error.message
+              : t("inbox.sendFailed"),
         );
       }
     } finally {

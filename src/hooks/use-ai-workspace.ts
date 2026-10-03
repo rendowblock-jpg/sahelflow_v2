@@ -632,7 +632,7 @@ export function useAiWorkspace() {
       // A watchdog aborts after ~45s without any stream activity; the abort
       // rides the existing stop path, so the server's persist-on-stop logic
       // (AI-04) keeps the partial answer and the UI shows recoverable state.
-      const STREAM_INACTIVITY_TIMEOUT_MS = 45_000;
+      const STREAM_INACTIVITY_TIMEOUT_MS = 90_000;
       let lastActivityAt = Date.now();
       let streamTimedOut = false;
       const streamWatchdogId = window.setInterval(() => {
@@ -684,6 +684,9 @@ export function useAiWorkspace() {
             for (const line of rawEvent.split("\n")) {
               if (line.startsWith("event:")) eventType = line.slice(6).trim();
               if (line.startsWith("data:")) eventData = line.slice(5).trim();
+            }
+            if (eventType === "heartbeat") {
+              continue;
             }
             if (eventType && eventData && eventType !== "close") {
               let payload: Record<string, unknown> | null = null;

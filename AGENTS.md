@@ -42,28 +42,28 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-Reconciled 2026-09-30 after PR #464. Re-resolve protected `main` before acting. `documentation/operations/WORKING_MEMORY.md` is the installed-truth authority. Dated "Next:" lines inside older bullets are not instructions.
+Reconciled 2026-10-03. Re-resolve protected `main` before acting. `documentation/operations/WORKING_MEMORY.md` is the installed-truth authority. Dated "Next:" lines inside older bullets are not instructions.
 
-- **Protected `main`:** `cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e` / PR #469 (F-42 risk scoring without look-ahead), on #468 (automation flow builder) and #466/#467 (storefront Studio). Re-resolve before acting.
-- **Version authority adopted by FD-065:** **Internal.39** / app `1.0.0-internal.39` / MSI `1.0.0.39` / `founder-offline-only`. It packages this exact main, including F-16…F-42. Signed publication is the release train on the FD-065 merge. This file does not invent a tag, digest or publish time. Retained published checkpoint until that run succeeds: Internal.38 / FD-062 (PR #451, `9bf89927…`, published 2026-09-16, through #450 only).
-- **Installed truth:** Internal.37 / FD-060 (in place 2026-09-11, AppData preserved) was visually rejected before campaign conversion (F-14/F-15). **No ledger row converts** from Internal.35, Internal.36, Internal.37 or unpublished Internal.38. Publication is not installation.
-- **Source inside the Internal.39 candidate, still uninstalled:** #453–#469, including FD-063 MCP, FD-064 extraction, F-16…F-42, storefront Studio and the automation flow builder. MCP-14 stays withdrawn. None of this is live-provider-certified.
+- **Protected `main`:** `0c15e77a04c9de52247afeac258b365b14a55928` / PR #483 (license keyring concatenation), on Internal.40 / FD-066 (`6e96dafc…` / PR #481). Re-resolve before acting.
+- **Published signed package:** **Internal.40** / app `1.0.0-internal.40` / MSI `1.0.0.40` / FD-066 / `customer-online` / host `sahelflow.com`. Tag `sahelflow-v1.0.0-internal.40-6e96dafca29f1d11260286196888d54332b1ca0c`, published 2026-10-02T15:05:29Z. This is a Founder-authorized launch candidate, not Stable or Beta.
+- **Installed truth:** Internal.40 is Founder-installed (2026-10-03, AppData preserved, path `com.sahelflow.desktop`). Campaign rows convert only on named observation of a candidate that contains them. Publication of Internal.40 is not conversion of later source.
+- **Source ahead of Internal.40 (this campaign, uninstalled until the next signed package):** the Internal.40 installed-campaign repair line — Gemini thought-signature round-trip and seller-chosen model/thinking, WhatsApp send queued at 202 then dispatched, search/combobox/order-detail/launch-screen repairs, and the PIN-rail Algeria live map. None of this is live-provider-certified.
 - issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint; #226 remains closed/completed with its budgets retained as regression criteria;
-- open issues are #164 (Phase 0–9 execution epic), #230 (customer-online readiness), #306 (real-phone WhatsApp certification), #316 and #317 (installed/real-phone evidence only; their source is complete and packaged);
-- open PRs #456 (artifact hygiene) and #457 (2026-09-25 working-memory note) are stale against this main. Do not merge #457: it would restore a pre-#458 handoff. Internal.36 is retained publication evidence, not the signed or installed frontier.
+- open issues are #164 (Phase 0–9 execution epic), #230 (Algerian-network installed trial; both licence hosts `/healthz` returned ready), #306 (real-phone WhatsApp certification; logout LAST), #316 and #317 (installed/real-phone evidence only; their source is complete and packaged);
+- open PR #456 (artifact hygiene) is stale against this main. Do not merge it as current work.
 
-Do not describe Internal.38, #463, #464 or any source work as installed, live-provider-certified or Founder-accepted until an in-place update and campaign produce that evidence. Preserve the Founder's installation state until that campaign.
+Do not describe this campaign, Internal.41, or any source work as installed, live-provider-certified or Founder-accepted until an in-place update and campaign produce that evidence. Preserve the Founder's installation state until that campaign.
 
 ## Exact next outcome
 
-FD-065 adopts Internal.39 as the signed successor of this exact main (`cbb27fbc…` / #469). Installing published Internal.38 cannot observe F-16…F-42.
+Internal.40 / FD-066 is published and Founder-installed. This campaign is source on top of `0c15e77a…`. The next signed successor is a **separate** release-authority PR after this campaign is on protected `main`.
 
 1. Re-resolve protected `main`, open PRs and issues #164/#230/#306/#316/#317.
-2. Merge this release-authority change by expected head only after its full Required battery, including installed-MSI evidence, is green. The signed train then publishes Internal.39. Do not claim the tag, digest or publish time before that run succeeds.
-3. On the installed Internal.39 candidate, run the FD-058 campaign once with state preserved (no logout, no AppData reset, no protected-auth clearing). Convert a row only when that candidate contains it and the observation proves it. #306 logout stays LAST. Then resume FRC-3 in order A→D→C→B. FRC-4/FRC-5 keep their external blockers.
-4. Transformation work stays source-only, from `documentation/operations/TRANSFORMATION_HANDOFF.md` §4 (STR-01 composer seam, then the list seam). It converts no installed row.
-5. Publicly promise only exact live-certified provider/actions. Unverified providers stay hidden, disabled or conditional.
-6. Keep #306, #230, customer-online, paid deployment, Beta and Stable separate until their own evidence and authority close them.
+2. Merge this campaign by expected head only after its Required battery is green.
+3. Cut Internal.41 as a separate release-authority PR (FD-067 remains the reserved customer-online packaging slot). That PR merges only after the full Required battery, including installed-MSI evidence, is green. Do not claim the tag, digest or publish time before that run succeeds.
+4. On the installed Internal.41 candidate, run one campaign with state preserved (no logout, no AppData reset, no protected-auth clearing). Convert a row only when that candidate contains it and the observation proves it. #306 logout stays LAST. Then resume FRC-3 in order A→D→C→B. FRC-4/FRC-5 keep their external blockers.
+5. Transformation work stays source-only, from `documentation/operations/TRANSFORMATION_HANDOFF.md` §4 (STR-01 composer seam, then the list seam). It converts no installed row.
+6. Publicly promise only exact live-certified provider/actions. Keep #306, #230, paid deployment, Beta and Stable separate until their own evidence and authority close them.
 
 ## First Revenue Certification rules
 

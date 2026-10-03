@@ -279,7 +279,7 @@ describe("order form combobox surface contract", () => {
   });
 
   it("builds the pickers on the cmdk Command structure with debounced search", () => {
-    expect(core).toContain("<Command shouldFilter={false}");
+    expect(core).toContain("shouldFilter={false}");
     expect(core).toContain("CommandInput");
     expect(core).toContain("CommandList");
     expect(core).toContain("CommandEmpty");
@@ -289,6 +289,10 @@ describe("order form combobox surface contract", () => {
     expect(core).toContain('data-testid="combobox-input"');
     expect(core).toContain('data-testid="combobox-skeleton"');
     expect(core).toContain('data-testid="combobox-empty"');
+    expect(core).toContain("max-h-56");
+    expect(core).toContain("overscroll-contain");
+    expect(core).toContain('autoComplete="off"');
+    expect(core).toContain("focus-visible:ring-0");
   });
 
   it("keeps the create-new-customer flow and delivery prefill intact", () => {
