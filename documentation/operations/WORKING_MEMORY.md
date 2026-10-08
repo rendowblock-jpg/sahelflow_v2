@@ -1,13 +1,40 @@
 # SahelFlow — Working Memory
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
-> **Last updated:** 2026-10-03
+> **Last updated:** 2026-10-08
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
 ## Current truth
 
-> **Read this first.** The live order is **Exact next-session order** below. Everything else in this section is a dated record. A "Next:" or "latest" inside a bullet from before 2026-10-03 is what was true that day.
+> **Read this first.** The live order is **Exact next-session order** below. Everything else in this section is a dated record. A "Next:" or "latest" inside a bullet from before 2026-10-08 is what was true that day.
+
+- **Internal.41 published and installed; Founder-priority source line open (2026-10-08):**
+  protected `main` is `5e611a87ae967ddb84cf7a23d9dbb12f7480256f` (PR #485,
+  FD-067 release authority). **Internal.41 is published:** tag
+  `sahelflow-v1.0.0-internal.41-5e611a87ae967ddb84cf7a23d9dbb12f7480256f`,
+  published 2026-10-03T08:38:07Z, app `1.0.0-internal.41` / MSI `1.0.0.41`,
+  MSI digest `sha256:b1887e650a1fd13a90835a35f353a292110131c7b2c0fd8a41d90a20078b97be`,
+  `customer-online` / `sahelflow.com`. **The Founder reports Internal.41
+  installed (2026-10-08).** No campaign row has converted on it yet. The
+  Founder then set four priorities ahead of courier/commerce certification:
+  startup time and a professional launch screen, market-standard polish at
+  every layer, WhatsApp inbox sends that still fail, and how licences reach
+  paying sellers. They are worked as source on PR #487 (branch
+  `claude/practical-einstein-q6yzaf`), **not inside any signed package**:
+  durable WhatsApp dispatch (provider dispatch marker, pre-write failures
+  retryable instead of ambiguous, lost responses reconciled, receipts
+  replayed before the connection gate, effective status no longer pinned by
+  a stale push), a privacy-scrubbed sidecar diagnostics log, the PRODUCT §5
+  permanent package as the licence default, the `SFLA1` activation code and
+  `.sflicense` file with the PIN step and coded errors, the offline License
+  Desk (`tools/license-desk/`, see `control-plane/licensing/DEPLOY.md`), a
+  native Win32 splash painted on the first frame with the workspace window
+  created after the runtime thread starts, connected workers idling quietly
+  when not enrolled, dependency advisories cleared (next 16.3.8, sharp
+  0.35.5), and the first UI audit wave (listed in the PR #487 description).
+  Rows convert only on a later installed candidate that contains
+  them.
 
 - **Campaign merged (2026-10-03):** protected `main` is `4bebfd838fbaf814187b82e176623505f23b3ecd`
   (PR #484, expected-head merge after a green Required battery: CI
@@ -156,25 +183,23 @@ Binding rules:
 
 ## Exact next-session order
 
-Protected `main` is `4bebfd83…` / #484. Internal.40 / FD-066 is published
-and Founder-installed. #456 is stale.
+Protected `main` is `5e611a87…` / #485. Internal.41 / FD-067 is published
+and Founder-installed (reported 2026-10-08). #456 is stale.
 
 1. Re-resolve protected `main`, open PRs and #164/#230/#306/#316/#317.
    Sidecar rows INB-13/14/19/32 stay BLOCKED.
-2. DONE (2026-10-03): the Internal.40 installed-campaign repair line merged
-   by expected head as PR #484; protected `main` is `4bebfd83…`; battery
-   green (CI 37101139061, Phase 5 37101138786, Phase 6-7 37101138902).
-3. The Internal.41 release-authority PR (FD-067, the reserved customer-online
-   packaging slot) is open as PR #485. It merges only after the full
-   Required battery, including installed-MSI evidence, is green. The signed
-   train then publishes Internal.41. Record the tag, digest and publish
-   time after that run. Do not invent them here.
-4. On the installed Internal.41 candidate, one campaign, state preserved.
+2. PR #487 (Founder-priority source line: WhatsApp durable dispatch,
+   licence distribution, native splash, UI audit wave 1) merges by expected
+   head only after its full Required battery, including installed-MSI
+   evidence, is green at that head. It is source; it converts no row.
+3. On the installed Internal.41 candidate, one campaign, state preserved.
    Convert only rows that build contains and the observation proves.
-   Record results in the UI, AI and WhatsApp ledgers.
-5. #306 logout executes LAST, after the other rows on that candidate are
+   Record results in the UI, AI and WhatsApp ledgers. The #487 line is not
+   in Internal.41: its rows wait for the next signed successor, which needs
+   its own release-authority PR and Founder decision.
+4. #306 logout executes LAST, after the other rows on that candidate are
    green. Then resume FRC-3 in order A→D→C→B. Keep external blockers.
-6. Source-only, in parallel, from `operations/TRANSFORMATION_HANDOFF.md` §4:
+5. Source-only, in parallel, from `operations/TRANSFORMATION_HANDOFF.md` §4:
    STR-01 composer seam, then the list seam, then `storefront-studio`,
    `automation-builder` and `inbox-v3-queue`. Then TEST-01, L10N-01,
    STR-02/STR-03 and SYS-04. Never present that track as campaign progress.
@@ -194,10 +219,9 @@ and Founder-installed. #456 is stale.
 ## Current hard blockers and dependencies
 
 - WhatsApp FRC-1 requires the Founder’s retained real phone/account/session.
-  Internal.40 is what is installed. The Internal.40 campaign source (this
-  branch) is not in that MSI. Until Internal.41 is installed, those campaign
-  rows do not convert. Internal.38/Internal.39 remain retained publication
-  evidence.
+  Internal.41 is what is installed (reported 2026-10-08); it contains the
+  Internal.40 campaign repairs (#484) but not the PR #487 durable-dispatch
+  line. Internal.38/39/40 remain retained publication evidence.
 - Real Gemini minimal inference requires a seller-owned key; free-tier work uses synthetic/redacted inputs only.
 - Commerce requires development/test environments and HTTPS ingress for webhook tests.
 - Courier live certification requires provider sandbox/demo or authorized seller credentials.
