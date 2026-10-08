@@ -15,7 +15,7 @@
     "music-metadata": "^11.14.0",
     "pino": "^9.5.0",
     "qrcode": "^1.5.4",
-    "sharp": "0.35.4"
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.5"
