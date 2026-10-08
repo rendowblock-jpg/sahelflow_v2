@@ -17,6 +17,7 @@ mod installation_root_rotation;
 mod launch_screen;
 mod license_clock;
 mod migration_coordinator;
+pub mod native_splash;
 mod packaged_auth;
 mod packaged_runtime;
 mod process_authority;
@@ -567,6 +568,30 @@ pub fn run() {
                 });
             }
 
+            // FD-025: the single configured workspace window, still hidden.
+            // It is built only now, after the startup thread is running, so
+            // WebView2 initialization overlaps migration and runtime startup
+            // instead of preceding them on the critical path.
+            create_workspace_window(app)?;
+            #[cfg(not(debug_assertions))]
+            {
+                use tauri::Manager;
+                let app_data_dir = app.path().app_data_dir()?;
+                startup_recovery::record_startup_stage(
+                    &app_data_dir,
+                    "workspace-window-created",
+                    None,
+                );
+                if let Some(started) = native_splash::process_started_unix_ms() {
+                    startup_recovery::record_startup_stage_at(
+                        &app_data_dir,
+                        "process-started",
+                        None,
+                        started,
+                    );
+                }
+            }
+
             #[cfg(debug_assertions)]
             startup_recovery::show_ready(app.handle(), "http://localhost:3000")?;
             Ok(())
@@ -611,6 +636,20 @@ pub fn run() {
             }
         }
     });
+}
+
+fn create_workspace_window(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    use tauri::Manager;
+    let configuration = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|window| window.label == "main")
+        .cloned()
+        .ok_or_else(|| IoError::new(ErrorKind::NotFound, "the main window is not configured"))?;
+    tauri::WebviewWindowBuilder::from_config(app.handle(), &configuration)?.build()?;
+    Ok(())
 }
 
 #[cfg(not(debug_assertions))]

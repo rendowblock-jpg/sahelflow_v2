@@ -65,7 +65,7 @@ struct RuntimeUiDiagnostic {
 
 #[cfg(not(debug_assertions))]
 pub use proven::reset_startup_trace;
-pub use proven::{record_startup_stage, show_blocked};
+pub use proven::{record_startup_stage, record_startup_stage_at, show_blocked};
 
 #[cfg(not(debug_assertions))]
 fn ensure_shop_lifecycle_started(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {

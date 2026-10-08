@@ -49,6 +49,59 @@ describe("FD-068 launch screen", () => {
     expect(desktop.slice(pending, open)).toContain("if !rotate_installation_root");
   });
 
+  it("paints natively before recovery, Tauri or any WebView, and never during rotation", () => {
+    const main = read("src-tauri/src/main.rs");
+    const splash = read("src-tauri/src/native_splash.rs");
+    const rotationReturn = main.indexOf("sahelflow_lib::run();\n            return;");
+    const start = main.indexOf("sahelflow_lib::native_splash::start();");
+    const recovery = main.indexOf("survivability_controller::recover_pending_before_run()", start);
+    expect(rotationReturn).toBeGreaterThan(-1);
+    expect(start).toBeGreaterThan(rotationReturn);
+    expect(recovery).toBeGreaterThan(start);
+    // A second launch only focuses the running instance: no splash flashes.
+    expect(splash).toContain('format!("{IDENTIFIER}-sim")');
+    expect(splash).toContain("if another_instance_running()");
+    // Presentation only.
+    expect(splash).not.toContain(".navigate(");
+    expect(splash).not.toContain("set_cookie");
+    expect(splash).not.toContain("runtime-endpoint");
+    expect(splash).toContain("launch_screen::LAUNCH_WINDOW_TITLE");
+    // Honest progress from this launch's trace only, never the previous one.
+    expect(splash).toContain("current_launch_stage(&self.trace_path, self.started_unix_ms)");
+    expect(splash).toContain(".clamp(1, 99)");
+  });
+
+  it("hands the native splash its close signal instead of building a second launch surface", () => {
+    const open = launchModule.slice(launchModule.indexOf("pub fn open("));
+    const native = open.indexOf("if crate::native_splash::is_active()");
+    const webview = open.indexOf("WebviewWindowBuilder::new(");
+    expect(native).toBeGreaterThan(-1);
+    expect(webview).toBeGreaterThan(native);
+    const follower = open.slice(native, webview);
+    expect(follower).toContain("!workspace_visible(&app)");
+    expect(follower).toContain("crate::native_splash::request_close()");
+    expect(follower).toContain("return;");
+  });
+
+  it("keeps saying 'opening' through the final workspace load", () => {
+    expect(launchModule).toContain('"ui-navigation-started" => (Phase::Opening');
+    expect(launchModule).toContain('"ui-ready" => (Phase::Opening');
+  });
+
+  it("builds the hidden workspace window after the startup thread starts", () => {
+    const configuration = JSON.parse(read("src-tauri/tauri.conf.json")) as {
+      app: { windows: Array<{ label: string; create?: boolean }> };
+    };
+    expect(configuration.app.windows[0]).toMatchObject({ label: "main", create: false });
+    const setup = desktop.slice(desktop.indexOf(".setup(move |app| {"));
+    const thread = setup.indexOf("std::thread::spawn(move || {");
+    const workspace = setup.indexOf("create_workspace_window(app)?;");
+    expect(thread).toBeGreaterThan(-1);
+    expect(workspace).toBeGreaterThan(thread);
+    const proven = read("src-tauri/src/startup_recovery/proven.rs");
+    expect(proven).toContain("fn workspace_window(app: &tauri::AppHandle)");
+  });
+
   it("keeps the configured window list to the single hidden workspace", () => {
     const configuration = JSON.parse(read("src-tauri/tauri.conf.json")) as {
       app: { windows: Array<{ label: string; visible: boolean }> };
