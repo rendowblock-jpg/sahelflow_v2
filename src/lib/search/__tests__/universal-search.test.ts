@@ -4,6 +4,7 @@ import {
   canOpenProtectedOperationalDetail,
   compactSearchText,
   mergeUniversalSearchFamilies,
+  messageExcerpt,
   normalizeSearchText,
   rankUniversalSearchCandidates,
   scoreUniversalSearchCandidate,
@@ -169,5 +170,22 @@ describe("universal search normalization and ranking", () => {
         financials: true,
       }),
     ).toBe(false);
+  });
+});
+
+describe("messageExcerpt", () => {
+  it("shows the part of a message that matched", () => {
+    const body = "Bonjour, je voudrais savoir si la livraison à Oran est possible demain matin svp";
+    expect(messageExcerpt(body, "oran")).toContain("Oran");
+    expect(messageExcerpt(body, "oran")?.startsWith("…")).toBe(true);
+  });
+
+  it("matches across accents and Arabic hamza forms", () => {
+    expect(messageExcerpt("Commande confirmée, livraison demain", "confirmee")).toContain("confirmée");
+    expect(messageExcerpt("نحب نأكد الطلبية", "ناكد")).toContain("نأكد");
+  });
+
+  it("returns nothing when the message did not match", () => {
+    expect(messageExcerpt("Salam", "livraison")).toBeUndefined();
   });
 });

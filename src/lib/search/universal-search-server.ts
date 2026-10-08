@@ -9,6 +9,8 @@ import {
 } from "@/lib/identity/trusted-actor";
 import { logger } from "@/lib/logger";
 import {
+  projectedConversationContacts,
+  projectedCustomerNames,
   projectedOrdersForCustomers,
   searchProjectedConversations,
   searchProjectedCustomers,
@@ -20,6 +22,7 @@ import {
 } from "@/lib/search/local-search-projection";
 import {
   compactSearchText,
+  messageExcerpt,
   normalizeSearchText,
   rankUniversalSearchCandidates,
   type UniversalSearchCandidate,
@@ -54,6 +57,7 @@ type RecentConversationSearchRow = {
   updatedAt: Date;
   messages: Array<{ body: string }>;
 };
+
 
 export interface UniversalRecordSearchResponse {
   query: string;
@@ -95,7 +99,9 @@ async function safeFamily<T>(
 }
 
 async function recentConversationMessageCandidates(
+  shopId: string,
   query: string,
+  includeContact: boolean,
 ): Promise<Array<RecordCandidate & { score: number }>> {
   // Message-body matching is deliberately a small live tail. Contact name/phone
   // lookup is handled by the revision-bound conversation projection. Keeping the
@@ -117,19 +123,34 @@ async function recentConversationMessageCandidates(
     take: CONVERSATION_SCAN_LIMIT,
   });
 
+  // Contact identity comes from the permission-gated projection, and only for
+  // actors who may read contacts.
+  const contacts = includeContact
+    ? await projectedConversationContacts(
+        shopId,
+        rows.map((conversation) => conversation.id),
+      )
+    : new Map<string, { label: string; sublabel?: string }>();
+
   return rankUniversalSearchCandidates(
     query,
     rows.map(
-      (conversation): RecordCandidate => ({
-        id: `conversation:${conversation.id}`,
-        entityId: conversation.id,
-        kind: "conversation",
-        label: `Inbox · ${conversation.id.slice(-6)}`,
-        sublabel: conversation.channel,
-        href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
-        keywords: conversation.messages.map((message) => message.body),
-        updatedAt: conversation.lastMessageAt ?? conversation.updatedAt,
-      }),
+      (conversation): RecordCandidate => {
+        const contact = contacts.get(conversation.id)?.label ?? "";
+        const excerpt = conversation.messages
+          .map((message) => messageExcerpt(message.body, query))
+          .find(Boolean);
+        return {
+          id: `conversation:${conversation.id}`,
+          entityId: conversation.id,
+          kind: "conversation",
+          label: contact || `Inbox · ${conversation.id.slice(-6)}`,
+          sublabel: excerpt ?? conversation.channel,
+          href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
+          keywords: conversation.messages.map((message) => message.body),
+          updatedAt: conversation.lastMessageAt ?? conversation.updatedAt,
+        };
+      },
     ),
     FAMILY_MATCH_BUDGET,
   );
@@ -149,8 +170,13 @@ function mergeConversationCandidates(
       combined.set(candidate.id, candidate);
       continue;
     }
+    const contactMatched =
+      normalizeSearchText(existing.label).includes(normalizeSearchText(query)) ||
+      compactSearchText(existing.sublabel ?? "").includes(compactSearchText(query));
     combined.set(candidate.id, {
       ...existing,
+      // Found by its text rather than its contact: say which message matched.
+      sublabel: contactMatched ? existing.sublabel : (candidate.sublabel ?? existing.sublabel),
       keywords: [
         ...(existing.keywords ?? []),
         ...(candidate.keywords ?? []),
@@ -320,7 +346,7 @@ export async function searchUniversalRecords(
       : Promise.resolve([]),
     canConversations && shouldSearchRecentMessages(query)
       ? safeFamily("conversation", [], degraded, () =>
-          recentConversationMessageCandidates(query),
+          recentConversationMessageCandidates(shopId, query, canReadContact),
         )
       : Promise.resolve([]),
     canDeliveries && canOpenProtectedOperationalDetail
@@ -370,6 +396,37 @@ export async function searchUniversalRecords(
           projectedOrdersForCustomers(shopId, [...customersById.keys()]),
         )
       : [];
+
+  // Orders found by number or tracking code still name their customer.
+  const missingCustomerIds = canReadContact
+    ? [
+        ...new Set(
+          [...(technicalOrders as RecordCandidate[]), ...(exactPhoneOrders as RecordCandidate[])]
+            .map((candidate) => candidate.customerId)
+            .filter((id): id is string => typeof id === "string" && !customersById.has(id)),
+        ),
+      ]
+    : [];
+  if (missingCustomerIds.length > 0) {
+    try {
+      const owners = await projectedCustomerNames(shopId, missingCustomerIds);
+      for (const [id, owner] of owners) {
+        customersById.set(id, {
+          id: `customer:${id}`,
+          entityId: id,
+          kind: "customer",
+          label: owner.name,
+          sublabel: owner.phone ?? undefined,
+          href: `/customers/${id}`,
+        });
+      }
+    } catch (error) {
+      // A missing name is cosmetic; the order result itself stays.
+      logger.warn("search.universal.order-customer-names", {
+        failure: error instanceof Error ? error.name : "unknown",
+      });
+    }
+  }
 
   const combinedOrders = new Map<string, RecordCandidate>();
   for (const candidate of decorateOrderCandidates(

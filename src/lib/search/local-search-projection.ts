@@ -755,7 +755,10 @@ async function buildConversationIndex(): Promise<SearchIndex> {
         id: `conversation:${conversation.id}`,
         entityId: conversation.id,
         kind: "conversation",
-        label: conversation.contactName || `Inbox · ${conversation.id.slice(-6)}`,
+        label:
+          conversation.contactName?.trim() ||
+          conversation.contactPhone?.trim() ||
+          `Inbox · ${conversation.id.slice(-6)}`,
         sublabel: conversation.contactPhone ?? conversation.channel,
         href: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
         keywords: [conversation.channel],
@@ -909,6 +912,42 @@ export async function searchProjectedOrders(
   assertBoundShop(shopId);
   await refreshOrderProjectionBatch();
   return queryPersistedOrders(query, limit);
+}
+
+/**
+ * Contact identity for conversations found by message text, read from the same
+ * permission-gated conversation projection that indexes contacts — the search
+ * server never decrypts contact fields itself.
+ */
+export async function projectedConversationContacts(
+  shopId: string,
+  conversationIds: readonly string[],
+): Promise<Map<string, { label: string; sublabel?: string }>> {
+  const contacts = new Map<string, { label: string; sublabel?: string }>();
+  if (conversationIds.length === 0) return contacts;
+  const index = await cached(shopId, "conversation", buildConversationIndex);
+  for (const id of new Set(conversationIds)) {
+    const row = index.records.get(`conversation:${id}`);
+    if (row) contacts.set(id, { label: row.label, sublabel: row.sublabel });
+  }
+  return contacts;
+}
+
+/** Customer name and phone for orders found by number or tracking code. */
+export async function projectedCustomerNames(
+  shopId: string,
+  customerIds: readonly string[],
+): Promise<Map<string, { name: string; phone: string | null }>> {
+  assertBoundShop(shopId);
+  const names = new Map<string, { name: string; phone: string | null }>();
+  const ids = [...new Set(customerIds)];
+  if (ids.length === 0) return names;
+  const rows = await db.customer.findMany({
+    where: { id: { in: ids }, deletedAt: null },
+    select: { id: true, name: true, phone: true },
+  });
+  for (const row of rows) names.set(row.id, { name: row.name, phone: row.phone });
+  return names;
 }
 
 export async function projectedOrdersForCustomers(
