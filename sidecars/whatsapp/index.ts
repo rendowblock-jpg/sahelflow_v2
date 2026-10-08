@@ -30,6 +30,7 @@ import {
   type SidecarEvent,
 } from "./whatsapp";
 import { declaredOutboundMimeType } from "./outbound-media-mime";
+import { diagnostics } from "./diagnostics-log";
 
 const configuredPort = Number.parseInt(process.env.SIDECAR_PORT ?? "3001", 10);
 if (!Number.isInteger(configuredPort) || configuredPort < 1 || configuredPort > 65535) {
@@ -498,7 +499,8 @@ function executeDurableSend(
   onSettled?: () => void,
 ): Promise<{ id: string; status: string; replayed: boolean }> {
   const providerMessageId = deterministicWhatsAppMessageId(effectKey);
-  return durableDispatcher.execute({
+  const startedAt = Date.now();
+  const outcome = durableDispatcher.execute({
     effectKey,
     requestBinding,
     providerMessageId,
@@ -506,6 +508,26 @@ function executeDurableSend(
     responseDeadlineMs: DISPATCH_RESPONSE_DEADLINE_MS[kind],
     onSettled,
   });
+  // One line per send attempt: kind, outcome code and timing only. The
+  // recipient, content and effect key never reach the diagnostics file.
+  outcome.then(
+    (result) =>
+      diagnostics.record("send.outcome", {
+        kind,
+        code: result.replayed ? "REPLAYED" : "SENT",
+        ms: Date.now() - startedAt,
+      }),
+    (error: unknown) => {
+      const failure = durableSendFailure(error);
+      diagnostics.record("send.outcome", {
+        kind,
+        code: failure.body.code,
+        reason: failure.body.reason,
+        ms: Date.now() - startedAt,
+      });
+    },
+  );
+  return outcome;
 }
 
 app.post("/send-receipt", async (context) => {

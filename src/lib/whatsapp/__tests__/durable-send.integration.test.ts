@@ -274,7 +274,7 @@ describe("durable WhatsApp text send", () => {
     });
     // The sidecar alone decides: here it reports a dispatch that had already
     // started, so the outcome stays quarantined for operator confirmation.
-    const sender = vi.fn(async () => {
+    const sender = vi.fn(async (..._args: unknown[]): Promise<never> => {
       throw new SidecarRequestError(
         "WhatsApp send outcome requires reconciliation",
         "WHATSAPP_SEND_AMBIGUOUS",

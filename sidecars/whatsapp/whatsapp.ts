@@ -33,6 +33,7 @@ import {
   mapBaileysStatusUpdate,
 } from "./delivery-status";
 import { createDispatchObservingLogger } from "./durable-dispatch";
+import { createDiagnosticTeeLogger, describeError, diagnostics } from "./diagnostics-log";
 
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
 // Voice/audio outbound shares the 32 MiB encrypted-storage audio ceiling.
@@ -42,7 +43,11 @@ const MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024;
 // requiring a manual "connect" after every sleep or network outage.
 const RECONNECT_WATCHDOG_INTERVAL_MS = 60_000;
 
-const logger = P({ level: process.env.SF_LOG_LEVEL ?? "warn", name: "wa" });
+// Warnings and errors are also kept in the bounded, scrubbed diagnostics file:
+// the packaged desktop discards this process's console.
+const logger = createDiagnosticTeeLogger(
+  P({ level: process.env.SF_LOG_LEVEL ?? "warn", name: "wa" }),
+);
 
 const APP_URL =
   process.env.SF_APP_URL ??
@@ -390,10 +395,16 @@ export class WhatsAppManager {
           user: this.user ?? undefined,
         });
         logger.info({ user: this.user }, "connected");
+        diagnostics.record("connection.open", { reconnectAttempts: 0 });
       }
 
       if (connection === "close") {
         const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
+        diagnostics.record("connection.close", {
+          statusCode: code ?? null,
+          reconnectAttempts: this.reconnectAttempts,
+          ...describeError(lastDisconnect?.error),
+        });
         const shouldReconnect =
           code !== DisconnectReason.loggedOut &&
           code !== 401 &&
