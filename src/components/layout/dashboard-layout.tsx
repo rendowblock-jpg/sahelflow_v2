@@ -8,6 +8,8 @@ import {
   matchPhysicalLetter,
   useKeyboardShortcuts,
 } from "@/hooks/use-keyboard-shortcuts";
+import { ActorAccessProvider } from "@/components/layout/actor-access";
+import type { Phase2Action } from "@/lib/identity/permissions";
 import { useI18n } from "@/hooks/use-i18n";
 import { useUiDensity } from "@/hooks/use-ui-density";
 import { warmUniversalSearchClient } from "@/lib/search/universal-search-client";
@@ -39,6 +41,8 @@ const CheatsheetModal = dynamic(() =>
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  /** Resolved on the server; decides which destinations the shell offers. */
+  permissions?: readonly Phase2Action[] | null;
 }
 
 /**
@@ -61,7 +65,10 @@ interface DashboardLayoutProps {
  * locale provider, but the shell never holds a stale server-only direction prop
  * after an interactive language switch.
  */
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function DashboardLayout({
+  children,
+  permissions = null,
+}: DashboardLayoutProps) {
   const [commandOpen, setCommandOpen] = useState(false);
   const { cheatsheetOpen, setCheatsheetOpen } = useKeyboardShortcuts();
   const { t, locale, dir } = useI18n();
@@ -145,67 +152,69 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [pathname]);
 
   return (
-    <div
-      dir={dir}
-      className="flex h-[100dvh] min-h-0 overflow-hidden bg-background text-foreground"
-      data-sahelflow-shell="desktop"
-      data-shell-mode={storefrontFocusMode ? "storefront-focus" : "standard"}
-      data-locale-dir={dir}
-      data-density={density}
-    >
-      <a
-        href="#main-content"
-        dir={dir}
-        className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-[100] focus:rounded-control focus:border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg"
-      >
-        {t("common.skipToContent")}
-      </a>
-
-      {!storefrontFocusMode ? (
-        <div
-          data-shell-region="navigation"
-          dir={dir}
-          className="hidden h-full min-h-0 shrink-0 lg:flex"
-        >
-          <Sidebar serverLocale={locale} serverDir={dir} />
-        </div>
-      ) : null}
-
+    <ActorAccessProvider permissions={permissions}>
       <div
-        data-shell-region="workspace"
         dir={dir}
-        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+        className="flex h-[100dvh] min-h-0 overflow-hidden bg-background text-foreground"
+        data-sahelflow-shell="desktop"
+        data-shell-mode={storefrontFocusMode ? "storefront-focus" : "standard"}
+        data-locale-dir={dir}
+        data-density={density}
       >
-        {!storefrontFocusMode ? (
-          <Topbar
-            search={
-              <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-            }
-            onCommandPaletteOpen={() => setCommandOpen(true)}
-            onCheatsheetOpen={() => setCheatsheetOpen(true)}
-            serverLocale={locale}
-            serverDir={dir}
-          />
-        ) : null}
-        <main
-          id="main-content"
-          tabIndex={-1}
+        <a
+          href="#main-content"
           dir={dir}
-          className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scroll-pt-14 outline-none"
+          className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-[100] focus:rounded-control focus:border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg"
         >
-          {storefrontFocusTitle ? (
-            <h1 className="sr-only">{storefrontFocusTitle}</h1>
-          ) : null}
-          {children}
-        </main>
-      </div>
+          {t("common.skipToContent")}
+        </a>
 
-      {cheatsheetOpen && (
-        <CheatsheetModal
-          open={cheatsheetOpen}
-          onOpenChange={setCheatsheetOpen}
-        />
-      )}
-    </div>
+        {!storefrontFocusMode ? (
+          <div
+            data-shell-region="navigation"
+            dir={dir}
+            className="hidden h-full min-h-0 shrink-0 lg:flex"
+          >
+            <Sidebar serverLocale={locale} serverDir={dir} />
+          </div>
+        ) : null}
+
+        <div
+          data-shell-region="workspace"
+          dir={dir}
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+        >
+          {!storefrontFocusMode ? (
+            <Topbar
+              search={
+                <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+              }
+              onCommandPaletteOpen={() => setCommandOpen(true)}
+              onCheatsheetOpen={() => setCheatsheetOpen(true)}
+              serverLocale={locale}
+              serverDir={dir}
+            />
+          ) : null}
+          <main
+            id="main-content"
+            tabIndex={-1}
+            dir={dir}
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scroll-pt-14 outline-none"
+          >
+            {storefrontFocusTitle ? (
+              <h1 className="sr-only">{storefrontFocusTitle}</h1>
+            ) : null}
+            {children}
+          </main>
+        </div>
+
+        {cheatsheetOpen && (
+          <CheatsheetModal
+            open={cheatsheetOpen}
+            onOpenChange={setCheatsheetOpen}
+          />
+        )}
+      </div>
+    </ActorAccessProvider>
   );
 }

@@ -176,7 +176,12 @@ describe("Settings Class-AAA control-center contract", () => {
     const modalPage = read("src/app/(dashboard)/@modal/(.)settings/page.tsx");
     expect(fullPage).toContain("resolveSettingsWorkspaceProps(params.group)");
     expect(modalPage).toContain("resolveSettingsWorkspaceProps(params.group)");
-    expect(page).toContain('requireTrustedAction("settings.read")');
+    // Every signed-in member opens Settings for their own account; each shop
+    // surface is offered only to roles holding its action. The shop's owner
+    // profile keeps its settings.read gate.
+    expect(page).toContain("await requireTrustedActor()");
+    expect(page).toContain('profile: can("settings.read")');
+    expect(page).toContain("myAccount: teamMember");
     const workspace = read("src/components/settings/settings-workspace.tsx");
     expect(page).toContain('aiKey: can("integrations.manage")');
     expect(page).toContain('aiConsent: can("settings.manage")');

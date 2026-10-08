@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { Command as CommandPrimitive } from "cmdk";
 import { AlertTriangle, ListFilter, Loader2, Plus, Search, SearchX, X } from "lucide-react";
 
-import { flattenNavigationItems } from "@/components/layout/navigation";
+import { useActorPermissions } from "@/components/layout/actor-access";
+import {
+  flattenNavigationItems,
+  navigationItemAllowed,
+} from "@/components/layout/navigation";
 import {
   CREATE_ACTIONS,
   GROUP_COPY,
@@ -125,16 +129,19 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   );
   const hasInstantMatches = visibleActions.length > 0 || visibleRecent.length > 0;
 
+  const permissions = useActorPermissions();
   const navigation = React.useMemo(
     () =>
-      flattenNavigationItems().map((item) => ({
+      flattenNavigationItems()
+        .filter((item) => navigationItemAllowed(item, permissions))
+        .map((item) => ({
         ...item,
         kind: "navigation" as const,
         label: t(item.labelKey),
         sublabel: undefined,
         updatedAt: null,
       })),
-    [t],
+    [permissions, t],
   );
   const quickNavigation = React.useMemo(
     () =>

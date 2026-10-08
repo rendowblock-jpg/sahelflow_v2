@@ -43,6 +43,11 @@ vi.mock("@/lib/identity/team-credentials", () => ({
 
 vi.mock("@/lib/identity/team-revocation-authority", () => ({
   registerTeamSessionAuthority: harness.register,
+  getTeamRevocationSnapshot: async () => ({
+    revision: 1,
+    sessions: [],
+    memberRevocations: [],
+  }),
 }));
 
 vi.mock("@/lib/identity/team-session", () => ({
@@ -169,6 +174,7 @@ describe("member enrollment and login routes", () => {
     expect(harness.accept).toHaveBeenCalledWith(
       input,
       expect.objectContaining({ shopId: "default" }),
+      { revokedMemberIds: new Set() },
     );
     expect(harness.register).toHaveBeenCalledWith({
       sessionId: "member-session",

@@ -45,6 +45,16 @@ vi.mock("@/lib/identity/member-authority", () => ({
   revokeMemberInvitation: harness.revokeInvitation,
 }));
 
+vi.mock("@/lib/identity/control-authority", () => ({
+  getIdentityAdministrationSnapshot: async () => ({
+    member: { shopIds: ["default"] },
+  }),
+}));
+
+vi.mock("@/lib/shops", () => ({
+  listShops: () => [{ id: "default", name: "Default" }],
+}));
+
 vi.mock("@/lib/api/with-error-handler", () => ({
   withErrorHandler:
     (handler: (...args: never[]) => Promise<Response>) =>

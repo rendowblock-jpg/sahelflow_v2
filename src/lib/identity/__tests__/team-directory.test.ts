@@ -12,7 +12,10 @@ import { createMemberInvitation } from "../member-authority";
 import {
   acceptTeamInvitation,
   acceptedInvitationIds,
+  changeOwnTeamMemberPin,
   createTeamLoginSession,
+  resetTeamMemberPin,
+  updateTeamMemberAccess,
   listTeamMembers,
   resolveTeamIdentityActor,
   teamDirectoryMarkerPath,
@@ -107,6 +110,137 @@ describe("accepted team member directory", () => {
       first.actor,
     );
     expect(await acceptedInvitationIds(SHOP)).toContain(invitation.invitation.id);
+  });
+
+  it("counts only active members toward the ten-member limit", async () => {
+    const accepted: string[] = [];
+    for (let index = 0; index < 10; index += 1) {
+      const invitation = await issueInvitation();
+      const grant = await acceptTeamInvitation(
+        {
+          token: invitation.token!,
+          requestId: randomUUID(),
+          displayName: `Member ${index}`,
+          loginId: `member.${index}`,
+          pin: "12345678",
+        },
+        SHOP,
+      );
+      accepted.push(grant.actor.workspaceMemberId);
+    }
+    const eleventh = await issueInvitation();
+    const input = {
+      token: eleventh.token!,
+      requestId: randomUUID(),
+      displayName: "Member 10",
+      loginId: "member.10",
+      pin: "12345678",
+    };
+    await expect(acceptTeamInvitation(input, SHOP)).rejects.toMatchObject({
+      code: "MEMBER_LIMIT_REACHED",
+      statusCode: 409,
+    });
+    // A revoked member frees the seat; the record stays for attribution.
+    const grant = await acceptTeamInvitation(input, SHOP, {
+      revokedMemberIds: new Set([accepted[0]!]),
+    });
+    expect(grant.replayed).toBe(false);
+    expect(await listTeamMembers(SHOP)).toHaveLength(11);
+  }, 120_000);
+
+  it("changes a member's access in place and ends their sessions", async () => {
+    const invitation = await issueInvitation({ role: "operator" });
+    const accepted = await acceptTeamInvitation(
+      {
+        token: invitation.token!,
+        requestId: randomUUID(),
+        displayName: "Amina",
+        loginId: "amina.ops",
+        pin: "12345678",
+      },
+      SHOP,
+    );
+
+    const change = await updateTeamMemberAccess(
+      {
+        memberId: accepted.actor.workspaceMemberId,
+        access: { role: "manager", permissions: null, shopIds: [SHOP.shopId] },
+      },
+      SHOP,
+    );
+    expect(change).toMatchObject({
+      changed: true,
+      endedSessionIds: [accepted.sessionId],
+      member: { role: "manager", personId: accepted.actor.personId },
+    });
+    // The old session can never verify again; the next sign-in carries the
+    // new role under the same identity.
+    await expect(resolveTeamIdentityActor(accepted.sessionId, SHOP)).resolves.toBeNull();
+    const login = await createTeamLoginSession("amina.ops", "12345678", SHOP);
+    expect(login?.actor).toMatchObject({
+      personId: accepted.actor.personId,
+      workspaceMemberId: accepted.actor.workspaceMemberId,
+      role: "manager",
+    });
+
+    const unchanged = await updateTeamMemberAccess(
+      {
+        memberId: accepted.actor.workspaceMemberId,
+        access: { role: "manager", permissions: null, shopIds: [SHOP.shopId] },
+      },
+      SHOP,
+    );
+    expect(unchanged).toMatchObject({ changed: false, endedSessionIds: [] });
+
+    // Custom permissions must stay inside the role's ceiling.
+    await expect(
+      updateTeamMemberAccess(
+        {
+          memberId: accepted.actor.workspaceMemberId,
+          access: { role: "viewer", permissions: ["orders.update"], shopIds: [SHOP.shopId] },
+        },
+        SHOP,
+      ),
+    ).rejects.toMatchObject({ code: "AUTHORIZATION_POLICY_INVALID" });
+  });
+
+  it("lets the owner reset a forgotten PIN and a member change their own", async () => {
+    const invitation = await issueInvitation();
+    const accepted = await acceptTeamInvitation(
+      {
+        token: invitation.token!,
+        requestId: randomUUID(),
+        displayName: "Amina",
+        loginId: "amina.ops",
+        pin: "12345678",
+      },
+      SHOP,
+    );
+
+    const reset = await resetTeamMemberPin(
+      { memberId: accepted.actor.workspaceMemberId, newPin: "24681357" },
+      SHOP,
+    );
+    expect(reset.endedSessionIds).toEqual([accepted.sessionId]);
+    await expect(createTeamLoginSession("amina.ops", "12345678", SHOP)).resolves.toBeNull();
+    const first = await createTeamLoginSession("amina.ops", "24681357", SHOP);
+    const second = await createTeamLoginSession("amina.ops", "24681357", SHOP);
+
+    await expect(
+      changeOwnTeamMemberPin(
+        { sessionId: first!.sessionId, currentPin: "00000000", newPin: "13572468" },
+        SHOP,
+      ),
+    ).resolves.toBeNull();
+    const own = await changeOwnTeamMemberPin(
+      { sessionId: first!.sessionId, currentPin: "24681357", newPin: "13572468" },
+      SHOP,
+    );
+    // The session making the change continues; the member's others end.
+    expect(own?.endedSessionIds).toEqual([second!.sessionId]);
+    await expect(resolveTeamIdentityActor(first!.sessionId, SHOP)).resolves.not.toBeNull();
+    await expect(resolveTeamIdentityActor(second!.sessionId, SHOP)).resolves.toBeNull();
+    await expect(createTeamLoginSession("amina.ops", "13572468", SHOP)).resolves.not.toBeNull();
   });
 
   it("rejects replay with changed profile or PIN", async () => {

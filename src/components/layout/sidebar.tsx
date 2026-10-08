@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { SahelFlowMark } from "@/components/brand/sahelflow-mark";
+import { useActorPermissions } from "@/components/layout/actor-access";
 import { useI18n } from "@/hooks/use-i18n";
 import { useInboxUnread } from "@/hooks/use-inbox-unread";
 import { useNewMessageAlerts } from "@/hooks/use-new-message-alerts";
@@ -21,6 +22,7 @@ import {
 import type { Locale } from "@/lib/i18n";
 import {
   navigationItemForPathname,
+  navigationItemAllowed,
   sellerSidebarNavigationItems,
   utilityNavigationItems,
   type NavigationItem,
@@ -144,6 +146,7 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const { t } = useI18n();
+  const permissions = useActorPermissions();
   const collapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const isRtl = serverDir === "rtl";
@@ -203,6 +206,9 @@ export function Sidebar({
             data-seller-navigation="fixed-priority"
           >
             {sellerSidebarNavigationItems.map((item) => {
+              // The page enforces access; the sidebar only stops offering
+              // destinations this member could not open.
+              if (!navigationItemAllowed(item, permissions)) return null;
               const selected = activeHref === item.href;
               return (
                 <div

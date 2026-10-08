@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { LicenseBoundary } from "@/components/license/license-boundary";
 import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
 import { isAuthenticated, isAuthSetup } from "@/lib/auth/server";
+import { currentActorPermissions } from "@/lib/identity/authorization";
 import { getLicenseAuthorityProjection } from "@/lib/license/license-authority";
 import { redirect } from "next/navigation";
 
@@ -39,9 +40,11 @@ export default async function DashboardRouteLayout({
     );
   }
 
+  const permissions = await currentActorPermissions();
+
   return (
     <LicenseBoundary>
-      <DashboardLayout>
+      <DashboardLayout permissions={permissions}>
         {/*
           Authentication, setup and entitlement authority have resolved above.
           Signal the hydrated workspace shell before slower page aggregates

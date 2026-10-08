@@ -49,7 +49,13 @@ const ROOT_KEY_BYTES = 32;
 const LOCK_STALE_MS = 30_000;
 const LOCK_TIMEOUT_MS = 5_000;
 const LOCK_RETRY_MS = 10;
-const MAX_MEMBERS = 10;
+/** PRODUCT §5: ten active team members besides the owner. */
+const MAX_ACTIVE_MEMBERS = 10;
+/**
+ * Revoked members stay in the directory so their actions remain attributable,
+ * so the stored history must be allowed to outgrow the active limit.
+ */
+const MAX_MEMBER_RECORDS = 500;
 const MAX_SESSIONS = 2_000;
 
 const exactIdSchema = z.string().regex(/^[0-9a-f]{32}$/i);
@@ -150,7 +156,7 @@ const payloadSchema = z
     workspaceId: exactIdSchema,
     installationId: exactIdSchema,
     policyVersion: z.number().int().positive().safe(),
-    members: z.array(teamMemberSchema).max(MAX_MEMBERS),
+    members: z.array(teamMemberSchema).max(MAX_MEMBER_RECORDS),
     sessions: z.array(teamSessionSchema).max(MAX_SESSIONS),
   })
   .strict();
@@ -693,6 +699,13 @@ function normalizePermissions(
 export async function acceptTeamInvitation(
   input: AcceptTeamInvitationInput,
   shop: ShopContext,
+  options: Readonly<{
+    /**
+     * Members revoked in the team revocation authority. They no longer hold a
+     * seat, but their records (and login IDs) stay for attribution.
+     */
+    revokedMemberIds?: ReadonlySet<string>;
+  }> = {},
 ): Promise<TeamSessionGrant> {
   const requestId = requestIdSchema.parse(input.requestId);
   const displayName = displayNameSchema.parse(input.displayName);
@@ -748,7 +761,14 @@ export async function acceptTeamInvitation(
       });
     }
 
-    if (payload.members.length >= MAX_MEMBERS) {
+    const revoked = options.revokedMemberIds ?? new Set<string>();
+    const activeMembers = payload.members.filter(
+      (member) => member.revokedAt === null && !revoked.has(member.memberId),
+    );
+    if (
+      activeMembers.length >= MAX_ACTIVE_MEMBERS ||
+      payload.members.length >= MAX_MEMBER_RECORDS
+    ) {
       throw teamError(
         "The installation member limit has been reached",
         "MEMBER_LIMIT_REACHED",
@@ -857,6 +877,194 @@ export async function createTeamLoginSession(
       invitationId: member.invitationId,
       replayed: false,
     });
+  });
+}
+
+export type TeamMemberAccess = Readonly<{
+  role: z.infer<typeof roleSchema>;
+  permissions: readonly Phase2Action[] | null;
+  shopIds: readonly string[];
+}>;
+
+export type TeamMemberDirectoryChange = Readonly<{
+  member: TeamDirectoryMemberView;
+  changed: boolean;
+  /** Directory sessions this change ended; the database rows follow. */
+  endedSessionIds: readonly string[];
+}>;
+
+function endMemberSessions(
+  payload: TeamPayload,
+  memberId: string,
+  at: string,
+  keepSessionId?: string,
+): string[] {
+  const ended: string[] = [];
+  for (const session of payload.sessions) {
+    if (
+      session.memberId === memberId &&
+      session.revokedAt === null &&
+      session.sessionId !== keepSessionId
+    ) {
+      session.revokedAt = at;
+      ended.push(session.sessionId);
+    }
+  }
+  return ended;
+}
+
+function requireDirectoryMember(
+  payload: TeamPayload,
+  memberId: string,
+): TeamMemberRecord {
+  const member = payload.members.find(
+    (candidate) => candidate.memberId === memberId,
+  );
+  if (!member || member.revokedAt) {
+    throw teamError("Team member not found", "MEMBER_NOT_FOUND", 404);
+  }
+  return member;
+}
+
+async function mutateDirectory<T>(
+  shop: ShopContext,
+  work: (payload: TeamPayload) => Promise<{ result: T; write: boolean }>,
+): Promise<T> {
+  return withLock(async () => {
+    const marker = readTeamMarker();
+    const envelope = readTeam();
+    if (!envelope) {
+      if (marker) throw teamError("Team directory is missing after initialization");
+      throw teamError("Team member not found", "MEMBER_NOT_FOUND", 404);
+    }
+    const payload = structuredClone(envelope.payload) as TeamPayload;
+    assertContext(payload, shop);
+    assertMarker(marker, payload, shop);
+    const { result, write } = await work(payload);
+    if (write) {
+      payload.revision += 1;
+      atomicWrite(teamDirectoryPath(), createEnvelope(payload));
+    }
+    return result;
+  });
+}
+
+/**
+ * Change one member's role, custom permissions and shops.
+ *
+ * Their open sessions end, so the next sign-in carries the new access; the
+ * member keeps the same identity, login ID, PIN and attributed history.
+ * Custom permissions stay inside the new role's ceiling.
+ */
+export async function updateTeamMemberAccess(
+  input: Readonly<{ memberId: string; access: TeamMemberAccess }>,
+  shop: ShopContext,
+): Promise<TeamMemberDirectoryChange> {
+  const memberId = exactIdSchema.parse(input.memberId);
+  const role = roleSchema.parse(input.access.role);
+  const permissions = normalizePermissions(
+    role,
+    input.access.permissions === null
+      ? null
+      : z.array(actionSchema).parse(input.access.permissions),
+  );
+  const shopIds = [
+    ...new Set(z.array(shopIdSchema).min(1).parse(input.access.shopIds)),
+  ].sort();
+
+  return mutateDirectory<TeamMemberDirectoryChange>(shop, async (payload) => {
+    const member = requireDirectoryMember(payload, memberId);
+    const samePermissions =
+      JSON.stringify(member.permissions ? [...member.permissions].sort() : null) ===
+      JSON.stringify(permissions ? [...permissions].sort() : null);
+    if (
+      member.role === role &&
+      samePermissions &&
+      JSON.stringify([...member.shopIds].sort()) === JSON.stringify(shopIds)
+    ) {
+      return {
+        result: { member: memberView(member), changed: false, endedSessionIds: [] },
+        write: false,
+      };
+    }
+    member.role = role;
+    member.permissions = permissions ? [...permissions] : null;
+    member.shopIds = shopIds;
+    // Sessions minted before this change can never verify again.
+    member.revocationEpoch += 1;
+    const endedSessionIds = endMemberSessions(
+      payload,
+      memberId,
+      new Date().toISOString(),
+    );
+    return {
+      result: { member: memberView(member), changed: true, endedSessionIds },
+      write: true,
+    };
+  });
+}
+
+/** The owner sets a new PIN for a member who forgot theirs. */
+export async function resetTeamMemberPin(
+  input: Readonly<{ memberId: string; newPin: string }>,
+  shop: ShopContext,
+): Promise<TeamMemberDirectoryChange> {
+  const memberId = exactIdSchema.parse(input.memberId);
+  const newPin = pinSchema.parse(input.newPin);
+  const pinHash = await hashPin(newPin, CURRENT_PBKDF2_ITERATIONS);
+  return mutateDirectory<TeamMemberDirectoryChange>(shop, async (payload) => {
+    const member = requireDirectoryMember(payload, memberId);
+    member.pinHash = pinHash;
+    const endedSessionIds = endMemberSessions(
+      payload,
+      memberId,
+      new Date().toISOString(),
+    );
+    return {
+      result: { member: memberView(member), changed: true, endedSessionIds },
+      write: true,
+    };
+  });
+}
+
+/**
+ * A signed-in member changes their own PIN. Returns null when the current PIN
+ * is wrong. The member's other sessions end; this one continues.
+ */
+export async function changeOwnTeamMemberPin(
+  input: Readonly<{ sessionId: string; currentPin: string; newPin: string }>,
+  shop: ShopContext,
+): Promise<TeamMemberDirectoryChange | null> {
+  const sessionId = sessionIdSchema.parse(input.sessionId);
+  const currentPin = pinSchema.parse(input.currentPin);
+  const newPin = pinSchema.parse(input.newPin);
+  return mutateDirectory<TeamMemberDirectoryChange | null>(shop, async (payload) => {
+    const session = payload.sessions.find(
+      (candidate) =>
+        candidate.sessionId === sessionId && candidate.revokedAt === null,
+    );
+    if (!session) {
+      throw teamError(
+        "The authenticated session has no durable identity binding",
+        "IDENTITY_SESSION_BINDING_REQUIRED",
+        401,
+      );
+    }
+    const member = requireDirectoryMember(payload, session.memberId);
+    if (!(await verifyPin(currentPin, member.pinHash))) {
+      return { result: null, write: false };
+    }
+    member.pinHash = await hashPin(newPin, CURRENT_PBKDF2_ITERATIONS);
+    const endedSessionIds = endMemberSessions(
+      payload,
+      member.memberId,
+      new Date().toISOString(),
+      sessionId,
+    );
+    return {
+      result: { member: memberView(member), changed: true, endedSessionIds },
+      write: true,
+    };
   });
 }
 

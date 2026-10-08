@@ -4,6 +4,7 @@ import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { getIdentityAdministrationSnapshot } from "@/lib/identity/control-authority";
+import { listTeamMembers } from "@/lib/identity/team-directory";
 import { listShops } from "@/lib/shops";
 import { enqueueAuthorizedNativeLifecycle } from "@/lib/shops/native-lifecycle-authority";
 
@@ -13,6 +14,27 @@ export const dynamic = "force-dynamic";
 export const GET = withErrorHandler(async (): Promise<NextResponse> => {
   const actorContext = await requireTrustedAction("shops.read");
   const shops = listShops();
+
+  if (actorContext.actor.kind === "person" && actorContext.actor.role !== "owner") {
+    // Accepted team members live in the team directory, not in the owner's
+    // core identity authority. Their grant is re-read here, never trusted
+    // from the session.
+    const actor = actorContext.actor;
+    const member = (await listTeamMembers(actorContext.shop)).find(
+      (candidate) =>
+        candidate.memberId === actor.workspaceMemberId &&
+        candidate.personId === actor.personId &&
+        candidate.revokedAt === null &&
+        candidate.policyVersion === actor.policyVersion &&
+        candidate.revocationEpoch === actor.revocationEpoch,
+    );
+    return NextResponse.json({
+      shops: member
+        ? shops.filter((shop) => member.shopIds.includes(shop.id))
+        : [],
+      activeShopId: actorContext.shop.shopId,
+    });
+  }
 
   if (actorContext.actor.kind === "person") {
     const identity = await getIdentityAdministrationSnapshot(

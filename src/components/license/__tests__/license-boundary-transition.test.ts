@@ -45,7 +45,9 @@ describe("licensed server-tree transition", () => {
 
     expect(layout).toContain("if (!licenseValid)");
     expect(layout).toContain("<LicenseBoundary>{null}</LicenseBoundary>");
-    expect(layout).toContain("<DashboardLayout>");
+    // The shell receives only the server-resolved permission set (what to
+    // offer), never a locale or other client-trusted authority.
+    expect(layout).toContain("<DashboardLayout permissions={permissions}>");
     expect(layout).not.toContain("<DashboardLayout locale=");
   });
 });

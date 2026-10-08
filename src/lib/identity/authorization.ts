@@ -1,6 +1,7 @@
 import "server-only";
 
 import { SahelFlowError } from "@/types/errors";
+import { forbiddenActionDigest } from "./access-denied";
 import {
   isTrustedActorContext,
   requireTrustedActor,
@@ -30,10 +31,15 @@ export function trustedActorAuditIdentity(actor: TrustedActor): string {
 }
 
 function forbidden(action: Phase2Action): SahelFlowError {
-  return new SahelFlowError(
-    `The current member is not authorized to perform ${action}`,
-    "ACTION_FORBIDDEN",
-    403,
+  // The digest lets a page's error boundary render "no access" instead of a
+  // generic failure; API routes keep answering with the coded 403.
+  return Object.assign(
+    new SahelFlowError(
+      `The current member is not authorized to perform ${action}`,
+      "ACTION_FORBIDDEN",
+      403,
+    ),
+    { digest: forbiddenActionDigest(action) },
   );
 }
 
@@ -105,4 +111,30 @@ export async function requireTrustedAction(
   const context = await requireTrustedActor();
   assertTrustedAction(context, action, resource);
   return context;
+}
+
+/**
+ * The signed-in actor's resolved permission set for shell presentation (which
+ * destinations to offer). Null when no actor can be resolved; callers must
+ * then hide nothing and let each page enforce its own action.
+ */
+export async function currentActorPermissions(): Promise<
+  readonly Phase2Action[] | null
+> {
+  try {
+    const context = await requireTrustedActor();
+    switch (context.actor.kind) {
+      case "person":
+        return (
+          context.actor.permissions ??
+          resolvePhase2Permissions(context.actor.role, null)
+        );
+      case "compatibility_local_owner":
+        return COMPATIBILITY_LOCAL_OWNER_ACTIONS;
+      case "system":
+        return [];
+    }
+  } catch {
+    return null;
+  }
 }

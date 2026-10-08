@@ -16,11 +16,13 @@ import {
   Store,
   TriangleAlert,
   Truck,
+  UserRound,
   Users,
   type LucideIcon,
 } from "lucide-react";
 
 import { ProfileEditor } from "@/components/profile/profile-editor";
+import { MemberAccountPanel } from "@/components/settings/member-account-panel";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { GeminiRuntimePanel } from "@/components/settings/gemini-runtime-panel";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
@@ -40,7 +42,6 @@ import { PhoneReputationPanel } from "@/components/settings/phone-reputation-pan
 import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
 import { ShopsPanel } from "@/components/settings/shops-panel";
 import { TeamAccessAuthorityPanel } from "@/components/settings/team-access-authority-panel";
-import { TeamMembersPanel } from "@/components/settings/team-members-panel";
 import type {
   SettingsPageId,
   SettingsSectionId,
@@ -93,6 +94,16 @@ export interface SettingsPage {
 }
 
 export const SETTINGS_PAGES: readonly SettingsPage[] = [
+  {
+    id: "account",
+    section: "account",
+    icon: UserRound,
+    label: "pageAccount",
+    description: "pageAccountDescription",
+    keywords: "account compte حساب pin code login identifiant role rôle دور access accès",
+    visible: (access) => access.myAccount,
+    render: () => <MemberAccountPanel />,
+  },
   {
     id: "profile",
     section: "account",
@@ -172,7 +183,6 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     render: () => (
       <>
         <TeamAccessAuthorityPanel />
-        <TeamMembersPanel />
         <CollaborationAdminPanel />
       </>
     ),

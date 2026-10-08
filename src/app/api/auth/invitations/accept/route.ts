@@ -12,7 +12,10 @@ import {
 } from "@/lib/auth/rate-limit";
 import { shopContext } from "@/lib/db";
 import { acceptTeamInvitation } from "@/lib/identity/team-directory";
-import { registerTeamSessionAuthority } from "@/lib/identity/team-revocation-authority";
+import {
+  getTeamRevocationSnapshot,
+  registerTeamSessionAuthority,
+} from "@/lib/identity/team-revocation-authority";
 import { establishTeamSession } from "@/lib/identity/team-session";
 
 const schema = z
@@ -61,7 +64,12 @@ export const POST = withErrorHandler(async (request: Request) => {
   recordLoginAttempt(ip);
 
   try {
-    const grant = await acceptTeamInvitation(input, shopContext);
+    const revocations = await getTeamRevocationSnapshot(shopContext);
+    const grant = await acceptTeamInvitation(input, shopContext, {
+      revokedMemberIds: new Set(
+        revocations.memberRevocations.map((entry) => entry.memberId),
+      ),
+    });
     await registerTeamSessionAuthority({
       sessionId: grant.sessionId,
       actor: grant.actor,
