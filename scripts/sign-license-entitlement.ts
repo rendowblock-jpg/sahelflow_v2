@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { signAsync } from "@noble/ed25519";
 
+import { encodeActivationCode, LICENSE_FILE_EXTENSION } from "../src/lib/license/activation-code";
 import {
   canonicalEntitlementBytes,
   entitlementClaimsSchema,
@@ -40,6 +41,12 @@ if (privateKey.length !== 32) fail("Permanent private key must be exactly 32 raw
 
 const signature = await signAsync(canonicalEntitlementBytes(claims), privateKey);
 privateKey.fill(0);
-process.stdout.write(
-  `${JSON.stringify({ claims, signature: Buffer.from(signature).toString("base64") }, null, 2)}\n`,
-);
+const signed = { claims, signature: Buffer.from(signature).toString("base64") };
+const activationCode = encodeActivationCode(signed);
+// The seller pastes the activation code (or opens the .sflicense file written
+// next to the claims); the signed JSON stays on stdout for records.
+const licenseFile = claimsPath.replace(/\.json$/i, "") + LICENSE_FILE_EXTENSION;
+writeFileSync(licenseFile, `${activationCode}\n`, { encoding: "utf8", flag: "wx" });
+process.stderr.write(`Activation code (send this to the seller):\n${activationCode}\n`);
+process.stderr.write(`Licence file: ${licenseFile}\n`);
+process.stdout.write(`${JSON.stringify(signed, null, 2)}\n`);

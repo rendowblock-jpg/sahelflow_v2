@@ -27,11 +27,17 @@ describe("licensed server-tree transition", () => {
   });
 
   it("keeps both permanent and trial activation paths refreshing the client entitlement projection", () => {
+    // The activation flow moved into its own module; the Settings panel and
+    // the lockout both consume it through the panel's re-export.
     const panel = read("src/components/settings/license-panel.tsx");
+    const activation = read("src/components/license/license-activation.tsx");
 
-    expect(panel).toContain('fetch("/api/license/sync"');
-    expect(panel).toContain('fetch("/api/license/trial"');
-    expect(panel.match(/await refresh\(\);/g)).toHaveLength(2);
+    expect(panel).toContain(
+      'export { LicenseKeyDialog, useLicenseActions } from "@/components/license/license-activation";',
+    );
+    expect(activation).toContain('fetch("/api/license/sync"');
+    expect(activation).toContain('fetch("/api/license/trial"');
+    expect(activation.match(/await refresh\(\);/g)).toHaveLength(2);
   });
 
   it("keeps the server lockout from rendering protected dashboard children before entitlement is valid", () => {
