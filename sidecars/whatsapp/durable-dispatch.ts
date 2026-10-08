@@ -427,7 +427,22 @@ export function createDispatchObservingLogger<T extends ProviderLogger>(
   });
 }
 
-/** File-backed dispatch journal; the marker write is fsynced. */
+/**
+ * Make the rename itself durable: POSIX filesystems may otherwise restore the
+ * previous journal after a crash. NTFS journals the rename metadata and does
+ * not allow opening a directory for fsync, matching the inbound spool's rule.
+ */
+function syncParentDirectory(file: string): void {
+  if (process.platform === "win32") return;
+  const descriptor = openSync(dirname(file), "r");
+  try {
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+/** File-backed dispatch journal; the marker write and its rename are fsynced. */
 export function createDispatchJournal(file: string): DispatchJournal {
   let journal: Record<string, DispatchRecord> | null = null;
 
@@ -461,6 +476,7 @@ export function createDispatchJournal(file: string): DispatchJournal {
       closeSync(descriptor);
     }
     renameSync(temporary, file);
+    syncParentDirectory(file);
     journal = next;
   }
 

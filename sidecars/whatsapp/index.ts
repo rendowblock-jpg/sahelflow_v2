@@ -530,6 +530,26 @@ function executeDurableSend(
   return outcome;
 }
 
+/**
+ * A send whose receipt is already journaled answers from that receipt before
+ * any connection check: a lost loopback response followed by a disconnect
+ * must not turn a delivered message into retries that dead-letter it. Any
+ * journal problem falls through to the normal path, which reports it.
+ */
+function completedSendReplay(effectKey: unknown, requestBinding: unknown) {
+  if (typeof effectKey !== "string" || typeof requestBinding !== "string") {
+    return null;
+  }
+  try {
+    const receipt = findDurableSendReceipt(effectKey, requestBinding);
+    return receipt
+      ? { ok: true, id: receipt.id, status: receipt.status, replayed: true }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 app.post("/send-receipt", async (context) => {
   const body = await context.req.json().catch(() => ({}));
   const { effectKey, requestBinding } = body as {
@@ -641,6 +661,8 @@ app.post("/send", async (context) => {
   }
 
   try {
+    const completed = completedSendReplay(effectKey, requestBinding);
+    if (completed) return context.json(completed);
     const status = wa.getStatus();
     if (status.status !== "connected") {
       return context.json(
@@ -783,6 +805,8 @@ app.post("/send-image", async (context) => {
     );
   }
 
+  const completed = completedSendReplay(effectKey, requestBinding);
+  if (completed) return context.json(completed);
   const status = wa.getStatus();
   if (status.status !== "connected") {
     return context.json(
@@ -940,6 +964,8 @@ app.post("/send-video", async (context) => {
     );
   }
 
+  const completed = completedSendReplay(effectKey, requestBinding);
+  if (completed) return context.json(completed);
   const status = wa.getStatus();
   if (status.status !== "connected") {
     return context.json(
@@ -1132,6 +1158,8 @@ app.post("/send-document", async (context) => {
     return documentRejection("document_type");
   }
 
+  const completed = completedSendReplay(effectKey, requestBinding);
+  if (completed) return context.json(completed);
   const status = wa.getStatus();
   if (status.status !== "connected") {
     return context.json(
@@ -1298,6 +1326,8 @@ app.post("/send-voice", async (context) => {
     );
   }
 
+  const completed = completedSendReplay(effectKey, requestBinding);
+  if (completed) return context.json(completed);
   const status = wa.getStatus();
   if (status.status !== "connected") {
     return context.json(

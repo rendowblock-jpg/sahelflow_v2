@@ -251,3 +251,25 @@ describe("installed Baileys dispatch contract", () => {
     expect(source).toMatch(/const \{ logger, [^}]*\} = config;/);
   });
 });
+
+describe("sidecar durable send routes", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const routes = readFileSync(join(here, "index.ts"), "utf8");
+
+  it("answers a journaled receipt before the connection gate on every durable route", () => {
+    for (const route of ["/send", "/send-image", "/send-video", "/send-document", "/send-voice"]) {
+      const start = routes.indexOf(`app.post("${route}",`);
+      expect(start, route).toBeGreaterThan(-1);
+      const body = routes.slice(start, routes.indexOf("\napp.", start + 1));
+      const replay = body.indexOf("completedSendReplay(effectKey, requestBinding)");
+      const gate = body.indexOf('status.status !== "connected"');
+      expect(replay, route).toBeGreaterThan(-1);
+      expect(replay, route).toBeLessThan(gate);
+    }
+  });
+
+  it("syncs the journal directory after the marker rename", () => {
+    const source = readFileSync(join(here, "durable-dispatch.ts"), "utf8");
+    expect(source).toMatch(/renameSync\(temporary, file\);\s*syncParentDirectory\(file\);/);
+  });
+});
