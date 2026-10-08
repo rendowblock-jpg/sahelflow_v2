@@ -48,7 +48,6 @@
 .stack3d { --spread: 18px; position: relative; overflow: clip; overflow-clip-margin: 40px; perspective: 2600px; height: clamp(420px, 62vw, 760px); display: grid; place-items: center; }
 .stack3d-inner {
   position: relative; width: min(760px, 62vw); aspect-ratio: 16 / 10;
-  margin-inline-end: 16%;
   transform-style: preserve-3d;
   transform: rotateX(56deg) rotateZ(-36deg) translateZ(-40px);
 }
@@ -67,15 +66,15 @@
 }
 .stack-layer::after { content: ""; position: absolute; inset: 0; border-radius: 14px; background: linear-gradient(135deg, rgba(56, 189, 248, .16), transparent 40%); pointer-events: none; }
 .stack-label {
-  position: absolute; top: 46%; inset-inline-start: calc(100% + 28px);
+  position: absolute; top: calc(100% + 14px); inset-inline-start: 4%;
   display: flex; align-items: center; gap: 10px;
-  white-space: nowrap; font-size: 22px; font-weight: 600; letter-spacing: -.01em;
+  white-space: nowrap; font-size: 20px; font-weight: 600; letter-spacing: -.01em;
   color: var(--ink);
   opacity: clamp(0, calc((var(--spread-n, 0) - .3) * 2.5), 1);
   transition: opacity .3s;
 }
-.stack-label::before { content: ""; width: 40px; height: 2px; background: linear-gradient(90deg, rgba(125, 211, 252, 0), var(--sky)); }
-[dir="rtl"] .stack-label::before { background: linear-gradient(270deg, rgba(125, 211, 252, 0), var(--sky)); }
+.stack-label::before { content: ""; width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 12px var(--sky); background: var(--sky); }
+
 @media (max-width: 700px) { .stack-label { display: none; } .stack3d-inner { width: 74vw; margin-inline-end: 0; } }
 
 /* the map tilts into the screen */
