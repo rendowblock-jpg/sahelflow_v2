@@ -79,19 +79,56 @@ Set the repository variable
 (primary|recovery). The customer release compiles both in and the build
 refuses anything outside `sahelflow.com`.
 
-## Paid licences
+## Paid licences — the License Desk (no terminal)
 
-1. Once, on your own PC (the permanent key never leaves it):
-   `bun scripts/licensing-keygen.ts permanent permanent-2026-10 %USERPROFILE%\sahelflow-keys`
-   and merge its public entry into the repository variable
-   `SF_LICENSE_PERMANENT_PUBLIC_KEYS` (it ships in the next release).
-2. For each customer, after BaridiMob/CCP payment, they send you their
-   **request code** (`SFLR1.…`) from the licence screen or Settings → Licence.
-3. Turn it into a licence and sign it:
-   `bun scripts/license-request-to-claims.ts "SFLR1.…" --members 5 > claims.json`
-   `bun scripts/sign-license-entitlement.ts claims.json %USERPROFILE%\sahelflow-keys\permanent-2026-10.private > licence.json`
-4. Send `licence.json`'s contents back on WhatsApp; the customer pastes it
-   into **Activate my licence**.
+The License Desk is one offline page: `tools/license-desk/sahelflow-license-desk.html`.
+Download it from GitHub (open the file → **Download raw file**) and open it in
+Edge or Chrome on your own PC. It cannot make any network request, so your
+signing key never leaves the computer.
+
+### Once: your permanent signing key
+
+1. In the Desk, open **Create a new signing key**, keep the key id
+   `permanent-2026-10` (or a new one such as `permanent-2027-01` when rotating),
+   click **Create and download key**.
+2. Store the downloaded `.private` file offline (a USB drive kept at home) and
+   a second copy somewhere safe. Anyone with this file can issue licences;
+   without it you cannot issue licences that installed versions accept.
+3. Copy the public entry the Desk shows into the repository **variable**
+   `SF_LICENSE_PERMANENT_PUBLIC_KEYS` (Settings → Secrets and variables →
+   Actions → Variables). Keep any existing entries: the value is one JSON
+   object, for example `{"permanent-2026-10":"…","permanent-2027-01":"…"}`.
+4. The next signed release trusts the key. Licences signed with it activate on
+   that release and every later one.
+
+If a key was already created with `scripts/licensing-keygen.ts`, just open that
+`.private` file in the Desk; paste the variable's current value under
+**Check against the app's keyring** to confirm the installed version trusts it.
+
+### Each sale
+
+1. The seller pays by BaridiMob or CCP and sends, on WhatsApp, the receipt and
+   their **request code** (`SFLR1.…`) from **Get my request code** on the
+   licence screen or in Settings → Licence.
+2. Verify the payment on your receiving account.
+3. In the Desk: open your key file, paste the request code, choose extra shops
+   (35,000 DZD includes 5 shops; each extra shop is 5,000 DZD, up to 10),
+   fill the customer and payment reference, tick **I verified this payment**,
+   click **Issue licence**.
+4. Click **Copy message** and send it on WhatsApp (Arabic, French or English).
+   It contains the activation code (`SFLA1.…`). You can also send the
+   downloaded `.sflicense` file.
+5. The seller opens SahelFlow → **Activate my licence**, pastes the code (or
+   opens the file) and confirms with their PIN if asked.
+
+Every licence grants the full SahelFlow 1.0 package from
+`src/lib/license/packages.ts`: 5 shops plus paid extras, owner + 10 team
+members, 23 remote devices, 20 GB backup (+4 GB per extra shop) and five years
+of updates. The Desk keeps a sales ledger in that browser; use **Export CSV**
+regularly.
 
 The request code names the installation only; it grants nothing without your
-signature, and activation re-checks every claim.
+signature, and activation re-checks every claim. The terminal path remains
+available: `bun scripts/license-request-to-claims.ts "SFLR1.…" --extra-shops 0 > claims.json`
+then `bun scripts/sign-license-entitlement.ts claims.json <key-file>`, which
+prints the activation code and writes `claims.sflicense`.

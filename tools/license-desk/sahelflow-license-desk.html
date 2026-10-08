@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Offline by construction: no network request of any kind is permitted, so
+     the signing key loaded into this page can never leave the computer. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>SahelFlow License Desk</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef3f8;
+  --ink: #0d1b2a;
+  --muted: #55657a;
+  --line: #d8e1ec;
+  --primary: #0b6bcb;
+  --primary-ink: #ffffff;
+  --primary-soft: #e3effb;
+  --success: #12804a;
+  --success-soft: #e3f4ea;
+  --warning: #9a5b00;
+  --warning-soft: #fdf1dc;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --radius: 10px;
+  --radius-control: 6px;
+  font: 14px/22px "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #07111c;
+    --surface: #0d1a28;
+    --surface-2: #122334;
+    --ink: #e6eef7;
+    --muted: #93a4b8;
+    --line: #22364b;
+    --primary: #4ea3f5;
+    --primary-ink: #04121f;
+    --primary-soft: #0f2a44;
+    --success: #4cc38a;
+    --success-soft: #0f2c20;
+    --warning: #f0b45a;
+    --warning-soft: #2e2210;
+    --danger: #f2877d;
+    --danger-soft: #34140f;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); }
+header {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.mark {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, #7dd3fc, #0b6bcb 70%);
+}
+.brand h1 { margin: 0; font-size: 18px; line-height: 26px; font-weight: 600; }
+.brand p { margin: 0; color: var(--muted); font-size: 12px; line-height: 16px; }
+.offline {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+  border-radius: 999px; background: var(--success-soft); color: var(--success);
+  font-size: 12px; font-weight: 600;
+}
+.offline::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+main { max-width: 1120px; margin: 0 auto; padding: 24px; display: grid; gap: 24px; }
+.grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: start; }
+section.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 14px;
+}
+.step { display: flex; align-items: center; gap: 10px; }
+.step b {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--primary-soft); color: var(--primary); font-size: 13px;
+}
+.step h2 { margin: 0; font-size: 15px; line-height: 22px; font-weight: 600; }
+.hint { margin: 0; color: var(--muted); font-size: 13px; line-height: 20px; }
+label { display: grid; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+input, select, textarea {
+  font: inherit; color: var(--ink); background: var(--surface); width: 100%;
+  border: 1px solid var(--line); border-radius: var(--radius-control); padding: 8px 10px; min-height: 36px;
+}
+textarea { min-height: 88px; resize: vertical; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12px; line-height: 18px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: 2px solid var(--primary); outline-offset: 2px;
+}
+.row { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  font: inherit; font-weight: 600; min-height: 36px; padding: 0 14px; border-radius: var(--radius-control);
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); cursor: pointer;
+}
+button.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.status { margin: 0; padding: 10px 12px; border-radius: var(--radius-control); font-size: 13px; line-height: 20px; }
+.status[data-tone="ok"] { background: var(--success-soft); color: var(--success); }
+.status[data-tone="warn"] { background: var(--warning-soft); color: var(--warning); }
+.status[data-tone="error"] { background: var(--danger-soft); color: var(--danger); }
+.status:empty { display: none; }
+dl.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 13px; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.total { font-size: 24px; line-height: 32px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.output { background: var(--surface-2); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: start; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-size: 12px; font-weight: 600; }
+td.num { font-variant-numeric: tabular-nums; }
+.empty { color: var(--muted); padding: 16px 10px; }
+details summary { cursor: pointer; font-weight: 600; }
+.hidden { display: none !important; }
+@media (max-width: 640px) { .row { grid-template-columns: 1fr; } main { padding: 16px; } header { padding: 12px 16px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark" aria-hidden="true"></div>
+    <div>
+      <h1>SahelFlow License Desk</h1>
+      <p>Issue permanent licences after BaridiMob / CCP payment</p>
+    </div>
+  </div>
+  <span class="offline" title="This page cannot make any network request">Offline · key stays on this PC</span>
+</header>
+
+<main>
+  <div class="grid">
+    <section class="card" aria-labelledby="key-title">
+      <div class="step"><b>1</b><h2 id="key-title">Signing key</h2></div>
+      <p class="hint">Open your permanent key file (for example <code>permanent-2026-10.private</code>). It is read into memory only and forgotten when you close this page.</p>
+      <label>Key file<input id="key-file" type="file" accept=".private,.txt"></label>
+      <label>Key id<input id="key-id" value="permanent-2026-10" autocomplete="off" spellcheck="false"></label>
+      <dl class="facts hidden" id="key-facts">
+        <dt>Public key</dt><dd id="key-public"></dd>
+      </dl>
+      <details>
+        <summary>Check against the app's keyring</summary>
+        <p class="hint">Paste the value of the GitHub variable <code>SF_LICENSE_PERMANENT_PUBLIC_KEYS</code>. A licence activates only if this key is in the keyring the installed version was built with.</p>
+        <textarea id="keyring" placeholder='{"permanent-2026-10":"…"}' spellcheck="false"></textarea>
+      </details>
+      <p class="status" id="key-status" role="status"></p>
+      <details>
+        <summary>Create a new signing key</summary>
+        <p class="hint">Do this once. Save the downloaded file somewhere safe and offline (a USB drive kept at home). Losing it means you cannot issue licences that current versions accept; anyone who copies it can issue licences.</p>
+        <div class="actions"><button type="button" id="key-generate">Create and download key</button></div>
+        <textarea id="key-new-entry" class="hidden" readonly spellcheck="false"></textarea>
+      </details>
+    </section>
+
+    <section class="card" aria-labelledby="request-title">
+      <div class="step"><b>2</b><h2 id="request-title">Seller's request code</h2></div>
+      <p class="hint">The seller copies it from SahelFlow → “Get my request code” and sends it on WhatsApp with the payment receipt.</p>
+      <label>Request code<textarea id="request-code" placeholder="SFLR1.…" spellcheck="false"></textarea></label>
+      <dl class="facts hidden" id="request-facts">
+        <dt>Installation</dt><dd id="request-installation"></dd>
+        <dt>Product version</dt><dd id="request-major"></dd>
+        <dt>Recovery epoch</dt><dd id="request-recovery"></dd>
+        <dt>Current licence</dt><dd id="request-current"></dd>
+      </dl>
+      <p class="status" id="request-status" role="status"></p>
+    </section>
+
+    <section class="card" aria-labelledby="package-title">
+      <div class="step"><b>3</b><h2 id="package-title">Package and payment</h2></div>
+      <div class="row">
+        <label>Extra shops<select id="extra-shops"></select></label>
+        <label>Reply language<select id="reply-locale">
+          <option value="ar">العربية</option><option value="fr">Français</option><option value="en">English</option>
+        </select></label>
+      </div>
+      <div class="total" id="package-total" aria-live="polite"></div>
+      <p class="hint" id="package-summary"></p>
+      <div class="row">
+        <label>Customer name<input id="customer" autocomplete="off"></label>
+        <label>Phone<input id="phone" autocomplete="off" inputmode="tel" dir="ltr"></label>
+      </div>
+      <label>Payment reference (BaridiMob / CCP)<input id="payment-ref" autocomplete="off" dir="ltr"></label>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink)">
+        <input type="checkbox" id="payment-confirmed" style="width:auto;min-height:auto">
+        I verified this payment on the receiving account
+      </label>
+      <div class="actions"><button type="button" class="primary" id="issue" disabled>Issue licence</button></div>
+      <p class="status" id="issue-status" role="status"></p>
+    </section>
+  </div>
+
+  <section class="card output hidden" id="result" aria-labelledby="result-title">
+    <div class="step"><b>✓</b><h2 id="result-title">Licence ready</h2></div>
+    <label>Message for the seller (WhatsApp)<textarea id="result-message" readonly spellcheck="false" style="min-height:140px"></textarea></label>
+    <div class="actions">
+      <button type="button" class="primary" id="copy-message">Copy message</button>
+      <button type="button" id="copy-code">Copy code only</button>
+      <button type="button" id="download-license">Download .sflicense file</button>
+    </div>
+    <p class="status" id="result-status" role="status"></p>
+  </section>
+
+  <section class="card" aria-labelledby="ledger-title">
+    <div class="step"><b>≡</b><h2 id="ledger-title">Sales ledger</h2></div>
+    <p class="hint">Kept only in this browser on this computer. Export it regularly.</p>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Issued</th><th>Customer</th><th>Payment</th><th>Shops</th><th>Total</th><th>Licence</th></tr></thead>
+        <tbody id="ledger-body"></tbody>
+      </table>
+    </div>
+    <div class="actions"><button type="button" id="export-ledger">Export CSV</button></div>
+  </section>
+</main>
+<script>(()=>{/*! noble-ed25519 - MIT License (c) 2019 Paul Miller (paulmillr.com) */var vt=Object.freeze({p:0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffedn,n:0x1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3edn,h:8n,a:0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffecn,d:0x52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3n,Gx:0x216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51an,Gy:0x6666666666666666666666666666666666666666666666666666666666666658n}),{p:Z,n:R,Gx:st,Gy:kt,a:y,d:_,h:nn}=vt;var en=(...t)=>{if("captureStackTrace"in Error&&typeof Error.captureStackTrace==="function")Error.captureStackTrace(...t)},I=(t="")=>{let n=Error(t);throw en(n,I),n},ln=(t)=>typeof t==="bigint",un=(t)=>typeof t==="string",fn=(t)=>t instanceof Uint8Array||ArrayBuffer.isView(t)&&t.constructor.name==="Uint8Array"&&("BYTES_PER_ELEMENT"in t)&&t.BYTES_PER_ELEMENT===1,j=(t,n,e="")=>{let l=fn(t),i=t?.length,u=n!==void 0;if(!l||u&&i!==n){let s=e&&`"${e}" `,c=u?` of length ${n}`:"",k=l?`length=${i}`:`type=${typeof t}`,r=s+"expected Uint8Array"+c+", got "+k;throw l?RangeError(r):TypeError(r)}return t},x=(t)=>new Uint8Array(t),p=(t)=>Uint8Array.from(t),It=(t,n)=>t.toString(16).padStart(n,"0"),ot=(t)=>Array.from(j(t)).map((n)=>It(n,2)).join(""),Q={_0:48,_9:57,A:65,F:70,a:97,f:102},rt=(t)=>{if(t>=Q._0&&t<=Q._9)return t-Q._0;if(t>=Q.A&&t<=Q.F)return t-(Q.A-10);if(t>=Q.a&&t<=Q.f)return t-(Q.a-10);return},Tt=(t)=>{if(!un(t))return I("hex invalid");let e=t.length,l=e/2;if(e%2)return I("hex invalid");let i=x(l);for(let u=0,s=0;u<l;u++,s+=2){let c=rt(t.charCodeAt(s)),k=rt(t.charCodeAt(s+1));if(c===void 0||k===void 0)return I("hex invalid");i[u]=c*16+k}return i},Ln=()=>globalThis?.crypto,cn=()=>Ln()?.subtle??I("crypto.subtle must be defined, consider polyfill"),D=(...t)=>{let n=0;for(let i of t)n+=j(i).length;let e=x(n),l=0;return t.forEach((i)=>{e.set(i,l),l+=i.length}),e};var N=BigInt,W=(t,n,e,l="bad number: out of range")=>{if(!ln(t))throw TypeError(l);if(n<=t&&t<e)return t;throw RangeError(l)},$=(t,n=Z)=>{let e=t%n;return e>=0n?e:n+e},St=(1n<<255n)-1n,f=(t)=>{if(t<0n)I("negative coordinate");let n=(t>>255n)*19n+(t&St);return n=(n>>255n)*19n+(n&St),n%Z},qt=(t)=>$(t,R),sn=(t,n)=>{if(t===0n||n<=0n)I("no inverse n="+t+" mod="+n);let e=$(t,n),l=n,i=0n,u=1n,s=1n,c=0n;while(e!==0n){let k=l/e,r=l%e,S=i-s*k,H=u-c*k;l=e,e=r,i=s,u=c,s=S,c=H}return l===1n?$(i,n):I("no inverse")},kn=(t)=>{let n=In[t];if(typeof n!=="function")I("hashes."+t+" not set");return n},rn=(t)=>j(t,64,"digest");var h=(t)=>t instanceof g?t:I("Point expected"),A=2n**256n;class g{static BASE;static ZERO;X;Y;Z;T;constructor(t,n,e,l){let i=A;this.X=W(t,0n,i),this.Y=W(n,0n,i),this.Z=W(e,1n,i),this.T=W(l,0n,i),Object.freeze(this)}static CURVE(){return vt}static fromAffine(t){return new g(t.x,t.y,1n,f(t.x*t.y))}static fromBytes(t,n=!1){let e=_,l=p(j(t,32)),i=t[31];l[31]=i&-129;let u=b(l);W(u,0n,n?A:Z);let c=f(u*u),k=$(c-1n),r=f(e*c+1n),{isValid:S,value:H}=wn(k,r);if(!S)I("bad point: y not sqrt");let J=(H&1n)===1n,q=(i&128)!==0;if(!n&&H===0n&&q)I("bad point: x==0, isLastByteOdd");if(q!==J)H=$(-H);return new g(H,u,1n,f(H*u))}static fromHex(t,n){return g.fromBytes(Tt(t),n)}get x(){return this.toAffine().x}get y(){return this.toAffine().y}assertValidity(){let t=y,n=_,e=this;if(e.is0())return I("bad point: ZERO");let{X:l,Y:i,Z:u,T:s}=e,c=f(l*l),k=f(i*i),r=f(u*u),S=f(r*r),H=f(c*t),J=f(r*(H+k)),q=$(S+f(n*f(c*k)));if(J!==q)return I("bad point: equation left != right (1)");let O=f(l*i),U=f(u*s);if(O!==U)return I("bad point: equation left != right (2)");return this}equals(t){let{X:n,Y:e,Z:l}=this,{X:i,Y:u,Z:s}=h(t),c=f(n*s),k=f(i*l),r=f(e*s),S=f(u*l);return c===k&&r===S}is0(){return this.equals(F)}negate(){return new g($(-this.X),this.Y,this.Z,$(-this.T))}double(){let{X:t,Y:n,Z:e}=this,l=y,i=f(t*t),u=f(n*n),s=f(2n*e*e),c=f(l*i),k=$(t+n),r=$(f(k*k)-i-u),S=$(c+u),H=$(S-s),J=$(c-u),q=f(r*H),O=f(S*J),U=f(r*J),C=f(H*S);return new g(q,O,C,U)}add(t){let{X:n,Y:e,Z:l,T:i}=this,{X:u,Y:s,Z:c,T:k}=h(t),r=y,S=_,H=f(n*u),J=f(e*s),q=f(f(i*S)*k),O=f(l*c),U=$(f($(n+e)*$(u+s))-H-J),C=$(O-q),Lt=$(O+q),ct=$(J-f(r*H)),pt=f(U*C),bt=f(Lt*ct),Pt=f(U*ct),tn=f(C*Lt);return new g(pt,bt,tn,Pt)}subtract(t){return this.add(h(t).negate())}multiply(t,n=!0){if(!n&&t===0n)return F;if(W(t,1n,R),!n&&this.is0())return F;if(t===1n)return this;if(this.equals(M))return qn(t).p;let e=F,l=M;for(let i=this;t>0n;i=i.double(),t>>=1n)if(t&1n)e=e.add(i);else if(n)l=l.add(i);return e}multiplyUnsafe(t){return this.multiply(t,!1)}toAffine(){let{X:t,Y:n,Z:e}=this;if(this.equals(F))return{x:0n,y:1n};let l=sn(e,Z);if(f(e*l)!==1n)I("invalid inverse");let i=f(t*l),u=f(n*l);return{x:i,y:u}}toBytes(){let{x:t,y:n}=this.toAffine(),e=gt(n);return e[31]|=t&1n?128:0,e}toHex(){return ot(this.toBytes())}clearCofactor(){return this.multiply(N(nn),!1)}isSmallOrder(){return this.clearCofactor().is0()}isTorsionFree(){let t=this.multiply(R/2n,!1).double();if(R%2n)t=t.add(this);return t.is0()}}var M=new g(st,kt,1n,$(st*kt)),F=new g(0n,1n,1n,0n);g.BASE=M;g.ZERO=F;var gt=(t)=>Tt(It(W(t,0n,A),64)).reverse(),b=(t)=>N("0x"+ot(p(j(t)).reverse())),V=(t,n)=>{let e=t;while(n-- >0n)e=f(e*e);return e},Sn=(t)=>{let n=f(t*t),e=f(n*t),l=f(V(e,2n)*e),i=f(V(l,1n)*t),u=f(V(i,5n)*i),s=f(V(u,10n)*u),c=f(V(s,20n)*s),k=f(V(c,40n)*c),r=f(V(k,80n)*k),S=f(V(r,80n)*k),H=f(V(S,10n)*u);return{pow_p_5_8:f(V(H,2n)*t),b2:e}},wt=0x2b8324804fc1df0b2b4d00993dfbd7a72f431806ad2fe478c4ee1b274a0ea0b0n,wn=(t,n)=>{let e=f(n*f(n*n)),l=f(f(e*e)*n),i=Sn(f(t*l)).pow_p_5_8,u=f(t*f(e*i)),s=f(n*f(u*u)),c=u,k=f(u*wt),r=s===t,S=s===$(-t),H=s===$(-t*wt);if(r)u=c;if(S||H)u=k;if(($(u)&1n)===1n)u=$(-u);return{isValid:r||S,value:u}},G=(t)=>qt(b(t)),P=(...t)=>Promise.resolve(kn("sha512Async")(D(...t))).then(rn);var Hn=(t)=>{let n=p(t),e=n.slice(0,32);e[0]&=248,e[31]&=127,e[31]|=64;let l=n.slice(32,64),i=G(e),u=M.multiply(i),s=u.toBytes();return{head:e,prefix:l,scalar:i,point:u,pointBytes:s}},Jt=(t)=>P(j(t,32)).then(Hn);var tt=(t)=>Jt(t).then((n)=>n.pointBytes);var jt=(t)=>P(t.hashable).then(t.finish);var $n=(t,n,e)=>{let{pointBytes:l,scalar:i}=t,u=G(n),s=M.multiply(u).toBytes();return{hashable:D(s,l,e),finish:(r)=>{let S=qt(u+G(r)*i);return j(D(s,gt(S)),64)}}},Ot=async(t,n)=>{let e=j(t),l=await Jt(n),i=await P(l.prefix,e);return jt($n(l,i,e))};var Vt={zip215:!0},vn=(t,n,e,l=Vt)=>{t=j(t,64),n=j(n),e=j(e,32);let{zip215:i=!0}=l,u=t.subarray(0,32),s=b(t.subarray(32,64)),c,k,r,S=Uint8Array.of(),H=!1;try{c=g.fromBytes(e,i),k=g.fromBytes(u,i),r=M.multiply(s,!1),S=D(u,e,n),H=!0}catch(q){}return{hashable:S,finish:(q)=>{if(!H)return!1;if(!i&&c.isSmallOrder())return!1;let O=G(q);return k.add(c.multiply(O,!1)).subtract(r).clearCofactor().is0()}}},Qt=async(t,n,e,l=Vt)=>jt(vn(t,n,e,l));var In={sha512Async:async(t)=>{let n=cn(),e=D(t);return x(await n.digest("SHA-512",e.buffer))},sha512:void 0};var d=8,on=256,Mt=Math.ceil(on/d)+1,m=2**(d-1),Tn=()=>{let t=[],n=M,e=n;for(let l=0;l<Mt;l++){e=n,t.push(e);for(let i=1;i<m;i++)e=e.add(n),t.push(e);n=e.double()}return t},Ht=void 0,$t=(t,n)=>{let e=n.negate();return t?e:n},qn=(t)=>{let n=Ht||(Ht=Tn()),e=F,l=M,i=2**d,u=i,s=N(i-1),c=N(d);for(let k=0;k<Mt;k++){let r=Number(t&s);if(t>>=c,r>m)r-=u,t+=1n;let S=k*m,H=S,J=S+Math.abs(r)-1,q=k%2!==0,O=r<0;if(r===0)l=l.add($t(q,n[H]));else e=e.add($t(O,n[J]))}if(t!==0n)I("invalid wnaf");return{p:e,f:l}};var gn=(()=>{let t=new Uint32Array(256);for(let n=0;n<256;n+=1){let e=n;for(let l=0;l<8;l+=1)e=e&1?3988292384^e>>>1:e>>>1;t[n]=e>>>0}return t})();function Jn(t){let n=new TextEncoder().encode(`SFLA1:${t}`),e=4294967295;for(let l of n)e=(gn[(e^l)&255]??0)^e>>>8;return((e^4294967295)>>>0).toString(16).padStart(8,"0")}function jn(t){let n=new TextEncoder().encode(t),e="";for(let l of n)e+=String.fromCharCode(l);return btoa(e).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}function Ut(t){let n=jn(JSON.stringify(t));return`SFLA1.${n}.${Jn(n)}`}var Wt="sahelflow.license.entitlement.v2",Ft=2;function zt(t){let n=[t.domain,t.formatVersion,t.licenseId,t.workspaceId,t.installationId,t.deviceBinding,t.productMajor,t.type,t.issuedAt,t.expiresAt,t.supportEndsAt,t.shopSlots,t.memberLimit,t.deviceLimit,t.backupBytes,t.mediaBytes,[...t.features].sort(),t.transferState,t.transferEpoch,t.recoveryEpoch,t.revocationEpoch,t.keyId,t.issuer];return new TextEncoder().encode(JSON.stringify(n))}var v=Object.freeze({priceDzd:35000,extraShopPriceDzd:5000,includedShops:5,maximumShops:10,memberLimit:11,deviceLimit:23,baseBackupBytes:20000000000,backupBytesPerExtraShop:4000000000,baseMediaBytes:10000000000,mediaBytesPerExtraShop:2000000000,supportMonths:60,features:Object.freeze(["sahelflow.complete"])}),Y=v.maximumShops-v.includedShops,On="permanent-2026-10";function Vn(){let t=new Uint8Array(12);return globalThis.crypto.getRandomValues(t),`perm-${Array.from(t,(n)=>n.toString(16).padStart(2,"0")).join("")}`}function X(t){return v.priceDzd+t*v.extraShopPriceDzd}function at(t,n={}){let e=n.extraShops??0;if(!Number.isInteger(e)||e<0||e>Y)throw RangeError(`extra shops must be an integer from 0 to ${Y}`);let l=n.issuedAt??new Date,i=new Date(l);return i.setUTCMonth(i.getUTCMonth()+v.supportMonths),{domain:Wt,formatVersion:Ft,licenseId:n.licenseId??Vn(),workspaceId:t.workspaceId,installationId:t.installationId,deviceBinding:t.deviceBinding,productMajor:t.productMajor,type:"permanent",issuedAt:l.toISOString(),expiresAt:null,supportEndsAt:i.toISOString(),shopSlots:v.includedShops+e,memberLimit:v.memberLimit,deviceLimit:v.deviceLimit,backupBytes:v.baseBackupBytes+e*v.backupBytesPerExtraShop,mediaBytes:v.baseMediaBytes+e*v.mediaBytesPerExtraShop,features:[...v.features],transferState:"active",transferEpoch:t.transferEpoch,recoveryEpoch:t.recoveryEpoch,revocationEpoch:t.revocationEpoch,keyId:n.keyId??On,issuer:"founder-offline"}}var Dt="SFLR1";class o extends Error{constructor(t){super(t);this.name="DeskError"}}function Qn(t){return Array.from(t,(n)=>n.toString(16).padStart(2,"0")).join("")}function Ct(t){let n=atob(t);return Uint8Array.from(n,(e)=>e.charCodeAt(0))}function et(t){let n="";for(let e of t)n+=String.fromCharCode(e);return btoa(n)}function Mn(t){let n=t.replace(/-/g,"+").replace(/_/g,"/");return new TextDecoder("utf-8",{fatal:!0}).decode(Ct(n+"=".repeat((4-n.length%4)%4)))}async function Un(t){let n=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));return Qn(new Uint8Array(n))}var Yt=/^[0-9a-f]{32}$/i,Wn=/^sfdb1_[0-9a-f]{64}$/,Fn=/^[a-z0-9][a-z0-9_-]{7,127}$/;function nt(t,n){if(typeof t!=="number"||!Number.isSafeInteger(t)||t<0)throw new o(`The request code has an invalid ${n}.`);return t}async function Rt(t){let n=t.replace(/\s+/g,"").split(".");if(n.length!==3||n[0]!==Dt)throw new o("This is not a SahelFlow request code. It starts with SFLR1.");let[,e,l]=n;if((await Un(`${Dt}:${e}`)).slice(0,8)!==l.toLowerCase())throw new o("The request code is incomplete or mistyped. Ask the seller to copy it again.");let u;try{u=JSON.parse(Mn(e))}catch{throw new o("The request code could not be read.")}if(Object.keys(u).sort().join(",")!=="currentLicenseId,deviceBinding,installationId,productMajor,recoveryEpoch,revocationEpoch,transferEpoch,workspaceId")throw new o("The request code has unexpected fields.");if(typeof u.workspaceId!=="string"||!Yt.test(u.workspaceId))throw new o("The request code has an invalid workspace.");if(typeof u.installationId!=="string"||!Yt.test(u.installationId))throw new o("The request code has an invalid installation.");if(typeof u.deviceBinding!=="string"||!Wn.test(u.deviceBinding))throw new o("The request code has an invalid device binding.");let c=u.productMajor;if(typeof c!=="number"||!Number.isInteger(c)||c<1||c>1000)throw new o("The request code has an invalid product version.");let k=u.currentLicenseId;if(k!==null&&(typeof k!=="string"||!Fn.test(k)))throw new o("The request code has an invalid current licence.");return{workspaceId:u.workspaceId,installationId:u.installationId,deviceBinding:u.deviceBinding,productMajor:c,transferEpoch:nt(u.transferEpoch,"transfer epoch"),revocationEpoch:nt(u.revocationEpoch,"revocation epoch"),recoveryEpoch:nt(u.recoveryEpoch,"recovery epoch"),currentLicenseId:k}}function Zt(t){let n=t.trim(),e=/^[0-9a-f]{64}$/i.test(n)?Uint8Array.from(n.match(/../g)??[],(l)=>Number.parseInt(l,16)):(()=>{try{return Ct(n)}catch{return new Uint8Array}})();if(e.length!==32)throw new o("This is not a SahelFlow permanent signing key file.");return e}function Nt(t){return/^([a-z0-9][a-z0-9-]{2,62})\.private$/i.exec(t.trim())?.[1]?.toLowerCase()??null}function B(t){return/^[a-z0-9][a-z0-9-]{2,62}$/.test(t)&&/^[a-z0-9][a-z0-9_-]{7,127}$/.test(t)}async function lt(t){return et(await tt(t))}async function Gt(){let t=crypto.getRandomValues(new Uint8Array(32)),n=await lt(t),e=`${et(t)}
+`;return t.fill(0),{privateKeyText:e,publicKey:n}}function dt(t,n,e){let l;try{l=JSON.parse(t.trim().replace(/\}\s*,?\s*\{/g,","))}catch{return"unreadable"}if(!l||typeof l!=="object"||Array.isArray(l))return"unreadable";let i=l[n];if(i===void 0)return"missing";return i===e?"match":"different"}async function Xt(t){if(!B(t.keyId))throw new o("The key id is not valid.");let n=at(t.request,{extraShops:t.extraShops,keyId:t.keyId,issuedAt:t.issuedAt}),e=zt(n),l=await Ot(e,t.privateKey),i=await tt(t.privateKey);if(!await Qt(l,e,i))throw new o("The signature could not be verified. Nothing was issued.");let u=et(l);return{claims:n,signature:u,activationCode:Ut({claims:n,signature:u})}}function Bt(t){let n=String(t);return`"${(/^[=+\-@]/.test(n)?`'${n}`:n).replace(/"/g,'""')}"`}function Kt(t){let n=["Issued at","Licence number","Installation","Customer","Phone","Payment reference","Extra shops","Total (DZD)","Updates until"],e=t.map((l)=>[l.issuedAt,l.licenseId,l.installation,l.customer,l.phone,l.paymentReference,l.extraShops,l.totalDzd,l.supportEndsAt].map(Bt).join(","));return`\uFEFF${[n.map(Bt).join(","),...e].join(`\r
+`)}\r
+`}function Et(t,n,e){if(t==="ar")return["شكراً لشرائك SahelFlow! \uD83C\uDF89",`ترخيصك الدائم جاهز (${e} متاجر، تحديثات لمدة 5 سنوات).`,"افتح SahelFlow ← «تفعيل ترخيصي» ثم الصق الرمز التالي كاملاً:","",n].join(`
+`);if(t==="fr")return["Merci pour votre achat de SahelFlow ! \uD83C\uDF89",`Votre licence permanente est prête (${e} boutiques, 5 ans de mises à jour).`,"Ouvrez SahelFlow → « Activer ma licence » puis collez le code ci-dessous en entier :","",n].join(`
+`);return["Thank you for buying SahelFlow! \uD83C\uDF89",`Your permanent licence is ready (${e} shops, 5 years of updates).`,"Open SahelFlow → “Activate my licence” and paste the whole code below:","",n].join(`
+`)}var ht="sahelflow-license-desk-sales-v1";function L(t){let n=document.getElementById(t);if(!n)throw Error(`Missing #${t}`);return n}function T(t,n,e="ok"){let l=L(t);l.textContent=n,l.dataset.tone=e}function K(t){L(t).textContent=""}function At(t){return`${new Intl.NumberFormat("fr-DZ").format(t)} DZD`}function E(){try{let t=JSON.parse(localStorage.getItem(ht)??"[]");return Array.isArray(t)?t:[]}catch{return[]}}function zn(t){try{return localStorage.setItem(ht,JSON.stringify(t)),!0}catch{return!1}}function ut(t,n,e){let l=URL.createObjectURL(new Blob([n],{type:e})),i=document.createElement("a");i.href=l,i.download=t,document.body.append(i),i.click(),i.remove(),window.setTimeout(()=>URL.revokeObjectURL(l),1000)}async function yt(t,n,e){try{await navigator.clipboard.writeText(t),T(n,e)}catch{T(n,"Copy failed. Select the text and copy it manually.","warn")}}var w={privateKey:null,publicKey:null,request:null,issued:null};function z(){return L("key-id").value.trim().toLowerCase()}function a(){let t=w.privateKey!==null&&w.request!==null&&B(z())&&L("payment-confirmed").checked;L("issue").disabled=!t}function ft(){if(!w.publicKey)return;let t=L("keyring").value.trim();if(!B(z())){T("key-status","The key id must be 8+ lowercase letters, digits or dashes.","error");return}if(!t){T("key-status","Key loaded. Optionally paste the app's keyring to confirm it will be accepted.");return}let n=dt(t,z(),w.publicKey);if(n==="match")T("key-status","This key is in the app's keyring. Licences you issue will activate.");else if(n==="missing")T("key-status",`The app's keyring has no "${z()}" entry. Licences signed now will be rejected until a release includes this key.`,"error");else if(n==="different")T("key-status",`The keyring's "${z()}" is a different key. This file is not the key the app trusts.`,"error");else T("key-status","The keyring text is not valid JSON.","warn")}function mt(t,n){let e=L("result-message");e.dir=t==="ar"?"rtl":"ltr",e.lang=t,e.value=Et(t,n.activationCode,n.claims.shopSlots)}function _t(){let t=Number.parseInt(L("extra-shops").value,10)||0;L("package-total").textContent=At(X(t)),L("package-summary").textContent=`${v.includedShops+t} shops · owner + ${v.memberLimit-1} team members · `+`${Math.round((v.baseBackupBytes+t*v.backupBytesPerExtraShop)/1e9)} GB backup · `+`${v.supportMonths/12} years of updates`}function xt(){let t=L("ledger-body");t.replaceChildren();let n=E();if(n.length===0){let l=t.insertRow().insertCell();l.colSpan=6,l.className="empty",l.textContent="No licence issued from this browser yet.";return}for(let e of[...n].reverse()){let l=t.insertRow();[new Date(e.issuedAt).toLocaleString(),[e.customer,e.phone].filter(Boolean).join(" · ")||"—",e.paymentReference||"—",String(v.includedShops+e.extraShops),At(e.totalDzd),e.licenseId].forEach((u,s)=>{let c=l.insertCell();if(c.textContent=u,s===3||s===4)c.className="num"})}}async function an(t){if(K("key-status"),w.privateKey?.fill(0),w.privateKey=null,w.publicKey=null,L("key-facts").classList.add("hidden"),!t)return a();try{if(t.size>4096)throw new o("This is not a SahelFlow permanent signing key file.");w.privateKey=Zt(await t.text()),w.publicKey=await lt(w.privateKey);let n=Nt(t.name);if(n)L("key-id").value=n;L("key-public").textContent=w.publicKey,L("key-facts").classList.remove("hidden"),ft()}catch(n){T("key-status",n instanceof Error?n.message:String(n),"error")}a()}var it=0;async function Dn(){let t=++it,n=L("request-code").value;if(w.request=null,L("request-facts").classList.add("hidden"),K("request-status"),a(),!n.trim())return;try{let e=await Rt(n);if(t!==it)return;w.request=e,L("request-installation").textContent=e.installationId,L("request-major").textContent=`SahelFlow ${e.productMajor}`,L("request-recovery").textContent=String(e.recoveryEpoch),L("request-current").textContent=e.currentLicenseId??"none (trial or new install)",L("request-facts").classList.remove("hidden");let l=E().filter((i)=>i.installation===e.installationId);if(l.length>0)T("request-status",`Already licensed from this browser on ${new Date(l.at(-1)?.issuedAt??Date.now()).toLocaleDateString()}. Issuing again replaces that licence (for example after a reinstall).`,"warn");else T("request-status","Request code is valid.")}catch(e){if(t!==it)return;T("request-status",e instanceof Error?e.message:String(e),"error")}a()}async function Yn(){if(K("issue-status"),!w.privateKey||!w.request)return;let t=Number.parseInt(L("extra-shops").value,10)||0,n=L("issue");n.disabled=!0;try{let e=await Xt({request:w.request,extraShops:t,keyId:z(),privateKey:w.privateKey});w.issued=e,mt(L("reply-locale").value,e),L("result").classList.remove("hidden"),K("result-status");let l=zn([...E(),{issuedAt:e.claims.issuedAt,licenseId:e.claims.licenseId,installation:e.claims.installationId,customer:L("customer").value.trim(),phone:L("phone").value.trim(),paymentReference:L("payment-ref").value.trim(),extraShops:t,totalDzd:X(t),supportEndsAt:e.claims.supportEndsAt}]);xt(),T("issue-status",l?`Licence ${e.claims.licenseId} issued and recorded in the ledger.`:`Licence ${e.claims.licenseId} issued. This browser could not save the ledger entry; note it down.`,l?"ok":"warn"),L("result").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){T("issue-status",e instanceof Error?e.message:String(e),"error")}finally{L("payment-confirmed").checked=!1,a()}}async function Bn(){let t=z();if(!B(t)){T("key-status","Choose a key id first (8+ lowercase letters, digits or dashes).","error");return}let{privateKeyText:n,publicKey:e}=await Gt();ut(`${t}.private`,n,"text/plain");let l=L("key-new-entry");l.value=`Add this entry to the GitHub variable SF_LICENSE_PERMANENT_PUBLIC_KEYS (keep existing entries):
+`+JSON.stringify({[t]:e}),l.classList.remove("hidden"),T("key-status","New key downloaded. Store it offline, add the public entry to GitHub, then open the file above. Licences signed with it activate on releases built after that.","warn")}function Cn(){let t=L("extra-shops");for(let n=0;n<=Y;n+=1){let e=document.createElement("option");e.value=String(n),e.textContent=n===0?`None (${v.includedShops} shops)`:`+${n} (${v.includedShops+n} shops)`,t.append(e)}L("key-file").addEventListener("change",(n)=>{an(n.target.files?.[0])}),L("key-id").addEventListener("input",()=>{ft(),a()}),L("keyring").addEventListener("input",ft),L("request-code").addEventListener("input",()=>void Dn()),t.addEventListener("change",_t),L("payment-confirmed").addEventListener("change",a),L("issue").addEventListener("click",()=>void Yn()),L("key-generate").addEventListener("click",()=>void Bn()),L("copy-message").addEventListener("click",()=>{yt(L("result-message").value,"result-status","Message copied.")}),L("copy-code").addEventListener("click",()=>{if(w.issued)yt(w.issued.activationCode,"result-status","Activation code copied.")}),L("download-license").addEventListener("click",()=>{if(!w.issued)return;ut(`sahelflow-${w.issued.claims.licenseId}.sflicense`,`${w.issued.activationCode}
+`,"text/plain")}),L("reply-locale").addEventListener("change",()=>{if(!w.issued)return;mt(L("reply-locale").value,w.issued)}),L("export-ledger").addEventListener("click",()=>{ut(`sahelflow-sales-${new Date().toISOString().slice(0,10)}.csv`,Kt(E()),"text/csv")}),window.addEventListener("beforeunload",()=>w.privateKey?.fill(0)),_t(),xt()}Cn();})();
+</script>
+</body>
+</html>
