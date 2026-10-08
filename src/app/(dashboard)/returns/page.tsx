@@ -76,7 +76,6 @@ export default async function ReturnsPage({
           label={t("returns.totalReturns")}
           value={total}
           icon={<RotateCcw />}
-          subtitle={t("returns.completedPct", { pct: completedPct })}
         />
         <StatCard
           label={t("returns.waiting")}

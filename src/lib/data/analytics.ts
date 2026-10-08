@@ -78,9 +78,10 @@ export interface AnalyticsSummary {
   netRevenue: number;
   netProfit: number;
   profitabilityComplete: boolean;
-  revenueDelta: number;
-  ordersDelta: number;
-  aovDelta: number;
+  /** Percent change vs the previous period; null when that period had none to compare against. */
+  revenueDelta: number | null;
+  ordersDelta: number | null;
+  aovDelta: number | null;
 }
 
 export interface AnalyticsReport {
@@ -116,8 +117,9 @@ function addDays(d: Date, n: number): Date {
   return x;
 }
 
-function pct(curr: number, prev: number): number {
-  if (prev === 0) return curr === 0 ? 0 : 100;
+function pct(curr: number, prev: number): number | null {
+  // Growth from nothing has no meaningful percentage ("+100 %" would be false).
+  if (prev === 0) return curr === 0 ? 0 : null;
   return Math.round(((curr - prev) / prev) * 100);
 }
 

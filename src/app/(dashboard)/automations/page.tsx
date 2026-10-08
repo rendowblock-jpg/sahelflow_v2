@@ -84,10 +84,28 @@ function conditionCount(definition: CanonicalAutomationDefinition | null): numbe
   return "all" in definition.conditions ? definition.conditions.all.length : definition.conditions.any.length;
 }
 
-/** Retired engine identifiers ("low_stock") read as words, never as raw keys. */
-function humanize(value: string): string {
-  const words = value.replace(/[._]+/g, " ").trim();
-  return words.charAt(0).toUpperCase() + words.slice(1);
+/**
+ * The retired engine wrote identifiers such as "order_created" or
+ * "low_stock". Where one means exactly what a current catalog entry means,
+ * the card borrows that entry's localized label; anything else reads as a
+ * localized "retired" chip, never as a raw English key.
+ */
+const RETIRED_TRIGGER_EQUIVALENTS: Readonly<Record<string, string>> = {
+  low_stock: "stock.low",
+};
+const RETIRED_ACTION_EQUIVALENTS: Readonly<Record<string, string>> = {
+  notify_seller: "send_notification",
+};
+
+function triggerSpecFor(trigger: string) {
+  return (
+    getSellerTriggerSpec(trigger) ??
+    getSellerTriggerSpec(RETIRED_TRIGGER_EQUIVALENTS[trigger] ?? trigger.replace(/_/g, "."))
+  );
+}
+
+function actionSpecFor(action: string) {
+  return getSellerActionSpec(action) ?? getSellerActionSpec(RETIRED_ACTION_EQUIVALENTS[action] ?? action);
 }
 
 export default async function AutomationsPage({
@@ -143,7 +161,7 @@ export default async function AutomationsPage({
     const structural = readStructuralDefinition(automation);
     const definition = readDefinition(automation);
     const trigger = definition?.trigger ?? automation.trigger;
-    const triggerSpec = getSellerTriggerSpec(trigger);
+    const triggerSpec = triggerSpecFor(trigger);
     const steps = definition?.steps ?? structural?.steps ?? [];
     const actionKeys = steps.length ? steps.map((step) => step.action as string) : [automation.action];
     const performance = byAutomation.get(automation.id) ?? emptyAutomationPerformance(now);
@@ -154,11 +172,11 @@ export default async function AutomationsPage({
       dryRun: automation.dryRun,
       repairRequired: !definition,
       trigger,
-      triggerLabel: triggerSpec ? t(triggerSpec.labelKey) : humanize(trigger),
+      triggerLabel: triggerSpec ? t(triggerSpec.labelKey) : c("workspace.retiredTrigger"),
       conditionCount: conditionCount(definition ?? structural),
       actions: actionKeys.map((action) => {
-        const spec = getSellerActionSpec(action);
-        return { action, label: spec ? c(spec.copyKey as AutomationWorkspaceCopyKey) : humanize(action) };
+        const spec = actionSpecFor(action);
+        return { action, label: spec ? c(spec.copyKey as AutomationWorkspaceCopyKey) : c("workspace.retiredStep") };
       }),
       lastRunAt: automation.lastRunAt ? automation.lastRunAt.toISOString() : null,
       whatsappBlocked: !waConnected && actionKeys.includes("send_whatsapp"),

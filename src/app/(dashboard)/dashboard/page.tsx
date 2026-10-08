@@ -118,7 +118,7 @@ export default async function DashboardPage() {
       ? [
           {
             id: "confirmation-stale",
-            label: t("confirmationQueue.stale"),
+            label: t("dashboard.attention.staleConfirmations"),
             value: staleConfirmations,
             href: "/orders/confirmation-queue",
             icon: AlertTriangle,
@@ -130,7 +130,7 @@ export default async function DashboardPage() {
       ? [
           {
             id: "delivery-pending",
-            label: t("nav.delivery"),
+            label: t("dashboard.attention.pendingDeliveries"),
             value: stats.pendingDeliveries,
             href: "/deliveries?status=pending",
             icon: Truck,
@@ -154,9 +154,9 @@ export default async function DashboardPage() {
       ? [
           {
             id: "low-stock",
-            label: t("dashboard.lowStock"),
+            label: t("dashboard.attention.lowStock"),
             value: stats.lowStockProducts,
-            href: "/products",
+            href: "/products?stock=low",
             icon: Package,
             tone: "warning" as const,
           },

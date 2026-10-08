@@ -81,7 +81,6 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
           label={t("customers.totalCustomers")}
           value={summary.total}
           icon={<Users />}
-          subtitle={t("customers.activePct", { pct: activePct })}
         />
         <StatCard
           label={t("customers.totalSpent")}

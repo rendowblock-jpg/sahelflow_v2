@@ -14,7 +14,7 @@ import {
   getProductsWorkbenchPage,
   getProductWorkbenchSummary,
 } from "@/lib/products/product-workbench";
-import { formatDZD } from "@/lib/utils";
+import { formatDZD, intlLocale } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +58,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     <div className="app-content page-sections">
       <PageHeader
         title={t("products.title")}
-        description={`${t("products.totalStock")}: ${summary.total} · ${t("products.inventoryValue")}: ${formatDZD(summary.inventoryValue, locale)}`}
+        description={`${t("products.totalStock")}: ${new Intl.NumberFormat(intlLocale(locale)).format(summary.stockUnits)} · ${t("products.inventoryValue")}: ${formatDZD(summary.inventoryValue, locale)}`}
         actions={access.export || access.import || canCreate ? (
           <div className="flex flex-wrap items-center gap-2">
             {access.export || access.import ? (
