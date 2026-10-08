@@ -19,7 +19,7 @@ export const SITE = {
   locales: ["ar", "fr", "en"],
   defaultLocale: "ar",
   // Bump when CSS or JS changes so phones do not keep yesterday's stylesheet.
-  asset: "20261002",
+  asset: "20261008",
 };
 
 export function whatsappHref(message) {
