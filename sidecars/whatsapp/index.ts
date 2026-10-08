@@ -12,9 +12,15 @@ import {
 } from "./auth-tokens";
 import { WhatsAppInboundSpool } from "./inbound-spool";
 import {
+  createDispatchJournal,
+  createDurableDispatcher,
+  defaultDispatchJournalFile,
+  durableSendFailure,
+} from "./durable-dispatch";
+import {
   deterministicWhatsAppMessageId,
+  durableSendReceiptJournal,
   findDurableSendReceipt,
-  recordDurableSendReceipt,
 } from "./send-receipts";
 import {
   isIndividualInboundJid,
@@ -461,51 +467,45 @@ app.post("/media/download", async (context) => {
   }
 });
 
-const durableSendsInFlight = new Map<
-  string,
-  {
-    requestBinding: string;
-    promise: Promise<{ id: string; status: string; replayed: boolean }>;
-  }
->();
+// Each HTTP request waits at most this long before answering "still in
+// progress"; the dispatch keeps running and the next request for the same
+// effect key joins it. Every deadline stays under the app's client timeout.
+const DISPATCH_RESPONSE_DEADLINE_MS = {
+  text: 20_000,
+  image: 110_000,
+  video: 170_000,
+  document: 170_000,
+  voice: 170_000,
+} as const;
 
-async function executeDurableSend(
+const durableDispatcher = createDurableDispatcher({
+  receipts: durableSendReceiptJournal,
+  dispatches: createDispatchJournal(defaultDispatchJournalFile()),
+  onMarkerUnavailable: () => {
+    console.error(
+      "[sahelflow-whatsapp-sidecar] provider dispatch marker unavailable; all send failures now fail closed as ambiguous",
+    );
+  },
+});
+wa.onProviderDispatch = (messageId) =>
+  durableDispatcher.observeProviderDispatch(messageId);
+
+function executeDurableSend(
+  kind: keyof typeof DISPATCH_RESPONSE_DEADLINE_MS,
   effectKey: string,
   requestBinding: string,
-  dispatch: () => Promise<{ id: string; status: string }>,
+  dispatch: (providerMessageId: string) => Promise<{ id: string; status: string }>,
+  onSettled?: () => void,
 ): Promise<{ id: string; status: string; replayed: boolean }> {
-  const existing = findDurableSendReceipt(effectKey, requestBinding);
-  if (existing) return { id: existing.id, status: existing.status, replayed: true };
-
-  const active = durableSendsInFlight.get(effectKey);
-  if (active) {
-    if (active.requestBinding !== requestBinding) {
-      throw new Error("WhatsApp effect key is already bound to different content");
-    }
-    return active.promise;
-  }
-
-  const promise = (async () => {
-    const recheck = findDurableSendReceipt(effectKey, requestBinding);
-    if (recheck) return { id: recheck.id, status: recheck.status, replayed: true };
-    const result = await dispatch();
-    if (!result.id) throw new Error("WhatsApp returned no message receipt");
-    recordDurableSendReceipt(effectKey, {
-      requestBinding,
-      id: result.id,
-      status: result.status,
-      completedAt: new Date().toISOString(),
-    });
-    return { ...result, replayed: false };
-  })();
-
-  durableSendsInFlight.set(effectKey, { requestBinding, promise });
-  try {
-    return await promise;
-  } finally {
-    const current = durableSendsInFlight.get(effectKey);
-    if (current?.promise === promise) durableSendsInFlight.delete(effectKey);
-  }
+  const providerMessageId = deterministicWhatsAppMessageId(effectKey);
+  return durableDispatcher.execute({
+    effectKey,
+    requestBinding,
+    providerMessageId,
+    dispatch: () => dispatch(providerMessageId),
+    responseDeadlineMs: DISPATCH_RESPONSE_DEADLINE_MS[kind],
+    onSettled,
+  });
 }
 
 app.post("/send-receipt", async (context) => {
@@ -660,13 +660,8 @@ app.post("/send", async (context) => {
       }
       return context.json({
         ok: true,
-        ...(await executeDurableSend(effectKey, requestBinding!, () =>
-          wa.sendMessage(
-            to,
-            text,
-            deterministicWhatsAppMessageId(effectKey),
-            quotedContext,
-          ),
+        ...(await executeDurableSend("text", effectKey, requestBinding!, (messageId) =>
+          wa.sendMessage(to, text, messageId, quotedContext),
         )),
       });
     }
@@ -674,20 +669,8 @@ app.post("/send", async (context) => {
     const result = await wa.sendMessage(to, text, undefined, quotedContext);
     return context.json({ ok: true, ...result, replayed: false, durable: false });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Send failed";
-    const conflict = /already bound to different content/i.test(message);
-    return context.json(
-      {
-        ok: false,
-        error: conflict
-          ? message
-          : "WhatsApp send outcome requires reconciliation",
-        code: conflict ? "EFFECT_KEY_CONFLICT" : "WHATSAPP_SEND_AMBIGUOUS",
-        retryable: false,
-        ambiguous: !conflict,
-      },
-      conflict ? 409 : 502,
-    );
+    const failure = durableSendFailure(error);
+    return context.json(failure.body, failure.status);
   }
 });
 
@@ -817,37 +800,36 @@ app.post("/send-image", async (context) => {
   }
 
   const bytes = Buffer.from(await image.arrayBuffer());
+  // The bytes are zeroed when the dispatch settles, not when this request
+  // answers: a "still in progress" reply must not corrupt the running upload.
+  let zeroed = false;
+  const zeroBytes = () => {
+    if (zeroed) return;
+    zeroed = true;
+    bytes.fill(0);
+  };
   try {
     return context.json({
       ok: true,
-      ...(await executeDurableSend(effectKey, requestBinding, () =>
-        wa.sendImage(
-          to,
-          bytes,
-          declaredMime,
-          caption,
-          deterministicWhatsAppMessageId(effectKey),
-          quotedContext,
-        ),
+      ...(await executeDurableSend(
+        "image",
+        effectKey,
+        requestBinding,
+        (messageId) =>
+          wa.sendImage(
+            to,
+            bytes,
+            declaredMime,
+            caption,
+            messageId,
+            quotedContext,
+          ),
+        zeroBytes,
       )),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Image send failed";
-    const conflict = /already bound to different content/i.test(message);
-    return context.json(
-      {
-        ok: false,
-        error: conflict
-          ? message
-          : "WhatsApp image send outcome requires reconciliation",
-        code: conflict ? "EFFECT_KEY_CONFLICT" : "WHATSAPP_SEND_AMBIGUOUS",
-        retryable: false,
-        ambiguous: !conflict,
-      },
-      conflict ? 409 : 502,
-    );
-  } finally {
-    bytes.fill(0);
+    const failure = durableSendFailure(error);
+    return context.json(failure.body, failure.status);
   }
 });
 
@@ -975,37 +957,36 @@ app.post("/send-video", async (context) => {
   }
 
   const bytes = Buffer.from(await video.arrayBuffer());
+  // The bytes are zeroed when the dispatch settles, not when this request
+  // answers: a "still in progress" reply must not corrupt the running upload.
+  let zeroed = false;
+  const zeroBytes = () => {
+    if (zeroed) return;
+    zeroed = true;
+    bytes.fill(0);
+  };
   try {
     return context.json({
       ok: true,
-      ...(await executeDurableSend(effectKey, requestBinding, () =>
-        wa.sendVideo(
-          to,
-          bytes,
-          declaredMime,
-          caption,
-          deterministicWhatsAppMessageId(effectKey),
-          quotedContext,
-        ),
+      ...(await executeDurableSend(
+        "video",
+        effectKey,
+        requestBinding,
+        (messageId) =>
+          wa.sendVideo(
+            to,
+            bytes,
+            declaredMime,
+            caption,
+            messageId,
+            quotedContext,
+          ),
+        zeroBytes,
       )),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Video send failed";
-    const conflict = /already bound to different content/i.test(message);
-    return context.json(
-      {
-        ok: false,
-        error: conflict
-          ? message
-          : "WhatsApp video send outcome requires reconciliation",
-        code: conflict ? "EFFECT_KEY_CONFLICT" : "WHATSAPP_SEND_AMBIGUOUS",
-        retryable: false,
-        ambiguous: !conflict,
-      },
-      conflict ? 409 : 502,
-    );
-  } finally {
-    bytes.fill(0);
+    const failure = durableSendFailure(error);
+    return context.json(failure.body, failure.status);
   }
 });
 
@@ -1168,39 +1149,37 @@ app.post("/send-document", async (context) => {
   }
 
   const bytes = Buffer.from(await document.arrayBuffer());
+  // The bytes are zeroed when the dispatch settles, not when this request
+  // answers: a "still in progress" reply must not corrupt the running upload.
+  let zeroed = false;
+  const zeroBytes = () => {
+    if (zeroed) return;
+    zeroed = true;
+    bytes.fill(0);
+  };
   try {
     return context.json({
       ok: true,
-      ...(await executeDurableSend(effectKey, requestBinding, () =>
-        wa.sendDocument(
-          to,
-          bytes,
-          declaredMime,
-          fileName,
-          caption,
-          deterministicWhatsAppMessageId(effectKey),
-          quotedContext,
-        ),
+      ...(await executeDurableSend(
+        "document",
+        effectKey,
+        requestBinding,
+        (messageId) =>
+          wa.sendDocument(
+            to,
+            bytes,
+            declaredMime,
+            fileName,
+            caption,
+            messageId,
+            quotedContext,
+          ),
+        zeroBytes,
       )),
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Document send failed";
-    const conflict = /already bound to different content/i.test(message);
-    return context.json(
-      {
-        ok: false,
-        error: conflict
-          ? message
-          : "WhatsApp document send outcome requires reconciliation",
-        code: conflict ? "EFFECT_KEY_CONFLICT" : "WHATSAPP_SEND_AMBIGUOUS",
-        retryable: false,
-        ambiguous: !conflict,
-      },
-      conflict ? 409 : 502,
-    );
-  } finally {
-    bytes.fill(0);
+    const failure = durableSendFailure(error);
+    return context.json(failure.body, failure.status);
   }
 });
 
@@ -1340,39 +1319,37 @@ app.post("/send-voice", async (context) => {
     typeof seconds === "string" && seconds
       ? Number.parseInt(seconds, 10)
       : null;
+  // The bytes are zeroed when the dispatch settles, not when this request
+  // answers: a "still in progress" reply must not corrupt the running upload.
+  let zeroed = false;
+  const zeroBytes = () => {
+    if (zeroed) return;
+    zeroed = true;
+    bytes.fill(0);
+  };
   try {
     return context.json({
       ok: true,
-      ...(await executeDurableSend(effectKey, requestBinding, () =>
-        wa.sendVoice(
-          to,
-          bytes,
-          declaredMime,
-          voiceMessage === "true",
-          authenticatedSeconds,
-          deterministicWhatsAppMessageId(effectKey),
-          quotedContext,
-        ),
+      ...(await executeDurableSend(
+        "voice",
+        effectKey,
+        requestBinding,
+        (messageId) =>
+          wa.sendVoice(
+            to,
+            bytes,
+            declaredMime,
+            voiceMessage === "true",
+            authenticatedSeconds,
+            messageId,
+            quotedContext,
+          ),
+        zeroBytes,
       )),
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Voice send failed";
-    const conflict = /already bound to different content/i.test(message);
-    return context.json(
-      {
-        ok: false,
-        error: conflict
-          ? message
-          : "WhatsApp voice send outcome requires reconciliation",
-        code: conflict ? "EFFECT_KEY_CONFLICT" : "WHATSAPP_SEND_AMBIGUOUS",
-        retryable: false,
-        ambiguous: !conflict,
-      },
-      conflict ? 409 : 502,
-    );
-  } finally {
-    bytes.fill(0);
+    const failure = durableSendFailure(error);
+    return context.json(failure.body, failure.status);
   }
 });
 

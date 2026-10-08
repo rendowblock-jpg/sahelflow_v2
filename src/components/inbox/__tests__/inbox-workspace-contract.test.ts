@@ -70,9 +70,15 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(queue).toContain("chatLoadGenerationRef");
     expect(queue).toContain("isLatestChatLoad");
     expect(queue).toContain("loadFallbackProjection(loadGeneration)");
+    // Push-down recovery never stops polling: a connected account refreshes
+    // at the live cadence, any other state refreshes its status more slowly
+    // so a reconnect after sleep re-enables Send without a manual refresh.
     expect(transport).toContain("LIVE_RECOVERY_POLL_MS");
-    expect(transport).toContain('sidecarStatus !== "connected"');
-    expect(transport).toContain("sidecarReachable !== true");
+    expect(transport).toContain("STATUS_RECOVERY_POLL_MS");
+    expect(transport).toContain(
+      'sidecarReachable === true && sidecarStatus === "connected"',
+    );
+    expect(transport).toContain("if (wsOpen || sending) return;");
     expect(transport).toContain("loadMessages(chat, { background: true })");
     expect(thread).toContain("const isCurrentConversation");
     expect(thread).toContain("messageLoadGenerationRef");

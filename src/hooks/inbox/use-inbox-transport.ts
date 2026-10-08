@@ -10,6 +10,7 @@ import type {
 import { toast } from "@/lib/toast";
 import {
   LIVE_RECOVERY_POLL_MS,
+  STATUS_RECOVERY_POLL_MS,
   mapDeliveryStatus,
 } from "./inbox-workspace-shared";
 import type { InboxSharedRefs } from "./use-inbox-shared-refs";
@@ -181,15 +182,16 @@ export function useInboxTransportRuntime({
   }, [status]);
 
   useEffect(() => {
-    if (
-      wsOpen ||
-      sidecarReachable !== true ||
-      sidecarStatus !== "connected" ||
-      sending
-    ) {
-      return;
-    }
+    if (wsOpen || sending) return;
 
+    // While the push channel is down, the durable projection is the only way
+    // the Inbox learns anything, including that WhatsApp came back. A
+    // connected account refreshes the chats and the open thread at the live
+    // cadence. Any other state still refreshes the status, more slowly, so a
+    // reconnect after sleep re-enables Send without a manual refresh (the
+    // former "only while connected" gate could never observe the return).
+    const liveCadence =
+      sidecarReachable === true && sidecarStatus === "connected";
     let cancelled = false;
     let inFlight = false;
     const refreshDurableProjection = async () => {
@@ -205,6 +207,9 @@ export function useInboxTransportRuntime({
       try {
         await loadChats();
         if (cancelled || sendingRef.current) return;
+        // Off the live cadence only the status matters; the thread refreshes
+        // once WhatsApp is connected again.
+        if (!liveCadence) return;
         const chat = activeChatRef.current;
         if (chat) await loadMessages(chat, { background: true });
       } finally {
@@ -212,9 +217,12 @@ export function useInboxTransportRuntime({
       }
     };
 
-    const intervalId = window.setInterval(() => {
-      void refreshDurableProjection();
-    }, LIVE_RECOVERY_POLL_MS);
+    const intervalId = window.setInterval(
+      () => {
+        void refreshDurableProjection();
+      },
+      liveCadence ? LIVE_RECOVERY_POLL_MS : STATUS_RECOVERY_POLL_MS,
+    );
     return () => {
       cancelled = true;
       window.clearInterval(intervalId);
