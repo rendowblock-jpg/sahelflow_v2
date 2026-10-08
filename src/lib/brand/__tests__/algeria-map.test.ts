@@ -4,6 +4,9 @@ import {
   ALGERIA_CITIES,
   ALGERIA_LIVE_ROUTES,
   algeriaArcPath,
+  algeriaArcPoints,
+  arcLength,
+  pointOnArc,
   algeriaMapDots,
   algeriaOutlinePath,
   projectAlgeria,
@@ -30,5 +33,15 @@ describe("Algeria live-map geometry", () => {
       expect.arrayContaining(["tindouf", "illizi", "eloued", "tamanrasset"]),
     );
     expect(algeriaMapDots(0.8).length).toBeGreaterThan(40);
+  });
+
+  it("samples each flight along its arc, end to end", () => {
+    const points = algeriaArcPoints("algiers", "tamanrasset");
+    expect(pointOnArc(points, 0)).toEqual(projectAlgeria(ALGERIA_CITIES.algiers));
+    expect(pointOnArc(points, 1)).toEqual(projectAlgeria(ALGERIA_CITIES.tamanrasset));
+    // The arc is lifted: its middle sits above the straight line between cities.
+    const [, midY] = pointOnArc(points, 0.5);
+    expect(midY).toBeLessThan((points[0][1] + points[2][1]) / 2);
+    expect(arcLength(points)).toBeGreaterThan(arcLength(algeriaArcPoints("algiers", "bejaia")));
   });
 });

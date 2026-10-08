@@ -1,111 +1,224 @@
+/*
+ * Every colour below derives from the app theme: --primary carries the active
+ * preset (Sahel, Atlas, Oasis, Dune) in light and dark, --success marks a
+ * delivery, and the surfaces come from the same material stack as the rest of
+ * the entry screen. Changing preset or mode recolours the map live.
+ */
+
+.board {
+  --dz-accent: var(--primary);
+  --dz-land: color-mix(in oklch, var(--primary) 3%, transparent);
+  --dz-coast: color-mix(in oklch, var(--primary) 42%, transparent);
+  --dz-dot: color-mix(in oklch, var(--primary) 16%, var(--surface-3));
+  --dz-city: color-mix(in oklch, var(--primary) 70%, var(--foreground));
+  --dz-arc: color-mix(in oklch, var(--primary) 45%, transparent);
+  --dz-head: color-mix(in oklch, var(--primary) 82%, black);
+  --dz-parcel: var(--primary);
+  --dz-parcel-edge: var(--surface-1);
+  --dz-glow: var(--primary);
+  --dz-glow-opacity: 0.07;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+:global(.dark) .board {
+  --dz-land: color-mix(in oklch, var(--primary) 4%, transparent);
+  --dz-coast: color-mix(in oklch, var(--primary) 46%, transparent);
+  --dz-arc: color-mix(in oklch, var(--primary) 58%, transparent);
+  --dz-dot: color-mix(in oklch, var(--primary) 14%, var(--surface-3));
+  --dz-head: color-mix(in oklch, var(--primary) 30%, white);
+  --dz-parcel: color-mix(in oklch, var(--primary) 12%, white);
+  --dz-glow-opacity: 0.16;
+}
+
 .map {
   display: block;
   width: 100%;
   height: 100%;
+  min-height: 0;
   overflow: visible;
 }
 
+/* ── the country: drawn in once, then breathing quietly ── */
+
 .shape {
-  fill: rgba(56, 189, 248, 0.03);
-  stroke: rgba(125, 211, 252, 0.28);
+  fill: var(--dz-land);
+  stroke: var(--dz-coast);
   stroke-width: 1.5;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: outline 1.8s cubic-bezier(0.65, 0, 0.35, 1) both;
 }
 
 .dots circle {
-  fill: #20354f;
+  fill: var(--dz-dot);
 }
 
 .dots {
-  animation: breathe 6s ease-in-out infinite;
+  animation:
+    appear 1.2s 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    breathe 7s 1.6s ease-in-out infinite;
 }
 
-.arc {
-  fill: none;
-  stroke: rgba(125, 211, 252, 0.55);
-  stroke-width: 1.6;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: draw 3.6s cubic-bezier(0.2, 0.8, 0.2, 1) var(--d, 0s) infinite;
+.glow {
+  animation: appear 1.6s 0.6s ease-out both;
 }
 
-.parcel {
-  fill: #fff;
-  filter: drop-shadow(0 0 6px #38bdf8);
+.glowCore {
+  stop-color: var(--dz-glow);
+  stop-opacity: var(--dz-glow-opacity);
+}
+
+.glowEdge {
+  stop-color: var(--dz-glow);
+  stop-opacity: 0;
 }
 
 .city {
-  fill: #f5b85b;
+  fill: var(--dz-city);
+  opacity: 0.6;
+  animation: appear 0.8s 1s ease-out both;
 }
 
-.cityRing {
+/* ── one flight ── */
+
+.arc {
   fill: none;
-  stroke: #f5b85b;
-  stroke-width: 1.5;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: ring 3.6s ease-out var(--d, 0s) infinite;
+  stroke: var(--dz-arc);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
 }
+
+.comet {
+  fill: none;
+  stroke: var(--dz-head);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px var(--dz-accent))
+    drop-shadow(0 0 10px color-mix(in oklch, var(--dz-accent) 60%, transparent));
+}
+
+.halo {
+  fill: var(--dz-accent);
+  opacity: 0.5;
+}
+
+.parcel {
+  fill: var(--dz-parcel);
+  stroke: var(--dz-parcel-edge);
+  stroke-width: 1.2;
+}
+
+.ring {
+  fill: none;
+  stroke: var(--dz-accent);
+  stroke-width: 1.6;
+}
+
+.badgeDisc {
+  fill: var(--success);
+  stroke: var(--surface-1);
+  stroke-width: 2;
+  filter: drop-shadow(0 4px 10px color-mix(in oklch, var(--success) 50%, transparent));
+}
+
+.badgeTick {
+  fill: none;
+  stroke: white;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── the warehouse in Algiers ── */
 
 .hubCore {
-  fill: #38bdf8;
-  filter: drop-shadow(0 0 10px #38bdf8);
+  fill: var(--dz-accent);
+  filter: drop-shadow(0 0 10px var(--dz-accent));
+  animation: appear 0.6s 0.2s ease-out both;
 }
 
 .hubRing {
   fill: none;
-  stroke: #38bdf8;
-  stroke-width: 2;
+  stroke: var(--dz-accent);
+  stroke-width: 1.6;
   transform-box: fill-box;
   transform-origin: center;
-  animation: ring 2.2s ease-out infinite;
+  animation: hub 2.8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
 }
 
-@keyframes breathe {
-  50% {
-    opacity: 0.75;
-  }
+.hubRingLate {
+  animation-delay: 1.4s;
 }
 
-@keyframes draw {
-  0% {
+.staticArc {
+  fill: none;
+  stroke: var(--dz-arc);
+  stroke-width: 1.3;
+}
+
+/* Theme changes cross-fade rather than snap. */
+.shape,
+.dots circle,
+.city,
+.arc,
+.staticArc,
+.hubCore,
+.hubRing,
+.glowCore,
+.glowEdge {
+  transition:
+    fill 0.4s ease,
+    stroke 0.4s ease,
+    stop-color 0.4s ease;
+}
+
+@keyframes outline {
+  from {
     stroke-dashoffset: 1;
-    opacity: 1;
+    fill-opacity: 0;
   }
-  55% {
+  to {
     stroke-dashoffset: 0;
-    opacity: 1;
   }
-  100% {
-    stroke-dashoffset: 0;
+}
+
+@keyframes appear {
+  from {
     opacity: 0;
   }
 }
 
-@keyframes ring {
+@keyframes breathe {
+  50% {
+    opacity: 0.72;
+  }
+}
+
+@keyframes hub {
   0% {
     transform: scale(1);
-    opacity: 0.9;
+    opacity: 0.85;
   }
   100% {
-    transform: scale(3.4);
+    transform: scale(3.6);
     opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .shape,
   .dots,
-  .arc,
-  .cityRing,
+  .glow,
+  .city,
+  .hubCore,
   .hubRing {
     animation: none;
   }
 
-  .arc {
-    stroke-dashoffset: 0;
-    opacity: 0.55;
-  }
-
-  .parcel {
-    display: none;
+  .hubRing {
+    opacity: 0;
   }
 }
