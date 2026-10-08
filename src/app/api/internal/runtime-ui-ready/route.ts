@@ -4,6 +4,7 @@ import {
   fsyncSync,
   mkdirSync,
   openSync,
+  readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -95,6 +96,45 @@ function recordUiDiagnostic(
   }
 }
 
+function readJson(path: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether this exact runtime instance already persisted its ready evidence.
+ *
+ * The beacon retries a report whose response it never saw (a cold first
+ * request can outlast its 5 s timeout while the server still completes it).
+ * Rewriting the evidence then would briefly regress the diagnostic to
+ * "received" after the desktop already showed the workspace on it, so a
+ * repeat report for the same instance answers without touching the files.
+ * When the desktop clears the evidence for a fresh navigation, the next report
+ * persists it again as usual.
+ */
+function readyEvidencePersisted(
+  ackPath: string,
+  diagnosticPath: string,
+  instanceId: string,
+  appVersion: string,
+): boolean {
+  const ack = readJson(ackPath);
+  const diagnostic = readJson(diagnosticPath);
+  return (
+    ack?.state === "ready" &&
+    ack.instanceId === instanceId &&
+    ack.appVersion === appVersion &&
+    diagnostic?.state === "ready" &&
+    diagnostic.code === "RUNTIME_UI_READY_PERSISTED" &&
+    diagnostic.instanceId === instanceId &&
+    diagnostic.appVersion === appVersion
+  );
+}
+
 export async function POST(request: NextRequest) {
   const attempt = ++uiReadyAttempt;
   const url = request.nextUrl;
@@ -136,6 +176,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { status: "rejected", code: "RUNTIME_SESSION_REQUIRED" },
       { status: 401, headers: noStoreHeaders() },
+    );
+  }
+
+  if (
+    readyEvidencePersisted(
+      ackPath,
+      resolve(dataDir, UI_DIAGNOSTIC_FILE),
+      instanceId,
+      appVersion,
+    )
+  ) {
+    requestBackgroundStart();
+    return NextResponse.json(
+      { status: "ready", instanceId },
+      { status: 200, headers: noStoreHeaders() },
     );
   }
 

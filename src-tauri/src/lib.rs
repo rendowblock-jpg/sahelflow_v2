@@ -639,7 +639,6 @@ pub fn run() {
 }
 
 fn create_workspace_window(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    use tauri::Manager;
     let configuration = app
         .config()
         .app
