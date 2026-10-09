@@ -27,7 +27,7 @@ const translations: Record<Locale, Record<string, string>> = {
       "The integration watermark changed outside this run. Reconcile the integration state and queue a new sync.",
     "commerce.runtime.credentialDrift":
       "The store connection changed after this sync was queued. Start a new sync.",
-    "commerce.runtime.items": "Provider items and immutable attempts",
+    "commerce.runtime.items": "Store orders and attempts",
     "commerce.runtime.attempts": "Attempts",
     "commerce.runtime.sourceOrder": "Provider order",
     "commerce.runtime.queueSuccess": "Commerce synchronization queued",
@@ -74,7 +74,7 @@ const translations: Record<Locale, Record<string, string>> = {
       "Le point de reprise de l’intégration a changé hors de cette exécution. Réconciliez l’intégration puis lancez une nouvelle synchronisation.",
     "commerce.runtime.credentialDrift":
       "La connexion de la boutique a changé après la mise en file de cette synchronisation. Lancez une nouvelle synchronisation.",
-    "commerce.runtime.items": "Commandes fournisseur et tentatives immuables",
+    "commerce.runtime.items": "Commandes boutique et tentatives",
     "commerce.runtime.attempts": "Tentatives",
     "commerce.runtime.sourceOrder": "Commande fournisseur",
     "commerce.runtime.queueSuccess": "Synchronisation e-commerce mise en file",
@@ -120,7 +120,7 @@ const translations: Record<Locale, Record<string, string>> = {
       "تغيرت نقطة المزامنة خارج هذا التشغيل. قم بتسوية حالة التكامل ثم ابدأ مزامنة جديدة.",
     "commerce.runtime.credentialDrift":
       "تغيّر اتصال المتجر بعد جدولة هذه المزامنة. ابدأ مزامنة جديدة.",
-    "commerce.runtime.items": "طلبات المزود والمحاولات غير القابلة للتغيير",
+    "commerce.runtime.items": "طلبات المتجر والمحاولات",
     "commerce.runtime.attempts": "المحاولات",
     "commerce.runtime.sourceOrder": "طلب المزود",
     "commerce.runtime.queueSuccess":

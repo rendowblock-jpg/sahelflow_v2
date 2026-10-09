@@ -16,6 +16,7 @@ import { Download, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 import { isTauriEnv } from "@/lib/env";
 import { intlLocale } from "@/lib/utils";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface UpdateInfo {
   version: string;
@@ -103,7 +104,7 @@ export function UpdateChecker() {
         } catch (err) {
           if (cancelled) return;
           const description =
-            err instanceof Error ? err.message : t("updater.unknownError");
+            err instanceof Error ? localizeServerMessage(err.message) : t("updater.unknownError");
           const transientFailure = isUpdaterTransientFailure(err);
 
           // A broken desktop capability cannot recover within this binary.
@@ -199,7 +200,7 @@ export function UpdateChecker() {
       }, 1500);
     } catch (err) {
       toast.error(t("updater.installFailed"), {
-        description: err instanceof Error ? err.message : t("updater.unknownError"),
+        description: err instanceof Error ? localizeServerMessage(err.message) : t("updater.unknownError"),
       });
     } finally {
       setDownloading(false);

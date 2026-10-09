@@ -159,3 +159,83 @@ export async function getProductStockHistory(
     return [];
   }
 }
+
+/**
+ * Order-driven stock movements from the append-only inventory ledger
+ * (`InventoryMovement`): reservations, releases, dispatches, returns and
+ * inspection outcomes written by the order, return and courier commands.
+ * Orders created before that ledger existed have no rows here.
+ */
+export type OrderStockMovementKind =
+  | "reserved"
+  | "released"
+  | "shipped"
+  | "returnReceived"
+  | "restocked"
+  | "damaged"
+  | "lost"
+  | "storefront"
+  | "other";
+
+export interface OrderStockMovement {
+  id: string;
+  occurredAt: Date;
+  kind: OrderStockMovementKind;
+  quantity: number;
+  orderId: string | null;
+  orderNumber: string | null;
+}
+
+export function classifyInventoryMovement(movementType: string): OrderStockMovementKind {
+  const type = movementType.toLowerCase();
+  if (type.startsWith("storefront_")) return "storefront";
+  if (type.includes("lost")) return "lost";
+  if (type.includes("damaged")) return "damaged";
+  if (type.includes("available")) return "restocked";
+  if (type.includes("return") && type.includes("received")) return "returnReceived";
+  if (type.includes("release")) return "released";
+  if (type.includes("reserve")) return "reserved";
+  if (type.includes("dispatch") || type.includes("consume") || type.includes("ship")) {
+    return "shipped";
+  }
+  return "other";
+}
+
+export async function getProductOrderMovements(
+  prisma: DbClient,
+  productId: string,
+  limit: number = DEFAULT_HISTORY_LIMIT,
+): Promise<OrderStockMovement[]> {
+  try {
+    const rows = await prisma.inventoryMovement.findMany({
+      where: { productId },
+      orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+      take: limit,
+      select: {
+        id: true,
+        movementType: true,
+        quantity: true,
+        orderId: true,
+        occurredAt: true,
+      },
+    });
+    const orderIds = [...new Set(rows.flatMap((row) => (row.orderId ? [row.orderId] : [])))];
+    const orders = orderIds.length
+      ? await prisma.order.findMany({
+          where: { id: { in: orderIds } },
+          select: { id: true, orderNumber: true },
+        })
+      : [];
+    const numbers = new Map(orders.map((order) => [order.id, order.orderNumber]));
+    return rows.map((row) => ({
+      id: row.id,
+      occurredAt: row.occurredAt,
+      kind: classifyInventoryMovement(row.movementType),
+      quantity: Math.abs(row.quantity),
+      orderId: row.orderId,
+      orderNumber: row.orderId ? (numbers.get(row.orderId) ?? null) : null,
+    }));
+  } catch {
+    return [];
+  }
+}

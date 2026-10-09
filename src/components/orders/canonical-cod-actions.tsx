@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
 import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { formatDZD, formatDate } from "@/lib/utils";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface CodPosition {
   orderId: string;
@@ -187,7 +188,7 @@ export function CanonicalCodActions({ orderId }: { orderId: string }) {
         }));
       } catch (caught) {
         if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : copy.unavailable);
+          setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy.unavailable);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -248,7 +249,7 @@ export function CanonicalCodActions({ orderId }: { orderId: string }) {
       };
       if (refreshedData.position) setPosition(refreshedData.position);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.failed);
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy.failed);
     } finally {
       setSubmitting(false);
     }

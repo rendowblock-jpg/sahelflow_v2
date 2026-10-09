@@ -38,6 +38,24 @@ export const dynamic = "force-dynamic";
 
 type PageProps = { params: Promise<{ id: string }> };
 
+/** Audit sources are snake_case; their copy keys are camelCase. */
+const STOCK_SOURCE_KEY = {
+  ai_assistant: "aiAssistant",
+  ai_action: "aiAction",
+  manual: "manual",
+  other: "other",
+} as const;
+
+/** Who changed the stock, in words (raw actor ids never reach the seller). */
+function stockActorKey(actor: string | null): string {
+  if (!actor) return "productStock.by.system";
+  if (actor.startsWith("ai")) return "productStock.by.ai";
+  if (actor.startsWith("person:") || actor.startsWith("member:") || actor === "user") {
+    return "productStock.by.person";
+  }
+  return "productStock.by.system";
+}
+
 export default async function ProductDetailPage({ params }: PageProps) {
   const { t, locale } = await getI18n();
   const actorContext = await requireTrustedAction("products.read");
@@ -49,6 +67,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
     product,
     recentItems,
     stockHistory,
+    orderMovements,
     canManage,
     canReadOrders,
     canReadOrderFinancials,
@@ -255,16 +274,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
                         {event.toStock ?? "—"}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {t(`productStock.source.${event.source}`)}
+                        {t(`productStock.source.${STOCK_SOURCE_KEY[event.source]}`)}
                       </TableCell>
                       <TableCell className="max-w-48 truncate text-sm text-muted-foreground">
                         {event.reason ?? "—"}
                       </TableCell>
-                      <TableCell
-                        className="font-mono text-xs text-muted-foreground"
-                        title={event.actor ?? undefined}
-                      >
-                        {event.actor ?? "—"}
+                      <TableCell className="text-sm text-muted-foreground">
+                        {t(stockActorKey(event.actor))}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -272,6 +288,52 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </Table>
             </div>
           )}
+          {orderMovements.length > 0 ? (
+            <div className="mt-6 space-y-2" data-product-stock-history="order-movements">
+              <h3 className="text-sm font-medium">
+                {t("productStock.orderMovementsTitle")}
+              </h3>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("common.date")}</TableHead>
+                      <TableHead>{t("productStock.movement")}</TableHead>
+                      <TableHead className="text-end">{t("productStock.quantity")}</TableHead>
+                      <TableHead>{t("productStock.order")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orderMovements.map((movement) => (
+                      <TableRow key={movement.id}>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(movement.occurredAt, locale)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {t(`productStock.kind.${movement.kind}`)}
+                        </TableCell>
+                        <TableCell className="text-end tabular-nums">
+                          {movement.quantity}
+                        </TableCell>
+                        <TableCell>
+                          {movement.orderId && movement.orderNumber ? (
+                            <Link
+                              href={`/orders/${movement.orderId}`}
+                              className="font-mono text-sm text-primary hover:underline"
+                            >
+                              {movement.orderNumber}
+                            </Link>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ) : null}
           <p className="mt-3 text-xs text-muted-foreground">
             {t("productStock.coverageNote")}
           </p>

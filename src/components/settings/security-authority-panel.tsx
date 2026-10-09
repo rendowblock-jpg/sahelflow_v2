@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
 import { intlLocale } from "@/lib/utils";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 type AuthorityResponse = {
   authority: {
@@ -92,7 +93,7 @@ export function SecurityAuthorityPanel() {
     try {
       setAuthority(await requestAuthority());
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("settings.security.loadError"));
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("settings.security.loadError"));
     } finally {
       setLoading(false);
     }
@@ -107,7 +108,7 @@ export function SecurityAuthorityPanel() {
         if (!cancelled) setAuthority(nextAuthority);
       } catch (caught) {
         if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : t("settings.security.loadError"));
+          setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("settings.security.loadError"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -145,7 +146,7 @@ export function SecurityAuthorityPanel() {
         setPin("");
         await loadAuthority();
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : t("settings.security.revokeError"));
+        setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("settings.security.revokeError"));
       } finally {
         setBusySessionId(null);
       }

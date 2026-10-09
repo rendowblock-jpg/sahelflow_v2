@@ -3226,5 +3226,6 @@
   "license.details.shops": "المتاجر المشمولة",
   "license.details.members": "أعضاء الفريق",
   "license.details.supportUntil": "التحديثات والدعم حتى",
-  "license.details.licenseId": "رقم الترخيص"
+  "license.details.licenseId": "رقم الترخيص",
+  "deliveries.errors.courierNotConnected": "شركة التوصيل هذه غير مربوطة بعد. اربطها وتحقّق منها في الإعدادات ← التوصيل، ثم أعد المحاولة."
 }

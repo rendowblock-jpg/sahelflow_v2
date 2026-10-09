@@ -35,6 +35,7 @@ import {
   type SettingsWorkspaceLocale,
 } from "@/lib/i18n/settings-workspace";
 import { IconTile } from "@/components/system";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 type DemoCounts = {
   categories: number;
@@ -116,7 +117,7 @@ function extractFailure(caught: unknown): DemoFailure {
   return caught instanceof DemoRequestError
     ? caught.failure
     : {
-        message: caught instanceof Error ? caught.message : "",
+        message: caught instanceof Error ? localizeServerMessage(caught.message) : "",
         code: null,
         status: 0,
       };

@@ -27,6 +27,7 @@ import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { deliveryProviderConfig } from "@/lib/shared";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { DZ_CLOCK, intlLocale } from "@/lib/utils";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 const PROVIDERS = ["yalidine", "maystro", "zrexpress", "ecotrack"] as const;
 const PROVIDER_LABELS: Record<(typeof PROVIDERS)[number], string> = {
@@ -219,7 +220,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
       setNotice(body.command?.replayed ? copy.replayed : copy.queued);
       await refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.failed);
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy.failed);
     } finally {
       setLoadingAction(null);
     }
@@ -236,7 +237,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
       setNotice(copy.synced);
       await refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.failed);
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy.failed);
     } finally {
       setLoadingAction(null);
     }
@@ -270,7 +271,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
       setNotice(body.command?.replayed ? copy.replayed : copy.reconciled);
       await refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.failed);
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy.failed);
     } finally {
       setLoadingAction(null);
     }

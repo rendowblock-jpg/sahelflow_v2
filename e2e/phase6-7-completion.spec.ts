@@ -686,8 +686,11 @@ test.describe.serial("Orders governed seller journey", () => {
     await expect(
       page.getByText(GOVERNED_REVIEW_EXPECTATIONS.en.title),
     ).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
+    // Restated: the review is proven by its decision action, not a badge.
     await expect(
-      page.getByText(GOVERNED_REVIEW_EXPECTATIONS.en.authority),
+      page
+        .getByRole("button", { name: GOVERNED_REVIEW_EXPECTATIONS.en.confirm })
+        .first(),
     ).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
     await expect(page.locator("body")).not.toContainText("rule-1");
     await assertContained(page, `/orders/${orderId}`);

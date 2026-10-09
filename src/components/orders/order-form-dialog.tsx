@@ -53,6 +53,7 @@ import {
   clearManualOrderCommand,
   resolveManualOrderCommand,
 } from "@/lib/orders/manual-order-command-key";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 /**
  * Customer/product rows come in as a capped most-recent slice (R2-c); the
@@ -265,7 +266,7 @@ export function OrderFormDialog({
     } catch (err) {
       toast.error(
         translateServerError(
-          err instanceof Error ? err.message : "",
+          err instanceof Error ? localizeServerMessage(err.message) : "",
           t,
           t("orders.form.createFailed"),
         ),

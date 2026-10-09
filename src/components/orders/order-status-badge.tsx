@@ -35,6 +35,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import type { OrderStatus } from "@/types/domain";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface OrderStatusBadgeProps {
   /** Order ID (required for actual status changes). If null, no API call is made. */
@@ -127,7 +128,7 @@ export function OrderStatusBadge({
     } catch (err) {
       // Revert on error
       setOptimisticStatus(currentStatus);
-      toast.error(err instanceof Error ? err.message : t("orders.statusActions.updateFailed"));
+      toast.error(err instanceof Error ? localizeServerMessage(err.message) : t("orders.statusActions.updateFailed"));
     }
   }
 

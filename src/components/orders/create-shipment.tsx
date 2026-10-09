@@ -38,6 +38,7 @@ import { deliveryProviderConfig } from "@/lib/shared";
 // types module — one authority, no hardcoded provider list.
 import { DELIVERY_PROVIDERS } from "@/lib/integrations/delivery/types";
 import { formatDZD } from "@/lib/utils";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface CreateShipmentProps {
   orderId: string;
@@ -94,7 +95,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
       void mutatePrefix("/api/orders");
       void mutatePrefix("/api/deliveries");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("orders.shipment.errorFallback"));
+      setError(err instanceof Error ? localizeServerMessage(err.message) : t("orders.shipment.errorFallback"));
     } finally {
       setCreating(false);
     }
@@ -120,7 +121,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
       void mutatePrefix("/api/orders");
       void mutatePrefix("/api/deliveries");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("orders.shipment.errorFallback"));
+      setError(err instanceof Error ? localizeServerMessage(err.message) : t("orders.shipment.errorFallback"));
     } finally {
       setSyncing(false);
     }

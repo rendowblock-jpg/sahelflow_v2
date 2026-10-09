@@ -3226,5 +3226,6 @@
   "license.details.shops": "Shops included",
   "license.details.members": "Team members",
   "license.details.supportUntil": "Updates and support until",
-  "license.details.licenseId": "Licence number"
+  "license.details.licenseId": "Licence number",
+  "deliveries.errors.courierNotConnected": "This courier is not connected yet. Connect and verify it in Settings → Delivery, then try again."
 }

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { useI18n } from "@/hooks/use-i18n";
 import { intlLocale } from "@/lib/utils";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface ExtractionData {
   total: number;
@@ -82,7 +83,7 @@ export function ExtractionAnalytics() {
       })
       .catch((caught) => {
         if (caught instanceof DOMException && caught.name === "AbortError") return;
-        setError(caught instanceof Error ? caught.message : t("error.requestFailed"));
+        setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("error.requestFailed"));
       })
       .finally(() => setLoading(false));
     return () => controller.abort();

@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
+import { classifyInventoryMovement } from "@/lib/products/product-stock-history";
 
 // URL-based paths percent-encode the bracketed [id] route segment, so resolve
 // from the repo root like the page-authority contract tests do.
@@ -24,6 +25,13 @@ const RUNTIME_KEYS = [
   "productStock.source.aiAction",
   "productStock.source.manual",
   "productStock.source.other",
+  "productStock.orderMovementsTitle",
+  "productStock.kind.reserved",
+  "productStock.kind.shipped",
+  "productStock.kind.restocked",
+  "productStock.by.ai",
+  "productStock.by.person",
+  "productStock.by.system",
 ];
 
 describe("product detail stock-adjustment history (R3-c)", () => {
@@ -37,8 +45,25 @@ describe("product detail stock-adjustment history (R3-c)", () => {
     expect(page).toContain('"productStock.source"');
     expect(page).toContain('"productStock.reason"');
     expect(page).toContain('"productStock.by"');
-    // Honest coverage note: order-driven movements are not logged yet.
+    // Coverage note: manual/AI above, order movements below, pre-ledger
+    // orders excluded.
     expect(page).toContain('"productStock.coverageNote"');
+    // Raw actor identities never render; they map to words.
+    expect(page).toContain("stockActorKey(event.actor)");
+  });
+
+  it("lists order-driven movements from the inventory ledger, gated on order access", () => {
+    const page = source("src/app/(dashboard)/products/[id]/page.tsx");
+    const workbench = source("src/lib/products/product-detail-workbench.ts");
+    expect(page).toContain('data-product-stock-history="order-movements"');
+    expect(workbench).toContain("getProductOrderMovements");
+    expect(workbench).toContain("const orderMovements = canReadOrders");
+    expect(classifyInventoryMovement("reserve")).toBe("reserved");
+    expect(classifyInventoryMovement("shipment_dispatched")).toBe("shipped");
+    expect(classifyInventoryMovement("customer_return_received_for_inspection")).toBe("returnReceived");
+    expect(classifyInventoryMovement("customer_return_inspected_available")).toBe("restocked");
+    expect(classifyInventoryMovement("customer_return_damaged_loss")).toBe("damaged");
+    expect(classifyInventoryMovement("storefront_delegation_opened")).toBe("storefront");
   });
 
   it("loads the history server-side through the existing workbench pattern", () => {

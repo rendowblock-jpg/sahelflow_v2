@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 /**
  * Client-side form schema — mirrors createCustomerSchema but allows empty
@@ -173,7 +174,7 @@ export function CustomerFormDialog({
           const first = issues[0];
           setServerError(first ? `${first.path.join(".")}: ${first.message}` : t("common.validationFailed"));
         } else {
-          setServerError(data?.error ?? `Request failed (${res.status})`);
+          setServerError(localizeServerMessage(data?.error ?? `Request failed (${res.status})`));
         }
         return;
       }

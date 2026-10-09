@@ -114,6 +114,30 @@ export function DeliveriesBulkSyncToolbar({
       }
       const description = descriptionParts.join(" — ") || undefined;
 
+      // Every failure is a courier that is not connected yet: say so and
+      // point to the fix instead of a bare "0 synced, N failed".
+      if (
+        outcome.succeeded === 0 &&
+        outcome.failed > 0 &&
+        outcome.courierNotConnected === outcome.failed
+      ) {
+        toast.warning(t("deliveries.bulkSync.notConnectedTitle"), {
+          description: t("deliveries.bulkSync.notConnectedBody"),
+          action: {
+            label: t("deliveries.bulkSync.openDeliverySettings"),
+            onClick: () => router.push("/settings?group=delivery"),
+          },
+        });
+        return;
+      }
+      if (outcome.courierNotConnected > 0) {
+        descriptionParts.unshift(
+          t("deliveries.bulkSync.someNotConnected", {
+            n: String(outcome.courierNotConnected),
+          }),
+        );
+      }
+
       if (outcome.failed === 0) {
         toast.success(
           t("deliveries.bulkSync.success", {

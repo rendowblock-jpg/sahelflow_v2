@@ -3226,5 +3226,6 @@
   "license.details.shops": "Boutiques incluses",
   "license.details.members": "Membres de l’équipe",
   "license.details.supportUntil": "Mises à jour et support jusqu’au",
-  "license.details.licenseId": "Numéro de licence"
+  "license.details.licenseId": "Numéro de licence",
+  "deliveries.errors.courierNotConnected": "Ce transporteur n’est pas encore connecté. Connectez-le et vérifiez-le dans Paramètres → Livraison, puis réessayez."
 }

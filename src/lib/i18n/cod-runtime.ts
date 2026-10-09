@@ -31,7 +31,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "codReconciliation.reviewCount": "Review queue",
     "codReconciliation.collectionTitle": "Record courier collection",
     "codReconciliation.collectionHelp":
-      "The expected amount comes from the immutable delivered receivable ledger.",
+      "The expected amount is what the customer owed when the order was delivered.",
     "codReconciliation.noCollection":
       "No delivered order is waiting for its cash to be recorded.",
     "codReconciliation.settlementTitle": "Post a remittance batch",
@@ -100,7 +100,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "codReconciliation.reviewCount": "File de contrôle",
     "codReconciliation.collectionTitle": "Enregistrer l'encaissement transporteur",
     "codReconciliation.collectionHelp":
-      "Le montant attendu provient du grand livre immuable de la livraison.",
+      "Le montant attendu correspond à ce que le client devait à la livraison.",
     "codReconciliation.noCollection":
       "Aucune commande livrée n’attend l’enregistrement de son encaissement.",
     "codReconciliation.settlementTitle": "Enregistrer un lot de versement",
@@ -168,7 +168,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "codReconciliation.remitPending": "بانتظار التحويل",
     "codReconciliation.reviewCount": "قائمة المراجعة",
     "codReconciliation.collectionTitle": "تسجيل تحصيل شركة التوصيل",
-    "codReconciliation.collectionHelp": "يأتي المبلغ المتوقع من سجل مستحق التسليم الثابت.",
+    "codReconciliation.collectionHelp": "المبلغ المتوقع هو ما كان على العميل دفعه عند تسليم الطلبية.",
     "codReconciliation.noCollection": "لا توجد طلبية مسلّمة بانتظار تسجيل تحصيلها.",
     "codReconciliation.settlementTitle": "تسجيل دفعة تحويل",
     "codReconciliation.settlementHelp": "يمكن أن تحتوي الدفعة على طلبيات شركة واحدة وسطر مزوّد غير مطابق اختياري.",

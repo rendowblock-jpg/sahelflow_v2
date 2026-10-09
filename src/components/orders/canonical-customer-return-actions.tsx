@@ -44,6 +44,7 @@ import {
   type ReturnAction,
   type ReturnDisposition,
 } from "@/components/orders/canonical-customer-return-ui";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 type TransitionAction = Exclude<ReturnAction, "request">;
 type RefundMethod = "cash" | "bank" | "credit" | "courier_deduction";
@@ -264,7 +265,7 @@ export function CanonicalCustomerReturnActions({
       router.refresh();
       return true;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.failed);
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy.failed);
       return false;
     } finally {
       setBusy(false);

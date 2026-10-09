@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 const COPY = {
   en: {
@@ -195,7 +196,7 @@ export function CollaborationAdminPanel() {
       if (!response.ok) throw new Error(body.error ?? copy.loadError);
       setView(body);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.loadError);
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy.loadError);
     } finally {
       setLoading(false);
     }
@@ -226,7 +227,7 @@ export function CollaborationAdminPanel() {
       await load();
       return true;
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : copy.saveError;
+      const message = caught instanceof Error ? localizeServerMessage(caught.message) : copy.saveError;
       setError(message);
       toast.error(message);
       return false;

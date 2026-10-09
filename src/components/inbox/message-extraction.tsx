@@ -27,6 +27,7 @@ import {
   type OrderExtractionCopyKey,
   type OrderExtractionLocale,
 } from "@/lib/i18n/order-extraction";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface MessageExtractionProps {
   conversationId?: string;
@@ -133,7 +134,7 @@ export function MessageExtraction({
       setReadSource({ key, anchorId });
       setRevision((value) => value + 1);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy("failed"));
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy("failed"));
     } finally {
       setReading(false);
     }
@@ -172,7 +173,7 @@ export function MessageExtraction({
       }
       router.push(`/orders/${body.order.id}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy("failed"));
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy("failed"));
     } finally {
       setCreating(false);
     }

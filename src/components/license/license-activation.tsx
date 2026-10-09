@@ -28,6 +28,7 @@ import {
   activationServerErrorKey,
 } from "@/lib/license/activation-errors";
 import { toast } from "@/lib/toast";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 const MAX_LICENSE_FILE_BYTES = 64 * 1024;
 
@@ -145,7 +146,7 @@ export function useLicenseActions() {
       await refresh();
       return true;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("license.trialFailed"));
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("license.trialFailed"));
       return false;
     } finally {
       setRequestingTrial(false);

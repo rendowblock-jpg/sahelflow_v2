@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useI18n } from "@/hooks/use-i18n";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface ImportPanelProps {
   entity: "orders" | "products" | "customers";
@@ -82,7 +83,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
       if (!response.ok) throw new Error(data.error ?? t("import.previewFailed"));
       setPreview(data);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("import.failed"));
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("import.failed"));
     } finally {
       setPreviewing(false);
     }
@@ -106,7 +107,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
       setCommitResult(data);
       setPreview(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("import.failed"));
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("import.failed"));
     } finally {
       setCommitting(false);
     }

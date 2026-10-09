@@ -21,6 +21,8 @@
  */
 import { toast as sonnerToast, type ExternalToast } from "sonner";
 
+import { localizeServerMessage as localize } from "@/lib/i18n/localize-server-message";
+
 type ToastVariant = "default" | "success" | "error" | "info" | "warning" | "loading";
 
 /** The options bag sonner accepts for `toast.promise` (loading/success/error renderers + toast options). */
@@ -49,16 +51,21 @@ function withDefaults(options?: ExternalToast): ExternalToast {
   };
 }
 
+// Known English server messages are shown in the seller's language
+// (see localize-server-message.ts); everything else passes through.
 /** The full sonner toast API, with our defaults pre-applied. */
 export const toast = {
   success: (message: string, options?: ExternalToast) =>
     sonnerToast.success(message, withDefaults(options)),
   error: (message: string, options?: ExternalToast) =>
-    sonnerToast.error(message, withDefaults({ duration: 7000, ...options })),
+    sonnerToast.error(
+      localize(message),
+      withDefaults({ duration: 7000, ...options }),
+    ),
   info: (message: string, options?: ExternalToast) =>
     sonnerToast.info(message, withDefaults(options)),
   warning: (message: string, options?: ExternalToast) =>
-    sonnerToast.warning(message, withDefaults(options)),
+    sonnerToast.warning(localize(message), withDefaults(options)),
   loading: (message: string, options?: ExternalToast) =>
     sonnerToast.loading(message, withDefaults(options)),
   // Promise toasts get the same house defaults (sf-toast class, default

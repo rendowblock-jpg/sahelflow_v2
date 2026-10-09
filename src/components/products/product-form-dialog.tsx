@@ -52,6 +52,7 @@ import {
   MAX_PRODUCT_IMAGES,
 } from "@/components/products/product-image-upload";
 import { ProductVariantsManager } from "./product-variants-manager";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 /**
  * Client-side form schema — mirrors createProductSchema but:
@@ -226,7 +227,7 @@ export function ProductFormDialog({
             first ? `${first.path.join(".")}: ${first.message}` : t("common.validationFailed"),
           );
         } else {
-          setServerError(data?.error ?? `Request failed (${res.status})`);
+          setServerError(localizeServerMessage(data?.error ?? `Request failed (${res.status})`));
         }
         return;
       }

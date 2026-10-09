@@ -51,6 +51,7 @@ import { SahelFlowMark } from "@/components/brand/sahelflow-mark";
 import { Panel } from "@/components/system";
 import { cn } from "@/lib/utils";
 import wilayasData from "../../../data/wilayas.json";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 const WILAYAS = wilayasData as Array<{ code: number | string; name: string; nameAr: string }>;
 
@@ -343,7 +344,7 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
     } catch (err) {
       // AUDIT-5 C3 discipline: surface the failure and DO NOT advance.
       toast.error(
-        err instanceof Error ? err.message : t("onboarding.saveFailed"),
+        err instanceof Error ? localizeServerMessage(err.message) : t("onboarding.saveFailed"),
       );
       return false;
     } finally {

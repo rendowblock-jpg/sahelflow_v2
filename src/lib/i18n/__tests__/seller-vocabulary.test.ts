@@ -10,9 +10,9 @@ import { describe, expect, it } from "vitest";
  * not scanned: only quoted strings that contain a space.
  */
 const root = process.cwd();
-const BANNED_EN = /\b(governed|canonical|authority|authorities|durable|durably|sidecar|outbox|endpoint|entitlement|atomically|committed)\b/i;
+const BANNED_EN = /\b(governed|canonical|authority|authorities|durable|durably|sidecar|outbox|endpoint|entitlement|atomically|committed|immutable|receivable ledger)\b/i;
 const BANNED_FR = /(gouvern[ée]|canonique|autorité|durable|outbox|endpoint|atomiquement|droit signé)/i;
-const BANNED_AR = /(محكوم|الموثوقة|سلطة|ذرية|الاستحقاق)/;
+const BANNED_AR = /(محكوم|الموثوقة|سلطة|ذرية|الاستحقاق|مستحق التسليم الثابت)/;
 
 const COPY_SOURCES = [
   ...readdirSync(resolve(root, "src/lib/i18n"))

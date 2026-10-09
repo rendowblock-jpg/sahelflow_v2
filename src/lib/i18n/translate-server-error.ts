@@ -83,6 +83,9 @@ const RULES: readonly ErrorRule[] = [
   { match: "locked after order confirmation", key: "orders.errors.postConfirmationEditLocked" },
   { match: "requires the governed refund flow", key: "returns.errors.completionRequiresRefundFact" },
   { match: "delivery not found", key: "deliveries.errors.notFound" },
+  // Courier connection not set up / not verified (PROVIDER_CAPABILITY_UNCERTIFIED)
+  { match: "capability is not enabled", key: "deliveries.errors.courierNotConnected" },
+  { match: "connection is not certified", key: "deliveries.errors.courierNotConnected" },
   { match: "must be confirmed before shipping", key: "deliveries.errors.mustBeConfirmed" },
   { match: "pas de numéro de suivi", key: "deliveries.errors.noTrackingNumber" },
 
@@ -97,6 +100,9 @@ const RULES: readonly ErrorRule[] = [
 
   // Desktop shop lifecycle (topbar title + native receipts)
   { match: "native shop lifecycle", key: "shops.lifecycleError" },
+
+  // Bare HTTP fallbacks some screens build when a response had no body
+  { match: "request failed (", key: "common.error" },
 
   // Generic fallback patterns
   { match: "not found", key: "error.notFound" },

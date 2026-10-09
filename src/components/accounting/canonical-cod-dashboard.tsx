@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { useI18n } from "@/hooks/use-i18n";
 import { formatDZD, formatDate } from "@/lib/utils";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface CodPosition {
   orderId: string;
@@ -315,7 +316,7 @@ export function CanonicalCodDashboard({
       router.refresh();
       return true;
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("codReconciliation.failed"));
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("codReconciliation.failed"));
       return false;
     } finally {
       setBusy("");

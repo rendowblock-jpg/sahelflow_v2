@@ -35,6 +35,7 @@ import type {
   CanonicalOrderRecoveryAction,
   CanonicalReturnDisposition,
 } from "@/lib/orders/canonical-order-recovery";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface RecoveryPosition {
   orderId: string;
@@ -367,7 +368,7 @@ export function CanonicalOrderRecoveryActions({
       await mutatePrefix("/api/orders");
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.failed);
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy.failed);
     } finally {
       setCommitting(false);
     }
