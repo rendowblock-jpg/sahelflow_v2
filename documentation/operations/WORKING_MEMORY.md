@@ -33,6 +33,10 @@
   created after the runtime thread starts, connected workers idling quietly
   when not enrolled, dependency advisories cleared (next 16.3.8, sharp
   0.35.5), and the first UI audit wave (listed in the PR #487 description).
+  The same line now also carries the 2026-10-09 full walkthrough repairs
+  (rows W-01..W-16 in `operations/UI_UX_TRIAGE_LEDGER.md`: seller
+  vocabulary, localized reason pickers, order/courier/return states,
+  validation and server errors in AR/FR/EN, storefront buyer routes).
   Rows convert only on a later installed candidate that contains
   them.
 
