@@ -3263,5 +3263,8 @@
   "common.actor.system": "SahelFlow",
   "common.actor.ai": "المساعد الذكي",
   "common.actor.customer": "العميل",
-  "common.actor.automation": "الأتمتة"
+  "common.actor.automation": "الأتمتة",
+  "imports.importOrdersDesc": "CSV أو XLSX بالأعمدة: اسم العميل، الهاتف، الولاية، الكمية والمنتج (الاسم أو SKU). البلدية والعنوان والسعر ورسوم التوصيل اختيارية.",
+  "import.chooseFile": "اختر ملفًا",
+  "import.noFileChosen": "لم يتم اختيار ملف"
 }

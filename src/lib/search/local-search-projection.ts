@@ -11,6 +11,7 @@ import {
   rankUniversalSearchCandidates,
   type UniversalSearchCandidate,
 } from "@/lib/search/universal-search";
+import { deliveryProviderConfig } from "@/lib/shared";
 
 const DEFAULT_CANDIDATE_LIMIT = 48;
 const MAX_PREFIX_LENGTH = 40;
@@ -813,8 +814,8 @@ async function buildDeliveryIndex(): Promise<SearchIndex> {
         delivery.order.orderNumber ??
         delivery.id.slice(-8),
       sublabel: delivery.order.orderNumber
-        ? `${delivery.provider} · \u2066${delivery.order.orderNumber}\u2069`
-        : delivery.provider,
+        ? `${deliveryProviderConfig[delivery.provider]?.label ?? delivery.provider} · \u2066${delivery.order.orderNumber}\u2069`
+        : (deliveryProviderConfig[delivery.provider]?.label ?? delivery.provider),
       keywords: [delivery.order.orderNumber ?? ""],
       href: `/deliveries/${delivery.id}`,
       updatedAt: delivery.updatedAt,

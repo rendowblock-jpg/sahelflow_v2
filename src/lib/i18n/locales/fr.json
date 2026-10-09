@@ -3263,5 +3263,8 @@
   "common.actor.system": "SahelFlow",
   "common.actor.ai": "Assistant IA",
   "common.actor.customer": "Client",
-  "common.actor.automation": "Automatisation"
+  "common.actor.automation": "Automatisation",
+  "imports.importOrdersDesc": "CSV ou XLSX avec colonnes : nom du client, téléphone, wilaya, quantité et produit (nom ou SKU). Commune, adresse, prix et frais de livraison sont optionnels.",
+  "import.chooseFile": "Choisir un fichier",
+  "import.noFileChosen": "Aucun fichier choisi"
 }

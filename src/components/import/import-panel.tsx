@@ -12,7 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Table,
@@ -126,14 +125,26 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
         <div className="space-y-2">
           <Label htmlFor={`file-${entity}`}>{t("import.fileLabel")}</Label>
           <div className="flex items-center gap-2">
-            <Input
+            {/* The native file input's "Choose File / No file chosen" text
+                follows the browser, not the app language; it stays for
+                keyboard and assistive access but the visible control is ours. */}
+            <input
               id={`file-${entity}`}
               ref={fileInputRef}
               type="file"
               accept=".csv,.xlsx,.xls,.txt"
               onChange={handleFileChange}
-              className="flex-1"
+              className="sr-only"
             />
+            <label
+              htmlFor={`file-${entity}`}
+              className="flex h-9 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-control border bg-background px-3 text-sm transition-colors hover:bg-muted/50 focus-within:ring-2 focus-within:ring-ring"
+            >
+              <span className="shrink-0 font-medium">{t("import.chooseFile")}</span>
+              <span className="min-w-0 truncate text-muted-foreground" dir="auto">
+                {file ? file.name : t("import.noFileChosen")}
+              </span>
+            </label>
             <Button onClick={handlePreview} disabled={!file || previewing}>
               {previewing ? (
                 <Loader2 className="me-1.5 size-4 animate-spin" aria-hidden="true" />
