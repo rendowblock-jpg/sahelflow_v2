@@ -728,7 +728,9 @@ function StorefrontViewBody({
             <CardTitle className="text-base">{t("storefront.view.checkout")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-3">
+            {/* noValidate: the checkout validates itself in the store's
+                language; the browser bubble would speak the browser's. */}
+            <form noValidate onSubmit={handleSubmit} className="space-y-3">
               <div aria-hidden="true" className="absolute -start-[9999px] h-px w-px overflow-hidden">
                 <Label htmlFor="website">{t("storefront.view.honeypot")}</Label>
                 <Input id="website" name="website" tabIndex={-1} autoComplete="off" value={form.website} onChange={(event) => changeForm("website", event.target.value)} />

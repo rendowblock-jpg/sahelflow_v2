@@ -27,6 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useI18n } from "@/hooks/use-i18n";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import { cn, formatDZD } from "@/lib/utils";
+import { displayContactName } from "@/lib/validation/phone";
 
 type ContextResponse = {
   customer: {
@@ -166,7 +167,7 @@ export function InboxCustomerWorkPanel({
             dir="ltr"
             className="mt-0.5 truncate text-xs tabular-nums text-muted-foreground"
           >
-            {chat.phone}
+            {chat.phone ? displayContactName(chat.phone) : null}
           </p>
         ) : null}
       </div>
@@ -211,7 +212,7 @@ export function InboxCustomerWorkPanel({
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{context.customer.name}</p>
                       <p dir="ltr" className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {context.customer.phone}
+                        {displayContactName(context.customer.phone)}
                       </p>
                     </div>
                     {context.fieldAccess.risk &&

@@ -35,6 +35,14 @@ export const PUBLIC_API_ROUTES: readonly string[] = [
   "/api/storefront/gates/public",
   "/api/storefront/otp/send",
   "/api/storefront/otp/verify",
+  // FD-061 EX-4 buyer-side calls from the public storefront: the reward
+  // preview (read-only, scoped to the slug's active offers), the abandoned-
+  // cart capture (rate-limited, always 204) and the order-verified review
+  // (rate-limited, orderNumber + phone). They were missing here, so every
+  // shopper got 401. Moderation (/api/storefront/reviews/[id]/…) stays private.
+  "/api/storefront/offers/evaluate",
+  "/api/storefront/cart-capture",
+  "/api/storefront/reviews",
   "/api/reports/daily", // self-protects via x-cron-secret
 ];
 

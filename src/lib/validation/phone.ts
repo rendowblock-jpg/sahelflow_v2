@@ -83,3 +83,16 @@ export const dzPhoneSchema = z
   .refine((value) => isValidDZMobilePhone(value), {
     message: "Invalid Algerian phone (must be 0[5-7]XXXXXXXX)",
   });
+
+/**
+ * Readable contact label: a chat with no saved name is labelled by its number,
+ * which arrives as raw international digits ("213555345678"). Algerian numbers
+ * are shown the way sellers write them ("05 55 34 56 78"), foreign ones with a
+ * leading "+"; real names pass through unchanged.
+ */
+export function displayContactName(name: string): string {
+  const compact = name.replace(/[\s+]/g, "");
+  if (!/^\d{9,15}$/.test(compact)) return name;
+  if (compact.startsWith("213") || compact.startsWith("0")) return formatDZPhone(compact);
+  return `+${compact}`;
+}

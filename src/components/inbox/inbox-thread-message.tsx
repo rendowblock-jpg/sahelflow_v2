@@ -31,6 +31,7 @@ import { MessageStatus } from "@/components/inbox/message-status";
 import { Button } from "@/components/ui/button";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
+import { whatsappSendFailureCopy } from "@/hooks/inbox/inbox-workspace-shared";
 
 function messageTime(value: number, locale: "ar" | "fr" | "en"): string {
   return new Intl.DateTimeFormat(intlLocale(locale), {
@@ -555,8 +556,13 @@ export const MessageBubble = memo(function MessageBubble({
             {t("inbox.retry")}
           </Button>
           {message.outboxErrorCode ? (
-            <span className="font-mono text-caption text-muted-foreground">
-              {message.outboxErrorCode}
+            // The reason in words; the raw code stays in the tooltip for
+            // support diagnostics.
+            <span
+              className="max-w-64 text-end text-caption text-muted-foreground"
+              title={message.outboxErrorCode}
+            >
+              {whatsappSendFailureCopy(t, { errorCode: message.outboxErrorCode })}
             </span>
           ) : null}
         </div>

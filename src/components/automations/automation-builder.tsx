@@ -254,8 +254,15 @@ export function AutomationBuilder({
           maxLength={120}
           disabled={saving}
           placeholder={c("builder.namePlaceholder")}
+          // A new automation starts on its name: an empty name is the one
+          // thing blocking "Create", so it reads as a field, not a title.
+          autoFocus={!isEdit && !flow.name}
+          aria-invalid={!flow.name.trim() || undefined}
           onChange={(event) => patch({ name: event.target.value })}
-          className="h-9 min-w-0 flex-1 rounded-control border border-transparent bg-transparent px-2 text-body font-semibold outline-none transition-colors placeholder:font-normal placeholder:text-muted-foreground hover:border-border focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+          className={cn(
+            "h-9 min-w-0 flex-1 rounded-control border bg-transparent px-2 text-body font-semibold outline-none transition-colors placeholder:font-normal placeholder:text-muted-foreground hover:border-border focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25",
+            flow.name.trim() ? "border-transparent" : "border-dashed border-border bg-muted/30",
+          )}
         />
 
         {dirty ? (
