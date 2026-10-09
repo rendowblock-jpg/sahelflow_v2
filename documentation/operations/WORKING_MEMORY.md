@@ -1,13 +1,34 @@
 # SahelFlow — Working Memory
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
-> **Last updated:** 2026-10-08
+> **Last updated:** 2026-10-09
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
 ## Current truth
 
-> **Read this first.** The live order is **Exact next-session order** below. Everything else in this section is a dated record. A "Next:" or "latest" inside a bullet from before 2026-10-08 is what was true that day.
+> **Read this first.** The live order is **Exact next-session order** below. Everything else in this section is a dated record. A "Next:" or "latest" inside a bullet from before 2026-10-09 is what was true that day.
+
+- **Internal.42 / FD-070 PUBLISHED (2026-10-09):** PR #487 (the
+  Founder-priority line plus the full walkthrough W-01..W-23) merged by
+  expected head `2dd0d6e…` as `dc73b83ffb866b3c57e911163604dd5d71b4da5a`
+  after its full Required battery was green (CI `37954036625`, Phase 5
+  `37954035870`, Phase 6-7 `37954035902`, installed-MSI evidence included).
+  The Founder's directive to make the next signed release adopted **FD-070**;
+  release PR #488 merged by expected head `193a844…` as protected `main`
+  `2e8900bd5d6489aa6244ee8c9c94e8a05faf0164` after its own full battery
+  (CI `37960599916`, Phase 5 `37960599544`, Phase 6-7 `37960599445`, 20
+  success / 1 draft-only skip). Signed run **37963575605** (auto-dispatched on
+  the merge; a duplicate manual dispatch was cancelled before it started)
+  passed every step incl. signed install/reopen and the authenticated WebView
+  proof. Tag `sahelflow-v1.0.0-internal.42-2e8900bd5d6489aa6244ee8c9c94e8a05faf0164`,
+  published 2026-10-09T17:24:38Z, app `1.0.0-internal.42` / MSI `1.0.0.42`,
+  MSI digest `sha256:24613850d457f551d5378040c648204a8b4ad5b89c771b881af44c53764d5450`,
+  `customer-online` / `sahelflow.com`. Not yet reported installed; no row
+  converts from publication. Netlify (an unrelated deploy-preview site wired
+  to the repo from outside it) was removed by the Founder; it was never a
+  Required check. Next source item: `SahelFlow-Setup.exe` for new clients
+  (Founder 2026-10-09), shipping in the release after Internal.42.
 
 - **Internal.41 published and installed; Founder-priority source line open (2026-10-08):**
   protected `main` is `5e611a87ae967ddb84cf7a23d9dbb12f7480256f` (PR #485,
@@ -187,22 +208,24 @@ Binding rules:
 
 ## Exact next-session order
 
-Protected `main` is `5e611a87…` / #485. Internal.41 / FD-067 is published
-and Founder-installed (reported 2026-10-08). #456 is stale.
+Protected `main` is `2e8900bd…` / #488. Internal.42 / FD-070 is published
+(2026-10-09); Internal.41 is what the Founder last reported installed. #456
+is stale.
 
 1. Re-resolve protected `main`, open PRs and #164/#230/#306/#316/#317.
    Sidecar rows INB-13/14/19/32 stay BLOCKED.
-2. PR #487 (Founder-priority source line: WhatsApp durable dispatch,
-   licence distribution, native splash, UI audit wave 1) merges by expected
-   head only after its full Required battery, including installed-MSI
-   evidence, is green at that head. It is source; it converts no row.
-3. On the installed Internal.41 candidate, one campaign, state preserved.
-   Convert only rows that build contains and the observation proves.
-   Record results in the UI, AI and WhatsApp ledgers. The #487 line is not
-   in Internal.41: its rows wait for the next signed successor, which needs
-   its own release-authority PR and Founder decision.
-4. #306 logout executes LAST, after the other rows on that candidate are
+2. The Founder updates Internal.41 → Internal.42 in place (AppData
+   preserved). On that installed candidate, one campaign, state preserved:
+   WhatsApp send (the durable-dispatch line), licence activation by `SFLA1`
+   code / `.sflicense`, the first-frame splash, team access, then the W rows.
+   Convert only rows that build contains and the observation proves; record
+   results in the UI, AI and WhatsApp ledgers.
+3. #306 logout executes LAST, after the other rows on that candidate are
    green. Then resume FRC-3 in order A→D→C→B. Keep external blockers.
+4. Source: `SahelFlow-Setup.exe` for new clients (per-machine NSIS installer
+   beside the MSI, updater entries for both, installed evidence lane, site
+   `/get/windows` serving the .exe). It reaches clients only through the next
+   release-authority PR.
 5. Source-only, in parallel, from `operations/TRANSFORMATION_HANDOFF.md` §4:
    STR-01 composer seam, then the list seam, then `storefront-studio`,
    `automation-builder` and `inbox-v3-queue`. Then TEST-01, L10N-01,
@@ -223,9 +246,10 @@ and Founder-installed (reported 2026-10-08). #456 is stale.
 ## Current hard blockers and dependencies
 
 - WhatsApp FRC-1 requires the Founder’s retained real phone/account/session.
-  Internal.41 is what is installed (reported 2026-10-08); it contains the
-  Internal.40 campaign repairs (#484) but not the PR #487 durable-dispatch
-  line. Internal.38/39/40 remain retained publication evidence.
+  Internal.41 is what is installed (reported 2026-10-08); published
+  Internal.42 (2026-10-09) carries the PR #487 durable-dispatch line and is
+  the candidate for that campaign. Internal.38–41 remain retained
+  publication evidence.
 - Real Gemini minimal inference requires a seller-owned key; free-tier work uses synthetic/redacted inputs only.
 - Commerce requires development/test environments and HTTPS ingress for webhook tests.
 - Courier live certification requires provider sandbox/demo or authorized seller credentials.
