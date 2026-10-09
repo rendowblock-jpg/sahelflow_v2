@@ -22,7 +22,9 @@ const translations: Record<Locale, Record<string, string>> = {
   en: {
     "orderLifecycle.stepsLabel": "Order journey",
     "orderLifecycle.nextActions": "Next actions",
-    "orderLifecycle.authority.legacy": "Legacy status authority",
+    "orderLifecycle.authority.legacy": "Basic tracking",
+    "orderLifecycle.authority.legacyHint":
+      "This order was created before full order tracking was added. You can still move it through each status; some details, like refusal reasons, are not recorded.",
     "orderLifecycle.moreActions": "More actions",
     "orderLifecycle.viewTimeline": "View timeline",
     "orderLifecycle.substate.updated": "Updated {{time}}",
@@ -33,7 +35,9 @@ const translations: Record<Locale, Record<string, string>> = {
   fr: {
     "orderLifecycle.stepsLabel": "Parcours de la commande",
     "orderLifecycle.nextActions": "Prochaines actions",
-    "orderLifecycle.authority.legacy": "Autorité de statut historique",
+    "orderLifecycle.authority.legacy": "Suivi simple",
+    "orderLifecycle.authority.legacyHint":
+      "Cette commande a été créée avant l’ajout du suivi complet. Vous pouvez toujours la faire passer par chaque statut ; certains détails, comme les motifs de refus, ne sont pas enregistrés.",
     "orderLifecycle.moreActions": "Autres actions",
     "orderLifecycle.viewTimeline": "Voir le suivi",
     "orderLifecycle.substate.updated": "Mis à jour {{time}}",
@@ -44,7 +48,9 @@ const translations: Record<Locale, Record<string, string>> = {
   ar: {
     "orderLifecycle.stepsLabel": "مسار الطلبية",
     "orderLifecycle.nextActions": "الإجراءات التالية",
-    "orderLifecycle.authority.legacy": "صلاحية حالة تقليدية",
+    "orderLifecycle.authority.legacy": "تتبّع أساسي",
+    "orderLifecycle.authority.legacyHint":
+      "أُنشئت هذه الطلبية قبل إضافة التتبّع الكامل. لا يزال بإمكانك نقلها بين الحالات؛ لكن بعض التفاصيل، مثل أسباب الرفض، لا تُسجَّل.",
     "orderLifecycle.moreActions": "إجراءات أخرى",
     "orderLifecycle.viewTimeline": "عرض المسار",
     "orderLifecycle.substate.updated": "آخر تحديث {{time}}",

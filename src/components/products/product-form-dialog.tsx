@@ -52,6 +52,8 @@ import {
   MAX_PRODUCT_IMAGES,
 } from "@/components/products/product-image-upload";
 import { ProductVariantsManager } from "./product-variants-manager";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { translateValidationMessage } from "@/lib/i18n/validation-messages";
 
 /**
  * Client-side form schema — mirrors createProductSchema but:
@@ -122,6 +124,8 @@ interface ProductFormDialogProps {
   open?: boolean;
   /** Called when the dialog requests to open/close (controlled mode). */
   onOpenChange?: (open: boolean) => void;
+  /** Called after a successful save (e.g. to refresh a server-rendered page). */
+  onSaved?: () => void;
 }
 
 export function ProductFormDialog({
@@ -130,6 +134,7 @@ export function ProductFormDialog({
   trigger,
   open: openProp,
   onOpenChange,
+  onSaved,
 }: ProductFormDialogProps) {
   const { t } = useI18n();
   const isEdit = !!product;
@@ -220,10 +225,10 @@ export function ProductFormDialog({
           const issues = data.details as { message: string; path: string[] }[];
           const first = issues[0];
           setServerError(
-            first ? `${first.path.join(".")}: ${first.message}` : t("common.validationFailed"),
+            first ? translateValidationMessage(first.message, t) : t("common.validationFailed"),
           );
         } else {
-          setServerError(data?.error ?? `Request failed (${res.status})`);
+          setServerError(localizeServerMessage(data?.error ?? `Request failed (${res.status})`));
         }
         return;
       }
@@ -232,6 +237,7 @@ export function ProductFormDialog({
       form.reset();
       setOpen(false);
       mutatePrefix("/api/products");
+      onSaved?.();
       toast.success(t(isEdit ? "products.updated" : "products.created"));
     } catch (err) {
       console.error("[ProductFormDialog] submit error:", err);

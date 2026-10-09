@@ -31,13 +31,15 @@ import { mutatePrefix } from "@/lib/swr/mutate";
 import { useI18n } from "@/hooks/use-i18n";
 import { getBrandIcon } from "@/components/brand/brand-icons";
 import { useDeliveryFeeQuote } from "@/components/deliveries/use-delivery-fee-quote";
-import { deliveryProviderConfig } from "@/lib/shared";
+import { deliveryProviderConfig, deliveryProviderLabel } from "@/lib/shared";
 // Registry-driven provider list (R3-d): DELIVERY_PROVIDERS is the canonical
 // union that keys the server-side adapter REGISTRY. The registry index module
 // is `server-only`, so the client imports the same const from the shared
 // types module — one authority, no hardcoded provider list.
 import { DELIVERY_PROVIDERS } from "@/lib/integrations/delivery/types";
 import { formatDZD } from "@/lib/utils";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { deliveryStatusI18nKey } from "@/lib/shared/status-colors";
 
 interface CreateShipmentProps {
   orderId: string;
@@ -94,7 +96,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
       void mutatePrefix("/api/orders");
       void mutatePrefix("/api/deliveries");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("orders.shipment.errorFallback"));
+      setError(err instanceof Error ? localizeServerMessage(err.message) : t("orders.shipment.errorFallback"));
     } finally {
       setCreating(false);
     }
@@ -120,7 +122,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
       void mutatePrefix("/api/orders");
       void mutatePrefix("/api/deliveries");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("orders.shipment.errorFallback"));
+      setError(err instanceof Error ? localizeServerMessage(err.message) : t("orders.shipment.errorFallback"));
     } finally {
       setSyncing(false);
     }
@@ -219,7 +221,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("orders.shipment.carrier")}</span>
                 <span className="font-medium">
-                  {deliveryProviderConfig[delivery.provider]?.label ?? delivery.provider}
+                  {deliveryProviderLabel(delivery.provider, t)}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -228,7 +230,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("common.status")}</span>
-                <span>{delivery.status.replace(/_/g, " ")}</span>
+                <span>{t(deliveryStatusI18nKey(delivery.status))}</span>
               </div>
             </div>
             <div className="flex gap-2">

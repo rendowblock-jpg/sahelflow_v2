@@ -112,9 +112,9 @@ export function AiComposerFooter({
 }) {
   return (
     <div className="mt-2 flex items-center justify-between gap-3 px-1 text-caption text-muted-foreground">
-      <p className="flex min-w-0 items-center gap-1.5">
-        <ShieldCheck className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-        <span className="truncate">{trust}</span>
+      <p className="flex min-w-0 items-start gap-1.5">
+        <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
+        <span className="min-w-0">{trust}</span>
       </p>
       <div className="hidden shrink-0 items-center gap-2 md:flex">
         {/* Key names stay LTR-isolated so an Arabic hint never reorders them. */}

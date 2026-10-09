@@ -8,7 +8,7 @@
  *
  * Fetches from /api/orders/[id]/timeline (RSC fallback or SWR).
  */
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDZD } from "@/lib/utils";
 import {
   Package, Truck, CheckCircle2, XCircle, RotateCcw, DollarSign,
   Edit3, Plus, Minus, Hash, Clock,
@@ -47,11 +47,41 @@ const ACTION_CONFIG: Record<string, { icon: React.ComponentType<{ className?: st
 
 const DEFAULT_CONFIG = { icon: Hash, color: "text-muted-foreground" };
 
+/** Who did it, in words: raw actor ids ("user", "person:…") never render. */
+export function actorLabel(
+  actor: string,
+  t: (key: string) => string,
+): string {
+  const value = actor.toLowerCase();
+  if (value.startsWith("ai")) return t("common.actor.ai");
+  if (value.startsWith("automation")) return t("common.actor.automation");
+  if (value.startsWith("customer") || value.startsWith("storefront")) {
+    return t("common.actor.customer");
+  }
+  if (value === "user" || value.startsWith("person") || value.startsWith("member")) {
+    return t("common.actor.person");
+  }
+  return t("common.actor.system");
+}
+
+const SIMPLE_ACTIONS = new Set([
+  "created",
+  "refuse",
+  "refund_reversed",
+  "delivery_sync_conflict",
+  "cod_unmatched_line_reconciled",
+  "cod_settlement_corrected",
+  "cod_collection_corrected",
+]);
+
 function formatActionLabel(
   actionType: string,
   payload: string | null,
   t: (key: string, params?: Record<string, string | number>) => string,
+  locale: string,
 ): string {
+  const statusLabel = (value: unknown) =>
+    typeof value === "string" ? t(`orders.status.${value}`) : "?";
   try {
     const p = payload ? JSON.parse(payload) : {};
     switch (actionType) {
@@ -63,7 +93,10 @@ function formatActionLabel(
             reason: rejectionReasonDisplay(p.rejectionReason, t),
           });
         }
-        return t("orders.timeline.status_change", { from: p.from ?? "?", to: p.to ?? "?" });
+        return t("orders.timeline.status_change", {
+          from: statusLabel(p.from),
+          to: statusLabel(p.to),
+        });
       case "item_add":
         return t("orders.timeline.item_add", { productName: p.productName ?? t("orders.timeline.unknown") });
       case "item_remove":
@@ -77,16 +110,24 @@ function formatActionLabel(
       case "return":
         return t("orders.timeline.return");
       case "refund":
-        return t("orders.timeline.refund", { amount: p.amount ?? 0, method: p.method ?? t("orders.timeline.cash") });
+        return t("orders.timeline.refund", {
+          amount: formatDZD(Number(p.amount ?? 0), locale),
+          method: p.method ?? t("orders.timeline.cash"),
+        });
       case "cod_collected":
-        return t("orders.timeline.cod_collected", { amount: p.amount ?? 0 });
+        return t("orders.timeline.cod_collected", {
+          amount: formatDZD(Number(p.amount ?? 0), locale),
+        });
       case "cod_remitted":
         return t("orders.timeline.cod_remitted", { remittanceRef: p.remittanceRef ?? "—" });
       case "edit":
         return t("orders.timeline.edit");
       case "cancel":
         return t("orders.timeline.cancel");
+      case "create":
+        return t("orders.timeline.created");
       default:
+        if (SIMPLE_ACTIONS.has(actionType)) return t(`orders.timeline.${actionType}`);
         return actionType.replace(/_/g, " ");
     }
   } catch {
@@ -125,9 +166,9 @@ export function OrderTimeline({ entries }: OrderTimelineProps) {
 
             {/* Content */}
             <div className={cn("flex-1 pb-4", isLast && "pb-0")}>
-              <p className="text-sm font-medium">{formatActionLabel(entry.actionType, entry.payload, t)}</p>
+              <p className="text-sm font-medium">{formatActionLabel(entry.actionType, entry.payload, t, locale)}</p>
               <p className="text-xs text-muted-foreground">
-                {entry.actor} · {formatDate(entry.createdAt, locale)}
+                {actorLabel(entry.actor, t)} · {formatDate(entry.createdAt, locale)}
               </p>
             </div>
           </div>

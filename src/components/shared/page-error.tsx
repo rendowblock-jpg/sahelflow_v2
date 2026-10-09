@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertTriangle, RefreshCw, RotateCw } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, LayoutDashboard, Lock, RefreshCw, RotateCw } from "lucide-react";
 
 import { StateSurface } from "@/components/shared/state-surface";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/use-i18n";
+import { forbiddenActionFromDigest } from "@/lib/identity/access-denied";
 import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { DESKTOP_RUNTIME_RECOVERED_EVENT } from "@/lib/runtime/desktop-recovery";
 
@@ -37,7 +39,38 @@ function isExpectedError(error: Error & { digest?: string }): boolean {
  * actions and human copy. Expected validation/authorization-style failures may
  * retain their bounded message when useful.
  */
-export function PageError({ error, reset, title, hideReload }: PageErrorProps) {
+export function PageError(props: PageErrorProps) {
+  // A role without access to this page is not a failure: say so plainly and
+  // offer the way back, with no retry that could never succeed.
+  if (forbiddenActionFromDigest(props.error.digest)) return <PageAccessDenied />;
+  return <PageFailure {...props} />;
+}
+
+function PageAccessDenied() {
+  const { t } = useI18n();
+  return (
+    <div className="app-content">
+      <StateSurface
+        icon={Lock}
+        title={t("error.accessDenied.title")}
+        description={t("error.accessDenied.description")}
+        tone="neutral"
+        size="page"
+        testId="page-access-denied"
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link href="/dashboard">
+              <LayoutDashboard className="me-2 size-4" aria-hidden="true" />
+              {t("error.accessDenied.home")}
+            </Link>
+          </Button>
+        }
+      />
+    </div>
+  );
+}
+
+function PageFailure({ error, reset, title, hideReload }: PageErrorProps) {
   const { t } = useI18n();
   const expected = isExpectedError(error);
 

@@ -169,6 +169,22 @@ export const deliveryProviderConfig: Record<string, { color: string; label: stri
 
 // ── Customer Status Config ───────────────────────────────────────────────────
 
+/**
+ * Courier name for display: the brand label for known couriers, a localized
+ * "Manual delivery" for seller-handled shipments, otherwise the stored value.
+ * Raw provider ids ("maystro", "manual-courier") never reach the seller.
+ */
+export function deliveryProviderLabel(
+  provider: string | null | undefined,
+  t: (key: string) => string,
+): string {
+  if (!provider) return "—";
+  if (provider === "manual" || provider === "manual-courier") {
+    return t("deliveries.provider.manual");
+  }
+  return deliveryProviderConfig[provider]?.label ?? provider;
+}
+
 export const customerStatusConfig: Record<string, { i18nKey: string; color: string; bg: string }> = {
   active: { i18nKey: 'common.active', color: 'text-success dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50' },
   inactive: { i18nKey: 'common.inactive', color: 'text-muted-foreground', bg: 'bg-muted border-border' },

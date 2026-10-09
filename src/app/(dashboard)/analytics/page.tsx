@@ -342,9 +342,9 @@ export default async function AnalyticsPage({
           label={t("analytics.totalRevenue")}
           value={formatDZD(summary.totalRevenue, locale)}
           icon={<TrendingUp />}
-          trend={summary.revenueDelta}
+          trend={summary.revenueDelta ?? undefined}
           trendDirectionOnly={false}
-          trendLabel={t("analytics.vsPrevious")}
+          trendLabel={summary.revenueDelta == null ? undefined : t("analytics.vsPrevious")}
           action={
             <KpiDrillDownLink
               href={ordersRangeHref}
@@ -357,9 +357,9 @@ export default async function AnalyticsPage({
           label={t("nav.orders")}
           value={integerFormatter.format(summary.totalOrders)}
           icon={<ShoppingCart />}
-          trend={summary.ordersDelta}
+          trend={summary.ordersDelta ?? undefined}
           trendDirectionOnly={false}
-          trendLabel={t("analytics.vsPrevious")}
+          trendLabel={summary.ordersDelta == null ? undefined : t("analytics.vsPrevious")}
           action={
             <KpiDrillDownLink
               href={ordersRangeHref}
@@ -372,9 +372,9 @@ export default async function AnalyticsPage({
           label={t("analytics.avgOrderValue")}
           value={formatDZD(summary.avgOrderValue, locale)}
           icon={<Package />}
-          trend={summary.aovDelta}
+          trend={summary.aovDelta ?? undefined}
           trendDirectionOnly={false}
-          trendLabel={t("analytics.vsPrevious")}
+          trendLabel={summary.aovDelta == null ? undefined : t("analytics.vsPrevious")}
           action={
             <KpiDrillDownLink
               href={ordersRangeHref}
@@ -401,7 +401,11 @@ export default async function AnalyticsPage({
         <ChartCard
           title={t("analytics.revenueTrend")}
           description={t("analytics.revenueTrendDesc")}
-          summary={`${formatDZD(summary.totalRevenue, locale)} · ${fmtSignedPercent(summary.revenueDelta)} ${t("analytics.vsPrevious")}`}
+          summary={
+            summary.revenueDelta === null
+              ? formatDZD(summary.totalRevenue, locale)
+              : `${formatDZD(summary.totalRevenue, locale)} · ${fmtSignedPercent(summary.revenueDelta)} ${t("analytics.vsPrevious")}`
+          }
           icon={<Activity />}
           accent="bg-emerald-500/10 dark:bg-emerald-500/15"
           config={revenueConfig}

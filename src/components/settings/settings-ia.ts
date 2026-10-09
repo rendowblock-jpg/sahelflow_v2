@@ -6,6 +6,8 @@
 import type { SettingsWorkspaceCopyKey } from "@/lib/i18n/settings-workspace";
 
 export type SettingsWorkspaceAccess = {
+  /** A team member's own account: identity, role, access and own PIN. */
+  myAccount: boolean;
   profile: boolean;
   profileManage: boolean;
   security: boolean;
@@ -47,6 +49,7 @@ export type SettingsWorkspaceGroup =
 export type SettingsSectionId = "account" | "shop" | "connections" | "data";
 
 export type SettingsPageId =
+  | "account"
   | "profile"
   | "appearance"
   | "security"
@@ -74,6 +77,7 @@ export const SETTINGS_SECTIONS: ReadonlyArray<{
 ];
 
 export const SETTINGS_PAGE_IDS: readonly SettingsPageId[] = [
+  "account",
   "profile",
   "appearance",
   "security",

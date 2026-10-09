@@ -42,26 +42,26 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-Reconciled 2026-10-03. Re-resolve protected `main` before acting. `documentation/operations/WORKING_MEMORY.md` is the installed-truth authority. Dated "Next:" lines inside older bullets are not instructions.
+Reconciled 2026-10-08. Re-resolve protected `main` before acting. `documentation/operations/WORKING_MEMORY.md` is the installed-truth authority. Dated "Next:" lines inside older bullets are not instructions.
 
-- **Protected `main`:** `4bebfd838fbaf814187b82e176623505f23b3ecd` / PR #484 (Internal.40 installed-campaign repairs + frontier docs), on Internal.40 / FD-066 (`6e96dafc…` / PR #481). Re-resolve before acting.
-- **Published signed package:** **Internal.40** / app `1.0.0-internal.40` / MSI `1.0.0.40` / FD-066 / `customer-online` / host `sahelflow.com`. Tag `sahelflow-v1.0.0-internal.40-6e96dafca29f1d11260286196888d54332b1ca0c`, published 2026-10-02T15:05:29Z. This is a Founder-authorized launch candidate, not Stable or Beta.
-- **Installed truth:** Internal.40 is Founder-installed (2026-10-03, AppData preserved, path `com.sahelflow.desktop`). Campaign rows convert only on named observation of a candidate that contains them. Publication of Internal.40 is not conversion of later source.
-- **Merged, uninstalled (2026-10-03):** the Internal.40 installed-campaign repair line (PR #484, `4bebfd83…`) — Gemini thought-signature round-trip and seller-chosen model/thinking, WhatsApp send queued at 202 then dispatched, search/combobox/order-detail/launch-screen repairs, and the PIN-rail Algeria live map — is on protected `main`, is not inside any signed package until the Internal.41 signed train succeeds, and none of it is live-provider-certified.
+- **Protected `main`:** `5e611a87ae967ddb84cf7a23d9dbb12f7480256f` / PR #485 (FD-067 Internal.41 release authority), on top of PR #484 (`4bebfd83…`, Internal.40 installed-campaign repairs). Re-resolve before acting.
+- **Published signed package:** **Internal.41** / app `1.0.0-internal.41` / MSI `1.0.0.41` / FD-067 / `customer-online` / host `sahelflow.com`. Tag `sahelflow-v1.0.0-internal.41-5e611a87ae967ddb84cf7a23d9dbb12f7480256f`, published 2026-10-03T08:38:07Z, MSI digest `sha256:b1887e650a1fd13a90835a35f353a292110131c7b2c0fd8a41d90a20078b97be`. This is a Founder-authorized launch candidate, not Stable or Beta.
+- **Installed truth:** the Founder reports Internal.41 installed (2026-10-08). No campaign row has converted on it yet. Campaign rows convert only on named observation of a candidate that contains them. Publication of a package is not conversion of later source.
+- **Open source line (2026-10-08):** PR #487 carries the Founder's four stated priorities as source: WhatsApp durable dispatch (sends that still failed on the installed build), licence distribution (permanent package default, `SFLA1` activation code / `.sflicense`, PIN step, offline License Desk), a native first-frame splash with deferred workspace window, and the first UI audit wave. It is inside no signed package and is not live-provider-certified.
 - issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint; #226 remains closed/completed with its budgets retained as regression criteria;
 - open issues are #164 (Phase 0–9 execution epic), #230 (Algerian-network installed trial; both licence hosts `/healthz` returned ready), #306 (real-phone WhatsApp certification; logout LAST), #316 and #317 (installed/real-phone evidence only; their source is complete and packaged);
 - open PR #456 (artifact hygiene) is stale against this main. Do not merge it as current work.
 
-Do not describe this campaign, Internal.41, or any source work as installed, live-provider-certified or Founder-accepted until an in-place update and campaign produce that evidence. Preserve the Founder's installation state until that campaign.
+Do not describe PR #487 or any later source work as installed, live-provider-certified or Founder-accepted until an in-place update and campaign produce that evidence. Preserve the Founder's installation state until that campaign.
 
 ## Exact next outcome
 
-Internal.40 / FD-066 is published and Founder-installed. The campaign is merged on protected `main` (`4bebfd83…` / PR #484). The next signed successor is the **separate** release-authority PR #485 (FD-067).
+Internal.41 / FD-067 is published and Founder-installed. PR #487 is the open source line.
 
 1. Re-resolve protected `main`, open PRs and issues #164/#230/#306/#316/#317.
-2. DONE (2026-10-03) — merged by expected head as PR #484 (`4bebfd83…`) after its Required battery passed (CI `37101139061`, Phase 5 `37101138786`, Phase 6-7 `37101138902`).
-3. Cut Internal.41 as a separate release-authority PR (FD-067 remains the reserved customer-online packaging slot); that envelope is open as PR #485. It merges only after the full Required battery, including installed-MSI evidence, is green. Do not claim the tag, digest or publish time before that run succeeds.
-4. On the installed Internal.41 candidate, run one campaign with state preserved (no logout, no AppData reset, no protected-auth clearing). Convert a row only when that candidate contains it and the observation proves it. #306 logout stays LAST. Then resume FRC-3 in order A→D→C→B. FRC-4/FRC-5 keep their external blockers.
+2. Merge PR #487 by expected head only after its full Required battery, including installed-MSI evidence, is green at that head.
+3. On the installed Internal.41 candidate, run one campaign with state preserved (no logout, no AppData reset, no protected-auth clearing). Convert a row only when that candidate contains it and the observation proves it. #306 logout stays LAST. Then resume FRC-3 in order A→D→C→B. FRC-4/FRC-5 keep their external blockers.
+4. The PR #487 line reaches sellers only through a separate release-authority PR for the next signed successor, on a Founder decision. Do not claim its tag, digest or publish time before that run succeeds.
 5. Transformation work stays source-only, from `documentation/operations/TRANSFORMATION_HANDOFF.md` §4 (STR-01 composer seam, then the list seam). It converts no installed row.
 6. Publicly promise only exact live-certified provider/actions. Keep #306, #230, paid deployment, Beta and Stable separate until their own evidence and authority close them.
 

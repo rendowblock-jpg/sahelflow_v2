@@ -1997,6 +1997,50 @@ async function markExpiredLeaseAmbiguous(
   });
 }
 
+/**
+ * A post-effect lease expired and the sidecar holds no receipt. The sidecar's
+ * dispatch authority is idempotent per effect key: re-sending the same key
+ * replays a receipt, joins a dispatch still in flight, refuses with an
+ * ambiguous outcome when a dispatch had already started, or sends for the
+ * first time when nothing ever reached WhatsApp. The intent is therefore
+ * handed back for one more governed attempt instead of being quarantined as
+ * ambiguous on the app's side, which left real messages unsent.
+ */
+async function returnExpiredLeaseToSidecar(
+  context: ServiceContext,
+  row: OutboxRow,
+  now: Date,
+): Promise<void> {
+  await context.prisma.$transaction(async (tx) => {
+    const returned = await tx.outboxIntent.updateMany({
+      where: {
+        id: row.id,
+        status: "processing",
+        leaseToken: row.leaseToken,
+      },
+      data: {
+        status: "retrying",
+        nextAttemptAt: now,
+        lockedAt: null,
+        leaseToken: null,
+        effectStartedAt: null,
+        outcomeState: "none",
+        lastErrorCode: "WORKER_LEASE_EXPIRED_RECONCILING",
+      },
+    });
+    if (returned.count !== 1) return;
+    await tx.auditLog.create({
+      data: {
+        action: "whatsapp.message.lease_returned_to_sidecar",
+        entity: "outbox-intent",
+        entityId: row.id,
+        actor: "system:whatsapp-outbox",
+        metadata: JSON.stringify({ effectKey: row.effectKey }),
+      },
+    });
+  });
+}
+
 async function deferReceiptReconciliation(
   context: ServiceContext,
   row: OutboxRow,
@@ -2083,11 +2127,7 @@ async function recoverExpiredLeases(
       if (receipt) {
         await markSucceeded(context, row, payload, receipt);
       } else {
-        await markExpiredLeaseAmbiguous(
-          context,
-          row,
-          "WORKER_LEASE_EXPIRED_WITHOUT_RECEIPT",
-        );
+        await returnExpiredLeaseToSidecar(context, row, now);
       }
     } catch (error) {
       if (
@@ -2177,10 +2217,15 @@ function failureDisposition(error: unknown): {
     };
   }
   if (error instanceof SidecarUnavailableError) {
+    // Every durable effect reaches the sidecar under its effect key, and the
+    // sidecar's dispatch authority makes a repeated key idempotent (receipt
+    // replay, in-flight join, or refusal once a dispatch had started). A
+    // timeout or dropped loopback connection therefore schedules a governed
+    // retry; only the sidecar can declare a provider outcome ambiguous.
     return {
-      code: error.ambiguous ? "SIDECAR_NETWORK_AMBIGUOUS" : "SIDECAR_UNAVAILABLE",
-      retryable: !error.ambiguous,
-      ambiguous: error.ambiguous,
+      code: error.ambiguous ? "SIDECAR_RESPONSE_LOST" : "SIDECAR_UNAVAILABLE",
+      retryable: true,
+      ambiguous: false,
       reason: null,
     };
   }

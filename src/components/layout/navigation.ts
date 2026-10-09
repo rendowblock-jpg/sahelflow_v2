@@ -1,4 +1,6 @@
 import type { LucideIcon } from "lucide-react";
+
+import type { Phase2Action } from "@/lib/identity/permissions";
 import {
   BarChart3,
   Bot,
@@ -48,6 +50,11 @@ export interface NavigationItem {
    * route is live.
    */
   unreadBadge?: boolean;
+  /**
+   * The page enforces these on the server; the sidebar and command palette
+   * only hide a destination the member could not open. Any one suffices.
+   */
+  requiredActions?: readonly Phase2Action[];
 }
 
 export interface NavigationDomain extends NavigationItem {
@@ -62,8 +69,9 @@ function item(
   icon: LucideIcon,
   keywords: readonly string[] = [],
   sidebarNested = false,
+  requiredActions?: readonly Phase2Action[],
 ): NavigationItem {
-  return { id, labelKey, href, icon, keywords, sidebarNested };
+  return { id, labelKey, href, icon, keywords, sidebarNested, requiredActions };
 }
 
 /**
@@ -78,6 +86,7 @@ export const navigationDomains: readonly NavigationDomain[] = [
     id: "home",
     labelKey: "nav.dashboard",
     href: "/dashboard",
+    requiredActions: ["shops.read"],
     icon: LayoutDashboard,
     keywords: ["home", "dashboard", "attention", "today"],
   },
@@ -85,6 +94,7 @@ export const navigationDomains: readonly NavigationDomain[] = [
     id: "sell",
     labelKey: "nav.orders",
     href: "/orders",
+    requiredActions: ["orders.read"],
     icon: ShoppingCart,
     keywords: ["sell", "sales", "orders", "confirmation"],
     children: [
@@ -95,52 +105,71 @@ export const navigationDomains: readonly NavigationDomain[] = [
         Clock,
         ["confirm", "queue", "sla"],
         true,
+        ["orders.read"],
       ),
-      item("products", "nav.products", "/products", Package, [
-        "catalog",
-        "stock",
-        "inventory",
-      ]),
-      item("imports", "nav.imports", "/imports", Upload, [
-        "csv",
-        "xlsx",
-        "import",
-        "export",
-      ]),
+      item(
+        "products",
+        "nav.products",
+        "/products",
+        Package,
+        ["catalog", "stock", "inventory"],
+        false,
+        ["products.read"],
+      ),
+      item(
+        "imports",
+        "nav.imports",
+        "/imports",
+        Upload,
+        ["csv", "xlsx", "import", "export"],
+        false,
+        ["data.import", "data.export"],
+      ),
     ],
   },
   {
     id: "customers",
     labelKey: "nav.customers",
     href: "/customers",
+    requiredActions: ["customers.read"],
     icon: Users,
     keywords: ["customers", "clients", "people", "crm"],
     children: [
-      item("risk", "nav.risk", "/risk", ShieldAlert, [
+      item(
         "risk",
-        "blacklist",
-        "reputation",
-      ]),
+        "nav.risk",
+        "/risk",
+        ShieldAlert,
+        ["risk", "blacklist", "reputation"],
+        false,
+        ["risk.read"],
+      ),
     ],
   },
   {
     id: "fulfill",
     labelKey: "nav.delivery",
     href: "/deliveries",
+    requiredActions: ["deliveries.read"],
     icon: Truck,
     keywords: ["fulfill", "shipping", "delivery", "courier"],
     children: [
-      item("returns", "nav.returns", "/returns", RotateCcw, [
-        "return",
-        "exchange",
-        "refund",
-      ]),
+      item(
+        "returns",
+        "nav.returns",
+        "/returns",
+        RotateCcw,
+        ["return", "exchange", "refund"],
+        false,
+        ["orders.read"],
+      ),
     ],
   },
   {
     id: "money",
     labelKey: "nav.accounting",
     href: "/accounting",
+    requiredActions: ["accounting.read"],
     icon: Calculator,
     keywords: ["money", "finance", "accounting", "profit"],
     children: [
@@ -151,6 +180,7 @@ export const navigationDomains: readonly NavigationDomain[] = [
         DollarSign,
         ["cod", "cash", "remittance", "reconcile"],
         true,
+        ["accounting.read"],
       ),
     ],
   },
@@ -158,6 +188,7 @@ export const navigationDomains: readonly NavigationDomain[] = [
     id: "inbox",
     labelKey: "nav.inbox",
     href: "/inbox",
+    requiredActions: ["conversations.read"],
     icon: MessageSquare,
     keywords: ["inbox", "whatsapp", "messages", "conversations"],
     unreadBadge: true,
@@ -166,6 +197,7 @@ export const navigationDomains: readonly NavigationDomain[] = [
     id: "storefront",
     labelKey: "nav.storefrontBuilder",
     href: "/storefronts",
+    requiredActions: ["storefront.read"],
     icon: Store,
     keywords: [
       "storefront",
@@ -180,19 +212,28 @@ export const navigationDomains: readonly NavigationDomain[] = [
     id: "grow",
     labelKey: "nav.analytics",
     href: "/analytics",
+    requiredActions: ["analytics.read"],
     icon: BarChart3,
     keywords: ["grow", "analytics", "insights", "performance"],
     children: [
-      item("automations", "nav.automations", "/automations", Zap, [
-        "automation",
-        "rules",
-        "workflow",
-      ]),
-      item("agents", "nav.agents", "/agents", Bot, [
-        "ai",
-        "assistant",
-        "agent",
-      ]),
+      item(
+        "automations",
+        "nav.automations",
+        "/automations",
+        Zap,
+        ["automation", "rules", "workflow"],
+        false,
+        ["automations.read"],
+      ),
+      item(
+        "agents",
+        "nav.agents",
+        "/agents",
+        Bot,
+        ["ai", "assistant", "agent"],
+        false,
+        ["ai.use"],
+      ),
     ],
   },
 ] as const;
@@ -248,6 +289,15 @@ export const utilityNavigationItems: readonly NavigationItem[] = [
     "integrations",
   ]),
 ] as const;
+
+/** Whether a member holding `permissions` may open this destination. */
+export function navigationItemAllowed(
+  entry: NavigationItem,
+  permissions: readonly Phase2Action[] | null,
+): boolean {
+  if (permissions === null || !entry.requiredActions?.length) return true;
+  return entry.requiredActions.some((action) => permissions.includes(action));
+}
 
 export function pathMatchesNavigation(pathname: string, href: string): boolean {
   if (href === "/settings" && pathname === "/profile") return true;

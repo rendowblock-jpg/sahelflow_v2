@@ -271,6 +271,7 @@ function LandingPageBody({
       </section>
 
       <form
+        noValidate
         onSubmit={handleSubmit}
         className="mt-6 space-y-4 rounded-lg border bg-card p-4"
         aria-label={t("storefront.view.landing.orderFormLabel")}

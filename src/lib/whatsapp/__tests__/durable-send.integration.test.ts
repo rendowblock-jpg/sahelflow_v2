@@ -6,7 +6,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { testAuthenticatedOwnerBusinessPrincipal } from "@/lib/business-truth/principal";
 import { db, shopContext } from "@/lib/db";
-import { SidecarRequestError } from "../sidecar-client";
+import { SidecarRequestError, SidecarUnavailableError } from "../sidecar-client";
 import {
   findWhatsAppEffectByMessageId,
   getWhatsAppEffectStatus,
@@ -260,7 +260,7 @@ describe("durable WhatsApp text send", () => {
     expect(sender).not.toHaveBeenCalled();
   });
 
-  it("marks an expired post-effect lease ambiguous only after confirming no receipt", async () => {
+  it("hands an expired post-effect lease without a receipt back to the idempotent sidecar", async () => {
     const effectKey = await queue("No durable receipt");
     await db.outboxIntent.update({
       where: { effectKey },
@@ -272,20 +272,60 @@ describe("durable WhatsApp text send", () => {
         effectStartedAt: new Date(1),
       },
     });
-    const sender = vi.fn(async () => ({
-      ok: true,
-      id: "MUST-NOT-SEND",
-      status: "sent",
-    }));
+    // The sidecar alone decides: here it reports a dispatch that had already
+    // started, so the outcome stays quarantined for operator confirmation.
+    const sender = vi.fn(async (..._args: unknown[]): Promise<never> => {
+      throw new SidecarRequestError(
+        "WhatsApp send outcome requires reconciliation",
+        "WHATSAPP_SEND_AMBIGUOUS",
+        false,
+        true,
+        502,
+        "dispatch_interrupted",
+      );
+    });
     const receiptLookup = vi.fn(async () => null);
     await expect(
       processWhatsAppEffect(context, effectKey, sender, receiptLookup),
     ).resolves.toMatchObject({
       state: "ambiguous",
       requiresDuplicateConfirmation: true,
-      errorCode: "WORKER_LEASE_EXPIRED_WITHOUT_RECEIPT",
+      errorCode: "WHATSAPP_SEND_AMBIGUOUS:dispatch_interrupted",
     });
-    expect(sender).not.toHaveBeenCalled();
+    // Same effect key and binding: the sidecar can only replay, join or refuse.
+    expect(sender).toHaveBeenCalledTimes(1);
+    expect(sender.mock.calls[0]?.[2]).toBe(effectKey);
+  });
+
+  it("completes an expired lease when the sidecar proves nothing was sent before", async () => {
+    const effectKey = await queue("Never reached WhatsApp");
+    await db.outboxIntent.update({
+      where: { effectKey },
+      data: {
+        status: "processing",
+        attemptCount: 1,
+        lockedAt: new Date(0),
+        leaseToken: "abandoned-before-dispatch",
+        effectStartedAt: new Date(1),
+      },
+    });
+    const sender = vi.fn(async () => ({ ok: true, id: "WA-FIRST-DISPATCH", status: "sent" }));
+    await expect(
+      processWhatsAppEffect(context, effectKey, sender, vi.fn(async () => null)),
+    ).resolves.toMatchObject({ state: "succeeded", providerMessageId: "WA-FIRST-DISPATCH" });
+    expect(sender).toHaveBeenCalledTimes(1);
+  });
+
+  it("schedules a retry when the loopback response to the sidecar is lost", async () => {
+    const effectKey = await queue("Lost response");
+    const lost = vi.fn(async () => {
+      throw new SidecarUnavailableError("Sidecar request timed out", true);
+    });
+    await expect(processWhatsAppEffect(context, effectKey, lost)).resolves.toMatchObject({
+      state: "retrying",
+      requiresDuplicateConfirmation: false,
+      errorCode: "SIDECAR_RESPONSE_LOST",
+    });
   });
 
   it("schedules a safe retry for a deterministic pre-submit rejection", async () => {

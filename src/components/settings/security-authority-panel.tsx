@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
 import { intlLocale } from "@/lib/utils";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 type AuthorityResponse = {
   authority: {
@@ -92,7 +93,7 @@ export function SecurityAuthorityPanel() {
     try {
       setAuthority(await requestAuthority());
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("settings.security.loadError"));
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("settings.security.loadError"));
     } finally {
       setLoading(false);
     }
@@ -107,7 +108,7 @@ export function SecurityAuthorityPanel() {
         if (!cancelled) setAuthority(nextAuthority);
       } catch (caught) {
         if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : t("settings.security.loadError"));
+          setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("settings.security.loadError"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -145,7 +146,7 @@ export function SecurityAuthorityPanel() {
         setPin("");
         await loadAuthority();
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : t("settings.security.revokeError"));
+        setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("settings.security.revokeError"));
       } finally {
         setBusySessionId(null);
       }
@@ -283,8 +284,10 @@ export function SecurityAuthorityPanel() {
                     <li key={session.sessionId} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span dir="ltr" className="font-mono text-xs">
-                            {shortId(session.sessionId)}
+                          {/* Sessions are told apart by their dates; the raw
+                              id stays available on hover for support. */}
+                          <span className="text-sm font-medium" title={shortId(session.sessionId)}>
+                            {t("settings.security.otherSession")}
                           </span>
                           {session.current ? (
                             <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">

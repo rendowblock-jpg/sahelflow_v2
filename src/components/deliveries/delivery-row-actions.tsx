@@ -80,6 +80,9 @@ export function DeliveryRowActions({
   }
 
   const trackUrl = trackingNumber ? getTrackingUrl(provider) : null;
+  // Actions that a row cannot offer keep their slot, so every row's icons
+  // line up in the same columns instead of shifting with the courier.
+  const emptySlot = <span className="size-9 min-h-(--sf-touch-target) min-w-(--sf-touch-target) shrink-0" aria-hidden="true" />;
   return (
     <div className="flex items-center justify-end gap-1">
       {canManage ? (
@@ -100,7 +103,7 @@ export function DeliveryRowActions({
             <ExternalLink className="size-4" aria-hidden="true" />
           </Link>
         </Button>
-      ) : null}
+      ) : emptySlot}
       {canManage && dashboardUrl ? (
         <Button
           variant="ghost"
@@ -111,7 +114,7 @@ export function DeliveryRowActions({
         >
           <Ban className="size-4" aria-hidden="true" />
         </Button>
-      ) : null}
+      ) : canManage ? emptySlot : null}
       {canViewDetail ? (
         <Button variant="ghost" size="icon-sm" asChild title={t("common.view")}>
           <Link href={`/deliveries/${deliveryId}`} aria-label={t("common.view")}>

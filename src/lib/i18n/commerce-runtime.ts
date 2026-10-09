@@ -2,11 +2,11 @@ import type { Locale } from "@/lib/i18n";
 
 const translations: Record<Locale, Record<string, string>> = {
   en: {
-    "commerce.runtime.history": "Durable commerce sync history",
+    "commerce.runtime.history": "Sync history",
     "commerce.runtime.subtitle":
       "Provider pages and orders are persisted before processing. Watermarks advance only after complete success.",
     "commerce.runtime.noRuns":
-      "No durable commerce sync runs have been recorded yet.",
+      "No store sync has run yet.",
     "commerce.runtime.refresh": "Refresh history",
     "commerce.runtime.showDetails": "Show details",
     "commerce.runtime.hideDetails": "Hide details",
@@ -26,8 +26,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "commerce.runtime.watermarkConflict":
       "The integration watermark changed outside this run. Reconcile the integration state and queue a new sync.",
     "commerce.runtime.credentialDrift":
-      "Credentials or the provider endpoint changed after this run was queued. Queue a new sync under the current connection.",
-    "commerce.runtime.items": "Provider items and immutable attempts",
+      "The store connection changed after this sync was queued. Start a new sync.",
+    "commerce.runtime.items": "Store orders and attempts",
     "commerce.runtime.attempts": "Attempts",
     "commerce.runtime.sourceOrder": "Provider order",
     "commerce.runtime.queueSuccess": "Commerce synchronization queued",
@@ -48,11 +48,11 @@ const translations: Record<Locale, Record<string, string>> = {
   },
   fr: {
     "commerce.runtime.history":
-      "Historique durable des synchronisations e-commerce",
+      "Historique des synchronisations",
     "commerce.runtime.subtitle":
       "Les pages et commandes fournisseur sont persistées avant traitement. Le point de reprise n’avance qu’après une réussite complète.",
     "commerce.runtime.noRuns":
-      "Aucune synchronisation e-commerce durable n’a encore été enregistrée.",
+      "Aucune synchronisation boutique n’a encore eu lieu.",
     "commerce.runtime.refresh": "Actualiser l’historique",
     "commerce.runtime.showDetails": "Afficher les détails",
     "commerce.runtime.hideDetails": "Masquer les détails",
@@ -73,8 +73,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "commerce.runtime.watermarkConflict":
       "Le point de reprise de l’intégration a changé hors de cette exécution. Réconciliez l’intégration puis lancez une nouvelle synchronisation.",
     "commerce.runtime.credentialDrift":
-      "Les identifiants ou le point d’accès fournisseur ont changé après la mise en file. Lancez une nouvelle synchronisation avec la connexion actuelle.",
-    "commerce.runtime.items": "Commandes fournisseur et tentatives immuables",
+      "La connexion de la boutique a changé après la mise en file de cette synchronisation. Lancez une nouvelle synchronisation.",
+    "commerce.runtime.items": "Commandes boutique et tentatives",
     "commerce.runtime.attempts": "Tentatives",
     "commerce.runtime.sourceOrder": "Commande fournisseur",
     "commerce.runtime.queueSuccess": "Synchronisation e-commerce mise en file",
@@ -94,11 +94,11 @@ const translations: Record<Locale, Record<string, string>> = {
     "commerce.runtime.state.failed": "Échouée",
   },
   ar: {
-    "commerce.runtime.history": "سجل مزامنة التجارة الإلكترونية الدائم",
+    "commerce.runtime.history": "سجل المزامنة",
     "commerce.runtime.subtitle":
       "تُحفظ صفحات وطلبات المزود قبل المعالجة، ولا تتقدم نقطة المزامنة إلا بعد النجاح الكامل.",
     "commerce.runtime.noRuns":
-      "لم يتم تسجيل أي مزامنة تجارة إلكترونية دائمة بعد.",
+      "لم تتم أي مزامنة للمتجر بعد.",
     "commerce.runtime.refresh": "تحديث السجل",
     "commerce.runtime.showDetails": "عرض التفاصيل",
     "commerce.runtime.hideDetails": "إخفاء التفاصيل",
@@ -119,8 +119,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "commerce.runtime.watermarkConflict":
       "تغيرت نقطة المزامنة خارج هذا التشغيل. قم بتسوية حالة التكامل ثم ابدأ مزامنة جديدة.",
     "commerce.runtime.credentialDrift":
-      "تغيرت بيانات الاعتماد أو نقطة اتصال المزود بعد إضافة هذا التشغيل إلى قائمة الانتظار. ابدأ مزامنة جديدة باستخدام الاتصال الحالي.",
-    "commerce.runtime.items": "طلبات المزود والمحاولات غير القابلة للتغيير",
+      "تغيّر اتصال المتجر بعد جدولة هذه المزامنة. ابدأ مزامنة جديدة.",
+    "commerce.runtime.items": "طلبات المتجر والمحاولات",
     "commerce.runtime.attempts": "المحاولات",
     "commerce.runtime.sourceOrder": "طلب المزود",
     "commerce.runtime.queueSuccess":

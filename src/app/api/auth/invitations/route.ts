@@ -4,6 +4,7 @@ import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireRecentReauthentication } from "@/lib/auth/server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
+import { getIdentityAdministrationSnapshot } from "@/lib/identity/control-authority";
 import {
   createMemberInvitation,
   listMemberInvitations,
@@ -13,6 +14,7 @@ import {
   PHASE2_ACTIONS,
 } from "@/lib/identity/permissions";
 import { acceptedInvitationIds } from "@/lib/identity/team-directory";
+import { listShops } from "@/lib/shops";
 import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
@@ -44,10 +46,20 @@ function requireOwnerPerson(
 export const GET = withErrorHandler(async () => {
   const context = await requireTrustedAction("members.manage");
   const actor = requireOwnerPerson(context);
-  const [authority, acceptedIds] = await Promise.all([
+  const [authority, acceptedIds, owner] = await Promise.all([
     listMemberInvitations(actor.sessionId, context.shop),
     acceptedInvitationIds(context.shop),
+    getIdentityAdministrationSnapshot(actor.sessionId, context.shop),
   ]);
+  // Invitations may grant exactly the shops the owner holds.
+  const granted = new Set(owner.member.shopIds);
+  const shopOptions = listShops()
+    .filter((shop) => granted.has(shop.id))
+    .map((shop) => ({
+      id: shop.id,
+      name: shop.name,
+      current: shop.id === context.shop.shopId,
+    }));
   const invitations = authority.invitations.map((invitation) =>
     acceptedIds.has(invitation.id)
       ? { ...invitation, state: "accepted" as const }
@@ -56,7 +68,9 @@ export const GET = withErrorHandler(async () => {
   return NextResponse.json(
     {
       authority: { ...authority, invitations },
-      shopOptions: [{ id: context.shop.shopId, current: true }],
+      shopOptions: shopOptions.length
+        ? shopOptions
+        : [{ id: context.shop.shopId, name: context.shop.shopId, current: true }],
       permissionCatalog: {
         actions: PHASE2_ACTIONS,
         ceilings: {

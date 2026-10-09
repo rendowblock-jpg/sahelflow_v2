@@ -6,6 +6,7 @@ import { toast } from "@/lib/toast";
 
 import { useI18n } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 /**
  * Hard cap on the number of images a product can have. Mirrors the
@@ -90,7 +91,7 @@ export function ProductImageUpload({
         return data.url;
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : t("products.uploadError"),
+          err instanceof Error ? localizeServerMessage(err.message) : t("products.uploadError"),
         );
         return null;
       }

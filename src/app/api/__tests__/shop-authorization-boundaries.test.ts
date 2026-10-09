@@ -56,6 +56,7 @@ const harness = vi.hoisted(() => {
     ],
     requireTrustedAction: vi.fn(),
     getIdentityAdministrationSnapshot: vi.fn(),
+    listTeamMembers: vi.fn(),
     enqueueLifecycle: vi.fn(),
     requireRecentReauthentication: vi.fn(),
     getCurrentSessionAuthority: vi.fn(),
@@ -69,6 +70,10 @@ vi.mock("@/lib/identity/authorization", () => ({
 
 vi.mock("@/lib/identity/control-authority", () => ({
   getIdentityAdministrationSnapshot: harness.getIdentityAdministrationSnapshot,
+}));
+
+vi.mock("@/lib/identity/team-directory", () => ({
+  listTeamMembers: harness.listTeamMembers,
 }));
 
 vi.mock("@/lib/auth/server", () => ({
@@ -179,6 +184,66 @@ describe("native shop route authorization behavior", () => {
       activeShopId: "shop-a",
       shops: [{ id: "shop-a" }, { id: "shop-b" }],
     });
+  });
+
+  it("projects only granted shops to an accepted team member from the team directory", async () => {
+    const memberActor = {
+      ...harness.actorContext.actor,
+      role: "operator" as const,
+      workspaceMemberId: "a".repeat(32),
+      personId: "b".repeat(32),
+      sessionId: "session-member",
+    };
+    harness.requireTrustedAction.mockResolvedValueOnce({
+      ...harness.actorContext,
+      actor: memberActor,
+    });
+    harness.listTeamMembers.mockResolvedValueOnce([
+      {
+        memberId: memberActor.workspaceMemberId,
+        personId: memberActor.personId,
+        shopIds: ["shop-b"],
+        revokedAt: null,
+        policyVersion: memberActor.policyVersion,
+        revocationEpoch: memberActor.revocationEpoch,
+      },
+    ]);
+    const response = await listShops();
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      activeShopId: "shop-a",
+      shops: [expect.objectContaining({ id: "shop-b" })],
+    });
+    expect(harness.getIdentityAdministrationSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("projects no shops to a revoked or stale team member", async () => {
+    const memberActor = {
+      ...harness.actorContext.actor,
+      role: "operator" as const,
+      workspaceMemberId: "a".repeat(32),
+      personId: "b".repeat(32),
+    };
+    for (const stale of [
+      { revokedAt: "2026-10-08T00:00:00.000Z", revocationEpoch: 0 },
+      { revokedAt: null, revocationEpoch: 1 },
+    ]) {
+      harness.requireTrustedAction.mockResolvedValueOnce({
+        ...harness.actorContext,
+        actor: memberActor,
+      });
+      harness.listTeamMembers.mockResolvedValueOnce([
+        {
+          memberId: memberActor.workspaceMemberId,
+          personId: memberActor.personId,
+          shopIds: ["shop-a", "shop-b"],
+          policyVersion: memberActor.policyVersion,
+          ...stale,
+        },
+      ]);
+      const response = await listShops();
+      await expect(response.json()).resolves.toMatchObject({ shops: [] });
+    }
   });
 
   it("authenticates creation before parsing an untrusted body", async () => {

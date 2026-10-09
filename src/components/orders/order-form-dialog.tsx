@@ -53,6 +53,7 @@ import {
   clearManualOrderCommand,
   resolveManualOrderCommand,
 } from "@/lib/orders/manual-order-command-key";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 /**
  * Customer/product rows come in as a capped most-recent slice (R2-c); the
@@ -265,7 +266,7 @@ export function OrderFormDialog({
     } catch (err) {
       toast.error(
         translateServerError(
-          err instanceof Error ? err.message : "",
+          err instanceof Error ? localizeServerMessage(err.message) : "",
           t,
           t("orders.form.createFailed"),
         ),
@@ -588,8 +589,15 @@ export function OrderFormDialog({
               <WilayaCommuneSelect
                 wilaya={watchValues.wilaya}
                 commune={watchValues.commune}
+                // A wilaya change clears the commune; only flag the empty
+                // commune once the seller has tried to submit.
                 onWilayaChange={(v) => form.setValue("wilaya", v, { shouldDirty: true, shouldValidate: true })}
-                onCommuneChange={(v) => form.setValue("commune", v, { shouldDirty: true, shouldValidate: true })}
+                onCommuneChange={(v) =>
+                  form.setValue("commune", v, {
+                    shouldDirty: true,
+                    shouldValidate: v !== "" || form.formState.isSubmitted,
+                  })
+                }
                 wilayaAriaDescribedby={form.formState.errors.wilaya ? "order-form-wilaya-error" : undefined}
                 communeAriaDescribedby={form.formState.errors.commune ? "order-form-commune-error" : undefined}
                 required

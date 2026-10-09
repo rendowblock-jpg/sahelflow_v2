@@ -3,6 +3,9 @@
 import * as React from "react"
 import type { Label as LabelPrimitive } from "radix-ui"
 import { Slot } from "radix-ui"
+
+import { useI18n } from "@/hooks/use-i18n"
+import { translateValidationMessage } from "@/lib/i18n/validation-messages"
 import {
   Controller,
   FormProvider,
@@ -137,7 +140,11 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
 
 function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField()
-  const body = error ? String(error?.message ?? "") : props.children
+  const { t } = useI18n()
+  // Schema messages are stable English; render them in the seller's language.
+  const body = error
+    ? translateValidationMessage(String(error?.message ?? ""), t)
+    : props.children
 
   if (!body) {
     return null

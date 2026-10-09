@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { trustedActionAllowed } from "@/lib/identity/authorization";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 import { getProductWorkbenchDetail } from "./product-workbench";
-import { getProductStockHistory } from "./product-stock-history";
+import { getProductOrderMovements, getProductStockHistory } from "./product-stock-history";
 
 function allowed(
   actorContext: TrustedActorContext,
@@ -23,11 +23,15 @@ export async function getProductDetailWorkbench(
   if (!product) return null;
 
   const canReadOrders = allowed(actorContext, "orders.read");
+  const canManage = allowed(actorContext, "products.manage");
   const canReadOrderFinancials =
     canReadOrders && allowed(actorContext, "orders.financials.read");
   // R3-c: stock-adjustment history — audit-trail rows that record explicit
   // stock mutations for this product (no StockEvent model exists yet).
   const stockHistory = await getProductStockHistory(db, productId);
+  const orderMovements = canReadOrders
+    ? await getProductOrderMovements(db, productId)
+    : [];
   const recentItems = canReadOrders
     ? await db.orderItem.findMany({
         where: { productId, order: { deletedAt: null } },
@@ -52,9 +56,11 @@ export async function getProductDetailWorkbench(
 
   return {
     product,
+    canManage,
     canReadOrders,
     canReadOrderFinancials,
     stockHistory,
+    orderMovements,
     recentItems: recentItems.map((item) => ({
       id: item.id,
       quantity: item.quantity,

@@ -120,6 +120,8 @@ export interface BulkSyncOutcome {
   failed: number;
   /** Failures where the route persisted provider data but the order needs reconciliation (HTTP 409). */
   reconciliationRequired: number;
+  /** Failures because the courier connection is not set up or verified yet. */
+  courierNotConnected: number;
   /** Tracking numbers (fallback: ids) of failed rows, first few. */
   failedRefs: string[];
 }
@@ -127,7 +129,16 @@ export interface BulkSyncOutcome {
 export interface SyncCallResult {
   ok: boolean;
   reconciliationRequired?: boolean;
+  /** Coded API error, when the route returned one. */
+  code?: string;
 }
+
+/** Error codes meaning "this courier is not connected/verified yet". */
+const COURIER_NOT_CONNECTED_CODES = new Set([
+  "PROVIDER_CAPABILITY_UNCERTIFIED",
+  "DELIVERY_PROVIDER_UNKNOWN",
+  "PROVIDER_CONNECTION_TEST_FAILED",
+]);
 
 async function defaultSyncDelivery(deliveryId: string): Promise<SyncCallResult> {
   const response = await fetch("/api/delivery/sync", {
@@ -137,9 +148,13 @@ async function defaultSyncDelivery(deliveryId: string): Promise<SyncCallResult> 
   });
   if (response.ok) return { ok: true };
   const data = (await response.json().catch(() => null)) as
-    | { reconciliationRequired?: boolean }
+    | { reconciliationRequired?: boolean; code?: string }
     | null;
-  return { ok: false, reconciliationRequired: Boolean(data?.reconciliationRequired) };
+  return {
+    ok: false,
+    reconciliationRequired: Boolean(data?.reconciliationRequired),
+    code: typeof data?.code === "string" ? data.code : undefined,
+  };
 }
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
@@ -170,6 +185,7 @@ export async function runBulkDeliverySync(
     succeeded: 0,
     failed: 0,
     reconciliationRequired: 0,
+    courierNotConnected: 0,
     failedRefs: [],
   };
   let done = 0;
@@ -190,6 +206,13 @@ export async function runBulkDeliverySync(
         result.value.reconciliationRequired
       ) {
         outcome.reconciliationRequired += 1;
+      }
+      if (
+        result.status === "fulfilled" &&
+        result.value.code &&
+        COURIER_NOT_CONNECTED_CODES.has(result.value.code)
+      ) {
+        outcome.courierNotConnected += 1;
       }
       if (delivery && outcome.failedRefs.length < 5) {
         outcome.failedRefs.push(

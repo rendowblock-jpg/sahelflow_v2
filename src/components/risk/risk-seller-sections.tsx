@@ -15,6 +15,8 @@ type Format = {
   int: (value: number) => string;
   /** One decimal, locale-aware ("3,2" in French). */
   dec: (value: number) => string;
+  /** Wilaya in the interface language. */
+  wilaya: (value: string | null) => string;
 };
 
 const LEVEL_BAR: Record<RiskLevel, string> = {
@@ -89,32 +91,35 @@ export function CheckBeforeShipping({
         </p>
       ) : (
         <ul className="divide-y">
-          {report.openRisky.map((order) => (
-            <li key={order.orderId}>
-              <Link
-                href={`/orders/${encodeURIComponent(order.orderId)}`}
-                className="flex items-center gap-3 px-4 py-3 outline-none transition-colors hover:bg-muted/40 focus-visible:bg-muted/40"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="font-mono text-caption font-semibold" dir="ltr">{order.orderNumber}</span>
-                    <span dir="auto" className="truncate text-body-sm font-medium">{order.customerName ?? "—"}</span>
-                    <RiskLevelBadgeServer level={order.level} label={format.t(`risk.level.${order.level}`)} />
-                  </p>
-                  <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
-                    <span className="inline-flex items-center gap-1">
-                      <MapPin className="size-3" aria-hidden="true" />
-                      {order.wilaya}
-                    </span>
-                    <span className="tabular-nums">{format.dzd(order.totalPrice)}</span>
-                    {order.reasons.length ? <span className="truncate">{order.reasons.map((reason) => format.t(reason)).join(" · ")}</span> : null}
-                  </p>
-                </div>
-                <span className="shrink-0 text-title-3 font-semibold tabular-nums text-muted-foreground">{order.score}</span>
-                <ArrowRight className="size-4 shrink-0 text-muted-foreground icon-rtl-flip" aria-hidden="true" />
-              </Link>
-            </li>
-          ))}
+          {report.openRisky.map((order) => {
+            const reasons = order.reasons.map((reason) => format.t(reason)).join(" · ");
+            return (
+              <li key={order.orderId}>
+                <Link
+                  href={`/orders/${encodeURIComponent(order.orderId)}`}
+                  className="flex items-center gap-3 px-4 py-3 outline-none transition-colors hover:bg-muted/40 focus-visible:bg-muted/40"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="font-mono text-caption font-semibold" dir="ltr">{order.orderNumber}</span>
+                      <span dir="auto" className="truncate text-body-sm font-medium">{order.customerName ?? "—"}</span>
+                      <RiskLevelBadgeServer level={order.level} label={format.t(`risk.level.${order.level}`)} />
+                    </p>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin className="size-3" aria-hidden="true" />
+                        {format.wilaya(order.wilaya)}
+                      </span>
+                      <span className="tabular-nums">{format.dzd(order.totalPrice)}</span>
+                      {reasons ? <span className="line-clamp-2 basis-full" title={reasons}>{reasons}</span> : null}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-title-3 font-semibold tabular-nums text-muted-foreground">{order.score}</span>
+                  <ArrowRight className="size-4 shrink-0 text-muted-foreground icon-rtl-flip" aria-hidden="true" />
+                </Link>
+              </li>
+            );
+          })}
           {rest > 0 ? (
             <li className="px-4 py-2.5 text-caption font-medium text-muted-foreground">{copy("checkMore", { count: format.int(rest) })}</li>
           ) : null}
@@ -290,7 +295,7 @@ export function WhereYouLoseMoney({
             {insights.warningSigns.map((sign) => (
               <li key={sign.factorId} className="flex items-center gap-3 bg-card px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-body-sm font-medium">{format.t(sign.labelKey)}</p>
+                  <p className="truncate text-body-sm font-medium" title={format.t(sign.labelKey)}>{format.t(sign.labelKey)}</p>
                   <p className="text-caption text-muted-foreground">
                     {copy("finished", { count: format.int(sign.completed) })} · {copy("colReturnRate")} {format.pct(sign.returnRate)}
                   </p>

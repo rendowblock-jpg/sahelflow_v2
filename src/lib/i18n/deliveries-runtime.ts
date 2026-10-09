@@ -25,6 +25,10 @@ const translations: Record<Locale, Record<string, string>> = {
       "Some shipments need reconciliation on their page.",
     "deliveries.bulkSync.fetchFailed": "Could not load in-transit shipments",
     "deliveries.bulkSync.lastSync": "Last sync: {{time}}",
+    "deliveries.bulkSync.notConnectedTitle": "Courier tracking is not set up yet",
+    "deliveries.bulkSync.notConnectedBody": "Connect and verify your courier accounts in Settings → Delivery, then sync again.",
+    "deliveries.bulkSync.openDeliverySettings": "Open delivery settings",
+    "deliveries.bulkSync.someNotConnected": "{{n}} shipments use a courier that is not connected yet",
     "deliveries.fee.estimate":
       "Estimated delivery fee to {{wilaya}}: {{fee}} (home delivery)",
   },
@@ -41,6 +45,10 @@ const translations: Record<Locale, Record<string, string>> = {
       "Certains colis exigent une réconciliation sur leur page.",
     "deliveries.bulkSync.fetchFailed": "Impossible de charger les colis en cours",
     "deliveries.bulkSync.lastSync": "Dernière synchronisation : {{time}}",
+    "deliveries.bulkSync.notConnectedTitle": "Le suivi transporteur n’est pas encore configuré",
+    "deliveries.bulkSync.notConnectedBody": "Connectez et vérifiez vos comptes transporteur dans Paramètres → Livraison, puis relancez la synchronisation.",
+    "deliveries.bulkSync.openDeliverySettings": "Ouvrir les paramètres de livraison",
+    "deliveries.bulkSync.someNotConnected": "{{n}} colis utilisent un transporteur pas encore connecté",
     "deliveries.fee.estimate":
       "Frais de livraison estimés vers {{wilaya}} : {{fee}} (livraison à domicile)",
   },
@@ -56,6 +64,10 @@ const translations: Record<Locale, Record<string, string>> = {
       "بعض الشحنات تحتاج إلى تسوية في صفحتها.",
     "deliveries.bulkSync.fetchFailed": "تعذّر تحميل الشحنات الجارية",
     "deliveries.bulkSync.lastSync": "آخر مزامنة: {{time}}",
+    "deliveries.bulkSync.notConnectedTitle": "تتبّع شركات التوصيل غير مُعدّ بعد",
+    "deliveries.bulkSync.notConnectedBody": "اربط حسابات شركات التوصيل وتحقّق منها في الإعدادات ← التوصيل، ثم أعد المزامنة.",
+    "deliveries.bulkSync.openDeliverySettings": "فتح إعدادات التوصيل",
+    "deliveries.bulkSync.someNotConnected": "{{n}} شحنة تستخدم شركة توصيل غير مربوطة بعد",
     "deliveries.fee.estimate":
       "رسوم التوصيل المقدّرة إلى {{wilaya}}: {{fee}} (توصيل إلى المنزل)",
   },

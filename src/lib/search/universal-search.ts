@@ -145,6 +145,25 @@ export function scoreUniversalSearchCandidate(
   return score + recentBonus(candidate.updatedAt) + (candidate.rankBoost ?? 0);
 }
 
+const EXCERPT_LEAD = 28;
+const EXCERPT_LENGTH = 96;
+
+/**
+ * The part of a message that matched, so a conversation found by its text says
+ * why it was found. Offsets come from the normalized text; they line up with
+ * the original closely enough for a display excerpt.
+ */
+export function messageExcerpt(body: string, query: string): string | undefined {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return undefined;
+  const text = body.replace(/\s+/gu, " ").trim();
+  const index = normalizeSearchText(text).indexOf(normalizedQuery);
+  if (index < 0) return undefined;
+  const start = Math.max(0, index - EXCERPT_LEAD);
+  const slice = text.slice(start, start + EXCERPT_LENGTH).trim();
+  return `${start > 0 ? "…" : ""}${slice}${start + EXCERPT_LENGTH < text.length ? "…" : ""}`;
+}
+
 export function rankUniversalSearchCandidates<T extends UniversalSearchCandidate>(
   query: string,
   candidates: readonly T[],

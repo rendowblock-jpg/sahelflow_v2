@@ -2,6 +2,12 @@ import "server-only";
 
 import { logger } from "@/lib/logger";
 
+import {
+  IDLE_POLL_INTERVAL_MS,
+  isConnectedIdleState,
+  NOT_ENROLLED_MESSAGE,
+} from "./worker-idle";
+
 const WORKER_KEY = Symbol.for("sahelflow.connected-command-worker.v1");
 const POLL_INTERVAL_MS = 5_000;
 const CURSOR_KEY_PREFIX = "connected.command.cursor.v1";
@@ -19,8 +25,9 @@ export function startConnectedCommandWorker(): void {
   const state: WorkerState = { running: false, timer: null };
   workerGlobal[WORKER_KEY] = state;
   let consecutiveFailures = 0;
+  let idle = false;
   const schedule = () => {
-    state.timer = setTimeout(() => void tick(), POLL_INTERVAL_MS);
+    state.timer = setTimeout(() => void tick(), idle ? IDLE_POLL_INTERVAL_MS : POLL_INTERVAL_MS);
     state.timer.unref?.();
   };
   const tick = async () => {
@@ -37,7 +44,7 @@ export function startConnectedCommandWorker(): void {
       await requireLicenseEntitlement("sahelflow.connected", shopContext);
       const context = { prisma: db, shop: shopContext };
       const runtime = await runtimeModule.loadConnectedRuntimeIfEnrolled(context);
-      if (!runtime) throw new Error("Connected command authority is not enrolled");
+      if (!runtime) throw new Error(NOT_ENROLLED_MESSAGE);
       const cursorKey = `${CURSOR_KEY_PREFIX}.${shopContext.shopId}`;
       const stored = await db.setting.findUnique({ where: { key: cursorKey } });
       const after = Number(stored?.value ?? "0");
@@ -56,7 +63,18 @@ export function startConnectedCommandWorker(): void {
         });
       }
       consecutiveFailures = 0;
+      if (idle) logger.info("connected.command_worker.resumed");
+      idle = false;
     } catch (error) {
+      if (isConnectedIdleState(error)) {
+        // Not enrolled or not entitled: the normal resting state for most
+        // installations. Rest quietly, say so once.
+        if (!idle) logger.info("connected.command_worker.idle");
+        idle = true;
+        consecutiveFailures = 0;
+        return;
+      }
+      idle = false;
       // C2: the silent catch made a dead command channel invisible. Exact
       // command idempotency and the cursor retain durable retry authority;
       // the classified log keeps every failure operator-visible and

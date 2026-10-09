@@ -182,6 +182,14 @@ export function getLifecycleRailPosition(input: {
   ) {
     return null;
   }
+  // A draft has not entered the rail yet: no milestone is current, so the
+  // tracker never claims "pending" while the badge says "draft".
+  if (status === "draft") {
+    return {
+      currentStep: -1,
+      completedSteps: LIFECYCLE_RAIL_STEPS.map(() => false),
+    };
+  }
   const packedDone =
     input.packedAt !== null && input.packedAt !== undefined
       ? true

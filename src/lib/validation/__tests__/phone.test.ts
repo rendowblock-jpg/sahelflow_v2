@@ -104,3 +104,12 @@ describe("canonical DZ phone module (audit d6 #1/#7/#10)", () => {
     });
   });
 });
+
+describe("displayContactName", () => {
+  it("shows raw chat numbers the way sellers write them and keeps names", async () => {
+    const { displayContactName } = await import("@/lib/validation/phone");
+    expect(displayContactName("213555345678")).toBe("05 55 34 56 78");
+    expect(displayContactName("33612345678")).toBe("+33612345678");
+    expect(displayContactName("Nadia Belkacem")).toBe("Nadia Belkacem");
+  });
+});

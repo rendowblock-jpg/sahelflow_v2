@@ -16,7 +16,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.language.label": "Language",
     "storefront.releaseHistory.title": "Release history",
     "storefront.releaseHistory.description":
-      "Every publish is immutable. Rollback creates a new release from a verified historical version.",
+      "Every publish is kept as its own version. Going back to an older version publishes it again as a new version.",
     "storefront.releaseHistory.current": "Current",
     "storefront.releaseHistory.rollback": "Rollback",
     "storefront.releaseHistory.rollingBack": "Rolling back…",
@@ -30,14 +30,14 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.releaseHistory.rollbackFailed":
       "Rollback failed. The current live release was kept.",
     "storefront.releaseHistory.rolledBack":
-      "Rollback published as a new immutable release.",
+      "The older version is live again, published as a new version.",
     "storefront.releaseHistory.products": "items",
   },
   fr: {
     "storefront.language.label": "Langue",
     "storefront.releaseHistory.title": "Historique des versions",
     "storefront.releaseHistory.description":
-      "Chaque publication est immuable. Le retour arrière crée une nouvelle version depuis une version historique vérifiée.",
+      "Chaque publication est conservée comme une version. Revenir à une ancienne version la republie comme nouvelle version.",
     "storefront.releaseHistory.current": "Actuelle",
     "storefront.releaseHistory.rollback": "Restaurer",
     "storefront.releaseHistory.rollingBack": "Restauration…",
@@ -52,14 +52,14 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.releaseHistory.rollbackFailed":
       "La restauration a échoué. La version active actuelle a été conservée.",
     "storefront.releaseHistory.rolledBack":
-      "La restauration a été publiée comme une nouvelle version immuable.",
+      "L’ancienne version est de nouveau en ligne, publiée comme nouvelle version.",
     "storefront.releaseHistory.products": "articles",
   },
   ar: {
     "storefront.language.label": "اللغة",
     "storefront.releaseHistory.title": "سجل الإصدارات",
     "storefront.releaseHistory.description":
-      "كل نشر غير قابل للتعديل. الاسترجاع ينشئ إصدارًا جديدًا من نسخة تاريخية موثّقة.",
+      "تُحفظ كل عملية نشر كإصدار مستقل. الرجوع إلى إصدار قديم يعيد نشره كإصدار جديد.",
     "storefront.releaseHistory.current": "الحالي",
     "storefront.releaseHistory.rollback": "استرجاع",
     "storefront.releaseHistory.rollingBack": "جارٍ الاسترجاع…",
@@ -73,7 +73,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.releaseHistory.rollbackFailed":
       "فشل الاسترجاع. تم الإبقاء على الإصدار الحي الحالي.",
     "storefront.releaseHistory.rolledBack":
-      "تم نشر الاسترجاع كإصدار جديد غير قابل للتعديل.",
+      "عاد الإصدار القديم إلى النشر كإصدار جديد.",
     "storefront.releaseHistory.products": "عناصر",
   },
 };

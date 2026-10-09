@@ -92,7 +92,7 @@ export function createDurableSendReceiptJournal(
   };
 }
 
-const durableReceiptJournal = createDurableSendReceiptJournal();
+export const durableSendReceiptJournal = createDurableSendReceiptJournal();
 
 export function deterministicWhatsAppMessageId(effectKey: string): string {
   return createHash("sha256")
@@ -107,12 +107,12 @@ export function findDurableSendReceipt(
   effectKey: string,
   requestBinding: string,
 ): DurableSendReceipt | null {
-  return durableReceiptJournal.find(effectKey, requestBinding);
+  return durableSendReceiptJournal.find(effectKey, requestBinding);
 }
 
 export function recordDurableSendReceipt(
   effectKey: string,
   receipt: DurableSendReceipt,
 ): void {
-  durableReceiptJournal.record(effectKey, receipt);
+  durableSendReceiptJournal.record(effectKey, receipt);
 }

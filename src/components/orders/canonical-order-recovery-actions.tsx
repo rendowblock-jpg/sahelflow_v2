@@ -29,11 +29,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import type {
   CanonicalOrderRecoveryAction,
   CanonicalReturnDisposition,
 } from "@/lib/orders/canonical-order-recovery";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { orderStateLabel } from "@/lib/orders/order-state-label";
 
 interface RecoveryPosition {
   orderId: string;
@@ -61,10 +64,10 @@ interface RecoveryPosition {
 const COPY = {
   en: {
     heading: "Cancellation and physical returns",
-    authority: "Governed recovery authority",
-    loading: "Loading current recovery authority…",
-    noAction: "No cancellation or physical-return action is currently available.",
-    loadFailed: "The current recovery position could not be loaded.",
+    authority: "Every step is recorded in the order history.",
+    loading: "Loading…",
+    noAction: "No cancellation or return step is possible right now.",
+    loadFailed: "This section could not be loaded.",
     cancel: "Cancel before shipment",
     delivery_failed: "Delivery failed",
     delivery_refused: "Customer refused",
@@ -73,7 +76,7 @@ const COPY = {
     inspect_return: "Inspect returned goods",
     cancelTitle: "Cancel this order before shipment?",
     cancelBody:
-      "The exact active reservation will be released and available stock restored atomically.",
+      "The reserved items go back to your available stock.",
     delivery_failedTitle: "Record a failed delivery?",
     delivery_failedBody:
       "Stock remains unavailable until the parcel physically returns and is inspected.",
@@ -82,29 +85,29 @@ const COPY = {
       "Stock remains with the carrier until physical return and inspection.",
     return_in_transitTitle: "Mark the parcel as returning?",
     return_in_transitBody:
-      "This records carrier return transit without restoring sellable stock.",
+      "The parcel is on its way back. It is not added to your stock yet.",
     receive_returnTitle: "Receive the physical parcel?",
     receive_returnBody:
-      "Goods enter inspection quarantine. They are not available for sale yet.",
+      "The items are set aside for checking. They are not for sale yet.",
     inspect_returnTitle: "Complete returned-goods inspection?",
     inspect_returnBody:
-      "Every item must be assigned to available, damaged, quarantine or lost stock.",
+      "Choose for each item: back to stock, damaged, set aside, or lost.",
     reason: "Reason code",
     reasonPlaceholder: "customer-refused",
-    providerEvent: "Provider event ID (optional)",
-    providerEventPlaceholder: "Courier event or tracking update ID",
-    disposition: "Disposition",
-    chooseDisposition: "Choose disposition",
-    available: "Available",
+    providerEvent: "Courier reference (optional)",
+    providerEventPlaceholder: "Tracking update or event number",
+    disposition: "Where does it go?",
+    chooseDisposition: "Choose",
+    available: "Back to stock",
     damaged: "Damaged",
-    quarantine: "Quarantine",
+    quarantine: "Set aside for checking",
     lost: "Lost",
-    commit: "Commit governed action",
-    committed: "The recovery action was committed.",
-    replayed: "The previously committed action was recovered safely.",
-    failed: "The action was not committed. Refresh the current facts and retry.",
-    conflict: "The order or delivery changed. Refresh before retrying.",
-    invalid: "Complete the required reason and inspection fields.",
+    commit: "Confirm",
+    committed: "Saved.",
+    replayed: "This was already saved.",
+    failed: "Nothing was saved. Refresh and try again.",
+    conflict: "This order or delivery changed in the meantime. Refresh and try again.",
+    invalid: "Choose a reason, and a destination for each item if asked.",
     returnCase: "Return case",
     delivery: "Delivery",
     inventory: "Inventory",
@@ -113,12 +116,12 @@ const COPY = {
   },
   fr: {
     heading: "Annulation et retours physiques",
-    authority: "Autorité de récupération gouvernée",
-    loading: "Chargement de l'autorité de récupération…",
+    authority: "Chaque étape est enregistrée dans l’historique de la commande.",
+    loading: "Chargement…",
     noAction:
-      "Aucune action d'annulation ou de retour physique n'est disponible.",
+      "Aucune annulation ni étape de retour n’est possible pour le moment.",
     loadFailed:
-      "La position de récupération actuelle n'a pas pu être chargée.",
+      "Cette section n’a pas pu être chargée.",
     cancel: "Annuler avant expédition",
     delivery_failed: "Échec de livraison",
     delivery_refused: "Refus du client",
@@ -127,7 +130,7 @@ const COPY = {
     inspect_return: "Inspecter les articles retournés",
     cancelTitle: "Annuler cette commande avant expédition ?",
     cancelBody:
-      "La réservation exacte sera libérée et le stock disponible restauré atomiquement.",
+      "Les articles réservés retournent dans votre stock disponible.",
     delivery_failedTitle: "Enregistrer un échec de livraison ?",
     delivery_failedBody:
       "Le stock reste indisponible jusqu'au retour physique et à l'inspection.",
@@ -136,30 +139,30 @@ const COPY = {
       "Le stock reste chez le transporteur jusqu'au retour physique et à l'inspection.",
     return_in_transitTitle: "Marquer le colis en retour ?",
     return_in_transitBody:
-      "Le transit retour est enregistré sans restaurer le stock vendable.",
+      "Le colis est sur le chemin du retour. Il n’est pas encore remis en stock.",
     receive_returnTitle: "Recevoir physiquement le colis ?",
     receive_returnBody:
-      "Les articles entrent en quarantaine d'inspection et ne sont pas encore vendables.",
+      "Les articles sont mis de côté pour vérification. Ils ne sont pas encore en vente.",
     inspect_returnTitle: "Terminer l'inspection du retour ?",
     inspect_returnBody:
-      "Chaque article doit être classé disponible, endommagé, en quarantaine ou perdu.",
+      "Choisissez pour chaque article : remis en stock, endommagé, mis de côté ou perdu.",
     reason: "Code motif",
     reasonPlaceholder: "customer-refused",
-    providerEvent: "ID événement transporteur (facultatif)",
-    providerEventPlaceholder: "ID événement ou suivi transporteur",
-    disposition: "Disposition",
-    chooseDisposition: "Choisir la disposition",
-    available: "Disponible",
+    providerEvent: "Référence transporteur (facultatif)",
+    providerEventPlaceholder: "Numéro de mise à jour ou d’événement",
+    disposition: "Où va l’article ?",
+    chooseDisposition: "Choisir",
+    available: "Remis en stock",
     damaged: "Endommagé",
-    quarantine: "Quarantaine",
+    quarantine: "Mis de côté pour vérification",
     lost: "Perdu",
-    commit: "Valider l'action gouvernée",
-    committed: "L'action de récupération a été validée.",
-    replayed: "L'action déjà validée a été récupérée sans risque.",
-    failed: "L'action n'a pas été validée. Actualisez puis réessayez.",
+    commit: "Confirmer",
+    committed: "Enregistré.",
+    replayed: "C’était déjà enregistré.",
+    failed: "Rien n’a été enregistré. Actualisez puis réessayez.",
     conflict:
-      "La commande ou la livraison a changé. Actualisez avant de réessayer.",
-    invalid: "Complétez le motif et les champs d'inspection requis.",
+      "Cette commande ou cette livraison a changé entre-temps. Actualisez puis réessayez.",
+    invalid: "Choisissez un motif, et une destination pour chaque article si demandé.",
     returnCase: "Dossier retour",
     delivery: "Livraison",
     inventory: "Stock",
@@ -168,10 +171,10 @@ const COPY = {
   },
   ar: {
     heading: "الإلغاء والإرجاع الفعلي",
-    authority: "صلاحية استرجاع موثوقة",
-    loading: "جارٍ تحميل صلاحية الاسترجاع الحالية…",
-    noAction: "لا يوجد إجراء إلغاء أو إرجاع فعلي متاح حاليًا.",
-    loadFailed: "تعذر تحميل حالة الاسترجاع الحالية.",
+    authority: "تُسجَّل كل خطوة في سجل الطلبية.",
+    loading: "جارٍ التحميل…",
+    noAction: "لا يمكن الإلغاء أو تنفيذ خطوة إرجاع حاليًا.",
+    loadFailed: "تعذّر تحميل هذا القسم.",
     cancel: "إلغاء قبل الشحن",
     delivery_failed: "فشل التوصيل",
     delivery_refused: "رفض الزبون",
@@ -180,7 +183,7 @@ const COPY = {
     inspect_return: "فحص السلع المرتجعة",
     cancelTitle: "إلغاء الطلبية قبل الشحن؟",
     cancelBody:
-      "سيُحرر الحجز الدقيق ويُعاد المخزون المتاح داخل معاملة واحدة.",
+      "تعود المنتجات المحجوزة إلى مخزونك المتاح.",
     delivery_failedTitle: "تسجيل فشل التوصيل؟",
     delivery_failedBody:
       "يبقى المخزون غير متاح حتى يرجع الطرد فعليًا ويتم فحصه.",
@@ -189,30 +192,30 @@ const COPY = {
       "يبقى المخزون لدى شركة التوصيل حتى الإرجاع والفحص الفعلي.",
     return_in_transitTitle: "تعليم الطرد كإرجاع قيد النقل؟",
     return_in_transitBody:
-      "يسجل مسار الإرجاع دون إعادة المخزون القابل للبيع.",
+      "الطرد في طريق العودة. لم يُضف إلى مخزونك بعد.",
     receive_returnTitle: "استلام الطرد المرتجع فعليًا؟",
     receive_returnBody:
-      "تدخل السلع إلى حجر الفحص ولا تصبح متاحة للبيع بعد.",
+      "تُعزل المنتجات للفحص. ليست متاحة للبيع بعد.",
     inspect_returnTitle: "إتمام فحص السلع المرتجعة؟",
     inspect_returnBody:
-      "يجب تصنيف كل عنصر كمتاح أو تالف أو محجور أو مفقود.",
+      "اختر لكل منتج: يعود إلى المخزون، تالف، معزول، أو مفقود.",
     reason: "رمز السبب",
     reasonPlaceholder: "customer-refused",
-    providerEvent: "معرّف حدث شركة التوصيل (اختياري)",
-    providerEventPlaceholder: "معرّف الحدث أو تحديث التتبع",
-    disposition: "التصنيف",
-    chooseDisposition: "اختر التصنيف",
-    available: "متاح",
+    providerEvent: "مرجع شركة التوصيل (اختياري)",
+    providerEventPlaceholder: "رقم تحديث التتبع أو الحدث",
+    disposition: "أين يذهب المنتج؟",
+    chooseDisposition: "اختر",
+    available: "يعود إلى المخزون",
     damaged: "تالف",
-    quarantine: "محجور",
+    quarantine: "معزول للفحص",
     lost: "مفقود",
-    commit: "اعتماد الإجراء الموثوق",
-    committed: "تم اعتماد إجراء الاسترجاع.",
-    replayed: "تمت استعادة الإجراء المعتمد سابقًا بأمان.",
-    failed: "لم يتم اعتماد الإجراء. حدّث الحالة ثم أعد المحاولة.",
+    commit: "تأكيد",
+    committed: "تم الحفظ.",
+    replayed: "سبق حفظ ذلك.",
+    failed: "لم يُحفظ شيء. حدّث الصفحة ثم أعد المحاولة.",
     conflict:
-      "تغيّرت الطلبية أو الشحنة. حدّث الصفحة قبل إعادة المحاولة.",
-    invalid: "أكمل رمز السبب وحقول الفحص المطلوبة.",
+      "تغيّرت هذه الطلبية أو هذا التوصيل في الأثناء. حدّث الصفحة ثم أعد المحاولة.",
+    invalid: "اختر سببًا، ووجهة لكل منتج إن طُلب ذلك.",
     returnCase: "ملف الإرجاع",
     delivery: "التوصيل",
     inventory: "المخزون",
@@ -249,7 +252,7 @@ export function CanonicalOrderRecoveryActions({
 }: {
   orderId: string;
 }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const copy = COPY[locale];
   const router = useRouter();
   const {
@@ -366,7 +369,7 @@ export function CanonicalOrderRecoveryActions({
       await mutatePrefix("/api/orders");
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.failed);
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy.failed);
     } finally {
       setCommitting(false);
     }
@@ -425,25 +428,25 @@ export function CanonicalOrderRecoveryActions({
         <div>
           <dt className="text-xs text-muted-foreground">{copy.delivery}</dt>
           <dd className="font-medium" dir="auto">
-            {position.deliveryState ?? "—"}
+            {orderStateLabel(position.deliveryState, t)}
           </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.inventory}</dt>
           <dd className="font-medium" dir="auto">
-            {position.inventoryState ?? "—"}
+            {orderStateLabel(position.inventoryState, t)}
           </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.returns}</dt>
           <dd className="font-medium" dir="auto">
-            {position.returnState ?? "—"}
+            {orderStateLabel(position.returnState, t)}
           </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.returnCase}</dt>
           <dd className="truncate font-medium" dir="auto">
-            {position.returnCase?.currentState ?? "—"}
+            {orderStateLabel(position.returnCase?.currentState, t)}
           </dd>
         </div>
       </dl>
@@ -475,17 +478,14 @@ export function CanonicalOrderRecoveryActions({
           </AlertDialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="recovery-reason">{copy.reason}</Label>
-              <Input
-                id="recovery-reason"
-                value={reasonCode}
-                onChange={(event) => setReasonCode(event.target.value)}
-                placeholder={copy.reasonPlaceholder}
-                disabled={committing}
-                dir="auto"
-              />
-            </div>
+            <ReasonCodeField
+              id="recovery-reason"
+              context="recovery"
+              locale={locale}
+              value={reasonCode}
+              onChange={setReasonCode}
+              disabled={committing}
+            />
 
             {selectedAction && PROVIDER_ACTIONS.has(selectedAction) ? (
               <div className="space-y-1.5">

@@ -258,6 +258,10 @@ export async function getProductWorkbenchSummary(
     lowStock: lowStockRows.filter(
       (row) => row.stock <= row.lowStockThreshold,
     ).length,
+    stockUnits: inventoryRows.reduce(
+      (sum, row) => sum + Math.max(0, row.stock),
+      0,
+    ),
     inventoryValue: inventoryRows.reduce(
       (sum, row) => sum + row.price * Math.max(0, row.stock),
       0,

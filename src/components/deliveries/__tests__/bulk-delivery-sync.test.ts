@@ -153,6 +153,22 @@ describe("runBulkDeliverySync", () => {
     expect(outcome.failedRefs).toContain("network-error");
   });
 
+  it("counts failures caused by a courier that is not connected yet", async () => {
+    const rows = [
+      row({ id: "a", trackingNumber: "A" }),
+      row({ id: "b", trackingNumber: "B" }),
+      row({ id: "c", trackingNumber: "C" }),
+    ];
+    const outcome = await runBulkDeliverySync(rows, {
+      sync: async (id) =>
+        id === "c"
+          ? { ok: false }
+          : { ok: false, code: "PROVIDER_CAPABILITY_UNCERTIFIED" },
+    });
+    expect(outcome.failed).toBe(3);
+    expect(outcome.courierNotConnected).toBe(2);
+  });
+
   it("caps failedRefs at five entries", async () => {
     const rows = Array.from({ length: 8 }, (_, index) =>
       row({ id: `d-${index}`, trackingNumber: `T-${index}` }),
@@ -206,6 +222,7 @@ describe("runBulkDeliverySync", () => {
       succeeded: 0,
       failed: 0,
       reconciliationRequired: 0,
+      courierNotConnected: 0,
       failedRefs: [],
     });
   });

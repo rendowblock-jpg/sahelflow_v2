@@ -78,7 +78,7 @@ export default async function ImportsPage() {
           <ImportPanel
             entity="orders"
             title={t("nav.orders")}
-            description={t("imports.subtitle")}
+            description={t("imports.importOrdersDesc")}
           />
         </div>
       ) : null}

@@ -10,6 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { ProductDetailActions } from "@/components/products/product-detail-actions";
 import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RecentRecordTracker } from "@/components/shared/recent-record-tracker";
@@ -25,6 +26,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { db, shopContext } from "@/lib/db";
+import { productService } from "@/lib/data";
 import { getI18n } from "@/lib/i18n-server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { getProductDetailWorkbench } from "@/lib/products/product-detail-workbench";
@@ -35,6 +38,24 @@ export const dynamic = "force-dynamic";
 
 type PageProps = { params: Promise<{ id: string }> };
 
+/** Audit sources are snake_case; their copy keys are camelCase. */
+const STOCK_SOURCE_KEY = {
+  ai_assistant: "aiAssistant",
+  ai_action: "aiAction",
+  manual: "manual",
+  other: "other",
+} as const;
+
+/** Who changed the stock, in words (raw actor ids never reach the seller). */
+function stockActorKey(actor: string | null): string {
+  if (!actor) return "productStock.by.system";
+  if (actor.startsWith("ai")) return "productStock.by.ai";
+  if (actor.startsWith("person:") || actor.startsWith("member:") || actor === "user") {
+    return "productStock.by.person";
+  }
+  return "productStock.by.system";
+}
+
 export default async function ProductDetailPage({ params }: PageProps) {
   const { t, locale } = await getI18n();
   const actorContext = await requireTrustedAction("products.read");
@@ -42,8 +63,18 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const workbench = await getProductDetailWorkbench(actorContext, id);
   if (!workbench) notFound();
 
-  const { product, recentItems, stockHistory, canReadOrders, canReadOrderFinancials } =
-    workbench;
+  const {
+    product,
+    recentItems,
+    stockHistory,
+    orderMovements,
+    canManage,
+    canReadOrders,
+    canReadOrderFinancials,
+  } = workbench;
+  const categories = canManage
+    ? await productService.listCategories({ prisma: db, shop: shopContext })
+    : [];
   const isLowStock = product.stock <= product.lowStockThreshold;
   const inventoryValue = product.price * Math.max(0, product.stock);
   const productVariants: VariantOption[] = product.productVariants.map((variant) => ({
@@ -111,11 +142,18 @@ export default async function ProductDetailPage({ params }: PageProps) {
           formatDate(product.createdAt, locale),
         ].filter(Boolean).join(" · ")}
         actions={
-          isLowStock ? (
-            <Badge variant="destructive">
-              <AlertTriangle className="size-3.5" aria-hidden="true" />
-              {t("products.lowStock")}
-            </Badge>
+          isLowStock || canManage ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {isLowStock ? (
+                <Badge variant="destructive">
+                  <AlertTriangle className="size-3.5" aria-hidden="true" />
+                  {t("products.lowStock")}
+                </Badge>
+              ) : null}
+              {canManage ? (
+                <ProductDetailActions product={product} categories={categories} />
+              ) : null}
+            </div>
           ) : undefined
         }
       />
@@ -127,7 +165,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           icon={<TrendingUp />}
           subtitle={
             product.cost !== null
-              ? `${t("products.cost")}: ${formatDZD(product.cost, locale)}${margin !== null ? ` · ${t("products.value")}: ${formatDZD(margin, locale)}${marginPct !== null ? ` (${marginPct}%)` : ""}` : ""}`
+              ? `${t("products.cost")}: ${formatDZD(product.cost, locale)}${margin !== null ? ` · ${t("analytics.skuColMargin")}: ${formatDZD(margin, locale)}${marginPct !== null ? ` (${marginPct}%)` : ""}` : ""}`
               : undefined
           }
         />
@@ -236,16 +274,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
                         {event.toStock ?? "—"}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {t(`productStock.source.${event.source}`)}
+                        {t(`productStock.source.${STOCK_SOURCE_KEY[event.source]}`)}
                       </TableCell>
                       <TableCell className="max-w-48 truncate text-sm text-muted-foreground">
                         {event.reason ?? "—"}
                       </TableCell>
-                      <TableCell
-                        className="font-mono text-xs text-muted-foreground"
-                        title={event.actor ?? undefined}
-                      >
-                        {event.actor ?? "—"}
+                      <TableCell className="text-sm text-muted-foreground">
+                        {t(stockActorKey(event.actor))}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -253,6 +288,52 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </Table>
             </div>
           )}
+          {orderMovements.length > 0 ? (
+            <div className="mt-6 space-y-2" data-product-stock-history="order-movements">
+              <h3 className="text-sm font-medium">
+                {t("productStock.orderMovementsTitle")}
+              </h3>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("common.date")}</TableHead>
+                      <TableHead>{t("productStock.movement")}</TableHead>
+                      <TableHead className="text-end">{t("productStock.quantity")}</TableHead>
+                      <TableHead>{t("productStock.order")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orderMovements.map((movement) => (
+                      <TableRow key={movement.id}>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(movement.occurredAt, locale)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {t(`productStock.kind.${movement.kind}`)}
+                        </TableCell>
+                        <TableCell className="text-end tabular-nums">
+                          {movement.quantity}
+                        </TableCell>
+                        <TableCell>
+                          {movement.orderId && movement.orderNumber ? (
+                            <Link
+                              href={`/orders/${movement.orderId}`}
+                              className="font-mono text-sm text-primary hover:underline"
+                            >
+                              {movement.orderNumber}
+                            </Link>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ) : null}
           <p className="mt-3 text-xs text-muted-foreground">
             {t("productStock.coverageNote")}
           </p>

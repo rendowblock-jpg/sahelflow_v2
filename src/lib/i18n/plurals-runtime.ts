@@ -58,6 +58,9 @@ const translations: Record<Locale, Record<string, string>> = {
     // Inbox label filter count ("1 labels" in the base is wrong).
     "inbox.labels.count_one": "{{count}} label",
     "inbox.labels.count_other": "{{count}} labels",
+    // Automation card step count ("1 step(s)" in the base reads as a form).
+    "automations.stepCount_one": "{{count}} step",
+    "automations.stepCount_other": "{{count}} steps",
     // Storefronts list — product count per storefront ("product(s)" cleanup).
     "storefront.list.productsCount_one": "{{count}} product",
     "storefront.list.productsCount_other": "{{count}} products",
@@ -100,6 +103,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "inbox.liveness.unreadChats_many": "{{count}} discussions non lues",
     "inbox.labels.count_one": "{{count}} étiquette",
     "inbox.labels.count_other": "{{count}} étiquettes",
+    "automations.stepCount_one": "{{count}} étape",
+    "automations.stepCount_many": "{{count}} d’étapes",
+    "automations.stepCount_other": "{{count}} étapes",
     // Vitrines.
     "storefront.list.productsCount_one": "{{count}} produit",
     "storefront.list.productsCount_other": "{{count}} produits",
@@ -185,6 +191,12 @@ const translations: Record<Locale, Record<string, string>> = {
     "inbox.labels.count_few": "{{count}} تصنيفات",
     "inbox.labels.count_many": "{{count}} تصنيفًا",
     "inbox.labels.count_other": "{{count}} تصنيف",
+    "automations.stepCount_zero": "بدون خطوات",
+    "automations.stepCount_one": "خطوة واحدة",
+    "automations.stepCount_two": "خطوتان",
+    "automations.stepCount_few": "{{count}} خطوات",
+    "automations.stepCount_many": "{{count}} خطوة",
+    "automations.stepCount_other": "{{count}} خطوة",
     // الإشعارات — تُكمل فئات ar.json: ‎_one و_other مملوكان لملف اللغة (يفوز JSON).
     "notif.staleQueue.title_zero": "لا طلبات تحتاج إلى تأكيد",
     "notif.staleQueue.title_two": "طلبان يحتاجان إلى تأكيد",

@@ -80,13 +80,50 @@ export function algeriaOutlinePath(): string {
   return `M${OUTLINE.map((point) => projectAlgeria(point).join(",")).join("L")}Z`;
 }
 
-export function algeriaArcPath(from: AlgeriaCity, to: AlgeriaCity): string {
+export type AlgeriaPoint = readonly [number, number];
+
+/** Start, control and end points of the lifted arc a parcel flies along. */
+export function algeriaArcPoints(
+  from: AlgeriaCity,
+  to: AlgeriaCity,
+): [AlgeriaPoint, AlgeriaPoint, AlgeriaPoint] {
   const [x1, y1] = projectAlgeria(ALGERIA_CITIES[from]);
   const [x2, y2] = projectAlgeria(ALGERIA_CITIES[to]);
-  const mx = (x1 + x2) / 2;
-  const my = (y1 + y2) / 2;
   const lift = Math.hypot(x2 - x1, y2 - y1) * 0.28;
-  return `M${x1},${y1} Q${mx},${(my - lift).toFixed(1)} ${x2},${y2}`;
+  return [
+    [x1, y1],
+    [(x1 + x2) / 2, +((y1 + y2) / 2 - lift).toFixed(1)],
+    [x2, y2],
+  ];
+}
+
+export function algeriaArcPath(from: AlgeriaCity, to: AlgeriaCity): string {
+  const [[x1, y1], [cx, cy], [x2, y2]] = algeriaArcPoints(from, to);
+  return `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`;
+}
+
+/** A point on the quadratic arc at progress t (0–1). */
+export function pointOnArc(
+  [p0, p1, p2]: readonly [AlgeriaPoint, AlgeriaPoint, AlgeriaPoint],
+  t: number,
+): [number, number] {
+  const u = 1 - t;
+  return [
+    u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0],
+    u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1],
+  ];
+}
+
+/** Approximate arc length, used so every parcel travels at a similar speed. */
+export function arcLength(points: readonly [AlgeriaPoint, AlgeriaPoint, AlgeriaPoint]): number {
+  let length = 0;
+  let previous = pointOnArc(points, 0);
+  for (let step = 1; step <= 24; step += 1) {
+    const next = pointOnArc(points, step / 24);
+    length += Math.hypot(next[0] - previous[0], next[1] - previous[1]);
+    previous = next;
+  }
+  return length;
 }
 
 /** Destinations from Algiers — same set as the cinematic sahelflow.com map. */

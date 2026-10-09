@@ -65,6 +65,9 @@ describe("isPublicApiRoute", () => {
     "/api/health/private",
     "/api/storefront/submit/private",
     "/api/storefront/config",
+    "/api/storefront/offers",
+    "/api/storefront/reviews/review-1/moderate",
+    "/api/storefront/cart-capture/private",
     "/api/whatsapp/qr-image",
     "/api/orders",
     "/api/customers",
@@ -94,6 +97,16 @@ describe("isPublicPage", () => {
     "/risk",
   ])("rejects protected page %s", (pathname) => {
     expect(isPublicPage(pathname)).toBe(false);
+  });
+});
+
+describe("public storefront buyer routes", () => {
+  it.each([
+    "/api/storefront/offers/evaluate",
+    "/api/storefront/cart-capture",
+    "/api/storefront/reviews",
+  ])("lets a shopper without an account reach %s", (pathname) => {
+    expect(isPublicApiRoute(pathname)).toBe(true);
   });
 });
 

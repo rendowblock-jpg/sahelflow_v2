@@ -41,6 +41,11 @@ fn main() {
             return;
         }
 
+        // FD-068: the first pixels. Painted before recovery, the
+        // survivability controller, Tauri or any WebView exists; never during
+        // installation-root rotation (returned above).
+        sahelflow_lib::native_splash::start();
+
         if let Err(error) = survivability_controller::recover_pending_before_run() {
             eprintln!(
                 "[sahelflow] protected replacement restore blocked ({})",

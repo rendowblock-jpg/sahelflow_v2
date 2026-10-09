@@ -5,10 +5,8 @@ import {
   type SettingsWorkspaceAccess,
 } from "@/components/settings/settings-ia";
 import { db } from "@/lib/db";
-import {
-  requireTrustedAction,
-  trustedActionAllowed,
-} from "@/lib/identity/authorization";
+import { trustedActionAllowed } from "@/lib/identity/authorization";
+import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 
 export interface SettingsWorkspaceProps {
   access: SettingsWorkspaceAccess;
@@ -28,7 +26,9 @@ export interface SettingsWorkspaceProps {
 export async function resolveSettingsWorkspaceProps(
   requestedGroup: string | undefined,
 ): Promise<SettingsWorkspaceProps> {
-  const actorContext = await requireTrustedAction("settings.read");
+  // Every signed-in member reaches Settings for their own account and
+  // appearance; shop surfaces below are offered only to roles that hold them.
+  const actorContext = await requireTrustedActor();
   const resource = { shopId: actorContext.shop.shopId };
   const can = (action: Parameters<typeof trustedActionAllowed>[1]) =>
     trustedActionAllowed(actorContext, action, resource);
@@ -37,8 +37,12 @@ export async function resolveSettingsWorkspaceProps(
   ) => actions.every((action) => can(action));
 
   const profileManage = can("settings.manage");
+  const teamMember =
+    actorContext.actor.kind === "person" && actorContext.actor.role !== "owner";
   const access: SettingsWorkspaceAccess = {
-    profile: true,
+    myAccount: teamMember,
+    // The profile is the shop's public owner profile, not the member's own.
+    profile: can("settings.read"),
     profileManage,
     security: can("sessions.read") || can("devices.read"),
     // The route enforces owner-only authority itself; this only decides

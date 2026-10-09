@@ -12,10 +12,10 @@
     "@whiskeysockets/baileys": "^6.7.0",
     "@hapi/boom": "^10.0.1",
     "hono": "^4.13.5",
-    "music-metadata": "^11.14.0",
+    "music-metadata": "^11.16.1",
     "pino": "^9.5.0",
     "qrcode": "^1.5.4",
-    "sharp": "0.35.4"
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.5"

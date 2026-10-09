@@ -17,6 +17,7 @@ import {
   mapConversationProjection,
 } from "./inbox-workspace-shared";
 import type { InboxSharedRefs } from "./use-inbox-shared-refs";
+import { displayContactName } from "@/lib/validation/phone";
 
 /**
  * INB-27 — chat queue concern of the Inbox workspace.
@@ -123,7 +124,7 @@ export function useInboxChatQueue({
             id: chat.jid,
             conversationId: chat.conversationId,
             transportId: chat.jid,
-            name: chat.name,
+            name: displayContactName(chat.name),
             phone: chat.phone ?? undefined,
             channel: "whatsapp" as const,
             lastMessageText: chat.lastMessage?.text,

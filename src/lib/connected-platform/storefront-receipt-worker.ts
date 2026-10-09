@@ -2,6 +2,8 @@ import "server-only";
 
 import { logger } from "@/lib/logger";
 
+import { IDLE_POLL_INTERVAL_MS, isConnectedIdleState } from "./worker-idle";
+
 const WORKER_KEY = Symbol.for("sahelflow.storefront-receipt-worker.v1");
 const POLL_INTERVAL_MS = 5_000;
 const CURSOR_KEY_PREFIX = "connected.storefront.receipt.cursor.v1";
@@ -15,8 +17,9 @@ export function startStorefrontReceiptWorker(): void {
   const state: WorkerState = { running: false, timer: null };
   workerGlobal[WORKER_KEY] = state;
 
+  let idle = false;
   const schedule = () => {
-    state.timer = setTimeout(() => void tick(), POLL_INTERVAL_MS);
+    state.timer = setTimeout(() => void tick(), idle ? IDLE_POLL_INTERVAL_MS : POLL_INTERVAL_MS);
     state.timer.unref?.();
   };
   const tick = async () => {
@@ -61,7 +64,16 @@ export function startStorefrontReceiptWorker(): void {
           update: { value: String(result.nextCursor) },
         });
       }
+      if (idle) logger.info("storefront.receipt_worker.resumed");
+      idle = false;
     } catch (error) {
+      if (isConnectedIdleState(error)) {
+        // No storefront enrolled or entitled: rest quietly, say so once.
+        if (!idle) logger.info("storefront.receipt_worker.idle");
+        idle = true;
+        return;
+      }
+      idle = false;
       // C1: the silent catch hid relay stalls (poison receipts, broken
       // decryption enrollment, relay outages) behind a permanently frozen
       // cursor. The cursor and canonical order idempotency retain their

@@ -114,6 +114,14 @@ describe("analyticsService.buildSummary", () => {
     expect(summary.revenueDelta).toBe(0);
   });
 
+  it("reports no percentage when the previous period had nothing to compare", () => {
+    const period = [makeOrder({ totalPrice: 1500, status: "delivered" })];
+    const summary = analyticsService.buildSummary(period, []);
+    expect(summary.revenueDelta).toBeNull();
+    expect(summary.ordersDelta).toBeNull();
+    expect(summary.aovDelta).toBeNull();
+  });
+
   it("preserves operational gross while exposing governed profitability", () => {
     const period = [makeOrder({ totalPrice: 9999, status: "pending" })];
     const summary = analyticsService.buildSummary(period, [], {

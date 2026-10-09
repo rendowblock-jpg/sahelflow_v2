@@ -54,6 +54,7 @@ import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
 import { formatDZD, formatDate } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 export const dynamic = "force-dynamic";
 
@@ -146,7 +147,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             {customer.wilaya ? (
               <span className="inline-flex items-center gap-1">
                 <MapPin className="size-3.5" aria-hidden="true" />
-                {customer.wilaya}{customer.commune ? ` · ${customer.commune}` : ""}
+                {displayWilaya(customer.wilaya, locale)}{customer.commune ? ` · ${customer.commune}` : ""}
               </span>
             ) : null}
             <span className="inline-flex items-center gap-1">

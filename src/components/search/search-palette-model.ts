@@ -108,6 +108,33 @@ export const CREATE_ACTIONS: readonly PaletteCreateAction[] = [
   },
 ];
 
+/**
+ * Words sellers actually type for each destination, in all three languages.
+ * The palette also matches every destination's label in Arabic, French and
+ * English, so a seller who thinks "stock" or "مخزون" in any interface language
+ * still lands on Products. Synonyms only widen matching; ranking still prefers
+ * the label in the current language.
+ */
+export const NAVIGATION_SYNONYMS: Readonly<Record<string, readonly string[]>> = {
+  home: ["accueil", "tableau", "aujourd'hui", "الرئيسية", "اليوم", "لوحة"],
+  sell: ["commandes", "ventes", "طلبيات", "طلبات", "مبيعات"],
+  "confirmation-queue": ["confirmer", "appel", "appeler", "à confirmer", "تأكيد", "اتصال", "مكالمة"],
+  products: ["stock", "inventaire", "catalogue", "article", "articles", "مخزون", "منتجات", "سلع", "كتالوج"],
+  imports: ["importer", "exporter", "excel", "استيراد", "تصدير"],
+  customers: ["acheteurs", "زبائن", "عملاء", "زبون"],
+  risk: ["risque", "liste noire", "blacklist", "réputation", "retours", "مخاطر", "قائمة سوداء", "سمعة"],
+  fulfill: ["livraison", "expédition", "colis", "livreur", "transporteur", "suivi", "توصيل", "شحن", "طرود", "طرد", "شركة التوصيل", "تتبع"],
+  returns: ["retour", "retours", "échange", "remboursement", "مرتجعات", "إرجاع", "استبدال"],
+  money: ["argent", "comptabilité", "bénéfice", "dépenses", "finance", "مال", "محاسبة", "ربح", "أرباح", "مصاريف"],
+  "cod-reconciliation": ["encaissement", "versement", "rapprochement", "tahsil", "تحصيل", "تسوية", "تحويل", "مطابقة"],
+  inbox: ["messages", "discussions", "chat", "واتساب", "رسائل", "محادثات"],
+  storefront: ["boutique", "site", "landing", "vitrine", "متجر", "موقع", "صفحة هبوط"],
+  grow: ["statistiques", "rapports", "performance", "إحصائيات", "تقارير", "تحليلات"],
+  automations: ["automatisation", "règles", "relance", "أتمتة", "قواعد", "تذكير"],
+  agents: ["ia", "assistant", "gemini", "ذكاء اصطناعي", "مساعد"],
+  settings: ["paramètres", "équipe", "licence", "sauvegarde", "boutiques", "إعدادات", "فريق", "ترخيص", "نسخ احتياطي", "متاجر"],
+};
+
 export interface ResultGroup {
   kind: Exclude<SearchScope, "all">;
   rows: Array<SearchRow & { score: number }>;
@@ -135,10 +162,20 @@ export function groupResults(
     }
     group.rows.push(row);
   }
-  return [...byKind.values()].sort((left, right) => {
+  const groups = [...byKind.values()];
+  const best = (group: ResultGroup | undefined) => group?.rows[0]?.score ?? 0;
+  const pages = byKind.get("navigation");
+  const bestRecord = Math.max(0, ...groups.filter((group) => group.kind !== "navigation").map(best));
+  // Records lead by default. A page leads only when the seller typed its name
+  // (or an exact synonym) and no record matched as well.
+  const pagesLead = best(pages) >= EXACT_PAGE_SCORE && best(pages) > bestRecord;
+  return groups.sort((left, right) => {
     const leftNav = left.kind === "navigation" ? 1 : 0;
     const rightNav = right.kind === "navigation" ? 1 : 0;
-    if (leftNav !== rightNav) return leftNav - rightNav;
-    return (right.rows[0]?.score ?? 0) - (left.rows[0]?.score ?? 0);
+    if (leftNav !== rightNav) return pagesLead ? rightNav - leftNav : leftNav - rightNav;
+    return best(right) - best(left);
   });
 }
+
+/** Score of an exact label or exact keyword match (see scoreUniversalSearchCandidate). */
+const EXACT_PAGE_SCORE = 1_120;

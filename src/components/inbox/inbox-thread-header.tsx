@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { intlLocale } from "@/lib/utils";
+import { displayContactName } from "@/lib/validation/phone";
 
 /** "Active …" hint appears only after the thread has been idle this long. */
 const LAST_ACTIVE_MIN_IDLE_MS = 5 * 60_000;
@@ -197,7 +198,7 @@ export function InboxThreadHeader({
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-caption text-muted-foreground">
             {activeChat.phone ? (
               <span dir="ltr" className="truncate tabular-nums">
-                {activeChat.phone}
+                {displayContactName(activeChat.phone)}
               </span>
             ) : null}
             {activeChat.phone ? <span aria-hidden="true">·</span> : null}

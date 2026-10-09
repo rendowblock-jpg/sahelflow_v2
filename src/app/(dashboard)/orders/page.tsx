@@ -360,9 +360,9 @@ export default async function OrdersPage({
         />
       </div>
 
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <Tabs defaultValue={statusFilter ?? "all"} className="w-full min-w-0">
-          <TabsList className="h-auto w-full min-w-0 flex-wrap justify-start">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 lg:flex-nowrap">
+        <Tabs defaultValue={statusFilter ?? "all"} className="min-w-0 flex-1">
+          <TabsList className="h-auto w-fit max-w-full min-w-0 flex-wrap justify-start">
             {STATUS_FILTERS.map((filter) => (
               <TabsTrigger key={filter.value} value={filter.value} asChild>
                 <Link
@@ -384,7 +384,7 @@ export default async function OrdersPage({
         {fallback.fieldAccess.risk ? (
           <Link
             href="/risk"
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-control px-2 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-control px-2 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ShieldAlert className="size-4" aria-hidden="true" />
             {t("nav.risk")}

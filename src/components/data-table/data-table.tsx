@@ -71,7 +71,7 @@ export interface BulkAction {
 declare module "@tanstack/react-table" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnMeta<TData, TValue> {
-    hideOn?: "sm" | "md" | "lg";
+    hideOn?: "sm" | "md" | "lg" | "xl" | "2xl";
     align?: "start" | "center" | "end";
     width?: string;
     /** Long-text columns: wrap instead of the global whitespace-nowrap. */
@@ -254,7 +254,11 @@ export function DataTable<TData>({
                           ? "hidden md:table-cell"
                           : meta?.hideOn === "lg"
                             ? "hidden lg:table-cell"
-                            : "";
+                            : meta?.hideOn === "xl"
+                              ? "hidden xl:table-cell"
+                              : meta?.hideOn === "2xl"
+                                ? "hidden 2xl:table-cell"
+                                : "";
                     const alignClass =
                       meta?.align === "end"
                         ? "text-end"
@@ -370,7 +374,11 @@ export function DataTable<TData>({
                             ? "hidden md:table-cell"
                             : meta?.hideOn === "lg"
                               ? "hidden lg:table-cell"
-                              : "";
+                              : meta?.hideOn === "xl"
+                                ? "hidden xl:table-cell"
+                                : meta?.hideOn === "2xl"
+                                  ? "hidden 2xl:table-cell"
+                                  : "";
                       const alignClass =
                         meta?.align === "end"
                           ? "text-end"

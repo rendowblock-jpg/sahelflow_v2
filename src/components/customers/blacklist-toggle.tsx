@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface BlacklistToggleProps {
   customerId: string;
@@ -71,7 +72,7 @@ export function BlacklistToggle({
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(data?.error ?? `Request failed (${res.status})`);
+        throw new Error(localizeServerMessage(data?.error ?? `Request failed (${res.status})`));
       }
       toast.success(t("risk.blacklist.add"));
       setAddOpen(false);
@@ -81,7 +82,7 @@ export function BlacklistToggle({
       void mutatePrefix("/api/customers");
     } catch (err) {
       toast.error(
-        translateServerError(err instanceof Error ? err.message : "", t, t("common.error")),
+        translateServerError(err instanceof Error ? localizeServerMessage(err.message) : "", t, t("common.error")),
       );
     } finally {
       setSaving(false);
@@ -96,7 +97,7 @@ export function BlacklistToggle({
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(data?.error ?? `Request failed (${res.status})`);
+        throw new Error(localizeServerMessage(data?.error ?? `Request failed (${res.status})`));
       }
       toast.success(t("risk.blacklist.remove"));
       setRemoveOpen(false);
@@ -105,7 +106,7 @@ export function BlacklistToggle({
       void mutatePrefix("/api/customers");
     } catch (err) {
       toast.error(
-        translateServerError(err instanceof Error ? err.message : "", t, t("common.error")),
+        translateServerError(err instanceof Error ? localizeServerMessage(err.message) : "", t, t("common.error")),
       );
     } finally {
       setSaving(false);

@@ -17,6 +17,7 @@ import {
   describeDeleteRejection,
   mapConversationProjection,
   normalizeDeepLinkConversationId,
+  resolveEffectiveWhatsAppStatus,
 } from "./inbox/inbox-workspace-shared";
 import { useInboxSharedRefs } from "./inbox/use-inbox-shared-refs";
 import { useInboxChatQueue } from "./inbox/use-inbox-chat-queue";
@@ -101,7 +102,11 @@ export function useInboxWorkspace() {
     onMessageUpdate: transportHandlers.handleMessageUpdate,
   });
 
-  const effectiveStatus: WhatsAppStatus | null = status ?? chatQueue.sidecarStatus;
+  const effectiveStatus: WhatsAppStatus | null = resolveEffectiveWhatsAppStatus({
+    wsOpen,
+    pushedStatus: status,
+    polledStatus: chatQueue.sidecarStatus,
+  });
 
   const outbox = useInboxOutbox({
     refs,

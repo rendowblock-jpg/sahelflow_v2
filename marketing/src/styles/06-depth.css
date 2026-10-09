@@ -1,0 +1,83 @@
+/* ───────────────────────── 3D: WebGL night, depth and stacks ───────────────────────── */
+
+.gl-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; display: block;
+  opacity: 0; transition: opacity 1.6s var(--ease);
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+  mask-image: linear-gradient(180deg, #000 70%, transparent);
+}
+.has-gl > .gl-canvas { opacity: 1; }
+.has-gl > .stars, .has-gl > .hero-aurora { opacity: 0; transition: opacity 1.2s; }
+.hero .gl-canvas { height: min(1100px, 125vh); }
+.hero.has-gl .hero-inner::before {
+  content: ""; position: absolute; inset: -60px -10% -40px; z-index: -1; pointer-events: none;
+  background: radial-gradient(50% 55% at 50% 45%, rgba(5, 7, 12, .72), transparent 75%);
+}
+.final-cta .gl-canvas, .download-hero .gl-canvas { -webkit-mask-image: linear-gradient(180deg, transparent, #000 25%, #000 75%, transparent); mask-image: linear-gradient(180deg, transparent, #000 25%, #000 75%, transparent); }
+.final-cta.has-gl .final-inner::before, .download-hero.has-gl .download-inner::before {
+  content: ""; position: absolute; inset: -40px -10%; z-index: -1; pointer-events: none;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(5, 7, 12, .7), transparent 75%);
+}
+.final-inner, .download-inner { isolation: isolate; }
+.has-gl .dunes { opacity: .0; }
+
+/* pointer-reactive depth */
+.hero-stage { transform-style: preserve-3d; }
+.tilt3d, [data-tilt] {
+  --rx: 0deg; --ry: 0deg;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx)) rotateY(var(--ry));
+  will-change: transform;
+}
+.tilt3d { position: relative; }
+.tilt3d .stage-layer { transform-style: preserve-3d; }
+.chat-card { translate: 0 0 90px; }
+.ai-card { translate: 0 0 120px; }
+.status-card { translate: 0 0 70px; }
+.cash-card { translate: 0 0 150px; }
+.tilt3d .app-window { transform: translateZ(0); }
+.tilt3d::before {
+  content: ""; position: absolute; inset: 8% 10% -4%; z-index: -1; border-radius: 40px;
+  background: radial-gradient(60% 60% at 50% 50%, rgba(0, 0, 0, .7), transparent 70%);
+  transform: translateZ(-80px); filter: blur(30px);
+}
+@media (max-width: 560px) { .chat-card, .ai-card, .status-card, .cash-card { translate: none; } }
+
+/* product overview: real screens exploded in 3D */
+.stack3d { --spread: 18px; position: relative; overflow: clip; overflow-clip-margin: 40px; perspective: 2600px; height: clamp(420px, 62vw, 760px); display: grid; place-items: center; }
+.stack3d-inner {
+  position: relative; width: min(760px, 62vw); aspect-ratio: 16 / 10;
+  transform-style: preserve-3d;
+  transform: rotateX(56deg) rotateZ(-36deg) translateZ(-40px);
+}
+[dir="rtl"] .stack3d-inner { transform: rotateX(56deg) rotateZ(36deg) translateZ(-40px); }
+.stack-layer {
+  position: absolute; inset: 0; margin: 0;
+  border-radius: 14px; overflow: visible;
+  transform: translateZ(calc(var(--i) * var(--spread)));
+  transform-style: preserve-3d;
+  transition: transform .2s linear;
+}
+.stack-layer img {
+  width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  box-shadow: 0 30px 60px -10px rgba(0, 0, 0, .75), 0 0 0 1px rgba(0, 0, 0, .4);
+}
+.stack-layer::after { content: ""; position: absolute; inset: 0; border-radius: 14px; background: linear-gradient(135deg, rgba(56, 189, 248, .16), transparent 40%); pointer-events: none; }
+.stack-label {
+  position: absolute; top: calc(100% + 14px); inset-inline-start: 4%;
+  display: flex; align-items: center; gap: 10px;
+  white-space: nowrap; font-size: 20px; font-weight: 600; letter-spacing: -.01em;
+  color: var(--ink);
+  opacity: clamp(0, calc((var(--spread-n, 0) - .3) * 2.5), 1);
+  transition: opacity .3s;
+}
+.stack-label::before { content: ""; width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 12px var(--sky); background: var(--sky); }
+
+@media (max-width: 700px) { .stack-label { display: none; } .stack3d-inner { width: 74vw; margin-inline-end: 0; } }
+
+/* the map tilts into the screen */
+.map-figure { perspective: 1600px; }
+.dz-map { transform: rotateX(32deg) rotateZ(-4deg) scale(.98); transform-origin: 50% 60%; filter: drop-shadow(0 40px 40px rgba(0, 0, 0, .6)); }
+[dir="rtl"] .dz-map { transform: rotateX(32deg) rotateZ(4deg) scale(.98); }

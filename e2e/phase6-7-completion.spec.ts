@@ -399,7 +399,7 @@ async function createGovernedManualOrder(page: Page) {
         address: "Cité AADL, Lot 23",
         phone,
         deliveryCost: 500,
-        notes: "Phase 6/7 governed Orders journey evidence",
+        notes: "Phase 6/7 Orders journey evidence",
         source: "manual",
       }),
     });
@@ -617,17 +617,17 @@ const GOVERNED_REVIEW_EXPECTATIONS = {
   en: {
     dir: "ltr",
     title: "Confirmation review",
-    authority: "Canonical order authority",
+    confirm: "Confirm order",
   },
   fr: {
     dir: "ltr",
     title: "Vérification de confirmation",
-    authority: "Autorité canonique de commande",
+    confirm: "Confirmer la commande",
   },
   ar: {
     dir: "rtl",
     title: "مراجعة التأكيد",
-    authority: "صلاحية الطلبية الموثوقة",
+    confirm: "تأكيد الطلبية",
   },
 } as const;
 
@@ -686,8 +686,11 @@ test.describe.serial("Orders governed seller journey", () => {
     await expect(
       page.getByText(GOVERNED_REVIEW_EXPECTATIONS.en.title),
     ).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
+    // Restated: the review is proven by its decision action, not a badge.
     await expect(
-      page.getByText(GOVERNED_REVIEW_EXPECTATIONS.en.authority),
+      page
+        .getByRole("button", { name: GOVERNED_REVIEW_EXPECTATIONS.en.confirm })
+        .first(),
     ).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
     await expect(page.locator("body")).not.toContainText("rule-1");
     await assertContained(page, `/orders/${orderId}`);
@@ -724,9 +727,14 @@ test.describe.serial("Orders governed seller journey", () => {
       await expect(page.getByText(expectation.title)).toBeVisible({
         timeout: GOVERNED_SURFACE_TIMEOUT_MS,
       });
-      await expect(page.getByText(expectation.authority)).toBeVisible({
-        timeout: GOVERNED_SURFACE_TIMEOUT_MS,
-      });
+      // Restated: normal orders no longer carry an engineering "authority"
+      // badge; the governed review is proven by its localized decision action.
+      await expect(
+        page.getByRole("button", { name: expectation.confirm }).first(),
+      ).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
+      // Engineering vocabulary never reaches the seller (every copy string is
+      // checked by src/lib/i18n/__tests__/seller-vocabulary.test.ts; a page-
+      // wide regex would also match fixture data such as the buyer's name).
       await expect(page.locator("body")).not.toContainText(
         "Canonical order authority",
       );

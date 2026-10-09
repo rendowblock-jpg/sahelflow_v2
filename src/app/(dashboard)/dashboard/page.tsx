@@ -42,6 +42,7 @@ import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
 import { formatDZD, intlLocale } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 export default async function DashboardPage() {
   const { t, locale } = await getI18n();
@@ -118,7 +119,7 @@ export default async function DashboardPage() {
       ? [
           {
             id: "confirmation-stale",
-            label: t("confirmationQueue.stale"),
+            label: t("dashboard.attention.staleConfirmations"),
             value: staleConfirmations,
             href: "/orders/confirmation-queue",
             icon: AlertTriangle,
@@ -130,7 +131,7 @@ export default async function DashboardPage() {
       ? [
           {
             id: "delivery-pending",
-            label: t("nav.delivery"),
+            label: t("dashboard.attention.pendingDeliveries"),
             value: stats.pendingDeliveries,
             href: "/deliveries?status=pending",
             icon: Truck,
@@ -154,9 +155,9 @@ export default async function DashboardPage() {
       ? [
           {
             id: "low-stock",
-            label: t("dashboard.lowStock"),
+            label: t("dashboard.attention.lowStock"),
             value: stats.lowStockProducts,
-            href: "/products",
+            href: "/products?stock=low",
             icon: Package,
             tone: "warning" as const,
           },
@@ -339,7 +340,7 @@ export default async function DashboardPage() {
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
                           {itemLabel}
-                          {order.wilaya ? ` · ${order.wilaya}` : ""}
+                          {order.wilaya ? ` · ${displayWilaya(order.wilaya, locale)}` : ""}
                         </p>
                       </div>
                     </div>

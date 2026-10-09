@@ -19,8 +19,9 @@ import {
 } from "@/hooks/swr/use-deliveries";
 import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
-import { deliveryProviderConfig } from "@/lib/shared";
+import { deliveryProviderConfig, deliveryProviderLabel } from "@/lib/shared";
 import { formatDZD, formatDate } from "@/lib/utils";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 interface DeliveriesDataTableProps {
   fallback: DeliveriesResponse;
@@ -49,14 +50,20 @@ export function DeliveriesDataTable({
             href={`/deliveries/${row.original.id}`}
             className="text-xs font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <TechnicalValue data-tracking-number>
-              {row.original.trackingNumber ?? row.original.id}
-            </TechnicalValue>
+            {row.original.trackingNumber ? (
+              <TechnicalValue data-tracking-number>{row.original.trackingNumber}</TechnicalValue>
+            ) : (
+              <span className="text-muted-foreground">{t("deliveries.noTracking")}</span>
+            )}
           </Link>
         ) : (
-          <TechnicalValue className="text-xs" data-tracking-number>
-            {row.original.trackingNumber ?? row.original.id}
-          </TechnicalValue>
+          row.original.trackingNumber ? (
+            <TechnicalValue className="text-xs" data-tracking-number>
+              {row.original.trackingNumber}
+            </TechnicalValue>
+          ) : (
+            <span className="text-xs text-muted-foreground">{t("deliveries.noTracking")}</span>
+          )
         ),
     },
     {
@@ -95,7 +102,7 @@ export function DeliveriesDataTable({
                   {row.original.order?.customer?.name ?? "—"}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {row.original.order?.wilaya ?? "—"}
+                  {displayWilaya(row.original.order?.wilaya, locale) || "—"}
                 </div>
               </div>
             ),
@@ -119,7 +126,7 @@ export function DeliveriesDataTable({
             {config.label}
           </span>
         ) : (
-          <span className="text-sm">{row.original.provider}</span>
+          <span className="text-sm">{deliveryProviderLabel(row.original.provider, t)}</span>
         );
       },
       meta: { hideOn: "sm" },
@@ -162,7 +169,7 @@ export function DeliveriesDataTable({
           {formatDate(row.original.createdAt, locale)}
         </span>
       ),
-      meta: { hideOn: "lg" },
+      meta: { hideOn: "2xl" },
       enableSorting: false,
     },
     {

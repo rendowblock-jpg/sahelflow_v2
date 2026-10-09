@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface ProductRowActionsProps {
   product: ProductFormDialogProduct;
@@ -61,7 +62,7 @@ export function ProductRowActions({
       setDeleteOpen(false);
       await deleteProduct(product.id);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("common.error"));
+      toast.error(err instanceof Error ? localizeServerMessage(err.message) : t("common.error"));
     } finally {
       setDeleting(false);
     }

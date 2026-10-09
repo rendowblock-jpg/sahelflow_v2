@@ -18,7 +18,7 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder}
 pub const LAUNCH_WINDOW_LABEL: &str = "launch";
 // Deliberately not "SahelFlow": installed evidence identifies the workspace
 // window by that exact title.
-const LAUNCH_WINDOW_TITLE: &str = "SahelFlow - Starting";
+pub(crate) const LAUNCH_WINDOW_TITLE: &str = "SahelFlow - Starting";
 const WORKSPACE_WINDOW_LABEL: &str = "main";
 const STARTUP_TRACE_FILE: &str = "startup-trace.json";
 const PREVIOUS_UI_READY_FILE: &str = "runtime-ui-ready.json";
@@ -27,6 +27,12 @@ const POLL_INTERVAL: Duration = Duration::from_millis(200);
 const SLOW_HINT_AFTER: Duration = Duration::from_secs(15);
 const MAX_LIFETIME: Duration = Duration::from_secs(10 * 60);
 const TEMPLATE: &str = include_str!("launch_screen.html");
+/// Timing-only trace stages: they never move the progress model.
+pub(crate) const INFORMATIONAL_STAGES: [&str; 3] = [
+    "process-started",
+    "splash-painted",
+    "workspace-window-created",
+];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Locale {
@@ -54,18 +60,18 @@ impl Phase {
     }
 }
 
-struct LaunchCopy {
+pub(crate) struct LaunchCopy {
     lang: &'static str,
     dir: &'static str,
-    tagline: &'static str,
-    preparing: &'static str,
-    starting: &'static str,
-    retrying: &'static str,
-    opening: &'static str,
-    slow_hint: &'static str,
+    pub(crate) tagline: &'static str,
+    pub(crate) preparing: &'static str,
+    pub(crate) starting: &'static str,
+    pub(crate) retrying: &'static str,
+    pub(crate) opening: &'static str,
+    pub(crate) slow_hint: &'static str,
 }
 
-fn copy(locale: Locale) -> LaunchCopy {
+pub(crate) fn copy(locale: Locale) -> LaunchCopy {
     match locale {
         Locale::Ar => LaunchCopy {
             lang: "ar",
@@ -145,7 +151,7 @@ struct PreviousUiReady {
 /// The seller's last workspace language (recorded by the previous launch's
 /// UI-ready receipt), else the Windows display language, else French — the
 /// workspace default.
-fn launch_locale(app_data_dir: &Path) -> Locale {
+pub(crate) fn launch_locale(app_data_dir: &Path) -> Locale {
     let previous = app_data_dir.join(PREVIOUS_UI_READY_FILE);
     let recorded = fs::metadata(&previous)
         .ok()
@@ -160,8 +166,11 @@ fn launch_locale(app_data_dir: &Path) -> Locale {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct TraceEvent {
     stage: String,
+    #[serde(default)]
+    created_at_unix_milliseconds: u64,
 }
 
 #[derive(Deserialize)]
@@ -170,15 +179,28 @@ struct Trace {
 }
 
 fn latest_stage(trace_path: &Path) -> Option<String> {
+    latest_stage_with_origin(trace_path).and_then(|(_, stage)| stage)
+}
+
+/// The first event's timestamp (when this launch reset the trace) and the
+/// latest recorded stage.
+pub(crate) fn latest_stage_with_origin(trace_path: &Path) -> Option<(u64, Option<String>)> {
     let bytes = fs::read(trace_path).ok()?;
     let trace = serde_json::from_slice::<Trace>(&bytes).ok()?;
-    trace.events.into_iter().last().map(|event| event.stage)
+    let origin = trace.events.first()?.created_at_unix_milliseconds;
+    let latest = trace
+        .events
+        .into_iter()
+        .rev()
+        .find(|event| !INFORMATIONAL_STAGES.contains(&event.stage.as_str()))
+        .map(|event| event.stage);
+    Some((origin, latest))
 }
 
 /// Each recorded stage maps to a phase and a progress band. Progress only
 /// creeps inside the band, so the bar never claims a stage that has not
 /// happened and never reaches the end before the workspace is visible.
-pub fn stage_band(stage: Option<&str>) -> (Phase, f32, f32) {
+pub(crate) fn stage_band(stage: Option<&str>) -> (Phase, f32, f32) {
     match stage.unwrap_or_default() {
         "migration-started" => (Phase::Preparing, 0.16, 0.34),
         "migration-complete" => (Phase::Preparing, 0.36, 0.42),
@@ -186,12 +208,16 @@ pub fn stage_band(stage: Option<&str>) -> (Phase, f32, f32) {
         "runtime-prepare-complete" | "runtime-attempt-started" => (Phase::Starting, 0.54, 0.72),
         "runtime-attempt-failed" => (Phase::Retrying, 0.50, 0.60),
         "runtime-listening" => (Phase::Starting, 0.74, 0.82),
-        "runtime-ready" => (Phase::Opening, 0.84, 0.96),
+        "runtime-ready" => (Phase::Opening, 0.84, 0.94),
+        // The workspace is loading and hydrating: the longest final wait must
+        // keep saying "opening", not fall back to "preparing".
+        "ui-navigation-started" => (Phase::Opening, 0.88, 0.97),
+        "ui-ready" => (Phase::Opening, 0.97, 0.99),
         _ => (Phase::Preparing, 0.06, 0.15),
     }
 }
 
-pub fn next_progress(shown: f32, floor: f32, ceiling: f32) -> f32 {
+pub(crate) fn next_progress(shown: f32, floor: f32, ceiling: f32) -> f32 {
     if shown < floor {
         floor
     } else if shown >= ceiling {
@@ -217,7 +243,35 @@ fn launch_url(app_data_dir: &Path, html: &str) -> Option<WebviewUrl> {
 
 /// Paint the launch window immediately. Failure to create it is never a
 /// startup failure: the workspace handoff continues exactly as before.
+///
+/// When the native splash already covers the wait (started at the top of
+/// `main`, before any WebView existed), no second launch surface is built:
+/// this only hands the splash its close signal for when `main` is visible.
 pub fn open(app: &AppHandle, app_data_dir: &Path) {
+    if crate::native_splash::is_active() {
+        let app = app.clone();
+        let _ = thread::Builder::new()
+            .name("sahelflow-native-splash-follow".to_string())
+            .spawn(move || {
+                let started_at = Instant::now();
+                while started_at.elapsed() < MAX_LIFETIME && !workspace_visible(&app) {
+                    thread::sleep(POLL_INTERVAL);
+                }
+                crate::native_splash::request_close();
+                if let (Some(painted), Ok(app_data_dir)) = (
+                    crate::native_splash::painted_unix_ms(),
+                    app.path().app_data_dir(),
+                ) {
+                    crate::startup_recovery::record_startup_stage_at(
+                        &app_data_dir,
+                        "splash-painted",
+                        None,
+                        painted,
+                    );
+                }
+            });
+        return;
+    }
     let html = render_html(launch_locale(app_data_dir), env!("CARGO_PKG_VERSION"));
     let Some(url) = launch_url(app_data_dir, &html) else {
         return;
@@ -291,6 +345,7 @@ pub fn focus(app: &AppHandle) {
     if let Some(window) = app.get_webview_window(LAUNCH_WINDOW_LABEL) {
         let _ = window.set_focus();
     }
+    crate::native_splash::bring_to_front();
 }
 
 #[cfg(test)]

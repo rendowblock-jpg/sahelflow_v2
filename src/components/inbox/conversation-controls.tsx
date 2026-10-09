@@ -42,6 +42,7 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 export type ConversationStatus = "open" | "pending" | "resolved" | "snoozed";
 export type ConversationPriority = "urgent" | "high" | "medium" | "low";
@@ -394,7 +395,7 @@ export function AssigneeControl({
       setAuthority(body.currentActor);
       setMembers(body.assignableMembers);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("inbox.assignment.loadError"));
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : t("inbox.assignment.loadError"));
     } finally {
       setLoading(false);
     }
@@ -496,7 +497,7 @@ export function AssigneeControl({
       setOpen(false);
       onUpdated?.(nextAssigneeId, body.assignment.version);
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : t("inbox.assignment.saveError");
+      const message = caught instanceof Error ? localizeServerMessage(caught.message) : t("inbox.assignment.saveError");
       setError(message);
       toast.error(message);
     } finally {

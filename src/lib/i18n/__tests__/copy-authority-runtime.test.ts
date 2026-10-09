@@ -257,9 +257,9 @@ describe("runtime chain integration (R5-d)", () => {
     expect(translate("fr", "codReconciliation.grossRemitted")).toBe(
       "Versement brut",
     );
-    expect(translate("en", "codReconciliation.commitSuccess")).toBe(
-      "The governed COD command was committed.",
-    );
+    // Restated 2026-10 seller-vocabulary pass: the chain still resolves this
+    // runtime key; its wording dropped the engineering terms.
+    expect(translate("en", "codReconciliation.commitSuccess")).toBe("Saved.");
     expect(translate("ar", "inbox.orderStatus.shipped")).toBe("تم الشحن");
     expect(translate("fr", "inbox.orderStatus.return_completed")).toBe(
       "Retour terminé",

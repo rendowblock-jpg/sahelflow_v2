@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Offline by construction: no network request of any kind is permitted, so
+     the signing key loaded into this page can never leave the computer. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>SahelFlow License Desk</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef3f8;
+  --ink: #0d1b2a;
+  --muted: #55657a;
+  --line: #d8e1ec;
+  --primary: #0b6bcb;
+  --primary-ink: #ffffff;
+  --primary-soft: #e3effb;
+  --success: #12804a;
+  --success-soft: #e3f4ea;
+  --warning: #9a5b00;
+  --warning-soft: #fdf1dc;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --radius: 10px;
+  --radius-control: 6px;
+  font: 14px/22px "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #07111c;
+    --surface: #0d1a28;
+    --surface-2: #122334;
+    --ink: #e6eef7;
+    --muted: #93a4b8;
+    --line: #22364b;
+    --primary: #4ea3f5;
+    --primary-ink: #04121f;
+    --primary-soft: #0f2a44;
+    --success: #4cc38a;
+    --success-soft: #0f2c20;
+    --warning: #f0b45a;
+    --warning-soft: #2e2210;
+    --danger: #f2877d;
+    --danger-soft: #34140f;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); }
+header {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.mark {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, #7dd3fc, #0b6bcb 70%);
+}
+.brand h1 { margin: 0; font-size: 18px; line-height: 26px; font-weight: 600; }
+.brand p { margin: 0; color: var(--muted); font-size: 12px; line-height: 16px; }
+.offline {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+  border-radius: 999px; background: var(--success-soft); color: var(--success);
+  font-size: 12px; font-weight: 600;
+}
+.offline::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+main { max-width: 1120px; margin: 0 auto; padding: 24px; display: grid; gap: 24px; }
+.grid { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: start; }
+section.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; display: grid; gap: 14px;
+}
+.step { display: flex; align-items: center; gap: 10px; }
+.step b {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--primary-soft); color: var(--primary); font-size: 13px;
+}
+.step h2 { margin: 0; font-size: 15px; line-height: 22px; font-weight: 600; }
+.hint { margin: 0; color: var(--muted); font-size: 13px; line-height: 20px; }
+label { display: grid; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+input, select, textarea {
+  font: inherit; color: var(--ink); background: var(--surface); width: 100%;
+  border: 1px solid var(--line); border-radius: var(--radius-control); padding: 8px 10px; min-height: 36px;
+}
+textarea { min-height: 88px; resize: vertical; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12px; line-height: 18px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: 2px solid var(--primary); outline-offset: 2px;
+}
+.row { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  font: inherit; font-weight: 600; min-height: 36px; padding: 0 14px; border-radius: var(--radius-control);
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); cursor: pointer;
+}
+button.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.status { margin: 0; padding: 10px 12px; border-radius: var(--radius-control); font-size: 13px; line-height: 20px; }
+.status[data-tone="ok"] { background: var(--success-soft); color: var(--success); }
+.status[data-tone="warn"] { background: var(--warning-soft); color: var(--warning); }
+.status[data-tone="error"] { background: var(--danger-soft); color: var(--danger); }
+.status:empty { display: none; }
+dl.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 13px; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.total { font-size: 24px; line-height: 32px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.output { background: var(--surface-2); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: start; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-size: 12px; font-weight: 600; }
+td.num { font-variant-numeric: tabular-nums; }
+.empty { color: var(--muted); padding: 16px 10px; }
+details summary { cursor: pointer; font-weight: 600; }
+.hidden { display: none !important; }
+@media (max-width: 640px) { .row { grid-template-columns: 1fr; } main { padding: 16px; } header { padding: 12px 16px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark" aria-hidden="true"></div>
+    <div>
+      <h1>SahelFlow License Desk</h1>
+      <p>Issue permanent licences after BaridiMob / CCP payment</p>
+    </div>
+  </div>
+  <span class="offline" title="This page cannot make any network request">Offline · key stays on this PC</span>
+</header>
+
+<main>
+  <div class="grid">
+    <section class="card" aria-labelledby="key-title">
+      <div class="step"><b>1</b><h2 id="key-title">Signing key</h2></div>
+      <p class="hint">Open your permanent key file (for example <code>permanent-2026-10.private</code>). It is read into memory only and forgotten when you close this page.</p>
+      <label>Key file<input id="key-file" type="file" accept=".private,.txt"></label>
+      <label>Key id<input id="key-id" value="permanent-2026-10" autocomplete="off" spellcheck="false"></label>
+      <dl class="facts hidden" id="key-facts">
+        <dt>Public key</dt><dd id="key-public"></dd>
+      </dl>
+      <details>
+        <summary>Check against the app's keyring</summary>
+        <p class="hint">Paste the value of the GitHub variable <code>SF_LICENSE_PERMANENT_PUBLIC_KEYS</code>. A licence activates only if this key is in the keyring the installed version was built with.</p>
+        <textarea id="keyring" placeholder='{"permanent-2026-10":"…"}' spellcheck="false"></textarea>
+      </details>
+      <p class="status" id="key-status" role="status"></p>
+      <details>
+        <summary>Create a new signing key</summary>
+        <p class="hint">Do this once. Save the downloaded file somewhere safe and offline (a USB drive kept at home). Losing it means you cannot issue licences that current versions accept; anyone who copies it can issue licences.</p>
+        <div class="actions"><button type="button" id="key-generate">Create and download key</button></div>
+        <textarea id="key-new-entry" class="hidden" readonly spellcheck="false"></textarea>
+      </details>
+    </section>
+
+    <section class="card" aria-labelledby="request-title">
+      <div class="step"><b>2</b><h2 id="request-title">Seller's request code</h2></div>
+      <p class="hint">The seller copies it from SahelFlow → “Get my request code” and sends it on WhatsApp with the payment receipt.</p>
+      <label>Request code<textarea id="request-code" placeholder="SFLR1.…" spellcheck="false"></textarea></label>
+      <dl class="facts hidden" id="request-facts">
+        <dt>Installation</dt><dd id="request-installation"></dd>
+        <dt>Product version</dt><dd id="request-major"></dd>
+        <dt>Recovery epoch</dt><dd id="request-recovery"></dd>
+        <dt>Current licence</dt><dd id="request-current"></dd>
+      </dl>
+      <p class="status" id="request-status" role="status"></p>
+    </section>
+
+    <section class="card" aria-labelledby="package-title">
+      <div class="step"><b>3</b><h2 id="package-title">Package and payment</h2></div>
+      <div class="row">
+        <label>Extra shops<select id="extra-shops"></select></label>
+        <label>Reply language<select id="reply-locale">
+          <option value="ar">العربية</option><option value="fr">Français</option><option value="en">English</option>
+        </select></label>
+      </div>
+      <div class="total" id="package-total" aria-live="polite"></div>
+      <p class="hint" id="package-summary"></p>
+      <div class="row">
+        <label>Customer name<input id="customer" autocomplete="off"></label>
+        <label>Phone<input id="phone" autocomplete="off" inputmode="tel" dir="ltr"></label>
+      </div>
+      <label>Payment reference (BaridiMob / CCP)<input id="payment-ref" autocomplete="off" dir="ltr"></label>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink)">
+        <input type="checkbox" id="payment-confirmed" style="width:auto;min-height:auto">
+        I verified this payment on the receiving account
+      </label>
+      <div class="actions"><button type="button" class="primary" id="issue" disabled>Issue licence</button></div>
+      <p class="status" id="issue-status" role="status"></p>
+    </section>
+  </div>
+
+  <section class="card output hidden" id="result" aria-labelledby="result-title">
+    <div class="step"><b>✓</b><h2 id="result-title">Licence ready</h2></div>
+    <label>Message for the seller (WhatsApp)<textarea id="result-message" readonly spellcheck="false" style="min-height:140px"></textarea></label>
+    <div class="actions">
+      <button type="button" class="primary" id="copy-message">Copy message</button>
+      <button type="button" id="copy-code">Copy code only</button>
+      <button type="button" id="download-license">Download .sflicense file</button>
+    </div>
+    <p class="status" id="result-status" role="status"></p>
+  </section>
+
+  <section class="card" aria-labelledby="ledger-title">
+    <div class="step"><b>≡</b><h2 id="ledger-title">Sales ledger</h2></div>
+    <p class="hint">Kept only in this browser on this computer. Export it regularly.</p>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Issued</th><th>Customer</th><th>Payment</th><th>Shops</th><th>Total</th><th>Licence</th></tr></thead>
+        <tbody id="ledger-body"></tbody>
+      </table>
+    </div>
+    <div class="actions"><button type="button" id="export-ledger">Export CSV</button></div>
+  </section>
+</main>
+<script>/*__DESK_SCRIPT__*/</script>
+</body>
+</html>

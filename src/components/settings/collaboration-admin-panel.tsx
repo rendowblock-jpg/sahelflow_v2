@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 const COPY = {
   en: {
     title: "Workgroups and queues",
-    description: "Organize current-shop work with versioned, audited member authority.",
-    loading: "Loading collaboration authority…",
-    loadError: "Collaboration authority could not be loaded.",
+    description: "Group people who share work, and give each kind of work its own queue. Every change is recorded.",
+    loading: "Loading workgroups…",
+    loadError: "Workgroups couldn’t be loaded. Try again.",
     refresh: "Refresh",
     workgroups: "Workgroups",
     queues: "Queues",
@@ -26,7 +27,7 @@ const COPY = {
     remove: "Remove selected",
     archive: "Archive",
     createQueue: "Create queue",
-    queueKey: "Stable queue key",
+    queueKey: "Short code (for example confirmations)",
     queueName: "Queue name",
     entityType: "Work type",
     conversation: "Conversations",
@@ -43,13 +44,13 @@ const COPY = {
     operator: "Operator",
     viewer: "Viewer",
     conflict: "The record changed elsewhere. Refresh and try again.",
-    saveError: "The collaboration change could not be saved.",
+    saveError: "The change couldn’t be saved. Try again.",
   },
   fr: {
     title: "Groupes de travail et files",
-    description: "Organisez le travail de la boutique avec une autorité versionnée et auditée.",
-    loading: "Chargement de l’autorité de collaboration…",
-    loadError: "Impossible de charger l’autorité de collaboration.",
+    description: "Regroupez les personnes qui partagent le même travail et donnez à chaque type de travail sa file. Chaque changement est enregistré.",
+    loading: "Chargement des groupes…",
+    loadError: "Les groupes n’ont pas pu être chargés. Réessayez.",
     refresh: "Actualiser",
     workgroups: "Groupes de travail",
     queues: "Files",
@@ -61,7 +62,7 @@ const COPY = {
     remove: "Retirer la sélection",
     archive: "Archiver",
     createQueue: "Créer une file",
-    queueKey: "Clé stable de la file",
+    queueKey: "Code court (par exemple confirmations)",
     queueName: "Nom de la file",
     entityType: "Type de travail",
     conversation: "Conversations",
@@ -78,13 +79,13 @@ const COPY = {
     operator: "Opérateur",
     viewer: "Lecteur",
     conflict: "L’enregistrement a changé ailleurs. Actualisez puis réessayez.",
-    saveError: "Impossible d’enregistrer le changement de collaboration.",
+    saveError: "Le changement n’a pas pu être enregistré. Réessayez.",
   },
   ar: {
     title: "مجموعات العمل وقوائم الانتظار",
-    description: "نظّم عمل المتجر بصلاحيات مضبوطة بالإصدار والتدقيق.",
-    loading: "جارٍ تحميل صلاحيات التعاون…",
-    loadError: "تعذر تحميل صلاحيات التعاون.",
+    description: "اجمع الأشخاص الذين يتشاركون العمل نفسه، وخصّص لكل نوع عمل قائمته. يُسجَّل كل تغيير.",
+    loading: "جارٍ تحميل المجموعات…",
+    loadError: "تعذّر تحميل المجموعات. حاول مرة أخرى.",
     refresh: "تحديث",
     workgroups: "مجموعات العمل",
     queues: "قوائم الانتظار",
@@ -96,7 +97,7 @@ const COPY = {
     remove: "إزالة المحددين",
     archive: "أرشفة",
     createQueue: "إنشاء قائمة انتظار",
-    queueKey: "المفتاح الثابت للقائمة",
+    queueKey: "رمز قصير (مثلًا confirmations)",
     queueName: "اسم قائمة الانتظار",
     entityType: "نوع العمل",
     conversation: "المحادثات",
@@ -113,7 +114,7 @@ const COPY = {
     operator: "مشغّل",
     viewer: "مشاهد",
     conflict: "تغيّر السجل في مكان آخر. حدّث ثم أعد المحاولة.",
-    saveError: "تعذر حفظ تغيير التعاون.",
+    saveError: "تعذّر حفظ التغيير. حاول مرة أخرى.",
   },
 } as const;
 
@@ -195,7 +196,7 @@ export function CollaborationAdminPanel() {
       if (!response.ok) throw new Error(body.error ?? copy.loadError);
       setView(body);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : copy.loadError);
+      setError(caught instanceof Error ? localizeServerMessage(caught.message) : copy.loadError);
     } finally {
       setLoading(false);
     }
@@ -226,7 +227,7 @@ export function CollaborationAdminPanel() {
       await load();
       return true;
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : copy.saveError;
+      const message = caught instanceof Error ? localizeServerMessage(caught.message) : copy.saveError;
       setError(message);
       toast.error(message);
       return false;

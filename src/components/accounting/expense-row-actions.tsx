@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface ExpenseRowActionsProps {
   expense: ExpenseFormDialogExpense;
@@ -64,7 +65,7 @@ export function ExpenseRowActions({ expense }: ExpenseRowActionsProps) {
       setDeleteOpen(false);
       await deleteExpense(expense.id);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("common.error"));
+      toast.error(err instanceof Error ? localizeServerMessage(err.message) : t("common.error"));
     } finally {
       setDeleting(false);
     }

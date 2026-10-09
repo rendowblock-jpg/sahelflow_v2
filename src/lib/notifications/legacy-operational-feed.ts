@@ -3,7 +3,9 @@ import { db, shopContext } from "@/lib/db";
 import { trustedActionAllowed } from "@/lib/identity/authorization";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 import { getI18n } from "@/lib/i18n-server";
+import { deliveryProviderLabel } from "@/lib/shared";
 import { intlLocale } from "@/lib/utils";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 /** Convert snake_case delivery status to camelCase for i18n lookup. */
 function statusToCamel(status: string): string {
@@ -70,6 +72,7 @@ export async function listLegacyOperationalNotifications() {
   );
   const { t, locale } = await getI18n();
   const numLocale = intlLocale(locale);
+  const wilayaName = (value: string | null) => displayWilaya(value, locale);
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const notificationContext = { prisma: db, shop: shopContext };
@@ -257,14 +260,14 @@ export async function listLegacyOperationalNotifications() {
         canReadContacts && canReadFinancials
           ? t("notif.newOrder.body", {
               customer: order.customer?.name ?? t("common.unknown"),
-              wilaya: order.wilaya,
+              wilaya: wilayaName(order.wilaya),
               total: order.totalPrice.toLocaleString(numLocale),
             })
           : canReadContacts
-            ? `${order.customer?.name ?? t("common.unknown")} · ${order.wilaya}`
+            ? `${order.customer?.name ?? t("common.unknown")} · ${wilayaName(order.wilaya)}`
             : canReadFinancials
-              ? `${order.wilaya} · ${order.totalPrice.toLocaleString(numLocale)}`
-              : order.wilaya,
+              ? `${wilayaName(order.wilaya)} · ${order.totalPrice.toLocaleString(numLocale)}`
+              : wilayaName(order.wilaya),
       time: formatRelativeTime(minutesAgo, t),
       read: minutesAgo > 60,
       link: `/orders/${order.id}`,
@@ -284,7 +287,7 @@ export async function listLegacyOperationalNotifications() {
       }),
       body: t("notif.delivery.body", {
         orderNumber: delivery.order?.orderNumber ?? "—",
-        provider: delivery.provider,
+        provider: deliveryProviderLabel(delivery.provider, t),
         tracking: delivery.trackingNumber ?? t("deliveries.noTracking"),
       }),
       time: formatRelativeTime(minutesAgo, t),

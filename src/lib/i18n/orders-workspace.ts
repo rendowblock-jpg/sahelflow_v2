@@ -9,69 +9,71 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.confirmation.review": "Review",
     "orders.workspace.confirmation.title": "Confirmation review",
     "orders.workspace.confirmation.description":
-      "Verify the customer, risk signals, order value, and delivery details before committing a decision.",
+      "Check the customer, risk signals, order value and delivery details before you decide.",
     "orders.workspace.confirmation.backToQueue": "Back to confirmation queue",
-    "orders.workspace.decision.authority": "Canonical order authority",
+    "orders.workspace.decision.authority": "Full tracking",
     "orders.workspace.decision.importAuthority":
-      "Imported order pending catalog mapping",
+      "Imported — products to match",
+    "orders.workspace.decision.importAuthorityHint":
+      "Match each imported item to one of your products so SahelFlow can reserve stock and confirm the order.",
     "orders.workspace.decision.confirm": "Confirm order",
     "orders.workspace.decision.reject": "Reject order",
     "orders.workspace.decision.submitDraft": "Submit draft for confirmation",
     "orders.workspace.decision.submitDraftCommitted":
       "The AI draft is now in the confirmation queue.",
     "orders.workspace.decision.submitDraftReplayed":
-      "The previous draft submission was recovered safely.",
+      "This draft was already sent for confirmation.",
     "orders.workspace.decision.confirmTitle": "Confirm this order?",
     "orders.workspace.decision.confirmBody":
-      "This atomically reserves exact available stock and records the inventory movement.",
+      "The ordered items are reserved from your available stock right away.",
     "orders.workspace.decision.rejectTitle": "Reject this order?",
     "orders.workspace.decision.rejectBody":
-      "Enter the seller-approved rejection reason.",
+      "Choose why you are rejecting this order.",
     "orders.workspace.decision.reasonLabel": "Rejection reason",
     "orders.workspace.decision.reasonPlaceholder":
       "Reason for rejecting this order",
-    "orders.workspace.decision.commit": "Commit decision",
-    "orders.workspace.decision.committed": "Decision committed.",
+    "orders.workspace.decision.commit": "Save decision",
+    "orders.workspace.decision.committed": "Decision saved.",
     "orders.workspace.decision.replayed":
-      "The previously committed decision was recovered safely.",
+      "This decision was already saved.",
     "orders.workspace.decision.versionMissing":
-      "Refresh the order before committing a decision.",
+      "Refresh the order before deciding.",
     "orders.workspace.decision.importBlocked":
-      "Map this imported order to exact catalog products and variants before confirmation.",
-    "orders.workspace.fulfillment.authority": "Canonical fulfillment authority",
+      "Match each imported item to a product and variant from your catalog before confirming.",
+    "orders.workspace.fulfillment.authority": "Full tracking",
     "orders.workspace.fulfillment.heading": "Fulfillment and delivery",
     "orders.workspace.fulfillment.axis.fulfillment": "Fulfillment",
     "orders.workspace.fulfillment.axis.delivery": "Delivery",
     "orders.workspace.fulfillment.axis.inventory": "Inventory",
     "orders.workspace.fulfillment.axis.cod": "COD",
-    "orders.workspace.fulfillment.legacy": "Awaiting governed adoption",
+    "orders.workspace.fulfillment.legacy": "Basic tracking",
     "orders.workspace.fulfillment.action.pack": "Mark packed",
     "orders.workspace.fulfillment.action.ship": "Dispatch shipment",
     "orders.workspace.fulfillment.action.deliver": "Mark delivered",
     "orders.workspace.fulfillment.confirm.pack.title":
       "Mark this order as packed?",
     "orders.workspace.fulfillment.confirm.pack.body":
-      "The reserved items remain held and the order becomes ready for dispatch.",
+      "The items stay reserved and the order is ready to ship.",
     "orders.workspace.fulfillment.confirm.ship.title":
       "Dispatch this order manually?",
     "orders.workspace.fulfillment.confirm.ship.body":
-      "This consumes the exact reservations into outbound inventory without calling a courier provider. Use the governed courier workspace for provider booking.",
+      "The reserved items leave your stock. No courier is contacted — to book a courier, use the delivery section instead.",
     "orders.workspace.fulfillment.confirm.deliver.title":
       "Mark this order as delivered?",
     "orders.workspace.fulfillment.confirm.deliver.body":
-      "This closes fulfillment and creates the carrier COD receivable. Collection and remittance remain separate.",
-    "orders.workspace.fulfillment.commit": "Commit transition",
-    "orders.workspace.fulfillment.committed": "Transition committed.",
+      "The order is closed and the cash the courier collects is now expected. You record the collection and the payout separately.",
+    "orders.workspace.fulfillment.commit": "Update order",
+    "orders.workspace.fulfillment.committed": "Order updated.",
     "orders.workspace.fulfillment.replayed":
-      "The previously committed transition was recovered safely.",
+      "This update was already saved.",
     "orders.workspace.fulfillment.noAction":
-      "No governed fulfillment action is available from the current state.",
+      "There is nothing to do on this order right now.",
     "orders.workspace.fulfillment.error.failed":
-      "The transition was not committed. Refresh and retry safely.",
+      "The order was not updated. Refresh and try again.",
     "orders.workspace.fulfillment.error.conflict":
-      "This order changed or its inventory authority is incomplete. Refresh before retrying.",
+      "This order changed in the meantime, or its stock is not fully set up. Refresh and try again.",
     "orders.workspace.fulfillment.error.invalid":
-      "This transition is not valid from the current order state.",
+      "This step is not possible from the order’s current status.",
     "orders.workspace.fulfillment.error.notFound":
       "This order is no longer available.",
     "orders.workspace.fulfillment.state.unfulfilled": "Not prepared",
@@ -104,6 +106,19 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.fulfillment.state.remitted": "Remitted",
     "orders.workspace.fulfillment.state.disputed": "Disputed",
     "orders.workspace.fulfillment.state.corrected": "Corrected",
+    "orders.workspace.fulfillment.state.none": "None",
+    "orders.workspace.fulfillment.state.requested": "Requested",
+    "orders.workspace.fulfillment.state.approved": "Approved",
+    "orders.workspace.fulfillment.state.rejected": "Rejected",
+    "orders.workspace.fulfillment.state.cancelled": "Cancelled",
+    "orders.workspace.fulfillment.state.received": "Received",
+    "orders.workspace.fulfillment.state.inspected": "Checked",
+    "orders.workspace.fulfillment.state.completed": "Completed",
+    "orders.workspace.fulfillment.state.issued": "Issued",
+    "orders.workspace.fulfillment.state.reversed": "Reversed",
+    "orders.workspace.fulfillment.state.partially_refunded": "Partially refunded",
+    "orders.workspace.fulfillment.state.refunded": "Refunded",
+    "orders.workspace.fulfillment.state.in_inspection": "Being checked",
     "orders.workspace.risk.factor.customerReturnRate":
       "Historical returns are {{rate}}% for this customer.",
     "orders.workspace.risk.factor.customerLoyalty":
@@ -137,12 +152,14 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.confirmation.review": "Vérifier",
     "orders.workspace.confirmation.title": "Vérification de confirmation",
     "orders.workspace.confirmation.description":
-      "Vérifiez le client, les signaux de risque, la valeur de la commande et la livraison avant de valider une décision.",
+      "Vérifiez le client, les signaux de risque, la valeur de la commande et la livraison avant de décider.",
     "orders.workspace.confirmation.backToQueue":
       "Retour à la file de confirmation",
-    "orders.workspace.decision.authority": "Autorité canonique de commande",
+    "orders.workspace.decision.authority": "Suivi complet",
     "orders.workspace.decision.importAuthority":
-      "Commande importée en attente de correspondance catalogue",
+      "Importée — produits à associer",
+    "orders.workspace.decision.importAuthorityHint":
+      "Associez chaque article importé à l’un de vos produits pour que SahelFlow puisse réserver le stock et confirmer la commande.",
     "orders.workspace.decision.confirm": "Confirmer la commande",
     "orders.workspace.decision.reject": "Refuser la commande",
     "orders.workspace.decision.submitDraft":
@@ -150,58 +167,58 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.decision.submitDraftCommitted":
       "Le brouillon IA est maintenant dans la file de confirmation.",
     "orders.workspace.decision.submitDraftReplayed":
-      "La soumission précédente du brouillon a été récupérée en toute sécurité.",
+      "Ce brouillon a déjà été envoyé en confirmation.",
     "orders.workspace.decision.confirmTitle": "Confirmer cette commande ?",
     "orders.workspace.decision.confirmBody":
-      "Cette action réserve atomiquement le stock exact disponible et enregistre le mouvement.",
+      "Les articles commandés sont réservés immédiatement dans votre stock disponible.",
     "orders.workspace.decision.rejectTitle": "Refuser cette commande ?",
     "orders.workspace.decision.rejectBody":
-      "Saisissez le motif de refus approuvé par le vendeur.",
+      "Indiquez pourquoi vous refusez cette commande.",
     "orders.workspace.decision.reasonLabel": "Motif du refus",
     "orders.workspace.decision.reasonPlaceholder":
       "Motif du refus de cette commande",
-    "orders.workspace.decision.commit": "Valider la décision",
-    "orders.workspace.decision.committed": "Décision validée.",
+    "orders.workspace.decision.commit": "Enregistrer la décision",
+    "orders.workspace.decision.committed": "Décision enregistrée.",
     "orders.workspace.decision.replayed":
-      "La décision déjà validée a été récupérée en toute sécurité.",
+      "Cette décision était déjà enregistrée.",
     "orders.workspace.decision.versionMissing":
-      "Actualisez la commande avant de valider une décision.",
+      "Actualisez la commande avant de décider.",
     "orders.workspace.decision.importBlocked":
-      "Associez cette commande importée aux produits et variantes exacts avant confirmation.",
-    "orders.workspace.fulfillment.authority": "Autorité canonique d'exécution",
+      "Associez chaque article importé à un produit et une variante de votre catalogue avant de confirmer.",
+    "orders.workspace.fulfillment.authority": "Suivi complet",
     "orders.workspace.fulfillment.heading": "Préparation et livraison",
     "orders.workspace.fulfillment.axis.fulfillment": "Préparation",
     "orders.workspace.fulfillment.axis.delivery": "Livraison",
     "orders.workspace.fulfillment.axis.inventory": "Stock",
     "orders.workspace.fulfillment.axis.cod": "COD",
-    "orders.workspace.fulfillment.legacy": "En attente d'adoption gouvernée",
+    "orders.workspace.fulfillment.legacy": "Suivi simple",
     "orders.workspace.fulfillment.action.pack": "Marquer comme emballée",
     "orders.workspace.fulfillment.action.ship": "Expédier manuellement",
     "orders.workspace.fulfillment.action.deliver": "Marquer comme livrée",
     "orders.workspace.fulfillment.confirm.pack.title":
       "Marquer cette commande comme emballée ?",
     "orders.workspace.fulfillment.confirm.pack.body":
-      "Les articles réservés restent bloqués et la commande devient prête à expédier.",
+      "Les articles restent réservés et la commande est prête à expédier.",
     "orders.workspace.fulfillment.confirm.ship.title":
       "Expédier cette commande manuellement ?",
     "orders.workspace.fulfillment.confirm.ship.body":
-      "Les réservations exactes passent en stock sortant sans appeler un transporteur. Utilisez l'espace transporteur gouverné pour une réservation fournisseur.",
+      "Les articles réservés sortent de votre stock. Aucun transporteur n’est contacté — pour réserver un transporteur, utilisez plutôt la section livraison.",
     "orders.workspace.fulfillment.confirm.deliver.title":
       "Marquer cette commande comme livrée ?",
     "orders.workspace.fulfillment.confirm.deliver.body":
-      "La préparation est clôturée et la créance COD transporteur est créée. Encaissement et versement restent séparés.",
-    "orders.workspace.fulfillment.commit": "Valider la transition",
-    "orders.workspace.fulfillment.committed": "Transition validée.",
+      "La commande est clôturée et l’encaissement du transporteur devient attendu. L’encaissement et le versement s’enregistrent séparément.",
+    "orders.workspace.fulfillment.commit": "Mettre à jour la commande",
+    "orders.workspace.fulfillment.committed": "Commande mise à jour.",
     "orders.workspace.fulfillment.replayed":
-      "La transition déjà validée a été récupérée en toute sécurité.",
+      "Cette mise à jour était déjà enregistrée.",
     "orders.workspace.fulfillment.noAction":
-      "Aucune action gouvernée n'est disponible depuis l'état actuel.",
+      "Aucune action n’est possible sur cette commande pour le moment.",
     "orders.workspace.fulfillment.error.failed":
-      "La transition n'a pas été validée. Actualisez puis réessayez sans risque.",
+      "La commande n’a pas été mise à jour. Actualisez puis réessayez.",
     "orders.workspace.fulfillment.error.conflict":
-      "La commande a changé ou son autorité de stock est incomplète. Actualisez avant de réessayer.",
+      "Cette commande a changé entre-temps, ou son stock n’est pas entièrement configuré. Actualisez puis réessayez.",
     "orders.workspace.fulfillment.error.invalid":
-      "Cette transition n'est pas valide depuis l'état actuel.",
+      "Cette étape n’est pas possible depuis l’état actuel de la commande.",
     "orders.workspace.fulfillment.error.notFound":
       "Cette commande n'est plus disponible.",
     "orders.workspace.fulfillment.state.unfulfilled": "Non préparée",
@@ -238,6 +255,19 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.fulfillment.state.remitted": "Versé",
     "orders.workspace.fulfillment.state.disputed": "En litige",
     "orders.workspace.fulfillment.state.corrected": "Corrigé",
+    "orders.workspace.fulfillment.state.none": "Aucun",
+    "orders.workspace.fulfillment.state.requested": "Demandé",
+    "orders.workspace.fulfillment.state.approved": "Approuvé",
+    "orders.workspace.fulfillment.state.rejected": "Refusé",
+    "orders.workspace.fulfillment.state.cancelled": "Annulé",
+    "orders.workspace.fulfillment.state.received": "Reçu",
+    "orders.workspace.fulfillment.state.inspected": "Vérifié",
+    "orders.workspace.fulfillment.state.completed": "Terminé",
+    "orders.workspace.fulfillment.state.issued": "Émis",
+    "orders.workspace.fulfillment.state.reversed": "Annulé",
+    "orders.workspace.fulfillment.state.partially_refunded": "Partiellement remboursé",
+    "orders.workspace.fulfillment.state.refunded": "Remboursé",
+    "orders.workspace.fulfillment.state.in_inspection": "En vérification",
     "orders.workspace.risk.factor.customerReturnRate":
       "Le taux de retour historique de ce client est de {{rate}} %.",
     "orders.workspace.risk.factor.customerLoyalty":
@@ -271,67 +301,69 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.confirmation.review": "مراجعة",
     "orders.workspace.confirmation.title": "مراجعة التأكيد",
     "orders.workspace.confirmation.description":
-      "راجع العميل ومؤشرات المخاطر وقيمة الطلبية وتفاصيل التوصيل قبل اعتماد القرار.",
+      "راجع العميل ومؤشرات المخاطر وقيمة الطلبية وتفاصيل التوصيل قبل أن تقرر.",
     "orders.workspace.confirmation.backToQueue": "العودة إلى قائمة التأكيد",
-    "orders.workspace.decision.authority": "صلاحية الطلبية الموثوقة",
+    "orders.workspace.decision.authority": "تتبّع كامل",
     "orders.workspace.decision.importAuthority":
-      "طلبية مستوردة بانتظار ربط الكتالوج",
+      "مستوردة — بانتظار ربط المنتجات",
+    "orders.workspace.decision.importAuthorityHint":
+      "اربط كل منتج مستورد بأحد منتجاتك ليتمكن SahelFlow من حجز المخزون وتأكيد الطلبية.",
     "orders.workspace.decision.confirm": "تأكيد الطلبية",
     "orders.workspace.decision.reject": "رفض الطلبية",
     "orders.workspace.decision.submitDraft": "إرسال المسودة إلى قائمة التأكيد",
     "orders.workspace.decision.submitDraftCommitted":
       "أصبحت مسودة الذكاء الاصطناعي ضمن قائمة التأكيد.",
     "orders.workspace.decision.submitDraftReplayed":
-      "تمت استعادة إرسال المسودة السابق بأمان.",
+      "سبق إرسال هذه المسودة إلى قائمة التأكيد.",
     "orders.workspace.decision.confirmTitle": "تأكيد هذه الطلبية؟",
     "orders.workspace.decision.confirmBody":
-      "سيتم حجز المخزون المتاح بدقة وتسجيل حركة المخزون ضمن عملية ذرية واحدة.",
+      "تُحجز المنتجات المطلوبة فورًا من مخزونك المتاح.",
     "orders.workspace.decision.rejectTitle": "رفض هذه الطلبية؟",
-    "orders.workspace.decision.rejectBody": "أدخل سبب الرفض المعتمد من البائع.",
+    "orders.workspace.decision.rejectBody": "اختر سبب رفض هذه الطلبية.",
     "orders.workspace.decision.reasonLabel": "سبب الرفض",
     "orders.workspace.decision.reasonPlaceholder": "سبب رفض هذه الطلبية",
-    "orders.workspace.decision.commit": "اعتماد القرار",
-    "orders.workspace.decision.committed": "تم اعتماد القرار.",
+    "orders.workspace.decision.commit": "حفظ القرار",
+    "orders.workspace.decision.committed": "تم حفظ القرار.",
     "orders.workspace.decision.replayed":
-      "تمت استعادة القرار المعتمد سابقًا بأمان.",
+      "سبق حفظ هذا القرار.",
     "orders.workspace.decision.versionMissing":
-      "حدّث الطلبية قبل اعتماد القرار.",
+      "حدّث الطلبية قبل اتخاذ القرار.",
     "orders.workspace.decision.importBlocked":
-      "اربط الطلبية المستوردة بالمنتجات والمتغيرات الدقيقة قبل تأكيدها.",
-    "orders.workspace.fulfillment.authority": "صلاحية تنفيذ موثوقة",
+      "اربط كل منتج مستورد بمنتج ومتغيّر من كتالوجك قبل التأكيد.",
+    "orders.workspace.fulfillment.authority": "تتبّع كامل",
     "orders.workspace.fulfillment.heading": "التجهيز والتوصيل",
     "orders.workspace.fulfillment.axis.fulfillment": "التجهيز",
     "orders.workspace.fulfillment.axis.delivery": "التوصيل",
     "orders.workspace.fulfillment.axis.inventory": "المخزون",
     "orders.workspace.fulfillment.axis.cod": "الدفع عند الاستلام",
-    "orders.workspace.fulfillment.legacy": "بانتظار الاعتماد الموثوق",
+    "orders.workspace.fulfillment.legacy": "تتبّع أساسي",
     "orders.workspace.fulfillment.action.pack": "تعليمها كمجهّزة",
     "orders.workspace.fulfillment.action.ship": "إرسالها يدويًا",
     "orders.workspace.fulfillment.action.deliver": "تعليمها كمسلّمة",
     "orders.workspace.fulfillment.confirm.pack.title":
       "هل تم تجهيز هذه الطلبية؟",
     "orders.workspace.fulfillment.confirm.pack.body":
-      "يبقى المخزون الدقيق محجوزًا وتصبح الطلبية جاهزة للإرسال.",
+      "تبقى المنتجات محجوزة وتصبح الطلبية جاهزة للإرسال.",
     "orders.workspace.fulfillment.confirm.ship.title":
       "هل تريد إرسال هذه الطلبية يدويًا؟",
     "orders.workspace.fulfillment.confirm.ship.body":
-      "تُنقل الحجوزات الدقيقة إلى مخزون قيد الشحن دون الاتصال بشركة توصيل. استخدم مساحة شركة التوصيل الموثوقة لإنشاء شحنة لدى المزوّد.",
+      "تخرج المنتجات المحجوزة من مخزونك دون التواصل مع أي شركة توصيل. لحجز شركة توصيل استخدم قسم التوصيل.",
     "orders.workspace.fulfillment.confirm.deliver.title":
       "هل تم تسليم هذه الطلبية؟",
     "orders.workspace.fulfillment.confirm.deliver.body":
-      "يُغلق التجهيز وتُنشأ مستحقات الدفع عند الاستلام. يبقى التحصيل والتحويل منفصلين.",
-    "orders.workspace.fulfillment.commit": "اعتماد الانتقال",
-    "orders.workspace.fulfillment.committed": "تم اعتماد الانتقال.",
+      "تُغلق الطلبية ويصبح المبلغ الذي تحصّله شركة التوصيل مستحقًا. يُسجَّل التحصيل والتحويل كلٌّ على حدة.",
+    "orders.workspace.fulfillment.commit": "تحديث الطلبية",
+    "orders.workspace.fulfillment.committed": "تم تحديث الطلبية.",
     "orders.workspace.fulfillment.replayed":
-      "تمت استعادة الانتقال المعتمد سابقًا بأمان.",
+      "سبق حفظ هذا التحديث.",
     "orders.workspace.fulfillment.noAction":
-      "لا يوجد إجراء تنفيذ موثوق متاح من الحالة الحالية.",
+      "لا يوجد إجراء متاح على هذه الطلبية حاليًا.",
     "orders.workspace.fulfillment.error.failed":
-      "لم يتم اعتماد الانتقال. حدّث الصفحة ثم أعد المحاولة بأمان.",
+      "لم يتم تحديث الطلبية. حدّث الصفحة ثم أعد المحاولة.",
     "orders.workspace.fulfillment.error.conflict":
-      "تغيّرت الطلبية أو أن صلاحية مخزونها غير مكتملة. حدّث الصفحة قبل إعادة المحاولة.",
+      "تغيّرت هذه الطلبية في الأثناء أو أن مخزونها غير مضبوط بالكامل. حدّث الصفحة ثم أعد المحاولة.",
     "orders.workspace.fulfillment.error.invalid":
-      "هذا الانتقال غير صالح من حالة الطلبية الحالية.",
+      "هذه الخطوة غير ممكنة من حالة الطلبية الحالية.",
     "orders.workspace.fulfillment.error.notFound": "لم تعد هذه الطلبية متاحة.",
     "orders.workspace.fulfillment.state.unfulfilled": "غير مجهّزة",
     "orders.workspace.fulfillment.state.ready": "مجهّزة وجاهزة",
@@ -364,6 +396,19 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.fulfillment.state.remitted": "محول",
     "orders.workspace.fulfillment.state.disputed": "متنازع عليه",
     "orders.workspace.fulfillment.state.corrected": "مصحّح",
+    "orders.workspace.fulfillment.state.none": "لا شيء",
+    "orders.workspace.fulfillment.state.requested": "مطلوب",
+    "orders.workspace.fulfillment.state.approved": "موافق عليه",
+    "orders.workspace.fulfillment.state.rejected": "مرفوض",
+    "orders.workspace.fulfillment.state.cancelled": "ملغى",
+    "orders.workspace.fulfillment.state.received": "مستلم",
+    "orders.workspace.fulfillment.state.inspected": "تم الفحص",
+    "orders.workspace.fulfillment.state.completed": "مكتمل",
+    "orders.workspace.fulfillment.state.issued": "صادر",
+    "orders.workspace.fulfillment.state.reversed": "ملغى",
+    "orders.workspace.fulfillment.state.partially_refunded": "مسترد جزئيًا",
+    "orders.workspace.fulfillment.state.refunded": "مسترد",
+    "orders.workspace.fulfillment.state.in_inspection": "قيد الفحص",
     "orders.workspace.risk.factor.customerReturnRate":
       "بلغ معدل الإرجاع السابق لهذا العميل {{rate}}٪.",
     "orders.workspace.risk.factor.customerLoyalty":

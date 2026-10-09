@@ -10,6 +10,7 @@
 
 import {
   makeWASocket,
+  makeCacheableSignalKeyStore,
   fetchLatestWaWebVersion,
   makeInMemoryStore,
   DisconnectReason,
@@ -31,6 +32,8 @@ import {
   baileysFailureText,
   mapBaileysStatusUpdate,
 } from "./delivery-status";
+import { createDispatchObservingLogger } from "./durable-dispatch";
+import { createDiagnosticTeeLogger, describeError, diagnostics } from "./diagnostics-log";
 
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
 // Voice/audio outbound shares the 32 MiB encrypted-storage audio ceiling.
@@ -40,7 +43,11 @@ const MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024;
 // requiring a manual "connect" after every sleep or network outage.
 const RECONNECT_WATCHDOG_INTERVAL_MS = 60_000;
 
-const logger = P({ level: process.env.SF_LOG_LEVEL ?? "warn", name: "wa" });
+// Warnings and errors are also kept in the bounded, scrubbed diagnostics file:
+// the packaged desktop discards this process's console.
+const logger = createDiagnosticTeeLogger(
+  P({ level: process.env.SF_LOG_LEVEL ?? "warn", name: "wa" }),
+);
 
 const APP_URL =
   process.env.SF_APP_URL ??
@@ -245,6 +252,12 @@ export class WhatsAppManager {
   private connecting = false;
   private reconnectAttempts = 0;
   private reconnectWatchdog: ReturnType<typeof setInterval> | null = null;
+  /**
+   * Receives every Baileys dispatch marker (the message id written to the
+   * WhatsApp socket next). The durable dispatcher uses it to tell a failure
+   * that sent nothing from one that may have reached WhatsApp.
+   */
+  onProviderDispatch: ((providerMessageId: string) => void) | null = null;
 
   subscribe(fn: Subscriber): () => void {
     this.subscribers.add(fn);
@@ -323,10 +336,23 @@ export class WhatsAppManager {
 
     this.store = makeInMemoryStore({ logger });
 
+    // The provider logger forwards everything to the sidecar logger and also
+    // reports the dispatch marker, whatever the configured log level.
+    const providerLogger = createDispatchObservingLogger(logger, (messageId) => {
+      this.onProviderDispatch?.(messageId);
+    });
+
     this.sock = makeWASocket({
       version,
-      auth: state,
-      logger,
+      // Baileys' recommended key-store cache: signal sessions and pre-keys are
+      // read from the protected store once and kept in process memory, so a
+      // send no longer decrypts every device session from disk. Writes still
+      // go through the protected durable store first.
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, providerLogger),
+      },
+      logger: providerLogger,
       printQRInTerminal: false,
       browser: ["SahelFlow", "Chrome", "3.0.0"],
       markOnlineOnConnect: false,
@@ -369,10 +395,16 @@ export class WhatsAppManager {
           user: this.user ?? undefined,
         });
         logger.info({ user: this.user }, "connected");
+        diagnostics.record("connection.open", { reconnectAttempts: 0 });
       }
 
       if (connection === "close") {
         const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
+        diagnostics.record("connection.close", {
+          statusCode: code ?? null,
+          reconnectAttempts: this.reconnectAttempts,
+          ...describeError(lastDisconnect?.error),
+        });
         const shouldReconnect =
           code !== DisconnectReason.loggedOut &&
           code !== 401 &&

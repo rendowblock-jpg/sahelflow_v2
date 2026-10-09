@@ -160,6 +160,46 @@ Priority: `P0` trust-killer / day-one parity · `P1` WhatsApp-parity surface · 
 
 ---
 
+## W — Full walkthrough (2026-10-09, source only, PR #487)
+
+Founder directive: every page and interaction ready "at that level deeply". A
+scripted walkthrough covered 27 routes (incl. one detail page per list) × AR/FR/EN ×
+light/dark at 1366×768 (162 page visits, ~600 safe clicks on tabs, menus,
+dialogs) plus end-to-end journeys (order create → confirm → pack → ship →
+deliver → return request; product/customer/expense forms; inbox reply;
+settings; automation builder; public storefront checkout). No page error, HTTP
+5xx, leaked key, untranslated English UI text or page-level overflow was
+found. Every row below is DONE (source) on PR #487; none is installed.
+
+| Row | Finding | Status |
+|---|---|---|
+| W-01 | ~120 seller strings carried engineering vocabulary (governed, canonical authority, durable, sidecar, outbox, entitlement, immutable) | DONE (source) — rewritten AR/FR/EN; `seller-vocabulary.test.ts` rejects the terms |
+| W-02 | Return/refund/recovery/courier/COD reason fields were free-text slugs; Arabic or French input could never pass the audited code contract | DONE (source) — localized `ReasonCodeField` submitting the same codes |
+| W-03 | Draft order tracker highlighted "Pending" against a Draft badge | DONE (source) |
+| W-04 | Order header status badge never resynced after an action (delivered order still read "Pending") | DONE (source) |
+| W-05 | Raw internal values on the order page (courier "manual", states "delivered/requested/none/settled", actor "user", timeline "created") | DONE (source) — localized labels, actor words, formatted amounts |
+| W-06 | Orders list: Actions column off-screen at 1366px; always-visible native date inputs; status tabs wrapped | DONE (source) |
+| W-07 | Wilayas shown in French script in the Arabic UI | DONE (source) — `displayWilaya` |
+| W-08 | Raw English API errors in toasts and inline panels (26 screens) | DONE (source) — `localizeServerMessage` + toast layer |
+| W-09 | Form validation in English (schema messages and zod v4 defaults); commune error before submit; expense "…: required" | DONE (source) — localized validation catalog in `FormMessage` |
+| W-10 | "Sync all in transit" ended in "0 synced, 13 failed" with no reason | DONE (source) — names the not-connected courier and opens Delivery settings |
+| W-11 | Product page had no Edit action, mislabelled margin, hid order stock movements and showed raw actor ids | DONE (source) — Edit, inventory-ledger movements, actor words |
+| W-12 | Public storefront: offer preview, cart capture and verified reviews returned 401 to shoppers | DONE (source) — exact public routes (each keeps its own guard); moderation stays private |
+| W-13 | Storefront checkout used the browser's validation bubble instead of the store's language | DONE (source) |
+| W-14 | Inbox: raw outbox error code under failed messages; nameless chats shown as "213…" digits | DONE (source) |
+| W-15 | New-customer dialog reused list title/empty-state text and a permanent "invalid phone" hint; phone hints showed a regex | DONE (source) |
+| W-16 | Automation builder: empty name looked like a title, leaving "Create" disabled without a visible reason | DONE (source) |
+| W-17 | Security sessions listed raw session ids; import file picker showed the browser's English "Choose file / No file chosen" | DONE (source) — "Sign-in" rows (id on hover); localized picker |
+| W-18 | COD forms took the courier as free text; backup verification, COD read-only and shipment status showed raw values | DONE (source) — courier picker, worded states |
+| W-19 | Arabic stat-card date range rendered scrambled (bidi) | DONE (source) — range isolated |
+| W-20 | Final re-sweep (162 visits): FR/AR card titles wrapped and pushed values out of line (dashboard revenue, confirmation queue "over 2 h", analytics revenue); analytics showed "vs previous period" with no figure | DONE (source) — shorter labels, caption only with a figure |
+| W-21 | Deliveries list: manual deliveries showed the database id as tracking; the row actions overflowed 1366px | DONE (source) — "No tracking"; date column from 1536px (on the delivery page below) |
+| W-22 | Order courier card printed two dashes side by side (empty tracking aligned LTR next to cost) | DONE (source) |
+| W-23 | Sidebar did not keep the current page in view on a short window; automation cards read "1 step(s)"; AI composer safety hint cut mid-word | DONE (source) — active item scrolled into view, real plurals (AR six forms), hint wraps |
+
+Environment-only observations (not product defects): the dev sandbox has no
+WhatsApp grant (ws-token 503) and no shop registry entry (topbar "Select").
+
 ## Rules
 
 1. **No row is "closed" until installed conversion** in an authorized signed release (latest: Internal.38 / FD-062, published 2026-09-16; installed remains Internal.37 pending the Founder's in-place update). Source-merge ≠ shipped.

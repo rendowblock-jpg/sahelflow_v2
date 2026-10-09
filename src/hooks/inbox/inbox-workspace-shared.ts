@@ -26,6 +26,12 @@ import { mapBaileysStatusUpdate } from "../../../sidecars/whatsapp/delivery-stat
 
 export const CHAT_REFRESH_COALESCE_MS = 500;
 export const LIVE_RECOVERY_POLL_MS = 3_000;
+/**
+ * While the push channel is down and WhatsApp is not (yet) connected, the
+ * durable status is still refreshed at this slower cadence so a reconnect
+ * after sleep or a network drop re-enables sending without a manual refresh.
+ */
+export const STATUS_RECOVERY_POLL_MS = 10_000;
 export const DRAFT_SAVE_DELAY_MS = 600;
 export const DRAFT_LOAD_ATTEMPTS = 3;
 export const DRAFT_LOAD_RETRY_MS = 500;
@@ -257,6 +263,24 @@ export interface SeededMessage {
   timestamp: string;
   messageType?: string;
   attachment?: IncomingMessage["attachment"];
+}
+
+/**
+ * The connection state the composer acts on.
+ *
+ * An OPEN push channel carries the freshest provider state. Once it closes,
+ * the last pushed value is stale history (it can read "connecting" or
+ * "disconnected" forever after a sleep), so the durable projection polled
+ * from `/api/whatsapp/chats` is authoritative. Letting a closed channel's
+ * stale value win disabled Send while WhatsApp itself was connected.
+ */
+export function resolveEffectiveWhatsAppStatus(input: {
+  wsOpen: boolean;
+  pushedStatus: WhatsAppStatus | null;
+  polledStatus: WhatsAppStatus | null;
+}): WhatsAppStatus | null {
+  if (input.wsOpen && input.pushedStatus) return input.pushedStatus;
+  return input.polledStatus;
 }
 
 export function isWhatsAppStatus(value: unknown): value is WhatsAppStatus {

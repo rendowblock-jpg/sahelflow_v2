@@ -83,23 +83,11 @@ function EntryLanguageSwitch({ label }: { label: string }) {
   );
 }
 
-function BrandIdentity({
-  className,
-  tone = "theme",
-}: {
-  className?: string;
-  tone?: "theme" | "night";
-}) {
+function BrandIdentity({ className }: { className?: string }) {
   return (
     <div className={cn("relative flex items-center gap-2.5", className)}>
       <SahelFlowMark className="size-8" priority />
-      <span
-        className={cn(
-          "text-title-3",
-          tone === "night" ? "text-[#eef5fb]" : "text-foreground",
-        )}
-        dir="ltr"
-      >
+      <span className="text-title-3 text-foreground" dir="ltr">
         SahelFlow
       </span>
     </div>
@@ -128,17 +116,13 @@ export function EntryShell({
       {beforeContent}
       <aside
         data-sf-entry-rail="live-map"
-        className="relative hidden isolate overflow-hidden border-e border-[rgba(148,197,233,0.12)] bg-[#04070d] px-6 py-8 lg:sticky lg:top-0 lg:col-span-5 lg:grid lg:h-dvh lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:gap-5 xl:px-8 xl:py-9"
+        className="relative hidden isolate overflow-hidden border-e border-border bg-surface-1 px-6 py-8 lg:sticky lg:top-0 lg:col-span-5 lg:grid lg:h-dvh lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:gap-5 xl:px-8 xl:py-9"
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(70% 55% at 50% 42%, rgba(14,165,233,0.14), transparent 72%)",
-          }}
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_55%_at_50%_42%,color-mix(in_oklch,var(--primary)_6%,transparent),transparent_72%)] dark:bg-[radial-gradient(70%_55%_at_50%_42%,color-mix(in_oklch,var(--primary)_11%,transparent),transparent_72%)]"
         />
-        <BrandIdentity className="shrink-0" tone="night" />
+        <BrandIdentity className="shrink-0" />
         <div className="relative h-full min-h-0" data-sf-entry-reveal="">
           <h2 className="sr-only">{headline}</h2>
           <p className="sr-only">{lede}</p>
@@ -154,7 +138,7 @@ export function EntryShell({
             caption={t("entry.liveMap.caption")}
           />
         </div>
-        <p className="relative max-w-md shrink-0 text-caption text-[#7f93a7]">{assurance}</p>
+        <p className="relative max-w-md shrink-0 text-caption text-muted-foreground">{assurance}</p>
       </aside>
 
       <section className="flex min-w-0 flex-col lg:col-span-7">

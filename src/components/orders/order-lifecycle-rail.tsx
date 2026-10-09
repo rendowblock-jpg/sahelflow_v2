@@ -394,13 +394,19 @@ export function OrderLifecycleRail({
     ? loadingActionId === actionId(reasonAction)
     : false;
   const updatedLabel = formatTimestamp(lastChangeAt, locale);
+  // Normal orders carry no badge; only the two special cases explain
+  // themselves, because their available steps differ.
   const authorityBadge =
-    mutationAuthority === "canonical_v1" ? (
-      <Badge variant="outline">{t("orders.workspace.decision.authority")}</Badge>
-    ) : mutationAuthority === "legacy_compatibility" ? (
-      <Badge variant="outline">{t("orderLifecycle.authority.legacy")}</Badge>
+    mutationAuthority === "canonical_v1" ? null : mutationAuthority ===
+      "legacy_compatibility" ? (
+      <Badge variant="outline" title={t("orderLifecycle.authority.legacyHint")}>
+        {t("orderLifecycle.authority.legacy")}
+      </Badge>
     ) : (
-      <Badge variant="outline">
+      <Badge
+        variant="outline"
+        title={t("orders.workspace.decision.importAuthorityHint")}
+      >
         {t("orders.workspace.decision.importAuthority")}
       </Badge>
     );
@@ -415,7 +421,7 @@ export function OrderLifecycleRail({
       <div className="flex flex-wrap items-center justify-between gap-2">
         {authorityBadge}
         {updatedLabel ? (
-          <p className="text-xs text-muted-foreground">
+          <p className="ms-auto text-xs text-muted-foreground">
             {t("orderLifecycle.substate.updated", { time: updatedLabel })}
           </p>
         ) : null}

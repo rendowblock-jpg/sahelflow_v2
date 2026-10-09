@@ -63,6 +63,7 @@ import type {
   ConfirmationQueueItem,
   ConfirmationQueueResponse,
 } from "@/types/workbench";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 interface ConfirmationQueueTableProps {
   fallback: ConfirmationQueueResponse;
@@ -524,7 +525,7 @@ export function ConfirmationQueueTable({
             accessorKey: "wilaya",
             header: () => t("confirmationQueue.col.wilaya"),
             cell: ({ row }: { row: { original: ConfirmationQueueItem } }) => (
-              <span className="text-sm">{row.original.wilaya ?? "—"}</span>
+              <span className="text-sm">{displayWilaya(row.original.wilaya, locale) || "—"}</span>
             ),
             meta: { hideOn: "md" as const },
             enableSorting: false,

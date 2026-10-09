@@ -1,24 +1,16 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
 import { Calendar, Key, Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
 
+import {
+  LicenseKeyDialog,
+  useLicenseActions,
+} from "@/components/license/license-activation";
 import { LicenseRequestCode } from "@/components/license/license-request-code";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/hooks/use-i18n";
 import { useLicense } from "@/hooks/use-license";
 import type { LicenseClientStatus } from "@/stores/license-store";
@@ -39,137 +31,9 @@ export const licenseStatusKeys: Record<LicenseClientStatus, string> = {
   transfer_required: "license.status.transferRequired",
 };
 
-/**
- * The two licence mutations, shared by the Settings panel and the first-run
- * lockout. Each refreshes the client entitlement projection on success.
- */
-export function useLicenseActions() {
-  const { t } = useI18n();
-  const { refresh } = useLicense();
-  const [error, setError] = useState<string | null>(null);
-  const [activating, setActivating] = useState(false);
-  const [requestingTrial, setRequestingTrial] = useState(false);
-
-  async function activate(keyText: string): Promise<boolean> {
-    setError(null);
-    let entitlement: unknown;
-    try {
-      entitlement = JSON.parse(keyText);
-    } catch {
-      setError(t("license.invalidJson"));
-      return false;
-    }
-    if (!entitlement || typeof entitlement !== "object") {
-      setError(t("license.invalidFormat"));
-      return false;
-    }
-    setActivating(true);
-    try {
-      const response = await fetch("/api/license/sync", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-requested-with": "sahelflow",
-        },
-        body: JSON.stringify(entitlement),
-      });
-      if (!response.ok) throw new Error(t("license.activationFailed"));
-      await refresh();
-      return true;
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("license.activationFailed"));
-      return false;
-    } finally {
-      setActivating(false);
-    }
-  }
-
-  async function startOrRecoverTrial(): Promise<boolean> {
-    setError(null);
-    setRequestingTrial(true);
-    try {
-      const response = await fetch("/api/license/trial", {
-        method: "POST",
-        headers: { "x-requested-with": "sahelflow" },
-      });
-      if (!response.ok) throw new Error(t("license.trialFailed"));
-      await refresh();
-      return true;
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t("license.trialFailed"));
-      return false;
-    } finally {
-      setRequestingTrial(false);
-    }
-  }
-
-  return { error, setError, activating, requestingTrial, activate, startOrRecoverTrial };
-}
-
-type LicenseActions = ReturnType<typeof useLicenseActions>;
-
-/** Paste-and-activate dialog for a Founder-signed licence. */
-export function LicenseKeyDialog({
-  actions,
-  trigger,
-}: {
-  actions: LicenseActions;
-  trigger: ReactNode;
-}) {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(false);
-  const [keyInput, setKeyInput] = useState("");
-
-  async function submit() {
-    if (await actions.activate(keyInput)) {
-      setOpen(false);
-      setKeyInput("");
-    }
-  }
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) actions.setError(null);
-      }}
-    >
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("license.activatePermanent")}</DialogTitle>
-          <DialogDescription>{t("license.protectedBindingHelp")}</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2 py-2">
-          <Label htmlFor="license-entitlement">{t("license.licenseKey")}</Label>
-          <Textarea
-            id="license-entitlement"
-            value={keyInput}
-            onChange={(event) => setKeyInput(event.target.value)}
-            placeholder={t("license.pasteJsonPlaceholder")}
-            className="min-h-32 font-mono text-caption"
-            dir="ltr"
-            spellCheck={false}
-            autoComplete="off"
-          />
-          {actions.error ? (
-            <p className="text-body-sm text-destructive" role="alert">{actions.error}</p>
-          ) : null}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            {t("common.cancel")}
-          </Button>
-          <Button onClick={() => void submit()} disabled={!keyInput.trim() || actions.activating}>
-            {actions.activating && <Loader2 className="me-1.5 h-4 w-4 animate-spin" aria-hidden="true" />}
-            {t("license.activate")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+// The activation flow lives in its own module; these re-exports keep the
+// Settings panel and the first-run lockout on one implementation.
+export { LicenseKeyDialog, useLicenseActions } from "@/components/license/license-activation";
 
 export function LicensePanel() {
   const { t, locale } = useI18n();
@@ -239,6 +103,33 @@ export function LicensePanel() {
             </span>
           </div>
         )}
+
+        {permanent && projection ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm" data-license-details>
+            <dt className="text-muted-foreground">{t("license.details.shops")}</dt>
+            <dd className="numeric-value text-end font-medium">{projection.shopSlots}</dd>
+            <dt className="text-muted-foreground">{t("license.details.members")}</dt>
+            <dd className="numeric-value text-end font-medium">
+              {Math.max(projection.memberLimit - 1, 1)}
+            </dd>
+            {projection.supportEndsAt ? (
+              <>
+                <dt className="text-muted-foreground">{t("license.details.supportUntil")}</dt>
+                <dd className="text-end font-medium">
+                  {new Date(projection.supportEndsAt).toLocaleDateString(intlLocale(locale))}
+                </dd>
+              </>
+            ) : null}
+            {projection.licenseId ? (
+              <>
+                <dt className="text-muted-foreground">{t("license.details.licenseId")}</dt>
+                <dd className="technical-value select-all text-end font-mono text-caption" dir="ltr">
+                  {projection.licenseId}
+                </dd>
+              </>
+            ) : null}
+          </dl>
+        ) : null}
 
         {projection?.minimumPermanentRecoveryEpoch && (
           <div className="rounded-control border border-warning/40 bg-warning-soft p-3">

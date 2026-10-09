@@ -5,10 +5,15 @@ import { useRouter } from "next/navigation";
 import { Command as CommandPrimitive } from "cmdk";
 import { AlertTriangle, ListFilter, Loader2, Plus, Search, SearchX, X } from "lucide-react";
 
-import { flattenNavigationItems } from "@/components/layout/navigation";
+import { useActorPermissions } from "@/components/layout/actor-access";
+import {
+  flattenNavigationItems,
+  navigationItemAllowed,
+} from "@/components/layout/navigation";
 import {
   CREATE_ACTIONS,
   GROUP_COPY,
+  NAVIGATION_SYNONYMS,
   GROUP_PREVIEW_LIMIT,
   KIND_COPY,
   QUICK_NAV_IDS,
@@ -23,6 +28,7 @@ import { SearchStateMessage } from "@/components/search/search-state-message";
 import { IconTile } from "@/components/system";
 import { CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { useI18n } from "@/hooks/use-i18n";
+import { LOCALES, getTranslations } from "@/lib/i18n";
 import { RECENT_RECORDS_VISIBLE, useRecentRecords } from "@/hooks/use-recent-records";
 import { useRecentSearches } from "@/hooks/use-recent-searches";
 import { useUniversalRecordSearch } from "@/hooks/use-universal-record-search";
@@ -125,16 +131,26 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   );
   const hasInstantMatches = visibleActions.length > 0 || visibleRecent.length > 0;
 
+  const permissions = useActorPermissions();
   const navigation = React.useMemo(
     () =>
-      flattenNavigationItems().map((item) => ({
+      flattenNavigationItems()
+        .filter((item) => navigationItemAllowed(item, permissions))
+        .map((item) => ({
         ...item,
         kind: "navigation" as const,
         label: t(item.labelKey),
         sublabel: undefined,
+        // Match the destination in every interface language and by the words
+        // sellers really type, not only by its label in the current language.
+        keywords: [
+          ...(item.keywords ?? []),
+          ...LOCALES.map((candidate) => getTranslations(candidate)[item.labelKey] ?? ""),
+          ...(NAVIGATION_SYNONYMS[item.id] ?? []),
+        ].filter(Boolean),
         updatedAt: null,
       })),
-    [t],
+    [permissions, t],
   );
   const quickNavigation = React.useMemo(
     () =>

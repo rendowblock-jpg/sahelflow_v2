@@ -20,6 +20,7 @@ const MAIN_WINDOW_TITLE: &str = "SahelFlow";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
 const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
+const WORKSPACE_WINDOW_WAIT: Duration = Duration::from_secs(30);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
 
 #[derive(Serialize)]
@@ -93,12 +94,7 @@ struct PackagedHandoff {
 /// UI acknowledgment matching the current runtime endpoint instance.
 pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn Error>> {
     let requested_url = tauri::Url::parse(app_url)?;
-    let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
-        IoError::new(
-            ErrorKind::NotFound,
-            "the configured main desktop window was not created",
-        )
-    })?;
+    let window = workspace_window(app)?;
     window.set_title(MAIN_WINDOW_TITLE)?;
 
     let Some(handoff) = packaged_handoff(&requested_url)? else {
@@ -122,7 +118,30 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
     Ok(())
 }
 
+/// The single configured workspace window. It is built on the main thread
+/// right after the startup thread begins, so WebView2 initialization overlaps
+/// migration and runtime startup; a startup thread that is faster than that
+/// waits here briefly instead of failing.
+fn workspace_window(app: &tauri::AppHandle) -> Result<WebviewWindow, IoError> {
+    let deadline = Instant::now() + WORKSPACE_WINDOW_WAIT;
+    loop {
+        if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+            return Ok(window);
+        }
+        if Instant::now() >= deadline {
+            return Err(IoError::new(
+                ErrorKind::NotFound,
+                "the configured main desktop window was not created",
+            ));
+        }
+        thread::sleep(Duration::from_millis(25));
+    }
+}
+
 pub fn reset_startup_trace(app_data_dir: &Path) {
+    let _guard = TRACE_WRITE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let trace = StartupTrace {
         format_version: 1,
         app_version: env!("CARGO_PKG_VERSION").to_string(),
@@ -136,6 +155,22 @@ pub fn reset_startup_trace(app_data_dir: &Path) {
 }
 
 pub fn record_startup_stage(app_data_dir: &Path, stage: &str, attempt: Option<u8>) {
+    record_startup_stage_at(app_data_dir, stage, attempt, unix_milliseconds());
+}
+
+/// Several threads record stages during startup (the startup thread, the
+/// main thread's window creation, the launch-splash follower); one lock keeps
+/// their read-modify-write of the trace from losing events.
+static TRACE_WRITE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Record a stage that happened at `at_unix_ms`, kept in chronological order
+/// (process start and the first splash paint happen before the trace reset).
+pub fn record_startup_stage_at(
+    app_data_dir: &Path,
+    stage: &str,
+    attempt: Option<u8>,
+    at_unix_ms: u64,
+) {
     if stage.is_empty()
         || stage.len() > 64
         || !stage
@@ -144,6 +179,9 @@ pub fn record_startup_stage(app_data_dir: &Path, stage: &str, attempt: Option<u8
     {
         return;
     }
+    let _guard = TRACE_WRITE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let path = app_data_dir.join(STARTUP_TRACE_FILE);
     let mut trace = fs::read(&path)
         .ok()
@@ -158,11 +196,19 @@ pub fn record_startup_stage(app_data_dir: &Path, stage: &str, attempt: Option<u8
     if trace.events.len() >= 32 {
         return;
     }
-    trace.events.push(StartupTraceEvent {
-        stage: stage.to_string(),
-        attempt,
-        created_at_unix_milliseconds: unix_milliseconds(),
-    });
+    let position = trace
+        .events
+        .iter()
+        .position(|event| event.created_at_unix_milliseconds > at_unix_ms)
+        .unwrap_or(trace.events.len());
+    trace.events.insert(
+        position,
+        StartupTraceEvent {
+            stage: stage.to_string(),
+            attempt,
+            created_at_unix_milliseconds: at_unix_ms,
+        },
+    );
     let _ = write_startup_trace(app_data_dir, &trace);
 }
 
@@ -474,12 +520,7 @@ pub fn show_blocked(
     );
     let url = tauri::Url::parse(&data_url)?;
 
-    let window = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
-        IoError::new(
-            ErrorKind::NotFound,
-            "the configured main desktop window was not created",
-        )
-    })?;
+    let window = workspace_window(app)?;
     window.navigate(url)?;
     window.set_title(BLOCKED_WINDOW_TITLE)?;
     window.show()?;
