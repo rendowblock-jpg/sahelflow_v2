@@ -83,6 +83,14 @@ function localeKey(locale: string): SupportedLocale {
   return locale === "ar" || locale === "en" ? locale : "fr";
 }
 
+/** The integrity column in words (the raw state never renders). */
+function verificationLabel(entry: BackupEntry, copy: BackupCopy): string {
+  if (entry.status === "verified") return copy.verifiedState;
+  if (entry.status === "corrupt") return copy.corrupt;
+  if (entry.status === "recovery-kit-required") return copy.kitRequired;
+  return copy.availableState;
+}
+
 function statusLabel(entry: BackupEntry, copy: BackupCopy): string {
   if (entry.status === "corrupt") return copy.corrupt;
   if (entry.requiresRecoveryKit) return copy.kitRequired;
@@ -418,7 +426,7 @@ export function BackupRestorePanel({
                             <TableCell className="tabular-nums" dir="ltr">
                               {formatSize(entry.containerBytes)}
                             </TableCell>
-                            <TableCell>{entry.status}</TableCell>
+                            <TableCell>{verificationLabel(entry, copy)}</TableCell>
                             <TableCell>{statusLabel(entry, copy)}</TableCell>
                             {canRestore ? (
                               <TableCell className="text-end">

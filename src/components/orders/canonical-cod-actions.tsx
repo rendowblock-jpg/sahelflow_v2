@@ -14,6 +14,7 @@ import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 import { deliveryProviderLabel } from "@/lib/shared";
+import { CourierSelect } from "@/components/orders/courier-select";
 
 interface CodPosition {
   orderId: string;
@@ -303,7 +304,7 @@ export function CanonicalCodActions({ orderId }: { orderId: string }) {
         <div className="space-y-3 rounded-surface border p-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5"><Label>{copy.amount}</Label><Input inputMode="numeric" value={collection.amount} onChange={(event) => setCollection((current) => ({ ...current, amount: event.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>{copy.provider}</Label><Input dir="auto" value={collection.provider} onChange={(event) => setCollection((current) => ({ ...current, provider: event.target.value }))} /></div>
+            <div className="space-y-1.5"><Label htmlFor={`cod-collection-provider-${orderId}`}>{copy.provider}</Label><CourierSelect id={`cod-collection-provider-${orderId}`} value={collection.provider} onChange={(provider) => setCollection((current) => ({ ...current, provider }))} /></div>
             <div className="space-y-1.5"><Label>{copy.reference}</Label><Input dir="auto" value={collection.reference} onChange={(event) => setCollection((current) => ({ ...current, reference: event.target.value }))} /></div>
             <div className="space-y-1.5"><Label>{copy.date}</Label><Input type="datetime-local" value={collection.collectedAt} onChange={(event) => setCollection((current) => ({ ...current, collectedAt: event.target.value }))} /></div>
           </div>

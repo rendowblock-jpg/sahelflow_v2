@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getI18n } from "@/lib/i18n-server";
+import { deliveryProviderConfig } from "@/lib/shared";
 import { formatDZD, formatDate } from "@/lib/utils";
 
 const COPY = {
@@ -34,6 +35,7 @@ const COPY = {
     state: "State",
     unmatched: "Unmatched provider line",
     needsReview: "Needs review",
+    posted: "Posted",
     noReview: "No COD discrepancy currently needs review.",
     readonly: "Read-only financial workspace",
   },
@@ -55,6 +57,7 @@ const COPY = {
     state: "État",
     unmatched: "Ligne fournisseur non rapprochée",
     needsReview: "À vérifier",
+    posted: "Enregistré",
     noReview: "Aucun écart COD ne nécessite de contrôle.",
     readonly: "Espace financier en lecture seule",
   },
@@ -76,6 +79,7 @@ const COPY = {
     state: "الحالة",
     unmatched: "سطر مزوّد غير مطابق",
     needsReview: "بحاجة إلى مراجعة",
+    posted: "مسجّل",
     noReview: "لا يوجد فرق دفع عند الاستلام يحتاج إلى مراجعة.",
     readonly: "مساحة مالية للقراءة فقط",
   },
@@ -144,7 +148,7 @@ export async function CanonicalCodReadOnly({
                         {line.orderNumber ?? line.providerLineReference ?? line.externalReference}
                       </TableCell>
                       <TableCell>—</TableCell>
-                      <TableCell>{line.provider}</TableCell>
+                      <TableCell>{deliveryProviderConfig[line.provider]?.label ?? line.provider}</TableCell>
                       <TableCell className="text-end tabular-nums">
                         {formatDZD(Math.abs(line.effectiveDiscrepancy), locale)}
                       </TableCell>
@@ -180,11 +184,11 @@ export async function CanonicalCodReadOnly({
                 <TableBody>
                   {summary.recentSettlements.map((settlement) => (
                     <TableRow key={settlement.settlementId}>
-                      <TableCell>{settlement.provider}</TableCell>
+                      <TableCell>{deliveryProviderConfig[settlement.provider]?.label ?? settlement.provider}</TableCell>
                       <TableCell className="font-mono">{settlement.externalReference}</TableCell>
                       <TableCell>{formatDate(settlement.receivedAt, locale)}</TableCell>
                       <TableCell className="text-end tabular-nums">{formatDZD(settlement.netAmount, locale)}</TableCell>
-                      <TableCell>{settlement.status}</TableCell>
+                      <TableCell>{settlement.status === "posted" ? text.posted : text.needsReview}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

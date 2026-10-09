@@ -39,6 +39,7 @@ import { deliveryProviderConfig, deliveryProviderLabel } from "@/lib/shared";
 import { DELIVERY_PROVIDERS } from "@/lib/integrations/delivery/types";
 import { formatDZD } from "@/lib/utils";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { deliveryStatusI18nKey } from "@/lib/shared/status-colors";
 
 interface CreateShipmentProps {
   orderId: string;
@@ -229,7 +230,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("common.status")}</span>
-                <span>{delivery.status.replace(/_/g, " ")}</span>
+                <span>{t(deliveryStatusI18nKey(delivery.status))}</span>
               </div>
             </div>
             <div className="flex gap-2">

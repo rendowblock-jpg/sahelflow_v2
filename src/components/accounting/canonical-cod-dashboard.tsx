@@ -24,6 +24,8 @@ import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { useI18n } from "@/hooks/use-i18n";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { deliveryProviderLabel } from "@/lib/shared";
+import { CourierSelect } from "@/components/orders/courier-select";
 
 interface CodPosition {
   orderId: string;
@@ -450,7 +452,7 @@ export function CanonicalCodDashboard({
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       <div className="space-y-1.5"><Label htmlFor={amountId}>{t("codReconciliation.amount")}</Label><Input id={amountId} inputMode="numeric" value={draft.amount} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, amount: event.target.value } }))} /></div>
-                      <div className="space-y-1.5"><Label htmlFor={providerId}>{t("codReconciliation.provider")}</Label><Input id={providerId} dir="auto" value={draft.provider} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, provider: event.target.value } }))} /></div>
+                      <div className="space-y-1.5"><Label htmlFor={providerId}>{t("codReconciliation.provider")}</Label><CourierSelect id={providerId} value={draft.provider} onChange={(provider) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, provider } }))} /></div>
                       <div className="space-y-1.5"><Label htmlFor={referenceId}>{t("codReconciliation.reference")}</Label><Input id={referenceId} dir="auto" value={draft.reference} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, reference: event.target.value } }))} /></div>
                       <div className="space-y-1.5"><Label htmlFor={dateId}>{t("codReconciliation.date")}</Label><Input id={dateId} type="datetime-local" value={draft.at} onChange={(event) => setCollections((current) => ({ ...current, [item.orderId]: { ...draft, at: event.target.value } }))} /></div>
                     </div>
@@ -498,7 +500,7 @@ export function CanonicalCodDashboard({
                       <tr key={item.orderId} className={draft.selected ? "bg-primary-subtle" : undefined}>
                         <td className="p-3"><Checkbox checked={draft.selected} onCheckedChange={(value) => toggleOrder(item, value === true)} aria-label={`${t("codReconciliation.select")} ${item.orderNumber}`} /></td>
                         <td className="p-3"><p className="font-mono font-medium">{item.orderNumber}</p><p className="text-xs text-muted-foreground">{item.customerName}</p></td>
-                        <td className="p-3" dir="auto">{item.provider}</td>
+                        <td className="p-3" dir="auto">{deliveryProviderLabel(item.provider, t)}</td>
                         <td className="p-3 text-end tabular-nums">{formatDZD(item.outstandingRemittance, locale)}</td>
                         <td className="p-3"><Input className="min-w-28 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${t("codReconciliation.gross")} ${item.orderNumber}`} value={draft.gross} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, gross: event.target.value } }))} /></td>
                         <td className="p-3"><Input className="min-w-24 text-end" inputMode="numeric" disabled={!draft.selected} aria-label={`${t("codReconciliation.fees")} ${item.orderNumber}`} value={draft.fee} onChange={(event) => setSettlementLines((current) => ({ ...current, [item.orderId]: { ...draft, fee: event.target.value } }))} /></td>
@@ -615,7 +617,7 @@ export function CanonicalCodDashboard({
             <div className="overflow-x-auto rounded-surface border">
               <table className="w-full min-w-[760px] text-sm">
                 <thead className="border-b bg-muted/60 text-muted-foreground"><tr><th className="p-3 text-start">{t("codReconciliation.reference")}</th><th className="p-3 text-start">{t("codReconciliation.provider")}</th><th className="p-3 text-start">{t("codReconciliation.state")}</th><th className="p-3 text-end">{t("codReconciliation.gross")}</th><th className="p-3 text-end">{t("codReconciliation.fees")}</th><th className="p-3 text-end">{t("codReconciliation.net")}</th><th className="p-3 text-end">{t("codReconciliation.reviewCount")}</th></tr></thead>
-                <tbody className="divide-y">{summary.recentSettlements.map((item) => <tr key={item.settlementId}><td className="p-3"><p className="font-mono font-medium">{item.externalReference}</p><p className="text-xs text-muted-foreground">{formatDate(item.receivedAt, locale)} · {item.lineCount} {t("codReconciliation.lines")}</p></td><td className="p-3" dir="auto">{item.provider}</td><td className="p-3"><Badge variant={item.status === "posted" ? "outline" : "destructive"}>{item.status === "posted" ? t("codReconciliation.posted") : t("codReconciliation.needsReview")}</Badge></td><td className="p-3 text-end tabular-nums">{formatDZD(item.grossAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.feeAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.netAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.discrepancyAmount + item.unmatchedAmount, locale)}</td></tr>)}</tbody>
+                <tbody className="divide-y">{summary.recentSettlements.map((item) => <tr key={item.settlementId}><td className="p-3"><p className="font-mono font-medium">{item.externalReference}</p><p className="text-xs text-muted-foreground">{formatDate(item.receivedAt, locale)} · {item.lineCount} {t("codReconciliation.lines")}</p></td><td className="p-3" dir="auto">{deliveryProviderLabel(item.provider, t)}</td><td className="p-3"><Badge variant={item.status === "posted" ? "outline" : "destructive"}>{item.status === "posted" ? t("codReconciliation.posted") : t("codReconciliation.needsReview")}</Badge></td><td className="p-3 text-end tabular-nums">{formatDZD(item.grossAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.feeAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.netAmount, locale)}</td><td className="p-3 text-end tabular-nums">{formatDZD(item.discrepancyAmount + item.unmatchedAmount, locale)}</td></tr>)}</tbody>
               </table>
             </div>
           )}
