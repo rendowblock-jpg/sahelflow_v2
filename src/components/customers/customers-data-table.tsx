@@ -25,6 +25,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { useListSearchScope } from "@/hooks/use-list-search-scope";
 import type { Locale } from "@/lib/i18n";
 import { formatDZD, formatDate } from "@/lib/utils";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 interface CustomersDataTableProps {
   fallback: CustomersResponse;
@@ -72,7 +73,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
       accessorKey: "wilaya",
       header: () => t("customers.wilaya"),
       cell: ({ row }) => (
-        <span className="text-sm">{row.original.wilaya ?? "—"}</span>
+        <span className="text-sm">{displayWilaya(row.original.wilaya, locale) || "—"}</span>
       ),
       meta: { hideOn: "sm" },
     },
@@ -135,7 +136,7 @@ export function CustomersDataTable({ fallback, locale }: CustomersDataTableProps
           >
             <EntityPreview
               title={label}
-              description={customer.wilaya ?? undefined}
+              description={displayWilaya(customer.wilaya, locale) || undefined}
               metadata={formatDate(customer.createdAt, locale)}
             >
               <dl className="grid grid-cols-2 gap-3 text-sm">

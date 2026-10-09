@@ -144,7 +144,8 @@ describe("AI action proposal card", () => {
     await userEvent.click(screen.getByRole("button", { name: /review and approve/i }));
 
     const status = document.querySelector('[role="status"][aria-live="polite"]');
-    expect(status?.textContent).toContain("Approval armed");
+    // Restated: plain-language copy ("Ready to approve") replaced "Approval armed".
+    expect(status?.textContent).toContain("Ready to approve");
   });
 
   it("disarms approval when the operator denies instead", async () => {

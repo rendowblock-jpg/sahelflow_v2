@@ -26,6 +26,7 @@ import {
 import { requireTrustedAction, trustedActionAllowed } from "@/lib/identity/authorization";
 import { getRiskAnalyticsReport, getRiskConfig, getRiskRules, listBlacklistedCustomers } from "@/lib/risk-engine";
 import { formatDZD, intlLocale } from "@/lib/utils";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -99,6 +100,7 @@ export default async function RiskPage({
     dzd: (value: number) => formatDZD(value, locale),
     int: (value: number) => integerFormatter.format(value),
     dec: (value: number) => decimalFormatter.format(value),
+    wilaya: (value: string | null) => displayWilaya(value, locale),
   };
   const sourceLabel = (source: string) => (SOURCE_KEYS[source] ? t(SOURCE_KEYS[source]) : source.charAt(0).toUpperCase() + source.slice(1));
 

@@ -617,17 +617,17 @@ const GOVERNED_REVIEW_EXPECTATIONS = {
   en: {
     dir: "ltr",
     title: "Confirmation review",
-    authority: "Canonical order authority",
+    confirm: "Confirm order",
   },
   fr: {
     dir: "ltr",
     title: "Vérification de confirmation",
-    authority: "Autorité canonique de commande",
+    confirm: "Confirmer la commande",
   },
   ar: {
     dir: "rtl",
     title: "مراجعة التأكيد",
-    authority: "صلاحية الطلبية الموثوقة",
+    confirm: "تأكيد الطلبية",
   },
 } as const;
 
@@ -724,12 +724,16 @@ test.describe.serial("Orders governed seller journey", () => {
       await expect(page.getByText(expectation.title)).toBeVisible({
         timeout: GOVERNED_SURFACE_TIMEOUT_MS,
       });
-      await expect(page.getByText(expectation.authority)).toBeVisible({
-        timeout: GOVERNED_SURFACE_TIMEOUT_MS,
-      });
+      // Restated: normal orders no longer carry an engineering "authority"
+      // badge; the governed review is proven by its localized decision action.
+      await expect(
+        page.getByRole("button", { name: expectation.confirm }).first(),
+      ).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
+      // Engineering vocabulary never reaches the seller.
       await expect(page.locator("body")).not.toContainText(
         "Canonical order authority",
       );
+      await expect(page.locator("body")).not.toContainText(/\b(governed|canonical)\b/i);
       await expect(page.locator("body")).not.toContainText("rule-1");
       await assertContained(page, `/orders/${orderId}`);
       await assertNoLeakedTranslationKeys(page, `/orders/${orderId}`);

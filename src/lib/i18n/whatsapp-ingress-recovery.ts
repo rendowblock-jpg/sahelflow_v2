@@ -4,7 +4,7 @@ const translations = {
   en: {
     title: "WhatsApp inbound recovery",
     description:
-      "Messages that could not enter the durable inbox remain tracked here. Raw message evidence is protected and is not displayed.",
+      "Messages that could not reach your inbox are kept here so you can retry them. Their content stays protected and is not shown.",
     retrying: "Retrying",
     quarantined: "Quarantined",
     dead_letter: "Dead letter",
@@ -20,7 +20,7 @@ const translations = {
     refresh: "Refresh",
     noIssues: "No inbound recovery issues",
     retrySucceeded: "Inbound message recovery completed",
-    retryQueued: "Inbound message was returned to durable processing",
+    retryQueued: "The message was sent back to your inbox for processing",
     retryFailed: "Could not retry this inbound message",
     history: "Recent attempt history",
     unknownContact: "Unknown contact",
@@ -28,7 +28,7 @@ const translations = {
   fr: {
     title: "Récupération des messages WhatsApp entrants",
     description:
-      "Les messages qui n’ont pas pu entrer dans la boîte durable restent suivis ici. Les preuves brutes sont protégées et ne sont pas affichées.",
+      "Les messages qui n’ont pas pu arriver dans votre boîte sont conservés ici pour être relancés. Leur contenu reste protégé et n’est pas affiché.",
     retrying: "Nouvelle tentative",
     quarantined: "En quarantaine",
     dead_letter: "Échec définitif",
@@ -44,7 +44,7 @@ const translations = {
     refresh: "Actualiser",
     noIssues: "Aucun problème de récupération entrant",
     retrySucceeded: "La récupération du message entrant est terminée",
-    retryQueued: "Le message entrant a été replacé dans le traitement durable",
+    retryQueued: "Le message a été renvoyé vers votre boîte pour traitement",
     retryFailed: "Impossible de réessayer ce message entrant",
     history: "Historique récent des tentatives",
     unknownContact: "Contact inconnu",
@@ -52,7 +52,7 @@ const translations = {
   ar: {
     title: "استرجاع رسائل واتساب الواردة",
     description:
-      "تبقى الرسائل التي تعذر إدخالها إلى صندوق الوارد الدائم مسجلة هنا. بيانات الرسالة الأصلية محمية ولا يتم عرضها.",
+      "تُحفظ هنا الرسائل التي تعذّر وصولها إلى صندوق الوارد لتعيد محاولتها. يبقى محتواها محميًا ولا يُعرض.",
     retrying: "إعادة المحاولة",
     quarantined: "في الحجر",
     dead_letter: "فشل نهائي",
@@ -68,7 +68,7 @@ const translations = {
     refresh: "تحديث",
     noIssues: "لا توجد مشاكل في استرجاع الرسائل الواردة",
     retrySucceeded: "اكتمل استرجاع الرسالة الواردة",
-    retryQueued: "أُعيدت الرسالة الواردة إلى المعالجة الدائمة",
+    retryQueued: "أُعيدت الرسالة إلى صندوق الوارد لمعالجتها",
     retryFailed: "تعذر إعادة محاولة معالجة الرسالة الواردة",
     history: "سجل المحاولات الأخيرة",
     unknownContact: "جهة اتصال غير معروفة",

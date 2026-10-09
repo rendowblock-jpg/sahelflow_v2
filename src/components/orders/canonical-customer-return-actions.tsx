@@ -33,6 +33,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { formatDZD } from "@/lib/utils";
 import {
@@ -595,16 +596,13 @@ export function CanonicalCustomerReturnActions({
           </AlertDialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="customer-return-reason">{copy.reason}</Label>
-              <Input
-                id="customer-return-reason"
-                value={reasonCode}
-                onChange={(event) => setReasonCode(event.target.value)}
-                placeholder={copy.reasonPlaceholder}
-                dir="auto"
-              />
-            </div>
+            <ReasonCodeField
+              id="customer-return-reason"
+              context="return"
+              locale={locale}
+              value={reasonCode}
+              onChange={setReasonCode}
+            />
 
             {dialog?.kind === "request" ? (
               <>

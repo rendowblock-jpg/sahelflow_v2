@@ -10,6 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { ProductDetailActions } from "@/components/products/product-detail-actions";
 import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RecentRecordTracker } from "@/components/shared/recent-record-tracker";
@@ -25,6 +26,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { db, shopContext } from "@/lib/db";
+import { productService } from "@/lib/data";
 import { getI18n } from "@/lib/i18n-server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { getProductDetailWorkbench } from "@/lib/products/product-detail-workbench";
@@ -42,8 +45,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const workbench = await getProductDetailWorkbench(actorContext, id);
   if (!workbench) notFound();
 
-  const { product, recentItems, stockHistory, canReadOrders, canReadOrderFinancials } =
-    workbench;
+  const {
+    product,
+    recentItems,
+    stockHistory,
+    canManage,
+    canReadOrders,
+    canReadOrderFinancials,
+  } = workbench;
+  const categories = canManage
+    ? await productService.listCategories({ prisma: db, shop: shopContext })
+    : [];
   const isLowStock = product.stock <= product.lowStockThreshold;
   const inventoryValue = product.price * Math.max(0, product.stock);
   const productVariants: VariantOption[] = product.productVariants.map((variant) => ({
@@ -111,11 +123,18 @@ export default async function ProductDetailPage({ params }: PageProps) {
           formatDate(product.createdAt, locale),
         ].filter(Boolean).join(" · ")}
         actions={
-          isLowStock ? (
-            <Badge variant="destructive">
-              <AlertTriangle className="size-3.5" aria-hidden="true" />
-              {t("products.lowStock")}
-            </Badge>
+          isLowStock || canManage ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {isLowStock ? (
+                <Badge variant="destructive">
+                  <AlertTriangle className="size-3.5" aria-hidden="true" />
+                  {t("products.lowStock")}
+                </Badge>
+              ) : null}
+              {canManage ? (
+                <ProductDetailActions product={product} categories={categories} />
+              ) : null}
+            </div>
           ) : undefined
         }
       />
@@ -127,7 +146,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           icon={<TrendingUp />}
           subtitle={
             product.cost !== null
-              ? `${t("products.cost")}: ${formatDZD(product.cost, locale)}${margin !== null ? ` · ${t("products.value")}: ${formatDZD(margin, locale)}${marginPct !== null ? ` (${marginPct}%)` : ""}` : ""}`
+              ? `${t("products.cost")}: ${formatDZD(product.cost, locale)}${margin !== null ? ` · ${t("analytics.skuColMargin")}: ${formatDZD(margin, locale)}${marginPct !== null ? ` (${marginPct}%)` : ""}` : ""}`
               : undefined
           }
         />

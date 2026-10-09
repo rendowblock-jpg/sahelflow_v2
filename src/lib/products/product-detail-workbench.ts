@@ -23,6 +23,7 @@ export async function getProductDetailWorkbench(
   if (!product) return null;
 
   const canReadOrders = allowed(actorContext, "orders.read");
+  const canManage = allowed(actorContext, "products.manage");
   const canReadOrderFinancials =
     canReadOrders && allowed(actorContext, "orders.financials.read");
   // R3-c: stock-adjustment history — audit-trail rows that record explicit
@@ -52,6 +53,7 @@ export async function getProductDetailWorkbench(
 
   return {
     product,
+    canManage,
     canReadOrders,
     canReadOrderFinancials,
     stockHistory,

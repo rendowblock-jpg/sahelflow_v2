@@ -15,6 +15,8 @@ type Format = {
   int: (value: number) => string;
   /** One decimal, locale-aware ("3,2" in French). */
   dec: (value: number) => string;
+  /** Wilaya in the interface language. */
+  wilaya: (value: string | null) => string;
 };
 
 const LEVEL_BAR: Record<RiskLevel, string> = {
@@ -106,7 +108,7 @@ export function CheckBeforeShipping({
                     <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <MapPin className="size-3" aria-hidden="true" />
-                        {order.wilaya}
+                        {format.wilaya(order.wilaya)}
                       </span>
                       <span className="tabular-nums">{format.dzd(order.totalPrice)}</span>
                       {reasons ? <span className="line-clamp-2 basis-full" title={reasons}>{reasons}</span> : null}

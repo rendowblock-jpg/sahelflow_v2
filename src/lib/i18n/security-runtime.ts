@@ -16,7 +16,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.security.title": "Security & sessions",
     "settings.security.description":
       "Review the exact installation, trusted device, and signed-in sessions. Revoking a session denies access immediately.",
-    "settings.security.workspace": "Workspace authority",
+    "settings.security.workspace": "This workspace",
     "settings.security.device": "Trusted device",
     "settings.security.sessions": "Signed-in sessions",
     "settings.security.current": "Current",
@@ -29,8 +29,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.security.revoke": "Revoke session",
     "settings.security.refreshing": "Refreshing…",
     "settings.security.refresh": "Refresh",
-    "settings.security.loading": "Loading security authority…",
-    "settings.security.loadError": "Security authority could not be loaded.",
+    "settings.security.loading": "Loading security settings…",
+    "settings.security.loadError": "Security settings could not be loaded.",
     "settings.security.revokeError": "The session could not be revoked.",
     "settings.security.reauthTitle": "Confirm with your PIN",
     "settings.security.reauthDescription":
@@ -60,7 +60,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.security.title": "Sécurité et sessions",
     "settings.security.description":
       "Consultez l’installation exacte, l’appareil de confiance et les sessions connectées. La révocation bloque immédiatement l’accès.",
-    "settings.security.workspace": "Autorité de l’espace de travail",
+    "settings.security.workspace": "Cet espace de travail",
     "settings.security.device": "Appareil de confiance",
     "settings.security.sessions": "Sessions connectées",
     "settings.security.current": "Actuelle",
@@ -73,8 +73,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.security.revoke": "Révoquer la session",
     "settings.security.refreshing": "Actualisation…",
     "settings.security.refresh": "Actualiser",
-    "settings.security.loading": "Chargement de l’autorité de sécurité…",
-    "settings.security.loadError": "Impossible de charger l’autorité de sécurité.",
+    "settings.security.loading": "Chargement des paramètres de sécurité…",
+    "settings.security.loadError": "Impossible de charger les paramètres de sécurité.",
     "settings.security.revokeError": "Impossible de révoquer la session.",
     "settings.security.reauthTitle": "Confirmez avec votre code PIN",
     "settings.security.reauthDescription":
@@ -108,7 +108,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.security.title": "الأمان والجلسات",
     "settings.security.description":
       "راجع التثبيت الحالي والجهاز الموثوق والجلسات المسجّلة. إلغاء الجلسة يمنع الوصول فورًا.",
-    "settings.security.workspace": "صلاحية مساحة العمل",
+    "settings.security.workspace": "مساحة العمل هذه",
     "settings.security.device": "الجهاز الموثوق",
     "settings.security.sessions": "الجلسات المسجّلة",
     "settings.security.current": "الحالية",
@@ -121,8 +121,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.security.revoke": "إلغاء الجلسة",
     "settings.security.refreshing": "جارٍ التحديث…",
     "settings.security.refresh": "تحديث",
-    "settings.security.loading": "جارٍ تحميل صلاحيات الأمان…",
-    "settings.security.loadError": "تعذر تحميل صلاحيات الأمان.",
+    "settings.security.loading": "جارٍ تحميل إعدادات الأمان…",
+    "settings.security.loadError": "تعذّر تحميل إعدادات الأمان.",
     "settings.security.revokeError": "تعذر إلغاء الجلسة.",
     "settings.security.reauthTitle": "أكد العملية بالرمز السري",
     "settings.security.reauthDescription":

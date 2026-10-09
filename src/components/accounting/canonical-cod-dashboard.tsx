@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { useI18n } from "@/hooks/use-i18n";
 import { formatDZD, formatDate } from "@/lib/utils";
 
@@ -258,7 +259,7 @@ export function CanonicalCodDashboard({
   function collectionCorrectionDraft(item: CodPosition) {
     return collectionCorrections[item.orderId] ?? {
       delta: String(-item.discrepancy),
-      reason: "provider-statement-corrected",
+      reason: "",
       at: localDateTime(),
     };
   }
@@ -266,9 +267,7 @@ export function CanonicalCodDashboard({
   function reviewDraft(line: ReviewLine) {
     return review[line.lineId] ?? {
       orderId: "",
-      reason: line.unresolvedUnmatched
-        ? "provider-reference-reconciled"
-        : "provider-statement-corrected",
+      reason: "",
       at: localDateTime(),
       grossDelta: "0",
       feeDelta: "0",
@@ -570,7 +569,7 @@ export function CanonicalCodDashboard({
                     {line.unresolvedUnmatched ? (
                       <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
                         <div className="space-y-1.5"><Label htmlFor={orderSelectId}>{t("codReconciliation.matchOrder")}</Label><select id={orderSelectId} className="h-9 w-full rounded-control border bg-background px-3 text-sm" value={draft.orderId} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, orderId: event.target.value } }))}><option value="">—</option>{matchCandidates.filter((item) => item.provider === line.provider).map((item) => <option key={item.orderId} value={item.orderId}>{item.orderNumber} · {item.customerName} · {formatDZD(item.outstandingRemittance, locale)}</option>)}</select></div>
-                        <div className="space-y-1.5"><Label htmlFor={reasonId}>{t("codReconciliation.reason")}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
+                        <ReasonCodeField id={reasonId} context="codMatch" locale={locale} value={draft.reason} onChange={(reason) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason } }))} />
                         <Button disabled={Boolean(busy) || !matchingOrder || !draft.reason.trim()} onClick={() => matchingOrder && void commit(operationKey, `/api/accounting/cod-settlements/lines/${line.lineId}/match`, { orderId: matchingOrder.orderId, expectedVersion: matchingOrder.orderVersion, reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{t("codReconciliation.match")}</Button>
                       </div>
                     ) : (
@@ -580,7 +579,7 @@ export function CanonicalCodDashboard({
                           <div className="space-y-1.5"><Label htmlFor={`cod-fee-delta-${line.lineId}`}>{t("codReconciliation.feeDelta")}</Label><Input id={`cod-fee-delta-${line.lineId}`} inputMode="numeric" value={draft.feeDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, feeDelta: event.target.value } }))} /></div>
                           <div className="space-y-1.5"><Label htmlFor={`cod-adjustment-delta-${line.lineId}`}>{t("codReconciliation.adjustmentDelta")}</Label><Input id={`cod-adjustment-delta-${line.lineId}`} inputMode="numeric" value={draft.adjustmentDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, adjustmentDelta: event.target.value } }))} /></div>
                           <div className="space-y-1.5"><Label htmlFor={`cod-discrepancy-delta-${line.lineId}`}>{t("codReconciliation.discrepancyDelta")}</Label><Input id={`cod-discrepancy-delta-${line.lineId}`} inputMode="numeric" value={draft.discrepancyDelta} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, discrepancyDelta: event.target.value } }))} /></div>
-                          <div className="space-y-1.5"><Label htmlFor={reasonId}>{t("codReconciliation.reason")}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason: event.target.value } }))} /></div>
+                          <ReasonCodeField id={reasonId} context="cod" locale={locale} value={draft.reason} onChange={(reason) => setReview((current) => ({ ...current, [line.lineId]: { ...draft, reason } }))} />
                         </div>
                         <div className="flex justify-end"><Button disabled={Boolean(busy) || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/accounting/cod-settlements/lines/${line.lineId}/correction`, { expectedVersion: line.orderVersion ?? undefined, grossDelta: integer(draft.grossDelta), feeDelta: integer(draft.feeDelta), adjustmentDelta: integer(draft.adjustmentDelta), discrepancyDelta: integer(draft.discrepancyDelta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{t("codReconciliation.correction")}</Button></div>
                       </div>
@@ -597,7 +596,7 @@ export function CanonicalCodDashboard({
                 return (
                   <div key={operationKey} className="rounded-surface border border-warning/40 p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3"><div><Badge variant="outline">{t("codReconciliation.collectionCorrection")}</Badge><p className="mt-2 font-mono text-sm font-semibold">{item.orderNumber}</p><p className="text-sm text-muted-foreground">{item.customerName}</p></div><div className="text-end text-sm"><p>{t("codReconciliation.expectedAmount")}: {formatDZD(item.expectedReceivable, locale)}</p><p>{t("codReconciliation.collectedTotal")}: {formatDZD(item.effectiveCollected, locale)}</p><p className="text-destructive">{t("codReconciliation.reviewCount")}: {formatDZD(item.discrepancy, locale)}</p></div></div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end"><div className="space-y-1.5"><Label htmlFor={deltaId}>{t("codReconciliation.collectionDelta")}</Label><Input id={deltaId} inputMode="numeric" value={draft.delta} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, delta: event.target.value } }))} /></div><div className="space-y-1.5"><Label htmlFor={reasonId}>{t("codReconciliation.reason")}</Label><Input id={reasonId} dir="auto" value={draft.reason} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, reason: event.target.value } }))} /></div><Button disabled={Boolean(busy) || integer(draft.delta) === 0 || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/orders/${item.orderId}/cod/collection/correction`, { expectedVersion: item.orderVersion, amountDelta: integer(draft.delta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{t("codReconciliation.correction")}</Button></div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end"><div className="space-y-1.5"><Label htmlFor={deltaId}>{t("codReconciliation.collectionDelta")}</Label><Input id={deltaId} inputMode="numeric" value={draft.delta} onChange={(event) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, delta: event.target.value } }))} /></div><ReasonCodeField id={reasonId} context="cod" locale={locale} value={draft.reason} onChange={(reason) => setCollectionCorrections((current) => ({ ...current, [item.orderId]: { ...draft, reason } }))} /><Button disabled={Boolean(busy) || integer(draft.delta) === 0 || !draft.reason.trim()} onClick={() => void commit(operationKey, `/api/orders/${item.orderId}/cod/collection/correction`, { expectedVersion: item.orderVersion, amountDelta: integer(draft.delta), reasonCode: draft.reason.trim(), occurredAt: new Date(draft.at).toISOString() })}>{busy === operationKey ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{t("codReconciliation.correction")}</Button></div>
                   </div>
                 );
               })}

@@ -71,6 +71,7 @@ import {
   getOrderRiskRuleLabelKey,
   riskActionCopyKey,
 } from "@/lib/orders/order-risk-presentation";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 export const dynamic = "force-dynamic";
 
@@ -599,7 +600,7 @@ export default async function OrderDetailPage({
                       <div className="flex items-center gap-2">
                         <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                         <span>
-                          {customer.commune ?? ""}, {customer.wilaya}
+                          {customer.commune ?? ""}, {displayWilaya(customer.wilaya, locale)}
                         </span>
                       </div>
                     )}
@@ -645,7 +646,7 @@ export default async function OrderDetailPage({
               <p className="font-medium">{order.phone}</p>
               <p className="text-muted-foreground">{order.address}</p>
               <p className="text-muted-foreground">
-                {order.commune}, {order.wilaya}
+                {order.commune}, {displayWilaya(order.wilaya, locale)}
               </p>
             </CardContent>
           </Card>

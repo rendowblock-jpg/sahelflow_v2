@@ -38,6 +38,7 @@ import { buildOrderWhatsAppMessage } from "@/lib/i18n/order-actions-runtime";
 import { buildWhatsAppLink } from "@/lib/whatsapp/deep-link";
 import type { WorkbenchFieldAccess } from "@/types/workbench";
 import { OrderStatusBadge } from "./order-status-badge";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 interface UseOrdersColumnsOptions {
   locale: "ar" | "fr" | "en";
@@ -123,7 +124,9 @@ export function useOrdersColumns(
           </span>
         );
       },
-      meta: { hideOn: "md" },
+      // The item count is the least decisive column; it yields its width
+      // first so Actions stays on screen on 1366px laptops.
+      meta: { hideOn: "2xl" },
       enableSorting: false,
     },
     ...(fieldAccess.contact
@@ -132,7 +135,7 @@ export function useOrdersColumns(
             accessorKey: "wilaya",
             header: () => t("orders.wilaya"),
             cell: ({ row }: { row: { original: OrderListItem } }) => (
-              <span className="text-sm">{row.original.wilaya ?? "—"}</span>
+              <span className="text-sm">{displayWilaya(row.original.wilaya, locale) || "—"}</span>
             ),
             meta: { hideOn: "sm" as const },
             enableSorting: false,

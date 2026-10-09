@@ -176,6 +176,15 @@ describe("lifecycle rail action matrix (per mutation authority)", () => {
 });
 
 describe("lifecycle rail position (5-step COD journey)", () => {
+  it("keeps a draft before the rail with no current milestone", () => {
+    expect(
+      getLifecycleRailPosition({ status: "draft", packedAt: null }),
+    ).toEqual({
+      currentStep: -1,
+      completedSteps: [false, false, false, false, false],
+    });
+  });
+
   it("walks the canonical milestones", () => {
     expect(
       getLifecycleRailPosition({ status: "pending", packedAt: null }),
@@ -212,12 +221,11 @@ describe("lifecycle rail position (5-step COD journey)", () => {
       currentStep: 4,
       completedSteps: [true, true, true, true, true],
     });
-    expect(getLifecycleRailPosition({ status: "draft", packedAt: null })).toEqual(
-      {
-        currentStep: 0,
-        completedSteps: [false, false, false, false, false],
-      },
-    );
+    // Restated: a draft no longer parks on "pending" (it contradicted the
+    // Draft badge); see the draft-specific case above.
+    expect(
+      getLifecycleRailPosition({ status: "draft", packedAt: null })?.currentStep,
+    ).toBe(-1);
   });
 
   it("returns null for terminal statuses so the rail renders a badge", () => {

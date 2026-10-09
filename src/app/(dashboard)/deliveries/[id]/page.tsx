@@ -16,6 +16,7 @@ import { assertTrustedAction, requireTrustedAction } from "@/lib/identity/author
 import { deliveryProviderConfig, orderStatusStyles } from "@/lib/shared";
 import { deliveryStatusI18nKey, statusI18nKey } from "@/lib/shared/status-colors";
 import { formatDZD, formatDate } from "@/lib/utils";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -118,7 +119,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Package className="size-4" aria-hidden="true" />
-              {t("nav.orders")}
+              {t("deliveries.table.order")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -161,7 +162,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <User className="size-4" aria-hidden="true" />
-              {t("nav.customers")}
+              {t("deliveries.table.customer")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -180,7 +181,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
               <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-muted-foreground">{t("customers.location")}</span>
                 <span className="text-sm">
-                  {delivery.order.customer.wilaya}
+                  {displayWilaya(delivery.order.customer.wilaya, locale)}
                   {delivery.order.customer.commune ? ` · ${delivery.order.customer.commune}` : ""}
                 </span>
               </div>

@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useI18n } from "@/hooks/use-i18n";
+import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { deliveryProviderConfig } from "@/lib/shared";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { DZ_CLOCK, intlLocale } from "@/lib/utils";
@@ -67,88 +68,88 @@ interface CourierPosition {
 
 const COPY = {
   en: {
-    authority: "Canonical courier authority",
+    authority: "Courier",
     heading: "Courier booking and tracking",
     provider: "Courier provider",
     book: "Book shipment",
     sync: "Sync tracking",
-    queued: "Booking queued safely.",
-    synced: "Provider tracking synchronized.",
-    replayed: "The previously committed action was recovered safely.",
-    failed: "The courier action was not committed. Refresh and retry safely.",
-    delivery: "Provider state",
+    queued: "Shipment request sent to the courier.",
+    synced: "Tracking updated.",
+    replayed: "This was already saved.",
+    failed: "The courier request did not go through. Refresh and try again.",
+    delivery: "Courier status",
     tracking: "Tracking number",
     cost: "Courier cost",
     estimated: "Estimated delivery",
     label: "Open label",
-    noTracking: "No provider shipment has been created yet.",
-    ambiguousTitle: "Provider outcome requires reconciliation",
+    noTracking: "No shipment has been created with a courier yet.",
+    ambiguousTitle: "Check whether the shipment was created",
     ambiguousBody:
-      "The provider request may have succeeded before the response was lost. Do not book again until you check the provider dashboard.",
-    trackingInput: "Tracking number confirmed in provider dashboard",
+      "The courier may have created the shipment even though no answer came back. Check your courier dashboard before booking again.",
+    trackingInput: "Tracking number shown in your courier dashboard",
     reason: "Reconciliation reason code",
     confirmCreated: "Confirm shipment exists",
     confirmMissing: "Confirm no shipment exists",
-    reconciled: "Courier outcome reconciled.",
+    reconciled: "Shipment status confirmed.",
     attempts: "Attempts",
-    nextRetry: "Next safe retry",
-    loading: "Loading courier authority…",
+    nextRetry: "Next automatic retry",
+    loading: "Loading courier details…",
   },
   fr: {
-    authority: "Autorité canonique du transporteur",
+    authority: "Transporteur",
     heading: "Réservation et suivi transporteur",
     provider: "Transporteur",
     book: "Créer l'expédition",
     sync: "Synchroniser le suivi",
-    queued: "Réservation mise en file de manière sûre.",
-    synced: "Suivi transporteur synchronisé.",
-    replayed: "L'action déjà validée a été récupérée en toute sécurité.",
-    failed: "L'action transporteur n'a pas été validée. Actualisez puis réessayez.",
-    delivery: "État transporteur",
+    queued: "Demande d’expédition envoyée au transporteur.",
+    synced: "Suivi mis à jour.",
+    replayed: "C’était déjà enregistré.",
+    failed: "La demande au transporteur n’a pas abouti. Actualisez puis réessayez.",
+    delivery: "Statut transporteur",
     tracking: "Numéro de suivi",
     cost: "Coût transporteur",
     estimated: "Livraison estimée",
     label: "Ouvrir l'étiquette",
-    noTracking: "Aucune expédition transporteur n'a encore été créée.",
-    ambiguousTitle: "Le résultat transporteur doit être rapproché",
+    noTracking: "Aucune expédition n’a encore été créée chez un transporteur.",
+    ambiguousTitle: "Vérifiez si l’expédition a été créée",
     ambiguousBody:
-      "La demande a peut-être réussi avant la perte de réponse. Ne recréez pas l'expédition avant de vérifier le tableau de bord transporteur.",
-    trackingInput: "Numéro de suivi confirmé chez le transporteur",
+      "Le transporteur a peut-être créé l’expédition même sans réponse. Vérifiez votre espace transporteur avant de réessayer.",
+    trackingInput: "Numéro de suivi affiché dans votre espace transporteur",
     reason: "Code motif du rapprochement",
     confirmCreated: "Confirmer que l'expédition existe",
     confirmMissing: "Confirmer qu'elle n'existe pas",
-    reconciled: "Résultat transporteur rapproché.",
+    reconciled: "Statut de l’expédition confirmé.",
     attempts: "Tentatives",
-    nextRetry: "Prochaine tentative sûre",
-    loading: "Chargement de l'autorité transporteur…",
+    nextRetry: "Prochaine tentative automatique",
+    loading: "Chargement du transporteur…",
   },
   ar: {
-    authority: "صلاحية شركة التوصيل الموثوقة",
+    authority: "شركة التوصيل",
     heading: "حجز الشحنة وتتبعها",
     provider: "شركة التوصيل",
     book: "إنشاء الشحنة",
     sync: "مزامنة التتبع",
-    queued: "تم وضع الحجز في الطابور بأمان.",
-    synced: "تمت مزامنة تتبع شركة التوصيل.",
-    replayed: "تمت استعادة الإجراء المعتمد سابقًا بأمان.",
-    failed: "لم يتم اعتماد إجراء شركة التوصيل. حدّث الصفحة ثم أعد المحاولة.",
+    queued: "أُرسل طلب الشحن إلى شركة التوصيل.",
+    synced: "تم تحديث التتبع.",
+    replayed: "سبق حفظ ذلك.",
+    failed: "لم يتم طلب شركة التوصيل. حدّث الصفحة ثم أعد المحاولة.",
     delivery: "حالة شركة التوصيل",
     tracking: "رقم التتبع",
     cost: "تكلفة التوصيل",
     estimated: "موعد التسليم المتوقع",
     label: "فتح الملصق",
-    noTracking: "لم تُنشأ شحنة لدى شركة التوصيل بعد.",
-    ambiguousTitle: "نتيجة شركة التوصيل تحتاج إلى مطابقة",
+    noTracking: "لم تُنشأ شحنة لدى أي شركة توصيل بعد.",
+    ambiguousTitle: "تحقّق مما إذا أُنشئت الشحنة",
     ambiguousBody:
-      "قد تكون الشحنة أُنشئت قبل ضياع الرد. لا تُنشئ شحنة أخرى قبل التحقق من لوحة شركة التوصيل.",
-    trackingInput: "رقم التتبع المؤكد في لوحة شركة التوصيل",
+      "ربما أنشأت شركة التوصيل الشحنة رغم عدم وصول رد. تحقّق من لوحة شركة التوصيل قبل إعادة الحجز.",
+    trackingInput: "رقم التتبع الظاهر في لوحة شركة التوصيل",
     reason: "رمز سبب المطابقة",
     confirmCreated: "تأكيد وجود الشحنة",
     confirmMissing: "تأكيد عدم إنشاء الشحنة",
-    reconciled: "تمت مطابقة نتيجة شركة التوصيل.",
+    reconciled: "تم تأكيد حالة الشحنة.",
     attempts: "عدد المحاولات",
-    nextRetry: "المحاولة الآمنة القادمة",
-    loading: "جارٍ تحميل صلاحية شركة التوصيل…",
+    nextRetry: "المحاولة التلقائية التالية",
+    loading: "جارٍ تحميل تفاصيل شركة التوصيل…",
   },
 } as const;
 
@@ -176,7 +177,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
   const position = data?.position;
   const [provider, setProvider] = useState<Provider>("yalidine");
   const [trackingNumber, setTrackingNumber] = useState("");
-  const [reasonCode, setReasonCode] = useState("provider-dashboard-checked");
+  const [reasonCode, setReasonCode] = useState("provider_dashboard_checked");
   const [loadingAction, setLoadingAction] = useState<Action | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -418,15 +419,13 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
                 dir="auto"
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor={`courier-reason-${orderId}`}>{copy.reason}</Label>
-              <Input
-                id={`courier-reason-${orderId}`}
-                value={reasonCode}
-                onChange={(event) => setReasonCode(event.target.value)}
-                dir="auto"
-              />
-            </div>
+            <ReasonCodeField
+              id={`courier-reason-${orderId}`}
+              context="courier"
+              locale={locale}
+              value={reasonCode}
+              onChange={setReasonCode}
+            />
           </div>
           <div className="flex flex-wrap gap-2">
             <Button

@@ -195,7 +195,8 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(messages).toContain("messageType: message.messageType");
     expect(read("src/components/inbox/inbox-thread-message.tsx")).toContain("isMediaMessage");
     expect(read("src/components/inbox/inbox-thread-message.tsx")).toContain('copy("mediaMetadataOnly")');
-    expect(copy).toContain("does not expose durable local media bytes yet");
+    // Restated: the honest no-file notice now reads in seller language.
+    expect(copy).toContain("the file itself is not available on this computer");
   });
 
   it("keeps one human-reviewed order candidate instead of extraction cards under every message", () => {

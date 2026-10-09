@@ -26,7 +26,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "confirmationQueue.reject.reason.postponed": "Postponed",
     "confirmationQueue.reject.submit": "Reject order",
     "confirmationQueue.reject.legacyHint":
-      "This legacy order records the cancellation only; rejection reasons are stored on governed orders.",
+      "This order was created before refusal reasons were tracked. It will be cancelled, but the reason will not be saved.",
     "confirmationQueue.bulk.rejectSelected": "Reject Selected",
     "confirmationQueue.bulk.rejectTitle": "Reject {{count}} orders",
     "confirmationQueue.bulk.blockedReason":
@@ -52,7 +52,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "confirmationQueue.reject.reason.postponed": "Reporté",
     "confirmationQueue.reject.submit": "Refuser la commande",
     "confirmationQueue.reject.legacyHint":
-      "Cette commande historique enregistre l’annulation uniquement ; les motifs de refus sont conservés sur les commandes gouvernées.",
+      "Cette commande date d’avant le suivi des motifs de refus : elle sera annulée, mais le motif ne sera pas enregistré.",
     "confirmationQueue.bulk.rejectSelected": "Refuser la sélection",
     "confirmationQueue.bulk.rejectTitle": "Refuser {{count}} commandes",
     "confirmationQueue.bulk.blockedReason":
@@ -78,7 +78,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "confirmationQueue.reject.reason.postponed": "مؤجلة",
     "confirmationQueue.reject.submit": "رفض الطلبية",
     "confirmationQueue.reject.legacyHint":
-      "هذه الطلبية القديمة تسجل الإلغاء فقط؛ تُحفظ أسباب الرفض على الطلبيات المعتمدة.",
+      "أُنشئت هذه الطلبية قبل تتبّع أسباب الرفض: ستُلغى، لكن السبب لن يُحفظ.",
     "confirmationQueue.bulk.rejectSelected": "رفض المحدد",
     "confirmationQueue.bulk.rejectTitle": "رفض {{count}} طلبيات",
     "confirmationQueue.bulk.blockedReason": "التأكيد محجوب (طلبية مستوردة)",

@@ -122,6 +122,8 @@ interface ProductFormDialogProps {
   open?: boolean;
   /** Called when the dialog requests to open/close (controlled mode). */
   onOpenChange?: (open: boolean) => void;
+  /** Called after a successful save (e.g. to refresh a server-rendered page). */
+  onSaved?: () => void;
 }
 
 export function ProductFormDialog({
@@ -130,6 +132,7 @@ export function ProductFormDialog({
   trigger,
   open: openProp,
   onOpenChange,
+  onSaved,
 }: ProductFormDialogProps) {
   const { t } = useI18n();
   const isEdit = !!product;
@@ -232,6 +235,7 @@ export function ProductFormDialog({
       form.reset();
       setOpen(false);
       mutatePrefix("/api/products");
+      onSaved?.();
       toast.success(t(isEdit ? "products.updated" : "products.created"));
     } catch (err) {
       console.error("[ProductFormDialog] submit error:", err);

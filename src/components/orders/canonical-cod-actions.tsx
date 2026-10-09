@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { formatDZD, formatDate } from "@/lib/utils";
 
 interface CodPosition {
@@ -37,79 +38,79 @@ interface CodPosition {
 
 const COPY = {
   en: {
-    title: "Canonical COD position",
-    authority: "Governed financial authority",
-    expected: "Expected receivable",
+    title: "Cash on delivery",
+    authority: "What the courier owes you for this order",
+    expected: "Expected",
     collected: "Collected",
-    remitted: "Gross remitted",
+    remitted: "Paid out",
     fees: "Courier fees",
     outstanding: "Outstanding",
     discrepancy: "Discrepancy",
-    loading: "Loading governed COD facts…",
-    unavailable: "The governed COD position is temporarily unavailable.",
-    provider: "Courier / provider",
+    loading: "Loading cash-on-delivery details…",
+    unavailable: "Cash-on-delivery details are temporarily unavailable.",
+    provider: "Courier",
     amount: "Collected amount",
     reference: "Collection reference",
     date: "Collected at",
     record: "Record collection",
-    correction: "Append collection correction",
-    delta: "Amount delta",
+    correction: "Record a correction",
+    delta: "Amount to add or remove (DA)",
     reason: "Reason code",
-    openWorkspace: "Open COD settlement workspace",
-    success: "The governed COD command was committed.",
-    replayed: "The already committed command was recovered safely.",
-    failed: "The command was not committed. Refresh and retry.",
-    conflict: "The order changed. Refresh before retrying.",
+    openWorkspace: "Open COD reconciliation",
+    success: "Saved.",
+    replayed: "This was already saved.",
+    failed: "Nothing was saved. Refresh and try again.",
+    conflict: "This order changed in the meantime. Refresh and try again.",
   },
   fr: {
-    title: "Position COD canonique",
-    authority: "Autorité financière gouvernée",
-    expected: "Créance attendue",
+    title: "Paiement à la livraison",
+    authority: "Ce que le transporteur vous doit pour cette commande",
+    expected: "Attendu",
     collected: "Encaissé",
-    remitted: "Versement brut",
+    remitted: "Versé",
     fees: "Frais transporteur",
     outstanding: "Restant",
     discrepancy: "Écart",
-    loading: "Chargement des faits COD gouvernés…",
-    unavailable: "La position COD gouvernée est temporairement indisponible.",
-    provider: "Transporteur / fournisseur",
+    loading: "Chargement du paiement à la livraison…",
+    unavailable: "Les détails du paiement à la livraison sont momentanément indisponibles.",
+    provider: "Transporteur",
     amount: "Montant encaissé",
     reference: "Référence d'encaissement",
     date: "Date d'encaissement",
     record: "Enregistrer l'encaissement",
-    correction: "Ajouter une correction d'encaissement",
-    delta: "Delta du montant",
+    correction: "Enregistrer une correction",
+    delta: "Montant à ajouter ou retirer (DA)",
     reason: "Code motif",
-    openWorkspace: "Ouvrir l'espace de règlement COD",
-    success: "La commande COD gouvernée a été validée.",
-    replayed: "La commande déjà validée a été récupérée en sécurité.",
-    failed: "La commande n'a pas été validée. Actualisez puis réessayez.",
-    conflict: "La commande a changé. Actualisez avant de réessayer.",
+    openWorkspace: "Ouvrir le rapprochement COD",
+    success: "Enregistré.",
+    replayed: "C’était déjà enregistré.",
+    failed: "Rien n’a été enregistré. Actualisez puis réessayez.",
+    conflict: "Cette commande a changé entre-temps. Actualisez puis réessayez.",
   },
   ar: {
-    title: "وضعية الدفع عند الاستلام الموثوقة",
-    authority: "صلاحية مالية محكومة",
-    expected: "المستحق المتوقع",
+    title: "الدفع عند الاستلام",
+    authority: "ما تدين به شركة التوصيل لك عن هذه الطلبية",
+    expected: "المتوقع",
     collected: "المحصّل",
-    remitted: "التحويل الإجمالي",
+    remitted: "المحوَّل",
     fees: "رسوم شركة التوصيل",
     outstanding: "المتبقي",
     discrepancy: "الفرق",
-    loading: "جارٍ تحميل حقائق الدفع عند الاستلام…",
-    unavailable: "وضعية الدفع عند الاستلام غير متاحة مؤقتًا.",
-    provider: "شركة التوصيل / المزوّد",
+    loading: "جارٍ تحميل تفاصيل الدفع عند الاستلام…",
+    unavailable: "تفاصيل الدفع عند الاستلام غير متاحة مؤقتًا.",
+    provider: "شركة التوصيل",
     amount: "المبلغ المحصّل",
     reference: "مرجع التحصيل",
     date: "تاريخ التحصيل",
     record: "تسجيل التحصيل",
-    correction: "إضافة تصحيح للتحصيل",
-    delta: "فرق المبلغ",
+    correction: "تسجيل تصحيح",
+    delta: "المبلغ المراد إضافته أو خصمه (دج)",
     reason: "رمز السبب",
-    openWorkspace: "فتح مساحة تسوية الدفع عند الاستلام",
-    success: "تم اعتماد أمر الدفع عند الاستلام الموثوق.",
-    replayed: "تمت استعادة الأمر المعتمد سابقًا بأمان.",
-    failed: "لم يتم اعتماد الأمر. حدّث الصفحة ثم أعد المحاولة.",
-    conflict: "تغيّرت الطلبية. حدّث الصفحة قبل إعادة المحاولة.",
+    openWorkspace: "فتح تسوية الدفع عند الاستلام",
+    success: "تم الحفظ.",
+    replayed: "سبق حفظ ذلك.",
+    failed: "لم يُحفظ شيء. حدّث الصفحة ثم أعد المحاولة.",
+    conflict: "تغيّرت هذه الطلبية في الأثناء. حدّث الصفحة ثم أعد المحاولة.",
   },
 } as const;
 
@@ -149,7 +150,7 @@ export function CanonicalCodActions({ orderId }: { orderId: string }) {
   });
   const [correction, setCorrection] = useState({
     delta: "",
-    reason: "provider-statement-corrected",
+    reason: "",
     occurredAt: nowLocalInput(),
   });
 
@@ -306,7 +307,7 @@ export function CanonicalCodActions({ orderId }: { orderId: string }) {
         <div className="space-y-3 rounded-surface border border-warning/40 p-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5"><Label>{copy.delta}</Label><Input inputMode="numeric" value={correction.delta} onChange={(event) => setCorrection((current) => ({ ...current, delta: event.target.value }))} /></div>
-            <div className="space-y-1.5"><Label>{copy.reason}</Label><Input dir="auto" value={correction.reason} onChange={(event) => setCorrection((current) => ({ ...current, reason: event.target.value }))} /></div>
+            <ReasonCodeField id={`cod-correction-reason-${orderId}`} context="cod" locale={locale} value={correction.reason} onChange={(reason) => setCorrection((current) => ({ ...current, reason }))} />
           </div>
           <div className="flex justify-end"><Button disabled={submitting || safeInteger(correction.delta) === 0 || !correction.reason.trim()} onClick={() => void commit("correction", { amountDelta: safeInteger(correction.delta), reasonCode: correction.reason.trim(), occurredAt: new Date(correction.occurredAt).toISOString() })}>{submitting ? <Loader2 className="me-1.5 h-4 w-4 animate-spin" /> : null}{copy.correction}</Button></div>
         </div>

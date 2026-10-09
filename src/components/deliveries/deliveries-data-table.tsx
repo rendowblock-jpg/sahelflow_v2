@@ -21,6 +21,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
 import { deliveryProviderConfig } from "@/lib/shared";
 import { formatDZD, formatDate } from "@/lib/utils";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 interface DeliveriesDataTableProps {
   fallback: DeliveriesResponse;
@@ -95,7 +96,7 @@ export function DeliveriesDataTable({
                   {row.original.order?.customer?.name ?? "—"}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {row.original.order?.wilaya ?? "—"}
+                  {displayWilaya(row.original.order?.wilaya, locale) || "—"}
                 </div>
               </div>
             ),

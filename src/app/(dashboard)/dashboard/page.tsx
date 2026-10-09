@@ -42,6 +42,7 @@ import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
 import { formatDZD, intlLocale } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
+import { displayWilaya } from "@/lib/wilaya-display";
 
 export default async function DashboardPage() {
   const { t, locale } = await getI18n();
@@ -339,7 +340,7 @@ export default async function DashboardPage() {
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
                           {itemLabel}
-                          {order.wilaya ? ` · ${order.wilaya}` : ""}
+                          {order.wilaya ? ` · ${displayWilaya(order.wilaya, locale)}` : ""}
                         </p>
                       </div>
                     </div>

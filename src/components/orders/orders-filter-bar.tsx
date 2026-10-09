@@ -12,7 +12,7 @@
  * Changing any scope resets `page` to 1. Logical CSS utilities only (RTL-safe).
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 
 import { ListSearchInput } from "@/components/shared/list-search-input";
@@ -83,7 +83,13 @@ export function OrdersFilterBar() {
     return "custom";
   }, [from, to]);
 
+  // The two date fields only appear for a custom range, so the bar stays a
+  // single readable row for the common presets.
+  const [customRequested, setCustomRequested] = useState(false);
+  const showCustomRange = customRequested || activePreset === "custom";
+
   function handlePreset(value: string) {
+    setCustomRequested(value === "custom");
     if (value === "all") {
       void setFilters({ from: null, to: null, page: 1 });
       return;
@@ -132,7 +138,10 @@ export function OrdersFilterBar() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={activePreset} onValueChange={handlePreset}>
+        <Select
+          value={showCustomRange ? "custom" : activePreset}
+          onValueChange={handlePreset}
+        >
           <SelectTrigger
             className="w-fit min-w-36"
             aria-label={t("orders.filters.dateRange")}
@@ -146,37 +155,41 @@ export function OrdersFilterBar() {
             </SelectItem>
             <SelectItem value="7d">{t("orders.filters.date7d")}</SelectItem>
             <SelectItem value="30d">{t("orders.filters.date30d")}</SelectItem>
-            <SelectItem value="custom" disabled>
+            <SelectItem value="custom">
               {t("orders.filters.dateCustom")}
             </SelectItem>
           </SelectContent>
         </Select>
-        <Input
-          type="date"
-          value={from ?? ""}
-          onChange={(event) =>
-            void setFilters({
-              from: event.target.value || null,
-              to,
-              page: 1,
-            })
-          }
-          aria-label={t("orders.filters.from")}
-          className="w-[9.5rem]"
-        />
-        <Input
-          type="date"
-          value={to ?? ""}
-          onChange={(event) =>
-            void setFilters({
-              from,
-              to: event.target.value || null,
-              page: 1,
-            })
-          }
-          aria-label={t("orders.filters.to")}
-          className="w-[9.5rem]"
-        />
+        {showCustomRange ? (
+          <>
+            <Input
+              type="date"
+              value={from ?? ""}
+              onChange={(event) =>
+                void setFilters({
+                  from: event.target.value || null,
+                  to,
+                  page: 1,
+                })
+              }
+              aria-label={t("orders.filters.from")}
+              className="w-[9.5rem]"
+            />
+            <Input
+              type="date"
+              value={to ?? ""}
+              onChange={(event) =>
+                void setFilters({
+                  from,
+                  to: event.target.value || null,
+                  page: 1,
+                })
+              }
+              aria-label={t("orders.filters.to")}
+              className="w-[9.5rem]"
+            />
+          </>
+        ) : null}
       </div>
 
       {hasActiveFilters ? (
