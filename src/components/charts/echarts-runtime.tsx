@@ -335,6 +335,41 @@ function hideKeyboardPoint(chart: ECharts) {
   chart.dispatchAction({ type: "updateAxisPointer", currTrigger: "leave" });
 }
 
+// Building a chart is the most expensive thing a page does in the browser
+// (~60 ms each). Several charts mounting in one commit used to block the main
+// thread for a quarter of a second before the page could paint. Each chart now
+// builds in its own task after the next frame, so the page paints at once,
+// stays responsive to clicks, and charts fill in one per frame.
+const pendingChartMounts: Array<() => void> = [];
+let chartMountPumping = false;
+
+function pumpChartMounts() {
+  const next = pendingChartMounts.shift();
+  if (!next) {
+    chartMountPumping = false;
+    return;
+  }
+  next();
+  requestAnimationFrame(() => setTimeout(pumpChartMounts, 0));
+}
+
+function scheduleChartMount(mount: () => void): () => void {
+  let cancelled = false;
+  const task = () => {
+    if (!cancelled) mount();
+  };
+  pendingChartMounts.push(task);
+  if (!chartMountPumping) {
+    chartMountPumping = true;
+    requestAnimationFrame(() => setTimeout(pumpChartMounts, 0));
+  }
+  return () => {
+    cancelled = true;
+    const index = pendingChartMounts.indexOf(task);
+    if (index >= 0) pendingChartMounts.splice(index, 1);
+  };
+}
+
 export function EChartSurface({
   option,
   ariaLabel,
@@ -366,60 +401,71 @@ export function EChartSurface({
     const container = containerRef.current;
     if (!container) return;
 
-    const chart = init(container, undefined, { renderer: "svg" });
-    readyRef.current?.(chart);
+    const mountChart = (): (() => void) => {
+      const chart = init(container, undefined, { renderer: "svg" });
+      readyRef.current?.(chart);
 
-    let lastThemeSignature = "";
-    let frame = 0;
+      let lastThemeSignature = "";
+      let frame = 0;
 
-    const render = () => {
-      const theme = readSahelChartTheme();
-      lastThemeSignature = themeSignature(theme);
-      chart.setOption(
-        withRuntimePolicy(
-          optionRef.current(theme),
-          ariaLabel,
-          reducedMotion,
-          baseDuration,
-        ),
-        { notMerge: true, lazyUpdate: false },
-      );
+      const render = () => {
+        const theme = readSahelChartTheme();
+        lastThemeSignature = themeSignature(theme);
+        chart.setOption(
+          withRuntimePolicy(
+            optionRef.current(theme),
+            ariaLabel,
+            reducedMotion,
+            baseDuration,
+          ),
+          { notMerge: true, lazyUpdate: false },
+        );
 
-      const pointCount = chartPointCount(chart);
-      if (
-        keyboardIndexRef.current !== null &&
-        keyboardIndexRef.current >= pointCount
-      ) {
-        keyboardIndexRef.current = pointCount > 0 ? pointCount - 1 : null;
-      }
+        const pointCount = chartPointCount(chart);
+        if (
+          keyboardIndexRef.current !== null &&
+          keyboardIndexRef.current >= pointCount
+        ) {
+          keyboardIndexRef.current = pointCount > 0 ? pointCount - 1 : null;
+        }
+      };
+
+      render();
+
+      const resizeObserver = new ResizeObserver(() => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => chart.resize());
+      });
+      resizeObserver.observe(container);
+
+      const themeObserver = new MutationObserver(() => {
+        const signature = themeSignature(readSahelChartTheme());
+        if (signature === lastThemeSignature) return;
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(render);
+      });
+      const observerOptions: MutationObserverInit = {
+        attributes: true,
+        attributeFilter: ["class", "style", "data-theme", "data-theme-preset"],
+      };
+      themeObserver.observe(document.documentElement, observerOptions);
+      if (document.body) themeObserver.observe(document.body, observerOptions);
+
+      return () => {
+        cancelAnimationFrame(frame);
+        resizeObserver.disconnect();
+        themeObserver.disconnect();
+        chart.dispose();
+      };
     };
 
-    render();
-
-    const resizeObserver = new ResizeObserver(() => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => chart.resize());
+    let teardown: (() => void) | null = null;
+    const cancelMount = scheduleChartMount(() => {
+      teardown = mountChart();
     });
-    resizeObserver.observe(container);
-
-    const themeObserver = new MutationObserver(() => {
-      const signature = themeSignature(readSahelChartTheme());
-      if (signature === lastThemeSignature) return;
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(render);
-    });
-    const observerOptions: MutationObserverInit = {
-      attributes: true,
-      attributeFilter: ["class", "style", "data-theme", "data-theme-preset"],
-    };
-    themeObserver.observe(document.documentElement, observerOptions);
-    if (document.body) themeObserver.observe(document.body, observerOptions);
-
     return () => {
-      cancelAnimationFrame(frame);
-      resizeObserver.disconnect();
-      themeObserver.disconnect();
-      chart.dispose();
+      cancelMount();
+      teardown?.();
     };
   }, [ariaLabel, baseDuration, reducedMotion]);
 
