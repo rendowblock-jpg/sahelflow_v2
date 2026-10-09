@@ -140,7 +140,8 @@ fn escape_text(value: &str) -> String {
         .chars()
         .filter(|character| {
             // Space and parentheses carry the seller-facing "1.0.0 (42)".
-            character.is_ascii_alphanumeric() || matches!(character, '.' | '-' | '+' | ' ' | '(' | ')')
+            character.is_ascii_alphanumeric()
+                || matches!(character, '.' | '-' | '+' | ' ' | '(' | ')')
         })
         .collect()
 }

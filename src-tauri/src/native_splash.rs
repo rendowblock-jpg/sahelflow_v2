@@ -1043,7 +1043,8 @@ mod imp {
             let (red, green, blue) = ((SKY >> 16) & 0xFF, (SKY >> 8) & 0xFF, SKY & 0xFF);
             let edge = (-3.0f32).exp();
             for y in 0..height {
-                let row = (data.Scan0 as *mut u8).offset(y as isize * data.Stride as isize) as *mut u32;
+                let row =
+                    (data.Scan0 as *mut u8).offset(y as isize * data.Stride as isize) as *mut u32;
                 let ny = (y as f32 + 0.5) / height as f32 * 2.0 - 1.0;
                 for x in 0..width {
                     let nx = (x as f32 + 0.5) / width as f32 * 2.0 - 1.0;
@@ -1053,7 +1054,9 @@ mod imp {
                     } else {
                         let falloff = ((-3.0 * d2).exp() - edge) / (1.0 - edge);
                         let exact = Self::PEAK_ALPHA * falloff;
-                        (exact + dither(x as u32, y as u32)).floor().clamp(0.0, 255.0) as u32
+                        (exact + dither(x as u32, y as u32))
+                            .floor()
+                            .clamp(0.0, 255.0) as u32
                     };
                     *row.add(x as usize) = (alpha << 24) | (red << 16) | (green << 8) | blue;
                 }

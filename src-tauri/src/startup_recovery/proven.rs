@@ -1,3 +1,4 @@
+use crate::launch_screen::{launch_locale, Locale};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs::{self, OpenOptions};
@@ -551,7 +552,12 @@ pub fn show_blocked(
     }
     fs::rename(&temp_report_path, &report_path)?;
 
-    let html = recovery_html(code, &safe_detail, &report_path.to_string_lossy());
+    let html = recovery_html(
+        launch_locale(&app_data_dir),
+        code,
+        &safe_detail,
+        &report_path.to_string_lossy(),
+    );
     let data_url = format!(
         "data:text/html;charset=utf-8,{}",
         urlencoding::encode(&html)
@@ -566,53 +572,171 @@ pub fn show_blocked(
     Ok(())
 }
 
-fn recovery_html(code: &str, detail: &str, report_path: &str) -> String {
+struct RecoveryCopy {
+    lang: &'static str,
+    dir: &'static str,
+    title: &'static str,
+    badge: &'static str,
+    heading: &'static str,
+    body: &'static str,
+    steps_title: &'static str,
+    step_reopen: &'static str,
+    step_support: &'static str,
+    report_label: &'static str,
+    code_label: &'static str,
+    detail_label: &'static str,
+    select_hint: &'static str,
+}
+
+fn recovery_copy(locale: Locale) -> RecoveryCopy {
+    match locale {
+        Locale::Ar => RecoveryCopy {
+            lang: "ar",
+            dir: "rtl",
+            title: "SahelFlow — تعذّر الفتح",
+            badge: "تعذّر الفتح",
+            heading: "لم يتمكّن SahelFlow من الفتح بأمان",
+            body: "فشلت إحدى خدمات التشغيل المحلية في فحوصها، فلم يُفتح أي متجر بديل ولا مساحة عمل ناقصة.",
+            steps_title: "ما العمل",
+            step_reopen: "أغلق هذه النافذة ثم افتح SahelFlow من جديد.",
+            step_support: "إن ظهرت هذه الشاشة مرة أخرى، أرسل ملف التشخيص أدناه إلى الدعم.",
+            report_label: "ملف التشخيص",
+            code_label: "رمز التشخيص",
+            detail_label: "التفاصيل التقنية",
+            select_hint: "انقر للتحديد، ثم Ctrl+C للنسخ.",
+        },
+        Locale::Fr => RecoveryCopy {
+            lang: "fr",
+            dir: "ltr",
+            title: "SahelFlow — ouverture impossible",
+            badge: "Ouverture impossible",
+            heading: "SahelFlow n’a pas pu s’ouvrir en toute sécurité",
+            body: "Un service local requis a échoué à ses vérifications de démarrage : aucune boutique de remplacement ni aucun espace incomplet n’a été ouvert.",
+            steps_title: "Que faire",
+            step_reopen: "Fermez cette fenêtre, puis rouvrez SahelFlow.",
+            step_support: "Si cet écran revient, envoyez le fichier de diagnostic ci-dessous au support.",
+            report_label: "Fichier de diagnostic",
+            code_label: "Code de diagnostic",
+            detail_label: "Détails techniques",
+            select_hint: "Cliquez pour sélectionner, puis Ctrl+C pour copier.",
+        },
+        Locale::En => RecoveryCopy {
+            lang: "en",
+            dir: "ltr",
+            title: "SahelFlow — could not open",
+            badge: "Could not open",
+            heading: "SahelFlow could not open safely",
+            body: "A required local service failed its startup checks, so no alternate shop or partial workspace was opened.",
+            steps_title: "What to do",
+            step_reopen: "Close this window, then open SahelFlow again.",
+            step_support: "If this screen comes back, send the diagnostic file below to support.",
+            report_label: "Diagnostic file",
+            code_label: "Diagnostic code",
+            detail_label: "Technical detail",
+            select_hint: "Click to select, then Ctrl+C to copy.",
+        },
+    }
+}
+
+/// The page a seller sees when startup is truly blocked: the launch screen's
+/// look, in the seller's language, with the two things they can do. It has no
+/// script and no link — the workspace window stays contained.
+fn recovery_html(locale: Locale, code: &str, detail: &str, report_path: &str) -> String {
+    let text = recovery_copy(locale);
     let code = escape_html(code);
     let detail = escape_html(detail);
     let report_path = escape_html(report_path);
 
     format!(
-        r#"<!doctype html>
-<html lang="fr">
+        r##"<!doctype html>
+<html lang="{lang}" dir="{dir}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SahelFlow — démarrage bloqué</title>
+  <title>{title}</title>
   <style>
-    :root {{ color-scheme: dark; font-family: Inter, Segoe UI, system-ui, sans-serif; }}
-    * {{ box-sizing: border-box; }}
-    body {{ margin: 0; min-height: 100vh; display: grid; place-items: center; background: #101214; color: #f4f4f5; padding: 24px; }}
-    main {{ width: min(720px, 100%); border: 1px solid #3f3f46; border-radius: 18px; background: #18181b; padding: 32px; box-shadow: 0 24px 80px rgba(0,0,0,.42); }}
-    .badge {{ display: inline-flex; align-items: center; border: 1px solid #7f1d1d; background: #450a0a; color: #fecaca; border-radius: 999px; padding: 6px 10px; font-size: 13px; font-weight: 700; }}
-    h1 {{ margin: 18px 0 10px; font-size: clamp(26px, 5vw, 40px); line-height: 1.05; }}
-    p {{ color: #d4d4d8; line-height: 1.65; }}
-    .steps {{ margin: 24px 0; padding: 18px 20px; border-radius: 14px; background: #0f172a; border: 1px solid #334155; }}
-    .steps strong {{ color: #e2e8f0; }}
-    code {{ display: block; overflow-wrap: anywhere; margin-top: 8px; padding: 12px; border-radius: 10px; background: #09090b; color: #a5f3fc; font-size: 12px; }}
-    details {{ margin-top: 18px; color: #a1a1aa; }}
-    summary {{ cursor: pointer; color: #e4e4e7; font-weight: 650; }}
-    .arabic {{ direction: rtl; text-align: right; font-family: Tahoma, Arial, sans-serif; }}
+    :root {{ color-scheme: dark; --bg: #050a11; --card: #0b131d; --ink: #e8f0f7; --muted: #8195a8; --line: rgba(148, 197, 233, .14); --sky: #38bdf8; --warn: #fbbf24; }}
+    * {{ box-sizing: border-box; margin: 0; }}
+    html, body {{ min-height: 100%; }}
+    body {{ min-height: 100vh; display: grid; place-items: center; padding: 32px 20px; background: radial-gradient(48% 40% at 50% 30%, rgba(14, 165, 233, .12), transparent 72%), var(--bg); color: var(--ink); font: 14px/1.6 "Segoe UI Variable Text", "Segoe UI", Tahoma, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }}
+    html[lang="ar"] body {{ font-family: "Segoe UI", Tahoma, system-ui, sans-serif; font-size: 15px; }}
+    main {{ width: min(560px, 100%); }}
+    .brand {{ display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }}
+    .brand svg {{ width: 30px; height: 30px; filter: drop-shadow(0 6px 16px rgba(14, 165, 233, .3)); }}
+    .word {{ font-size: 18px; font-weight: 600; letter-spacing: -.01em; direction: ltr; unicode-bidi: isolate; }}
+    .word b {{ font-weight: 600; color: var(--sky); }}
+    .card {{ border: 1px solid var(--line); border-radius: 16px; background: var(--card); padding: 28px; box-shadow: 0 24px 64px rgba(0, 0, 0, .45); }}
+    .badge {{ display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--warn); }}
+    .badge::before {{ content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 4px rgba(251, 191, 36, .14); }}
+    h1 {{ margin: 12px 0 8px; font-size: 22px; line-height: 1.3; font-weight: 600; letter-spacing: -.01em; }}
+    p {{ color: var(--muted); }}
+    h2 {{ margin: 24px 0 10px; font-size: 13px; font-weight: 600; color: var(--ink); }}
+    ol {{ padding-inline-start: 20px; display: grid; gap: 6px; color: var(--ink); }}
+    ol li::marker {{ color: var(--sky); font-weight: 600; }}
+    .field {{ margin-top: 18px; }}
+    .label {{ font-size: 12px; color: var(--muted); }}
+    code {{ display: block; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #050a11; color: #bae6fd; font: 12px/1.5 Consolas, "Cascadia Mono", monospace; overflow-wrap: anywhere; direction: ltr; text-align: left; unicode-bidi: isolate; user-select: all; -webkit-user-select: all; cursor: text; }}
+    .hint {{ margin-top: 6px; font-size: 12px; color: #5d7083; }}
+    details {{ margin-top: 18px; }}
+    summary {{ cursor: pointer; font-size: 12.5px; color: var(--muted); }}
+    summary:focus-visible, code:focus-visible {{ outline: 2px solid var(--sky); outline-offset: 2px; border-radius: 6px; }}
   </style>
 </head>
 <body>
   <main role="alert" aria-live="assertive">
-    <span class="badge">Démarrage bloqué · Startup blocked</span>
-    <h1>SahelFlow ne peut pas s’ouvrir en toute sécurité.</h1>
-    <p>The business workspace was not opened because a required local service failed its startup checks. No alternate shop or partial workspace was loaded.</p>
-    <p class="arabic" lang="ar">تعذّر تشغيل ساهل فلو بأمان. لم يتم فتح متجر بديل أو واجهة عمل غير مكتملة.</p>
-    <section class="steps">
-      <strong>Safe retry</strong>
-      <p>Close SahelFlow, then open it again. If this screen returns, reinstall the current candidate or send the diagnostic file below to support.</p>
-      <code>{report_path}</code>
+    <div class="brand" aria-hidden="true">
+      <svg viewBox="9 7 50 50">
+        <defs>
+          <linearGradient id="sky" x1="17" y1="9" x2="42" y2="34" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#7DD3FC"/><stop offset="1" stop-color="#0EA5E9"/></linearGradient>
+          <linearGradient id="deep" x1="22" y1="30" x2="47" y2="55" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0284C7"/><stop offset="1" stop-color="#0C4A6E"/></linearGradient>
+          <mask id="m-top"><rect width="64" height="64" fill="#000"/><circle cx="31.5" cy="23" r="14" fill="#fff"/><circle cx="35.4" cy="25.6" r="10.6" fill="#000"/><rect x="31.5" y="23" width="33" height="41" fill="#000"/></mask>
+          <mask id="m-bottom"><rect width="64" height="64" fill="#000"/><circle cx="32.5" cy="41" r="14" fill="#fff"/><circle cx="28.6" cy="38.4" r="10.6" fill="#000"/><rect x="0" y="0" width="32.5" height="41" fill="#000"/></mask>
+        </defs>
+        <rect width="64" height="64" fill="url(#sky)" mask="url(#m-top)"/>
+        <rect width="64" height="64" fill="url(#deep)" mask="url(#m-bottom)"/>
+        <circle cx="47.2" cy="12.4" r="3.1" fill="#7DD3FC"/>
+      </svg>
+      <span class="word">Sahel<b>Flow</b></span>
+    </div>
+    <section class="card">
+      <span class="badge">{badge}</span>
+      <h1>{heading}</h1>
+      <p>{body}</p>
+      <h2>{steps_title}</h2>
+      <ol>
+        <li>{step_reopen}</li>
+        <li>{step_support}</li>
+      </ol>
+      <div class="field">
+        <span class="label">{report_label}</span>
+        <code tabindex="0">{report_path}</code>
+        <p class="hint">{select_hint}</p>
+      </div>
+      <div class="field">
+        <span class="label">{code_label}</span>
+        <code tabindex="0">{code}</code>
+      </div>
+      <details>
+        <summary>{detail_label}</summary>
+        <code tabindex="0">{detail}</code>
+      </details>
     </section>
-    <p><strong>Diagnostic code:</strong> {code}</p>
-    <details>
-      <summary>Technical detail</summary>
-      <code>{detail}</code>
-    </details>
   </main>
 </body>
-</html>"#
+</html>"##,
+        lang = text.lang,
+        dir = text.dir,
+        title = text.title,
+        badge = text.badge,
+        heading = text.heading,
+        body = text.body,
+        steps_title = text.steps_title,
+        step_reopen = text.step_reopen,
+        step_support = text.step_support,
+        report_label = text.report_label,
+        code_label = text.code_label,
+        detail_label = text.detail_label,
+        select_hint = text.select_hint,
     )
 }
 
@@ -800,8 +924,35 @@ mod tests {
 
     #[test]
     fn recovery_html_escapes_diagnostic_content() {
-        let html = recovery_html("SF-TEST", "<script>bad()</script>", "C:\\report.json");
+        let html = recovery_html(
+            Locale::Fr,
+            "SF-TEST",
+            "<script>bad()</script>",
+            "C:\\report.json",
+        );
         assert!(!html.contains("<script>bad()</script>"));
         assert!(html.contains("&lt;script&gt;bad()&lt;/script&gt;"));
+    }
+
+    #[test]
+    fn recovery_page_speaks_the_sellers_language_without_script_or_links() {
+        for (locale, lang, dir, heading) in [
+            (Locale::Ar, "ar", "rtl", "لم يتمكّن SahelFlow من الفتح بأمان"),
+            (
+                Locale::Fr,
+                "fr",
+                "ltr",
+                "SahelFlow n’a pas pu s’ouvrir en toute sécurité",
+            ),
+            (Locale::En, "en", "ltr", "SahelFlow could not open safely"),
+        ] {
+            let html = recovery_html(locale, "SF-CODE", "detail", "C:\\report.json");
+            assert!(html.contains(&format!(r#"<html lang="{lang}" dir="{dir}">"#)));
+            assert!(html.contains(heading));
+            assert!(html.contains("SF-CODE"));
+            assert!(!html.contains("<script"));
+            assert!(!html.contains("<a "));
+            assert!(!html.contains("{{"));
+        }
     }
 }
