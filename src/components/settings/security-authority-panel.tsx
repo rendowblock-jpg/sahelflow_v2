@@ -284,8 +284,10 @@ export function SecurityAuthorityPanel() {
                     <li key={session.sessionId} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span dir="ltr" className="font-mono text-xs">
-                            {shortId(session.sessionId)}
+                          {/* Sessions are told apart by their dates; the raw
+                              id stays available on hover for support. */}
+                          <span className="text-sm font-medium" title={shortId(session.sessionId)}>
+                            {t("settings.security.otherSession")}
                           </span>
                           {session.current ? (
                             <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
