@@ -155,11 +155,21 @@ export function Sidebar({
   const activeHref = navigationItemForPathname(pathname)?.href ?? null;
   const navRef = useRef<HTMLElement>(null);
   // On a short window the list scrolls: keep the current destination in view
-  // so the seller always sees where they are.
+  // so the seller always sees where they are. Only the sidebar's own viewport
+  // moves; scrollIntoView would also move the keyboard's Tab starting point
+  // onto the sidebar and skip the "Skip to main content" link.
   useEffect(() => {
-    navRef.current
-      ?.querySelector<HTMLElement>('[aria-current="page"]')
-      ?.scrollIntoView({ block: "nearest" });
+    const nav = navRef.current;
+    const item = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    const viewport = nav?.closest<HTMLElement>('[data-slot="scroll-area-viewport"]');
+    if (!item || !viewport) return;
+    const itemBox = item.getBoundingClientRect();
+    const viewBox = viewport.getBoundingClientRect();
+    if (itemBox.bottom > viewBox.bottom) {
+      viewport.scrollTop += itemBox.bottom - viewBox.bottom + 8;
+    } else if (itemBox.top < viewBox.top) {
+      viewport.scrollTop -= viewBox.top - itemBox.top + 8;
+    }
   }, [activeHref, collapsed]);
 
   // Inbox liveness (R4-a): the sidebar is the persistent shell surface, so it
