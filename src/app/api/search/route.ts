@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { getI18n } from "@/lib/i18n-server";
 import {
   searchUniversalRecords,
   warmUniversalSearchRecords,
@@ -26,7 +27,10 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     req.nextUrl.searchParams.get("limit") ?? "16",
     10,
   );
-  const result = await searchUniversalRecords(query, requestedLimit);
+  const { t } = await getI18n();
+  const result = await searchUniversalRecords(query, requestedLimit, {
+    manualDeliveryLabel: t("deliveries.provider.manual"),
+  });
   return NextResponse.json(result, {
     headers: {
       "Cache-Control": "no-store",

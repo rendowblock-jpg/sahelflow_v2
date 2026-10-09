@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  algerianPhoneSearchForms,
   canOpenProtectedOperationalDetail,
   compactSearchText,
   mergeUniversalSearchFamilies,
   messageExcerpt,
   normalizeSearchText,
+  paddedRecordNumber,
   rankUniversalSearchCandidates,
   scoreUniversalSearchCandidate,
+  typoDistance,
   type UniversalSearchCandidate,
 } from "../universal-search";
 
@@ -187,5 +190,71 @@ describe("messageExcerpt", () => {
 
   it("returns nothing when the message did not match", () => {
     expect(messageExcerpt("Salam", "livraison")).toBeUndefined();
+  });
+});
+
+describe("search forms sellers really type", () => {
+  const customer: UniversalSearchCandidate = {
+    id: "customer:1",
+    kind: "customer",
+    label: "Fatima Zohra",
+    sublabel: "0661987654",
+    href: "/customers/1",
+  };
+  const order: UniversalSearchCandidate = {
+    id: "order:58",
+    kind: "order",
+    label: "ORD-0058",
+    sublabel: "Fatima Zohra",
+    href: "/orders/58",
+    keywords: ["Fatima Zohra", "0661987654"],
+  };
+
+  it("reads one Algerian number in its local, international and spaced shapes", () => {
+    const forms = ["0661987654", "213661987654"];
+    expect(algerianPhoneSearchForms("+213661987654")).toEqual(forms);
+    expect(algerianPhoneSearchForms("+213 661 98 76 54")).toEqual(forms);
+    expect(algerianPhoneSearchForms("00213661987654")).toEqual(forms);
+    expect(algerianPhoneSearchForms("0661 98 76 54")).toEqual(forms);
+    expect(algerianPhoneSearchForms("021 23 45 67")).toEqual(["021234567", "21321234567"]);
+    expect(algerianPhoneSearchForms("9876")).toEqual([]);
+    expect(algerianPhoneSearchForms("Fatima")).toEqual([]);
+  });
+
+  it("pads a short order number the way order numbers are written", () => {
+    expect(paddedRecordNumber("58")).toBe("0058");
+    expect(paddedRecordNumber("7")).toBe("0007");
+    expect(paddedRecordNumber("0058")).toBeNull();
+    expect(paddedRecordNumber("ord 58")).toBeNull();
+  });
+
+  it("ranks the order a short number ends above one that merely contains it", () => {
+    const other = { ...order, id: "order:158", label: "ORD-0158" };
+    expect(scoreUniversalSearchCandidate("58", order)).toBeGreaterThan(1_000);
+    expect(
+      rankUniversalSearchCandidates("58", [other, order], 2).map((row) => row.label),
+    ).toEqual(["ORD-0058", "ORD-0158"]);
+  });
+
+  it("ranks a spaced phone the same way as an unspaced one", () => {
+    const rank = (query: string) =>
+      rankUniversalSearchCandidates(query, [order, customer], 2).map((row) => row.kind);
+    expect(rank("0661 98 76 54")).toEqual(rank("0661987654"));
+  });
+
+  it("forgives one typo in a short name and two in a long one, below every real match", () => {
+    expect(typoDistance("fatma", "fatima", 1)).toBe(1);
+    expect(typoDistance("benli", "benali", 1)).toBe(1);
+    expect(typoDistance("mohamed", "mohammed", 2)).toBe(1);
+    expect(typoDistance("karim", "zohra", 1)).toBe(2);
+
+    const fatma = scoreUniversalSearchCandidate("Fatma", customer);
+    expect(fatma).toBeGreaterThan(0);
+    expect(fatma).toBeLessThan(scoreUniversalSearchCandidate("Fati", customer));
+    expect(scoreUniversalSearchCandidate("fatma zohra", customer)).toBeGreaterThan(0);
+    expect(scoreUniversalSearchCandidate("Karim", customer)).toBe(0);
+    // Three letters or digits are never "corrected".
+    expect(scoreUniversalSearchCandidate("fat", { ...customer, label: "Fit" })).toBe(0);
+    expect(scoreUniversalSearchCandidate("0662", customer)).toBe(0);
   });
 });

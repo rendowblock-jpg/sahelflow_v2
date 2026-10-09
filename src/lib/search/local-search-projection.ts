@@ -9,8 +9,10 @@ import {
   compactSearchText,
   normalizeSearchText,
   rankUniversalSearchCandidates,
+  typoBudget,
   type UniversalSearchCandidate,
 } from "@/lib/search/universal-search";
+import { LOCALES, getTranslations } from "@/lib/i18n";
 import { deliveryProviderConfig } from "@/lib/shared";
 
 const DEFAULT_CANDIDATE_LIMIT = 48;
@@ -37,9 +39,19 @@ const ORDER_TOKEN_REFERENCE = {
 
 type BlindIndexClient = Parameters<typeof deriveShopBlindIndexes>[0];
 
+/** "Manual delivery" in every interface language, so any of them finds it. */
+const MANUAL_DELIVERY_NAMES = LOCALES.map(
+  (locale) => getTranslations(locale)["deliveries.provider.manual"] ?? "",
+).filter(Boolean);
+
+export function isManualDeliveryProvider(provider: string | null | undefined): boolean {
+  return provider === "manual" || provider === "manual-courier";
+}
+
 type ProjectedCandidate = UniversalSearchCandidate & {
   entityId: string;
   customerId?: string;
+  manualDelivery?: boolean;
 };
 
 interface SearchIndex {
@@ -297,7 +309,25 @@ function candidateIdsForQuery(index: SearchIndex, rawQuery: string): string[] {
     }
   }
 
+  // Nothing matched as typed: offer near misses. Candidates share the first
+  // letters of a typed word; ranking then keeps only true near misses.
+  if (selected.size === 0) {
+    for (const key of typoFallbackPrefixes(query)) {
+      appendBounded(selected, index.keys.get(`w:${key}`) ?? []);
+      if (selected.size >= CANDIDATE_SCAN_BUDGET) break;
+    }
+  }
+
   return [...selected];
+}
+
+/** Word starts that seed near-miss candidates, most specific first. */
+function typoFallbackPrefixes(query: string): string[] {
+  const words = query.split(/\s+/u).filter((word) => typoBudget(word) > 0);
+  return [
+    ...words.map((word) => word.slice(0, 3)),
+    ...words.map((word) => word.slice(0, 2)),
+  ];
 }
 
 function queryIndex(
@@ -450,6 +480,23 @@ async function persistedIdsForQuery(
       let ids = new Set(buckets[0]);
       for (const bucket of buckets.slice(1)) ids = intersect(ids, bucket);
       appendBounded(selected, ids);
+    }
+  }
+
+  if (selected.size === 0) {
+    const fallbackKeys = typoFallbackPrefixes(query).map((key) => `word-prefix:${key}`);
+    if (fallbackKeys.length > 0) {
+      const fallbackHashes = await queryTokenHashes(
+        fallbackKeys,
+        reference,
+        unavailableMessage,
+      );
+      for (const key of fallbackKeys) {
+        const hash = fallbackHashes.get(key);
+        if (!hash) continue;
+        appendBounded(selected, await idsForTokenHash(family, hash));
+        if (selected.size >= CANDIDATE_SCAN_BUDGET) break;
+      }
     }
   }
 
@@ -805,21 +852,34 @@ async function buildDeliveryIndex(): Promise<SearchIndex> {
     },
   });
   return createIndex(
-    rows.map((delivery) => ({
-      id: `delivery:${delivery.id}`,
-      entityId: delivery.id,
-      kind: "delivery" as const,
-      label:
-        delivery.trackingNumber ??
-        delivery.order.orderNumber ??
-        delivery.id.slice(-8),
-      sublabel: delivery.order.orderNumber
-        ? `${deliveryProviderConfig[delivery.provider]?.label ?? delivery.provider} · \u2066${delivery.order.orderNumber}\u2069`
-        : (deliveryProviderConfig[delivery.provider]?.label ?? delivery.provider),
-      keywords: [delivery.order.orderNumber ?? ""],
-      href: `/deliveries/${delivery.id}`,
-      updatedAt: delivery.updatedAt,
-    })),
+    rows.map((delivery) => {
+      // Seller-handled deliveries carry no brand: their localized name is added
+      // per request (searchUniversalRecords), never the raw provider id.
+      const manual = isManualDeliveryProvider(delivery.provider);
+      const provider = manual
+        ? null
+        : (deliveryProviderConfig[delivery.provider]?.label ?? delivery.provider);
+      const orderNumber = delivery.order.orderNumber
+        ? `\u2066${delivery.order.orderNumber}\u2069`
+        : null;
+      return {
+        id: `delivery:${delivery.id}`,
+        entityId: delivery.id,
+        kind: "delivery" as const,
+        label:
+          delivery.trackingNumber ??
+          delivery.order.orderNumber ??
+          delivery.id.slice(-8),
+        sublabel: [provider, orderNumber].filter(Boolean).join(" · ") || undefined,
+        keywords: [
+          delivery.order.orderNumber ?? "",
+          ...(manual ? MANUAL_DELIVERY_NAMES : []),
+        ],
+        href: `/deliveries/${delivery.id}`,
+        updatedAt: delivery.updatedAt,
+        ...(manual ? { manualDelivery: true } : {}),
+      };
+    }),
   );
 }
 

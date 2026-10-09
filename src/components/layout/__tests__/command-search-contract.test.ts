@@ -197,11 +197,31 @@ describe("universal command search contract", () => {
       "canDeliveries && canOpenProtectedOperationalDetail",
     );
     expect(server).toContain("canOrders && canOpenProtectedOperationalDetail");
-    expect(server).toContain("searchProjectedOrders(shopId, query, FAMILY_MATCH_BUDGET)");
+    // Each family is looked up for the typed query and for the other stored
+    // forms of the same value; the permission gate in front of it is unchanged.
+    expect(server).toContain("searchProjectedOrders(shopId, form, FAMILY_MATCH_BUDGET)");
     expect(server).toContain(
       "canOrders && canOpenProtectedOperationalDetail && canReadContact",
     );
-    expect(server).toContain("exactPhoneOrderCandidates(query, actorContext)");
+    expect(server).toContain("exactPhoneOrderCandidates(form, actorContext)");
+    expect(server).toMatch(
+      /canOrders && canOpenProtectedOperationalDetail && canReadContact\s*\? safeFamily\("order", \[\], degraded, \(\) =>\s*acrossForms\(query, phoneForms/u,
+    );
+  });
+
+  it("finds a phone in either stored form, a short order number and a manual delivery in the seller's language", () => {
+    const server = source("../../../lib/search/universal-search-server.ts");
+    const route = source("../../../app/api/search/route.ts");
+    const projection = source("../../../lib/search/local-search-projection.ts");
+
+    expect(server).toContain("const phoneForms = algerianPhoneSearchForms(query)");
+    expect(server).toContain("const paddedNumber = paddedRecordNumber(query)");
+    expect(route).toContain('manualDeliveryLabel: t("deliveries.provider.manual")');
+    // The raw provider id never reaches a result row.
+    expect(projection).toContain("isManualDeliveryProvider(delivery.provider)");
+    expect(projection).not.toContain("?? delivery.provider} ·");
+    // Near-miss candidates only when nothing matched as typed.
+    expect(projection).toContain("typoFallbackPrefixes(query)");
   });
 
   it("uses the shared technical-value boundary for RTL-safe result identifiers", () => {

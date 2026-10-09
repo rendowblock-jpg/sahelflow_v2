@@ -21,9 +21,11 @@ import {
   warmLocalSearchProjection,
 } from "@/lib/search/local-search-projection";
 import {
+  algerianPhoneSearchForms,
   compactSearchText,
   messageExcerpt,
   normalizeSearchText,
+  paddedRecordNumber,
   rankUniversalSearchCandidates,
   type UniversalSearchCandidate,
 } from "@/lib/search/universal-search";
@@ -48,7 +50,13 @@ type RecordCandidate = UniversalSearchCandidate & {
   kind: RecordKind;
   entityId?: string;
   customerId?: string;
+  manualDelivery?: boolean;
 };
+
+export interface UniversalRecordSearchOptions {
+  /** "Manual delivery" in the seller's language, for seller-handled deliveries. */
+  manualDeliveryLabel?: string;
+}
 
 type RecentConversationSearchRow = {
   id: string;
@@ -173,10 +181,16 @@ function mergeConversationCandidates(
     const contactMatched =
       normalizeSearchText(existing.label).includes(normalizeSearchText(query)) ||
       compactSearchText(existing.sublabel ?? "").includes(compactSearchText(query));
+    const messageMatched = (candidate.keywords ?? []).some((body) =>
+      Boolean(messageExcerpt(body, query)),
+    );
     combined.set(candidate.id, {
       ...existing,
       // Found by its text rather than its contact: say which message matched.
-      sublabel: contactMatched ? existing.sublabel : (candidate.sublabel ?? existing.sublabel),
+      sublabel:
+        !contactMatched && messageMatched
+          ? (candidate.sublabel ?? existing.sublabel)
+          : existing.sublabel,
       keywords: [
         ...(existing.keywords ?? []),
         ...(candidate.keywords ?? []),
@@ -191,6 +205,34 @@ function mergeConversationCandidates(
   );
 }
 
+/**
+ * Runs one family lookup for the query as typed and for each other form the
+ * same value is stored under (the other shape of a phone number, the padded
+ * form of a short order number). A record found only through another form
+ * names the typed query among its keywords, so it ranks as the match it is.
+ */
+async function acrossForms<T extends UniversalSearchCandidate>(
+  query: string,
+  forms: readonly string[],
+  lookup: (form: string) => Promise<T[]>,
+): Promise<T[]> {
+  const typed = compactSearchText(query);
+  const others = [...new Set(forms)].filter((form) => form !== typed);
+  if (others.length === 0) return lookup(query);
+  const answers = await Promise.all([query, ...others].map((form) => lookup(form)));
+  const merged = new Map<string, T>();
+  answers.forEach((rows, index) => {
+    for (const row of rows) {
+      if (merged.has(row.id)) continue;
+      merged.set(
+        row.id,
+        index === 0 ? row : { ...row, keywords: [...(row.keywords ?? []), query] },
+      );
+    }
+  });
+  return [...merged.values()];
+}
+
 function isLikelyPhoneQuery(query: string): boolean {
   const compact = compactSearchText(query);
   return compact.length >= 6 && /^\d+$/u.test(compact);
@@ -203,6 +245,7 @@ function shouldSearchRecentMessages(query: string): boolean {
 }
 
 function decorateOrderCandidates(
+  query: string,
   rows: readonly RecordCandidate[],
   customersById: ReadonlyMap<string, RecordCandidate>,
 ): RecordCandidate[] {
@@ -217,6 +260,9 @@ function decorateOrderCandidates(
         ...(order.keywords ?? []),
         customer?.label ?? "",
         customer?.sublabel ?? "",
+        // A customer found through another form of the typed phone passes
+        // that match on to their orders.
+        ...(customer?.keywords?.includes(query) ? [query] : []),
       ],
     };
   });
@@ -290,6 +336,7 @@ export async function warmUniversalSearchRecords(): Promise<void> {
 export async function searchUniversalRecords(
   rawQuery: string,
   requestedLimit?: number,
+  options: UniversalRecordSearchOptions = {},
 ): Promise<UniversalRecordSearchResponse> {
   const startedAt = Date.now();
   const query = normalizeSearchText(rawQuery);
@@ -315,6 +362,9 @@ export async function searchUniversalRecords(
   const canOpenProtectedOperationalDetail =
     canReadContact && canReadFinancials;
   const degraded = new Set<RecordKind>();
+  const phoneForms = algerianPhoneSearchForms(query);
+  const paddedNumber = paddedRecordNumber(query);
+  const numberForms = paddedNumber ? [paddedNumber] : [];
 
   // Every query-independent family starts together. The previous implementation
   // waited for all non-order families and only then began order search, adding an
@@ -331,7 +381,9 @@ export async function searchUniversalRecords(
   ] = await Promise.all([
     canCustomers && canReadContact
       ? safeFamily("customer", [], degraded, () =>
-          searchProjectedCustomers(shopId, query, FAMILY_MATCH_BUDGET),
+          acrossForms(query, phoneForms, (form) =>
+            searchProjectedCustomers(shopId, form, FAMILY_MATCH_BUDGET),
+          ),
         )
       : Promise.resolve([]),
     canProducts
@@ -341,7 +393,9 @@ export async function searchUniversalRecords(
       : Promise.resolve([]),
     canConversations && canReadContact
       ? safeFamily("conversation", [], degraded, () =>
-          searchProjectedConversations(shopId, query, FAMILY_MATCH_BUDGET),
+          acrossForms(query, phoneForms, (form) =>
+            searchProjectedConversations(shopId, form, FAMILY_MATCH_BUDGET),
+          ),
         )
       : Promise.resolve([]),
     canConversations && shouldSearchRecentMessages(query)
@@ -351,22 +405,30 @@ export async function searchUniversalRecords(
       : Promise.resolve([]),
     canDeliveries && canOpenProtectedOperationalDetail
       ? safeFamily("delivery", [], degraded, () =>
-          searchProjectedDeliveries(shopId, query, FAMILY_MATCH_BUDGET),
+          acrossForms(query, numberForms, (form) =>
+            searchProjectedDeliveries(shopId, form, FAMILY_MATCH_BUDGET),
+          ),
         )
       : Promise.resolve([]),
     canOrders && canOpenProtectedOperationalDetail
       ? safeFamily("return", [], degraded, () =>
-          searchProjectedReturns(shopId, query, FAMILY_MATCH_BUDGET),
+          acrossForms(query, numberForms, (form) =>
+            searchProjectedReturns(shopId, form, FAMILY_MATCH_BUDGET),
+          ),
         )
       : Promise.resolve([]),
     canOrders && canOpenProtectedOperationalDetail
       ? safeFamily("order", [], degraded, () =>
-          searchProjectedOrders(shopId, query, FAMILY_MATCH_BUDGET),
+          acrossForms(query, numberForms, (form) =>
+            searchProjectedOrders(shopId, form, FAMILY_MATCH_BUDGET),
+          ),
         )
       : Promise.resolve([]),
     canOrders && canOpenProtectedOperationalDetail && canReadContact
       ? safeFamily("order", [], degraded, () =>
-          exactPhoneOrderCandidates(query, actorContext),
+          acrossForms(query, phoneForms, (form) =>
+            exactPhoneOrderCandidates(form, actorContext),
+          ),
         )
       : Promise.resolve([]),
   ]);
@@ -430,6 +492,7 @@ export async function searchUniversalRecords(
 
   const combinedOrders = new Map<string, RecordCandidate>();
   for (const candidate of decorateOrderCandidates(
+    query,
     [
       ...(technicalOrders as RecordCandidate[]),
       ...(linkedOrders as RecordCandidate[]),
@@ -473,7 +536,16 @@ export async function searchUniversalRecords(
 
   return {
     query,
-    results,
+    results: results.map((result) =>
+      result.manualDelivery && options.manualDeliveryLabel
+        ? {
+            ...result,
+            sublabel: [options.manualDeliveryLabel, result.sublabel]
+              .filter(Boolean)
+              .join(" · "),
+          }
+        : result,
+    ),
     degradedFamilies: [...degraded],
     tookMs: Date.now() - startedAt,
   };
