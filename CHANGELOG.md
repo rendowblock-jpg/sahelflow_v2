@@ -8,6 +8,10 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-09 — FD-070 adopts the Internal.42 release authority
+
+- FD-070 authorizes one signed successor: app `1.0.0-internal.42` / MSI `1.0.0.42`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`. It packages protected main `dc73b83f…` (#487) — WhatsApp durable dispatch, licence distribution with `SFLA1` codes and the offline License Desk, the native startup splash, team access, the theme-aware PIN map and the full walkthrough repairs — and merges only after the full Required battery including installed-MSI evidence. Not a Stable claim; no ledger row converts from this authority.
+
 ### 2026-10-03 — FD-067 adopts the Internal.41 release authority
 
 - FD-067 (the customer-online slot reserved by FD-066) authorizes one signed successor: app `1.0.0-internal.41` / MSI `1.0.0.41`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`. It packages protected main `4bebfd83…` (#484) — the Internal.40 installed-campaign repair line plus #483 — and merges only after the full Required battery including installed-MSI evidence. Not a Stable claim; no ledger row converts from this authority.
