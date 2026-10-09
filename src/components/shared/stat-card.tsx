@@ -348,9 +348,12 @@ export function StatCard({
               >
                 {sparkDated ? (
                   <>
-                    {formatDay(spark[0]?.date, rangeFormatter)}
+                    {/* Each date is its own bidi isolate: inside this LTR
+                        axis an Arabic "3 أكتوبر" must not merge with its
+                        neighbour into a scrambled run. */}
+                    <bdi>{formatDay(spark[0]?.date, rangeFormatter)}</bdi>
                     <span aria-hidden="true">–</span>
-                    {formatDay(spark.at(-1)?.date, rangeFormatter)}
+                    <bdi>{formatDay(spark.at(-1)?.date, rangeFormatter)}</bdi>
                   </>
                 ) : null}
               </span>
