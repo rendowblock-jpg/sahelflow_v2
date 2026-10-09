@@ -355,7 +355,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">{copy.tracking}</dt>
-            <dd className="font-medium" dir="auto">{delivery.trackingNumber ?? "—"}</dd>
+            <dd className="font-medium" dir={delivery.trackingNumber ? "auto" : undefined}>{delivery.trackingNumber ?? "—"}</dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">{copy.cost}</dt>

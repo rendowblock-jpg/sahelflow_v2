@@ -50,14 +50,20 @@ export function DeliveriesDataTable({
             href={`/deliveries/${row.original.id}`}
             className="text-xs font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <TechnicalValue data-tracking-number>
-              {row.original.trackingNumber ?? row.original.id}
-            </TechnicalValue>
+            {row.original.trackingNumber ? (
+              <TechnicalValue data-tracking-number>{row.original.trackingNumber}</TechnicalValue>
+            ) : (
+              <span className="text-muted-foreground">{t("deliveries.noTracking")}</span>
+            )}
           </Link>
         ) : (
-          <TechnicalValue className="text-xs" data-tracking-number>
-            {row.original.trackingNumber ?? row.original.id}
-          </TechnicalValue>
+          row.original.trackingNumber ? (
+            <TechnicalValue className="text-xs" data-tracking-number>
+              {row.original.trackingNumber}
+            </TechnicalValue>
+          ) : (
+            <span className="text-xs text-muted-foreground">{t("deliveries.noTracking")}</span>
+          )
         ),
     },
     {
@@ -163,7 +169,7 @@ export function DeliveriesDataTable({
           {formatDate(row.original.createdAt, locale)}
         </span>
       ),
-      meta: { hideOn: "lg" },
+      meta: { hideOn: "2xl" },
       enableSorting: false,
     },
     {

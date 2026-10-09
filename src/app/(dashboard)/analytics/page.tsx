@@ -344,7 +344,7 @@ export default async function AnalyticsPage({
           icon={<TrendingUp />}
           trend={summary.revenueDelta ?? undefined}
           trendDirectionOnly={false}
-          trendLabel={t("analytics.vsPrevious")}
+          trendLabel={summary.revenueDelta == null ? undefined : t("analytics.vsPrevious")}
           action={
             <KpiDrillDownLink
               href={ordersRangeHref}
@@ -359,7 +359,7 @@ export default async function AnalyticsPage({
           icon={<ShoppingCart />}
           trend={summary.ordersDelta ?? undefined}
           trendDirectionOnly={false}
-          trendLabel={t("analytics.vsPrevious")}
+          trendLabel={summary.ordersDelta == null ? undefined : t("analytics.vsPrevious")}
           action={
             <KpiDrillDownLink
               href={ordersRangeHref}
@@ -374,7 +374,7 @@ export default async function AnalyticsPage({
           icon={<Package />}
           trend={summary.aovDelta ?? undefined}
           trendDirectionOnly={false}
-          trendLabel={t("analytics.vsPrevious")}
+          trendLabel={summary.aovDelta == null ? undefined : t("analytics.vsPrevious")}
           action={
             <KpiDrillDownLink
               href={ordersRangeHref}

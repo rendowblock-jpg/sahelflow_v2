@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -152,6 +153,14 @@ export function Sidebar({
   const isRtl = serverDir === "rtl";
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
   const activeHref = navigationItemForPathname(pathname)?.href ?? null;
+  const navRef = useRef<HTMLElement>(null);
+  // On a short window the list scrolls: keep the current destination in view
+  // so the seller always sees where they are.
+  useEffect(() => {
+    navRef.current
+      ?.querySelector<HTMLElement>('[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest" });
+  }, [activeHref, collapsed]);
 
   // Inbox liveness (R4-a): the sidebar is the persistent shell surface, so it
   // owns the shared unread-summary poll (15s, focus-revalidated, paused while
@@ -201,6 +210,7 @@ export function Sidebar({
       <ScrollArea className="min-h-0 flex-1">
         <TooltipProvider delayDuration={0}>
           <nav
+            ref={navRef}
             className="flex flex-col gap-1 px-2.5 py-3"
             aria-label={t("nav.sidebarLabel")}
             data-seller-navigation="fixed-priority"

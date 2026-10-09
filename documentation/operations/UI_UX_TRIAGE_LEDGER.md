@@ -189,6 +189,13 @@ found. Every row below is DONE (source) on PR #487; none is installed.
 | W-14 | Inbox: raw outbox error code under failed messages; nameless chats shown as "213…" digits | DONE (source) |
 | W-15 | New-customer dialog reused list title/empty-state text and a permanent "invalid phone" hint; phone hints showed a regex | DONE (source) |
 | W-16 | Automation builder: empty name looked like a title, leaving "Create" disabled without a visible reason | DONE (source) |
+| W-17 | Security sessions listed raw session ids; import file picker showed the browser's English "Choose file / No file chosen" | DONE (source) — "Sign-in" rows (id on hover); localized picker |
+| W-18 | COD forms took the courier as free text; backup verification, COD read-only and shipment status showed raw values | DONE (source) — courier picker, worded states |
+| W-19 | Arabic stat-card date range rendered scrambled (bidi) | DONE (source) — range isolated |
+| W-20 | Final re-sweep (162 visits): FR/AR card titles wrapped and pushed values out of line (dashboard revenue, confirmation queue "over 2 h", analytics revenue); analytics showed "vs previous period" with no figure | DONE (source) — shorter labels, caption only with a figure |
+| W-21 | Deliveries list: manual deliveries showed the database id as tracking; the row actions overflowed 1366px | DONE (source) — "No tracking"; date column from 1536px (on the delivery page below) |
+| W-22 | Order courier card printed two dashes side by side (empty tracking aligned LTR next to cost) | DONE (source) |
+| W-23 | Sidebar did not keep the current page in view on a short window; automation cards read "1 step(s)"; AI composer safety hint cut mid-word | DONE (source) — active item scrolled into view, real plurals (AR six forms), hint wraps |
 
 Environment-only observations (not product defects): the dev sandbox has no
 WhatsApp grant (ws-token 503) and no shop registry entry (topbar "Select").

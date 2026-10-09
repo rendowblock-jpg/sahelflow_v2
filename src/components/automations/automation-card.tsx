@@ -38,7 +38,7 @@ export interface AutomationCardData {
 
 /** One automation: what starts it, what it does, and how it has been running. */
 export function AutomationCard({ data, canManage, order = 0 }: { data: AutomationCardData; canManage: boolean; order?: number }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const c = useAutomationCopy();
   const visibleActions = data.actions.slice(0, 3);
   const hasTrend = data.stats.trend.some((point) => point.value > 0);
@@ -90,7 +90,7 @@ export function AutomationCard({ data, canManage, order = 0 }: { data: Automatio
                 {c("workspace.dryRun")}
               </span>
             ) : null}
-            <span>{c("workspace.steps", { count: data.actions.length })}</span>
+            <span>{t("automations.stepCount", { count: data.actions.length })}</span>
             {data.whatsappBlocked && !data.repairRequired ? (
               <span className="inline-flex items-center gap-1 font-medium text-warning" data-automation-whatsapp-blocked="true">
                 <AlertTriangle className="size-3.5" aria-hidden="true" />
