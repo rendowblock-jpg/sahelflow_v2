@@ -36,6 +36,7 @@ import type {
   CanonicalReturnDisposition,
 } from "@/lib/orders/canonical-order-recovery";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { orderStateLabel } from "@/lib/orders/order-state-label";
 
 interface RecoveryPosition {
   orderId: string;
@@ -251,7 +252,7 @@ export function CanonicalOrderRecoveryActions({
 }: {
   orderId: string;
 }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const copy = COPY[locale];
   const router = useRouter();
   const {
@@ -427,25 +428,25 @@ export function CanonicalOrderRecoveryActions({
         <div>
           <dt className="text-xs text-muted-foreground">{copy.delivery}</dt>
           <dd className="font-medium" dir="auto">
-            {position.deliveryState ?? "—"}
+            {orderStateLabel(position.deliveryState, t)}
           </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.inventory}</dt>
           <dd className="font-medium" dir="auto">
-            {position.inventoryState ?? "—"}
+            {orderStateLabel(position.inventoryState, t)}
           </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.returns}</dt>
           <dd className="font-medium" dir="auto">
-            {position.returnState ?? "—"}
+            {orderStateLabel(position.returnState, t)}
           </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.returnCase}</dt>
           <dd className="truncate font-medium" dir="auto">
-            {position.returnCase?.currentState ?? "—"}
+            {orderStateLabel(position.returnCase?.currentState, t)}
           </dd>
         </div>
       </dl>

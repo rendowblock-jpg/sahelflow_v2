@@ -13,6 +13,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { ReasonCodeField } from "@/components/orders/reason-code-field";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { deliveryProviderLabel } from "@/lib/shared";
 
 interface CodPosition {
   orderId: string;
@@ -136,7 +137,7 @@ function safeInteger(value: string): number {
 
 export function CanonicalCodActions({ orderId }: { orderId: string }) {
   const router = useRouter();
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const copy = COPY[locale as keyof typeof COPY] ?? COPY.en;
   const [position, setPosition] = useState<CodPosition | null>(null);
   const [loading, setLoading] = useState(true);
@@ -281,7 +282,11 @@ export function CanonicalCodActions({ orderId }: { orderId: string }) {
           [copy.remitted, position.grossRemitted],
           [copy.fees, position.fees],
           [copy.outstanding, position.outstandingCollection + position.outstandingRemittance],
-          [copy.discrepancy, position.discrepancy],
+          // A gap only exists once cash was collected or paid out; before
+          // that the whole amount is simply still outstanding.
+          ...(position.collectionId || position.grossRemitted > 0
+            ? [[copy.discrepancy, position.discrepancy] as const]
+            : []),
         ].map(([label, amount]) => (
           <div key={String(label)} className="rounded-control border bg-muted/20 p-2.5">
             <dt className="text-xs text-muted-foreground">{String(label)}</dt>
@@ -290,7 +295,7 @@ export function CanonicalCodActions({ orderId }: { orderId: string }) {
         ))}
       </dl>
 
-      {position.collectedAt ? <p className="text-xs text-muted-foreground">{copy.collected}: {formatDate(position.collectedAt, locale)} · {position.provider ?? "—"} · {position.collectionReference ?? "—"}</p> : null}
+      {position.collectedAt ? <p className="text-xs text-muted-foreground">{copy.collected}: {formatDate(position.collectedAt, locale)} · {deliveryProviderLabel(position.provider, t)} · {position.collectionReference ?? "—"}</p> : null}
       {notice ? <p role="status" className="text-sm text-success">{notice}</p> : null}
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
 

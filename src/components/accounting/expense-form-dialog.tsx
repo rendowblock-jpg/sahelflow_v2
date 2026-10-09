@@ -46,6 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { translateValidationMessage } from "@/lib/i18n/validation-messages";
 
 /** All 8 expense categories (drives the Select dropdown options). */
 const EXPENSE_CATEGORIES = expenseCategorySchema.options;
@@ -148,7 +149,7 @@ export function ExpenseFormDialog({
     // The form schema allows "" while typing — block submit here with a clear
     // inline error rather than round-tripping to the API's strict `posInt`.
     if (values.amount === "") {
-      setServerError(`${t("accounting.expenseAmount")}: required`);
+      form.setError("amount", { message: t("validation.amountRequired") });
       return;
     }
 
@@ -184,7 +185,7 @@ export function ExpenseFormDialog({
           const issues = data.details as { message: string; path: string[] }[];
           const first = issues[0];
           setServerError(
-            first ? `${first.path.join(".")}: ${first.message}` : t("common.validationFailed"),
+            first ? translateValidationMessage(first.message, t) : t("common.validationFailed"),
           );
         } else {
           setServerError(translateServerError(data?.error, t, t("error.requestFailed")));

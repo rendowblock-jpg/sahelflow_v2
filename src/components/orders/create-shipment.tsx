@@ -31,7 +31,7 @@ import { mutatePrefix } from "@/lib/swr/mutate";
 import { useI18n } from "@/hooks/use-i18n";
 import { getBrandIcon } from "@/components/brand/brand-icons";
 import { useDeliveryFeeQuote } from "@/components/deliveries/use-delivery-fee-quote";
-import { deliveryProviderConfig } from "@/lib/shared";
+import { deliveryProviderConfig, deliveryProviderLabel } from "@/lib/shared";
 // Registry-driven provider list (R3-d): DELIVERY_PROVIDERS is the canonical
 // union that keys the server-side adapter REGISTRY. The registry index module
 // is `server-only`, so the client imports the same const from the shared
@@ -220,7 +220,7 @@ export function CreateShipment({ orderId, orderStatus, delivery }: CreateShipmen
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t("orders.shipment.carrier")}</span>
                 <span className="font-medium">
-                  {deliveryProviderConfig[delivery.provider]?.label ?? delivery.provider}
+                  {deliveryProviderLabel(delivery.provider, t)}
                 </span>
               </div>
               <div className="flex justify-between">

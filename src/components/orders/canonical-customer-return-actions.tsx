@@ -45,6 +45,7 @@ import {
   type ReturnDisposition,
 } from "@/components/orders/canonical-customer-return-ui";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { orderStateLabel } from "@/lib/orders/order-state-label";
 
 type TransitionAction = Exclude<ReturnAction, "request">;
 type RefundMethod = "cash" | "bank" | "credit" | "courier_deduction";
@@ -103,7 +104,7 @@ export function CanonicalCustomerReturnActions({
 }: {
   orderId: string;
 }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const copy = RETURN_COPY[locale];
   const router = useRouter();
   const {
@@ -508,11 +509,11 @@ export function CanonicalCustomerReturnActions({
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
         <div>
           <dt className="text-xs text-muted-foreground">{copy.state}</dt>
-          <dd className="font-medium" dir="auto">{position.returnState ?? "none"}</dd>
+          <dd className="font-medium" dir="auto">{orderStateLabel(position.returnState ?? "none", t)}</dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.refundState}</dt>
-          <dd className="font-medium" dir="auto">{position.refundState ?? "none"}</dd>
+          <dd className="font-medium" dir="auto">{orderStateLabel(position.refundState ?? "none", t)}</dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">{copy.refunded}</dt>
@@ -529,7 +530,7 @@ export function CanonicalCustomerReturnActions({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Badge>{currentCase.caseType === "exchange" ? copy.exchange : copy.return}</Badge>
-              <span className="text-sm font-medium" dir="auto">{currentCase.currentState}</span>
+              <span className="text-sm font-medium" dir="auto">{orderStateLabel(currentCase.currentState, t)}</span>
             </div>
             {currentCase.replacementOrderId ? (
               <Button asChild size="sm" variant="ghost">

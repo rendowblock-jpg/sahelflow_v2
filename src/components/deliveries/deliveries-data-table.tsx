@@ -19,7 +19,7 @@ import {
 } from "@/hooks/swr/use-deliveries";
 import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
-import { deliveryProviderConfig } from "@/lib/shared";
+import { deliveryProviderConfig, deliveryProviderLabel } from "@/lib/shared";
 import { formatDZD, formatDate } from "@/lib/utils";
 import { displayWilaya } from "@/lib/wilaya-display";
 
@@ -120,7 +120,7 @@ export function DeliveriesDataTable({
             {config.label}
           </span>
         ) : (
-          <span className="text-sm">{row.original.provider}</span>
+          <span className="text-sm">{deliveryProviderLabel(row.original.provider, t)}</span>
         );
       },
       meta: { hideOn: "sm" },

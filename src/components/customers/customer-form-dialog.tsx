@@ -43,6 +43,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { translateValidationMessage } from "@/lib/i18n/validation-messages";
 
 /**
  * Client-side form schema — mirrors createCustomerSchema but allows empty
@@ -172,7 +173,7 @@ export function CustomerFormDialog({
           // Zod validation error from the server — surface the first issue
           const issues = data.details as { message: string; path: string[] }[];
           const first = issues[0];
-          setServerError(first ? `${first.path.join(".")}: ${first.message}` : t("common.validationFailed"));
+          setServerError(first ? translateValidationMessage(first.message, t) : t("common.validationFailed"));
         } else {
           setServerError(localizeServerMessage(data?.error ?? `Request failed (${res.status})`));
         }
@@ -221,10 +222,10 @@ export function CustomerFormDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? t("customers.editCustomer") : t("customers.title")}
+            {isEdit ? t("customers.editCustomer") : t("customers.newCustomer")}
           </DialogTitle>
           <DialogDescription>
-            {isEdit ? t("customers.editCustomerDesc") : t("customers.noCustomersDesc")}
+            {isEdit ? t("customers.editCustomerDesc") : t("customers.newCustomerDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -270,9 +271,7 @@ export function CustomerFormDialog({
                       }
                     />
                   </FormControl>
-                  <FormDescription>
-                    {t("publicForm.phoneInvalid")}
-                  </FormDescription>
+                  <FormDescription>{t("customers.phoneHint")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -308,7 +307,11 @@ export function CustomerFormDialog({
               wilaya={watchedWilaya ?? ""}
               commune={watchedCommune ?? ""}
               onWilayaChange={(v) => form.setValue("wilaya", v, { shouldValidate: true })}
-              onCommuneChange={(v) => form.setValue("commune", v, { shouldValidate: true })}
+              onCommuneChange={(v) =>
+                form.setValue("commune", v, {
+                  shouldValidate: v !== "" || form.formState.isSubmitted,
+                })
+              }
               wilayaLabel={t("publicForm.wilaya")}
               communeLabel={t("publicForm.commune")}
             />

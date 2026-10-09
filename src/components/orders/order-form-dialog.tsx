@@ -589,8 +589,15 @@ export function OrderFormDialog({
               <WilayaCommuneSelect
                 wilaya={watchValues.wilaya}
                 commune={watchValues.commune}
+                // A wilaya change clears the commune; only flag the empty
+                // commune once the seller has tried to submit.
                 onWilayaChange={(v) => form.setValue("wilaya", v, { shouldDirty: true, shouldValidate: true })}
-                onCommuneChange={(v) => form.setValue("commune", v, { shouldDirty: true, shouldValidate: true })}
+                onCommuneChange={(v) =>
+                  form.setValue("commune", v, {
+                    shouldDirty: true,
+                    shouldValidate: v !== "" || form.formState.isSubmitted,
+                  })
+                }
                 wilayaAriaDescribedby={form.formState.errors.wilaya ? "order-form-wilaya-error" : undefined}
                 communeAriaDescribedby={form.formState.errors.commune ? "order-form-commune-error" : undefined}
                 required

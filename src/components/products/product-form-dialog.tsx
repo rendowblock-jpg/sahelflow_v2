@@ -53,6 +53,7 @@ import {
 } from "@/components/products/product-image-upload";
 import { ProductVariantsManager } from "./product-variants-manager";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { translateValidationMessage } from "@/lib/i18n/validation-messages";
 
 /**
  * Client-side form schema — mirrors createProductSchema but:
@@ -224,7 +225,7 @@ export function ProductFormDialog({
           const issues = data.details as { message: string; path: string[] }[];
           const first = issues[0];
           setServerError(
-            first ? `${first.path.join(".")}: ${first.message}` : t("common.validationFailed"),
+            first ? translateValidationMessage(first.message, t) : t("common.validationFailed"),
           );
         } else {
           setServerError(localizeServerMessage(data?.error ?? `Request failed (${res.status})`));

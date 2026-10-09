@@ -399,7 +399,7 @@ async function createGovernedManualOrder(page: Page) {
         address: "Cité AADL, Lot 23",
         phone,
         deliveryCost: 500,
-        notes: "Phase 6/7 governed Orders journey evidence",
+        notes: "Phase 6/7 Orders journey evidence",
         source: "manual",
       }),
     });

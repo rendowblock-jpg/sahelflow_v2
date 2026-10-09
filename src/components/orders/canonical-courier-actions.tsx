@@ -11,7 +11,6 @@ import {
   Truck,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,9 +23,10 @@ import {
 } from "@/components/ui/select";
 import { useI18n } from "@/hooks/use-i18n";
 import { ReasonCodeField } from "@/components/orders/reason-code-field";
-import { deliveryProviderConfig } from "@/lib/shared";
+import { deliveryProviderLabel } from "@/lib/shared";
 import { mutatePrefix } from "@/lib/swr/mutate";
-import { DZ_CLOCK, intlLocale } from "@/lib/utils";
+import { deliveryStatusI18nKey } from "@/lib/shared/status-colors";
+import { DZ_CLOCK, formatDZD, intlLocale } from "@/lib/utils";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 const PROVIDERS = ["yalidine", "maystro", "zrexpress", "ecotrack"] as const;
@@ -171,7 +171,7 @@ function formatDate(value: string | null, locale: string): string {
 }
 
 export function CanonicalCourierActions({ orderId }: { orderId: string }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const copy = COPY[locale];
   const endpoint = `/api/orders/${orderId}/courier`;
   const { data, error: loadError, isLoading, mutate } = useSWR(endpoint, fetcher);
@@ -300,9 +300,6 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
           <h3 id={`courier-${orderId}`} className="text-sm font-medium">
             {copy.heading}
           </h3>
-          <Badge variant="outline" className="mt-1">
-            {copy.authority}
-          </Badge>
         </div>
         {canSync ? (
           <Button size="sm" variant="outline" onClick={() => void sync()} disabled={loadingAction !== null}>
@@ -349,12 +346,12 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
           <div>
             <dt className="text-xs text-muted-foreground">{copy.provider}</dt>
             <dd className="font-medium" dir="auto">
-              {deliveryProviderConfig[delivery.provider]?.label ?? delivery.provider}
+              {deliveryProviderLabel(delivery.provider, t)}
             </dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">{copy.delivery}</dt>
-            <dd className="font-medium" dir="auto">{delivery.status}</dd>
+            <dd className="font-medium" dir="auto">{t(deliveryStatusI18nKey(delivery.status))}</dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">{copy.tracking}</dt>
@@ -362,7 +359,7 @@ export function CanonicalCourierActions({ orderId }: { orderId: string }) {
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">{copy.cost}</dt>
-            <dd className="font-medium">{delivery.cost === null ? "—" : `${delivery.cost} DZD`}</dd>
+            <dd className="font-medium">{delivery.cost === null ? "—" : formatDZD(delivery.cost, locale)}</dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">{copy.estimated}</dt>

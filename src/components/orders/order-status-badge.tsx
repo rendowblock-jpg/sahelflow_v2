@@ -77,9 +77,16 @@ export function OrderStatusBadge({
   const router = useRouter();
   const { t } = useI18n();
   const [isPending, startTransition] = useTransition();
-  const [optimisticStatus, setOptimisticStatus] = useState<OrderStatus | null>(status);
+  // The optimistic pick is tied to the status it was made from: once the
+  // server-rendered `status` moves on (refresh after this or any other
+  // action on the page), the prop wins again instead of a stale first value.
+  const [optimistic, setOptimistic] = useState<{
+    status: OrderStatus;
+    from: OrderStatus | null;
+  } | null>(null);
 
-  const currentStatus = optimisticStatus ?? status;
+  const currentStatus =
+    optimistic && optimistic.from === status ? optimistic.status : status;
   const style = currentStatus ? orderStatusStyles[currentStatus] : null;
 
   const allowedTransitions = allowAll
@@ -92,7 +99,7 @@ export function OrderStatusBadge({
     if (newStatus === currentStatus) return;
 
     // Optimistic update
-    setOptimisticStatus(newStatus);
+    setOptimistic({ status: newStatus, from: status });
 
     try {
       // If onStatusChange provided, call it
@@ -127,7 +134,7 @@ export function OrderStatusBadge({
       }
     } catch (err) {
       // Revert on error
-      setOptimisticStatus(currentStatus);
+      setOptimistic(null);
       toast.error(err instanceof Error ? localizeServerMessage(err.message) : t("orders.statusActions.updateFailed"));
     }
   }

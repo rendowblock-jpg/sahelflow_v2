@@ -62,7 +62,7 @@ export function CreateParamDialog(props: CreateParamDialogProps) {
         trigger={
           <Button>
             <Plus className="h-4 w-4" />
-            {t("common.create")}
+            {t("customers.newCustomer")}
           </Button>
         }
       />
