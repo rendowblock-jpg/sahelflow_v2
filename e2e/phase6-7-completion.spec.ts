@@ -732,11 +732,12 @@ test.describe.serial("Orders governed seller journey", () => {
       await expect(
         page.getByRole("button", { name: expectation.confirm }).first(),
       ).toBeVisible({ timeout: GOVERNED_SURFACE_TIMEOUT_MS });
-      // Engineering vocabulary never reaches the seller.
+      // Engineering vocabulary never reaches the seller (every copy string is
+      // checked by src/lib/i18n/__tests__/seller-vocabulary.test.ts; a page-
+      // wide regex would also match fixture data such as the buyer's name).
       await expect(page.locator("body")).not.toContainText(
         "Canonical order authority",
       );
-      await expect(page.locator("body")).not.toContainText(/\b(governed|canonical)\b/i);
       await expect(page.locator("body")).not.toContainText("rule-1");
       await assertContained(page, `/orders/${orderId}`);
       await assertNoLeakedTranslationKeys(page, `/orders/${orderId}`);
