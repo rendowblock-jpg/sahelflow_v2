@@ -18,7 +18,12 @@ const STARTUP_TRACE_FILE: &str = "startup-trace.json";
 const MAIN_WINDOW_LABEL: &str = "main";
 const MAIN_WINDOW_TITLE: &str = "SahelFlow";
 const BLOCKED_WINDOW_TITLE: &str = "SahelFlow - Startup blocked";
-const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(90);
+/// The hidden workspace waits for a hydrated, authenticated page. A healthy
+/// cold first launch after an update can take well over a minute to serve
+/// its first page; installed Internal.42 crossed the old 90 s limit and showed
+/// "Startup blocked" on a launch that was merely slow. Real failures are
+/// reported earlier through the UI diagnostic and still block.
+const PACKAGED_UI_READY_TIMEOUT: Duration = Duration::from_secs(240);
 const UI_READY_POLL_INTERVAL: Duration = Duration::from_millis(100);
 const WORKSPACE_WINDOW_WAIT: Duration = Duration::from_secs(30);
 const RUNTIME_PROTOCOL_VERSION: u8 = 1;
@@ -416,14 +421,47 @@ fn wait_for_matching_ui_ready(app_data_dir: &Path, timeout: Duration) -> bool {
     let ui_ready_path = app_data_dir.join(RUNTIME_UI_READY_FILE);
     let diagnostic_path = app_data_dir.join(RUNTIME_UI_DIAGNOSTIC_FILE);
     let started_at = Instant::now();
+    let mut blocked_since: Option<Instant> = None;
 
     while started_at.elapsed() < timeout {
         if matching_ui_ready(&endpoint_path, &ui_ready_path, &diagnostic_path) {
             return true;
         }
+        // A page that keeps reporting a blocked acknowledgment (rejected
+        // session, persistence failure) is a real failure: surface it within
+        // seconds instead of making the seller wait out the long limit that
+        // exists for slow, healthy cold starts. The page retries twice a
+        // second, so a transient refusal is superseded long before this.
+        if ui_diagnostic_blocked(&diagnostic_path) {
+            let since = *blocked_since.get_or_insert_with(Instant::now);
+            if since.elapsed() >= UI_BLOCKED_SETTLE {
+                return false;
+            }
+        } else {
+            blocked_since = None;
+        }
         thread::sleep(UI_READY_POLL_INTERVAL);
     }
     false
+}
+
+/// How long a blocked UI acknowledgment must persist before startup stops.
+const UI_BLOCKED_SETTLE: Duration = Duration::from_secs(15);
+
+fn ui_diagnostic_blocked(diagnostic_path: &Path) -> bool {
+    let Ok(bytes) = fs::read(diagnostic_path) else {
+        return false;
+    };
+    if bytes.len() > 64 * 1024 {
+        return false;
+    }
+    serde_json::from_slice::<RuntimeUiDiagnostic>(&bytes)
+        .map(|diagnostic| {
+            diagnostic.format_version == 1
+                && diagnostic.state == "blocked"
+                && diagnostic.app_version.as_deref() == Some(env!("CARGO_PKG_VERSION"))
+        })
+        .unwrap_or(false)
 }
 
 fn matching_ui_ready(endpoint_path: &Path, ui_ready_path: &Path, diagnostic_path: &Path) -> bool {

@@ -192,9 +192,18 @@ impl RuntimeProtocol {
 
     /// Wait until the exact spawned instance authenticates the probe and
     /// reports that its configured database is queryable.
+    /// Wait for credentialed semantic readiness.
+    ///
+    /// `timeout` bounds a server that never accepts a connection. Once the
+    /// child is listening and still alive, it is given at least
+    /// `listening_grace` from that moment: a cold first launch after an update
+    /// (antivirus scanning every new file, an empty code cache) can need more
+    /// than a minute before its first answer, and killing it then throws all
+    /// that warm-up away for a retry that starts cold again.
     pub fn wait_until_ready<F>(
         &self,
         timeout: Duration,
+        listening_grace: Duration,
         mut child_exit: F,
         mut on_listening: impl FnMut(),
     ) -> Result<ReadinessOutcome, IoError>
@@ -203,15 +212,29 @@ impl RuntimeProtocol {
     {
         self.clear_probe_diagnostic();
         let started_at = Instant::now();
+        let mut listening_since: Option<Instant> = None;
         let mut last_failure = "the local server did not accept a readiness connection".to_string();
-        while started_at.elapsed() < timeout {
+        loop {
+            let expired = started_at.elapsed() >= timeout
+                && listening_since.map_or(true, |since| since.elapsed() >= listening_grace);
+            if expired {
+                break;
+            }
             if let Some(code) = child_exit()? {
                 let detail =
                     format!("the local server process exited before readiness with code {code}");
                 self.write_probe_diagnostic(&detail);
                 return Ok(ReadinessOutcome::ProcessExited(code));
             }
-            match self.probe_once(&mut on_listening) {
+            let mut connected = false;
+            let outcome = self.probe_once(&mut || {
+                connected = true;
+                on_listening();
+            });
+            if connected && listening_since.is_none() {
+                listening_since = Some(Instant::now());
+            }
+            match outcome {
                 Ok(()) => {
                     self.clear_probe_diagnostic();
                     return Ok(ReadinessOutcome::Ready);
@@ -825,6 +848,53 @@ mod tests {
     }
 
     #[test]
+    fn a_listening_but_slow_runtime_keeps_its_grace_and_a_silent_one_does_not() {
+        let directory = std::env::temp_dir().join(format!(
+            "sahelflow-runtime-grace-{}-{}",
+            std::process::id(),
+            random_hex(8).expect("test suffix")
+        ));
+        fs::create_dir_all(&directory).expect("create test directory");
+
+        // Nothing listens: the pre-listening budget alone applies.
+        let silent =
+            RuntimeProtocol::allocate(&directory, "setup", &authority()).expect("runtime protocol");
+        let started = Instant::now();
+        let outcome = silent
+            .wait_until_ready(
+                Duration::from_millis(300),
+                Duration::from_secs(30),
+                || Ok(None),
+                || {},
+            )
+            .expect("readiness outcome");
+        assert_eq!(outcome, ReadinessOutcome::TimedOut);
+        assert!(started.elapsed() < Duration::from_secs(5));
+
+        // A cold server that accepts connections but has not answered yet is
+        // not killed at the pre-listening budget.
+        let slow =
+            RuntimeProtocol::allocate(&directory, "setup", &authority()).expect("runtime protocol");
+        let listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, slow.app_port))
+            .expect("bind the slow runtime port");
+        let mut listened = false;
+        let started = Instant::now();
+        let outcome = slow
+            .wait_until_ready(
+                Duration::from_millis(100),
+                Duration::from_secs(3),
+                || Ok(None),
+                || listened = true,
+            )
+            .expect("readiness outcome");
+        assert_eq!(outcome, ReadinessOutcome::TimedOut);
+        assert!(listened);
+        assert!(started.elapsed() >= Duration::from_secs(3));
+        drop(listener);
+        fs::remove_dir_all(directory).expect("remove test directory");
+    }
+
+    #[test]
     fn readiness_stops_immediately_when_the_runtime_process_exits() {
         let directory = std::env::temp_dir().join(format!(
             "sahelflow-runtime-exit-{}-{}",
@@ -837,7 +907,12 @@ mod tests {
 
         let started = Instant::now();
         let outcome = protocol
-            .wait_until_ready(Duration::from_secs(90), || Ok(Some(23)), || {})
+            .wait_until_ready(
+                Duration::from_secs(90),
+                Duration::from_secs(240),
+                || Ok(Some(23)),
+                || {},
+            )
             .expect("readiness outcome");
 
         assert_eq!(outcome, ReadinessOutcome::ProcessExited(23));

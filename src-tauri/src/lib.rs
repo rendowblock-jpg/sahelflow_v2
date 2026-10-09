@@ -200,6 +200,11 @@ const SIDECAR_NAME: &str = "sahelflow-whatsapp";
 const MCP_BRIDGE_NAME: &str = "sahelflow-mcp";
 const PROCESS_TREE_STOP_TIMEOUT: Duration = Duration::from_secs(10);
 const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(90);
+/// Once the server is listening and alive, a cold first launch after an
+/// update (antivirus scanning every new file, an empty code cache) may need
+/// minutes before its first answer. Killing it then restarts the same cold
+/// work; installed Internal.42 lost 80 s that way before a warm retry.
+const MANDATORY_RUNTIME_LISTENING_GRACE: Duration = Duration::from_secs(240);
 const RUNTIME_STDERR_CLASSIFICATIONS: &[(&str, &str)] = &[
     ("SF_ROTATION_STAGE_LEASE", "rotation-lease-stage"),
     (
@@ -1019,6 +1024,7 @@ fn spawn_runtime_generation(
     let mut listening_recorded = false;
     match runtime_protocol.wait_until_ready(
         MANDATORY_RUNTIME_READY_TIMEOUT,
+        MANDATORY_RUNTIME_LISTENING_GRACE,
         || {
             server_child
                 .try_wait()

@@ -1,6 +1,8 @@
 // The packaged desktop starts the workers after the workspace hydrates, or
-// after this bounded fallback if the UI-ready signal never arrives.
-const PACKAGED_WORKER_START_FALLBACK_MS = 45_000;
+// after this bounded fallback if the UI-ready signal never arrives. A cold
+// first launch after an update can need more than a minute to serve its first
+// page; a short fallback started twelve workers in the middle of that load.
+const PACKAGED_WORKER_START_FALLBACK_MS = 180_000;
 
 async function startBackgroundWorkers(): Promise<void> {
   const [
