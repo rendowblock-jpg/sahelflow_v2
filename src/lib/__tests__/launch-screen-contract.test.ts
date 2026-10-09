@@ -109,4 +109,18 @@ describe("FD-068 launch screen", () => {
     expect(configuration.app.windows).toHaveLength(1);
     expect(configuration.app.windows[0]).toMatchObject({ label: "main", visible: false });
   });
+
+  // Installed Internal.42 painted "Sahe Flo": GDI+ character trimming dropped
+  // the last glyph of each wordmark run, and the halo showed stepped rings.
+  it("never trims splash text and paints a dithered halo", () => {
+    const splash = read("src-tauri/src/native_splash.rs");
+    expect(splash).toContain("StringFormatFlagsNoWrap | StringFormatFlagsNoClip");
+    expect(splash).toContain("GdipSetStringFormatTrimming(format, StringTrimmingNone)");
+    expect(splash).toMatch(/sahel \+ WORD_SLACK/);
+    expect(splash).toMatch(/flow \+ WORD_SLACK/);
+    expect(splash).not.toMatch(/(sahel|flow) \+ 8\.0/);
+    expect(splash).toContain("fn dither(x: u32, y: u32)");
+    expect(splash).toContain("self.glow.paint(");
+    expect(splash).not.toContain("GdipCreatePathGradientFromPath");
+  });
 });

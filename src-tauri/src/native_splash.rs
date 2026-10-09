@@ -237,6 +237,7 @@ mod imp {
     };
 
     const PIXEL_FORMAT_32BPP_PARGB: i32 = 0x000E_200B;
+    const PIXEL_FORMAT_32BPP_ARGB: i32 = 0x0026_200A;
     const TIMER_ID: usize = 1;
     const INTRO_FRAME_MS: u32 = 33;
     const STEADY_FRAME_MS: u32 = 50;
@@ -247,6 +248,10 @@ mod imp {
     thread_local! {
         static RENDERER: RefCell<Option<Renderer>> = const { RefCell::new(None) };
     }
+
+    /// Extra width behind each wordmark run. Near-aligned text never moves with
+    /// it; it only keeps the last glyph's overhang inside the layout box.
+    const WORD_SLACK: f32 = 24.0;
 
     fn wide(value: &str) -> Vec<u16> {
         value.encode_utf16().chain(std::iter::once(0)).collect()
@@ -352,11 +357,15 @@ mod imp {
             };
             let format = |rtl: bool, align: StringAlignment| {
                 let mut format: *mut GpStringFormat = std::ptr::null_mut();
-                let mut flags = StringFormatFlagsNoWrap;
+                // GDI+ trims by character by default: a glyph that overhangs the
+                // layout box by a pixel is dropped ("Sahe Flo" on an installed
+                // 125% display). Never trim or clip splash text.
+                let mut flags = StringFormatFlagsNoWrap | StringFormatFlagsNoClip;
                 if rtl {
                     flags |= StringFormatFlagsDirectionRightToLeft;
                 }
                 GdipCreateStringFormat(flags, 0, &mut format);
+                GdipSetStringFormatTrimming(format, StringTrimmingNone);
                 GdipSetStringFormatAlign(format, align);
                 GdipSetStringFormatLineAlign(format, StringAlignmentNear);
                 format
@@ -414,6 +423,7 @@ mod imp {
         bitmap: *mut GpBitmap,
         graphics: *mut GpGraphics,
         fonts: Fonts,
+        glow: Glow,
         locale: Locale,
         copy: launch_screen::LaunchCopy,
         version: String,
@@ -435,6 +445,7 @@ mod imp {
             if !self.bitmap.is_null() {
                 GdipDisposeImage(self.bitmap.cast());
             }
+            self.glow.destroy();
             self.fonts.destroy();
             if !self.memory_dc.is_null() {
                 SelectObject(self.memory_dc, self.previous);
@@ -541,14 +552,7 @@ mod imp {
                 (t / 1_400.0).sin()
             };
             let glow_strength = timeline(t, 200.0, 900.0) * (0.85 + 0.15 * breathe);
-            glow(
-                g,
-                CARD_WIDTH / 2.0,
-                104.0,
-                170.0,
-                120.0,
-                with_alpha(argb(70, 14, 165, 233), glow_strength),
-            );
+            self.glow.paint(g, CARD_WIDTH / 2.0, 104.0, glow_strength);
             GdipDeletePath(card);
 
             self.paint_mark(g, t);
@@ -822,7 +826,7 @@ mod imp {
                 self.fonts.near,
                 left,
                 y,
-                sahel + 8.0,
+                sahel + WORD_SLACK,
                 with_alpha(INK, alpha),
             );
             let start = PointF {
@@ -846,7 +850,7 @@ mod imp {
             let rect = RectF {
                 X: left + sahel,
                 Y: y,
-                Width: flow + 8.0,
+                Width: flow + WORD_SLACK,
                 Height: 40.0,
             };
             GdipDrawString(
@@ -977,20 +981,145 @@ mod imp {
         GdipDeleteBrush(brush.cast());
     }
 
-    unsafe fn glow(g: *mut GpGraphics, cx: f32, cy: f32, rx: f32, ry: f32, color: u32) {
-        let mut path: *mut GpPath = std::ptr::null_mut();
-        GdipCreatePath(FillModeAlternate, &mut path);
-        GdipAddPathEllipse(path, cx - rx, cy - ry, rx * 2.0, ry * 2.0);
-        let mut brush: *mut GpPathGradient = std::ptr::null_mut();
-        if GdipCreatePathGradientFromPath(path, &mut brush) == Ok {
-            GdipSetPathGradientCenterColor(brush, color);
-            let surround = color & 0x00FF_FFFF;
-            let mut count = 1;
-            GdipSetPathGradientSurroundColorsWithCount(brush, &surround, &mut count);
-            GdipFillPath(g, brush.cast(), path);
-            GdipDeleteBrush(brush.cast());
+    /// The halo behind the mark. A path-gradient fill at this low alpha shows
+    /// visible rings on the dark card (each 8-bit alpha step is a band several
+    /// pixels wide). The halo is rendered once into a bitmap at device
+    /// resolution with a bell-shaped falloff and randomised rounding (dither),
+    /// then faded per frame through a colour matrix.
+    struct Glow {
+        bitmap: *mut GpBitmap,
+        attributes: *mut GpImageAttributes,
+        width: i32,
+        height: i32,
+        rx: f32,
+        ry: f32,
+    }
+
+    impl Glow {
+        const PEAK_ALPHA: f32 = 70.0;
+
+        unsafe fn new(rx: f32, ry: f32, scale: f32) -> Self {
+            let width = (rx * 2.0 * scale).ceil().max(1.0) as i32;
+            let height = (ry * 2.0 * scale).ceil().max(1.0) as i32;
+            let mut glow = Self {
+                bitmap: std::ptr::null_mut(),
+                attributes: std::ptr::null_mut(),
+                width,
+                height,
+                rx,
+                ry,
+            };
+            if GdipCreateBitmapFromScan0(
+                width,
+                height,
+                0,
+                PIXEL_FORMAT_32BPP_ARGB,
+                std::ptr::null(),
+                &mut glow.bitmap,
+            ) != Ok
+            {
+                glow.bitmap = std::ptr::null_mut();
+                return glow;
+            }
+            let rect = Rect {
+                X: 0,
+                Y: 0,
+                Width: width,
+                Height: height,
+            };
+            let mut data: BitmapData = std::mem::zeroed();
+            if GdipBitmapLockBits(
+                glow.bitmap,
+                &rect,
+                ImageLockModeWrite as u32,
+                PIXEL_FORMAT_32BPP_ARGB,
+                &mut data,
+            ) != Ok
+            {
+                GdipDisposeImage(glow.bitmap.cast());
+                glow.bitmap = std::ptr::null_mut();
+                return glow;
+            }
+            let (red, green, blue) = ((SKY >> 16) & 0xFF, (SKY >> 8) & 0xFF, SKY & 0xFF);
+            let edge = (-3.0f32).exp();
+            for y in 0..height {
+                let row = (data.Scan0 as *mut u8).offset(y as isize * data.Stride as isize) as *mut u32;
+                let ny = (y as f32 + 0.5) / height as f32 * 2.0 - 1.0;
+                for x in 0..width {
+                    let nx = (x as f32 + 0.5) / width as f32 * 2.0 - 1.0;
+                    let d2 = nx * nx + ny * ny;
+                    let alpha = if d2 >= 1.0 {
+                        0
+                    } else {
+                        let falloff = ((-3.0 * d2).exp() - edge) / (1.0 - edge);
+                        let exact = Self::PEAK_ALPHA * falloff;
+                        (exact + dither(x as u32, y as u32)).floor().clamp(0.0, 255.0) as u32
+                    };
+                    *row.add(x as usize) = (alpha << 24) | (red << 16) | (green << 8) | blue;
+                }
+            }
+            GdipBitmapUnlockBits(glow.bitmap, &mut data);
+            if GdipCreateImageAttributes(&mut glow.attributes) != Ok {
+                glow.attributes = std::ptr::null_mut();
+            }
+            glow
         }
-        GdipDeletePath(path);
+
+        unsafe fn paint(&self, g: *mut GpGraphics, cx: f32, cy: f32, strength: f32) {
+            if self.bitmap.is_null() || self.attributes.is_null() || strength <= 0.0 {
+                return;
+            }
+            let mut matrix = ColorMatrix { m: [0.0; 25] };
+            for i in 0..5 {
+                matrix.m[i * 6] = 1.0;
+            }
+            matrix.m[18] = clamp01(strength);
+            GdipSetImageAttributesColorMatrix(
+                self.attributes,
+                ColorAdjustTypeDefault,
+                1,
+                &matrix,
+                std::ptr::null(),
+                ColorMatrixFlagsDefault,
+            );
+            GdipDrawImageRectRect(
+                g,
+                self.bitmap.cast(),
+                cx - self.rx,
+                cy - self.ry,
+                self.rx * 2.0,
+                self.ry * 2.0,
+                0.0,
+                0.0,
+                self.width as f32,
+                self.height as f32,
+                UnitPixel,
+                self.attributes,
+                0,
+                std::ptr::null_mut(),
+            );
+        }
+
+        unsafe fn destroy(&mut self) {
+            if !self.attributes.is_null() {
+                GdipDisposeImageAttributes(self.attributes);
+                self.attributes = std::ptr::null_mut();
+            }
+            if !self.bitmap.is_null() {
+                GdipDisposeImage(self.bitmap.cast());
+                self.bitmap = std::ptr::null_mut();
+            }
+        }
+    }
+
+    /// Deterministic per-pixel threshold in [0, 1): rounding each pixel's
+    /// alpha up or down by it turns 8-bit steps into fine grain, not rings.
+    fn dither(x: u32, y: u32) -> f32 {
+        let mut h = x.wrapping_mul(0x9E37_79B1) ^ y.wrapping_mul(0x85EB_CA77);
+        h ^= h >> 15;
+        h = h.wrapping_mul(0x2C1B_3C6D);
+        h ^= h >> 12;
+        (h & 0xFFFF) as f32 / 65_536.0
     }
 
     unsafe fn measure(
@@ -1302,9 +1431,10 @@ mod imp {
             bitmap,
             graphics,
             fonts,
+            glow: Glow::new(170.0, 120.0, scale),
             locale,
             copy: launch_screen::copy(locale),
-            version: env!("CARGO_PKG_VERSION").to_string(),
+            version: launch_screen::display_version(env!("CARGO_PKG_VERSION")),
             trace_path: app_data_dir.join("startup-trace.json"),
             started_unix_ms,
             shown_at: now,

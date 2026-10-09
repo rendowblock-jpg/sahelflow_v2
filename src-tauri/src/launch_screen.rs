@@ -117,14 +117,30 @@ pub fn render_html(locale: Locale, version: &str) -> String {
         .replace("{{RETRYING}}", text.retrying)
         .replace("{{OPENING}}", text.opening)
         .replace("{{SLOW_HINT}}", text.slow_hint)
-        .replace("{{VERSION}}", &escape_text(version))
+        .replace("{{VERSION}}", &escape_text(&display_version(version)))
+}
+
+/// The version a seller reads on the launch screen: `1.0.0-internal.42`
+/// becomes `1.0.0 (42)`. The build number stays for support; the channel word
+/// does not belong on a client's screen. Anything else is shown as is.
+pub(crate) fn display_version(version: &str) -> String {
+    match version.split_once('-') {
+        Some((core, pre)) => match pre.rsplit_once('.') {
+            Some((_, build)) if !build.is_empty() && build.bytes().all(|b| b.is_ascii_digit()) => {
+                format!("{core} ({build})")
+            }
+            _ => version.to_string(),
+        },
+        None => version.to_string(),
+    }
 }
 
 fn escape_text(value: &str) -> String {
     value
         .chars()
         .filter(|character| {
-            character.is_ascii_alphanumeric() || matches!(character, '.' | '-' | '+')
+            // Space and parentheses carry the seller-facing "1.0.0 (42)".
+            character.is_ascii_alphanumeric() || matches!(character, '.' | '-' | '+' | ' ' | '(' | ')')
         })
         .collect()
 }
@@ -358,10 +374,19 @@ mod tests {
             let html = render_html(locale, "1.0.0-internal.40");
             assert!(!html.contains("{{"), "unfilled placeholder for {locale:?}");
             assert!(!html.to_ascii_lowercase().contains("<script"));
-            assert!(html.contains("1.0.0-internal.40"));
+            assert!(html.contains("1.0.0 (40)"));
+            assert!(!html.contains("internal"));
         }
         assert!(render_html(Locale::Ar, "1").contains("dir=\"rtl\""));
         assert!(render_html(Locale::Fr, "1").contains("dir=\"ltr\""));
+    }
+
+    #[test]
+    fn shows_sellers_a_plain_version() {
+        assert_eq!(display_version("1.0.0-internal.42"), "1.0.0 (42)");
+        assert_eq!(display_version("1.2.3"), "1.2.3");
+        assert_eq!(display_version("1.0.0-beta"), "1.0.0-beta");
+        assert_eq!(display_version("1.0.0-rc.x"), "1.0.0-rc.x");
     }
 
     #[test]
