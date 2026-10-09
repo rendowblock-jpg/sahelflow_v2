@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.42 FD-070 customer launch publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.42",
+  "windowsMsiVersion": "1.0.0.42",
+  "channel": "internal",
+  "releaseMode": "customer-online",
+  "ownedHostSuffix": "sahelflow.com",
+  "authorityDecision": "FD-070",
+  "licenseServiceUrl": "https://license.sahelflow.com|https://activate.sahelflow.com",
+  "certification": {
+    "productSha": "dc73b83ffb866b3c57e911163604dd5d71b4da5a",
+    "phase5RunId": 37954035870,
+    "phase67RunId": 37954035902,
+    "ciRunId": 37954036625
+  },
+  "reason": "ADOPTED release authority — FD-070 (documentation/product/DECISIONS.md). The Founder's 2026-10-09 directive to make the next signed release once PR #487 merged adopts one signed customer launch successor, app 1.0.0-internal.42 / MSI 1.0.0.42, mode customer-online, owned host sahelflow.com, packaging protected main dc73b83ffb866b3c57e911163604dd5d71b4da5a (#487): WhatsApp durable dispatch and stale-status repairs, the WhatsApp diagnostics file, licence distribution (permanent package default, SFLA1 activation code / .sflicense, PIN step, offline License Desk), the native first-frame splash with deferred workspace window, team access across layers, the command palette and theme-aware PIN map, and the full walkthrough repairs W-01..W-23. PR #487 merged by expected head 2dd0d6e25352561e7a3741ccad78f8cb8a801d0c after its full Required battery was green at that head: CI 37954036625, Phase 5 37954035870, Phase 6-7 37954035902, including the installed-MSI evidence lane (exact evidence MSI built once, installed, every installed gate collected green). Licence host health was recorded ready at FD-066 and is not re-measured by this envelope. Paid licences stay offline-signed. This is a Founder-authorized launch release, not a Stable claim; it converts no ledger row."
+}

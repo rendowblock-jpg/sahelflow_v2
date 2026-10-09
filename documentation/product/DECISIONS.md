@@ -1600,3 +1600,32 @@ reason when a row could not be imported.
 Not live-certified until the Founder runs one real sheet end to end (connect,
 import, confirm, ship, observe the sheet). Until then it is presented as a setup
 guide, not as a certified provider claim.
+
+## FD-070 — One signed successor Internal.42 under the FD-066 customer launch (2026-10-09, ADOPTED)
+
+The Founder's 2026-10-09 directive to make the next signed release once PR
+#487 merged adopts the next customer-online release authority as one signed
+successor:
+
+- **Package:** app `1.0.0-internal.42` / MSI `1.0.0.42`, channel `internal`,
+  mode `customer-online`, owned host `sahelflow.com`, trial origins
+  `license.sahelflow.com` (primary) and `activate.sahelflow.com` (recovery);
+  paid licences stay offline-signed after BaridiMob/CCP payment.
+- **Content:** protected `main` `dc73b83f…` (PR #487) — WhatsApp durable
+  dispatch and stale-status repairs, the WhatsApp diagnostics file, licence
+  distribution (permanent package default, `SFLA1` activation code /
+  `.sflicense`, PIN step, offline License Desk), the native first-frame splash
+  with deferred workspace window, team access across layers, the command
+  palette and theme-aware PIN map, and the full walkthrough repairs
+  (UI/UX triage ledger rows W-01..W-23).
+- **Gates:** the release-authority PR merges only after its full Required
+  battery, including installed-MSI evidence, is green; the signed train
+  publishes from exact protected `main`; the tag, digest and publish time
+  are recorded only after that run succeeds.
+- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
+  no ledger row; rows convert only on the Founder's installed Internal.42
+  observation, with #306 logout LAST. Live WhatsApp delivery stays
+  uncertified until that campaign.
+- **Next:** a `SahelFlow-Setup.exe` download for new clients (Founder,
+  2026-10-09) follows in the release after Internal.42 under its own
+  authority; Internal.42 ships as an MSI.
