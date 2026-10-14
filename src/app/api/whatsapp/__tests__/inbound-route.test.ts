@@ -5,6 +5,7 @@ const harness = vi.hoisted(() => ({
   authenticated: true,
   persist: vi.fn(),
   process: vi.fn(),
+  persistPhone: vi.fn(),
   db: {},
   shopContext: {
     workspaceId: "1".repeat(32),
@@ -34,6 +35,15 @@ vi.mock("@/lib/whatsapp/inbound-processor", () => ({
   processWhatsAppInbound: harness.process,
 }));
 
+vi.mock("@/lib/whatsapp/phone-outbound", () => ({
+  isWhatsAppPhoneOutboundEnvelope: (value: unknown) => {
+    if (!value || typeof value !== "object") return false;
+    const message = (value as { message?: { key?: { fromMe?: unknown } } }).message;
+    return message?.key?.fromMe === true;
+  },
+  persistWhatsAppPhoneOutbound: harness.persistPhone,
+}));
+
 vi.mock("@/lib/api/with-error-handler", () => ({
   withErrorHandler:
     (handler: (...args: never[]) => Promise<Response>) =>
@@ -50,7 +60,10 @@ vi.mock("@/lib/api/with-error-handler", () => ({
     },
 }));
 
-import { POST } from "@/app/api/whatsapp/inbound/route";
+import {
+  acknowledgeWhatsAppSpoolRemoval,
+  POST,
+} from "@/app/api/whatsapp/inbound/route";
 
 function request(): NextRequest {
   return new NextRequest("http://localhost/api/whatsapp/inbound", {
@@ -78,6 +91,11 @@ beforeEach(() => {
     messageId: "message-1",
     publish: true,
     errorCode: null,
+  });
+  harness.persistPhone.mockReset().mockResolvedValue({
+    messageId: "PHONEWAMID0001",
+    created: true,
+    replayed: false,
   });
 });
 
@@ -136,7 +154,13 @@ describe("WhatsApp inbound route", () => {
     });
   });
 
-  it("durably acknowledges quarantine without publishing invalid input", async () => {
+  it("does not acknowledge quarantined or dead-letter spool removal", async () => {
+    expect(acknowledgeWhatsAppSpoolRemoval("applied")).toBe(true);
+    expect(acknowledgeWhatsAppSpoolRemoval("chat_deleted")).toBe(true);
+    expect(acknowledgeWhatsAppSpoolRemoval("quarantined")).toBe(false);
+    expect(acknowledgeWhatsAppSpoolRemoval("dead_letter")).toBe(false);
+    expect(acknowledgeWhatsAppSpoolRemoval("retrying")).toBe(false);
+
     harness.process.mockResolvedValue({
       ingressEventId: "ingress-1",
       state: "quarantined",
@@ -146,15 +170,76 @@ describe("WhatsApp inbound route", () => {
       errorCode: "INVALID_PROVIDER_PAYLOAD",
     });
 
+    const quarantined = await POST(request());
+    expect(quarantined.status).toBe(503);
+    await expect(quarantined.json()).resolves.toMatchObject({
+      acknowledged: false,
+      publish: false,
+      status: "quarantined",
+      code: "INVALID_PROVIDER_PAYLOAD",
+    });
+
+    harness.process.mockResolvedValue({
+      ingressEventId: "ingress-1",
+      state: "dead_letter",
+      conversationId: null,
+      messageId: null,
+      publish: false,
+      errorCode: "ATTEMPT_BUDGET_EXHAUSTED",
+    });
+    const dead = await POST(request());
+    expect(dead.status).toBe(503);
+    await expect(dead.json()).resolves.toMatchObject({
+      acknowledged: false,
+      publish: false,
+      status: "dead_letter",
+    });
+  });
+
+  it("acknowledges chat_deleted only as a tombstone that already exists", async () => {
+    harness.process.mockResolvedValue({
+      ingressEventId: "ingress-1",
+      state: "chat_deleted",
+      conversationId: null,
+      messageId: null,
+      publish: false,
+      errorCode: "CHAT_DELETED",
+    });
+
     const response = await POST(request());
 
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toMatchObject({
       acknowledged: true,
       publish: false,
-      status: "quarantined",
-      errorCode: "INVALID_PROVIDER_PAYLOAD",
+      status: "chat_deleted",
     });
+  });
+
+  it("stores a fromMe phone echo as outbound and does not process it as inbound", async () => {
+    const response = await POST(
+      new NextRequest("http://localhost/api/whatsapp/inbound", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer private-sidecar-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: { key: { fromMe: true, id: "PHONEWAMID0001" } },
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({
+      acknowledged: true,
+      publish: true,
+      ingressEventId: "PHONEWAMID0001",
+      replayed: false,
+    });
+    expect(harness.persistPhone).toHaveBeenCalledTimes(1);
+    expect(harness.persist).not.toHaveBeenCalled();
+    expect(harness.process).not.toHaveBeenCalled();
   });
 
   it("returns replay acknowledgement without creating another canonical message", async () => {

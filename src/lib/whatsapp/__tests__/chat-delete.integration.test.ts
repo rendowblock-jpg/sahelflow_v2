@@ -340,6 +340,51 @@ describe("permanent WhatsApp chat deletion", () => {
     expect(tombstoned?.lastErrorCode).toBe("CHAT_DELETED");
   });
 
+  it("tombstones an ingress row inserted after the initial read", async () => {
+    const chat = await seedChat(6);
+    const sourceId = chat.sourceId;
+    if (!sourceId) throw new Error("seed conversation missing sourceId");
+
+    await deleteWhatsAppChats(context, [chat.id], {
+      afterTargetRead: async () => {
+        const late = await db.message.create({
+          data: {
+            id: "late-during-delete",
+            conversationId: chat.id,
+            body: "arrived after the snapshot",
+            direction: "inbound",
+            timestamp: new Date(),
+          },
+        });
+        await db.providerIngressEvent.create({
+          data: {
+            id: "evt-late",
+            ingressKey: "ingress-key-late",
+            provider: "whatsapp",
+            environment: "test",
+            providerAccountHash: "0".repeat(64),
+            eventType: "message",
+            sourceId,
+            providerEventId: "WAMIDLATE0000001",
+            payloadJson: "{}",
+            payloadHash: "1".repeat(64),
+            status: "applied",
+            conversationId: chat.id,
+            messageId: late.id,
+          },
+        });
+      },
+    });
+
+    expect(await db.message.findUnique({ where: { id: "late-during-delete" } })).toBeNull();
+    expect(await db.conversation.findUnique({ where: { id: chat.id } })).toBeNull();
+    const tombstone = await db.providerIngressEvent.findUnique({
+      where: { id: "evt-late" },
+    });
+    expect(tombstone?.status).toBe("chat_deleted");
+    expect(tombstone?.lastErrorCode).toBe("CHAT_DELETED");
+  });
+
   it("operator recovery refuses to retry a tombstoned event", async () => {
     const chat = await seedChat(5);
     if (!chat.sourceId) throw new Error("seed conversation missing sourceId");

@@ -70,7 +70,9 @@ describe("delivery provider authority source contract", () => {
     const certification = source("src/app/api/delivery/test-connection/route.ts");
     expect(certification).toContain("requireRecentReauthentication()");
     expect(certification).toContain("testAndCertifyProvider");
-    expect(certification).toContain("delivery.provider.certified");
+    expect(certification).toContain("delivery.provider.connection_checked");
+    expect(certification).toContain("certified: false");
+    expect(certification).not.toContain("certified: result.ok");
   });
 
   it("gates every production booking, fee and tracking boundary", () => {

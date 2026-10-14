@@ -18,6 +18,69 @@ import {
 } from "./inbox-workspace-shared";
 import type { InboxSharedRefs } from "./use-inbox-shared-refs";
 
+export function quoteRejectionMayRetry(
+  status: number,
+  data: { accepted?: boolean; effectKey?: string | null },
+  hadQuote: boolean,
+): boolean {
+  return (
+    hadQuote &&
+    (status === 400 || status === 409) &&
+    data.accepted !== true &&
+    !data.effectKey
+  );
+}
+
+export function withoutRejectedQuote<
+  T extends { quotedMessageId?: string | null; quoted?: unknown },
+>(message: T): T {
+  return { ...message, quotedMessageId: null, quoted: null };
+}
+
+/** A browser abort is not proof the send failed. A queued effect must stay queued. */
+export function abortedSendShouldFailBubble(
+  effect: { state?: string | null } | null,
+): boolean {
+  if (!effect?.state) return true;
+  return (
+    effect.state !== "queued" &&
+    effect.state !== "processing" &&
+    effect.state !== "retrying" &&
+    effect.state !== "succeeded"
+  );
+}
+
+export async function lookupQueuedSend(
+  clientMessageId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{
+  state: NonNullable<InboxMessage["outboxState"]>;
+  effectKey: string;
+  providerMessageId: string | null;
+  errorCode?: string | null;
+} | null> {
+  const response = await fetchImpl(
+    `/api/whatsapp/outbox?messageId=${encodeURIComponent(clientMessageId)}`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) return null;
+  const data = (await response.json()) as {
+    effect?: {
+      state?: InboxMessage["outboxState"];
+      effectKey?: string;
+      providerMessageId?: string | null;
+      errorCode?: string | null;
+    };
+  };
+  if (!data.effect?.effectKey || !data.effect.state) return null;
+  return {
+    state: data.effect.state,
+    effectKey: data.effect.effectKey,
+    providerMessageId: data.effect.providerMessageId ?? null,
+    errorCode: data.effect.errorCode ?? null,
+  };
+}
+
 /**
  * INB-27 — outbox concern of the Inbox workspace.
  *
@@ -351,26 +414,42 @@ export function useInboxOutbox({
     ]);
 
     try {
-      const response = await fetch("/api/whatsapp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Ledger INB-31: text sends get a hard timeout so a hung request can
-        // never leave the bubble in "sending" limbo — the timeout raises a
-        // DOMException that the existing failure reconciliation already
-        // converts into a failed-with-retry bubble (durable outbox truth is
-        // unaffected: the effectKey contract owns actual delivery state).
-        signal: AbortSignal.timeout(45_000),
-        body: JSON.stringify({
-          clientMessageId: tempId,
-          conversationId: chat.conversationId,
-          to: chat.transportId,
-          text: body,
-          ...(trimmedQuotedId ? { quotedMessageId: trimmedQuotedId } : {}),
-        }),
-      });
-      const data = (await response.json()) as MediaSendResponse & {
+      const postText = (includeQuote: boolean) =>
+        fetch("/api/whatsapp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          // Ledger INB-31: text sends get a hard timeout so a hung request can
+          // never leave the bubble in "sending" limbo. An abort is not proof
+          // the send failed; the catch reconciles the same client id against
+          // the outbox before painting a failure.
+          signal: AbortSignal.timeout(45_000),
+          body: JSON.stringify({
+            clientMessageId: tempId,
+            conversationId: chat.conversationId,
+            to: chat.transportId,
+            text: body,
+            ...(includeQuote && trimmedQuotedId
+              ? { quotedMessageId: trimmedQuotedId }
+              : {}),
+          }),
+        });
+      let response = await postText(true);
+      let data = (await response.json()) as MediaSendResponse & {
         code?: string;
       };
+      // A quote the server will not anchor (bad id, unconfirmed target,
+      // cross-chat) must not swallow the seller's text. Nothing was
+      // committed on that rejection, so the same client id sends the words
+      // and the bubble must not keep a quote WhatsApp did not get.
+      if (quoteRejectionMayRetry(response.status, data, Boolean(trimmedQuotedId))) {
+        mutateMessages(chat.conversationId, (current) =>
+          current.map((message) =>
+            message.id === tempId ? withoutRejectedQuote(message) : message,
+          ),
+        );
+        response = await postText(false);
+        data = (await response.json()) as MediaSendResponse & { code?: string };
+      }
       if (!data.errorCode && data.code) {
         data.errorCode = data.code;
       }
@@ -419,6 +498,40 @@ export function useInboxOutbox({
       clearAcceptedDraft();
       void loadChats();
     } catch (error) {
+      const aborted =
+        error instanceof DOMException &&
+        (error.name === "TimeoutError" || error.name === "AbortError");
+      if (aborted) {
+        // The 45s abort can fire after POST /api/whatsapp/send has already
+        // queued the effect. Reconcile that client id; do not mint another
+        // and do not paint a queued effect as failed.
+        const effect = await lookupQueuedSend(tempId).catch(() => null);
+        if (effect && !abortedSendShouldFailBubble(effect)) {
+          clearAcceptedDraft();
+          mutateMessages(chat.conversationId, (current) =>
+            current.map((message) =>
+              message.id === tempId
+                ? {
+                    ...message,
+                    deliveryStatus:
+                      effect.state === "succeeded" ? "sent" : "sending",
+                    outboxEffectKey: effect.effectKey,
+                    outboxState: effect.state,
+                    outboxErrorCode: effect.errorCode ?? null,
+                  }
+                : message,
+            ),
+          );
+          if (effect.state !== "succeeded") {
+            void monitorWhatsAppEffect(
+              chat.conversationId,
+              effect.effectKey,
+              tempId,
+            );
+          }
+          return;
+        }
+      }
       mutateMessages(chat.conversationId, (current) =>
         current.map((message) =>
           message.id === tempId
@@ -427,11 +540,8 @@ export function useInboxOutbox({
         ),
       );
       if (activeChatRef.current?.conversationId === chat.conversationId) {
-        const timedOut =
-          error instanceof DOMException &&
-          (error.name === "TimeoutError" || error.name === "AbortError");
         setSendError(
-          timedOut
+          aborted
             ? t("inbox.sendError.timeout")
             : error instanceof Error
               ? error.message
@@ -556,12 +666,40 @@ export function useInboxOutbox({
           if (spec.carriesCaption) form.set("caption", caption);
           if (trimmedQuotedId) form.set("quotedMessageId", trimmedQuotedId);
           form.set(spec.fieldName, file, file.name || spec.fallbackFileName);
-          const { status: responseStatus, data } = await postFormWithUploadProgress(
+          let uploaded = await postFormWithUploadProgress(
             spec.endpoint,
             form,
             (percent) => markUploadProgress(tempId, percent),
             (abort) => uploadCancelRef.current.set(tempId, abort),
           );
+          // Same rule as text: a quote rejection retries the media without
+          // the quote. A committed first request (effect key or accepted)
+          // is never sent again.
+          if (
+            quoteRejectionMayRetry(
+              uploaded.status,
+              uploaded.data,
+              Boolean(trimmedQuotedId),
+            )
+          ) {
+            mutateMessages(chat.conversationId, (current) =>
+              current.map((message) =>
+                message.id === tempId ? withoutRejectedQuote(message) : message,
+              ),
+            );
+            const retry = new FormData();
+            retry.set("clientMessageId", tempId);
+            retry.set("to", chat.transportId);
+            if (spec.carriesCaption) retry.set("caption", caption);
+            retry.set(spec.fieldName, file, file.name || spec.fallbackFileName);
+            uploaded = await postFormWithUploadProgress(
+              spec.endpoint,
+              retry,
+              (percent) => markUploadProgress(tempId, percent),
+              (abort) => uploadCancelRef.current.set(tempId, abort),
+            );
+          }
+          const { status: responseStatus, data } = uploaded;
           knownEffectKey = data.effectKey ?? null;
           clearUploadState(tempId);
 

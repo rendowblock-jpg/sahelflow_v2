@@ -5,7 +5,12 @@ import {
   EXTRACTION_IMAGE_USER_PROMPT,
   EXTRACTION_SYSTEM_PROMPT,
 } from "../prompts/extraction";
-import { ExtractedOrderSchema, responseSchema } from "./gemini-extractor";
+import {
+  ExtractedOrderSchema,
+  canonicalizeOrder,
+  responseSchema,
+  visibleGeminiText,
+} from "./gemini-extractor";
 import type { ExtractionImageInput, ExtractionResult } from "./types";
 
 /**
@@ -47,7 +52,9 @@ export interface GeminiImageExtractorOptions {
 }
 
 type GeminiImageResponse = {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+  }>;
 };
 
 export async function extractWithGeminiFromImage(
@@ -89,7 +96,9 @@ export async function extractWithGeminiFromImage(
           },
         ],
         generationConfig: {
-          maxOutputTokens: 1024,
+          // Same output budget as chat. 1024 counted thinking tokens and
+          // starved the JSON.
+          maxOutputTokens: 8192,
           responseMimeType: "application/json",
           responseJsonSchema: responseSchema,
           thinkingConfig: { thinkingLevel: runtime.thinkingLevel },
@@ -97,10 +106,7 @@ export async function extractWithGeminiFromImage(
       },
     });
     const data = (await response.json()) as GeminiImageResponse;
-    const text = data.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text ?? "")
-      .join("")
-      .trim();
+    const text = visibleGeminiText(data.candidates?.[0]?.content?.parts);
     if (!text) return fail("GEMINI_EMPTY_RESPONSE");
     let parsed: unknown;
     try {
@@ -110,7 +116,7 @@ export async function extractWithGeminiFromImage(
     }
     const validated = ExtractedOrderSchema.safeParse(parsed);
     if (!validated.success) return fail("GEMINI_INVALID_EXTRACTION");
-    const order = validated.data;
+    const order = canonicalizeOrder(validated.data, {});
     const missingFields: string[] = [];
     if (order.items.length === 0) missingFields.push("items");
     if (!order.wilaya) missingFields.push("wilaya");

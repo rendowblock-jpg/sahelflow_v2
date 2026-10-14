@@ -44,6 +44,69 @@ function checkRateLimit(ip: string): {
   return { allowed: true, retryAfterMs: 0 };
 }
 
+type SellableLine = {
+  productId: string;
+  productVariantId: string | null;
+  quantity: number;
+};
+
+function sellableKey(productId: string, productVariantId: string | null): string {
+  return `${productId}\u0000${productVariantId ?? ""}`;
+}
+
+/** Catalog stock minus active reservations. The request quantity ceiling is not stock. */
+async function sellableStockExhausted(items: readonly SellableLine[]): Promise<boolean> {
+  const demand = new Map<string, SellableLine>();
+  for (const item of items) {
+    const key = sellableKey(item.productId, item.productVariantId);
+    const quantity = (demand.get(key)?.quantity ?? 0) + item.quantity;
+    if (!Number.isSafeInteger(quantity) || quantity < 1) return true;
+    demand.set(key, {
+      productId: item.productId,
+      productVariantId: item.productVariantId,
+      quantity,
+    });
+  }
+  const productIds = [...new Set([...demand.values()].map((item) => item.productId))];
+  const products = await db.product.findMany({
+    where: { id: { in: productIds }, isActive: true, deletedAt: null },
+    select: {
+      id: true,
+      stock: true,
+      productVariants: { select: { id: true, stock: true, isActive: true } },
+    },
+  });
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const reservations = await db.inventoryReservation.findMany({
+    where: { state: "active", productId: { in: productIds } },
+    select: { productId: true, productVariantId: true, quantity: true },
+  });
+  const reservedByKey = new Map<string, number>();
+  for (const reservation of reservations) {
+    const key = sellableKey(reservation.productId, reservation.productVariantId);
+    const quantity = (reservedByKey.get(key) ?? 0) + reservation.quantity;
+    if (!Number.isSafeInteger(quantity)) return true;
+    reservedByKey.set(key, quantity);
+  }
+  for (const item of demand.values()) {
+    const product = productById.get(item.productId);
+    if (!product) return true;
+    let stock: number;
+    if (item.productVariantId) {
+      const variant = product.productVariants.find(
+        (candidate) => candidate.id === item.productVariantId && candidate.isActive,
+      );
+      if (!variant) return true;
+      stock = variant.stock;
+    } else {
+      stock = product.stock;
+    }
+    const reserved = reservedByKey.get(sellableKey(item.productId, item.productVariantId)) ?? 0;
+    if (!Number.isSafeInteger(stock) || stock - reserved < item.quantity) return true;
+  }
+  return false;
+}
+
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
@@ -51,11 +114,6 @@ if (typeof setInterval !== "undefined") {
       if (now > entry.resetAt) ipHits.delete(ip);
     }
   }, 300_000).unref?.();
-}
-
-function isTauriRequest(request: NextRequest): boolean {
-  if (request.headers.get("x-sf-tauri") === "1") return true;
-  return /tauri/i.test(request.headers.get("user-agent") ?? "");
 }
 
 const submitSchema = z.object({
@@ -156,61 +214,55 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     );
   }
 
-  if (!isTauriRequest(request)) {
-    // FD-061 EX-4: Turnstile gate — per-store config; missing token or
-    // in-band verification failure is fail-closed, transport failure is
-    // fail-open (revenue first); timeout-or-duplicate is the expired copy.
-    const turnstileSecret = await readTurnstileSecret(
-      { prisma: db, shop: shopContext },
-      config.slug,
-    );
-    const turnstile = await decideTurnstileGate(
-      { prisma: db, shop: shopContext },
+  // Public checkout. Turnstile and OTP are not skipped for a client-supplied
+  // desktop header or user-agent; those are spoofable on this route.
+  const turnstileSecret = await readTurnstileSecret(
+    { prisma: db, shop: shopContext },
+    config.slug,
+  );
+  const turnstile = await decideTurnstileGate(
+    { prisma: db, shop: shopContext },
+    {
+      slug: config.slug,
+      secret: turnstileSecret,
+      token: input["cf-turnstile-response"],
+      ip,
+    },
+  );
+  if (turnstile.action === "fail_closed") {
+    return NextResponse.json(
       {
-        slug: config.slug,
-        secret: turnstileSecret,
-        token: input["cf-turnstile-response"],
-        ip,
+        error:
+          turnstile.code === "TURNSTILE_TOKEN_INVALID" && turnstile.expired
+            ? "Your verification has expired — please retry submitting the order"
+            : "Verification failed — please retry submitting the order",
+        code: turnstile.code,
       },
+      { status: 403 },
     );
-    if (turnstile.action === "fail_closed") {
-      return NextResponse.json(
-        {
-          error:
-            turnstile.code === "TURNSTILE_TOKEN_INVALID" && turnstile.expired
-              ? "Your verification has expired — please retry submitting the order"
-              : "Verification failed — please retry submitting the order",
-          code: turnstile.code,
-        },
-        { status: 403 },
-      );
-    }
+  }
 
-    // FD-061 EX-4: WhatsApp OTP gate — verified ("v") or server-attested
-    // bypass ("b") tokens pass; the verified phone must equal the order
-    // phone (both E.164-normalized).
-    const otp = await decideOtpGate(
-      { prisma: db, shop: shopContext },
+  const otp = await decideOtpGate(
+    { prisma: db, shop: shopContext },
+    {
+      storefrontSlug: config.slug,
+      orderPhone: input.customer.phone,
+      otpToken: input.otpToken,
+    },
+  );
+  if (otp.action === "fail_closed") {
+    return NextResponse.json(
       {
-        storefrontSlug: config.slug,
-        orderPhone: input.customer.phone,
-        otpToken: input.otpToken,
+        error:
+          otp.code === "OTP_PHONE_MISMATCH"
+            ? "The verified phone does not match the order's phone number"
+            : otp.code === "OTP_TOKEN_INVALID"
+              ? "Your verification code has expired — request a new one"
+              : "Phone verification is required — request a WhatsApp code and enter it to place your order",
+        code: otp.code,
       },
+      { status: 403 },
     );
-    if (otp.action === "fail_closed") {
-      return NextResponse.json(
-        {
-          error:
-            otp.code === "OTP_PHONE_MISMATCH"
-              ? "The verified phone does not match the order's phone number"
-              : otp.code === "OTP_TOKEN_INVALID"
-                ? "Your verification code has expired — request a new one"
-                : "Phone verification is required — request a WhatsApp code and enter it to place your order",
-          code: otp.code,
-        },
-        { status: 403 },
-      );
-    }
   }
 
   const allowedProductIds = new Set(config.productIds);
@@ -272,6 +324,16 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         unitPrice: 0,
       });
     }
+  }
+
+  if (await sellableStockExhausted(kernelItems)) {
+    return NextResponse.json(
+      {
+        error: "Not enough stock to place this order",
+        code: "STOREFRONT_STOCK_UNAVAILABLE",
+      },
+      { status: 409 },
+    );
   }
 
   const command = await createCanonicalSourceOrder(

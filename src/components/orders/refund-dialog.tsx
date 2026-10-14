@@ -30,6 +30,7 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
   const [amount, setAmount] = useState(String(maxAmount - alreadyRefunded));
   const [method, setMethod] = useState("cash");
   const [reason, setReason] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
 
   const mutation = useApiMutation({
     successMessage: t("refund.success"),
@@ -38,6 +39,7 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
       setOpen(false);
       setAmount(String(maxAmount - alreadyRefunded));
       setReason("");
+      setIdempotencyKey(crypto.randomUUID());
     },
   });
 
@@ -46,7 +48,13 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
   const isValid = refundAmount > 0 && refundAmount <= remaining;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) setIdempotencyKey(crypto.randomUUID());
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <DollarSign className="h-4 w-4 me-1.5" />
@@ -123,7 +131,12 @@ export function RefundDialog({ orderId, orderNumber, maxAmount, alreadyRefunded 
             onClick={() =>
               mutation.submit(`/api/orders/${orderId}/refund`, {
                 method: "POST",
-                body: JSON.stringify({ amount: refundAmount, method, reason: reason || undefined }),
+                body: JSON.stringify({
+                  amount: refundAmount,
+                  method,
+                  reason: reason || undefined,
+                  idempotencyKey,
+                }),
               })
             }
           >

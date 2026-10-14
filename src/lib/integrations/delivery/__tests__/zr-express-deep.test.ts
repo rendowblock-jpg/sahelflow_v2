@@ -201,6 +201,16 @@ describe("ZR Express delivery adapter (deep)", () => {
       expect(result.error).toContain("Identifiants ZR Express manquants");
     });
 
+    it("does not prefix-match El M'Ghair onto El Bayadh", async () => {
+      const result = await zrExpressAdapter.createShipment(
+        { ...sampleRequest, customer: { ...sampleRequest.customer, wilaya: "El M'Ghair" } },
+        validCreds,
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("non reconnue");
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
     it("returns error when wilaya is not recognized", async () => {
       const result = await zrExpressAdapter.createShipment(
         { ...sampleRequest, customer: { ...sampleRequest.customer, wilaya: "Mars" } },

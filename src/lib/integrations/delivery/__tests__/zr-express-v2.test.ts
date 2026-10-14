@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { zrExpressAdapter } from "../zr-express";
+import { resolveWilayaCode } from "../zr-express-v2";
+import { stripAccents } from "../zr-express-text";
 import type { ShipmentRequest } from "../types";
 
 const fetchMock = vi.fn();
@@ -155,6 +157,78 @@ describe("ZR Express new-platform dialect (FD-061 EX-2, CodFlow contract)", () =
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("resolves the corrected southern wilayas to themselves and does not treat El Meniaa as unserved", async () => {
+    expect(resolveWilayaCode("Timimoun")).toBe(49);
+    expect(resolveWilayaCode("Bordj Badji Mokhtar")).toBe(50);
+    expect(resolveWilayaCode("El M'Ghair")).toBe(57);
+    expect(resolveWilayaCode("El Meniaa")).toBe(58);
+
+    const unserved = await zrExpressAdapter.createShipment(
+      { ...shipment, customer: { ...shipment.customer, wilaya: "Bordj Badji Mokhtar" } },
+      v2Creds(),
+    );
+    expect(unserved).toMatchObject({
+      success: false,
+      error: expect.stringContaining("50"),
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    const served = [
+      { name: "Timimoun", code: 49, oldCode: "54", cityId: "city-timimoun" },
+      { name: "El M'Ghair", code: 57, oldCode: "49", cityId: "city-mghair" },
+      { name: "El Meniaa", code: 58, oldCode: "50", cityId: "city-meniaa" },
+    ] as const;
+    for (const wilaya of served) {
+      const creds = v2Creds();
+      const searched: string[] = [];
+      fetchMock.mockReset();
+      fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? "GET";
+        if (url.endsWith("/customers/individual")) return json({ id: "cust-south" });
+        if (url.endsWith("/territories/search") && method === "POST") {
+          const body = JSON.parse(String(init!.body)) as { keyword?: string };
+          const keyword = body.keyword ?? "";
+          searched.push(keyword);
+          if (keyword === stripAccents(wilaya.name) || keyword === String(wilaya.code)) {
+            return json({
+              items: [{ id: wilaya.cityId, code: wilaya.code, level: "wilaya", name: wilaya.name }],
+            });
+          }
+          if (keyword === "Hydra") {
+            return json({
+              items: [{ id: `${wilaya.cityId}-dist`, level: "commune", parentId: wilaya.cityId, name: "Hydra" }],
+            });
+          }
+          if (keyword === wilaya.oldCode) {
+            return json({
+              items: [{ id: "city-wrong", code: Number(wilaya.oldCode), level: "wilaya", name: "Wrong" }],
+            });
+          }
+          return json({ items: [] });
+        }
+        if (url.endsWith("/parcels") && method === "POST") return json({ id: "parcel-south" });
+        if (url.endsWith("/parcels/parcel-south")) {
+          return json({ id: "parcel-south", trackingNumber: `TRK-${wilaya.code}` });
+        }
+        if (url.endsWith("/parcels/labels/individual/pdf")) return json({ parcelLabelFiles: [] });
+        throw new Error(`Unexpected ZR v2 request: ${method} ${url}`);
+      });
+
+      const created = await zrExpressAdapter.createShipment(
+        { ...shipment, customer: { ...shipment.customer, wilaya: wilaya.name } },
+        creds,
+      );
+      expect(created).toMatchObject({ success: true, trackingId: `TRK-${wilaya.code}` });
+      expect(searched).not.toContain(wilaya.oldCode);
+      const createCall = fetchMock.mock.calls.find(
+        ([url, init]) => String(url).endsWith("/parcels") && (init as RequestInit).method === "POST",
+      );
+      const payload = JSON.parse(String((createCall?.[1] as RequestInit).body));
+      expect(payload.deliveryAddress.cityTerritoryId).toBe(wilaya.cityId);
+    }
+  });
+
   it("never falls back to items[0] when the commune does not match (strict district resolution)", async () => {
     const creds = v2Creds();
     fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -303,6 +377,7 @@ describe("ZR Express new-platform dialect (FD-061 EX-2, CodFlow contract)", () =
 
     const tracking = await zrExpressAdapter.syncTracking("ZRV2-TRK-4", creds);
     expect(tracking.status).toBe("returned");
+    expect(tracking.events.map((event) => event.status)).toEqual(["created", "returned"]);
   });
 
   it("cancels through DELETE /parcels/bulk/by-tracking-number with idempotent 404 truth", async () => {

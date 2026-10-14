@@ -89,6 +89,33 @@ function hostedDelegationReleaseId(
   return details.hostedReleaseId;
 }
 
+async function activeHeldQuantity(
+  tx: BusinessTransaction,
+  productId: string,
+  productVariantId: string | null,
+): Promise<number> {
+  const rows = productVariantId
+    ? await tx.$queryRaw<Array<{ quantity: number | bigint | null }>>`
+        SELECT COALESCE(SUM("quantity"), 0) AS "quantity"
+        FROM "InventoryReservation"
+        WHERE "productId" = ${productId}
+          AND "productVariantId" = ${productVariantId}
+          AND "state" = 'active'
+      `
+    : await tx.$queryRaw<Array<{ quantity: number | bigint | null }>>`
+        SELECT COALESCE(SUM("quantity"), 0) AS "quantity"
+        FROM "InventoryReservation"
+        WHERE "productId" = ${productId}
+          AND "productVariantId" IS NULL
+          AND "state" = 'active'
+      `;
+  const quantity = Number(rows[0]?.quantity ?? 0);
+  if (!Number.isSafeInteger(quantity) || quantity < 0) {
+    throw new ConflictError("Active inventory holds are outside the supported integer range");
+  }
+  return quantity;
+}
+
 async function reserveOrderItem(
   tx: BusinessTransaction,
   commandId: string,
@@ -125,7 +152,7 @@ async function reserveOrderItem(
         productId: product.id,
         isActive: true,
       },
-      select: { id: true },
+      select: { id: true, stock: true },
     });
     if (!variant) {
       throw new ValidationError(
@@ -135,19 +162,21 @@ async function reserveOrderItem(
     }
 
     if (!initialProductStock.has(product.id)) {
-      const beforeAvailable = await tx.productVariant.aggregate({
-        where: { productId: product.id, isActive: true },
-        _sum: { stock: true },
-      });
-      initialProductStock.set(product.id, beforeAvailable._sum.stock ?? 0);
+      initialProductStock.set(product.id, product.stock);
     }
 
+    const held = await activeHeldQuantity(tx, product.id, variant.id);
+    if (variant.stock - held < item.quantity) {
+      throw new ConflictError(
+        `Insufficient available stock for variant '${variant.id}'`,
+      );
+    }
     const updated = await tx.productVariant.updateMany({
       where: {
         id: variant.id,
         productId: product.id,
         isActive: true,
-        stock: { gte: item.quantity },
+        stock: { gte: item.quantity + held },
       },
       data: { stock: { decrement: item.quantity } },
     });
@@ -157,14 +186,22 @@ async function reserveOrderItem(
       );
     }
 
-    const available = await tx.productVariant.aggregate({
-      where: { productId: product.id, isActive: true },
-      _sum: { stock: true },
+    // Decrement the sold quantity. Never replace product.stock with the sum
+    // of active variants — that drops inactive units and can raise on-hand.
+    const productUpdated = await tx.product.updateMany({
+      where: {
+        id: product.id,
+        isActive: true,
+        deletedAt: null,
+        stock: { gte: item.quantity },
+      },
+      data: { stock: { decrement: item.quantity } },
     });
-    await tx.product.update({
-      where: { id: product.id },
-      data: { stock: available._sum.stock ?? 0 },
-    });
+    if (productUpdated.count !== 1) {
+      throw new ConflictError(
+        `Insufficient available stock for product '${product.id}'`,
+      );
+    }
   } else {
     if (!initialProductStock.has(product.id)) {
       initialProductStock.set(product.id, product.stock);
@@ -176,12 +213,18 @@ async function reserveOrderItem(
       );
     }
 
+    const held = await activeHeldQuantity(tx, product.id, null);
+    if (product.stock - held < item.quantity) {
+      throw new ConflictError(
+        `Insufficient available stock for product '${product.id}'`,
+      );
+    }
     const updated = await tx.product.updateMany({
       where: {
         id: product.id,
         isActive: true,
         deletedAt: null,
-        stock: { gte: item.quantity },
+        stock: { gte: item.quantity + held },
       },
       data: { stock: { decrement: item.quantity } },
     });

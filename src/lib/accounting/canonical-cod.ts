@@ -1970,6 +1970,25 @@ export async function matchCanonicalCodSettlementLine(
           payload: eventPayload,
         },
       ];
+      const financialMovements: FinancialMovementFact[] = [];
+      // The unmatched posting recorded only a net movement with no orderId, so
+      // profitability never saw the fee. Attach the original fee once,
+      // append-only, to this order. Do not post a second cash movement.
+      // Fee corrections already have their own movements.
+      if (line.feeAmount > 0) {
+        financialMovements.push({
+          movementKey: `${commandId}:matched-fee`,
+          movementType: "courier_fee_withheld",
+          orderId: order.id,
+          settlementId: line.settlementId,
+          amount: -line.feeAmount,
+          currency: "DZD",
+          counterparty: line.settlement.provider,
+          reference: line.providerLineReference ?? line.settlement.externalReference,
+          reason: `Courier fee withheld from settlement for order ${order.id}`,
+          occurredAt: data.occurredAt,
+        });
+      }
 
       return {
         result,
@@ -2008,6 +2027,7 @@ export async function matchCanonicalCodSettlementLine(
           },
         ],
         compensationFacts,
+        financialMovements,
         projectionInvalidations: codProjectionKeys([order.id]),
       };
     },

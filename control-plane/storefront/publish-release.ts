@@ -94,10 +94,13 @@ export async function publishRelease(
       WHERE release_id = ?1 AND storefront_id = ?2`,
   ).bind(input.releaseId, storefrontId).first<ExistingReleaseRow>();
   if (existing) {
-    // Release IDs are generated from the durable desktop publish command. Once
-    // committed, allocation/shipping inputs cannot mutate the immutable result;
-    // a retry needs only prove it is replaying the same public artifact.
-    if (existing.artifact_digest !== artifactDigest) {
+    // The release id is one durable publish command. The public artifact and
+    // the request digest (price, quantity, fees) must both match. A different
+    // request digest is a different sale, not a replay of the committed rows.
+    if (
+      existing.artifact_digest !== artifactDigest ||
+      existing.request_digest !== requestDigest
+    ) {
       return json({ error: "release_idempotency_conflict" }, 409);
     }
     return publicationResponse(environment, {
@@ -163,7 +166,10 @@ export async function publishRelease(
          FROM storefront_release
         WHERE release_id = ?1 AND storefront_id = ?2`,
     ).bind(input.releaseId, storefrontId).first<ExistingReleaseRow>();
-    if (raced?.artifact_digest === artifactDigest) {
+    if (
+      raced?.artifact_digest === artifactDigest &&
+      raced.request_digest === requestDigest
+    ) {
       return publicationResponse(environment, {
         storefrontId,
         releaseId: input.releaseId,

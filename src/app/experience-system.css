@@ -247,6 +247,10 @@ html[dir="rtl"] [data-inbox-workspace="v2"] [data-inbox-resizable-panes="true"] 
  * names still drifted left in Arabic), and it lowers `:dir()` into a language
  * list. The interface direction is set on <html>, so the alignment is stated
  * against it explicitly.
+ *
+ * Do not pair this physical text-align with truncate and dir=auto. On an LTR
+ * run, text-align: right clips the start of the Latin word. Queue names and
+ * agent titles keep direction isolation without this attribute.
  */
 html[dir="rtl"] [data-sf-seller-label="true"] {
   text-align: right;

@@ -339,7 +339,7 @@ describe("order creation path regression coverage", () => {
     ).toBe(1);
   });
 
-  it("commerce sync writes one canonical server-priced order and timeline entry", async () => {
+  it("commerce sync writes one canonical order at the provider unit price", async () => {
     const product = await seedProduct({
       name: "Widget A",
       price: 2750,
@@ -365,7 +365,7 @@ describe("order creation path regression coverage", () => {
     expect(order?.items[0]).toMatchObject({
       productId: product.id,
       quantity: 2,
-      unitPrice: 2750,
+      unitPrice: 2000,
     });
     expect(
       await rawDb.orderChange.count({

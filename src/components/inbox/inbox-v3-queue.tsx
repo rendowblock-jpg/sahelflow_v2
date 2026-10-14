@@ -305,17 +305,20 @@ const ConversationRow = memo(function ConversationRow({
 
       <span className="min-w-0 flex-1 overflow-hidden">
         <span className="flex min-w-0 items-center gap-2 overflow-hidden">
-          {/* The name keeps its own direction (a long Latin name truncates at
-              ITS end) but aligns with the RTL column, beside the avatar. */}
-          <bdi
-            data-sf-seller-label="true"
-            className={cn(
-              "block min-w-0 flex-1 truncate text-[13px]",
-              chat.unread > 0 ? "font-semibold text-foreground" : "font-medium",
-            )}
-          >
-            {chat.name}
-          </bdi>
+          {/* Direction isolation without the seller-label rule: its physical
+              text-align clips the start of a long Latin name. The slot stays
+              on the avatar side; the name ellipsizes at its own end. */}
+          <span className="flex min-w-0 flex-1 justify-start overflow-hidden">
+            <bdi
+              dir="auto"
+              className={cn(
+                "block min-w-0 max-w-full truncate text-start text-[13px]",
+                chat.unread > 0 ? "font-semibold text-foreground" : "font-medium",
+              )}
+            >
+              {chat.name}
+            </bdi>
+          </span>
           {chat.pinned ? (
             <Pin
               className="size-3 shrink-0 text-primary"

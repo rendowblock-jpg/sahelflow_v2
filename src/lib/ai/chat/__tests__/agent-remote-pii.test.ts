@@ -34,6 +34,7 @@ vi.mock("../tools/core-tools", () => ({}));
 vi.mock("../tools/extended-tools", () => ({}));
 vi.mock("../tools/advanced-tools", () => ({}));
 
+import { redactStoredAiToolCalls } from "@/lib/redact-pii";
 import {
   runAgent,
   runAgentStream,
@@ -316,5 +317,69 @@ describe("agent remote-model PII boundary", () => {
     expect(proposal.proposalDigestPrefix).toBe("abcdef123456");
     expect(summary.customerName).toBe("Karim B.");
     expect(summary.phoneLast4).toBe("••56");
+  });
+
+  it("replays a stored tool call with its name and thought signature on the live-loop roles", async () => {
+    const signature = `thought-sig-${PHONE}-keep`;
+    const stored = redactStoredAiToolCalls([
+      {
+        name: "search_products",
+        args: { query: "Atlas", phone: PHONE, name: FULL_NAME },
+        result: [{ id: "p1", name: "Atlas Premium Hoodie", price: 9000 }],
+        thoughtSignature: signature,
+      },
+    ]);
+    expect(stored[0]).toMatchObject({
+      name: "search_products",
+      thoughtSignature: signature,
+      args: { phone: "[REDACTED]", name: "[REDACTED]" },
+    });
+
+    const history: AgentMessage[] = [
+      {
+        role: "assistant",
+        content: "",
+        toolCalls: stored as AgentMessage["toolCalls"],
+      },
+    ];
+    vi.mocked(fetch).mockResolvedValue(geminiTextResponse("OK"));
+    await runAgent(history, "Continue");
+
+    const body = JSON.parse(requestBodyText(0)) as {
+      contents: Array<{ role: string; parts: Array<Record<string, unknown>> }>;
+    };
+    const modelTurn = body.contents.find((entry) =>
+      entry.parts.some((part) => part.functionCall),
+    );
+    const responseTurn = body.contents.find((entry) =>
+      entry.parts.some((part) => part.functionResponse),
+    );
+    expect(modelTurn?.role).toBe("model");
+    expect(responseTurn?.role).toBe("user");
+    expect(body.contents.indexOf(responseTurn!)).toBeGreaterThan(
+      body.contents.indexOf(modelTurn!),
+    );
+    expect(modelTurn?.parts.some((part) => part.functionResponse)).toBe(false);
+    expect(modelTurn?.parts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          functionCall: expect.objectContaining({ name: "search_products" }),
+          thoughtSignature: signature,
+        }),
+      ]),
+    );
+    const response = responseTurn?.parts[0]?.functionResponse as {
+      name: string;
+    };
+    expect(response.name).toBe("search_products");
+    const call = modelTurn?.parts.find((part) => part.functionCall) as {
+      functionCall: { name: string; args: Record<string, unknown> };
+      thoughtSignature: string;
+    };
+    expect(call.functionCall.name).toBe("search_products");
+    expect(call.functionCall.args.phone).toBe("[REDACTED]");
+    expect(call.functionCall.args.name).toBe("[REDACTED]");
+    expect(call.thoughtSignature).toBe(signature);
+    expect(JSON.stringify(call.functionCall.args)).not.toContain(FULL_NAME);
   });
 });

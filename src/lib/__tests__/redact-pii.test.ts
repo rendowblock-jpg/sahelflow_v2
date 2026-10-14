@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { redactPii } from "@/lib/redact-pii";
+import { redactPii, redactStoredAiToolCalls } from "@/lib/redact-pii";
 
 describe("redactPii", () => {
   it("redacts sensitive top-level keys", () => {
@@ -59,5 +59,26 @@ describe("redactPii", () => {
       after: { afterDigestCode: "b".repeat(64) },
       count: 3,
     });
+  });
+
+  it("keeps a stored tool name and thought signature while redacting argument PII", () => {
+    const signature = "sig-0555123456-gemini3";
+    const input = [
+      {
+        name: "get_order_details",
+        args: { orderId: "ord-1", phone: "0555123456", name: "Karim Benali" },
+        result: { phone: "0555123456" },
+        thoughtSignature: signature,
+      },
+    ];
+    const stored = redactStoredAiToolCalls(input);
+    expect(stored[0]).toEqual({
+      name: "get_order_details",
+      args: { orderId: "ord-1", phone: "[REDACTED]", name: "[REDACTED]" },
+      result: { phone: "[REDACTED]" },
+      thoughtSignature: signature,
+    });
+    expect(input[0]!.thoughtSignature).toBe(signature);
+    expect(input[0]!.args.phone).toBe("0555123456");
   });
 });

@@ -179,7 +179,7 @@ describe("universal command search contract", () => {
   it("keeps the latency-sensitive search families parallel while coalescing ordinary typing", () => {
     const server = source("../../../lib/search/universal-search-server.ts");
     const recordSearch = source("../../../hooks/use-universal-record-search.ts");
-    expect(recordSearch).toContain("SEARCH_DEBOUNCE_MS = 160");
+    expect(recordSearch).toContain("SEARCH_DEBOUNCE_MS = 32");
     expect(recordSearch).toContain("Page/workspace matches are local");
     expect(server).toContain("] = await Promise.all([");
     expect(server).toContain("technicalOrders");

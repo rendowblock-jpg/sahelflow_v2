@@ -38,6 +38,7 @@ export default function LoginPage() {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (pin.length < 8) return;
     setLoading(true);
     setError("");
     try {
@@ -135,7 +136,7 @@ export default function LoginPage() {
           <p className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive" role="alert">{error}</p>
         ) : null}
 
-        <Button type="submit" size="lg" className="w-full" disabled={loading || pin.length < 1 || (mode === "member" && loginId.length < 3)}>
+        <Button type="submit" size="lg" className="w-full" disabled={loading || pin.length < 8 || (mode === "member" && loginId.length < 3)}>
           {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <>{t("auth.login")}<ArrowRight className="ms-2 size-4 rtl:rotate-180" aria-hidden="true" /></>}
         </Button>
 

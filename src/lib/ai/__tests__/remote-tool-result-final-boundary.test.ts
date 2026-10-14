@@ -43,7 +43,7 @@ describe("remote tool-result final privacy boundary", () => {
         orderNumber: "ORD-4413",
         status: "confirmed",
         totalPrice: 7500,
-        wilaya: "Bordj Baji Mokhtar",
+        wilaya: "Bordj Badji Mokhtar",
         createdAt: "2026-08-24T18:34:00.000Z",
       },
     ]) as Array<Record<string, unknown>>;
@@ -68,7 +68,7 @@ describe("remote tool-result final privacy boundary", () => {
     });
     expect(output[3]?.orderNumber).toBeNull();
     expect(output[3]?.wilaya).toBe("Oran");
-    expect(output[4]?.wilaya).toBe("Bordj Baji Mokhtar");
+    expect(output[4]?.wilaya).toBe("Bordj Badji Mokhtar");
 
     const serialized = JSON.stringify(output);
     expect(serialized).not.toContain(PRIVATE_NAME);

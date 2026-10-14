@@ -274,6 +274,41 @@ describe("canonical manual confirmation", () => {
     expect(reservations).toEqual([{ productVariantId: black.id }]);
   });
 
+  it("does not raise product stock on a variant sale and will not confirm a reserved unit twice", async () => {
+    const product = await seedProduct(2);
+    const inactive = await db.productVariant.create({
+      data: { productId: product.id, name: "Inactive", stock: 6, isActive: false },
+    });
+    const active = await db.productVariant.create({
+      data: { productId: product.id, name: "Active", stock: 8, isActive: true },
+    });
+    const order = await seedOrder({
+      productId: product.id,
+      productVariantId: active.id,
+      quantity: 1,
+    });
+
+    await executeManualOrderDecision(context, confirm(order.id, "variant-sale-no-raise"));
+
+    expect(await db.product.findUnique({ where: { id: product.id } })).toMatchObject({ stock: 1 });
+    expect(await db.productVariant.findUnique({ where: { id: active.id } })).toMatchObject({ stock: 7 });
+    expect(await db.productVariant.findUnique({ where: { id: inactive.id } })).toMatchObject({ stock: 6 });
+
+    await db.product.update({ where: { id: product.id }, data: { stock: 1 } });
+    await db.productVariant.update({ where: { id: active.id }, data: { stock: 1 } });
+    const second = await seedOrder({
+      productId: product.id,
+      productVariantId: active.id,
+      quantity: 1,
+    });
+    await expect(
+      executeManualOrderDecision(context, confirm(second.id, "variant-sale-held")),
+    ).rejects.toThrow(/insufficient available stock/i);
+    expect(await db.product.findUnique({ where: { id: product.id } })).toMatchObject({ stock: 1 });
+    expect(await db.productVariant.findUnique({ where: { id: active.id } })).toMatchObject({ stock: 1 });
+    expect(await db.inventoryReservation.count({ where: { state: "active" } })).toBe(1);
+  });
+
   it("rejects without moving stock and records the encrypted command result", async () => {
     const product = await seedProduct(5);
     const order = await seedOrder({ productId: product.id, quantity: 2 });

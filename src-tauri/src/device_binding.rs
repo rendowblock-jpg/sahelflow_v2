@@ -98,9 +98,78 @@ fn raw_smbios() -> Result<Vec<u8>, String> {
 #[cfg(target_os = "windows")]
 pub(crate) fn current_device_binding() -> Result<String, String> {
     let mut raw = raw_smbios()?;
-    let binding = binding_from_raw_smbios(&raw);
+    let binding = match binding_from_raw_smbios(&raw) {
+        Ok(binding) => Ok(binding),
+        Err(error) if uuid_unusable(&error) => machine_guid_binding(),
+        Err(error) => Err(error),
+    };
     raw.fill(0);
     binding
+}
+
+fn uuid_unusable(error: &str) -> bool {
+    error.contains("not usable") || error.contains("is missing") || error.contains("is unavailable")
+}
+
+/// White-box machines ship an all-zero SMBIOS UUID. The Windows MachineGuid
+/// is the fallback identity. It uses a different domain byte so it can never
+/// collide with a real SMBIOS binding.
+pub(crate) fn binding_from_machine_guid(guid: &str) -> Result<String, String> {
+    let trimmed = guid.trim();
+    if trimmed.len() < 8 || trimmed.chars().all(|char| char == '0' || char == '-') {
+        return Err("Windows MachineGuid is not usable".to_owned());
+    }
+    let mut hasher = Sha256::new();
+    hasher.update(DEVICE_BINDING_DOMAIN);
+    hasher.update([1]);
+    hasher.update(trimmed.as_bytes());
+    let digest = hasher.finalize();
+    let mut encoded = String::with_capacity(70);
+    encoded.push_str("sfdb1_");
+    for byte in digest {
+        use std::fmt::Write as _;
+        write!(&mut encoded, "{byte:02x}")
+            .map_err(|_| "device binding encoding failed".to_owned())?;
+    }
+    Ok(encoded)
+}
+
+#[cfg(target_os = "windows")]
+fn machine_guid_binding() -> Result<String, String> {
+    use std::os::windows::ffi::OsStrExt;
+    use std::ptr::null_mut;
+    use windows_sys::Win32::Foundation::ERROR_SUCCESS;
+    use windows_sys::Win32::System::Registry::{RegGetValueW, HKEY_LOCAL_MACHINE, RRF_RT_REG_SZ};
+    let subkey: Vec<u16> = std::ffi::OsStr::new("SOFTWARE\\Microsoft\\Cryptography")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let name: Vec<u16> = std::ffi::OsStr::new("MachineGuid")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut bytes = vec![0_u16; 80];
+    let mut size = (bytes.len() * 2) as u32;
+    let read = unsafe {
+        RegGetValueW(
+            HKEY_LOCAL_MACHINE,
+            subkey.as_ptr(),
+            name.as_ptr(),
+            RRF_RT_REG_SZ,
+            null_mut(),
+            bytes.as_mut_ptr().cast(),
+            &mut size,
+        )
+    };
+    if read != ERROR_SUCCESS {
+        return Err(format!(
+            "Windows MachineGuid is unavailable ({})",
+            std::io::Error::from_raw_os_error(read as i32)
+        ));
+    }
+    let chars = (size as usize / 2).saturating_sub(1);
+    let guid = String::from_utf16_lossy(&bytes[..chars.min(bytes.len())]);
+    binding_from_machine_guid(&guid)
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -111,6 +180,20 @@ pub(crate) fn current_device_binding() -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_unusable_uuid_is_not_a_machine_guid_binding() {
+        let zeros = binding_from_raw_smbios(&raw_table([0; 16]));
+        assert!(zeros.expect_err("zero uuid").contains("not usable"));
+        let guid = binding_from_machine_guid("4c4c4544-0032-4410-8051-b7c04f583532")
+            .expect("machine guid");
+        assert!(guid.starts_with("sfdb1_"));
+        assert_ne!(
+            guid,
+            binding_from_machine_guid("4c4c4544-0032-4410-8051-b7c04f583533").expect("other")
+        );
+        assert!(binding_from_machine_guid("00000000-0000-0000-0000-000000000000").is_err());
+    }
 
     fn raw_table(uuid: [u8; 16]) -> Vec<u8> {
         let mut table = vec![1, 25, 1, 0, 1, 2, 3, 4];

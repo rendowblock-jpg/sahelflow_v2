@@ -19,7 +19,9 @@ import { nextOrderNumber } from "@/lib/data/service-base";
 import {
   appendCanonicalReturnEvent,
   assertDeliveredReturnAuthority,
+  canonicalReceivableAmount,
   canonicalReturnCaseForOrder,
+  effectiveRefundAmount,
   loadCanonicalReturnOrder,
   returnProjectionKeys,
   setCanonicalReturnCaseState,
@@ -625,13 +627,9 @@ async function restoreAvailableStock(
         `Product variant '${item.productVariantId}' is missing during return inspection`,
       );
     }
-    const aggregate = await tx.productVariant.aggregate({
-      where: { productId: item.productId, isActive: true },
-      _sum: { stock: true },
-    });
     const product = await tx.product.updateMany({
       where: { id: item.productId, deletedAt: null },
-      data: { stock: aggregate._sum.stock ?? 0 },
+      data: { stock: { increment: item.quantity } },
     });
     if (product.count !== 1) {
       throw new ConflictError(
@@ -995,13 +993,25 @@ export async function transitionCanonicalCustomerReturn(
         inventoryState = "settled";
         status = fullOrderReturn ? "returned" : "delivered";
         if (fullOrderReturn) {
+          const receivable = await canonicalReceivableAmount(tx, order.id);
+          const refunded = await effectiveRefundAmount(tx, order.id);
+          const recognized = receivable - refunded.effective;
+          if (recognized < 0) {
+            throw new ConflictError(
+              "Customer realized revenue cannot be reversed below the refunds already recorded",
+            );
+          }
           const adjusted = await tx.customer.updateMany({
             where: {
               id: order.customerId,
               deletedAt: null,
               orderCount: { gt: 0 },
+              ...(recognized > 0 ? { totalSpent: { gte: recognized } } : {}),
             },
-            data: { orderCount: { decrement: 1 } },
+            data: {
+              orderCount: { decrement: 1 },
+              ...(recognized > 0 ? { totalSpent: { decrement: recognized } } : {}),
+            },
           });
           if (adjusted.count !== 1) {
             throw new ConflictError(
@@ -1015,6 +1025,7 @@ export async function transitionCanonicalCustomerReturn(
               orderId: order.id,
               returnId: returnCase.id,
               delta: -1,
+              recognizedRevenue: recognized,
             },
           });
         }

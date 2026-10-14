@@ -10,7 +10,7 @@ import {
 } from "@/lib/identity/authorization";
 import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
 import { getReturnWorkbenchPage } from "@/lib/returns/return-workbench";
-import { NotFoundError } from "@/types/errors";
+import { NotFoundError, SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -48,34 +48,23 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   const execute = async (): Promise<NextResponse> => {
     const input = createReturnSchema.parse(await req.json());
-    const context = { prisma: db, shop: shopContext };
     const order = await db.order.findUnique({
       where: { id: input.orderId },
       select: {
-        id: true,
-        orderNumber: true,
-        status: true,
         source: true,
         sourceMetadata: true,
       },
     });
     if (!order) throw new NotFoundError("Order", input.orderId);
     assertLegacyOrderFollowupAllowed(order.source, order.sourceMetadata);
-
-    const notesParts: string[] = [];
-    if (input.itemCount) notesParts.push(`Items returned: ${input.itemCount}`);
-    if (input.notes) notesParts.push(input.notes);
-    const record = await context.prisma.return.create({
-      data: {
-        orderId: input.orderId,
-        reason: input.reason,
-        type: input.type ?? "return",
-        status: "requested",
-        notes: notesParts.length > 0 ? notesParts.join("\n") : null,
-      },
-      include: { order: { select: { orderNumber: true } } },
-    });
-    return NextResponse.json({ return: record }, { status: 201 });
+    // A requested row does not move stock or COD. Legacy and canonical orders
+    // both stay on the governed return flow (refund settlement or the
+    // canonical customer-return command).
+    throw new SahelFlowError(
+      "Use the governed return flow. This endpoint does not move stock or COD and will not record a return.",
+      "GOVERNED_RETURN_REQUIRED",
+      409,
+    );
   };
 
   return withReplayGuard(shopContext.shopId, requestId, execute);

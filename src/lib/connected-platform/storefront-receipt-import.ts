@@ -233,10 +233,10 @@ function intakeStorefrontReceipt(
 }
 
 /**
- * Best-effort rejection marking for a poison receipt. A receipt whose shape
- * is too broken to yield an addressable id, or one the relay refuses (e.g.
- * delivered under another shop's authority), is warn-logged and skipped —
- * the page cursor still advances past it, so ingestion can never stall.
+ * Mark a poison receipt rejected on the relay. A receipt with no addressable
+ * id is warn-logged and skipped. If the relay refuses the completion, the
+ * error propagates: the caller must not advance the ingest cursor, so the
+ * receipt stays `received` and can be read again.
  */
 async function rejectPoisonStorefrontReceipt(
   client: ConnectedPlatformClient,
@@ -274,6 +274,7 @@ async function rejectPoisonStorefrontReceipt(
       code,
       reason: error instanceof Error ? error.message : String(error),
     });
+    throw error;
   }
 }
 

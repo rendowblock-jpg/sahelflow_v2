@@ -28,6 +28,27 @@ import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { InboxLinkPreview, firstHttpUrlInText } from "@/components/inbox/link-preview-card";
 import { ActivityMessage } from "@/components/inbox/conversation-controls";
 import { MessageStatus } from "@/components/inbox/message-status";
+
+/** A succeeded outbox already reached WhatsApp. A late error receipt must not offer a resend. */
+export function outboxAllowsResend(
+  message: Pick<InboxMessage, "direction" | "outboxEffectKey" | "outboxState">,
+): boolean {
+  return (
+    message.direction !== "inbound" &&
+    message.direction !== "system" &&
+    Boolean(message.outboxEffectKey) &&
+    (message.outboxState === "dead_letter" || message.outboxState === "ambiguous")
+  );
+}
+
+export function bubbleDeliveryStatus(
+  message: Pick<InboxMessage, "deliveryStatus" | "outboxState">,
+): NonNullable<InboxMessage["deliveryStatus"]> {
+  if (message.outboxState === "succeeded" && message.deliveryStatus === "failed") {
+    return "sent";
+  }
+  return message.deliveryStatus ?? "sent";
+}
 import { Button } from "@/components/ui/button";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
@@ -467,7 +488,7 @@ export const MessageBubble = memo(function MessageBubble({
           <div className="mt-1 flex items-center justify-end gap-1 text-caption tabular-nums text-muted-foreground">
             <span>{messageTime(message.timestamp, locale)}</span>
             {!inbound ? (
-              <MessageStatus status={message.deliveryStatus ?? "sent"} />
+              <MessageStatus status={bubbleDeliveryStatus(message)} />
             ) : null}
           </div>
         </div>
@@ -542,9 +563,7 @@ export const MessageBubble = memo(function MessageBubble({
         </div>
       ) : null}
 
-      {!inbound &&
-      message.deliveryStatus === "failed" &&
-      message.outboxEffectKey ? (
+      {outboxAllowsResend(message) ? (
         <div className="flex flex-col items-end gap-1">
           <Button
             type="button"

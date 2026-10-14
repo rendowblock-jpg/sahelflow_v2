@@ -10,6 +10,7 @@
  */
 import type { Order, OrderStatus } from "@/types/domain";
 import {
+  ConflictError,
   NotFoundError,
   SahelFlowError,
   ValidationError,
@@ -62,6 +63,45 @@ export interface OrderStatusTransitionEffects {
   order: Order;
   changed: boolean;
   lowStockProducts: LowStockProduct[];
+}
+
+async function completedRefundTotal(
+  tx: OrderChangeTransactionClient,
+  orderId: string,
+): Promise<number> {
+  const total = await tx.refund.aggregate({
+    where: { orderId, reversed: false, status: "completed" },
+    _sum: { amount: true },
+  });
+  return total._sum.amount ?? 0;
+}
+
+async function revenueStillRecognized(
+  tx: OrderChangeTransactionClient,
+  orderId: string,
+  totalPrice: number,
+): Promise<number> {
+  const refunded = await completedRefundTotal(tx, orderId);
+  return Math.max(0, totalPrice - refunded);
+}
+
+async function deliveredStockAlreadyRestored(
+  tx: OrderChangeTransactionClient,
+  orderId: string,
+): Promise<boolean> {
+  const changes = await tx.orderChange.findMany({
+    where: { orderId, actionType: "refund" },
+    select: { payload: true },
+  });
+  return changes.some((change) => {
+    if (!change.payload) return false;
+    try {
+      const payload = JSON.parse(change.payload) as { stockRestored?: boolean };
+      return payload.stockRestored === true;
+    } catch {
+      return false;
+    }
+  });
 }
 
 async function updateStatusInTransaction(
@@ -131,31 +171,46 @@ async function updateStatusInTransaction(
   }
 
   if (triggersStockRestoration(from, to)) {
-    const affectedProducts = await restoreOrderItemStock(tx, order.items);
-    for (const productId of affectedProducts) {
-      const lowStockInfo = await detectLowStock(tx, productId);
-      if (lowStockInfo) lowStockProducts.push(lowStockInfo);
+    const alreadyRestored =
+      from === "delivered" && (await deliveredStockAlreadyRestored(tx, order.id));
+    if (!alreadyRestored) {
+      const affectedProducts = await restoreOrderItemStock(tx, order.items);
+      for (const productId of affectedProducts) {
+        const lowStockInfo = await detectLowStock(tx, productId);
+        if (lowStockInfo) lowStockProducts.push(lowStockInfo);
+      }
     }
   }
 
   if (triggersCustomerStatsUpdate(from, to)) {
+    const recognized = await revenueStillRecognized(tx, order.id, order.totalPrice);
     await tx.customer.update({
       where: { id: order.customerId },
       data: {
         orderCount: { increment: 1 },
-        totalSpent: { increment: order.totalPrice },
+        ...(recognized > 0 ? { totalSpent: { increment: recognized } } : {}),
       },
     });
   }
 
   if (triggersCustomerStatsReversal(from, to)) {
-    await tx.customer.update({
-      where: { id: order.customerId },
+    const recognized = await revenueStillRecognized(tx, order.id, order.totalPrice);
+    const reversed = await tx.customer.updateMany({
+      where: {
+        id: order.customerId,
+        orderCount: { gt: 0 },
+        ...(recognized > 0 ? { totalSpent: { gte: recognized } } : {}),
+      },
       data: {
         orderCount: { decrement: 1 },
-        totalSpent: { decrement: order.totalPrice },
+        ...(recognized > 0 ? { totalSpent: { decrement: recognized } } : {}),
       },
     });
+    if (reversed.count !== 1) {
+      throw new ConflictError(
+        "Customer revenue reversal would exceed the amount still recognized",
+      );
+    }
   }
 
   const data: Record<string, unknown> = { status: to };

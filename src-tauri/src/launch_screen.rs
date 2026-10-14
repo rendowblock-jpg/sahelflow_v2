@@ -81,7 +81,7 @@ pub(crate) fn copy(locale: Locale) -> LaunchCopy {
             starting: "جارٍ تشغيل SahelFlow",
             retrying: "إعادة المحاولة…",
             opening: "جارٍ فتح مساحة عملك",
-            slow_hint: "أول تشغيل بعد التحديث يستغرق وقتاً أطول قليلاً.",
+            slow_hint: "هذا الجهاز يفتح مساحة العمل المحلية. أبقِ النافذة مفتوحة.",
         },
         Locale::Fr => LaunchCopy {
             lang: "fr",
@@ -91,7 +91,8 @@ pub(crate) fn copy(locale: Locale) -> LaunchCopy {
             starting: "Démarrage de SahelFlow",
             retrying: "Nouvelle tentative…",
             opening: "Ouverture de votre espace",
-            slow_hint: "Le premier lancement après une mise à jour prend un peu plus de temps.",
+            slow_hint:
+                "Cet ordinateur ouvre l'espace de travail local. Laissez la fenêtre ouverte.",
         },
         Locale::En => LaunchCopy {
             lang: "en",
@@ -101,7 +102,7 @@ pub(crate) fn copy(locale: Locale) -> LaunchCopy {
             starting: "Starting SahelFlow",
             retrying: "Retrying…",
             opening: "Opening your workspace",
-            slow_hint: "The first launch after an update takes a little longer.",
+            slow_hint: "This computer is opening the local workspace. Keep this window open.",
         },
     }
 }
@@ -204,6 +205,7 @@ pub(crate) fn stage_band(stage: Option<&str>) -> (Phase, f32, f32) {
     match stage.unwrap_or_default() {
         "migration-started" => (Phase::Preparing, 0.16, 0.34),
         "migration-complete" => (Phase::Preparing, 0.36, 0.42),
+        "runtime-warm-started" | "runtime-warm-complete" => (Phase::Starting, 0.44, 0.62),
         "runtime-prepare-started" => (Phase::Starting, 0.44, 0.52),
         "runtime-prepare-complete" | "runtime-attempt-started" => (Phase::Starting, 0.54, 0.72),
         "runtime-attempt-failed" => (Phase::Retrying, 0.50, 0.60),

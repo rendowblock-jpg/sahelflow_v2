@@ -87,6 +87,16 @@ describe("Shopify adapter", () => {
   });
 
   describe("listOrdersSince", () => {
+    it("rejects a shop that is not one myshopify label and does not send the access token", async () => {
+      for (const shop of ["evil.example", "evil.example#"]) {
+        mockFetch.mockClear();
+        await expect(
+          shopifyAdapter.listOrdersSince({ shop, accessToken: "shpat_secret" }, ""),
+        ).rejects.toThrow("Invalid Shopify shop domain");
+        expect(mockFetch).not.toHaveBeenCalled();
+      }
+    });
+
     it("throws on invalid (non-Shopify) credentials", async () => {
       await expect(
         shopifyAdapter.listOrdersSince(

@@ -32,7 +32,11 @@ import {
   baileysFailureText,
   mapBaileysStatusUpdate,
 } from "./delivery-status";
-import { createDispatchObservingLogger } from "./durable-dispatch";
+import {
+  createDispatchObservingLogger,
+  failedBeforeWrite,
+  SendNotDispatchedError,
+} from "./durable-dispatch";
 import { createDiagnosticTeeLogger, describeError, diagnostics } from "./diagnostics-log";
 
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
@@ -121,40 +125,67 @@ export function parseWhatsAppQuotedContext(value: unknown): SidecarQuotedContext
   return { stanzaId, fromMe, ...(participant ? { participant } : {}), stubKind, ...(stubText ? { stubText } : {}) };
 }
 
+function quotedStubMessage(quoted: SidecarQuotedContext): proto.IMessage {
+  switch (quoted.stubKind) {
+    case "image":
+      return { imageMessage: quoted.stubText ? { caption: quoted.stubText } : {} };
+    case "video":
+      return { videoMessage: quoted.stubText ? { caption: quoted.stubText } : {} };
+    case "audio":
+      return { audioMessage: {} };
+    case "document":
+      return { documentMessage: quoted.stubText ? { caption: quoted.stubText } : {} };
+    default:
+      return { conversation: quoted.stubText ?? "" };
+  }
+}
+
 /**
- * Build the Baileys `quoted` send option. Baileys derives the provider
- * contextInfo from the quoted key (stanza ID + participant; the seller's own
- * JID is resolved from the connected account for fromMe quotes) and embeds the
- * single-type stub as the honest fallback quote body.
+ * Quote context embedded on the message content itself.
+ *
+ * Baileys' `quoted` option always writes
+ * `contextInfo.participant = quoted.participant || quoted.key.participant || quoted.key.remoteJid`.
+ * Omitting `key.participant` does not help: the chat JID is filled back in, and
+ * on a 1:1 or `@lid` chat WhatsApp treats that as a group sender and drops the
+ * stanza. Putting `contextInfo` on the content (and not passing `quoted`) is
+ * the shape that actually goes out. A real group may still name its participant.
  */
-function baileysQuotedOption(
+export function quotedSendContent<T extends Record<string, unknown>>(
   jid: string,
+  content: T,
   quoted: SidecarQuotedContext | null | undefined,
-): proto.IWebMessageInfo | undefined {
-  if (!quoted) return undefined;
-  const stub: proto.IMessage = (() => {
-    switch (quoted.stubKind) {
-      case "image":
-        return { imageMessage: quoted.stubText ? { caption: quoted.stubText } : {} };
-      case "video":
-        return { videoMessage: quoted.stubText ? { caption: quoted.stubText } : {} };
-      case "audio":
-        return { audioMessage: {} };
-      case "document":
-        return { documentMessage: quoted.stubText ? { caption: quoted.stubText } : {} };
-      default:
-        return { conversation: quoted.stubText ?? "" };
-    }
-  })();
-  return {
-    key: {
-      remoteJid: jid,
-      fromMe: quoted.fromMe,
-      id: quoted.stanzaId,
-      ...(quoted.participant ? { participant: quoted.participant } : {}),
-    },
-    message: stub,
+): T {
+  if (!quoted) return content;
+  const group = jid.endsWith("@g.us");
+  const contextInfo: proto.IContextInfo = {
+    stanzaId: quoted.stanzaId,
+    quotedMessage: quotedStubMessage(quoted),
+    ...(group && quoted.participant
+      ? { participant: quoted.participant, remoteJid: jid }
+      : {}),
   };
+  return { ...content, contextInfo };
+}
+
+/**
+ * Which provider upserts become durable inbox traffic.
+ *
+ * Baileys emits `append` for offline stanzas it has already acked. Those are
+ * real messages and must be spooled the same way as `notify`. Status, group,
+ * and broadcast surfaces stay out of the spool.
+ */
+export function providerMessageSpoolAction(
+  upsertType: string | undefined,
+  message: {
+    remoteJid?: string | null;
+    id?: string | null;
+    fromMe?: boolean | null;
+  },
+): "inbound" | "phone-outbound" | "skip" {
+  if (upsertType !== "notify" && upsertType !== "append") return "skip";
+  if (!message.remoteJid || !message.id) return "skip";
+  if (!isIndividualInboundJid(message.remoteJid)) return "skip";
+  return message.fromMe ? "phone-outbound" : "inbound";
 }
 
 async function postMessageStatus(payload: {
@@ -258,6 +289,22 @@ export class WhatsAppManager {
    * that sent nothing from one that may have reached WhatsApp.
    */
   onProviderDispatch: ((providerMessageId: string) => void) | null = null;
+  /** Provider message ids whose dispatch marker has already been logged. */
+  private providerWrites = new Set<string>();
+
+  /**
+   * Record a Baileys dispatch marker and forward it to the durable dispatcher.
+   * A quoted retry must not send a second stanza after this has fired.
+   */
+  recordProviderWrite(providerMessageId: string): void {
+    if (!providerMessageId) return;
+    this.providerWrites.add(providerMessageId);
+    if (this.providerWrites.size > 10_000) {
+      const oldest = this.providerWrites.values().next().value;
+      if (oldest) this.providerWrites.delete(oldest);
+    }
+    this.onProviderDispatch?.(providerMessageId);
+  }
 
   subscribe(fn: Subscriber): () => void {
     this.subscribers.add(fn);
@@ -339,7 +386,7 @@ export class WhatsAppManager {
     // The provider logger forwards everything to the sidecar logger and also
     // reports the dispatch marker, whatever the configured log level.
     const providerLogger = createDispatchObservingLogger(logger, (messageId) => {
-      this.onProviderDispatch?.(messageId);
+      this.recordProviderWrite(messageId);
     });
 
     this.sock = makeWASocket({
@@ -449,12 +496,7 @@ export class WhatsAppManager {
     });
 
     this.sock.ev.on("messages.upsert", ({ messages, type }) => {
-      if (type !== "notify") return;
-      for (const m of messages) {
-        const incoming = this.toIncoming(m);
-        if (!incoming) continue;
-        this.emit({ type: "message", message: incoming });
-      }
+      this.ingestMessagesUpsert(type, messages);
     });
 
     this.sock.ev.on("messages.update", (updates) => {
@@ -502,6 +544,27 @@ export class WhatsAppManager {
     });
   }
 
+  /**
+   * Emit spoolable 1:1 upserts. `append` is the offline path Baileys has
+   * already acked; status, group, and broadcast never leave this method.
+   */
+  ingestMessagesUpsert(
+    type: string | undefined,
+    messages: ReadonlyArray<proto.IWebMessageInfo>,
+  ): void {
+    for (const message of messages) {
+      const action = providerMessageSpoolAction(type, {
+        remoteJid: message.key?.remoteJid,
+        id: message.key?.id,
+        fromMe: message.key?.fromMe,
+      });
+      if (action === "skip") continue;
+      const incoming = this.toIncoming(message);
+      if (!incoming?.key.remoteJid || !incoming.key.id) continue;
+      this.emit({ type: "message", message: incoming });
+    }
+  }
+
   private toIncoming(m: proto.IWebMessageInfo): IncomingMessage | null {
     const key = m.key;
     if (!key?.remoteJid) return null;
@@ -523,6 +586,60 @@ export class WhatsAppManager {
     };
   }
 
+  private async sendToProvider(
+    jid: string,
+    content: Parameters<WASocket["sendMessage"]>[1],
+    messageId: string | undefined,
+    quoted: SidecarQuotedContext | null | undefined,
+  ): Promise<{ id: string; status: string }> {
+    if (!this.sock || this.status !== "connected") {
+      throw new Error(`Not connected (status=${this.status})`);
+    }
+    const quotedContent = quotedSendContent(
+      jid,
+      content as Record<string, unknown>,
+      quoted,
+    ) as typeof content;
+    const attempt = (withQuote: boolean) => {
+      const options = messageId ? { messageId } : undefined;
+      return this.sock!.sendMessage(
+        jid,
+        withQuote ? quotedContent : content,
+        options,
+      );
+    };
+    try {
+      const sent = await attempt(true);
+      return {
+        id: sent?.key?.id ?? "",
+        status: String(sent?.status ?? "sent"),
+      };
+    } catch (error) {
+      if (!quoted) throw error;
+      // A second stanza is only safe when the first write never started.
+      // After the dispatch marker the outcome is ambiguous and must surface
+      // as the first attempt, not a silent unquoted resend.
+      if (!this.quoteRetryIsBeforeWrite(messageId, error)) throw error;
+      logger.warn(
+        { err: error },
+        "[quote] quoted reply failed before the provider write; sending without the quote",
+      );
+      const sent = await attempt(false);
+      return {
+        id: sent?.key?.id ?? "",
+        status: String(sent?.status ?? "sent"),
+      };
+    }
+  }
+
+  private quoteRetryIsBeforeWrite(messageId: string | undefined, error: unknown): boolean {
+    if (error instanceof SendNotDispatchedError || failedBeforeWrite(error)) {
+      return true;
+    }
+    if (!messageId) return false;
+    return !this.providerWrites.has(messageId);
+  }
+
   async sendMessage(
     to: string,
     text: string,
@@ -533,20 +650,7 @@ export class WhatsAppManager {
       throw new Error(`Not connected (status=${this.status})`);
     }
     const jid = this.toJid(to);
-    const baileysQuoted = baileysQuotedOption(jid, quoted);
-    const options = {
-      ...(messageId ? { messageId } : {}),
-      ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
-    };
-    const sent = await this.sock.sendMessage(
-      jid,
-      { text },
-      Object.keys(options).length ? options : undefined,
-    );
-    return {
-      id: sent?.key?.id ?? "",
-      status: String(sent?.status ?? "sent"),
-    };
+    return this.sendToProvider(jid, { text }, messageId, quoted);
   }
 
   async sendImage(
@@ -564,23 +668,16 @@ export class WhatsAppManager {
       throw new Error("Image send requires bounded JPEG, PNG or WebP bytes");
     }
     const jid = this.toJid(to);
-    const baileysQuoted = baileysQuotedOption(jid, quoted);
-    const sent = await this.sock.sendMessage(
+    return this.sendToProvider(
       jid,
       {
         image: Buffer.from(image.buffer, image.byteOffset, image.byteLength),
         mimetype: mimetype.toLowerCase(),
         ...(caption ? { caption } : {}),
       },
-      {
-        ...(messageId ? { messageId } : {}),
-        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
-      },
+      messageId,
+      quoted,
     );
-    return {
-      id: sent?.key?.id ?? "",
-      status: String(sent?.status ?? "sent"),
-    };
   }
 
   async sendVideo(
@@ -598,23 +695,16 @@ export class WhatsAppManager {
       throw new Error("Video send requires bounded MP4 bytes");
     }
     const jid = this.toJid(to);
-    const baileysQuoted = baileysQuotedOption(jid, quoted);
-    const sent = await this.sock.sendMessage(
+    return this.sendToProvider(
       jid,
       {
         video: Buffer.from(video.buffer, video.byteOffset, video.byteLength),
         mimetype: "video/mp4",
         ...(caption ? { caption } : {}),
       },
-      {
-        ...(messageId ? { messageId } : {}),
-        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
-      },
+      messageId,
+      quoted,
     );
-    return {
-      id: sent?.key?.id ?? "",
-      status: String(sent?.status ?? "sent"),
-    };
   }
 
   async sendDocument(
@@ -645,8 +735,7 @@ export class WhatsAppManager {
       throw new Error("Document send requires bounded classified bytes and a file name");
     }
     const jid = this.toJid(to);
-    const baileysQuoted = baileysQuotedOption(jid, quoted);
-    const sent = await this.sock.sendMessage(
+    return this.sendToProvider(
       jid,
       {
         document: Buffer.from(
@@ -658,15 +747,9 @@ export class WhatsAppManager {
         fileName,
         ...(caption ? { caption } : {}),
       },
-      {
-        ...(messageId ? { messageId } : {}),
-        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
-      },
+      messageId,
+      quoted,
     );
-    return {
-      id: sent?.key?.id ?? "",
-      status: String(sent?.status ?? "sent"),
-    };
   }
 
   async sendVoice(
@@ -697,8 +780,7 @@ export class WhatsAppManager {
       throw new Error("WhatsApp voice notes require authenticated OGG/Opus audio");
     }
     const jid = this.toJid(to);
-    const baileysQuoted = baileysQuotedOption(jid, quoted);
-    const sent = await this.sock.sendMessage(
+    return this.sendToProvider(
       jid,
       {
         audio: Buffer.from(audio.buffer, audio.byteOffset, audio.byteLength),
@@ -709,15 +791,9 @@ export class WhatsAppManager {
         // duration display truthful.
         ...(durationSeconds ? { seconds: durationSeconds } : {}),
       },
-      {
-        ...(messageId ? { messageId } : {}),
-        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
-      },
+      messageId,
+      quoted,
     );
-    return {
-      id: sent?.key?.id ?? "",
-      status: String(sent?.status ?? "sent"),
-    };
   }
 
   async downloadMedia(message: IncomingMessage): Promise<AsyncIterable<Uint8Array>> {

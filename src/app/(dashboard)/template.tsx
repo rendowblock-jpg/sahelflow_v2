@@ -6,7 +6,12 @@
  *
  * Next.js re-renders template.tsx on every navigation (unlike layout.tsx
  * which persists). Using framer-motion's motion.div with a key on the
- * pathname gives a smooth enter animation per route.
+ * underlying page gives a smooth enter animation per route.
+ *
+ * Settings is an overlay (`/settings` over the page the seller was on).
+ * Keying that URL remounts the page behind the window — scroll, client
+ * state and data all start over, which reads as a refresh. The content key
+ * stays on the page underneath for the whole time Settings is open.
  *
  * The transition is intentionally subtle (150ms, 4px slide) — noticeable
  * enough to feel "alive" but not slow. Respects prefers-reduced-motion.
@@ -21,13 +26,29 @@ import { useState, useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 
+function contentPath(pathname: string): string | null {
+  const path =
+    pathname.length > 1 && pathname.endsWith("/")
+      ? pathname.slice(0, -1)
+      : pathname;
+  if (path === "/settings") return null;
+  return path;
+}
+
 export default function DashboardTemplate({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const reduceMotion = useReducedMotion();
+  const [contentKey, setContentKey] = useState(
+    () => contentPath(pathname) ?? pathname,
+  );
+  const nextContentPath = contentPath(pathname);
+  if (nextContentPath !== null && nextContentPath !== contentKey) {
+    setContentKey(nextContentPath);
+  }
   // mounted = false on SSR + first hydration, true after first effect.
   // This prevents the hydration mismatch: on first render, initial={false}
   // (starts at animate state, matches server). After mount, initial is
@@ -40,7 +61,7 @@ export default function DashboardTemplate({
 
   return (
     <motion.div
-      key={pathname}
+      key={nextContentPath ?? contentKey}
       initial={
         !mounted || reduceMotion
           ? false

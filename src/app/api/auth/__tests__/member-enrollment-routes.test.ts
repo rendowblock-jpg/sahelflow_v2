@@ -39,6 +39,15 @@ vi.mock("@/lib/identity/team-directory", () => ({
 
 vi.mock("@/lib/identity/team-credentials", () => ({
   createActiveTeamLoginSession: harness.memberLogin,
+  decideActiveTeamLogin: async (
+    loginId: string,
+    pin: string,
+    shop: unknown,
+  ) => {
+    const grant = await harness.memberLogin(loginId, pin, shop);
+    if (!grant) return { code: "invalid" as const };
+    return { code: "granted" as const, grant };
+  },
 }));
 
 vi.mock("@/lib/identity/team-revocation-authority", () => ({

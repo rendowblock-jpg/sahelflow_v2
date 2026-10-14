@@ -23,6 +23,10 @@ import {
 } from "@/lib/i18n/settings-workspace";
 import { cn } from "@/lib/utils";
 
+import {
+  bindSettingsSearchEscape,
+  consumeSettingsSearchEscape,
+} from "./settings-search-escape";
 import styles from "./settings-control-center.module.css";
 
 export type { SettingsWorkspaceAccess, SettingsWorkspaceGroup };
@@ -170,6 +174,13 @@ export function SettingsWorkspace({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const focusIntentRef = useRef<FocusIntent>(null);
   const breakpointFocusSourceRef = useRef<HTMLElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const field = searchRef.current;
+    if (!field) return;
+    return bindSettingsSearchEscape(field, () => setQuery(""));
+  }, []);
 
   const effectivePage =
     visiblePages.find((page) => page.id === active) ?? visiblePages[0] ?? SETTINGS_PAGES[0]!;
@@ -326,6 +337,7 @@ export function SettingsWorkspace({
                 aria-hidden="true"
               />
               <input
+                ref={searchRef}
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -334,11 +346,9 @@ export function SettingsWorkspace({
                     event.preventDefault();
                     openFirstMatch();
                   }
-                  if (event.key === "Escape" && query) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setQuery("");
-                  }
+                }}
+                onKeyDownCapture={(event) => {
+                  consumeSettingsSearchEscape(event, query, () => setQuery(""));
                 }}
                 placeholder={copy("searchSettings")}
                 aria-label={copy("searchSettings")}

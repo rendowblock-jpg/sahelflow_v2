@@ -40,6 +40,7 @@ export interface PreparedCanonicalCommerceOrder
     productId: string;
     productVariantId: string | null;
     quantity: number;
+    unitPrice: number;
   }>;
 }
 
@@ -214,16 +215,26 @@ export async function prepareCanonicalCommerceOrder(
     orderBy: [{ name: "asc" }, { id: "asc" }],
   });
 
-  const resolved = order.items.map((item) => resolveItem(products, item));
+  const resolved = order.items.map((item) => ({
+    ...resolveItem(products, item),
+    unitPrice: integerMoney(item.unitPrice, "items.unitPrice"),
+  }));
   const grouped = new Map<
     string,
-    { productId: string; productVariantId: string | null; quantity: number }
+    {
+      productId: string;
+      productVariantId: string | null;
+      quantity: number;
+      unitPrice: number;
+    }
   >();
   for (const item of resolved) {
-    const key = `${item.productId}:${item.productVariantId ?? "base"}`;
+    const key = `${item.productId}:${item.productVariantId ?? "base"}:${item.unitPrice}`;
     const prior = grouped.get(key);
     grouped.set(key, {
-      ...item,
+      productId: item.productId,
+      productVariantId: item.productVariantId,
+      unitPrice: item.unitPrice,
       quantity: (prior?.quantity ?? 0) + item.quantity,
     });
   }

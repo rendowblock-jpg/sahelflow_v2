@@ -126,15 +126,20 @@ function getWilayaCode(wilaya: string): string | null {
     "naâma": "45", "aïn témouchent": "46", "ghardaïa": "47", "relizane": "48",
   };
   const key = wilaya.toLowerCase().trim();
-  // Try exact match, then try without accents
   if (WILAYA_CODES[key]) return WILAYA_CODES[key]!;
+  // Full-name accent fold only. A shared first token ("El M'Ghair" / "El Bayadh")
+  // is not a match — an unknown wilaya stays unresolved.
   const normalized = key
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[''`]/g, "");
   if (WILAYA_CODES[normalized]) return WILAYA_CODES[normalized]!;
-  // Try matching just the first word (e.g. "Aïn Défla" → "ain défla")
   for (const [name, code] of Object.entries(WILAYA_CODES)) {
-    if (name.startsWith(normalized.split(" ")[0]!)) return code;
+    const folded = name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[''`]/g, "");
+    if (folded === normalized) return code;
   }
   return null;
 }

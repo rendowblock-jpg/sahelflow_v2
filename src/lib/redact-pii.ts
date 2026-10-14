@@ -143,6 +143,39 @@ export function redactPii<T>(value: T): T {
   return redactRecursive(value) as T;
 }
 
+/**
+ * Persist an assistant tool-call list. `name` is the tool identifier and
+ * `thoughtSignature` is a Gemini replay token, not customer PII. Argument
+ * and result strings still pass through redactPii.
+ */
+export function redactStoredAiToolCalls<T>(value: T): T {
+  if (!Array.isArray(value)) return redactPii(value);
+  return value.map(redactStoredToolCall) as T;
+}
+
+function redactStoredToolCall(entry: unknown): unknown {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    return redactPii(entry);
+  }
+  const record = entry as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(record)) {
+    const redacted =
+      key === "name" && typeof child === "string"
+        ? child
+        : key === "thoughtSignature" && typeof child === "string"
+          ? child
+          : redactPii(child);
+    Object.defineProperty(out, key, {
+      value: redacted,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
+  }
+  return out;
+}
+
 function scrubEmbeddedPii(value: string): string {
   return value
     .replace(PHONE_REGEX, "[PHONE]")

@@ -40,9 +40,10 @@ export interface UniversalRecordSearchState {
 }
 
 // Page/workspace matches are local and update on every keystroke. Record search
-// settles briefly so ordinary typing coalesces before we spend protected SQLite
-// projection work on the server. The server path itself is warm and parallel.
-export const SEARCH_DEBOUNCE_MS = 160;
+// fires immediately for the first settled query (two characters — the
+// projection's token floor) and then coalesces further typing into one frame
+// so a burst does not queue a SQLite projection read per character.
+export const SEARCH_DEBOUNCE_MS = 32;
 const RECORD_LIMIT = 24;
 const SESSION_CACHE_LIMIT = 40;
 
@@ -92,6 +93,7 @@ export function useUniversalRecordSearch(
     if (!open || normalizedQuery.length < 2 || hasCachedAnswer) return;
 
     const controller = new AbortController();
+    const delay = normalizedQuery.length <= 2 ? 0 : SEARCH_DEBOUNCE_MS;
     const timer = window.setTimeout(() => {
       void fetch(
         `/api/search?q=${encodeURIComponent(normalizedQuery)}&limit=${RECORD_LIMIT}`,
@@ -135,7 +137,7 @@ export function useUniversalRecordSearch(
           setAnswers((current) => new Map(current).set(normalizedQuery, failure));
           setLatest(failure);
         });
-    }, SEARCH_DEBOUNCE_MS);
+    }, delay);
 
     return () => {
       window.clearTimeout(timer);

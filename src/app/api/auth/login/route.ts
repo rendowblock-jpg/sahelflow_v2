@@ -16,7 +16,7 @@ import {
   recordLoginSuccess,
 } from "@/lib/auth/rate-limit";
 import { shopContext } from "@/lib/db";
-import { createActiveTeamLoginSession } from "@/lib/identity/team-credentials";
+import { decideActiveTeamLogin } from "@/lib/identity/team-credentials";
 import { registerTeamSessionAuthority } from "@/lib/identity/team-revocation-authority";
 import { establishTeamSession } from "@/lib/identity/team-session";
 import { logger } from "@/lib/logger";
@@ -88,6 +88,18 @@ async function loginHandler(request: Request): Promise<NextResponse> {
     );
   }
 
+  // A short team PIN is not a credential attempt. Reject it before the
+  // sliding window or the failure counter moves.
+  if (
+    parsed.data.loginId &&
+    (parsed.data.pin.length < 8 || parsed.data.pin.length > 32)
+  ) {
+    return NextResponse.json(
+      { error: "Validation failed", code: "REQUEST_VALIDATION_FAILED" },
+      { status: 400 },
+    );
+  }
+
   if (!(await isAuthSetup())) {
     return NextResponse.json(
       {
@@ -102,11 +114,22 @@ async function loginHandler(request: Request): Promise<NextResponse> {
   recordLoginAttempt(limiterKey);
 
   if (parsed.data.loginId) {
-    const grant = await createActiveTeamLoginSession(
+    const decision = await decideActiveTeamLogin(
       parsed.data.loginId,
       parsed.data.pin,
       shopContext,
     );
+    if (decision.code === "shop_unavailable") {
+      void auditLog("auth.login.failed", { reason: "shop_unavailable" }, ip);
+      return NextResponse.json(
+        {
+          error: "This shop is not available for that account.",
+          code: "TEAM_SHOP_UNAVAILABLE",
+        },
+        { status: 403 },
+      );
+    }
+    const grant = decision.code === "granted" ? decision.grant : null;
     if (!grant) {
       const failure = recordLoginFailure(limiterKey);
       void auditLog("auth.login.failed", { reason: "member_credentials" }, ip);

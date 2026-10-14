@@ -10,7 +10,9 @@
 import type { z } from "zod";
 
 import {
+  AI_GOVERNED_CONFIRMATION_REFUSAL,
   getAiToolPolicy,
+  isGovernedOrderConfirmation,
   parseSensitiveAiToolArgs,
 } from "@/lib/ai/actions/contracts";
 import type { AiActionExecutionAuthority } from "@/lib/ai/actions/execution-authority";
@@ -92,6 +94,16 @@ export function registerTool(tool: ChatTool): void {
     }
     if (policy.executionClass !== "sensitive") {
       return tool.execute(rawParams, context);
+    }
+
+    // The body knows `confirmed` and refuses it. Return that refusal before
+    // argument parsing so a governed confirmation never becomes a proposal
+    // and never throws out of the agent as an internal error.
+    if (isGovernedOrderConfirmation(tool.definition.name, rawParams)) {
+      return {
+        success: false,
+        error: AI_GOVERNED_CONFIRMATION_REFUSAL,
+      };
     }
 
     const params = parseSensitiveAiToolArgs(tool.definition.name, rawParams);

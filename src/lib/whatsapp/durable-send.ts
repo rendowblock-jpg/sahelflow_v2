@@ -681,7 +681,10 @@ async function resolveQuotedReplyContext(
       context: {
         stanzaId: applied.providerEventId,
         fromMe: false,
-        participant: jid,
+        // No participant: Baileys fills contextInfo.participant from
+        // key.participant or the chat JID, and that group-style sender makes
+        // WhatsApp drop a 1:1 or @lid quote. The sidecar embeds the quote
+        // without one.
         stubKind: quotedStubKind(target.messageType),
         stubText: quotedStubText(target.body),
       },

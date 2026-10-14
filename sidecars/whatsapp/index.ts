@@ -1447,17 +1447,21 @@ const inboundSpool = new WhatsAppInboundSpool({
 });
 
 wa.subscribe((event) => {
-  if (event.type !== "message" || !event.message || event.message.key.fromMe) {
+  if (event.type !== "message" || !event.message) {
     broadcast(event);
     return;
   }
   // C1 ingress scope: group/status/broadcast surfaces are intentionally
   // unsupported (ledger #317). Skip them before the spool so they can never
-  // loop against the app or appear as phantom conversations.
-  if (!isIndividualInboundJid(event.message.key.remoteJid)) {
-    console.warn(
-      `[sahelflow-whatsapp-sidecar] skipping non-individual inbound jid ${event.message.key.remoteJid ?? "<empty>"}`,
-    );
+  // loop against the app or appear as phantom conversations. fromMe 1:1
+  // echoes are spooled too; the app stores them as outbound, once.
+  if (!isIndividualInboundJid(event.message.key.remoteJid) || !event.message.key.id) {
+    if (event.message.key.fromMe) broadcast(event);
+    else {
+      console.warn(
+        `[sahelflow-whatsapp-sidecar] skipping non-individual inbound jid ${event.message.key.remoteJid ?? "<empty>"}`,
+      );
+    }
     return;
   }
   const status = wa.getStatus();

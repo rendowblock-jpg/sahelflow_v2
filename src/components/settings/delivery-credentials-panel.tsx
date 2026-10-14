@@ -33,18 +33,33 @@ import {
 
 type ProviderId = "yalidine" | "maystro" | "zrexpress" | "ecotrack";
 type ProviderStatus = Record<string, boolean>;
+type CapabilityCertification = {
+  status: string;
+  expiresAt: string | null;
+  lastCheckedAt: string | null;
+  reasonCode: string | null;
+  lastErrorCode: string | null;
+};
+
 type Certification = {
   provider: string;
   capabilities: {
-    connection?: {
-      status: string;
-      expiresAt: string | null;
-      lastCheckedAt: string | null;
-      reasonCode: string | null;
-      lastErrorCode: string | null;
-    };
+    connection?: CapabilityCertification;
+    fees?: CapabilityCertification;
+    booking?: CapabilityCertification;
+    tracking?: CapabilityCertification;
   };
 };
+
+/** Connection-probe success is not a live booking certification. */
+export function deliveryCredentialBadge(input: {
+  connectionStatus: string | undefined;
+  bookingStatus: string | undefined;
+}): "certified" | "connection_checked" | null {
+  if (input.bookingStatus === "certified") return "certified";
+  if (input.connectionStatus === "certified") return "connection_checked";
+  return null;
+}
 type ProviderConfig = {
   id: ProviderId;
   credentialRouteId: ProviderId;
@@ -288,7 +303,11 @@ export function DeliveryCredentialsPanel() {
 
           {state === "ready" ? PROVIDERS.map((provider) => {
             const configured = Object.values(status[provider.id] ?? {}).some(Boolean);
-            const certified = certifications[provider.id]?.capabilities.connection?.status === "certified";
+            const capabilities = certifications[provider.id]?.capabilities;
+            const certificationBadge = deliveryCredentialBadge({
+              connectionStatus: capabilities?.connection?.status,
+              bookingStatus: capabilities?.booking?.status,
+            });
             const isEditing = editing === provider.id;
             return (
               <section key={provider.id} className="space-y-3 rounded-surface border p-4">
@@ -298,7 +317,8 @@ export function DeliveryCredentialsPanel() {
                     <span className="truncate font-medium">{provider.name}</span>
                   </span>
                   <div className="flex gap-2">
-                    {certified ? <Badge><ShieldCheck className="me-1 size-3" aria-hidden="true" />{t("delivery.certified")}</Badge> : null}
+                    {certificationBadge === "certified" ? <Badge><ShieldCheck className="me-1 size-3" aria-hidden="true" />{t("delivery.certified")}</Badge> : null}
+                    {certificationBadge === "connection_checked" ? <Badge variant="outline"><ShieldCheck className="me-1 size-3" aria-hidden="true" />{t("delivery.connectionChecked")}</Badge> : null}
                     <Badge variant={configured ? "default" : "outline"}>
                       {configured ? t("delivery.configured") : t("delivery.notConfigured")}
                     </Badge>

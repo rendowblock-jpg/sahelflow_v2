@@ -10,6 +10,7 @@
  * (src/hooks/use-ai-workspace.ts) reads.
  */
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 vi.mock("@/lib/auth/server", () => ({
   requireAuth: vi.fn(async () => undefined),
@@ -195,6 +196,30 @@ describe("POST /api/ai/sessions/[id]/messages/stream — SSE error classificatio
       expect(JSON.stringify(failureEvent.data)).not.toContain(
         "Resource exhausted",
       );
+    } finally {
+      agentHarness.thrown = null;
+    }
+  });
+
+  it("maps a tool-argument ZodError to a coded validation event, not AI_INTERNAL_ERROR", async () => {
+    try {
+      z.object({ status: z.enum(["draft"]) }).parse({ status: "confirmed" });
+      throw new Error("expected ZodError");
+    } catch (error) {
+      if (!(error instanceof z.ZodError)) throw error;
+      agentHarness.thrown = error;
+    }
+    try {
+      const response = await POST(streamRequest(), {
+        params: Promise.resolve({ id: "sess-1" }),
+      });
+      expect(response.status).not.toBe(500);
+      const events = parseSse(await response.text());
+      const errorEvents = events.filter((event) => event.event === "error");
+      expect(errorEvents).toHaveLength(1);
+      expect(errorEvents[0]!.data.code).toBe("AI_TOOL_ARGUMENTS_INVALID");
+      expect(String(errorEvents[0]!.data.message)).toMatch(/^Invalid arguments —/);
+      expect(JSON.stringify(errorEvents[0]!.data)).not.toContain("AI_INTERNAL_ERROR");
     } finally {
       agentHarness.thrown = null;
     }

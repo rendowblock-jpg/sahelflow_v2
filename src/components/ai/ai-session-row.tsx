@@ -182,18 +182,23 @@ export function AiSessionRow({
           deleteArmed && "bg-destructive-subtle",
         )}
       >
-        {/* Seller-named titles keep their own direction so a Latin title
-            truncates at its own end while the row aligns with the rail. */}
+        {/* Direction isolation without the seller-label rule: its physical
+            text-align clips the start of a long Latin title. */}
         <span
-          dir="auto"
-          data-sf-seller-label="true"
           className={cn(
-            "min-w-0 flex-1 truncate text-body-sm",
-            session.active ? "font-medium" : "font-normal",
+            "flex min-w-0 flex-1 justify-start overflow-hidden",
             "group-hover/session:pe-6 group-focus-within/session:pe-6 max-md:pe-6",
           )}
         >
-          {session.title}
+          <span
+            dir="auto"
+            className={cn(
+              "block min-w-0 max-w-full truncate text-start text-body-sm",
+              session.active ? "font-medium" : "font-normal",
+            )}
+          >
+            {session.title}
+          </span>
         </span>
         {session.reviewCount > 0 ? (
           <span className="shrink-0 rounded-full bg-warning-soft px-1.5 text-caption font-semibold tabular-nums text-warning group-hover/session:hidden">

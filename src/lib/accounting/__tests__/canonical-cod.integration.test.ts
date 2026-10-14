@@ -13,6 +13,7 @@ import {
   recordCanonicalCodCollection,
 } from "@/lib/accounting/canonical-cod";
 import { getCanonicalCodWorkspaceSummary } from "@/lib/accounting/canonical-cod-projections";
+import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { executeManualOrderDecision } from "@/lib/orders/manual-confirmation";
 import { trustedManualOrderSourceMetadata } from "@/lib/orders/manual-order-authority";
@@ -339,6 +340,15 @@ describe("canonical COD collection, settlement and reconciliation", () => {
     expect(summary.reviewLines).toHaveLength(0);
     expect(summary.counts.settlementsNeedingReview).toBe(0);
     expect(summary.totals.unmatched).toBe(0);
+    const fee = await db.financialMovement.findFirst({
+      where: { orderId: order.id, movementType: "courier_fee_withheld" },
+    });
+    expect(fee).toMatchObject({ amount: -100, orderId: order.id });
+    const profitability = await getProfitabilityProjection(db as never, {
+      from: new Date("2020-01-01T00:00:00.000Z"),
+      to: new Date("2030-01-01T00:00:00.000Z"),
+    });
+    expect(profitability.courierFees).toBe(100);
   });
 
   it("corrects collection and settlement facts append-only and recomputes the order projection", async () => {

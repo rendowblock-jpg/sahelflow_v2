@@ -828,6 +828,7 @@
   "delivery.configured": "Configured",
   "delivery.confirmDelete": "Delete {{provider}} credentials?",
   "delivery.confirmDeleteDesc": "This will remove the stored credentials for this delivery provider. You'll need to re-enter them to use this provider again.",
+  "delivery.connectionChecked": "Connection checked",
   "delivery.connectionFailed": "Connection failed.",
   "delivery.createShipment": "Create Shipment",
   "delivery.creatingShipment": "Creating...",

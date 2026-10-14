@@ -4,6 +4,7 @@ import type { PrismaClient } from "@prisma/client";
 vi.mock("@/lib/audit", () => ({ logAudit: vi.fn(async () => {}) }));
 
 import { createRefund, reverseRefund } from "@/lib/data/refund-service";
+import { orderService } from "@/lib/data/order-service";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -303,6 +304,35 @@ describe("refund transaction facts", () => {
       });
     },
   );
+
+  it("recognizes only the revenue still left when a refunded confirmed order is later delivered", async () => {
+    const { customer, order } = await seedPreDeliveryOrder("confirmed");
+    await createRefund({ prisma: db as never }, {
+      orderId: order.id,
+      amount: 2000,
+      method: "cash",
+      idempotencyKey: "refund-before-delivery",
+    });
+    await orderService.updateStatus({ prisma: db as never }, order.id, "shipped");
+    await orderService.updateStatus({ prisma: db as never }, order.id, "delivered");
+    expect(await db.customer.findUnique({ where: { id: customer.id } }))
+      .toMatchObject({ orderCount: 1, totalSpent: 3000 });
+  });
+
+  it("subtracts only the revenue still recognized after a partial refund when the order is returned, once", async () => {
+    const { customer, product, order } = await seedDeliveredOrder();
+    await createRefund({ prisma: db as never }, {
+      orderId: order.id,
+      amount: 2000,
+      method: "cash",
+      idempotencyKey: "refund-then-returned",
+    });
+    await orderService.updateStatus({ prisma: db as never }, order.id, "returned");
+    expect(await db.customer.findUnique({ where: { id: customer.id } }))
+      .toMatchObject({ orderCount: 0, totalSpent: 0 });
+    expect((await db.product.findUnique({ where: { id: product.id } }))?.stock).toBe(100);
+    expect((await db.order.findUnique({ where: { id: order.id } }))?.status).toBe("returned");
+  });
 
   it("reverses a pre-delivery refund without re-crediting totalSpent (B7-2)", async () => {
     const { customer, order } = await seedPreDeliveryOrder("confirmed");

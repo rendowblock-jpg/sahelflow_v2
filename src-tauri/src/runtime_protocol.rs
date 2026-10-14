@@ -203,22 +203,45 @@ impl RuntimeProtocol {
     {
         self.clear_probe_diagnostic();
         let started_at = Instant::now();
+        // The boot budget covers the time until the port accepts. Semantic
+        // readiness (database, auth, protected search) then gets its own
+        // budget. Folding both into one clock killed a live Internal.42
+        // server that had listened at 67s and was still starting, and the
+        // retry paid the cold start again.
+        const READY_AFTER_LISTENING: Duration = Duration::from_secs(45);
+        let mut listening_since: Option<Instant> = None;
         let mut last_failure = "the local server did not accept a readiness connection".to_string();
-        while started_at.elapsed() < timeout {
+        loop {
+            let gave_up = match listening_since {
+                Some(since) => since.elapsed() >= READY_AFTER_LISTENING,
+                None => started_at.elapsed() >= timeout,
+            };
+            if gave_up {
+                break;
+            }
             if let Some(code) = child_exit()? {
                 let detail =
                     format!("the local server process exited before readiness with code {code}");
                 self.write_probe_diagnostic(&detail);
                 return Ok(ReadinessOutcome::ProcessExited(code));
             }
-            match self.probe_once(&mut on_listening) {
+            let mut accepted = false;
+            match self.probe_once(&mut || {
+                accepted = true;
+                on_listening();
+            }) {
                 Ok(()) => {
                     self.clear_probe_diagnostic();
                     return Ok(ReadinessOutcome::Ready);
                 }
-                Err(detail) => last_failure = detail,
+                Err(detail) => {
+                    if accepted {
+                        listening_since.get_or_insert_with(Instant::now);
+                    }
+                    last_failure = detail;
+                }
             }
-            std::thread::sleep(Duration::from_millis(250));
+            std::thread::sleep(Duration::from_millis(40));
         }
         self.write_probe_diagnostic(&last_failure);
         Ok(ReadinessOutcome::TimedOut)

@@ -25,6 +25,32 @@ mod survivability_bridge;
 #[allow(clippy::needless_return)]
 mod survivability_controller;
 
+fn exit_before_window(message: &str) -> ! {
+    eprintln!("[sahelflow] {message}");
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        let title: Vec<u16> = std::ffi::OsStr::new("SahelFlow")
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+        let body: Vec<u16> = std::ffi::OsStr::new(message)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+        unsafe {
+            windows_sys::Win32::UI::WindowsAndMessaging::MessageBoxW(
+                std::ptr::null_mut(),
+                body.as_ptr(),
+                title.as_ptr(),
+                windows_sys::Win32::UI::WindowsAndMessaging::MB_ICONERROR
+                    | windows_sys::Win32::UI::WindowsAndMessaging::MB_OK,
+            );
+        }
+    }
+    std::process::exit(1);
+}
+
 fn main() {
     #[cfg(not(debug_assertions))]
     {
@@ -47,20 +73,18 @@ fn main() {
         sahelflow_lib::native_splash::start();
 
         if let Err(error) = survivability_controller::recover_pending_before_run() {
-            eprintln!(
-                "[sahelflow] protected replacement restore blocked ({})",
+            exit_before_window(&format!(
+                "SahelFlow could not finish restoring the previous shop ({}). The startup card will close. Start SahelFlow again after the other copy has quit.",
                 error.kind()
-            );
-            std::process::exit(1);
+            ));
         }
         let controller = match survivability_controller::SurvivabilityController::start() {
             Ok(controller) => controller,
             Err(error) => {
-                eprintln!(
-                    "[sahelflow] survivability controller could not start ({})",
+                exit_before_window(&format!(
+                    "SahelFlow could not start its protected shop controller ({}).",
                     error.kind()
-                );
-                std::process::exit(1);
+                ));
             }
         };
         sahelflow_lib::run();

@@ -462,10 +462,9 @@ describe("Yalidine delivery adapter (deep)", () => {
         return { ok: false, status: 404, text: async () => "" };
       });
 
-      const result = await yalidineAdapter.createShipment(sampleRequest, validCreds);
-      expect(result.success).toBe(false);
-      expect(result.trackingId).toBe("");
-      expect(result.error).toBeTruthy();
+      await expect(yalidineAdapter.createShipment(sampleRequest, validCreds)).rejects.toMatchObject({
+        code: "YALIDINE_CREATE_OUTCOME_AMBIGUOUS",
+      });
     });
 
     it("returns error when create API returns non-OK", async () => {
@@ -495,9 +494,9 @@ describe("Yalidine delivery adapter (deep)", () => {
         return { ok: true, json: async () => ({}) };
       });
 
-      const result = await yalidineAdapter.createShipment(sampleRequest, validCreds);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("Réponse vide");
+      await expect(yalidineAdapter.createShipment(sampleRequest, validCreds)).rejects.toMatchObject({
+        code: "YALIDINE_CREATE_OUTCOME_AMBIGUOUS",
+      });
     });
 
     it("returns error when fetch throws", async () => {
@@ -511,9 +510,9 @@ describe("Yalidine delivery adapter (deep)", () => {
         return { ok: true, json: async () => ({}) };
       });
 
-      const result = await yalidineAdapter.createShipment(sampleRequest, validCreds);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("connection reset");
+      await expect(yalidineAdapter.createShipment(sampleRequest, validCreds)).rejects.toMatchObject({
+        code: "YALIDINE_CREATE_OUTCOME_AMBIGUOUS",
+      });
     });
   });
 

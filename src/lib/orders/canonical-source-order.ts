@@ -69,8 +69,17 @@ export const canonicalSourceOrderSchema = z
         message: "Only AI-created canonical source orders may enter as draft",
       });
     }
+    const commercePriced = ["shopify", "woocommerce", "youcan"].includes(value.source);
+    if (commercePriced && value.items.some((item) => item.unitPrice === undefined)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["items"],
+        message: "Commerce lines must keep the provider unit price",
+      });
+    }
     if (
       value.source !== "storefront" &&
+      !commercePriced &&
       value.items.some((item) => item.unitPrice !== undefined)
     ) {
       context.addIssue({
@@ -97,6 +106,26 @@ export interface CanonicalSourceOrderResult {
     totalPrice: number;
     wilaya: string;
   };
+}
+
+const COMMERCE_PRICED_SOURCES = new Set(["shopify", "woocommerce", "youcan"]);
+
+function codUnitPrice(
+  source: CanonicalOrderSource,
+  supplied: number | undefined,
+  catalogPrice: number,
+): number {
+  if (COMMERCE_PRICED_SOURCES.has(source)) {
+    if (supplied === undefined) {
+      throw new ValidationError(
+        "Commerce lines must keep the provider unit price",
+        "items.unitPrice",
+      );
+    }
+    return supplied;
+  }
+  if (source === "storefront" && supplied !== undefined) return supplied;
+  return catalogPrice;
 }
 
 function canonicalAlgerianPhone(value: string, field: string): string {
@@ -236,9 +265,7 @@ export async function createCanonicalSourceOrder(
             productName: product.name,
             productVariantName: variant.name,
             quantity: item.quantity,
-            unitPrice: data.source === "storefront" && item.unitPrice !== undefined
-              ? item.unitPrice
-              : variant.price ?? product.price,
+            unitPrice: codUnitPrice(data.source, item.unitPrice, variant.price ?? product.price),
           };
         }
 
@@ -254,9 +281,7 @@ export async function createCanonicalSourceOrder(
           productName: product.name,
           productVariantName: null,
           quantity: item.quantity,
-          unitPrice: data.source === "storefront" && item.unitPrice !== undefined
-            ? item.unitPrice
-            : product.price,
+          unitPrice: codUnitPrice(data.source, item.unitPrice, product.price),
         };
       });
 

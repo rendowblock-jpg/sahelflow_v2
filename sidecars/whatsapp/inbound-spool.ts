@@ -95,14 +95,12 @@ function syncDirectory(path: string): void {
 }
 
 function assertInboundMessage(message: IncomingMessage): void {
-  if (message.key.fromMe) {
-    throw new Error(
-      "Outbound WhatsApp messages cannot enter the inbound spool",
-    );
-  }
+  // fromMe is a phone-originated echo in the same 1:1 chat. It is spooled so
+  // it survives refresh, and the app persists it as one outbound row. It must
+  // never be turned into a second inbound message.
   if (!message.key.remoteJid || !message.key.id) {
     throw new Error(
-      "Inbound WhatsApp messages require provider JID and message ID",
+      "WhatsApp spool messages require provider JID and message ID",
     );
   }
 }

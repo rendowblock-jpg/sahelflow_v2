@@ -173,4 +173,90 @@ describe("POST /api/storefront/submit", () => {
     expect(await rawDb.customer.count()).toBe(1);
     expect(await rawDb.order.count()).toBe(2);
   });
+
+  it("rejects an oversell when active reservations consume the stock", async () => {
+    const product = await seedProduct({ stock: 4 });
+    await seedStorefront({ productIds: [product.id] });
+    const commandId = "cmd_storefront_stock";
+    await rawDb.businessCommand.create({
+      data: {
+        id: commandId,
+        idempotencyKey: "storefront-stock-reservation",
+        commandType: "test.reservation",
+        aggregateType: "product",
+        aggregateId: product.id,
+        requestHash: "d".repeat(64),
+        status: "committed",
+        actor: "test",
+        correlationId: "storefront-stock-reservation",
+        expectedVersion: 0,
+        committedVersion: 1,
+      },
+    });
+    await rawDb.inventoryReservation.create({
+      data: {
+        id: "reservation_storefront_stock",
+        reservationKey: "storefront-stock-hold",
+        orderId: "order_storefront_hold",
+        productId: product.id,
+        quantity: 3,
+        state: "active",
+        createdByCommandId: commandId,
+      },
+    });
+
+    const response = await POST(
+      mockPost("http://localhost/api/storefront/submit", {
+        slug: "test-store",
+        submissionId: "40404040-4040-4040-8040-404040404040",
+        customer: {
+          name: "Oversell",
+          phone: "0555123456",
+          wilaya: "Alger",
+          commune: "B",
+          address: "C",
+        },
+        items: [{ productId: product.id, quantity: 2 }],
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ code: "STOREFRONT_STOCK_UNAVAILABLE" });
+    expect(await rawDb.order.count()).toBe(0);
+  });
+
+  it("still applies Turnstile and OTP gates when the client spoofs the desktop shell", async () => {
+    const product = await seedProduct();
+    const storefront = await seedStorefront({ slug: "otp-gate-store", productIds: [product.id] });
+    await rawDb.storefrontGateConfig.create({
+      data: { storefrontSlug: storefront.slug, otpEnabled: true },
+    });
+    try {
+      const response = await POST(
+        mockPost(
+          "http://localhost/api/storefront/submit",
+          {
+            slug: storefront.slug,
+            customer: {
+              name: "Desktop Spoof",
+              phone: "0555123456",
+              wilaya: "Alger",
+              commune: "B",
+              address: "C",
+            },
+            items: [{ productId: product.id, quantity: 1 }],
+          },
+          {
+            "x-sf-tauri": "1",
+            "user-agent": "Mozilla/5.0 Tauri/2.0",
+          },
+        ),
+      );
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toMatchObject({ code: "OTP_VERIFICATION_REQUIRED" });
+      expect(await rawDb.order.count()).toBe(0);
+    } finally {
+      await rawDb.storefrontGateConfig.deleteMany({ where: { storefrontSlug: storefront.slug } });
+    }
+  });
 });

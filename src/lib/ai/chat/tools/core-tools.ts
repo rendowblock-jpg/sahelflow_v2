@@ -20,6 +20,7 @@ import { grossRevenue } from "@/lib/data/metrics";
 import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
+import { AI_GOVERNED_CONFIRMATION_REFUSAL } from "@/lib/ai/actions/contracts";
 import { currentAiSourceProposal } from "@/lib/ai/chat/source-proposal";
 import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 
@@ -400,14 +401,24 @@ registerTool({
   definition: {
     name: "update_order_status",
     description:
-      "Update the status of a legacy-compatible order. Canonical confirmation remains a governed seller action. Valid statuses: draft, pending, shipped, delivered, cancelled, returned.",
+      "Update the status of a legacy-compatible order. Canonical confirmation remains a governed seller action and is refused. Valid statuses: draft, pending, confirmed, shipped, delivered, cancelled, returned.",
     parameters: {
       type: "object",
       properties: {
         orderId: { type: "string" },
         status: {
           type: "string",
-          description: "draft|pending|shipped|delivered|cancelled|returned",
+          enum: [
+            "draft",
+            "pending",
+            "confirmed",
+            "shipped",
+            "delivered",
+            "cancelled",
+            "returned",
+          ],
+          description:
+            "draft|pending|confirmed|shipped|delivered|cancelled|returned",
         },
       },
       required: ["orderId", "status"],
@@ -419,8 +430,7 @@ registerTool({
       if (input.status === "confirmed") {
         return {
           success: false,
-          error:
-            "La confirmation exige la commande gouvernée; l’IA ne peut pas utiliser le chemin historique.",
+          error: AI_GOVERNED_CONFIRMATION_REFUSAL,
         };
       }
       const db = getDb(ctx);
