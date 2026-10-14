@@ -75,13 +75,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     (key: SearchCommandCopyKey) => searchCommandCopy(locale, key),
     [locale],
   );
-  const seed = React.useRef(peekCommandPaletteSeed());
-  const [query, setQuery] = React.useState(seed.current.query);
+  const [query, setQuery] = React.useState(
+    () => peekCommandPaletteSeed().query,
+  );
   const [scope, setScope] = React.useState<SearchScope>("all");
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
-  const queryRef = React.useRef(query);
-  queryRef.current = query;
   const normalizedQuery = normalizeSearchText(query);
   const technicalQuery =
     normalizedQuery.length > 0 && /^[0-9\s()+\-./]+$/u.test(normalizedQuery);
@@ -252,7 +251,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   React.useLayoutEffect(() => {
     const current = peekCommandPaletteSeed();
     if (!current.open && !current.query) return;
-    if (current.query && current.query !== query) setQuery(current.query);
     if (current.open && !open) onOpenChange(true);
     inputRef.current?.focus();
     if (current.query.length > 0) {
@@ -341,11 +339,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               // cmdk clears its store when the results list mounts. Ignore
               // that reset while the field still shows what was typed.
               const typed = inputRef.current?.value;
-              if (
-                value === "" &&
-                queryRef.current !== "" &&
-                typed === queryRef.current
-              ) {
+              if (value === "" && query !== "" && typed === query) {
                 return;
               }
               setQuery(value);
