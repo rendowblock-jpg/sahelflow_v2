@@ -112,6 +112,73 @@ function normalizeOrder(order: WooOrder): NormalizedOrder {
   };
 }
 
+function expandIpv6(host: string): number[] | null {
+  const halves = host.split("::");
+  if (halves.length > 2) return null;
+  const parse = (side: string): number[] | null => {
+    if (side === "") return [];
+    const parts = side.split(":");
+    const out: number[] = [];
+    for (const part of parts) {
+      if (!/^[0-9a-f]{1,4}$/.test(part)) return null;
+      out.push(Number.parseInt(part, 16));
+    }
+    return out;
+  };
+  const head = parse(halves[0] ?? "");
+  if (!head) return null;
+  if (halves.length === 1) return head.length === 8 ? head : null;
+  const tail = parse(halves[1] ?? "");
+  if (!tail || head.length + tail.length > 8) return null;
+  return [...head, ...Array.from({ length: 8 - head.length - tail.length }, () => 0), ...tail];
+}
+
+function classifyBlockedHost(hostname: string): "localhost" | "private" | null {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host === "::1" ||
+    host === "0:0:0:0:0:0:0:1"
+  ) {
+    return "localhost";
+  }
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
+    const parts = host.split(".").map(Number);
+    if (parts.some((part) => part > 255)) return "private";
+    const [a, b] = parts;
+    if (a === 127 || a === 0) return "localhost";
+    if (
+      a === 10 ||
+      (a === 172 && b !== undefined && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 169 && b === 254)
+    ) {
+      return "private";
+    }
+    return null;
+  }
+  if (!host.includes(":")) return null;
+  const hextets = expandIpv6(host);
+  if (!hextets) return "private";
+  if (hextets.every((part, index) => part === (index === 7 ? 1 : 0))) return "localhost";
+  if ((hextets[0]! & 0xfe00) === 0xfc00) return "private";
+  if ((hextets[0]! & 0xffc0) === 0xfe80) return "private";
+  const mapped =
+    hextets[0] === 0 &&
+    hextets[1] === 0 &&
+    hextets[2] === 0 &&
+    hextets[3] === 0 &&
+    hextets[4] === 0 &&
+    hextets[5] === 0xffff;
+  if (mapped) {
+    const hi = hextets[6]!;
+    const lo = hextets[7]!;
+    return classifyBlockedHost(`${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`);
+  }
+  return null;
+}
+
 function validateSiteUrl(siteUrl: string): URL {
   let parsed: URL;
   try {
@@ -128,32 +195,43 @@ function validateSiteUrl(siteUrl: string): URL {
       "Invalid WooCommerce site URL: protocol must be http or https",
     );
   }
+  if (parsed.username !== "" || parsed.password !== "") {
+    throw new Error("WooCommerce site URL cannot point to a private or link-local IP address");
+  }
 
-  const hostname = parsed.hostname.toLowerCase();
-  if (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "0.0.0.0" ||
-    hostname.endsWith(".localhost") ||
-    hostname === "::1"
-  ) {
+  const blocked = classifyBlockedHost(parsed.hostname);
+  if (blocked === "localhost") {
     throw new Error("WooCommerce site URL cannot point to localhost");
   }
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
-    const parts = hostname.split(".").map(Number);
-    const privateAddress =
-      parts[0] === 10 ||
-      (parts[0] === 172 && (parts[1] ?? 0) >= 16 && (parts[1] ?? 0) <= 31) ||
-      (parts[0] === 192 && parts[1] === 168) ||
-      (parts[0] === 169 && parts[1] === 254) ||
-      parts[0] === 0;
-    if (privateAddress) {
-      throw new Error(
-        "WooCommerce site URL cannot point to a private or link-local IP address",
-      );
-    }
+  if (blocked === "private") {
+    throw new Error(
+      "WooCommerce site URL cannot point to a private or link-local IP address",
+    );
   }
   return parsed;
+}
+
+const MAX_REDIRECTS = 3;
+
+async function fetchWoo(
+  url: string,
+  init: { headers: { Authorization: string }; signal: AbortSignal },
+): Promise<Response> {
+  let current = validateSiteUrl(url);
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    const response = await fetch(current.toString(), { ...init, redirect: "manual" });
+    if (response.status < 300 || response.status >= 400) return response;
+    const location = response.headers.get("Location") ?? response.headers.get("location");
+    if (!location || hop === MAX_REDIRECTS) {
+      throw new Error("WooCommerce site URL redirect was refused");
+    }
+    const next = validateSiteUrl(new URL(location, current).toString());
+    if (next.hostname !== current.hostname) {
+      throw new Error("WooCommerce site URL redirect was refused");
+    }
+    current = next;
+  }
+  throw new Error("WooCommerce site URL redirect was refused");
 }
 
 export const woocommerceAdapter: EcommerceAdapter = {
@@ -197,7 +275,7 @@ export const woocommerceAdapter: EcommerceAdapter = {
       const timeoutId = setTimeout(() => controller.abort(), 30_000);
       let response: Response;
       try {
-        response = await fetch(`${baseApi}?${params.toString()}`, {
+        response = await fetchWoo(`${baseApi}?${params.toString()}`, {
           headers: { Authorization: auth },
           signal: controller.signal,
         });
@@ -291,7 +369,7 @@ export const woocommerceAdapter: EcommerceAdapter = {
       const timeoutId = setTimeout(() => controller.abort(), 30_000);
       let response: Response;
       try {
-        response = await fetch(`${baseApi}?${params.toString()}`, {
+        response = await fetchWoo(`${baseApi}?${params.toString()}`, {
           headers: { Authorization: auth },
           signal: controller.signal,
         });

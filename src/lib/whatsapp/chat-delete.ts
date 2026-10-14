@@ -105,6 +105,7 @@ async function withBusyRetry<T>(run: () => Promise<T>): Promise<T> {
 export async function deleteWhatsAppChats(
   context: ServiceContext,
   ids: string[],
+  options?: { afterTargetRead?: () => Promise<void> },
 ): Promise<DeleteWhatsAppChatsResult> {
   const uniqueIds = [
     ...new Set(ids.map((id) => id.trim()).filter(Boolean)),
@@ -133,77 +134,66 @@ export async function deleteWhatsAppChats(
     conversation.sourceId ? [conversation.sourceId] : [],
   );
 
-  const [messages, events] = await withBusyRetry(() =>
-    Promise.all([
-      context.prisma.message.findMany({
-        where: { conversationId: { in: conversationIds } },
-        select: { id: true },
-      }),
-      context.prisma.providerIngressEvent.findMany({
-        where: {
-          OR: [
-            ...(sourceIds.length > 0
-              ? [{ sourceId: { in: sourceIds } }]
-              : []),
-            ...(conversationIds.length > 0
-              ? [{ conversationId: { in: conversationIds } }]
-              : []),
-          ],
-        },
-        select: { id: true },
-      }),
-    ]),
-  );
-  const messageIds = messages.map((message) => message.id);
-  const eventIds = events.map((event) => event.id);
+  // A message committed after the conversation read must not be cascade-deleted
+  // without its ingress tombstone. The transaction re-reads both sets, and
+  // tombstones every ingress row for the chat source rather than a stale id list.
+  if (options?.afterTargetRead) await options.afterTargetRead();
 
-  const effects = messageIds.length
-    ? await withBusyRetry(() =>
-        context.prisma.whatsAppOutboundEffect.findMany({
-          where: { messageId: { in: messageIds } },
-          select: { effectKey: true },
-        }),
-      )
-    : [];
-  const effectKeys = effects.map((effect) => effect.effectKey);
+  const ingressWhere = {
+    OR: [
+      ...(sourceIds.length > 0 ? [{ sourceId: { in: sourceIds } }] : []),
+      { conversationId: { in: conversationIds } },
+    ],
+  };
 
   // F-10: the commit itself is the write that loses the lock. A longer
   // transaction budget plus the busy retry absorbs a WhatsApp writer that
   // holds SQLite for more than a few hundred milliseconds.
-  await withBusyRetry(() =>
+  const messageIds = await withBusyRetry(() =>
     context.prisma.$transaction(
       async (tx) => {
-        if (eventIds.length > 0) {
-          // Terminal tombstone — never delete. ProviderIngressEvent.ingressKey is
-          // the provider-replay idempotency barrier, and ProviderIngressAttempt
-          // rows carry a Restrict FK into the event; both stay as append-only
-          // evidence. The processor's terminal-status gate and the operator
-          // recovery guard refuse "chat_deleted", so no path can re-apply these
-          // events and resurrect the deleted conversations.
-          await tx.providerIngressEvent.updateMany({
-            where: { id: { in: eventIds } },
-            data: {
-              status: "chat_deleted",
-              lastErrorCode: "CHAT_DELETED",
-              nextAttemptAt: null,
-              lockedAt: null,
-              leaseToken: null,
-            },
-          });
-        }
-        if (effectKeys.length > 0) {
+        const liveMessages = await tx.message.findMany({
+          where: { conversationId: { in: conversationIds } },
+          select: { id: true },
+        });
+        const liveMessageIds = liveMessages.map((message) => message.id);
+        const liveEffects = liveMessageIds.length
+          ? await tx.whatsAppOutboundEffect.findMany({
+              where: { messageId: { in: liveMessageIds } },
+              select: { effectKey: true },
+            })
+          : [];
+        const liveEffectKeys = liveEffects.map((effect) => effect.effectKey);
+        // Terminal tombstone — never delete. ProviderIngressEvent.ingressKey is
+        // the provider-replay idempotency barrier, and ProviderIngressAttempt
+        // rows carry a Restrict FK into the event; both stay as append-only
+        // evidence. The processor's terminal-status gate and the operator
+        // recovery guard refuse "chat_deleted", so no path can re-apply these
+        // events and resurrect the deleted conversations.
+        await tx.providerIngressEvent.updateMany({
+          where: ingressWhere,
+          data: {
+            status: "chat_deleted",
+            lastErrorCode: "CHAT_DELETED",
+            nextAttemptAt: null,
+            lockedAt: null,
+            leaseToken: null,
+          },
+        });
+        if (liveEffectKeys.length > 0) {
           await tx.outboxIntent.deleteMany({
-            where: { effectKey: { in: effectKeys } },
+            where: { effectKey: { in: liveEffectKeys } },
           });
         }
-        if (messageIds.length > 0) {
+        if (liveMessageIds.length > 0) {
           await tx.whatsAppOutboundEffect.deleteMany({
-            where: { messageId: { in: messageIds } },
+            where: { messageId: { in: liveMessageIds } },
           });
         }
         await tx.conversation.deleteMany({
           where: { id: { in: conversationIds } },
         });
+        return liveMessageIds;
       },
       { maxWait: 8_000, timeout: 20_000 },
     ),

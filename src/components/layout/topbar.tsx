@@ -608,7 +608,10 @@ export function Topbar({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link href="/profile">
+                {/* `(.)settings` intercepts this. `/profile` is only the
+                    direct-load alias, which paints Settings on a fresh
+                    dashboard and leaves the page the seller was on. */}
+                <Link href="/settings?group=profile">
                   <User className="me-2 size-4" aria-hidden="true" />
                   {t("topbar.profile")}
                 </Link>

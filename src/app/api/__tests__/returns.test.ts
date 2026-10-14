@@ -132,8 +132,10 @@ describe("POST /api/returns — create return request", () => {
   beforeEach(async () => { await cleanDb(); });
   afterAll(async () => { await rawDb.$disconnect(); });
 
-  it("creates a return in 'requested' status on valid input (201)", async () => {
-    const { order } = await seedOrderAtStatus("delivered");
+  it("rejects a legacy return instead of leaving a requested row with stock and COD unchanged", async () => {
+    const { order, product, customer } = await seedOrderAtStatus("delivered");
+    const stockBefore = (await rawDb.product.findUnique({ where: { id: product.id } }))!.stock;
+    const spentBefore = (await rawDb.customer.findUnique({ where: { id: customer.id } }))!.totalSpent;
 
     const res = await POSTReturn(
       mockPost("http://localhost/api/returns", {
@@ -144,30 +146,24 @@ describe("POST /api/returns — create return request", () => {
         notes: "Items in original packaging",
       }),
     );
-    expect(res.status).toBe(201);
     const body = await getJson(res);
-    expect(body.return).toBeTruthy();
-    const ret = body.return as Record<string, unknown>;
-    expect(ret.status).toBe("requested");
-    expect(ret.type).toBe("return");
-    expect(ret.reason).toBe("Customer changed mind");
-    // itemCount appended to notes (no dedicated column)
-    expect(String(ret.notes)).toMatch(/Items returned: 2/);
-
-    // DB row created
-    const dbRet = await rawDb.return.findFirst({ where: { orderId: order.id } });
-    expect(dbRet).toBeTruthy();
-    expect(dbRet!.status).toBe("requested");
+    expect(res.status).toBe(409);
+    expect(body.code).toBe("GOVERNED_RETURN_REQUIRED");
+    expect(await rawDb.return.count({ where: { orderId: order.id } })).toBe(0);
+    expect((await rawDb.order.findUnique({ where: { id: order.id } }))!.status).toBe("delivered");
+    expect((await rawDb.product.findUnique({ where: { id: product.id } }))!.stock).toBe(stockBefore);
+    expect((await rawDb.customer.findUnique({ where: { id: customer.id } }))!.totalSpent).toBe(spentBefore);
   });
 
-  it("defaults type to 'return' when omitted", async () => {
+  it("rejects an omitted type the same way and still creates no return row", async () => {
     const { order } = await seedOrderAtStatus("delivered");
     const res = await POSTReturn(
       mockPost("http://localhost/api/returns", { orderId: order.id, reason: "x" }),
     );
-    expect(res.status).toBe(201);
     const body = await getJson(res);
-    expect((body.return as { type: string }).type).toBe("return");
+    expect(res.status).toBe(409);
+    expect(body.code).toBe("GOVERNED_RETURN_REQUIRED");
+    expect(await rawDb.return.count({ where: { orderId: order.id } })).toBe(0);
   });
 
   it("does not create a legacy return for a canonical delivered order", async () => {

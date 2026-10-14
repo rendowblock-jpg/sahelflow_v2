@@ -60,6 +60,44 @@ function isShopifyCreds(
   return "shop" in credentials && "accessToken" in credentials;
 }
 
+const SHOPIFY_SHOP_LABEL = /^[A-Za-z0-9][A-Za-z0-9-]*$/;
+
+/**
+ * The Admin API host is exactly one DNS label plus `.myshopify.com`.
+ * A dot, slash, query, hash, or port would put the access token on another host.
+ */
+function shopifyAdminHost(shop: string): string {
+  const raw = shop.trim();
+  if (raw.length === 0 || raw.length > 200 || /[/?#\\@:\s%]/.test(raw)) {
+    throw new Error("Invalid Shopify shop domain");
+  }
+  const suffix = ".myshopify.com";
+  const lower = raw.toLowerCase();
+  const label = lower.endsWith(suffix) ? lower.slice(0, -suffix.length) : lower;
+  if (!SHOPIFY_SHOP_LABEL.test(label) || label.length > 63) {
+    throw new Error("Invalid Shopify shop domain");
+  }
+  const host = `${label}.myshopify.com`;
+  let parsed: URL;
+  try {
+    parsed = new URL(`https://${host}/`);
+  } catch {
+    throw new Error("Invalid Shopify shop domain");
+  }
+  if (
+    parsed.hostname !== host ||
+    parsed.port !== "" ||
+    parsed.username !== "" ||
+    parsed.password !== "" ||
+    parsed.pathname !== "/" ||
+    parsed.search !== "" ||
+    parsed.hash !== ""
+  ) {
+    throw new Error("Invalid Shopify shop domain");
+  }
+  return host;
+}
+
 function parseNextPageInfo(linkHeader: string | null): string | null {
   if (!linkHeader) return null;
   const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
@@ -130,7 +168,7 @@ export const shopifyAdapter: EcommerceAdapter = {
     }
 
     const { shop, accessToken } = credentials;
-    const baseHost = `${shop}.myshopify.com`;
+    const baseHost = shopifyAdminHost(shop);
     const watermarkIsIso = isIso8601Watermark(request.watermark);
     let url = request.cursor
       ? `https://${baseHost}/admin/api/${API_VERSION}/orders.json?page_info=${encodeURIComponent(request.cursor)}&limit=${PAGE_SIZE}`
@@ -201,7 +239,7 @@ export const shopifyAdapter: EcommerceAdapter = {
     }
 
     const { shop, accessToken } = credentials;
-    const baseHost = `${shop}.myshopify.com`;
+    const baseHost = shopifyAdminHost(shop);
     let allOrders: NormalizedOrder[] = [];
     let page = 0;
     let hasMore = false;

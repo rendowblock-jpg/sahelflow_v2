@@ -7,18 +7,23 @@ const harness = vi.hoisted(() => ({
   listMembers: vi.fn(),
   createSession: vi.fn(),
   assertActive: vi.fn(),
+  pinMatches: vi.fn(),
 }));
 
 vi.mock("../team-directory", () => ({
   listTeamMembers: harness.listMembers,
   createTeamLoginSession: harness.createSession,
+  teamMemberPinMatches: harness.pinMatches,
 }));
 
 vi.mock("../team-revocation-authority", () => ({
   assertTeamMemberActive: harness.assertActive,
 }));
 
-import { createActiveTeamLoginSession } from "../team-credentials";
+import {
+  createActiveTeamLoginSession,
+  decideActiveTeamLogin,
+} from "../team-credentials";
 
 const SHOP: ShopContext = Object.freeze({
   workspaceId: "1".repeat(32),
@@ -48,6 +53,7 @@ const MEMBER = Object.freeze({
 
 beforeEach(() => {
   harness.listMembers.mockReset().mockResolvedValue([MEMBER]);
+  harness.pinMatches.mockReset().mockResolvedValue(false);
   harness.assertActive.mockReset().mockResolvedValue(undefined);
   harness.createSession.mockReset().mockResolvedValue({
     sessionId: "member-session",
@@ -78,11 +84,32 @@ describe("createActiveTeamLoginSession", () => {
     expect(harness.createSession).not.toHaveBeenCalled();
   });
 
-  it("returns a generic credential miss outside the member shop grant", async () => {
+  it("returns a generic credential miss outside the member shop grant when the PIN is wrong", async () => {
     harness.listMembers.mockResolvedValue([
       { ...MEMBER, shopIds: ["other-shop"] },
     ]);
+    harness.pinMatches.mockResolvedValue(false);
 
+    await expect(
+      decideActiveTeamLogin("AMINA.OPS", "12345678", SHOP),
+    ).resolves.toEqual({ code: "invalid" });
+    await expect(
+      createActiveTeamLoginSession("AMINA.OPS", "12345678", SHOP),
+    ).resolves.toBeNull();
+    expect(harness.pinMatches).toHaveBeenCalledWith("AMINA.OPS", "12345678", SHOP);
+    expect(harness.assertActive).not.toHaveBeenCalled();
+    expect(harness.createSession).not.toHaveBeenCalled();
+  });
+
+  it("reports this shop as unavailable when the PIN matches a grant for another shop", async () => {
+    harness.listMembers.mockResolvedValue([
+      { ...MEMBER, shopIds: ["other-shop"] },
+    ]);
+    harness.pinMatches.mockResolvedValue(true);
+
+    await expect(
+      decideActiveTeamLogin("AMINA.OPS", "12345678", SHOP),
+    ).resolves.toEqual({ code: "shop_unavailable" });
     await expect(
       createActiveTeamLoginSession("AMINA.OPS", "12345678", SHOP),
     ).resolves.toBeNull();

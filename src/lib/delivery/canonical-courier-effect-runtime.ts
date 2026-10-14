@@ -1274,6 +1274,7 @@ export async function synchronizeCanonicalCourierTracking(
         : [];
 
   let expectedVersion = position.orderVersion;
+  let deliveryState = position.deliveryState;
   const outcomes: Array<Record<string, unknown>> = [];
   for (const event of events) {
     const eventId = stableEventId(provider, delivery.trackingNumber, event);
@@ -1326,25 +1327,34 @@ export async function synchronizeCanonicalCourierTracking(
       continue;
     }
     if (event.status === "returned") {
-      const recovery = await executeCanonicalOrderRecovery(
-        {
-          ...context,
-          businessPrincipal: providerBusinessPrincipal(provider),
-        },
-        {
-          orderId,
-          action: "return_in_transit",
-          expectedVersion,
-          reasonCode: `provider-${provider}-return`,
-          providerEventId: eventId,
-          occurredAt: event.timestamp,
-          idempotencyKey: `courier-return:${provider}:${eventId}`,
-          correlationId: `courier:${provider}:${delivery.id}`,
-        },
+      const opensException = ["picked_up", "in_transit", "out_for_delivery"].includes(
+        deliveryState ?? "",
       );
-      expectedVersion = recovery.result.version;
-      outcomes.push(recovery.result as unknown as Record<string, unknown>);
-      continue;
+      const continuesException = ["failed", "refused"].includes(deliveryState ?? "");
+      if (opensException || continuesException) {
+        const recovery = await executeCanonicalOrderRecovery(
+          {
+            ...context,
+            businessPrincipal: providerBusinessPrincipal(provider),
+          },
+          {
+            orderId,
+            action: "return_in_transit",
+            expectedVersion,
+            reasonCode: `provider-${provider}-return`,
+            providerEventId: eventId,
+            occurredAt: event.timestamp,
+            idempotencyKey: `courier-return:${provider}:${eventId}`,
+            correlationId: `courier:${provider}:${delivery.id}`,
+          },
+        );
+        expectedVersion = recovery.result.version;
+        deliveryState = recovery.result.deliveryState;
+        outcomes.push(recovery.result as unknown as Record<string, unknown>);
+        continue;
+      }
+      // The exception is already open. Record the carrier event without a
+      // second stock movement.
     }
     const ingested = await ingestCanonicalCourierTrackingEventForStoredProvider(
       {
@@ -1377,7 +1387,11 @@ export async function synchronizeCanonicalCourierTracking(
       orderId: string;
       providerStatus: string;
       outOfOrder: boolean;
+      deliveryState?: string;
     };
+    if (typeof ingestedResult.deliveryState === "string") {
+      deliveryState = ingestedResult.deliveryState;
+    }
     if (
       !ingestedResult.outOfOrder &&
       (ingestedResult.providerStatus === "delivered" ||

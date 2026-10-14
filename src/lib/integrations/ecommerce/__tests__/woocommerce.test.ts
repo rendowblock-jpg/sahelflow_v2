@@ -143,6 +143,38 @@ describe("WooCommerce adapter", () => {
       ).rejects.toThrow("private");
     });
 
+    it("rejects the rest of 127.0.0.0/8, IPv6 loopback, mapped loopback, unique-local and link-local", async () => {
+      for (const siteUrl of [
+        "http://127.0.0.2",
+        "http://[::1]",
+        "http://[::ffff:127.0.0.1]",
+        "http://[fd00::1]",
+        "http://[fe80::1]",
+      ]) {
+        mockFetch.mockClear();
+        await expect(
+          woocommerceAdapter.listOrdersSince({ ...creds, siteUrl }, ""),
+        ).rejects.toThrow(/localhost|private/);
+        expect(mockFetch).not.toHaveBeenCalled();
+      }
+    });
+
+    it("refuses a redirect onto loopback and does not send the credential there", async () => {
+      mockFetch.mockResolvedValueOnce(
+        res([], {
+          status: 302,
+          headers: { Location: "http://127.0.0.1/wp-json/wc/v3/orders" },
+        }),
+      );
+      await expect(woocommerceAdapter.listOrdersSince(creds, "")).rejects.toThrow(/localhost/);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(String(url)).not.toContain("127.0.0.1");
+      expect(init.redirect).toBe("manual");
+      const headers = init.headers as Record<string, string>;
+      expect(headers.Authorization).toContain("Basic ");
+    });
+
     it("rejects non-HTTP protocols (SSRF guard)", async () => {
       await expect(
         woocommerceAdapter.listOrdersSince(

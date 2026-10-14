@@ -285,18 +285,24 @@ export async function issueCanonicalRefund(
           createdByCommandId: commandId,
         },
       });
-      const customer = await tx.customer.updateMany({
-        where: {
-          id: order.customerId,
-          deletedAt: null,
-          totalSpent: { gte: data.amount },
-        },
-        data: { totalSpent: { decrement: data.amount } },
-      });
-      if (customer.count !== 1) {
-        throw new ConflictError(
-          "Customer realized-value projection cannot be reduced safely",
-        );
+      // A completed full return already unrecognized the remaining revenue.
+      // A later cash settlement must not debit totalSpent a second time.
+      const revenueAlreadyUnrecognized =
+        order.status === "returned" && order.returnState === "completed";
+      if (!revenueAlreadyUnrecognized) {
+        const customer = await tx.customer.updateMany({
+          where: {
+            id: order.customerId,
+            deletedAt: null,
+            totalSpent: { gte: data.amount },
+          },
+          data: { totalSpent: { decrement: data.amount } },
+        });
+        if (customer.count !== 1) {
+          throw new ConflictError(
+            "Customer realized-value projection cannot be reduced safely",
+          );
+        }
       }
 
       const effectiveAfter = before.effective + data.amount;
@@ -375,18 +381,20 @@ export async function issueCanonicalRefund(
           occurredAt: data.occurredAt,
         },
       ];
-      const compensationFacts: CompensationFact[] = [
-        {
-          key: `${commandId}:customer-value`,
-          type: "customer.refund.realized-value-adjustment.v1",
-          payload: {
-            orderId: order.id,
-            refundId,
-            customerId: order.customerId,
-            amountDelta: -data.amount,
-          },
-        },
-      ];
+      const compensationFacts: CompensationFact[] = revenueAlreadyUnrecognized
+        ? []
+        : [
+            {
+              key: `${commandId}:customer-value`,
+              type: "customer.refund.realized-value-adjustment.v1",
+              payload: {
+                orderId: order.id,
+                refundId,
+                customerId: order.customerId,
+                amountDelta: -data.amount,
+              },
+            },
+          ];
 
       return {
         result: output,
@@ -494,14 +502,23 @@ export async function reverseCanonicalRefund(
           createdByCommandId: commandId,
         },
       });
-      const customer = await tx.customer.updateMany({
-        where: { id: order.customerId, deletedAt: null },
-        data: { totalSpent: { increment: data.amount } },
+      const valueWasAdjusted = await tx.compensationFact.findFirst({
+        where: {
+          commandId: refund.createdByCommandId,
+          factType: "customer.refund.realized-value-adjustment.v1",
+        },
+        select: { id: true },
       });
-      if (customer.count !== 1) {
-        throw new ConflictError(
-          "Customer realized-value projection cannot be restored safely",
-        );
+      if (valueWasAdjusted) {
+        const customer = await tx.customer.updateMany({
+          where: { id: order.customerId, deletedAt: null },
+          data: { totalSpent: { increment: data.amount } },
+        });
+        if (customer.count !== 1) {
+          throw new ConflictError(
+            "Customer realized-value projection cannot be restored safely",
+          );
+        }
       }
 
       const effectiveAfter = before.effective - data.amount;

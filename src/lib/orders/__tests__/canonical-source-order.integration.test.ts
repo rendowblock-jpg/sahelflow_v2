@@ -199,6 +199,41 @@ describe("canonical source order intake", () => {
     ]);
   });
 
+  it("keeps the commerce provider unit price instead of the catalog price", async () => {
+    const product = await seedProduct(1500);
+    for (const source of ["shopify", "woocommerce", "youcan"] as const) {
+      const created = await createCanonicalSourceOrder(
+        {
+          ...context,
+          businessPrincipal: sourceBusinessPrincipal(source, "commerce-shop"),
+        },
+        {
+          idempotencyKey: `${source}:price-1000`,
+          source,
+          sourceIdentity: "commerce-shop",
+          sourceOrderId: `${source}-order-1000`,
+          newCustomer: {
+            name: `${source} buyer`,
+            phone: source === "shopify" ? "0555001001" : source === "woocommerce" ? "0555001002" : "0555001003",
+            wilaya: "Alger",
+            commune: "Alger Centre",
+            address: "1 Commerce Street",
+          },
+          items: [{ productId: product.id, quantity: 1, unitPrice: 1000 }],
+          wilaya: "Alger",
+          commune: "Alger Centre",
+          address: "1 Commerce Street",
+          phone: source === "shopify" ? "0555001001" : source === "woocommerce" ? "0555001002" : "0555001003",
+          deliveryCost: 0,
+        },
+      );
+      expect(created.result.order.totalPrice).toBe(1000);
+      expect(created.result.order.items).toEqual([
+        expect.objectContaining({ unitPrice: 1000, total: 1000 }),
+      ]);
+    }
+  });
+
   it("allows an adopted storefront order to enter canonical confirmation", async () => {
     const product = await seedProduct(2500, 10);
     const created = await createCanonicalSourceOrder(

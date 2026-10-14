@@ -828,6 +828,7 @@
   "delivery.configured": "Configuré",
   "delivery.confirmDelete": "Supprimer les identifiants {{provider}} ?",
   "delivery.confirmDeleteDesc": "Cela supprimera les informations d'identification stockées pour ce transporteur. Vous devrez les saisir à nouveau pour utiliser ce transporteur.",
+  "delivery.connectionChecked": "Connexion vérifiée",
   "delivery.connectionFailed": "Échec de la connexion.",
   "delivery.createShipment": "Créer un envoi",
   "delivery.creatingShipment": "Création...",

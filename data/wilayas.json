@@ -289,14 +289,14 @@
   },
   {
     "code": 49,
-    "name": "El M'Ghair",
-    "nameAr": "المغير",
+    "name": "Timimoun",
+    "nameAr": "تيميمون",
     "zone": "south"
   },
   {
     "code": 50,
-    "name": "El Meniaa",
-    "nameAr": "المنيعة",
+    "name": "Bordj Badji Mokhtar",
+    "nameAr": "برج باجي مختار",
     "zone": "south"
   },
   {
@@ -307,20 +307,20 @@
   },
   {
     "code": 52,
-    "name": "Bordj Baji Mokhtar",
-    "nameAr": "برج باجي مختار",
-    "zone": "south"
-  },
-  {
-    "code": 53,
     "name": "Béni Abbès",
     "nameAr": "بني عباس",
     "zone": "south"
   },
   {
+    "code": 53,
+    "name": "In Salah",
+    "nameAr": "عين صالح",
+    "zone": "south"
+  },
+  {
     "code": 54,
-    "name": "Timimoun",
-    "nameAr": "تيميمون",
+    "name": "In Guezzam",
+    "nameAr": "عين قزام",
     "zone": "south"
   },
   {
@@ -337,14 +337,14 @@
   },
   {
     "code": 57,
-    "name": "In Salah",
-    "nameAr": "عين صالح",
+    "name": "El M'Ghair",
+    "nameAr": "المغير",
     "zone": "south"
   },
   {
     "code": 58,
-    "name": "In Guezzam",
-    "nameAr": "عين قزام",
+    "name": "El Meniaa",
+    "nameAr": "المنيعة",
     "zone": "south"
   }
 ]

@@ -552,11 +552,15 @@ fn stop_planned_runtime(app: &tauri::AppHandle, generation: u64) -> Result<(), I
                 "planned runtime stop authority is stale or unavailable",
             ));
         }
-        children
-            .shutdown_authority
-            .as_ref()
-            .ok_or_else(|| IoError::other("runtime shutdown authority is missing"))?
-            .flush_compile_cache()?;
+        if let Some(authority) = children.shutdown_authority.as_ref() {
+            // A wedged server that misses the flush must still be stopped.
+            // Normal close already logs this and kills the tree.
+            if let Err(error) = authority.flush_compile_cache() {
+                eprintln!(
+                    "[sahelflow] compile cache could not be flushed before the planned stop: {error}"
+                );
+            }
+        }
         children
             .server
             .as_ref()

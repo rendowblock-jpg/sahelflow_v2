@@ -1,7 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import type { PrismaClient } from "@prisma/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { yalidineAdapter } from "@/lib/integrations/delivery/yalidine";
+import type { ShipmentRequest } from "@/lib/integrations/delivery/types";
 
 import {
   testAuthenticatedOwnerBusinessPrincipal,
@@ -337,6 +340,108 @@ describe("canonical courier booking and tracking", () => {
     expect((await db.order.findUnique({ where: { id: orderId } }))?.codState).toBe(
       "receivable",
     );
+  });
+
+  it("opens the delivery exception once when a shipped order receives a retour", async () => {
+    const { orderId, booking, productId } = await queuedBooking();
+    await drainDueCourierBookings(context, 1, async () => ({
+      success: true,
+      trackingId: "YAL-RETOUR-1",
+      cost: 600,
+    }));
+    let position = await getCanonicalCourierPosition(context, orderId);
+    await ingestCanonicalCourierTrackingEvent(context, {
+      deliveryId: booking.result.deliveryId,
+      provider: "yalidine",
+      providerEventId: "yal-retour-transit",
+      status: "in_transit",
+      occurredAt: "2026-08-01T08:00:00.000Z",
+      reasonCode: "provider-yalidine-in-transit",
+      expectedVersion: position.orderVersion,
+      idempotencyKey: "courier-event:yal-retour-transit",
+    });
+    const stockAfterShip = (await db.product.findUnique({ where: { id: productId } }))!.stock;
+    position = await getCanonicalCourierPosition(context, orderId);
+    expect(position).toMatchObject({
+      orderStatus: "shipped",
+      deliveryState: "in_transit",
+      inventoryState: "outbound",
+    });
+
+    const fetcher: CourierTrackingFetcher = async () => ({
+      trackingId: "YAL-RETOUR-1",
+      status: "returned",
+      deliveryCompany: "Yalidine",
+      events: [
+        {
+          status: "returned",
+          timestamp: "2026-08-02T08:00:00.000Z",
+          details: "retour",
+        },
+      ],
+    });
+    await synchronizeCanonicalCourierTracking(context, orderId, fetcher);
+    expect(await db.order.findUnique({ where: { id: orderId } })).toMatchObject({
+      status: "shipped",
+      deliveryState: "return_in_transit",
+      inventoryState: "return_pending_receipt",
+      returnState: "in_transit",
+    });
+    expect(await db.canonicalReturnCase.count({ where: { orderId } })).toBe(1);
+    expect((await db.product.findUnique({ where: { id: productId } }))!.stock).toBe(stockAfterShip);
+
+    await synchronizeCanonicalCourierTracking(context, orderId, fetcher);
+    expect(await db.canonicalReturnCase.count({ where: { orderId } })).toBe(1);
+    expect((await db.product.findUnique({ where: { id: productId } }))!.stock).toBe(stockAfterShip);
+  });
+
+  it("does not enqueue a second createShipment when Yalidine answers HTTP 500", async () => {
+    const { booking } = await queuedBooking();
+    const shipment: ShipmentRequest = {
+      orderId: "order-500",
+      orderNumber: "ORD-500",
+      customer: {
+        name: "Client",
+        phone: "0555123456",
+        wilaya: "Wilaya 500 Unique",
+        commune: "Hydra",
+        address: "1 rue",
+      },
+      items: [{ name: "Widget", quantity: 1, unitPrice: 1000 }],
+      totalPrice: 1000,
+      weight: 1,
+    };
+    let creates = 0;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (String(url).includes("/parcels/") && init?.method === "POST") {
+        creates += 1;
+        return new Response("upstream", { status: 500 });
+      }
+      if (String(url).includes("/communes/")) {
+        return new Response(JSON.stringify([{ name: "Hydra" }]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response("{}", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const sender = async () =>
+        yalidineAdapter.createShipment(shipment, { apiId: "id", apiToken: "token" });
+      await drainDueCourierBookings(context, 5, sender);
+      expect(await drainDueCourierBookings(context, 5, sender)).toBe(0);
+      expect(creates).toBe(1);
+      expect(
+        await db.outboxIntent.findUnique({ where: { effectKey: booking.result.effectKey } }),
+      ).toMatchObject({
+        status: "failed",
+        outcomeState: "ambiguous",
+        nextAttemptAt: null,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("records but never applies an out-of-order tracking rollback", async () => {

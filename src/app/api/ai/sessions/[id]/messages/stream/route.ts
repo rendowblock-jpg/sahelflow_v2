@@ -35,7 +35,11 @@ import { db, shopContext } from "@/lib/db";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 import { requireLicense } from "@/lib/license/license-server";
 import { logger } from "@/lib/logger";
-import { redactPii } from "@/lib/redact-pii";
+import {
+  AI_TOOL_ARGUMENTS_INVALID,
+  toolArgsValidationMessage,
+} from "@/lib/ai/chat/tool-args-error";
+import { redactStoredAiToolCalls } from "@/lib/redact-pii";
 import { getBool, SETTING_KEYS } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -326,7 +330,7 @@ export const POST = withErrorHandler(
                     content: assistantResponse,
                     toolCalls:
                       assistantToolCalls.length > 0
-                        ? JSON.stringify(redactPii(assistantToolCalls))
+                        ? JSON.stringify(redactStoredAiToolCalls(assistantToolCalls))
                         : null,
                   },
                 });
@@ -341,6 +345,15 @@ export const POST = withErrorHandler(
                 }
               }
             }
+          } else if (error instanceof z.ZodError) {
+            // Tool-argument failures are a coded validation result, same
+            // shape as MCP execute. Do not log the issue text: it can echo
+            // the rejected value.
+            send({
+              type: "error",
+              message: toolArgsValidationMessage(error),
+              code: AI_TOOL_ARGUMENTS_INVALID,
+            });
           } else if (error instanceof GeminiProviderError) {
             // Provider failures keep their coded, locale-native copy.
             send({
@@ -372,7 +385,7 @@ export const POST = withErrorHandler(
                 content: assistantResponse,
                 toolCalls:
                   assistantToolCalls.length > 0
-                    ? JSON.stringify(redactPii(assistantToolCalls))
+                    ? JSON.stringify(redactStoredAiToolCalls(assistantToolCalls))
                     : null,
               },
             });

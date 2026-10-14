@@ -560,13 +560,9 @@ async function restoreAvailableStock(
           `Variant '${reservation.productVariantId}' is missing during cancellation`,
         );
       }
-      const available = await tx.productVariant.aggregate({
-        where: { productId: reservation.productId, isActive: true },
-        _sum: { stock: true },
-      });
       const product = await tx.product.updateMany({
         where: { id: reservation.productId, deletedAt: null },
-        data: { stock: available._sum.stock ?? 0 },
+        data: { stock: { increment: quantity } },
       });
       if (product.count !== 1) {
         throw new ConflictError(
@@ -852,20 +848,104 @@ export async function executeCanonicalOrderRecovery(
           },
         });
       } else if (data.action === "return_in_transit") {
-        if (
-          order.status !== "shipped" ||
-          !["failed", "refused"].includes(order.deliveryState ?? "") ||
-          order.inventoryState !== "return_pending_receipt" ||
-          order.returnState !== "awaiting_return"
-        ) {
+        const inDelivery =
+          order.status === "shipped" &&
+          order.fulfillmentState === "shipped" &&
+          ["picked_up", "in_transit", "out_for_delivery"].includes(
+            order.deliveryState ?? "",
+          ) &&
+          order.inventoryState === "outbound" &&
+          order.codState === "not_expected";
+        const exceptionOpen =
+          order.status === "shipped" &&
+          ["failed", "refused"].includes(order.deliveryState ?? "") &&
+          order.inventoryState === "return_pending_receipt" &&
+          order.returnState === "awaiting_return";
+        if (!inDelivery && !exceptionOpen) {
           throw stateConflict(data.action, order);
         }
+        const consumed = await reservationRows(tx, order.id, "consumed");
+        assertReservationsMatchItems(consumed, order.items, "consumed");
+        if (inDelivery) {
+          if (await returnCaseForOrder(tx, order.id)) {
+            throw new ConflictError("This order already has a canonical return case");
+          }
+          await updateDelivery(
+            tx,
+            order,
+            ["picked_up", "in_transit", "out_for_delivery", "at_hub"],
+            "return_in_transit",
+          );
+          await appendDeliveryEvent(tx, {
+            commandId,
+            order,
+            eventType: "delivery.return-in-transit.v1",
+            reasonCode: data.reasonCode,
+            occurredAt: data.occurredAt,
+            providerEventId: data.providerEventId,
+          });
+          returnCaseId = randomUUID();
+          await tx.canonicalReturnCase.create({
+            data: {
+              id: returnCaseId,
+              returnKey: `${commandId}:return-case`,
+              orderId: order.id,
+              origin: "delivery_failure",
+              caseType: "return",
+              currentState: "in_transit",
+              reasonCode: data.reasonCode,
+              createdByCommandId: commandId,
+            },
+          });
+          await appendReturnEvent(tx, {
+            commandId,
+            returnId: returnCaseId,
+            orderId: order.id,
+            eventType: "return.in-transit.v1",
+            fromState: null,
+            toState: "in_transit",
+            reasonCode: data.reasonCode,
+            occurredAt: data.occurredAt,
+          });
+          inventoryMovements.push(
+            ...consumed.map((reservation) => ({
+              ...movementForReservation(
+                commandId,
+                reservation,
+                "physical_return_in_transit",
+                "outbound",
+                "return_in_transit",
+                `Carrier return opened the delivery exception for order ${order.id}`,
+                data.occurredAt,
+              ),
+              orderId: order.id,
+            })),
+          );
+          states = {
+            status: "shipped",
+            fulfillmentState: "closed",
+            deliveryState: "return_in_transit",
+            inventoryState: "return_pending_receipt",
+            codState: "not_expected",
+            returnState: "in_transit",
+            refundState: "none",
+          };
+          compensationFacts.push({
+            key: `${commandId}:return-opened`,
+            type: "delivery.exception.awaiting-physical-return.v1",
+            payload: {
+              orderId: order.id,
+              returnCaseId,
+              origin: "delivery_failure",
+              stockRestored: false,
+              reasonCode: data.reasonCode,
+            },
+          });
+        } else {
         const returnCase = await returnCaseForOrder(tx, order.id);
         if (!returnCase) {
           throw new ConflictError("Canonical return case is missing");
         }
-        const consumed = await reservationRows(tx, order.id, "consumed");
-        assertReservationsMatchItems(consumed, order.items, "consumed");
         returnCaseId = returnCase.id;
         await updateDelivery(
           tx,
@@ -920,6 +1000,7 @@ export async function executeCanonicalOrderRecovery(
           returnState: "in_transit",
           refundState: "none",
         };
+        }
       } else if (data.action === "receive_return") {
         if (
           order.status !== "shipped" ||
@@ -1092,13 +1173,9 @@ export async function executeCanonicalOrderRecovery(
                   `Product variant '${item.productVariantId}' is missing during return inspection`,
                 );
               }
-              const aggregate = await tx.productVariant.aggregate({
-                where: { productId: item.productId, isActive: true },
-                _sum: { stock: true },
-              });
               const product = await tx.product.updateMany({
                 where: { id: item.productId, deletedAt: null },
-                data: { stock: aggregate._sum.stock ?? 0 },
+                data: { stock: { increment: item.quantity } },
               });
               if (product.count !== 1) {
                 throw new ConflictError(

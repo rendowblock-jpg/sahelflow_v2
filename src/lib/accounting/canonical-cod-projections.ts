@@ -238,7 +238,7 @@ async function buildOrderPositions(
   const orderIds = canonical.map((order) => order.id);
   if (orderIds.length === 0) return [];
 
-  const [receivableMovements, collections, lines] = await Promise.all([
+  const [receivableMovements, collections, courierDeductions, lines] = await Promise.all([
     context.prisma.financialMovement.findMany({
       where: {
         orderId: { in: orderIds },
@@ -250,6 +250,14 @@ async function buildOrderPositions(
     context.prisma.codCollection.findMany({
       where: { orderId: { in: orderIds } },
       include: { corrections: true },
+    }),
+    context.prisma.canonicalRefund.findMany({
+      where: { orderId: { in: orderIds }, method: "courier_deduction" },
+      select: {
+        orderId: true,
+        amount: true,
+        reversals: { select: { amount: true } },
+      },
     }),
     context.prisma.codSettlementLine.findMany({
       where: {
@@ -287,6 +295,13 @@ async function buildOrderPositions(
   const collectionByOrder = new Map(
     collections.map((entry) => [entry.orderId, entry]),
   );
+  const deductionByOrder = new Map<string, number>();
+  for (const refund of courierDeductions) {
+    const reversed = refund.reversals.reduce((total, entry) => total + entry.amount, 0);
+    const net = refund.amount - reversed;
+    if (net <= 0) continue;
+    deductionByOrder.set(refund.orderId, (deductionByOrder.get(refund.orderId) ?? 0) + net);
+  }
   const linesByOrder = new Map<string, SettlementLineShape[]>();
   for (const line of lines) {
     const orderId = line.orderId ?? line.match?.orderId;
@@ -304,7 +319,10 @@ async function buildOrderPositions(
       );
     }
     const collection = collectionByOrder.get(order.id) ?? null;
-    const expectedReceivable = receivable.amount;
+    const deducted = deductionByOrder.get(order.id) ?? 0;
+    // A courier deduction is cash the courier no longer owes. It is not a
+    // second cash collection — the refund movement already records the money.
+    const expectedReceivable = Math.max(0, receivable.amount - deducted);
     const collected = collectionAmount(collection);
     const lineSummary = lineAmounts(linesByOrder.get(order.id) ?? []);
     const codState = deriveCodState({
@@ -313,6 +331,7 @@ async function buildOrderPositions(
       grossRemitted: lineSummary.gross,
       settlementDiscrepancy: lineSummary.discrepancy,
     });
+    const remittable = Math.min(collected, expectedReceivable);
     return {
       orderId: order.id,
       orderNumber: order.orderNumber,
@@ -330,7 +349,7 @@ async function buildOrderPositions(
       discrepancy:
         collected - expectedReceivable + lineSummary.discrepancy,
       outstandingCollection: Math.max(0, expectedReceivable - collected),
-      outstandingRemittance: Math.max(0, collected - lineSummary.gross),
+      outstandingRemittance: Math.max(0, remittable - lineSummary.gross),
       collectionReference: collection?.reference ?? null,
       collectedAt: collection?.collectedAt.toISOString() ?? null,
       lastSettlementReference: lineSummary.lastReference,

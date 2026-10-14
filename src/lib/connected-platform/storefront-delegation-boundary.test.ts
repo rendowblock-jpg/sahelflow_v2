@@ -81,6 +81,7 @@ describe("storefront hosted delegation authority", () => {
   it("treats the committed immutable release ID as the replay boundary", () => {
     const publish = source("control-plane/storefront/publish-release.ts");
     expect(publish).toContain("existing.artifact_digest !== artifactDigest");
+    expect(publish).toContain("existing.request_digest !== requestDigest");
     expect(publish).toContain("replay: true");
     expect(publish).toContain("loadAllocationTransferSnapshot");
     expect(publish).toContain("request_digest");

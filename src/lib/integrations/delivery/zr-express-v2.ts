@@ -72,8 +72,31 @@ const FETCH_TIMEOUT_MS = 15_000;
 const HUB_PAGE_SIZE = 200;
 const HUB_MAX_PAGES = 10;
 
-/** The four wilayas with NO ZR territory (live-verified upstream). */
-const UNSERVED_WILAYA_CODES = new Set([33, 37, 50, 56]);
+/**
+ * Live-verified ZR gaps, by the corrected official names. Codes are derived
+ * from reference data so a renumbered wilaya (El Meniaa is 58, not 50) is
+ * not treated as unserved just because 50 used to point at it.
+ * 33 Illizi, 37 Tindouf, 50 Bordj Badji Mokhtar, 56 Djanet.
+ */
+const UNSERVED_WILAYA_NAMES = [
+  "Illizi",
+  "Tindouf",
+  "Bordj Badji Mokhtar",
+  "Djanet",
+] as const;
+
+function unservedWilayaCodes(): Set<number> {
+  const codes = new Set<number>();
+  for (const name of UNSERVED_WILAYA_NAMES) {
+    const code = wilayas.find(
+      (item) => item.name.toLocaleLowerCase("fr") === name.toLocaleLowerCase("fr"),
+    )?.code;
+    if (code !== undefined) codes.add(code);
+  }
+  return codes;
+}
+
+const UNSERVED_WILAYA_CODES = unservedWilayaCodes();
 
 interface ZrTerritoryItem {
   id: string;
@@ -637,7 +660,9 @@ export async function zrV2SyncTracking(
     }
 
     // The parcel GET verdict outranks the history stream; isReturn is the
-    // only fully reliable terminal return signal (live-proven).
+    // only fully reliable terminal return signal (live-proven). History can
+    // exist without a returned row — the flag still has to become an event
+    // or tracking sync never opens the delivery exception.
     if (parcel.isReturn === true) {
       lastMeaningful = "returned";
     } else {
@@ -645,19 +670,28 @@ export async function zrV2SyncTracking(
       if (parcelVerdict.status !== null) lastMeaningful = parcelVerdict.status;
     }
 
+    const timeline =
+      events.length > 0
+        ? events
+        : [
+            {
+              status: lastMeaningful,
+              timestamp: new Date().toISOString(),
+              details: "ZR Express state history received without events.",
+            },
+          ];
+    if (parcel.isReturn === true && !timeline.some((event) => event.status === "returned")) {
+      timeline.push({
+        status: "returned",
+        timestamp: timeline[timeline.length - 1]?.timestamp ?? new Date().toISOString(),
+        details: "ZR Express isReturn",
+      });
+    }
+
     return {
       trackingId: parcel.trackingNumber ?? trackingId,
       status: lastMeaningful,
-      events:
-        events.length > 0
-          ? events
-          : [
-              {
-                status: lastMeaningful,
-                timestamp: new Date().toISOString(),
-                details: "ZR Express state history received without events.",
-              },
-            ],
+      events: timeline,
       deliveryCompany: "ZR Express",
     };
 }

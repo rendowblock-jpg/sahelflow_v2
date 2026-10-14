@@ -21,7 +21,11 @@ import { getCurrentUserKey, requireAuth } from "@/lib/auth/server";
 import { db, shopContext } from "@/lib/db";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 import { requireLicense } from "@/lib/license/license-server";
-import { redactPii } from "@/lib/redact-pii";
+import {
+  AI_TOOL_ARGUMENTS_INVALID,
+  toolArgsValidationMessage,
+} from "@/lib/ai/chat/tool-args-error";
+import { redactStoredAiToolCalls } from "@/lib/redact-pii";
 import { getBool, SETTING_KEYS } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -186,35 +190,49 @@ export const POST = withErrorHandler(
       data: { sessionId: id, role: "user", content: input.message },
     });
     const history = historyFrom(recentMessages);
-    const result = await runWithAiActionProposalRuntime(
-      {
-        createProposal: (toolName, args) =>
-          createAiActionProposal({
-            context,
-            requester,
-            sessionId: id,
-            requestMessageId: userMessage.id,
-            toolName,
-            rawArgs: args,
-          }),
-      },
-      async () => {
-        // F-06: presentation-only shop snapshot; empty on failure, never a
-        // turn-breaking dependency.
-        const shopContextNote = await aiShopContextNote();
-        return runAgent(
-          history,
-          input.message,
+    let result: Awaited<ReturnType<typeof runAgent>>;
+    try {
+      result = await runWithAiActionProposalRuntime(
+        {
+          createProposal: (toolName, args) =>
+            createAiActionProposal({
+              context,
+              requester,
+              sessionId: id,
+              requestMessageId: userMessage.id,
+              toolName,
+              rawArgs: args,
+            }),
+        },
+        async () => {
+          // F-06: presentation-only shop snapshot; empty on failure, never a
+          // turn-breaking dependency.
+          const shopContextNote = await aiShopContextNote();
+          return runAgent(
+            history,
+            input.message,
+            {
+              db,
+              shop: shopContext,
+              sourceIdentity: `ai-session:${id}`,
+            },
+            input.locale,
+            shopContextNote,
+          );
+        },
+      );
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
           {
-            db,
-            shop: shopContext,
-            sourceIdentity: `ai-session:${id}`,
+            error: toolArgsValidationMessage(error),
+            code: AI_TOOL_ARGUMENTS_INVALID,
           },
-          input.locale,
-          shopContextNote,
+          { status: 400 },
         );
-      },
-    );
+      }
+      throw error;
+    }
 
     if (result.response) {
       await context.prisma.aiChatMessage.create({
@@ -224,7 +242,7 @@ export const POST = withErrorHandler(
           content: result.response,
           toolCalls:
             result.toolCalls.length > 0
-              ? JSON.stringify(redactPii(result.toolCalls))
+              ? JSON.stringify(redactStoredAiToolCalls(result.toolCalls))
               : null,
         },
       });

@@ -56,7 +56,17 @@ export const responseSchema = {
   required: ["items"], additionalProperties: false,
 } as const;
 
-type GeminiResponse = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+type GeminiPart = { text?: string; thought?: boolean };
+type GeminiResponse = { candidates?: Array<{ content?: { parts?: GeminiPart[] } }> };
+
+/** Drop thought parts the way chat does, then join only visible text. */
+export function visibleGeminiText(parts: GeminiPart[] | undefined): string {
+  return (parts ?? [])
+    .filter((part) => !part.thought)
+    .map((part) => part.text ?? "")
+    .join("")
+    .trim();
+}
 const fail = (code: string): ExtractionResult => ({
   order: null, method: "none", confidence: 0, isComplete: false, missingFields: [code],
 });
@@ -122,7 +132,9 @@ export async function extractWithGemini(
           parts: [{ text: EXTRACTION_USER_PROMPT(input.body, input.catalog?.map((entry) => entry.name)) }],
         }],
         generationConfig: {
-          maxOutputTokens: 1024,
+          // Same output budget as chat. 1024 counted thinking tokens and
+          // starved the JSON.
+          maxOutputTokens: 8192,
           responseMimeType: "application/json",
           responseJsonSchema: responseSchema,
           thinkingConfig: { thinkingLevel: runtime.thinkingLevel },
@@ -130,7 +142,7 @@ export async function extractWithGemini(
       },
     });
     const data = await response.json() as GeminiResponse;
-    const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim();
+    const text = visibleGeminiText(data.candidates?.[0]?.content?.parts);
     if (!text) return fail("GEMINI_EMPTY_RESPONSE");
     let parsed: unknown;
     try { parsed = JSON.parse(text); } catch { return fail("GEMINI_INVALID_EXTRACTION"); }

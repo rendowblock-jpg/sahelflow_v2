@@ -352,7 +352,9 @@ mod imp {
             };
             let format = |rtl: bool, align: StringAlignment| {
                 let mut format: *mut GpStringFormat = std::ptr::null_mut();
-                let mut flags = StringFormatFlagsNoWrap;
+                // NoClip: the measured box is the layout width. Clipping it
+                // cut the last glyph, so the installed splash read "Sahe Flo".
+                let mut flags = StringFormatFlagsNoWrap | StringFormatFlagsNoClip;
                 if rtl {
                     flags |= StringFormatFlagsDirectionRightToLeft;
                 }
@@ -576,6 +578,25 @@ mod imp {
             } else {
                 track_x
             };
+            // A short sheen keeps the wait visibly alive while a stage band
+            // is still creeping. It does not advance the honest fill.
+            if !self.reduced_motion {
+                let travel = (t / 1_400.0) % 1.0;
+                let sheen_w = 28.0_f32;
+                let span = (track_width - sheen_w).max(0.0);
+                let sheen_x = if rtl {
+                    track_x + span * (1.0 - travel)
+                } else {
+                    track_x + span * travel
+                };
+                let sheen = rounded_rect(sheen_x, track_y, sheen_w, 2.0, 1.0);
+                fill_solid(
+                    g,
+                    sheen,
+                    with_alpha(argb(255, 255, 255, 255), meter_alpha * 0.45),
+                );
+                GdipDeletePath(sheen);
+            }
             let fill = rounded_rect(fill_x, track_y, fill_width, 2.0, 1.0);
             fill_horizontal_gradient(
                 g,
@@ -749,53 +770,19 @@ mod imp {
             if alpha <= 0.0 {
                 return;
             }
-            let sahel = measure(g, "Sahel", self.fonts.word, self.fonts.near);
-            let flow = measure(g, "Flow", self.fonts.word, self.fonts.near);
-            let left = (CARD_WIDTH - sahel - flow) / 2.0;
+            // One centered string. Splitting "Sahel" and "Flow" into two
+            // measured boxes clipped the last glyph of each half, so the
+            // installed card read "Sahe Flo".
             draw_text(
                 g,
-                "Sahel",
+                "SahelFlow",
                 self.fonts.word,
-                self.fonts.near,
-                left,
+                self.fonts.center,
+                24.0,
                 y,
-                sahel + 8.0,
+                CARD_WIDTH - 48.0,
                 with_alpha(INK, alpha),
             );
-            let start = PointF {
-                X: left + sahel,
-                Y: y,
-            };
-            let end = PointF {
-                X: left + sahel + flow,
-                Y: y + 20.0,
-            };
-            let mut brush: *mut GpLineGradient = std::ptr::null_mut();
-            GdipCreateLineBrush(
-                &start,
-                &end,
-                with_alpha(SKY_LIGHT, alpha),
-                with_alpha(SKY, alpha),
-                WrapModeTileFlipXY,
-                &mut brush,
-            );
-            let text = wide("Flow");
-            let rect = RectF {
-                X: left + sahel,
-                Y: y,
-                Width: flow + 8.0,
-                Height: 40.0,
-            };
-            GdipDrawString(
-                g,
-                text.as_ptr(),
-                (text.len() - 1) as i32,
-                self.fonts.word,
-                &rect,
-                self.fonts.near,
-                brush.cast(),
-            );
-            GdipDeleteBrush(brush.cast());
         }
     }
 
@@ -863,40 +850,6 @@ mod imp {
         GdipDeleteBrush(brush.cast());
     }
 
-    unsafe fn measure(
-        g: *mut GpGraphics,
-        text: &str,
-        font: *mut GpFont,
-        format: *mut GpStringFormat,
-    ) -> f32 {
-        let wide_text = wide(text);
-        let layout = RectF {
-            X: 0.0,
-            Y: 0.0,
-            Width: CARD_WIDTH,
-            Height: 60.0,
-        };
-        let mut bounds = RectF {
-            X: 0.0,
-            Y: 0.0,
-            Width: 0.0,
-            Height: 0.0,
-        };
-        GdipMeasureString(
-            g,
-            wide_text.as_ptr(),
-            (wide_text.len() - 1) as i32,
-            font,
-            &layout,
-            format,
-            &mut bounds,
-            std::ptr::null_mut(),
-            std::ptr::null_mut(),
-        );
-        // GDI+ pads measured strings by about a sixth of the em on each side.
-        (bounds.Width - 9.0).max(0.0)
-    }
-
     #[allow(clippy::too_many_arguments)]
     unsafe fn draw_text(
         g: *mut GpGraphics,
@@ -916,7 +869,7 @@ mod imp {
             X: x,
             Y: y,
             Width: width,
-            Height: 40.0,
+            Height: 56.0,
         };
         let mut brush: *mut GpSolidFill = std::ptr::null_mut();
         GdipCreateSolidFill(color, &mut brush);

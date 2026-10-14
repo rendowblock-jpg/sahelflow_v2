@@ -185,11 +185,16 @@ function collectFunctionCalls(
 }
 
 function renderHistory(history: AgentMessage[]): Content[] {
-  return history.map((message) => {
+  const contents: Content[] = [];
+  for (const message of history) {
     if (message.role === "assistant" && message.toolCalls?.length) {
+      // Same shape as the live loop: function calls stay on the model turn
+      // (with the original thought signature) and function responses are a
+      // following user turn. Gemini 3 rejects both parts in one model turn.
       const parts: Array<Record<string, unknown>> = message.content
         ? [{ text: message.content }]
         : [];
+      const responses: Array<Record<string, unknown>> = [];
       for (const call of message.toolCalls) {
         parts.push(
           modelFunctionCallPart({
@@ -200,26 +205,29 @@ function renderHistory(history: AgentMessage[]): Content[] {
               : {}),
           }),
         );
-        parts.push({
+        responses.push({
           functionResponse: {
             name: call.name,
             response: { result: historySafeToolResult(call.name, call.result) },
           },
         });
       }
-      return { role: "model", parts };
+      contents.push({ role: "model", parts });
+      contents.push({ role: "user", parts: responses });
+      continue;
     }
     const imageNote =
       message.role === "user" && message.imageCount
         ? `[The seller attached ${message.imageCount} image(s) to this message.]`
         : "";
-    return {
+    contents.push({
       role: message.role === "assistant" ? "model" : "user",
       parts: [
         { text: [message.content, imageNote].filter(Boolean).join("\n") || imageNote },
       ],
-    };
-  });
+    });
+  }
+  return contents;
 }
 
 /** The current seller turn: text plus any attached images as inline data. */

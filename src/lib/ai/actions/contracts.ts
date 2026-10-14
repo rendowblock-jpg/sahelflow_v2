@@ -9,6 +9,24 @@ import { SahelFlowError } from "@/types/errors";
 
 export const AI_ACTION_PROPOSAL_TTL_MS = 10 * 60_000;
 
+/**
+ * The tool body knows `confirmed` and refuses it. That refusal is returned
+ * before proposal persistence, so this status is not a persistable proposal
+ * and cannot confirm an order without the governed seller decision.
+ */
+export const AI_GOVERNED_CONFIRMATION_REFUSAL =
+  "La confirmation exige la commande gouvernée; l’IA ne peut pas utiliser le chemin historique.";
+
+export function isGovernedOrderConfirmation(
+  toolName: string,
+  rawArgs: unknown,
+): boolean {
+  if (toolName !== "update_order_status" || !rawArgs || typeof rawArgs !== "object") {
+    return false;
+  }
+  return (rawArgs as { status?: unknown }).status === "confirmed";
+}
+
 export type AiToolExecutionClass =
   | "read"
   | "external_read"
@@ -59,6 +77,9 @@ const createOrderArgsSchema = z
 const updateOrderStatusArgsSchema = z
   .object({
     orderId: z.string().trim().min(1).max(200),
+    // `confirmed` is declared on the tool so the model can name it, and the
+    // registry returns the French refusal before this parse. It is omitted
+    // here so a confirmation cannot be persisted as an approvable proposal.
     status: z.enum([
       "draft",
       "pending",

@@ -199,7 +199,11 @@ const SIDECAR_NAME: &str = "sahelflow-whatsapp";
 /// Connected agents dialog can hand the seller a ready client configuration.
 const MCP_BRIDGE_NAME: &str = "sahelflow-mcp";
 const PROCESS_TREE_STOP_TIMEOUT: Duration = Duration::from_secs(10);
-const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(90);
+/// Time allowed until the server accepts a connection. The installed
+/// Internal.42 cold open spent ~67s in that read and was then killed because
+/// the same clock also covered database readiness. Semantic readiness has its
+/// own budget once the port is open (`READY_AFTER_LISTENING`).
+const MANDATORY_RUNTIME_READY_TIMEOUT: Duration = Duration::from_secs(150);
 const RUNTIME_STDERR_CLASSIFICATIONS: &[(&str, &str)] = &[
     ("SF_ROTATION_STAGE_LEASE", "rotation-lease-stage"),
     (
@@ -461,6 +465,19 @@ pub fn run() {
                         eprintln!("[sahelflow] protected commercial anchor unavailable: {error}");
                     }
 
+                    // Read the packaged server into the standby list while migration
+                    // runs. Node then opens those files warm. A cold random read
+                    // of this tree (about 4,751 files) was the 67s before the
+                    // port accepted a connection.
+                    let standalone_dir = resource_dir.join("standalone");
+                    let warmup = std::thread::Builder::new()
+                        .name("sahelflow-runtime-warm".to_string())
+                        .spawn(move || warm_packaged_standalone(&standalone_dir))
+                        .map_err(|error| {
+                            eprintln!("[sahelflow] runtime warm thread did not start: {error}");
+                        })
+                        .ok();
+
                     // Validate the registry and migrate every registered shop
                     // before any business server can observe a database.
                     runtime_protocol::remove_manifest(&app_data_dir);
@@ -529,6 +546,20 @@ pub fn run() {
                         );
                         return;
                     }
+
+                    startup_recovery::record_startup_stage(
+                        &app_data_dir,
+                        "runtime-warm-started",
+                        None,
+                    );
+                    if let Some(handle) = warmup {
+                        let _ = handle.join();
+                    }
+                    startup_recovery::record_startup_stage(
+                        &app_data_dir,
+                        "runtime-warm-complete",
+                        None,
+                    );
 
                     let runtime = match spawn_initial_services(&app_handle) {
                         Ok(runtime) => runtime,
@@ -703,9 +734,10 @@ fn server_env(
     let device_binding = device_binding::current_device_binding().map_err(IoError::other)?;
     let license_clock_anchor = match license_clock::observe(&device_binding, true) {
         Ok(anchor) => anchor,
+        // A clock that cannot be read must not be reported as "missing".
+        // Missing is the no-anchor state. A read failure starts no server.
         Err(error) => {
-            eprintln!("[sahelflow] protected license clock unavailable: {error}");
-            None
+            return Err(format!("protected license clock unavailable: {error}").into());
         }
     };
 
@@ -883,6 +915,62 @@ fn sidecar_env(
         ("SIDECAR_HOST".to_string(), "127.0.0.1".to_string()),
         ("NODE_ENV".to_string(), "production".to_string()),
     ])
+}
+
+/// Pull the packaged Next.js tree into the file cache with sequential reads.
+/// The cold open was paying one slow `CreateFile` per module inside Node.
+fn warm_packaged_standalone(root: &std::path::Path) {
+    use std::io::Read;
+    if !root.is_dir() {
+        return;
+    }
+    let mut stack = vec![root.to_path_buf()];
+    let mut buffer = vec![0_u8; 128 * 1024];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let Ok(kind) = entry.file_type() else {
+                continue;
+            };
+            if kind.is_symlink() {
+                continue;
+            }
+            if kind.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            if !kind.is_file() {
+                continue;
+            }
+            let Ok(mut file) = open_warm_file(&path) else {
+                continue;
+            };
+            loop {
+                match file.read(&mut buffer) {
+                    Ok(0) | Err(_) => break,
+                    Ok(_) => {}
+                }
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+fn open_warm_file(path: &std::path::Path) -> std::io::Result<std::fs::File> {
+    use std::os::windows::fs::OpenOptionsExt;
+    // FILE_FLAG_SEQUENTIAL_SCAN
+    std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(0x0800_0000)
+        .open(path)
+}
+
+#[cfg(not(windows))]
+fn open_warm_file(path: &std::path::Path) -> std::io::Result<std::fs::File> {
+    std::fs::File::open(path)
 }
 
 /// Validate and start the mandatory Next.js standalone server, prove it is
@@ -1854,7 +1942,10 @@ fn windows_safe_parent_environment() -> Vec<(std::ffi::OsString, std::ffi::OsStr
 
 fn is_windows_safe_parent_environment_key(key: &std::ffi::OsStr) -> bool {
     let key = key.to_string_lossy();
-    ["SystemRoot", "WINDIR", "TEMP", "TMP"]
+    // USERPROFILE, HOMEDRIVE and HOMEPATH are the Windows home the packaged
+    // server needs for os.homedir() (cloud restore). PATH and credentials
+    // stay stripped.
+    ["SystemRoot", "WINDIR", "TEMP", "TMP", "USERPROFILE", "HOMEDRIVE", "HOMEPATH"]
         .iter()
         .any(|allowed| key.eq_ignore_ascii_case(allowed))
 }
@@ -1953,6 +2044,9 @@ mod child_environment_tests {
         )));
         assert!(!is_windows_safe_parent_environment_key(OsStr::new(
             "DATABASE_URL"
+        )));
+        assert!(is_windows_safe_parent_environment_key(OsStr::new(
+            "USERPROFILE"
         )));
         assert!(!is_windows_safe_parent_environment_key(OsStr::new("PATH")));
     }

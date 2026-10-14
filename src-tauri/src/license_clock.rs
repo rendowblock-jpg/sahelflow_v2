@@ -458,11 +458,21 @@ fn observe_platform(
             .and_then(|plaintext| parse_clock_payload(&plaintext))
         {
             Ok((value, legacy)) => (Some(value), legacy),
-            Err(_) => return Ok(None),
+            // A blob that will not open is not "no clock". Reporting it as
+            // missing lets a later trial reseal over a paid anchor.
+            Err(error) => {
+                return Err(format!(
+                    "protected license clock could not be read: {error}"
+                ))
+            }
         },
         Ok(None) if installation_authority_preexists => return Ok(None),
         Ok(None) => (None, false),
-        Err(_) => return Ok(None),
+        Err(error) => {
+            return Err(format!(
+                "protected license clock could not be read: {error}"
+            ))
+        }
     };
     let anchor = previous.map_or(
         CommercialAnchor {
@@ -490,7 +500,7 @@ fn observe_platform(
             )
         };
         if written != ERROR_SUCCESS {
-            return Ok(None);
+            return durable_anchor_or_error(previous, "could not write the protected license clock");
         }
         // R2: the anti-rollback anchor is only trustworthy once it reaches
         // the hive. RegSetValueExW can sit in the lazy registry flush queue,
@@ -498,10 +508,26 @@ fn observe_platform(
         // backward — flush explicitly before treating the write as durable.
         let flushed = unsafe { RegFlushKey(key) };
         if flushed != ERROR_SUCCESS {
-            return Ok(None);
+            return durable_anchor_or_error(
+                previous,
+                "could not flush the protected license clock",
+            );
         }
     }
     Ok(Some(anchor))
+}
+
+/// A failed durable write must not look like "no clock" when an anchor was
+/// already read. This launch keeps that anchor. Creating a brand-new anchor
+/// that could not be flushed is an error, not a missing clock.
+fn durable_anchor_or_error(
+    previous: Option<CommercialAnchor>,
+    detail: &str,
+) -> Result<Option<CommercialAnchor>, String> {
+    match previous {
+        Some(anchor) => Ok(Some(anchor)),
+        None => Err(detail.to_owned()),
+    }
 }
 
 #[cfg(windows)]

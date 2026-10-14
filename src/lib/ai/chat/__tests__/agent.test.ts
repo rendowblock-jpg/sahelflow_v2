@@ -240,6 +240,7 @@ describe("runAgent — tool calls", () => {
     const modelTurn = body.contents.find((entry) =>
       entry.parts.some((part) => part.functionCall),
     );
+    expect(modelTurn?.role).toBe("model");
     expect(modelTurn?.parts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -248,6 +249,11 @@ describe("runAgent — tool calls", () => {
         }),
       ]),
     );
+    expect(modelTurn?.parts.some((part) => part.functionResponse)).toBe(false);
+    const responseTurn = body.contents.find((entry) =>
+      entry.parts.some((part) => part.functionResponse),
+    );
+    expect(responseTurn?.role).toBe("user");
   });
 
   it("handles a failed tool execution by feeding the error back", async () => {

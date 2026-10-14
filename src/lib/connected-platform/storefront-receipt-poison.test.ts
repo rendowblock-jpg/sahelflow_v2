@@ -6,8 +6,10 @@
  * failure and the cursor never advanced — a permanent silent stall of
  * storefront ingestion. These tests pin the partitioned contract:
  *
- * - receipt-scoped corruption is classified, rejected on the relay, and the
- *   page continues (the cursor always advances);
+ * - receipt-scoped corruption is classified and rejected on the relay, and the
+ *   page continues when that rejection commits;
+ * - a poison rejection the relay refuses does not advance the cursor, so the
+ *   receipt stays readable;
  * - the checkout delegation is released for poison receipts whose item list
  *   fully parsed;
  * - customer-decryption failures that could equally mean a broken enrollment
@@ -255,6 +257,41 @@ describe("hosted storefront receipt ingestion poison contract (C1)", () => {
     expect(releaseRejectedStorefrontReceiptDelegation).not.toHaveBeenCalled();
     expect(completions).toHaveLength(1);
     expect(completions[0]).toMatchObject({ receiptId: "receipt_crossshp", state: "rejected" });
+  });
+
+  it("does not move the ingest cursor when poison rejection throws", async () => {
+    const keys = await encryptWithFreshKeys();
+    const badItemKey = baseReceipt({
+      receiptId: "receipt_baditemk",
+      lines: [{ itemKey: "z:-x", quantity: 1, unitPriceDzd: 2_500 }],
+    });
+    const client = {
+      pollStorefrontReceipts: vi.fn(async () => ({ receipts: [badItemKey], nextCursor: 7 })),
+      completeStorefrontReceipt: vi.fn(async () => {
+        throw new Error("relay down");
+      }),
+    } as unknown as ConnectedPlatformClient;
+    let cursor = 4;
+    let advanced = false;
+    try {
+      const result = await importHostedStorefrontReceipts({
+        client,
+        context,
+        workspaceId: context.shop.workspaceId,
+        encryptionPrivateKeyPkcs8: keys.privateKeyPkcs8,
+        after: cursor,
+      });
+      if (result.nextCursor > cursor) {
+        cursor = result.nextCursor;
+        advanced = true;
+      }
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toMatch(/relay down/);
+    }
+    expect(advanced).toBe(false);
+    expect(cursor).toBe(4);
+    expect(client.completeStorefrontReceipt).toHaveBeenCalledTimes(1);
   });
 
   it("fails fast on an unusable enrollment key before touching any receipt", async () => {

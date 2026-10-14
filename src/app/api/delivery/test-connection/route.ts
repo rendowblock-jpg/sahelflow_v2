@@ -21,11 +21,18 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const actor = trustedActorAuditIdentity(actorContext.actor);
   const result = await testAndCertifyProvider(context, input.provider, actor, input.reasonCode);
   await logAudit(context, {
-    action: result.ok ? "delivery.provider.certified" : "delivery.provider.certification_failed",
+    action: result.ok ? "delivery.provider.connection_checked" : "delivery.provider.certification_failed",
     entity: "delivery_provider",
     entityId: input.provider,
     actor,
-    metadata: { provider: input.provider, reasonCode: input.reasonCode, certified: result.ok, expiresAt: result.expiresAt ?? null },
+    metadata: {
+      provider: input.provider,
+      reasonCode: input.reasonCode,
+      connectionChecked: result.ok,
+      // A connection probe leaves booking source-reviewed. Do not record it as certified.
+      certified: false,
+      expiresAt: result.expiresAt ?? null,
+    },
   });
   return NextResponse.json(result);
 }, "POST /api/delivery/test-connection");

@@ -219,6 +219,29 @@ describe("EcoTrack true-v1 dialect (FD-061 EX-2, CodFlow contract)", () => {
     ).toBe(true);
   });
 
+  it("treats HTTP 500 as an ambiguous create and does not report a known rejection", async () => {
+    fetchMock.mockResolvedValue(json({ message: "upstream" }, 500));
+    await expect(ecoTrackAdapter.createShipment(shipment, V1_CREDENTIALS)).rejects.toMatchObject({
+      code: "ECOTRACK_CREATE_OUTCOME_AMBIGUOUS",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats a NOEST-profile HTTP 500 as an ambiguous create", async () => {
+    fetchMock.mockResolvedValue(json({ message: "upstream" }, 500));
+    await expect(
+      ecoTrackAdapter.createShipment(shipment, {
+        apiToken: "profile-token",
+        userGuid: "profile-guid",
+        createOrderUrl: "https://app.noest-dz.com/api/public/create/order",
+        validateOrderUrl: "https://app.noest-dz.com/api/public/validate/order",
+        trackingsUrl: "https://app.noest-dz.com/api/public/get/trackings/info",
+        feesUrl: "https://app.noest-dz.com/api/public/fees",
+      }),
+    ).rejects.toMatchObject({ code: "ECOTRACK_CREATE_OUTCOME_AMBIGUOUS" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("throws the structured ambiguous-outcome error when create fails on the network", async () => {
     fetchMock.mockRejectedValue(new Error("connection reset"));
     await expect(ecoTrackAdapter.createShipment(shipment, V1_CREDENTIALS)).rejects.toMatchObject({

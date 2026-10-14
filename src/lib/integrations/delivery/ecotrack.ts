@@ -340,6 +340,29 @@ async function createShipmentV1(
   }
 
   const payload = await json<EcoTrackResponse>(response).catch(() => null);
+  if (response.status === 429 || payload?.message === "Too Many Attempts.") {
+    const failure = parseEcotrackFailure(response.status, payload);
+    throw new SahelFlowError(failure.message, "ECOTRACK_RATE_LIMITED", 429);
+  }
+  // 5xx, timeout, conflict, or an unreadable 2xx body may already be a parcel.
+  // A definite 4xx validation rejection stays a known failure.
+  if (
+    (!response.ok && (response.status >= 500 || response.status === 408 || response.status === 409)) ||
+    (response.ok && !payload)
+  ) {
+    throw new SahelFlowError(
+      `EcoTrack create outcome is ambiguous (HTTP ${response.status}).`,
+      "ECOTRACK_CREATE_OUTCOME_AMBIGUOUS",
+      502,
+    );
+  }
+  if (payload?.success === true && !payload.tracking?.trim()) {
+    throw new SahelFlowError(
+      "EcoTrack create outcome is ambiguous (tracking was not returned).",
+      "ECOTRACK_CREATE_OUTCOME_AMBIGUOUS",
+      502,
+    );
+  }
   if (!response.ok || !payload || payload.success === false || !payload.tracking?.trim()) {
     const failure = parseEcotrackFailure(response.status, payload);
     if (failure.kind === "rate_limit") {
@@ -635,6 +658,13 @@ export const ecoTrackAdapter: DeliveryAdapter = {
     }
 
     if (!response.ok) {
+      if (response.status >= 500 || response.status === 408 || response.status === 409) {
+        throw new SahelFlowError(
+          `EcoTrack create outcome is ambiguous (HTTP ${response.status}).`,
+          "ECOTRACK_CREATE_OUTCOME_AMBIGUOUS",
+          502,
+        );
+      }
       return {
         success: false,
         trackingId: "",
@@ -644,6 +674,13 @@ export const ecoTrackAdapter: DeliveryAdapter = {
     }
     const created = await json<EcoTrackResponse>(response);
     const tracking = created.tracking?.trim() ?? "";
+    if (created.success === true && !tracking) {
+      throw new SahelFlowError(
+        "EcoTrack create outcome is ambiguous (tracking was not returned).",
+        "ECOTRACK_CREATE_OUTCOME_AMBIGUOUS",
+        502,
+      );
+    }
     if (!created.success || !tracking) {
       return {
         success: false,

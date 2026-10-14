@@ -828,6 +828,7 @@
   "delivery.configured": "تم الإعداد",
   "delivery.confirmDelete": "حذف بيانات اعتماد {{provider}}؟",
   "delivery.confirmDeleteDesc": "سيؤدي هذا إلى إزالة بيانات الاعتماد المخزنة لهذا المزود. ستحتاج إلى إعادة إدخالها لاستخدام هذا المزود مرة أخرى.",
+  "delivery.connectionChecked": "تم فحص الاتصال",
   "delivery.connectionFailed": "فشل الاتصال.",
   "delivery.createShipment": "إنشاء شحنة",
   "delivery.creatingShipment": "جاري الإنشاء...",

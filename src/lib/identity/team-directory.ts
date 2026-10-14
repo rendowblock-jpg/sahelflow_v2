@@ -880,6 +880,37 @@ export async function createTeamLoginSession(
   });
 }
 
+/**
+ * Whether this login's PIN matches an active member. Does not create a session.
+ * A PIN outside the directory schema is not a match and does not throw.
+ */
+export async function teamMemberPinMatches(
+  loginIdInput: string,
+  pinInput: string,
+  shop: ShopContext,
+): Promise<boolean> {
+  const loginId = loginIdSchema.safeParse(loginIdInput);
+  const pin = pinSchema.safeParse(pinInput);
+  if (!loginId.success || !pin.success) return false;
+  return withLock(async () => {
+    const marker = readTeamMarker();
+    const envelope = readTeam();
+    if (!envelope) {
+      if (marker) throw teamError("Team directory is missing after initialization");
+      return false;
+    }
+    const payload = envelope.payload;
+    assertContext(payload, shop);
+    assertMarker(marker, payload, shop);
+    const member = payload.members.find(
+      (candidate) =>
+        candidate.loginId === loginId.data && candidate.revokedAt === null,
+    );
+    if (!member) return false;
+    return (await verifyPinDetailed(pin.data, member.pinHash)).valid;
+  });
+}
+
 export type TeamMemberAccess = Readonly<{
   role: z.infer<typeof roleSchema>;
   permissions: readonly Phase2Action[] | null;

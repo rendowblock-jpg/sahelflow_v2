@@ -29,6 +29,8 @@
 import { env } from "@/lib/env";
 import "server-only";
 
+import { SahelFlowError } from "@/types/errors";
+
 
 import type {
   DeliveryAdapter,
@@ -356,6 +358,15 @@ export const yalidineAdapter: DeliveryAdapter = {
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
+        // 5xx, timeout and conflict may mean the parcel was committed.
+        // A definite 4xx validation rejection is a known failure.
+        if (res.status >= 500 || res.status === 408 || res.status === 409) {
+          throw new SahelFlowError(
+            `Yalidine create outcome is ambiguous (HTTP ${res.status}).`,
+            "YALIDINE_CREATE_OUTCOME_AMBIGUOUS",
+            502,
+          );
+        }
         return {
           success: false,
           trackingId: "",
@@ -367,12 +378,11 @@ export const yalidineAdapter: DeliveryAdapter = {
       const payload: unknown = await res.json().catch(() => null);
       const entry = extractCreateEntry(payload, request.orderNumber);
       if (!entry) {
-        return {
-          success: false,
-          trackingId: "",
-          cost: 0,
-          error: "Réponse vide de Yalidine.",
-        };
+        throw new SahelFlowError(
+          "Yalidine create outcome is ambiguous (unreadable body).",
+          "YALIDINE_CREATE_OUTCOME_AMBIGUOUS",
+          502,
+        );
       }
 
       const tracking =
@@ -381,6 +391,14 @@ export const yalidineAdapter: DeliveryAdapter = {
           : typeof entry.tracking_id === "string"
             ? entry.tracking_id
             : "";
+      // success:true without a tracking id may already be a committed parcel.
+      if (entry.success === true && !tracking) {
+        throw new SahelFlowError(
+          "Yalidine create outcome is ambiguous (tracking was not returned).",
+          "YALIDINE_CREATE_OUTCOME_AMBIGUOUS",
+          502,
+        );
+      }
       // Success only when success === true AND tracking is non-empty.
       if (entry.success !== true || !tracking) {
         const message =
@@ -415,12 +433,12 @@ export const yalidineAdapter: DeliveryAdapter = {
         cost: estimate.available ? estimate.cost : 0,
       };
     } catch (err) {
-      return {
-        success: false,
-        trackingId: "",
-        cost: 0,
-        error: `Échec de connexion: ${err instanceof Error ? err.message : "erreur inconnue"}`,
-      };
+      if (err instanceof SahelFlowError) throw err;
+      throw new SahelFlowError(
+        err instanceof Error ? err.message : "Yalidine create outcome is unknown.",
+        "YALIDINE_CREATE_OUTCOME_AMBIGUOUS",
+        502,
+      );
     }
   },
 

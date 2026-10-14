@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { issueCanonicalRefund, reverseCanonicalRefund } from "@/lib/accounting/canonical-refund";
+import { getCanonicalCodWorkspaceSummary } from "@/lib/accounting/canonical-cod-projections";
 import type { ServiceContext } from "@/lib/data/service-base";
 import {
   requestCanonicalCustomerReturn,
@@ -324,6 +325,54 @@ describe("canonical customer returns, exchanges and refunds", () => {
     });
   });
 
+  it("a courier deduction reduces the COD the courier still owes without a second cash movement", async () => {
+    const { order } = await seedDeliveredOrder({ quantity: 2, price: 2500 });
+    const orderItem = required(order.items[0], "order item");
+    const requested = await requestReturn({
+      orderId: order.id,
+      expectedVersion: 5,
+      orderItemId: orderItem.id,
+      quantity: 1,
+      key: "courier-deduction-return",
+    });
+    const lifecycle = await completeReturn({
+      orderId: order.id,
+      returnId: requested.result.returnId,
+      orderItemId: orderItem.id,
+      quantity: 1,
+      startVersion: requested.result.orderVersion,
+    });
+    await issueCanonicalRefund(context, {
+      orderId: order.id,
+      returnId: requested.result.returnId,
+      expectedVersion: lifecycle.completed.result.orderVersion,
+      amount: 1500,
+      method: "courier_deduction",
+      reference: "ZR-DEDUCT-1",
+      reasonCode: "courier-kept-the-refund",
+      occurredAt: new Date("2026-07-30T14:00:00.000Z"),
+      idempotencyKey: "courier-deduction-refund",
+    });
+
+    const summary = await getCanonicalCodWorkspaceSummary(context as never);
+    const position = summary.awaitingCollection.find((entry) => entry.orderId === order.id);
+    expect(position).toMatchObject({
+      expectedReceivable: 3500,
+      outstandingCollection: 3500,
+    });
+    expect(await db.codCollection.count({ where: { orderId: order.id } })).toBe(0);
+    const movements = await db.financialMovement.findMany({
+      where: { orderId: order.id },
+      select: { movementType: true },
+    });
+    expect(movements.map((movement) => movement.movementType)).toContain(
+      "customer_refund_via_courier_deduction",
+    );
+    expect(movements.map((movement) => movement.movementType)).not.toContain(
+      "cod_cash_collected_by_courier",
+    );
+  });
+
   it("creates a pending server-priced replacement order only after a full exchange completes", async () => {
     const { order, product, customer } = await seedDeliveredOrder({
       quantity: 1,
@@ -407,7 +456,7 @@ describe("canonical customer returns, exchanges and refunds", () => {
     });
     expect(await db.customer.findUnique({ where: { id: customer.id } })).toMatchObject({
       orderCount: 0,
-      totalSpent: 2400,
+      totalSpent: 0,
     });
   });
 
@@ -490,7 +539,8 @@ describe("canonical customer returns, exchanges and refunds", () => {
       refundState: "partially_reversed",
     });
     expect(await db.customer.findUnique({ where: { id: customer.id } })).toMatchObject({
-      totalSpent: 400,
+      orderCount: 0,
+      totalSpent: 0,
     });
     expect(await db.product.findUnique({ where: { id: product.id } })).toMatchObject({
       stock: 5,

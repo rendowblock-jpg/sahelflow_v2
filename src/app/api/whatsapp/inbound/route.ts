@@ -9,6 +9,10 @@ import {
 } from "@/lib/identity/authorization";
 import { persistWhatsAppInbound } from "@/lib/whatsapp/inbound-ingress";
 import { processWhatsAppInbound } from "@/lib/whatsapp/inbound-processor";
+import {
+  isWhatsAppPhoneOutboundEnvelope,
+  persistWhatsAppPhoneOutbound,
+} from "@/lib/whatsapp/phone-outbound";
 import { authenticateWhatsAppSidecar } from "@/lib/whatsapp/sidecar-rest-auth";
 
 export const dynamic = "force-dynamic";
@@ -80,6 +84,16 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   return NextResponse.json({ events });
 }, "GET /api/whatsapp/inbound");
 
+/**
+ * Spool removal is an acknowledgement that the provider event is durable.
+ * Applied rows are durable. A chat-delete tombstone is durable only because
+ * the row exists with status `chat_deleted`. Quarantine and dead-letter are
+ * not: acknowledging them would drop the only copy WhatsApp will not resend.
+ */
+export function acknowledgeWhatsAppSpoolRemoval(state: string): boolean {
+  return state === "applied" || state === "chat_deleted";
+}
+
 /** Private sidecar commit-before-acknowledgement boundary. */
 export const POST = withErrorHandler(async (request: NextRequest) => {
   if (!authenticateWhatsAppSidecar(request)) {
@@ -87,13 +101,35 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   const context = { prisma: db, shop: shopContext };
-  const persisted = await persistWhatsAppInbound(context, await request.json());
+  const raw = await request.json();
+  if (isWhatsAppPhoneOutboundEnvelope(raw)) {
+    // Phone echoes are outbound rows, never a second inbound. Ack only after
+    // that row is durable.
+    const stored = await persistWhatsAppPhoneOutbound(context, raw);
+    return NextResponse.json(
+      {
+        ok: true,
+        acknowledged: true,
+        publish: true,
+        ingressEventId: stored.messageId,
+        messageId: stored.messageId,
+        status: "stored",
+        replayed: stored.replayed,
+      },
+      {
+        status: stored.replayed ? 200 : 201,
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
+  }
+
+  const persisted = await persistWhatsAppInbound(context, raw);
   const processed = await processWhatsAppInbound(
     context,
     persisted.ingressEventId,
   );
 
-  if (["received", "processing", "retrying"].includes(processed.state)) {
+  if (!acknowledgeWhatsAppSpoolRemoval(processed.state)) {
     return NextResponse.json(
       {
         ok: false,

@@ -87,6 +87,9 @@ describe("extractWithGeminiFromImage (ledger AI-21)", () => {
       generationConfig: { responseMimeType: string };
     };
     expect(body.generationConfig.responseMimeType).toBe("application/json");
+    expect(
+      (body.generationConfig as { maxOutputTokens?: number }).maxOutputTokens,
+    ).toBe(8192);
     const inline = body.contents[0]!.parts[0]!.inline_data as {
       mime_type: string;
       data: string;
@@ -115,6 +118,67 @@ describe("extractWithGeminiFromImage (ledger AI-21)", () => {
     expect(result.order).toBeNull();
     expect(result.method).toBe("none");
     expect(result.missingFields?.[0]).toBeTruthy();
+  });
+
+  it("does not present an invalid phone or unofficial wilaya as complete", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      ok(
+        JSON.stringify({
+          customerName: "Ahmed",
+          phone: "12345",
+          wilaya: "Narnia",
+          items: [{ productName: "Robe", quantity: 1 }],
+        }),
+      ),
+    );
+    const result = await extractWithGeminiFromImage(PNG_INPUT, OPTIONS);
+    expect(result.isComplete).toBe(false);
+    expect(result.order?.phone).toBeUndefined();
+    expect(result.order?.wilaya).toBeUndefined();
+    expect(result.missingFields).toEqual(
+      expect.arrayContaining(["phone", "wilaya"]),
+    );
+    expect(JSON.stringify(result.order)).not.toContain("12345");
+    expect(JSON.stringify(result.order)).not.toContain("Narnia");
+  });
+
+  it("drops thought parts and treats a thought-only screenshot as a failed read", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          candidates: [
+            { content: { parts: [{ thought: true, text: COMPLETE }] } },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const empty = await extractWithGeminiFromImage(PNG_INPUT, OPTIONS);
+    expect(empty.order).toBeNull();
+    expect(empty.isComplete).toBe(false);
+    expect(empty.missingFields).toContain("GEMINI_EMPTY_RESPONSE");
+
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { thought: true, text: "THOUGHT_LEAK 0999999999" },
+                  { text: COMPLETE },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const result = await extractWithGeminiFromImage(PNG_INPUT, OPTIONS);
+    expect(result.isComplete).toBe(true);
+    expect(result.order?.phone).toBe("0661234567");
+    expect(JSON.stringify(result.order)).not.toContain("THOUGHT_LEAK");
   });
 
   it("keeps the declared screenshot type set aligned with the inbox image authority", () => {

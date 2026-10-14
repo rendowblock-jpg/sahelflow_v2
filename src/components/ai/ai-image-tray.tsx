@@ -20,6 +20,12 @@ import {
 } from "@/lib/ai/chat/attachment-limits";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import wilayas from "../../../data/wilayas.json";
+
+const ALGERIAN_MOBILE = /^0[5-7]\d{8}$/;
+const OFFICIAL_WILAYAS = new Set(
+  (wilayas as Array<{ name: string }>).map((wilaya) => wilaya.name),
+);
 
 /**
  * Agents image input. Images picked, pasted or dropped on the composer are
@@ -51,14 +57,27 @@ interface ScreenshotExtractionResult {
  * model contract language (English) while every surrounding UI string is
  * localized — the seller reviews and edits the draft before sending.
  */
+function acceptedPhone(value: string | undefined): string | undefined {
+  return value && ALGERIAN_MOBILE.test(value) ? value : undefined;
+}
+
+function acceptedWilaya(value: string | undefined): string | undefined {
+  return value && OFFICIAL_WILAYAS.has(value) ? value : undefined;
+}
+
 export function screenshotSummary(result: ScreenshotExtractionResult): string {
   const order = result.order!;
+  const phone = acceptedPhone(order.phone);
+  const wilaya = acceptedWilaya(order.wilaya);
+  const missing = [...(result.missingFields ?? [])];
+  if (order.phone && !phone && !missing.includes("phone")) missing.push("phone");
+  if (order.wilaya && !wilaya && !missing.includes("wilaya")) missing.push("wilaya");
   const lines: string[] = [
     `Order request extracted from a screenshot (${Math.round(result.confidence * 100)}% confidence):`,
   ];
   if (order.customerName) lines.push(`customer: ${order.customerName}`);
-  if (order.phone) lines.push(`phone: ${order.phone}`);
-  if (order.wilaya) lines.push(`wilaya: ${order.wilaya}`);
+  if (phone) lines.push(`phone: ${phone}`);
+  if (wilaya) lines.push(`wilaya: ${wilaya}`);
   if (order.commune) lines.push(`commune: ${order.commune}`);
   if (order.address) lines.push(`address: ${order.address}`);
   for (const item of order.items) {
@@ -70,8 +89,8 @@ export function screenshotSummary(result: ScreenshotExtractionResult): string {
   }
   if (order.totalPrice != null) lines.push(`total: ${order.totalPrice} DZD`);
   if (order.notes) lines.push(`notes: ${order.notes}`);
-  if (result.missingFields?.length) {
-    lines.push(`missing: ${result.missingFields.join(", ")}`);
+  if (missing.length) {
+    lines.push(`missing: ${missing.join(", ")}`);
   }
   return lines.join("\n");
 }

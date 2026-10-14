@@ -76,6 +76,53 @@ describe("extractWithGemini", () => {
     });
     expect(body.generationConfig).not.toHaveProperty("responseFormat");
     expect(body.generationConfig).not.toHaveProperty("temperature");
+    expect(body.generationConfig.maxOutputTokens).toBe(8192);
+  });
+
+  it("drops thought parts instead of concatenating them into the order JSON", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { thought: true, text: COMPLETE },
+                  { text: "" },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const empty = await extractWithGemini(INPUT, OPTIONS);
+    expect(empty.order).toBeNull();
+    expect(empty.isComplete).toBe(false);
+    expect(empty.missingFields).toContain("GEMINI_EMPTY_RESPONSE");
+
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { thought: true, text: "THOUGHT_LEAK 0999999999" },
+                  { text: COMPLETE },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const result = await extractWithGemini(INPUT, OPTIONS);
+    expect(result.isComplete).toBe(true);
+    expect(result.order?.phone).toBe("0661234567");
+    expect(JSON.stringify(result.order)).not.toContain("THOUGHT_LEAK");
   });
 
   it("reports incomplete but valid extraction fields", async () => {

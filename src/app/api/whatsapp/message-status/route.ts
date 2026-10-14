@@ -28,7 +28,7 @@ const statusSchema = z.object({
   error: z.string().max(2000).optional(),
 });
 
-function allowedPriorStates(next: DeliveryStatus): Array<string | null> {
+export function allowedPriorDeliveryStates(next: DeliveryStatus): Array<string | null> {
   switch (next) {
     case "sending":
       return [null];
@@ -39,7 +39,9 @@ function allowedPriorStates(next: DeliveryStatus): Array<string | null> {
     case "read":
       return [null, "sending", "sent", "delivered"];
     case "failed":
-      return [null, "sending", "sent"];
+      // A late ERROR receipt must not turn a message the provider already
+      // accepted into a retryable failure. The receipt is still audited.
+      return [null, "sending"];
   }
 }
 
@@ -69,7 +71,7 @@ async function updateMessageStatus(
   messageId: string,
   deliveryStatus: DeliveryStatus,
 ): Promise<boolean> {
-  const prior = allowedPriorStates(deliveryStatus);
+  const prior = allowedPriorDeliveryStates(deliveryStatus);
   const updated = await db.message.updateMany({
     where: {
       id: messageId,

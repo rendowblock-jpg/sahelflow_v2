@@ -681,9 +681,10 @@ async function resolveQuotedReplyContext(
       context: {
         stanzaId: applied.providerEventId,
         fromMe: false,
-        // Direct chats must not carry a group participant. Baileys treats
-        // key.participant as a group sender and a 1:1 quote with one set
-        // (especially a LID) is rejected, so the text never leaves.
+        // No participant: Baileys fills contextInfo.participant from
+        // key.participant or the chat JID, and that group-style sender makes
+        // WhatsApp drop a 1:1 or @lid quote. The sidecar embeds the quote
+        // without one.
         stubKind: quotedStubKind(target.messageType),
         stubText: quotedStubText(target.body),
       },

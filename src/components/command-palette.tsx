@@ -29,6 +29,7 @@ import {
   clearCommandPaletteSeed,
   peekCommandPaletteSeed,
 } from "@/components/search/command-palette-seed";
+import { IconTile } from "@/components/system";
 import { CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { useI18n } from "@/hooks/use-i18n";
 import { LOCALES, getTranslations } from "@/lib/i18n";
