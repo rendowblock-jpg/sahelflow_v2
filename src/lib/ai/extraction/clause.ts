@@ -220,8 +220,11 @@ export function readClause(original: string, folded: string): ClauseReading {
     if (cue?.groups?.num) reading.price = parsePriceNumber(cue.groups.num);
   }
   if (reading.price === undefined) {
-    const bare = [...work.folded.matchAll(BARE_PRICE)].filter((m) => Number(parsePriceNumber(m.groups?.num ?? "")) >= 100).at(-1);
-    if (bare?.groups?.num) {
+    // A bare number is a price only at the end of the clause ("montre 3000").
+    // "power bank 20000 disponible" keeps 20000: it is a model, words follow it,
+    // and no currency was written.
+    const bare = [...work.folded.matchAll(BARE_PRICE)].filter((match) => Number(parsePriceNumber(match.groups?.num ?? "")) >= 100).at(-1);
+    if (bare?.groups?.num && work.folded.slice((bare.index ?? 0) + bare[0].length).trim() === "") {
       reading.price = parsePriceNumber(bare.groups.num);
       work.blank(bare.index ?? 0, (bare.index ?? 0) + bare[0].length);
     }
@@ -243,7 +246,14 @@ export function readClause(original: string, folded: string): ClauseReading {
     }
   }
 
-  const name = trimEdges(work.rest().replace(FILLER_ANYWHERE, " ").replace(/\s+/g, " "));
+  // Fillers are matched on the folded view (Arabic letter variants) and blanked
+  // in both views, so "في الصفحة" does not stay glued to the product name.
+  FILLER_ANYWHERE.lastIndex = 0;
+  const fillers = [...work.folded.matchAll(FILLER_ANYWHERE)];
+  for (const match of fillers.reverse()) {
+    work.blank(match.index ?? 0, (match.index ?? 0) + match[0].length);
+  }
+  const name = trimEdges(work.rest().replace(/\s+/g, " "));
   if (name && isProductName(name)) reading.name = name;
   return reading;
 }

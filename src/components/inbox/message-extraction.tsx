@@ -64,11 +64,45 @@ function algerianPhoneToWhatsAppJid(phone: string): string {
   return `${international}@s.whatsapp.net`;
 }
 
-/**
- * FD-064 order extraction: read the customer's message (on this device, and
- * with Gemini when the seller enabled it), then let the seller confirm or
- * correct every field against the real catalog before the order exists.
- */
+function ExtractionAiLine({
+  method,
+  aiFailure,
+  ai,
+  copy,
+  onSettings,
+}: {
+  method: ExtractionResult["method"];
+  aiFailure?: string;
+  ai: { consent: boolean; available: boolean };
+  copy: (key: OrderExtractionCopyKey) => string;
+  onSettings: () => void;
+}) {
+  if (aiFailure) {
+    return <p className="text-caption text-muted-foreground" role="status">{copy("aiFailed")}</p>;
+  }
+  if (method === "gemini") {
+    return <p className="text-caption text-foreground" role="status">{copy("aiUsed")}</p>;
+  }
+  if (!ai.consent) {
+    return (
+      <p className="text-caption text-muted-foreground" role="status">
+        {copy("aiOff")}{" "}
+        <button
+          type="button"
+          onClick={onSettings}
+          className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {copy("aiSettings")}
+          <ArrowRight className="size-3 icon-rtl-flip" aria-hidden="true" />
+        </button>
+      </p>
+    );
+  }
+  if (!ai.available) {
+    return <p className="text-caption text-muted-foreground" role="status">{copy("aiNoKey")}</p>;
+  }
+  return <p className="text-caption text-muted-foreground" role="status">{copy("aiNotNeeded")}</p>;
+}
 export function MessageExtraction({
   conversationId,
   messageId,
@@ -231,28 +265,22 @@ export function MessageExtraction({
                   <Badge variant="outline">
                     {read.method === "gemini" ? copy("methodGemini") : copy("methodOffline")}
                   </Badge>
-                  <Badge variant="outline" className="tabular-nums">
-                    {copy("confidence", { value: Math.round(read.confidence * 100) })}
-                  </Badge>
+                  {read.method === "gemini" ? null : (
+                    <Badge variant="outline" className="tabular-nums">
+                      {copy("confidence", { value: Math.round(read.confidence * 100) })}
+                    </Badge>
+                  )}
                 </div>
               ) : (
                 <p className="text-caption text-muted-foreground">{copy("notFoundHint")}</p>
               )}
-              {read.aiFailure ? (
-                <p className="text-caption text-muted-foreground" role="status">{copy("aiFailed")}</p>
-              ) : !response?.ai.consent && !read.isComplete ? (
-                <p className="text-caption text-muted-foreground">
-                  {copy("aiOff")}{" "}
-                  <button
-                    type="button"
-                    onClick={() => router.push("/settings?group=intelligence")}
-                    className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
-                  >
-                    {copy("aiSettings")}
-                    <ArrowRight className="size-3 icon-rtl-flip" aria-hidden="true" />
-                  </button>
-                </p>
-              ) : null}
+              <ExtractionAiLine
+                method={read.method}
+                aiFailure={read.aiFailure}
+                ai={response?.ai ?? { consent: false, available: false }}
+                copy={copy}
+                onSettings={() => router.push("/settings?group=intelligence")}
+              />
               <Button type="button" variant="ghost" size="sm" onClick={handleRead} disabled={reading} className="-ms-2">
                 <RefreshCw className={reading ? "size-4 animate-spin" : "size-4"} aria-hidden="true" />
                 {copy("readAgain")}
@@ -352,29 +380,23 @@ export function MessageExtraction({
           <Badge variant="outline">
             {result.method === "gemini" ? copy("methodGemini") : copy("methodOffline")}
           </Badge>
-          <Badge variant="outline" className="tabular-nums">
-            {copy("confidence", { value: Math.round(result.confidence * 100) })}
-          </Badge>
+          {result.method === "gemini" ? null : (
+            <Badge variant="outline" className="tabular-nums">
+              {copy("confidence", { value: Math.round(result.confidence * 100) })}
+            </Badge>
+          )}
         </div>
       ) : (
         <p className="text-caption text-muted-foreground">{copy("notFoundHint")}</p>
       )}
 
-      {result.aiFailure ? (
-        <p className="text-caption text-muted-foreground" role="status">{copy("aiFailed")}</p>
-      ) : !ai.consent && !result.isComplete ? (
-        <p className="text-caption text-muted-foreground">
-          {copy("aiOff")}{" "}
-          <button
-            type="button"
-            onClick={() => router.push("/settings?group=intelligence")}
-            className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
-          >
-            {copy("aiSettings")}
-            <ArrowRight className="size-3 icon-rtl-flip" aria-hidden="true" />
-          </button>
-        </p>
-      ) : null}
+      <ExtractionAiLine
+        method={result.method}
+        aiFailure={result.aiFailure}
+        ai={ai}
+        copy={copy}
+        onSettings={() => router.push("/settings?group=intelligence")}
+      />
 
       <ExtractionReview
         key={revision}

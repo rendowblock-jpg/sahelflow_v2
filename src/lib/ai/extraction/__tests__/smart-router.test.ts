@@ -92,6 +92,32 @@ describe("extractOrder — regex routing", () => {
 // ── extractOrder — Gemini routing ────────────────────────────────────────────
 
 describe("extractOrder — Gemini routing", () => {
+  it("calls Gemini when a complete reading did not land on the catalog", async () => {
+    vi.mocked(extractWithGemini).mockResolvedValue(geminiResult());
+
+    const result = await extractOrder(
+      { body: COMPLETE_MSG, catalog: [{ name: "Coque iPhone" }] },
+      { geminiApiKey: "AIza-key" },
+    );
+
+    expect(extractWithGemini).toHaveBeenCalledTimes(1);
+    expect(result.method).toBe("gemini");
+  });
+
+  it("does not call Gemini when every item already matches the catalog", async () => {
+    const result = await extractOrder(
+      {
+        body: "je veux 2x Montre Connectée 3500 da, Oran, 0500000092",
+        catalog: [{ name: "Montre Connectée" }],
+      },
+      { geminiApiKey: "AIza-key" },
+    );
+
+    expect(result.method).toBe("regex");
+    expect(result.order?.items[0]?.catalogMatch).toBe("exact");
+    expect(extractWithGemini).not.toHaveBeenCalled();
+  });
+
   it("calls Gemini when regex is incomplete and a key is provided", async () => {
     vi.mocked(extractWithGemini).mockResolvedValue(geminiResult());
 

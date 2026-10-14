@@ -27,30 +27,66 @@ function singular(token: string): string {
 }
 
 export function productTokens(value: string): string[] {
-  return foldKey(value)
+  const raw = foldKey(value)
     .split(" ")
-    .filter((token) => token && !STOP.has(token))
-    .map(singular);
+    .filter((token) => token && !STOP.has(token));
+  const joined: string[] = [];
+  for (let index = 0; index < raw.length; index += 1) {
+    const token = raw[index]!;
+    const next = raw[index + 1];
+    // "20 000" and "20000" are the same capacity.
+    if (/^\d{1,3}$/.test(token) && next && /^\d{3}$/.test(next)) {
+      joined.push(token + next);
+      index += 1;
+      continue;
+    }
+    joined.push(singular(token));
+  }
+  return joined;
 }
 
-function editDistanceAtMostOne(left: string, right: string): boolean {
-  if (Math.abs(left.length - right.length) > 1) return false;
-  let i = 0;
-  let j = 0;
-  let edits = 0;
-  while (i < left.length && j < right.length) {
-    if (left[i] === right[j]) { i += 1; j += 1; continue; }
-    edits += 1;
-    if (edits > 1) return false;
-    if (left.length > right.length) i += 1;
-    else if (right.length > left.length) j += 1;
-    else { i += 1; j += 1; }
+/** Color, size-label and attribute words. They describe a product; they are not a second one. */
+const QUERY_NOISE = new Set(
+  [
+    "couleur", "color", "colour", "size", "pointure", "modele", "modèle", "model", "type", "version",
+    "noir", "noire", "noirs", "black", "blanc", "blanche", "beige", "vert", "verte", "rouge",
+    "bleu", "bleue", "rose", "gris", "grise", "marron", "camel", "dore", "doré", "gold",
+    "brown", "green", "white", "اسود", "كحل", "ابيض", "بيضاء", "احمر", "ازرق", "اخضر", "بيج", "رمادي",
+  ].map((word) => fold(word)),
+);
+
+function queryTokens(value: string): string[] {
+  return productTokens(value).filter((token) => !QUERY_NOISE.has(token));
+}
+
+function covers(item: readonly string[], entry: readonly string[]): boolean {
+  return item.length > 0 && item.every((token) => entry.some((candidate) => sameToken(candidate, token)));
+}
+
+function editDistanceAtMost(left: string, right: string, max: number): boolean {
+  if (Math.abs(left.length - right.length) > max) return false;
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= left.length; i += 1) {
+    const current = [i];
+    let rowMin = i;
+    for (let j = 1; j <= right.length; j += 1) {
+      const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+      const value = Math.min(current[j - 1]! + 1, previous[j]! + 1, previous[j - 1]! + cost);
+      current[j] = value;
+      if (value < rowMin) rowMin = value;
+    }
+    if (rowMin > max) return false;
+    previous = current;
   }
-  return edits + (left.length - i) + (right.length - j) <= 1;
+  return previous[right.length]! <= max;
 }
 
 function sameToken(left: string, right: string): boolean {
-  return left === right || (left.length >= 5 && right.length >= 5 && editDistanceAtMostOne(left, right));
+  if (left === right) return true;
+  if (left.length < 5 || right.length < 5) return false;
+  // One slip on a normal word; two on a long product word ("imprimante").
+  const max = left.length >= 8 && right.length >= 8 ? 2 : 1;
+  return editDistanceAtMost(left, right, max);
 }
 
 function similarity(item: readonly string[], entry: readonly string[]): number {
@@ -81,7 +117,16 @@ export function matchCatalog(
   if (exact.length === 1) return { name: exact[0]!.name, kind: "exact" };
   if (exact.length > 1) return undefined;
 
-  const tokens = productTokens(name);
+  const tokens = queryTokens(name);
+  // "mini imprimante" → "Mini imprimante thermique Bluetooth", and
+  // "abaya taille L" → the L variant only. Two products that both contain
+  // every word ("tshirt oversize" vs M and L) stay unmatched.
+  const contained = catalog.filter((entry) => covers(tokens, productTokens(entry.name)));
+  const distinctive = tokens.some((token) => token.length >= 4 || /^\d{2,}$/.test(token));
+  if (contained.length === 1 && distinctive) {
+    return { name: contained[0]!.name, kind: "close" };
+  }
+
   const scored = catalog
     .map((entry) => ({ entry, score: similarity(tokens, productTokens(entry.name)) }))
     .sort((left, right) => right.score - left.score);

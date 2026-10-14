@@ -3,11 +3,13 @@
  * then assemble. A clause that only states a price ("thmano khamsa alaf",
  * "4500 da koll wahda", "tshirts 1500 le koll") prices an item already named
  * instead of inventing a new one; a clause with no quantity, price or order
- * verb is conversation, not an item.
+ * verb is conversation, not an item. A product asked about ("disponible ?")
+ * is still the order when the same message also asks for delivery or says
+ * "je veux" / "نحب". A warranty question with no order is not an item.
  */
-import { findCatalogSpans, matchCatalog, sameProduct, type ExtractionCatalogEntry } from "./catalog";
+import { findCatalogSpans, matchCatalog, productTokens, sameProduct, type ExtractionCatalogEntry } from "./catalog";
 import { readClause } from "./clause";
-import { B_AFTER, B_BEFORE } from "./text";
+import { B_AFTER, B_BEFORE, fold } from "./text";
 import type { ExtractedItem } from "./types";
 
 export interface ItemsReading {
@@ -51,6 +53,26 @@ function splitClauses(folded: string, protectedSpans: ReadonlyArray<{ start: num
 }
 
 const SIGNATURE_WORD = /^(?:\p{Lu}[\p{Ll}'-]+|\p{Script=Arabic}{2,})$/u;
+const DELIVERY_LINE = /(?:livraison|livrer|توصيل|التوصيل|tawsil|twsil|twsl|delivery)/u;
+const PAYMENT_LINE = /(?:عند الاستلام|الدفع عند|cash on delivery|paiement)/u;
+const COLOR_WORDS = new Set(
+  [
+    "noir", "noire", "noirs", "black", "blanc", "blanche", "beige", "vert", "verte",
+    "rouge", "bleu", "bleue", "rose", "gris", "grise", "marron", "camel", "dore", "gold",
+    "brown", "green", "white", "اسود", "كحل", "ابيض", "بيضاء", "احمر", "ازرق", "اخضر", "بيج", "رمادي",
+  ].map((word) => fold(word)),
+);
+
+function colorPhrase(name: string): string | undefined {
+  const tokens = productTokens(name).filter((token) => COLOR_WORDS.has(token));
+  const all = productTokens(name);
+  if (all.length === 0 || tokens.length !== all.length) return undefined;
+  return tokens.join(" ");
+}
+
+function clampQty(quantity: number | undefined): number {
+  return Math.min(Math.max(quantity ?? 1, 1), 999);
+}
 
 /** One to three name-shaped words and nothing else. */
 function signatureName(text: string): string | undefined {
@@ -73,11 +95,17 @@ export function readItems(
   // "Sac à Main Femme + Parfum Oud": the first entry of a list is an item
   // once the entry joined to it is one.
   let pendingListItem: ExtractedItem | undefined;
+  // A product named before the customer says "je veux" / "نحب" or asks for delivery.
+  let mention: { name: string; quantity: number } | undefined;
 
-  for (const clause of splitClauses(folded, findCatalogSpans(folded, catalog))) {
+  const parsed = splitClauses(folded, findCatalogSpans(folded, catalog)).map((clause) => {
     const text = original.slice(clause.start, clause.end);
-    const line = readClause(text, folded.slice(clause.start, clause.end));
+    const clauseFolded = folded.slice(clause.start, clause.end);
+    return { clause, text, clauseFolded, line: readClause(text, clauseFolded) };
+  });
+  const messageOrders = parsed.some((row) => row.line.intent || DELIVERY_LINE.test(row.clauseFolded));
 
+  for (const { clause, text, clauseFolded, line } of parsed) {
     if (line.address || (line.addressContinuation && previousWasAddress)) {
       addressParts.push((line.address ?? line.addressContinuation)!);
       previousWasAddress = true;
@@ -97,7 +125,36 @@ export function readItems(
       continue;
     }
 
+    const deliveryOrPayment =
+      (DELIVERY_LINE.test(clauseFolded) || PAYMENT_LINE.test(clauseFolded)) &&
+      !line.quantityStated &&
+      line.price === undefined;
+    if (deliveryOrPayment) {
+      previousWasItem = false;
+      continue;
+    }
+
     if (line.name) {
+      const onlyColor = !line.intent && !line.quantityStated && line.price === undefined ? colorPhrase(line.name) : undefined;
+      if (onlyColor) {
+        notes.push(onlyColor);
+        continue;
+      }
+      // "Oud & Ambre" is one product. "Sac + Parfum Oud" is two: the second has two words.
+      if (
+        clause.list &&
+        previousWasItem &&
+        items.length > 0 &&
+        !line.quantityStated &&
+        line.price === undefined &&
+        !line.intent &&
+        productTokens(line.name).length <= 1
+      ) {
+        const last = items[items.length - 1]!;
+        last.productName = `${last.productName} ${line.name}`.replace(/\s+/g, " ").trim();
+        continue;
+      }
+
       const catalogMatch = matchCatalog(line.name, catalog);
       const evidence =
         line.quantityStated ||
@@ -105,12 +162,19 @@ export function readItems(
         line.intent ||
         (clause.conjunction && previousWasItem) ||
         catalogMatch !== undefined;
+      const bareQuestion = clause.question && !line.quantityStated && line.price === undefined && !line.intent;
+      // "est disponible ?" is the order when the message also asks for delivery.
+      // "est-il garanti ?" with no order is not.
+      const blockedQuestion = bareQuestion && !messageOrders;
       if (!evidence && clause.list && pendingListItem) {
         items.push(pendingListItem);
-      } else if (!evidence || (clause.question && !line.quantityStated && line.price === undefined)) {
+      } else if (!evidence || blockedQuestion) {
         const signature = !clause.question && !line.intent ? signatureName(text) : undefined;
         if (signature && items.length > 0) reading.signatureName ??= signature;
-        pendingListItem = clause.question ? undefined : { productName: line.name, quantity: Math.min(Math.max(line.quantity ?? 1, 1), 999) };
+        if (!blockedQuestion) {
+          mention = { name: line.name, quantity: clampQty(line.quantity) };
+        }
+        pendingListItem = clause.question ? undefined : { productName: line.name, quantity: clampQty(line.quantity) };
         previousWasItem = false;
         continue;
       }
@@ -128,10 +192,24 @@ export function readItems(
       if (line.exchange) notes.push(text.replace(/\s+/g, " ").trim());
       items.push({
         productName: line.name,
-        quantity: Math.min(Math.max(line.quantity ?? 1, 1), 999),
+        quantity: clampQty(line.quantity),
         ...(line.price !== undefined && !line.total ? { unitPrice: line.price } : {}),
       });
       if (line.total && line.price !== undefined) reading.totalPrice = line.price;
+      previousWasItem = true;
+      mention = undefined;
+      continue;
+    }
+
+    if ((line.intent || line.quantityStated) && !line.name && items.length === 0 && mention) {
+      items.push({ productName: mention.name, quantity: clampQty(line.quantity ?? mention.quantity) });
+      mention = undefined;
+      previousWasItem = true;
+      continue;
+    }
+    // "شفت imprimante. نحب زوج" — the quantity is in the next clause.
+    if (line.quantityStated && !line.name && items.length === 1) {
+      items[0]!.quantity = clampQty(line.quantity);
       previousWasItem = true;
       continue;
     }
@@ -146,6 +224,10 @@ export function readItems(
     previousWasItem = false;
   }
 
+  if (items.length === 0 && mention && messageOrders) {
+    items.push({ productName: mention.name, quantity: mention.quantity });
+  }
+
   // Same product written twice with the same price is one line.
   const merged: ExtractedItem[] = [];
   for (const item of items) {
@@ -156,6 +238,8 @@ export function readItems(
     else merged.push(item);
   }
   reading.items = merged.map((item) => {
+    const colors = productTokens(item.productName).filter((token) => COLOR_WORDS.has(token));
+    if (colors.length) notes.push(colors.join(" "));
     const match = matchCatalog(item.productName, catalog);
     if (!match) return item;
     return {

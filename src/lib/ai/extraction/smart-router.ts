@@ -9,8 +9,10 @@
  *   4. Gemini unavailable → the offline reading, carrying the failure code
  *
  * This protects the seller-owned Gemini quota (the shared session/user rate
- * limiter caps chat + extraction at 20/session/hour and 100/user/day): ~70%
- * of messages are handled by regex and never hit Gemini.
+ * limiter caps chat + extraction at 20/session/hour and 100/user/day).
+ * A complete reading that already names the seller's products stays on the
+ * device. An unfinished reading, or a product that did not land on the
+ * catalog, still asks Gemini when the seller enabled it.
  */
 
 import type { ServiceContext } from "@/lib/data/service-base";
@@ -21,6 +23,17 @@ import type { ExtractedOrder, ExtractionImageInput, ExtractionInput, ExtractionR
 
 /** Minimum regex confidence to skip Gemini */
 const REGEX_CONFIDENCE_THRESHOLD = 0.6;
+
+/**
+ * The offline reading is enough when it is complete and, if the seller has a
+ * catalog, every item already landed on one product. A complete-looking line
+ * that is not in the catalog ("لابنتي", a split name) still goes to Gemini.
+ */
+function offlineReadingIsEnough(result: ExtractionResult, input: ExtractionInput): boolean {
+  if (result.confidence < REGEX_CONFIDENCE_THRESHOLD || !result.isComplete || !result.order) return false;
+  if (!input.catalog?.length) return true;
+  return result.order.items.length > 0 && result.order.items.every((item) => item.catalogMatch);
+}
 
 export interface SmartRouterOptions {
   /** Seller's Gemini API key (from OS keychain). If absent, regex-only mode. */
@@ -38,11 +51,7 @@ export async function extractOrder(
   const regexResult = extractWithRegex(input);
 
   // A complete, confident offline reading never leaves the device.
-  if (
-    !options.forceGemini &&
-    regexResult.confidence >= REGEX_CONFIDENCE_THRESHOLD &&
-    regexResult.isComplete
-  ) {
+  if (!options.forceGemini && offlineReadingIsEnough(regexResult, input)) {
     return regexResult;
   }
   if (!options.geminiApiKey) return regexResult;
