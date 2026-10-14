@@ -1627,5 +1627,24 @@ successor:
   observation, with #306 logout LAST. Live WhatsApp delivery stays
   uncertified until that campaign.
 - **Next:** a `SahelFlow-Setup.exe` download for new clients (Founder,
-  2026-10-09) follows in the release after Internal.42 under its own
-  authority; Internal.42 ships as an MSI.
+  2026-10-09) follows under its own authority. Internal.43 ships as an MSI.
+
+## FD-071 — One signed successor Internal.43 under the FD-066 customer launch (2026-10-14, ADOPTED)
+
+The Founder's directive to make the next signed release once the installed
+audit fixes were complete adopts the next customer-online release authority
+as one signed successor:
+
+- **Package:** app `1.0.0-internal.43` / MSI `1.0.0.43`, channel `internal`,
+  mode `customer-online`, owned host `sahelflow.com`. Paid licences stay
+  offline-signed. Trial origins stay `license.sahelflow.com` and
+  `activate.sahelflow.com`.
+- **Content:** protected `main` `d75eb813…` (PR #490) — the installed Internal.42
+  audit repairs for orders, couriers, storefront, WhatsApp, AI, team login,
+  the startup card, and the search crash.
+- **Gates:** this release-authority PR merges only after its full Required
+  battery, including installed-MSI evidence, is green. The signed train
+  publishes from that exact `main` commit. The tag, digest, and publish time
+  are recorded only after that run succeeds.
+- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
+  no ledger row. #306 logout stays LAST.
