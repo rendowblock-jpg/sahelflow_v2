@@ -80,8 +80,8 @@ describe("Algerian demo data", () => {
         products: 16,
         customers: 24,
         orders: 48,
-        conversations: 8,
-        messages: 32,
+        conversations: 16,
+        messages: 40,
         expenses: 12,
       },
     });
@@ -203,6 +203,41 @@ describe("Algerian demo data", () => {
         (message) => message.timestamp.getTime() < (flagship?.createdAt.getTime() ?? 0),
       ),
     ).toBe(true);
+
+    const extractionChats = await prisma.conversation.findMany({
+      where: { id: { startsWith: "demo-extract-chat-" } },
+      include: { messages: { orderBy: { timestamp: "asc" } } },
+      orderBy: { id: "asc" },
+    });
+    expect(extractionChats).toHaveLength(8);
+    expect(
+      extractionChats.every(
+        (chat) =>
+          chat.status === "open" &&
+          chat.unreadCount === 1 &&
+          chat.pinnedAt !== null &&
+          chat.channel === "whatsapp" &&
+          chat.sourceId?.endsWith("@s.whatsapp.net") === true &&
+          (chat.labels ?? "").includes("extraction") &&
+          chat.messages.length === 1 &&
+          chat.messages[0]?.extractedOrderJson == null &&
+          chat.messages[0]?.extractionMethod == null &&
+          chat.messages[0]?.direction === "incoming",
+      ),
+    ).toBe(true);
+    const storyOrderBodies = await Promise.all(
+      [1, 2, 3, 4, 5, 6, 7, 8].map((index) =>
+        prisma.message.findUnique({
+          where: {
+            id: `demo-conversation-${String(index).padStart(2, "0")}-message-1`,
+          },
+          select: { body: true },
+        }),
+      ),
+    );
+    expect(extractionChats.map((chat) => chat.messages[0]?.body)).toEqual(
+      storyOrderBodies.map((message) => message?.body),
+    );
 
     const automations = await prisma.automation.findMany({
       where: { id: { startsWith: "demo-" } },

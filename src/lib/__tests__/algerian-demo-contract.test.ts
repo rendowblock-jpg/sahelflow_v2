@@ -37,6 +37,8 @@ describe("Algerian Founder demo contract", () => {
 
     expect(demo).toContain("Fatima Zohra Benamar");
     expect(demo).toContain("سلام، شفت mini imprimante");
+    expect(demo).toContain("demo-extract-chat-");
+    expect(demo).toContain('JSON.stringify(["extraction"])');
     expect(demo).toContain("تم تأكيد الطلب DZ-DEMO-0001");
     expect(demo).toContain("codCollected");
     expect(demo).toContain("codRemitted");
