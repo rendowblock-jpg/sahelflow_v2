@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.43 FD-071 customer launch publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.43",
+  "windowsMsiVersion": "1.0.0.43",
+  "channel": "internal",
+  "releaseMode": "customer-online",
+  "ownedHostSuffix": "sahelflow.com",
+  "authorityDecision": "FD-071",
+  "licenseServiceUrl": "https://license.sahelflow.com|https://activate.sahelflow.com",
+  "certification": {
+    "productSha": "d75eb813dc1e000ae653cb8727f75bdc2dd3282a",
+    "phase5RunId": 38595568840,
+    "phase67RunId": 38595568900,
+    "ciRunId": 38595568560
+  },
+  "reason": "ADOPTED release authority — FD-071 (documentation/product/DECISIONS.md). The Founder's directive to make the next signed release once the installed audit fixes were complete adopts one signed customer launch successor, app 1.0.0-internal.43 / MSI 1.0.0.43, mode customer-online, owned host sahelflow.com, packaging protected main d75eb813dc1e000ae653cb8727f75bdc2dd3282a (#490): orders, couriers, storefront, WhatsApp, AI, team login, the startup card, and the search crash. PR #490 merged after its full Required battery was green at head ef5f8db5e9044c9eefffc2e5c864a99423161090: CI 38595568560, Phase 5 38595568840, Phase 6-7 38595568900, including the installed-MSI evidence lane. Paid licences stay offline-signed. This is a Founder-authorized launch release, not a Stable claim; it converts no ledger row."
+}
