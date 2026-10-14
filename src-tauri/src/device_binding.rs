@@ -108,9 +108,7 @@ pub(crate) fn current_device_binding() -> Result<String, String> {
 }
 
 fn uuid_unusable(error: &str) -> bool {
-    error.contains("not usable")
-        || error.contains("is missing")
-        || error.contains("is unavailable")
+    error.contains("not usable") || error.contains("is missing") || error.contains("is unavailable")
 }
 
 /// White-box machines ship an all-zero SMBIOS UUID. The Windows MachineGuid

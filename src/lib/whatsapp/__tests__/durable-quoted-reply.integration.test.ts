@@ -134,7 +134,8 @@ describe("durable WhatsApp quoted replies", () => {
         stubText: "Inbound question about delivery",
       }),
     );
-    expect(sender.mock.calls[0]?.[4]).not.toHaveProperty("participant");
+    const quoted = (sender.mock.calls[0] as unknown[] | undefined)?.[4];
+    expect(quoted ?? {}).not.toHaveProperty("participant");
     await expect(
       db.message.findUniqueOrThrow({
         where: { id: "22222222-2222-4222-8222-222222222222" },
@@ -170,7 +171,8 @@ describe("durable WhatsApp quoted replies", () => {
         fromMe: false,
       }),
     );
-    expect(sender.mock.calls[0]?.[4]).not.toHaveProperty("participant");
+    const quoted = (sender.mock.calls[0] as unknown[] | undefined)?.[4];
+    expect(quoted ?? {}).not.toHaveProperty("participant");
     // The reply row stores the canonical target id so local quote previews
     // keep resolving against canonical Message rows.
     await expect(

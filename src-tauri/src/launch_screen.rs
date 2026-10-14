@@ -91,7 +91,8 @@ pub(crate) fn copy(locale: Locale) -> LaunchCopy {
             starting: "Démarrage de SahelFlow",
             retrying: "Nouvelle tentative…",
             opening: "Ouverture de votre espace",
-            slow_hint: "Cet ordinateur ouvre l'espace de travail local. Laissez la fenêtre ouverte.",
+            slow_hint:
+                "Cet ordinateur ouvre l'espace de travail local. Laissez la fenêtre ouverte.",
         },
         Locale::En => LaunchCopy {
             lang: "en",

@@ -1945,9 +1945,17 @@ fn is_windows_safe_parent_environment_key(key: &std::ffi::OsStr) -> bool {
     // USERPROFILE, HOMEDRIVE and HOMEPATH are the Windows home the packaged
     // server needs for os.homedir() (cloud restore). PATH and credentials
     // stay stripped.
-    ["SystemRoot", "WINDIR", "TEMP", "TMP", "USERPROFILE", "HOMEDRIVE", "HOMEPATH"]
-        .iter()
-        .any(|allowed| key.eq_ignore_ascii_case(allowed))
+    [
+        "SystemRoot",
+        "WINDIR",
+        "TEMP",
+        "TMP",
+        "USERPROFILE",
+        "HOMEDRIVE",
+        "HOMEPATH",
+    ]
+    .iter()
+    .any(|allowed| key.eq_ignore_ascii_case(allowed))
 }
 
 /// In-memory authority for the one authenticated shutdown-only cache flush.

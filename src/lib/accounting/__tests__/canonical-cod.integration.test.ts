@@ -344,7 +344,7 @@ describe("canonical COD collection, settlement and reconciliation", () => {
       where: { orderId: order.id, movementType: "courier_fee_withheld" },
     });
     expect(fee).toMatchObject({ amount: -100, orderId: order.id });
-    const profitability = await getProfitabilityProjection(db, {
+    const profitability = await getProfitabilityProjection(db as never, {
       from: new Date("2020-01-01T00:00:00.000Z"),
       to: new Date("2030-01-01T00:00:00.000Z"),
     });

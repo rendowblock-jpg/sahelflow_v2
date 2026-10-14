@@ -130,7 +130,7 @@ afterAll(async () => {
 });
 
 describe("canonical commerce sync", () => {
-  it("creates a server-priced pending canonical order and advances the watermark", async () => {
+  it("creates a pending canonical order at the provider unit price and advances the watermark", async () => {
     const product = await seedProduct({ price: 2000 });
     listOrdersMock.mockResolvedValueOnce(fetched([order()], "wm-1"));
 
@@ -149,15 +149,15 @@ describe("canonical commerce sync", () => {
       source: "shopify",
       sourceOrderId: "shopify-001",
       status: "pending",
-      totalPrice: 4500,
+      totalPrice: 502,
       deliveryCost: 500,
       version: 1,
     });
     expect(stored?.items[0]).toMatchObject({
       productId: product.id,
-      unitPrice: 2000,
+      unitPrice: 1,
       quantity: 2,
-      total: 4000,
+      total: 2,
     });
     expect(
       readCanonicalSourceOrderAuthority(stored?.source, stored?.sourceMetadata),
@@ -361,7 +361,7 @@ describe("canonical commerce sync", () => {
     expect(await rawDb.order.count()).toBe(2);
   });
 
-  it("resolves an exact variant SKU and uses its server price", async () => {
+  it("resolves an exact variant SKU and keeps the provider unit price", async () => {
     const product = await seedProduct({ name: "T-Shirt", sku: "TSHIRT", price: 2000 });
     const variant = await rawDb.productVariant.create({
       data: {
@@ -396,7 +396,7 @@ describe("canonical commerce sync", () => {
     expect(item).toMatchObject({
       productId: product.id,
       productVariantId: variant.id,
-      unitPrice: 2600,
+      unitPrice: 1,
     });
   });
 

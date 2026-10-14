@@ -570,7 +570,11 @@ mod imp {
             let track_x = (CARD_WIDTH - track_width) / 2.0;
             let track_y = 292.0;
             let track = rounded_rect(track_x, track_y, track_width, 2.0, 1.0);
-            fill_solid(g, track, with_alpha(argb(255, 255, 255, 255), meter_alpha * 0.12));
+            fill_solid(
+                g,
+                track,
+                with_alpha(argb(255, 255, 255, 255), meter_alpha * 0.12),
+            );
             GdipDeletePath(track);
             let fill_width = (track_width * self.progress.shown).max(2.0);
             let fill_x = if rtl {

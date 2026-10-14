@@ -500,7 +500,10 @@ fn observe_platform(
             )
         };
         if written != ERROR_SUCCESS {
-            return durable_anchor_or_error(previous, "could not write the protected license clock");
+            return durable_anchor_or_error(
+                previous,
+                "could not write the protected license clock",
+            );
         }
         // R2: the anti-rollback anchor is only trustworthy once it reaches
         // the hive. RegSetValueExW can sit in the lazy registry flush queue,

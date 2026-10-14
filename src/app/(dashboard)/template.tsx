@@ -22,7 +22,7 @@
  * initial state so subsequent navigations animate from opacity:0 → opacity:1.
  * This is the documented Framer Motion SSR pattern.
  */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 
@@ -42,10 +42,12 @@ export default function DashboardTemplate({
 }) {
   const pathname = usePathname() ?? "";
   const reduceMotion = useReducedMotion();
-  const contentKeyRef = useRef(contentPath(pathname) ?? pathname);
+  const [contentKey, setContentKey] = useState(
+    () => contentPath(pathname) ?? pathname,
+  );
   const nextContentPath = contentPath(pathname);
-  if (nextContentPath !== null) {
-    contentKeyRef.current = nextContentPath;
+  if (nextContentPath !== null && nextContentPath !== contentKey) {
+    setContentKey(nextContentPath);
   }
   // mounted = false on SSR + first hydration, true after first effect.
   // This prevents the hydration mismatch: on first render, initial={false}
@@ -59,7 +61,7 @@ export default function DashboardTemplate({
 
   return (
     <motion.div
-      key={contentKeyRef.current}
+      key={nextContentPath ?? contentKey}
       initial={
         !mounted || reduceMotion
           ? false

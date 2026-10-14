@@ -23,10 +23,10 @@ describe("inbox conversation-native interaction source contract", () => {
     expect(thread).toContain("quotedMessageId");
     expect(hook).toContain("quotedMessageId");
     expect(hook).toContain("quotedMessageId: trimmedQuotedId");
-    // All five send entry points accept and forward the quoted target.
-    // Ledger INB-28 disposition: the four media senders share ONE factory
-    // signature, so the counted occurrences are sendReply + the factory.
-    expect(hook.match(/quotedMessageId\?: string \| null/g)?.length).toBe(2);
+    // Ledger INB-28: text send and the one media factory accept the quote.
+    // A helper type also names the field, so this pins the two functions.
+    expect(hook).toContain("async (quotedMessageId?: string | null)");
+    expect(hook).toContain("async (file: File, quotedMessageId?: string | null)");
   });
 
   it("routes paste and drop ingestion through the validated send paths", () => {
