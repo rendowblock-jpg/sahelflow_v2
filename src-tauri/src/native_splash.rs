@@ -126,8 +126,8 @@ fn unix_milliseconds() -> u64 {
 // ---------------------------------------------------------------------------
 
 /// Logical size of the splash card in device-independent pixels.
-pub(crate) const CARD_WIDTH: f32 = 560.0;
-pub(crate) const CARD_HEIGHT: f32 = 340.0;
+pub(crate) const CARD_WIDTH: f32 = 640.0;
+pub(crate) const CARD_HEIGHT: f32 = 380.0;
 const SLOW_HINT_AFTER_MS: f32 = 15_000.0;
 const FADE_OUT_MS: f32 = 170.0;
 const MAX_LIFETIME_MS: f32 = 10.0 * 60.0 * 1_000.0;
@@ -261,13 +261,13 @@ mod imp {
         (alpha << 24) | (color & 0x00FF_FFFF)
     }
 
-    const INK: u32 = argb(255, 232, 240, 247);
-    const MUTED: u32 = argb(255, 129, 149, 168);
-    const FAINT: u32 = argb(255, 76, 92, 108);
-    const SKY_LIGHT: u32 = argb(255, 125, 211, 252);
-    const SKY: u32 = argb(255, 14, 165, 233);
-    const SKY_DEEP: u32 = argb(255, 2, 132, 199);
-    const OCEAN: u32 = argb(255, 12, 74, 110);
+    const INK: u32 = argb(255, 244, 246, 248);
+    const MUTED: u32 = argb(255, 161, 168, 178);
+    const FAINT: u32 = argb(255, 113, 120, 130);
+    const SKY_LIGHT: u32 = argb(255, 186, 230, 253);
+    const SKY: u32 = argb(255, 56, 189, 248);
+    const SKY_DEEP: u32 = argb(255, 14, 165, 233);
+    const OCEAN: u32 = argb(255, 3, 105, 161);
 
     pub(super) fn bring_to_front(window: isize) {
         if window != 0 {
@@ -363,8 +363,8 @@ mod imp {
             };
             let fonts = Self {
                 family,
-                word: font(27.0, FontStyleBold),
-                body: font(13.5, FontStyleRegular),
+                word: font(34.0, FontStyleBold),
+                body: font(14.0, FontStyleRegular),
                 caption: font(12.5, FontStyleBold),
                 small: font(11.5, FontStyleRegular),
                 center: format(false, StringAlignmentCenter),
@@ -519,120 +519,33 @@ mod imp {
             GdipResetWorldTransform(g);
             GdipScaleWorldTransform(g, self.scale, self.scale, MatrixOrderPrepend);
 
-            // Card: deep ocean gradient, hairline frame.
-            let card = rounded_rect(0.5, 0.5, CARD_WIDTH - 1.0, CARD_HEIGHT - 1.0, 16.0);
+            // Quiet near-black card. One hairline, no glow blob.
+            let card = rounded_rect(0.5, 0.5, CARD_WIDTH - 1.0, CARD_HEIGHT - 1.0, 22.0);
             fill_vertical_gradient(
                 g,
                 card,
                 0.0,
                 CARD_HEIGHT,
-                argb(255, 11, 24, 40),
-                argb(255, 5, 10, 17),
+                argb(255, 16, 17, 20),
+                argb(255, 9, 10, 12),
             );
             let mut pen: *mut GpPen = std::ptr::null_mut();
-            GdipCreatePen1(argb(34, 148, 197, 233), 1.0, UnitPixel, &mut pen);
+            GdipCreatePen1(argb(28, 255, 255, 255), 1.0, UnitPixel, &mut pen);
             GdipDrawPath(g, pen, card);
             GdipDeletePen(pen);
-
-            // Breathing glow behind the mark.
-            let breathe = if self.reduced_motion {
-                0.0
-            } else {
-                (t / 1_400.0).sin()
-            };
-            let glow_strength = timeline(t, 200.0, 900.0) * (0.85 + 0.15 * breathe);
-            glow(
-                g,
-                CARD_WIDTH / 2.0,
-                104.0,
-                170.0,
-                120.0,
-                with_alpha(argb(70, 14, 165, 233), glow_strength),
-            );
             GdipDeletePath(card);
 
             self.paint_mark(g, t);
 
-            // Wordmark "Sahel" + sky "Flow".
             let rise = |delay: f32| {
-                let p = ease_out_cubic(timeline(t, delay, 800.0));
-                (p, 8.0 * (1.0 - p))
+                let p = ease_out_cubic(timeline(t, delay, 520.0));
+                (p, 6.0 * (1.0 - p))
             };
-            let (word_alpha, word_dy) = rise(450.0);
-            self.paint_wordmark(g, 160.0 + word_dy, word_alpha);
+            let (word_alpha, word_dy) = rise(180.0);
+            self.paint_wordmark(g, 196.0 + word_dy, word_alpha);
 
             let rtl = self.locale == Locale::Ar;
-            let (tag_alpha, tag_dy) = rise(580.0);
-            draw_text(
-                g,
-                self.copy.tagline,
-                self.fonts.body,
-                self.center_format(rtl),
-                0.0,
-                198.0 + tag_dy,
-                CARD_WIDTH,
-                with_alpha(MUTED, tag_alpha),
-            );
-
-            // Meter: track, eased fill with a travelling sheen, numeric percent.
-            let (meter_alpha, meter_dy) = rise(700.0);
-            let track_width = 260.0;
-            let track_x = (CARD_WIDTH - track_width) / 2.0;
-            let track_y = 240.0 + meter_dy;
-            let track = rounded_rect(track_x, track_y, track_width, 5.0, 2.5);
-            fill_solid(g, track, with_alpha(argb(30, 148, 197, 233), meter_alpha));
-            GdipDeletePath(track);
-            let fill_width = (track_width * self.progress.shown).max(5.0);
-            let fill_x = if rtl {
-                track_x + track_width - fill_width
-            } else {
-                track_x
-            };
-            let fill = rounded_rect(fill_x, track_y, fill_width, 5.0, 2.5);
-            let (from, to) = if rtl {
-                (SKY, SKY_DEEP)
-            } else {
-                (SKY_DEEP, SKY)
-            };
-            fill_horizontal_gradient(
-                g,
-                fill,
-                fill_x,
-                fill_x + fill_width,
-                with_alpha(from, meter_alpha),
-                with_alpha(to, meter_alpha),
-            );
-            if !self.reduced_motion {
-                let sweep = (t % 1_800.0) / 1_800.0;
-                let sheen_x =
-                    fill_x - 60.0 + (fill_width + 120.0) * if rtl { 1.0 - sweep } else { sweep };
-                GdipSetClipRect(g, fill_x, track_y, fill_width, 5.0, CombineModeReplace);
-                let sheen = rounded_rect(sheen_x, track_y, 60.0, 5.0, 2.5);
-                fill_horizontal_gradient_three(
-                    g,
-                    sheen,
-                    sheen_x,
-                    sheen_x + 60.0,
-                    with_alpha(argb(110, 255, 255, 255), meter_alpha),
-                );
-                GdipDeletePath(sheen);
-                GdipResetClip(g);
-            }
-            GdipDeletePath(fill);
-            let percent = format!("{}%", self.progress.percent());
-            draw_text(
-                g,
-                &percent,
-                self.fonts.caption,
-                self.fonts.center,
-                0.0,
-                track_y + 12.0,
-                CARD_WIDTH,
-                with_alpha(INK, meter_alpha),
-            );
-
-            // Honest stage copy.
-            let (status_alpha, status_dy) = rise(800.0);
+            let (status_alpha, status_dy) = rise(280.0);
             let status = match self.progress.phase {
                 Phase::Preparing => self.copy.preparing,
                 Phase::Starting => self.copy.starting,
@@ -644,11 +557,35 @@ mod imp {
                 status,
                 self.fonts.body,
                 self.center_format(rtl),
-                24.0,
-                276.0 + status_dy,
-                CARD_WIDTH - 48.0,
+                48.0,
+                248.0 + status_dy,
+                CARD_WIDTH - 96.0,
                 with_alpha(MUTED, status_alpha),
             );
+
+            let (meter_alpha, _) = rise(340.0);
+            let track_width = 168.0;
+            let track_x = (CARD_WIDTH - track_width) / 2.0;
+            let track_y = 292.0;
+            let track = rounded_rect(track_x, track_y, track_width, 2.0, 1.0);
+            fill_solid(g, track, with_alpha(argb(255, 255, 255, 255), meter_alpha * 0.12));
+            GdipDeletePath(track);
+            let fill_width = (track_width * self.progress.shown).max(2.0);
+            let fill_x = if rtl {
+                track_x + track_width - fill_width
+            } else {
+                track_x
+            };
+            let fill = rounded_rect(fill_x, track_y, fill_width, 2.0, 1.0);
+            fill_horizontal_gradient(
+                g,
+                fill,
+                fill_x,
+                fill_x + fill_width,
+                with_alpha(SKY, meter_alpha),
+                with_alpha(SKY_LIGHT, meter_alpha),
+            );
+            GdipDeletePath(fill);
 
             let lifetime_ms = self.shown_at.elapsed().as_secs_f32() * 1_000.0;
             if lifetime_ms > SLOW_HINT_AFTER_MS {
@@ -658,9 +595,9 @@ mod imp {
                     self.copy.slow_hint,
                     self.fonts.small,
                     self.center_format(rtl),
-                    24.0,
-                    300.0,
-                    CARD_WIDTH - 48.0,
+                    48.0,
+                    312.0,
+                    CARD_WIDTH - 96.0,
                     with_alpha(FAINT, hint_alpha),
                 );
             }
@@ -670,9 +607,9 @@ mod imp {
                 self.fonts.small,
                 self.fonts.center,
                 0.0,
-                318.0,
+                348.0,
                 CARD_WIDTH,
-                with_alpha(argb(150, 76, 92, 108), status_alpha),
+                with_alpha(argb(140, 161, 168, 178), status_alpha),
             );
 
             GdipFlush(g, FlushIntentionSync);
@@ -690,10 +627,10 @@ mod imp {
         /// dot lands last. Geometry mirrors public/brand/sahelflow-logo.svg
         /// (viewBox 9 7 50 50).
         unsafe fn paint_mark(&self, g: *mut GpGraphics, t: f32) {
-            let size = 78.0_f32;
+            let size = 72.0_f32;
             let unit = size / 50.0;
             let origin_x = CARD_WIDTH / 2.0 - size / 2.0 - 9.0 * unit;
-            let origin_y = 66.0 - 7.0 * unit;
+            let origin_y = 78.0 - 7.0 * unit;
             let hover = if self.reduced_motion {
                 0.0
             } else {
@@ -717,7 +654,7 @@ mod imp {
                 GdipTranslateWorldTransform(g, origin_x, origin_y - hover, MatrixOrderPrepend);
                 GdipScaleWorldTransform(g, unit, unit, MatrixOrderPrepend);
                 GdipTranslateWorldTransform(g, pivot.0, pivot.1, MatrixOrderPrepend);
-                GdipRotateWorldTransform(g, -70.0 * (1.0 - p), MatrixOrderPrepend);
+                GdipRotateWorldTransform(g, -12.0 * (1.0 - p), MatrixOrderPrepend);
                 let grow = 0.82 + 0.18 * p;
                 GdipScaleWorldTransform(g, grow, grow, MatrixOrderPrepend);
                 GdipTranslateWorldTransform(g, -pivot.0, -pivot.1, MatrixOrderPrepend);
@@ -924,73 +861,6 @@ mod imp {
         GdipCreateLineBrush(&start, &end, from, to, WrapModeTileFlipXY, &mut brush);
         GdipFillPath(g, brush.cast(), path);
         GdipDeleteBrush(brush.cast());
-    }
-
-    /// Transparent → highlight → transparent, for the progress sheen.
-    unsafe fn fill_horizontal_gradient_three(
-        g: *mut GpGraphics,
-        path: *mut GpPath,
-        left: f32,
-        right: f32,
-        highlight: u32,
-    ) {
-        let middle = (left + right) / 2.0;
-        let clear = highlight & 0x00FF_FFFF;
-        let start = PointF {
-            X: left - 0.5,
-            Y: 0.0,
-        };
-        let half = PointF { X: middle, Y: 0.0 };
-        let end = PointF {
-            X: right + 0.5,
-            Y: 0.0,
-        };
-        GdipSetClipRect(
-            g,
-            left,
-            0.0,
-            middle - left,
-            CARD_HEIGHT,
-            CombineModeIntersect,
-        );
-        let mut brush: *mut GpLineGradient = std::ptr::null_mut();
-        GdipCreateLineBrush(
-            &start,
-            &half,
-            clear,
-            highlight,
-            WrapModeTileFlipXY,
-            &mut brush,
-        );
-        GdipFillPath(g, brush.cast(), path);
-        GdipDeleteBrush(brush.cast());
-        brush = std::ptr::null_mut();
-        GdipCreateLineBrush(
-            &half,
-            &end,
-            highlight,
-            clear,
-            WrapModeTileFlipXY,
-            &mut brush,
-        );
-        GdipFillPath(g, brush.cast(), path);
-        GdipDeleteBrush(brush.cast());
-    }
-
-    unsafe fn glow(g: *mut GpGraphics, cx: f32, cy: f32, rx: f32, ry: f32, color: u32) {
-        let mut path: *mut GpPath = std::ptr::null_mut();
-        GdipCreatePath(FillModeAlternate, &mut path);
-        GdipAddPathEllipse(path, cx - rx, cy - ry, rx * 2.0, ry * 2.0);
-        let mut brush: *mut GpPathGradient = std::ptr::null_mut();
-        if GdipCreatePathGradientFromPath(path, &mut brush) == Ok {
-            GdipSetPathGradientCenterColor(brush, color);
-            let surround = color & 0x00FF_FFFF;
-            let mut count = 1;
-            GdipSetPathGradientSurroundColorsWithCount(brush, &surround, &mut count);
-            GdipFillPath(g, brush.cast(), path);
-            GdipDeleteBrush(brush.cast());
-        }
-        GdipDeletePath(path);
     }
 
     unsafe fn measure(

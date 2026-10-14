@@ -130,11 +130,11 @@ describe("durable WhatsApp quoted replies", () => {
       expect.objectContaining({
         stanzaId: "WASTANZA0001",
         fromMe: false,
-        participant: jid,
         stubKind: "text",
         stubText: "Inbound question about delivery",
       }),
     );
+    expect(sender.mock.calls[0]?.[4]).not.toHaveProperty("participant");
     await expect(
       db.message.findUniqueOrThrow({
         where: { id: "22222222-2222-4222-8222-222222222222" },
@@ -168,9 +168,9 @@ describe("durable WhatsApp quoted replies", () => {
       expect.objectContaining({
         stanzaId: "WASTANZA0002",
         fromMe: false,
-        participant: jid,
       }),
     );
+    expect(sender.mock.calls[0]?.[4]).not.toHaveProperty("participant");
     // The reply row stores the canonical target id so local quote previews
     // keep resolving against canonical Message rows.
     await expect(

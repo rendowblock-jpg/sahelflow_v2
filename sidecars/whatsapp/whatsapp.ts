@@ -151,9 +151,15 @@ function baileysQuotedOption(
       remoteJid: jid,
       fromMe: quoted.fromMe,
       id: quoted.stanzaId,
-      ...(quoted.participant ? { participant: quoted.participant } : {}),
+      // Participant is a group-sender field. On a 1:1 chat (including @lid)
+      // Baileys derives it from the chat itself; setting it makes the quote
+      // look like a group reply and the provider drops the whole send.
+      ...(jid.endsWith("@g.us") && quoted.participant
+        ? { participant: quoted.participant }
+        : {}),
     },
     message: stub,
+    messageTimestamp: Math.floor(Date.now() / 1000),
   };
 }
 
@@ -523,6 +529,50 @@ export class WhatsAppManager {
     };
   }
 
+  private async sendToProvider(
+    jid: string,
+    content: Parameters<WASocket["sendMessage"]>[1],
+    messageId: string | undefined,
+    quoted: SidecarQuotedContext | null | undefined,
+  ): Promise<{ id: string; status: string }> {
+    if (!this.sock || this.status !== "connected") {
+      throw new Error(`Not connected (status=${this.status})`);
+    }
+    const quotedMessage = baileysQuotedOption(jid, quoted);
+    const attempt = (withQuote: boolean) => {
+      const options = {
+        ...(messageId ? { messageId } : {}),
+        ...(withQuote && quotedMessage ? { quoted: quotedMessage } : {}),
+      };
+      return this.sock!.sendMessage(
+        jid,
+        content,
+        Object.keys(options).length ? options : undefined,
+      );
+    };
+    try {
+      const sent = await attempt(true);
+      return {
+        id: sent?.key?.id ?? "",
+        status: String(sent?.status ?? "sent"),
+      };
+    } catch (error) {
+      if (!quotedMessage) throw error;
+      // The quote was the part the provider rejected. The same message id
+      // keeps a retry from delivering twice if the first attempt actually
+      // landed. The seller's text still goes out.
+      logger.warn(
+        { err: error },
+        "[quote] WhatsApp rejected the quoted reply; sending the message without the quote",
+      );
+      const sent = await attempt(false);
+      return {
+        id: sent?.key?.id ?? "",
+        status: String(sent?.status ?? "sent"),
+      };
+    }
+  }
+
   async sendMessage(
     to: string,
     text: string,
@@ -533,20 +583,7 @@ export class WhatsAppManager {
       throw new Error(`Not connected (status=${this.status})`);
     }
     const jid = this.toJid(to);
-    const baileysQuoted = baileysQuotedOption(jid, quoted);
-    const options = {
-      ...(messageId ? { messageId } : {}),
-      ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
-    };
-    const sent = await this.sock.sendMessage(
-      jid,
-      { text },
-      Object.keys(options).length ? options : undefined,
-    );
-    return {
-      id: sent?.key?.id ?? "",
-      status: String(sent?.status ?? "sent"),
-    };
+    return this.sendToProvider(jid, { text }, messageId, quoted);
   }
 
   async sendImage(
@@ -564,23 +601,16 @@ export class WhatsAppManager {
       throw new Error("Image send requires bounded JPEG, PNG or WebP bytes");
     }
     const jid = this.toJid(to);
-    const baileysQuoted = baileysQuotedOption(jid, quoted);
-    const sent = await this.sock.sendMessage(
+    return this.sendToProvider(
       jid,
       {
         image: Buffer.from(image.buffer, image.byteOffset, image.byteLength),
         mimetype: mimetype.toLowerCase(),
         ...(caption ? { caption } : {}),
       },
-      {
-        ...(messageId ? { messageId } : {}),
-        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
-      },
+      messageId,
+      quoted,
     );
-    return {
-      id: sent?.key?.id ?? "",
-      status: String(sent?.status ?? "sent"),
-    };
   }
 
   async sendVideo(
@@ -598,23 +628,16 @@ export class WhatsAppManager {
       throw new Error("Video send requires bounded MP4 bytes");
     }
     const jid = this.toJid(to);
-    const baileysQuoted = baileysQuotedOption(jid, quoted);
-    const sent = await this.sock.sendMessage(
+    return this.sendToProvider(
       jid,
       {
         video: Buffer.from(video.buffer, video.byteOffset, video.byteLength),
         mimetype: "video/mp4",
         ...(caption ? { caption } : {}),
       },
-      {
-        ...(messageId ? { messageId } : {}),
-        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
-      },
+      messageId,
+      quoted,
     );
-    return {
-      id: sent?.key?.id ?? "",
-      status: String(sent?.status ?? "sent"),
-    };
   }
 
   async sendDocument(
@@ -645,8 +668,7 @@ export class WhatsAppManager {
       throw new Error("Document send requires bounded classified bytes and a file name");
     }
     const jid = this.toJid(to);
-    const baileysQuoted = baileysQuotedOption(jid, quoted);
-    const sent = await this.sock.sendMessage(
+    return this.sendToProvider(
       jid,
       {
         document: Buffer.from(
@@ -658,15 +680,9 @@ export class WhatsAppManager {
         fileName,
         ...(caption ? { caption } : {}),
       },
-      {
-        ...(messageId ? { messageId } : {}),
-        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
-      },
+      messageId,
+      quoted,
     );
-    return {
-      id: sent?.key?.id ?? "",
-      status: String(sent?.status ?? "sent"),
-    };
   }
 
   async sendVoice(
@@ -697,8 +713,7 @@ export class WhatsAppManager {
       throw new Error("WhatsApp voice notes require authenticated OGG/Opus audio");
     }
     const jid = this.toJid(to);
-    const baileysQuoted = baileysQuotedOption(jid, quoted);
-    const sent = await this.sock.sendMessage(
+    return this.sendToProvider(
       jid,
       {
         audio: Buffer.from(audio.buffer, audio.byteOffset, audio.byteLength),
@@ -709,15 +724,9 @@ export class WhatsAppManager {
         // duration display truthful.
         ...(durationSeconds ? { seconds: durationSeconds } : {}),
       },
-      {
-        ...(messageId ? { messageId } : {}),
-        ...(baileysQuoted ? { quoted: baileysQuoted } : {}),
-      },
+      messageId,
+      quoted,
     );
-    return {
-      id: sent?.key?.id ?? "",
-      status: String(sent?.status ?? "sent"),
-    };
   }
 
   async downloadMedia(message: IncomingMessage): Promise<AsyncIterable<Uint8Array>> {

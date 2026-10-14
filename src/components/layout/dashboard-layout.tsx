@@ -13,24 +13,53 @@ import type { Phase2Action } from "@/lib/identity/permissions";
 import { useI18n } from "@/hooks/use-i18n";
 import { useUiDensity } from "@/hooks/use-ui-density";
 import { warmUniversalSearchClient } from "@/lib/search/universal-search-client";
+import { seedCommandPalette } from "@/components/search/command-palette-seed";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
+function CommandPalettePlaceholder() {
+  const { t } = useI18n();
+  return (
+    <div
+      className="relative mx-auto hidden min-w-0 max-w-xl flex-1 sm:block"
+      data-command-trigger="true"
+    >
+      <div className="flex h-8 min-h-(--sf-touch-target) items-center gap-2 rounded-surface border border-border/80 bg-muted/30 px-2.5">
+        <input
+          data-command-seed="true"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-keyshortcuts="Control+K"
+          aria-label={t("topbar.searchPlaceholder")}
+          placeholder={t("topbar.searchPlaceholder")}
+          className="h-full min-w-0 flex-1 bg-transparent text-body-sm text-foreground outline-none placeholder:text-muted-foreground"
+          onChange={(event) => {
+            seedCommandPalette({ query: event.target.value, open: true });
+          }}
+          onFocus={() => seedCommandPalette({ open: true })}
+        />
+        <kbd
+          dir="ltr"
+          className="pointer-events-none inline-flex h-5 shrink-0 select-none items-center gap-1 rounded-control border border-border/80 bg-background/80 px-1.5 font-sans text-caption font-medium text-muted-foreground"
+        >
+          Ctrl K
+        </kbd>
+      </div>
+    </div>
+  );
+}
+
 // The in-place search is part of the frame, but its ranking/grouping code is
-// still a separate chunk: the placeholder below holds the exact field geometry
-// until it arrives, so the top bar never shifts.
+// still a separate chunk. The placeholder is a real field so the first
+// keystroke is captured and handed to the palette when the chunk arrives.
 const CommandPalette = dynamic(
   () =>
     import("@/components/command-palette").then(
       (module) => module.CommandPalette,
     ),
   {
-    loading: () => (
-      <div
-        aria-hidden="true"
-        className="mx-auto hidden h-8 min-h-(--sf-touch-target) min-w-0 max-w-xl flex-1 rounded-surface border border-border/80 bg-muted/30 sm:block"
-      />
-    ),
+    loading: () => <CommandPalettePlaceholder />,
   },
 );
 const CheatsheetModal = dynamic(() =>
@@ -128,12 +157,15 @@ export function DashboardLayout({
 
   useEffect(() => {
     if (storefrontFocusMode) return;
+    // Start the chunk and the projection warmup with the shell. Waiting
+    // left the first search cold and the first keystroke with nowhere to go.
+    void import("@/components/command-palette");
     const timer = window.setTimeout(() => {
       void warmUniversalSearchClient().catch(() => {
         // Search remains lazy and self-healing if background projection warmup
         // fails. Never disturb the seller's current work surface for cache work.
       });
-    }, 900);
+    }, 0);
     return () => window.clearTimeout(timer);
   }, [storefrontFocusMode]);
 

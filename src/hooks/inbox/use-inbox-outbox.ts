@@ -351,23 +351,36 @@ export function useInboxOutbox({
     ]);
 
     try {
-      const response = await fetch("/api/whatsapp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Ledger INB-31: text sends get a hard timeout so a hung request can
-        // never leave the bubble in "sending" limbo — the timeout raises a
-        // DOMException that the existing failure reconciliation already
-        // converts into a failed-with-retry bubble (durable outbox truth is
-        // unaffected: the effectKey contract owns actual delivery state).
-        signal: AbortSignal.timeout(45_000),
-        body: JSON.stringify({
-          clientMessageId: tempId,
-          conversationId: chat.conversationId,
-          to: chat.transportId,
-          text: body,
-          ...(trimmedQuotedId ? { quotedMessageId: trimmedQuotedId } : {}),
-        }),
-      });
+      const postText = (includeQuote: boolean) =>
+        fetch("/api/whatsapp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          // Ledger INB-31: text sends get a hard timeout so a hung request can
+          // never leave the bubble in "sending" limbo — the timeout raises a
+          // DOMException that the existing failure reconciliation already
+          // converts into a failed-with-retry bubble (durable outbox truth is
+          // unaffected: the effectKey contract owns actual delivery state).
+          signal: AbortSignal.timeout(45_000),
+          body: JSON.stringify({
+            clientMessageId: tempId,
+            conversationId: chat.conversationId,
+            to: chat.transportId,
+            text: body,
+            ...(includeQuote && trimmedQuotedId
+              ? { quotedMessageId: trimmedQuotedId }
+              : {}),
+          }),
+        });
+      let response = await postText(true);
+      // A quote the server will not anchor (bad id, unconfirmed target,
+      // cross-chat) must not swallow the seller's text. Nothing was
+      // committed on that rejection, so the same client id sends the words.
+      if (
+        trimmedQuotedId &&
+        (response.status === 400 || response.status === 409)
+      ) {
+        response = await postText(false);
+      }
       const data = (await response.json()) as MediaSendResponse & {
         code?: string;
       };

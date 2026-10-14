@@ -218,7 +218,7 @@ impl RuntimeProtocol {
                 }
                 Err(detail) => last_failure = detail,
             }
-            std::thread::sleep(Duration::from_millis(250));
+            std::thread::sleep(Duration::from_millis(40));
         }
         self.write_probe_diagnostic(&last_failure);
         Ok(ReadinessOutcome::TimedOut)

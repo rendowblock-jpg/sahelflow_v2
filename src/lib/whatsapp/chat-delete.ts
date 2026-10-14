@@ -20,32 +20,61 @@ export interface DeleteWhatsAppChatsResult {
  * processor, outbox worker, read-state updates) hold the database write lock;
  * the losing transaction throws and the operator sees a first-attempt error.
  *
- * A busy/locked rejection is retry-safe here: the transaction is atomic, so
- * a rejected attempt committed nothing. The deletion target set is derived
- * from ids, and a retried transaction re-asserts every tombstone/delete
- * against the same ids inside the new transaction — a concurrent writer that
- * touched those rows between attempts is handled by the same statements, not
- * by stale data.
+ * A busy/locked/timeout rejection is retry-safe here: the transaction is
+ * atomic, so a rejected attempt committed nothing. Retries cover the read
+ * that builds the target set and the commit itself. The deletion target set
+ * is derived from ids, and a retried transaction re-asserts every
+ * tombstone/delete against the same ids inside the new transaction.
  */
 function isSqliteBusyError(error: unknown): boolean {
   if (!error) return false;
-  if (typeof error === "object" && "code" in error) {
-    // P2024: Prisma connection-pool timeout (the pool wait expiring while the
-    // database is write-saturated) surfaces with this code.
-    if ((error as { code?: unknown }).code === "P2024") return true;
-  }
+  const code =
+    typeof error === "object" && error && "code" in error
+      ? String((error as { code?: unknown }).code ?? "")
+      : "";
+  // P2024: pool wait expired while the database was write-saturated.
+  // P2028: the interactive transaction timed out waiting on that same lock
+  // (the installed F-10 failure — the first delete surfaced, the second
+  // succeeded once the writer had moved on). P2034: write conflict.
+  if (code === "P2024" || code === "P2028" || code === "P2034") return true;
   const message = error instanceof Error ? error.message : String(error);
   return (
+    message.includes("P2024") ||
+    message.includes("P2028") ||
+    message.includes("P2034") ||
     message.includes("SQLITE_BUSY") ||
     message.includes("database is locked") ||
-    message.includes("database table is locked")
+    message.includes("database table is locked") ||
+    message.includes("Transaction already closed") ||
+    message.includes("Transaction not found")
   );
 }
 
-const BUSY_RETRY_DELAYS_MS = [150, 450];
+const BUSY_RETRY_DELAYS_MS = [80, 250, 700, 1_500, 3_000];
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withBusyRetry<T>(run: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await run();
+    } catch (error) {
+      const delay =
+        attempt < BUSY_RETRY_DELAYS_MS.length
+          ? BUSY_RETRY_DELAYS_MS[attempt]
+          : undefined;
+      if (delay !== undefined && isSqliteBusyError(error)) {
+        logger.warn("whatsapp.chat_delete.busy_retry", {
+          attempt: attempt + 1,
+        });
+        await sleep(delay);
+        continue;
+      }
+      throw error;
+    }
+  }
 }
 
 /**
@@ -84,10 +113,16 @@ export async function deleteWhatsAppChats(
     return { deletedConversationIds: [], deletedMessageCount: 0 };
   }
 
-  const conversations = await context.prisma.conversation.findMany({
-    where: { id: { in: uniqueIds }, channel: "whatsapp" },
-    select: { id: true, sourceId: true },
-  });
+  // F-10: bounded busy-retry. The installed failure was a lock timeout that
+  // the two short retries did not classify, so the first click surfaced an
+  // error and the second (lock already free) succeeded. Reads and the
+  // transaction both retry: a rejected attempt commits nothing.
+  const conversations = await withBusyRetry(() =>
+    context.prisma.conversation.findMany({
+      where: { id: { in: uniqueIds }, channel: "whatsapp" },
+      select: { id: true, sourceId: true },
+    }),
+  );
   const conversationIds = conversations
     .map((conversation) => conversation.id)
     .sort();
@@ -98,43 +133,46 @@ export async function deleteWhatsAppChats(
     conversation.sourceId ? [conversation.sourceId] : [],
   );
 
-  const [messages, events] = await Promise.all([
-    context.prisma.message.findMany({
-      where: { conversationId: { in: conversationIds } },
-      select: { id: true },
-    }),
-    context.prisma.providerIngressEvent.findMany({
-      where: {
-        OR: [
-          ...(sourceIds.length > 0
-            ? [{ sourceId: { in: sourceIds } }]
-            : []),
-          ...(conversationIds.length > 0
-            ? [{ conversationId: { in: conversationIds } }]
-            : []),
-        ],
-      },
-      select: { id: true },
-    }),
-  ]);
+  const [messages, events] = await withBusyRetry(() =>
+    Promise.all([
+      context.prisma.message.findMany({
+        where: { conversationId: { in: conversationIds } },
+        select: { id: true },
+      }),
+      context.prisma.providerIngressEvent.findMany({
+        where: {
+          OR: [
+            ...(sourceIds.length > 0
+              ? [{ sourceId: { in: sourceIds } }]
+              : []),
+            ...(conversationIds.length > 0
+              ? [{ conversationId: { in: conversationIds } }]
+              : []),
+          ],
+        },
+        select: { id: true },
+      }),
+    ]),
+  );
   const messageIds = messages.map((message) => message.id);
   const eventIds = events.map((event) => event.id);
 
   const effects = messageIds.length
-    ? await context.prisma.whatsAppOutboundEffect.findMany({
-        where: { messageId: { in: messageIds } },
-        select: { effectKey: true },
-      })
+    ? await withBusyRetry(() =>
+        context.prisma.whatsAppOutboundEffect.findMany({
+          where: { messageId: { in: messageIds } },
+          select: { effectKey: true },
+        }),
+      )
     : [];
   const effectKeys = effects.map((effect) => effect.effectKey);
 
-  // F-10: bounded busy-retry — two re-issues with short backoff absorb the
-  // transient write-lock loss before the operator ever sees an error. Any
-  // non-busy failure, or a busy failure that survives every retry, still
-  // throws to the route's coded 500 path (guaranteed failure surfacing).
-  for (let attempt = 0; ; attempt += 1) {
-    try {
-      await context.prisma.$transaction(async (tx) => {
+  // F-10: the commit itself is the write that loses the lock. A longer
+  // transaction budget plus the busy retry absorbs a WhatsApp writer that
+  // holds SQLite for more than a few hundred milliseconds.
+  await withBusyRetry(() =>
+    context.prisma.$transaction(
+      async (tx) => {
         if (eventIds.length > 0) {
           // Terminal tombstone — never delete. ProviderIngressEvent.ingressKey is
           // the provider-replay idempotency barrier, and ProviderIngressAttempt
@@ -166,29 +204,10 @@ export async function deleteWhatsAppChats(
         await tx.conversation.deleteMany({
           where: { id: { in: conversationIds } },
         });
-      });
-      break;
-    } catch (error) {
-      // noUncheckedIndexedAccess: index into the delays table must narrow
-      // before use; the bounds guard makes the undefined branch unreachable,
-      // and falling back to throwing keeps the non-retry path intact.
-      const delay =
-        attempt < BUSY_RETRY_DELAYS_MS.length
-          ? BUSY_RETRY_DELAYS_MS[attempt]
-          : undefined;
-      if (delay !== undefined && isSqliteBusyError(error)) {
-        logger.warn("whatsapp.chat_delete.busy_retry", {
-          attempt: attempt + 1,
-          conversations: conversationIds.length,
-          messages: messageIds.length,
-          events: eventIds.length,
-        });
-        await sleep(delay);
-        continue;
-      }
-      throw error;
-    }
-  }
+      },
+      { maxWait: 8_000, timeout: 20_000 },
+    ),
+  );
 
   // Post-commit hygiene: canonical and thumbnail media objects are bound to
   // Message identities that no longer exist. Best-effort: any file that

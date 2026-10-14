@@ -1099,8 +1099,25 @@ fn spawn_runtime_generation(
     }
 
     watch_server(app.clone(), app_data_dir.clone(), generation, server_child);
-    // WhatsApp is degradable. Do not start it until the business server is ready.
-    spawn_sidecar_and_watch(app.clone(), sidecar_environment, generation)?;
+    // WhatsApp is degradable. Start it only after the business server is
+    // ready, but do not make the first window navigation wait on the spawn.
+    let sidecar_app = app.clone();
+    let sidecar_env = sidecar_environment;
+    let sidecar_generation = generation;
+    std::thread::Builder::new()
+        .name("sahelflow-sidecar-start".to_string())
+        .spawn(move || {
+            if let Err(error) =
+                spawn_sidecar_and_watch(sidecar_app, sidecar_env, sidecar_generation)
+            {
+                eprintln!("[sahelflow] WhatsApp sidecar failed to start: {error}");
+            }
+        })
+        .map_err(|error| {
+            IoError::other(format!(
+                "failed to start the WhatsApp sidecar thread: {error}"
+            ))
+        })?;
     Ok(SpawnedRuntime {
         protocol: runtime_protocol,
         generation,

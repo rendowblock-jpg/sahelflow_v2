@@ -25,7 +25,10 @@ import { SearchResultRow, type SearchRow } from "@/components/search/search-resu
 import { SearchScopeBar } from "@/components/search/search-scope-bar";
 import { SearchStartPanel } from "@/components/search/search-start-panel";
 import { SearchStateMessage } from "@/components/search/search-state-message";
-import { IconTile } from "@/components/system";
+import {
+  clearCommandPaletteSeed,
+  peekCommandPaletteSeed,
+} from "@/components/search/command-palette-seed";
 import { CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { useI18n } from "@/hooks/use-i18n";
 import { LOCALES, getTranslations } from "@/lib/i18n";
@@ -71,10 +74,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     (key: SearchCommandCopyKey) => searchCommandCopy(locale, key),
     [locale],
   );
-  const [query, setQuery] = React.useState("");
+  const seed = React.useRef(peekCommandPaletteSeed());
+  const [query, setQuery] = React.useState(seed.current.query);
   const [scope, setScope] = React.useState<SearchScope>("all");
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const queryRef = React.useRef(query);
+  queryRef.current = query;
   const normalizedQuery = normalizeSearchText(query);
   const technicalQuery =
     normalizedQuery.length > 0 && /^[0-9\s()+\-./]+$/u.test(normalizedQuery);
@@ -161,7 +167,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   );
   const pageResults = React.useMemo(
     () =>
-      normalizedQuery.length >= 2
+      normalizedQuery.length > 0
         ? rankUniversalSearchCandidates(normalizedQuery, navigation, 8)
         : [],
     [navigation, normalizedQuery],
@@ -240,6 +246,24 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     if (open) inputRef.current?.focus();
   }, [open]);
 
+  // A character typed into the shell placeholder before this chunk arrived
+  // is already in `query`. Open and focus so the first press is not dropped.
+  React.useLayoutEffect(() => {
+    const current = peekCommandPaletteSeed();
+    if (!current.open && !current.query) return;
+    if (current.query && current.query !== query) setQuery(current.query);
+    if (current.open && !open) onOpenChange(true);
+    inputRef.current?.focus();
+    if (current.query.length > 0) {
+      const placed = current.query.length;
+      inputRef.current?.setSelectionRange(placed, placed);
+    }
+    const clear = window.setTimeout(clearCommandPaletteSeed, 0);
+    return () => window.clearTimeout(clear);
+    // Seed is applied once, on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // A press anywhere outside the field and its results closes them — there is
   // no backdrop, so the page underneath stays visible and usable.
   React.useEffect(() => {
@@ -313,8 +337,18 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             dir={technicalQuery ? "ltr" : "auto"}
             value={query}
             onValueChange={(value) => {
+              // cmdk clears its store when the results list mounts. Ignore
+              // that reset while the field still shows what was typed.
+              const typed = inputRef.current?.value;
+              if (
+                value === "" &&
+                queryRef.current !== "" &&
+                typed === queryRef.current
+              ) {
+                return;
+              }
               setQuery(value);
-              if (!open) onOpenChange(true);
+              if (value && !open) onOpenChange(true);
             }}
             onFocus={() => {
               if (!open) onOpenChange(true);
