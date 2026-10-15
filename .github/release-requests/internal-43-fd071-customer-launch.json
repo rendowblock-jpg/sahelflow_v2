@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "request": "Internal.43 FD-071 customer launch publication",
+  "sourcePolicy": "exact-protected-main",
+  "version": "1.0.0-internal.43",
+  "windowsMsiVersion": "1.0.0.43",
+  "channel": "internal",
+  "releaseMode": "customer-online",
+  "ownedHostSuffix": "sahelflow.com",
+  "authorityDecision": "FD-071",
+  "licenseServiceUrl": "https://license.sahelflow.com|https://activate.sahelflow.com",
+  "certification": {
+    "productSha": "80956e46e218a3262c9f57c36728318e5312b630",
+    "phase5RunId": 38739256999,
+    "phase67RunId": 38739256948,
+    "ciRunId": 38739256979
+  },
+  "reason": "ADOPTED release authority \u2014 FD-071 (documentation/product/DECISIONS.md), amended 2026-10-15 by the Founder directive to land the extraction repair and the Setup.exe outcome before this release. One signed customer launch successor, app 1.0.0-internal.43 / MSI 1.0.0.43, mode customer-online, owned host sahelflow.com, packaging protected main cdb907dbc2dd9c7de0585ff3a7a40bac43eb7bb0: PR #490 (the installed Internal.42 audit repairs for orders, couriers, storefront, WhatsApp, AI, team login, the startup card, and the search crash), PR #492 (the messy-demo-order extraction repair, the inbox AI status line, eight pinned extraction demo chats, and honest rich-seed messages), and PR #493 (the per-machine SahelFlow-Setup.exe beside the MSI, dual updater entries, /get/windows serving the named download). PR #492 merged as 6545f2f08b29fc0144bbd79a1d3eb1169336d88b after its full Required battery was green at head 9833907f9dd67734b7fcf5e9585fa5481c4319f5. PR #493 merged as cdb907dbc2dd9c7de0585ff3a7a40bac43eb7bb0 after its full Required battery was green at head 80956e46e218a3262c9f57c36728318e5312b630: CI 38739256979, Phase 5 38739256999, Phase 6-7 38739256948, including the installed-MSI evidence lane. The signed train publishes the named SahelFlow-Setup.exe beside the MSI under this authority; the named Setup.exe installed-evidence lane stays with its first shipped observation. Paid licences stay offline-signed. This is a Founder-authorized launch release, not a Stable claim; it converts no ledger row."
+}

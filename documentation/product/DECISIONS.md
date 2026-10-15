@@ -1627,5 +1627,45 @@ successor:
   observation, with #306 logout LAST. Live WhatsApp delivery stays
   uncertified until that campaign.
 - **Next:** a `SahelFlow-Setup.exe` download for new clients (Founder,
-  2026-10-09) follows in the release after Internal.42 under its own
-  authority; Internal.42 ships as an MSI.
+  2026-10-09) follows under its own authority. Internal.43 ships as an MSI.
+  Amended by FD-071 (2026-10-15): the Setup.exe source and the named
+  `SahelFlow-Setup.exe` download asset ship inside Internal.43's signed
+  publication; its installed-evidence lane follows on first shipped
+  observation.
+
+## FD-071 — One signed successor Internal.43 under the FD-066 customer launch (2026-10-14, ADOPTED)
+
+The Founder's directive to make the next signed release once the installed
+audit fixes were complete adopts the next customer-online release authority
+as one signed successor:
+
+- **Package:** app `1.0.0-internal.43` / MSI `1.0.0.43`, channel `internal`,
+  mode `customer-online`, owned host `sahelflow.com`. Paid licences stay
+  offline-signed. Trial origins stay `license.sahelflow.com` and
+  `activate.sahelflow.com`.
+- **Content:** protected `main` `d75eb813…` (PR #490) — the installed Internal.42
+  audit repairs for orders, couriers, storefront, WhatsApp, AI, team login,
+  the startup card, and the search crash.
+- **Gates:** this release-authority PR merges only after its full Required
+  battery, including installed-MSI evidence, is green. The signed train
+  publishes from that exact `main` commit. The tag, digest, and publish time
+  are recorded only after that run succeeds.
+- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
+  no ledger row. #306 logout stays LAST.
+- **Amended (2026-10-15, Founder directive — the extraction repair and the
+  Setup.exe outcome land before this release):** the packaged content extends
+  from `d75eb813…` (PR #490) to protected `main` `cdb907db…` — the same audit
+  repairs, plus **PR #492** (the messy-demo-order extraction repair: offline
+  reader, smart router, the inbox AI status line, eight pinned extraction
+  demo chats, the repaired offline-reader suites, and rich-seed order messages
+  that name their own contact) and **PR #493** (the `SahelFlow-Setup.exe`
+  source outcome: per-machine NSIS beside the MSI from one version authority,
+  dual updater entries with the manifest bound to the named download,
+  `/get/windows` serving the Setup.exe, and the contract pins). The signed
+  train builds and publishes both installer shapes under this authority, so
+  new clients receive `SahelFlow-Setup.exe` through Internal.43's
+  publication. The named Setup.exe installed-evidence lane stays with the
+  Setup.exe's own first-shipped observation. Certification of the product
+  content at head `80956e46…` (PR #493, tree-identical to this content):
+  CI `38739256979`, Phase 5 `38739256999`, Phase 6-7 `38739256948`, including
+  the installed-MSI evidence lane. Everything else in this decision stands.
