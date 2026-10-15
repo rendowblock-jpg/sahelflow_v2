@@ -193,6 +193,15 @@ const COMMUNE_PATTERN = new RegExp(
   "gu",
 );
 
+const STRONG_DELIVERY = new RegExp(
+  `${B_BEFORE}(?:livraison|livrer|توصيل|التوصيل|tawsil|twsil|delivery)[\\s:'-]*$`,
+  "u",
+);
+
+function precededByDelivery(folded: string, start: number): boolean {
+  return STRONG_DELIVERY.test(folded.slice(Math.max(0, start - 28), start));
+}
+
 export interface CommuneMention {
   name: string;
   wilayaCode: number;
@@ -216,7 +225,11 @@ export function findCommune(folded: string, wilayaCode: number | undefined): Com
       continue;
     }
     const wilayaCodes = new Set(candidates.map((candidate) => candidate.wilayaCode));
-    if (wilayaCodes.size === 1 && key.replace(/ /g, "").length >= 6) {
+    // "Koléa" is five letters. A delivery word in front of one unique commune
+    // is enough; without that cue, short names stay ignored.
+    const letters = key.replace(/ /g, "").length;
+    const minLetters = precededByDelivery(folded, start) ? 5 : 6;
+    if (wilayaCodes.size === 1 && letters >= minLetters) {
       const only = candidates[0]!;
       return { name: only.name, wilayaCode: only.wilayaCode, start, end };
     }

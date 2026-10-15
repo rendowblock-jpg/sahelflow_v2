@@ -198,6 +198,122 @@ describe("catalog matching", () => {
   });
 });
 
+describe("offline reader — realistic demo chats", () => {
+  const shop = [
+    { name: "Mini imprimante thermique Bluetooth" },
+    { name: "Sac à langer grande capacité" },
+    { name: "Sac bandoulière femme minimal" },
+    { name: "Coffret cadeau Oud & Ambre" },
+    { name: "Coffret parfum oriental 3 pièces" },
+    { name: "Lampe LED rechargeable tactile" },
+    { name: "Abaya Medina premium Taille M" },
+    { name: "Abaya Medina premium Taille L" },
+    { name: "Abaya Medina premium Taille XL" },
+    { name: "Hachoir électrique multifonction" },
+    { name: "Tapis de prière velours premium" },
+    { name: "Power bank compact 20 000 mAh" },
+  ];
+  const phone = "0500000091";
+  const readDemo = (body: string) => extractWithRegex({ body, catalog: shop, knownPhone: phone });
+
+  it("reads a Darija page-view as the catalog printer, not as the daughter", () => {
+    const order = readDemo(
+      "سلام، شفت mini imprimante في الصفحة. نحب وحدة لابنتي، التوصيل لباب الزوار و نقدر نخلص عند الاستلام؟",
+    ).order;
+    expect(order?.items).toEqual([
+      {
+        productName: "Mini imprimante thermique Bluetooth",
+        quantity: 1,
+        catalogMatch: "close",
+        sourceText: "mini imprimante",
+      },
+    ]);
+    expect(order).toMatchObject({ phone, wilaya: "Alger", commune: "Bab Ezzouar" });
+  });
+
+  it("keeps a product that was only asked about when delivery is in the same message", () => {
+    const order = readDemo("Bonjour, le sac à langer est disponible en noir ? Livraison Boufarik svp.").order;
+    expect(order?.items[0]).toMatchObject({
+      productName: "Sac à langer grande capacité",
+      quantity: 1,
+      catalogMatch: "close",
+    });
+    expect(order).toMatchObject({ wilaya: "Blida", commune: "Boufarik", notes: "noir" });
+  });
+
+  it("keeps Oud & Ambre as one catalog product", () => {
+    const order = readDemo(
+      "Salam, je veux le coffret Oud & Ambre pour un cadeau. Combien avec livraison Annaba ?",
+    ).order;
+    expect(order?.items).toHaveLength(1);
+    expect(order?.items[0]).toMatchObject({ productName: "Coffret cadeau Oud & Ambre", quantity: 1 });
+    expect(order?.wilaya).toBe("Annaba");
+  });
+
+  it("lands the size on the matching abaya variant and keeps the color as a note", () => {
+    const order = readDemo("سلام، نحب abaya taille L couleur noire، التوصيل لبئر خادم.").order;
+    expect(order?.items[0]).toMatchObject({ productName: "Abaya Medina premium Taille L", quantity: 1 });
+    expect(order).toMatchObject({ wilaya: "Alger", commune: "Birkhadem", notes: "noire" });
+  });
+
+  it("reads two colors as notes on one prayer-rug line and Koléa as Tipaza", () => {
+    const order = readDemo("Je veux deux tapis de prière, un vert et un beige. Livraison Koléa.").order;
+    expect(order?.items[0]).toMatchObject({
+      productName: "Tapis de prière velours premium",
+      quantity: 2,
+      catalogMatch: "close",
+    });
+    expect(order).toMatchObject({ wilaya: "Tipaza", commune: "Kolea", notes: "vert · beige" });
+    expect(order?.customerName).toBeUndefined();
+  });
+
+  it("does not turn a power-bank capacity into a price", () => {
+    const order = readDemo("Salam, power bank 20000 disponible ? Je veux livraison M'Sila.").order;
+    expect(order?.items[0]).toMatchObject({
+      productName: "Power bank compact 20 000 mAh",
+      quantity: 1,
+      catalogMatch: "close",
+    });
+    expect(order?.items[0]?.unitPrice).toBeUndefined();
+    expect(order?.wilaya).toBe("M'Sila");
+  });
+
+  it("maps a misspelled short name when one catalog product contains it", () => {
+    const order = readDemo("je veux mini imprimant, livraison alger").order;
+    expect(order?.items[0]?.productName).toBe("Mini imprimante thermique Bluetooth");
+    expect(order?.wilaya).toBe("Alger");
+  });
+
+  it("applies a quantity written in the next clause", () => {
+    const order = readDemo("شفت mini imprimante في الصفحة. نحب زوج.").order;
+    expect(order?.items[0]).toMatchObject({
+      productName: "Mini imprimante thermique Bluetooth",
+      quantity: 2,
+    });
+  });
+
+  it("does not read a pure question as an order", () => {
+    expect(readDemo("Bonsoir, la lampe tactile est rechargeable USB ? Je confirme si oui.").order).toBeNull();
+    expect(readDemo("Le hachoir est-il garanti ? Je suis à Béjaïa centre.").order).toBeNull();
+  });
+
+  it("still reads the product when the shop catalog is not loaded", () => {
+    const sac = extractWithRegex({
+      body: "Bonjour, le sac à langer est disponible en noir ? Livraison Boufarik svp.",
+      knownPhone: phone,
+    });
+    expect(sac.order?.items.map((item) => item.productName)).toEqual(["sac à langer en noir"]);
+    expect(sac.order?.wilaya).toBe("Blida");
+    const coffret = extractWithRegex({
+      body: "je veux le coffret Oud & Ambre pour un cadeau, Annaba",
+      knownPhone: phone,
+    });
+    expect(coffret.order?.items).toHaveLength(1);
+    expect(coffret.order?.items[0]?.productName.toLowerCase()).toContain("ambre");
+    expect(coffret.order?.items[0]?.productName.toLowerCase()).toContain("oud");
+  });
+});
+
 describe("offline reader — lists and signatures", () => {
   it("keeps every entry of a '+' list once one entry is an item", () => {
     const order = read("Bonjour, Sac à Main Femme + Parfum Oud. Nadia, Blida. 0500000070").order;

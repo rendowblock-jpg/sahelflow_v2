@@ -43,6 +43,13 @@ export const FILLERS = [
   "واش", "ya", "يا", "3afak", "afak", "ida mumkin", "si possible",
   "bonne journee", "bonne soiree", "bon courage", "inchallah", "incha allah",
   "ان شاء الله", "bslama", "bye", "salutations", "cordialement", "saha ftourkoum",
+  // Seen on a page, asked about, or given as a reason — not part of the product.
+  "شفت", "شفنا", "شفته", "رايت", "في الصفحة", "في الصفحه", "على الصفحة", "على الصفحه",
+  "sur la page", "dans la page", "on the page", "fil page",
+  "pour un cadeau", "pour le cadeau", "comme cadeau", "en cadeau",
+  "pour ma fille", "pour mon fils", "pour ma femme", "لابنتي", "لابني", "لبنتي", "كهدية",
+  "est", "sont", "est-il", "est-elle", "est-ce que", "c est",
+  "disponible", "dispo", "kayen", "kayn", "كاين", "garanti", "garantie", "guaranteed",
 ];
 
 /** Words that may sit at a product-name edge but never alone. */

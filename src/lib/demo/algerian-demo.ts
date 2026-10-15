@@ -783,6 +783,57 @@ export async function seedAlgerianDemoData(
       }
     }
 
+    // The eight story chats above are a finished walkthrough: the order is
+    // already confirmed, so the latest customer message is not the order.
+    // These chats are the same realistic messages, unanswered and unextracted,
+    // pinned at the top of the inbox so the seller can run extraction on them.
+    const extractionChats = [
+      ["Amina Cheriet · Mini imprimante", "0559000101"],
+      ["Lina Bouzid · Sac à langer", "0669000102"],
+      ["Samira Hadj · Coffret Oud", "0779000103"],
+      ["Yasmine Kaci · Lampe (question)", "0559000104"],
+      ["Meriem Taleb · Abaya L", "0669000105"],
+      ["Karima Ouari · Hachoir (question)", "0779000106"],
+      ["Salima Boudjemaa · Tapis", "0559000107"],
+      ["Anis Ferhat · Power bank", "0669000108"],
+    ] as const;
+    for (let index = 0; index < extractionChats.length; index += 1) {
+      const [contactName, phone] = extractionChats[index]!;
+      const sentAt = new Date(Date.now() - (index + 1) * 4 * 60 * 1000);
+      const conversationId = `demo-extract-chat-${String(index + 1).padStart(2, "0")}`;
+      await client.conversation.create({
+        data: {
+          id: conversationId,
+          channel: "whatsapp",
+          contactName,
+          contactPhone: phone,
+          sourceId: `${phone}@s.whatsapp.net`,
+          lastMessageAt: sentAt,
+          unreadCount: 1,
+          status: "open",
+          priority: "high",
+          waitingSince: sentAt,
+          pinnedAt: sentAt,
+          labels: JSON.stringify(["extraction"]),
+          createdAt: sentAt,
+        },
+      });
+      await client.message.create({
+        data: {
+          id: `${conversationId}-message-1`,
+          conversationId,
+          direction: "incoming",
+          body: incomingMessages[index]!,
+          deliveryStatus: "delivered",
+          messageType: "text",
+          extractionMethod: null,
+          extractedOrderJson: null,
+          timestamp: sentAt,
+          createdAt: sentAt,
+        },
+      });
+    }
+
     const automations = [
       {
         id: "demo-automation-01",
