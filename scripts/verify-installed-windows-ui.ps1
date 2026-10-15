@@ -30,6 +30,14 @@ $arabicLocaleFile = Join-Path $repositoryRoot "src/lib/i18n/locales/ar.json"
 $maxRuntimePrepareMilliseconds = 15000
 $maxAuthenticatedUiMilliseconds = 100000
 $authenticatedUiEvidenceGraceMilliseconds = 3000
+# The durable shutdown/cache receipt waits for a real flush of hundreds of
+# compile-cache files. Under post-build runner I/O pressure that flush can
+# legitimately exceed a short deadline (signed train 38750028169 attempt 1
+# flushed in under a second; attempt 2 needed more than 15 seconds on a
+# different runner of the same image), while the receipt's content contract
+# (flushed state, matching instance, nonzero cache) stays unchanged. The
+# deadline therefore budgets patience, not ordering.
+$runtimeShutdownReceiptDeadlineSeconds = 45
 
 New-Item -ItemType Directory -Path $evidenceRoot -Force | Out-Null
 
@@ -192,6 +200,7 @@ function Wait-ForAuthenticatedUi {
     $deadline = $StartedAt.AddMilliseconds($maxAuthenticatedUiMilliseconds)
     $lastObservation = $null
     $workspaceVisibleAt = $null
+    $evidenceAtFirstVisibility = $null
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Milliseconds 250
         $Process.Refresh()
@@ -262,6 +271,28 @@ function Wait-ForAuthenticatedUi {
         $workspaceWindows = @($visibleWindows | Where-Object { $_.title -ceq $workspaceWindowTitle })
         if ($workspaceWindows.Count -ne 0 -and $null -eq $workspaceVisibleAt) {
             $workspaceVisibleAt = Get-Date
+            # The desktop shows the workspace only after matching durable
+            # readiness evidence (the shell gates window.show() on the same
+            # files), so the honest ordering witness is whether fresh evidence
+            # files already existed at the first visibility observation. Re-stat
+            # them here: any evidence written before the window was shown is now
+            # visible to this snapshot. Comparing file mtimes against the
+            # wall-clock capture instead mis-attributed a passing lifecycle pass
+            # under heavy runner I/O (signed train 38750028169, ui-launch-3):
+            # observation skew and the desktop's evidence re-persistence move
+            # mtime after the capture without any ordering violation.
+            $firstVisibilityUiItem = Get-Item -LiteralPath $runtimeUiReadyPath -ErrorAction SilentlyContinue
+            $firstVisibilityUiDiagnosticItem = Get-Item -LiteralPath $runtimeUiDiagnosticPath -ErrorAction SilentlyContinue
+            $evidenceAtFirstVisibility = [pscustomobject]@{
+                uiReadyPresent = (
+                    $null -ne $firstVisibilityUiItem -and
+                    $firstVisibilityUiItem.LastWriteTime -ge $StartedAt.AddSeconds(-2)
+                )
+                uiDiagnosticPresent = (
+                    $null -ne $firstVisibilityUiDiagnosticItem -and
+                    $firstVisibilityUiDiagnosticItem.LastWriteTime -ge $StartedAt.AddSeconds(-2)
+                )
+            }
         }
         $workspaceEvidenceLeadMilliseconds = if ($null -ne $workspaceVisibleAt -and -not $matching) {
             [int64]((Get-Date) - $workspaceVisibleAt).TotalMilliseconds
@@ -271,10 +302,9 @@ function Wait-ForAuthenticatedUi {
         $readinessPredatesWorkspaceVisibility =
             $matching -and
             $null -ne $workspaceVisibleAt -and
-            $null -ne $uiItem -and
-            $null -ne $uiDiagnosticItem -and
-            $uiItem.LastWriteTime -le $workspaceVisibleAt -and
-            $uiDiagnosticItem.LastWriteTime -le $workspaceVisibleAt
+            $null -ne $evidenceAtFirstVisibility -and
+            $evidenceAtFirstVisibility.uiReadyPresent -and
+            $evidenceAtFirstVisibility.uiDiagnosticPresent
         $lastObservation = [pscustomobject]@{
             endpointMatched = [bool]$matching
             responding = [bool]$Process.Responding
@@ -485,7 +515,7 @@ function Wait-ForRuntimeShutdownDiagnostic {
         [Parameter(Mandatory = $true)][string]$Phase
     )
 
-    $deadline = (Get-Date).AddSeconds(15)
+    $deadline = (Get-Date).AddSeconds($runtimeShutdownReceiptDeadlineSeconds)
     do {
         $diagnostic = Read-JsonFile -Path $runtimeShutdownDiagnosticPath
         if (

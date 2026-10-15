@@ -24,10 +24,29 @@ describe("installed Windows authenticated UI readiness ordering", () => {
     expect(harness).not.toContain(
       "$workspaceWindows.Count -eq 0) {\n            $workspaceVisibleAt = $null",
     );
+    // The ordering witness is the durable evidence snapshot taken at the first
+    // visibility observation, not a file-mtime-versus-wall-clock comparison:
+    // mtime moves after the capture under observation skew and the desktop's
+    // evidence re-persistence without any ordering violation, which mis-failed
+    // signed train 38750028169 (ui-launch-3). The desktop gates window.show()
+    // on the same durable files, so fresh evidence present at first visibility
+    // proves readiness predated visibility.
     expect(harness).toContain(
-      "$uiItem.LastWriteTime -le $workspaceVisibleAt",
+      "$evidenceAtFirstVisibility.uiReadyPresent",
     );
     expect(harness).toContain(
+      "$evidenceAtFirstVisibility.uiDiagnosticPresent",
+    );
+    expect(harness).toContain(
+      "$firstVisibilityUiItem = Get-Item -LiteralPath $runtimeUiReadyPath -ErrorAction SilentlyContinue",
+    );
+    expect(harness).toContain(
+      "$firstVisibilityUiDiagnosticItem = Get-Item -LiteralPath $runtimeUiDiagnosticPath -ErrorAction SilentlyContinue",
+    );
+    expect(harness).not.toContain(
+      "$uiItem.LastWriteTime -le $workspaceVisibleAt",
+    );
+    expect(harness).not.toContain(
       "$uiDiagnosticItem.LastWriteTime -le $workspaceVisibleAt",
     );
     expect(harness).toContain(
