@@ -291,6 +291,8 @@ describe("offline reader — realistic demo chats", () => {
       quantity: 2,
     });
   });
+
+  it("does not read a pure question as an order", () => {
     expect(readDemo("Bonsoir, la lampe tactile est rechargeable USB ? Je confirme si oui.").order).toBeNull();
     expect(readDemo("Le hachoir est-il garanti ? Je suis à Béjaïa centre.").order).toBeNull();
   });
@@ -311,6 +313,8 @@ describe("offline reader — realistic demo chats", () => {
     expect(coffret.order?.items[0]?.productName.toLowerCase()).toContain("oud");
   });
 });
+
+describe("offline reader — lists and signatures", () => {
   it("keeps every entry of a '+' list once one entry is an item", () => {
     const order = read("Bonjour, Sac à Main Femme + Parfum Oud. Nadia, Blida. 0500000070").order;
     expect(order?.items.map((item) => item.productName)).toEqual(["Sac à Main Femme", "Parfum Oud"]);
