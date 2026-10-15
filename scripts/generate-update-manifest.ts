@@ -127,12 +127,26 @@ async function main(): Promise<void> {
     console.warn("  ⚠️  macOS .dmg found but no signature readable — skipping darwin entries");
   }
 
-  // Windows
+  // Windows — two installer shapes when both were built (tauri.conf.json
+  // targets ["msi", "nsis"]): the per-machine NSIS "Setup.exe" for new clients
+  // (`windows-x86_64`) and the MSI (`windows-x86_64-msi`). The Tauri updater
+  // picks the entry that matches how the installed app was put on the machine.
+  // When only an MSI exists (pre-Setup releases), the MSI fills both keys so
+  // every installed candidate keeps updating.
+  const windowsSetup = findBundle("nsis", "-setup.exe");
   const windowsBundle = findBundle("msi", ".msi");
+  if (windowsSetup) {
+    const url = `https://github.com/rendowblock-jpg/sahelflow_v2/releases/download/v${version}/${windowsSetup.path}`;
+    platforms["windows-x86_64"] = { signature: windowsSetup.sig, url };
+    console.log(`  ✅ Windows (Setup.exe): ${windowsSetup.path}`);
+  }
   if (windowsBundle) {
     const url = `https://github.com/rendowblock-jpg/sahelflow_v2/releases/download/v${version}/${windowsBundle.path}`;
-    platforms["windows-x86_64"] = { signature: windowsBundle.sig, url };
-    console.log(`  ✅ Windows: ${windowsBundle.path}`);
+    platforms["windows-x86_64-msi"] = { signature: windowsBundle.sig, url };
+    if (!windowsSetup) {
+      platforms["windows-x86_64"] = { signature: windowsBundle.sig, url };
+    }
+    console.log(`  ✅ Windows (MSI): ${windowsBundle.path}`);
   }
 
   // Linux

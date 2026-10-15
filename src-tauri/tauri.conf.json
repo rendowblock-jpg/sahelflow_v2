@@ -34,7 +34,7 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
-    "targets": ["msi"],
+    "targets": ["msi", "nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -48,7 +48,10 @@
       "resources/standalone/": "standalone/",
       "resources/runtime/": "runtime/"
     },
-    "windows": { "wix": { "version": "1.0.0.42" } }
+    "windows": {
+      "wix": { "version": "1.0.0.42" },
+      "nsis": { "installMode": "perMachine" }
+    }
   },
   "plugins": {
     "updater": {

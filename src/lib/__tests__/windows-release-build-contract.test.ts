@@ -54,6 +54,36 @@ describe("Windows signed release build contract", () => {
     expect(workflow).toContain("latest.json");
   });
 
+  it("builds and publishes the named per-machine Setup.exe beside the MSI", () => {
+    const workflow = read(".github/workflows/release.yml");
+    const desktop = JSON.parse(read("src-tauri/tauri.conf.json")) as {
+      bundle?: { targets?: string[]; windows?: { nsis?: { installMode?: string } } };
+    };
+    const worker = read("marketing/worker.js");
+
+    // Both installer shapes are built from one version authority; the NSIS
+    // installer is per-machine like the MSI (no per-user split).
+    expect(desktop.bundle?.targets).toEqual(expect.arrayContaining(["msi", "nsis"]));
+    expect(desktop.bundle?.windows?.nsis?.installMode).toBe("perMachine");
+
+    // The signed train builds both bundles and cryptographically verifies the
+    // NSIS signature exactly like the MSI one.
+    expect(workflow).toContain("args: --bundles msi,nsis");
+    expect(workflow).toContain("bundle/nsis/*-setup.exe");
+    expect(workflow).toContain("verify-updater-artifact.ts -- $setups[0].FullName $setupSignatures[0].FullName");
+
+    // New clients download one stable name bound into the updater manifest;
+    // the publication gate hash-compares the named pair before publishing.
+    expect(workflow).toContain("Publish the Setup.exe download name");
+    expect(workflow).toContain("SahelFlow-Setup.exe");
+    expect(workflow).toContain("latest.json Setup.exe entry is not bound to the named download asset");
+
+    // /get/windows serves the Setup.exe and still honours MSI-only manifests.
+    expect(worker).toContain("windows-x86_64-msi");
+    expect(worker).toContain("\\.exe$");
+    expect(worker).toContain("\\.msi$");
+  });
+
   it("verifies approved packaging drift but generates evidence from a clean exact worktree", () => {
     const workflow = read(".github/workflows/release.yml");
     const evidenceHelper = read("scripts/generate-release-evidence-worktree.ts");
