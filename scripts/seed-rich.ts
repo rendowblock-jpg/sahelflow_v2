@@ -143,18 +143,22 @@ const ADDRESSES = [
   "Rue Mohamed V", "Quartier Bel Air", "Cité Ben Omar", "Rue Khelifa Boukhalfa",
 ];
 
-// WhatsApp message templates (realistic Darija/French mixed order messages)
+// WhatsApp message templates (realistic Darija/French mixed order messages).
+// `{name}` and `{phone}` are filled with the conversation's own contact: a
+// customer never quotes another person's name or number, so universal search
+// stays truthful about who said what (the Phase 5 command-touch journeys
+// assert exactly that).
 const WHATSAPP_MESSAGES = [
-  "Salam, bghit ncommandi Écouteurs Bluetooth JBL, adresse: Cité 1000 Logements Bât B, Bab Ezzouar Alger. Tel: 0555123456",
-  "Bonjour, je veux commander Chargeur Rapide USB-C. Nom: Karim Haddad. Wilaya: Oran, Commune: Es Senia. 0661987654",
-  "سلام، نريد شراء Montre Connectée. الاسم: أمينة شريف. ولاية قسنطينة. الهاتف: 0770456789",
-  "Salam, 2x Power Bank 20000mAh svp. Yacine, Tizi Ouzou. 0555789012. Adresse: Rue Larbi Ben M'hidi",
-  "Bonjour, Sac à Main Femme + Parfum Oud Royal. Nadia, Blida. 0555345678",
-  "Bghit Tapis de Prière Premium. Mohamed, Sétif. 0770891234. Cité 5 Juillet",
-  "Salam, je commande Djellaba Femme Premium taille M. Leila, Béjaïa. 0555678901",
-  "3x Coque iPhone 14 Pro svp. Sofiane, Tlemcen. 0661567890. Rue Mohamed V",
-  "Bonjour, Coffret Thé Décoré. Rachid, Batna. 0770234567. Quartier Bel Air",
-  "Salam, Clavier Mécanique RGB. Tarek, Annaba. 0661789012",
+  "Salam, bghit ncommandi Écouteurs Bluetooth JBL, adresse: Cité 1000 Logements Bât B, Bab Ezzouar Alger. Tel: {phone}",
+  "Bonjour, je veux commander Chargeur Rapide USB-C. Nom: {name}. Wilaya: Oran, Commune: Es Senia. {phone}",
+  "سلام، نريد شراء Montre Connectée. الاسم: {name}. ولاية قسنطينة. الهاتف: {phone}",
+  "Salam, 2x Power Bank 20000mAh svp. {name}, Tizi Ouzou. {phone}. Adresse: Rue Larbi Ben M'hidi",
+  "Bonjour, Sac à Main Femme + Parfum Oud Royal. {name}, Blida. {phone}",
+  "Bghit Tapis de Prière Premium. {name}, Sétif. {phone}. Cité 5 Juillet",
+  "Salam, je commande Djellaba Femme Premium taille M. {name}, Béjaïa. {phone}",
+  "3x Coque iPhone 14 Pro svp. {name}, Tlemcen. {phone}. Rue Mohamed V",
+  "Bonjour, Coffret Thé Décoré. {name}, Batna. {phone}. Quartier Bel Air",
+  "Salam, Clavier Mécanique RGB. {name}, Annaba. {phone}",
 ];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -557,6 +561,8 @@ async function main() {
       const isIncoming = j % 2 === 0;
       const msgText = isIncoming
         ? randomFrom(WHATSAPP_MESSAGES)
+            .replaceAll("{name}", customer.name)
+            .replaceAll("{phone}", customer.phone)
         : randomFrom([
             "Salam! Commande confirmée. Livraison prévue demain 📦",
             "Merci pour votre commande! Le total est de 4 500 DA",
