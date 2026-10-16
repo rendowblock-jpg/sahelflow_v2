@@ -1,8 +1,18 @@
 name: CI failure digest
 
-# Posts the failing job's error lines and log tail onto the pull request when a
-# gated workflow fails. That text otherwise lives only in the Actions web UI,
-# which reviewers working through the API (including coding agents) cannot read.
+# When a gated workflow fails, post the failing output on the pull request.
+# That text otherwise lives only in the Actions web UI, which reviewers working
+# through the API (including coding agents) cannot read.
+#
+# Per failed job it shows:
+# - the output printed just before each error marker. A step that fails with a
+#   message (PowerShell throw, bash echo, a test runner summary) prints it
+#   BEFORE the runner's generic "Process completed with exit code N" marker, so
+#   the marker alone says nothing;
+# - lines that look like compiler, test or lint failures;
+# - a collapsed tail of the log.
+# A step set to continue past its failure (continue-on-error) is covered too:
+# it looks green in the UI, but its error marker is still in the log.
 #
 # Safety posture:
 # - It never checks out or executes pull-request code. Its only inputs are API
@@ -78,10 +88,12 @@ jobs:
               sys.exit("The pull request number must be numeric.")
 
           MAX_JOBS = 4        # failed jobs shown per run
-          MAX_ERRORS = 24     # distinct ##[error] messages per job
-          MAX_CONTEXT = 10    # lines kept right after the first error
+          MAX_BLOCKS = 6      # error markers shown per job
+          MAX_BEFORE = 30     # output lines kept before each error marker
+          MAX_SIGNALS = 30    # failure-looking lines (compiler, test, lint) per job
           MAX_TAIL = 40       # closing lines of the job log
-          LINE_CAP = 1500     # characters per line
+          LINE_CAP = 800      # characters per line
+          JOB_CAP = 13000     # characters per failed job
           BODY_CAP = 58000    # GitHub rejects comments over 65536 characters
 
           ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
@@ -93,6 +105,18 @@ jobs:
               r"|-----BEGIN [A-Z ]*PRIVATE KEY-----"
               r"|(?i:bearer)\s+[A-Za-z0-9._~+/=-]{24,}"
           )
+          # Strong signals: a tool said something failed. Weak signals are exception names
+          # that passing tests also print, so they are shown only when nothing stronger exists.
+          STRONG = re.compile(
+              r"\berror TS\d+:"
+              r"|^\s*(?:FAIL|FAILED)\b"
+              r"|^\s*[\u00d7\u2717\u2718]\s"
+              r"|\berror\[E\d{4}\]"
+              r"|^error: "
+              r"|^\s*\d+:\d+\s+error\s"
+              r"|^Exception: "
+          )
+          WEAK = re.compile(r"\b(?:AssertionError|TypeError|ReferenceError|SyntaxError)\b")
 
 
           def gh(*args, stdin=None):
@@ -138,24 +162,109 @@ jobs:
               return f"{ticks}text\n{text}\n{ticks}"
 
 
+          def close_open_fence(text):
+              open_ticks = None
+              for line in text.splitlines():
+                  match = re.match(r"^(`{3,})(.*)$", line)
+                  if not match:
+                      continue
+                  if open_ticks is None:
+                      open_ticks = match.group(1)
+                  elif len(match.group(1)) >= len(open_ticks) and not match.group(2).strip():
+                      open_ticks = None
+              return text + ("\n" + open_ticks if open_ticks else "")
+
+
+          def fit(lines, budget, keep_end=False):
+              chosen, used = [], 0
+              for line in reversed(lines) if keep_end else lines:
+                  cost = len(line) + 1
+                  if chosen and used + cost > budget:
+                      break
+                  chosen.append(line)
+                  used += cost
+              if keep_end:
+                  chosen.reverse()
+              if len(chosen) < len(lines):
+                  if keep_end:
+                      chosen = ["...[earlier lines omitted]"] + chosen
+                  else:
+                      chosen = chosen + ["...[more lines omitted]"]
+              return chosen, used
+
+
           def summarize(raw):
               lines = [clean(line) for line in raw.splitlines()]
-              errors, seen, first = [], set(), None
-              for index, line in enumerate(lines):
-                  if "##[error]" not in line:
+
+              # A step that fails with a message (PowerShell throw, bash echo, a test runner
+              # summary) prints that message BEFORE the runner adds its generic
+              # "##[error]Process completed with exit code N" marker, so the output ahead of
+              # each marker is what matters. A step's own output starts after its last
+              # "##[endgroup]" (the group holds the script and environment).
+              markers = [i for i, line in enumerate(lines) if "##[error]" in line]
+              chosen = markers if len(markers) <= MAX_BLOCKS else markers[: MAX_BLOCKS - 1] + markers[-1:]
+              blocks, covered = [], 0
+              for index in chosen:
+                  start = index
+                  while start > covered and index - start < MAX_BEFORE:
+                      previous = lines[start - 1]
+                      if "##[endgroup]" in previous or "##[group]" in previous:
+                          break
+                      start -= 1
+                  before = [text for text in lines[start:index] if text.strip() and "##[" not in text]
+                  title = ""
+                  for back in range(start - 1, max(-1, start - 3000), -1):
+                      if "##[group]" in lines[back]:
+                          title = lines[back].split("##[group]", 1)[1].strip()
+                          break
+                  message = lines[index].split("##[error]", 1)[1].strip()
+                  blocks.append({"title": title[:160], "before": before, "message": message})
+                  covered = index + 1
+
+              shown = {text.strip() for block in blocks for text in block["before"] + [block["message"]]}
+              strong, weak, seen = [], [], set()
+              for line in lines:
+                  text = line.strip()
+                  if not text or text in seen or text in shown:
                       continue
-                  message = line.split("##[error]", 1)[1].strip()
-                  if message and message not in seen:
-                      seen.add(message)
-                      errors.append(message)
-                      if first is None:
-                          first = index
-              context = lines[first + 1 : first + 1 + MAX_CONTEXT] if first is not None else []
+                  if STRONG.search(line):
+                      seen.add(text)
+                      strong.append(text)
+                      if len(strong) >= MAX_SIGNALS:
+                          break
+                  elif WEAK.search(line) and len(weak) < 10:
+                      seen.add(text)
+                      weak.append(text)
               visible = [
-                  line for line in lines
-                  if line.strip() and "##[group]" not in line and "##[endgroup]" not in line
+                  text for text in lines
+                  if text.strip() and "##[group]" not in text and "##[endgroup]" not in text
               ]
-              return errors, context, visible[-MAX_TAIL:]
+              return blocks, len(markers) - len(chosen), strong or weak, visible[-MAX_TAIL:]
+
+
+          def render(item, include_tail):
+              parts = [f"**{item['name']}** - failed step: {item['steps']} - [job log]({item['url']})"]
+              budget = JOB_CAP
+              if item["problem"]:
+                  parts.append(f"_{label(item['problem'])}_")
+              for block in item["blocks"]:
+                  heading = "Output just before an error marker"
+                  title = label(block["title"]).strip()
+                  if title:
+                      heading += f" (step: `{title}`)"
+                  kept, used = fit(block["before"] + ["[error] " + block["message"]], max(budget, 400), keep_end=True)
+                  budget -= used
+                  parts.append(heading + ":\n" + fence("\n".join(kept)))
+              if item["omitted"]:
+                  parts.append(f"({item['omitted']} more error markers omitted)")
+              if item["signals"] and budget > 400:
+                  kept, used = fit(item["signals"], budget)
+                  budget -= used
+                  parts.append("Lines that look like failures:\n" + fence("\n".join(kept)))
+              if include_tail and item["tail"] and budget > 600:
+                  kept, used = fit(item["tail"], budget, keep_end=True)
+                  parts.append("<details><summary>Last log lines</summary>\n\n" + fence("\n".join(kept)) + "\n\n</details>")
+              return "\n\n".join(parts)
 
 
           run = json.loads(gh("api", f"repos/{REPO}/actions/runs/{RUN_ID}"))
@@ -196,13 +305,13 @@ jobs:
           )["jobs"]
           failed = [j for j in jobs if j.get("conclusion") in ("failure", "timed_out")]
           specific = [j for j in failed if not j["name"].startswith("Required ")]
-          shown = (specific or failed)[:MAX_JOBS]
-          if not shown:
+          shown_jobs = (specific or failed)[:MAX_JOBS]
+          if not shown_jobs:
               print("The run has no failed jobs; nothing to digest.")
               sys.exit(0)
 
           findings = []
-          for job in shown:
+          for job in shown_jobs:
               steps = [
                   s["name"] for s in job.get("steps", [])
                   if s.get("conclusion") in ("failure", "timed_out")
@@ -211,14 +320,13 @@ jobs:
                   "name": label(job["name"]),
                   "url": job["html_url"],
                   "steps": label(", ".join(steps)) if steps else "not recorded",
-                  "errors": [], "omitted": 0, "context": [], "tail": [], "problem": "",
+                  "blocks": [], "omitted": 0, "signals": [], "tail": [], "problem": "",
               }
               try:
-                  errors, context, tail = summarize(
+                  blocks, omitted, signals, tail = summarize(
                       gh("api", f"repos/{REPO}/actions/jobs/{job['id']}/logs")
                   )
-                  item["omitted"] = max(0, len(errors) - MAX_ERRORS)
-                  item["errors"], item["context"], item["tail"] = errors[:MAX_ERRORS], context, tail
+                  item.update(blocks=blocks, omitted=omitted, signals=signals, tail=tail)
               except Exception as error:
                   item["problem"] = f"The job log could not be read: {error}"
               findings.append(item)
@@ -233,39 +341,20 @@ jobs:
               f"Run [{RUN_ID}]({run['html_url']}), attempt {run.get('run_attempt', 1)}, "
               f"head `{head[:8]}`. Posted by the *CI failure digest* workflow so the failing "
               "text can be read without the Actions UI. Lines are trimmed and token-shaped "
-              "strings are redacted.\n\n"
+              "strings are redacted. A step set to continue past its failure still shows up "
+              "here, because its error marker is in the log even when the step looks green.\n\n"
           )
 
 
           def build(include_tail):
-              blocks = []
-              for item in findings:
-                  lines = [
-                      f"**{item['name']}** - failed step: {item['steps']} - [job log]({item['url']})"
-                  ]
-                  if item["problem"]:
-                      lines.append(f"_{label(item['problem'])}_")
-                  if item["errors"]:
-                      lines.append("Error lines:\n" + fence("\n".join(item["errors"])))
-                      if item["omitted"]:
-                          lines.append(f"({item['omitted']} more error lines omitted)")
-                  if item["context"]:
-                      lines.append("Right after the first error:\n" + fence("\n".join(item["context"])))
-                  if include_tail and item["tail"]:
-                      lines.append(
-                          "<details><summary>Last log lines</summary>\n\n"
-                          + fence("\n".join(item["tail"]))
-                          + "\n\n</details>"
-                      )
-                  blocks.append("\n\n".join(lines))
-              return header + "\n\n".join(blocks)
+              return header + "\n\n".join(render(item, include_tail) for item in findings)
 
 
           body = build(True)
           if len(body) > BODY_CAP:
               body = build(False)
           if len(body) > BODY_CAP:
-              body = body[:BODY_CAP] + "\n\n(digest truncated)"
+              body = close_open_fence(body[:BODY_CAP]) + "\n\n(digest truncated)"
 
           summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
           if summary_path:
