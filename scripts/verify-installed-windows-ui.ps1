@@ -30,6 +30,12 @@ $arabicLocaleFile = Join-Path $repositoryRoot "src/lib/i18n/locales/ar.json"
 $maxRuntimePrepareMilliseconds = 15000
 $maxAuthenticatedUiMilliseconds = 100000
 $authenticatedUiEvidenceGraceMilliseconds = 3000
+# The durable ordering witness compares the shell's own "ui-ready" startup-trace
+# record against the first visibility observation. The shell writes that record
+# immediately before window.show() (monitor_packaged_ui), so on one machine the
+# trace timestamp must not land after the observation by more than this
+# tolerance. The tolerance budgets write/scheduling latency, not ordering.
+$authenticatedUiOrderingWitnessToleranceMilliseconds = 2000
 # The durable shutdown/cache receipt waits for a real flush of hundreds of
 # compile-cache files. Under post-build runner I/O pressure that flush can
 # legitimately exceed a short deadline (signed train 38750028169 attempt 1
@@ -51,6 +57,41 @@ function Read-JsonFile {
     } catch {
         return $null
     }
+}
+
+function Get-LastStartupTraceUiReadyMilliseconds {
+    # The startup trace is the shell's own durable ordering record: the
+    # "ui-ready" stage is recorded under a mutex immediately before the gated
+    # window.show(), with the timestamp captured at record time. Reading it is
+    # therefore stronger than any observer-side reconstruction from file
+    # metadata, which failed twice (signed train 38750028169 attempt 1
+    # mtime-versus-clock; PR 495 lane single-instant presence) on runners where
+    # the identical product content passed. The trace is rewritten whole on
+    # every stage record, so a read overlapping a record can see partial JSON;
+    # that returns no witness (callers fall back to the presence snapshot)
+    # instead of failing the pass.
+    $trace = Read-JsonFile -Path $startupTracePath
+    if ($null -eq $trace -or [int]$trace.formatVersion -ne 1 -or $null -eq $trace.events) {
+        return $null
+    }
+    $uiReadyEvents = @($trace.events | Where-Object { $_.stage -eq "ui-ready" })
+    if ($uiReadyEvents.Count -eq 0) {
+        return $null
+    }
+    $latestMilliseconds = [int64]-1
+    foreach ($event in $uiReadyEvents) {
+        if ($null -eq $event.createdAtUnixMilliseconds) {
+            return $null
+        }
+        $value = [int64]$event.createdAtUnixMilliseconds
+        if ($value -gt $latestMilliseconds) {
+            $latestMilliseconds = $value
+        }
+    }
+    if ($latestMilliseconds -lt 0) {
+        return $null
+    }
+    return $latestMilliseconds
 }
 
 function Get-SahelFlowProcesses {
@@ -201,6 +242,10 @@ function Wait-ForAuthenticatedUi {
     $lastObservation = $null
     $workspaceVisibleAt = $null
     $evidenceAtFirstVisibility = $null
+    $firstVisibilityTraceUiReadyMilliseconds = $null
+    $firstVisibilityWorkspaceUnixMilliseconds = $null
+    $orderingWitnessMode = $null
+    $orderingHeld = $false
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Milliseconds 250
         $Process.Refresh()
@@ -273,14 +318,18 @@ function Wait-ForAuthenticatedUi {
             $workspaceVisibleAt = Get-Date
             # The desktop shows the workspace only after matching durable
             # readiness evidence (the shell gates window.show() on the same
-            # files), so the honest ordering witness is whether fresh evidence
-            # files already existed at the first visibility observation. Re-stat
-            # them here: any evidence written before the window was shown is now
-            # visible to this snapshot. Comparing file mtimes against the
-            # wall-clock capture instead mis-attributed a passing lifecycle pass
-            # under heavy runner I/O (signed train 38750028169, ui-launch-3):
-            # observation skew and the desktop's evidence re-persistence move
-            # mtime after the capture without any ordering violation.
+            # files and records the "ui-ready" startup-trace stage immediately
+            # before that show), so the honest ordering witness is the shell's
+            # own durable trace record: it is written before the show it
+            # authorizes, with the timestamp captured at record time, and it
+            # cannot be missed by observer polling. The presence snapshot below
+            # stays as a fallback for a trace read that overlaps the trace's
+            # whole-file rewrite. Two earlier observer-side witnesses failed on
+            # runners where the identical product content passed (signed train
+            # 38750028169 attempt 1: file-mtime versus wall-clock capture; PR
+            # 495 lane: single-instant presence stat whose SilentlyContinue
+            # miss poisoned the verdict), so observation-side reconstruction
+            # from file metadata is no longer trusted as the primary witness.
             $firstVisibilityUiItem = Get-Item -LiteralPath $runtimeUiReadyPath -ErrorAction SilentlyContinue
             $firstVisibilityUiDiagnosticItem = Get-Item -LiteralPath $runtimeUiDiagnosticPath -ErrorAction SilentlyContinue
             $evidenceAtFirstVisibility = [pscustomobject]@{
@@ -293,6 +342,26 @@ function Wait-ForAuthenticatedUi {
                     $firstVisibilityUiDiagnosticItem.LastWriteTime -ge $StartedAt.AddSeconds(-2)
                 )
             }
+            $firstVisibilityWorkspaceUnixMilliseconds = [int64]([DateTimeOffset]$workspaceVisibleAt).ToUnixTimeMilliseconds()
+            $firstVisibilityTraceUiReadyMilliseconds = Get-LastStartupTraceUiReadyMilliseconds
+            if ($null -eq $firstVisibilityTraceUiReadyMilliseconds) {
+                # One retry: the trace is stable once "ui-ready" is recorded
+                # (nothing records after it before the show), so a retry can
+                # only heal a read that overlapped the record's rewrite.
+                Start-Sleep -Milliseconds 100
+                $firstVisibilityTraceUiReadyMilliseconds = Get-LastStartupTraceUiReadyMilliseconds
+            }
+            if ($null -ne $firstVisibilityTraceUiReadyMilliseconds) {
+                $orderingWitnessMode = "trace"
+                $orderingHeld =
+                    $firstVisibilityTraceUiReadyMilliseconds -le
+                    ($firstVisibilityWorkspaceUnixMilliseconds + $authenticatedUiOrderingWitnessToleranceMilliseconds)
+            } else {
+                $orderingWitnessMode = "presence"
+                $orderingHeld =
+                    $evidenceAtFirstVisibility.uiReadyPresent -and
+                    $evidenceAtFirstVisibility.uiDiagnosticPresent
+            }
         }
         $workspaceEvidenceLeadMilliseconds = if ($null -ne $workspaceVisibleAt -and -not $matching) {
             [int64]((Get-Date) - $workspaceVisibleAt).TotalMilliseconds
@@ -302,30 +371,33 @@ function Wait-ForAuthenticatedUi {
         $readinessPredatesWorkspaceVisibility =
             $matching -and
             $null -ne $workspaceVisibleAt -and
-            $null -ne $evidenceAtFirstVisibility -and
-            $evidenceAtFirstVisibility.uiReadyPresent -and
-            $evidenceAtFirstVisibility.uiDiagnosticPresent
+            $orderingHeld
         $lastObservation = [pscustomobject]@{
             endpointMatched = [bool]$matching
             responding = [bool]$Process.Responding
             workspaceWindowCount = $workspaceWindows.Count
             workspaceVisibleBeforeEvidenceMilliseconds = $workspaceEvidenceLeadMilliseconds
             readinessPredatesWorkspaceVisibility = [bool]$readinessPredatesWorkspaceVisibility
+            orderingWitnessMode = $orderingWitnessMode
+            orderingHeld = [bool]$orderingHeld
+            traceUiReadyAtFirstVisibilityMilliseconds = $firstVisibilityTraceUiReadyMilliseconds
+            workspaceVisibleAtUnixMilliseconds = $firstVisibilityWorkspaceUnixMilliseconds
             visibleWindows = @($visibleWindows)
         }
+        $lastObservationJson = $lastObservation | ConvertTo-Json -Depth 5 -Compress
         if (
             $matching -and
             $workspaceWindows.Count -ne 0 -and
             -not $readinessPredatesWorkspaceVisibility
         ) {
-            throw "${Phase}: workspace became visible before matching authenticated readiness evidence was durably written."
+            throw "${Phase}: workspace became visible before matching authenticated readiness evidence was durably written (ordering witness: $orderingWitnessMode). Last observation: $lastObservationJson"
         }
         if (-not $matching) {
             if (
                 $workspaceWindows.Count -ne 0 -and
                 $workspaceEvidenceLeadMilliseconds -gt $authenticatedUiEvidenceGraceMilliseconds
             ) {
-                throw "${Phase}: workspace remained visible for $workspaceEvidenceLeadMilliseconds ms without matching authenticated readiness evidence."
+                throw "${Phase}: workspace remained visible for $workspaceEvidenceLeadMilliseconds ms without matching authenticated readiness evidence. Last observation: $lastObservationJson"
             }
             continue
         }
