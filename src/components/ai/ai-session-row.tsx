@@ -211,28 +211,41 @@ export function AiSessionRow({
       </button>
 
       {deleteArmed ? (
-        <div className="mt-1 flex items-center gap-1.5 px-1 pb-1">
+        // The confirmation sentence is long ("Click again to confirm deleting
+        // this session") and the rail is narrow, so the button WRAPS it
+        // (whitespace-normal, min-w-0) instead of spilling over its neighbour.
+        // Cancel is a compact icon button named "Cancel" (it used to borrow the
+        // rename label, "Cancel renaming").
+        <div
+          role="group"
+          aria-label={t("ai.history.delete")}
+          data-ai-session-delete-bar="true"
+          className="mt-1 flex items-start gap-1 px-1 pb-1"
+        >
           <Button
             type="button"
             size="sm"
             variant="destructive"
-            className="h-7 flex-1 text-caption"
+            className="h-auto min-w-0 flex-1 justify-start whitespace-normal px-2.5 py-1.5 text-start text-caption leading-snug"
             data-ai-session-delete={session.id}
             aria-label={t("ai.history.deleteConfirm")}
             disabled={actionsLocked}
             onClick={onConfirmDelete}
           >
             <Trash2 className="size-3.5" aria-hidden="true" />
-            {t("ai.history.deleteConfirm")}
+            <span className="min-w-0">{t("ai.history.deleteConfirm")}</span>
           </Button>
           <Button
             type="button"
-            size="sm"
+            size="icon-xs"
             variant="ghost"
-            className="h-7 text-caption"
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+            aria-label={t("common.cancel")}
+            title={t("common.cancel")}
+            data-ai-session-delete-cancel="true"
             onClick={onCancelDelete}
           >
-            {t("ai.history.renameCancel")}
+            <X className="size-3.5" aria-hidden="true" />
           </Button>
         </div>
       ) : null}

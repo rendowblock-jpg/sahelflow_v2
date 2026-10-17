@@ -937,6 +937,23 @@ html[dir="rtl"] body {
   /* border-radius intentionally NOT set here — let each component keep its own radius */
 }
 
+/* A text field inside a rounded frame (the AI composer) hands its focus
+   indicator to the frame, which draws it once, rounded, with :focus-within.
+   The generic rule above is a rectangle: inside a rounded frame it showed as a
+   square outline that poked past the corners. Attribute + pseudo-class outranks
+   the universal selector, so no !important is needed. Windows high-contrast
+   mode ignores box-shadow and border colours, so there the system outline
+   stays. */
+[data-focus-owner="frame"]:focus-visible {
+  outline: none;
+}
+@media (forced-colors: active) {
+  [data-focus-owner="frame"]:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+
 /* Consistent stat number formatting */
 .tabular-nums { font-variant-numeric: tabular-nums; }
 

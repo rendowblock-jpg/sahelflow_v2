@@ -1,5 +1,4 @@
 import "server-only";
-import { google } from "googleapis";
 import { getSecret } from "@/lib/secrets";
 import type { ServiceContext } from "@/lib/data/service-base";
 
@@ -59,6 +58,15 @@ async function loadServiceAccountKey(context: ServiceContext): Promise<ServiceAc
   }
 }
 
+/**
+ * `googleapis` is a ~12 MB bundle. The status route only asks whether a key is
+ * configured, so the library is loaded on the first call that really talks to
+ * Google, never at import time.
+ */
+async function loadGoogle() {
+  return (await import("googleapis")).google;
+}
+
 /** Create an authenticated Google Sheets client. */
 async function getSheetsClient(context: ServiceContext) {
   const key = await loadServiceAccountKey(context);
@@ -66,6 +74,7 @@ async function getSheetsClient(context: ServiceContext) {
     throw new Error("Google Service Account not configured. Add credentials in Settings → Integrations.");
   }
 
+  const google = await loadGoogle();
   const jwt = new google.auth.JWT({
     email: key.client_email,
     key: key.private_key,
@@ -168,6 +177,7 @@ export async function createSpreadsheet(
   const key = await loadServiceAccountKey(context);
   if (!key) throw new Error("Google Service Account not configured");
 
+  const google = await loadGoogle();
   const jwt = new google.auth.JWT({
     email: key.client_email,
     key: key.private_key,

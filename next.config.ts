@@ -102,6 +102,15 @@ const nextConfig: NextConfig = {
   experimental: {
     // Ensure server-only code never leaks into client bundles
     serverActions: { bodySizeLimit: "10mb" },
+    // Next.js loads EVERY route and page module when the production server
+    // starts (default true). Measured with strace on the shipped Internal.43
+    // server tree: 871 files / 28.6 MB opened before the first request,
+    // including all 227 API routes, 42 pages and a 12.4 MB googleapis chunk.
+    // With this off the same boot opens 483 files / 4.0 MB. On a PC where
+    // every file open costs 20 to 110 ms (installed trace, 2026-10-17) that
+    // is the difference between loading what the seller uses and loading
+    // everything. A route loads the first time it is requested.
+    preloadEntriesOnStart: false,
     // Tree-shake unused exports from heavy libraries (lucide-react, etc.)
     optimizePackageImports: [
       "lucide-react",
