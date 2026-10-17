@@ -117,9 +117,6 @@ function walkMarkdown(directory: string): string[] {
   for (const name of readdirSync(directory)) {
     if ([".git", "node_modules", ".next", "target"].includes(name)) continue;
     const absolutePath = resolve(directory, name);
-    const relativePath = absolutePath
-      .slice(repoRoot.length + 1)
-      .replaceAll("\\", "/");
     const metadata = statSync(absolutePath);
     if (metadata.isDirectory()) output.push(...walkMarkdown(absolutePath));
     else if (extname(name).toLowerCase() === ".md") output.push(absolutePath);
