@@ -25,6 +25,7 @@ import {
   messageExcerpt,
   normalizeSearchText,
   rankUniversalSearchCandidates,
+  typoBackoffQueries,
   type UniversalSearchCandidate,
 } from "@/lib/search/universal-search";
 
@@ -287,7 +288,7 @@ export async function warmUniversalSearchRecords(): Promise<void> {
   });
 }
 
-export async function searchUniversalRecords(
+async function searchUniversalRecordsStrict(
   rawQuery: string,
   requestedLimit?: number,
 ): Promise<UniversalRecordSearchResponse> {
@@ -477,4 +478,45 @@ export async function searchUniversalRecords(
     degradedFamilies: [...degraded],
     tookMs: Date.now() - startedAt,
   };
+}
+
+// A slow first pass means a slow machine: do not multiply its work by widening.
+const TYPO_BACKOFF_MAX_FIRST_PASS_MS = 350;
+
+/**
+ * The universal record search. The strict pass is the whole answer whenever it
+ * finds anything. Only a search that found nothing is widened, once per
+ * shorter spelling and stopping at the first that finds something, and the
+ * widened hits are re-ranked by how close they are to what was actually typed.
+ * Permissions, shop isolation and degraded-family reporting all stay inside
+ * the strict pass, which is the only code that reads records.
+ */
+export async function searchUniversalRecords(
+  rawQuery: string,
+  requestedLimit?: number,
+): Promise<UniversalRecordSearchResponse> {
+  const startedAt = Date.now();
+  const strict = await searchUniversalRecordsStrict(rawQuery, requestedLimit);
+  if (strict.results.length > 0 || strict.tookMs > TYPO_BACKOFF_MAX_FIRST_PASS_MS) {
+    return strict;
+  }
+
+  const limit = clampLimit(requestedLimit);
+  const degraded = new Set<RecordKind>(strict.degradedFamilies);
+  for (const variant of typoBackoffQueries(strict.query)) {
+    const widened = await searchUniversalRecordsStrict(variant, MAX_RESULTS);
+    for (const family of widened.degradedFamilies) degraded.add(family);
+    const results = rankUniversalSearchCandidates(strict.query, widened.results, limit, {
+      fuzzy: true,
+    });
+    if (results.length > 0) {
+      return {
+        query: strict.query,
+        results,
+        degradedFamilies: [...degraded],
+        tookMs: Date.now() - startedAt,
+      };
+    }
+  }
+  return strict;
 }
