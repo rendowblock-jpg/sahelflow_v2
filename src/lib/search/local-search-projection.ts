@@ -5,7 +5,6 @@ import {
   deriveShopBlindIndexes,
 } from "@/lib/crypto/protected-record";
 import { db, shopContext } from "@/lib/db";
-import { logger } from "@/lib/logger";
 import {
   compactSearchText,
   normalizeSearchText,
@@ -56,25 +55,7 @@ type ProjectionSlot = "product" | "delivery" | "return" | "conversation";
 interface CachedProjection {
   revision: number;
   promise: Promise<SearchIndex>;
-  /** The last COMPLETE index. Set once `promise` has resolved. */
-  ready?: SearchIndex;
-  /** The one in-flight background rebuild of a stale `ready` index, if any. */
-  rebuild?: Promise<void>;
 }
-
-/**
- * Slots that answer from a stale in-memory index while ONE background rebuild
- * refreshes it. Only the conversation index qualifies: every WhatsApp message
- * bumps its revision, and a full re-read of every conversation does not belong
- * on the critical path of each search. A brand new or renamed contact can be
- * missing from palette results for the few moments the rebuild takes.
- *
- * Products, deliveries and returns stay strictly consistent: a record the
- * seller has just written is found by the very next search.
- */
-const STALE_WHILE_REVALIDATE_SLOTS: ReadonlySet<ProjectionSlot> = new Set([
-  "conversation",
-]);
 
 interface ShopProjectionCache {
   product?: CachedProjection;
@@ -866,39 +847,6 @@ async function buildReturnIndex(): Promise<SearchIndex> {
   );
 }
 
-/**
- * Refreshes a stale index without anyone waiting for it. Failure must not
- * poison the cache: the stale index keeps being served, and only this
- * rebuild's own in-flight marker is cleared (and only if it is still the
- * marker), so the next search can start a fresh one. The rejection is always
- * consumed here, so a failed rebuild is never an unhandled rejection.
- */
-function rebuildInBackground(
-  cache: ShopProjectionCache,
-  slot: ProjectionSlot,
-  stale: CachedProjection,
-  build: () => Promise<SearchIndex>,
-): Promise<void> {
-  const rebuild: Promise<void> = buildStableProjection(slot, build)
-    .then(({ index, revision }) => {
-      if (cache[slot] === stale) {
-        cache[slot] = {
-          revision,
-          promise: Promise.resolve(index),
-          ready: index,
-        };
-      }
-    })
-    .catch((error: unknown) => {
-      if (stale.rebuild === rebuild) stale.rebuild = undefined;
-      logger.warn("search.projection.background-rebuild-failed", {
-        slot,
-        failure: error instanceof Error ? error.name : "unknown",
-      });
-    });
-  return rebuild;
-}
-
 async function cached(
   shopId: string,
   slot: ProjectionSlot,
@@ -909,21 +857,10 @@ async function cached(
   const existing = cache[slot];
   if (existing?.revision === revision) return existing.promise;
 
-  // Stale, but an index exists: answer from it now and start exactly one
-  // rebuild (a search that arrives while it runs finds the marker and reuses
-  // it). With no index yet there is nothing to serve, so the build is awaited.
-  if (existing?.ready && STALE_WHILE_REVALIDATE_SLOTS.has(slot)) {
-    existing.rebuild ??= rebuildInBackground(cache, slot, existing, build);
-    return existing.ready;
-  }
-
   const pending: Promise<SearchIndex> = buildStableProjection(slot, build)
     .then(({ index, revision: stableRevision }) => {
       const current = cache[slot];
-      if (current?.promise === pending) {
-        current.revision = stableRevision;
-        current.ready = index;
-      }
+      if (current?.promise === pending) current.revision = stableRevision;
       return index;
     })
     .catch((error) => {
