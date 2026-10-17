@@ -398,7 +398,13 @@ describe("session token authority", () => {
 
     cookieJar.reset();
     await createSession();
-    await setupAuth("12345678");
+    // A different signing secret must invalidate tokens issued under the old
+    // one. setupAuth no longer overwrites an existing authority (IDN-08), so
+    // rotate the stored secret directly.
+    await dbRaw.authSecret.update({
+      where: { id: "default" },
+      data: { secret: "rotated-signing-secret-for-test" },
+    });
     await expect(isAuthenticated()).resolves.toBe(false);
 
     cookieJar.reset();
