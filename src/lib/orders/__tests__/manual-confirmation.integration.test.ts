@@ -274,7 +274,7 @@ describe("canonical manual confirmation", () => {
     expect(reservations).toEqual([{ productVariantId: black.id }]);
   });
 
-  it("does not raise product stock on a variant sale and will not confirm a reserved unit twice", async () => {
+  it("does not raise product stock on a variant sale and will not confirm the same unit twice", async () => {
     const product = await seedProduct(2);
     const inactive = await db.productVariant.create({
       data: { productId: product.id, name: "Inactive", stock: 6, isActive: false },
@@ -294,19 +294,30 @@ describe("canonical manual confirmation", () => {
     expect(await db.productVariant.findUnique({ where: { id: active.id } })).toMatchObject({ stock: 7 });
     expect(await db.productVariant.findUnique({ where: { id: inactive.id } })).toMatchObject({ stock: 6 });
 
-    await db.product.update({ where: { id: product.id }, data: { stock: 1 } });
-    await db.productVariant.update({ where: { id: active.id }, data: { stock: 1 } });
+    // The parent product has exactly one unit left. The second order takes it
+    // (stock is already net of the first hold, so that hold is not subtracted
+    // again), and a third order is refused whole: nothing is oversold and the
+    // variant decrement that ran before the refusal is rolled back.
     const second = await seedOrder({
       productId: product.id,
       productVariantId: active.id,
       quantity: 1,
     });
+    await executeManualOrderDecision(context, confirm(second.id, "variant-sale-second"));
+    expect(await db.product.findUnique({ where: { id: product.id } })).toMatchObject({ stock: 0 });
+    expect(await db.productVariant.findUnique({ where: { id: active.id } })).toMatchObject({ stock: 6 });
+
+    const third = await seedOrder({
+      productId: product.id,
+      productVariantId: active.id,
+      quantity: 1,
+    });
     await expect(
-      executeManualOrderDecision(context, confirm(second.id, "variant-sale-held")),
+      executeManualOrderDecision(context, confirm(third.id, "variant-sale-third")),
     ).rejects.toThrow(/insufficient available stock/i);
-    expect(await db.product.findUnique({ where: { id: product.id } })).toMatchObject({ stock: 1 });
-    expect(await db.productVariant.findUnique({ where: { id: active.id } })).toMatchObject({ stock: 1 });
-    expect(await db.inventoryReservation.count({ where: { state: "active" } })).toBe(1);
+    expect(await db.product.findUnique({ where: { id: product.id } })).toMatchObject({ stock: 0 });
+    expect(await db.productVariant.findUnique({ where: { id: active.id } })).toMatchObject({ stock: 6 });
+    expect(await db.inventoryReservation.count({ where: { state: "active" } })).toBe(2);
   });
 
   it("rejects without moving stock and records the encrypted command result", async () => {
