@@ -8,6 +8,7 @@ import {
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
+import { searchProjectedCustomers } from "@/lib/search/local-search-projection";
 import type {
   CustomerWorkbenchFieldAccess,
   CustomersWorkbenchResponse,
@@ -15,6 +16,9 @@ import type {
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
+// A list page shows more matches than the palette's 48 suggestions. The
+// projection's own candidate scan budget still bounds the work per search.
+const SEARCH_RESULT_LIMIT = 200;
 
 function allowed(
   actorContext: TrustedActorContext,
@@ -66,9 +70,13 @@ function clampPageSize(value: number | undefined): number {
 }
 
 /**
- * Customer list scope. `q` is a free-text contains search across customer name
- * and phone (both plaintext columns); the search only opens contact-gated
- * branches when the actor may read contact data.
+ * Customer list scope. `q` is a free-text search across customer name and
+ * phone. In the packaged app those columns hold a contextual ciphertext
+ * envelope and an HMAC blind index, so a SQL `contains` can never match them.
+ * The search therefore resolves customer ids through the same permission-gated
+ * blind-index projection that serves the command palette, then filters the
+ * list by id. It only opens contact-gated branches when the actor may read
+ * contact data.
  */
 export interface CustomersWorkbenchFilters {
   q?: string | null;
@@ -85,10 +93,12 @@ export async function getCustomersWorkbenchPage(
   const where: Prisma.CustomerWhereInput = { deletedAt: null };
   if (q) {
     if (access.contact) {
-      where.OR = [
-        { name: { contains: q } },
-        { phone: { contains: q } },
-      ];
+      const matches = await searchProjectedCustomers(
+        actorContext.shop.shopId,
+        q,
+        SEARCH_RESULT_LIMIT,
+      );
+      where.id = { in: matches.map((match) => match.entityId) };
     } else {
       // Without contact read authority the search cannot match anything —
       // return an honest empty scope rather than leaking contact matches.

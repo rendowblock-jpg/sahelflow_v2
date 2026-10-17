@@ -7,16 +7,56 @@
  */
 import { z } from "zod";
 
+import { normalizeDZPhone } from "./phone";
+
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
 /** Non-empty string, trimmed */
 export const nonEmptyString = z.string().trim().min(1);
 
-/** Algerian phone: 10 digits starting with 0[5-7] */
+/**
+ * Characters a person may reasonably type or paste inside a phone number:
+ * digits, spaces, dashes, dots, brackets and one leading "+". Anything else
+ * (letters, ";", Arabic digits...) is NOT normalised, so it fails the strict
+ * check below instead of being silently stripped into a valid-looking number.
+ */
+const DZ_PHONE_TYPED_CHARS = /^\+?[\d\s().-]+$/;
+
+/**
+ * Turn what a person typed into the local form, or hand the value back
+ * untouched so the strict check below rejects it. A leading "+" marks an
+ * international number: only Algeria's own code (+213) is rewritten, so a
+ * foreign number can never be coerced into somebody else's local one.
+ */
+function toLocalDzPhone(value: string): string {
+  if (!DZ_PHONE_TYPED_CHARS.test(value)) return value;
+  if (value.startsWith("+") && !value.replace(/\D/g, "").startsWith("213")) {
+    return value;
+  }
+  return normalizeDZPhone(value);
+}
+
+/**
+ * Algerian phone: 10 digits starting with 0[5-7].
+ *
+ * The common spellings of one number ("+213555123456", "00213555123456",
+ * "0555 12 34 56", and the nine digits "555123456" a spreadsheet leaves after
+ * dropping the leading zero) are normalised with the canonical
+ * `normalizeDZPhone` BEFORE the strict check, so the OUTPUT is always the
+ * strict local form and everything else is still rejected with the same
+ * message (S03c-12). Built with `.transform().pipe()` rather than
+ * `z.preprocess` so the schema's INPUT type stays `string` (a preprocess would
+ * widen it to `unknown` and break react-hook-form resolvers and `z.input`).
+ */
 export const dzPhone = z
   .string()
   .trim()
-  .regex(/^0[5-7]\d{8}$/, "Invalid Algerian phone (must be 0[5-7]XXXXXXXX)");
+  .transform(toLocalDzPhone)
+  .pipe(
+    z
+      .string()
+      .regex(/^0[5-7]\d{8}$/, "Invalid Algerian phone (must be 0[5-7]XXXXXXXX)"),
+  );
 
 /** Non-negative integer (DZD money, quantities, stock) */
 export const nonNegInt = z.number().int().nonnegative();

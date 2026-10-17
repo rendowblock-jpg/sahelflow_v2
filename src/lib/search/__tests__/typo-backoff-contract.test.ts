@@ -16,7 +16,7 @@ describe("typo backoff orchestration", () => {
   it("is the only exported entry point and wraps the strict pass", () => {
     expect(server.match(/export async function searchUniversalRecords\(/g)).toHaveLength(1);
     expect(server).toContain("async function searchUniversalRecordsStrict(");
-    expect(exported).toContain("searchUniversalRecordsStrict(rawQuery, requestedLimit)");
+    expect(exported).toContain("searchUniversalRecordsStrict(rawQuery, requestedLimit, signal)");
   });
 
   it("widens only an empty answer, only once per spelling, and re-ranks by closeness", () => {
