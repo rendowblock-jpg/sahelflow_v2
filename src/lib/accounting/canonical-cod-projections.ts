@@ -113,6 +113,39 @@ function deriveCodState(input: {
   return "remitted";
 }
 
+/**
+ * Per-order gap between what was expected and what actually arrived.
+ *
+ * A gap only exists once something was recorded: a collection fact or a
+ * settlement line. A delivered order that is simply not collected yet owes
+ * its whole amount, which is `outstandingCollection`, not a discrepancy:
+ * counting it as `-expectedReceivable` put every pending order in the
+ * "disputed" bucket (MNY-02). A collection that was later corrected down to
+ * zero is still a recorded fact, so it keeps its real shortfall.
+ */
+export function computeCodPositionDiscrepancy(input: {
+  hasCollection: boolean;
+  hasSettlementLines: boolean;
+  expectedReceivable: number;
+  effectiveCollected: number;
+  settlementDiscrepancy: number;
+}): number {
+  if (!input.hasCollection && !input.hasSettlementLines) return 0;
+  return (
+    input.effectiveCollected -
+    input.expectedReceivable +
+    input.settlementDiscrepancy
+  );
+}
+
+/** Disputed = the state machine says so, or a recorded gap is non-zero. */
+export function isDisputedCodPosition(position: {
+  codState: string;
+  discrepancy: number;
+}): boolean {
+  return position.codState === "disputed" || position.discrepancy !== 0;
+}
+
 function collectionAmount(collection: {
   amount: number;
   corrections: Array<{ amountDelta: number }>;
@@ -324,7 +357,8 @@ async function buildOrderPositions(
     // second cash collection — the refund movement already records the money.
     const expectedReceivable = Math.max(0, receivable.amount - deducted);
     const collected = collectionAmount(collection);
-    const lineSummary = lineAmounts(linesByOrder.get(order.id) ?? []);
+    const orderLines = linesByOrder.get(order.id) ?? [];
+    const lineSummary = lineAmounts(orderLines);
     const codState = deriveCodState({
       expectedReceivable,
       effectiveCollected: collected,
@@ -346,8 +380,13 @@ async function buildOrderPositions(
       fees: lineSummary.fees,
       adjustments: lineSummary.adjustments,
       netReceived: lineSummary.net,
-      discrepancy:
-        collected - expectedReceivable + lineSummary.discrepancy,
+      discrepancy: computeCodPositionDiscrepancy({
+        hasCollection: collection !== null,
+        hasSettlementLines: orderLines.length > 0,
+        expectedReceivable,
+        effectiveCollected: collected,
+        settlementDiscrepancy: lineSummary.discrepancy,
+      }),
       outstandingCollection: Math.max(0, expectedReceivable - collected),
       outstandingRemittance: Math.max(0, remittable - lineSummary.gross),
       collectionReference: collection?.reference ?? null,
@@ -490,9 +529,7 @@ export async function getCanonicalCodWorkspaceSummary(
       entry.outstandingRemittance > 0 &&
       entry.codState !== "disputed",
   );
-  const disputed = positions.filter(
-    (entry) => entry.codState === "disputed" || entry.discrepancy !== 0,
-  );
+  const disputed = positions.filter(isDisputedCodPosition);
 
   return {
     totals: {
