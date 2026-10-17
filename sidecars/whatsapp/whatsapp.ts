@@ -38,7 +38,8 @@ import {
   SendNotDispatchedError,
 } from "./durable-dispatch";
 import { postToApp, STATUS_CALLBACK_POLICY } from "./app-callback";
-import { LivenessTracker, runLivenessProbe } from "./liveness";
+import { authIoStats } from "./auth-io-stats";
+import { LivenessTracker, LoopLagProbe, runLivenessProbe } from "./liveness";
 import { createDiagnosticTeeLogger, describeError, diagnostics } from "./diagnostics-log";
 
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
@@ -47,6 +48,7 @@ const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
 const LIVENESS_FIRST_SAMPLE_MS = 90_000;
 const LIVENESS_SAMPLE_EVERY_MS = 5 * 60_000;
 const LIVENESS_PROBE_TIMEOUT_MS = 30_000;
+const LIVENESS_LAG_TICK_MS = 500;
 // Voice/audio outbound shares the 32 MiB encrypted-storage audio ceiling.
 const MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024;
 // C1 watchdog: after the bounded fast reconnects give up (5 attempts), keep
@@ -290,6 +292,7 @@ export class WhatsAppManager {
   private liveness: LivenessTracker | null = null;
   private livenessFirstTimer: ReturnType<typeof setTimeout> | null = null;
   private livenessTimer: ReturnType<typeof setInterval> | null = null;
+  private livenessLagTimer: ReturnType<typeof setInterval> | null = null;
   private livenessProbeInFlight = false;
   private reconnectWatchdog: ReturnType<typeof setInterval> | null = null;
   /**
@@ -370,9 +373,21 @@ export class WhatsAppManager {
     this.currentQr = null;
     this.emit({ type: "status", status: "connecting" });
 
+    // Where the time goes before the socket even exists. Unlocking the stored
+    // key runs a synchronous PowerShell on Windows, so on a slow PC this can be
+    // seconds during which the sidecar answers nothing.
+    const connectStartedAt = performance.now();
     const { state, saveCreds } = await useProtectedWhatsAppAuthState();
+    const authLoadMs = Math.round(performance.now() - connectStartedAt);
+    const versionStartedAt = performance.now();
     const versionResult = await fetchLatestWaWebVersion({
       signal: AbortSignal.timeout(WA_VERSION_LOOKUP_TIMEOUT_MS),
+    });
+    diagnostics.record("connect.timing", {
+      authLoadMs,
+      versionMs: Math.round(performance.now() - versionStartedAt),
+      versionLatest: versionResult.isLatest,
+      sinceProcessStartSec: Math.round(process.uptime()),
     });
 
     // Fresh device linking is version-sensitive. Current Baileys has had cases
@@ -465,7 +480,10 @@ export class WhatsAppManager {
           user: this.user ?? undefined,
         });
         logger.info({ user: this.user }, "connected");
-        diagnostics.record("connection.open", { reconnectAttempts: 0 });
+        diagnostics.record("connection.open", {
+          reconnectAttempts: 0,
+          openAfterMs: Math.round(performance.now() - connectStartedAt),
+        });
         const creds = state.creds as unknown as {
           myAppStateKeyId?: string;
           accountSyncCounter?: number;
@@ -965,15 +983,25 @@ export class WhatsAppManager {
     const sample = () => void this.recordLiveness(sock, tracker, hasAppStateKey);
     this.livenessFirstTimer = setTimeout(sample, LIVENESS_FIRST_SAMPLE_MS);
     this.livenessTimer = setInterval(sample, LIVENESS_SAMPLE_EVERY_MS);
+    // How late this process runs its own timers: the direct measure of
+    // synchronous work (disk, PowerShell, crypto) holding the thread.
+    const lag = new LoopLagProbe(LIVENESS_LAG_TICK_MS);
+    this.livenessLagTimer = setInterval(
+      () => tracker.noteLag(lag.tick()),
+      LIVENESS_LAG_TICK_MS,
+    );
     this.livenessFirstTimer.unref?.();
     this.livenessTimer.unref?.();
+    this.livenessLagTimer.unref?.();
   }
 
   private stopLiveness(): void {
     if (this.livenessFirstTimer) clearTimeout(this.livenessFirstTimer);
     if (this.livenessTimer) clearInterval(this.livenessTimer);
+    if (this.livenessLagTimer) clearInterval(this.livenessLagTimer);
     this.livenessFirstTimer = null;
     this.livenessTimer = null;
+    this.livenessLagTimer = null;
     this.liveness = null;
   }
 
@@ -1014,6 +1042,7 @@ export class WhatsAppManager {
     }
     diagnostics.record("liveness", {
       ...sample,
+      ...authIoStats.take(),
       buffering,
       appStateKey: hasAppStateKey(),
       probe: probe.outcome,
