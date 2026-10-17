@@ -111,6 +111,11 @@ beforeEach(() => {
     "WINDIR",
     "SystemRoot",
     "SF_WHATSAPP_STORAGE_KEY",
+    // A packaged build refuses these raw key sources on purpose, and CI exports
+    // SF_MASTER_KEY in every lane, so this file must start without them.
+    "SF_MASTER_KEY",
+    "SF_WHATSAPP_INGRESS_SPOOL_KEY",
+    "SF_WHATSAPP_INGRESS_SPOOL_KEY_FILE",
   ]) {
     saved[name] = process.env[name];
   }
@@ -125,6 +130,9 @@ beforeEach(() => {
   process.env.WINDIR = windowsRoot;
   delete process.env.SystemRoot;
   delete process.env.SF_WHATSAPP_STORAGE_KEY;
+  delete process.env.SF_MASTER_KEY;
+  delete process.env.SF_WHATSAPP_INGRESS_SPOOL_KEY;
+  delete process.env.SF_WHATSAPP_INGRESS_SPOOL_KEY_FILE;
   Object.defineProperty(process, "platform", { value: "win32", configurable: true });
   dpapi.operations = [];
   dpapi.failNextUnprotect = false;
