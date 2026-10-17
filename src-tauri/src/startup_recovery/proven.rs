@@ -99,6 +99,7 @@ pub fn show_ready(app: &tauri::AppHandle, app_url: &str) -> Result<(), Box<dyn E
 
     let Some(handoff) = packaged_handoff(&requested_url)? else {
         window.navigate(requested_url)?;
+        maximize_before_show(&window);
         window.show()?;
         window.set_focus()?;
         return Ok(());
@@ -317,10 +318,26 @@ fn runtime_cookie(host: &str, token: &str) -> Result<Cookie<'static>, IoError> {
     )
 }
 
+/// The workspace window is configured hidden and *not* maximized (see
+/// `tauri.conf.json`). tao 0.35 applies `ShowWindow(SW_MAXIMIZE)` to a hidden
+/// window whose maximized flag is set, so a window created (or flagged)
+/// maximized while hidden is briefly visible long before the authenticated UI
+/// is ready; tao 0.37.0 fixed this upstream (tauri-apps/tao#1306). Maximize
+/// only here, immediately before a show that is already authorized, and never
+/// let a failed maximize block showing the workspace.
+fn maximize_before_show(window: &WebviewWindow) {
+    if let Err(error) = window.maximize() {
+        eprintln!(
+            "[sahelflow] the workspace window could not be maximized before it was shown: {error}"
+        );
+    }
+}
+
 fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_dir: PathBuf) {
     thread::spawn(move || {
         if wait_for_matching_ui_ready(&app_data_dir, PACKAGED_UI_READY_TIMEOUT) {
             record_startup_stage(&app_data_dir, "ui-ready", None);
+            maximize_before_show(&window);
             if let Err(error) = window.show().and_then(|_| window.set_focus()) {
                 let detail = format!("the authenticated workspace was ready but the desktop window could not be shown: {error}");
                 eprintln!("[sahelflow] FATAL: {detail}");
