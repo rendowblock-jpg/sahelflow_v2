@@ -37,6 +37,7 @@ import {
   failedBeforeWrite,
   SendNotDispatchedError,
 } from "./durable-dispatch";
+import { postToApp, STATUS_CALLBACK_POLICY } from "./app-callback";
 import { createDiagnosticTeeLogger, describeError, diagnostics } from "./diagnostics-log";
 
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
@@ -200,21 +201,19 @@ async function postMessageStatus(payload: {
     "Content-Type": "application/json",
   };
   if (token) headers.Authorization = `Bearer ${token}`;
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5_000);
-    try {
-      await fetch(`${APP_URL}/api/whatsapp/message-status`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-  } catch (err) {
-    logger.warn({ err }, "[W3-12] failed to POST message-status to app");
+  // Patient and retrying: the first call after the app starts is a cold route.
+  const outcome = await postToApp({
+    url: `${APP_URL}/api/whatsapp/message-status`,
+    headers,
+    body: JSON.stringify(payload),
+    policy: STATUS_CALLBACK_POLICY,
+  });
+  if (!outcome.ok) {
+    logger.warn({ err: outcome.error }, "[W3-12] failed to POST message-status to app");
+    diagnostics.record("status.post-failed", {
+      attempts: outcome.attempts,
+      statusCode: outcome.status,
+    });
   }
 }
 
@@ -552,6 +551,7 @@ export class WhatsAppManager {
     type: string | undefined,
     messages: ReadonlyArray<proto.IWebMessageInfo>,
   ): void {
+    let accepted = 0;
     for (const message of messages) {
       const action = providerMessageSpoolAction(type, {
         remoteJid: message.key?.remoteJid,
@@ -562,6 +562,16 @@ export class WhatsAppManager {
       const incoming = this.toIncoming(message);
       if (!incoming?.key.remoteJid || !incoming.key.id) continue;
       this.emit({ type: "message", message: incoming });
+      accepted += 1;
+    }
+    if (messages.length > 0) {
+      // Counts only, never a JID or text. This is the line that shows whether
+      // WhatsApp delivered anything at all, and how much of it was usable.
+      diagnostics.record("inbound.upsert", {
+        upsertType: type ?? "none",
+        received: messages.length,
+        accepted,
+      });
     }
   }
 
