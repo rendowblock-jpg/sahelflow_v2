@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { diagnostics } from "./diagnostics-log";
 import {
   openWhatsAppInboundSpoolRecord,
   resolveWhatsAppInboundSpoolKey,
@@ -24,7 +25,11 @@ import type { IncomingMessage } from "./whatsapp";
 const FORMAT_VERSION = 1;
 const DEFAULT_RETRY_BASE_MS = 1_000;
 const MAX_RETRY_DELAY_MS = 5 * 60_000;
-const DELIVERY_TIMEOUT_MS = 5_000;
+// A cold app answers its first request slowly: the route's whole module graph
+// is read from disk. On the Founder's PC the first status call of every session
+// outlived the old 5 s limit. The timeout only abandons the wait; the app still
+// finishes the commit, and a retry is an exact replay of the same event.
+const DELIVERY_TIMEOUT_MS = 30_000;
 
 export interface WhatsAppInboundSpoolEnvelope {
   spoolId: string;
@@ -307,6 +312,9 @@ export class WhatsAppInboundSpool {
       createdAt: now,
       updatedAt: now,
     });
+    diagnostics.record("inbound.spooled", {
+      direction: message.key.fromMe ? "out" : "in",
+    });
     void this.flush();
     return envelope;
   }
@@ -344,6 +352,10 @@ export class WhatsAppInboundSpool {
   ): void {
     const now = Date.now();
     record.lastErrorCode = errorCode.slice(0, 128);
+    diagnostics.record("inbound.delivery-failed", {
+      code: record.lastErrorCode,
+      attempt: record.attemptCount,
+    });
     record.nextAttemptAt = new Date(
       now + retryDelay(record.attemptCount, this.retryBaseMs),
     ).toISOString();
@@ -355,6 +367,11 @@ export class WhatsAppInboundSpool {
     if (!record.ingressEventId) {
       throw new Error("Committed inbound spool record has no ingress event ID");
     }
+    diagnostics.record("inbound.committed", {
+      attempt: record.attemptCount,
+      replayed: record.attemptCount > 1,
+      ms: Date.now() - Date.parse(record.envelope.receivedAt),
+    });
     if (record.publish !== false) {
       this.onCommitted(record.envelope, {
         ingressEventId: record.ingressEventId,
