@@ -21,6 +21,11 @@ import {
   isTrustedManualOrderAuthority,
   readCanonicalSourceOrderAuthority,
 } from "@/lib/orders/manual-order-authority";
+import {
+  availableForManualConfirm,
+  stockHeldAgainstOnHand,
+  type ActiveStockHold,
+} from "@/lib/orders/stock-availability";
 import { redactPii } from "@/lib/redact-pii";
 import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
 
@@ -89,31 +94,65 @@ function hostedDelegationReleaseId(
   return details.hostedReleaseId;
 }
 
-async function activeHeldQuantity(
+type ActiveHoldRow = {
+  reservationKey: string;
+  quantity: number | bigint;
+  reserveMovement: number | bigint;
+};
+
+/**
+ * Every active hold on this product or exact variant, with the one fact that
+ * tells a manual hold (stock already lowered when it opened) from a storefront
+ * hold (stock not lowered): whether the command that opened it also wrote a
+ * 'reserve' InventoryMovement for it. See stock-availability.ts for the proof.
+ */
+async function activeStockHolds(
   tx: BusinessTransaction,
   productId: string,
   productVariantId: string | null,
-): Promise<number> {
+): Promise<ActiveStockHold[]> {
   const rows = productVariantId
-    ? await tx.$queryRaw<Array<{ quantity: number | bigint | null }>>`
-        SELECT COALESCE(SUM("quantity"), 0) AS "quantity"
-        FROM "InventoryReservation"
-        WHERE "productId" = ${productId}
-          AND "productVariantId" = ${productVariantId}
-          AND "state" = 'active'
+    ? await tx.$queryRaw<ActiveHoldRow[]>`
+        SELECT r."reservationKey" AS "reservationKey",
+               r."quantity" AS "quantity",
+               EXISTS (
+                 SELECT 1
+                 FROM "InventoryMovement" m
+                 WHERE m."commandId" = r."createdByCommandId"
+                   AND m."reservationId" = r."id"
+                   AND m."movementType" = 'reserve'
+               ) AS "reserveMovement"
+        FROM "InventoryReservation" r
+        WHERE r."productId" = ${productId}
+          AND r."productVariantId" = ${productVariantId}
+          AND r."state" = 'active'
       `
-    : await tx.$queryRaw<Array<{ quantity: number | bigint | null }>>`
-        SELECT COALESCE(SUM("quantity"), 0) AS "quantity"
-        FROM "InventoryReservation"
-        WHERE "productId" = ${productId}
-          AND "productVariantId" IS NULL
-          AND "state" = 'active'
+    : await tx.$queryRaw<ActiveHoldRow[]>`
+        SELECT r."reservationKey" AS "reservationKey",
+               r."quantity" AS "quantity",
+               EXISTS (
+                 SELECT 1
+                 FROM "InventoryMovement" m
+                 WHERE m."commandId" = r."createdByCommandId"
+                   AND m."reservationId" = r."id"
+                   AND m."movementType" = 'reserve'
+               ) AS "reserveMovement"
+        FROM "InventoryReservation" r
+        WHERE r."productId" = ${productId}
+          AND r."productVariantId" IS NULL
+          AND r."state" = 'active'
       `;
-  const quantity = Number(rows[0]?.quantity ?? 0);
-  if (!Number.isSafeInteger(quantity) || quantity < 0) {
-    throw new ConflictError("Active inventory holds are outside the supported integer range");
-  }
-  return quantity;
+  return rows.map((row) => {
+    const quantity = Number(row.quantity);
+    if (!Number.isSafeInteger(quantity) || quantity < 0) {
+      throw new ConflictError("Active inventory holds are outside the supported integer range");
+    }
+    return {
+      reservationKey: row.reservationKey,
+      quantity,
+      reserveMovementRecorded: Number(row.reserveMovement) === 1,
+    };
+  });
 }
 
 async function reserveOrderItem(
@@ -165,8 +204,11 @@ async function reserveOrderItem(
       initialProductStock.set(product.id, product.stock);
     }
 
-    const held = await activeHeldQuantity(tx, product.id, variant.id);
-    if (variant.stock - held < item.quantity) {
+    const holds = await activeStockHolds(tx, product.id, variant.id);
+    if (
+      availableForManualConfirm({ onHand: variant.stock, activeHolds: holds }) <
+      item.quantity
+    ) {
       throw new ConflictError(
         `Insufficient available stock for variant '${variant.id}'`,
       );
@@ -176,7 +218,7 @@ async function reserveOrderItem(
         id: variant.id,
         productId: product.id,
         isActive: true,
-        stock: { gte: item.quantity + held },
+        stock: { gte: item.quantity + stockHeldAgainstOnHand(holds) },
       },
       data: { stock: { decrement: item.quantity } },
     });
@@ -213,8 +255,11 @@ async function reserveOrderItem(
       );
     }
 
-    const held = await activeHeldQuantity(tx, product.id, null);
-    if (product.stock - held < item.quantity) {
+    const holds = await activeStockHolds(tx, product.id, null);
+    if (
+      availableForManualConfirm({ onHand: product.stock, activeHolds: holds }) <
+      item.quantity
+    ) {
       throw new ConflictError(
         `Insufficient available stock for product '${product.id}'`,
       );
@@ -224,7 +269,7 @@ async function reserveOrderItem(
         id: product.id,
         isActive: true,
         deletedAt: null,
-        stock: { gte: item.quantity + held },
+        stock: { gte: item.quantity + stockHeldAgainstOnHand(holds) },
       },
       data: { stock: { decrement: item.quantity } },
     });
