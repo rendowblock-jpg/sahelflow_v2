@@ -37,9 +37,16 @@ import {
   failedBeforeWrite,
   SendNotDispatchedError,
 } from "./durable-dispatch";
+import { postToApp, STATUS_CALLBACK_POLICY } from "./app-callback";
+import { LivenessTracker, runLivenessProbe } from "./liveness";
 import { createDiagnosticTeeLogger, describeError, diagnostics } from "./diagnostics-log";
 
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
+// Liveness evidence (diagnostics only): one sample shortly after the 60 s
+// `init queries` deadline has passed, then every five minutes.
+const LIVENESS_FIRST_SAMPLE_MS = 90_000;
+const LIVENESS_SAMPLE_EVERY_MS = 5 * 60_000;
+const LIVENESS_PROBE_TIMEOUT_MS = 30_000;
 // Voice/audio outbound shares the 32 MiB encrypted-storage audio ceiling.
 const MAX_OUTBOUND_VOICE_BYTES = 32 * 1024 * 1024;
 // C1 watchdog: after the bounded fast reconnects give up (5 attempts), keep
@@ -200,21 +207,19 @@ async function postMessageStatus(payload: {
     "Content-Type": "application/json",
   };
   if (token) headers.Authorization = `Bearer ${token}`;
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5_000);
-    try {
-      await fetch(`${APP_URL}/api/whatsapp/message-status`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-  } catch (err) {
-    logger.warn({ err }, "[W3-12] failed to POST message-status to app");
+  // Patient and retrying: the first call after the app starts is a cold route.
+  const outcome = await postToApp({
+    url: `${APP_URL}/api/whatsapp/message-status`,
+    headers,
+    body: JSON.stringify(payload),
+    policy: STATUS_CALLBACK_POLICY,
+  });
+  if (!outcome.ok) {
+    logger.warn({ err: outcome.error }, "[W3-12] failed to POST message-status to app");
+    diagnostics.record("status.post-failed", {
+      attempts: outcome.attempts,
+      statusCode: outcome.status,
+    });
   }
 }
 
@@ -282,6 +287,10 @@ export class WhatsAppManager {
   private subscribers = new Set<Subscriber>();
   private connecting = false;
   private reconnectAttempts = 0;
+  private liveness: LivenessTracker | null = null;
+  private livenessFirstTimer: ReturnType<typeof setTimeout> | null = null;
+  private livenessTimer: ReturnType<typeof setInterval> | null = null;
+  private livenessProbeInFlight = false;
   private reconnectWatchdog: ReturnType<typeof setInterval> | null = null;
   /**
    * Receives every Baileys dispatch marker (the message id written to the
@@ -421,6 +430,20 @@ export class WhatsAppManager {
     this.sock.ev.on("connection.update", (update) => {
       const { connection, qr, lastDisconnect } = update;
 
+      // When the provider says it has delivered the messages that arrived
+      // while this device was offline, and whether the device is online.
+      if (
+        update.receivedPendingNotifications !== undefined ||
+        update.isOnline !== undefined ||
+        update.isNewLogin !== undefined
+      ) {
+        diagnostics.record("connection.update", {
+          receivedPendingNotifications: update.receivedPendingNotifications,
+          isOnline: update.isOnline,
+          isNewLogin: update.isNewLogin,
+        });
+      }
+
       if (qr) {
         this.currentQr = qr;
         this.status = "qr";
@@ -443,6 +466,20 @@ export class WhatsAppManager {
         });
         logger.info({ user: this.user }, "connected");
         diagnostics.record("connection.open", { reconnectAttempts: 0 });
+        const creds = state.creds as unknown as {
+          myAppStateKeyId?: string;
+          accountSyncCounter?: number;
+          registered?: boolean;
+        };
+        // Booleans and counters only, never a key or an identity.
+        diagnostics.record("session.state", {
+          appStateKey: Boolean(creds.myAppStateKeyId),
+          accountSyncCounter: creds.accountSyncCounter ?? 0,
+          registered: Boolean(creds.registered),
+        });
+        if (this.sock) {
+          this.startLiveness(this.sock, () => Boolean(creds.myAppStateKeyId));
+        }
       }
 
       if (connection === "close") {
@@ -452,6 +489,7 @@ export class WhatsAppManager {
           reconnectAttempts: this.reconnectAttempts,
           ...describeError(lastDisconnect?.error),
         });
+        this.stopLiveness();
         const shouldReconnect =
           code !== DisconnectReason.loggedOut &&
           code !== 401 &&
@@ -552,6 +590,7 @@ export class WhatsAppManager {
     type: string | undefined,
     messages: ReadonlyArray<proto.IWebMessageInfo>,
   ): void {
+    let accepted = 0;
     for (const message of messages) {
       const action = providerMessageSpoolAction(type, {
         remoteJid: message.key?.remoteJid,
@@ -562,6 +601,17 @@ export class WhatsAppManager {
       const incoming = this.toIncoming(message);
       if (!incoming?.key.remoteJid || !incoming.key.id) continue;
       this.emit({ type: "message", message: incoming });
+      accepted += 1;
+    }
+    this.liveness?.noteUpserts(messages.length);
+    if (messages.length > 0) {
+      // Counts only, never a JID or text. This is the line that shows whether
+      // WhatsApp delivered anything at all, and how much of it was usable.
+      diagnostics.record("inbound.upsert", {
+        upsertType: type ?? "none",
+        received: messages.length,
+        accepted,
+      });
     }
   }
 
@@ -864,6 +914,7 @@ export class WhatsAppManager {
 
   async logout(): Promise<void> {
     this.clearReconnectWatchdog();
+    this.stopLiveness();
     if (this.sock) {
       try {
         await this.sock.logout();
@@ -893,6 +944,83 @@ export class WhatsAppManager {
    * Without it, the sidecar stayed disconnected until a manual "connect"
    * press and every message sent meanwhile was lost to the inbox.
    */
+  /**
+   * Start measuring whether this socket receives. Diagnostics only: nothing
+   * here reconnects, flushes or alters message flow (see liveness.ts).
+   */
+  private startLiveness(sock: WASocket, hasAppStateKey: () => boolean): void {
+    this.stopLiveness();
+    const tracker = new LivenessTracker();
+    this.liveness = tracker;
+    try {
+      const ws = (
+        sock as unknown as {
+          ws?: { on?: (event: string, listener: () => void) => unknown };
+        }
+      ).ws;
+      ws?.on?.("frame", () => tracker.noteFrame());
+    } catch {
+      // Evidence only: a socket without this hook simply reports zero frames.
+    }
+    const sample = () => void this.recordLiveness(sock, tracker, hasAppStateKey);
+    this.livenessFirstTimer = setTimeout(sample, LIVENESS_FIRST_SAMPLE_MS);
+    this.livenessTimer = setInterval(sample, LIVENESS_SAMPLE_EVERY_MS);
+    this.livenessFirstTimer.unref?.();
+    this.livenessTimer.unref?.();
+  }
+
+  private stopLiveness(): void {
+    if (this.livenessFirstTimer) clearTimeout(this.livenessFirstTimer);
+    if (this.livenessTimer) clearInterval(this.livenessTimer);
+    this.livenessFirstTimer = null;
+    this.livenessTimer = null;
+    this.liveness = null;
+  }
+
+  private async recordLiveness(
+    sock: WASocket,
+    tracker: LivenessTracker,
+    hasAppStateKey: () => boolean,
+  ): Promise<void> {
+    if (this.sock !== sock || this.status !== "connected") return;
+    // Sample first, so the probe's own traffic is not counted in this window.
+    const sample = tracker.sample();
+    let buffering: boolean | null = null;
+    try {
+      const events = (
+        sock as unknown as { ev?: { isBuffering?: () => boolean } }
+      ).ev;
+      buffering = events?.isBuffering?.() ?? null;
+    } catch {
+      buffering = null;
+    }
+    const ownId = sock.user?.id;
+    const lookup = (
+      sock as unknown as { onWhatsApp?: (...jids: string[]) => Promise<unknown> }
+    ).onWhatsApp;
+    let probe: { outcome: string; ms: number } = { outcome: "skipped", ms: 0 };
+    if (!this.livenessProbeInFlight) {
+      this.livenessProbeInFlight = true;
+      try {
+        probe = await runLivenessProbe(
+          ownId && typeof lookup === "function"
+            ? () => lookup.call(sock, ownId)
+            : null,
+          LIVENESS_PROBE_TIMEOUT_MS,
+        );
+      } finally {
+        this.livenessProbeInFlight = false;
+      }
+    }
+    diagnostics.record("liveness", {
+      ...sample,
+      buffering,
+      appStateKey: hasAppStateKey(),
+      probe: probe.outcome,
+      probeMs: probe.ms,
+    });
+  }
+
   private scheduleReconnectWatchdog(): void {
     if (this.reconnectWatchdog) return;
     const timer = setInterval(() => {
