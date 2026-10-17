@@ -25,6 +25,7 @@ vi.mock("@/lib/auth/server", () => ({
 vi.mock("@/lib/auth/rate-limit", () => ({
   checkLoginRateLimit: harness.checkLimit,
   getClientIp: harness.getIp,
+  getConfirmationLimiterKey: (sessionId: string) => `confirm:session:${sessionId}`,
   recordLoginAttempt: harness.recordAttempt,
   recordLoginFailure: harness.recordFailure,
   recordLoginSuccess: harness.recordSuccess,
@@ -213,7 +214,7 @@ describe("POST /api/auth/reauthenticate", () => {
     expect(harness.registerTeam).not.toHaveBeenCalled();
     expect(harness.rotateTeam).not.toHaveBeenCalled();
     expect(harness.reauthenticateOwner).not.toHaveBeenCalled();
-    expect(harness.recordFailure).toHaveBeenCalledWith("127.0.0.1");
+    expect(harness.recordFailure).toHaveBeenCalledWith("confirm:session:current-session");
   });
 
   it("applies rate limiting after authority but before parsing the PIN", async () => {
@@ -231,5 +232,43 @@ describe("POST /api/auth/reauthenticate", () => {
     expect(harness.recordAttempt).not.toHaveBeenCalled();
     expect(harness.prepareTeam).not.toHaveBeenCalled();
     expect(harness.registerTeam).not.toHaveBeenCalled();
+  });
+});
+
+describe("limiter bucket (IDN-01)", () => {
+  it("keys the allowance on the verified session, never on a forwarding header", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/auth/reauthenticate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-forwarded-for": "203.0.113.77",
+        },
+        body: JSON.stringify({ pin: "12345678" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(harness.checkLimit).toHaveBeenCalledWith("confirm:session:current-session");
+    expect(harness.recordAttempt).toHaveBeenCalledWith("confirm:session:current-session");
+    expect(harness.recordSuccess).toHaveBeenCalledWith("confirm:session:current-session");
+    for (const spy of [harness.checkLimit, harness.recordAttempt, harness.recordSuccess]) {
+      expect(spy).not.toHaveBeenCalledWith("203.0.113.77");
+      expect(spy).not.toHaveBeenCalledWith("127.0.0.1");
+    }
+  });
+
+  it("refuses a request that has no live session before it touches the limiter", async () => {
+    harness.currentAuthority.mockResolvedValue({
+      status: "rejected",
+      code: "SESSION_INVALID",
+    });
+
+    const response = await POST(request(JSON.stringify({ pin: "12345678" })));
+
+    expect(response.status).toBe(401);
+    expect(harness.checkLimit).not.toHaveBeenCalled();
+    expect(harness.prepareTeam).not.toHaveBeenCalled();
+    expect(harness.reauthenticateOwner).not.toHaveBeenCalled();
   });
 });

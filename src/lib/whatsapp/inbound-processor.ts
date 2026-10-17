@@ -100,6 +100,35 @@ function retryDelay(attemptNumber: number): number {
   );
 }
 
+/**
+ * Should a new message bring an archived conversation back into the main
+ * queues? (audit MSG-06, INB-12)
+ *
+ * Archiving is the seller's "I am done with this thread". When the customer
+ * writes again the thread must become visible, otherwise unread goes up and the
+ * status reopens on a row that no main queue shows. The one exception is a
+ * conversation the seller has also MUTED: archived plus muted means "do not
+ * disturb me", so it stays archived. A mute counts only while `mutedUntil` is
+ * still in the future, the same rule the Inbox list uses (an expired mute reads
+ * as unmuted, never as a stale flag). A message the seller sent never changes
+ * the archive state.
+ *
+ * `at` is the moment the message is applied, not the provider timestamp, so an
+ * offline backlog message does not hide behind a mute that has since expired.
+ */
+export function shouldUnarchiveOnInboundMessage(input: {
+  archivedAt: Date | null | undefined;
+  mutedUntil: Date | null | undefined;
+  fromMe: boolean;
+  at: Date;
+}): boolean {
+  if (input.fromMe) return false;
+  if (!input.archivedAt) return false;
+  const muted =
+    input.mutedUntil != null && input.mutedUntil.getTime() > input.at.getTime();
+  return !muted;
+}
+
 function messageType(payload: Record<string, unknown>): string {
   if (payload.conversation || payload.extendedTextMessage) return "text";
   if (payload.imageMessage) return "image";
@@ -455,6 +484,23 @@ async function applyClaim(
       },
     },
     async ({ tx }) => {
+      // Read the archive/mute state first so the update below can bring an
+      // archived thread back (audit MSG-06). A first message has no row yet.
+      const existingState = await tx.conversation.findUnique({
+        where: {
+          channel_sourceId: {
+            channel: "whatsapp",
+            sourceId,
+          },
+        },
+        select: { archivedAt: true, mutedUntil: true },
+      });
+      const unarchive = shouldUnarchiveOnInboundMessage({
+        archivedAt: existingState?.archivedAt,
+        mutedUntil: existingState?.mutedUntil,
+        fromMe: input.message.key.fromMe,
+        at: new Date(),
+      });
       const conversation = await tx.conversation.upsert({
         where: {
           channel_sourceId: {
@@ -478,6 +524,7 @@ async function applyClaim(
           unreadCount: { increment: 1 },
           status: "open",
           snoozedUntil: null,
+          ...(unarchive ? { archivedAt: null } : {}),
         },
         select: { id: true },
       });

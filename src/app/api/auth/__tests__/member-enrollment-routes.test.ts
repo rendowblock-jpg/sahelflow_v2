@@ -28,9 +28,13 @@ vi.mock("@/lib/auth/rate-limit", () => ({
   recordLoginAttempt: harness.recordAttempt,
   recordLoginFailure: harness.recordFailure,
   recordLoginSuccess: harness.recordSuccess,
-  // Batch A (audit 7-a F14) added this limiter-bucket key to the login route;
-  // the route imports it unconditionally, so the mock must provide it.
+  // The routes import every limiter-bucket key helper unconditionally, so the
+  // mock must provide them all (audit 7-a F14, IDN-01, IDN-06).
   getLoginLimiterKey: vi.fn(() => "test-login-limiter-key"),
+  getOwnerLoginLimiterKey: vi.fn(() => "test-owner-limiter-key"),
+  getMemberLoginLimiterKey: vi.fn((loginId: string) => `test-member:${loginId}`),
+  getInvitationAcceptLimiterKey: vi.fn(() => "test-invitation-limiter-key"),
+  holdFailedAttempt: vi.fn(async () => undefined),
 }));
 
 vi.mock("@/lib/identity/team-directory", () => ({
@@ -244,5 +248,67 @@ describe("member enrollment and login routes", () => {
     expect(harness.ownerSession).toHaveBeenCalledWith("127.0.0.1");
     expect(harness.memberLogin).not.toHaveBeenCalled();
     expect(harness.register).not.toHaveBeenCalled();
+  });
+});
+
+describe("limiter buckets (IDN-01, IDN-06)", () => {
+  it("keys invitation acceptance on its own fixed bucket, not on a forwarding header", async () => {
+    await acceptInvitation(
+      new Request("http://localhost/api/auth/invitations/accept", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-forwarded-for": "203.0.113.79",
+        },
+        body: JSON.stringify({
+          token: `sf-invite-v1.${"8".repeat(32)}.${"a".repeat(43)}`,
+          requestId: "11111111-1111-4111-8111-111111111111",
+          displayName: "Amina",
+          loginId: "amina.ops",
+          pin: "12345678",
+        }),
+      }),
+    );
+
+    expect(harness.rateLimit).toHaveBeenCalledWith("test-invitation-limiter-key");
+    expect(harness.recordAttempt).toHaveBeenCalledWith("test-invitation-limiter-key");
+    expect(harness.recordSuccess).toHaveBeenCalledWith("test-invitation-limiter-key");
+    expect(harness.rateLimit).not.toHaveBeenCalledWith("203.0.113.79");
+    expect(harness.rateLimit).not.toHaveBeenCalledWith("127.0.0.1");
+  });
+
+  it("keys the owner PIN and each team login id on their own buckets", async () => {
+    await login(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: "12345678" }),
+      }),
+    );
+    expect(harness.rateLimit).toHaveBeenLastCalledWith("test-owner-limiter-key");
+    expect(harness.recordSuccess).toHaveBeenLastCalledWith("test-owner-limiter-key");
+
+    await login(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ loginId: "Amina.Ops", pin: "12345678" }),
+      }),
+    );
+    expect(harness.rateLimit).toHaveBeenLastCalledWith("test-member:amina.ops");
+  });
+
+  it("sends a body that names no account to the shared unattributed bucket", async () => {
+    const response = await login(
+      new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{not-json",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(harness.rateLimit).toHaveBeenLastCalledWith("test-login-limiter-key");
+    expect(harness.recordAttempt).toHaveBeenLastCalledWith("test-login-limiter-key");
   });
 });

@@ -1,12 +1,10 @@
-import { readFileSync } from "node:fs";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { logAudit } from "@/lib/audit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { db, shopContext } from "@/lib/db";
-import { env } from "@/lib/env";
+import { authenticateWhatsAppSidecar } from "@/lib/whatsapp/sidecar-rest-auth";
 import { deterministicWhatsAppMessageId } from "../../../../../sidecars/whatsapp/send-receipts";
 
 export const dynamic = "force-dynamic";
@@ -43,28 +41,6 @@ export function allowedPriorDeliveryStates(next: DeliveryStatus): Array<string |
       // accepted into a retryable failure. The receipt is still audited.
       return [null, "sending"];
   }
-}
-
-function resolveExpectedRestToken(): string | undefined {
-  const fromEnv = env.sidecarToken;
-  if (fromEnv && fromEnv.length >= 16) return fromEnv;
-  try {
-    const fromFile = readFileSync(env.sidecarTokenFile, "utf8").trim();
-    if (fromFile.length >= 16) return fromFile;
-  } catch {
-    // Sidecar may not be ready.
-  }
-  return undefined;
-}
-
-function authenticateSidecar(request: NextRequest): boolean {
-  const match = /^Bearer\s+(.+)$/i.exec(
-    request.headers.get("authorization") ?? "",
-  );
-  const expected = resolveExpectedRestToken();
-  return Boolean(
-    match?.[1] && expected && constantTimeEqual(match[1], expected),
-  );
 }
 
 async function updateMessageStatus(
@@ -132,7 +108,7 @@ async function findOrBindDurableEffect(providerMessageId: string): Promise<{
 }
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  if (!authenticateSidecar(request)) {
+  if (!authenticateWhatsAppSidecar(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
