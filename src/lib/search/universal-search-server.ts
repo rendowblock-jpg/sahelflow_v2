@@ -25,6 +25,7 @@ import {
   messageExcerpt,
   normalizeSearchText,
   rankUniversalSearchCandidates,
+  mayStartTypoPass,
   typoBackoffQueries,
   type UniversalSearchCandidate,
 } from "@/lib/search/universal-search";
@@ -519,9 +520,6 @@ async function searchUniversalRecordsStrict(
   };
 }
 
-// A slow first pass means a slow machine: do not multiply its work by widening.
-const TYPO_BACKOFF_MAX_FIRST_PASS_MS = 350;
-
 /**
  * The universal record search. The strict pass is the whole answer whenever it
  * finds anything. Only a search that found nothing is widened, once per
@@ -541,16 +539,20 @@ export async function searchUniversalRecords(
 ): Promise<UniversalRecordSearchResponse> {
   const startedAt = Date.now();
   const strict = await searchUniversalRecordsStrict(rawQuery, requestedLimit, signal);
-  if (strict.results.length > 0 || strict.tookMs > TYPO_BACKOFF_MAX_FIRST_PASS_MS) {
-    return strict;
-  }
+  if (strict.results.length > 0) return strict;
 
   const limit = clampLimit(requestedLimit);
   const degraded = new Set<RecordKind>(strict.degradedFamilies);
+  const widenStartedAt = Date.now();
+  let startedPasses = 0;
   for (const variant of typoBackoffQueries(strict.query)) {
     // Each shorter spelling is a complete extra search: do not start the next
-    // one for a request the browser has already cancelled.
+    // one for a request the browser has already cancelled, nor once the fixed
+    // widening budget is spent. The first pass always runs (see
+    // TYPO_PASS_BUDGET_MS): a slow machine is never a reason to skip it.
     if (signal?.aborted) return strict;
+    if (!mayStartTypoPass(startedPasses, Date.now() - widenStartedAt)) break;
+    startedPasses += 1;
     const widened = await searchUniversalRecordsStrict(variant, MAX_RESULTS, signal);
     for (const family of widened.degradedFamilies) degraded.add(family);
     const results = rankUniversalSearchCandidates(strict.query, widened.results, limit, {
