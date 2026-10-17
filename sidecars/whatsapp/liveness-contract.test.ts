@@ -65,6 +65,44 @@ describe("WhatsApp liveness evidence", () => {
     }
   });
 
+  it("measures event-loop lag and key-store time without changing either", () => {
+    expect(liveness).toContain("new LoopLagProbe(");
+    expect(liveness).toContain("this.livenessLagTimer");
+    expect(liveness).toContain("authIoStats.take()");
+    // Every timer started is also stopped.
+    const stop = manager.slice(
+      manager.indexOf("private stopLiveness(): void {"),
+      manager.indexOf("private async recordLiveness("),
+    );
+    expect(stop).toContain("clearInterval(this.livenessLagTimer)");
+    // The key store is only TIMED: its durable write sequence is untouched.
+    const auth = read("sidecars/whatsapp/protected-auth-state.ts");
+    expect(auth).toContain('authIoStats.note("read"');
+    expect(auth).toContain('authIoStats.note("write"');
+    const writeDurable = auth.slice(
+      auth.indexOf("function writeDurable("),
+      auth.indexOf("function keyId("),
+    );
+    for (const step of [
+      'openSync(temporary, "wx", 0o600)',
+      "writeFileSync(descriptor, content",
+      "fsyncSync(descriptor)",
+      "renameSync(temporary, path)",
+      "flushCommittedFile(path)",
+      "syncDirectory(dirname(path))",
+    ]) {
+      expect(writeDurable, step).toContain(step);
+    }
+    expect(writeDurable).not.toContain("authIoStats");
+  });
+
+  it("records where connect time goes before the socket exists", () => {
+    expect(manager).toContain('diagnostics.record("connect.timing"');
+    expect(manager).toContain("authLoadMs");
+    expect(manager).toContain("openAfterMs");
+    expect(read("sidecars/whatsapp/index.ts")).toContain('diagnostics.record("spool.ready"');
+  });
+
   it("is quiet when the socket is not connected and cannot overlap itself", () => {
     expect(liveness).toContain('this.status !== "connected"');
     expect(liveness).toContain("livenessProbeInFlight");

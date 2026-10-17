@@ -29,6 +29,7 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
+import { authIoStats } from "./auth-io-stats";
 import { getWhatsAppAuthStorageKey } from "./protected-storage-key";
 
 const RECORD_FORMAT_VERSION = 1 as const;
@@ -454,6 +455,7 @@ export async function useProtectedWhatsAppAuthState(): Promise<{
     creds,
     keys: {
       get: async (type, ids) => {
+        const startedAt = performance.now();
         const result: { [id: string]: SignalDataTypeMap[typeof type] } = {};
         for (const id of ids) {
           const recordId = baileysFileName(`${String(type)}-${id}.json`);
@@ -465,9 +467,12 @@ export async function useProtectedWhatsAppAuthState(): Promise<{
           }
           if (value !== null) result[id] = value;
         }
+        authIoStats.note("read", performance.now() - startedAt, ids.length);
         return result;
       },
       set: async (data) => {
+        const startedAt = performance.now();
+        let records = 0;
         for (const [category, entries] of Object.entries(
           data as unknown as Record<string, Record<string, unknown | null | undefined>>,
         )) {
@@ -478,8 +483,10 @@ export async function useProtectedWhatsAppAuthState(): Promise<{
             } else {
               writeRecord(recordId, value, key);
             }
+            records += 1;
           }
         }
+        authIoStats.note("write", performance.now() - startedAt, records);
       },
     },
   };

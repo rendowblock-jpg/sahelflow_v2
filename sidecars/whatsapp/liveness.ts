@@ -18,6 +18,9 @@
  * than a missing sample.
  */
 
+/** A delay of the sidecar's own event loop this long counts as a stall. */
+export const STALL_MS = 1_000;
+
 export interface LivenessSample {
   /** Seconds since this socket opened. */
   openForSec: number;
@@ -29,6 +32,10 @@ export interface LivenessSample {
   upserts: number;
   /** Seconds since the last upsert, or null if none since the socket opened. */
   secSinceLastUpsert: number | null;
+  /** The longest delay of the sidecar's own event loop in the window, in ms. */
+  lagMaxMs: number;
+  /** Event-loop delays of STALL_MS or more in the window. */
+  stalls: number;
 }
 
 export class LivenessTracker {
@@ -37,6 +44,8 @@ export class LivenessTracker {
   private windowUpserts = 0;
   private lastFrameAt: number | null = null;
   private lastUpsertAt: number | null = null;
+  private windowLagMax = 0;
+  private windowStalls = 0;
 
   constructor(private readonly now: () => number = Date.now) {
     this.openedAt = now();
@@ -45,6 +54,13 @@ export class LivenessTracker {
   noteFrame(): void {
     this.windowFrames += 1;
     this.lastFrameAt = this.now();
+  }
+
+  /** One event-loop delay sample, in ms (see LoopLagProbe). */
+  noteLag(ms: number): void {
+    if (!Number.isFinite(ms) || ms < 0) return;
+    if (ms > this.windowLagMax) this.windowLagMax = ms;
+    if (ms >= STALL_MS) this.windowStalls += 1;
   }
 
   noteUpserts(count: number): void {
@@ -64,10 +80,38 @@ export class LivenessTracker {
       secSinceLastFrame: seconds(this.lastFrameAt),
       upserts: this.windowUpserts,
       secSinceLastUpsert: seconds(this.lastUpsertAt),
+      lagMaxMs: Math.round(this.windowLagMax),
+      stalls: this.windowStalls,
     };
     this.windowFrames = 0;
     this.windowUpserts = 0;
+    this.windowLagMax = 0;
+    this.windowStalls = 0;
     return sample;
+  }
+}
+
+/**
+ * Measures how late a repeating timer fires, which is how long something else
+ * kept the event loop busy. Call tick() from a timer set for `intervalMs`: the
+ * result is how many ms past its due time that tick ran. A loop that is only
+ * ever waiting reports 0 every time.
+ */
+export class LoopLagProbe {
+  private last: number;
+
+  constructor(
+    private readonly intervalMs: number,
+    private readonly now: () => number = Date.now,
+  ) {
+    this.last = now();
+  }
+
+  tick(): number {
+    const at = this.now();
+    const late = Math.max(0, at - this.last - this.intervalMs);
+    this.last = at;
+    return late;
   }
 }
 
