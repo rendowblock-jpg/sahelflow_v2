@@ -6,6 +6,7 @@ import { auditLog, isAuthSetup } from "@/lib/auth/server";
 import {
   checkLoginRateLimit,
   getClientIp,
+  getInvitationAcceptLimiterKey,
   recordLoginAttempt,
   recordLoginFailure,
   recordLoginSuccess,
@@ -34,8 +35,13 @@ const schema = z
 
 /** POST /api/auth/invitations/accept — public, single-use member enrollment. */
 export const POST = withErrorHandler(async (request: Request) => {
+  // Audit metadata only (client-controlled): never a limiter key (IDN-01).
   const ip = getClientIp(request.headers);
-  const limit = checkLoginRateLimit(ip);
+  // One fixed bucket for this public door, separate from every sign-in and
+  // PIN-proof bucket: the invitation token is the credential, and a flood here
+  // must not be able to lock anyone out of signing in.
+  const limiterKey = getInvitationAcceptLimiterKey();
+  const limit = checkLoginRateLimit(limiterKey);
   if (!limit.allowed) {
     return NextResponse.json(
       {
@@ -61,7 +67,7 @@ export const POST = withErrorHandler(async (request: Request) => {
   }
 
   const input = schema.parse(await request.json());
-  recordLoginAttempt(ip);
+  recordLoginAttempt(limiterKey);
 
   try {
     const revocations = await getTeamRevocationSnapshot(shopContext);
@@ -76,7 +82,7 @@ export const POST = withErrorHandler(async (request: Request) => {
       shop: shopContext,
     });
     const session = await establishTeamSession(grant.sessionId, ip);
-    recordLoginSuccess(ip);
+    recordLoginSuccess(limiterKey);
     void auditLog(
       "team.invitation.accepted",
       {
@@ -102,7 +108,7 @@ export const POST = withErrorHandler(async (request: Request) => {
       replayed: grant.replayed || session.replayed,
     });
   } catch (error) {
-    const failure = recordLoginFailure(ip);
+    const failure = recordLoginFailure(limiterKey);
     void auditLog(
       "team.invitation.acceptance_failed",
       {
