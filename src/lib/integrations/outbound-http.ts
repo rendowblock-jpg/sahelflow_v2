@@ -31,6 +31,12 @@ import { SahelFlowError } from "@/types/errors";
  * 3. Redirects are never followed. A 3xx response is returned to the caller,
  *    which decides (and must pass any target back through this module).
  *
+ * Policy: no provider needs loopback, link-local, RFC1918, carrier-grade NAT or
+ * metadata addresses, so none is allowed. In particular a WooCommerce store that
+ * is reachable only on the seller's own LAN is not supported (literal LAN
+ * addresses were already refused before this module existed; a name that merely
+ * resolves to one is now refused as well). Revisit per provider, never globally.
+ *
  * Errors raised here never contain the URL, the host, an address, a header or
  * a body: only a fixed message and a short machine code.
  */

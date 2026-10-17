@@ -325,7 +325,7 @@ describe("the adapters use the connect-time check (INT-09)", () => {
   it("EcoTrack: a normal-looking name that resolves to the LAN is refused once, with nothing sent", async () => {
     const resolver = resolvesTo("192.168.1.20");
     __setOutboundTestHooks({ resolve: resolver });
-    const result = await ecoTrackAdapter.testConnection({
+    const result = await ecoTrackAdapter.testConnection?.({
       carrierName: "Courier",
       apiToken: "token-should-never-leave",
       userGuid: "guid",
@@ -334,7 +334,7 @@ describe("the adapters use the connect-time check (INT-09)", () => {
       trackingsUrl: "https://merchant.ecotrack.example/trackings",
       feesUrl: "https://merchant.ecotrack.example/fees",
     });
-    expect(result.ok).toBe(false);
+    expect(result?.ok).toBe(false);
     // Not retried: a refused address is final.
     expect(resolver).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(result)).not.toContain("192.168.1.20");
@@ -356,6 +356,28 @@ describe("the adapters use the connect-time check (INT-09)", () => {
     ).rejects.toMatchObject({ code: "OUTBOUND_URL_BLOCKED" });
     expect(resolver).toHaveBeenCalledTimes(1);
   });
+
+  // Decision (INT-09): no provider is allowed to reach RFC1918 space. WooCommerce
+  // already refused literal LAN addresses before this change; a store that is only
+  // reachable on the seller's own LAN is therefore not supported, by name or by IP.
+  it.each(["10.0.0.5", "172.16.4.4", "192.168.1.20"])(
+    "WooCommerce: a name that resolves to the LAN address %s is refused and the key is not sent",
+    async (address) => {
+      const resolver = resolvesTo(address);
+      __setOutboundTestHooks({ resolve: resolver });
+      await expect(
+        woocommerceAdapter.listOrdersSince(
+          {
+            siteUrl: "https://shop.example",
+            consumerKey: "ck_should_never_leave",
+            consumerSecret: "cs_should_never_leave",
+          },
+          "",
+        ),
+      ).rejects.toMatchObject({ code: "OUTBOUND_URL_BLOCKED" });
+      expect(resolver).toHaveBeenCalledTimes(1);
+    },
+  );
 });
 
 describe("no seller-URL request can bypass the guard (source pins)", () => {

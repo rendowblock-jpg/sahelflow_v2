@@ -19,6 +19,7 @@ import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 
 import type { ServiceContext } from "@/lib/data/service-base";
+import { classifyWorkerFailure } from "@/lib/integrations/worker-health";
 import { getSecret, setSecret } from "@/lib/secrets";
 import {
   resolveConversionForStage,
@@ -233,10 +234,8 @@ export async function queueCapiStage(
   } catch (error) {
     // Deliberate swallow: CAPI must never block the caller's flow. The next
     // trigger of the same stage re-claims; the outbox remains the authority.
-    console.warn(
-      "[meta-capi] trigger enqueue failed:",
-      error instanceof Error ? error.message : error,
-    );
+    // INT-10: a code only. A database error message can embed customer values.
+    console.warn("[meta-capi] trigger enqueue failed:", classifyWorkerFailure(error));
     return { queued: false, reason: "enqueue_failed" };
   }
 }

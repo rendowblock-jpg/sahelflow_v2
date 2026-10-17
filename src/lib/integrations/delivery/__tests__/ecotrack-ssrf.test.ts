@@ -75,8 +75,8 @@ describe("EcoTrack refuses seller URLs that point inside the machine or the LAN 
   });
 
   it.each(BLOCKED_BASES)("%s: the connection test sends nothing", async (base) => {
-    const result = await ecoTrackAdapter.testConnection(credentials(base));
-    expect(result.ok).toBe(false);
+    const result = await ecoTrackAdapter.testConnection?.(credentials(base));
+    expect(result?.ok).toBe(false);
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
