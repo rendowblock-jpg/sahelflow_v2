@@ -81,6 +81,22 @@ function clampLimit(value: number | undefined): number {
   return Math.min(value!, MAX_RESULTS);
 }
 
+/**
+ * The answer for a search the browser already cancelled. Nobody receives it:
+ * it carries no records and exists only so the return type stays one shape.
+ */
+function abortedResponse(
+  query: string,
+  startedAt: number,
+): UniversalRecordSearchResponse {
+  return {
+    query,
+    results: [],
+    degradedFamilies: [],
+    tookMs: Date.now() - startedAt,
+  };
+}
+
 async function safeFamily<T>(
   family: RecordKind,
   fallback: T,
@@ -103,6 +119,7 @@ async function recentConversationMessageCandidates(
   shopId: string,
   query: string,
   includeContact: boolean,
+  signal?: AbortSignal,
 ): Promise<Array<RecordCandidate & { score: number }>> {
   // Message-body matching is deliberately a small live tail. Contact name/phone
   // lookup is handled by the revision-bound conversation projection. Keeping the
@@ -123,6 +140,10 @@ async function recentConversationMessageCandidates(
     orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
     take: CONVERSATION_SCAN_LIMIT,
   });
+
+  // The contact lookup below follows a long read; nobody is waiting for it once
+  // the browser has cancelled this search.
+  if (signal?.aborted) return [];
 
   // Contact identity comes from the permission-gated projection, and only for
   // actors who may read contacts.
@@ -291,6 +312,7 @@ export async function warmUniversalSearchRecords(): Promise<void> {
 async function searchUniversalRecordsStrict(
   rawQuery: string,
   requestedLimit?: number,
+  signal?: AbortSignal,
 ): Promise<UniversalRecordSearchResponse> {
   const startedAt = Date.now();
   const query = normalizeSearchText(rawQuery);
@@ -304,6 +326,10 @@ async function searchUniversalRecordsStrict(
     };
   }
 
+  // The signal is only ever read at the phase boundaries below. It is never
+  // passed into the shared projection builds: other searches await those.
+  if (signal?.aborted) return abortedResponse(query, startedAt);
+
   const actorContext = await requireTrustedActor();
   const shopId = actorContext.shop.shopId;
   const canOrders = allowed(actorContext, "orders.read");
@@ -316,6 +342,8 @@ async function searchUniversalRecordsStrict(
   const canOpenProtectedOperationalDetail =
     canReadContact && canReadFinancials;
   const degraded = new Set<RecordKind>();
+
+  if (signal?.aborted) return abortedResponse(query, startedAt);
 
   // Every query-independent family starts together. The previous implementation
   // waited for all non-order families and only then began order search, adding an
@@ -347,7 +375,12 @@ async function searchUniversalRecordsStrict(
       : Promise.resolve([]),
     canConversations && shouldSearchRecentMessages(query)
       ? safeFamily("conversation", [], degraded, () =>
-          recentConversationMessageCandidates(shopId, query, canReadContact),
+          recentConversationMessageCandidates(
+            shopId,
+            query,
+            canReadContact,
+            signal,
+          ),
         )
       : Promise.resolve([]),
     canDeliveries && canOpenProtectedOperationalDetail
@@ -371,6 +404,10 @@ async function searchUniversalRecordsStrict(
         )
       : Promise.resolve([]),
   ]);
+
+  // The fan-out is the long step: stop here for a cancelled search instead of
+  // running the dependent lookups and the ranking.
+  if (signal?.aborted) return abortedResponse(query, startedAt);
 
   const customerRows = customers as RecordCandidate[];
   const customersById = new Map(
@@ -397,6 +434,8 @@ async function searchUniversalRecordsStrict(
           projectedOrdersForCustomers(shopId, [...customersById.keys()]),
         )
       : [];
+
+  if (signal?.aborted) return abortedResponse(query, startedAt);
 
   // Orders found by number or tracking code still name their customer.
   const missingCustomerIds = canReadContact
@@ -490,13 +529,18 @@ const TYPO_BACKOFF_MAX_FIRST_PASS_MS = 350;
  * widened hits are re-ranked by how close they are to what was actually typed.
  * Permissions, shop isolation and degraded-family reporting all stay inside
  * the strict pass, which is the only code that reads records.
+ *
+ * `signal` is the request's own AbortSignal. It only lets a search the browser
+ * already cancelled stop early, between phases; it never changes what a live
+ * search returns.
  */
 export async function searchUniversalRecords(
   rawQuery: string,
   requestedLimit?: number,
+  signal?: AbortSignal,
 ): Promise<UniversalRecordSearchResponse> {
   const startedAt = Date.now();
-  const strict = await searchUniversalRecordsStrict(rawQuery, requestedLimit);
+  const strict = await searchUniversalRecordsStrict(rawQuery, requestedLimit, signal);
   if (strict.results.length > 0 || strict.tookMs > TYPO_BACKOFF_MAX_FIRST_PASS_MS) {
     return strict;
   }
@@ -504,7 +548,10 @@ export async function searchUniversalRecords(
   const limit = clampLimit(requestedLimit);
   const degraded = new Set<RecordKind>(strict.degradedFamilies);
   for (const variant of typoBackoffQueries(strict.query)) {
-    const widened = await searchUniversalRecordsStrict(variant, MAX_RESULTS);
+    // Each shorter spelling is a complete extra search: do not start the next
+    // one for a request the browser has already cancelled.
+    if (signal?.aborted) return strict;
+    const widened = await searchUniversalRecordsStrict(variant, MAX_RESULTS, signal);
     for (const family of widened.degradedFamilies) degraded.add(family);
     const results = rankUniversalSearchCandidates(strict.query, widened.results, limit, {
       fuzzy: true,
