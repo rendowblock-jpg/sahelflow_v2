@@ -1669,3 +1669,20 @@ as one signed successor:
   content at head `80956e46…` (PR #493, tree-identical to this content):
   CI `38739256979`, Phase 5 `38739256999`, Phase 6-7 `38739256948`, including
   the installed-MSI evidence lane. Everything else in this decision stands.
+- **Amended (2026-10-15, installed-UI evidence-harness timing repair):** the
+  first signed train execution under this authority (run `38750028169`) failed
+  twice on two different timing assertions of the installed-UI evidence lane —
+  attempt 1 `ui-launch-3` (evidence-mtime versus first-visibility clock
+  capture) and attempt 2 `ui-close-1` (the 15-second shutdown-receipt
+  deadline) — on two different runners of the same image with zero
+  product-source delta, after the same lane had passed 3/3 on PR #493's
+  installed-MSI gate. Diagnostics for both attempts were recorded before any
+  retry and a third blind retry was not taken. PR #494 repaired the harness
+  semantics-preservingly (durable evidence snapshot at first visibility
+  replaces the mtime-vs-clock comparison; the shutdown-receipt deadline
+  widens to 45 seconds with the receipt's content contract unchanged) and
+  merged as `09b5963b…` after its full Required battery, including the
+  installed-MSI lane, was green at head `21cd66e9…`. The packaged content is
+  unchanged — the certification above stays at product head `80956e46…` — and
+  the signed train re-executes from exact protected main with the repaired
+  harness. Everything else in this decision stands.
