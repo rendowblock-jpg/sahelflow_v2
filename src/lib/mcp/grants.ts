@@ -129,12 +129,54 @@ export function normalizeGrantRequest(
   return { label, tools: [...tools].sort() };
 }
 
+const GRANT_LIST_LIMIT = 100;
+
+/**
+ * Active grants first, then revoked grants with the newest revocation first.
+ * Two queries: a single `revokedAt` ordering puts NULL (active) first under
+ * ascending order and last under descending order, so with more than 100 rows
+ * either the newest revocations or the active grants would be cut (S06b-07).
+ */
 export async function listMcpAgentGrants(db: DbClient): Promise<McpAgentGrantView[]> {
-  const rows = await db.mcpAgentGrant.findMany({
-    orderBy: [{ revokedAt: "asc" }, { createdAt: "desc" }],
-    take: 100,
+  const active = await db.mcpAgentGrant.findMany({
+    where: { revokedAt: null },
+    orderBy: { createdAt: "desc" },
+    take: GRANT_LIST_LIMIT,
   });
-  return rows.map(toView);
+  const room = GRANT_LIST_LIMIT - active.length;
+  const revoked =
+    room > 0
+      ? await db.mcpAgentGrant.findMany({
+          where: { revokedAt: { not: null } },
+          orderBy: [{ revokedAt: "desc" }, { createdAt: "desc" }],
+          take: room,
+        })
+      : [];
+  return [...active, ...revoked].map(toView);
+}
+
+/**
+ * Grant lifecycle audit rows (S06b-03). They name the fields that were set,
+ * never the secret, the label or any other free text. Best-effort like every
+ * MCP audit write: the grant row itself already records who and when.
+ */
+async function writeGrantAudit(
+  db: DbClient,
+  entry: { action: string; entityId: string; actor: string; fields: string[]; extra?: Record<string, number> },
+): Promise<void> {
+  try {
+    await db.auditLog.create({
+      data: {
+        action: entry.action,
+        entity: "mcp_grant",
+        entityId: entry.entityId,
+        actor: entry.actor,
+        metadata: JSON.stringify({ via: "mcp-grants", fields: entry.fields, ...entry.extra }),
+      },
+    });
+  } catch {
+    /* audit is best-effort; it never decides whether a grant exists */
+  }
 }
 
 export async function createMcpAgentGrant(
@@ -174,6 +216,13 @@ export async function createMcpAgentGrant(
     await db.mcpAgentGrant.delete({ where: { id: row.id } }).catch(() => undefined);
     throw error;
   }
+  await writeGrantAudit(db, {
+    action: "mcp.grant_created.v1",
+    entityId: row.id,
+    actor: input.createdBy,
+    fields: ["label", "tools"],
+    extra: { toolCount: input.tools.length },
+  });
   return { grant: toView(row), secret };
 }
 
@@ -191,12 +240,24 @@ export async function revokeMcpAgentGrant(
   // The row is revoked first: ingress checks it on every request, so access
   // ends even if the identity write below is interrupted, and a retry of this
   // idempotent call finishes the binding revocation.
+  // Decided before the update: the row object must not be re-read afterwards.
+  const newlyRevoked = !existing.revokedAt;
   const row = existing.revokedAt
     ? existing
     : await db.mcpAgentGrant.update({
         where: { id },
         data: { revokedAt: new Date(), revokedBy },
       });
+  if (newlyRevoked) {
+    // Audited before the identity step: the revocation is real even if that
+    // step is interrupted. A repeated revoke writes no second row.
+    await writeGrantAudit(db, {
+      action: "mcp.grant_revoked.v1",
+      entityId: id,
+      actor: revokedBy,
+      fields: ["revokedAt", "revokedBy"],
+    });
+  }
   await revokeIdentity(id);
   return toView(row);
 }
