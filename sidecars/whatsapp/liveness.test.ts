@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { LivenessTracker, runLivenessProbe } from "./liveness";
+import { LivenessTracker, LoopLagProbe, runLivenessProbe, STALL_MS } from "./liveness";
 
 function clock(start = 1_000_000) {
   let current = start;
@@ -23,6 +23,8 @@ describe("LivenessTracker", () => {
       secSinceLastFrame: null,
       upserts: 0,
       secSinceLastUpsert: null,
+      lagMaxMs: 0,
+      stalls: 0,
     });
   });
 
@@ -61,6 +63,41 @@ describe("LivenessTracker", () => {
     tracker.noteUpserts(-2);
     tracker.noteUpserts(Number.NaN);
     expect(tracker.sample().secSinceLastUpsert).toBeNull();
+  });
+});
+
+describe("event-loop lag", () => {
+  it("reports the longest delay and counts only real stalls per window", () => {
+    const time = clock();
+    const tracker = new LivenessTracker(time.now);
+    tracker.noteLag(0);
+    tracker.noteLag(40);
+    tracker.noteLag(STALL_MS - 1);
+    tracker.noteLag(2_300);
+    tracker.noteLag(STALL_MS);
+    expect(tracker.sample()).toMatchObject({ lagMaxMs: 2_300, stalls: 2 });
+    expect(tracker.sample()).toMatchObject({ lagMaxMs: 0, stalls: 0 });
+  });
+
+  it("ignores impossible delays", () => {
+    const tracker = new LivenessTracker(clock().now);
+    tracker.noteLag(Number.NaN);
+    tracker.noteLag(-5);
+    tracker.noteLag(Number.POSITIVE_INFINITY);
+    expect(tracker.sample()).toMatchObject({ lagMaxMs: 0, stalls: 0 });
+  });
+
+  it("measures how late a timer runs, never negative", () => {
+    const time = clock();
+    const probe = new LoopLagProbe(500, time.now);
+    time.advance(500);
+    expect(probe.tick()).toBe(0);
+    time.advance(2_500);
+    expect(probe.tick()).toBe(2_000);
+    time.advance(300);
+    expect(probe.tick()).toBe(0);
+    time.advance(500);
+    expect(probe.tick()).toBe(0);
   });
 });
 

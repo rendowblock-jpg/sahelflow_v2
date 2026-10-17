@@ -1435,6 +1435,9 @@ function broadcast(event: SidecarEvent): void {
   }
 }
 
+// Opening the spool resolves its storage key (a synchronous PowerShell on
+// Windows) and verifies every queued record: record how long that takes here.
+const spoolStartedAt = performance.now();
 const inboundSpool = new WhatsAppInboundSpool({
   appUrl: APP_URL,
   bearerToken: SIDECAR_REST_TOKEN,
@@ -1444,6 +1447,10 @@ const inboundSpool = new WhatsAppInboundSpool({
     // WebSocket delivery is a low-latency projection only.
     broadcast({ type: "message", message: envelope.message });
   },
+});
+
+diagnostics.record("spool.ready", {
+  ms: Math.round(performance.now() - spoolStartedAt),
 });
 
 wa.subscribe((event) => {
