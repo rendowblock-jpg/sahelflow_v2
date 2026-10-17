@@ -23,6 +23,7 @@ import {
   getProfitabilityProjection,
   getProfitabilitySeries,
 } from "@/lib/accounting/profitability";
+import { sumMonthlyTotals, totalExpensesOf } from "@/lib/accounting/expense-totals";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import {
@@ -116,20 +117,13 @@ export default async function AccountingPage() {
     return {
       month: date.toLocaleDateString(dateLocale, { month: "short" }),
       revenue: month?.netRevenue ?? 0,
-      expenses:
-        (month?.cogs ?? 0) +
-        (month?.courierFees ?? 0) +
-        (month?.inventoryLosses ?? 0) +
-        (month?.operatingExpenses ?? 0) -
-        (month?.settlementAdjustments ?? 0),
+      expenses: totalExpensesOf(month),
     };
   });
-  const totalExpenses = profitability
-    ? profitability.courierFees +
-      profitability.inventoryLosses +
-      profitability.operatingExpenses -
-      profitability.settlementAdjustments
-    : null;
+  // MNY-06: one definition of "Expenses" (COGS included) for the card, every
+  // chart bar and the chart caption; the caption totals the plotted months.
+  const totalExpenses = profitability ? totalExpensesOf(profitability) : null;
+  const chartTotals = sumMonthlyTotals(monthlyData);
 
   return (
     <div className="app-content page-sections">
@@ -195,7 +189,7 @@ export default async function AccountingPage() {
 
           <ChartCard
             title={t("accounting.revenueVsExpenses")}
-            summary={`${t("accounting.netRevenue")}: ${formatDZD(profitability.netRevenue, locale)} · ${t("accounting.expenses")}: ${formatDZD(totalExpenses ?? 0, locale)}`}
+            summary={`${t("accounting.netRevenue")}: ${formatDZD(chartTotals.revenue, locale)} · ${t("accounting.expenses")}: ${formatDZD(chartTotals.expenses, locale)}`}
             icon={<TrendingUp className="size-4" />}
             config={{}}
           >
