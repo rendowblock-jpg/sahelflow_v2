@@ -4,13 +4,32 @@ import { useEffect, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
-import { needsLicensedServerTreeRefresh } from "@/components/license/license-boundary-state";
+import {
+  needsLicensedServerTreeRefresh,
+  resolveLicenseBoundaryState,
+} from "@/components/license/license-boundary-state";
 import { LicenseLockout } from "@/components/license/license-lockout";
 import { useI18n } from "@/hooks/use-i18n";
 import { useLicense } from "@/hooks/use-license";
+import type { LicenseClientProjection } from "@/stores/license-store";
 
-export function LicenseBoundary({ children }: { children: ReactNode }) {
-  const { projection, isLoading } = useLicense();
+export function LicenseBoundary({
+  children,
+  initialProjection,
+}: {
+  children: ReactNode;
+  /**
+   * The server layout's own, already validated projection. It stands in for the
+   * first paint only; anything fetched by the client replaces it.
+   */
+  initialProjection?: LicenseClientProjection;
+}) {
+  const license = useLicense();
+  const { projection, isLoading } = resolveLicenseBoundaryState({
+    storeProjection: license.projection,
+    storeIsLoading: license.isLoading,
+    serverProjection: initialProjection,
+  });
   const { t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
