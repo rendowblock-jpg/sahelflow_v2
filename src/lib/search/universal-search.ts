@@ -93,6 +93,147 @@ function recentBonus(value: UniversalSearchCandidate["updatedAt"]): number {
   return Math.max(0, 24 - Math.floor(ageDays));
 }
 
+export interface UniversalSearchScoreOptions {
+  /**
+   * Also accept words that are one or two typos away. Off by default: the
+   * strict tiers alone decide the normal pass. The server turns it on only for
+   * a search that found nothing.
+   */
+  fuzzy?: boolean;
+}
+
+const FUZZY_MIN_TOKEN_LENGTH = 4;
+const FUZZY_MAX_TOTAL_DISTANCE = 2;
+const FUZZY_BASE_SCORE = 540;
+const FUZZY_DISTANCE_PENALTY = 45;
+
+/**
+ * Edit distance (insert, delete, substitute and adjacent transposition) that
+ * gives up as soon as it must exceed `max`, so a miss costs almost nothing.
+ * Returns `max + 1` for "too far".
+ */
+export function boundedEditDistance(a: string, b: string, max: number): number {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let beforePrevious: number[] = new Array<number>(b.length + 1).fill(0);
+  let previous: number[] = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let row = 1; row <= a.length; row += 1) {
+    const current: number[] = new Array<number>(b.length + 1).fill(0);
+    current[0] = row;
+    let rowMinimum = row;
+    for (let column = 1; column <= b.length; column += 1) {
+      const cost = a.charCodeAt(row - 1) === b.charCodeAt(column - 1) ? 0 : 1;
+      let value = Math.min(
+        previous[column]! + 1,
+        current[column - 1]! + 1,
+        previous[column - 1]! + cost,
+      );
+      if (
+        row > 1 &&
+        column > 1 &&
+        a.charCodeAt(row - 1) === b.charCodeAt(column - 2) &&
+        a.charCodeAt(row - 2) === b.charCodeAt(column - 1)
+      ) {
+        value = Math.min(value, beforePrevious[column - 2]! + 1);
+      }
+      current[column] = value;
+      if (value < rowMinimum) rowMinimum = value;
+    }
+    if (rowMinimum > max) return max + 1;
+    beforePrevious = previous;
+    previous = current;
+  }
+  const distance = previous[b.length]!;
+  return distance > max ? max + 1 : distance;
+}
+
+function fuzzyBudget(length: number): number {
+  if (length >= 8) return 2;
+  return length >= FUZZY_MIN_TOKEN_LENGTH ? 1 : 0;
+}
+
+/**
+ * Closest candidate word to one typed word, or null when none is close enough.
+ * Digits never match loosely (a wrong phone digit is a different customer), a
+ * short word never does, and the first letter must agree: that single rule
+ * removes most false positives.
+ */
+function closestWordDistance(
+  typed: string,
+  words: readonly string[],
+): number | null {
+  const budget = fuzzyBudget(typed.length);
+  if (budget === 0 || /\d/u.test(typed)) return null;
+  let best: number | null = null;
+  for (const word of words) {
+    if (word.charCodeAt(0) !== typed.charCodeAt(0)) continue;
+    // Compare against the whole word and against its same-length start, so a
+    // typo in a word that is still being typed counts too.
+    const distance = Math.min(
+      boundedEditDistance(typed, word, budget),
+      boundedEditDistance(typed, word.slice(0, typed.length), budget),
+    );
+    if (distance <= budget && (best === null || distance < best)) best = distance;
+  }
+  return best;
+}
+
+function fuzzyScore(
+  queryTokens: readonly string[],
+  fields: readonly string[],
+): number {
+  if (queryTokens.length === 0 || queryTokens.length > 3) return 0;
+  const words = new Set<string>();
+  for (const field of fields) {
+    for (const word of field.split(" ")) if (word.length >= 3) words.add(word);
+  }
+  const candidateWords = [...words];
+  let totalDistance = 0;
+  let loose = false;
+  for (const typed of queryTokens) {
+    if (candidateWords.some((word) => word.startsWith(typed))) continue;
+    const distance = closestWordDistance(typed, candidateWords);
+    if (distance === null) return 0;
+    totalDistance += distance;
+    loose = true;
+  }
+  if (!loose || totalDistance > FUZZY_MAX_TOTAL_DISTANCE) return 0;
+  return FUZZY_BASE_SCORE - FUZZY_DISTANCE_PENALTY * totalDistance;
+}
+
+/**
+ * Shorter spellings of a query to try once when it found nothing. The longest
+ * word is cut to a prefix, because a typo is usually near the end of a word
+ * and the index answers prefixes: "mohamad" has no match, but "mohama" finds
+ * "Mohamed", which the caller then re-ranks by closeness to what was typed.
+ */
+export function typoBackoffQueries(rawQuery: string): string[] {
+  const tokens = normalizeSearchText(rawQuery).split(" ").filter(Boolean);
+  if (tokens.length === 0 || tokens.length > 3) return [];
+  let index = -1;
+  let longest = 0;
+  tokens.forEach((token, position) => {
+    if (!/\d/u.test(token) && token.length >= 5 && token.length > longest) {
+      longest = token.length;
+      index = position;
+    }
+  });
+  if (index < 0) return [];
+  const target = tokens[index]!;
+  const lengths = new Set(
+    [target.length - 1, Math.ceil(target.length * 0.6)].filter(
+      (length) => length >= 3 && length < target.length,
+    ),
+  );
+  return [...lengths]
+    .sort((left, right) => right - left)
+    .map((length) => {
+      const copy = [...tokens];
+      copy[index] = target.slice(0, length);
+      return copy.join(" ");
+    });
+}
+
 /**
  * Search quality authority. Exact primary matches dominate exact metadata,
  * prefixes dominate token/contains matches, and recency is only a bounded
@@ -102,6 +243,7 @@ function recentBonus(value: UniversalSearchCandidate["updatedAt"]): number {
 export function scoreUniversalSearchCandidate(
   rawQuery: string,
   candidate: UniversalSearchCandidate,
+  options: UniversalSearchScoreOptions = {},
 ): number {
   const query = normalizeSearchText(rawQuery);
   if (!query) return 0;
@@ -141,6 +283,13 @@ export function scoreUniversalSearchCandidate(
     score = 580;
   }
 
+  // Last and lowest tier: a word one or two typos away. Every strict tier
+  // above scores at least 580, this one at most 540, so a loose match can
+  // never outrank a real one.
+  if (score === 0 && options.fuzzy) {
+    score = fuzzyScore(queryTokens, [label, sublabel, ...keywords]);
+  }
+
   if (score === 0) return 0;
   return score + recentBonus(candidate.updatedAt) + (candidate.rankBoost ?? 0);
 }
@@ -168,6 +317,7 @@ export function rankUniversalSearchCandidates<T extends UniversalSearchCandidate
   query: string,
   candidates: readonly T[],
   limit: number,
+  options: UniversalSearchScoreOptions = {},
 ): Array<T & { score: number }> {
   if (!Number.isSafeInteger(limit) || limit <= 0) return [];
 
@@ -175,7 +325,7 @@ export function rankUniversalSearchCandidates<T extends UniversalSearchCandidate
     .map((candidate, index) => ({
       candidate,
       index,
-      score: scoreUniversalSearchCandidate(query, candidate),
+      score: scoreUniversalSearchCandidate(query, candidate, options),
     }))
     .filter((entry) => entry.score > 0)
     .sort(
