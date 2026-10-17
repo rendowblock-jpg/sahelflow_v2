@@ -1,12 +1,12 @@
 # SahelFlow — Final Roadmap
 
 > **Status:** Active dependency/completion program
-> **Last reconciled:** 2026-10-03 (protected `main` `4bebfd83…` / PR #484; re-resolve before acting)
+> **Last reconciled:** 2026-10-17 (re-resolve protected `main` before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Live protected main:** `4bebfd838fbaf814187b82e176623505f23b3ecd` after #484.
-> **Published signed package:** Internal.40 / FD-066 / `customer-online` (tag `sahelflow-v1.0.0-internal.40-6e96dafc…`, published 2026-10-02T15:05:29Z). Founder-authorized launch candidate, not Stable.
-> **Latest Founder-installed checkpoint:** Internal.40 / FD-066 (installed 2026-10-03, AppData preserved). Authority: `../operations/WORKING_MEMORY.md`.
-> **Current execution mode:** the Internal.40 installed-campaign source merged via #484; the separate Internal.41 release-authority PR (#485, FD-067) is open. Convert rows only on the installed Internal.41 observation. #306 logout LAST, then FRC-3 in order A→D→C→B.
+> **Protected `main`:** resolve it live from GitHub; this roadmap records order of work, not branch tips.
+> **Published signed package:** Internal.43 / FD-071 / `customer-online` (tag `sahelflow-v1.0.0-internal.43-3fa65206…`, published 2026-10-17T14:59:16Z). Founder-authorized launch candidate, not Stable.
+> **Latest recorded Founder-installed checkpoint:** Internal.41 (2026-10-08); Internal.43 is being installed in place. Authority: `../operations/WORKING_MEMORY.md`.
+> **Current execution mode:** the installed campaign on Internal.43 with state preserved, then FRC-3 in order A→D→C→B. Convert rows only on the installed observation. #306 logout LAST.
 
 This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
 
@@ -39,10 +39,11 @@ completed product/experience reconstruction
 → #411 behavioural UI evidence harness (render truth replaces source-text pinning on the agents/inbox surfaces)
 → FD-059 Internal.36 signed publication (#412/#413)
 → FD-060 Internal.37 signed publication (#423; Founder-installed 2026-09-11, visually rejected before campaign conversion; repairs merged as #424)
-→ FD-062 Internal.38 signed publication (#451; publication record #452) ← latest signed checkpoint; packages through #450 only
-→ source after publication, not in the MSI: #453, #458, #459/#454, #460, #461, #462, #463 (F-16…F-28), #464 (F-29…F-33) ← protected main `bc840ca7…`
-→ Founder packaging decision for a signed candidate that includes #464 if F-16…F-33 are in scope ← current gate
-→ FD-058 installed campaign once on that installed candidate (not on Internal.38 alone)
+→ FD-062 Internal.38 signed publication (#451)
+→ FD-065 Internal.39; FD-066 Internal.40 (customer-online licensing on the owned host sahelflow.com); FD-067 Internal.41
+→ FD-070 Internal.42 (WhatsApp durable dispatch, licence distribution, native splash, team access, walkthrough repairs)
+→ FD-071 Internal.43 (installed-audit repairs, messy-order extraction, SahelFlow-Setup.exe, window fix) published 2026-10-17 ← latest signed checkpoint
+→ Founder installs Internal.43 in place; FD-058 installed campaign once on that candidate ← current gate
 → FRC-3 Required capability/journey assurance ledger and demonstrated repairs (order A→D→C→B)
 → FRC-4 commerce official dev/test certification work
 → FRC-5 courier contract/sandbox or authorized-account certification work
@@ -65,8 +66,6 @@ Founder directive 2026-09-09 (whole-app transformation)
   (`../operations/TRANSFORMATION_HANDOFF.md` §4)
 ```
 
-Re-fetch open PRs before acting; there were no open PRs immediately after #414 merged.
-
 ## FD-048 batched source-first order
 
 The FD-048 cadence is historically complete: #316 merged through PR #319, #317 completed, and FRC-2 frozen. FD-049 (2026-08-27) superseded its release cadence for Internal.28, and each subsequent checkpoint has followed the same discipline — freeze one exact protected-main candidate, separate release authority, one signed successor, one preserved in-place update, one installed campaign. Keep every row classified by evidence level and preserve external blockers.
@@ -88,15 +87,14 @@ Completion confidence means:
 Owner: issue #306. Retained installed evidence: Internal.27 plus the
 Founder-installed Internal.28–Internal.34 campaigns (text/image/video send,
 automatic no-refresh inbound and reopen verified; every reproduced regression
-repaired on main). Published candidate: Internal.38 / FD-062 — authorized
-(FD-062, PR #451), signed and published 2026-09-16 with the #424–#450 frontier
-inside; the remaining work is the Founder in-place update and the FD-058
-re-verification campaign on that installed candidate.
+repaired on main). Published candidate: Internal.43 / FD-071 (published 2026-10-17), which
+carries the Internal.42 durable-dispatch line; the remaining work is the
+Founder in-place update and one installed campaign on it.
 
 Required sequence:
 
 1. retain Internal.27 QR/link/reopen, exact LID outbound and durable inbound evidence;
-2. treat #315 through #413 as packaged inside the published checkpoints;
+2. treat #315 and every later merged repair as packaged in the published checkpoints that contain them;
 3. verify the exact protected main behind the published candidate and update in place through the normal updater;
 4. preserve AppData, install/registry identity, keys and shop databases;
 5. verify exact installed version, normal launch and reopen;
@@ -217,9 +215,9 @@ Issue #226 is closed/completed. Its budgets remain regression criteria. Run focu
 
 ## Phase 8 — connected SahelFlow platform
 
-Connected source foundations exist, but customer-online authority does not. #230 remains open/reopened P1 and requires:
+Connected source foundations exist, and FD-066 (2026-10-01) put customer-online licensing on the owned host `sahelflow.com`. #230 remains open P1 for the evidence it still requires:
 
-- SahelFlow-owned production hostname;
+- the owned production hostname (provisioned: `sahelflow.com`);
 - resilient primary/recovery ingress;
 - bounded DNS/TCP/TLS/HTTP diagnostics and timeouts;
 - representative Algerian fixed/mobile evidence;
@@ -230,7 +228,7 @@ A `workers.dev` endpoint can support development but does not satisfy the sole p
 
 ## Phase 9 — release certification and launch readiness
 
-Internal.38 / FD-062 is the latest signed/published Internal Founder-offline checkpoint. Every Internal checkpoint from Internal.24 onward is an internal Founder-offline package: none is Beta or Stable, and none carries customer-online authority.
+Internal.43 / FD-071 is the latest signed/published Internal checkpoint. Internal.24 through Internal.39 were Founder-offline packages; Internal.40 onward carry the FD-066 customer-online launch authority on `sahelflow.com`. None is Beta or Stable.
 
 Stable still requires:
 
@@ -269,4 +267,4 @@ No force merge, waiver, protection bypass, updater-key weakening, Rust `--locked
 - Historical retained evidence set: issues #201, #214, #221, #226 and #230.
 - PR #250, PR #251 and `agent/internal-16-wave-4` remain history.
 - Internal.24 / FD-043 is the Founder-accepted installed checkpoint of that era.
-- Internal.25 / FD-044 through Internal.37 / FD-060 remain retained publication history; Internal.38 / FD-062 is the current signed/published authority.
+- Internal.25 / FD-044 through Internal.42 / FD-070 remain retained publication history; Internal.43 / FD-071 is the current signed/published authority.
