@@ -11,6 +11,7 @@ import {
 import {
   checkLoginRateLimit,
   getClientIp,
+  getConfirmationLimiterKey,
   recordLoginAttempt,
   recordLoginFailure,
   recordLoginSuccess,
@@ -25,8 +26,17 @@ const Schema = z.object({ pin: z.string().min(1, "PIN is required") });
 
 export const POST = withErrorHandler(async (req: Request) => {
   await requireReauthenticationEligibility();
+  // Audit metadata only (client-controlled): never a limiter key (IDN-01).
   const ip = getClientIp(req.headers);
-  const limit = checkLoginRateLimit(ip);
+  // The allowance belongs to the verified session whose PIN is being proven, so
+  // a forged forwarding header cannot buy a fresh one and another session's
+  // failures cannot spend it.
+  const authority = await getCurrentSessionAuthority();
+  if (authority.status !== "authenticated") {
+    throw new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
+  }
+  const limiterKey = getConfirmationLimiterKey(authority.sessionId);
+  const limit = checkLoginRateLimit(limiterKey);
   if (!limit.allowed) {
     // Audit S2-5: coded rejection bodies — exact English strings kept verbatim;
     // Retry-After headers preserved via NextResponse bodies.
@@ -44,19 +54,14 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   const parsed = Schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    recordLoginAttempt(ip);
+    recordLoginAttempt(limiterKey);
     return NextResponse.json(
       { error: "PIN is required", code: "REQUEST_VALIDATION_FAILED" },
       { status: 400 },
     );
   }
 
-  const authority = await getCurrentSessionAuthority();
-  if (authority.status !== "authenticated") {
-    throw new SahelFlowError("Unauthorized", "UNAUTHORIZED", 401);
-  }
-
-  recordLoginAttempt(ip);
+  recordLoginAttempt(limiterKey);
   const teamAttempt = await prepareTeamReauthentication(
     authority.sessionId,
     parsed.data.pin,
@@ -86,7 +91,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   }
 
   if (!reauthenticated) {
-    const failure = recordLoginFailure(ip);
+    const failure = recordLoginFailure(limiterKey);
     void auditLog(
       "auth.reauthenticate.failed",
       { reason: "pin_invalid", subject },
@@ -112,7 +117,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     );
   }
 
-  recordLoginSuccess(ip);
+  recordLoginSuccess(limiterKey);
   void auditLog(
     "auth.reauthenticate.success",
     { sessionRotated: true, subject },

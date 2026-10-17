@@ -11,6 +11,9 @@ import {
   checkLoginRateLimit,
   getClientIp,
   getLoginLimiterKey,
+  getMemberLoginLimiterKey,
+  getOwnerLoginLimiterKey,
+  holdFailedAttempt,
   recordLoginAttempt,
   recordLoginFailure,
   recordLoginSuccess,
@@ -57,11 +60,22 @@ export async function POST(request: Request) {
 }
 
 async function loginHandler(request: Request): Promise<NextResponse> {
+  const startedAt = Date.now();
   // Audit metadata only (client-controlled): kept for session/audit records.
   const ip = getClientIp(request.headers);
-  // Limiter bucket key (audit 7-a F14): loopback-consistent, not spoofable,
-  // so replayed x-forwarded-for values cannot rotate the bucket.
-  const limiterKey = getLoginLimiterKey(request.headers);
+
+  const parsed = LoginSchema.safeParse(await request.json().catch(() => ({})));
+
+  // Limiter bucket (audit 7-a F14, IDN-01, IDN-06): the ACCOUNT being tried,
+  // never a value the caller can rotate. The owner PIN and each team login id
+  // have their own allowance, so somebody else's failures cannot lock a correct
+  // credential out; a body that names no account goes to a shared bucket that
+  // no account depends on.
+  const limiterKey = !parsed.success
+    ? getLoginLimiterKey(request.headers)
+    : parsed.data.loginId
+      ? getMemberLoginLimiterKey(parsed.data.loginId)
+      : getOwnerLoginLimiterKey();
   const limit = checkLoginRateLimit(limiterKey);
   if (!limit.allowed) {
     return NextResponse.json(
@@ -76,7 +90,6 @@ async function loginHandler(request: Request): Promise<NextResponse> {
     );
   }
 
-  const parsed = LoginSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
     recordLoginAttempt(limiterKey);
     return NextResponse.json(
@@ -133,6 +146,7 @@ async function loginHandler(request: Request): Promise<NextResponse> {
     if (!grant) {
       const failure = recordLoginFailure(limiterKey);
       void auditLog("auth.login.failed", { reason: "member_credentials" }, ip);
+      await holdFailedAttempt(startedAt);
       if (!failure.allowed && failure.locked) {
         return NextResponse.json(
           {
@@ -184,6 +198,7 @@ async function loginHandler(request: Request): Promise<NextResponse> {
   if (!valid) {
     const failure = recordLoginFailure(limiterKey);
     void auditLog("auth.login.failed", { reason: "wrong_pin" }, ip);
+    await holdFailedAttempt(startedAt);
     if (!failure.allowed && failure.locked) {
       return NextResponse.json(
         {
