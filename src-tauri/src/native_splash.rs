@@ -29,6 +29,7 @@ const STATE_CLOSED: u8 = 4;
 
 static STATE: AtomicU8 = AtomicU8::new(STATE_IDLE);
 static CLOSE_REQUESTED: AtomicBool = AtomicBool::new(false);
+static QUIT_REQUESTED: AtomicBool = AtomicBool::new(false);
 static WINDOW: AtomicIsize = AtomicIsize::new(0);
 static STARTED_UNIX_MS: AtomicU64 = AtomicU64::new(0);
 static PAINTED_UNIX_MS: AtomicU64 = AtomicU64::new(0);
@@ -91,6 +92,12 @@ pub fn request_close() {
     CLOSE_REQUESTED.store(true, Ordering::SeqCst);
 }
 
+/// True once the seller closed the startup card. Closing it means "quit
+/// SahelFlow": it must never leave a launch running invisibly.
+pub fn quit_requested() -> bool {
+    QUIT_REQUESTED.load(Ordering::SeqCst)
+}
+
 /// A second launch while the workspace is still hidden brings the splash
 /// forward instead of doing nothing.
 pub fn bring_to_front() {
@@ -126,11 +133,27 @@ fn unix_milliseconds() -> u64 {
 // ---------------------------------------------------------------------------
 
 /// Logical size of the splash card in device-independent pixels.
-pub(crate) const CARD_WIDTH: f32 = 640.0;
-pub(crate) const CARD_HEIGHT: f32 = 380.0;
+pub(crate) const CARD_WIDTH: f32 = 600.0;
+pub(crate) const CARD_HEIGHT: f32 = 360.0;
+/// Transparent border around the card: room for its soft shadow.
+pub(crate) const SHADOW_MARGIN: f32 = 32.0;
+const SHADOW_STEPS: u32 = 12;
+const SHADOW_DROP: f32 = 8.0;
+const CARD_RADIUS: f32 = 26.0;
+const MARK_TOP: f32 = 44.0;
+const MARK_SIZE: f32 = 84.0;
+const MARK_CENTER_Y: f32 = MARK_TOP + MARK_SIZE / 2.0;
+const GLOW_RINGS: u32 = 18;
+const GLOW_RADIUS: f32 = 84.0;
+const RAIL_Y: f32 = 238.0;
+const RAIL_SPACING: f32 = 96.0;
+const ENTRANCE_MS: f32 = 220.0;
+const ENTRANCE_FLOOR: f32 = 0.55;
 const SLOW_HINT_AFTER_MS: f32 = 15_000.0;
 const FADE_OUT_MS: f32 = 170.0;
-const MAX_LIFETIME_MS: f32 = 10.0 * 60.0 * 1_000.0;
+/// A launch still starting after this long is a hang, not a slow start. The
+/// card stays until the workspace or the recovery document is visible.
+const MAX_LIFETIME_MS: f32 = 30.0 * 60.0 * 1_000.0;
 
 pub(crate) fn clamp01(value: f32) -> f32 {
     value.clamp(0.0, 1.0)
@@ -189,6 +212,17 @@ impl Progress {
     pub(crate) fn percent(&self) -> u32 {
         ((self.shown * 100.0).round() as u32).clamp(1, 99)
     }
+}
+
+/// The three honest stages on the card's rail (data, services, workspace):
+/// which one is current and how far through it the bar is.
+pub(crate) fn rail_state(phase: Phase, shown: f32) -> (usize, f32) {
+    let (index, low, high) = match phase {
+        Phase::Preparing => (0, 0.0, 0.43),
+        Phase::Starting | Phase::Retrying => (1, 0.43, 0.82),
+        Phase::Opening => (2, 0.82, 1.0),
+    };
+    (index, clamp01((shown - low) / (high - low)))
 }
 
 /// The trace on disk still holds the previous launch until this launch's
@@ -268,6 +302,7 @@ mod imp {
     const SKY: u32 = argb(255, 56, 189, 248);
     const SKY_DEEP: u32 = argb(255, 14, 165, 233);
     const OCEAN: u32 = argb(255, 3, 105, 161);
+    const WHITE: u32 = argb(255, 255, 255, 255);
 
     pub(super) fn bring_to_front(window: isize) {
         if window != 0 {
@@ -482,8 +517,16 @@ mod imp {
                 SetTimer(self.window, TIMER_ID, STEADY_FRAME_MS, None);
             }
 
+            // A short fade-in, so the card arrives instead of popping. It
+            // starts already visible: the first frame is never blank.
+            let entrance = if self.reduced_motion {
+                1.0
+            } else {
+                let arrival = ease_out_cubic(timeline(lifetime_ms, 0.0, ENTRANCE_MS));
+                ENTRANCE_FLOOR + (1.0 - ENTRANCE_FLOOR) * arrival
+            };
             self.paint();
-            self.present(clamp01(opacity));
+            self.present(clamp01(opacity * entrance));
             true
         }
 
@@ -514,45 +557,115 @@ mod imp {
             ReleaseDC(std::ptr::null_mut(), screen);
         }
 
+        /// Card space: logical pixels with the card's top-left at the origin.
+        unsafe fn reset_to_card_space(&self, g: *mut GpGraphics) {
+            GdipResetWorldTransform(g);
+            GdipScaleWorldTransform(g, self.scale, self.scale, MatrixOrderPrepend);
+            GdipTranslateWorldTransform(g, SHADOW_MARGIN, SHADOW_MARGIN, MatrixOrderPrepend);
+        }
+
         unsafe fn paint(&self) {
             let g = self.graphics;
             let t = self.elapsed_ms();
+            let rtl = self.locale == Locale::Ar;
+            let closing = quit_requested();
             GdipGraphicsClear(g, 0);
-            GdipResetWorldTransform(g);
-            GdipScaleWorldTransform(g, self.scale, self.scale, MatrixOrderPrepend);
+            self.reset_to_card_space(g);
 
-            // Quiet near-black card. One hairline, no glow blob.
-            let card = rounded_rect(0.5, 0.5, CARD_WIDTH - 1.0, CARD_HEIGHT - 1.0, 22.0);
+            // Soft shadow: stacked rounded rectangles, widest and faintest
+            // first, so the card floats instead of sitting flat on the desktop.
+            for step in (0..SHADOW_STEPS).rev() {
+                let spread = step as f32 * 2.0;
+                let shadow = rounded_rect(
+                    -spread,
+                    SHADOW_DROP - spread,
+                    CARD_WIDTH + spread * 2.0,
+                    CARD_HEIGHT + spread * 2.0,
+                    CARD_RADIUS + spread,
+                );
+                fill_solid(g, shadow, argb((14 - step) as u8, 0, 0, 0));
+                GdipDeletePath(shadow);
+            }
+
+            // Deep navy card with one hairline edge.
+            let card = rounded_rect(0.5, 0.5, CARD_WIDTH - 1.0, CARD_HEIGHT - 1.0, CARD_RADIUS);
             fill_vertical_gradient(
                 g,
                 card,
                 0.0,
                 CARD_HEIGHT,
-                argb(255, 16, 17, 20),
-                argb(255, 9, 10, 12),
+                argb(255, 15, 22, 38),
+                argb(255, 7, 11, 18),
             );
             let mut pen: *mut GpPen = std::ptr::null_mut();
-            GdipCreatePen1(argb(28, 255, 255, 255), 1.0, UnitPixel, &mut pen);
+            GdipCreatePen1(argb(33, 255, 255, 255), 1.0, UnitPixel, &mut pen);
             GdipDrawPath(g, pen, card);
             GdipDeletePen(pen);
             GdipDeletePath(card);
 
+            // Ambient light behind the mark: stacked, nearly transparent discs
+            // that fade in with the mark and breathe once it has settled.
+            let glow_in = ease_out_cubic(timeline(t, 0.0, 900.0));
+            let breathe = if self.reduced_motion {
+                1.0
+            } else {
+                0.9 + 0.1 * (t / 1_300.0).sin()
+            };
+            for ring in 0..GLOW_RINGS {
+                let radius = GLOW_RADIUS - ring as f32 * 5.0;
+                let tint = with_alpha(argb(4, 56, 189, 248), glow_in * breathe);
+                fill_disc(g, CARD_WIDTH / 2.0, MARK_CENTER_Y, radius, tint);
+            }
+
             self.paint_mark(g, t);
+
+            // One soft ring leaves the mark every few seconds once it settled.
+            if !self.reduced_motion && !closing && t > 1_500.0 {
+                let phase = ((t - 1_500.0) / 2_800.0) % 1.0;
+                let radius = 54.0 + 36.0 * ease_out_cubic(phase);
+                let fade = (1.0 - phase) * (1.0 - phase) * 0.3;
+                let ring = with_alpha(SKY, fade);
+                stroke_circle(g, CARD_WIDTH / 2.0, MARK_CENTER_Y, radius, 1.25, ring);
+            }
 
             let rise = |delay: f32| {
                 let p = ease_out_cubic(timeline(t, delay, 520.0));
                 (p, 6.0 * (1.0 - p))
             };
             let (word_alpha, word_dy) = rise(180.0);
-            self.paint_wordmark(g, 196.0 + word_dy, word_alpha);
+            self.paint_wordmark(g, 144.0 + word_dy, word_alpha);
 
-            let rtl = self.locale == Locale::Ar;
-            let (status_alpha, status_dy) = rise(280.0);
-            let status = match self.progress.phase {
-                Phase::Preparing => self.copy.preparing,
-                Phase::Starting => self.copy.starting,
-                Phase::Retrying => self.copy.retrying,
-                Phase::Opening => self.copy.opening,
+            let (tagline_alpha, tagline_dy) = rise(260.0);
+            let tagline = if rtl {
+                self.copy.tagline.to_string()
+            } else {
+                self.copy.tagline.to_uppercase()
+            };
+            draw_text(
+                g,
+                &tagline,
+                self.fonts.small,
+                self.center_format(rtl),
+                48.0,
+                190.0 + tagline_dy,
+                CARD_WIDTH - 96.0,
+                with_alpha(MUTED, tagline_alpha * 0.85),
+            );
+
+            let (rail_alpha, _) = rise(340.0);
+            let state = rail_state(self.progress.phase, self.progress.shown);
+            self.paint_rail(g, t, rtl, state, rail_alpha);
+
+            let (status_alpha, status_dy) = rise(380.0);
+            let status = if closing {
+                self.copy.closing
+            } else {
+                match self.progress.phase {
+                    Phase::Preparing => self.copy.preparing,
+                    Phase::Starting => self.copy.starting,
+                    Phase::Retrying => self.copy.retrying,
+                    Phase::Opening => self.copy.opening,
+                }
             };
             draw_text(
                 g,
@@ -560,48 +673,29 @@ mod imp {
                 self.fonts.body,
                 self.center_format(rtl),
                 48.0,
-                248.0 + status_dy,
+                256.0 + status_dy,
                 CARD_WIDTH - 96.0,
-                with_alpha(MUTED, status_alpha),
+                with_alpha(INK, status_alpha * 0.86),
             );
 
-            let (meter_alpha, _) = rise(340.0);
-            let track_width = 168.0;
+            // The honest bar: it only ever shows what the startup trace proved.
+            let (meter_alpha, _) = rise(440.0);
+            let track_width = 300.0;
             let track_x = (CARD_WIDTH - track_width) / 2.0;
-            let track_y = 292.0;
-            let track = rounded_rect(track_x, track_y, track_width, 2.0, 1.0);
-            fill_solid(
-                g,
-                track,
-                with_alpha(argb(255, 255, 255, 255), meter_alpha * 0.12),
-            );
+            let track_y = 290.0;
+            let track = rounded_rect(track_x, track_y, track_width, 3.0, 1.5);
+            fill_solid(g, track, with_alpha(WHITE, meter_alpha * 0.12));
             GdipDeletePath(track);
-            let fill_width = (track_width * self.progress.shown).max(2.0);
+            let fill_width = (track_width * self.progress.shown).max(3.0);
             let fill_x = if rtl {
                 track_x + track_width - fill_width
             } else {
                 track_x
             };
-            // A short sheen keeps the wait visibly alive while a stage band
-            // is still creeping. It does not advance the honest fill.
-            if !self.reduced_motion {
-                let travel = (t / 1_400.0) % 1.0;
-                let sheen_w = 28.0_f32;
-                let span = (track_width - sheen_w).max(0.0);
-                let sheen_x = if rtl {
-                    track_x + span * (1.0 - travel)
-                } else {
-                    track_x + span * travel
-                };
-                let sheen = rounded_rect(sheen_x, track_y, sheen_w, 2.0, 1.0);
-                fill_solid(
-                    g,
-                    sheen,
-                    with_alpha(argb(255, 255, 255, 255), meter_alpha * 0.45),
-                );
-                GdipDeletePath(sheen);
-            }
-            let fill = rounded_rect(fill_x, track_y, fill_width, 2.0, 1.0);
+            let halo = rounded_rect(fill_x, track_y - 2.0, fill_width, 7.0, 3.5);
+            fill_solid(g, halo, with_alpha(SKY, meter_alpha * 0.16));
+            GdipDeletePath(halo);
+            let fill = rounded_rect(fill_x, track_y, fill_width, 3.0, 1.5);
             fill_horizontal_gradient(
                 g,
                 fill,
@@ -611,9 +705,24 @@ mod imp {
                 with_alpha(SKY_LIGHT, meter_alpha),
             );
             GdipDeletePath(fill);
+            // A highlight travels along the filled part, so a long stage never
+            // looks frozen. It does not advance the honest fill.
+            let sheen_width = 36.0_f32;
+            if !self.reduced_motion && fill_width > sheen_width + 2.0 {
+                let travel = (t / 1_400.0) % 1.0;
+                let span = fill_width - sheen_width;
+                let sheen_x = if rtl {
+                    fill_x + span * (1.0 - travel)
+                } else {
+                    fill_x + span * travel
+                };
+                let sheen = rounded_rect(sheen_x, track_y, sheen_width, 3.0, 1.5);
+                fill_solid(g, sheen, with_alpha(WHITE, meter_alpha * 0.35));
+                GdipDeletePath(sheen);
+            }
 
             let lifetime_ms = self.shown_at.elapsed().as_secs_f32() * 1_000.0;
-            if lifetime_ms > SLOW_HINT_AFTER_MS {
+            if lifetime_ms > SLOW_HINT_AFTER_MS && !closing {
                 let hint_alpha = clamp01((lifetime_ms - SLOW_HINT_AFTER_MS) / 800.0);
                 draw_text(
                     g,
@@ -621,7 +730,7 @@ mod imp {
                     self.fonts.small,
                     self.center_format(rtl),
                     48.0,
-                    312.0,
+                    308.0,
                     CARD_WIDTH - 96.0,
                     with_alpha(FAINT, hint_alpha),
                 );
@@ -632,12 +741,73 @@ mod imp {
                 self.fonts.small,
                 self.fonts.center,
                 0.0,
-                348.0,
+                330.0,
                 CARD_WIDTH,
                 with_alpha(argb(140, 161, 168, 178), status_alpha),
             );
 
             GdipFlush(g, FlushIntentionSync);
+        }
+
+        /// The honest three-stage rail: data, services, workspace. Finished
+        /// stages are filled, the current one pulses, upcoming ones are hollow.
+        unsafe fn paint_rail(
+            &self,
+            g: *mut GpGraphics,
+            t: f32,
+            rtl: bool,
+            state: (usize, f32),
+            alpha: f32,
+        ) {
+            let (current, fraction) = state;
+            let middle = CARD_WIDTH / 2.0;
+            let mut stops = [middle - RAIL_SPACING, middle, middle + RAIL_SPACING];
+            if rtl {
+                stops.reverse();
+            }
+            for (segment, pair) in stops.windows(2).enumerate() {
+                let left = pair[0].min(pair[1]) + 9.0;
+                let right = pair[0].max(pair[1]) - 9.0;
+                let width = right - left;
+                let track = rounded_rect(left, RAIL_Y - 1.0, width, 2.0, 1.0);
+                fill_solid(g, track, with_alpha(WHITE, alpha * 0.12));
+                GdipDeletePath(track);
+                let done = match segment.cmp(&current) {
+                    std::cmp::Ordering::Less => 1.0,
+                    std::cmp::Ordering::Equal => fraction,
+                    std::cmp::Ordering::Greater => 0.0,
+                };
+                if done > 0.0 {
+                    let filled = (width * done).max(2.0);
+                    let x = if rtl { right - filled } else { left };
+                    let bar = rounded_rect(x, RAIL_Y - 1.0, filled, 2.0, 1.0);
+                    fill_solid(g, bar, with_alpha(SKY, alpha * 0.85));
+                    GdipDeletePath(bar);
+                }
+            }
+            let pulse = if self.reduced_motion {
+                0.0
+            } else {
+                0.5 + 0.5 * (t / 420.0).sin()
+            };
+            for (index, x) in stops.iter().enumerate() {
+                match index.cmp(&current) {
+                    std::cmp::Ordering::Less => {
+                        fill_disc(g, *x, RAIL_Y, 5.0, with_alpha(SKY, alpha));
+                        let core = with_alpha(argb(255, 6, 16, 28), alpha);
+                        fill_disc(g, *x, RAIL_Y, 1.9, core);
+                    }
+                    std::cmp::Ordering::Equal => {
+                        let halo = with_alpha(SKY, alpha * 0.16);
+                        fill_disc(g, *x, RAIL_Y, 10.0 + 2.0 * pulse, halo);
+                        fill_disc(g, *x, RAIL_Y, 5.0, with_alpha(SKY, alpha));
+                    }
+                    std::cmp::Ordering::Greater => {
+                        let outline = with_alpha(WHITE, alpha * 0.24);
+                        stroke_circle(g, *x, RAIL_Y, 4.5, 1.25, outline);
+                    }
+                }
+            }
         }
 
         fn center_format(&self, rtl: bool) -> *mut GpStringFormat {
@@ -652,10 +822,10 @@ mod imp {
         /// dot lands last. Geometry mirrors public/brand/sahelflow-logo.svg
         /// (viewBox 9 7 50 50).
         unsafe fn paint_mark(&self, g: *mut GpGraphics, t: f32) {
-            let size = 72.0_f32;
+            let size = MARK_SIZE;
             let unit = size / 50.0;
             let origin_x = CARD_WIDTH / 2.0 - size / 2.0 - 9.0 * unit;
-            let origin_y = 78.0 - 7.0 * unit;
+            let origin_y = MARK_TOP - 7.0 * unit;
             let hover = if self.reduced_motion {
                 0.0
             } else {
@@ -674,8 +844,7 @@ mod imp {
                 if p <= 0.0 {
                     return;
                 }
-                GdipResetWorldTransform(g);
-                GdipScaleWorldTransform(g, self.scale, self.scale, MatrixOrderPrepend);
+                self.reset_to_card_space(g);
                 GdipTranslateWorldTransform(g, origin_x, origin_y - hover, MatrixOrderPrepend);
                 GdipScaleWorldTransform(g, unit, unit, MatrixOrderPrepend);
                 GdipTranslateWorldTransform(g, pivot.0, pivot.1, MatrixOrderPrepend);
@@ -750,8 +919,7 @@ mod imp {
                 let radius = 3.1 * scale;
                 let dx = -6.0 * (1.0 - land);
                 let dy = 6.0 * (1.0 - land);
-                GdipResetWorldTransform(g);
-                GdipScaleWorldTransform(g, self.scale, self.scale, MatrixOrderPrepend);
+                self.reset_to_card_space(g);
                 GdipTranslateWorldTransform(g, origin_x, origin_y - hover, MatrixOrderPrepend);
                 GdipScaleWorldTransform(g, unit, unit, MatrixOrderPrepend);
                 let mut dot: *mut GpSolidFill = std::ptr::null_mut();
@@ -766,8 +934,7 @@ mod imp {
                 );
                 GdipDeleteBrush(dot.cast());
             }
-            GdipResetWorldTransform(g);
-            GdipScaleWorldTransform(g, self.scale, self.scale, MatrixOrderPrepend);
+            self.reset_to_card_space(g);
         }
 
         unsafe fn paint_wordmark(&self, g: *mut GpGraphics, y: f32, alpha: f32) {
@@ -808,6 +975,38 @@ mod imp {
         GdipCreateSolidFill(color, &mut brush);
         GdipFillPath(g, brush.cast(), path);
         GdipDeleteBrush(brush.cast());
+    }
+
+    unsafe fn fill_disc(g: *mut GpGraphics, x: f32, y: f32, radius: f32, color: u32) {
+        let mut brush: *mut GpSolidFill = std::ptr::null_mut();
+        GdipCreateSolidFill(color, &mut brush);
+        GdipFillEllipse(
+            g,
+            brush.cast(),
+            x - radius,
+            y - radius,
+            radius * 2.0,
+            radius * 2.0,
+        );
+        GdipDeleteBrush(brush.cast());
+    }
+
+    unsafe fn stroke_circle(
+        g: *mut GpGraphics,
+        x: f32,
+        y: f32,
+        radius: f32,
+        width: f32,
+        color: u32,
+    ) {
+        let mut path: *mut GpPath = std::ptr::null_mut();
+        GdipCreatePath(FillModeAlternate, &mut path);
+        GdipAddPathEllipse(path, x - radius, y - radius, radius * 2.0, radius * 2.0);
+        let mut pen: *mut GpPen = std::ptr::null_mut();
+        GdipCreatePen1(color, width, UnitPixel, &mut pen);
+        GdipDrawPath(g, pen, path);
+        GdipDeletePen(pen);
+        GdipDeletePath(path);
     }
 
     unsafe fn fill_vertical_gradient(
@@ -911,8 +1110,11 @@ mod imp {
             }
             // Dragging anywhere moves the splash, like a native splash card.
             WM_NCHITTEST => HTCAPTION as LRESULT,
+            // Closing the card (Alt+F4, the taskbar) means "quit SahelFlow". The
+            // card keeps showing "Closing" until the app stops; it never hides
+            // a launch that carries on invisibly.
             WM_CLOSE => {
-                CLOSE_REQUESTED.store(true, Ordering::SeqCst);
+                QUIT_REQUESTED.store(true, Ordering::SeqCst);
                 0
             }
             WM_DESTROY => {
@@ -1011,8 +1213,8 @@ mod imp {
 
         let dpi = GetDpiForSystem();
         let scale = if dpi == 0 { 1.0 } else { dpi as f32 / 96.0 };
-        let width = (CARD_WIDTH * scale).round() as i32;
-        let height = (CARD_HEIGHT * scale).round() as i32;
+        let width = ((CARD_WIDTH + SHADOW_MARGIN * 2.0) * scale).round() as i32;
+        let height = ((CARD_HEIGHT + SHADOW_MARGIN * 2.0) * scale).round() as i32;
         let position = placement(width, height);
         let title = wide(launch_screen::LAUNCH_WINDOW_TITLE);
         let window = CreateWindowExW(
@@ -1144,8 +1346,8 @@ mod imp {
         // Paint the first frame before the window becomes visible, so the
         // very first pixels are the card, never an empty rectangle.
         renderer.paint();
-        renderer.present(1.0);
         let reduced = renderer.reduced_motion;
+        renderer.present(if reduced { 1.0 } else { ENTRANCE_FLOOR });
         RENDERER.with(|cell| *cell.borrow_mut() = Some(renderer));
         WINDOW.store(window as isize, Ordering::SeqCst);
         ShowWindow(window, SW_SHOW);
@@ -1212,5 +1414,26 @@ mod tests {
             Some("ui-ready")
         );
         fs::remove_dir_all(&directory).unwrap();
+    }
+    #[test]
+    fn the_rail_tracks_the_three_honest_stages() {
+        assert_eq!(rail_state(Phase::Preparing, 0.0), (0, 0.0));
+        let (index, fraction) = rail_state(Phase::Starting, 0.6);
+        assert_eq!(index, 1);
+        assert!(fraction > 0.3 && fraction < 0.6, "got {fraction}");
+        assert_eq!(
+            rail_state(Phase::Retrying, 0.5).0,
+            1,
+            "a retry is still stage two"
+        );
+        let (index, fraction) = rail_state(Phase::Opening, 0.99);
+        assert_eq!(index, 2);
+        assert!(fraction > 0.9 && fraction <= 1.0, "got {fraction}");
+        assert_eq!(
+            rail_state(Phase::Preparing, 0.9).1,
+            1.0,
+            "never past the end of a stage"
+        );
+        assert_eq!(rail_state(Phase::Opening, 0.0).1, 0.0, "never negative");
     }
 }
