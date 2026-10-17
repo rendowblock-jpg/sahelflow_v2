@@ -2,9 +2,12 @@
  * AI chat tool framework.
  *
  * Tool registration is fail-closed through the Task 5 execution policy. Read
- * tools may execute in the agent loop. Sensitive tools may only create one
- * persisted proposal through the request-scoped proposal runtime. Blocked or
- * unclassified tools are never sent to Gemini and cannot execute.
+ * tools may execute in the agent loop, but only for an actor who holds the
+ * grants their data needs (see `read-access.ts`): the check runs here, before
+ * the tool body, against the actor of the current session. Sensitive tools may
+ * only create one persisted proposal through the request-scoped proposal
+ * runtime. Blocked or unclassified tools are never sent to Gemini and cannot
+ * execute. A refusal is a structured tool result, never a thrown error.
  */
 
 import type { z } from "zod";
@@ -17,8 +20,12 @@ import {
 } from "@/lib/ai/actions/contracts";
 import type { AiActionExecutionAuthority } from "@/lib/ai/actions/execution-authority";
 import { currentAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
+import type { Phase2Action } from "@/lib/identity/permissions";
+import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
 import type { ShopContext } from "@/lib/shops/context";
 import { SahelFlowError } from "@/types/errors";
+import { resolveChatReadAccess, withholdPaths } from "./read-access";
+import { aiToolRefusalResult, type AiToolRefusal } from "./tool-refusal";
 
 export interface ToolDefinition {
   name: string;
@@ -45,6 +52,13 @@ export interface ToolContext {
   sourceIdentity?: string;
   /** Stable identity of the persisted proposal. */
   sourceOrderId?: string;
+  /**
+   * Server-minted actor of the current chat session. The chat routes always
+   * set it; read tools are then limited to what this actor may open in the
+   * normal UI. Callers that authorize on their own before executing (the MCP
+   * surface resolves scopes per tool first) may omit it.
+   */
+  actor?: TrustedActorContext;
   /** Legacy sealed authority retained for source compatibility only. */
   aiActionExecution?: AiActionExecutionAuthority;
 }
@@ -53,6 +67,11 @@ export interface ToolResult {
   success: boolean;
   data?: unknown;
   error?: string;
+  /**
+   * Set only by the registry gate: the call was refused or the proposal could
+   * not be created. The agent turns it into a model-readable tool result.
+   */
+  refusal?: AiToolRefusal;
 }
 
 export interface ChatTool {
@@ -75,6 +94,46 @@ function legacyVitestHarness(): boolean {
   );
 }
 
+function refused(refusal: AiToolRefusal): ToolResult {
+  return {
+    success: false,
+    error: aiToolRefusalResult(refusal).error,
+    refusal,
+  };
+}
+
+/**
+ * Permission probe for one actor. Anything other than a plain "yes" is a "no":
+ * an invalid policy or an untrusted context must refuse, not throw out of the
+ * turn and not allow.
+ *
+ * The identity module is loaded on first use (it pulls in the session and
+ * database authority), so importing this registry stays as light as before for
+ * every caller that never passes an actor.
+ */
+async function permissionProbe(
+  actor: TrustedActorContext,
+): Promise<(action: Phase2Action) => boolean> {
+  const { trustedActionAllowed } = await import(
+    "@/lib/identity/authorization"
+  );
+  const resource = { shopId: actor.shop.shopId };
+  return (action) => {
+    try {
+      return trustedActionAllowed(actor, action, resource);
+    } catch {
+      return false;
+    }
+  };
+}
+
+/** Grants the proposal service demands before it creates a proposal. */
+function proposalPermissions(
+  required: readonly Phase2Action[],
+): Phase2Action[] {
+  return [...new Set<Phase2Action>(["approvals.request", "ai.use", ...required])];
+}
+
 export function registerTool(tool: ChatTool): void {
   const policy = getAiToolPolicy(tool.definition.name);
   const execute: ChatTool["execute"] = async (rawParams, context) => {
@@ -93,7 +152,23 @@ export function registerTool(tool: ChatTool): void {
       );
     }
     if (policy.executionClass !== "sensitive") {
-      return tool.execute(rawParams, context);
+      const actor = context.actor;
+      if (!actor) return tool.execute(rawParams, context);
+
+      const access = resolveChatReadAccess(
+        tool.definition.name,
+        await permissionProbe(actor),
+      );
+      if (!access.allowed) {
+        return refused({
+          code: "AI_TOOL_NOT_PERMITTED",
+          missingPermissions: access.missing,
+        });
+      }
+      const result = await tool.execute(rawParams, context);
+      return result.success && access.withheldPaths.length > 0
+        ? { ...result, data: withholdPaths(result.data, access.withheldPaths) }
+        : result;
     }
 
     // The body knows `confirmed` and refuses it. Return that refusal before
@@ -106,7 +181,26 @@ export function registerTool(tool: ChatTool): void {
       };
     }
 
+    // Malformed arguments keep their coded validation error (the routes map it
+    // to a 400), so parse first. Nothing is persisted before the check below.
     const params = parseSensitiveAiToolArgs(tool.definition.name, rawParams);
+
+    // A member who cannot request this action gets a readable refusal before
+    // any proposal is created (the proposal service checks the same grants
+    // again; this only makes the outcome a tool result).
+    const can = context.actor ? await permissionProbe(context.actor) : null;
+    if (can) {
+      const missing = proposalPermissions(policy.requiredPermissions).filter(
+        (action) => !can(action),
+      );
+      if (missing.length > 0) {
+        return refused({
+          code: "AI_PROPOSAL_NOT_PERMITTED",
+          missingPermissions: missing,
+        });
+      }
+    }
+
     const runtime = currentAiActionProposalRuntime();
     if (!runtime) {
       throw new SahelFlowError(
@@ -115,7 +209,29 @@ export function registerTool(tool: ChatTool): void {
         409,
       );
     }
-    const handle = await runtime.createProposal(tool.definition.name, params);
+    let handle: Awaited<ReturnType<typeof runtime.createProposal>>;
+    try {
+      handle = await runtime.createProposal(tool.definition.name, params);
+    } catch (error) {
+      // S06a-03: a coded refusal of the proposal service (missing grant, record
+      // not found, stale request message, ...) is something the model can
+      // explain to the seller. Server faults (5xx) and unexpected errors still
+      // propagate as internal errors.
+      if (error instanceof SahelFlowError && error.statusCode < 500) {
+        if (error.code === "ACTION_FORBIDDEN") {
+          return refused({
+            code: "AI_PROPOSAL_NOT_PERMITTED",
+            missingPermissions: can
+              ? proposalPermissions(policy.requiredPermissions).filter(
+                  (action) => !can(action),
+                )
+              : [],
+          });
+        }
+        return refused({ code: "AI_PROPOSAL_REJECTED", reasonCode: error.code });
+      }
+      throw error;
+    }
     return {
       success: true,
       data: {

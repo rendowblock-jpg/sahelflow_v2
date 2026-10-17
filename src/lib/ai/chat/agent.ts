@@ -28,6 +28,7 @@ import {
   getTool,
   type ToolContext,
 } from "./tools/registry";
+import { aiToolRefusalResult, isAiToolRefusalResult } from "./tools/tool-refusal";
 import "./tools/core-tools";
 import "./tools/extended-tools";
 import "./tools/advanced-tools";
@@ -144,6 +145,11 @@ type ToolExecutionResult = {
 type Content = { role: string; parts: Array<Record<string, unknown>> };
 
 function historySafeToolResult(toolName: string, value: unknown): unknown {
+  // Built only from constants (fixed sentence, vocabulary names, a coded
+  // reason) and validated exactly, so it carries no record content and cannot
+  // be forged by a tool body. It must reach the model as written: the generic
+  // serializer would reduce it to "Tool failed".
+  if (isAiToolRefusalResult(value)) return value;
   if (
     value &&
     typeof value === "object" &&
@@ -266,9 +272,14 @@ async function execute(
     };
   }
   const toolResult = await tool.execute(call.args, context);
-  const result = toolResult.success
-    ? toolResult.data
-    : { error: toolResult.error };
+  // A refusal from the registry gate (read not permitted, proposal refused or
+  // not creatable) is a constant, model-readable result so the model can tell
+  // the seller why; every other failure keeps the generic `{ error }` shape.
+  const result = toolResult.refusal
+    ? aiToolRefusalResult(toolResult.refusal)
+    : toolResult.success
+      ? toolResult.data
+      : { error: toolResult.error };
   if (isAiActionProposalToolResult(result)) {
     return {
       result: historySafeToolResult(call.name, result),
