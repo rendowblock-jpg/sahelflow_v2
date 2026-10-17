@@ -78,6 +78,20 @@ describe("Windows signed release build contract", () => {
     expect(workflow).toContain("SahelFlow-Setup.exe");
     expect(workflow).toContain("latest.json Setup.exe entry is not bound to the named download asset");
 
+    // The manifest entry for the renamed Setup.exe must carry the NSIS
+    // signature. tauri-action seeds `windows-x86_64` with the MSI entry, so
+    // rebinding only the URL ships a Setup.exe URL with the MSI signature
+    // (the Internal.43 signed train failed its manifest gate on exactly this).
+    expect(workflow).toContain(
+      "$record.signature = (Get-Content -LiteralPath $env:SF_SETUP_SIG_PATH -Raw).Trim()",
+    );
+    expect(workflow.indexOf("$record.signature =")).toBeGreaterThan(
+      workflow.indexOf("$record.url ="),
+    );
+    expect(workflow.indexOf("$record.signature =")).toBeLessThan(
+      workflow.indexOf("Install and prove signed runtime launch/reopen"),
+    );
+
     // /get/windows serves the Setup.exe and still honours MSI-only manifests.
     expect(worker).toContain("windows-x86_64-msi");
     expect(worker).toContain("\\.exe$");

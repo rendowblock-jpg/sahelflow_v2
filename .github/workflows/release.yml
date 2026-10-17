@@ -514,6 +514,14 @@ jobs:
           $record = $manifest.platforms.'windows-x86_64'
           if ($null -eq $record) { throw 'latest.json has no windows-x86_64 entry to bind to the Setup.exe name' }
           $record.url = "https://github.com/${{ github.repository }}/releases/download/$env:SF_RELEASE_TAG/SahelFlow-Setup.exe"
+          # tauri-action seeds `windows-x86_64` with the MSI entry
+          # (updaterJsonPreferNsis is false), so rebinding only the URL would
+          # leave the MSI signature on a Setup.exe URL and the updater would
+          # reject the download. Bind the NSIS signature of the renamed bytes.
+          $record.signature = (Get-Content -LiteralPath $env:SF_SETUP_SIG_PATH -Raw).Trim()
+          if ([string]::IsNullOrWhiteSpace($record.signature)) {
+            throw 'the Setup.exe updater signature is empty; refusing to rebind the manifest'
+          }
           $manifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $manifestPath -Encoding UTF8NoBOM
           gh release upload "$env:SF_RELEASE_TAG" $manifestPath --clobber
           if ($LASTEXITCODE -ne 0) { throw 'failed to rebind the updater manifest to the Setup.exe name' }
