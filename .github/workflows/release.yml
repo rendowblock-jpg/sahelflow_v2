@@ -92,7 +92,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify source is reachable from protected origin/main
+      - name: Verify source is the current tip of protected origin/main
         shell: pwsh
         env:
           SOURCE_SHA: ${{ inputs.source_ref }}
@@ -108,9 +108,18 @@ jobs:
           git cat-file -e "$env:SOURCE_SHA^{commit}"
           if ($LASTEXITCODE -ne 0) { throw 'source_ref is not a commit' }
 
-          git merge-base --is-ancestor $env:SOURCE_SHA refs/remotes/origin/main
-          if ($LASTEXITCODE -ne 0) {
-            throw 'source_ref is not reachable from protected origin/main'
+          $mainTip = (git rev-parse refs/remotes/origin/main).Trim()
+          if ($env:SOURCE_SHA -cne $mainTip) {
+            git merge-base --is-ancestor $env:SOURCE_SHA refs/remotes/origin/main
+            if ($LASTEXITCODE -ne 0) {
+              throw 'source_ref is not reachable from protected origin/main'
+            }
+            # GitHub refuses to create the draft release (403 'Resource not
+            # accessible by integration', about 20 minutes into the build) at
+            # a commit that protected main has already moved past. Observed with
+            # probe workflows during the Internal.43 release (PR 495); fail now,
+            # with the reason, instead of after the build.
+            throw "source_ref $env:SOURCE_SHA is not the current tip of protected main (${mainTip}). Main has moved past it, so GitHub would refuse to create the draft release for it. Dispatch the signed build from the current tip of main (the Dispatch signed internal version workflow always does) and do not merge to main while it runs."
           }
 
       - name: Attest clean exact source checkout
@@ -431,6 +440,20 @@ jobs:
           includeUpdaterJson: true
           updaterJsonPreferNsis: false
           args: --bundles msi,nsis
+
+      - name: Explain a failed draft release creation
+        if: ${{ failure() && steps.tauri.conclusion == 'failure' }}
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ inputs.source_ref }}
+        run: |
+          git fetch --force --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          $mainTip = (git rev-parse refs/remotes/origin/main).Trim()
+          if ($mainTip -cne $env:SOURCE_SHA) {
+            Write-Host "::error title=Protected main moved during the build::main moved from $env:SOURCE_SHA to ${mainTip} while this build ran. GitHub refuses to create the draft release at a commit that main has moved past. Do not retry this run; dispatch the signed build again from the current tip of main and do not merge to main while it runs."
+          } else {
+            Write-Host 'Protected main did not move during this build, so the moved-main condition does not explain the failure. Read the tauri-action output above.'
+          }
 
       - name: Verify staged packaged runtime reaches authenticated readiness
         run: bun run scripts/verify-windows-packaged-runtime.ts

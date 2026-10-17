@@ -98,6 +98,37 @@ describe("Windows signed release build contract", () => {
     expect(worker).toContain("\\.msi$");
   });
 
+  it("refuses a source that is not the current tip of main and explains a moved-main failure", () => {
+    const workflow = read(".github/workflows/release.yml");
+
+    // GitHub refuses to create the draft release at a commit that protected main
+    // has already moved past (403 "Resource not accessible by integration",
+    // reproduced with probe workflows during Internal.43). The train must fail in
+    // its first minutes with the reason, not 20 minutes into the build.
+    const tipGuard = workflow.indexOf(
+      "Verify source is the current tip of protected origin/main",
+    );
+    const attest = workflow.indexOf("Attest clean exact source checkout");
+    expect(tipGuard).toBeGreaterThan(-1);
+    expect(tipGuard).toBeLessThan(attest);
+    expect(workflow).toContain("$mainTip = (git rev-parse refs/remotes/origin/main).Trim()");
+    expect(workflow).toContain("is not the current tip of protected main");
+    // Equality with the tip replaces the ancestry-only check; unreachable
+    // sources keep their original message.
+    expect(workflow).toContain("source_ref is not reachable from protected origin/main");
+
+    // If main moves during the long build, the failure names the cause.
+    const build = workflow.indexOf("Build signed updater artifacts into a draft release");
+    const explain = workflow.indexOf("Explain a failed draft release creation");
+    const staged = workflow.indexOf(
+      "Verify staged packaged runtime reaches authenticated readiness",
+    );
+    expect(explain).toBeGreaterThan(build);
+    expect(explain).toBeLessThan(staged);
+    expect(workflow).toContain("failure() && steps.tauri.conclusion == 'failure'");
+    expect(workflow).toContain("Protected main moved during the build");
+  });
+
   it("verifies approved packaging drift but generates evidence from a clean exact worktree", () => {
     const workflow = read(".github/workflows/release.yml");
     const evidenceHelper = read("scripts/generate-release-evidence-worktree.ts");
