@@ -26,7 +26,10 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     req.nextUrl.searchParams.get("limit") ?? "16",
     10,
   );
-  const result = await searchUniversalRecords(query, requestedLimit);
+  // req.signal fires when the browser cancels the fetch (the seller typed the
+  // next letter), so a superseded search stops between phases instead of
+  // running to completion on the single server thread.
+  const result = await searchUniversalRecords(query, requestedLimit, req.signal);
   return NextResponse.json(result, {
     headers: {
       "Cache-Control": "no-store",
