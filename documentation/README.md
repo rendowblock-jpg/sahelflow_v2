@@ -1,6 +1,6 @@
 # SahelFlow documentation authority
 
-> **Status:** Active non-archive documentation entry point
+> **Status:** Active documentation entry point
 > **Last reconciled:** 2026-10-03 (protected `main` `4bebfd83…` after PR #484; re-resolve live before acting)
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Live protected main:** `4bebfd838fbaf814187b82e176623505f23b3ecd` / #484. Always re-resolve GitHub `main` before a write, review, merge, release or evidence claim
@@ -9,7 +9,7 @@
 > **Latest recorded installed checkpoint:** Internal.40 / FD-066 (Founder-installed 2026-10-03, AppData preserved). Campaign rows convert only on named observation
 > **Current next outcome:** the Internal.40 installed-campaign repair line merged via #484 (`4bebfd83…`); the Internal.41 release-authority PR (#485, FD-067) is open and merges only after its full Required battery including installed-MSI evidence. Campaign rules stay: one preserved in-place update, convert only proved rows, #306 logout LAST, then FRC-3 in order A→D→C→B
 
-This directory is the active documentation authority for SahelFlow. `documentation/archive/**` is historical evidence/context only and must not be treated as the current execution frontier.
+This directory is the documentation authority for SahelFlow. Superseded material is deleted rather than archived; git history is the record.
 
 ## Mandatory reading order
 
@@ -32,7 +32,7 @@ Reading order does not change authority precedence. A newer explicit Founder dec
 
 ## Security-evidence authority (single interpretation)
 
-`security/phase4-vulnerability-triage.json` is the live accepted-disposition authority (CycloneDX VEX input) only: it records accepted exceptions, mitigations and not-affected verdicts, and it never asserts that any exact head is vulnerability-free — an empty findings array means no disposition was accepted, nothing more. The only machine-proven exact-head audit truth is the blocking `bun audit --production` GitHub Actions check executed at the exact audited commit (`.github/workflows/ci.yml`, `.github/workflows/phase6-7-completion.yml`); the triage file does not duplicate or restate that run result. SBOM/VEX artifacts and their authority digests are generated deterministically by `scripts/generate-phase4-evidence.ts` and re-verified by `scripts/verify-phase4-closure.ts`; Rust advisory coverage rides the CycloneDX SBOM (resolved Cargo.lock components) under the explicit policy in the triage file. Historical Phase 4 material stays in `documentation/archive/phase4/` and is never promoted back into authority.
+`security/phase4-vulnerability-triage.json` is the live accepted-disposition authority (CycloneDX VEX input) only: it records accepted exceptions, mitigations and not-affected verdicts, and it never asserts that any exact head is vulnerability-free — an empty findings array means no disposition was accepted, nothing more. The only machine-proven exact-head audit truth is the blocking `bun audit --production` GitHub Actions check executed at the exact audited commit (`.github/workflows/ci.yml`, `.github/workflows/phase6-7-completion.yml`); the triage file does not duplicate or restate that run result. SBOM/VEX artifacts and their authority digests are generated deterministically by `scripts/generate-phase4-evidence.ts` and re-verified by `scripts/verify-phase4-closure.ts`; Rust advisory coverage rides the CycloneDX SBOM (resolved Cargo.lock components) under the explicit policy in the triage file. The Phase 4 evidence documents (`PHASE4_THREAT_MODEL.md`, `ALGERIA_LAW_18_07_MAPPING.md`, `PHASE4_INDEPENDENT_REVIEW.md`, `PHASE4_EVIDENCE_MATRIX.md`) live beside it in `security/`; `scripts/generate-phase4-evidence.ts` hashes them into the SBOM/VEX authority manifest.
 
 ## Current protected and signed truth
 

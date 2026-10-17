@@ -46,7 +46,7 @@ Authority precedence:
 6. Roadmap;
 7. this Workflow;
 8. Working Memory;
-9. Research/archive.
+9. Research and historical notes.
 
 Operational rules:
 

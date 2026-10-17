@@ -36,7 +36,7 @@ Do not re-open the transformation rows that were CORRECTED by evidence rather th
 6. Roadmap.
 7. Workflow.
 8. Working Memory.
-9. Research/archive.
+9. Research and historical notes.
 
 No lower layer silently weakens a higher one.
 
@@ -117,7 +117,7 @@ No certification, repair, transformation or release work may weaken:
 
 ## Documentation discipline
 
-`documentation/archive/**` is history/evidence only. Active non-archive documentation plus protected source/GitHub define current truth. `documentation/operations/WORKING_MEMORY.md` is the single compact resumable handoff; do not create a competing masterplan. `documentation/operations/TRANSFORMATION_HANDOFF.md` is subordinate to it and scoped to the transformation program only.
+Superseded documentation is deleted, not archived; git history is the record. The documentation under `documentation/` plus protected source/GitHub define current truth. `documentation/operations/WORKING_MEMORY.md` is the single compact resumable handoff; do not create a competing masterplan. `documentation/operations/TRANSFORMATION_HANDOFF.md` is subordinate to it and scoped to the transformation program only.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

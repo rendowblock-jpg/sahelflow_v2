@@ -857,9 +857,7 @@ Do not ship:
 
 ## Consolidation provenance
 
-The full pre-consolidation
-[Experience and Frontend Constitution](../archive/experience/EXPERIENCE_FRONTEND_CONSTITUTION-2026-07-15.md)
-and
-[Journey and State Atlas](../archive/experience/JOURNEY_STATE_ATLAS-2026-07-15.md)
-are retained as dated design evidence. This document adopts their durable
-requirements and is the current authority when wording or scope differs.
+This document consolidates the earlier Experience and Frontend Constitution and
+Journey and State Atlas (2026-07-15) and adopts their durable requirements. Those
+snapshots were retired from the working tree; they remain in git history. Where
+any recovered wording differs, this document is the authority.

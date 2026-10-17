@@ -95,4 +95,4 @@ Unverified integrations remain hidden, disabled or explicitly conditional. A pro
 - Preserve Founder AppData, registry/install identity, keys, shop databases and retained evidence.
 - Heavy builds, Rust, MSI and complete validation run in GitHub Actions; this machine is for lightweight inspection, bounded edits and real installed/provider observation.
 
-`documentation/archive/**` is historical evidence/context only. Active non-archive documentation plus live protected source/GitHub define current execution truth.
+Superseded documentation is deleted, not archived; git history is the record. The documentation under `documentation/` plus live protected source/GitHub define current execution truth.

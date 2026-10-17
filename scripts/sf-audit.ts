@@ -120,7 +120,6 @@ function walkMarkdown(directory: string): string[] {
     const relativePath = absolutePath
       .slice(repoRoot.length + 1)
       .replaceAll("\\", "/");
-    if (relativePath.startsWith("documentation/archive/")) continue;
     const metadata = statSync(absolutePath);
     if (metadata.isDirectory()) output.push(...walkMarkdown(absolutePath));
     else if (extname(name).toLowerCase() === ".md") output.push(absolutePath);
@@ -247,6 +246,7 @@ const forbiddenActivePaths = [
   "documentation/history/README.md",
   "documentation/history/LEGACY_SESSION_CHANGELOG.md",
   "documentation/research/MASTER_GAP_ANALYSIS.md",
+  "documentation/archive",
 ];
 
 for (const relativePath of forbiddenActivePaths) {
@@ -263,11 +263,11 @@ const markdownFiles = walkMarkdown(repoRoot);
 const activeDocumentationFiles = walkMarkdown(
   resolve(repoRoot, "documentation"),
 );
-if (activeDocumentationFiles.length !== 21) {
+if (activeDocumentationFiles.length !== 25) {
   report(
     "drift",
     "documentation/",
-    `expected 21 active Markdown files, found ${activeDocumentationFiles.length}`,
+    `expected 25 active Markdown files, found ${activeDocumentationFiles.length}`,
   );
 }
 

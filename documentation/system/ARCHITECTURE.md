@@ -888,14 +888,11 @@ This specification does not authorize:
 - unlimited included resources;
 - product-funded general Gemini inference;
 - provider scope merely because adapter code exists;
+- security-equivalence claims for modified Windows without evidence.
 
 ## Consolidation provenance
 
-The detailed pre-consolidation
-[superseding ADR register](../archive/architecture/SUPERSEDING_ADRS-2026-07-15.md)
-and
-[Internal.5-era updater trust contract](../archive/architecture/UPDATER_RELEASE_CONTRACT-internal5-era.md)
-remain available as dated rationale/evidence. This document incorporates the
-governing decisions and supersedes those snapshots when wording or current
-state differs.
-- security-equivalence claims for modified Windows without evidence.
+This document consolidates the earlier superseding-ADR register (2026-07-15) and
+the Internal.5-era updater trust contract, and incorporates their governing
+decisions. Those snapshots were retired from the working tree; they remain in git
+history. Where any recovered wording differs, this document is the authority.
