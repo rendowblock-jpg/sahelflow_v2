@@ -1,0 +1,382 @@
+name: CI failure digest
+
+# When a gated workflow fails, post the failing output on the pull request.
+# That text otherwise lives only in the Actions web UI, which reviewers working
+# through the API (including coding agents) cannot read.
+#
+# Per failed job it shows:
+# - the output printed just before each error marker. A step that fails with a
+#   message (PowerShell throw, bash echo, a test runner summary) prints it
+#   BEFORE the runner's generic "Process completed with exit code N" marker, so
+#   the marker alone says nothing;
+# - lines that look like compiler, test or lint failures;
+# - a collapsed tail of the log.
+# A step set to continue past its failure (continue-on-error) is covered too:
+# it looks green in the UI, but its error marker is still in the log.
+#
+# Safety posture:
+# - It never checks out or executes pull-request code. Its only inputs are API
+#   responses about runs of this repository.
+# - Runs from other repositories are ignored.
+# - It can read Actions data and write pull-request comments. Nothing else.
+# - Log lines are bounded and ANSI-stripped, and token-shaped strings are
+#   redacted. (Actions already masks registered secrets before storing a log.)
+#
+# Manual use: Actions -> CI failure digest -> Run workflow, with the id of a run
+# that already finished (the number in the run's URL). Leave the pull request
+# blank to use the run's own pull request.
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - Phase 5 Experience Gate
+      - Phase 6-7 Completion Gate
+      - Build Signed Internal Windows Update
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Id of a finished workflow run (the number in its URL)
+        required: true
+        type: string
+      pr_number:
+        description: Pull request to comment on (blank = the run's own pull request)
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: ci-failure-digest-${{ github.event.workflow_run.id || inputs.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    name: Post failure digest
+    if: ${{ github.event_name == 'workflow_dispatch' || (contains(fromJSON('["failure","timed_out"]'), github.event.workflow_run.conclusion) && github.event.workflow_run.head_repository.full_name == github.repository) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Post the digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+          PR_OVERRIDE: ${{ inputs.pr_number }}
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+          REPO = os.environ["REPO"]
+          RUN_ID = os.environ["RUN_ID"].strip()
+          PR_OVERRIDE = os.environ.get("PR_OVERRIDE", "").strip()
+          MANUAL = os.environ.get("MANUAL") == "true"
+
+          if not re.fullmatch(r"[0-9]{1,20}", RUN_ID):
+              sys.exit("The run id must be numeric.")
+          if PR_OVERRIDE and not re.fullmatch(r"[0-9]{1,9}", PR_OVERRIDE):
+              sys.exit("The pull request number must be numeric.")
+
+          MAX_JOBS = 4        # failed jobs shown per run
+          MAX_BLOCKS = 6      # error markers shown per job
+          MAX_BEFORE = 30     # output lines kept before each error marker
+          MAX_SIGNALS = 30    # failure-looking lines (compiler, test, lint) per job
+          MAX_TAIL = 40       # closing lines of the job log
+          LINE_CAP = 800      # characters per line
+          JOB_CAP = 13000     # characters per failed job
+          BODY_CAP = 58000    # GitHub rejects comments over 65536 characters
+
+          ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+          STAMP = re.compile(r"^\ufeff?\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z ")
+          TOKEN = re.compile(
+              r"gh[pousr]_[A-Za-z0-9]{20,}"
+              r"|github_pat_[A-Za-z0-9_]{20,}"
+              r"|AKIA[0-9A-Z]{16}"
+              r"|-----BEGIN [A-Z ]*PRIVATE KEY-----"
+              r"|(?i:bearer)\s+[A-Za-z0-9._~+/=-]{24,}"
+          )
+          # Strong signals: a tool said something failed. Weak signals are exception names
+          # that passing tests also print, so they are shown only when nothing stronger exists.
+          STRONG = re.compile(
+              r"\berror TS\d+:"
+              r"|^\s*(?:FAIL|FAILED)\b"
+              r"|^\s*[\u00d7\u2717\u2718]\s"
+              r"|\berror\[E\d{4}\]"
+              r"|^error: "
+              r"|^\s*\d+:\d+\s+error\s"
+              r"|^Exception: "
+          )
+          WEAK = re.compile(r"\b(?:AssertionError|TypeError|ReferenceError|SyntaxError)\b")
+
+
+          def gh(*args, stdin=None):
+              done = subprocess.run(
+                  ["gh", *args],
+                  input=stdin,
+                  capture_output=True,
+                  encoding="utf-8",
+                  errors="replace",
+              )
+              if done.returncode != 0:
+                  raise RuntimeError(f"gh {' '.join(args[:2])} failed: {done.stderr.strip()[:300]}")
+              return done.stdout
+
+
+          def json_values(text):
+              decoder = json.JSONDecoder()
+              text = text.strip()
+              index = 0
+              while index < len(text):
+                  value, index = decoder.raw_decode(text, index)
+                  yield value
+                  while index < len(text) and text[index].isspace():
+                      index += 1
+
+
+          def clean(line):
+              line = STAMP.sub("", line.rstrip("\r\n"))
+              line = ANSI.sub("", line)
+              line = TOKEN.sub("[redacted]", line)
+              if len(line) > LINE_CAP:
+                  line = line[:LINE_CAP] + " ...[line truncated]"
+              return line
+
+
+          def label(text):
+              return re.sub(r"[<>`]", "", text)
+
+
+          def fence(text):
+              longest = max((len(run) for run in re.findall(r"`+", text)), default=0)
+              ticks = "`" * max(3, longest + 1)
+              return f"{ticks}text\n{text}\n{ticks}"
+
+
+          def close_open_fence(text):
+              open_ticks = None
+              for line in text.splitlines():
+                  match = re.match(r"^(`{3,})(.*)$", line)
+                  if not match:
+                      continue
+                  if open_ticks is None:
+                      open_ticks = match.group(1)
+                  elif len(match.group(1)) >= len(open_ticks) and not match.group(2).strip():
+                      open_ticks = None
+              return text + ("\n" + open_ticks if open_ticks else "")
+
+
+          def fit(lines, budget, keep_end=False):
+              chosen, used = [], 0
+              for line in reversed(lines) if keep_end else lines:
+                  cost = len(line) + 1
+                  if chosen and used + cost > budget:
+                      break
+                  chosen.append(line)
+                  used += cost
+              if keep_end:
+                  chosen.reverse()
+              if len(chosen) < len(lines):
+                  if keep_end:
+                      chosen = ["...[earlier lines omitted]"] + chosen
+                  else:
+                      chosen = chosen + ["...[more lines omitted]"]
+              return chosen, used
+
+
+          def summarize(raw):
+              lines = [clean(line) for line in raw.splitlines()]
+
+              # A step that fails with a message (PowerShell throw, bash echo, a test runner
+              # summary) prints that message BEFORE the runner adds its generic
+              # "##[error]Process completed with exit code N" marker, so the output ahead of
+              # each marker is what matters. A step's own output starts after its last
+              # "##[endgroup]" (the group holds the script and environment).
+              markers = [i for i, line in enumerate(lines) if "##[error]" in line]
+              chosen = markers if len(markers) <= MAX_BLOCKS else markers[: MAX_BLOCKS - 1] + markers[-1:]
+              blocks, covered = [], 0
+              for index in chosen:
+                  start = index
+                  while start > covered and index - start < MAX_BEFORE:
+                      previous = lines[start - 1]
+                      if "##[endgroup]" in previous or "##[group]" in previous:
+                          break
+                      start -= 1
+                  before = [text for text in lines[start:index] if text.strip() and "##[" not in text]
+                  title = ""
+                  for back in range(start - 1, max(-1, start - 3000), -1):
+                      if "##[group]" in lines[back]:
+                          title = lines[back].split("##[group]", 1)[1].strip()
+                          break
+                  message = lines[index].split("##[error]", 1)[1].strip()
+                  blocks.append({"title": title[:160], "before": before, "message": message})
+                  covered = index + 1
+
+              shown = {text.strip() for block in blocks for text in block["before"] + [block["message"]]}
+              strong, weak, seen = [], [], set()
+              for line in lines:
+                  text = line.strip()
+                  if not text or text in seen or text in shown:
+                      continue
+                  if STRONG.search(line):
+                      seen.add(text)
+                      strong.append(text)
+                      if len(strong) >= MAX_SIGNALS:
+                          break
+                  elif WEAK.search(line) and len(weak) < 10:
+                      seen.add(text)
+                      weak.append(text)
+              visible = [
+                  text for text in lines
+                  if text.strip() and "##[group]" not in text and "##[endgroup]" not in text
+              ]
+              return blocks, len(markers) - len(chosen), strong or weak, visible[-MAX_TAIL:]
+
+
+          def render(item, include_tail):
+              parts = [f"**{item['name']}** - failed step: {item['steps']} - [job log]({item['url']})"]
+              budget = JOB_CAP
+              if item["problem"]:
+                  parts.append(f"_{label(item['problem'])}_")
+              for block in item["blocks"]:
+                  heading = "Output just before an error marker"
+                  title = label(block["title"]).strip()
+                  if title:
+                      heading += f" (step: `{title}`)"
+                  kept, used = fit(block["before"] + ["[error] " + block["message"]], max(budget, 400), keep_end=True)
+                  budget -= used
+                  parts.append(heading + ":\n" + fence("\n".join(kept)))
+              if item["omitted"]:
+                  parts.append(f"({item['omitted']} more error markers omitted)")
+              if item["signals"] and budget > 400:
+                  kept, used = fit(item["signals"], budget)
+                  budget -= used
+                  parts.append("Lines that look like failures:\n" + fence("\n".join(kept)))
+              if include_tail and item["tail"] and budget > 600:
+                  kept, used = fit(item["tail"], budget, keep_end=True)
+                  parts.append("<details><summary>Last log lines</summary>\n\n" + fence("\n".join(kept)) + "\n\n</details>")
+              return "\n\n".join(parts)
+
+
+          run = json.loads(gh("api", f"repos/{REPO}/actions/runs/{RUN_ID}"))
+          head_repo = (run.get("head_repository") or {}).get("full_name")
+          if not MANUAL and head_repo != REPO:
+              print("Ignoring a run that belongs to another repository.")
+              sys.exit(0)
+          if run.get("status") != "completed":
+              sys.exit("That run has not finished yet.")
+
+          pr_number = PR_OVERRIDE
+          if not pr_number and run.get("pull_requests"):
+              pr_number = str(run["pull_requests"][0]["number"])
+          if not pr_number:
+              found = json.loads(
+                  gh(
+                      "api",
+                      f"repos/{REPO}/commits/{run['head_sha']}/pulls",
+                      "--jq",
+                      "[.[] | {number, state, merged_at}]",
+                  )
+              )
+              open_prs = [p for p in found if p["state"] == "open"]
+              merged = sorted(
+                  (p for p in found if p.get("merged_at")),
+                  key=lambda p: p["merged_at"],
+                  reverse=True,
+              )
+              pick = (open_prs or merged or [None])[0]
+              if pick:
+                  pr_number = str(pick["number"])
+          if not pr_number:
+              print("No pull request is associated with this run; nothing to comment on.")
+              sys.exit(0)
+
+          jobs = json.loads(
+              gh("api", f"repos/{REPO}/actions/runs/{RUN_ID}/jobs?filter=latest&per_page=100")
+          )["jobs"]
+          failed = [j for j in jobs if j.get("conclusion") in ("failure", "timed_out")]
+          specific = [j for j in failed if not j["name"].startswith("Required ")]
+          shown_jobs = (specific or failed)[:MAX_JOBS]
+          if not shown_jobs:
+              print("The run has no failed jobs; nothing to digest.")
+              sys.exit(0)
+
+          findings = []
+          for job in shown_jobs:
+              steps = [
+                  s["name"] for s in job.get("steps", [])
+                  if s.get("conclusion") in ("failure", "timed_out")
+              ]
+              item = {
+                  "name": label(job["name"]),
+                  "url": job["html_url"],
+                  "steps": label(", ".join(steps)) if steps else "not recorded",
+                  "blocks": [], "omitted": 0, "signals": [], "tail": [], "problem": "",
+              }
+              try:
+                  blocks, omitted, signals, tail = summarize(
+                      gh("api", f"repos/{REPO}/actions/jobs/{job['id']}/logs")
+                  )
+                  item.update(blocks=blocks, omitted=omitted, signals=signals, tail=tail)
+              except Exception as error:
+                  item["problem"] = f"The job log could not be read: {error}"
+              findings.append(item)
+
+          workflow = label(run.get("name") or "workflow")
+          head = run["head_sha"]
+          key = re.sub(r"[^A-Za-z0-9]+", "-", workflow).strip("-") + ":" + head[:12]
+          marker = f"<!-- sf-ci-failure-digest:{key} -->"
+          header = (
+              f"{marker}\n"
+              f"### CI failure digest - {workflow}\n"
+              f"Run [{RUN_ID}]({run['html_url']}), attempt {run.get('run_attempt', 1)}, "
+              f"head `{head[:8]}`. Posted by the *CI failure digest* workflow so the failing "
+              "text can be read without the Actions UI. Lines are trimmed and token-shaped "
+              "strings are redacted. A step set to continue past its failure still shows up "
+              "here, because its error marker is in the log even when the step looks green.\n\n"
+          )
+
+
+          def build(include_tail):
+              return header + "\n\n".join(render(item, include_tail) for item in findings)
+
+
+          body = build(True)
+          if len(body) > BODY_CAP:
+              body = build(False)
+          if len(body) > BODY_CAP:
+              body = close_open_fence(body[:BODY_CAP]) + "\n\n(digest truncated)"
+
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as handle:
+                  handle.write(body + "\n")
+
+          existing = None
+          listing = gh(
+              "api", "--paginate", f"repos/{REPO}/issues/{pr_number}/comments?per_page=100",
+              "--jq", ".[] | {id, user: .user.login, body}",
+          )
+          for comment in json_values(listing):
+              if comment["user"] == "github-actions[bot]" and marker in comment["body"]:
+                  existing = comment["id"]
+
+          payload = json.dumps({"body": body})
+          if existing:
+              gh("api", "--method", "PATCH", f"repos/{REPO}/issues/comments/{existing}",
+                 "--input", "-", stdin=payload)
+              print(f"Updated digest comment {existing} on #{pr_number}.")
+          else:
+              gh("api", "--method", "POST", f"repos/{REPO}/issues/{pr_number}/comments",
+                 "--input", "-", stdin=payload)
+              print(f"Posted a digest on #{pr_number}.")
+          PY
