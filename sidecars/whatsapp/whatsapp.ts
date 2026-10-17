@@ -420,6 +420,20 @@ export class WhatsAppManager {
     this.sock.ev.on("connection.update", (update) => {
       const { connection, qr, lastDisconnect } = update;
 
+      // When the provider says it has delivered the messages that arrived
+      // while this device was offline, and whether the device is online.
+      if (
+        update.receivedPendingNotifications !== undefined ||
+        update.isOnline !== undefined ||
+        update.isNewLogin !== undefined
+      ) {
+        diagnostics.record("connection.update", {
+          receivedPendingNotifications: update.receivedPendingNotifications,
+          isOnline: update.isOnline,
+          isNewLogin: update.isNewLogin,
+        });
+      }
+
       if (qr) {
         this.currentQr = qr;
         this.status = "qr";

@@ -30,7 +30,7 @@ import {
   type SidecarEvent,
 } from "./whatsapp";
 import { declaredOutboundMimeType } from "./outbound-media-mime";
-import { diagnostics } from "./diagnostics-log";
+import { describeError, diagnostics } from "./diagnostics-log";
 
 const configuredPort = Number.parseInt(process.env.SIDECAR_PORT ?? "3001", 10);
 if (!Number.isInteger(configuredPort) || configuredPort < 1 || configuredPort > 65535) {
@@ -1461,6 +1461,12 @@ wa.subscribe((event) => {
       console.warn(
         `[sahelflow-whatsapp-sidecar] skipping non-individual inbound jid ${event.message.key.remoteJid ?? "<empty>"}`,
       );
+      // The packaged desktop discards the console. Only the part after the
+      // "@" is recorded (g.us, broadcast, newsletter, ...): never an identity.
+      diagnostics.record("inbound.dropped", {
+        reason: "non-individual-jid",
+        jidKind: (event.message.key.remoteJid ?? "").split("@")[1] ?? "none",
+      });
     }
     return;
   }
@@ -1469,6 +1475,12 @@ wa.subscribe((event) => {
     console.error(
       "[sahelflow-whatsapp-sidecar] refusing inbound publication without paired account authority",
     );
+    // This message is gone for good: the provider will not resend what it has
+    // already acknowledged. It must never vanish without a trace.
+    diagnostics.record("inbound.dropped", {
+      reason: "no-paired-account",
+      connection: status.status,
+    });
     return;
   }
   try {
@@ -1480,6 +1492,7 @@ wa.subscribe((event) => {
       "[sahelflow-whatsapp-sidecar] failed to durably spool inbound message",
       error instanceof Error ? error.message : String(error),
     );
+    diagnostics.record("inbound.spool-failed", describeError(error));
   }
 });
 inboundSpool.start();
