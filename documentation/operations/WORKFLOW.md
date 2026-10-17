@@ -1,10 +1,10 @@
 # SahelFlow — Research, coding, review and delivery workflow
 
 > **Status:** Active operating contract
-> **Last consolidated:** 2026-08-26
+> **Last consolidated:** 2026-10-17
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.40 / FD-066 (`1.0.0-internal.40` / MSI `1.0.0.40`, customer-online, sahelflow.com) is published (tag `sahelflow-v1.0.0-internal.40-6e96dafc…`, 2026-10-02T15:05:29Z) and Founder-installed. Protected `main` is `0c15e77a…` / #483. The Internal.40 installed-campaign repair line is source ahead of that package. The next signed successor is a separate Internal.41 release-authority PR after that campaign merges. Re-resolve `main` before acting.
+> **Current checkpoint:** Internal.43 / FD-071 (`1.0.0-internal.43` / MSI `1.0.0.43`, customer-online, sahelflow.com) is published (2026-10-17). The Founder is installing it in place; the installed campaign is the current gate. Re-resolve `main` before acting. Release facts: `../system/CURRENT_STATE.md`.
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -30,7 +30,7 @@ resolve protected main + open PR/issues + current signed release
 → perform installed/human/provider/external evidence that automation cannot prove
 ```
 
-At the current frontier, no product rewrite is authorized. Internal.27 passed the exact-once real `@lid` outbound and durable new-number inbound; its demonstrated live-push root is repaired by PR #315 (dynamic-loopback CSP, bounded polling/retry, durable receipt/identity reconciliation). #316 and #317 completed in source through #319/#324/#325/#327/#329/#331. The Founder-installed Internal.28 campaign verified text/image/video send, automatic no-refresh inbound and reopen, and reproduced three regressions that were repaired on protected main (#335 quoted-reply id spaces, #336 OOXML document mimetype, #337 in-composer voice recording) and extended by #338/#339. The FRC-2 source frontier is frozen (#342/#343) and everything is packaged inside published Internal.29 (FD-050), which the Founder has now installed. The FD-050 campaign reproduced six defects (B1/B2 quote chips, B3 document spinner, B4 voice fail-closed, B5 chat-delete resurrection, D1 AI-key flow); all were root-caused and repaired on protected main through the audited series #346–#353 (`b1b5a033`), which also includes the #350 status-enum truth and #352 C1 resilience hardening found by deep audit. These repairs are NOT in the signed Internal.29 artifact. The follow-on adversarial deep-audit remediation register — zod `.partial()` default-backfill data loss, Batch A F1–F15 route guards, Batch D crypto/data truth, Batch B order/refund/stock/COD/wilaya domain truth plus the storefront poison-receipt contract, audit/risk-config validation truth, worker/inbox failure visibility and the native R1–R3 batch — was re-derived, executed in full and squash-merged through PR #355 (`14c059b7`, every Actions gate green at head); it is equally NOT in the signed Internal.29 artifact. The next implementation-level actions are: obtain separate release authority for one signed successor packaging the FD-050 repair line AND the deep-audit register, Founder re-verification on that successor (the repaired rows plus the retained #306 rows and applicable FRC-2 matrix rows), and only then FRC-3 source/evidence work.
+At the current frontier no product rewrite is authorized. The next outcome is the Founder's in-place update to the published Internal.43 and one installed campaign with state preserved (`../operations/WORKING_MEMORY.md`). Earlier repair lines (the Internal.27–42 campaigns, #346–#355, the deep-audit register) are recorded in `../../CHANGELOG.md` and the ledgers, not repeated here.
 
 Do not restart generic repository reconnaissance when a bounded current outcome is known. Do not rerun an unchanged passing exact head. Do not retry deterministic failures until they turn green without identifying/fixing the cause.
 
@@ -46,7 +46,7 @@ Authority precedence:
 6. Roadmap;
 7. this Workflow;
 8. Working Memory;
-9. Research/archive.
+9. Research and historical notes.
 
 Operational rules:
 
@@ -59,7 +59,7 @@ Operational rules:
 - issue bodies can retain evidence/work queues but do not replace active documentation authority;
 - source, signed artifact, hosted CI install, Founder install, live-provider evidence, representative beta and Stable are distinct truth levels.
 
-Current signed authority is Internal.40 / `1.0.0-internal.40` / MSI `1.0.0.40` / FD-066 / `customer-online` (published 2026-10-02; Founder-installed 2026-10-03; it packages the FD-066 customer launch). FD-045/FD-066 change execution strategy and timing only; they do not create Beta or Stable authority. This campaign's source is ahead of Internal.40 and rides the next signed package.
+Current signed authority is Internal.43 / `1.0.0-internal.43` / MSI `1.0.0.43` / FD-071 / `customer-online` (published 2026-10-17). FD-045 and FD-066 change execution strategy and timing only; they do not create Beta or Stable authority.
 
 ## 3. Complete phase/package audit
 
@@ -82,7 +82,7 @@ Before a major phase/package or a materially uncertain bounded repair, perform t
 
 For a broad package, freeze one **Phase Problem Register** before implementation so duplicate manifestations group under root causes and P0/P1 are visible. For one demonstrated installed defect, the reproduction plus bounded impacted-sibling inventory can serve as the register; do not create bureaucracy for its own sake.
 
-At the current Internal.29 checkpoint, FRC-3 may build the finite Required capability/journey evidence ledger. It must not become generic speculative reconnaissance. Complete phase/package audit begins only for a demonstrated defect or a specifically frozen FRC certification package.
+FRC-3 builds a finite Required capability/journey evidence ledger. It must not become generic speculative reconnaissance. Complete phase/package audit begins only for a demonstrated defect or a specifically frozen FRC certification package.
 
 ## 4. Research rule
 
@@ -178,7 +178,7 @@ Applicable proof includes:
 
 A signed release is built only after exact protected-main authority exists. Branch-only artifacts are evidence candidates, never durable release sources.
 
-Internal.29 is the current completed Level 3 release path: release PR #344 passed the full Required battery on the exact head (two confirmed CI load-flakes re-ran green with zero code deltas) and exact-head review; protected-main dispatcher `33212635887`, signed publication `33212648778` and release observer `33212661580` passed and published the exact source-bound artifact. Internal.28's #333 path (dispatcher `33136807451`, signed publication `33136814065`, observer `33136822222`, 21 Required checks) remains the retained prior precedent.
+Internal.43 is the most recent completed Level 3 release path: release PR #495 passed the full Required battery, including installed-MSI evidence, on its exact head; the signed train then attested protected-main tree equality, passed the signed install, launch, reopen and authenticated-UI proof, and published the exact verified artifacts (run `39041467501`). The release record, including three failed signed attempts and their root causes, is in `../system/CURRENT_STATE.md` §1.
 
 ## 7. Whole-product AAA frontend program
 
@@ -322,6 +322,20 @@ FD-048 specifically prohibits opening the next release-authority package until
 main. Documentation and implementation packages do not infer the next Internal
 version or decision number.
 
+### Release train mechanics
+
+How a signed Internal release is produced, verified from the workflows and the 2026-10-17 publication:
+
+1. A release-authority PR changes `sahelflow.version.json` and adds or amends one `.github/release-requests/*.json`. It merges only after its full Required battery, including the installed-MSI lane, is green. Documentation or product PRs must not touch those two paths, because merging them starts a signed build.
+2. The merge triggers `Dispatch signed internal version` (`release-on-version-authority.yml`), which dispatches `Build Signed Internal Windows Update` (`release.yml`) with `source_ref` set to the merge commit, using the workflow's own token. The dispatcher can also be started by hand from the Actions page; it always takes the current tip of `main`.
+3. `release.yml` requires `source_ref` to be the **current tip of `main`** and refuses anything else in its first source step. GitHub refuses to create the draft release at a commit that `main` has already moved past (`403 Resource not accessible by integration`, about 20 minutes into the build); probe workflows reproduced this on 2026-10-17. Do not merge to `main` between dispatch and the draft release being created.
+4. The train attests that the source tree equals a reviewed merged PR's head tree and that `Required PR gate` was green there; builds and signs the MSI and the per-machine `SahelFlow-Setup.exe`; creates a draft release; installs the signed MSI and proves launch, reopen and authenticated UI twice; verifies that `latest.json` binds each installer to its own signature; compares the draft's assets byte-for-byte with the verified candidate; creates the tag; publishes.
+5. Publication requires exactly one release for the tag. Remove a stale draft for the same tag first.
+6. A failed gate is investigated, never retried blind. Record the failing step's text on the release PR first. One re-run is allowed only for a failure the diff cannot reach, with the evidence recorded before it; a second identical failure is a defect.
+7. After publication, update `../../CHANGELOG.md`, `../system/CURRENT_STATE.md` and `WORKING_MEMORY.md` in a documentation PR that does not touch the two release paths.
+
+The one exposure not closed by a check is `main` moving during the roughly 14-minute build. Closing it needs the draft release to exist before the build (the build action reuses an existing draft), which changes release mechanics and needs a Founder decision.
+
 ## 12. External/provider boundaries
 
 - #306 remains open for real-phone WhatsApp QR/link/reopen/outbound/inbound/persistence/logout evidence.
@@ -330,7 +344,7 @@ version or decision number.
 - The free Gemini tier is limited to the privacy-safe seller-owned-key contract; synthetic/redacted certification does not authorize silent client-PII processing.
 - A `workers.dev` route may support development but is not the sole business-critical customer authority.
 - Representative beta, legal/privacy/security, provider certification, incident/recovery and compatibility gates remain distinct before Stable.
-- Founder-offline Internal.29 does not authorize customer-online, a paid deployment, Beta or Stable.
+- No Internal checkpoint authorizes Beta or Stable. Customer-online licensing is the FD-066 launch authority; a paid assisted deployment needs its own scope gate under FD-045.
 
 ## 13. Hard prohibitions
 

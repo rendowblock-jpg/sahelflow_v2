@@ -83,6 +83,51 @@ describe("FD-068 launch screen", () => {
     expect(follower).toContain("return;");
   });
 
+  it("treats closing the native card as quit, never as hide, and outlasts a slow launch", () => {
+    const splash = read("src-tauri/src/native_splash.rs");
+    const closeArm = splash.slice(
+      splash.indexOf("WM_CLOSE => {"),
+      splash.indexOf("WM_DESTROY => {"),
+    );
+    expect(closeArm).toContain("QUIT_REQUESTED.store(true");
+    expect(closeArm).not.toContain("CLOSE_REQUESTED");
+    expect(splash).toContain("pub fn quit_requested()");
+    const open = launchModule.slice(launchModule.indexOf("pub fn open("));
+    const follower = open.slice(
+      open.indexOf("if crate::native_splash::is_active()"),
+      open.indexOf("WebviewWindowBuilder::new("),
+    );
+    expect(follower).toContain("crate::native_splash::quit_requested()");
+    expect(follower).toContain("quit_is_safe(&trace_path)");
+    expect(follower).toContain("quit_during_startup(&app)");
+    // The one stretch where an abrupt exit is not free is the shop migration.
+    const safe = launchModule.slice(
+      launchModule.indexOf("fn quit_is_safe("),
+      launchModule.indexOf("fn launch_url("),
+    );
+    expect(safe).toContain('"migration-started"');
+    // It stops exactly the way a normal close stops.
+    expect(launchModule).toContain("crate::begin_normal_close(app.clone())");
+    // Neither surface gives up while the launch is still starting.
+    expect(launchModule).toContain("Duration::from_secs(30 * 60)");
+    expect(splash).toContain("const MAX_LIFETIME_MS: f32 = 30.0 * 60.0 * 1_000.0;");
+  });
+
+  it("carries the closing and slow-launch copy in Arabic, French and English", () => {
+    expect(launchModule.match(/^\s+closing: "/gm)).toHaveLength(3);
+    expect(launchModule.match(/^\s+slow_hint: "/gm)).toHaveLength(3);
+    // The brand is the wordmark; it never repeats inside a sentence (it also
+    // broke Arabic bidi order: "SahelFlow" jumped to the wrong end).
+    expect(launchModule).not.toMatch(/starting: "[^"]*SahelFlow/);
+  });
+
+  it("paints inside a shadow margin so the card floats and is never clipped", () => {
+    const splash = read("src-tauri/src/native_splash.rs");
+    expect(splash).toContain("((CARD_WIDTH + SHADOW_MARGIN * 2.0) * scale)");
+    expect(splash).toContain("((CARD_HEIGHT + SHADOW_MARGIN * 2.0) * scale)");
+    expect(splash).toContain("GdipTranslateWorldTransform(g, SHADOW_MARGIN, SHADOW_MARGIN");
+  });
+
   it("keeps saying 'opening' through the final workspace load", () => {
     expect(launchModule).toContain('"ui-navigation-started" => (Phase::Opening');
     expect(launchModule).toContain('"ui-ready" => (Phase::Opening');

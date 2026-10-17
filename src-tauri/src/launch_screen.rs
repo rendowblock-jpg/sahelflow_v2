@@ -25,7 +25,7 @@ const PREVIOUS_UI_READY_FILE: &str = "runtime-ui-ready.json";
 const MAX_LOCALE_EVIDENCE_BYTES: u64 = 64 * 1024;
 const POLL_INTERVAL: Duration = Duration::from_millis(200);
 const SLOW_HINT_AFTER: Duration = Duration::from_secs(15);
-const MAX_LIFETIME: Duration = Duration::from_secs(10 * 60);
+const MAX_LIFETIME: Duration = Duration::from_secs(30 * 60);
 const TEMPLATE: &str = include_str!("launch_screen.html");
 /// Timing-only trace stages: they never move the progress model.
 pub(crate) const INFORMATIONAL_STAGES: [&str; 3] = [
@@ -68,6 +68,7 @@ pub(crate) struct LaunchCopy {
     pub(crate) starting: &'static str,
     pub(crate) retrying: &'static str,
     pub(crate) opening: &'static str,
+    pub(crate) closing: &'static str,
     pub(crate) slow_hint: &'static str,
 }
 
@@ -78,31 +79,33 @@ pub(crate) fn copy(locale: Locale) -> LaunchCopy {
             dir: "rtl",
             tagline: "إدارة الدفع عند الاستلام",
             preparing: "جارٍ تجهيز بياناتك",
-            starting: "جارٍ تشغيل SahelFlow",
+            starting: "جارٍ تشغيل الخدمات",
             retrying: "إعادة المحاولة…",
             opening: "جارٍ فتح مساحة عملك",
-            slow_hint: "هذا الجهاز يفتح مساحة العمل المحلية. أبقِ النافذة مفتوحة.",
+            closing: "جارٍ الإغلاق…",
+            slow_hint: "يستغرق وقتًا أطول من المعتاد. أبقِ هذه النافذة مفتوحة.",
         },
         Locale::Fr => LaunchCopy {
             lang: "fr",
             dir: "ltr",
             tagline: "Gestion COD",
             preparing: "Préparation de vos données",
-            starting: "Démarrage de SahelFlow",
+            starting: "Démarrage des services",
             retrying: "Nouvelle tentative…",
             opening: "Ouverture de votre espace",
-            slow_hint:
-                "Cet ordinateur ouvre l'espace de travail local. Laissez la fenêtre ouverte.",
+            closing: "Fermeture…",
+            slow_hint: "Plus long que d'habitude. Gardez cette fenêtre ouverte.",
         },
         Locale::En => LaunchCopy {
             lang: "en",
             dir: "ltr",
             tagline: "COD management",
             preparing: "Preparing your data",
-            starting: "Starting SahelFlow",
+            starting: "Starting services",
             retrying: "Retrying…",
             opening: "Opening your workspace",
-            slow_hint: "This computer is opening the local workspace. Keep this window open.",
+            closing: "Closing…",
+            slow_hint: "Taking longer than usual. Please keep this window open.",
         },
     }
 }
@@ -229,6 +232,15 @@ pub(crate) fn next_progress(shown: f32, floor: f32, ceiling: f32) -> f32 {
     }
 }
 
+/// Quitting from the startup card is held back only while the shop databases
+/// are being migrated: that is the one stretch where an abrupt exit is not free.
+fn quit_is_safe(trace_path: &Path) -> bool {
+    !matches!(
+        latest_stage(trace_path).as_deref(),
+        None | Some("native-started" | "workspace-window-pending" | "migration-started")
+    )
+}
+
 fn launch_url(app_data_dir: &Path, html: &str) -> Option<WebviewUrl> {
     let path = app_data_dir.join("launch-screen.html");
     if fs::write(&path, html.as_bytes()).is_ok() {
@@ -252,11 +264,22 @@ fn launch_url(app_data_dir: &Path, html: &str) -> Option<WebviewUrl> {
 pub fn open(app: &AppHandle, app_data_dir: &Path) {
     if crate::native_splash::is_active() {
         let app = app.clone();
+        let trace_path = app_data_dir.join(STARTUP_TRACE_FILE);
         let _ = thread::Builder::new()
             .name("sahelflow-native-splash-follow".to_string())
             .spawn(move || {
                 let started_at = Instant::now();
+                let mut quitting = false;
                 while started_at.elapsed() < MAX_LIFETIME && !workspace_visible(&app) {
+                    // Closing the startup card means "quit SahelFlow", never
+                    // "hide a launch that keeps running".
+                    if !quitting
+                        && crate::native_splash::quit_requested()
+                        && quit_is_safe(&trace_path)
+                    {
+                        quitting = true;
+                        quit_during_startup(&app);
+                    }
                     thread::sleep(POLL_INTERVAL);
                 }
                 crate::native_splash::request_close();
@@ -309,6 +332,15 @@ fn workspace_visible(app: &AppHandle) -> bool {
     app.get_webview_window(WORKSPACE_WINDOW_LABEL)
         .and_then(|window| window.is_visible().ok())
         .unwrap_or(false)
+}
+
+/// The seller closed the startup card: stop the way a normal close stops, so
+/// the contained servers and sidecars end with the app.
+fn quit_during_startup(app: &AppHandle) {
+    #[cfg(not(debug_assertions))]
+    crate::begin_normal_close(app.clone());
+    #[cfg(debug_assertions)]
+    app.exit(0);
 }
 
 fn follow_startup(app: AppHandle, window: WebviewWindow, trace_path: PathBuf) {
@@ -393,5 +425,39 @@ mod tests {
             Phase::Retrying
         );
         assert_eq!(stage_band(None).0, Phase::Preparing);
+    }
+    #[test]
+    fn quitting_is_held_back_only_while_the_shops_migrate() {
+        let directory = std::env::temp_dir().join(format!("sf-launch-quit-{}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let trace = directory.join(STARTUP_TRACE_FILE);
+        let write = |stage: &str| {
+            let body = format!(
+                r#"{{"formatVersion":1,"appVersion":"x","events":[{{"stage":"{stage}","attempt":null,"createdAtUnixMilliseconds":1000}}]}}"#
+            );
+            fs::write(&trace, body).unwrap();
+        };
+        assert!(!quit_is_safe(&trace), "no trace yet");
+        write("workspace-window-pending");
+        assert!(!quit_is_safe(&trace));
+        write("migration-started");
+        assert!(!quit_is_safe(&trace));
+        write("migration-complete");
+        assert!(quit_is_safe(&trace));
+        write("runtime-attempt-started");
+        assert!(quit_is_safe(&trace));
+        fs::remove_dir_all(&directory).unwrap();
+    }
+
+    #[test]
+    fn every_locale_has_its_closing_and_hint_copy() {
+        for locale in [Locale::Ar, Locale::Fr, Locale::En] {
+            let text = copy(locale);
+            assert!(!text.closing.is_empty() && !text.slow_hint.is_empty());
+            assert!(
+                !text.starting.contains("SahelFlow"),
+                "the brand is already the wordmark; it must not repeat inside a sentence"
+            );
+        }
     }
 }

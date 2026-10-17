@@ -8,13 +8,28 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-17 — documentation reconciled to Internal.43
+
+- Retired `documentation/archive` (14 superseded files deleted; the four live Phase 4 evidence documents moved to `documentation/security/`). Superseded documentation is deleted, not archived; git history is the record.
+- `WORKING_MEMORY.md` reduced from a dated diary to a compact resumable handoff; `CURRENT_STATE.md` now holds the release facts once, including a release ledger generated from GitHub; the README files, `AGENTS.md`, `ROADMAP.md` and `WORKFLOW.md` point to them instead of repeating release snapshots. The release process and the sandbox workflow are documented in `WORKFLOW.md` §11 and `AGENTS.md`. `DECISIONS.md` gained a header correction, an index and the FD-071 execution record; no decision changed.
+
+### 2026-10-17 — signed Internal.43 publication (FD-071)
+
+- Tag `sahelflow-v1.0.0-internal.43-3fa652062295f3b2d82a66cc9e0c0cc159a21f38`, published 2026-10-17T14:59:16Z by signed run `39041467501`: app `1.0.0-internal.43` / MSI `1.0.0.43`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`. Assets: MSI (sha256 `0dc5e849…`) and `.sig`; `SahelFlow-Setup.exe` (sha256 `f5c91bd4…`) and `.sig`; the same installer under its versioned name; updater `latest.json` with `windows-x86_64` (Setup.exe), `windows-x86_64-msi` and `windows-x86_64-nsis` entries.
+- First release to ship the per-machine `SahelFlow-Setup.exe` beside the MSI (#493).
+- Content: #490 (installed Internal.42 audit repairs across orders, couriers, storefront, WhatsApp, AI, team login, startup card and search), #492 (messy-order extraction repair; the inbox shows whether Gemini ran), #493, #498 (the workspace window is no longer created maximized before the authenticated UI is ready), plus the installed-UI evidence harness repairs (#494, #496), the CI failure digest workflow (#497) and the Setup.exe manifest signature fix (#500). Release authority: #491 and #495.
+- Release record: three signed attempts failed first — the manifest signature (fixed by #500), then two draft-release `403`s because protected `main` had moved past the source commit. The release was built from the `main` tip; `release.yml` now refuses any other source (#501). Details in `documentation/system/CURRENT_STATE.md` §1.
+- Published is not installed: no ledger row converts, and installation by the Founder is the next gate.
+
 ### 2026-10-09 — FD-070 adopts the Internal.42 release authority
 
 - FD-070 authorizes one signed successor: app `1.0.0-internal.42` / MSI `1.0.0.42`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`. It packages protected main `dc73b83f…` (#487) — WhatsApp durable dispatch, licence distribution with `SFLA1` codes and the offline License Desk, the native startup splash, team access, the theme-aware PIN map and the full walkthrough repairs — and merges only after the full Required battery including installed-MSI evidence. Not a Stable claim; no ledger row converts from this authority.
+- Published 2026-10-09T17:24:38Z: tag `sahelflow-v1.0.0-internal.42-2e8900bd5d6489aa6244ee8c9c94e8a05faf0164` (release PR #488 merged as `2e8900bd…`; signed run `37963575605`), MSI sha256 `24613850d457f551d5378040c648204a8b4ad5b89c771b881af44c53764d5450`.
 
 ### 2026-10-03 — FD-067 adopts the Internal.41 release authority
 
 - FD-067 (the customer-online slot reserved by FD-066) authorizes one signed successor: app `1.0.0-internal.41` / MSI `1.0.0.41`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`. It packages protected main `4bebfd83…` (#484) — the Internal.40 installed-campaign repair line plus #483 — and merges only after the full Required battery including installed-MSI evidence. Not a Stable claim; no ledger row converts from this authority.
+- Published 2026-10-03T08:38:07Z: tag `sahelflow-v1.0.0-internal.41-5e611a87ae967ddb84cf7a23d9dbb12f7480256f`, MSI sha256 `b1887e650a1fd13a90835a35f353a292110131c7b2c0fd8a41d90a20078b97be`. The Founder reported it installed on 2026-10-08.
 
 ### 2026-10-03 — Internal.40 installed-campaign repair line (source)
 

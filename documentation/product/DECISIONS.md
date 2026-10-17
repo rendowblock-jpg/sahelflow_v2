@@ -1,15 +1,76 @@
 # SahelFlow 1.0 — Consolidated Founder Decisions
 
-> **Status:** Authoritative consolidated product/execution register through FD-033 plus FD-045, FD-048 and FD-049; version-bound FD-034–FD-044 and FD-046–FD-047 remain in protected release authority
+> **Status:** Authoritative register of approved Founder product and execution decisions. FD-001–FD-033 were consolidated from earlier addenda on 2026-07-29; later decisions are appended in numeric order as dated entries. FD-034–FD-044, FD-046 and FD-047 are version-bound release authority recorded in the protected release requests, not entries here
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-08-28
+> **Last amended:** 2026-10-17 (header and index; FD-071 execution record. No decision changed)
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
-This register consolidates approved product and execution decisions through FD-033, FD-045 First Revenue Certification, FD-048 source-first batching and FD-049 post-#317 signed successor authority. Version-bound FD-034–FD-044 and FD-046–FD-047 remain durable in their protected release envelopes and are summarized by active current-state documentation. Engineering
-mechanisms remain subject to architecture, research, security review, provider
-certification and evidence gates, but engineering may not contradict these
-policies without a new numbered Founder decision.
+This register records approved product and execution decisions. Entries FD-001–FD-029 are consolidated policy statements; FD-030 onward are dated Founder directives. Detailed mechanisms remain subject to architecture, research, security review, provider certification and evidence gates, but engineering may not contradict these policies without a new numbered Founder decision. A later entry supersedes an earlier one only for the choice it names.
 
+## Index (newest first)
+
+- FD-071 — One signed successor Internal.43 under the FD-066 customer launch (2026-10-14, ADOPTED)
+- FD-070 — One signed successor Internal.42 under the FD-066 customer launch (2026-10-09, ADOPTED)
+- FD-069 — Google Sheets through a seller-owned Apps Script bridge (2026-10-01, ADOPTED)
+- FD-068 — Branded launch screen while the workspace starts (2026-10-01, ADOPTED)
+- FD-067 — One signed successor Internal.41 under the FD-066 customer launch (2026-10-03, ADOPTED)
+- FD-066 — Launch to first paying clients on sahelflow.com (2026-10-01, ADOPTED)
+- FD-065 — One signed successor (Internal.39) packaging protected main through #469
+- FD-064 — Gemini stays selectable; its primary role is order extraction (2026-09-28, ADOPTED)
+- FD-063 — Local MCP agentic surface (EX-5 conversion, 2026-09-21, ADOPTED)
+- FD-062 — One signed successor (Internal.38) packaging the #424–#450 protected-main frontier
+- FD-061 — CodFlow extraction program (2026-09-13, ADOPTED)
+- FD-060 — One signed successor (Internal.37) packaging the #413–#422 plus #421 protected-main frontier
+- FD-059 — One signed successor (Internal.36) packaging the #399–#411 protected-main frontier
+- FD-058 — One signed successor (Internal.35) packaging the Internal.34 installed-campaign repair line
+- FD-057 — One signed successor (Internal.34) packaging the post-campaign repair line
+- FD-056 — One signed successor (Internal.33) packaging the triage-ledger quality line
+- FD-055 — One signed successor (Internal.32) packaging the round-2 campaign repair line
+- FD-054 — Demo data loads into a shop that already contains real data
+- FD-053 — One signed successor (Internal.31) packaging the campaign repair line and the six-wave stream
+- FD-052 — Demo data coexists with real operations (option A)
+- FD-051 — One signed successor (Internal.30) packaging the two repair lines, before FRC-3
+- FD-050 — One signed successor (Internal.29) after FRC-2, before FRC-3
+- FD-049 — One signed/installed successor after #317, before FRC-2
+- FD-048 — Batched source-first First Revenue Certification and one installed successor
+- FD-045 — Zero-budget First Revenue Certification and evidence-bounded public promises
+- FD-033 — Internal.16 completion convergence, first-revenue bootstrap and whole-product assurance
+- FD-032 — Internal.15 Founder-only offline checkpoint; customer release still requires live trial certification
+- FD-031 — One-time Internal.14 installed-evidence exception
+- FD-030 — Phase 3 provider conformance closure; live accounts deferred to representative beta
+- FD-029 — Uncompromised AAA completion and disciplined delivery
+- FD-028 — Final Completion Program and Research-First Quality Protocol
+- FD-027 — SahelFlow Completion Operating Model v2
+- FD-026 — Maximum AAA-candidate target and fast agentic delivery
+- FD-025 — Authenticated workspace is the first normal-launch window
+- FD-024 — Two coding agents with GitHub as durable truth
+- FD-023 — Founder continuous Internal-update acceptance
+- FD-022 — Safe demo before the signed trial
+- FD-021 — Person, workspace and license are separate
+- FD-020 — Private Founder Console
+- FD-019 — Shared SahelFlow cloud; default seller BYOC rejected
+- FD-018 — SahelFlow 1.0 public identity and version authority
+- FD-017 — 5,000 DZD one-time extra shop
+- FD-016 — Permanent-license transfer and ownership recovery
+- FD-015 — Seller-owned Google AI Studio / Gemini model
+- FD-014 — Complete-edition boundaries
+- FD-013 — Five-year maintenance and connected-service continuity
+- FD-012 — 35,000 DZD launch price
+- FD-011 — Professional multi-user team operations
+- FD-010 — Low-end-first Windows performance and broad compatibility
+- FD-009 — Professional manual BaridiMob/CCP verification
+- FD-008 — Hybrid commerce synchronization
+- FD-007 — Zero-knowledge backup and disaster recovery
+- FD-006 — Shared multi-tenant COD storefront and AAA standard
+- FD-005 — Hybrid Cloudflare control plane and cost discipline
+- FD-004 — Full operational Android/browser companion with limited administration
+- FD-003 — Online machine-bound signed trial
+- FD-002 — Complete lockout after trial expiry
+- FD-001 — One complete one-time edition
+
+## Change-control reading note
+
+Entries are ordered by number, not by date, and the newest numbers are at the end of the file. FD-067 (2026-10-03) precedes FD-068 and FD-069 (both 2026-10-01) because FD-066 reserved its number. The `## Change control` section sits between FD-068 and FD-069.
 ---
 
 ## FD-001 — One complete one-time edition
@@ -1686,3 +1747,32 @@ as one signed successor:
   unchanged — the certification above stays at product head `80956e46…` — and
   the signed train re-executes from exact protected main with the repaired
   harness. Everything else in this decision stands.
+
+  > **Superseded in part (2026-10-17):** the sentence "The packaged content is
+  > unchanged — the certification above stays at product head `80956e46…`" no
+  > longer holds. PR #498 later changed packaged content (the workspace window is
+  > no longer created maximized before the authenticated UI is ready:
+  > `src-tauri/tauri.conf.json` and `src-tauri/src/startup_recovery/proven.rs`), and
+  > the release request records the re-certification at product head `d0159346…`.
+  > See the execution record below.
+
+- **Execution record (2026-10-17; no decision changed):** the signed train under
+  this authority failed three times before it published, for independent
+  reasons, each recorded on PR #495 before any retry. (1) Run `39013736331`
+  stopped at its manifest gate because the `windows-x86_64` entry of
+  `latest.json` pointed at `SahelFlow-Setup.exe` but carried the MSI signature;
+  PR #500 fixed `release.yml` and added a contract pin. (2) Runs `39035937811`
+  and `39038240457` then failed at draft-release creation with
+  `403 Resource not accessible by integration`: protected `main` had moved past
+  the source `95681a52…` (PR #500 moved it), and GitHub refuses that call at a
+  commit `main` has moved past, while the tip of `main`, the branch name and
+  descendants of `main` all work (three probe workflows). The release was
+  therefore built from the protected-main tip `3fa65206…` (tree identical to
+  PR #500's reviewed head) through the dispatcher workflow, under the release
+  request's `exact-protected-main` source policy, and published as tag
+  `sahelflow-v1.0.0-internal.43-3fa652062295f3b2d82a66cc9e0c0cc159a21f38` at
+  2026-10-17T14:59:16Z (signed run `39041467501`). Beyond the amendments above
+  the package carries PR #494 and #496 (installed-UI evidence harness), #497
+  (CI failure digest workflow), #498 (window behaviour) and #500. PR #501 adds a
+  first-step guard so `release.yml` refuses any source that is not the tip of
+  `main`. Digests and the release ledger are in `system/CURRENT_STATE.md`.
