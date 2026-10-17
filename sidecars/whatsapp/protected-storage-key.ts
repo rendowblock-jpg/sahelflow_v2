@@ -20,6 +20,8 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
+import { diagnostics } from "./diagnostics-log";
+
 const DOCUMENT_FORMAT_VERSION = 1 as const;
 const ALGORITHM = "windows-dpapi-current-user" as const;
 const PURPOSE = "sahelflow-whatsapp-sidecar-storage-v1" as const;
@@ -502,21 +504,89 @@ function storageRoot(): Buffer {
     : loadOrCreateDevelopmentRoot();
 }
 
-function deriveSubkey(purpose: string): Buffer {
-  const root = storageRoot();
-  try {
-    return createHmac("sha256", root).update(purpose, "utf8").digest();
-  } finally {
-    root.fill(0);
+function deriveFromRoot(root: Buffer, purpose: string): Buffer {
+  return createHmac("sha256", root).update(purpose, "utf8").digest();
+}
+
+// Unlocking the packaged storage root runs a synchronous powershell.exe that
+// blocks the sidecar's event loop (Add-Type alone is slow on a low-end PC), and
+// it used to run once when the spool opened and again at every connect. The two
+// derived sub-keys are therefore resolved together, once per process, and kept
+// only in this module's memory: never written to disk or logs, handed out as
+// copies (callers wipe their own), and zeroed when the process exits. The root
+// itself is wiped as soon as both sub-keys are derived. Both sub-keys already
+// live in memory for the whole run (the spool and the auth state hold theirs),
+// so this adds no new secret to the process. Development and test modes read a
+// plain key and never spawn anything, so they are not cached.
+interface DerivedStorageKeys {
+  scope: string;
+  auth: Buffer;
+  spool: Buffer;
+}
+
+let derivedKeys: DerivedStorageKeys | null = null;
+let exitHookRegistered = false;
+
+/** Zero and drop the cached sub-keys. Runs at process exit. */
+export function clearWhatsAppStorageKeyCache(): void {
+  const current = derivedKeys;
+  derivedKeys = null;
+  if (!current) return;
+  current.auth.fill(0);
+  current.spool.fill(0);
+}
+
+function deriveSubkey(which: "auth" | "spool"): Buffer {
+  if (!productionMode()) {
+    const root = storageRoot();
+    try {
+      return deriveFromRoot(
+        root,
+        which === "auth" ? AUTH_SUBKEY_PURPOSE : SPOOL_SUBKEY_PURPOSE,
+      );
+    } finally {
+      root.fill(0);
+    }
   }
+
+  // The installation identity is re-read on every call (a small file, no
+  // PowerShell) and is part of the cache key: a different identity must be
+  // refused by the DPAPI authority exactly as before, not served a cached key.
+  const identity = readInstallationIdentity();
+  const scope = [documentPath(), identity.workspaceId, identity.installationId].join("\0");
+  if (!derivedKeys || derivedKeys.scope !== scope) {
+    clearWhatsAppStorageKeyCache();
+    const startedAt = performance.now();
+    // A failed unlock throws here and caches nothing, so the next call asks
+    // again instead of serving a stale failure.
+    const root = storageRoot();
+    try {
+      derivedKeys = {
+        scope,
+        auth: deriveFromRoot(root, AUTH_SUBKEY_PURPOSE),
+        spool: deriveFromRoot(root, SPOOL_SUBKEY_PURPOSE),
+      };
+    } finally {
+      root.fill(0);
+    }
+    if (!exitHookRegistered) {
+      exitHookRegistered = true;
+      process.once("exit", clearWhatsAppStorageKeyCache);
+    }
+    // How long the unlock took on this PC. A duration only: no key, no path.
+    diagnostics.record("storage-key.unlocked", {
+      ms: Math.round(performance.now() - startedAt),
+    });
+  }
+  return Buffer.from(which === "auth" ? derivedKeys.auth : derivedKeys.spool);
 }
 
 export function getWhatsAppAuthStorageKey(): Buffer {
-  return deriveSubkey(AUTH_SUBKEY_PURPOSE);
+  return deriveSubkey("auth");
 }
 
 export function getWhatsAppInboundSpoolStorageKey(): Buffer {
-  return deriveSubkey(SPOOL_SUBKEY_PURPOSE);
+  return deriveSubkey("spool");
 }
 
 export function whatsappProtectedStorageAuthorityPath(): string {
