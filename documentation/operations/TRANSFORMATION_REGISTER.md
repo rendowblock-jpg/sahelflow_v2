@@ -110,6 +110,45 @@ Recorded so the transformation does not "fix" what is already right:
 
 ---
 
+## P1 — Whole-app audit, 2026-10-17
+
+The Founder asked for a deep audit of the whole app, mapped, "and then we can go from there"; and then said: *"complete the work left and fixes and improvement to be done from the audit findings and then update the documentation files and everything to main then make the release."*
+
+A read-only audit covered ten layers (data, identity, COD core, money and intelligence, messaging, AI and MCP, integrations and storefront edge, native shell, frontend platform, operations and release), in narrower slices where a layer was too large. The auditors indexed 254 findings as they rated them (22 P1, 116 P2, 116 P3, none P0; the reports overlap, so the count is an upper bound). The reports are working notes in the agent sandbox and are not committed; this section is the durable record of what was acted on and what was deliberately left. Each row below was re-read at file and line by the lead before it was repaired or deferred.
+
+**What the audit found sound.** All 226 route files were checked mechanically: every non-public handler passes a trusted-actor guard (for `/api/search` the guard is in the service layer); the three identity-only handlers are `auth/me`, `auth/me/pin` and `license/status`. The i18n catalogue holds 3,270 keys with no missing or empty entry in Arabic, French or English. There are two source-level import cycles and no client component reaches a server-only or database module. The AI proposal invariant holds on the production path: every direct-write chat tool is classified sensitive or blocked, and an unclassified tool is refused. The installed app bundles its fonts (12 woff2 files, no Google URL).
+
+### Repaired in source after Internal.43 (merged to `main`, shipped in no signed package yet)
+
+| ID | Finding | Evidence | Status |
+|---|---|---|---|
+| S03c-02 | **The Customers page search could never match.** It searched the protected name and phone columns directly. | `src/lib/customers/customer-workbench.ts` | **DONE (source, #511)** — the search resolves through the blind-index projection (`searchProjectedCustomers`) and filters by id. `customer-workbench-search.test.ts` fails 3 of its 5 tests on the old code. |
+| AIX-01, S06a-03 | **AI chat read tools ignored the member's role.** The chat route required only `ai.use`, so an Operator could read profit, product cost and order money that the normal screens withhold, and the answer could go on to the remote model. A proposal the service refused surfaced as a thrown error the model could not explain. | `src/lib/ai/chat/tools/registry.ts`, `read-access.ts`, `tool-refusal.ts` | **DONE (source, #516)** — a per-tool table of required grants and withheld result fields is checked in the registry, before the tool body, against the session's actor; a tool with no row is refused. Refusals, and proposal refusals below HTTP 500, are constant model-readable tool results. Callers that pass no actor (the MCP surface, which resolves scopes itself) are unchanged. |
+| S05a-01, S05a-12, MSG-06 | **WhatsApp inbound ghosts.** An undecryptable placeholder was spooled and, sharing a provider id with the real message, blocked that message once it arrived; reactions and protocol upserts were treated as content; a new message did not bring an archived thread back. | `sidecars/whatsapp/whatsapp.ts`; `src/lib/whatsapp/inbound-processor.ts` | **DONE (source, #514)** — a closed deny-list of non-content kinds, undecryptable stubs are not spooled, and an inbound message unarchives its thread unless the thread is muted. **This does not close the Founder's "new messages did not land" report**; its cause is not established (see S05a-02 below). |
+| MNY-02, S03c-12, S03c-03 | **Three small COD defects.** The "disputed" bucket and the `discrepancy` total counted every uncollected order; the API phone check rejected the international `+213` form; `PATCH /api/products/[id]` wrote no audit entry. | `canonical-cod-projections.ts`; the shared `dzPhone` schema; `src/app/api/products/[id]/route.ts` | **DONE (source, #515)** — uncollected is no longer disputed; `+213` is rewritten to the local form before the strict check; a product edit logs `product.updated` with the changed field names only. |
+| S01b-03, S01b-04 | **The privacy export left out five models and its authority gate never ran.** `AiMessageFeedback`, `CapiAttemptLog`, `CapiEventLedger`, `MetaPixelConfig` and `QuantityTierOffer` were missing; `privacy-export-authority.test.ts` was not in the vitest include list. | `src/lib/privacy/lifecycle.ts`; `vitest.config.ts` | **DONE (source, #512)** — five loaders added; `access_token=` is masked in the two CAPI error columns; the derived search-index tables are declared excluded with a reason; the gate now runs. |
+| S09b-01, S09b-02 (abort half) | **The palette's server search kept working after the browser cancelled it**, including its typo back-off passes. | `src/app/api/search/route.ts`; `searchUniversalRecords` | **DONE (source, #513)** — the request signal is passed down and checked between phases and before each back-off pass. The latency effect is unmeasured. The other half (a stale-while-revalidate conversation index) is **not merged**: its benefit is unmeasured and erase or delete could leave a removed contact visible for one search. |
+| S03a-02, S03c-01 | **The stock check subtracted a confirmed manual hold twice**, once in the stock figure and once as a hold, so 10 on the shelf with 5 confirmed looked like 0. It failed safe: it refused a sale it could have made. | `src/lib/orders/manual-confirmation.ts`; `stock-availability.ts` | **DONE (source, #517)** — a hold counts as already out of stock only when the command that opened it also wrote a `reserve` movement and its key is not a storefront key; every other hold, including a future producer, is still subtracted. `stock-hold-producers.test.ts` fails if a new producer of holds appears unclassified. |
+
+### Not in the next release: each needs a Founder decision, a database migration or a Windows test
+
+| ID | Finding | Why it waits |
+|---|---|---|
+| S09b-03 | The workspace's first paint waits for a client fetch of the licence status (the `ui-ready` trace stage includes it). | A server-seeded boundary (PR #510, draft) passed its 18 unit tests but failed two required browser tests that pass on `main` (`e2e/storefront-studio.spec.ts:48`, `e2e/phase6-7-completion.spec.ts:702`). Cause unproven (the hydration marker may now precede interactivity). Investigate; do not edit the specs to fit it. |
+| S05a-02 and the Inbox report | Baileys buffers live events with no timeout and acknowledges before emitting. The cause of "new messages did not land" is not established. | Needs the diagnostics run on the Founder's machine. No fix is chosen blind. |
+| MSG-01 | A reply from an `@lid` identity opens a separate thread from the phone-number thread (no identity merge). Frequency unknown. | Touches conversation identity; needs a decision and a migration. |
+| S03a-03 | Canonical orders cannot be edited. | Product decision on amend semantics. |
+| MNY-01 | COD reconciliation silently truncates to the newest 5,000 orders. | Needs a pagination or aggregation design. |
+| STO-01, STO-02 | Unauthenticated junk receipts can stall hosted order ingestion; the hosted storefront has no buyer-facing client or deploy path in the repo. | Dormant until the hosted plane is live; Founder decision. |
+| INT-03, INT-02, STO-05 | Nothing pulls commerce orders or courier statuses automatically (the required hybrid webhook plus reconciliation is not built); commerce platforms show no certification state; public marketing claims capabilities listed as not certified. | Founder decision on scope and wording. |
+| S01a-01 | Append-only truth for the core money, stock and audit tables is not enforced by the database. | A migration with its own backup and restore proof. |
+| S01b-01, S01b-02 | The WhatsApp number is stored in plaintext in `Conversation.sourceId`; AI chat messages are plaintext at rest. | Migrations touching search and backup; Founder decision. |
+| S08a-01 | A forwarded second launch shows nothing while the main window is hidden and no splash exists. | Windows-only; needs an installed test. |
+| S03c-09 | The Returns "new return" dialog always answers 409. | Needs a design decision. |
+| AIX-08 (F-1) | Extraction routes have no explicit `requireLicense`, but the shared wrapper already enforces the entitlement in production. | Decision record only; propose closing. |
+
+---
+
 ## Execution order
 
 Foundations first, because every surface inherits them; then the two surfaces the Founder

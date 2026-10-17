@@ -35,6 +35,16 @@ This document distinguishes protected source, automated evidence, signed publica
 
 **Not proven.** An in-place update on a Founder machine; `SahelFlow-Setup.exe` on a clean machine (first shipped here); any ledger row; the root cause of the earlier window-visibility timing failures (the explanation behind #498, a Tauri/tao dependency behaviour, is an inference from dependency source and is supported only by green installed lanes); live WhatsApp delivery; commerce or courier certification.
 
+### Source on `main` after Internal.43 (merged, not published)
+
+These pull requests are merged to protected `main` and are in no signed package yet. They ship only in a later signed successor on a Founder decision, and none of them is Founder-installed truth until that build is installed and observed.
+
+- **Reported on Internal.43 (2026-10-17):** **#503** the launch no longer waits for the packaged-server file pre-read; **#504** the startup card is rebuilt and closing it quits instead of hiding a running launch; **#506** the server no longer loads every route module at boot (a `strace` of the unpacked Internal.43 server opened 871 files, 28.6 MB; the same measurement after the change opened 483, 4.0 MB); **#505** and **#508** WhatsApp survives a cold start and the sidecar records where its time goes (diagnostics only); **#507** search finds a record the seller mistyped; **#509** the AI delete confirmation no longer overlaps and the composer draws one focus ring.
+- **Release mechanics and documents:** **#501** a signed build's source must be the current tip of `main`; **#502** the documentation archive is retired.
+- **Whole-app audit repairs:** **#511** Customers search, **#512** privacy export, **#513** palette search cancellation, **#514** WhatsApp inbound stubs, reactions and archived threads, **#515** three small COD defects, **#516** AI chat read permissions, **#517** stock availability. Evidence and the findings left open are in `../operations/TRANSFORMATION_REGISTER.md` (section "Whole-app audit, 2026-10-17").
+
+**Measured and not measured.** The startup gain is a projection from the two Founder traces of 2026-10-17 (about 26 s for a launch like the second, which took 148 s; about 76 s for a first launch after install, which took 629 s). It is not measured on a build and must be compared with the next trace. Palette latency is unmeasured. The cause of the Inbox report is not established. PR #510 (licence boundary seed) is a draft and is not on `main`.
+
 ### Release record, 2026-10-17
 
 Why the published tag is `3fa65206…` and not the `95681a52…` that PR #495 merged as:
