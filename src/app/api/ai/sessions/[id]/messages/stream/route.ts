@@ -297,6 +297,7 @@ export const POST = withErrorHandler(
                   db,
                   shop: shopContext,
                   sourceIdentity: `ai-session:${id}`,
+                  actor: requester,
                 },
                 input.locale,
                 shopContextNote,
