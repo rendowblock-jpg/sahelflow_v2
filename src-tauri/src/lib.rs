@@ -465,14 +465,23 @@ pub fn run() {
                         eprintln!("[sahelflow] protected commercial anchor unavailable: {error}");
                     }
 
-                    // Read the packaged server into the standby list while migration
-                    // runs. Node then opens those files warm. A cold random read
-                    // of this tree (about 4,751 files) was the 67s before the
-                    // port accepted a connection.
+                    // Read the packaged server into the standby list ONLY while
+                    // migration runs, then stop. A cold random read of this tree
+                    // (about 4,751 files) was the 67s before the port accepted a
+                    // connection on one machine, but on the installed Internal.43
+                    // trace of another the same read took 540s because every file
+                    // open is slow there (startup-trace.json: runtime-warm-started
+                    // to runtime-warm-complete). The pre-read is an optimization
+                    // that must never gate startup: it gets a stop flag and the
+                    // server launch never waits for it.
                     let standalone_dir = resource_dir.join("standalone");
+                    let warm_stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+                    let warm_stop_for_thread = std::sync::Arc::clone(&warm_stop);
                     let warmup = std::thread::Builder::new()
                         .name("sahelflow-runtime-warm".to_string())
-                        .spawn(move || warm_packaged_standalone(&standalone_dir))
+                        .spawn(move || {
+                            warm_packaged_standalone(&standalone_dir, &warm_stop_for_thread)
+                        })
                         .map_err(|error| {
                             eprintln!("[sahelflow] runtime warm thread did not start: {error}");
                         })
@@ -552,9 +561,10 @@ pub fn run() {
                         "runtime-warm-started",
                         None,
                     );
-                    if let Some(handle) = warmup {
-                        let _ = handle.join();
-                    }
+                    // Migration is done: tell the pre-read to stop and do NOT wait
+                    // for it. The thread exits on its own at its next file.
+                    warm_stop.store(true, std::sync::atomic::Ordering::SeqCst);
+                    drop(warmup);
                     startup_recovery::record_startup_stage(
                         &app_data_dir,
                         "runtime-warm-complete",
@@ -917,20 +927,30 @@ fn sidecar_env(
     ])
 }
 
-/// Pull the packaged Next.js tree into the file cache with sequential reads.
-/// The cold open was paying one slow `CreateFile` per module inside Node.
-fn warm_packaged_standalone(root: &std::path::Path) {
+/// Pull the packaged Next.js tree into the file cache with sequential reads,
+/// for as long as `stop` stays false (the caller raises it when migration
+/// finishes). The cold open was paying one slow `CreateFile` per module inside
+/// Node; this must never delay the server launch, so it is cooperative and
+/// is never joined.
+fn warm_packaged_standalone(root: &std::path::Path, stop: &std::sync::atomic::AtomicBool) {
     use std::io::Read;
+    use std::sync::atomic::Ordering;
     if !root.is_dir() {
         return;
     }
     let mut stack = vec![root.to_path_buf()];
     let mut buffer = vec![0_u8; 128 * 1024];
     while let Some(dir) = stack.pop() {
+        if stop.load(Ordering::Relaxed) {
+            return;
+        }
         let Ok(entries) = std::fs::read_dir(&dir) else {
             continue;
         };
         for entry in entries.flatten() {
+            if stop.load(Ordering::Relaxed) {
+                return;
+            }
             let path = entry.path();
             let Ok(kind) = entry.file_type() else {
                 continue;
@@ -949,6 +969,9 @@ fn warm_packaged_standalone(root: &std::path::Path) {
                 continue;
             };
             loop {
+                if stop.load(Ordering::Relaxed) {
+                    return;
+                }
                 match file.read(&mut buffer) {
                     Ok(0) | Err(_) => break,
                     Ok(_) => {}
