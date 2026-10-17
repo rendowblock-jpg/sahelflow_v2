@@ -204,6 +204,11 @@ export function AiComposerDeck({
             <AiImageTray tray={tray} copy={copy} disabled={inputLocked} />
             <Textarea
               ref={composerRef}
+              // The frame owns the ONE focus indicator (border above, halo in
+              // workspace-system.css). The field opts out of the generic
+              // rectangular ring, which showed as a square outline inside the
+              // rounded frame (see globals.css, [data-focus-owner="frame"]).
+              data-focus-owner="frame"
               value={draft}
               // A textbox for assistive tech; the quick-jobs list links while open.
               aria-controls={menuOpen ? menuId : undefined}
