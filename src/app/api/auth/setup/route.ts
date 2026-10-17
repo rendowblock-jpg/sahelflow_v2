@@ -122,6 +122,16 @@ async function collectOwnerSessionFailureFacts(
   };
 }
 
+function alreadySetupResponse(): NextResponse {
+  return NextResponse.json(
+    {
+      error: "Auth is already set up. Use the settings page to change your PIN.",
+      code: "AUTH_ALREADY_SETUP",
+    },
+    { status: 409 },
+  );
+}
+
 export const POST = withErrorHandler(async (req: Request) => {
   const body = await req.json();
   const parsed = SetupSchema.safeParse(body);
@@ -144,19 +154,19 @@ export const POST = withErrorHandler(async (req: Request) => {
     throw error;
   }
   if (alreadySetup) {
-    return NextResponse.json(
-      {
-        error: "Auth is already set up. Use the settings page to change your PIN.",
-        code: "AUTH_ALREADY_SETUP",
-      },
-      { status: 409 },
-    );
+    return alreadySetupResponse();
   }
 
   let secret: string;
   try {
     ({ secret } = await setupAuth(parsed.data.pin));
   } catch (error) {
+    // A second overlapping submission lost the race to create the owner
+    // (IDN-08). Nothing was written for it; it must not touch the process
+    // secret or open a session.
+    if (error instanceof SahelFlowError && error.code === "AUTH_ALREADY_SETUP") {
+      return alreadySetupResponse();
+    }
     await writePhase4SetupDiagnostic("auth-persist", error);
     throw error;
   }

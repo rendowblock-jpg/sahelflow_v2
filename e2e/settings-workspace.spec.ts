@@ -52,7 +52,38 @@ async function expectNoHorizontalOverflow(page: Page) {
   );
 }
 
+/**
+ * The Settings window is a dialog that opens with a 200 ms scale-in
+ * (`zoom-in-95`: 0.95 -> 1). `boundingBox()` includes CSS transforms, so a read
+ * taken while that animation is still running reports a rail narrower than its
+ * layout width (250 px x the current scale). Wait for every finite animation to
+ * end before measuring. Infinite ones (spinners) are ignored, and the wait is
+ * bounded so a stuck animation cannot hang the test: the width assertions
+ * below stay exactly as strict as before.
+ */
+async function settleOpenAnimations(page: Page) {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        const timer = window.setTimeout(resolve, 3_000);
+        const finite = document
+          .getAnimations()
+          .filter(
+            (animation) =>
+              animation.effect?.getComputedTiming().iterations !== Infinity,
+          );
+        void Promise.all(
+          finite.map((animation) => animation.finished.catch(() => undefined)),
+        ).then(() => {
+          window.clearTimeout(timer);
+          resolve();
+        });
+      }),
+  );
+}
+
 async function settingsGeometry(page: Page) {
+  await settleOpenAnimations(page);
   return {
     rail: await page
       .locator('[data-settings-control-center="true"] > div > aside')

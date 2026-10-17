@@ -4,7 +4,7 @@ import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import {
   checkLoginRateLimit,
-  getClientIp,
+  getConfirmationLimiterKey,
   recordLoginAttempt,
   recordLoginFailure,
   recordLoginSuccess,
@@ -37,8 +37,10 @@ export const POST = withErrorHandler(async (request: Request) => {
     );
   }
 
-  const ip = getClientIp(request.headers);
-  const limit = checkLoginRateLimit(ip);
+  // The allowance belongs to the verified member session making the proof; no
+  // client header takes part (IDN-01).
+  const limiterKey = getConfirmationLimiterKey(context.actor.sessionId);
+  const limit = checkLoginRateLimit(limiterKey);
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "Too many attempts. Please try again later.", code: "RATE_LIMITED" },
@@ -62,7 +64,7 @@ export const POST = withErrorHandler(async (request: Request) => {
     );
   }
 
-  recordLoginAttempt(ip);
+  recordLoginAttempt(limiterKey);
   const result = await changeOwnTeamPin({
     sessionId: context.actor.sessionId,
     currentPin: parsed.data.currentPin,
@@ -71,7 +73,7 @@ export const POST = withErrorHandler(async (request: Request) => {
     auditActor: trustedActorAuditIdentity(context.actor),
   });
   if (!result) {
-    const failure = recordLoginFailure(ip);
+    const failure = recordLoginFailure(limiterKey);
     if (!failure.allowed && failure.locked) {
       return NextResponse.json(
         { error: "Too many failed attempts. Account temporarily locked.", code: "RATE_LIMITED" },
@@ -86,6 +88,6 @@ export const POST = withErrorHandler(async (request: Request) => {
       { status: 403 },
     );
   }
-  recordLoginSuccess(ip);
+  recordLoginSuccess(limiterKey);
   return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
 }, "POST /api/auth/me/pin");
