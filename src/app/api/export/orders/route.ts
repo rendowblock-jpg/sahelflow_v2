@@ -6,6 +6,12 @@ import { requireAuth } from "@/lib/auth/server";
 import { db, shopContext } from "@/lib/db";
 import { toXlsx } from "@/lib/import/export";
 import {
+  activeFilterNames,
+  exportAuditAfter,
+  exportedRowCount,
+  exportRowHeaders,
+} from "@/lib/import/export-audit";
+import {
   collectBoundedXlsxRows,
   createPagedCsvStream,
 } from "@/lib/import/paged-export";
@@ -80,13 +86,24 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       filters.dateTo,
   );
 
+  // S03c-17: count first so the audit row and the response can say how many
+  // rows the download carries and whether the filtered cap cut the file.
+  const summary = {
+    totalMatching: await db.order.count({ where }),
+    rowLimit: filtered ? MAX_FILTERED_EXPORT_ROWS : undefined,
+  };
   await logAudit(
     { prisma: db, shop: shopContext },
     {
       action: "export.orders",
       entity: "orders",
       actor: trustedActorAuditIdentity(actorContext.actor),
-      after: { format, ...(filtered ? { filtered: true } : {}) },
+      after: exportAuditAfter({
+        entity: "orders",
+        format,
+        summary,
+        filterNames: activeFilterNames({ ...filters }),
+      }),
     },
   );
 
@@ -150,15 +167,15 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const filePrefix = locale === "ar" ? "طلبات" : locale === "fr" ? "commandes" : "orders";
   const fileSuffix = new Date().toISOString().slice(0, 10);
   if (format === "xlsx") {
-    const total = await db.order.count({ where });
     const rows = await collectBoundedXlsxRows(
-      filtered ? Math.min(total, MAX_FILTERED_EXPORT_ROWS) : total,
+      exportedRowCount(summary),
       loadPage,
       filtered ? { maxRows: MAX_FILTERED_EXPORT_ROWS } : undefined,
     );
     return new NextResponse(toXlsx(rows, [...columns]), {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ...exportRowHeaders(summary),
         "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.xlsx"`,
       },
     });
@@ -167,6 +184,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   return new NextResponse(createPagedCsvStream(columns, loadPage), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
+      ...exportRowHeaders(summary),
       "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.csv"`,
       "Cache-Control": "no-store",
     },

@@ -11,6 +11,11 @@ import {
   autoDetectMapping,
 } from "@/lib/import/engine";
 import { PRODUCT_FIELDS, parseNumber } from "@/lib/import/fields";
+import { importAuditAfter } from "@/lib/import/import-audit";
+import { importRowError } from "@/lib/import/row-error";
+import { logAudit } from "@/lib/audit";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
+import { logger } from "@/lib/logger";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
 import { requireAuth } from "@/lib/auth/server";
@@ -30,7 +35,7 @@ const productImportSchema = z.object({
 
 /** POST /api/import/products — preview (commit=false) or canonical insert. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth([
+  const actorContext = await requireAuth([
     "data.import",
     "products.manage",
     "products.cost.read",
@@ -118,7 +123,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   const result = await batchInsert(validation.valid, async (chunk) => {
     let inserted = 0;
-    const errors: Array<{ rowIndex: number; error: string }> = [];
+    const errors: Array<{ rowIndex: number; error: string; code: string }> = [];
     for (const row of chunk) {
       try {
         const { category, ...productData } = row.data as {
@@ -137,13 +142,31 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         });
         inserted += 1;
       } catch (error) {
-        errors.push({
+        // Constant per-row message: never echo driver text (S03c-13).
+        const coded = importRowError(error);
+        logger.warn("api.POST /api/import/products.row-failed", {
           rowIndex: row.rowIndex,
-          error: error instanceof Error ? error.message : t("common.errorGeneric"),
+          code: coded.code,
         });
+        errors.push({ rowIndex: row.rowIndex, error: coded.message, code: coded.code });
       }
     }
     return { inserted, errors };
+  });
+
+  await logAudit(context, {
+    action: "import.products",
+    entity: "products",
+    actor: trustedActorAuditIdentity(actorContext.actor),
+    after: importAuditAfter({
+      entity: "products",
+      totalRows: parsed.rows.length,
+      inserted: result.inserted,
+      failed: result.errors.length,
+      invalid: validation.invalid.length,
+      mapping,
+      knownFields: PRODUCT_FIELDS.map((field) => field.key),
+    }),
   });
 
   return NextResponse.json({
