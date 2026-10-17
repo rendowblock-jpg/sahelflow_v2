@@ -18,7 +18,29 @@ const PRIVACY_EXPORT_EXCLUDED_MODELS = [
   "Secret",
   "Session",
   "WilayaRiskProfile",
+  // Derived search-index material (keyed blind-index tokens and their
+  // re-index bookkeeping, plus the revision watermark): rebuilt from the
+  // exported Customer and Order records, meaningless without the
+  // installation-wrapped blind-index key and far too large for the bounded
+  // export. Declared in scripts/__tests__/privacy-export-authority.test.ts.
+  "SearchProjectionDirty",
+  "SearchProjectionRevision",
+  "SearchProjectionToken",
 ] as const;
+
+/**
+ * Meta CAPI delivery errors are free text copied from the failed Graph API
+ * call, and that call carries the access token in its query string. The token
+ * lives only in the encrypted Secret authority (`meta_capi_access_token`), so a
+ * stored error is masked here before it can reach a portability file.
+ */
+const QUERY_ACCESS_TOKEN_VALUE = /(access_token=)[^&\s"<>]+/gi;
+
+function maskQueryAccessToken(text: string | null): string | null {
+  return text === null
+    ? null
+    : text.replace(QUERY_ACCESS_TOKEN_VALUE, "$1[redacted]");
+}
 
 /**
  * Exact model-level export authority derived from the Phase 4 data inventory.
@@ -49,6 +71,8 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
     }),
   AiChatMessage: () => db.aiChatMessage.findMany(),
   AiChatSession: () => db.aiChatSession.findMany(),
+  // Ledger AI-13 thumbs: value and timestamp keyed to an exported chat message.
+  AiMessageFeedback: () => db.aiMessageFeedback.findMany(),
   AuditLog: () => db.auditLog.findMany(),
   Automation: () => db.automation.findMany(),
   AutomationLog: () => db.automationLog.findMany(),
@@ -82,6 +106,21 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
   CanonicalReturnEvent: () => db.canonicalReturnEvent.findMany(),
   CanonicalReturnInspection: () => db.canonicalReturnInspection.findMany(),
   CanonicalReturnItem: () => db.canonicalReturnItem.findMany(),
+  // FD-061 EX-3 Meta CAPI: the delivery ledger and attempt audit hold order
+  // ids, stages, outcomes and Meta trace ids only (the hashed buyer fields are
+  // computed in memory at send time and never stored), so rows are exported
+  // as stored. The access token is not a column; the free-text error columns
+  // are masked because the failed request URL carries it.
+  CapiAttemptLog: async () =>
+    (await db.capiAttemptLog.findMany()).map((attempt) => ({
+      ...attempt,
+      error: maskQueryAccessToken(attempt.error),
+    })),
+  CapiEventLedger: async () =>
+    (await db.capiEventLedger.findMany()).map((entry) => ({
+      ...entry,
+      lastError: maskQueryAccessToken(entry.lastError),
+    })),
   Category: () => db.category.findMany(),
   CodCollection: () => db.codCollection.findMany(),
   CodCollectionCorrection: () => db.codCollectionCorrection.findMany(),
@@ -138,6 +177,9 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
       key?.fill(0);
     }
   },
+  // Seller pixel configuration. It has no credential column: the CAPI access
+  // token rides the Secret authority, which stays excluded.
+  MetaPixelConfig: () => db.metaPixelConfig.findMany(),
   NotificationDeliveryAttempt: () =>
     db.notificationDeliveryAttempt.findMany(),
   NotificationEvent: () => db.notificationEvent.findMany(),
@@ -158,6 +200,8 @@ const PRIVACY_EXPORT_MODEL_LOADERS = {
     db.providerCapabilityCertification.findMany(),
   ProviderIngressAttempt: () => db.providerIngressAttempt.findMany(),
   ProviderIngressEvent: () => db.providerIngressEvent.findMany(),
+  // FD-061 EX-4 upsell configuration (seller-owned, no buyer data).
+  QuantityTierOffer: () => db.quantityTierOffer.findMany(),
   Refund: () => db.refund.findMany(),
   Return: () => db.return.findMany(),
   ReturnNote: () => db.returnNote.findMany(),
@@ -236,6 +280,7 @@ export async function createShopPrivacyExport(): Promise<Buffer> {
           "session and installation authentication authority",
           "backup recovery secrets",
           "public rebuildable wilaya reference data",
+          "derived search-index material",
           "ephemeral runtime state",
         ],
         models,
