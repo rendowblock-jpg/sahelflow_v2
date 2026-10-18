@@ -214,7 +214,7 @@ export function AiDecisionCanvas({
     : activeSession?.title || workspace.copy("newSessionTitle");
 
   return (
-    <main
+    <div
       data-ai-decision-canvas="true"
       data-ai-canvas-mode={home ? "home" : "conversation"}
       className="relative flex h-full min-h-0 flex-col bg-background"
@@ -375,6 +375,6 @@ export function AiDecisionCanvas({
           </SheetContent>
         </Sheet>
       ) : null}
-    </main>
+    </div>
   );
 }
