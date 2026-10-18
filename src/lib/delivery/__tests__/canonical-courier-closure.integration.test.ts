@@ -502,6 +502,12 @@ describe("canonical courier public boundary", () => {
         process.cwd(),
         "src/lib/integrations/__tests__/phase3-source-closure.test.ts",
       ),
+      // S03c-05 pin: reads the booking authority as TEXT to assert that the
+      // amount sent to the courier is Order.totalPrice. It never imports it.
+      resolve(
+        process.cwd(),
+        "src/lib/delivery/__tests__/courier-cod-amount-contract.test.ts",
+      ),
     ]);
     const offenders: string[] = [];
 

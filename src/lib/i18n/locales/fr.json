@@ -385,6 +385,8 @@
   "codReconciliation.selectOrderAria": "Sélectionner {{orderNumber}}",
   "codReconciliation.success": "Commandes marquées comme versées",
   "codReconciliation.title": "Rapprochement COD",
+  "codReconciliation.flaggedNotice": "Exclues de ces totaux : l’enregistrement de créance est incohérent",
+  "codReconciliation.truncatedNotice": "Seuls les commandes livrées et les versements les plus récents sont comptés ici ; les plus anciens ne figurent pas dans ces totaux.",
   "codReconciliation.totalPending": "Total en attente :",
   "command.action.askAi": "Demander à l'IA",
   "command.action.backup": "Créer une sauvegarde",

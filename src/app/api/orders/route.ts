@@ -6,7 +6,6 @@ import {
   type TriggerEvent,
 } from "@/lib/automations/engine";
 import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
-import { orderService } from "@/lib/data/order-service";
 import { db, shopContext } from "@/lib/db";
 import {
   assertTrustedAction,
@@ -15,6 +14,7 @@ import {
 import { assertOrderCreateFieldAuthority } from "@/lib/identity/order-authorization";
 import { projectOrderForTrustedActor } from "@/lib/identity/order-projection";
 import { createTrustedManualOrder } from "@/lib/orders/manual-order";
+import { assertManualOrderIntakeSource } from "@/lib/orders/manual-order-intake-source";
 import { getOrdersWorkbenchPage } from "@/lib/orders/order-list-workbench";
 import { assessOrderRisk } from "@/lib/risk-engine";
 import { orderStatusSchema } from "@/lib/validation";
@@ -61,7 +61,13 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   return NextResponse.json(result);
 }, "GET /api/orders");
 
-/** POST /api/orders — governed manual intake or compatibility intake. */
+/**
+ * POST /api/orders — governed manual intake (order.manual.create.v1).
+ *
+ * Every order created here goes through the command kernel. Orders from other
+ * channels are created by their own intake, so a body that names another
+ * source is refused (S03a-01).
+ */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("orders.create");
   assertTrustedAction(actorContext, "orders.read", {
@@ -73,19 +79,15 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     businessPrincipal: businessPrincipalFromTrustedActor(actorContext),
   };
   const body = await req.json();
-  const effectiveSource = body?.source ?? "manual";
-  const manualCommand =
-    effectiveSource === "manual"
-      ? await createTrustedManualOrder(businessContext, {
-          ...body,
-          source: "manual",
-        })
-      : null;
-  const manualResult = manualCommand?.result;
-  const order =
-    manualResult?.order ?? (await orderService.create(context, body));
+  assertManualOrderIntakeSource(body);
+  const manualCommand = await createTrustedManualOrder(businessContext, {
+    ...body,
+    source: "manual",
+  });
+  const manualResult = manualCommand.result;
+  const order = manualResult.order;
 
-  if (manualCommand && !manualCommand.replayed && manualResult) {
+  if (!manualCommand.replayed) {
     await dispatchTrigger(
       context,
       "order.created" as TriggerEvent,
@@ -98,7 +100,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   let risk: Awaited<ReturnType<typeof assessOrderRisk>> = null;
-  if (!manualCommand?.replayed) {
+  if (!manualCommand.replayed) {
     try {
       risk = await assessOrderRisk(context, order.id);
     } catch {
@@ -110,15 +112,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     {
       order: projectOrderForTrustedActor(actorContext, order),
       risk,
-      customerCreated: manualResult?.customerCreated ?? false,
-      authority: manualCommand ? "trusted-manual-v1" : "legacy-compatibility",
-      command: manualCommand
-        ? {
-            id: manualCommand.commandId,
-            aggregateVersion: manualCommand.aggregateVersion,
-            replayed: manualCommand.replayed,
-          }
-        : null,
+      customerCreated: manualResult.customerCreated,
+      authority: "trusted-manual-v1",
+      command: {
+        id: manualCommand.commandId,
+        aggregateVersion: manualCommand.aggregateVersion,
+        replayed: manualCommand.replayed,
+      },
     },
     { status: 201 },
   );

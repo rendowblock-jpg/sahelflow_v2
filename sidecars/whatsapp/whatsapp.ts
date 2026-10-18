@@ -15,8 +15,9 @@ import {
   makeInMemoryStore,
   DisconnectReason,
   downloadMediaMessage,
+  normalizeMessageContent,
+  proto,
   type WASocket,
-  type proto,
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 import P from "pino";
@@ -177,11 +178,105 @@ export function quotedSendContent<T extends Record<string, unknown>>(
 }
 
 /**
+ * Top-level `proto.Message` fields that carry nothing a seller can read: a
+ * reaction, a protocol/system instruction, a poll vote, a pin or keep action,
+ * and the Signal sender-key hand-over that can ride beside (or without) a
+ * message. Baileys' own `isRealMessage` excludes the same three headline kinds
+ * (`protocolMessage`, `reactionMessage`, `pollUpdateMessage`).
+ *
+ * This is a closed DENY-list on purpose. A kind that is not listed here,
+ * including one this code has never seen, is spooled: showing a blank row is
+ * cheaper than silently dropping a real customer message.
+ */
+const NON_CONTENT_MESSAGE_KINDS: ReadonlySet<string> = new Set([
+  "reactionMessage",
+  "encReactionMessage",
+  "protocolMessage",
+  "pollUpdateMessage",
+  "keepInChatMessage",
+  "pinInChatMessage",
+  "senderKeyDistributionMessage",
+  "fastRatchetKeySenderKeyDistributionMessage",
+]);
+
+/** Routing metadata that sits beside the content and is never content itself. */
+const MESSAGE_METADATA_KEYS: ReadonlySet<string> = new Set(["messageContextInfo"]);
+
+export type ProviderUpsertContent = "content" | "decrypt-stub" | "non-content";
+
+/**
+ * A protocol message is normally a system instruction, but MESSAGE_EDIT with a
+ * replacement body is the customer correcting what they wrote (an address, a
+ * phone number). The app already renders that body as text, so it stays
+ * deliverable.
+ */
+function isEditWithReplacementBody(kind: string, content: Record<string, unknown>): boolean {
+  if (kind !== "protocolMessage") return false;
+  const protocol = content.protocolMessage as proto.Message.IProtocolMessage | null | undefined;
+  return (
+    protocol?.type === proto.Message.ProtocolMessage.Type.MESSAGE_EDIT &&
+    protocol.editedMessage != null
+  );
+}
+
+/**
+ * Decide whether a provider upsert carries anything deliverable.
+ *
+ * Wrappers (disappearing messages, view-once, document-with-caption, edits)
+ * are unwrapped with Baileys' own `normalizeMessageContent` first, so a real
+ * message inside a wrapper is judged by what it holds.
+ *
+ *  - "content": at least one top-level kind that is not on the deny-list (or an
+ *    edit that carries a replacement body), or nothing recognisable at all.
+ *    Anything unknown fails open.
+ *  - "decrypt-stub": Baileys could not decrypt it (CIPHERTEXT) and there is no
+ *    content to deliver. WhatsApp re-delivers the real message under the SAME
+ *    key.id, so spooling the stub would make that real copy a changed-content
+ *    conflict that is refused for ever (audit S05a-01).
+ *  - "non-content": only deny-listed kinds (reaction, protocol, poll vote ...).
+ */
+export function classifyProviderUpsertContent(upsert: {
+  message?: proto.IMessage | null;
+  messageStubType?: number | null;
+}): ProviderUpsertContent {
+  const content = (normalizeMessageContent(upsert.message ?? undefined) ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const kinds = Object.keys(content).filter(
+    (kind) => content[kind] != null && !MESSAGE_METADATA_KEYS.has(kind),
+  );
+  if (
+    kinds.some(
+      (kind) =>
+        !NON_CONTENT_MESSAGE_KINDS.has(kind) || isEditWithReplacementBody(kind, content),
+    )
+  ) {
+    return "content";
+  }
+  if (upsert.messageStubType === proto.WebMessageInfo.StubType.CIPHERTEXT) {
+    return "decrypt-stub";
+  }
+  return kinds.length > 0 ? "non-content" : "content";
+}
+
+export type ProviderSpoolAction =
+  | "inbound"
+  | "phone-outbound"
+  | "skip"
+  | "decrypt-stub"
+  | "non-content";
+
+/**
  * Which provider upserts become durable inbox traffic.
  *
  * Baileys emits `append` for offline stanzas it has already acked. Those are
  * real messages and must be spooled the same way as `notify`. Status, group,
- * and broadcast surfaces stay out of the spool.
+ * and broadcast surfaces stay out of the spool. A customer message that holds
+ * no deliverable content (an undecryptable stub, a reaction, a protocol
+ * message ...) is reported as "decrypt-stub" / "non-content" and not spooled.
+ * A stanza the seller sent from the phone (fromMe) keeps its own path whatever
+ * it carries.
  */
 export function providerMessageSpoolAction(
   upsertType: string | undefined,
@@ -189,12 +284,16 @@ export function providerMessageSpoolAction(
     remoteJid?: string | null;
     id?: string | null;
     fromMe?: boolean | null;
+    message?: proto.IMessage | null;
+    messageStubType?: number | null;
   },
-): "inbound" | "phone-outbound" | "skip" {
+): ProviderSpoolAction {
   if (upsertType !== "notify" && upsertType !== "append") return "skip";
   if (!message.remoteJid || !message.id) return "skip";
   if (!isIndividualInboundJid(message.remoteJid)) return "skip";
-  return message.fromMe ? "phone-outbound" : "inbound";
+  if (message.fromMe) return "phone-outbound";
+  const content = classifyProviderUpsertContent(message);
+  return content === "content" ? "inbound" : content;
 }
 
 async function postMessageStatus(payload: {
@@ -602,19 +701,33 @@ export class WhatsAppManager {
 
   /**
    * Emit spoolable 1:1 upserts. `append` is the offline path Baileys has
-   * already acked; status, group, and broadcast never leave this method.
+   * already acked; status, group, and broadcast never leave this method, and
+   * neither do undecryptable stubs or non-content kinds (reactions, protocol
+   * messages ...): see providerMessageSpoolAction.
    */
   ingestMessagesUpsert(
     type: string | undefined,
     messages: ReadonlyArray<proto.IWebMessageInfo>,
   ): void {
     let accepted = 0;
+    let decryptStubs = 0;
+    let nonContent = 0;
     for (const message of messages) {
       const action = providerMessageSpoolAction(type, {
         remoteJid: message.key?.remoteJid,
         id: message.key?.id,
         fromMe: message.key?.fromMe,
+        message: message.message,
+        messageStubType: message.messageStubType,
       });
+      if (action === "decrypt-stub") {
+        decryptStubs += 1;
+        continue;
+      }
+      if (action === "non-content") {
+        nonContent += 1;
+        continue;
+      }
       if (action === "skip") continue;
       const incoming = this.toIncoming(message);
       if (!incoming?.key.remoteJid || !incoming.key.id) continue;
@@ -629,6 +742,23 @@ export class WhatsAppManager {
         upsertType: type ?? "none",
         received: messages.length,
         accepted,
+      });
+    }
+    // Counts only, with the reason. Never an id, a JID or any text: for a stub
+    // the real message re-arrives under the same id and is then a normal first
+    // event, so nothing about the stub has to be remembered.
+    if (decryptStubs > 0) {
+      diagnostics.record("inbound.dropped", {
+        reason: "decrypt-stub",
+        upsertType: type ?? "none",
+        count: decryptStubs,
+      });
+    }
+    if (nonContent > 0) {
+      diagnostics.record("inbound.dropped", {
+        reason: "non-content",
+        upsertType: type ?? "none",
+        count: nonContent,
       });
     }
   }

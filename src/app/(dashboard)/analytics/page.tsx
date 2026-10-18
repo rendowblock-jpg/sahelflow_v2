@@ -50,6 +50,7 @@ import {
 import { getAnalyticsReportForRange } from "@/lib/analytics/report";
 import { getCourierPerformance } from "@/lib/analytics/courier-performance";
 import { getReturnRateByWilaya, getSkuPnl, getPeriodComparison } from "@/lib/data/analytics-v2";
+import { projectSkuPnlForTrustedActor } from "@/lib/identity/sku-pnl-projection";
 import { getI18n } from "@/lib/i18n-server";
 import {
   assertTrustedAction,
@@ -115,6 +116,11 @@ export default async function AnalyticsPage({
       }),
       getCourierPerformance(range, { includeFees }),
     ]);
+
+  // MNY-20: SKU margin is revenue minus cost, so cost-derived columns need the
+  // same products.cost.read grant that guards the product cost itself.
+  const skuProjection = projectSkuPnlForTrustedActor(actorContext, skuPnl);
+  const showSkuCost = skuProjection.fieldAccess.cost;
 
   const dateLocale = intlLocale(locale);
   const integerFormatter = new Intl.NumberFormat(dateLocale, {
@@ -705,7 +711,7 @@ export default async function AnalyticsPage({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {skuPnl.length > 0 ? (
+          {skuProjection.rows.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="sticky top-0 z-10 border-b bg-muted">
@@ -716,22 +722,28 @@ export default async function AnalyticsPage({
                     <th className="px-4 py-3 text-end">
                       {t("analytics.revenueLabel")}
                     </th>
-                    <th className="px-4 py-3 text-end">
-                      {t("analytics.skuColCost")}
-                    </th>
-                    <th className="px-4 py-3 text-end">
-                      {t("analytics.skuColMargin")}
-                    </th>
-                    <th className="px-4 py-3 text-end">
-                      {t("analytics.skuColMarginPct")}
-                    </th>
+                    {showSkuCost ? (
+                      <th className="px-4 py-3 text-end">
+                        {t("analytics.skuColCost")}
+                      </th>
+                    ) : null}
+                    {showSkuCost ? (
+                      <th className="px-4 py-3 text-end">
+                        {t("analytics.skuColMargin")}
+                      </th>
+                    ) : null}
+                    {showSkuCost ? (
+                      <th className="px-4 py-3 text-end">
+                        {t("analytics.skuColMarginPct")}
+                      </th>
+                    ) : null}
                     <th className="px-4 py-3 text-end">
                       {t("analytics.skuColQty")}
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {skuPnl.slice(0, 10).map((item) => (
+                  {skuProjection.rows.slice(0, 10).map((item) => (
                     <tr key={item.sku} className="hover:bg-muted/50">
                       <td className="px-4 py-3 text-sm font-medium">
                         {item.sku}
@@ -739,27 +751,33 @@ export default async function AnalyticsPage({
                       <td className="px-4 py-3 text-end text-sm tabular-nums">
                         {formatDZD(item.revenue, locale)}
                       </td>
-                      <td className="px-4 py-3 text-end text-sm tabular-nums text-muted-foreground">
-                        {formatDZD(item.cost, locale)}
-                      </td>
-                      <td className="px-4 py-3 text-end text-sm font-medium tabular-nums">
-                        {formatDZD(item.margin, locale)}
-                      </td>
-                      <td className="px-4 py-3 text-end">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            item.marginPct > 40
-                              ? "border-emerald-500/20 text-success"
-                              : "",
-                            item.marginPct < 20
-                              ? "border-red-500/20 text-destructive"
-                              : "",
-                          )}
-                        >
-                          {fmtPercent(item.marginPct)}
-                        </Badge>
-                      </td>
+                      {showSkuCost && item.cost !== null ? (
+                        <td className="px-4 py-3 text-end text-sm tabular-nums text-muted-foreground">
+                          {formatDZD(item.cost, locale)}
+                        </td>
+                      ) : null}
+                      {showSkuCost && item.margin !== null ? (
+                        <td className="px-4 py-3 text-end text-sm font-medium tabular-nums">
+                          {formatDZD(item.margin, locale)}
+                        </td>
+                      ) : null}
+                      {showSkuCost && item.marginPct !== null ? (
+                        <td className="px-4 py-3 text-end">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              item.marginPct > 40
+                                ? "border-emerald-500/20 text-success"
+                                : "",
+                              item.marginPct < 20
+                                ? "border-red-500/20 text-destructive"
+                                : "",
+                            )}
+                          >
+                            {fmtPercent(item.marginPct)}
+                          </Badge>
+                        </td>
+                      ) : null}
                       <td className="px-4 py-3 text-end text-sm tabular-nums text-muted-foreground">
                         {integerFormatter.format(item.quantity)}
                       </td>

@@ -1,5 +1,10 @@
 import "server-only";
 
+import {
+  recordWorkerFailure,
+  recordWorkerIdle,
+  recordWorkerSuccess,
+} from "@/lib/integrations/worker-health";
 import { logger } from "@/lib/logger";
 
 import { IDLE_POLL_INTERVAL_MS, isConnectedIdleState } from "./worker-idle";
@@ -54,6 +59,7 @@ export function startStorefrontReceiptWorker(): void {
         context,
         workspaceId: shopContext.workspaceId,
         encryptionPrivateKeyPkcs8: runtime.receiptKeys.privateKeyPkcs8,
+        encryptionPublicKeyJwk: runtime.receiptKeys.publicKeyJwk,
         after,
         limit: 50,
       });
@@ -66,23 +72,23 @@ export function startStorefrontReceiptWorker(): void {
       }
       if (idle) logger.info("storefront.receipt_worker.resumed");
       idle = false;
+      recordWorkerSuccess("storefront-receipts");
     } catch (error) {
       if (isConnectedIdleState(error)) {
         // No storefront enrolled or entitled: rest quietly, say so once.
         if (!idle) logger.info("storefront.receipt_worker.idle");
         idle = true;
+        recordWorkerIdle("storefront-receipts", "not_enrolled");
         return;
       }
       idle = false;
       // C1: the silent catch hid relay stalls (poison receipts, broken
       // decryption enrollment, relay outages) behind a permanently frozen
       // cursor. The cursor and canonical order idempotency retain their
-      // durable retry authority; the classified warn keeps every repeated
-      // tick failure operator-visible.
-      logger.warn("storefront.receipt_worker.tick_failed", {
-        name: error instanceof Error ? error.name : undefined,
-        message: error instanceof Error ? error.message : String(error),
-      });
+      // durable retry authority; the coded, throttled record below keeps a
+      // stalled ingest operator-visible without ever logging an error message
+      // (a relay or decryption message can carry receipt or customer data).
+      recordWorkerFailure("storefront-receipts", error);
     } finally {
       state.running = false;
       schedule();
