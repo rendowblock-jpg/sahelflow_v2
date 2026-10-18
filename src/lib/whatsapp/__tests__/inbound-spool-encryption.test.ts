@@ -71,7 +71,7 @@ describe("WhatsApp inbound spool encryption authority", () => {
     expect(serialized).not.toContain("PROVIDER-SEALED-1");
   });
 
-  it("blocks sidecar startup when the restart key cannot authenticate pending records", async () => {
+  it("sets a record the restart key cannot authenticate aside instead of blocking sidecar startup", async () => {
     const directory = temporaryDirectory();
     const first = new WhatsAppInboundSpool({
       directory,
@@ -82,20 +82,28 @@ describe("WhatsApp inbound spool encryption authority", () => {
       onCommitted: vi.fn(),
     });
 
-    first.enqueue("213555999000:12@s.whatsapp.net", message());
+    const envelope = first.enqueue("213555999000:12@s.whatsapp.net", message());
     await first.flush();
     expect(readdirSync(directory)).toHaveLength(1);
+    const sealedBytes = readFileSync(join(directory, `${envelope.spoolId}.json`), "utf8");
 
-    expect(
-      () =>
-        new WhatsAppInboundSpool({
-          directory,
-          appUrl: "http://127.0.0.1:3000",
-          bearerToken: "test-sidecar-token-1234",
-          encryptionKey: Buffer.alloc(32, 3),
-          fetchImpl: vi.fn() as unknown as typeof fetch,
-          onCommitted: vi.fn(),
-        }),
-    ).toThrow(/cannot be opened safely/i);
+    // One unreadable record used to make this constructor throw, which kept the
+    // whole sidecar (and every send) down. It is now kept aside, byte for byte,
+    // and the sidecar starts.
+    const restarted = new WhatsAppInboundSpool({
+      directory,
+      appUrl: "http://127.0.0.1:3000",
+      bearerToken: "test-sidecar-token-1234",
+      encryptionKey: Buffer.alloc(32, 3),
+      fetchImpl: vi.fn() as unknown as typeof fetch,
+      onCommitted: vi.fn(),
+    });
+
+    expect(restarted.pendingCount()).toBe(0);
+    const aside = readdirSync(join(directory, "quarantine"));
+    expect(aside).toHaveLength(1);
+    expect(aside[0]).toMatch(/\.authentication_failed\.json$/);
+    expect(readFileSync(join(directory, "quarantine", aside[0] ?? ""), "utf8")).toBe(sealedBytes);
+    expect(restarted.snapshot().quarantined).toBe(1);
   });
 });
