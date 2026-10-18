@@ -14,7 +14,8 @@ import {
 } from "@/lib/automations/contracts";
 import { assertSellerAutomationWritePolicy } from "@/lib/automations/seller-policy";
 import { db, shopContext } from "@/lib/db";
-import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
+import { assertAutomationEffectGrants } from "@/lib/automations/authoring-grants";
+import { assertTrustedAction, trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { SahelFlowError } from "@/types/errors";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -91,6 +92,10 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
     retryDelayMs: input.retryDelayMs ?? existing.retryDelayMs,
   });
   assertSellerAutomationWritePolicy(canonical);
+  // INT-05: re-enabling or editing a definition is authoring too (disabling stays open above).
+  assertAutomationEffectGrants(canonical.steps, (action) =>
+    assertTrustedAction(actorContext, action, { shopId: actorContext.shop.shopId }),
+  );
 
   const automation = await db.automation.update({
     where: { id },

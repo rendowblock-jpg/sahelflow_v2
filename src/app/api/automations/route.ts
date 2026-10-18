@@ -7,13 +7,18 @@ import { canonicalizeAutomationMutation } from "@/lib/automations/contracts";
 import { assertSellerAutomationWritePolicy } from "@/lib/automations/seller-policy";
 import { logAudit } from "@/lib/audit";
 import { db, shopContext } from "@/lib/db";
-import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
+import { assertAutomationEffectGrants } from "@/lib/automations/authoring-grants";
+import { assertTrustedAction, trustedActorAuditIdentity } from "@/lib/identity/authorization";
 
 /** POST — Create one fully validated, seller-compatible automation definition. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireAuth("automations.manage");
   const input = canonicalizeAutomationMutation(await req.json());
   assertSellerAutomationWritePolicy(input);
+  // INT-05: the author must hold the grant of every outward effect they script.
+  assertAutomationEffectGrants(input.steps, (action) =>
+    assertTrustedAction(actorContext, action, { shopId: actorContext.shop.shopId }),
+  );
   const context = { prisma: db, shop: shopContext };
 
   const automation = await context.prisma.automation.create({
