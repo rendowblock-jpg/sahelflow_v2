@@ -106,6 +106,19 @@ describe("licence boundary wiring", () => {
     expect(squash(layout)).toContain("...licenseProjection,");
   });
 
+  it("lets the server copy stand in only after the client has taken over, so the first client render equals the server HTML", () => {
+    // Server snapshot false, client snapshot true: hydration renders the loading surface.
+    expect(squash(boundary)).toContain(
+      "useSyncExternalStore( subscribeNever, clientSnapshot, serverSnapshot, )",
+    );
+    expect(boundary).toContain("const serverSnapshot = () => false;");
+    expect(boundary).toContain("const clientSnapshot = () => true;");
+    // The flag must be read before the server copy is used, never after.
+    expect(boundary.indexOf("const mounted = useSyncExternalStore(")).toBeLessThan(
+      boundary.indexOf("resolveLicenseBoundaryState({"),
+    );
+  });
+
   it("keeps the workspace-ready beacon inside the seeded boundary and the spinner contract intact", () => {
     const seeded = layout.indexOf("initialProjection={");
     const beacon = layout.indexOf("<RuntimeUiReadyBeacon />", seeded);
@@ -113,7 +126,9 @@ describe("licence boundary wiring", () => {
     expect(seeded).toBeGreaterThan(-1);
     expect(beacon).toBeGreaterThan(seeded);
     expect(beacon).toBeLessThan(close);
-    expect(boundary).toContain("serverProjection: initialProjection");
+    expect(boundary).toContain(
+      "serverProjection: mounted ? initialProjection : undefined",
+    );
     expect(boundary).toContain("if (isLoading || needsServerTreeRefresh)");
   });
 });

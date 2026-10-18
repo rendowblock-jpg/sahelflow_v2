@@ -20,10 +20,13 @@ export function needsLicensedServerTreeRefresh(
  * What the boundary renders from.
  *
  * The dashboard server layout validates the entitlement before it renders the
- * licensed tree, and it hands that same projection down. Using it for the first
- * paint means neither the server HTML nor hydration has to wait for a client
- * round trip to `/api/license/status` before the workspace (and the
- * `RuntimeUiReadyBeacon` inside it) can mount. That wait sat on every launch.
+ * licensed tree, and it hands that same projection down. Once the client has
+ * taken over, using it means the workspace (and the `RuntimeUiReadyBeacon`
+ * inside it) does not wait for a client round trip to `/api/license/status`
+ * before it mounts. That wait sat on every launch. The server HTML and the
+ * hydrating first client render stay the loading surface, exactly as before, so
+ * hydration never sees page content the server did not render. The caller
+ * decides when the server copy may stand in.
  *
  * Whatever the client has fetched is fresher and always wins. The loading
  * spinner now blocks only when there is nothing at all to show; a refresh that
