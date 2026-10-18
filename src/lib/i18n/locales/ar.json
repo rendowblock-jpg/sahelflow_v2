@@ -385,6 +385,8 @@
   "codReconciliation.selectOrderAria": "تحديد {{orderNumber}}",
   "codReconciliation.success": "تم وضع علامة على الطلبات كمحوّلة",
   "codReconciliation.title": "تسوية الدفع عند الاستلام",
+  "codReconciliation.flaggedNotice": "مستبعدة من هذه الإجماليات لأن سجل المستحق الخاص بها غير متسق",
+  "codReconciliation.truncatedNotice": "تُحتسب هنا أحدث الطلبات المسلّمة ودفعات التحويل فقط، أما الأقدم فلا تدخل في هذه الإجماليات.",
   "codReconciliation.totalPending": "الإجمالي المعلق:",
   "command.action.askAi": "اسأل الذكاء الاصطناعي",
   "command.action.backup": "إنشاء نسخة احتياطية",

@@ -27,6 +27,8 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+import { describeRefusal, foreignBodyMessage, isJsonRpcBody } from "./bridge-messages";
+
 const APP_IDENTIFIER = "com.sahelflow.desktop";
 const CONNECTION_ID = process.env.MCP_CONNECTION_ID ?? "stdio";
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -145,19 +147,20 @@ async function forward(message: unknown): Promise<void> {
     });
 
     if (response.status === 202) return;
-    if (!response.ok && (response.status === 401 || response.status === 403)) {
-      if (hasId) {
-        transportError(
-          id,
-          "SahelFlow refused this agent: its key was revoked or is not valid. Create a new key in AI Agents → Connected agents.",
-        );
-      }
-      return;
-    }
 
     const text = await response.text();
+    if (response.status === 401 || response.status === 403) {
+      if (hasId) transportError(id, describeRefusal(response.status, text));
+      return;
+    }
     if (!text) {
       if (hasId) transportError(id, "Empty response from SahelFlow");
+      return;
+    }
+    // Only JSON-RPC reaches the agent. Any other body (an HTML page, a
+    // transport error object) is replaced by a constant message, never echoed.
+    if (!isJsonRpcBody(text)) {
+      if (hasId) transportError(id, foreignBodyMessage(response.status));
       return;
     }
     process.stdout.write(`${text.trim()}\n`);

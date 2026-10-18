@@ -1,10 +1,15 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { shopifyAdapter } from "../shopify";
 import { woocommerceAdapter } from "../woocommerce";
+import { routeOutboundThroughGlobalFetch } from "../../__tests__/outbound-test-transport";
 import { youcanAdapter } from "../youcan";
 
 const originalFetch = global.fetch;
+
+beforeEach(() => {
+  routeOutboundThroughGlobalFetch();
+});
 
 afterEach(() => {
   global.fetch = originalFetch;

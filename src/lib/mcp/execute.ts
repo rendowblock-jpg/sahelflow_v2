@@ -14,7 +14,9 @@
  *     the Agents workspace. The MCP client has no approval path at all;
  *   - `blocked` (1) is never advertised and resolves as unknown.
  *
- * Every invocation is rate-limited (fail-open) and audited (best-effort).
+ * Every invocation is rate-limited (fail-open) and audited (best-effort). A
+ * call refused before execution is audited as `denied` with no arguments
+ * (S06b-04); identical repeated rows are coalesced by `audit.ts` (S06b-01).
  */
 import "server-only";
 
@@ -85,6 +87,36 @@ function proposalIdOf(value: unknown): string | null {
 }
 
 /**
+ * Record a call that never reached a tool body. Only an authority refusal is a
+ * denial; anything else (a registry failure) is an internal failure. The agent
+ * chose the tool name and arguments of a call it was not allowed to make, so no
+ * argument is recorded and the stored name is bounded by the audit writer.
+ */
+async function auditRefusedCall(
+  session: McpAgentSession,
+  toolName: string,
+  executionClass: string,
+  error: unknown,
+  startedAt: number,
+): Promise<void> {
+  const refusal = error instanceof SahelFlowError && error.statusCode < 500;
+  await writeMcpInvocationAudit(db, {
+    toolName,
+    executionClass,
+    agentActor: session.agentActor,
+    onBehalfOf: session.onBehalfOf,
+    grantId: session.grant.id,
+    clientName: session.client.name,
+    clientVersion: session.client.version,
+    outcome: refusal ? "denied" : "failed",
+    errorCode: errorCodeOf(error).slice(0, 64),
+    proposalId: null,
+    durationMs: Date.now() - startedAt,
+    args: null,
+  });
+}
+
+/**
  * Execute one `tools/call`.
  *
  * Never throws for ordinary tool failure: MCP reports that as a result with
@@ -97,8 +129,14 @@ export async function callMcpTool(
   rawArgs: Record<string, unknown>,
 ): Promise<McpCallOutcome> {
   const startedAt = Date.now();
-  const entry = await resolveMcpToolForSession(session, toolName);
-  assertMcpNeverApprover(entry.requires);
+  let entry: Awaited<ReturnType<typeof resolveMcpToolForSession>>;
+  try {
+    entry = await resolveMcpToolForSession(session, toolName);
+    assertMcpNeverApprover(entry.requires);
+  } catch (error) {
+    await auditRefusedCall(session, toolName, "unresolved", error, startedAt);
+    throw error;
+  }
 
   const limit = consumeMcpRateLimit(session.rateLimitSubject);
   if (!limit.allowed) {
@@ -123,11 +161,13 @@ export async function callMcpTool(
 
   const tool = getTool(toolName);
   if (!tool) {
-    throw new SahelFlowError(
+    const missing = new SahelFlowError(
       `Unknown tool: ${toolName}`,
       "MCP_TOOL_NOT_FOUND",
       404,
     );
+    await auditRefusedCall(session, toolName, entry.executionClass, missing, startedAt);
+    throw missing;
   }
 
   const context = { db, shop: shopContext };

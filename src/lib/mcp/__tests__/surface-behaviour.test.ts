@@ -21,6 +21,7 @@ import {
   openMcpAgentSession,
   type McpAgentSession,
 } from "@/lib/mcp/agent-session";
+import { resetMcpAuditCoalescing } from "@/lib/mcp/audit";
 import { callMcpTool } from "@/lib/mcp/execute";
 import {
   JSON_RPC_INVALID_PARAMS,
@@ -266,6 +267,7 @@ describe("loopback transport authorization", () => {
 describe("execution", () => {
   beforeEach(async () => {
     resetMcpRateLimit();
+    resetMcpAuditCoalescing();
     await db.auditLog.deleteMany({ where: { action: "mcp.tool_called.v1" } });
   });
 

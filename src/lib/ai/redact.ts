@@ -328,6 +328,20 @@ export function redactPhonesInText(text: string): string {
     .replace(FLEXIBLE_LOCAL_PHONE, (match) => redactPhone(match));
 }
 
+/**
+ * A name token longer than this, or joined from more than
+ * NAME_TOKEN_MAX_SEGMENTS pieces by - . ' , is not a human name: it is how an
+ * imperative sentence would be smuggled through the name field as one
+ * whitespace-free "word" (audit AIX-05).
+ */
+const NAME_TOKEN_MAX_CHARS = 24;
+const NAME_TOKEN_MAX_SEGMENTS = 3;
+
+function isBoundedNameToken(token: string): boolean {
+  if (!token || Array.from(token).length > NAME_TOKEN_MAX_CHARS) return false;
+  return token.split(/['\u2019.-]/u).length <= NAME_TOKEN_MAX_SEGMENTS;
+}
+
 /** Keep only a customer's first name and family-name initial. */
 export function redactCustomerName(name: string): string {
   const normalized = name.normalize("NFKC").trim();
@@ -352,10 +366,12 @@ export function redactCustomerName(name: string): string {
   }
 
   const parts = withoutPhoneLikeContent.split(/\s+/u).filter(Boolean);
-  if (parts.length <= 1) return parts[0] ?? "••••";
+  const givenName = parts[0] ?? "";
+  if (!isBoundedNameToken(givenName)) return "••••";
+  if (parts.length <= 1) return givenName;
   const familyName = parts[parts.length - 1] ?? "";
   const initial = Array.from(familyName)[0] ?? "";
-  return initial ? `${parts[0]} ${initial}.` : parts[0] ?? "••••";
+  return initial ? `${givenName} ${initial}.` : givenName;
 }
 
 /**
