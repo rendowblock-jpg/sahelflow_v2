@@ -78,28 +78,47 @@ describe("the page never interrupts the seller", () => {
 });
 
 describe("the desktop shell closes properly before the installer runs", () => {
-  it("registers the updater with a before-exit hook", () => {
-    expect(rust).toContain(".on_before_exit(prepare_for_update_install)");
-    expect(rust).not.toContain("tauri_plugin_updater::Builder::new().build()");
+  it("builds every update with the before-exit hook, not the plugin's default", () => {
+    // The hook belongs to each update, so it is attached where updates are made.
+    expect(rust).toContain(".on_before_exit(move || prepare_for_update_install(&app))");
+    // The plugin itself is registered plainly: its Builder has no such method.
+    expect(rust).toContain(".plugin(tauri_plugin_updater::Builder::new().build())");
+    expect(rust).not.toMatch(/Builder::new\(\)\s*\.on_before_exit/);
+    const command = rustFunction("async fn check_for_update(");
+    expect(command).toMatch(/webview\s*\.updater_builder\(\)/);
+    // The update goes where the plugin's own download and install look for it.
+    expect(command).toContain("webview.resources_table().add(update)");
+    expect(rust).toContain("#[tauri::command]\nasync fn check_for_update(");
+    expect(rust).toContain(".invoke_handler(tauri::generate_handler![check_for_update])");
   });
 
   it("the hook takes the shutdown, hides the workspace, then stops the contained trees", () => {
-    const hook = rustFunction("fn prepare_for_update_install()");
+    const hook = rustFunction("fn prepare_for_update_install(app: &tauri::AppHandle)");
     const begin = hook.indexOf("coordinator.begin()");
     const hide = hook.indexOf('get_webview_window("main")');
     const stop = hook.indexOf("stop_contained_trees(app)");
+    const cleanup = hook.indexOf("app.cleanup_before_exit()");
     expect(begin).toBeGreaterThan(-1);
     expect(hide).toBeGreaterThan(begin);
     expect(stop).toBeGreaterThan(hide);
-    // A normal close already in progress keeps ownership of the teardown.
-    expect(hook).toContain("if !coordinator.begin() {");
-    // Before the app exists there is nothing to stop.
-    expect(hook).toContain("UPDATE_APP_HANDLE.get()");
+    // The framework's own cleanup, which the plugin's default hook also ran.
+    expect(cleanup).toBeGreaterThan(stop);
+  });
+
+  it("a normal close already running is waited for, never raced", () => {
+    const hook = rustFunction("fn prepare_for_update_install(app: &tauri::AppHandle)");
+    expect(hook).toContain("wait_for_shutdown(&coordinator, UPDATE_SHUTDOWN_WAIT)");
+    expect(hook).not.toContain("if !coordinator.begin() {\n            return;");
+    expect(rust).toContain("const UPDATE_SHUTDOWN_WAIT: std::time::Duration");
   });
 
   it("development builds, which run no contained trees, have an inert hook", () => {
-    expect(rust).toContain("#[cfg(debug_assertions)]\nfn prepare_for_update_install() {}");
-    expect(rust).toContain("#[cfg(not(debug_assertions))]\nfn prepare_for_update_install()");
+    expect(rust).toContain(
+      "#[cfg(debug_assertions)]\nfn prepare_for_update_install(_app: &tauri::AppHandle) {}",
+    );
+    expect(rust).toContain(
+      "#[cfg(not(debug_assertions))]\nfn prepare_for_update_install(app: &tauri::AppHandle)",
+    );
   });
 
   it("a normal close and an update share one teardown", () => {
@@ -112,11 +131,53 @@ describe("the desktop shell closes properly before the installer runs", () => {
     expect(normalClose).not.toContain("kill_all");
   });
 
-  it("remembers the app handle only after the shutdown coordinator exists", () => {
-    const managed = rust.indexOf("app.manage(ShutdownCoordinator::default());");
-    const stored = rust.indexOf("UPDATE_APP_HANDLE.set(app.handle().clone())");
-    expect(managed).toBeGreaterThan(-1);
-    expect(stored).toBeGreaterThan(managed);
+  it("keeps no global app handle: the command carries the handle it needs", () => {
+    expect(rust).not.toContain("UPDATE_APP_HANDLE");
+  });
+});
+
+describe("the page may call exactly one command of its own, and only to look", () => {
+  const capability = JSON.parse(read("src-tauri/capabilities/default.json")) as {
+    permissions: string[];
+    remote?: { urls: string[] };
+  };
+  const permissionFile = read("src-tauri/permissions/check-for-update.toml");
+  const bridge = read("src/lib/updater/desktop-update-check.ts");
+
+  it("names the command in a capability, because the page is a remote origin", () => {
+    // The loopback workspace is not Tauri's local origin, so an app command is
+    // refused unless a capability for that origin lists its permission.
+    expect(capability.remote?.urls).toContain("http://127.0.0.1:*");
+    const ownPermissions = capability.permissions.filter((entry) => !entry.includes(":"));
+    expect(ownPermissions).toEqual(["allow-check-for-update"]);
+    expect(permissionFile).toContain('identifier = "allow-check-for-update"');
+    expect(permissionFile).toContain('commands.allow = ["check_for_update"]');
+    expect(permissionFile.match(/\[\[permission\]\]/g)).toHaveLength(1);
+  });
+
+  it("registers that one command and no other", () => {
+    const handlers = /generate_handler!\[([^\]]*)\]/.exec(rust);
+    expect(handlers?.[1]?.split(",").map((name) => name.trim()).filter(Boolean)).toEqual([
+      "check_for_update",
+    ]);
+  });
+
+  it("the command only looks: it cannot download, install, stop or exit", () => {
+    const command = rustFunction("async fn check_for_update(");
+    for (const forbidden of [".download(", ".install(", "download_and_install", ".exit(", "stop_contained_trees"]) {
+      expect(command, forbidden).not.toContain(forbidden);
+    }
+  });
+
+  it("the page asks through the bridge, not through the plugin's own check()", () => {
+    expect(checker).toContain("checkForDesktopUpdate()");
+    expect(checker).not.toMatch(/\{\s*check\s*\}\s*=\s*await import\("@tauri-apps\/plugin-updater"\)/);
+    expect(checker).not.toContain("await check()");
+    expect(bridge).toContain('CHECK_FOR_UPDATE_COMMAND = "check_for_update"');
+    expect(bridge).toContain("invoke<unknown>(CHECK_FOR_UPDATE_COMMAND)");
+    // Code only: the doc comment may mention the plugin's check().
+    const bridgeCode = bridge.replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(bridgeCode).not.toMatch(/\bcheck\s*\(/);
   });
 });
 

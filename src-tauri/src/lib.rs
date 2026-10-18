@@ -73,10 +73,9 @@ const SHUTDOWN_IDLE: u8 = 0;
 const SHUTDOWN_RUNNING: u8 = 1;
 const SHUTDOWN_COMPLETE: u8 = 2;
 
-/// The app handle the updater's before-exit hook needs. The hook is registered
-/// while the plugins are built, before the app (and so its handle) exists.
-#[cfg(not(debug_assertions))]
-static UPDATE_APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
+/// How long an update waits for a normal close that is already running.
+#[cfg_attr(debug_assertions, allow(dead_code))]
+const UPDATE_SHUTDOWN_WAIT: std::time::Duration = std::time::Duration::from_secs(20);
 
 /// Coordinates one normal-close owner without blocking Tauri's event loop.
 #[derive(Default)]
@@ -333,13 +332,11 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_notification::init())
         // On Windows the updater starts the installer and ends this process
-        // straight away. This hook runs first, so an update stops the contained
-        // trees through the same path as a normal close.
-        .plugin(
-            tauri_plugin_updater::Builder::new()
-                .on_before_exit(prepare_for_update_install)
-                .build(),
-        )
+        // straight away. The before-exit hook that stops the contained trees
+        // first is a property of each update, so it is attached where the
+        // update is created: `check_for_update` below.
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![check_for_update])
         .on_window_event(|_window, _event| {
             #[cfg(not(debug_assertions))]
             if _window.label() == "main" {
@@ -369,7 +366,6 @@ pub fn run() {
                 app.manage(std::sync::Mutex::new(SpawnedChildren::new()));
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
                 app.manage(ShutdownCoordinator::default());
-                let _ = UPDATE_APP_HANDLE.set(app.handle().clone());
                 let app_handle = app.handle().clone();
                 startup_recovery::reset_startup_trace(&app_data_dir);
                 startup_recovery::record_startup_stage(
@@ -748,33 +744,102 @@ fn stop_contained_trees(app: &tauri::AppHandle) {
     }
 }
 
+/// What the workspace needs to show an update and to hand it back to the
+/// updater plugin. The same fields the plugin's own `check` command returns, so
+/// the page can wrap it in the plugin's `Update` class unchanged.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateOffer {
+    rid: tauri::ResourceId,
+    current_version: String,
+    version: String,
+    date: Option<String>,
+    body: Option<String>,
+    raw_json: serde_json::Value,
+}
+
+/// Looks for a signed update and, if there is one, keeps it in the webview's
+/// resource table exactly as the plugin's own `check` command does, so the
+/// plugin's `download` and `install` commands work on it.
+///
+/// This exists because the before-exit hook is attached to an individual
+/// update, and the plugin's JavaScript `check()` builds its updates with the
+/// plugin's default hook. Here every update is built with ours, so an install
+/// stops the contained trees before the installer starts.
+#[tauri::command]
+async fn check_for_update(webview: tauri::Webview) -> Result<Option<UpdateOffer>, String> {
+    use tauri::Manager;
+    use tauri_plugin_updater::UpdaterExt;
+
+    let app = webview.app_handle().clone();
+    let updater = webview
+        .updater_builder()
+        .on_before_exit(move || prepare_for_update_install(&app))
+        .build()
+        .map_err(|error| error.to_string())?;
+    let Some(update) = updater.check().await.map_err(|error| error.to_string())? else {
+        return Ok(None);
+    };
+    let date = update
+        .raw_json
+        .get("pub_date")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned);
+    let current_version = update.current_version.clone();
+    let version = update.version.clone();
+    let body = update.body.clone();
+    let raw_json = update.raw_json.clone();
+    let rid = webview.resources_table().add(update);
+    Ok(Some(UpdateOffer {
+        rid,
+        current_version,
+        version,
+        date,
+        body,
+        raw_json,
+    }))
+}
+
+/// Waits until the shutdown has finished or the limit passes. True when it
+/// finished.
+#[cfg_attr(debug_assertions, allow(dead_code))]
+fn wait_for_shutdown(coordinator: &ShutdownCoordinator, limit: std::time::Duration) -> bool {
+    let deadline = std::time::Instant::now() + limit;
+    while !coordinator.is_finished() {
+        if std::time::Instant::now() >= deadline {
+            return false;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    true
+}
+
 /// Runs on the updater's thread right before it starts the installer and ends
 /// the process. The workspace is taken out of interaction, then the contained
 /// trees stop, so nothing is writing to the shop databases while the installer
 /// replaces the application. If a normal close is already running it owns the
-/// teardown and this does nothing.
+/// teardown, and this waits for it instead of racing it. The framework's own
+/// cleanup runs last, as it does in the plugin's default hook.
 #[cfg(not(debug_assertions))]
-fn prepare_for_update_install() {
+fn prepare_for_update_install(app: &tauri::AppHandle) {
     use tauri::Manager;
 
-    let Some(app) = UPDATE_APP_HANDLE.get() else {
-        return;
-    };
-    let Some(coordinator) = app.try_state::<ShutdownCoordinator>() else {
-        return;
-    };
-    if !coordinator.begin() {
-        return;
+    if let Some(coordinator) = app.try_state::<ShutdownCoordinator>() {
+        if coordinator.begin() {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.hide();
+            }
+            stop_contained_trees(app);
+        } else if !wait_for_shutdown(&coordinator, UPDATE_SHUTDOWN_WAIT) {
+            eprintln!("[sahelflow] a normal close was still running when the update started");
+        }
     }
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.hide();
-    }
-    stop_contained_trees(app);
+    app.cleanup_before_exit();
 }
 
 /// Development builds run no contained trees, so there is nothing to stop.
 #[cfg(debug_assertions)]
-fn prepare_for_update_install() {}
+fn prepare_for_update_install(_app: &tauri::AppHandle) {}
 
 /// Environment passed only to the mandatory application server.
 fn server_env(
@@ -2183,5 +2248,32 @@ mod child_environment_tests {
         coordinator.finish();
         assert!(coordinator.is_finished());
         assert!(!coordinator.begin());
+    }
+
+    #[test]
+    fn an_update_waits_for_a_running_close_and_gives_up_if_it_never_ends() {
+        use std::sync::Arc;
+        use std::time::Duration;
+
+        // Nothing running: the limit passes and the caller is told so.
+        let idle = ShutdownCoordinator::default();
+        assert!(!super::wait_for_shutdown(&idle, Duration::from_millis(120)));
+
+        // Already finished: it returns at once, whatever the limit.
+        let done = ShutdownCoordinator::default();
+        assert!(done.begin());
+        done.finish();
+        assert!(super::wait_for_shutdown(&done, Duration::from_millis(0)));
+
+        // A close that finishes while the update waits is waited for.
+        let running = Arc::new(ShutdownCoordinator::default());
+        assert!(running.begin());
+        let closer = Arc::clone(&running);
+        let worker = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(150));
+            closer.finish();
+        });
+        assert!(super::wait_for_shutdown(&running, Duration::from_secs(10)));
+        worker.join().expect("the closing thread ends cleanly");
     }
 }

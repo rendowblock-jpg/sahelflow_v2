@@ -76,9 +76,9 @@ export function UpdateChecker() {
 
         if (!updateIsInHand()) {
           try {
-            // Dynamic import: the plugin only exists in the Tauri context.
-            const { check } = await import("@tauri-apps/plugin-updater");
-            const update = await check();
+            // Dynamic import: the desktop bridge only works in the Tauri context.
+            const { checkForDesktopUpdate } = await import("@/lib/updater/desktop-update-check");
+            const update = await checkForDesktopUpdate();
             if (cancelled) {
               void update?.close().catch(() => undefined);
               return;
