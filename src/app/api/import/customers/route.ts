@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { db, shopContext } from "@/lib/db";
 import { customerService } from "@/lib/data";
 import {
@@ -11,26 +10,28 @@ import {
   autoDetectMapping,
 } from "@/lib/import/engine";
 import { CUSTOMER_FIELDS, normalizePhone } from "@/lib/import/fields";
+import { importAuditAfter } from "@/lib/import/import-audit";
+import { importRowError } from "@/lib/import/row-error";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
+import { logAudit } from "@/lib/audit";
 import { getI18n } from "@/lib/i18n-server";
 import { requireAuth } from "@/lib/auth/server";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
+import { logger } from "@/lib/logger";
+import { createCustomerSchema } from "@/lib/validation";
 import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
 
-const customerImportSchema = z.object({
-  name: z.string().min(1),
-  phone: z.string().min(1),
-  phone2: z.string().optional(),
-  wilaya: z.string().optional(),
-  commune: z.string().optional(),
-  address: z.string().optional(),
-  notes: z.string().optional(),
-});
+/**
+ * Preview and commit validate with the SAME schema the customer API and the
+ * service use (S03c-13). The preview used to check only "name and phone are
+ * non-empty", so it reported rows as valid that the commit then rejected.
+ */
 
 /** POST /api/import/customers — preview (commit=false) or canonical insert. */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth([
+  const actorContext = await requireAuth([
     "data.import",
     "customers.manage",
     "customers.contact.read",
@@ -91,7 +92,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       },
     };
   });
-  const validation = validateRows(mapped, customerImportSchema);
+  const validation = validateRows(mapped, createCustomerSchema);
 
   if (!commit) {
     return NextResponse.json({
@@ -108,19 +109,37 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const context = { prisma: db, shop: shopContext };
   const result = await batchInsert(validation.valid, async (chunk) => {
     let inserted = 0;
-    const errors: Array<{ rowIndex: number; error: string }> = [];
+    const errors: Array<{ rowIndex: number; error: string; code: string }> = [];
     for (const row of chunk) {
       try {
         await customerService.create(context, row.data);
         inserted += 1;
       } catch (error) {
-        errors.push({
+        // Constant per-row message: never echo driver text or the phone number.
+        const coded = importRowError(error);
+        logger.warn("api.POST /api/import/customers.row-failed", {
           rowIndex: row.rowIndex,
-          error: error instanceof Error ? error.message : t("common.errorGeneric"),
+          code: coded.code,
         });
+        errors.push({ rowIndex: row.rowIndex, error: coded.message, code: coded.code });
       }
     }
     return { inserted, errors };
+  });
+
+  await logAudit(context, {
+    action: "import.customers",
+    entity: "customers",
+    actor: trustedActorAuditIdentity(actorContext.actor),
+    after: importAuditAfter({
+      entity: "customers",
+      totalRows: parsed.rows.length,
+      inserted: result.inserted,
+      failed: result.errors.length,
+      invalid: validation.invalid.length,
+      mapping,
+      knownFields: CUSTOMER_FIELDS.map((field) => field.key),
+    }),
   });
 
   return NextResponse.json({
