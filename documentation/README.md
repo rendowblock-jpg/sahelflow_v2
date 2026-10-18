@@ -1,11 +1,11 @@
 # SahelFlow documentation authority
 
 > **Status:** Active documentation entry point
-> **Last reconciled:** 2026-10-17
+> **Last reconciled:** 2026-10-18
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Published signed package:** Internal.43 / `1.0.0-internal.43` / MSI `1.0.0.43` / FD-071 / `customer-online` — tag `sahelflow-v1.0.0-internal.43-3fa652062295f3b2d82a66cc9e0c0cc159a21f38`, published 2026-10-17T14:59:16Z. Founder-authorized launch candidate, not Stable
-> **Latest recorded installed checkpoint:** Internal.41 (Founder-installed 2026-10-08); the Founder is installing Internal.43 in place. Campaign rows convert only on named observation
-> **Current next outcome:** the installed campaign on Internal.43 with state preserved, then FRC-3 in order A→D→C→B (see "Exact resume path")
+> **Published signed package:** Internal.44 / `1.0.0-internal.44` / MSI `1.0.0.44` / FD-072 / `customer-online` — tag `sahelflow-v1.0.0-internal.44-c1a66d9b17d5a11a2b6d31d70729102609fb4be1`, published 2026-10-18T15:15:42Z. Founder-authorized launch candidate, not Stable
+> **Latest recorded installed checkpoint:** Internal.41 (Founder-installed 2026-10-08); the Founder reported installing Internal.43 in place; Internal.44 is published and not installed. Campaign rows convert only on named observation
+> **Current next outcome:** the installed campaign on Internal.44 with state preserved, then FRC-3 in order A→D→C→B (see "Exact resume path")
 
 This directory is the documentation authority for SahelFlow. Superseded material is deleted rather than archived; git history is the record.
 
@@ -96,8 +96,8 @@ Each signed Internal checkpoint follows one discipline: freeze one exact protect
 ## Exact resume path
 
 1. Resolve live protected `main`, open PRs, the latest release and #164/#230/#306/#316/#317.
-2. Read `operations/WORKING_MEMORY.md`. Internal.43 is the latest signed package; Internal.41 is the last recorded installed build.
-3. When Internal.43 is installed with AppData preserved, execute the rows that candidate contains. Use the capability ledgers. #306 logout is LAST. Convert nothing the observation did not prove.
+2. Read `operations/WORKING_MEMORY.md`. Internal.44 is the latest signed package; Internal.41 is the last recorded installed build.
+3. When Internal.44 is installed with AppData preserved, execute the rows that candidate contains. Use the capability ledgers. #306 logout is LAST. Convert nothing the observation did not prove.
 4. Then continue FRC-3 in order A→D→C→B. Keep FRC-4/FRC-5 external blockers explicit.
 5. Source-level transformation work may proceed in parallel; it never converts an installed row and never carries release authority.
 6. Do not expose or market an integration/action before its live certification record exists.

@@ -44,22 +44,22 @@ No lower layer silently weakens a higher one.
 
 ## Verified product frontier
 
-Reconciled 2026-10-17. Re-resolve protected `main` before acting. `documentation/operations/WORKING_MEMORY.md` is the installed-truth authority; release facts and digests are in `documentation/system/CURRENT_STATE.md`. Dated "Next:" lines inside older documents are not instructions.
+Reconciled 2026-10-18. Re-resolve protected `main` before acting. `documentation/operations/WORKING_MEMORY.md` is the installed-truth authority; release facts and digests are in `documentation/system/CURRENT_STATE.md`. Dated "Next:" lines inside older documents are not instructions.
 
-- **Published signed package:** **Internal.43** / app `1.0.0-internal.43` / MSI `1.0.0.43` / FD-071 / `customer-online` / host `sahelflow.com`. Tag `sahelflow-v1.0.0-internal.43-3fa652062295f3b2d82a66cc9e0c0cc159a21f38`, published 2026-10-17T14:59:16Z by signed run 39041467501. It is the first release to ship `SahelFlow-Setup.exe` beside the MSI. A Founder-authorized launch candidate, not Stable or Beta.
-- **Installed truth:** the last recorded Founder-installed checkpoint is Internal.41 (2026-10-08); the Founder is installing Internal.43 in place (2026-10-17). No campaign row has converted on Internal.42 or 43. Campaign rows convert only on named observation of a candidate that contains them. Publication of a package is not conversion of later source.
+- **Published signed package:** **Internal.44** / app `1.0.0-internal.44` / MSI `1.0.0.44` / FD-072 / `customer-online` / host `sahelflow.com`. Tag `sahelflow-v1.0.0-internal.44-c1a66d9b17d5a11a2b6d31d70729102609fb4be1`, published 2026-10-18T15:15:42Z by signed run 39137845506, built from the tip of `main` at that time (`c1a66d9b`, release PR #533). A Founder-authorized launch candidate, not Stable or Beta. It packages the Internal.43 line plus #501-#509 and the whole-app audit repairs #511-#517 and #519-#531 (`documentation/system/CURRENT_STATE.md`, "What Internal.44 packages"). Internal.43 (FD-071, published 2026-10-17T14:59:16Z, signed run 39041467501) was the first release to ship `SahelFlow-Setup.exe` beside the MSI.
+- **Installed truth:** the last recorded Founder-installed checkpoint is Internal.41 (2026-10-08); the Founder reported installing Internal.43 in place (2026-10-17). Internal.44 is published and not installed. No campaign row has converted on Internal.42, 43 or 44. Campaign rows convert only on named observation of a candidate that contains them. Publication of a package is not conversion of later source.
 - issue #221 remains closed/completed on Founder acceptance of the historical installed Internal.24 checkpoint; #226 remains closed/completed with its budgets retained as regression criteria;
 - open issues are #164 (Phase 0–9 execution epic), #230 (Algerian-network installed trial), #306 (real-phone WhatsApp certification; logout LAST), #316 and #317 (installed/real-phone evidence only; their source is complete and packaged), plus #499, a superseded agent note;
 - open PR #456 (artifact hygiene) is stale against current main. Do not merge it as current work.
 
-Do not describe Internal.43 content as installed, live-provider-certified or Founder-accepted until an in-place update and campaign produce that evidence. Preserve the Founder's installation state until that campaign.
+Do not describe Internal.44 content as installed, live-provider-certified or Founder-accepted until an in-place update and campaign produce that evidence. Preserve the Founder's installation state until that campaign.
 
 ## Exact next outcome
 
-Internal.43 / FD-071 is published. The Founder updates in place.
+Internal.44 / FD-072 is published (2026-10-18). The Founder updates in place.
 
 1. Re-resolve protected `main`, open PRs, the latest release and issues #164/#230/#306/#316/#317.
-2. On the installed Internal.43 candidate, run one campaign with state preserved (no logout, no AppData reset, no protected-auth clearing). Convert a row only when that candidate contains it and the observation proves it — first WhatsApp sending (#306, logout LAST), licence activation by `SFLA1` code, the splash, team access, `SahelFlow-Setup.exe` on a clean machine. Then resume FRC-3 in order A→D→C→B. FRC-4/FRC-5 keep their external blockers.
+2. On the installed Internal.44 candidate, run one campaign with state preserved (no logout, no AppData reset, no protected-auth clearing). Convert a row only when that candidate contains it and the observation proves it — first WhatsApp sending (#306, logout LAST), licence activation by `SFLA1` code, the splash, team access, `SahelFlow-Setup.exe` on a clean machine. Then resume FRC-3 in order A→D→C→B. FRC-4/FRC-5 keep their external blockers. The startup gain and the Inbox cause can be measured only on Internal.44: the Founder's new `startup-trace.json` and WhatsApp diagnostics log decide both.
 3. Transformation work stays source-only, from `documentation/operations/TRANSFORMATION_HANDOFF.md` §4 (STR-01 composer seam, then the list seam). It converts no installed row.
 4. Any later source line reaches sellers only through a separate release-authority PR for the next signed successor, on a Founder decision. A signed build's source must be the current tip of `main` (see Evidence rules).
 5. Publicly promise only exact live-certified provider/actions. Keep #306, #230, paid deployment, Beta and Stable separate until their own evidence and authority close them.
