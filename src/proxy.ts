@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIE, isPublicApiRoute, isPublicPage } from "@/lib/auth/config";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { verifySessionToken } from "@/lib/auth/crypto";
+import { sidecarBearerMatches } from "@/lib/auth/sidecar-bearer";
 import { authorizeMcpTransport } from "@/lib/mcp/transport-auth";
 import {
   classifySetupRequestPath,
@@ -42,15 +43,11 @@ function hasWhatsAppSidecarCallbackAuthority(request: NextRequest): boolean {
     return false;
   }
 
-  const expected = process.env.SIDECAR_TOKEN;
-  const supplied = /^Bearer\s+(\S+)$/i.exec(
-    request.headers.get("authorization") ?? "",
-  )?.[1];
-  return Boolean(
-    expected &&
-      expected.length >= 16 &&
-      supplied &&
-      constantTimeEqual(supplied, expected),
+  // The one shared bearer check (IDN-11); the routes repeat it with the same
+  // function. The outer door reads the environment token only.
+  return sidecarBearerMatches(
+    request.headers.get("authorization"),
+    process.env.SIDECAR_TOKEN,
   );
 }
 
@@ -260,8 +257,11 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
+// Static image files skip the proxy so the login page can show its logo. That
+// exemption must never cover an API path (IDN-04): a dynamic segment such as
+// /api/orders/[id] accepts "x.png", and the proxy is the launch-cookie door.
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icons/|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icons/|sw\\.js|(?!api/).*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

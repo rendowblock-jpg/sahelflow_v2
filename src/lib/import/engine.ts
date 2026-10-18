@@ -29,6 +29,8 @@ import { z } from "zod";
 
 import { SahelFlowError } from "@/types/errors";
 
+import { importRowError } from "./row-error";
+
 /**
  * Import bounds (audit 7-a F4).
  *
@@ -278,7 +280,7 @@ export async function batchInsert<T>(
       for (const row of chunk) {
         errors.push({
           rowIndex: row.rowIndex,
-          error: err instanceof Error ? err.message : "Erreur d'insertion",
+          error: importRowError(err).message,
         });
       }
     }

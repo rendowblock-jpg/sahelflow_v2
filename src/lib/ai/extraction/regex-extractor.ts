@@ -57,7 +57,9 @@ export function readOrderFields(input: ExtractionInput): { order: ExtractedOrder
   const lines = readItems(original, folded, input.catalog);
   const items = lines.items;
   const wilaya = wilayaName(wilayaCode);
-  const phone = phones[0]?.value ?? normalizePhone(input.knownPhone) ?? input.knownPhone;
+  // A knownPhone that cannot be normalised is not a phone: counting it would mark
+  // the order complete and skip the model for a conversation id (S06b-12).
+  const phone = phones[0]?.value ?? normalizePhone(input.knownPhone);
   const address = labelledAddress?.value ?? lines.address;
   const customerName = name?.value ?? lines.signatureName;
 

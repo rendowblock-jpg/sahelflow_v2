@@ -1,5 +1,7 @@
 import "server-only";
 
+import { recordWorkerFailure, recordWorkerSuccess } from "@/lib/integrations/worker-health";
+
 const WORKER_KEY = Symbol.for("sahelflow.automation-worker.v1");
 const POLL_INTERVAL_MS = 2_000;
 
@@ -55,9 +57,13 @@ export function startAutomationWorker(): void {
       );
       await drainDueAutomationTriggers({ prisma: db, shop: shopContext }, 10);
       await drainDueAutomationRuns({ prisma: db, shop: shopContext }, 10);
-    } catch {
+      recordWorkerSuccess("automations");
+    } catch (error) {
       // Durable trigger/run/step state remains authoritative. The next bounded
       // tick retries due work without logging provider payload or seller PII.
+      // Only a failure CODE is recorded (INT-10): never the message, a URL or a
+      // customer value.
+      recordWorkerFailure("automations", error);
     } finally {
       state.running = false;
       schedule();

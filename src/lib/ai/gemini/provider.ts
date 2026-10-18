@@ -127,9 +127,13 @@ export function describeTransportCause(
 function providerError(
   status: number,
   body: GeminiErrorBody,
+  apiKey?: string,
 ): GeminiProviderError {
   const providerStatus = body.error?.status;
-  const message = body.error?.message?.trim() || `Gemini HTTP ${status}`;
+  const message = scrubGeminiSecrets(
+    body.error?.message?.trim() || `Gemini HTTP ${status}`,
+    apiKey,
+  );
   const withStatus = (
     code: GeminiProviderErrorCode,
   ): GeminiProviderError =>
@@ -204,22 +208,61 @@ async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function geminiAuthUrl(url: string, apiKey: string): string {
-  // Campaign row D1 (round 3): auth travels as the documented `?key=` query
-  // parameter — the carriage Google's own quickstarts use — NOT the
-  // `x-goog-api-key` header. Installed evidence: the Founder's browser
-  // probe (models list with ?key=) succeeded with the SAME AQ. key that
-  // this app's header-authenticated probe rejected as GEMINI_KEY_INVALID.
-  // New-format "AQ." keys are the demonstrated failure class for the header
-  // carriage on generativelanguage.googleapis.com; the parameter carriage
-  // is universally accepted for both AIza and AQ. keys. The key never
-  // reaches app logs: request logging records only model/attempt/status.
+/** Legacy Google-format keys: the only family proven to work in a header. */
+const HEADER_CARRIAGE_KEY_PREFIX = "AIza";
+const SECRET_PLACEHOLDER = "[redacted]";
+const KEY_QUERY_PARAMETER = /([?&]key=)[^&\s"'<>]*/gi;
+const GOOGLE_KEY_SHAPES =
+  /\bAIza[0-9A-Za-z_-]{16,}|\bAQ\.[0-9A-Za-z_.-]{16,}/g;
+const MIN_SCRUBBED_KEY_LENGTH = 8;
+
+/**
+ * Remove an API key, and anything shaped like one, from text that may be
+ * thrown, shown or logged (audit AIX-09 / S06a-10). Runtime errors from fetch
+ * can quote the full request URL (for example "Failed to parse URL from
+ * ...?key=..."), and an upstream error body may echo the credential, so every
+ * message built from either goes through here before it is stored on an error.
+ */
+export function scrubGeminiSecrets(text: string, apiKey?: string): string {
+  let scrubbed = text;
+  const key = apiKey?.trim() ?? "";
+  if (key.length >= MIN_SCRUBBED_KEY_LENGTH) {
+    for (const needle of new Set([key, encodeURIComponent(key)])) {
+      scrubbed = scrubbed.split(needle).join(SECRET_PLACEHOLDER);
+    }
+  }
+  return scrubbed
+    .replace(KEY_QUERY_PARAMETER, `$1${SECRET_PLACEHOLDER}`)
+    .replace(GOOGLE_KEY_SHAPES, SECRET_PLACEHOLDER);
+}
+
+function geminiAuthCarriage(
+  url: string,
+  apiKey: string,
+): { url: string; headers: Record<string, string> } {
+  // Legacy-format keys travel in the documented `x-goog-api-key` header, so
+  // they never appear in a URL, a proxy log or a runtime error message.
+  //
+  // New-format "AQ." keys keep the `?key=` parameter (campaign row D1, round
+  // 3). Installed evidence: the Founder's browser probe (models list with
+  // ?key=) succeeded with the SAME AQ. key that this app's header-carried
+  // probe rejected as GEMINI_KEY_INVALID, so the header is the demonstrated
+  // failure class for that family and moving it would break a working
+  // install. The key still never reaches app logs or errors: request logging
+  // records only model/attempt/status, and every error message is scrubbed
+  // (scrubGeminiSecrets). Retire the parameter carriage once a live probe
+  // proves the header accepts AQ. keys.
   // Trim here as well: keys stored before the save-boundary trim (or written
-  // by an older build) must not travel with stray surrounding whitespace —
-  // the provider's own verify path already trims, so the call path must
-  // behave identically.
+  // by an older build) must not travel with stray surrounding whitespace.
+  const key = apiKey.trim();
+  if (key.startsWith(HEADER_CARRIAGE_KEY_PREFIX)) {
+    return { url, headers: { "x-goog-api-key": key } };
+  }
   const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}key=${encodeURIComponent(apiKey.trim())}`;
+  return {
+    url: `${url}${separator}key=${encodeURIComponent(key)}`,
+    headers: {},
+  };
 }
 
 async function fetchAttempt(
@@ -231,10 +274,12 @@ async function fetchAttempt(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(geminiAuthUrl(url, apiKey), {
+    const carriage = geminiAuthCarriage(url, apiKey);
+    return await fetch(carriage.url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...carriage.headers,
       },
       signal: controller.signal,
       body: JSON.stringify(body),
@@ -254,7 +299,9 @@ async function fetchAttempt(
     }
     throw new GeminiProviderError(
       "GEMINI_NETWORK_ERROR",
-      error instanceof Error ? error.message : "Gemini network request failed.",
+      error instanceof Error
+        ? scrubGeminiSecrets(error.message, apiKey)
+        : "Gemini network request failed.",
       undefined,
       null,
       describeTransportCause(error),
@@ -325,7 +372,7 @@ export async function requestGemini(
       const errorBody = (await response
         .json()
         .catch(() => ({}))) as GeminiErrorBody;
-      const error = providerError(response.status, errorBody);
+      const error = providerError(response.status, errorBody, apiKey);
       lastError = error;
       logger.warn("ai.gemini.request_rejected", {
         model,
@@ -505,8 +552,8 @@ export async function verifyGeminiKey(
   diagnostics?: GeminiProbeDiagnostics;
 }> {
   // Google AI Studio issues keys in two formats: the legacy "AIza…" project
-  // keys and the newer "AQ." keys. Both travel the same ?key= query
-  // parameter; the live probe below is the real validator (campaign row D1 —
+  // keys and the newer "AQ." keys. See geminiAuthCarriage for how each family
+  // travels; the live probe below is the real validator (campaign row D1 —
   // the stale AIza-only gate rejected valid new-format keys before any
   // network activity, and the header carriage rejected the parameter-valid
   // AQ. keys at the auth layer).
