@@ -24,7 +24,11 @@ const STARTUP_TRACE_FILE: &str = "startup-trace.json";
 const PREVIOUS_UI_READY_FILE: &str = "runtime-ui-ready.json";
 const MAX_LOCALE_EVIDENCE_BYTES: u64 = 64 * 1024;
 const POLL_INTERVAL: Duration = Duration::from_millis(200);
-const SLOW_HINT_AFTER: Duration = Duration::from_secs(15);
+/// A normal first launch takes about 32 s, so a hint at 15 s told every
+/// seller that something was wrong. Shared by the native card and the
+/// WebView fallback.
+pub(crate) const SLOW_HINT_AFTER_SECS: u64 = 45;
+const SLOW_HINT_AFTER: Duration = Duration::from_secs(SLOW_HINT_AFTER_SECS);
 const MAX_LIFETIME: Duration = Duration::from_secs(30 * 60);
 const TEMPLATE: &str = include_str!("launch_screen.html");
 /// Timing-only trace stages: they never move the progress model.
@@ -78,12 +82,12 @@ pub(crate) fn copy(locale: Locale) -> LaunchCopy {
             lang: "ar",
             dir: "rtl",
             tagline: "إدارة الدفع عند الاستلام",
-            preparing: "جارٍ تجهيز بياناتك",
-            starting: "جارٍ تشغيل الخدمات",
+            preparing: "جاري تجهيز بياناتك",
+            starting: "جاري تشغيل الخدمات",
             retrying: "إعادة المحاولة…",
-            opening: "جارٍ فتح مساحة عملك",
-            closing: "جارٍ الإغلاق…",
-            slow_hint: "يستغرق وقتًا أطول من المعتاد. أبقِ هذه النافذة مفتوحة.",
+            opening: "جاري فتح مساحة عملك",
+            closing: "جاري الإغلاق…",
+            slow_hint: "يستغرق هذا وقتًا أطول قليلًا من المعتاد. أبقِ هذه النافذة مفتوحة.",
         },
         Locale::Fr => LaunchCopy {
             lang: "fr",
@@ -94,7 +98,8 @@ pub(crate) fn copy(locale: Locale) -> LaunchCopy {
             retrying: "Nouvelle tentative…",
             opening: "Ouverture de votre espace",
             closing: "Fermeture…",
-            slow_hint: "Plus long que d'habitude. Gardez cette fenêtre ouverte.",
+            slow_hint:
+                "Cela prend un peu plus de temps que d'habitude. Gardez cette fenêtre ouverte.",
         },
         Locale::En => LaunchCopy {
             lang: "en",
@@ -105,15 +110,16 @@ pub(crate) fn copy(locale: Locale) -> LaunchCopy {
             retrying: "Retrying…",
             opening: "Opening your workspace",
             closing: "Closing…",
-            slow_hint: "Taking longer than usual. Please keep this window open.",
+            slow_hint: "This is taking a little longer than usual. Keep this window open.",
         },
     }
 }
 
-pub fn render_html(locale: Locale, version: &str) -> String {
+pub fn render_html(locale: Locale, theme: Theme, version: &str) -> String {
     let text = copy(locale);
     TEMPLATE
         .replace("{{LANG}}", text.lang)
+        .replace("{{THEME}}", theme.attribute())
         .replace("{{DIR}}", text.dir)
         .replace("{{TAGLINE}}", text.tagline)
         .replace("{{PREPARING}}", text.preparing)
@@ -147,21 +153,115 @@ pub fn locale_from_tag(tag: &str) -> Option<Locale> {
     }
 }
 
+/// The two looks of the startup card, matching the workspace's light and dark
+/// colour modes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Theme {
+    Light,
+    Dark,
+}
+
+impl Theme {
+    fn attribute(self) -> &'static str {
+        match self {
+            Theme::Light => "light",
+            Theme::Dark => "dark",
+        }
+    }
+}
+
+/// What the seller picked in Settings. "System" follows Windows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ThemeChoice {
+    Light,
+    Dark,
+    System,
+}
+
+pub(crate) fn theme_from_tag(tag: &str) -> Option<ThemeChoice> {
+    match tag {
+        "light" => Some(ThemeChoice::Light),
+        "dark" => Some(ThemeChoice::Dark),
+        "system" => Some(ThemeChoice::System),
+        _ => None,
+    }
+}
+
+/// No recorded choice means the workspace default, which is dark.
+pub(crate) fn resolve_theme(choice: Option<ThemeChoice>, system_is_light: bool) -> Theme {
+    match choice {
+        Some(ThemeChoice::Light) => Theme::Light,
+        Some(ThemeChoice::System) if system_is_light => Theme::Light,
+        Some(ThemeChoice::System | ThemeChoice::Dark) | None => Theme::Dark,
+    }
+}
+
 #[derive(Deserialize)]
 struct PreviousUiReady {
     locale: Option<String>,
+    theme: Option<String>,
+}
+
+/// The previous launch's UI-ready receipt, when it is present and small.
+fn previous_receipt(app_data_dir: &Path) -> Option<PreviousUiReady> {
+    let previous = app_data_dir.join(PREVIOUS_UI_READY_FILE);
+    fs::metadata(&previous)
+        .ok()
+        .filter(|metadata| metadata.is_file() && metadata.len() <= MAX_LOCALE_EVIDENCE_BYTES)
+        .and_then(|_| fs::read(&previous).ok())
+        .and_then(|bytes| serde_json::from_slice::<PreviousUiReady>(&bytes).ok())
+}
+
+/// Whether Windows apps are set to the light theme (a missing or unreadable
+/// value reads as dark).
+#[cfg(windows)]
+fn system_prefers_light() -> bool {
+    use windows_sys::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD};
+    let subkey: Vec<u16> = "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let value: Vec<u16> = "AppsUseLightTheme"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut data: u32 = 0;
+    let mut size = std::mem::size_of::<u32>() as u32;
+    let status = unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            subkey.as_ptr(),
+            value.as_ptr(),
+            RRF_RT_REG_DWORD,
+            std::ptr::null_mut(),
+            (&mut data as *mut u32).cast(),
+            &mut size,
+        )
+    };
+    status == 0 && data != 0
+}
+
+#[cfg(not(windows))]
+fn system_prefers_light() -> bool {
+    false
+}
+
+/// The seller's workspace colour mode (recorded by the previous launch's
+/// UI-ready receipt), else the workspace default: dark. Windows is asked only
+/// when the seller follows the system.
+pub(crate) fn launch_theme(app_data_dir: &Path) -> Theme {
+    let choice = previous_receipt(app_data_dir)
+        .and_then(|receipt| receipt.theme)
+        .and_then(|tag| theme_from_tag(&tag));
+    let system_is_light = choice == Some(ThemeChoice::System) && system_prefers_light();
+    resolve_theme(choice, system_is_light)
 }
 
 /// The seller's last workspace language (recorded by the previous launch's
 /// UI-ready receipt), else the Windows display language, else French — the
 /// workspace default.
 pub(crate) fn launch_locale(app_data_dir: &Path) -> Locale {
-    let previous = app_data_dir.join(PREVIOUS_UI_READY_FILE);
-    let recorded = fs::metadata(&previous)
-        .ok()
-        .filter(|metadata| metadata.is_file() && metadata.len() <= MAX_LOCALE_EVIDENCE_BYTES)
-        .and_then(|_| fs::read(&previous).ok())
-        .and_then(|bytes| serde_json::from_slice::<PreviousUiReady>(&bytes).ok())
+    let recorded = previous_receipt(app_data_dir)
         .and_then(|receipt| receipt.locale)
         .and_then(|tag| locale_from_tag(&tag));
     recorded
@@ -297,7 +397,12 @@ pub fn open(app: &AppHandle, app_data_dir: &Path) {
             });
         return;
     }
-    let html = render_html(launch_locale(app_data_dir), env!("CARGO_PKG_VERSION"));
+    let theme = launch_theme(app_data_dir);
+    let html = render_html(
+        launch_locale(app_data_dir),
+        theme,
+        env!("CARGO_PKG_VERSION"),
+    );
     let Some(url) = launch_url(app_data_dir, &html) else {
         return;
     };
@@ -312,7 +417,10 @@ pub fn open(app: &AppHandle, app_data_dir: &Path) {
         .always_on_top(true)
         .visible(true)
         .focused(true)
-        .background_color(tauri::window::Color(5, 10, 17, 255))
+        .background_color(match theme {
+            Theme::Dark => tauri::window::Color(5, 10, 17, 255),
+            Theme::Light => tauri::window::Color(241, 245, 249, 255),
+        })
         .build()
     {
         Ok(window) => window,
@@ -389,18 +497,22 @@ mod tests {
     #[test]
     fn renders_every_locale_without_placeholders_or_scripts() {
         for locale in [Locale::Ar, Locale::Fr, Locale::En] {
-            let html = render_html(locale, "1.0.0-internal.40");
-            assert!(!html.contains("{{"), "unfilled placeholder for {locale:?}");
-            assert!(!html.to_ascii_lowercase().contains("<script"));
-            assert!(html.contains("1.0.0-internal.40"));
+            for theme in [Theme::Light, Theme::Dark] {
+                let html = render_html(locale, theme, "1.0.0-internal.40");
+                assert!(!html.contains("{{"), "unfilled placeholder for {locale:?}");
+                assert!(!html.to_ascii_lowercase().contains("<script"));
+                assert!(html.contains("1.0.0-internal.40"));
+            }
         }
-        assert!(render_html(Locale::Ar, "1").contains("dir=\"rtl\""));
-        assert!(render_html(Locale::Fr, "1").contains("dir=\"ltr\""));
+        assert!(render_html(Locale::Ar, Theme::Dark, "1").contains("dir=\"rtl\""));
+        assert!(render_html(Locale::Fr, Theme::Dark, "1").contains("dir=\"ltr\""));
+        assert!(render_html(Locale::En, Theme::Light, "1").contains("data-theme=\"light\""));
+        assert!(render_html(Locale::En, Theme::Dark, "1").contains("data-theme=\"dark\""));
     }
 
     #[test]
     fn version_text_cannot_inject_markup() {
-        assert!(!render_html(Locale::En, "<b>1</b>").contains("<b>1</b>"));
+        assert!(!render_html(Locale::En, Theme::Dark, "<b>1</b>").contains("<b>1</b>"));
     }
 
     #[test]
@@ -409,6 +521,49 @@ mod tests {
         assert_eq!(locale_from_tag("fr_FR"), Some(Locale::Fr));
         assert_eq!(locale_from_tag("EN-us"), Some(Locale::En));
         assert_eq!(locale_from_tag("de-DE"), None);
+    }
+
+    #[test]
+    fn maps_theme_tags_and_defaults_to_the_workspace_dark() {
+        assert_eq!(theme_from_tag("light"), Some(ThemeChoice::Light));
+        assert_eq!(theme_from_tag("dark"), Some(ThemeChoice::Dark));
+        assert_eq!(theme_from_tag("system"), Some(ThemeChoice::System));
+        assert_eq!(theme_from_tag("Light"), None, "the cookie value is exact");
+        assert_eq!(theme_from_tag(""), None);
+        // No recorded choice is the workspace default, whatever Windows says.
+        assert_eq!(resolve_theme(None, true), Theme::Dark);
+        assert_eq!(resolve_theme(Some(ThemeChoice::Dark), true), Theme::Dark);
+        assert_eq!(resolve_theme(Some(ThemeChoice::Light), false), Theme::Light);
+        assert_eq!(resolve_theme(Some(ThemeChoice::System), true), Theme::Light);
+        assert_eq!(resolve_theme(Some(ThemeChoice::System), false), Theme::Dark);
+    }
+
+    #[test]
+    fn reads_locale_and_theme_from_the_previous_receipt() {
+        let directory =
+            std::env::temp_dir().join(format!("sf-launch-theme-{}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let receipt = directory.join(PREVIOUS_UI_READY_FILE);
+        fs::write(
+            &receipt,
+            r#"{"state":"ready","locale":"ar","theme":"light","extra":1}"#,
+        )
+        .unwrap();
+        assert_eq!(launch_locale(&directory), Locale::Ar);
+        assert_eq!(launch_theme(&directory), Theme::Light);
+        // A receipt from before the theme was recorded still gives the locale
+        // and falls back to the dark default.
+        fs::write(&receipt, r#"{"state":"ready","locale":"en"}"#).unwrap();
+        assert_eq!(launch_locale(&directory), Locale::En);
+        assert_eq!(launch_theme(&directory), Theme::Dark);
+        // An unknown value never breaks the card.
+        fs::write(&receipt, r#"{"locale":"en","theme":"sepia"}"#).unwrap();
+        assert_eq!(launch_theme(&directory), Theme::Dark);
+        fs::write(&receipt, "not json").unwrap();
+        assert_eq!(launch_theme(&directory), Theme::Dark);
+        fs::remove_file(&receipt).unwrap();
+        assert_eq!(launch_theme(&directory), Theme::Dark);
+        fs::remove_dir_all(&directory).unwrap();
     }
 
     #[test]
@@ -447,6 +602,31 @@ mod tests {
         write("runtime-attempt-started");
         assert!(quit_is_safe(&trace));
         fs::remove_dir_all(&directory).unwrap();
+    }
+
+    #[test]
+    fn arabic_copy_avoids_marks_the_native_renderer_draws_detached() {
+        // GDI+ places the tanween of "جارٍ" beside the word instead of on it.
+        let text = copy(Locale::Ar);
+        for line in [
+            text.preparing,
+            text.starting,
+            text.retrying,
+            text.opening,
+            text.closing,
+        ] {
+            assert!(
+                !line.chars().any(|c| ('\u{064B}'..='\u{0652}').contains(&c)),
+                "Arabic diacritic in {line:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_slow_hint_waits_longer_than_a_normal_launch() {
+        // A normal first launch takes about 32 s on the reference machine.
+        assert!(SLOW_HINT_AFTER_SECS >= 40);
+        assert_eq!(SLOW_HINT_AFTER, Duration::from_secs(SLOW_HINT_AFTER_SECS));
     }
 
     #[test]
