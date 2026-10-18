@@ -19,6 +19,17 @@ type RouteContext = { params: Promise<{ id: string }> };
  * Follows the sibling AI route pattern: withErrorHandler, requireAuth scope
  * `ai.use`, zod-validated input, per-shop SQLite DB (`db`) scopes the data.
  */
+/**
+ * S06a-11: proposals that can still be approved or executed. Final states
+ * (succeeded, rejected, expired, conflict) never block a truncation.
+ */
+const LIVE_PROPOSAL_STATUSES = new Set([
+  "pending",
+  "approved",
+  "executing",
+  "failed",
+]);
+
 const truncateSchema = z.object({
   afterMessageId: z.string().trim().min(1).max(64),
   includeMessage: z.boolean().optional().default(true),
@@ -67,6 +78,26 @@ export const POST = withErrorHandler(
       .map((row) => row.id);
     if (doomed.length === 0) {
       return NextResponse.json({ deleted: 0 });
+    }
+    // S06a-11: AiActionProposal.requestMessageId is a plain string (no relation,
+    // no cascade). Deleting the user message a still-actionable proposal was
+    // created for would leave the approval card without the request that
+    // justified it, so refuse and delete nothing.
+    const bound = await db.aiActionProposal.findMany({
+      where: { sessionId: id, requestMessageId: { in: doomed } },
+      select: { status: true, expiresAt: true },
+    });
+    const now = Date.now();
+    const hasLiveProposal = bound.some(
+      (proposal) =>
+        LIVE_PROPOSAL_STATUSES.has(proposal.status) &&
+        !(proposal.status === "pending" && proposal.expiresAt.getTime() <= now),
+    );
+    if (hasLiveProposal) {
+      return NextResponse.json(
+        { error: "AI_PROPOSAL_PENDING", code: "AI_PROPOSAL_PENDING" },
+        { status: 409 },
+      );
     }
     const result = await db.aiChatMessage.deleteMany({
       where: { id: { in: doomed } },
