@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { woocommerceAdapter } from "../woocommerce";
+import { routeOutboundThroughGlobalFetch } from "../../__tests__/outbound-test-transport";
 import type { WooCommerceCredentials } from "../types";
 
 const mockFetch = vi.fn();
@@ -79,7 +80,11 @@ function sampleOrder(overrides: Partial<Record<string, unknown>> = {}): Record<s
 }
 
 describe("WooCommerce adapter", () => {
-  beforeEach(() => { mockFetch.mockReset(); vi.stubGlobal("fetch", mockFetch); });
+  beforeEach(() => {
+    mockFetch.mockReset();
+    vi.stubGlobal("fetch", mockFetch);
+    routeOutboundThroughGlobalFetch();
+  });
 
   describe("metadata", () => {
     it("has platform + displayName", () => {

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ecoTrackAdapter } from "../ecotrack";
+import { routeOutboundThroughGlobalFetch } from "../../__tests__/outbound-test-transport";
 import { SahelFlowError } from "@/types/errors";
 import type { ShipmentRequest } from "../types";
 
@@ -38,6 +39,7 @@ function json(body: unknown, status = 200): Response {
 beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
+  routeOutboundThroughGlobalFetch();
 });
 
 afterEach(() => {

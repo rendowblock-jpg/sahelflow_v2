@@ -1,5 +1,7 @@
 import "server-only";
 
+import { recordWorkerFailure, recordWorkerSuccess } from "@/lib/integrations/worker-health";
+
 /**
  * Meta CAPI outbox worker — same shape as the courier outbox worker: one
  * module-level singleton poll, unref'd timer, bounded drain, and durable
@@ -43,10 +45,14 @@ export function startMetaCapiWorker(): void {
         import("./capi-effect-runtime"),
       ]);
       await drainDueCapiSends({ prisma: db, shop: shopContext }, 10);
-    } catch {
+      recordWorkerSuccess("meta-capi");
+    } catch (error) {
       // Durable queued/retrying/failed state remains authority. The next
       // bounded tick retries only known-safe work and never duplicates a
       // Meta event (the ledger claim is the idempotency authority).
+      // Only a failure CODE is recorded (INT-10): never the message, a URL or a
+      // customer value.
+      recordWorkerFailure("meta-capi", error);
     } finally {
       state.running = false;
       schedule();

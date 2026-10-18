@@ -1,3 +1,4 @@
+import { classifyOutboundHost, outboundFetch } from "../outbound-http";
 import type {
   EcommerceAdapter,
   EcommerceCredentials,
@@ -112,71 +113,16 @@ function normalizeOrder(order: WooOrder): NormalizedOrder {
   };
 }
 
-function expandIpv6(host: string): number[] | null {
-  const halves = host.split("::");
-  if (halves.length > 2) return null;
-  const parse = (side: string): number[] | null => {
-    if (side === "") return [];
-    const parts = side.split(":");
-    const out: number[] = [];
-    for (const part of parts) {
-      if (!/^[0-9a-f]{1,4}$/.test(part)) return null;
-      out.push(Number.parseInt(part, 16));
-    }
-    return out;
-  };
-  const head = parse(halves[0] ?? "");
-  if (!head) return null;
-  if (halves.length === 1) return head.length === 8 ? head : null;
-  const tail = parse(halves[1] ?? "");
-  if (!tail || head.length + tail.length > 8) return null;
-  return [...head, ...Array.from({ length: 8 - head.length - tail.length }, () => 0), ...tail];
-}
-
+/**
+ * Literal-address check on the host the seller typed. The shared classifier
+ * (outbound-http.ts) also covers carrier-grade NAT, benchmarking, multicast,
+ * NAT64/6to4 embeddings, trailing-dot and `.local`/`.internal` names; the name
+ * is checked again at connect time against the address actually used.
+ */
 function classifyBlockedHost(hostname: string): "localhost" | "private" | null {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (
-    host === "localhost" ||
-    host.endsWith(".localhost") ||
-    host === "::1" ||
-    host === "0:0:0:0:0:0:0:1"
-  ) {
-    return "localhost";
-  }
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
-    const parts = host.split(".").map(Number);
-    if (parts.some((part) => part > 255)) return "private";
-    const [a, b] = parts;
-    if (a === 127 || a === 0) return "localhost";
-    if (
-      a === 10 ||
-      (a === 172 && b !== undefined && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) ||
-      (a === 169 && b === 254)
-    ) {
-      return "private";
-    }
-    return null;
-  }
-  if (!host.includes(":")) return null;
-  const hextets = expandIpv6(host);
-  if (!hextets) return "private";
-  if (hextets.every((part, index) => part === (index === 7 ? 1 : 0))) return "localhost";
-  if ((hextets[0]! & 0xfe00) === 0xfc00) return "private";
-  if ((hextets[0]! & 0xffc0) === 0xfe80) return "private";
-  const mapped =
-    hextets[0] === 0 &&
-    hextets[1] === 0 &&
-    hextets[2] === 0 &&
-    hextets[3] === 0 &&
-    hextets[4] === 0 &&
-    hextets[5] === 0xffff;
-  if (mapped) {
-    const hi = hextets[6]!;
-    const lo = hextets[7]!;
-    return classifyBlockedHost(`${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`);
-  }
-  return null;
+  const reason = classifyOutboundHost(hostname);
+  if (reason === null) return null;
+  return reason === "loopback" || reason === "unspecified" ? "localhost" : "private";
 }
 
 function validateSiteUrl(siteUrl: string): URL {
@@ -219,7 +165,11 @@ async function fetchWoo(
 ): Promise<Response> {
   let current = validateSiteUrl(url);
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    const response = await fetch(current.toString(), { ...init, redirect: "manual" });
+    const response = await outboundFetch(current.toString(), {
+      ...init,
+      redirect: "manual",
+      allowHttp: true,
+    });
     if (response.status < 300 || response.status >= 400) return response;
     const location = response.headers.get("Location") ?? response.headers.get("location");
     if (!location || hop === MAX_REDIRECTS) {

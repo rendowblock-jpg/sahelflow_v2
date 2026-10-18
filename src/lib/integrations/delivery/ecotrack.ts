@@ -2,6 +2,7 @@ import "server-only";
 
 import wilayas from "../../../../data/wilayas.json";
 import { SahelFlowError } from "@/types/errors";
+import { assertPublicOutboundUrl, outboundFetch } from "../outbound-http";
 import { retryFetch } from "./retry";
 import {
   buildEcotrackCreateQuery,
@@ -60,6 +61,31 @@ import type {
  */
 
 const TIMEOUT_MS = 15_000;
+
+/**
+ * Every EcoTrack request carries a seller-typed URL (INT-09): it goes through
+ * the address-checking transport (public hosts only, the connected address is
+ * the checked address) and a redirect is refused instead of followed, because
+ * following one would re-send the Bearer token or api_token body to a host the
+ * seller never configured.
+ */
+async function ecoFetch(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const response = await retryFetch(url, options, timeoutMs, (input, init) =>
+    outboundFetch(input, init),
+  );
+  if (response.status >= 300 && response.status < 400) {
+    throw new SahelFlowError(
+      "The EcoTrack endpoint answered with a redirect; configure its final HTTPS address.",
+      "ECOTRACK_ENDPOINT_REDIRECT",
+      502,
+    );
+  }
+  return response;
+}
 
 type EcoTrackCredentials = DeliveryCredentials & {
   carrierName?: string;
@@ -161,6 +187,15 @@ function endpoint(value: string | undefined, label: string): URL {
     throw new SahelFlowError(
       `EcoTrack ${label} must use HTTPS.`,
       "ECOTRACK_ENDPOINT_INSECURE",
+      409,
+    );
+  }
+  try {
+    assertPublicOutboundUrl(parsed);
+  } catch {
+    throw new SahelFlowError(
+      `EcoTrack ${label} must point to a public HTTPS host, not to this computer or a private network.`,
+      "ECOTRACK_ENDPOINT_NOT_PUBLIC",
       409,
     );
   }
@@ -320,7 +355,7 @@ async function createShipmentV1(
 
   let response: Response;
   try {
-    response = await retryFetch(
+    response = await ecoFetch(
       url.toString(),
       {
         method: "POST",
@@ -400,7 +435,7 @@ async function syncTrackingV1(
   const infoUrl = new URL("/api/v1/get/tracking/info", createUrl.origin);
   infoUrl.searchParams.set("tracking", trackingId);
 
-  const response = await retryFetch(
+  const response = await ecoFetch(
     infoUrl.toString(),
     {
       method: "GET",
@@ -473,7 +508,7 @@ export const ecoTrackAdapter: DeliveryAdapter = {
         const { validateToken } = v1Endpoints(createUrl);
         const probe = new URL(validateToken.toString());
         probe.searchParams.set("api_token", auth.apiToken);
-        const response = await retryFetch(probe.toString(), { method: "GET" }, TIMEOUT_MS);
+        const response = await ecoFetch(probe.toString(), { method: "GET" }, TIMEOUT_MS);
         if (!response.ok) {
           return {
             ok: false,
@@ -498,7 +533,7 @@ export const ecoTrackAdapter: DeliveryAdapter = {
       }
       const auth = identity(creds);
       const urls = endpoints(creds);
-      const response = await retryFetch(
+      const response = await ecoFetch(
         urls.fees.toString(),
         {
           method: "POST",
@@ -560,7 +595,7 @@ export const ecoTrackAdapter: DeliveryAdapter = {
           error: `Unknown wilaya: ${params.wilaya}`,
         };
       }
-      const response = await retryFetch(
+      const response = await ecoFetch(
         urls.fees.toString(),
         {
           method: "POST",
@@ -609,8 +644,23 @@ export const ecoTrackAdapter: DeliveryAdapter = {
     if (isEcotrackV1CreateUrl(creds.createOrderUrl)) {
       return createShipmentV1(request, creds);
     }
-    const auth = identity(creds);
-    const urls = endpoints(creds);
+    // A refused or incomplete configuration is a KNOWN failure: nothing was
+    // sent, so it must not surface as a thrown error, which the booking runtime
+    // files as an ambiguous send (reconciliation_required). Same contract as
+    // createShipmentV1 above.
+    let auth: ReturnType<typeof identity>;
+    let urls: ReturnType<typeof endpoints>;
+    try {
+      auth = identity(creds);
+      urls = endpoints(creds);
+    } catch (error) {
+      return {
+        success: false,
+        trackingId: "",
+        cost: 0,
+        error: error instanceof Error ? error.message : "EcoTrack configuration is incomplete.",
+      };
+    }
     const code = wilayaCode(request.customer.wilaya);
     if (!code) {
       return {
@@ -623,7 +673,7 @@ export const ecoTrackAdapter: DeliveryAdapter = {
 
     let response: Response;
     try {
-      response = await retryFetch(
+      response = await ecoFetch(
         urls.create.toString(),
         {
           method: "POST",
@@ -691,7 +741,7 @@ export const ecoTrackAdapter: DeliveryAdapter = {
     }
 
     try {
-      const validation = await retryFetch(
+      const validation = await ecoFetch(
         urls.validate.toString(),
         {
           method: "POST",
@@ -741,7 +791,7 @@ export const ecoTrackAdapter: DeliveryAdapter = {
     const urls = endpoints(creds);
     const requestBody = body(auth);
     requestBody.append("trackings[]", trackingId);
-    const response = await retryFetch(
+    const response = await ecoFetch(
       urls.track.toString(),
       {
         method: "POST",

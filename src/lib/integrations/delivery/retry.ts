@@ -47,10 +47,24 @@ async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+
+/** Errors that mark themselves `nonRetryable` (a refused address) are never retried. */
+function isNonRetryable(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { nonRetryable?: unknown }).nonRetryable === true
+  );
+}
+
 export async function retryFetch(
   url: string,
   options: RequestInit = {},
   timeoutMs = 15_000,
+  // Resolved at call time so a global `fetch` stub keeps working; a caller that
+  // sends a seller-supplied URL passes the address-checking transport instead.
+  fetchImpl: FetchLike = (input, init) => fetch(input, init),
 ): Promise<Response> {
   const method = (options.method ?? "GET").toUpperCase();
   const retryableMethod = RETRYABLE_METHODS.has(method);
@@ -60,7 +74,7 @@ export async function retryFetch(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(url, {
+      const response = await fetchImpl(url, {
         ...options,
         signal: controller.signal,
       });
@@ -76,7 +90,7 @@ export async function retryFetch(
       return response;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      if (!retryableMethod || attempt >= MAX_ATTEMPTS) {
+      if (!retryableMethod || attempt >= MAX_ATTEMPTS || isNonRetryable(error)) {
         throw lastError;
       }
       await sleep(backoffMs(attempt));
