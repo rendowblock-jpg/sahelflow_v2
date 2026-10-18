@@ -4,8 +4,7 @@ import { z } from "zod";
 import { logAudit } from "@/lib/audit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
-import { deleteBackup } from "@/lib/backup";
-import { deleteCloudBackupIfEnrolled } from "@/lib/connected-platform/cloud-backup";
+import { deleteBackupLocalFirst } from "@/lib/backup/delete-everywhere";
 import { db, shopContext } from "@/lib/db";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 
@@ -24,11 +23,12 @@ export const DELETE = withErrorHandler(
     await requireRecentReauthentication();
     const { filename } = await params;
     const backupId = backupIdSchema.parse(decodeURIComponent(filename));
-    const cloudDeleted = await deleteCloudBackupIfEnrolled(
+    // Local copy first, cloud copy second: a partial failure must never leave
+    // the seller with neither copy (S01b-07).
+    const { result, cloudDeleted, cloudState } = await deleteBackupLocalFirst(
       { prisma: db, shop: shopContext },
       backupId,
     );
-    const result = await deleteBackup(backupId);
     await logAudit(
       { prisma: db, shop: shopContext },
       {
@@ -36,10 +36,10 @@ export const DELETE = withErrorHandler(
         entity: "backup",
         entityId: backupId,
         actor: trustedActorAuditIdentity(actorContext.actor),
-        after: { backupId, deleted: result.deleted, cloudDeleted },
+        after: { backupId, deleted: result.deleted, cloudDeleted, cloudState },
       },
     );
-    return NextResponse.json({ ...result, cloudDeleted }, {
+    return NextResponse.json({ ...result, cloudDeleted, cloudState }, {
       headers: { "Cache-Control": "no-store" },
     });
   },

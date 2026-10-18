@@ -40,6 +40,29 @@ export default async function CodReconciliationPage() {
         title={t("codReconciliation.title")}
         description={t("codReconciliation.description")}
       />
+      {/* MNY-03: an order with an inconsistent receivable record is reported
+          here instead of failing the whole workspace. Order numbers only. */}
+      {summary.flaggedOrders.length > 0 ? (
+        <p
+          role="alert"
+          className="rounded-control border border-destructive/30 bg-destructive-soft p-3 text-sm text-destructive"
+        >
+          {t("codReconciliation.flaggedNotice")}:
+          {summary.flaggedOrders.slice(0, 5).map((entry, index) => (
+            <span key={entry.orderId}>
+              {index > 0 ? ", " : " "}
+              <bdi>{entry.orderNumber}</bdi>
+            </span>
+          ))}
+          {summary.flaggedOrders.length > 5 ? " …" : null}
+        </p>
+      ) : null}
+      {/* MNY-01: the read is capped; say so instead of looking complete. */}
+      {summary.truncated.orders || summary.truncated.settlements ? (
+        <p role="status" className="rounded-control border p-3 text-sm text-muted-foreground">
+          {t("codReconciliation.truncatedNotice")}
+        </p>
+      ) : null}
       {canUpdate ? (
         <CanonicalCodDashboard summary={summary} />
       ) : (

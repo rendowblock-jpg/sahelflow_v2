@@ -13,14 +13,18 @@ import {
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
 import { projectCustomerListItemForTrustedActor } from "@/lib/identity/customer-projection";
+import {
+  parseCustomerSearchLimit,
+  parseCustomerSearchOffset,
+} from "@/lib/customers/search-params";
 
 export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("customers.read");
   const q = req.nextUrl.searchParams.get("q") ?? "";
-  const limit = Math.min(parseInt(req.nextUrl.searchParams.get("limit") ?? "50", 10), 100);
-  const offset = parseInt(req.nextUrl.searchParams.get("offset") ?? "0", 10);
+  const limit = parseCustomerSearchLimit(req.nextUrl.searchParams.get("limit"));
+  const offset = parseCustomerSearchOffset(req.nextUrl.searchParams.get("offset"));
 
   const contact = trustedActionAllowed(
     actorContext,

@@ -167,15 +167,6 @@ export const POST = withErrorHandler(
       });
     }
 
-    const userKey = await getCurrentUserKey();
-    const rateLimit = checkRateLimit(id, userKey);
-    if (!rateLimit.allowed) {
-      return jsonError(429, "AI_RATE_LIMITED", {
-        code: "AI_RATE_LIMITED",
-        reason: rateLimit.reason ?? null,
-      });
-    }
-
     let input: z.infer<typeof sendSchema>;
     try {
       input = sendSchema.parse(await request.json());
@@ -194,6 +185,17 @@ export const POST = withErrorHandler(
         return jsonError(400, "AI_ATTACHMENT_INVALID", { code: "AI_ATTACHMENT_INVALID" });
       }
       throw error;
+    }
+
+    // S06a-09: the limiter runs AFTER validation, so a malformed request
+    // cannot spend the seller's per-session and per-day message budget.
+    const userKey = await getCurrentUserKey();
+    const rateLimit = checkRateLimit(id, userKey);
+    if (!rateLimit.allowed) {
+      return jsonError(429, "AI_RATE_LIMITED", {
+        code: "AI_RATE_LIMITED",
+        reason: rateLimit.reason ?? null,
+      });
     }
 
     const session = await db.aiChatSession.findUnique({ where: { id } });

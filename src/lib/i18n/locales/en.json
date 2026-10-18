@@ -385,6 +385,8 @@
   "codReconciliation.selectOrderAria": "Select {{orderNumber}}",
   "codReconciliation.success": "Orders marked as remitted",
   "codReconciliation.title": "COD Reconciliation",
+  "codReconciliation.flaggedNotice": "Left out of these totals because their receivable record is inconsistent",
+  "codReconciliation.truncatedNotice": "Only the newest delivered orders and remittance batches are counted here; older ones are not in these totals.",
   "codReconciliation.totalPending": "Total pending:",
   "command.action.askAi": "Ask AI",
   "command.action.backup": "Create Backup",

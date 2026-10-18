@@ -249,7 +249,11 @@ describe("batchInsert", () => {
     const result = await batchInsert(makeRows(3), insertFn, 50);
     expect(result.inserted).toBe(0);
     expect(result.errors).toHaveLength(3);
-    for (const e of result.errors) expect(e.error).toBe("DB connection lost");
+    // S03c-13: the raw driver text is never echoed back to the caller.
+    for (const e of result.errors) {
+      expect(e.error).toBe("The row could not be imported.");
+      expect(e.error).not.toContain("DB connection lost");
+    }
   });
 
   it("uses default chunkSize of 50 when not specified", async () => {

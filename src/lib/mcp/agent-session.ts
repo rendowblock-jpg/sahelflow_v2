@@ -5,11 +5,13 @@
  * agent a durable identity without giving it *person* authority. This is that
  * boundary.
  *
- * Slice 1 shape:
+ * Current shape (the original slice-1 model forwarded the desktop's browser
+ * session; that was replaced by grant-bound identity, MCP-11/MCP-12):
  *
  *   - the local sidecar holds a launch-scoped bearer token (loopback only) and
- *     forwards the desktop's authenticated session, so the agent always acts
- *     inside an exact Founder-authorized session. No cookie, no tools;
+ *     the agent's grant key. The route resolves the grant and mints the actor
+ *     context from the grant's own durable identity binding; no cookie or
+ *     browser session is borrowed. No grant, no tools;
  *   - the agent gets its own **non-person** audit identity (`agent:<id>`). That
  *     identity is what lands in every `mcp.tool_called.v1` row, so agent work
  *     is never indistinguishable from a human click in the audit trail;
