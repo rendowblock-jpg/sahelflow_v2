@@ -17,6 +17,7 @@ import {
   useMemo,
   useSyncExternalStore,
 } from "react";
+import { reportLaunchAppearance } from "@/lib/runtime/report-launch-appearance";
 
 export interface ThemeProviderProps {
   children: React.ReactNode;
@@ -257,6 +258,7 @@ function persistTheme(theme: ThemeMode): void {
     // Cookie persistence still carries desktop restarts when localStorage fails.
   }
   if (persisted) runtimeThemeOverride = null;
+  reportLaunchAppearance();
 }
 
 function persistPreset(preset: ThemePreset): void {
@@ -269,6 +271,7 @@ function persistPreset(preset: ThemePreset): void {
     // Cookie persistence still carries desktop restarts when localStorage fails.
   }
   if (persisted) runtimePresetOverride = null;
+  reportLaunchAppearance();
 }
 
 function notifyAppearanceChanged(): void {

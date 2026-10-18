@@ -22,6 +22,10 @@ pub(crate) const LAUNCH_WINDOW_TITLE: &str = "SahelFlow - Starting";
 const WORKSPACE_WINDOW_LABEL: &str = "main";
 const STARTUP_TRACE_FILE: &str = "startup-trace.json";
 const PREVIOUS_UI_READY_FILE: &str = "runtime-ui-ready.json";
+/// Written by the workspace whenever the seller changes language, colour
+/// mode or colour preset (and once at UI-ready), and never cleared, so the
+/// next startup card matches what the seller last saw.
+const LAUNCH_APPEARANCE_FILE: &str = "launch-appearance.json";
 const MAX_LOCALE_EVIDENCE_BYTES: u64 = 64 * 1024;
 const POLL_INTERVAL: Duration = Duration::from_millis(200);
 /// A normal first launch takes about 32 s, so a hint at 15 s told every
@@ -115,11 +119,12 @@ pub(crate) fn copy(locale: Locale) -> LaunchCopy {
     }
 }
 
-pub fn render_html(locale: Locale, theme: Theme, version: &str) -> String {
+pub fn render_html(locale: Locale, appearance: Appearance, version: &str) -> String {
     let text = copy(locale);
     TEMPLATE
         .replace("{{LANG}}", text.lang)
-        .replace("{{THEME}}", theme.attribute())
+        .replace("{{THEME}}", appearance.theme.attribute())
+        .replace("{{PRESET}}", appearance.preset.attribute())
         .replace("{{DIR}}", text.dir)
         .replace("{{TAGLINE}}", text.tagline)
         .replace("{{PREPARING}}", text.preparing)
@@ -153,8 +158,7 @@ pub fn locale_from_tag(tag: &str) -> Option<Locale> {
     }
 }
 
-/// The two looks of the startup card, matching the workspace's light and dark
-/// colour modes.
+/// The two colour modes of the workspace, as the startup card shows them.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Theme {
     Light,
@@ -168,6 +172,41 @@ impl Theme {
             Theme::Dark => "dark",
         }
     }
+}
+
+/// The workspace's four colour presets. Sahel is the default.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Preset {
+    Sahel,
+    Atlas,
+    Oasis,
+    Dune,
+}
+
+impl Preset {
+    fn attribute(self) -> &'static str {
+        match self {
+            Preset::Sahel => "sahel",
+            Preset::Atlas => "atlas",
+            Preset::Oasis => "oasis",
+            Preset::Dune => "dune",
+        }
+    }
+}
+
+/// What the startup card wears: the seller's colour mode and colour preset.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Appearance {
+    pub theme: Theme,
+    pub preset: Preset,
+}
+
+impl Appearance {
+    /// The workspace default (dark, Sahel), used until a choice is recorded.
+    pub const DEFAULT: Appearance = Appearance {
+        theme: Theme::Dark,
+        preset: Preset::Sahel,
+    };
 }
 
 /// What the seller picked in Settings. "System" follows Windows.
@@ -187,6 +226,16 @@ pub(crate) fn theme_from_tag(tag: &str) -> Option<ThemeChoice> {
     }
 }
 
+pub(crate) fn preset_from_tag(tag: &str) -> Option<Preset> {
+    match tag {
+        "sahel" => Some(Preset::Sahel),
+        "atlas" => Some(Preset::Atlas),
+        "oasis" => Some(Preset::Oasis),
+        "dune" => Some(Preset::Dune),
+        _ => None,
+    }
+}
+
 /// No recorded choice means the workspace default, which is dark.
 pub(crate) fn resolve_theme(choice: Option<ThemeChoice>, system_is_light: bool) -> Theme {
     match choice {
@@ -199,17 +248,28 @@ pub(crate) fn resolve_theme(choice: Option<ThemeChoice>, system_is_light: bool) 
 #[derive(Deserialize)]
 struct PreviousUiReady {
     locale: Option<String>,
-    theme: Option<String>,
 }
 
-/// The previous launch's UI-ready receipt, when it is present and small.
-fn previous_receipt(app_data_dir: &Path) -> Option<PreviousUiReady> {
-    let previous = app_data_dir.join(PREVIOUS_UI_READY_FILE);
-    fs::metadata(&previous)
+/// What the workspace last recorded about how it looks.
+#[derive(Deserialize)]
+struct LaunchAppearanceRecord {
+    locale: Option<String>,
+    theme: Option<String>,
+    preset: Option<String>,
+}
+
+/// A small JSON file under the app data directory, when it is present and
+/// bounded. Anything else reads as "nothing recorded".
+fn bounded_json<T: serde::de::DeserializeOwned>(path: &Path) -> Option<T> {
+    fs::metadata(path)
         .ok()
         .filter(|metadata| metadata.is_file() && metadata.len() <= MAX_LOCALE_EVIDENCE_BYTES)
-        .and_then(|_| fs::read(&previous).ok())
-        .and_then(|bytes| serde_json::from_slice::<PreviousUiReady>(&bytes).ok())
+        .and_then(|_| fs::read(path).ok())
+        .and_then(|bytes| serde_json::from_slice::<T>(&bytes).ok())
+}
+
+fn appearance_record(app_data_dir: &Path) -> Option<LaunchAppearanceRecord> {
+    bounded_json(&app_data_dir.join(LAUNCH_APPEARANCE_FILE))
 }
 
 /// Whether Windows apps are set to the light theme (a missing or unreadable
@@ -246,24 +306,39 @@ fn system_prefers_light() -> bool {
     false
 }
 
-/// The seller's workspace colour mode (recorded by the previous launch's
-/// UI-ready receipt), else the workspace default: dark. Windows is asked only
-/// when the seller follows the system.
-pub(crate) fn launch_theme(app_data_dir: &Path) -> Theme {
-    let choice = previous_receipt(app_data_dir)
-        .and_then(|receipt| receipt.theme)
-        .and_then(|tag| theme_from_tag(&tag));
+/// The colour mode and preset the seller last used (recorded by the workspace),
+/// else the workspace default. Windows is asked only when the seller follows
+/// the system colour mode.
+pub(crate) fn launch_appearance(app_data_dir: &Path) -> Appearance {
+    let record = appearance_record(app_data_dir);
+    let choice = record
+        .as_ref()
+        .and_then(|record| record.theme.as_deref())
+        .and_then(theme_from_tag);
+    let preset = record
+        .as_ref()
+        .and_then(|record| record.preset.as_deref())
+        .and_then(preset_from_tag)
+        .unwrap_or(Appearance::DEFAULT.preset);
     let system_is_light = choice == Some(ThemeChoice::System) && system_prefers_light();
-    resolve_theme(choice, system_is_light)
+    Appearance {
+        theme: resolve_theme(choice, system_is_light),
+        preset,
+    }
 }
 
-/// The seller's last workspace language (recorded by the previous launch's
-/// UI-ready receipt), else the Windows display language, else French — the
-/// workspace default.
+/// The seller's last workspace language (recorded by the workspace, or by the
+/// previous launch's UI-ready receipt from an older build), else the Windows
+/// display language, else French, the workspace default.
 pub(crate) fn launch_locale(app_data_dir: &Path) -> Locale {
-    let recorded = previous_receipt(app_data_dir)
-        .and_then(|receipt| receipt.locale)
-        .and_then(|tag| locale_from_tag(&tag));
+    let recorded = appearance_record(app_data_dir)
+        .and_then(|record| record.locale)
+        .and_then(|tag| locale_from_tag(&tag))
+        .or_else(|| {
+            bounded_json::<PreviousUiReady>(&app_data_dir.join(PREVIOUS_UI_READY_FILE))
+                .and_then(|receipt| receipt.locale)
+                .and_then(|tag| locale_from_tag(&tag))
+        });
     recorded
         .or_else(|| tauri_plugin_os::locale().and_then(|tag| locale_from_tag(&tag)))
         .unwrap_or(Locale::Fr)
@@ -397,10 +472,10 @@ pub fn open(app: &AppHandle, app_data_dir: &Path) {
             });
         return;
     }
-    let theme = launch_theme(app_data_dir);
+    let appearance = launch_appearance(app_data_dir);
     let html = render_html(
         launch_locale(app_data_dir),
-        theme,
+        appearance,
         env!("CARGO_PKG_VERSION"),
     );
     let Some(url) = launch_url(app_data_dir, &html) else {
@@ -417,7 +492,7 @@ pub fn open(app: &AppHandle, app_data_dir: &Path) {
         .always_on_top(true)
         .visible(true)
         .focused(true)
-        .background_color(match theme {
+        .background_color(match appearance.theme {
             Theme::Dark => tauri::window::Color(5, 10, 17, 255),
             Theme::Light => tauri::window::Color(241, 245, 249, 255),
         })
@@ -496,23 +571,35 @@ mod tests {
 
     #[test]
     fn renders_every_locale_without_placeholders_or_scripts() {
+        let presets = [Preset::Sahel, Preset::Atlas, Preset::Oasis, Preset::Dune];
         for locale in [Locale::Ar, Locale::Fr, Locale::En] {
             for theme in [Theme::Light, Theme::Dark] {
-                let html = render_html(locale, theme, "1.0.0-internal.40");
-                assert!(!html.contains("{{"), "unfilled placeholder for {locale:?}");
-                assert!(!html.to_ascii_lowercase().contains("<script"));
-                assert!(html.contains("1.0.0-internal.40"));
+                for preset in presets {
+                    let html =
+                        render_html(locale, Appearance { theme, preset }, "1.0.0-internal.40");
+                    assert!(!html.contains("{{"), "unfilled placeholder for {locale:?}");
+                    assert!(!html.to_ascii_lowercase().contains("<script"));
+                    assert!(html.contains("1.0.0-internal.40"));
+                }
             }
         }
-        assert!(render_html(Locale::Ar, Theme::Dark, "1").contains("dir=\"rtl\""));
-        assert!(render_html(Locale::Fr, Theme::Dark, "1").contains("dir=\"ltr\""));
-        assert!(render_html(Locale::En, Theme::Light, "1").contains("data-theme=\"light\""));
-        assert!(render_html(Locale::En, Theme::Dark, "1").contains("data-theme=\"dark\""));
+        let dark = Appearance::DEFAULT;
+        assert!(render_html(Locale::Ar, dark, "1").contains("dir=\"rtl\""));
+        assert!(render_html(Locale::Fr, dark, "1").contains("dir=\"ltr\""));
+        let light_atlas = Appearance {
+            theme: Theme::Light,
+            preset: Preset::Atlas,
+        };
+        let html = render_html(Locale::En, light_atlas, "1");
+        assert!(html.contains("data-theme=\"light\""));
+        assert!(html.contains("data-preset=\"atlas\""));
+        assert!(render_html(Locale::En, dark, "1").contains("data-theme=\"dark\""));
     }
 
     #[test]
     fn version_text_cannot_inject_markup() {
-        assert!(!render_html(Locale::En, Theme::Dark, "<b>1</b>").contains("<b>1</b>"));
+        let html = render_html(Locale::En, Appearance::DEFAULT, "<b>1</b>");
+        assert!(!html.contains("<b>1</b>"));
     }
 
     #[test]
@@ -524,45 +611,81 @@ mod tests {
     }
 
     #[test]
-    fn maps_theme_tags_and_defaults_to_the_workspace_dark() {
+    fn maps_theme_and_preset_tags_and_defaults_to_the_workspace_look() {
         assert_eq!(theme_from_tag("light"), Some(ThemeChoice::Light));
         assert_eq!(theme_from_tag("dark"), Some(ThemeChoice::Dark));
         assert_eq!(theme_from_tag("system"), Some(ThemeChoice::System));
         assert_eq!(theme_from_tag("Light"), None, "the cookie value is exact");
         assert_eq!(theme_from_tag(""), None);
+        assert_eq!(preset_from_tag("sahel"), Some(Preset::Sahel));
+        assert_eq!(preset_from_tag("atlas"), Some(Preset::Atlas));
+        assert_eq!(preset_from_tag("oasis"), Some(Preset::Oasis));
+        assert_eq!(preset_from_tag("dune"), Some(Preset::Dune));
+        assert_eq!(preset_from_tag("Dune"), None);
+        assert_eq!(preset_from_tag("sepia"), None);
         // No recorded choice is the workspace default, whatever Windows says.
         assert_eq!(resolve_theme(None, true), Theme::Dark);
         assert_eq!(resolve_theme(Some(ThemeChoice::Dark), true), Theme::Dark);
         assert_eq!(resolve_theme(Some(ThemeChoice::Light), false), Theme::Light);
         assert_eq!(resolve_theme(Some(ThemeChoice::System), true), Theme::Light);
         assert_eq!(resolve_theme(Some(ThemeChoice::System), false), Theme::Dark);
+        assert_eq!(Appearance::DEFAULT.theme, Theme::Dark);
+        assert_eq!(Appearance::DEFAULT.preset, Preset::Sahel);
     }
 
     #[test]
-    fn reads_locale_and_theme_from_the_previous_receipt() {
-        let directory =
-            std::env::temp_dir().join(format!("sf-launch-theme-{}", std::process::id()));
+    fn reads_language_mode_and_preset_from_the_launch_appearance_record() {
+        let directory = std::env::temp_dir().join(format!("sf-launch-look-{}", std::process::id()));
         fs::create_dir_all(&directory).unwrap();
-        let receipt = directory.join(PREVIOUS_UI_READY_FILE);
+        let record = directory.join(LAUNCH_APPEARANCE_FILE);
         fs::write(
-            &receipt,
-            r#"{"state":"ready","locale":"ar","theme":"light","extra":1}"#,
+            &record,
+            r#"{"formatVersion":1,"locale":"ar","theme":"light","preset":"dune","extra":1}"#,
         )
         .unwrap();
         assert_eq!(launch_locale(&directory), Locale::Ar);
-        assert_eq!(launch_theme(&directory), Theme::Light);
-        // A receipt from before the theme was recorded still gives the locale
-        // and falls back to the dark default.
-        fs::write(&receipt, r#"{"state":"ready","locale":"en"}"#).unwrap();
-        assert_eq!(launch_locale(&directory), Locale::En);
-        assert_eq!(launch_theme(&directory), Theme::Dark);
+        assert_eq!(
+            launch_appearance(&directory),
+            Appearance {
+                theme: Theme::Light,
+                preset: Preset::Dune
+            }
+        );
+        // A partial record keeps what it has and defaults the rest.
+        fs::write(&record, r#"{"preset":"oasis"}"#).unwrap();
+        assert_eq!(
+            launch_appearance(&directory),
+            Appearance {
+                theme: Theme::Dark,
+                preset: Preset::Oasis
+            }
+        );
         // An unknown value never breaks the card.
-        fs::write(&receipt, r#"{"locale":"en","theme":"sepia"}"#).unwrap();
-        assert_eq!(launch_theme(&directory), Theme::Dark);
-        fs::write(&receipt, "not json").unwrap();
-        assert_eq!(launch_theme(&directory), Theme::Dark);
-        fs::remove_file(&receipt).unwrap();
-        assert_eq!(launch_theme(&directory), Theme::Dark);
+        fs::write(
+            &record,
+            r#"{"locale":"en","theme":"sepia","preset":"neon"}"#,
+        )
+        .unwrap();
+        assert_eq!(launch_appearance(&directory), Appearance::DEFAULT);
+        assert_eq!(launch_locale(&directory), Locale::En);
+        fs::write(&record, "not json").unwrap();
+        assert_eq!(launch_appearance(&directory), Appearance::DEFAULT);
+        fs::remove_file(&record).unwrap();
+        assert_eq!(launch_appearance(&directory), Appearance::DEFAULT);
+        fs::remove_dir_all(&directory).unwrap();
+    }
+
+    #[test]
+    fn an_older_build_receipt_still_gives_the_language() {
+        let directory =
+            std::env::temp_dir().join(format!("sf-launch-receipt-{}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let receipt = directory.join(PREVIOUS_UI_READY_FILE);
+        fs::write(&receipt, r#"{"state":"ready","locale":"ar"}"#).unwrap();
+        assert_eq!(launch_locale(&directory), Locale::Ar);
+        // The newer record wins when both exist.
+        fs::write(directory.join(LAUNCH_APPEARANCE_FILE), r#"{"locale":"en"}"#).unwrap();
+        assert_eq!(launch_locale(&directory), Locale::En);
         fs::remove_dir_all(&directory).unwrap();
     }
 
@@ -622,10 +745,12 @@ mod tests {
         }
     }
 
+    // A normal first launch takes about 32 s on the reference machine.
+    const _: () = assert!(SLOW_HINT_AFTER_SECS >= 40);
+
     #[test]
     fn the_slow_hint_waits_longer_than_a_normal_launch() {
         // A normal first launch takes about 32 s on the reference machine.
-        assert!(SLOW_HINT_AFTER_SECS >= 40);
         assert_eq!(SLOW_HINT_AFTER, Duration::from_secs(SLOW_HINT_AFTER_SECS));
     }
 

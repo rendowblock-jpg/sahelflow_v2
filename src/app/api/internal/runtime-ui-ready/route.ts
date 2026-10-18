@@ -14,6 +14,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { RUNTIME_COOKIE, RUNTIME_PROTOCOL_VERSION } from "@/lib/runtime-auth";
 import { requestBackgroundStart } from "@/lib/runtime/background-start";
+import {
+  readLaunchAppearance,
+  recordLaunchAppearance,
+} from "@/lib/runtime/launch-appearance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -244,6 +248,10 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: noStoreHeaders() },
     );
   }
+
+  // The next native startup card should look like this workspace. Best effort:
+  // a failure here never changes readiness.
+  recordLaunchAppearance(dataDir, readLaunchAppearance(request.cookies));
 
   // The workspace is visible: the deferred background workers may start now.
   requestBackgroundStart();
