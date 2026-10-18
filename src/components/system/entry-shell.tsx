@@ -113,6 +113,13 @@ export function EntryShell({
       data-sf-entry=""
       className={cn("grid min-h-dvh bg-surface-0 lg:grid-cols-12", className)}
     >
+      <a
+        href="#entry-content"
+        data-sf-skip-link=""
+        className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-[100] focus:rounded-control focus:border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg"
+      >
+        {t("common.skipToContent")}
+      </a>
       {beforeContent}
       <aside
         data-sf-entry-rail="live-map"
@@ -146,7 +153,11 @@ export function EntryShell({
           <BrandIdentity className="lg:invisible" />
           <EntryLanguageSwitch label={languageLabel} />
         </header>
-        <div className="flex flex-1 items-center justify-center px-5 pb-10">
+        <div
+          id="entry-content"
+          tabIndex={-1}
+          className="flex flex-1 items-center justify-center px-5 pb-10 focus:outline-none"
+        >
           <div
             className={cn("w-full space-y-7", width === "md" ? "max-w-md" : "max-w-sm")}
             data-sf-entry-reveal=""

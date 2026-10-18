@@ -2,6 +2,8 @@ import "server-only";
 
 import { SahelFlowError } from "@/types/errors";
 
+import { csvEscapeField as escapeField } from "./csv-field";
+
 export interface ExportColumn<Row extends Record<string, unknown>> {
   key: string;
   label: string;
@@ -15,14 +17,6 @@ export type ExportPageLoader<Row extends Record<string, unknown>> = (
 
 export const DEFAULT_EXPORT_PAGE_SIZE = 500;
 export const MAX_XLSX_EXPORT_ROWS = 10_000;
-
-function escapeField(value: string): string {
-  const sanitized = /^[=+@\t\r-]/.test(value) ? `'${value}` : value;
-  if (/[",\n\r]/.test(sanitized)) {
-    return `"${sanitized.replace(/"/g, '""')}"`;
-  }
-  return sanitized;
-}
 
 function rowLine<Row extends Record<string, unknown>>(
   row: Row,

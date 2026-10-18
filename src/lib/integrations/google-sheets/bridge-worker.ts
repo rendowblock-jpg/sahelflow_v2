@@ -1,5 +1,11 @@
 import "server-only";
 
+import {
+  recordWorkerFailure,
+  recordWorkerIdle,
+  recordWorkerSuccess,
+} from "@/lib/integrations/worker-health";
+
 /**
  * Google Sheets bridge worker: every minute, runs a sync when the seller's
  * chosen interval has elapsed. New rows are imported when auto-import is on;
@@ -38,13 +44,23 @@ export function startGoogleSheetsBridgeWorker(): void {
         ]);
       const context = { prisma: db, shop: shopContext };
       const current = await config.loadBridgeConfig(context);
-      if (!current.spreadsheetId || (!current.autoImport && !current.writeBack)) return;
+      if (!current.spreadsheetId || (!current.autoImport && !current.writeBack)) {
+        recordWorkerIdle("google-sheets-bridge", "nothing_due");
+        return;
+      }
       const last = current.lastSyncAt ? Date.parse(current.lastSyncAt) : 0;
-      if (Date.now() - last < current.intervalMinutes * 60_000) return;
+      if (Date.now() - last < current.intervalMinutes * 60_000) {
+        recordWorkerIdle("google-sheets-bridge", "nothing_due");
+        return;
+      }
       await requireLicenseEntitlement(undefined, shopContext);
       await sync.runSheetSync(context, { importRows: current.autoImport });
-    } catch {
+      recordWorkerSuccess("google-sheets-bridge");
+    } catch (error) {
       // The bridge configuration keeps the last result; the next tick retries.
+      // Only a failure CODE is recorded (INT-10): never the message, a URL or a
+      // customer value.
+      recordWorkerFailure("google-sheets-bridge", error);
     } finally {
       state.running = false;
       schedule();

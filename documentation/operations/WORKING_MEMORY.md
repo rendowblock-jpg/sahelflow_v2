@@ -1,7 +1,7 @@
 # SahelFlow — Working Memory
 
 > **Purpose:** Single compact resumable handoff. Read after Current State, Roadmap and Workflow.
-> **Last updated:** 2026-10-17
+> **Last updated:** 2026-10-18
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
 > **Do not use this file as a live branch pointer:** resolve protected `main` from GitHub at action time.
 
@@ -9,11 +9,13 @@
 
 > **Read this first.** The live order is **Exact next-session order** below. Release facts, digests and the release record are in `../system/CURRENT_STATE.md`; per-release history is in `../../CHANGELOG.md`; evidence rows are in the ledgers listed in `../README.md`. This file keeps only what a new session needs to resume, and it is the authority for what the Founder has installed.
 
-- **Internal.43 / FD-071 is published** (2026-10-17T14:59:16Z): app `1.0.0-internal.43`, MSI `1.0.0.43`, `customer-online`, host `sahelflow.com`, tag `sahelflow-v1.0.0-internal.43-3fa652062295f3b2d82a66cc9e0c0cc159a21f38`, signed run `39041467501`. It adds `SahelFlow-Setup.exe` (per-machine NSIS) beside the MSI for the first time. It is a Founder-authorized launch candidate, not Beta or Stable. Published is not installed.
-- **Installed record (Founder-reported):** the last recorded installation is **Internal.41** (2026-10-08). Internal.42 was published 2026-10-09; the installed audit behind PR #490 and FD-071 shows it was in use, but no installation is recorded. On 2026-10-17 the Founder said they are installing Internal.43 in place. **No campaign row has converted on Internal.42 or 43**; a row converts only on a named observation of a candidate that contains it. Publication of a package is not conversion of later source.
+- **Internal.44 / FD-072 is published** (2026-10-18T15:15:42Z): app `1.0.0-internal.44`, MSI `1.0.0.44`, `customer-online`, host `sahelflow.com`, tag `sahelflow-v1.0.0-internal.44-c1a66d9b17d5a11a2b6d31d70729102609fb4be1`, signed run `39137845506`, built from the tip of `main` at that time (`c1a66d9b`, release PR #533). It is a Founder-authorized launch candidate, not Beta or Stable. Published is not installed. Internal.43 / FD-071 (2026-10-17T14:59:16Z, signed run `39041467501`) added `SahelFlow-Setup.exe` (per-machine NSIS) beside the MSI for the first time.
+- **Installed record (Founder-reported):** the last recorded installation is **Internal.41** (2026-10-08). Internal.42 was published 2026-10-09; the installed audit behind PR #490 and FD-071 shows it was in use, but no installation is recorded. On 2026-10-17 the Founder said they are installing Internal.43 in place. Internal.44 was published 2026-10-18 and is not installed. **No campaign row has converted on Internal.42, 43 or 44**; a row converts only on a named observation of a candidate that contains it. Publication of a package is not conversion of later source.
+- **Packaged in Internal.44 (published 2026-10-18, not installed):** #501-#509 and the whole-app audit repairs #511-#517 and #519-#531 (`../system/CURRENT_STATE.md`, "What Internal.44 packages"). The audit register with the findings left open is `TRANSFORMATION_REGISTER.md`, section "Whole-app audit, 2026-10-17". The Inbox cause, the startup gain and palette latency stay unmeasured until the Founder's new trace and diagnostics from Internal.44 arrive. PR #510 stays a draft.
+- **Merged to `main` after Internal.44, not published:** #534 (the AI page has one `main` landmark). It reaches the Founder only in a signed successor.
 - **Open issues:** #164 (Phase 0–9 epic), #230 (Algerian-network installed trial; both licence hosts reported ready), #306 (real-phone WhatsApp certification; logout LAST), #316 and #317 (installed/real-phone evidence only; source complete and packaged). #499 is a 2026-10-17 agent note superseded by this file. PR #456 (artifact hygiene) is stale; do not merge it as current work.
 - **Source-only tracks (no release authority, no installed row):** the whole-app transformation (`TRANSFORMATION_HANDOFF.md` §4: STR-01 composer seam, then the list seam, then `storefront-studio`, `automation-builder`, `inbox-v3-queue`; then TEST-01, L10N-01, STR-02/03, SYS-04). Never present it as campaign progress.
-- **Open Founder decisions:** (1) **F-1** — whether `POST /api/extraction` should require a licence (`requireLicense()`); unchanged pending a recorded decision. (2) **Release mechanics** — a signed build fails if `main` moves during its ~14-minute build; closing it needs the draft release created before the build, a change to release mechanics (see `WORKFLOW.md` §11).
+- **Open Founder decisions:** (1) **F-1** — whether `POST /api/extraction` should require a licence (`requireLicense()`); unchanged pending a recorded decision. (2) **Release mechanics** — a signed build fails if `main` moves during its ~14-minute build; closing it needs the draft release created before the build, a change to release mechanics (see `WORKFLOW.md` §11). (3) **Inbox cause** — needs the Founder's diagnostics run; no fix is chosen blind. (4) **Residency** — tray and start-with-Windows, to be decided after a new build's startup is measured. (5) The items in the register's 'Not in the next release' table.
 - **Sidecar rows** INB-13/14/19/32 (reactions, delete-for-everyone, avatars, typing/presence) stay BLOCKED until a capability probe and a contract revision.
 - **Agent tooling:** the agent works through the Sahelflow MCP sandbox. Two files at its workspace root, outside git, carry session context (`AGENTS.md` → "Working in the agent sandbox"). The Workbench plan from #499 was dropped on 2026-10-17 because the Sahelflow MCP replaces it.
 
@@ -43,7 +45,7 @@ Binding rules:
 ## Exact next-session order
 
 1. Re-resolve protected `main`, open PRs, the latest release and issues #164/#230/#306/#316/#317.
-2. The Founder updates in place to Internal.43 (AppData preserved; no logout, no AppData reset, no protected-auth clearing) and runs **one campaign with state preserved**. Convert only rows that build contains and the observation proves: WhatsApp durable send (#306), licence activation by `SFLA1` code or `.sflicense`, the first-frame splash, team access, the W-01..W-23 rows, the PR #490 installed-audit repairs, the PR #492 extraction status line, the window behaviour from PR #498, and `SahelFlow-Setup.exe` on a clean machine (first shipped). Record results in the UI/UX, AI and WhatsApp ledgers.
+2. The Founder updates in place to Internal.44 (AppData preserved; no logout, no AppData reset, no protected-auth clearing) and runs **one campaign with state preserved**. Convert only rows that build contains and the observation proves: WhatsApp durable send (#306), licence activation by `SFLA1` code or `.sflicense`, the first-frame splash, team access, the W-01..W-23 rows, the PR #490 installed-audit repairs, the PR #492 extraction status line, the window behaviour from PR #498, and `SahelFlow-Setup.exe` on a clean machine (first shipped in Internal.43). Record results in the UI/UX, AI and WhatsApp ledgers. Also collect the build's `startup-trace.json` and WhatsApp diagnostics log: the startup gain and the Inbox cause can be measured only on it.
 3. **#306 logout executes LAST**, after the other rows on that candidate are green. Then resume FRC-3 in order **A→D→C→B**. FRC-4 and FRC-5 keep their external blockers.
 4. Source in parallel: the transformation track above; the release-mechanics decision above.
 5. Any later source line reaches sellers only through a separate release-authority PR for the next signed successor, on a Founder decision, built from the then-current tip of `main`.
@@ -112,7 +114,7 @@ Never weaken:
 
 ## Hard non-claims
 
-- Internal.43 is published; no installed observation of it is recorded. Rows from Internal.30 onward convert only on installed observation (see the ledgers).
+- Internal.44 is published (Internal.43 before it); no installed observation of either is recorded. Rows from Internal.30 onward convert only on installed observation (see the ledgers).
 - Complete AI/tools/order-extraction certification is open; live-key, installed-observation and T470 rows remain external-blocked.
 - Class-AAA Notifications and professional WhatsApp message/media parity are source-complete but unproven on an installed build with a real phone.
 - Public commerce/courier live certification is not established by adapter source alone.

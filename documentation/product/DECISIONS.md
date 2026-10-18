@@ -2,13 +2,14 @@
 
 > **Status:** Authoritative register of approved Founder product and execution decisions. FD-001–FD-033 were consolidated from earlier addenda on 2026-07-29; later decisions are appended in numeric order as dated entries. FD-034–FD-044, FD-046 and FD-047 are version-bound release authority recorded in the protected release requests, not entries here
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-10-17 (header and index; FD-071 execution record. No decision changed)
+> **Last amended:** 2026-10-18 (FD-072 publication record added. No decision changed)
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
 This register records approved product and execution decisions. Entries FD-001–FD-029 are consolidated policy statements; FD-030 onward are dated Founder directives. Detailed mechanisms remain subject to architecture, research, security review, provider certification and evidence gates, but engineering may not contradict these policies without a new numbered Founder decision. A later entry supersedes an earlier one only for the choice it names.
 
 ## Index (newest first)
 
+- FD-072 — One signed successor Internal.44 under the FD-066 customer launch (2026-10-17, ADOPTED)
 - FD-071 — One signed successor Internal.43 under the FD-066 customer launch (2026-10-14, ADOPTED)
 - FD-070 — One signed successor Internal.42 under the FD-066 customer launch (2026-10-09, ADOPTED)
 - FD-069 — Google Sheets through a seller-owned Apps Script bridge (2026-10-01, ADOPTED)
@@ -1776,3 +1777,35 @@ as one signed successor:
   (CI failure digest workflow), #498 (window behaviour) and #500. PR #501 adds a
   first-step guard so `release.yml` refuses any source that is not the tip of
   `main`. Digests and the release ledger are in `system/CURRENT_STATE.md`.
+
+## FD-072 — One signed successor Internal.44 under the FD-066 customer launch (2026-10-17, ADOPTED)
+
+After the whole-app read-only audit of 2026-10-17 the Founder directed: "complete
+the work left and fixes and improvement to be done from the audit findings and
+then update the documentation files and everything to main then make the
+release." That directive adopts the next customer-online release authority as
+one signed successor:
+
+- **Package:** app `1.0.0-internal.44` / MSI `1.0.0.44`, channel `internal`,
+  mode `customer-online`, owned host `sahelflow.com`. Paid licences stay
+  offline-signed. Trial origins stay `license.sahelflow.com` and
+  `activate.sahelflow.com`.
+- **Content:** protected `main` at the tip this release pull request merges
+  into. It carries everything merged after Internal.43 (`3fa65206…`):
+
+- **Reported on Internal.43 (2026-10-17):** #503 the launch no longer waits for the packaged-server file pre-read; #504 the startup card is rebuilt and closing it quits instead of hiding a running launch; #506 the server loads route modules lazily instead of all at boot; #505 and #508 WhatsApp survives a cold start, retries status callbacks, and records inbound and timing diagnostics (the Inbox cause is not established); #507 search finds a record the seller mistyped; #509 the AI delete confirmation no longer overlaps and the composer draws one focus ring.
+- **Whole-app audit repairs, data and money:** #511 the Customers page search can match; #512 the privacy export includes five omitted models and its gate runs; #515 uncollected COD is no longer "disputed", the API accepts `+213` phones, and a product edit is audited; #517 stock availability no longer subtracts a confirmed manual hold twice; #519 orders are created only through the governed command; #525 imports and exports (non-negative stock, one schema for preview and commit, audited, idempotent expenses import, truncation reported); #526 one bad order no longer breaks the COD workspace, the Expenses figures agree (they include the cost of goods sold), expense edits are audited, and risk analytics needs the Risk page grants (an Operator or Viewer now gets 403); #531 deleting a backup removes the local copy first, a swallowed audit failure leaves a code-only signal, a packaged process refuses the development key override.
+- **Whole-app audit repairs, access, integrations and AI:** #516 AI chat read tools follow the member's role (an Operator can no longer read profit or cost through chat); #521 sign-in limits are per account on a server-derived key and first-run setup is create-only; #523 delivery status moves follow an explicit table and are audited, and the Returns page no longer offers a dialog that could only fail; #524 seller-supplied integration addresses are checked before use, six background workers record a failure code, and one malformed hosted receipt no longer stalls a page; #527 MCP grants and refused calls are audited, read audits are coalesced per minute, request size is bounded; #528 the Gemini key is carried in a header for legacy-format keys and scrubbed from errors, name redaction and the tool-loop ending are fixed.
+- **Whole-app audit repairs, WhatsApp, search and interface:** #514 WhatsApp inbound ignores undecryptable stubs and reactions and brings an archived thread back; #522 one unreadable inbound-spool record is set aside instead of stopping the sidecar, and the protected key is unlocked once per process; #513 the palette's server search stops when the browser cancels it; #530 typo search always tries one shorter spelling (on a slow PC a search that finds nothing is about twice as slow; unmeasured), the Inbox fallback poll backs off from 3 s to 15 s, and the sign-in, setup, join and licence pages get a skip link.
+- **Release mechanics, tests and documents:** #501 a signed build's source must be the current tip of `main`; #502 the documentation archive is retired; #520 and #529 test-only (the Settings window test waits for its open animation; three script contract tests join the vitest lane); the audit register and the merged-not-published record.
+- **Left out on purpose:** #510 (licence-boundary seed, draft: it failed two required browser tests) and the findings in the transformation register's "Not in the next release" table (each needs a Founder decision, a database migration or a Windows test).
+- **Measured and not measured:** the startup gain is a projection from two Founder traces, not a measurement of this build; palette latency is unmeasured; the Inbox cause is not established and needs the diagnostics from this build; the WhatsApp sidecar fix was tested in CI, not on a device; none of this is Founder-installed until it is installed and observed.
+
+- **Gates:** this release-authority PR merges only after its full Required
+  battery, including installed-MSI evidence, is green. The signed train builds
+  from that exact `main` tip and nothing else merges while it runs. The tag,
+  digests and publish time are recorded only after the signed run succeeds.
+- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
+  no ledger row and does not turn source or CI evidence into installed or
+  live-provider evidence. #306 logout stays LAST.
+- **Publication record (2026-10-18):** published 2026-10-18T15:15:42Z by signed run `39137845506` from the `main` tip `c1a66d9b…` (release PR #533); tag `sahelflow-v1.0.0-internal.44-c1a66d9b17d5a11a2b6d31d70729102609fb4be1`. Digests and the release ledger are in `system/CURRENT_STATE.md`. No decision changed.

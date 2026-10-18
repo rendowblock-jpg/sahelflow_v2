@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ecoTrackAdapter } from "../ecotrack";
+import { routeOutboundThroughGlobalFetch } from "../../__tests__/outbound-test-transport";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -41,6 +42,7 @@ describe("EcoTrack courier adapter", () => {
   beforeEach(() => {
     mockFetch.mockReset();
     vi.stubGlobal("fetch", mockFetch);
+    routeOutboundThroughGlobalFetch();
   });
 
   it("never guesses missing courier endpoints", async () => {

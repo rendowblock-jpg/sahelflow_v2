@@ -7,8 +7,9 @@
  *
  * The token is a launch-scoped secret the desktop shell mints and hands to the
  * MCP sidecar. It authorizes the *transport*; it is not identity. Identity is
- * still the durable Founder session the sidecar forwards, and authority is
- * still the permission check plus the proposal gate.
+ * the agent grant's own durable binding (MCP-11/MCP-12), resolved by the route
+ * from the grant secret the bridge presents; no browser session is forwarded.
+ * Authority is still the permission check plus the proposal gate.
  */
 import "server-only";
 

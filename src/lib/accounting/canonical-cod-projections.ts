@@ -42,6 +42,23 @@ export interface CanonicalCodSettlementSummary {
   lineCount: number;
 }
 
+/** Why a delivered canonical order could not be turned into a COD position. */
+export type CanonicalCodFlagReason =
+  | "receivable_missing"
+  | "receivable_duplicated"
+  | "receivable_not_positive";
+
+/**
+ * One delivered order whose receivable record is inconsistent (MNY-03). It is
+ * reported instead of failing the whole workspace. Reason code only: no
+ * customer name and no amount ever leaves through this list.
+ */
+export interface CanonicalCodFlaggedOrder {
+  orderId: string;
+  orderNumber: string;
+  reason: CanonicalCodFlagReason;
+}
+
 export interface CanonicalCodReviewLine {
   lineId: string;
   settlementId: string;
@@ -80,12 +97,22 @@ export interface CanonicalCodWorkspaceSummary {
     disputed: number;
     remitted: number;
     settlementsNeedingReview: number;
+    /** Delivered orders left out because their receivable record is inconsistent. */
+    flagged: number;
   };
   awaitingCollection: CanonicalCodOrderPosition[];
   awaitingRemittance: CanonicalCodOrderPosition[];
   disputed: CanonicalCodOrderPosition[];
   recentSettlements: CanonicalCodSettlementSummary[];
   reviewLines: CanonicalCodReviewLine[];
+  /** Orders left out of every list and total above (MNY-03). */
+  flaggedOrders: CanonicalCodFlaggedOrder[];
+  /**
+   * True when the read was capped (MNY-01): more delivered orders than the
+   * newest ORDER_WINDOW, or more settlements than the newest SETTLEMENT_WINDOW,
+   * exist, so the totals above cover only the newest rows.
+   */
+  truncated: { orders: boolean; settlements: boolean };
 }
 
 function sum(values: readonly number[]): number {
@@ -111,6 +138,39 @@ function deriveCodState(input: {
     return "partially_remitted";
   }
   return "remitted";
+}
+
+/**
+ * Per-order gap between what was expected and what actually arrived.
+ *
+ * A gap only exists once something was recorded: a collection fact or a
+ * settlement line. A delivered order that is simply not collected yet owes
+ * its whole amount, which is `outstandingCollection`, not a discrepancy:
+ * counting it as `-expectedReceivable` put every pending order in the
+ * "disputed" bucket (MNY-02). A collection that was later corrected down to
+ * zero is still a recorded fact, so it keeps its real shortfall.
+ */
+export function computeCodPositionDiscrepancy(input: {
+  hasCollection: boolean;
+  hasSettlementLines: boolean;
+  expectedReceivable: number;
+  effectiveCollected: number;
+  settlementDiscrepancy: number;
+}): number {
+  if (!input.hasCollection && !input.hasSettlementLines) return 0;
+  return (
+    input.effectiveCollected -
+    input.expectedReceivable +
+    input.settlementDiscrepancy
+  );
+}
+
+/** Disputed = the state machine says so, or a recorded gap is non-zero. */
+export function isDisputedCodPosition(position: {
+  codState: string;
+  discrepancy: number;
+}): boolean {
+  return position.codState === "disputed" || position.discrepancy !== 0;
 }
 
 function collectionAmount(collection: {
@@ -211,15 +271,45 @@ function lineAmounts(lines: SettlementLineShape[]): {
   };
 }
 
+/** Newest delivered orders read for the workspace; one more is fetched to detect a cap. */
+const ORDER_WINDOW = 5000;
+/** Newest settlements read for the workspace; one more is fetched to detect a cap. */
+const SETTLEMENT_WINDOW = 100;
+
+interface CanonicalCodOrderPositions {
+  positions: CanonicalCodOrderPosition[];
+  flagged: CanonicalCodFlaggedOrder[];
+  truncated: boolean;
+}
+
+function receivableFlagReason(
+  receivable: { count: number; amount: number } | undefined,
+): CanonicalCodFlagReason | null {
+  if (!receivable) return "receivable_missing";
+  if (receivable.count !== 1) return "receivable_duplicated";
+  if (receivable.amount <= 0) return "receivable_not_positive";
+  return null;
+}
+
+/**
+ * Build the COD position of every delivered canonical order, or (with
+ * `orderId`) of that one order through a direct query that does not depend on
+ * the order being inside the newest-ORDER_WINDOW window. An order whose
+ * receivable record is inconsistent is flagged, not thrown: one bad row must
+ * not take down the workspace or the positions of unrelated orders.
+ */
 async function buildOrderPositions(
   context: BusinessPrincipalContext,
-): Promise<CanonicalCodOrderPosition[]> {
-  const orders = await context.prisma.order.findMany({
+  options: { orderId?: string } = {},
+): Promise<CanonicalCodOrderPositions> {
+  const scoped = options.orderId !== undefined;
+  const fetched = await context.prisma.order.findMany({
     where: {
       deletedAt: null,
       status: "delivered",
       deliveryState: "delivered",
       codState: { not: null },
+      ...(options.orderId !== undefined ? { id: options.orderId } : {}),
     },
     select: {
       id: true,
@@ -230,13 +320,15 @@ async function buildOrderPositions(
       customer: { select: { name: true } },
     },
     orderBy: { deliveredAt: "desc" },
-    take: 5000,
+    take: scoped ? 1 : ORDER_WINDOW + 1,
   });
+  const truncated = !scoped && fetched.length > ORDER_WINDOW;
+  const orders = truncated ? fetched.slice(0, ORDER_WINDOW) : fetched;
   const canonical = orders.filter((order) =>
     isTrustedManualOrderAuthority(order.source, order.sourceMetadata),
   );
   const orderIds = canonical.map((order) => order.id);
-  if (orderIds.length === 0) return [];
+  if (orderIds.length === 0) return { positions: [], flagged: [], truncated };
 
   const [receivableMovements, collections, courierDeductions, lines] = await Promise.all([
     context.prisma.financialMovement.findMany({
@@ -311,20 +403,34 @@ async function buildOrderPositions(
     linesByOrder.set(orderId, current);
   }
 
-  return canonical.map((order) => {
+  const flagged: CanonicalCodFlaggedOrder[] = [];
+  const consistent: Array<{
+    order: (typeof canonical)[number];
+    receivableAmount: number;
+  }> = [];
+  for (const order of canonical) {
     const receivable = receivableByOrder.get(order.id);
-    if (!receivable || receivable.count !== 1 || receivable.amount <= 0) {
-      throw new ConflictError(
-        `Canonical COD position for order ${order.id} requires exactly one positive delivered receivable movement`,
-      );
+    const reason = receivableFlagReason(receivable);
+    if (reason !== null || receivable === undefined) {
+      flagged.push({
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        reason: reason ?? "receivable_missing",
+      });
+      continue;
     }
+    consistent.push({ order, receivableAmount: receivable.amount });
+  }
+
+  const positions = consistent.map(({ order, receivableAmount }) => {
     const collection = collectionByOrder.get(order.id) ?? null;
     const deducted = deductionByOrder.get(order.id) ?? 0;
     // A courier deduction is cash the courier no longer owes. It is not a
     // second cash collection — the refund movement already records the money.
-    const expectedReceivable = Math.max(0, receivable.amount - deducted);
+    const expectedReceivable = Math.max(0, receivableAmount - deducted);
     const collected = collectionAmount(collection);
-    const lineSummary = lineAmounts(linesByOrder.get(order.id) ?? []);
+    const orderLines = linesByOrder.get(order.id) ?? [];
+    const lineSummary = lineAmounts(orderLines);
     const codState = deriveCodState({
       expectedReceivable,
       effectiveCollected: collected,
@@ -346,8 +452,13 @@ async function buildOrderPositions(
       fees: lineSummary.fees,
       adjustments: lineSummary.adjustments,
       netReceived: lineSummary.net,
-      discrepancy:
-        collected - expectedReceivable + lineSummary.discrepancy,
+      discrepancy: computeCodPositionDiscrepancy({
+        hasCollection: collection !== null,
+        hasSettlementLines: orderLines.length > 0,
+        expectedReceivable,
+        effectiveCollected: collected,
+        settlementDiscrepancy: lineSummary.discrepancy,
+      }),
       outstandingCollection: Math.max(0, expectedReceivable - collected),
       outstandingRemittance: Math.max(0, remittable - lineSummary.gross),
       collectionReference: collection?.reference ?? null,
@@ -356,6 +467,7 @@ async function buildOrderPositions(
       lastSettlementAt: lineSummary.lastAt,
     };
   });
+  return { positions, flagged, truncated };
 }
 
 async function buildSettlementSummaries(
@@ -363,10 +475,11 @@ async function buildSettlementSummaries(
 ): Promise<{
   summaries: CanonicalCodSettlementSummary[];
   reviewLines: CanonicalCodReviewLine[];
+  truncated: boolean;
 }> {
-  const settlements = await context.prisma.codSettlement.findMany({
+  const fetchedSettlements = await context.prisma.codSettlement.findMany({
     orderBy: { receivedAt: "desc" },
-    take: 100,
+    take: SETTLEMENT_WINDOW + 1,
     include: {
       lines: {
         include: {
@@ -376,6 +489,10 @@ async function buildSettlementSummaries(
       },
     },
   });
+  const truncated = fetchedSettlements.length > SETTLEMENT_WINDOW;
+  const settlements = truncated
+    ? fetchedSettlements.slice(0, SETTLEMENT_WINDOW)
+    : fetchedSettlements;
   const matchedOrderIds = Array.from(
     new Set(
       settlements.flatMap((settlement) =>
@@ -461,26 +578,32 @@ async function buildSettlementSummaries(
     });
   }
 
-  return { summaries, reviewLines };
+  return { summaries, reviewLines, truncated };
 }
 
 export async function getCanonicalCodOrderPosition(
   context: BusinessPrincipalContext,
   orderId: string,
 ): Promise<CanonicalCodOrderPosition> {
-  const positions = await buildOrderPositions(context);
+  const { positions, flagged } = await buildOrderPositions(context, { orderId });
   const position = positions.find((entry) => entry.orderId === orderId);
-  if (!position) throw new NotFoundError("Canonical COD position", orderId);
-  return position;
+  if (position) return position;
+  if (flagged.some((entry) => entry.orderId === orderId)) {
+    throw new ConflictError(
+      `Canonical COD position for order ${orderId} requires exactly one positive delivered receivable movement`,
+    );
+  }
+  throw new NotFoundError("Canonical COD position", orderId);
 }
 
 export async function getCanonicalCodWorkspaceSummary(
   context: BusinessPrincipalContext,
 ): Promise<CanonicalCodWorkspaceSummary> {
-  const [positions, settlementData] = await Promise.all([
+  const [orderData, settlementData] = await Promise.all([
     buildOrderPositions(context),
     buildSettlementSummaries(context),
   ]);
+  const { positions } = orderData;
   const awaitingCollection = positions.filter(
     (entry) => entry.collectionId === null && entry.outstandingCollection > 0,
   );
@@ -490,9 +613,7 @@ export async function getCanonicalCodWorkspaceSummary(
       entry.outstandingRemittance > 0 &&
       entry.codState !== "disputed",
   );
-  const disputed = positions.filter(
-    (entry) => entry.codState === "disputed" || entry.discrepancy !== 0,
-  );
+  const disputed = positions.filter(isDisputedCodPosition);
 
   return {
     totals: {
@@ -522,11 +643,17 @@ export async function getCanonicalCodWorkspaceSummary(
       settlementsNeedingReview: settlementData.summaries.filter(
         (entry) => entry.status === "needs_review",
       ).length,
+      flagged: orderData.flagged.length,
     },
     awaitingCollection,
     awaitingRemittance,
     disputed,
     recentSettlements: settlementData.summaries,
     reviewLines: settlementData.reviewLines,
+    flaggedOrders: orderData.flagged,
+    truncated: {
+      orders: orderData.truncated,
+      settlements: settlementData.truncated,
+    },
   };
 }

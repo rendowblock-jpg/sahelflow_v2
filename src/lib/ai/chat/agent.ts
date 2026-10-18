@@ -8,7 +8,7 @@ import {
   geminiErrorMessage,
   geminiProviderErrorFromStream,
   type GeminiModel,
-  type GeminiProviderError,
+  GeminiProviderError,
   requestGemini,
 } from "@/lib/ai/gemini/provider";
 import type { GeminiThinkingLevel } from "@/lib/ai/gemini/catalog";
@@ -28,11 +28,22 @@ import {
   getTool,
   type ToolContext,
 } from "./tools/registry";
+import { aiToolRefusalResult, isAiToolRefusalResult } from "./tools/tool-refusal";
 import "./tools/core-tools";
 import "./tools/extended-tools";
 import "./tools/advanced-tools";
 
 const MAX_ITERATIONS = 5;
+/**
+ * S06a-08: no bytes from the provider for this long ends the turn. Generous on
+ * purpose: thinking models can be silent for a long time before the first
+ * token, and the route heartbeat only keeps the CLIENT watchdog alive.
+ */
+export const AGENT_STREAM_IDLE_MS = 90_000;
+/** S06a-08: overall wall-clock budget of one chat turn (all iterations). */
+export const AGENT_TURN_DEADLINE_MS = 5 * 60_000;
+const STREAM_IDLE_TRANSPORT_CODE = "SAHELFLOW_STREAM_IDLE";
+const STREAM_DEADLINE_TRANSPORT_CODE = "SAHELFLOW_TURN_DEADLINE";
 
 interface GeminiFunctionCall {
   name: string;
@@ -144,6 +155,11 @@ type ToolExecutionResult = {
 type Content = { role: string; parts: Array<Record<string, unknown>> };
 
 function historySafeToolResult(toolName: string, value: unknown): unknown {
+  // Built only from constants (fixed sentence, vocabulary names, a coded
+  // reason) and validated exactly, so it carries no record content and cannot
+  // be forged by a tool body. It must reach the model as written: the generic
+  // serializer would reduce it to "Tool failed".
+  if (isAiToolRefusalResult(value)) return value;
   if (
     value &&
     typeof value === "object" &&
@@ -266,9 +282,14 @@ async function execute(
     };
   }
   const toolResult = await tool.execute(call.args, context);
-  const result = toolResult.success
-    ? toolResult.data
-    : { error: toolResult.error };
+  // A refusal from the registry gate (read not permitted, proposal refused or
+  // not creatable) is a constant, model-readable result so the model can tell
+  // the seller why; every other failure keeps the generic `{ error }` shape.
+  const result = toolResult.refusal
+    ? aiToolRefusalResult(toolResult.refusal)
+    : toolResult.success
+      ? toolResult.data
+      : { error: toolResult.error };
   if (isAiActionProposalToolResult(result)) {
     return {
       result: historySafeToolResult(call.name, result),
@@ -374,6 +395,27 @@ function emptyResponseMessage(
   if (locale === "en")
     return `The model returned no visible content. Send the request again.${usageProofSuffix(locale, usage)}`;
   return `Le modèle n'a renvoyé aucun contenu visible. Renvoyez la demande.${usageProofSuffix(locale, usage)}`;
+}
+
+/** S06a-09: constant, model-independent copy for an exhausted tool loop. */
+function iterationLimitMessage(locale: AiChatLocale | undefined): string {
+  if (locale === "ar")
+    return "تم بلوغ الحد الأقصى من خطوات الوكيل. بسّط طلبك ثم أعد المحاولة.";
+  if (locale === "en")
+    return "The agent reached its iteration limit. Simplify the request and try again.";
+  return "La limite d'itérations a été atteinte. Simplifiez la demande puis réessayez.";
+}
+
+/** S06a-08: the turn stalled or outlived its deadline. Coded and localized. */
+function streamStalledEvent(locale: AiChatLocale | undefined): AgentStreamEvent {
+  return {
+    type: "error",
+    message: geminiErrorMessage(
+      new GeminiProviderError("GEMINI_TIMEOUT", "Gemini stream stalled."),
+      locale ?? "fr",
+    ),
+    code: "AI_STREAM_STALLED",
+  };
 }
 
 export async function runAgent(
@@ -507,12 +549,7 @@ export async function runAgent(
   }
 
   return {
-    response:
-      locale === "ar"
-        ? "تم بلوغ الحد الأقصى من خطوات الوكيل. بسّط طلبك ثم أعد المحاولة."
-        : locale === "en"
-          ? "The agent reached its iteration limit. Simplify the request and try again."
-          : "La limite d'itérations a été atteinte. Simplifiez la demande puis réessayez.",
+    response: iterationLimitMessage(locale),
     toolCalls: allToolCalls,
   };
 }
@@ -530,9 +567,75 @@ interface ParsedStream {
   blockReason: string | null;
 }
 
+interface StreamLimits {
+  /** Longest silence between provider chunks. */
+  idleMs: number;
+  /** Absolute epoch-ms deadline of the whole turn. */
+  deadlineAt: number;
+}
+
+type StreamRead =
+  | { kind: "chunk"; result: ReadableStreamReadResult<Uint8Array> }
+  | { kind: "idle" | "deadline" };
+
+async function readWithLimits(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  limits: StreamLimits,
+): Promise<StreamRead> {
+  const remainingMs = limits.deadlineAt - Date.now();
+  if (remainingMs <= 0) return { kind: "deadline" };
+  const deadlineFirst = remainingMs <= limits.idleMs;
+  const waitMs = deadlineFirst ? remainingMs : limits.idleMs;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expiry = new Promise<StreamRead>((resolve) => {
+    timer = setTimeout(
+      () => resolve({ kind: deadlineFirst ? "deadline" : "idle" }),
+      waitMs,
+    );
+  });
+  const read = reader
+    .read()
+    .then((result): StreamRead => ({ kind: "chunk", result }));
+  // A read that loses the race is settled by reader.cancel(); its rejection
+  // must never surface as an unhandled one.
+  read.catch(() => undefined);
+  try {
+    return await Promise.race([read, expiry]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function stalledStreamError(kind: "idle" | "deadline"): GeminiProviderError {
+  return new GeminiProviderError(
+    "GEMINI_TIMEOUT",
+    "Gemini stream stalled.",
+    undefined,
+    null,
+    {
+      name: "StreamStall",
+      code:
+        kind === "idle"
+          ? STREAM_IDLE_TRANSPORT_CODE
+          : STREAM_DEADLINE_TRANSPORT_CODE,
+    },
+  );
+}
+
+function isStreamStall(error: GeminiProviderError): boolean {
+  return (
+    error.transport?.code === STREAM_IDLE_TRANSPORT_CODE ||
+    error.transport?.code === STREAM_DEADLINE_TRANSPORT_CODE
+  );
+}
+
 async function* parseStream(
   stream: ReadableStream<Uint8Array>,
   signal?: AbortSignal,
+  limits: StreamLimits = {
+    idleMs: AGENT_STREAM_IDLE_MS,
+    deadlineAt: Number.POSITIVE_INFINITY,
+  },
 ): AsyncGenerator<AgentStreamEvent, ParsedStream> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
@@ -567,7 +670,20 @@ async function* parseStream(
           blockReason,
         };
       }
-      const { done, value } = await reader.read();
+      const read = await readWithLimits(reader, limits);
+      if (read.kind !== "chunk") {
+        await reader.cancel().catch(() => undefined);
+        return {
+          fullText,
+          functionCalls: [],
+          cancelled: false,
+          providerError: stalledStreamError(read.kind),
+          usage,
+          finishReason,
+          blockReason,
+        };
+      }
+      const { done, value } = read.result;
       if (done) break;
       bytesSeen += value.byteLength;
       // F-05 residual (Internal.34 installed campaign): Google's SSE frames
@@ -684,8 +800,14 @@ export async function* runAgentStream(
   // resolves fallbacks internally, so the reported model is request truth.
   let servedModel: GeminiModel | null = null;
 
+  const deadlineAt = Date.now() + AGENT_TURN_DEADLINE_MS;
+
   for (let iteration = 0; iteration < MAX_ITERATIONS; iteration += 1) {
     if (externalSignal?.aborted) return;
+    if (Date.now() >= deadlineAt) {
+      yield streamStalledEvent(locale);
+      return;
+    }
     let stream: ReadableStream<Uint8Array> | null;
     try {
       const result = await requestGemini(apiKey, {
@@ -711,7 +833,10 @@ export async function* runAgentStream(
       return;
     }
 
-    const parser = parseStream(stream, externalSignal);
+    const parser = parseStream(stream, externalSignal, {
+      idleMs: AGENT_STREAM_IDLE_MS,
+      deadlineAt,
+    });
     let parsed: IteratorResult<AgentStreamEvent, ParsedStream>;
     while (true) {
       parsed = await parser.next();
@@ -722,10 +847,12 @@ export async function* runAgentStream(
       parsed.value;
     if (cancelled) return;
     if (providerError) {
-      yield {
-        type: "error",
-        message: geminiErrorMessage(providerError, locale ?? "fr"),
-      };
+      yield isStreamStall(providerError)
+        ? streamStalledEvent(locale)
+        : {
+            type: "error",
+            message: geminiErrorMessage(providerError, locale ?? "fr"),
+          };
       return;
     }
 
@@ -809,4 +936,13 @@ export async function* runAgentStream(
     };
     return;
   }
+
+  // S06a-09: every iteration ended in tool calls and the budget is spent. The
+  // old loop simply fell off its end, leaving the seller a half-finished turn
+  // with no reason. Say so, with the same constant copy as runAgent.
+  yield {
+    type: "error",
+    message: iterationLimitMessage(locale),
+    code: "AI_ITERATION_LIMIT",
+  };
 }

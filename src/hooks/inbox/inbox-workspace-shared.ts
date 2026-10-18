@@ -32,6 +32,34 @@ export const LIVE_RECOVERY_POLL_MS = 3_000;
  * after sleep or a network drop re-enables sending without a manual refresh.
  */
 export const STATUS_RECOVERY_POLL_MS = 10_000;
+/**
+ * The fallback poll runs at its base cadence for this many refreshes, then
+ * doubles every this-many refreshes up to RECOVERY_POLL_MAX_MS. A socket that
+ * is down for a while must not keep hitting the local server every 3 s.
+ */
+export const RECOVERY_POLL_FULL_RATE_CYCLES = 5;
+export const RECOVERY_POLL_MAX_MS = 15_000;
+
+/**
+ * Delay before the next fallback refresh, after `completedCycles` refreshes
+ * since the push channel went down (or the tab last became visible). Pure and
+ * monotonic: 3 s x5, 6 s x5, 12 s x5, then 15 s; the 10 s status cadence goes
+ * 10 s x5 and then 15 s. Never below the base cadence, never above
+ * max(base, RECOVERY_POLL_MAX_MS).
+ */
+export function recoveryPollDelayMs(
+  baseMs: number,
+  completedCycles: number,
+): number {
+  const cycles = Number.isFinite(completedCycles)
+    ? Math.max(0, Math.floor(completedCycles))
+    : 0;
+  const doublings = Math.min(
+    Math.floor(cycles / RECOVERY_POLL_FULL_RATE_CYCLES),
+    8,
+  );
+  return Math.min(baseMs * 2 ** doublings, Math.max(baseMs, RECOVERY_POLL_MAX_MS));
+}
 export const DRAFT_SAVE_DELAY_MS = 600;
 export const DRAFT_LOAD_ATTEMPTS = 3;
 export const DRAFT_LOAD_RETRY_MS = 500;

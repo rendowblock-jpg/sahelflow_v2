@@ -121,6 +121,24 @@ export const getAuthSecret = cache(async (): Promise<string | null> => {
   return null;
 });
 
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "P2002",
+  );
+}
+
+/**
+ * First-run owner creation. The authority row is created, never overwritten:
+ * its primary key makes the database pick exactly ONE winner when two
+ * submissions overlap, and the loser gets AUTH_ALREADY_SETUP without changing
+ * anything (IDN-08; an upsert let the later write replace the earlier
+ * submission's signing secret and PIN). The one row still repaired in place is
+ * a half-written one with an empty PIN hash, which isAuthSetup() already treats
+ * as "not set up"; that repair is itself a conditional single-row update.
+ */
 export async function setupAuth(pin: string): Promise<{ secret: string }> {
   const secret = generateSecret();
   const pinHash = await sealAuthSecretValue(
@@ -128,12 +146,24 @@ export async function setupAuth(pin: string): Promise<{ secret: string }> {
     "pinHash",
     await hashPin(pin),
   );
-  await authContext.prisma.authSecret.upsert({
-    where: { id: "default" },
-    create: { id: "default", secret, pinHash },
-    update: { secret, pinHash },
+  try {
+    await authContext.prisma.authSecret.create({
+      data: { id: "default", secret, pinHash },
+    });
+    return { secret };
+  } catch (error) {
+    if (!isUniqueConstraintViolation(error)) throw error;
+  }
+  const repaired = await authContext.prisma.authSecret.updateMany({
+    where: { id: "default", pinHash: "" },
+    data: { secret, pinHash },
   });
-  return { secret };
+  if (repaired.count === 1) return { secret };
+  throw new SahelFlowError(
+    "Auth is already set up. Use the settings page to change your PIN.",
+    "AUTH_ALREADY_SETUP",
+    409,
+  );
 }
 
 export async function verifyAuthPinAndMaybeRehash(

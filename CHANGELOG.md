@@ -8,6 +8,32 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-18 — documentation reconciled to Internal.44
+
+- `AGENTS.md`, both README files, `CURRENT_STATE.md`, `ROADMAP.md`, `WORKFLOW.md`, `WORKING_MEMORY.md`, `TRANSFORMATION_REGISTER.md` and `DECISIONS.md` now name Internal.44 as the published package and record that it is not installed. The Internal.43 package record is retained in `CURRENT_STATE.md`. No decision changed; the active documentation is still 25 files.
+
+### 2026-10-18 — after Internal.44 (merged to `main`, not published)
+
+- #534: `/agents` had two `main` landmarks on desktop; the AI canvas root is now a `div`, so the page has one. The change is two lines (a tag), measured by reading the rendered page's accessibility tree on a local dev server; the Playwright specs that touch the page run in CI.
+
+### 2026-10-18 — signed Internal.44 publication (FD-072)
+
+- Tag `sahelflow-v1.0.0-internal.44-c1a66d9b17d5a11a2b6d31d70729102609fb4be1`, published 2026-10-18T15:15:42Z by signed run `39137845506` (started by the dispatcher run `39137834611` on the merge of #533, first attempt): app `1.0.0-internal.44` / MSI `1.0.0.44`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`. Assets: MSI (sha256 `b38775e5…`) and `.sig`; `SahelFlow-Setup.exe` (sha256 `e1b57dbf…`) and `.sig`; the same installer under its versioned name; updater `latest.json` (sha256 `d9448cea…`) with `windows-x86_64` (Setup.exe), `windows-x86_64-msi` and `windows-x86_64-nsis` entries.
+- Source: the `main` tip `c1a66d9b…` (#533). The signed train checked the source was the current tip, attested tree equality with the reviewed pull request, passed the signed install, launch, reopen and authenticated-UI proof, and verified the draft `latest.json` before publishing. Content: the FD-072 entry below.
+- Published is not installed: no ledger row converts, and installation by the Founder is the next gate.
+
+### 2026-10-17 — FD-072 adopts the Internal.44 release authority
+
+- FD-072 authorizes one signed successor: app `1.0.0-internal.44` / MSI `1.0.0.44`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`, built from the exact `main` tip. Content merged after Internal.43:
+  - **Reported on Internal.43 (2026-10-17):** #503 the launch no longer waits for the packaged-server file pre-read; #504 the startup card is rebuilt and closing it quits instead of hiding a running launch; #506 the server loads route modules lazily instead of all at boot; #505 and #508 WhatsApp survives a cold start, retries status callbacks, and records inbound and timing diagnostics (the Inbox cause is not established); #507 search finds a record the seller mistyped; #509 the AI delete confirmation no longer overlaps and the composer draws one focus ring.
+  - **Whole-app audit repairs, data and money:** #511 the Customers page search can match; #512 the privacy export includes five omitted models and its gate runs; #515 uncollected COD is no longer "disputed", the API accepts `+213` phones, and a product edit is audited; #517 stock availability no longer subtracts a confirmed manual hold twice; #519 orders are created only through the governed command; #525 imports and exports (non-negative stock, one schema for preview and commit, audited, idempotent expenses import, truncation reported); #526 one bad order no longer breaks the COD workspace, the Expenses figures agree (they include the cost of goods sold), expense edits are audited, and risk analytics needs the Risk page grants (an Operator or Viewer now gets 403); #531 deleting a backup removes the local copy first, a swallowed audit failure leaves a code-only signal, a packaged process refuses the development key override.
+  - **Whole-app audit repairs, access, integrations and AI:** #516 AI chat read tools follow the member's role (an Operator can no longer read profit or cost through chat); #521 sign-in limits are per account on a server-derived key and first-run setup is create-only; #523 delivery status moves follow an explicit table and are audited, and the Returns page no longer offers a dialog that could only fail; #524 seller-supplied integration addresses are checked before use, six background workers record a failure code, and one malformed hosted receipt no longer stalls a page; #527 MCP grants and refused calls are audited, read audits are coalesced per minute, request size is bounded; #528 the Gemini key is carried in a header for legacy-format keys and scrubbed from errors, name redaction and the tool-loop ending are fixed.
+  - **Whole-app audit repairs, WhatsApp, search and interface:** #514 WhatsApp inbound ignores undecryptable stubs and reactions and brings an archived thread back; #522 one unreadable inbound-spool record is set aside instead of stopping the sidecar, and the protected key is unlocked once per process; #513 the palette's server search stops when the browser cancels it; #530 typo search always tries one shorter spelling (on a slow PC a search that finds nothing is about twice as slow; unmeasured), the Inbox fallback poll backs off from 3 s to 15 s, and the sign-in, setup, join and licence pages get a skip link.
+  - **Release mechanics, tests and documents:** #501 a signed build's source must be the current tip of `main`; #502 the documentation archive is retired; #520 and #529 test-only (the Settings window test waits for its open animation; three script contract tests join the vitest lane); the audit register and the merged-not-published record.
+  - **Left out on purpose:** #510 (licence-boundary seed, draft: it failed two required browser tests) and the findings in the transformation register's "Not in the next release" table (each needs a Founder decision, a database migration or a Windows test).
+  - **Measured and not measured:** the startup gain is a projection from two Founder traces, not a measurement of this build; palette latency is unmeasured; the Inbox cause is not established and needs the diagnostics from this build; the WhatsApp sidecar fix was tested in CI, not on a device; none of this is Founder-installed until it is installed and observed.
+- The tag, digests and publish time are recorded in the publication entry above. Published is not installed: no ledger row converts.
+
 ### 2026-10-17 — documentation reconciled to Internal.43
 
 - Retired `documentation/archive` (14 superseded files deleted; the four live Phase 4 evidence documents moved to `documentation/security/`). Superseded documentation is deleted, not archived; git history is the record.

@@ -129,6 +129,11 @@ describe("connected entitlement and quota boundaries", () => {
     expect(listRoute).toContain('cloudState = "unavailable"');
     expect(listRoute).toContain("listCloudBackupsIfEnrolled");
     expect(restoreRoute).toContain("stageCloudBackupForNativeRestoreIfNeeded");
-    expect(deleteRoute).toContain("deleteCloudBackupIfEnrolled");
+    // S01b-07: the route deletes through the local-first helper, and that helper
+    // is the one place that calls the cloud delete, so the cloud copy is still
+    // reached from production.
+    const deleteEverywhere = source("src/lib/backup/delete-everywhere.ts");
+    expect(deleteRoute).toContain("deleteBackupLocalFirst");
+    expect(deleteEverywhere).toContain("deleteCloudBackupIfEnrolled");
   });
 });

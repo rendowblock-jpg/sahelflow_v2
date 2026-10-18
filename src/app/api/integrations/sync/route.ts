@@ -31,9 +31,12 @@ const syncSchema = z.object({
  * If platform is omitted, syncs all platforms that have credentials configured.
  *
  * Auth: durable trusted-actor session via requireAuth — the caller must hold
- * any of the listed Phase 2 actions (integrations.manage, data.import, order
- * intake/customer-contact, or order-financials authority). The stale
- * "x-cron-secret" contract no longer applies to this route.
+ * every one of the listed Phase 2 actions (integrations.manage, data.import,
+ * order intake, customer-contact and order-financials authority). requireAuth
+ * is all-of: the first missing action is ACTION_FORBIDDEN, so a single
+ * read-type grant never starts a sync (audit INT-05 read it as any-of; it is
+ * not, and sync-route-authority.test.ts pins that). The stale "x-cron-secret"
+ * contract no longer applies to this route.
  */
 export const POST = withErrorHandler(
   async (req: NextRequest): Promise<NextResponse> => {

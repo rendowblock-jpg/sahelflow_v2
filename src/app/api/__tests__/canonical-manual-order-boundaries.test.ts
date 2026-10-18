@@ -251,6 +251,65 @@ describe("canonical manual order API boundary", () => {
     });
   });
 
+  it("refuses a forged canonical-source order on the manual intake and writes nothing", async () => {
+    const product = await seedProduct({ stock: 5 });
+    const customer = await seedCustomer();
+
+    const response = await POSTOrder(
+      mockPost("http://localhost/api/orders", {
+        ...manualBody(customer.id, product.id),
+        source: "shopify",
+        sourceOrderId: "forged-shopify-1",
+        status: "pending",
+        sourceMetadata: {
+          authority: "canonical-source-v1",
+          source: "shopify",
+          sourceIdentity: "forged-shop",
+          sourceOrderId: "forged-shopify-1",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await getJson(response)).toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(await rawDb.order.count()).toBe(0);
+    expect(await rawDb.businessCommand.count()).toBe(0);
+  });
+
+  it("stamps the server's own authority on a manual order and ignores caller-written fields", async () => {
+    const product = await seedProduct({ stock: 5 });
+    const customer = await seedCustomer();
+
+    const response = await POSTOrder(
+      mockPost("http://localhost/api/orders", {
+        ...manualBody(customer.id, product.id),
+        status: "delivered",
+        sourceOrderId: "forged-manual-1",
+        sourceMetadata: {
+          authority: "canonical-source-v1",
+          source: "shopify",
+          sourceIdentity: "forged-shop",
+          sourceOrderId: "forged-manual-1",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(await rawDb.order.count()).toBe(1);
+    const stored = await rawDb.order.findFirst({
+      where: { customerId: customer.id },
+    });
+    expect(stored).toMatchObject({
+      source: "manual",
+      status: "pending",
+      sourceOrderId: null,
+    });
+    expect(JSON.parse(stored?.sourceMetadata ?? "null")).toEqual({
+      authority: "trusted-manual-v1",
+    });
+    expect(await rawDb.businessCommand.count()).toBe(1);
+  });
+
   it("rejects direct confirmed creation on compatibility sources", async () => {
     const product = await seedProduct({ stock: 5 });
     const customer = await seedCustomer();
