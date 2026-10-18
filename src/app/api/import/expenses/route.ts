@@ -11,6 +11,10 @@ import {
 } from "@/lib/import/engine";
 import { SahelFlowError } from "@/types/errors";
 import { EXPENSE_FIELDS, parseNumber } from "@/lib/import/fields";
+import { planExpenseImport } from "@/lib/import/expense-dedupe";
+import { importAuditAfter } from "@/lib/import/import-audit";
+import { logAudit } from "@/lib/audit";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getI18n } from "@/lib/i18n-server";
 import { requireAuth } from "@/lib/auth/server";
@@ -31,7 +35,7 @@ const VALID_CATEGORIES = expenseCategorySchema.options;
 
 /** POST /api/import/expenses */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth(["data.import", "accounting.read", "accounting.update"]);
+  const actorContext = await requireAuth(["data.import", "accounting.read", "accounting.update"]);
   const { t } = await getI18n();
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
@@ -93,7 +97,27 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   const context = { prisma: db, shop: shopContext };
-  const result = await batchInsert(validation.valid, async (batch) => {
+
+  // S03c-16: idempotent re-import. Rows identical to an expense the shop
+  // already holds (same instant, category, amount, note) are skipped, so
+  // uploading the same file twice no longer doubles the money rows.
+  const times = validation.valid.map((row) => new Date(row.data.date).getTime());
+  const existing =
+    times.length === 0
+      ? []
+      : await context.prisma.expense.findMany({
+          where: {
+            deletedAt: null,
+            date: {
+              gte: new Date(times.reduce((a, b) => Math.min(a, b))),
+              lte: new Date(times.reduce((a, b) => Math.max(a, b))),
+            },
+          },
+          select: { date: true, category: true, amount: true, notes: true },
+        });
+  const plan = planExpenseImport(validation.valid, existing);
+
+  const result = await batchInsert(plan.toInsert, async (batch) => {
     await context.prisma.expense.createMany({
       data: batch.map((row) => {
         const data = row.data as { date: string; category: string; description?: string; amount: number };
@@ -108,8 +132,25 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     return { inserted: batch.length };
   });
 
+  await logAudit(context, {
+    action: "import.expenses",
+    entity: "expenses",
+    actor: trustedActorAuditIdentity(actorContext.actor),
+    after: importAuditAfter({
+      entity: "expenses",
+      totalRows: parsed.rows.length,
+      inserted: result.inserted,
+      failed: result.errors.length,
+      invalid: validation.invalid.length,
+      skipped: plan.skipped.length,
+      mapping,
+      knownFields: EXPENSE_FIELDS.map((field) => field.key),
+    }),
+  });
+
   return NextResponse.json({
     inserted: result.inserted,
+    skipped: plan.skipped.length,
     errors: result.errors,
   });
 }, "POST /api/import/expenses");

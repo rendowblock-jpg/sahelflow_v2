@@ -5,6 +5,7 @@ import { logAudit } from "@/lib/audit";
 import { requireAuth } from "@/lib/auth/server";
 import { db, shopContext } from "@/lib/db";
 import { toXlsx } from "@/lib/import/export";
+import { exportAuditAfter, exportRowHeaders } from "@/lib/import/export-audit";
 import {
   collectBoundedXlsxRows,
   createPagedCsvStream,
@@ -37,13 +38,14 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     "orders.financials.read",
   ]);
   const format = req.nextUrl.searchParams.get("format") ?? "csv";
+  const summary = { totalMatching: await db.delivery.count({ where: { deletedAt: null } }) };
   await logAudit(
     { prisma: db, shop: shopContext },
     {
       action: "export.deliveries",
       entity: "deliveries",
       actor: trustedActorAuditIdentity(actorContext.actor),
-      after: { format },
+      after: exportAuditAfter({ entity: "deliveries", format, summary }),
     },
   );
   const { t, locale } = await getI18n();
@@ -100,11 +102,11 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   const filePrefix = locale === "ar" ? "توصيلات" : locale === "fr" ? "livraisons" : "deliveries";
   const fileSuffix = new Date().toISOString().slice(0, 10);
   if (format === "xlsx") {
-    const total = await db.delivery.count({ where: { deletedAt: null } });
-    const rows = await collectBoundedXlsxRows(total, loadPage);
+    const rows = await collectBoundedXlsxRows(summary.totalMatching, loadPage);
     return new NextResponse(toXlsx(rows, [...columns]), {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ...exportRowHeaders(summary),
         "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.xlsx"`,
       },
     });
@@ -113,6 +115,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   return new NextResponse(createPagedCsvStream(columns, loadPage), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
+      ...exportRowHeaders(summary),
       "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.csv"`,
       "Cache-Control": "no-store",
     },

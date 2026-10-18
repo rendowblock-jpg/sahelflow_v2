@@ -190,7 +190,7 @@ export const productVariantSchema = z.object({
   name: nonEmptyString,
   sku: nonEmptyString.nullable().optional(),
   price: nonNegInt.nullable().optional(), // overrides product.price if set
-  stock: z.number().int().default(0),
+  stock: nonNegInt.default(0),
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().default(0),
 });
@@ -200,7 +200,10 @@ export const createProductSchema = z.object({
   sku: nonEmptyString.nullable().optional(),
   price: nonNegInt,
   cost: nonNegInt.nullable().optional(),
-  stock: z.number().int().default(0), // can be negative (backorders)
+  // S03c-04: stock is never negative. Backorders are not a stated feature and a
+  // negative count blocks every canonical confirm of the product (available =
+  // stock - holds). Reservations, not negative stock, express over-commitment.
+  stock: nonNegInt.default(0),
   lowStockThreshold: nonNegInt.default(5),
   categoryId: cuid.nullable().optional(),
   variants: z.array(productVariantSchema).nullable().optional(),
@@ -228,7 +231,7 @@ export const createProductSchema = z.object({
  * intended (pinned by src/lib/validation/__tests__/update-schemas.test.ts).
  */
 export const updateProductSchema = createProductSchema.partial().extend({
-  stock: z.number().int().optional(), // can be negative (backorders), like create
+  stock: nonNegInt.optional(), // never negative, like create (S03c-04)
   lowStockThreshold: nonNegInt.optional(),
   isActive: z.boolean().optional(),
 });

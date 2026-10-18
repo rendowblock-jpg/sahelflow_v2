@@ -2,13 +2,51 @@
  * Customer service — CRUD + risk score + order history aggregation.
  */
 import type { Customer } from "@/types/domain";
-import { NotFoundError, ConflictError } from "@/types/errors";
+import { NotFoundError, ConflictError, SahelFlowError } from "@/types/errors";
 import { createCustomerSchema, updateCustomerSchema } from "@/lib/validation";
 import type { ServiceContext } from "./service-base";
 import { withServiceError } from "./service-base";
 
 function toDomain(row: Record<string, unknown>): Customer {
   return row as unknown as Customer;
+}
+
+/** Prisma unique-constraint violation (a concurrent create, or a soft-deleted twin). */
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { code?: unknown }).code === "P2002"
+  );
+}
+
+/**
+ * S03c-14: Customer.phone is unique INCLUDING soft-deleted rows. A create or a
+ * phone change onto a deleted customer's number used to reach the database and
+ * fail as a raw unique violation. Say so explicitly instead, with constant text
+ * (no phone number, no driver message). Restoring is a deliberate act, never a
+ * side effect of creating or importing a customer.
+ */
+async function assertPhoneNotOnDeletedCustomer(
+  ctx: ServiceContext,
+  phone: string,
+  exceptId?: string,
+): Promise<void> {
+  const deleted = await ctx.prisma.customer.findFirst({
+    where: {
+      phone,
+      deletedAt: { not: null },
+      ...(exceptId ? { id: { not: exceptId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (deleted) {
+    throw new SahelFlowError(
+      "This phone number belongs to a previously deleted customer.",
+      "CUSTOMER_PHONE_DELETED",
+      409,
+    );
+  }
 }
 
 export const customerService = {
@@ -73,8 +111,17 @@ export const customerService = {
         throw new ConflictError(`Customer with phone ${data.phone} already exists`);
       }
 
-      const row = await ctx.prisma.customer.create({ data });
-      return toDomain(row as unknown as Record<string, unknown>);
+      await assertPhoneNotOnDeletedCustomer(ctx, data.phone);
+
+      try {
+        const row = await ctx.prisma.customer.create({ data });
+        return toDomain(row as unknown as Record<string, unknown>);
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          throw new ConflictError("A customer with this phone number already exists.");
+        }
+        throw err;
+      }
     }, "Customer");
   },
 
@@ -88,10 +135,18 @@ export const customerService = {
         if (conflict) {
           throw new ConflictError(`Phone ${data.phone} already used by another customer`);
         }
+        await assertPhoneNotOnDeletedCustomer(ctx, data.phone, id);
       }
 
-      const row = await ctx.prisma.customer.update({ where: { id }, data });
-      return toDomain(row as unknown as Record<string, unknown>);
+      try {
+        const row = await ctx.prisma.customer.update({ where: { id }, data });
+        return toDomain(row as unknown as Record<string, unknown>);
+      } catch (err) {
+        if (isUniqueViolation(err)) {
+          throw new ConflictError("A customer with this phone number already exists.");
+        }
+        throw err;
+      }
     }, "Customer");
   },
 
