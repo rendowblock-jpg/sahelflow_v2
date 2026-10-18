@@ -10,6 +10,7 @@ import type {
 import { toast } from "@/lib/toast";
 import {
   LIVE_RECOVERY_POLL_MS,
+  recoveryPollDelayMs,
   STATUS_RECOVERY_POLL_MS,
   mapDeliveryStatus,
 } from "./inbox-workspace-shared";
@@ -192,8 +193,16 @@ export function useInboxTransportRuntime({
     // former "only while connected" gate could never observe the return).
     const liveCadence =
       sidecarReachable === true && sidecarStatus === "connected";
+    const baseDelayMs = liveCadence
+      ? LIVE_RECOVERY_POLL_MS
+      : STATUS_RECOVERY_POLL_MS;
     let cancelled = false;
     let inFlight = false;
+    // Refreshes done since the channel went down or the tab last became
+    // visible. It only grows while the tab is visible and a refresh really
+    // ran, and it drives the back-off in recoveryPollDelayMs.
+    let completedCycles = 0;
+    let timerId: number | undefined;
     const refreshDurableProjection = async () => {
       if (
         cancelled ||
@@ -204,6 +213,7 @@ export function useInboxTransportRuntime({
         return;
       }
       inFlight = true;
+      completedCycles += 1;
       try {
         await loadChats();
         if (cancelled || sendingRef.current) return;
@@ -217,15 +227,29 @@ export function useInboxTransportRuntime({
       }
     };
 
-    const intervalId = window.setInterval(
-      () => {
-        void refreshDurableProjection();
-      },
-      liveCadence ? LIVE_RECOVERY_POLL_MS : STATUS_RECOVERY_POLL_MS,
-    );
+    // One timer at a time: each refresh schedules the next with a delay that
+    // grows while the channel stays down.
+    const scheduleNext = () => {
+      if (cancelled) return;
+      window.clearTimeout(timerId);
+      timerId = window.setTimeout(() => {
+        void refreshDurableProjection().finally(scheduleNext);
+      }, recoveryPollDelayMs(baseDelayMs, completedCycles));
+    };
+    // A seller returning to the tab gets a refresh now, at the full rate,
+    // instead of waiting out a backed-off delay.
+    const onVisibilityChange = () => {
+      if (cancelled || document.visibilityState !== "visible") return;
+      completedCycles = 0;
+      window.clearTimeout(timerId);
+      void refreshDurableProjection().finally(scheduleNext);
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    scheduleNext();
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      window.clearTimeout(timerId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [activeChatRef, loadChats, loadMessages, sending, sidecarReachable, sidecarStatus, sendingRef, wsOpen]);
 
