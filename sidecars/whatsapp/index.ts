@@ -11,6 +11,7 @@ import {
   verifySidecarWebSocketGrant,
 } from "./auth-tokens";
 import { WhatsAppInboundSpool } from "./inbound-spool";
+import { createInboundSubscriber } from "./inbound-subscriber";
 import {
   createDispatchJournal,
   createDurableDispatcher,
@@ -23,14 +24,13 @@ import {
   findDurableSendReceipt,
 } from "./send-receipts";
 import {
-  isIndividualInboundJid,
   parseWhatsAppQuotedContext,
   wa,
   type IncomingMessage,
   type SidecarEvent,
 } from "./whatsapp";
 import { declaredOutboundMimeType } from "./outbound-media-mime";
-import { describeError, diagnostics } from "./diagnostics-log";
+import { diagnostics } from "./diagnostics-log";
 
 const configuredPort = Number.parseInt(process.env.SIDECAR_PORT ?? "3001", 10);
 if (!Number.isInteger(configuredPort) || configuredPort < 1 || configuredPort > 65535) {
@@ -1453,55 +1453,15 @@ diagnostics.record("spool.ready", {
   ms: Math.round(performance.now() - spoolStartedAt),
 });
 
-wa.subscribe((event) => {
-  if (event.type !== "message" || !event.message) {
-    broadcast(event);
-    return;
-  }
-  // C1 ingress scope: group/status/broadcast surfaces are intentionally
-  // unsupported (ledger #317). Skip them before the spool so they can never
-  // loop against the app or appear as phantom conversations. fromMe 1:1
-  // echoes are spooled too; the app stores them as outbound, once.
-  if (!isIndividualInboundJid(event.message.key.remoteJid) || !event.message.key.id) {
-    if (event.message.key.fromMe) broadcast(event);
-    else {
-      console.warn(
-        `[sahelflow-whatsapp-sidecar] skipping non-individual inbound jid ${event.message.key.remoteJid ?? "<empty>"}`,
-      );
-      // The packaged desktop discards the console. Only the part after the
-      // "@" is recorded (g.us, broadcast, newsletter, ...): never an identity.
-      diagnostics.record("inbound.dropped", {
-        reason: "non-individual-jid",
-        jidKind: (event.message.key.remoteJid ?? "").split("@")[1] ?? "none",
-      });
-    }
-    return;
-  }
-  const status = wa.getStatus();
-  if (status.status !== "connected" || !status.user?.id) {
-    console.error(
-      "[sahelflow-whatsapp-sidecar] refusing inbound publication without paired account authority",
-    );
-    // This message is gone for good: the provider will not resend what it has
-    // already acknowledged. It must never vanish without a trace.
-    diagnostics.record("inbound.dropped", {
-      reason: "no-paired-account",
-      connection: status.status,
-    });
-    return;
-  }
-  try {
-    // enqueue() performs an atomic synchronous file commit before returning.
-    // It schedules app delivery; this callback intentionally does not broadcast.
-    inboundSpool.enqueue(status.user.id, event.message);
-  } catch (error) {
-    console.error(
-      "[sahelflow-whatsapp-sidecar] failed to durably spool inbound message",
-      error instanceof Error ? error.message : String(error),
-    );
-    diagnostics.record("inbound.spool-failed", describeError(error));
-  }
-});
+wa.subscribe(
+  createInboundSubscriber({
+    getStatus: () => wa.getStatus(),
+    credentialAccountId: () => wa.credentialAccountId(),
+    spool: inboundSpool,
+    diagnostics,
+    broadcast,
+  }),
+);
 inboundSpool.start();
 
 function sendCurrentStatus(client: WebSocket): void {
