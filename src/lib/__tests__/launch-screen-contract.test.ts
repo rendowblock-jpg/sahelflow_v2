@@ -114,8 +114,9 @@ describe("FD-068 launch screen", () => {
   });
 
   it("carries the closing and slow-launch copy in Arabic, French and English", () => {
-    expect(launchModule.match(/^\s+closing: "/gm)).toHaveLength(3);
-    expect(launchModule.match(/^\s+slow_hint: "/gm)).toHaveLength(3);
+    // `\s*` after the colon: rustfmt wraps a long string onto the next line.
+    expect(launchModule.match(/^\s+closing:\s*"/gm)).toHaveLength(3);
+    expect(launchModule.match(/^\s+slow_hint:\s*"/gm)).toHaveLength(3);
     // The brand is the wordmark; it never repeats inside a sentence (it also
     // broke Arabic bidi order: "SahelFlow" jumped to the wrong end).
     expect(launchModule).not.toMatch(/starting: "[^"]*SahelFlow/);

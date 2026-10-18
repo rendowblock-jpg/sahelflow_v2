@@ -222,8 +222,9 @@ pub(crate) fn with_alpha(color: u32, opacity: f32) -> u32 {
 }
 
 /// The colours that come straight from the workspace's own theme CSS (dark:
-/// `theme-preset-system.css`; light: `product-system.css`). A contract test
-/// derives them from those files and fails if this table drifts.
+/// `theme-preset-system.css`; light: `product-system.css`). The contract test
+/// `src/lib/__tests__/startup-card-palette-contract.test.ts` derives them from
+/// those files and fails, printing the expected values, if this table drifts.
 #[derive(Clone, Copy)]
 struct Tokens {
     /// The card surface (`--card`, dark: `--surface-1`).
@@ -240,7 +241,7 @@ struct Tokens {
     border: (u32, u32),
 }
 
-// BEGIN GENERATED TOKENS (audit/tools/splash_palette.py --rust)
+// BEGIN TOKENS (kept equal to the CSS by the contract test above)
 const fn tokens(theme: Theme, preset: Preset) -> Tokens {
     match (theme, preset) {
         (Theme::Light, Preset::Sahel) => Tokens {
@@ -309,7 +310,7 @@ const fn tokens(theme: Theme, preset: Preset) -> Tokens {
         },
     }
 }
-// END GENERATED TOKENS
+// END TOKENS
 
 /// One channel of `mix`.
 const fn mix_channel(from: u32, to: u32, percent: u32, shift: u32) -> u32 {
