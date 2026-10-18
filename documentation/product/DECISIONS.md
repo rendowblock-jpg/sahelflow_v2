@@ -2,7 +2,7 @@
 
 > **Status:** Authoritative register of approved Founder product and execution decisions. FD-001–FD-033 were consolidated from earlier addenda on 2026-07-29; later decisions are appended in numeric order as dated entries. FD-034–FD-044, FD-046 and FD-047 are version-bound release authority recorded in the protected release requests, not entries here
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-10-17 (header and index; FD-072 adopted. No earlier decision changed)
+> **Last amended:** 2026-10-18 (FD-072 publication record added. No decision changed)
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
 This register records approved product and execution decisions. Entries FD-001–FD-029 are consolidated policy statements; FD-030 onward are dated Founder directives. Detailed mechanisms remain subject to architecture, research, security review, provider certification and evidence gates, but engineering may not contradict these policies without a new numbered Founder decision. A later entry supersedes an earlier one only for the choice it names.
@@ -1808,3 +1808,4 @@ one signed successor:
 - **Not Stable:** Beta/Stable authority is unchanged. This authority converts
   no ledger row and does not turn source or CI evidence into installed or
   live-provider evidence. #306 logout stays LAST.
+- **Publication record (2026-10-18):** published 2026-10-18T15:15:42Z by signed run `39137845506` from the `main` tip `c1a66d9b…` (release PR #533); tag `sahelflow-v1.0.0-internal.44-c1a66d9b17d5a11a2b6d31d70729102609fb4be1`. Digests and the release ledger are in `system/CURRENT_STATE.md`. No decision changed.

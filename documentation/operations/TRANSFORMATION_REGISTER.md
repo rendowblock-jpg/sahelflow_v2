@@ -118,7 +118,7 @@ A read-only audit covered ten layers (data, identity, COD core, money and intell
 
 **What the audit found sound.** All 226 route files were checked mechanically: every non-public handler passes a trusted-actor guard (for `/api/search` the guard is in the service layer); the three identity-only handlers are `auth/me`, `auth/me/pin` and `license/status`. The i18n catalogue holds 3,270 keys with no missing or empty entry in Arabic, French or English. There are two source-level import cycles and no client component reaches a server-only or database module. The AI proposal invariant holds on the production path: every direct-write chat tool is classified sensitive or blocked, and an unclassified tool is refused. The installed app bundles its fonts (12 woff2 files, no Google URL).
 
-### Repaired in source after Internal.43 (merged to `main`, shipped in no signed package yet)
+### Repaired in source after Internal.43 (merged to `main`; packaged in Internal.44, published 2026-10-18, not installed)
 
 | ID | Finding | Evidence | Status |
 |---|---|---|---|

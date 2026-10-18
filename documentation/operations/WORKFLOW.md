@@ -4,7 +4,7 @@
 > **Last consolidated:** 2026-10-17
 > **Governing authority:** FD-028/FD-029 completion model plus newer numbered Founder decisions, current product/experience/architecture contracts and exact protected release authority
 > **Execution model:** one active implementation agent; audit-first; batch remediation; tiered CI
-> **Current checkpoint:** Internal.43 / FD-071 (`1.0.0-internal.43` / MSI `1.0.0.43`, customer-online, sahelflow.com) is published (2026-10-17). The Founder is installing it in place; the installed campaign is the current gate. Re-resolve `main` before acting. Release facts: `../system/CURRENT_STATE.md`.
+> **Current checkpoint:** Internal.44 / FD-072 (`1.0.0-internal.44` / MSI `1.0.0.44`, customer-online, sahelflow.com) is published (2026-10-18). It is not installed; the Founder's in-place update and one installed campaign are the current gate. Re-resolve `main` before acting. Release facts: `../system/CURRENT_STATE.md`.
 
 Speed comes from accurate scope, root-cause grouping, targeted fast feedback and one frozen certification head—not from weakening integrity, Arabic/RTL, accessibility, security, recovery, performance or evidence honesty.
 
@@ -30,7 +30,7 @@ resolve protected main + open PR/issues + current signed release
 → perform installed/human/provider/external evidence that automation cannot prove
 ```
 
-At the current frontier no product rewrite is authorized. The next outcome is the Founder's in-place update to the published Internal.43 and one installed campaign with state preserved (`../operations/WORKING_MEMORY.md`). Earlier repair lines (the Internal.27–42 campaigns, #346–#355, the deep-audit register) are recorded in `../../CHANGELOG.md` and the ledgers, not repeated here.
+At the current frontier no product rewrite is authorized. The next outcome is the Founder's in-place update to the published Internal.44 and one installed campaign with state preserved (`../operations/WORKING_MEMORY.md`). Earlier repair lines (the Internal.27–42 campaigns, #346–#355, the deep-audit register) are recorded in `../../CHANGELOG.md` and the ledgers, not repeated here.
 
 Do not restart generic repository reconnaissance when a bounded current outcome is known. Do not rerun an unchanged passing exact head. Do not retry deterministic failures until they turn green without identifying/fixing the cause.
 
@@ -59,7 +59,7 @@ Operational rules:
 - issue bodies can retain evidence/work queues but do not replace active documentation authority;
 - source, signed artifact, hosted CI install, Founder install, live-provider evidence, representative beta and Stable are distinct truth levels.
 
-Current signed authority is Internal.43 / `1.0.0-internal.43` / MSI `1.0.0.43` / FD-071 / `customer-online` (published 2026-10-17). FD-045 and FD-066 change execution strategy and timing only; they do not create Beta or Stable authority.
+Current signed authority is Internal.44 / `1.0.0-internal.44` / MSI `1.0.0.44` / FD-072 / `customer-online` (published 2026-10-18). FD-045 and FD-066 change execution strategy and timing only; they do not create Beta or Stable authority.
 
 ## 3. Complete phase/package audit
 
@@ -178,7 +178,7 @@ Applicable proof includes:
 
 A signed release is built only after exact protected-main authority exists. Branch-only artifacts are evidence candidates, never durable release sources.
 
-Internal.43 is the most recent completed Level 3 release path: release PR #495 passed the full Required battery, including installed-MSI evidence, on its exact head; the signed train then attested protected-main tree equality, passed the signed install, launch, reopen and authenticated-UI proof, and published the exact verified artifacts (run `39041467501`). The release record, including three failed signed attempts and their root causes, is in `../system/CURRENT_STATE.md` §1.
+Internal.44 (release PR #533, signed run `39137845506`, published 2026-10-18) ran the same signed train on its first attempt: the source-is-the-tip check, the tree attestation, the signed install, launch and reopen proof and the authenticated-UI proof; its record is in `../system/CURRENT_STATE.md` §1. Internal.43 is the completed Level 3 release path whose failures shaped that train: release PR #495 passed the full Required battery, including installed-MSI evidence, on its exact head; the signed train then attested protected-main tree equality, passed the signed install, launch, reopen and authenticated-UI proof, and published the exact verified artifacts (run `39041467501`). The release record, including three failed signed attempts and their root causes, is in `../system/CURRENT_STATE.md` §1.
 
 ## 7. Whole-product AAA frontend program
 

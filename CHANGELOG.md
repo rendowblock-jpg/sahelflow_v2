@@ -8,6 +8,20 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-18 — documentation reconciled to Internal.44
+
+- `AGENTS.md`, both README files, `CURRENT_STATE.md`, `ROADMAP.md`, `WORKFLOW.md`, `WORKING_MEMORY.md`, `TRANSFORMATION_REGISTER.md` and `DECISIONS.md` now name Internal.44 as the published package and record that it is not installed. The Internal.43 package record is retained in `CURRENT_STATE.md`. No decision changed; the active documentation is still 25 files.
+
+### 2026-10-18 — after Internal.44 (merged to `main`, not published)
+
+- #534: `/agents` had two `main` landmarks on desktop; the AI canvas root is now a `div`, so the page has one. The change is two lines (a tag), measured by reading the rendered page's accessibility tree on a local dev server; the Playwright specs that touch the page run in CI.
+
+### 2026-10-18 — signed Internal.44 publication (FD-072)
+
+- Tag `sahelflow-v1.0.0-internal.44-c1a66d9b17d5a11a2b6d31d70729102609fb4be1`, published 2026-10-18T15:15:42Z by signed run `39137845506` (started by the dispatcher run `39137834611` on the merge of #533, first attempt): app `1.0.0-internal.44` / MSI `1.0.0.44`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`. Assets: MSI (sha256 `b38775e5…`) and `.sig`; `SahelFlow-Setup.exe` (sha256 `e1b57dbf…`) and `.sig`; the same installer under its versioned name; updater `latest.json` (sha256 `d9448cea…`) with `windows-x86_64` (Setup.exe), `windows-x86_64-msi` and `windows-x86_64-nsis` entries.
+- Source: the `main` tip `c1a66d9b…` (#533). The signed train checked the source was the current tip, attested tree equality with the reviewed pull request, passed the signed install, launch, reopen and authenticated-UI proof, and verified the draft `latest.json` before publishing. Content: the FD-072 entry below.
+- Published is not installed: no ledger row converts, and installation by the Founder is the next gate.
+
 ### 2026-10-17 — FD-072 adopts the Internal.44 release authority
 
 - FD-072 authorizes one signed successor: app `1.0.0-internal.44` / MSI `1.0.0.44`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`, built from the exact `main` tip. Content merged after Internal.43:
@@ -18,7 +32,7 @@ SahelFlow 1.0 Stable has not been released.
   - **Release mechanics, tests and documents:** #501 a signed build's source must be the current tip of `main`; #502 the documentation archive is retired; #520 and #529 test-only (the Settings window test waits for its open animation; three script contract tests join the vitest lane); the audit register and the merged-not-published record.
   - **Left out on purpose:** #510 (licence-boundary seed, draft: it failed two required browser tests) and the findings in the transformation register's "Not in the next release" table (each needs a Founder decision, a database migration or a Windows test).
   - **Measured and not measured:** the startup gain is a projection from two Founder traces, not a measurement of this build; palette latency is unmeasured; the Inbox cause is not established and needs the diagnostics from this build; the WhatsApp sidecar fix was tested in CI, not on a device; none of this is Founder-installed until it is installed and observed.
-- The tag, digests and publish time are recorded after the signed run succeeds. Published is not installed: no ledger row converts.
+- The tag, digests and publish time are recorded in the publication entry above. Published is not installed: no ledger row converts.
 
 ### 2026-10-17 — documentation reconciled to Internal.43
 
