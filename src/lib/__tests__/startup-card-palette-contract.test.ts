@@ -85,8 +85,8 @@ function oklchToRgb(value: string): { rgb: Rgb; alpha: number } {
   return { rgb: linear.map((c) => Math.round(encode(c) * 255)) as Rgb, alpha };
 }
 
-function required<T>(value: T | undefined, what: string): T {
-  if (value === undefined) throw new Error(`missing ${what}`);
+function required<T>(value: T | null | undefined, what: string): T {
+  if (value === undefined || value === null) throw new Error(`missing ${what}`);
   return value;
 }
 
