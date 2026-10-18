@@ -13,8 +13,17 @@ import { trustedActionAllowed } from "@/lib/identity/authorization";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { db, shopContext } from "@/lib/db";
 import { listExtractionCatalog } from "@/lib/orders/canonical-named-items";
+import { readBoundedText } from "@/lib/mcp/request-body";
+import { SahelFlowError } from "@/types/errors";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Hard ceiling on the request body (S06b-08). The message is capped at 16,000
+ * characters below; 128 KiB covers that at four bytes a character plus the
+ * JSON around it, and nothing larger is buffered.
+ */
+const MAX_EXTRACTION_BODY_BYTES = 128 * 1024;
 
 const extractionSchema = z.object({
   // Audit S2-6: bounded request body — a multi-MB paste must be rejected at
@@ -58,7 +67,16 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     false,
   );
 
-  const body = await req.json();
+  const bounded = await readBoundedText(req, MAX_EXTRACTION_BODY_BYTES);
+  if (!bounded.ok) {
+    throw new SahelFlowError("The message is too long to read", "VALIDATION_ERROR", 413);
+  }
+  let body: unknown;
+  try {
+    body = JSON.parse(bounded.text);
+  } catch {
+    throw new SahelFlowError("The request body is not valid JSON", "VALIDATION_ERROR", 400);
+  }
   const input = extractionSchema.parse(body);
 
   // AI-M1: rate-limit the extraction route to prevent Gemini-quota

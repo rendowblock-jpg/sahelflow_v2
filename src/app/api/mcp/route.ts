@@ -26,6 +26,7 @@ import {
   jsonRpcError,
   type JsonRpcResponse,
 } from "@/lib/mcp/protocol";
+import { MCP_MAX_BATCH_SIZE, isOversizeBatch, readBoundedText } from "@/lib/mcp/request-body";
 import { authorizeMcpTransport } from "@/lib/mcp/transport-auth";
 import { SahelFlowError } from "@/types/errors";
 
@@ -44,13 +45,16 @@ export const POST = withErrorHandler(async (request: NextRequest): Promise<NextR
     return NextResponse.json({ error: "Unauthorized", code }, { status: 401 });
   }
 
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) {
+  // Refuse on the declared length, then count real bytes while streaming
+  // (S06b-08): nothing past the limit is ever buffered.
+  const body = await readBoundedText(request, MAX_BODY_BYTES);
+  if (!body.ok) {
     return NextResponse.json(
       jsonRpcError(null, JSON_RPC_INVALID_REQUEST, "Request body is too large"),
       { status: 413 },
     );
   }
+  const raw = body.text;
 
   let payload: unknown;
   try {
@@ -59,6 +63,18 @@ export const POST = withErrorHandler(async (request: NextRequest): Promise<NextR
     return NextResponse.json(
       jsonRpcError(null, JSON_RPC_PARSE_ERROR, "Parse error"),
       { status: 400 },
+    );
+  }
+
+  // An oversize batch is refused, never silently cut to its first entries.
+  if (isOversizeBatch(payload)) {
+    return NextResponse.json(
+      jsonRpcError(
+        null,
+        JSON_RPC_INVALID_REQUEST,
+        `Batch is too large (at most ${MCP_MAX_BATCH_SIZE} requests)`,
+      ),
+      { status: 413 },
     );
   }
 
@@ -90,7 +106,7 @@ export const POST = withErrorHandler(async (request: NextRequest): Promise<NextR
   // A JSON-RPC batch is answered as a batch; notifications produce no entry.
   if (Array.isArray(payload)) {
     const responses: JsonRpcResponse[] = [];
-    for (const entry of payload.slice(0, 32)) {
+    for (const entry of payload) {
       const response = await handleMcpRequest(session, entry);
       if (response) responses.push(response);
     }

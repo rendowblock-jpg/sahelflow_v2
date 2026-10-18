@@ -11,6 +11,7 @@ import "server-only";
  * the localized header text in the resulting file.
  */
 import * as XLSX from "@e965/xlsx";
+import { csvEscapeField as escapeField } from "./csv-field";
 export interface ExportColumn<T> {
   /** Property name on the row object. */
   key: keyof T;
@@ -18,19 +19,6 @@ export interface ExportColumn<T> {
   i18nKey: string;
   /** Optional formatter (e.g., format dates, numbers). */
   format?: (value: T[keyof T], row: T) => string;
-}
-
-/** Escape a CSV field value (quote if it contains commas/quotes/newlines). */
-function escapeField(value: string): string {
-  // SEC-010: CSV formula injection — prefix a single quote to any field
-  // starting with =, +, -, @, tab, or CR. Prevents Excel/LibreOffice from
-  // interpreting the cell as a formula (e.g. =cmd|'/c calc'!A1).
-  const sanitized = /^[=+@\t\r-]/.test(value) ? `'${value}` : value;
-  // Quote fields that contain special characters (RFC 4180)
-  if (/[",\n\r]/.test(sanitized)) {
-    return `"${sanitized.replace(/"/g, '""')}"`;
-  }
-  return sanitized;
 }
 
 /** Convert rows to a CSV string. Column labels must already be translated. */

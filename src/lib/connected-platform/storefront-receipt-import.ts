@@ -5,7 +5,12 @@ import {
   createDecipheriv,
   createHash,
   createPrivateKey,
+  createPublicKey,
   privateDecrypt,
+  publicEncrypt,
+  randomBytes,
+  timingSafeEqual,
+  type JsonWebKey as NodeJsonWebKey,
 } from "node:crypto";
 import { z } from "zod";
 import {
@@ -17,7 +22,8 @@ import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
 import { parseStorefrontReleaseItemKey } from "@/lib/storefront/release-artifact";
-import { NotFoundError, ValidationError } from "@/types/errors";
+import { classifyWorkerFailure } from "@/lib/integrations/worker-health";
+import { NotFoundError, SahelFlowError, ValidationError } from "@/types/errors";
 import { logger } from "@/lib/logger";
 import type { ConnectedPlatformClient, StorefrontReceipt } from "./client";
 import { releaseRejectedStorefrontReceiptDelegation } from "./storefront-receipt-delegation";
@@ -159,10 +165,13 @@ export function decryptStorefrontReceiptCustomer(
  * (permanent silent stall of storefront ingestion).
  *
  * Customer-decryption failures are the one exception: they can also mean the
- * desktop enrollment key is broken (systemic). The page-level heuristic in
- * importHostedStorefrontReceipts rejects isolated decrypt failures but
- * refuses a page where EVERY receipt failed decryption, preserving the
- * durable retry instead of poison-rejecting importable orders.
+ * desktop enrollment key is broken (systemic). importHostedStorefrontReceipts
+ * therefore proves the key with a known-answer round trip
+ * (assertEnrollmentKeyAuthority) before it poison-rejects any decrypt failure.
+ * A healthy key makes a failure receipt-scoped, however many receipts in the
+ * page share it (STO-01: ~50 well-formed junk checkouts used to form an
+ * all-failure page that was refused for ever, stalling every later order); a
+ * broken key refuses the page and keeps the durable retry.
  */
 type PoisonReceiptCode =
   | "malformed_receipt"
@@ -233,6 +242,52 @@ function intakeStorefrontReceipt(
 }
 
 /**
+ * Known-answer self-test of the desktop enrollment key: wrap a random content
+ * key with the PUBLIC key the storefront published and unwrap it with the
+ * private key. Passing means a receipt that fails to decrypt is junk (or was
+ * sealed to some other key), not evidence that this desktop lost its key. The
+ * error is fixed text with a code: no key material, no receipt data.
+ */
+function assertEnrollmentKeyAuthority(
+  privateKeyPkcs8: string,
+  publicKeyJwk: string | undefined,
+): void {
+  let probe: Buffer | null = null;
+  let unwrapped: Buffer | null = null;
+  try {
+    const privateKey = createPrivateKey({
+      key: Buffer.from(privateKeyPkcs8, "base64"),
+      format: "der",
+      type: "pkcs8",
+    });
+    const publicKey = publicKeyJwk === undefined
+      ? createPublicKey(privateKey)
+      : createPublicKey({ key: JSON.parse(publicKeyJwk) as NodeJsonWebKey, format: "jwk" });
+    probe = randomBytes(32);
+    const wrapped = publicEncrypt(
+      { key: publicKey, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" },
+      probe,
+    );
+    unwrapped = privateDecrypt(
+      { key: privateKey, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" },
+      wrapped,
+    );
+    if (unwrapped.byteLength !== probe.byteLength || !timingSafeEqual(unwrapped, probe)) {
+      throw new Error("round trip mismatch");
+    }
+  } catch {
+    throw new SahelFlowError(
+      "Storefront receipt enrollment key does not match its published public key; receipts were kept for retry",
+      "STOREFRONT_RECEIPT_KEY_MISMATCH",
+      409,
+    );
+  } finally {
+    probe?.fill(0);
+    unwrapped?.fill(0);
+  }
+}
+
+/**
  * Mark a poison receipt rejected on the relay. A receipt with no addressable
  * id is warn-logged and skipped. If the relay refuses the completion, the
  * error propagates: the caller must not advance the ingest cursor, so the
@@ -272,7 +327,7 @@ async function rejectPoisonStorefrontReceipt(
     logger.warn("storefront.receipt.poison_reject_refused", {
       receiptId,
       code,
-      reason: error instanceof Error ? error.message : String(error),
+      reason: classifyWorkerFailure(error),
     });
     throw error;
   }
@@ -283,6 +338,8 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
   context: ServiceContext;
   workspaceId: string;
   encryptionPrivateKeyPkcs8: string;
+  /** The public key the storefront published; lets the key self-test prove the pair matches. */
+  encryptionPublicKeyJwk?: string;
   after: number;
   limit?: number;
 }>): Promise<Readonly<{ imported: number; replayed: number; nextCursor: number }>> {
@@ -320,10 +377,10 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
   const decryptFailures = intakes.filter(
     (entry) => !entry.intake.ok && entry.intake.code === "customer_payload",
   );
-  if (decryptFailures.length > 0 && decryptFailures.length === intakes.length) {
-    throw new Error(
-      `Storefront receipt decryption failed for all ${decryptFailures.length} receipts in the page — enrollment key or storefront binding authority is broken`,
-    );
+  if (decryptFailures.length > 0) {
+    // Throws (and so keeps the whole page for retry) only when the enrollment
+    // key itself is broken; otherwise every decrypt failure below is junk.
+    assertEnrollmentKeyAuthority(input.encryptionPrivateKeyPkcs8, input.encryptionPublicKeyJwk);
   }
 
   let imported = 0;
@@ -356,7 +413,7 @@ export async function importHostedStorefrontReceipts(input: Readonly<{
             {
               receiptId: receipt.receiptId,
               code,
-              reason: releaseError instanceof Error ? releaseError.message : String(releaseError),
+              reason: classifyWorkerFailure(releaseError),
             },
           );
         }

@@ -235,6 +235,20 @@ export function typoBackoffQueries(rawQuery: string): string[] {
 }
 
 /**
+ * Wall-clock budget for the extra "shorter spelling" passes of ONE search that
+ * found nothing. The first widened pass always runs, however slow the machine
+ * is, so typo tolerance never switches itself off on slow hardware. A further
+ * pass starts only while the widened phase has used less than this budget, so
+ * the work added to a miss is bounded by this constant plus one pass instead
+ * of growing with every spelling tried.
+ */
+export const TYPO_PASS_BUDGET_MS = 300;
+
+export function mayStartTypoPass(startedPasses: number, elapsedMs: number): boolean {
+  return startedPasses <= 0 || elapsedMs < TYPO_PASS_BUDGET_MS;
+}
+
+/**
  * Search quality authority. Exact primary matches dominate exact metadata,
  * prefixes dominate token/contains matches, and recency is only a bounded
  * tie-breaker. This avoids the old round-robin behavior where a weak result from
