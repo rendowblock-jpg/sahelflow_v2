@@ -42,6 +42,11 @@ import { postToApp, STATUS_CALLBACK_POLICY } from "./app-callback";
 import { authIoStats } from "./auth-io-stats";
 import { LivenessTracker, LoopLagProbe, runLivenessProbe } from "./liveness";
 import { createDiagnosticTeeLogger, describeError, diagnostics } from "./diagnostics-log";
+import {
+  conformMessageTimestamp,
+  conformParticipant,
+  conformPushName,
+} from "./inbound-envelope";
 
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
 // Liveness evidence (diagnostics only): one sample shortly after the 60 s
@@ -771,16 +776,13 @@ export class WhatsAppManager {
         remoteJid: key.remoteJid,
         fromMe: key.fromMe ?? false,
         id: key.id ?? "",
-        participant: key.participant ?? undefined,
+        // The app refuses the whole envelope if any of these three is out of
+        // shape, so each is made to fit before it is spooled.
+        participant: conformParticipant(key.participant),
       },
       message: (m.message ?? {}) as IncomingMessage["message"],
-      messageTimestamp:
-        typeof m.messageTimestamp === "number"
-          ? m.messageTimestamp
-          : typeof m.messageTimestamp === "object" && m.messageTimestamp
-            ? (m.messageTimestamp as { low?: number }).low ?? 0
-            : 0,
-      pushName: m.pushName ?? undefined,
+      messageTimestamp: conformMessageTimestamp(m.messageTimestamp),
+      pushName: conformPushName(m.pushName),
     };
   }
 
