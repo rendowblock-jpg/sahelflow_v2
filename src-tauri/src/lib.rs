@@ -818,8 +818,14 @@ fn wait_for_shutdown(coordinator: &ShutdownCoordinator, limit: std::time::Durati
 /// the process. The workspace is taken out of interaction, then the contained
 /// trees stop, so nothing is writing to the shop databases while the installer
 /// replaces the application. If a normal close is already running it owns the
-/// teardown, and this waits for it instead of racing it. The framework's own
-/// cleanup runs last, as it does in the plugin's default hook.
+/// teardown, and this waits for it instead of racing it.
+///
+/// The plugin's default hook also calls the framework's cleanup_before_exit.
+/// That only removes tray icons (SahelFlow has none), empties in-memory
+/// resource tables and hides windows (the workspace is already hidden), just
+/// before the process ends. It is left out on purpose: the installed-runtime
+/// contract keeps that call out of this file so that every normal close
+/// finishes through `app.exit(0)`.
 #[cfg(not(debug_assertions))]
 fn prepare_for_update_install(app: &tauri::AppHandle) {
     use tauri::Manager;
@@ -834,7 +840,6 @@ fn prepare_for_update_install(app: &tauri::AppHandle) {
             eprintln!("[sahelflow] a normal close was still running when the update started");
         }
     }
-    app.cleanup_before_exit();
 }
 
 /// Development builds run no contained trees, so there is nothing to stop.

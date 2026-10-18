@@ -97,12 +97,14 @@ describe("the desktop shell closes properly before the installer runs", () => {
     const begin = hook.indexOf("coordinator.begin()");
     const hide = hook.indexOf('get_webview_window("main")');
     const stop = hook.indexOf("stop_contained_trees(app)");
-    const cleanup = hook.indexOf("app.cleanup_before_exit()");
     expect(begin).toBeGreaterThan(-1);
     expect(hide).toBeGreaterThan(begin);
     expect(stop).toBeGreaterThan(hide);
-    // The framework's own cleanup, which the plugin's default hook also ran.
-    expect(cleanup).toBeGreaterThan(stop);
+    // The installed-runtime contract keeps the framework's manual cleanup call
+    // out of lib.rs (every normal close ends through app.exit(0)). SahelFlow has
+    // no tray icon, so skipping it in the update hook loses nothing.
+    expect(hook).not.toContain("cleanup_before_exit");
+    expect(rust).not.toContain("cleanup_before_exit();");
   });
 
   it("a normal close already running is waited for, never raced", () => {
