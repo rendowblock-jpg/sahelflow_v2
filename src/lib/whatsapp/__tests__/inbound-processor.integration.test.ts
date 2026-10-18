@@ -252,3 +252,100 @@ describe("durable WhatsApp inbound normalization", () => {
     expect(attempts[1]).toMatchObject({ attemptNumber: 2, state: "succeeded" });
   });
 });
+
+describe("archived conversations (audit MSG-06, INB-12)", () => {
+  const PAST_ARCHIVE = new Date("2026-08-02T00:00:00.000Z");
+
+  async function seedConversation(state: {
+    archivedAt: Date | null;
+    mutedUntil: Date | null;
+  }) {
+    return db.conversation.create({
+      data: {
+        channel: "whatsapp",
+        contactName: "Client Archive",
+        contactPhone: "213555000222",
+        sourceId: envelope().message.key.remoteJid,
+        status: "resolved",
+        unreadCount: 0,
+        lastMessageAt: new Date("2026-08-01T00:00:00.000Z"),
+        archivedAt: state.archivedAt,
+        mutedUntil: state.mutedUntil,
+      },
+    });
+  }
+
+  async function receive(id: string) {
+    const ingress = await persistWhatsAppInbound(context, envelope(id));
+    return processWhatsAppInbound(context, ingress.ingressEventId);
+  }
+
+  function readState(id: string) {
+    return db.conversation.findUniqueOrThrow({
+      where: { id },
+      select: {
+        archivedAt: true,
+        mutedUntil: true,
+        unreadCount: true,
+        status: true,
+      },
+    });
+  }
+
+  it("brings an archived, unmuted thread back when the customer writes", async () => {
+    const seeded = await seedConversation({
+      archivedAt: PAST_ARCHIVE,
+      mutedUntil: null,
+    });
+
+    await expect(receive("ARCHIVED-UNMUTED-1")).resolves.toMatchObject({
+      state: "applied",
+    });
+
+    await expect(readState(seeded.id)).resolves.toMatchObject({
+      archivedAt: null,
+      unreadCount: 1,
+      status: "open",
+    });
+  });
+
+  it("brings an archived thread back when its mute has already expired", async () => {
+    const seeded = await seedConversation({
+      archivedAt: PAST_ARCHIVE,
+      mutedUntil: new Date("2020-01-01T00:00:00.000Z"),
+    });
+
+    await receive("ARCHIVED-EXPIRED-MUTE-1");
+
+    await expect(readState(seeded.id)).resolves.toMatchObject({
+      archivedAt: null,
+      unreadCount: 1,
+    });
+  });
+
+  it("keeps an archived thread archived while it is muted, but still counts the message", async () => {
+    const seeded = await seedConversation({
+      archivedAt: PAST_ARCHIVE,
+      mutedUntil: new Date("2999-01-01T00:00:00.000Z"),
+    });
+
+    await receive("ARCHIVED-MUTED-1");
+
+    const state = await readState(seeded.id);
+    expect(state.archivedAt).toEqual(PAST_ARCHIVE);
+    expect(state.mutedUntil).toEqual(new Date("2999-01-01T00:00:00.000Z"));
+    expect(state.unreadCount).toBe(1);
+    expect(state.status).toBe("open");
+  });
+
+  it("leaves a thread that is not archived exactly as it was", async () => {
+    const seeded = await seedConversation({ archivedAt: null, mutedUntil: null });
+
+    await receive("NOT-ARCHIVED-1");
+
+    await expect(readState(seeded.id)).resolves.toMatchObject({
+      archivedAt: null,
+      unreadCount: 1,
+    });
+  });
+});

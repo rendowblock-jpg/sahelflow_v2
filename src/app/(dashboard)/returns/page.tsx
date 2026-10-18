@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeftRight, CheckCircle2, Clock, RotateCcw } from "lucide-react";
+import {
+  ArrowLeftRight,
+  CheckCircle2,
+  Clock,
+  PackageCheck,
+  RotateCcw,
+} from "lucide-react";
 
-import { ReturnFormDialog } from "@/components/returns/return-form-dialog";
 import { ReturnsDataTable } from "@/components/returns/returns-data-table";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
+import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
@@ -66,7 +73,18 @@ export default async function ReturnsPage({
         actions={access.export || access.create ? (
           <div className="flex flex-wrap items-center gap-2">
             {access.export ? <ImportExportButtons exportRoute="/api/export/returns" /> : null}
-            {access.create ? <ReturnFormDialog /> : null}
+            {/* S03c-09: a return is requested from the delivered order itself
+                (the governed customer-return command on the order page).
+                POST /api/returns refuses every create, so this page no longer
+                offers a form that can only fail. */}
+            {access.create ? (
+              <Button variant="outline" asChild>
+                <Link href="/orders?status=delivered">
+                  <PackageCheck className="h-4 w-4" aria-hidden="true" />
+                  {t("returns.empty.action")}
+                </Link>
+              </Button>
+            ) : null}
           </div>
         ) : undefined}
       />

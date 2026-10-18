@@ -23,6 +23,7 @@ vi.mock("@/lib/auth/server", () => ({
 vi.mock("@/lib/auth/rate-limit", () => ({
   checkLoginRateLimit: harness.checkLimit,
   getClientIp: harness.getIp,
+  getConfirmationLimiterKey: (sessionId: string) => `confirm:session:${sessionId}`,
   recordLoginAttempt: harness.recordAttempt,
   recordLoginFailure: harness.recordFailure,
   recordLoginSuccess: harness.recordSuccess,
@@ -145,5 +146,44 @@ describe("POST /api/auth/change-pin", () => {
       "87654321",
       "127.0.0.1",
     );
+  });
+});
+
+describe("limiter bucket (IDN-01)", () => {
+  it("keys the allowance on the verified owner session, never on a forwarding header", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/auth/change-pin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-forwarded-for": "203.0.113.78",
+        },
+        body: JSON.stringify({ currentPin: "12345678", newPin: "87654321" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(harness.checkLimit).toHaveBeenCalledWith("confirm:session:owner-session");
+    expect(harness.recordAttempt).toHaveBeenCalledWith("confirm:session:owner-session");
+    expect(harness.recordSuccess).toHaveBeenCalledWith("confirm:session:owner-session");
+    for (const spy of [harness.checkLimit, harness.recordAttempt, harness.recordSuccess]) {
+      expect(spy).not.toHaveBeenCalledWith("203.0.113.78");
+      expect(spy).not.toHaveBeenCalledWith("127.0.0.1");
+    }
+  });
+
+  it("counts a wrong current PIN against the same session bucket", async () => {
+    harness.changePin.mockResolvedValue({ changed: false, reason: "invalid_current_pin" });
+
+    const response = await POST(
+      new Request("http://localhost/api/auth/change-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPin: "00000000", newPin: "87654321" }),
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(harness.recordFailure).toHaveBeenCalledWith("confirm:session:owner-session");
   });
 });

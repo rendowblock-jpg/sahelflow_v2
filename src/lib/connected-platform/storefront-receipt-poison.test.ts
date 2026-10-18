@@ -12,10 +12,12 @@
  *   receipt stays readable;
  * - the checkout delegation is released for poison receipts whose item list
  *   fully parsed;
- * - customer-decryption failures that could equally mean a broken enrollment
- *   key stay systemic when they affect the whole page (durable retry, no
- *   poison-reject data loss) and poison-reject only when a sibling receipt
- *   proves the key works.
+ * - customer-decryption failures are receipt-scoped corruption as long as the
+ *   desktop enrollment key itself is healthy. Health is proven by a known-answer
+ *   round trip against the public key the storefront published (STO-01), not by
+ *   whether a sibling receipt happens to decrypt: a page where EVERY receipt is
+ *   junk used to throw and stall ingestion for ever. When the key is NOT healthy
+ *   the page is refused (durable retry, no poison-reject data loss).
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
@@ -88,6 +90,7 @@ function fakeClient(page: { receipts: StorefrontReceipt[]; nextCursor: number })
 
 async function encryptWithFreshKeys(): Promise<{
   privateKeyPkcs8: string;
+  publicKeyJwk: string;
   encryptedCustomer: string;
   wrappedCustomerKey: string;
 }> {
@@ -106,6 +109,7 @@ async function encryptWithFreshKeys(): Promise<{
   );
   return {
     privateKeyPkcs8: keys.encryptionPrivateKeyPkcs8,
+    publicKeyJwk: keys.encryptionPublicKeyJwk,
     encryptedCustomer: encrypted.encryptedCustomer,
     wrappedCustomerKey: encrypted.wrappedCustomerKey,
   };
@@ -175,10 +179,62 @@ describe("hosted storefront receipt ingestion poison contract (C1)", () => {
     expect(completions[0]).toMatchObject({ receiptId: "receipt_brokenamt", state: "rejected" });
   });
 
-  it("refuses a page where every receipt fails decryption (systemic key authority)", async () => {
+  it("rejects a page where every receipt is undecryptable while the enrollment key is healthy (STO-01)", async () => {
     const keys = await encryptWithFreshKeys();
     const corrupted = baseReceipt({
       receiptId: "receipt_corrupt1",
+      wrappedCustomerKey: keys.wrappedCustomerKey.slice(0, -4) + "AAAA",
+    });
+    const { client, completions } = fakeClient({ receipts: [corrupted], nextCursor: 6 });
+
+    const result = await importHostedStorefrontReceipts({
+      client,
+      context,
+      workspaceId: context.shop.workspaceId,
+      encryptionPrivateKeyPkcs8: keys.privateKeyPkcs8,
+      encryptionPublicKeyJwk: keys.publicKeyJwk,
+      after: 5,
+    });
+
+    expect(result).toMatchObject({ imported: 0, replayed: 0, nextCursor: 6 });
+    expect(completions).toEqual([
+      expect.objectContaining({ receiptId: "receipt_corrupt1", state: "rejected" }),
+    ]);
+    expect(createCanonicalSourceOrder).not.toHaveBeenCalled();
+  });
+
+  it("clears a whole page of 50 junk receipts so the next legitimate order is reachable (STO-01)", async () => {
+    const keys = await encryptWithFreshKeys();
+    const junk = Array.from({ length: 50 }, (_, index) =>
+      baseReceipt({
+        receiptId: `receipt_junk${String(index).padStart(4, "0")}`,
+        relaySequence: index + 1,
+        wrappedCustomerKey: keys.wrappedCustomerKey.slice(0, -4) + "AAAA",
+      }),
+    );
+    const { client, completions } = fakeClient({ receipts: junk, nextCursor: 50 });
+
+    const result = await importHostedStorefrontReceipts({
+      client,
+      context,
+      workspaceId: context.shop.workspaceId,
+      encryptionPrivateKeyPkcs8: keys.privateKeyPkcs8,
+      encryptionPublicKeyJwk: keys.publicKeyJwk,
+      after: 0,
+      limit: 50,
+    });
+
+    expect(result).toMatchObject({ imported: 0, replayed: 0, nextCursor: 50 });
+    expect(completions).toHaveLength(50);
+    expect(completions.every((completion) => completion.state === "rejected")).toBe(true);
+    expect(createCanonicalSourceOrder).not.toHaveBeenCalled();
+  });
+
+  it("still refuses the page when the enrollment key does not match the public key it published", async () => {
+    const keys = await encryptWithFreshKeys();
+    const someoneElse = generateConnectedKeyPair();
+    const corrupted = baseReceipt({
+      receiptId: "receipt_corrupt3",
       wrappedCustomerKey: keys.wrappedCustomerKey.slice(0, -4) + "AAAA",
     });
     const { client, completions } = fakeClient({ receipts: [corrupted], nextCursor: 6 });
@@ -188,13 +244,41 @@ describe("hosted storefront receipt ingestion poison contract (C1)", () => {
       context,
       workspaceId: context.shop.workspaceId,
       encryptionPrivateKeyPkcs8: keys.privateKeyPkcs8,
+      encryptionPublicKeyJwk: someoneElse.encryptionPublicKeyJwk,
       after: 5,
-    })).rejects.toThrow(/decryption failed for all/i);
+    })).rejects.toMatchObject({ code: "STOREFRONT_RECEIPT_KEY_MISMATCH" });
 
     // Systemic failure: no poison-reject data loss, durable retry authority
     // preserved (no completion marking, cursor untouched).
     expect(completions).toHaveLength(0);
     expect(createCanonicalSourceOrder).not.toHaveBeenCalled();
+  });
+
+  it("does not put the key material or the receipt payload into the mismatch error", async () => {
+    const keys = await encryptWithFreshKeys();
+    const someoneElse = generateConnectedKeyPair();
+    const corrupted = baseReceipt({
+      receiptId: "receipt_corrupt4",
+      wrappedCustomerKey: keys.wrappedCustomerKey.slice(0, -4) + "AAAA",
+    });
+    const { client } = fakeClient({ receipts: [corrupted], nextCursor: 6 });
+
+    const error = await importHostedStorefrontReceipts({
+      client,
+      context,
+      workspaceId: context.shop.workspaceId,
+      encryptionPrivateKeyPkcs8: keys.privateKeyPkcs8,
+      encryptionPublicKeyJwk: someoneElse.encryptionPublicKeyJwk,
+      after: 5,
+    }).then(
+      () => null,
+      (caught: unknown) => caught as Error,
+    );
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error?.message ?? "").not.toContain(keys.privateKeyPkcs8.slice(0, 24));
+    expect(error?.message ?? "").not.toContain(someoneElse.encryptionPublicKeyJwk.slice(0, 24));
+    expect(error?.message ?? "").not.toContain("receipt_corrupt4");
   });
 
   it("rejects an isolated decrypt failure once a sibling receipt proves the key works", async () => {

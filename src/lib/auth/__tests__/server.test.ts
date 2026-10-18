@@ -108,10 +108,57 @@ describe("setupAuth", () => {
     expect(row?.pinHash).not.toContain("12345678");
   });
 
-  it("upserts the single local auth authority", async () => {
+  it("creates the single local auth authority once and refuses a second setup", async () => {
     const first = await setupAuth("11111111");
-    const second = await setupAuth("22222222");
-    expect(second.secret).not.toBe(first.secret);
+    const before = await dbRaw.authSecret.findUnique({ where: { id: "default" } });
+
+    await expect(setupAuth("22222222")).rejects.toMatchObject({
+      code: "AUTH_ALREADY_SETUP",
+      statusCode: 409,
+    });
+
+    const after = await dbRaw.authSecret.findUnique({ where: { id: "default" } });
+    expect(after).toEqual(before);
+    expect(after?.secret).toBe(first.secret);
+    expect(await dbRaw.authSecret.count()).toBe(1);
+    await expect(verifyAuthPin("11111111")).resolves.toBe(true);
+    await expect(verifyAuthPin("22222222")).resolves.toBe(false);
+  });
+
+  it("lets exactly one of two overlapping first-run submissions win (IDN-08)", async () => {
+    const [a, b] = await Promise.allSettled([
+      setupAuth("11111111"),
+      setupAuth("22222222"),
+    ]);
+
+    const winner = a.status === "fulfilled" ? a : b;
+    const loser = a.status === "fulfilled" ? b : a;
+    const winningPin = a.status === "fulfilled" ? "11111111" : "22222222";
+    const losingPin = a.status === "fulfilled" ? "22222222" : "11111111";
+    expect(winner.status).toBe("fulfilled");
+    expect(loser.status).toBe("rejected");
+    expect((loser as PromiseRejectedResult).reason).toMatchObject({
+      code: "AUTH_ALREADY_SETUP",
+    });
+
+    const row = await dbRaw.authSecret.findUnique({ where: { id: "default" } });
+    expect(row?.secret).toBe((winner as PromiseFulfilledResult<{ secret: string }>).value.secret);
+    expect(await dbRaw.authSecret.count()).toBe(1);
+    await expect(verifyAuthPin(winningPin)).resolves.toBe(true);
+    await expect(verifyAuthPin(losingPin)).resolves.toBe(false);
+  });
+
+  it("repairs a half-written authority row that has no PIN hash", async () => {
+    await dbRaw.authSecret.create({
+      data: { id: "default", secret: "stale-secret", pinHash: "" },
+    });
+    await expect(isAuthSetup()).resolves.toBe(false);
+
+    const { secret } = await setupAuth("12345678");
+
+    expect(secret).not.toBe("stale-secret");
+    await expect(isAuthSetup()).resolves.toBe(true);
+    await expect(verifyAuthPin("12345678")).resolves.toBe(true);
     expect(await dbRaw.authSecret.count()).toBe(1);
   });
 });
@@ -351,7 +398,13 @@ describe("session token authority", () => {
 
     cookieJar.reset();
     await createSession();
-    await setupAuth("12345678");
+    // A different signing secret must invalidate tokens issued under the old
+    // one. setupAuth no longer overwrites an existing authority (IDN-08), so
+    // rotate the stored secret directly.
+    await dbRaw.authSecret.update({
+      where: { id: "default" },
+      data: { secret: "rotated-signing-secret-for-test" },
+    });
     await expect(isAuthenticated()).resolves.toBe(false);
 
     cookieJar.reset();

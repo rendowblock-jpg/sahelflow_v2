@@ -46,6 +46,7 @@ vi.mock("@/lib/auth/server", () => ({
 vi.mock("@/lib/auth/rate-limit", () => ({
   checkLoginRateLimit: () => ({ allowed: true, retryAfterMs: 0 }),
   getClientIp: () => "127.0.0.1",
+  getConfirmationLimiterKey: (sessionId: string) => `confirm:session:${sessionId}`,
   recordLoginAttempt: vi.fn(),
   recordLoginFailure: () => ({ allowed: true, locked: false, retryAfterMs: 0 }),
   recordLoginSuccess: vi.fn(),
