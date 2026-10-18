@@ -22,6 +22,7 @@ import {
   type StateStorage,
 } from "zustand/middleware";
 import { getDirection, type Locale } from "@/lib/i18n";
+import { reportLaunchAppearance } from "@/lib/runtime/report-launch-appearance";
 
 const VALID_LOCALES: readonly Locale[] = ["ar", "fr", "en"];
 
@@ -99,6 +100,8 @@ function setLocaleCookie(locale: Locale): void {
 /** Select the locale that the next Server Component request must render. */
 export function requestLocale(locale: Locale): void {
   setLocaleCookie(locale);
+  // The next native startup card is painted before any page exists.
+  reportLaunchAppearance();
 }
 
 /** Apply the live locale to the browser document boundary. */

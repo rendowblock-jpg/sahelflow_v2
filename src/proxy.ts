@@ -17,6 +17,7 @@ import {
   RUNTIME_BOOTSTRAP_HANDOFF_PATH,
   RUNTIME_BOOTSTRAP_PATH,
   RUNTIME_COOKIE,
+  RUNTIME_LAUNCH_APPEARANCE_PATH,
   RUNTIME_READY_PATH,
   RUNTIME_SHUTDOWN_PATH,
   RUNTIME_UI_READY_PATH,
@@ -196,7 +197,8 @@ export async function proxy(request: NextRequest) {
   // checks so an accidental middleware exclusion still fails closed.
   if (
     pathname === RUNTIME_BOOTSTRAP_CONFIRM_PATH ||
-    pathname === RUNTIME_UI_READY_PATH
+    pathname === RUNTIME_UI_READY_PATH ||
+    pathname === RUNTIME_LAUNCH_APPEARANCE_PATH
   ) {
     return NextResponse.next();
   }
