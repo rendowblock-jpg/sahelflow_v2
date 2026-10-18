@@ -47,6 +47,7 @@ import {
   conformParticipant,
   conformPushName,
 } from "./inbound-envelope";
+import { summarizeOfflineNode } from "./offline-backlog";
 
 const WA_VERSION_LOOKUP_TIMEOUT_MS = 10_000;
 // Liveness evidence (diagnostics only): one sample shortly after the 60 s
@@ -389,6 +390,12 @@ export class WhatsAppManager {
   private store: ReturnType<typeof makeInMemoryStore> | null = null;
   private status: ConnectionStatus = "disconnected";
   private user: WhatsAppUser | null = null;
+  /**
+   * The paired account in the saved login credentials, known as soon as they
+   * are loaded and long before the connection reports "open". See
+   * inbound-subscriber.ts for why the inbound gate needs it.
+   */
+  private pairedAccountId: string | null = null;
   private currentQr: string | null = null;
   private subscribers = new Set<Subscriber>();
   private connecting = false;
@@ -453,6 +460,11 @@ export class WhatsAppManager {
     return this.currentQr;
   }
 
+  /** The paired account's id from the saved credentials, or null when not paired. */
+  credentialAccountId(): string | null {
+    return this.pairedAccountId;
+  }
+
   async start(): Promise<void> {
     if (this.connecting || this.sock) return;
     this.connecting = true;
@@ -464,6 +476,7 @@ export class WhatsAppManager {
       this.sock = null;
       this.status = "disconnected";
       this.user = null;
+      this.pairedAccountId = null;
       this.currentQr = null;
       this.emit({ type: "status", status: "disconnected" });
       throw error;
@@ -483,6 +496,11 @@ export class WhatsAppManager {
     const connectStartedAt = performance.now();
     const { state, saveCreds } = await useProtectedWhatsAppAuthState();
     const authLoadMs = Math.round(performance.now() - connectStartedAt);
+    const savedAccountId = state.creds.me?.id;
+    this.pairedAccountId =
+      typeof savedAccountId === "string" && savedAccountId.length > 0
+        ? savedAccountId
+        : null;
     const versionStartedAt = performance.now();
     const versionResult = await fetchLatestWaWebVersion({
       signal: AbortSignal.timeout(WA_VERSION_LOOKUP_TIMEOUT_MS),
@@ -544,6 +562,7 @@ export class WhatsAppManager {
     });
 
     this.store.bind(this.sock.ev);
+    this.observeOfflineBacklog(this.sock);
     this.sock.ev.on("creds.update", saveCreds);
 
     this.sock.ev.on("connection.update", (update) => {
@@ -1081,6 +1100,7 @@ export class WhatsAppManager {
   }
 
   private clearAuth(): void {
+    this.pairedAccountId = null;
     try {
       clearProtectedWhatsAppAuthState();
     } catch {
@@ -1094,6 +1114,29 @@ export class WhatsAppManager {
    * Without it, the sidecar stayed disconnected until a manual "connect"
    * press and every message sent meanwhile was lost to the inbox.
    */
+  /**
+   * Record, as counts only, what the provider says it held for this device
+   * while it was away (offline_preview) and how many it handled (offline).
+   * Diagnostics only: nothing here changes message flow.
+   */
+  private observeOfflineBacklog(sock: WASocket): void {
+    const ws = sock.ws as unknown as {
+      on?: (event: string, listener: (node: unknown) => void) => unknown;
+    };
+    if (!ws || typeof ws.on !== "function") return;
+    const watch = (event: string, childTag: string, record: string) => {
+      ws.on?.(event, (node) => {
+        try {
+          diagnostics.record(record, summarizeOfflineNode(node, childTag) ?? {});
+        } catch {
+          // Diagnostics must never disturb the connection.
+        }
+      });
+    };
+    watch("CB:ib,,offline_preview", "offline_preview", "offline.preview");
+    watch("CB:ib,,offline", "offline", "offline.done");
+  }
+
   /**
    * Start measuring whether this socket receives. Diagnostics only: nothing
    * here reconnects, flushes or alters message flow (see liveness.ts).

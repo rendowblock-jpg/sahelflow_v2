@@ -13,14 +13,14 @@ function read(path: string): string {
 // trace (counts and reasons only: never a JID, a number or a message body).
 describe("inbound WhatsApp visibility", () => {
   const sidecar = read("sidecars/whatsapp/index.ts");
+  const gate = read("sidecars/whatsapp/inbound-subscriber.ts");
   const manager = read("sidecars/whatsapp/whatsapp.ts");
   const spool = read("sidecars/whatsapp/inbound-spool.ts");
 
   it("records every silent drop in the sidecar subscriber", () => {
-    const subscriber = sidecar.slice(
-      sidecar.indexOf("wa.subscribe((event) => {"),
-      sidecar.indexOf("inboundSpool.start();"),
-    );
+    // The gate lives in its own module so it can be tested; index.ts must use it.
+    expect(sidecar).toContain("createInboundSubscriber({");
+    const subscriber = gate;
     expect(subscriber).toContain('reason: "non-individual-jid"');
     expect(subscriber).toContain('reason: "no-paired-account"');
     expect(subscriber).toContain('diagnostics.record("inbound.spool-failed"');
@@ -46,7 +46,7 @@ describe("inbound WhatsApp visibility", () => {
   });
 
   it("never passes a message body or an identity to the diagnostics file", () => {
-    for (const source of [sidecar, manager, spool]) {
+    for (const source of [sidecar, gate, manager, spool]) {
       for (const call of source.match(/diagnostics\.record\([^;]*\);/gs) ?? []) {
         expect(call).not.toMatch(/\b(body|text|conversation|caption|pushName)\b\s*[:,}]/);
       }

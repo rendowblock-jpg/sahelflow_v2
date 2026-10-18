@@ -42,6 +42,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/hooks/use-i18n";
 import {
   dismissNotification,
+  dismissNotifications,
   useNotificationCenter,
   type NotificationCenterItem,
 } from "@/hooks/use-notification-center";
@@ -119,17 +120,13 @@ export function Topbar({
   };
 
   const dismissAll = async () => {
-    const results = await Promise.all(notifications.map((item) => dismissNotification(item)));
-    const done = results.filter((result) => result.ok);
-    if (done.length === 0) {
+    const { dismissed, undo } = await dismissNotifications(notifications);
+    if (dismissed === 0) {
       toast.error(t("notifications.dismissFailed"));
       return;
     }
-    toast.success(t("notifications.clearedAll", { count: done.length }), {
-      action: {
-        label: t("common.undo"),
-        onClick: () => void Promise.all(done.map((result) => result.undo())),
-      },
+    toast.success(t("notifications.clearedAll", { count: dismissed }), {
+      action: { label: t("common.undo"), onClick: () => void undo() },
     });
   };
   const [isLoggingOut, setIsLoggingOut] = useState(false);
