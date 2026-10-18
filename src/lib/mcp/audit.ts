@@ -9,6 +9,10 @@
  * Audit is best-effort by design. A failed audit write must not roll back a
  * completed read, and must never silently convert into a successful *write*:
  * every write still flows through the kernel, which owns its own atomic audit.
+ *
+ * A call refused before it reaches a tool is recorded with outcome `denied`
+ * and no arguments (S06b-04). Repeated identical rows are coalesced so MCP
+ * traffic cannot evict the shop's other audit evidence (S06b-01, see below).
  */
 import "server-only";
 
@@ -71,18 +75,85 @@ export interface McpInvocationAuditRecord {
 }
 
 /**
- * Persist one invocation row. Never throws.
+ * MCP traffic must not displace the shop's other audit evidence (S06b-01).
+ *
+ * The audit log keeps only its newest rows, so one looping agent writing a row
+ * per call would push every other kind of evidence out. Rows are therefore
+ * coalesced per one-minute window in memory: the first call of a kind writes a
+ * row, identical calls in the window are only counted, and the next row of that
+ * kind records the count as `coalescedCalls`. A proposal row is never coalesced
+ * (each one is a persisted decision record). Refusals are keyed per grant and
+ * outcome only, because the agent chooses the tool name of a refused call.
+ * The counter lives in process memory: a restart forgets it, and a count with
+ * no later row of its kind is not written. No migration is involved.
+ */
+const COALESCE_WINDOW_MS = 60_000;
+const COALESCE_MAX_KEYS = 2_000;
+/** Real tool names are far shorter; an agent-chosen name is bounded here. */
+const AUDIT_TOOL_NAME_LIMIT = 64;
+
+interface CoalesceWindow {
+  startedAt: number;
+  suppressed: number;
+}
+
+const coalesceWindows = new Map<string, CoalesceWindow>();
+
+function coalesceKey(record: McpInvocationAuditRecord): string {
+  const refusal = record.outcome === "denied" || record.outcome === "rate_limited";
+  return [record.grantId, record.outcome, refusal ? "" : record.toolName].join("\u0000");
+}
+
+interface AuditSlot {
+  write: boolean;
+  key: string | null;
+  coalescedCalls: number;
+}
+
+function claimAuditSlot(record: McpInvocationAuditRecord, now: number): AuditSlot {
+  if (record.outcome === "proposed") return { write: true, key: null, coalescedCalls: 0 };
+  const key = coalesceKey(record);
+  const existing = coalesceWindows.get(key);
+  if (existing && now - existing.startedAt < COALESCE_WINDOW_MS) {
+    existing.suppressed += 1;
+    return { write: false, key, coalescedCalls: 0 };
+  }
+  coalesceWindows.delete(key);
+  coalesceWindows.set(key, { startedAt: now, suppressed: 0 });
+  while (coalesceWindows.size > COALESCE_MAX_KEYS) {
+    const oldest = coalesceWindows.keys().next();
+    if (oldest.done) break;
+    coalesceWindows.delete(oldest.value);
+  }
+  return { write: true, key, coalescedCalls: existing?.suppressed ?? 0 };
+}
+
+/** Test seam: forget every window. */
+export function resetMcpAuditCoalescing(): void {
+  coalesceWindows.clear();
+}
+
+/** Number of windows currently tracked; bounded by `COALESCE_MAX_KEYS`. */
+export function mcpAuditCoalescerSize(): number {
+  return coalesceWindows.size;
+}
+
+/**
+ * Persist one invocation row, unless an identical call already wrote one in
+ * the current window. Never throws.
  */
 export async function writeMcpInvocationAudit(
   db: DbClient,
   record: McpInvocationAuditRecord,
 ): Promise<void> {
+  const slot = claimAuditSlot(record, Date.now());
+  if (!slot.write) return;
   try {
     await db.auditLog.create({
       data: {
         action: "mcp.tool_called.v1",
         entity: "mcp_tool",
-        entityId: record.toolName,
+        entityId: record.toolName.slice(0, AUDIT_TOOL_NAME_LIMIT),
         actor: record.agentActor,
         metadata: JSON.stringify({
           via: "mcp",
@@ -97,11 +168,16 @@ export async function writeMcpInvocationAudit(
           errorCode: record.errorCode,
           proposalId: record.proposalId,
           durationMs: record.durationMs,
-          args: redactForAudit(record.args),
+          ...(slot.coalescedCalls > 0 ? { coalescedCalls: slot.coalescedCalls } : {}),
+          // A refused call carries arguments the agent was not allowed to use:
+          // none of them is recorded.
+          args: record.outcome === "denied" ? null : redactForAudit(record.args),
         }),
       },
     });
   } catch {
     /* audit is best-effort; a write is never authorized by its audit row */
+    // The row was not stored, so it must not suppress the next call's row.
+    if (slot.key) coalesceWindows.delete(slot.key);
   }
 }
