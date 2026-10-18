@@ -9,7 +9,8 @@ import { deterministicWhatsAppMessageId } from "../../../sidecars/whatsapp/send-
 import { sidecar } from "./sidecar-client";
 import { messageText, normalizeWhatsAppMessageContent } from "./types";
 
-const phoneOutboundSchema = z.object({
+/** The envelope the sidecar spools for a message the seller sent (from the phone, or echoed from SahelFlow). */
+export const phoneOutboundSchema = z.object({
   spoolId: z.string().regex(/^[0-9a-f]{64}$/),
   accountId: z.string().trim().min(1).max(256),
   receivedAt: z.string().datetime({ offset: true }),
