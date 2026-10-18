@@ -73,6 +73,11 @@ const SHUTDOWN_IDLE: u8 = 0;
 const SHUTDOWN_RUNNING: u8 = 1;
 const SHUTDOWN_COMPLETE: u8 = 2;
 
+/// The app handle the updater's before-exit hook needs. The hook is registered
+/// while the plugins are built, before the app (and so its handle) exists.
+#[cfg(not(debug_assertions))]
+static UPDATE_APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
+
 /// Coordinates one normal-close owner without blocking Tauri's event loop.
 #[derive(Default)]
 struct ShutdownCoordinator {
@@ -327,7 +332,14 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        // On Windows the updater starts the installer and ends this process
+        // straight away. This hook runs first, so an update stops the contained
+        // trees through the same path as a normal close.
+        .plugin(
+            tauri_plugin_updater::Builder::new()
+                .on_before_exit(prepare_for_update_install)
+                .build(),
+        )
         .on_window_event(|_window, _event| {
             #[cfg(not(debug_assertions))]
             if _window.label() == "main" {
@@ -357,6 +369,7 @@ pub fn run() {
                 app.manage(std::sync::Mutex::new(SpawnedChildren::new()));
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
                 app.manage(ShutdownCoordinator::default());
+                let _ = UPDATE_APP_HANDLE.set(app.handle().clone());
                 let app_handle = app.handle().clone();
                 startup_recovery::reset_startup_trace(&app_data_dir);
                 startup_recovery::record_startup_stage(
@@ -706,17 +719,7 @@ fn begin_normal_close(app: tauri::AppHandle) {
     }
 
     std::thread::spawn(move || {
-        if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
-            if let Ok(mut children) = state.lock() {
-                children.kill_all();
-            }
-        }
-        if let Ok(app_data_dir) = app.path().app_data_dir() {
-            runtime_protocol::remove_manifest(&app_data_dir);
-        }
-        if let Some(coordinator) = app.try_state::<ShutdownCoordinator>() {
-            coordinator.finish();
-        }
+        stop_contained_trees(&app);
 
         // AppHandle::exit drives Tauri's ExitRequested/Exit lifecycle. App::run
         // owns final framework cleanup and process exit after the off-thread
@@ -724,6 +727,54 @@ fn begin_normal_close(app: tauri::AppHandle) {
         app.exit(0);
     });
 }
+
+/// Stop the contained trees the way a normal close does: kill the server and
+/// the sidecar (flushing the compile cache first), remove the runtime manifest
+/// and mark the shutdown complete. Blocking; callers choose the thread.
+#[cfg(not(debug_assertions))]
+fn stop_contained_trees(app: &tauri::AppHandle) {
+    use tauri::Manager;
+
+    if let Some(state) = app.try_state::<std::sync::Mutex<SpawnedChildren>>() {
+        if let Ok(mut children) = state.lock() {
+            children.kill_all();
+        }
+    }
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
+        runtime_protocol::remove_manifest(&app_data_dir);
+    }
+    if let Some(coordinator) = app.try_state::<ShutdownCoordinator>() {
+        coordinator.finish();
+    }
+}
+
+/// Runs on the updater's thread right before it starts the installer and ends
+/// the process. The workspace is taken out of interaction, then the contained
+/// trees stop, so nothing is writing to the shop databases while the installer
+/// replaces the application. If a normal close is already running it owns the
+/// teardown and this does nothing.
+#[cfg(not(debug_assertions))]
+fn prepare_for_update_install() {
+    use tauri::Manager;
+
+    let Some(app) = UPDATE_APP_HANDLE.get() else {
+        return;
+    };
+    let Some(coordinator) = app.try_state::<ShutdownCoordinator>() else {
+        return;
+    };
+    if !coordinator.begin() {
+        return;
+    }
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.hide();
+    }
+    stop_contained_trees(app);
+}
+
+/// Development builds run no contained trees, so there is nothing to stop.
+#[cfg(debug_assertions)]
+fn prepare_for_update_install() {}
 
 /// Environment passed only to the mandatory application server.
 fn server_env(
