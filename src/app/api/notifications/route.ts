@@ -6,6 +6,10 @@ import { requireTrustedAction } from "@/lib/identity/authorization";
 import { notificationQuerySchema } from "@/lib/notifications/contracts";
 import { listLegacyOperationalNotifications } from "@/lib/notifications/legacy-operational-feed";
 import { listNotifications } from "@/lib/notifications/notification-center";
+import {
+  filterDismissedAlerts,
+  readDismissedAlerts,
+} from "@/lib/notifications/operational-dismissals";
 
 export const dynamic = "force-dynamic";
 
@@ -29,14 +33,15 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       ? Object.fromEntries(request.nextUrl.searchParams.entries())
       : {},
   );
-  const [result, legacy] = await Promise.all([
+  const [result, legacy, dismissed] = await Promise.all([
     listNotifications(actorContext, query),
     query.cursor || query.category || query.severity || query.state === "archived"
       ? Promise.resolve([])
       : listLegacyOperationalNotifications(),
+    readDismissedAlerts(actorContext),
   ]);
   const { t } = await getI18n();
-  const compatibleLegacy = legacy
+  const visibleLegacy = legacy
     .filter((notification) =>
       query.state === "read"
         ? notification.read
@@ -63,6 +68,10 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       approximate: !notification.createdAt,
       nativePending: false,
     }));
+  // Alerts this member cleared stay cleared, across restarts: the server
+  // remembers them (see operational-dismissals.ts). One whose text has
+  // changed since is a different situation and is shown again.
+  const compatibleLegacy = filterDismissedAlerts(visibleLegacy, dismissed);
   return NextResponse.json({
     ...result,
     notifications: [
