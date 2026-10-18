@@ -6,6 +6,7 @@ import { auditLog, changeAuthPin } from "@/lib/auth/server";
 import {
   checkLoginRateLimit,
   getClientIp,
+  getConfirmationLimiterKey,
   recordLoginAttempt,
   recordLoginFailure,
   recordLoginSuccess,
@@ -31,8 +32,11 @@ export const POST = withErrorHandler(async (req: Request) => {
     );
   }
 
+  // Audit metadata only (client-controlled): never a limiter key (IDN-01).
   const ip = getClientIp(req.headers);
-  const limit = checkLoginRateLimit(ip);
+  // The allowance belongs to the verified owner session making the proof.
+  const limiterKey = getConfirmationLimiterKey(context.actor.sessionId);
+  const limit = checkLoginRateLimit(limiterKey);
   if (!limit.allowed) {
     // Audit S2-5: coded rejection bodies — exact English strings kept verbatim
     // for the client substring-translation contract. Headers preserved, so
@@ -52,7 +56,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   const body = await req.json();
   const parsed = ChangePinSchema.safeParse(body);
   if (!parsed.success) {
-    recordLoginAttempt(ip);
+    recordLoginAttempt(limiterKey);
     return NextResponse.json(
       {
         error: parsed.error.issues[0]?.message ?? "Invalid request",
@@ -62,7 +66,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     );
   }
   if (parsed.data.newPin === parsed.data.currentPin) {
-    recordLoginAttempt(ip);
+    recordLoginAttempt(limiterKey);
     return NextResponse.json(
       {
         error: "New PIN must be different from the current PIN",
@@ -72,14 +76,14 @@ export const POST = withErrorHandler(async (req: Request) => {
     );
   }
 
-  recordLoginAttempt(ip);
+  recordLoginAttempt(limiterKey);
   const result = await changeAuthPin(
     parsed.data.currentPin,
     parsed.data.newPin,
     ip,
   );
   if (!result.changed) {
-    const failure = recordLoginFailure(ip);
+    const failure = recordLoginFailure(limiterKey);
     void auditLog("auth.pin.change.failed", { reason: result.reason }, ip);
     if (!failure.allowed && failure.locked) {
       return NextResponse.json(
@@ -101,7 +105,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     );
   }
 
-  recordLoginSuccess(ip);
+  recordLoginSuccess(limiterKey);
   void auditLog("auth.pin.change", { sessionsRotated: true }, ip);
   return NextResponse.json({ success: true, sessionRotated: true });
 }, "POST /api/auth/change-pin");
