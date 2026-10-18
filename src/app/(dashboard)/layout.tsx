@@ -28,9 +28,10 @@ export default async function DashboardRouteLayout({
 }) {
   if (!(await isAuthSetup())) redirect("/setup");
   if (!(await isAuthenticated())) redirect("/login");
-  const licenseValid = await getLicenseAuthorityProjection()
-    .then((projection) => projection.status === "valid")
-    .catch(() => false);
+  const licenseProjection = await getLicenseAuthorityProjection().catch(
+    () => null,
+  );
+  const licenseValid = licenseProjection?.status === "valid";
   if (!licenseValid) {
     return (
       <>
@@ -43,7 +44,21 @@ export default async function DashboardRouteLayout({
   const permissions = await currentActorPermissions();
 
   return (
-    <LicenseBoundary>
+    <LicenseBoundary
+      initialProjection={
+        // The projection this layout just validated, in the same shape as
+        // GET /api/license/status. It lets the workspace paint without a
+        // client round trip; the client refresh still replaces it.
+        licenseProjection
+          ? {
+              ...licenseProjection,
+              onlineTrialAvailable: Boolean(
+                process.env.SF_LICENSE_SERVICE_URL?.trim(),
+              ),
+            }
+          : undefined
+      }
+    >
       <DashboardLayout permissions={permissions}>
         {/*
           Authentication, setup and entitlement authority have resolved above.
