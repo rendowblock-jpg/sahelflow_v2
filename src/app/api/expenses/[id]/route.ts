@@ -21,7 +21,7 @@ type RouteContext = { params: Promise<{ id: string }> };
  * is converted to a `Date` before being written to Prisma.
  */
 export const PATCH = withErrorHandler(async (req: NextRequest, { params }: RouteContext) => {
-  await requireAuth("accounting.update");
+  const actorContext = await requireAuth("accounting.update");
   const { id } = await params;
   const body = await req.json();
   const data = updateExpenseSchema.parse(body);
@@ -29,9 +29,11 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 
   const existing = await db.expense.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, deletedAt: true },
   });
-  if (!existing) throw new NotFoundError("Expense", id);
+  // MNY-11: a soft-deleted expense is gone for the seller; editing it would
+  // change figures nobody can see. Restore it first.
+  if (!existing || existing.deletedAt) throw new NotFoundError("Expense", id);
 
   let expense;
   try {
@@ -55,6 +57,22 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
       error: error instanceof Error ? error.message : String(error),
     });
     throw coded;
+  }
+
+  // MNY-11: field NAMES only, never the amount, date or free-text notes.
+  const changedFields = Object.keys(data).filter(
+    (field) => (data as Record<string, unknown>)[field] !== undefined,
+  );
+  if (changedFields.length > 0) {
+    await logAudit(context, {
+      action: "expense.updated",
+      entity: "expense",
+      entityId: id,
+      actor: trustedActorAuditIdentity(actorContext.actor),
+      metadata: {
+        changedFields: Object.fromEntries(changedFields.map((field) => [field, true])),
+      },
+    });
   }
 
   return NextResponse.json({ expense });

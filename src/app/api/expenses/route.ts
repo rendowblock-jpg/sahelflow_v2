@@ -4,6 +4,8 @@ import { createExpenseSchema } from "@/lib/validation";
 import { readReplayRequestId, withReplayGuard } from "@/lib/api/replay-guard";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
+import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +64,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
  * duplicate expense row.
  */
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  await requireAuth("accounting.update");
+  const actorContext = await requireAuth("accounting.update");
   const requestId = readReplayRequestId(req);
 
   const execute = async (): Promise<NextResponse> => {
@@ -76,6 +78,24 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         amount: data.amount,
         date: new Date(data.date),
         notes: data.notes ?? null,
+      },
+    });
+
+    // MNY-11: field NAMES only. Amounts and free-text notes never enter the
+    // audit trail (same rule as product.updated).
+    const createdFields = [
+      "category",
+      "amount",
+      "date",
+      ...(data.notes !== undefined && data.notes !== null ? ["notes"] : []),
+    ];
+    await logAudit(context, {
+      action: "expense.created",
+      entity: "expense",
+      entityId: expense.id,
+      actor: trustedActorAuditIdentity(actorContext.actor),
+      metadata: {
+        changedFields: Object.fromEntries(createdFields.map((field) => [field, true])),
       },
     });
 
