@@ -15,6 +15,7 @@ import {
   decryptString,
   type EncryptedPayload,
 } from "@/lib/crypto/field-crypto";
+import { recordLegacyGenerationRead } from "@/lib/crypto/legacy-generation-diagnostics";
 import { getMasterKey } from "@/lib/crypto/master-key";
 import { resolveShopProtectedKey } from "@/lib/crypto/protected-key-authority";
 import { classifyProtectedValue } from "@/lib/crypto/protected-value-classification";
@@ -138,6 +139,8 @@ export async function getSecret(
     );
   }
 
+  // Legacy three-column row, opened with the installation root (migration input).
+  recordLegacyGenerationRead("secret_row");
   return decryptString(
     rowToLegacyPayload(row),
     options.installationRoot ?? getMasterKey(),

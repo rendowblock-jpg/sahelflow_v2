@@ -78,6 +78,18 @@ function nativeRootIsRequired(): boolean {
   return process.env.SF_INSTALLATION_ROOT_SOURCE === NATIVE_ROOT_SOURCE;
 }
 
+/**
+ * Mirror of isPackagedDesktopRuntime() in src/lib/runtime/background-start.ts,
+ * inlined so this module keeps no dependency on the app alias (standalone
+ * scripts load it). master-key-packaged-guard.test.ts pins the two together.
+ */
+function packagedDesktopProcess(): boolean {
+  return (
+    process.env.NODE_ENV === "production" &&
+    /^[0-9a-f]{32}$/i.test(process.env.SF_RUNTIME_INSTANCE_ID ?? "")
+  );
+}
+
 function offlineProtectedDataMaintenanceIsRunning(): boolean {
   const lifecycle = process.env.npm_lifecycle_event ?? "";
   if (lifecycle.startsWith("protected-data:")) return true;
@@ -247,6 +259,18 @@ export function getMasterKey(): Buffer {
   if (nativeRootIsRequired()) {
     throw new Error(
       "The packaged installation root was not transferred by the native runtime",
+    );
+  }
+
+  // Defence in depth (S01b-11): the Tauri launcher always sends the native root
+  // marker, so a PACKAGED desktop process that reaches this point is
+  // misconfigured or tampered with. The development override, the key file and
+  // first-run generation below are for dev/test only and must stay unreachable
+  // there. CI and unit tests are not packaged desktop processes (no
+  // SF_RUNTIME_INSTANCE_ID under NODE_ENV=production), so they are unaffected.
+  if (packagedDesktopProcess()) {
+    throw new Error(
+      "The packaged runtime did not receive its installation root from the native runtime; the development override, key file and key generation are disabled",
     );
   }
 

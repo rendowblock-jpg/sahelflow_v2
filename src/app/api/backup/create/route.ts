@@ -4,10 +4,12 @@ import { logAudit } from "@/lib/audit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { createBackup } from "@/lib/backup";
+import { backupFailureCode } from "@/lib/backup/failure-code";
 import { uploadNativeBackupToCloudIfEnrolled } from "@/lib/connected-platform/cloud-backup";
 import { db, shopContext } from "@/lib/db";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { requireLicenseEntitlement } from "@/lib/license/license-authority";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +27,15 @@ export const POST = withErrorHandler(async () => {
       entitlement.type ?? "trial",
     );
     if (cloudBackup) cloudState = "verified";
-  } catch {
+  } catch (error) {
     // The native encrypted backup is already durable. Report cloud degradation
     // explicitly without turning a successful local backup into a failed request
-    // that encourages duplicate retries.
+    // that encourages duplicate retries. Leave a code-only trace (never the
+    // message, which can carry URLs or tokens).
+    logger.warn("backup.cloud_upload_failed", {
+      backupId: result.backupId,
+      code: backupFailureCode(error),
+    });
     cloudState = "unavailable";
   }
   await logAudit(
