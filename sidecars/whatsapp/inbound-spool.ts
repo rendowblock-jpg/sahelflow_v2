@@ -23,6 +23,10 @@ import {
   resolveWhatsAppInboundSpoolKey,
   sealWhatsAppInboundSpoolRecord,
 } from "./inbound-spool-crypto";
+import {
+  conformIncomingForApp,
+  summarizeRejectedFields,
+} from "./inbound-envelope";
 import type { IncomingMessage } from "./whatsapp";
 
 const FORMAT_VERSION = 1;
@@ -211,6 +215,17 @@ function responseErrorCode(status: number, body: unknown): string {
     if (typeof code === "string" && code.length <= 128) return code;
   }
   return `HTTP_${status}`;
+}
+
+/**
+ * When the app refuses the envelope itself (400 REQUEST_VALIDATION_FAILED),
+ * which fields it named. Paths and validation codes only, never a value:
+ * see summarizeRejectedFields. Null for every other kind of failure.
+ */
+function rejectedFieldsOf(status: number, body: unknown): string | null {
+  if (status !== 400 || !isObject(body)) return null;
+  if (body.code !== "REQUEST_VALIDATION_FAILED") return null;
+  return summarizeRejectedFields(body.details);
 }
 
 interface SpoolIndexEntry {
@@ -834,6 +849,7 @@ export class WhatsAppInboundSpool {
     record: StoredInboundRecord,
     failureCode: string,
     appStatus: string | null = null,
+    rejectedFields: string | null = null,
   ): void {
     const now = Date.now();
     record.lastErrorCode = failureCode.slice(0, 128);
@@ -841,6 +857,7 @@ export class WhatsAppInboundSpool {
       code: record.lastErrorCode,
       attempt: record.attemptCount,
       appStatus,
+      ...(rejectedFields ? { fields: rejectedFields } : {}),
     });
     record.nextAttemptAt = new Date(
       now + retryDelay(record.attemptCount, this.retryBaseMs),
@@ -896,7 +913,12 @@ export class WhatsAppInboundSpool {
             Authorization: `Bearer ${this.bearerToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(record.envelope),
+          // Sent in the shape the app accepts: a record queued by an older
+          // sidecar may hold a field the app refuses on every try.
+          body: JSON.stringify({
+            ...record.envelope,
+            message: conformIncomingForApp(record.envelope.message),
+          }),
           signal: controller.signal,
         },
       );
@@ -924,6 +946,7 @@ export class WhatsAppInboundSpool {
           record,
           responseErrorCode(response.status, body),
           appStatus,
+          rejectedFieldsOf(response.status, body),
         );
         return;
       }
