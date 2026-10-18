@@ -67,6 +67,7 @@ const PRE_AUTH_ROUTES = new Map<string, string>([
   ["/api/internal/runtime-ready", "Runtime IPC: constant-time secret."],
   ["/api/internal/runtime-shutdown", "Runtime IPC: constant-time secret."],
   ["/api/internal/runtime-ui-ready", "Runtime IPC: constant-time secret."],
+  ["/api/internal/launch-appearance", "Runtime IPC: constant-time secret."],
 
   // — Public and provider surfaces.
   [

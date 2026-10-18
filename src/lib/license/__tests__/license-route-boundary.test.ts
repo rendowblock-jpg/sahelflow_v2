@@ -9,7 +9,10 @@ const unwrappedControlRoutes = [
   /^health[\\/]route\.ts$/,
   /^internal[\\/]runtime-bootstrap[\\/]route\.ts$/,
   /^internal[\\/]runtime-bootstrap[\\/]confirm[\\/]route\.ts$/,
-  /^internal[\\/]runtime-(?:ready|shutdown|ui-ready)[\\/]route\.ts$/,
+  // Runtime IPC beside ui-ready: authenticated by the per-launch runtime cookie,
+  // takes no request body, and must keep working under a licence lockout so the
+  // native startup card still matches the look the seller last saw.
+  /^internal[\\/](?:runtime-(?:ready|shutdown|ui-ready)|launch-appearance)[\\/]route\.ts$/,
 ] as const;
 
 function routeFiles(directory: string): string[] {

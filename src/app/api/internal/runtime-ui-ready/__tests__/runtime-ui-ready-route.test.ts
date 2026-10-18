@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -11,15 +11,19 @@ vi.mock("@/lib/runtime/background-start", () => ({
 
 import { POST } from "@/app/api/internal/runtime-ui-ready/route";
 import { RUNTIME_COOKIE } from "@/lib/runtime-auth";
+import { LAUNCH_APPEARANCE_FILE } from "@/lib/runtime/launch-appearance";
 
 const TOKEN = "a".repeat(64);
 const INSTANCE = "b".repeat(32);
 let dataDir: string;
 
-function report(): NextRequest {
+function report(extraCookies: string[] = []): NextRequest {
   return new NextRequest("http://127.0.0.1:4310/api/internal/runtime-ui-ready", {
     method: "POST",
-    headers: { cookie: `${RUNTIME_COOKIE}=${TOKEN}`, "X-SahelFlow-UI-Ready": "1" },
+    headers: {
+      cookie: [`${RUNTIME_COOKIE}=${TOKEN}`, ...extraCookies].join("; "),
+      "X-SahelFlow-UI-Ready": "1",
+    },
   });
 }
 
@@ -52,6 +56,51 @@ describe("runtime UI-ready report", () => {
     expect(second.status).toBe(200);
     expect([statSync(diagnosticPath).mtimeMs, statSync(ackPath).mtimeMs]).toEqual(before);
     expect(JSON.parse(readFileSync(diagnosticPath, "utf8"))).toEqual(diagnostic);
+  });
+
+  it("records how the workspace looks, for the next native startup card", async () => {
+    const response = await POST(
+      report(["sahelflow-locale=ar", "sahelflow-theme=system", "sahelflow-theme-preset=oasis"]),
+    );
+    expect(response.status).toBe(200);
+    expect(JSON.parse(readFileSync(join(dataDir, LAUNCH_APPEARANCE_FILE), "utf8"))).toMatchObject({
+      formatVersion: 1,
+      locale: "ar",
+      theme: "system",
+      preset: "oasis",
+    });
+  });
+
+  it("keeps the appearance record when the desktop clears the ready evidence", async () => {
+    await POST(report(["sahelflow-theme=light", "sahelflow-theme-preset=dune"]));
+    // The desktop removes the receipt at the start of every launch; the card
+    // of a launch that crashes must still match what the seller last saw.
+    rmSync(join(dataDir, "runtime-ui-ready.json"));
+    rmSync(join(dataDir, "runtime-ui-diagnostic.json"));
+    expect(existsSync(join(dataDir, LAUNCH_APPEARANCE_FILE))).toBe(true);
+    expect(JSON.parse(readFileSync(join(dataDir, LAUNCH_APPEARANCE_FILE), "utf8"))).toMatchObject({
+      theme: "light",
+      preset: "dune",
+    });
+  });
+
+  it("never fails readiness because the appearance record could not be written", async () => {
+    mkdirSync(join(dataDir, LAUNCH_APPEARANCE_FILE));
+    const response = await POST(report(["sahelflow-theme=dark"]));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "ready", instanceId: INSTANCE });
+    expect(JSON.parse(readFileSync(join(dataDir, "runtime-ui-ready.json"), "utf8"))).toMatchObject({
+      state: "ready",
+    });
+  });
+
+  it("writes nothing for an unauthenticated report", async () => {
+    const request = new NextRequest("http://127.0.0.1:4310/api/internal/runtime-ui-ready", {
+      method: "POST",
+      headers: { cookie: "sahelflow-theme=light" },
+    });
+    expect((await POST(request)).status).toBe(401);
+    expect(existsSync(join(dataDir, LAUNCH_APPEARANCE_FILE))).toBe(false);
   });
 
   it("persists again once the desktop cleared the evidence for a new navigation", async () => {
