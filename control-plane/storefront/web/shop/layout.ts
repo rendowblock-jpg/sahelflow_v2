@@ -2,7 +2,7 @@ import { storefrontScheme, storefrontThemeStyle } from "@/lib/storefront/storefr
 
 import { directionOf, PUBLIC_LOCALES, type PublicLocale } from "../locale";
 import { jsonForScript } from "../html";
-import { esc, type Ctx } from "./ui";
+import { esc, preloadImage, type Ctx } from "./ui";
 
 const LANGUAGE: Record<PublicLocale, { code: string; name: string }> = {
   ar: { code: "AR", name: "العربية" },
@@ -99,7 +99,7 @@ export function documentShell(ctx: Ctx, page: PageParts): string {
     ...(locale === "ar" && assets.fonts[VOICE_FONT[theme.template]]
       ? [`<link rel="preload" as="font" type="font/woff2" href="${esc(assets.fonts[VOICE_FONT[theme.template]] as string)}" crossorigin>`]
       : []),
-    ...(page.preload ? [`<link rel="preload" as="image" href="${esc(page.preload)}" fetchpriority="high">`] : []),
+    ...(page.preload ? [preloadImage(page.preload, "(min-width:900px) 540px, 100vw")] : []),
     `<script type="application/ld+json">${jsonForScript({ "@context": "https://schema.org", ...(page.jsonLd as object) })}</script>`,
   ].join("\n");
 

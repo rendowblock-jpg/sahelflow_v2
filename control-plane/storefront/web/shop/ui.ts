@@ -88,6 +88,27 @@ export function transitionName(ctx: Ctx, productId: string): string | null {
   return name;
 }
 
+const HOSTED_PHOTO = /^(https:\/\/[A-Za-z0-9.-]+\/m\/[A-Za-z0-9_-]+\/[0-9a-f]{24})-1280\.webp$/;
+
+/**
+ * src (and, for a photo we host, srcset + sizes) for an <img>. A hosted photo exists in two widths, so a phone on a slow
+ * connection downloads the 640 px file and only a large or sharp screen asks for the 1280 px one. A seller's own link
+ * is used as it is.
+ */
+export function imgAttrs(url: string, sizes: string, fallback: 640 | 1280 = 1280): string {
+  const hosted = HOSTED_PHOTO.exec(url);
+  if (!hosted) return `src="${esc(url)}"`;
+  const small = `${hosted[1]}-640.webp`;
+  return `src="${esc(fallback === 640 ? small : url)}" srcset="${esc(small)} 640w, ${esc(url)} 1280w" sizes="${esc(sizes)}"`;
+}
+
+/** The preload link for the largest picture of a page; for a hosted photo it carries the same choice of widths. */
+export function preloadImage(url: string, sizes: string): string {
+  const hosted = HOSTED_PHOTO.exec(url);
+  if (!hosted) return `<link rel="preload" as="image" href="${esc(url)}" fetchpriority="high">`;
+  return `<link rel="preload" as="image" href="${esc(url)}" imagesrcset="${esc(`${hosted[1]}-640.webp`)} 640w, ${esc(url)} 1280w" imagesizes="${esc(sizes)}" fetchpriority="high">`;
+}
+
 /** The product page address. */
 export function productHref(slug: string, productId: string): string {
   return `/${slug}/p/${encodeURIComponent(productId)}`;

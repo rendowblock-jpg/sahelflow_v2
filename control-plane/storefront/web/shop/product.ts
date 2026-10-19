@@ -2,10 +2,12 @@ import wilayas from "../../../../data/wilayas.json";
 
 import { currencySuffix, formatPrice, localeTag } from "./format";
 import { renderContact, renderFaq, renderRail, renderTestimonials } from "./home";
-import { esc, icon, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
+import { esc, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
 import type { ShopProduct } from "./model";
 
 type Fees = Record<string, [number | null, number | null]>;
+
+export const GALLERY_SIZES = "(min-width:900px) 540px, 100vw";
 
 function feeTable(ctx: Ctx): Fees {
   const fees: Fees = {};
@@ -40,7 +42,7 @@ function gallery(ctx: Ctx, product: ShopProduct): string {
   }
   const total = product.images.length;
   const slides = product.images
-    .map((url, index) => `<div class="sf-slide" role="group" aria-label="${esc(t("storefront.shop.photo", { n: index + 1, total }))}"${index === 0 ? vtStyle : ""}><img src="${esc(url)}" alt="${esc(index === 0 ? product.name : `${product.name} ${index + 1}`)}" width="800" height="1000" ${index === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" referrerpolicy="no-referrer"></div>`)
+    .map((url, index) => `<div class="sf-slide" role="group" aria-label="${esc(t("storefront.shop.photo", { n: index + 1, total }))}"${index === 0 ? vtStyle : ""}><img ${imgAttrs(url, GALLERY_SIZES)} alt="${esc(index === 0 ? product.name : `${product.name} ${index + 1}`)}" width="800" height="1000" ${index === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" referrerpolicy="no-referrer"></div>`)
     .join("");
   const counter = total > 1 ? `<span class="sf-count" aria-hidden="true"><b>1</b> / ${total}</span>` : "";
   const dots = total > 1 ? `<div class="sf-dots" aria-hidden="true">${product.images.map((_, index) => `<i${index === 0 ? ' aria-current="true"' : ""}></i>`).join("")}</div>` : "";
@@ -197,7 +199,7 @@ ${extras}${more}${renderContact(ctx, true)}
 <script type="application/json" id="sf-data">${JSON.stringify(data).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029")}</script>`;
 
   const thumb = product.images[0]
-    ? `<img class="sf-sticky-thumb" src="${esc(product.images[0])}" alt="" width="48" height="48" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
+    ? `<img class="sf-sticky-thumb" ${imgAttrs(product.images[0], "48px", 640)} alt="" width="48" height="48" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
     : "";
   const bar = showBar
     ? `<div id="sf-sticky" class="sf-sticky">${thumb}<div class="sf-sticky-price"><small dir="auto">${esc(product.name)}</small><strong data-sf="bar-total">${esc(price)}</strong></div><a id="sf-bar-cta" class="sf-cta sf-cta--bar" href="#order">${esc(t("storefront.studio.orderNow"))}</a></div>`

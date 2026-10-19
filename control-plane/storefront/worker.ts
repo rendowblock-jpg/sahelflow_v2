@@ -1,6 +1,7 @@
 import { checkout } from "./checkout";
 import { createStorefront } from "./create-storefront";
 import { listReleases } from "./list-releases";
+import { checkMedia, putMedia } from "./media";
 import { pauseStorefront } from "./pause-storefront";
 import { publicStorefront } from "./public-storefront";
 import { publishRelease } from "./publish-release";
@@ -49,6 +50,16 @@ export async function handleStorefrontRequest(
   }
   if (request.method === "GET" && releaseMatch?.[1]) {
     return listReleases(request, environment, releaseMatch[1], url);
+  }
+  const mediaCheckMatch =
+    /^\/v1\/desktop\/storefronts\/([A-Za-z0-9][A-Za-z0-9_-]{7,127})\/media\/check$/.exec(url.pathname);
+  if (request.method === "POST" && mediaCheckMatch?.[1]) {
+    return checkMedia(request, environment, mediaCheckMatch[1]);
+  }
+  const mediaPutMatch =
+    /^\/v1\/desktop\/storefronts\/([A-Za-z0-9][A-Za-z0-9_-]{7,127})\/media\/([0-9a-f]{24})\/(640|1280)$/.exec(url.pathname);
+  if (request.method === "PUT" && mediaPutMatch?.[1]) {
+    return putMedia(request, environment, mediaPutMatch[1], mediaPutMatch[2] as string, mediaPutMatch[3] as string, url);
   }
   const rollbackMatch =
     /^\/v1\/desktop\/storefronts\/([A-Za-z0-9][A-Za-z0-9_-]{7,127})\/rollback$/.exec(

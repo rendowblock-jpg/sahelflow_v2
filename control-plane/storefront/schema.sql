@@ -168,3 +168,15 @@ BEGIN
           AND line.release_id = NEW.release_id
      );
 END;
+
+-- Hosted product photos: one row per stored size. The bytes live in R2; this ledger enforces the quotas.
+CREATE TABLE IF NOT EXISTS storefront_media (
+  storefront_id TEXT NOT NULL,
+  hash TEXT NOT NULL,
+  width INTEGER NOT NULL CHECK(width IN (640, 1280)),
+  bytes INTEGER NOT NULL CHECK(bytes > 0),
+  sha256 TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(storefront_id, hash, width),
+  FOREIGN KEY(storefront_id) REFERENCES storefront(storefront_id) ON DELETE CASCADE
+);
