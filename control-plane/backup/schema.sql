@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS cloud_backup_chunk (
 CREATE INDEX IF NOT EXISTS cloud_backup_chunk_upload_idx
   ON cloud_backup_chunk(workspace_id, backup_id, uploaded_at);
 
+-- Quota and rotation: the points that retention will retire the moment a new backup
+-- verifies are not counted against its quota (see migrations/0004_quota_rotation.sql).
 CREATE TRIGGER IF NOT EXISTS cloud_backup_entitlement_guard
 BEFORE INSERT ON cloud_backup
 BEGIN
@@ -74,11 +76,42 @@ BEGIN
   END;
   SELECT CASE
     WHEN NEW.total_bytes + COALESCE((
-      SELECT SUM(total_bytes)
-        FROM cloud_backup
-       WHERE workspace_id = NEW.workspace_id
-         AND state NOT IN ('failed','deleted')
-         AND NOT (NEW.retention_class = 'trial' AND retention_class = 'trial' AND state = 'verified')
+      SELECT SUM(r.total_bytes)
+        FROM cloud_backup r
+       WHERE r.workspace_id = NEW.workspace_id
+         AND r.state NOT IN ('failed','deleted')
+         AND NOT (
+           r.state = 'verified'
+           AND r.shop_id = NEW.shop_id
+           AND r.retention_class = NEW.retention_class
+           AND NEW.retention_class IN ('daily','weekly','monthly','trial')
+           AND (
+             NEW.retention_class = 'trial'
+             OR NOT EXISTS (
+               SELECT 1
+                 FROM cloud_backup f
+                WHERE f.workspace_id = NEW.workspace_id
+                  AND f.shop_id = NEW.shop_id
+                  AND f.retention_class = NEW.retention_class
+                  AND f.state IN ('initiated','uploading','awaiting_verification')
+             )
+           )
+           AND (
+             SELECT COUNT(*)
+               FROM cloud_backup n
+              WHERE n.workspace_id = r.workspace_id
+                AND n.shop_id = r.shop_id
+                AND n.retention_class = r.retention_class
+                AND n.state = 'verified'
+                AND (COALESCE(n.verified_at, n.created_at), n.created_at, n.backup_id)
+                  > (COALESCE(r.verified_at, r.created_at), r.created_at, r.backup_id)
+           ) >= CASE NEW.retention_class
+                  WHEN 'daily' THEN 6
+                  WHEN 'weekly' THEN 3
+                  WHEN 'monthly' THEN 5
+                  ELSE 0
+                END
+         )
     ), 0) > (
       SELECT backup_bytes FROM backup_workspace WHERE workspace_id = NEW.workspace_id
     ) THEN RAISE(ABORT, 'backup_quota_exceeded')

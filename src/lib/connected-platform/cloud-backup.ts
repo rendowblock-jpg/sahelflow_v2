@@ -16,6 +16,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import type { BackupEntry } from "@/lib/backup";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 import { canonicalBackupVerificationBytes } from "./backup-protocol";
 import { ConnectedPlatformHttpError } from "./client";
 import { signConnectedBytes } from "./payload-crypto";
@@ -154,83 +155,170 @@ function cloudRetentionClass(
     : "daily";
 }
 
+/** A failure worth another try: the network or the service, not the request itself. */
+function isTransientCloudFailure(error: unknown): error is ConnectedPlatformHttpError {
+  return error instanceof ConnectedPlatformHttpError &&
+    (error.status === 408 || error.status === 429 || error.status >= 500);
+}
+
+/** Pause before the second attempt, then before the third. */
+const UPLOAD_RETRY_DELAYS_MS: readonly number[] = Object.freeze([1_000, 4_000]);
+
+export type CloudBackupUploadOptions = Readonly<{
+  /** Replaceable so tests do not wait. */
+  sleep?: (milliseconds: number) => Promise<void>;
+}>;
+
+type BackupRuntime = NonNullable<Awaited<ReturnType<typeof loadBackupRuntimeIfEnrolled>>>;
+type UploadProgress = { reserved: boolean; verifying: boolean };
+
+/** Chunk indexes the service says it already holds; anything unusable counts as "not held". */
+function arrivedChunkSet(value: unknown, chunkCount: number): ReadonlySet<number> {
+  const arrived = new Set<number>();
+  if (!Array.isArray(value)) return arrived;
+  for (const item of value) {
+    if (typeof item === "number" && Number.isSafeInteger(item) && item >= 0 && item < chunkCount) {
+      arrived.add(item);
+    }
+  }
+  return arrived;
+}
+
+async function uploadBundleOnce(
+  runtime: BackupRuntime,
+  shop: NonNullable<ServiceContext["shop"]>,
+  entry: BackupEntry,
+  bundle: Awaited<ReturnType<typeof nativeBundle>>,
+  licenseType: "trial" | "extension" | "permanent",
+  progress: UploadProgress,
+): Promise<Readonly<{ backupId: string; state: "verified"; receiptDigest: string | null }>> {
+  const manifestSha256 = digest(bundle.manifestBytes);
+  const totalBytes = bundle.manifestBytes.byteLength +
+    bundle.chunks.reduce((sum, chunk) => sum + chunk.file.byteSize, 0);
+  const initiated = await runtime.client.initiateBackup({
+    workspaceId: shop.workspaceId,
+    backupId: entry.backupId,
+    shopId: shop.shopId,
+    retentionClass: cloudRetentionClass(entry, licenseType),
+    wrappedDek: bundle.wrappedDek,
+    manifestSha256,
+    manifestBytes: bundle.manifestBytes.byteLength,
+    chunks: bundle.chunks.map(({ file }) => ({
+      index: file.index,
+      sha256: file.sha256,
+      byteSize: file.byteSize,
+    })),
+  });
+  const refusal = new Error("Cloud backup did not acknowledge the exact native backup");
+  if (initiated.backupId !== entry.backupId) throw refusal;
+  const resumed = initiated.resumed === true;
+  // The same plan was sent before and already finished: a lost reply to the
+  // verification request is safe to retry, nothing is uploaded twice.
+  if (resumed && initiated.state === "verified") {
+    return Object.freeze({
+      backupId: initiated.backupId,
+      state: "verified" as const,
+      receiptDigest: initiated.receiptDigest ?? null,
+    });
+  }
+  const acceptable = resumed
+    ? initiated.state === "initiated" || initiated.state === "uploading" ||
+      initiated.state === "awaiting_verification"
+    : initiated.state === "initiated";
+  if (!acceptable || initiated.totalBytes !== totalBytes) throw refusal;
+  progress.reserved = true;
+
+  // Resume where the service says it stopped. Verification below re-checks every
+  // object in storage, so a wrong claim here can never produce a bad backup.
+  if (!(resumed && initiated.manifestUploaded === true)) {
+    await runtime.client.uploadBackupManifest(entry.backupId, shop.workspaceId, bundle.manifestBytes);
+  }
+  const arrived = resumed ? arrivedChunkSet(initiated.uploadedChunks, bundle.chunks.length) : new Set<number>();
+  for (const chunk of bundle.chunks) {
+    if (arrived.has(chunk.file.index)) continue;
+    await runtime.client.uploadBackupChunk(
+      entry.backupId,
+      chunk.file.index,
+      shop.workspaceId,
+      chunk.bytes,
+    );
+  }
+  const verifiedAt = new Date().toISOString();
+  const signature = signConnectedBytes(
+    runtime.desktopKeys.signingPrivateKeyPkcs8,
+    canonicalBackupVerificationBytes({
+      workspaceId: shop.workspaceId,
+      shopId: shop.shopId,
+      backupId: entry.backupId,
+      manifestSha256,
+      totalBytes,
+      chunkCount: bundle.chunks.length,
+      verifiedAt,
+    }),
+  );
+  progress.verifying = true;
+  const verified = await runtime.client.verifyBackup(entry.backupId, {
+    workspaceId: shop.workspaceId,
+    verifiedAt,
+    signature,
+  });
+  return Object.freeze({
+    backupId: verified.backupId,
+    state: verified.state,
+    receiptDigest: verified.receiptDigest ?? null,
+  });
+}
+
+/**
+ * Upload one finished native backup to the seller's cloud copy.
+ *
+ * The cloud backup id IS the local backup id, so every attempt sends the very
+ * same plan and the service resumes it: after a dropped connection only the
+ * missing parts are sent, and if the reply to the final verification was lost the
+ * retry simply learns that it is already verified. A failure that is not the
+ * network's or the service's fault (a refused plan, a hash mismatch) is not
+ * retried. The reservation is released only after the last failure, and never
+ * once verification started, because then the cloud copy may already exist.
+ */
 export async function uploadNativeBackupToCloudIfEnrolled(
   context: ServiceContext,
   entry: BackupEntry,
   licenseType: "trial" | "extension" | "permanent",
+  options: CloudBackupUploadOptions = {},
 ): Promise<Readonly<{ backupId: string; state: "verified"; receiptDigest: string | null }> | null> {
-  if (!context.shop) throw new Error("Cloud backup requires active shop authority");
+  const shop = context.shop;
+  if (!shop) throw new Error("Cloud backup requires active shop authority");
   const runtime = await loadBackupRuntimeIfEnrolled(context);
   if (!runtime) return null;
   const bundle = await nativeBundle(entry, context);
-  let reservationCreated = false;
-  let verificationStarted = false;
-  try {
-    const initiated = await runtime.client.initiateBackup({
-      workspaceId: context.shop.workspaceId,
-      backupId: entry.backupId,
-      shopId: context.shop.shopId,
-      retentionClass: cloudRetentionClass(entry, licenseType),
-      wrappedDek: bundle.wrappedDek,
-      manifestSha256: digest(bundle.manifestBytes),
-      manifestBytes: bundle.manifestBytes.byteLength,
-      chunks: bundle.chunks.map(({ file }) => ({
-        index: file.index,
-        sha256: file.sha256,
-        byteSize: file.byteSize,
-      })),
-    });
-    if (initiated.backupId !== entry.backupId || initiated.state !== "initiated") {
-      throw new Error("Cloud backup did not acknowledge the exact native backup");
-    }
-    reservationCreated = true;
-    await runtime.client.uploadBackupManifest(
-      entry.backupId,
-      context.shop.workspaceId,
-      bundle.manifestBytes,
-    );
-    for (const chunk of bundle.chunks) {
-      await runtime.client.uploadBackupChunk(
-        entry.backupId,
-        chunk.file.index,
-        context.shop.workspaceId,
-        chunk.bytes,
-      );
-    }
-    const verifiedAt = new Date().toISOString();
-    const signature = signConnectedBytes(
-      runtime.desktopKeys.signingPrivateKeyPkcs8,
-      canonicalBackupVerificationBytes({
-        workspaceId: context.shop.workspaceId,
-        shopId: context.shop.shopId,
+  const sleep = options.sleep ?? ((milliseconds: number) =>
+    new Promise<void>((done) => { setTimeout(done, milliseconds); }));
+  const progress: UploadProgress = { reserved: false, verifying: false };
+  let failure: unknown;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await uploadBundleOnce(runtime, shop, entry, bundle, licenseType, progress);
+    } catch (error) {
+      failure = error;
+      const delay = UPLOAD_RETRY_DELAYS_MS[attempt];
+      if (delay === undefined || !isTransientCloudFailure(error)) break;
+      // Code-only trace: never the message, which can carry URLs.
+      logger.warn("backup.cloud_upload_retry", {
         backupId: entry.backupId,
-        manifestSha256: digest(bundle.manifestBytes),
-        totalBytes: initiated.totalBytes,
-        chunkCount: bundle.chunks.length,
-        verifiedAt,
-      }),
-    );
-    verificationStarted = true;
-    const verified = await runtime.client.verifyBackup(entry.backupId, {
-      workspaceId: context.shop.workspaceId,
-      verifiedAt,
-      signature,
-    });
-    return Object.freeze({
-      backupId: verified.backupId,
-      state: verified.state,
-      receiptDigest: verified.receiptDigest ?? null,
-    });
-  } catch (error) {
-    if (reservationCreated && !verificationStarted) {
-      try {
-        await runtime.client.deleteRemoteBackup(entry.backupId, context.shop.workspaceId);
-      } catch {
-        // The server expires stale reservations; the verified local backup stays authoritative.
-      }
+        attempt: attempt + 1,
+        status: error.status,
+      });
+      await sleep(delay);
     }
-    throw error;
   }
+  if (progress.reserved && !progress.verifying) {
+    try {
+      await runtime.client.deleteRemoteBackup(entry.backupId, shop.workspaceId);
+    } catch {
+      // The server expires stale reservations; the verified local backup stays authoritative.
+    }
+  }
+  throw failure;
 }
 
 function parseBundleManifest(bytes: Uint8Array, backupId: string, workspaceId: string): CloudBundleManifest {

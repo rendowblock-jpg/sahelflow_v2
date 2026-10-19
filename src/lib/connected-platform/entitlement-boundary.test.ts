@@ -120,8 +120,12 @@ describe("connected entitlement and quota boundaries", () => {
     expect(cloud).toContain("canonicalBackupVerificationBytes");
     expect(cloud).toContain("cloudRetentionClass");
     expect(cloud).toContain("deleteRemoteBackup");
-    expect(cloud).toContain("reservationCreated && !verificationStarted");
-    expect(retention).toContain("datetime('now', '-24 hours')");
+    // The reservation is released only while verification has not started: after
+    // that the cloud copy may already exist (behaviour: cloud-backup.test.ts).
+    expect(cloud).toContain("progress.reserved && !progress.verifying");
+    // Uploads left unfinished for 24 hours are released (behaviour: the backup e2e).
+    expect(retention).toContain("ABANDONED_AFTER_HOURS = 24");
+    expect(retention).toContain("datetime('now', '-${ABANDONED_AFTER_HOURS} hours')");
     expect(retention).toContain("KEEP_BY_CLASS");
     expect(source("control-plane/backup/auth.ts")).toContain("recoveryTransfer");
     expect(createRoute).toContain("uploadNativeBackupToCloudIfEnrolled");

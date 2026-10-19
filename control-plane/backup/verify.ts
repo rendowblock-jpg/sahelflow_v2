@@ -1,6 +1,6 @@
 import { authenticateBackupWorkspace, json } from "./auth";
 import { sha256Hex, verifyEd25519 } from "./crypto";
-import { loadBackup, objectMatches } from "./r2-integrity";
+import { damagedChunkIndexes, loadBackup, objectMatches } from "./r2-integrity";
 import { enforceVerifiedRetention } from "./retention";
 import type { BackupWorkerEnvironment } from "./types";
 import {
@@ -81,6 +81,18 @@ export async function verifyBackup(
   );
   if (!manifest || !objectMatches(manifest, backup.manifest_bytes, backup.manifest_sha256)) {
     return json({ error: "manifest_remote_verification_failed" }, 409);
+  }
+
+  // Every chunk is re-checked in storage too, not only the manifest: an object
+  // lost or altered between its upload and this call must not be certified.
+  let damaged: number[];
+  try {
+    damaged = await damagedChunkIndexes(environment, workspaceId, backupId);
+  } catch {
+    return json({ error: "remote_verification_unavailable", retryable: true }, 503);
+  }
+  if (damaged.length > 0) {
+    return json({ error: "chunk_remote_verification_failed", chunks: damaged.slice(0, 16) }, 409);
   }
 
   const canonical = canonicalBackupVerificationBytes({

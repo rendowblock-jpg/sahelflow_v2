@@ -506,7 +506,20 @@ export class ConnectedPlatformClient {
   }
 
   initiateBackup(input: unknown) {
-    return this.requestJson<{ backupId: string; state: string; totalBytes: number }>(
+    return this.requestJson<{
+      backupId: string;
+      state: string;
+      totalBytes?: number;
+      /** true when the service already held this exact plan and resumed it */
+      resumed?: boolean;
+      manifestUploaded?: boolean;
+      /** indexes of the chunks the service already holds (resumed plans only) */
+      uploadedChunks?: number[];
+      chunkCount?: number;
+      /** present when the resumed plan was already verified */
+      verifiedAt?: string | null;
+      receiptDigest?: string | null;
+    }>(
       "backup",
       "/v1/backups",
       { method: "POST", body: input, token: "backup" },
@@ -525,6 +538,9 @@ export class ConnectedPlatformClient {
       state: string;
       created_at: string;
       verified_at: string | null;
+      /** how far an unfinished backup got (older services do not report them) */
+      manifest_uploaded_at?: string | null;
+      chunks_uploaded?: number;
     }> }>("backup", "/v1/backups", {
       query: { workspaceId, limit },
       token: "backup",

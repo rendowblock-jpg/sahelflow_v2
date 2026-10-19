@@ -1,6 +1,17 @@
 import { authenticateBackupWorkspace, json } from "./auth";
-import { expireInterruptedBackups } from "./retention";
-import type { BackupWorkerEnvironment, D1Statement } from "./types";
+import {
+  arrivedChunkIndexes,
+  planMatches,
+  type RequestedPlan,
+  type StoredChunkPlan,
+} from "./plan";
+import { loadBackup } from "./r2-integrity";
+import {
+  deleteBackupObjects,
+  expireInterruptedBackups,
+  supersedeIdleBackups,
+} from "./retention";
+import type { BackupRow, BackupWorkerEnvironment, D1Statement } from "./types";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
@@ -8,6 +19,56 @@ const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const MAX_CHUNKS = 512;
 const MAX_CHUNK_BYTES = 64 * 1024 * 1024;
 const MAX_MANIFEST_BYTES = 4 * 1024 * 1024;
+
+/**
+ * A backup id that is already reserved: the same plan resumes it, a different
+ * plan is a conflict. The desktop's cloud backup id is the id of its local
+ * backup, so a retry after a dropped connection, a crash or a timed-out verify
+ * sends exactly the same plan; before this it was refused for the rest of the
+ * reservation's life, and for a trial seller it also blocked every other backup.
+ */
+async function answerForExisting(
+  environment: BackupWorkerEnvironment,
+  existing: BackupRow,
+  workspaceId: string,
+  backupId: string,
+  requested: RequestedPlan,
+): Promise<Response> {
+  const rows = await environment.DB.prepare(
+    `SELECT chunk_index, sha256, byte_size, uploaded_at
+       FROM cloud_backup_chunk
+      WHERE workspace_id = ?1 AND backup_id = ?2
+      ORDER BY chunk_index`,
+  ).bind(workspaceId, backupId).all<StoredChunkPlan>();
+  const stored = rows.results ?? [];
+  if (!planMatches(existing, stored, requested)) return json({ error: "backup_plan_conflict" }, 409);
+  if (existing.state === "verified") {
+    return json({
+      backupId,
+      state: "verified",
+      resumed: true,
+      verifiedAt: existing.verified_at,
+      receiptDigest: existing.verification_receipt_digest,
+    });
+  }
+  if (
+    existing.state === "initiated" ||
+    existing.state === "uploading" ||
+    existing.state === "awaiting_verification"
+  ) {
+    return json({
+      backupId,
+      state: existing.state,
+      resumed: true,
+      manifestUploaded: existing.manifest_uploaded_at !== null,
+      uploadedChunks: arrivedChunkIndexes(stored),
+      manifestObjectKey: `backup/${workspaceId}/${backupId}/manifest.bin`,
+      chunkCount: stored.length,
+      totalBytes: Number(existing.total_bytes),
+    });
+  }
+  return json({ error: "backup_not_resumable", state: existing.state }, 409);
+}
 
 export async function initiateBackup(
   request: Request,
@@ -84,11 +145,48 @@ export async function initiateBackup(
 
   try {
     await expireInterruptedBackups(environment, workspaceId);
+    await supersedeIdleBackups(environment, workspaceId, backupId);
   } catch {
     return json({ error: "backup_cleanup_unavailable", retryable: true }, 503);
   }
 
-  const statements: D1Statement[] = [
+  const requested: RequestedPlan = {
+    shopId,
+    retentionClass: String(retentionClass),
+    wrappedDek,
+    manifestSha256,
+    manifestBytes,
+    totalBytes,
+    chunks,
+  };
+  const statements: D1Statement[] = [];
+  const existing = await loadBackup(environment, workspaceId, backupId);
+  if (existing && existing.state !== "failed") {
+    return answerForExisting(environment, existing, workspaceId, backupId, requested);
+  }
+  if (existing) {
+    // A failed reservation is dead (expired or superseded) and its objects are
+    // gone. The same backup id may be reserved again from the start.
+    try {
+      await deleteBackupObjects(environment, workspaceId, backupId);
+    } catch {
+      return json({ error: "backup_cleanup_unavailable", retryable: true }, 503);
+    }
+    statements.push(
+      environment.DB.prepare(
+        `DELETE FROM cloud_backup_chunk
+          WHERE workspace_id = ?1 AND backup_id = ?2
+            AND EXISTS (SELECT 1 FROM cloud_backup b
+                         WHERE b.workspace_id = ?1 AND b.backup_id = ?2 AND b.state = 'failed')`,
+      ).bind(workspaceId, backupId),
+      environment.DB.prepare(
+        `DELETE FROM cloud_backup
+          WHERE workspace_id = ?1 AND backup_id = ?2 AND state = 'failed'`,
+      ).bind(workspaceId, backupId),
+    );
+  }
+
+  statements.push(
     environment.DB.prepare(
       `INSERT INTO cloud_backup
         (workspace_id, backup_id, shop_id, retention_class, wrapped_dek,
@@ -105,7 +203,7 @@ export async function initiateBackup(
       chunks.length,
       totalBytes,
     ),
-  ];
+  );
   for (const chunk of chunks) {
     statements.push(environment.DB.prepare(
       `INSERT INTO cloud_backup_chunk
@@ -136,6 +234,15 @@ export async function initiateBackup(
     }
     if (message.includes("backup_entitlement_expired")) {
       return json({ error: "backup_not_entitled" }, 403);
+    }
+    // Two identical requests at the same moment (a retry that overtook a slow
+    // first attempt): the batch rolled back on the primary key, nothing is half
+    // written. Answer for the reservation that won, exactly like a later retry.
+    if (/UNIQUE constraint failed|SQLITE_CONSTRAINT_PRIMARYKEY/i.test(message)) {
+      const stored = await loadBackup(environment, workspaceId, backupId);
+      if (stored && stored.state !== "failed") {
+        return answerForExisting(environment, stored, workspaceId, backupId, requested);
+      }
     }
     return json({ error: "backup_plan_conflict" }, 409);
   }

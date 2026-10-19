@@ -26,7 +26,10 @@ export type R2Object = {
   customMetadata?: Record<string, string>;
 };
 export type R2ObjectBody = R2Object & { body: ReadableStream };
+export type R2ListOptions = { prefix?: string; limit?: number; cursor?: string };
+export type R2Objects = { objects: R2Object[]; truncated: boolean; cursor?: string };
 export type R2Bucket = {
+  list: (options?: R2ListOptions) => Promise<R2Objects>;
   put: (
     key: string,
     value: ReadableStream | ArrayBuffer | ArrayBufferView | string | Blob | null,
