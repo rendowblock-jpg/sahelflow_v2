@@ -93,8 +93,27 @@ function buildMessages(): string {
   return `${JSON.stringify(sorted, null, 2)}\n`;
 }
 
-async function buildCss(): Promise<string> {
-  const source = readFileSync(join(WEB, "styles/shop.css"), "utf8");
+const FONT_NAMES = ["naskh-bold", "kufi-bold", "kufi-regular"] as const;
+
+/** The three subsetted Arabic faces (SIL OFL, see web/fonts/OFL.txt), hashed so they can be cached for a year. */
+function buildFonts(): { paths: Record<string, string>; files: Map<string, Buffer> } {
+  const paths: Record<string, string> = {};
+  const files = new Map<string, Buffer>();
+  for (const name of FONT_NAMES) {
+    const data = readFileSync(join(WEB, `fonts/${name}.woff2`));
+    const path = `/_sf/f.${createHash("sha256").update(data).digest("hex").slice(0, 10)}.${name}.woff2`;
+    paths[name] = path;
+    files.set(`${REL_PUBLIC}${path}`, data);
+  }
+  return { paths, files };
+}
+
+async function buildCss(fontPaths: Record<string, string>): Promise<string> {
+  const source = readFileSync(join(WEB, "styles/shop.css"), "utf8").replace(/__SF_FONT_([a-z-]+)__/g, (_match, name: string) => {
+    const path = fontPaths[name];
+    if (!path) throw new Error(`stylesheet names an unknown font: ${name}`);
+    return path;
+  });
   const result = await transform(source, {
     loader: "css",
     minify: true,
@@ -145,21 +164,22 @@ function buildCommunes(): { hash: string; files: Map<string, string> } {
   return { hash, files };
 }
 
-export type StorefrontPublicFiles = ReadonlyMap<string, string>;
+export type StorefrontPublicFiles = ReadonlyMap<string, string | Buffer>;
 
 const short = (content: string) => createHash("sha256").update(content).digest("hex").slice(0, 10);
 
 /** Every generated file as repo-relative path -> content. Pure: writes nothing. */
 export async function buildStorefrontPublic(): Promise<StorefrontPublicFiles> {
-  const [css, js] = await Promise.all([buildCss(), buildScript()]);
+  const fonts = buildFonts();
+  const [css, js] = await Promise.all([buildCss(fonts.paths), buildScript()]);
   const communes = buildCommunes();
   const cssPath = `/_sf/shop.${short(css)}.css`;
   const jsPath = `/_sf/shop.${short(js)}.js`;
-  const files = new Map<string, string>([
+  const files = new Map<string, string | Buffer>([
     ["control-plane/storefront/web/messages.generated.json", buildMessages()],
     [
       "control-plane/storefront/web/asset-manifest.generated.json",
-      `${JSON.stringify({ css: cssPath, js: jsPath, communes: `/_sf/c.${communes.hash}` }, null, 2)}\n`,
+      `${JSON.stringify({ css: cssPath, js: jsPath, communes: `/_sf/c.${communes.hash}`, fonts: fonts.paths }, null, 2)}\n`,
     ],
     [`${REL_PUBLIC}${cssPath}`, css],
     [`${REL_PUBLIC}${jsPath}`, js],
@@ -169,6 +189,7 @@ export async function buildStorefrontPublic(): Promise<StorefrontPublicFiles> {
     ],
   ]);
   for (const [path, content] of communes.files) files.set(path, content);
+  for (const [path, content] of fonts.files) files.set(path, content);
   return files;
 }
 
@@ -184,7 +205,7 @@ export function storefrontPublicDrift(files: StorefrontPublicFiles): string[] {
   for (const [path, content] of files) {
     const absolute = join(ROOT, path);
     if (!existsSync(absolute)) problems.push(`missing: ${path}`);
-    else if (readFileSync(absolute, "utf8") !== content) problems.push(`stale: ${path}`);
+    else if (!readFileSync(absolute).equals(typeof content === "string" ? Buffer.from(content) : content)) problems.push(`stale: ${path}`);
   }
   for (const path of obsolete(files)) problems.push(`obsolete: ${path}`);
   return problems;
@@ -211,7 +232,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   } else {
     writeStorefrontPublic(files);
     const big = [...files].filter(([path]) => !path.includes("/c."));
-    for (const [path, content] of big) console.log(`${path}  ${Buffer.byteLength(content)} bytes`);
+    for (const [path, content] of big) console.log(`${path}  ${typeof content === "string" ? Buffer.byteLength(content) : content.length} bytes`);
     console.log(`communes: ${files.size - big.length} files`);
   }
 }

@@ -244,7 +244,7 @@ describe("product page", () => {
   it("lists the other products below, but not itself", async () => {
     const store = await publishTestStore({ locale: "fr" });
     const html = page(store, { productId: "product_00000001" });
-    const more = html.slice(html.indexOf("sf-grid"));
+    const more = html.slice(html.indexOf("sf-rail"));
     expect(more).toContain("/sahel-store/p/product_00000002");
     expect(more).toContain("/sahel-store/p/product_00000003");
     expect(more).not.toContain("/sahel-store/p/product_00000001");

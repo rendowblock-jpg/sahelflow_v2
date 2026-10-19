@@ -40,6 +40,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.shop.needJs": "Please enable JavaScript to place your order.",
     "storefront.shop.thanksNext": "We will call you shortly to confirm your order.",
     "storefront.shop.confirmWhatsapp": "Confirm on WhatsApp",
+    "storefront.shop.details": "Details",
+    "storefront.shop.stepContact": "Your details",
+    "storefront.shop.stepDelivery": "Delivery",
     "storefront.shop.whatsappMessage": "Hello! I just ordered {{product}} ×{{count}} (ref. {{ref}}).",
     "storefront.releaseHistory.title": "Release history",
     "storefront.releaseHistory.description":
@@ -88,6 +91,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.shop.needJs": "Activez JavaScript pour passer commande.",
     "storefront.shop.thanksNext": "Nous vous appelons très bientôt pour confirmer votre commande.",
     "storefront.shop.confirmWhatsapp": "Confirmer sur WhatsApp",
+    "storefront.shop.details": "Détails",
+    "storefront.shop.stepContact": "Vos coordonnées",
+    "storefront.shop.stepDelivery": "Livraison",
     "storefront.shop.whatsappMessage": "Bonjour ! Je viens de commander {{product}} ×{{count}} (réf. {{ref}}).",
     "storefront.releaseHistory.title": "Historique des versions",
     "storefront.releaseHistory.description":
@@ -137,6 +143,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "storefront.shop.needJs": "فعّل جافاسكريبت لإتمام الطلب.",
     "storefront.shop.thanksNext": "سنتصل بك قريباً لتأكيد طلبك.",
     "storefront.shop.confirmWhatsapp": "أكّد عبر واتساب",
+    "storefront.shop.details": "التفاصيل",
+    "storefront.shop.stepContact": "بياناتك",
+    "storefront.shop.stepDelivery": "التوصيل",
     "storefront.shop.whatsappMessage": "مرحباً! لقد طلبت للتو {{product}} ×{{count}} (المرجع {{ref}}).",
     "storefront.releaseHistory.title": "سجل الإصدارات",
     "storefront.releaseHistory.description":

@@ -15,6 +15,8 @@ import {
   availableModes,
   clampQuantity,
   feeFor,
+  formatPhone,
+  isValidPhone,
   newIdempotencyKey,
   normalizePhone,
   orderSignature,
@@ -57,6 +59,7 @@ function boot(): void {
   // photo dots follow the swipe
   const track = document.querySelector<HTMLElement>(".sf-gal-track");
   const dots = document.querySelectorAll(".sf-dots i");
+  const counter = document.querySelector<HTMLElement>(".sf-count b");
   if (track && dots.length > 1 && "IntersectionObserver" in window) {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -64,6 +67,7 @@ function boot(): void {
           if (!entry.isIntersecting) continue;
           const index = Array.prototype.indexOf.call(track.children, entry.target) as number;
           dots.forEach((dot, position) => (position === index ? dot.setAttribute("aria-current", "true") : dot.removeAttribute("aria-current")));
+          if (counter) counter.textContent = String(index + 1);
         }
       },
       { root: track, threshold: 0.6 },
@@ -110,12 +114,23 @@ function boot(): void {
 
   const selectedWilaya = () => els.wilaya.value;
 
+  // a changed number pops once, so the eye sees what moved (never on first paint, never with reduced motion)
+  let animate = false;
+  function put(el: HTMLElement, text: string): void {
+    if (el.textContent === text) return;
+    el.textContent = text;
+    if (!animate || reduce) return;
+    el.classList.remove("is-bump");
+    void el.offsetWidth;
+    el.classList.add("is-bump");
+  }
+
   function refresh(): void {
     quantity = clampQuantity(quantity, current.r);
-    els.qty.textContent = String(quantity);
+    put(els.qty, String(quantity));
     els.minus.disabled = quantity <= 1;
     els.plus.disabled = quantity >= clampQuantity(Number.MAX_SAFE_INTEGER, current.r);
-    if (priceEl) priceEl.textContent = money(current.p);
+    if (priceEl) put(priceEl, money(current.p));
 
     const wilaya = selectedWilaya();
     const modes = wilaya ? availableModes(d.fees, wilaya) : [];
@@ -131,10 +146,10 @@ function boot(): void {
     }
     const fee = wilaya && mode ? feeFor(d.fees, wilaya, mode) : null;
     const sums = totals(current.p, quantity, fee);
-    els.subtotal.textContent = money(sums.subtotal);
-    els.shipping.textContent = fee === null ? (wilaya ? d.i.noDelivery ?? "" : d.i.pick ?? "") : fee === 0 ? d.i.free ?? "0" : money(fee);
-    els.total.textContent = money(sums.total);
-    if (barTotal) barTotal.textContent = money(sums.total);
+    put(els.subtotal, money(sums.subtotal));
+    put(els.shipping, fee === null ? (wilaya ? d.i.noDelivery ?? "" : d.i.pick ?? "") : fee === 0 ? d.i.free ?? "0" : money(fee));
+    put(els.total, money(sums.total));
+    if (barTotal) put(barTotal, money(sums.total));
     if (stockEl) {
       stockEl.hidden = current.s === "";
       if (current.s) stockEl.textContent = current.s;
@@ -218,6 +233,13 @@ function boot(): void {
   });
   els.commune.addEventListener("change", () => clearFieldError("commune"));
   for (const id of ["name", "phone", "address"] as const) els[id].addEventListener("input", () => clearFieldError(id));
+  // quiet confirmation as the visitor types: a tick when the field is good, the number written the usual way
+  const tick = (input: HTMLElement, ok: boolean) => input.closest(".sf-field")?.classList.toggle("is-ok", ok);
+  els.name.addEventListener("input", () => tick(els.name, els.name.value.trim().length >= 3));
+  els.phone.addEventListener("input", () => tick(els.phone, isValidPhone(els.phone.value)));
+  els.phone.addEventListener("blur", () => {
+    if (isValidPhone(els.phone.value)) els.phone.value = formatPhone(normalizePhone(els.phone.value));
+  });
   for (const input of modeInputs) input.addEventListener("change", () => { mode = input.value as Mode; clearFieldError("mode"); refresh(); });
   for (const input of variantInputs) {
     input.addEventListener("change", () => {
@@ -424,6 +446,7 @@ function boot(): void {
   });
 
   refresh();
+  requestAnimationFrame(() => { animate = true; });
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

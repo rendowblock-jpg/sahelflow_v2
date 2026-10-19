@@ -25,6 +25,11 @@ export function normalizePhone(raw: string): string {
   return `0${national}`;
 }
 
+/** "0555123456" -> "05 55 12 34 56", the way Algerians write a number. */
+export function formatPhone(national: string): string {
+  return national.replace(/\D/g, "").replace(/(\d{2})(?=\d)/g, "$1 ");
+}
+
 export function isValidPhone(raw: string): boolean {
   return /^0[5-7]\d{8}$/.test(normalizePhone(raw));
 }

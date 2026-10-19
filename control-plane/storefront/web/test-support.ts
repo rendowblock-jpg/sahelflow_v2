@@ -139,7 +139,7 @@ export function renderInputFor(store: PublishedTestStore, overrides: Partial<Ren
     defaultLocale: release.locale,
     artifact: JSON.parse(release.artifact_json) as PublicArtifact,
     stock,
-    assets: { css: "/_sf/shop.test.css", js: "/_sf/shop.test.js", communes: "/_sf/c.test" },
+    assets: { css: "/_sf/shop.test.css", js: "/_sf/shop.test.js", communes: "/_sf/c.test", fonts: { "naskh-bold": "/_sf/f.test.naskh-bold.woff2", "kufi-bold": "/_sf/f.test.kufi-bold.woff2", "kufi-regular": "/_sf/f.test.kufi-regular.woff2" } },
     storefrontId: key.id,
     releaseId: release.release_id,
     receiptKey: key.k,

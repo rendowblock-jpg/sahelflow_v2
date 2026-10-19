@@ -6,6 +6,7 @@ import {
   availableModes,
   clampQuantity,
   feeFor,
+  formatPhone,
   isValidPhone,
   newIdempotencyKey,
   normalizePhone,
@@ -113,5 +114,23 @@ describe("form validation", () => {
     expect(validate({ ...good, phone: "0455123456" }).phone).toBe(true);
     expect(validate({ ...good, address: "    " }).address).toBe(true);
     expect(validate({ ...good, phone: "+213 555 12 34 56" })).toEqual({});
+  });
+});
+
+describe("formatPhone", () => {
+  it("writes a national number the way Algerians do, in pairs", () => {
+    expect(formatPhone("0555123456")).toBe("05 55 12 34 56");
+    expect(formatPhone(normalizePhone("+213 555 12 34 56"))).toBe("05 55 12 34 56");
+    expect(formatPhone(normalizePhone("٠٥٥٥١٢٣٤٥٦"))).toBe("05 55 12 34 56");
+  });
+  it("is stable when applied twice and keeps a half-typed number readable", () => {
+    expect(formatPhone(formatPhone("0555123456"))).toBe("05 55 12 34 56");
+    expect(formatPhone("055512")).toBe("05 55 12");
+    expect(formatPhone("")).toBe("");
+  });
+  it("never changes whether a number is valid", () => {
+    for (const raw of ["0555123456", "0655123456", "0455123456", "055512345"]) {
+      expect(isValidPhone(formatPhone(normalizePhone(raw)))).toBe(isValidPhone(raw));
+    }
   });
 });

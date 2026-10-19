@@ -7,7 +7,7 @@ export const esc = escapeHtml;
 
 export type ShippingRow = { wilayaCode: string; mode: "home" | "desk"; feeDzd: number };
 
-export type Assets = { css: string; js: string; communes: string };
+export type Assets = { css: string; js: string; communes: string; fonts: Record<string, string> };
 
 /** Everything a render function needs; built once per page. */
 export type Ctx = {
@@ -67,6 +67,25 @@ export type IconName = keyof typeof PATHS;
 
 export function icon(name: IconName, extraClass = ""): string {
   return `<svg class="sf-i${extraClass ? ` ${extraClass}` : ""}" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${PATHS[name]}</svg>`;
+}
+
+const TRANSITION_NAMES = new WeakMap<Ctx, Set<string>>();
+
+/**
+ * A view-transition name for a product picture, unique on the page (a duplicate would cancel the
+ * transition). The card on the list page and the first gallery picture on the product page use the same
+ * name, so the picture glides from one to the other when the visitor opens a product.
+ */
+export function transitionName(ctx: Ctx, productId: string): string | null {
+  const name = `p-${productId.replace(/[^A-Za-z0-9_-]/g, "_")}`;
+  let used = TRANSITION_NAMES.get(ctx);
+  if (!used) {
+    used = new Set();
+    TRANSITION_NAMES.set(ctx, used);
+  }
+  if (used.has(name)) return null;
+  used.add(name);
+  return name;
 }
 
 /** The product page address. */

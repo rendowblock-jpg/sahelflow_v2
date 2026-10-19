@@ -59,13 +59,22 @@ describe("generated page files", () => {
   it("make a small stylesheet that keeps the fallbacks, the focus ring and reduced motion", () => {
     const css = readFileSync(join(PUBLIC, manifest.css), "utf8");
     console.warn(`[weight] css ${css.length} bytes, ${gzipSync(css).length} gzip`);
-    expect(gzipSync(css).length).toBeLessThan(6_500);
+    expect(gzipSync(css).length).toBeLessThan(8_000);
     for (const needle of [".sf-cta", ".sf-sticky", ".sf-gal-track", "scroll-snap-type", "prefers-reduced-motion", "@supports", ":focus-visible", "env(safe-area-inset-bottom", ".sf-notice", "inset-inline"]) {
       expect(css, needle).toContain(needle);
     }
     expect(css).not.toContain("@import");
     expect(css).not.toMatch(/url\(\s*["']?data:/); // the page's policy forbids data: images
-    expect(css).not.toMatch(/\bfont-face\b/); // system fonts only: zero font bytes
+    // Fonts: only our own subsetted Arabic faces. Same host, woff2, swap, and only for Arabic characters, so a French or
+    // English page never downloads a font byte (the browser fetches a face only when the page uses a character in its range).
+    const faces = css.match(/@font-face\{[^}]*\}/g) ?? [];
+    expect(faces.length).toBe(3);
+    for (const face of faces) {
+      expect(face).toMatch(/src:url\(\/_sf\/f\.[0-9a-f]{10}\.[a-z-]+\.woff2\)\s*format\("woff2"\)/);
+      expect(face).toContain("font-display:swap");
+      expect(face).toMatch(/unicode-range:U\+0600-06FF/);
+    }
+    expect(css).not.toMatch(/url\(\s*["']?https?:/);
   });
 
   it("make a small script with no eval and no network call except the page's own", () => {

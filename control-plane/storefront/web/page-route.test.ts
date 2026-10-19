@@ -23,7 +23,7 @@ const render: RenderStorePage = (input) =>
     .join(",")}">ok</html>`;
 
 function deps(cache: CacheLike | null, overrides: Partial<PageDeps> = {}): PageDeps {
-  return { render, assets: { css: "/_sf/test.css", js: "/_sf/test.js", communes: "/_sf/c.test" }, cache, ...overrides };
+  return { render, assets: { css: "/_sf/test.css", js: "/_sf/test.js", communes: "/_sf/c.test", fonts: {} }, cache, ...overrides };
 }
 
 function get(path: string, headers: Record<string, string> = {}, method = "GET"): Request {

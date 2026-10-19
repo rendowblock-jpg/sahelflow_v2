@@ -36,13 +36,16 @@ export function renderHeader(ctx: Ctx): string {
 export function renderAnnouncement(ctx: Ctx): string {
   const { theme, t } = ctx;
   if (!theme.announcement.enabled) return "";
-  const text = theme.announcement.text.trim() || t("storefront.studio.freePhoneConfirmation");
-  return `<div class="sf-ann"><span dir="auto">${esc(text)}</span></div>`;
+  const text = esc(theme.announcement.text.trim() || t("storefront.studio.freePhoneConfirmation"));
+  // Three copies per set and two sets: the track slides by half its width, so the loop never shows a gap.
+  // Only the first copy is read by assistive technology; with reduced motion only the first copy is shown.
+  const first = `<span dir="auto">${text}</span><span dir="auto" aria-hidden="true">${text}</span><span dir="auto" aria-hidden="true">${text}</span>`;
+  return `<div class="sf-ann" role="note"><div class="sf-ann-track"><div class="sf-ann-set">${first}</div><div class="sf-ann-set" aria-hidden="true">${first}</div></div></div>`;
 }
 
 export function renderFooter(ctx: Ctx, tagline: string): string {
   const { t, model } = ctx;
-  return `<footer class="sf-foot"><div class="sf-wrap"><strong>${esc(t("storefront.studio.footerBrand", { name: model.name }))}</strong>${tagline ? `<span dir="auto">${esc(tagline)}</span>` : ""}<small>${esc(t("storefront.view.poweredBy"))}</small></div></footer>`;
+  return `<footer class="sf-foot"><div class="sf-wrap"><strong dir="auto">${esc(model.name)}</strong>${tagline ? `<span dir="auto">${esc(tagline)}</span>` : ""}<small>${esc(t("storefront.studio.footerBrand", { name: model.name }))} · ${esc(t("storefront.view.poweredBy"))}</small></div></footer>`;
 }
 
 export type PageParts = {
@@ -64,6 +67,9 @@ export type PageParts = {
 };
 
 const OG_LOCALE: Record<PublicLocale, string> = { ar: "ar_DZ", fr: "fr_DZ", en: "en_GB" };
+
+/** The one display face each archetype loads on Arabic pages (the others never download). */
+const VOICE_FONT = { sahara: "naskh-bold", atlas: "kufi-bold", oasis: "kufi-regular" } as const;
 
 export function documentShell(ctx: Ctx, page: PageParts): string {
   const { theme, locale, origin, assets } = ctx;
@@ -90,6 +96,9 @@ export function documentShell(ctx: Ctx, page: PageParts): string {
     `<meta name="theme-color" content="${esc(theme.backgroundColor)}">`,
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
     `<link rel="stylesheet" href="${esc(assets.css)}">`,
+    ...(locale === "ar" && assets.fonts[VOICE_FONT[theme.template]]
+      ? [`<link rel="preload" as="font" type="font/woff2" href="${esc(assets.fonts[VOICE_FONT[theme.template]] as string)}" crossorigin>`]
+      : []),
     ...(page.preload ? [`<link rel="preload" as="image" href="${esc(page.preload)}" fetchpriority="high">`] : []),
     `<script type="application/ld+json">${jsonForScript({ "@context": "https://schema.org", ...(page.jsonLd as object) })}</script>`,
   ].join("\n");
