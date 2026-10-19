@@ -4,6 +4,7 @@ import {
   canonicalEntitlementBytes,
 } from "../../src/lib/license/entitlement-canonical";
 import type { SignedEntitlement } from "../../src/lib/license/entitlement";
+import { readEntitlementExpiry } from "../../src/lib/license/entitlement-expiry";
 import { isRemoteCommandType } from "../../src/lib/connected-platform/command-policy";
 import {
   canonicalConnectedEnvelopeBytes,
@@ -237,7 +238,10 @@ async function verifyEntitlement(
   if (!Number.isSafeInteger(productMajor) || productMajor < 1 || claims.productMajor !== productMajor) {
     throw new Error("product major mismatch");
   }
-  if (claims.expiresAt && Date.parse(claims.expiresAt) <= Date.now()) throw new Error("entitlement expired");
+  // Strict: null (never expires) or a real ISO-8601 instant. An unreadable expiry
+  // used to pass as "not expired" and enrol a workspace that could never authenticate.
+  const expiresAtMs = readEntitlementExpiry(claims.expiresAt);
+  if (expiresAtMs !== null && expiresAtMs <= Date.now()) throw new Error("entitlement expired");
   const ring = claims.issuer === "founder-offline"
     ? parsedKeyring(environment.SF_LICENSE_PERMANENT_PUBLIC_KEYS)
     : parsedKeyring(environment.SF_LICENSE_TRIAL_PUBLIC_KEYS);
