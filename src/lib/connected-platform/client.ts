@@ -297,6 +297,11 @@ export class ConnectedPlatformClient {
           Authorization: `Bearer ${authorization}`,
           "Content-Type": "application/octet-stream",
           "Content-Length": String(body.byteLength),
+          // The backup Worker refuses every upload whose SHA-256 header does not
+          // match the digest it was told at initiation (r2-integrity.ts), so the
+          // body must always carry its own digest. Without this header every
+          // desktop upload ended in manifest/chunk_integrity_mismatch (409).
+          "X-SahelFlow-SHA256": createHash("sha256").update(body).digest("hex"),
         },
         body,
         cache: "no-store",
