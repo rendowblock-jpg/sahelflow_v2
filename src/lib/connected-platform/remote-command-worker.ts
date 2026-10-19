@@ -7,14 +7,19 @@ import {
   isConnectedIdleState,
   NOT_ENROLLED_MESSAGE,
 } from "./worker-idle";
+import {
+  POLL_ACTIVE_MS,
+  commandPollDelayMs,
+  failureDelayMs,
+} from "./poll-cadence";
 
 const WORKER_KEY = Symbol.for("sahelflow.connected-command-worker.v1");
-const POLL_INTERVAL_MS = 5_000;
 const CURSOR_KEY_PREFIX = "connected.command.cursor.v1";
-// C2: escalate to error-level logging after ~1 minute of continuously failing
-// ticks (12 × 5s) — a persistent command-channel failure needs operator
+// C2: escalate to error-level logging after about five minutes of continuously
+// failing ticks (6 failures at the 5 s, 10 s, 20 s, 40 s, 80 s, 160 s back-off
+// of poll-cadence.ts) — a persistent command-channel failure needs operator
 // attention, not one lost warn line among success noise.
-const ESCALATE_AFTER_CONSECUTIVE_FAILURES = 12;
+const ESCALATE_AFTER_CONSECUTIVE_FAILURES = 6;
 
 type WorkerState = { running: boolean; timer: ReturnType<typeof setTimeout> | null };
 type WorkerGlobal = typeof globalThis & { [WORKER_KEY]?: WorkerState };
@@ -26,8 +31,11 @@ export function startConnectedCommandWorker(): void {
   workerGlobal[WORKER_KEY] = state;
   let consecutiveFailures = 0;
   let idle = false;
+  // Pace of the NEXT tick. Set by each tick from what the relay reported
+  // (poll-cadence.ts): quick while a phone is in use, slow otherwise.
+  let nextDelayMs = POLL_ACTIVE_MS;
   const schedule = () => {
-    state.timer = setTimeout(() => void tick(), idle ? IDLE_POLL_INTERVAL_MS : POLL_INTERVAL_MS);
+    state.timer = setTimeout(() => void tick(), idle ? IDLE_POLL_INTERVAL_MS : nextDelayMs);
     state.timer.unref?.();
   };
   const tick = async () => {
@@ -63,6 +71,7 @@ export function startConnectedCommandWorker(): void {
         });
       }
       consecutiveFailures = 0;
+      nextDelayMs = commandPollDelayMs({ hadWork: result.completed > 0, hint: result.hint });
       if (idle) logger.info("connected.command_worker.resumed");
       idle = false;
     } catch (error) {
@@ -80,6 +89,8 @@ export function startConnectedCommandWorker(): void {
       // the classified log keeps every failure operator-visible and
       // escalates once failures persist.
       consecutiveFailures += 1;
+      // Back off instead of hammering a relay that is already struggling.
+      nextDelayMs = failureDelayMs(consecutiveFailures);
       const detail = {
         name: error instanceof Error ? error.name : undefined,
         message: error instanceof Error ? error.message : String(error),
@@ -95,6 +106,6 @@ export function startConnectedCommandWorker(): void {
       schedule();
     }
   };
-  state.timer = setTimeout(() => void tick(), POLL_INTERVAL_MS);
+  state.timer = setTimeout(() => void tick(), POLL_ACTIVE_MS);
   state.timer.unref?.();
 }

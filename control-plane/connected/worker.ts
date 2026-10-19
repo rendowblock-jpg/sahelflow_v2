@@ -1010,7 +1010,24 @@ async function pollCommands(request: Request, environment: ConnectedWorkerEnviro
     commandId: row.command_id,
     envelope: JSON.parse(row.envelope_json) as unknown,
   }));
-  return json({ commands, nextCursor: commands.at(-1)?.relaySequence ?? after });
+  // Presence lets the desktop poll quickly only while a phone is in use and
+  // fall back to a slow heartbeat when none is paired (poll-cadence.ts). A
+  // device counts as active for two minutes after any authenticated request
+  // (authenticateDevice stamps last_seen_at). No identifiers leave the relay.
+  const presence = await environment.DB.prepare(
+    `SELECT COUNT(*) AS paired,
+            COALESCE(SUM(CASE WHEN last_seen_at IS NOT NULL
+                               AND datetime(last_seen_at) > datetime('now', '-120 seconds')
+                              THEN 1 ELSE 0 END), 0) AS active
+       FROM connected_device
+      WHERE workspace_id = ?1 AND revoked_at IS NULL`,
+  ).bind(workspaceId).first<{ paired: number; active: number }>();
+  return json({
+    commands,
+    nextCursor: commands.at(-1)?.relaySequence ?? after,
+    pairedDevices: Number(presence?.paired ?? 0),
+    activeDevices: Number(presence?.active ?? 0),
+  });
 }
 
 async function completeCommand(
