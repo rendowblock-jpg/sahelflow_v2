@@ -14,6 +14,12 @@ SahelFlow 1.0 Stable has not been released.
 
 ### 2026-10-18 — after Internal.44 (merged to `main`, not published)
 
+- #540 (`1f8d8cc3`): quiet updates. A top-bar chip offers the update, the download starts only on a click, "Restart to update" follows; no dialog and no 30-minute nagging. The desktop shell stops the contained servers and the WhatsApp sidecar through the normal-close teardown before the installer starts. Not run with a real installer; the Windows administrator confirmation remains.
+- #539 (`fe0dcdf4`): premium startup card that follows the colour mode and preset, with Minimize and Close, a draggable card, a single progress group and a hint at 45 s instead of 15 s. Compiled and tested for Windows in CI; not drawn on a Windows screen.
+- #538 (`9184f760`): cleared notifications stay cleared after SahelFlow is reopened (kept per member in the `Setting` table instead of the WebView's per-launch `localStorage`).
+- #537 (`8c4c0b79`): WhatsApp messages that arrive while SahelFlow is closed are kept (the inbound gate no longer waits for `open`); new diagnostics `inbound.early`, `offline.preview`, `offline.done`.
+- #536 (`49441056`): the stuck inbound WhatsApp record (own-message echoes carried an empty participant) is accepted; refusals now log field paths.
+- #510 (`64282a8f`): the workspace paints from the server's licence check; hydration mismatch fixed with `useSyncExternalStore`.
 - #534: `/agents` had two `main` landmarks on desktop; the AI canvas root is now a `div`, so the page has one. The change is two lines (a tag), measured by reading the rendered page's accessibility tree on a local dev server; the Playwright specs that touch the page run in CI.
 
 ### 2026-10-18 — signed Internal.44 publication (FD-072)
