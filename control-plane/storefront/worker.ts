@@ -98,7 +98,9 @@ export async function handleStorefrontRequest(
   return json({ error: "not_found" }, 404);
 }
 
-export default {
+const worker = {
   fetch: (request: Request, environment: StorefrontWorkerEnvironment, context?: PageContext) =>
     handleStorefrontRequest(request, environment, context),
 };
+
+export default worker;

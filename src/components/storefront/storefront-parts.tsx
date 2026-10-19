@@ -281,7 +281,7 @@ export function StorefrontHeader({
       style={{ background: "color-mix(in srgb, var(--background) 88%, transparent)" }}
     >
       <Container className="flex h-16 items-center justify-between gap-4">
-        <a href="#" className="flex min-w-0 items-center gap-2.5">
+        <a href="#" className="flex min-h-11 min-w-0 items-center gap-2.5">
           <span
             aria-hidden="true"
             className={cn(radius(theme.radius), "flex size-9 shrink-0 items-center justify-center text-sm font-bold")}

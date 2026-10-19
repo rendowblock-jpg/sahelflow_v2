@@ -30,7 +30,7 @@ function LanguageNav({ slug }: { slug: string }) {
             lang={code}
             aria-current="true"
             title={LANGUAGE[code].name}
-            className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full"
             style={{ background: "var(--accent)", color: "var(--sf-brand-text-on-surface)" }}
           >
             {LANGUAGE[code].code}
@@ -42,7 +42,7 @@ function LanguageNav({ slug }: { slug: string }) {
             lang={code}
             hrefLang={code}
             aria-label={LANGUAGE[code].name}
-            className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
           >
             {LANGUAGE[code].code}
           </a>

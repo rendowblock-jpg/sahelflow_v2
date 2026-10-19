@@ -381,6 +381,24 @@ export function StorefrontRenderer({
     }
   }
 
+  // The announcement bar and the header open the page; everything after them is
+  // the page's content. A seller may reorder sections, so only the leading
+  // run of banner sections stays outside the main landmark.
+  const bannerCount = bodySections.findIndex(
+    (section) => section.type !== "announcement" && section.type !== "navbar",
+  );
+  const bannerSections = bannerCount < 0 ? bodySections : bodySections.slice(0, bannerCount);
+  const contentSections = bannerCount < 0 ? [] : bodySections.slice(bannerCount);
+  const mainContent = (
+    <>
+      {contentSections.map(renderSection)}
+      {/* FD-061 EX-4: approved order-verified reviews ride below the composed
+          sections. Studio previews pass nothing, so the slot is invisible to
+          the seller authoring surface. */}
+      {renderReviews ? <Container className={space}>{renderReviews}</Container> : null}
+    </>
+  );
+
   return (
     <div
       data-storefront-root="true"
@@ -389,11 +407,15 @@ export function StorefrontRenderer({
       className="@container min-h-full"
       style={storefrontThemeStyle(theme)}
     >
-      {bodySections.map(renderSection)}
-      {/* FD-061 EX-4: approved order-verified reviews ride below the composed
-          sections. Studio previews pass nothing, so the slot is invisible to
-          the seller authoring surface. */}
-      {renderReviews ? <Container className={space}>{renderReviews}</Container> : null}
+      {bannerSections.map(renderSection)}
+      {/* A customer page has exactly one main landmark, between the banner
+          (announcement bar and header) and the footer. Embedded previews live
+          inside a page that already has one, so they add no element. */}
+      {isEmbeddedPreview ? (
+        mainContent
+      ) : (
+        <main id="storefront-main">{mainContent}</main>
+      )}
       {footerSections.map(renderSection)}
     </div>
   );

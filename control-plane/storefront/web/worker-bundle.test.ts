@@ -121,6 +121,9 @@ describe("GET /<slug> through the real Worker", () => {
     expect(html.startsWith('<!doctype html>\n<html lang="ar" dir="rtl">')).toBe(true);
     expect(html).toContain('data-storefront-root="true"');
     expect(html).toContain('data-storefront-locale="ar"');
+    expect(html.match(/<main[\s>]/g)?.length).toBe(1);
+    expect(html.indexOf("<header")).toBeLessThan(html.indexOf("<main"));
+    expect(html.indexOf("</main>")).toBeLessThan(html.indexOf("<footer"));
     expect(html).toContain("متجر الساحل");
     for (const product of SAMPLE_PRODUCTS) expect(html).toContain(product.name);
     expect(html).toContain(formatDZD(2_500, "ar"));
@@ -236,9 +239,10 @@ describe("GET /<slug> through the real Worker", () => {
     const store = await publishTestStore();
     const { html } = await getPage(store.env, "/sahel-store");
     const ld = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "";
-    const graph = (JSON.parse(ld) as { "@graph": Array<Record<string, any>> })["@graph"];
+    type Offer = { price: number; priceCurrency: string; availability: string };
+    const graph = (JSON.parse(ld) as { "@graph": Array<{ "@type": string; url?: string; offers?: Offer }> })["@graph"];
     expect(graph[0]).toMatchObject({ "@type": "Store", url: "https://shop.test/sahel-store" });
-    const offers = graph.filter((entry) => entry["@type"] === "Product").map((entry) => entry.offers);
+    const offers = graph.filter((entry) => entry["@type"] === "Product").map((entry) => entry.offers as Offer);
     expect(offers).toHaveLength(3);
     expect(offers.map((offer) => offer.priceCurrency)).toEqual(["DZD", "DZD", "DZD"]);
     expect(offers.map((offer) => offer.availability)).toEqual([
@@ -301,7 +305,7 @@ describe("GET /<slug> through the real Worker", () => {
     const elapsed = performance.now() - started;
     expect(response.status).toBe(200);
     expect(html.match(/data-storefront-product=/g)?.length).toBe(100);
-    console.log(`[page weight] 100 products: ${(html.length / 1024).toFixed(1)} KB html, ${gzipSync(html).length} bytes gzip, ${elapsed.toFixed(1)} ms in node (warm)`);
+    console.warn(`[page weight] 100 products: ${(html.length / 1024).toFixed(1)} KB html, ${gzipSync(html).length} bytes gzip, ${elapsed.toFixed(1)} ms in node (warm)`);
     expect(html.length).toBeLessThan(400_000);
     store.database.close();
   });
