@@ -4,30 +4,26 @@
  *   bun scripts/storefront-public-build.ts            write the generated files
  *   bun scripts/storefront-public-build.ts --check    exit 1 when they are stale
  *
- * The hosted page is rendered inside a Cloudflare Worker, which must not carry
- * the dashboard's 750 KB of translations or its 40 KB of CSS. This script
- * produces the two small files the Worker needs instead:
+ * Produces everything the storefront Worker serves or embeds besides its own code:
  *
  *   control-plane/storefront/web/messages.generated.json
- *       only the `storefront.*` messages the page code actually uses, resolved
- *       through the app's own static dictionaries and runtime dictionaries, so
- *       the page can never show different words from the Studio preview.
- *   control-plane/storefront/public/_sf/storefront.<hash>.css
- *       one Tailwind build of the shared storefront renderer, with the design
- *       tokens read from src/app/globals.css (never copied by hand).
- *   control-plane/storefront/web/asset-manifest.generated.json
- *       the hashed CSS path the Worker links to.
+ *       only the `storefront.*` messages the page code asks for, resolved through the
+ *       app's own static and runtime dictionaries, so the public page can never use
+ *       different words from the Studio.
+ *   control-plane/storefront/public/_sf/shop.<hash>.css   the store stylesheet
+ *   control-plane/storefront/public/_sf/shop.<hash>.js    the order-form script
+ *   control-plane/storefront/public/_sf/c.<hash>/<wilaya>.json   communes, one file per wilaya
+ *   control-plane/storefront/web/asset-manifest.generated.json   the hashed paths
  *
- * Static assets are served by Cloudflare without invoking the Worker, so the
- * stylesheet costs nothing against the Workers Free request budget.
+ * Files under public/ are served by Cloudflare without running the Worker, so they cost
+ * nothing against the Workers Free request budget and are cached for a year (hashed names).
  */
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import tailwindcss from "@tailwindcss/postcss";
-import postcss from "postcss";
+import { build, transform } from "esbuild";
 
 import { getTranslations } from "../src/lib/i18n";
 import { getRuntimeTranslation } from "../src/lib/i18n/runtime-translations";
@@ -35,38 +31,31 @@ import { getRuntimeTranslation } from "../src/lib/i18n/runtime-translations";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB = join(ROOT, "control-plane/storefront/web");
 const PUBLIC = join(ROOT, "control-plane/storefront/public");
+const REL_PUBLIC = "control-plane/storefront/public";
 
 const LOCALES = ["ar", "fr", "en"] as const;
 const PLURAL_RULES = ["zero", "one", "two", "few", "many", "other"] as const;
 
-/** The shared renderer files the hosted page draws, plus the page's own files. */
-const RENDERER_FILES = [
-  "src/components/storefront/storefront-renderer.tsx",
-  "src/components/storefront/storefront-hero.tsx",
-  "src/components/storefront/storefront-parts.tsx",
-  "src/components/storefront/storefront-product-grid.tsx",
-] as const;
-
-function webSourceFiles(): string[] {
-  const entries = readdirSync(WEB, { recursive: true }) as string[];
-  return entries
-    .filter((entry) => /\.(ts|tsx)$/.test(entry) && !/\.(test|generated)\.|(^|\/)test-support\./.test(entry))
-    .map((entry) => join("control-plane/storefront/web", entry).split(sep).join("/"))
-    .sort();
+function walk(directory: string): string[] {
+  if (!existsSync(directory)) return [];
+  return (readdirSync(directory, { recursive: true }) as string[])
+    .map((entry) => join(directory, entry))
+    .filter((path) => statSync(path).isFile());
 }
 
 /** Repo-relative paths of every source file the hosted page is built from. */
 export function storefrontPublicSourceFiles(): string[] {
-  return [...RENDERER_FILES, ...webSourceFiles()];
+  return walk(WEB)
+    .map((path) => path.slice(ROOT.length + 1).split(sep).join("/"))
+    .filter((file) => /\.(ts|tsx)$/.test(file) && !/\.(test|generated)\.|(^|\/)test-support\./.test(file))
+    .sort();
 }
-
-const scannedFiles = storefrontPublicSourceFiles;
 
 const KEY_PATTERN = /["'`](storefront\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+)["'`]/g;
 
 export function storefrontPublicMessageKeys(): string[] {
   const keys = new Set<string>();
-  for (const file of scannedFiles()) {
+  for (const file of storefrontPublicSourceFiles()) {
     const source = readFileSync(join(ROOT, file), "utf8");
     for (const match of source.matchAll(KEY_PATTERN)) if (match[1]) keys.add(match[1]);
   }
@@ -84,15 +73,16 @@ function buildMessages(): string {
       const base = resolveMessage(locale, key);
       const target = out[locale] as Record<string, string>;
       if (base !== undefined) target[key] = base;
+      let plural = false;
       for (const rule of PLURAL_RULES) {
-        const plural = resolveMessage(locale, `${key}_${rule}`);
-        if (plural !== undefined) target[`${key}_${rule}`] = plural;
+        const value = resolveMessage(locale, `${key}_${rule}`);
+        if (value !== undefined) {
+          target[`${key}_${rule}`] = value;
+          plural = true;
+        }
       }
-      // A key used by the page but missing from a language must fail the build,
-      // never ship as a raw key on a customer's phone.
-      if (base === undefined && !PLURAL_RULES.some((rule) => resolveMessage(locale, `${key}_${rule}`) !== undefined)) {
-        throw new Error(`Storefront message "${key}" is missing for "${locale}"`);
-      }
+      // A key the page uses but a language lacks must fail the build, never ship as a raw key on a phone.
+      if (base === undefined && !plural) throw new Error(`Storefront message "${key}" is missing for "${locale}"`);
     }
   }
   const sorted: Record<string, Record<string, string>> = {};
@@ -103,102 +93,88 @@ function buildMessages(): string {
   return `${JSON.stringify(sorted, null, 2)}\n`;
 }
 
-/** The text of the first `opener { ... }` block, matching braces and skipping comments. */
-function extractBlock(css: string, opener: string): string {
-  const start = css.indexOf(`\n${opener}`);
-  if (start < 0) throw new Error(`globals.css no longer has a "${opener}" block`);
-  const from = start + 1;
-  let depth = 0;
-  for (let index = css.indexOf("{", from); index < css.length; index += 1) {
-    if (css.startsWith("/*", index)) {
-      index = css.indexOf("*/", index) + 1;
-      continue;
-    }
-    if (css[index] === "{") depth += 1;
-    if (css[index] === "}") {
-      depth -= 1;
-      if (depth === 0) return css.slice(from, index + 1);
-    }
-  }
-  throw new Error(`Unbalanced "${opener}" block in globals.css`);
-}
-
-function entryCss(): string {
-  const globals = readFileSync(join(ROOT, "src/app/globals.css"), "utf8");
-  const darkVariant = /^@custom-variant dark .*;$/m.exec(globals)?.[0];
-  if (!darkVariant) throw new Error("globals.css no longer defines the dark custom variant");
-  const system = readFileSync(join(ROOT, "src/app/storefront-system.css"), "utf8");
-  const sources = scannedFiles()
-    .map((file) => `@source "${relative(WEB, join(ROOT, file)).split(sep).join("/")}";`)
-    .join("\n");
-  return `@import "tailwindcss" source(none);
-${sources}
-
-${darkVariant}
-
-${extractBlock(globals, "@theme inline {")}
-
-${extractBlock(globals, "@theme {")}
-
-/* Zero font bytes on a customer's phone: the system fonts already cover Arabic. */
-@theme inline {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", "Noto Sans", Tahoma, Arial, sans-serif;
-}
-
-${system}
-
-:root { --radius: 0.625rem; }
-html { -webkit-text-size-adjust: 100%; }
-button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
-[data-storefront-root] :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-[data-storefront-locale="ar"] {
-  font-family: "Segoe UI", "Noto Sans Arabic", "Noto Naskh Arabic", Tahoma, system-ui, sans-serif;
-  line-height: 1.65;
-}
-[data-storefront-locale="ar"] :where(:dir(rtl)) { letter-spacing: normal !important; }
-.sf-notice {
-  display: grid; min-height: 100svh; place-items: center; padding: 2rem; text-align: center;
-  background: #fafaf9; color: #1c1917;
-}
-.sf-notice h1 { font-size: 1.25rem; font-weight: 600; }
-.sf-notice p { margin-top: 0.5rem; color: #57534e; }
-@media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
-}
-`;
-}
-
 async function buildCss(): Promise<string> {
-  const result = await postcss([tailwindcss({ optimize: { minify: true } })]).process(entryCss(), {
-    from: join(WEB, "storefront.css"),
-    map: false,
+  const source = readFileSync(join(WEB, "styles/shop.css"), "utf8");
+  const result = await transform(source, {
+    loader: "css",
+    minify: true,
+    target: ["chrome80", "safari13", "firefox78"],
+    legalComments: "none",
   });
-  return result.css;
+  return result.code;
+}
+
+async function buildScript(): Promise<string> {
+  const result = await build({
+    entryPoints: [join(WEB, "client/shop.ts")],
+    bundle: true,
+    write: false,
+    format: "iife",
+    platform: "browser",
+    target: "es2019",
+    minify: true,
+    legalComments: "none",
+    tsconfig: join(ROOT, "tsconfig.json"),
+    absWorkingDir: ROOT,
+    logLevel: "silent",
+  });
+  const output = result.outputFiles[0];
+  if (!output) throw new Error("order-form script produced no output");
+  return output.text;
+}
+
+type Commune = { wilayaCode: number; name: string; nameAr: string };
+
+function buildCommunes(): { hash: string; files: Map<string, string> } {
+  const all = JSON.parse(readFileSync(join(ROOT, "data/communes.json"), "utf8")) as Commune[];
+  const byWilaya = new Map<string, Array<[string, string]>>();
+  for (const commune of all) {
+    const code = String(commune.wilayaCode).padStart(2, "0");
+    const list = byWilaya.get(code) ?? [];
+    list.push([commune.name, commune.nameAr]);
+    byWilaya.set(code, list);
+  }
+  const serialised = new Map<string, string>();
+  for (const [code, list] of [...byWilaya.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    list.sort((a, b) => a[0].localeCompare(b[0], "fr"));
+    serialised.set(code, JSON.stringify(list));
+  }
+  const hash = createHash("sha256").update([...serialised.entries()].map(([code, json]) => `${code}${json}`).join("\n")).digest("hex").slice(0, 10);
+  const files = new Map<string, string>();
+  for (const [code, json] of serialised) files.set(`${REL_PUBLIC}/_sf/c.${hash}/${code}.json`, json);
+  return { hash, files };
 }
 
 export type StorefrontPublicFiles = ReadonlyMap<string, string>;
 
+const short = (content: string) => createHash("sha256").update(content).digest("hex").slice(0, 10);
+
 /** Every generated file as repo-relative path -> content. Pure: writes nothing. */
 export async function buildStorefrontPublic(): Promise<StorefrontPublicFiles> {
-  const css = await buildCss();
-  const hash = createHash("sha256").update(css).digest("hex").slice(0, 10);
-  const cssPath = `/_sf/storefront.${hash}.css`;
-  return new Map([
+  const [css, js] = await Promise.all([buildCss(), buildScript()]);
+  const communes = buildCommunes();
+  const cssPath = `/_sf/shop.${short(css)}.css`;
+  const jsPath = `/_sf/shop.${short(js)}.js`;
+  const files = new Map<string, string>([
     ["control-plane/storefront/web/messages.generated.json", buildMessages()],
-    ["control-plane/storefront/web/asset-manifest.generated.json", `${JSON.stringify({ css: cssPath }, null, 2)}\n`],
-    [`control-plane/storefront/public${cssPath}`, css],
     [
-      "control-plane/storefront/public/_headers",
+      "control-plane/storefront/web/asset-manifest.generated.json",
+      `${JSON.stringify({ css: cssPath, js: jsPath, communes: `/_sf/c.${communes.hash}` }, null, 2)}\n`,
+    ],
+    [`${REL_PUBLIC}${cssPath}`, css],
+    [`${REL_PUBLIC}${jsPath}`, js],
+    [
+      `${REL_PUBLIC}/_headers`,
       "/_sf/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n",
     ],
   ]);
+  for (const [path, content] of communes.files) files.set(path, content);
+  return files;
 }
 
-function staleStylesheets(files: StorefrontPublicFiles): string[] {
-  const directory = join(PUBLIC, "_sf");
-  if (!existsSync(directory)) return [];
-  return readdirSync(directory)
-    .map((name) => `control-plane/storefront/public/_sf/${name}`)
+function obsolete(files: StorefrontPublicFiles): string[] {
+  return walk(join(PUBLIC, "_sf"))
+    .map((path) => path.slice(ROOT.length + 1).split(sep).join("/"))
     .filter((path) => !files.has(path));
 }
 
@@ -210,17 +186,17 @@ export function storefrontPublicDrift(files: StorefrontPublicFiles): string[] {
     if (!existsSync(absolute)) problems.push(`missing: ${path}`);
     else if (readFileSync(absolute, "utf8") !== content) problems.push(`stale: ${path}`);
   }
-  for (const path of staleStylesheets(files)) problems.push(`obsolete: ${path}`);
+  for (const path of obsolete(files)) problems.push(`obsolete: ${path}`);
   return problems;
 }
 
 export function writeStorefrontPublic(files: StorefrontPublicFiles): void {
+  for (const path of obsolete(files)) rmSync(join(ROOT, path));
   for (const [path, content] of files) {
     const absolute = join(ROOT, path);
     mkdirSync(dirname(absolute), { recursive: true });
     writeFileSync(absolute, content);
   }
-  for (const path of staleStylesheets(files)) rmSync(join(ROOT, path));
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -234,6 +210,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     console.log("Storefront public files are current.");
   } else {
     writeStorefrontPublic(files);
-    for (const [path, content] of files) console.log(`${path}  ${content.length} bytes`);
+    const big = [...files].filter(([path]) => !path.includes("/c."));
+    for (const [path, content] of big) console.log(`${path}  ${Buffer.byteLength(content)} bytes`);
+    console.log(`communes: ${files.size - big.length} files`);
   }
 }

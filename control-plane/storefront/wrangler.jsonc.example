@@ -5,15 +5,9 @@
   "compatibility_date": "2026-08-13",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
-  // React must be bundled in its production build (smaller, faster to render).
-  "define": { "process.env.NODE_ENV": "\"production\"" },
-  // The shared storefront renderer imports this module by name. In the Worker
-  // it is replaced by a small server-side version (web/shims). Do not remove.
-  "alias": {
-    "@/components/storefront/storefront-locale-provider": "./web/shims/storefront-locale-provider.tsx"
-  },
-  // The page stylesheet is a static asset: served by Cloudflare without
-  // running the Worker, so it costs nothing against the request budget.
+  // The store stylesheet, the order-form script and the commune lists are static
+  // assets: served by Cloudflare without running the Worker, so they cost nothing
+  // against the request budget. Regenerate with: bun scripts/storefront-public-build.ts
   "assets": { "directory": "./public" },
   "d1_databases": [
     {

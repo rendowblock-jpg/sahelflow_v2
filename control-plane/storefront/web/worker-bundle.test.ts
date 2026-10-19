@@ -1,25 +1,25 @@
 /**
- * End to end, in one process: the REAL Worker entry (worker.ts) is bundled with
- * esbuild using the define/alias/assets taken from wrangler.jsonc.example, the
- * same way wrangler bundles it, and is then driven with real requests against a
- * SQLite database holding a store published through the real publish code.
+ * End to end, in one process: the REAL Worker entry (worker.ts) is bundled with esbuild the
+ * way wrangler does it, then driven with real requests against a SQLite database holding a
+ * store published through the real publish code. Static assets (stylesheet, order-form
+ * script, commune lists) are checked on disk because Cloudflare, not the Worker, serves them.
  */
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 import { build } from "esbuild";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { formatDZD } from "../../../src/lib/utils";
-import { createPublicTranslator } from "./translator";
 import manifest from "./asset-manifest.generated.json";
-import { escapeHtml } from "./html";
-import { SAMPLE_PRODUCTS, publishTestStore } from "./test-support";
+import { createPublicTranslator } from "./translator";
+import { formatPrice } from "./shop/format";
+import { publishTestStore } from "./test-support";
 
 const ROOT = process.cwd();
 const DIR = join(ROOT, "control-plane/storefront");
+const PUBLIC = join(DIR, "public");
 const ORIGIN = "https://shop.test";
 
 type WorkerModule = {
@@ -32,17 +32,16 @@ let bundleBytes = 0;
 let bundleGzip = 0;
 let bundledInputs: string[] = [];
 
-function exampleConfig(): { main: string; define: Record<string, string>; alias: Record<string, string>; assets: { directory: string } } {
+function exampleConfig(): { main: string; assets: { directory: string } } {
   const text = readFileSync(join(DIR, "wrangler.jsonc.example"), "utf8");
   return JSON.parse(text.split("\n").filter((line) => !/^\s*\/\//.test(line)).join("\n"));
 }
 
 beforeAll(async () => {
   workDir = mkdtempSync(join(tmpdir(), "sf-worker-"));
-  const config = exampleConfig();
   const outfile = join(workDir, "worker.mjs");
   const result = await build({
-    entryPoints: [join(DIR, config.main)],
+    entryPoints: [join(DIR, exampleConfig().main)],
     outfile,
     bundle: true,
     format: "esm",
@@ -54,17 +53,10 @@ beforeAll(async () => {
     metafile: true,
     external: ["node:*", "cloudflare:*"],
     tsconfig: join(ROOT, "tsconfig.json"),
-    // What wrangler passes to esbuild (its default `jsx_factory` / `jsx_fragment`). It forces
-    // the classic JSX transform whatever tsconfig says; testing the automatic one hid a crash.
-    jsxFactory: "React.createElement",
-    jsxFragment: "React.Fragment",
-    define: config.define,
-    alias: Object.fromEntries(Object.entries(config.alias).map(([from, to]) => [from, resolve(DIR, to)])),
     absWorkingDir: ROOT,
     logLevel: "silent",
   });
-  const output = Object.values(result.metafile.outputs)[0];
-  bundledInputs = Object.keys(output?.inputs ?? {});
+  bundledInputs = Object.keys(Object.values(result.metafile.outputs)[0]?.inputs ?? {});
   const bytes = readFileSync(outfile);
   bundleBytes = bytes.length;
   bundleGzip = gzipSync(bytes, { level: 9 }).length;
@@ -73,218 +65,112 @@ beforeAll(async () => {
 
 afterAll(() => {
   if (workDir) rmSync(workDir, { recursive: true, force: true });
+  vi.unstubAllGlobals();
 });
 
-async function getPage(
-  env: unknown,
-  path: string,
-  headers: Record<string, string> = {},
-): Promise<{ response: Response; html: string }> {
+async function get(env: unknown, path: string, headers: Record<string, string> = {}) {
   const response = await worker.default.fetch(new Request(`${ORIGIN}${path}`, { headers }), env);
-  return { response, html: await response.text() };
+  return { response, text: await response.text() };
 }
 
 class MemoryCache {
   readonly store = new Map<string, Response>();
-  async match(request: Request): Promise<Response | undefined> {
+  async match(request: Request) {
     return this.store.get(request.url)?.clone();
   }
-  async put(request: Request, response: Response): Promise<void> {
+  async put(request: Request, response: Response) {
     this.store.set(request.url, response);
   }
 }
 
 describe("the bundled Worker", () => {
-  it("fits the Workers Free size limit with room to spare and carries no dashboard code", () => {
-    expect(bundleBytes).toBeLessThan(400_000);
-    expect(bundleGzip).toBeLessThan(120_000);
+  it("is small, carries no framework and no dashboard code", () => {
+    console.warn(`[bundle] worker ${bundleBytes} bytes, ${bundleGzip} gzip`);
+    expect(bundleBytes).toBeLessThan(160_000);
+    expect(bundleGzip).toBeLessThan(55_000);
     const forbidden = bundledInputs.filter((input) =>
-      /locales\/(ar|fr|en)\.json|use-i18n|runtime-translations|node_modules\/(next|radix-ui|@radix-ui|recharts|zustand|sonner)\//.test(input),
+      /locales\/(ar|fr|en)\.json|use-i18n|runtime-translations|node_modules\/(react|react-dom|next|radix-ui|@radix-ui|recharts|zustand|sonner|tailwind-merge|clsx|lucide-react)\//.test(input),
     );
     expect(forbidden).toEqual([]);
-    expect(bundledInputs.some((input) => input.includes("react-dom"))).toBe(true);
   });
 
-  it("is told about static assets, a production React and the alias in the file the deploy copies", () => {
-    const config = exampleConfig();
-    expect(config.assets.directory).toBe("./public");
-    expect(config.define["process.env.NODE_ENV"]).toBe('"production"');
-    expect(Object.keys(config.alias)).toEqual(["@/components/storefront/storefront-locale-provider"]);
+  it("serves its stylesheet, script and commune lists from the assets directory", () => {
+    expect(exampleConfig().assets.directory).toBe("./public");
+    for (const path of [manifest.css, manifest.js, "/favicon.svg", "/robots.txt", "/_headers"]) {
+      expect(existsSync(join(PUBLIC, path)), path).toBe(true);
+    }
+    const files = readdirSync(join(PUBLIC, manifest.communes));
+    expect(files).toHaveLength(58);
+    const alger = JSON.parse(readFileSync(join(PUBLIC, manifest.communes, "16.json"), "utf8")) as Array<[string, string]>;
+    expect(alger.length).toBeGreaterThan(40);
+    expect(alger.some(([latin, arabic]) => latin === "Bab Ezzouar" && arabic.length > 0)).toBe(true);
+    expect(alger.map(([latin]) => latin)).toEqual([...alger.map(([latin]) => latin)].sort((a, b) => a.localeCompare(b, "fr")));
   });
 });
 
-describe("GET /<slug> through the real Worker", () => {
-  it("renders the published store in Arabic, right to left, with the shared renderer", async () => {
+describe("GET /<slug> and /<slug>/p/<product> through the real Worker", () => {
+  it("serves the store home and a product page with the security headers", async () => {
     const store = await publishTestStore({ locale: "ar" });
-    const { response, html } = await getPage(store.env, "/sahel-store");
-    expect(response.status).toBe(200);
-    expect(html.startsWith('<!doctype html>\n<html lang="ar" dir="rtl">')).toBe(true);
-    expect(html).toContain('data-storefront-root="true"');
-    expect(html).toContain('data-storefront-locale="ar"');
-    expect(html.match(/<main[\s>]/g)?.length).toBe(1);
-    expect(html.indexOf("<header")).toBeLessThan(html.indexOf("<main"));
-    expect(html.indexOf("</main>")).toBeLessThan(html.indexOf("<footer"));
-    expect(html).toContain("متجر الساحل");
-    for (const product of SAMPLE_PRODUCTS) expect(html).toContain(product.name);
-    expect(html).toContain(formatDZD(2_500, "ar"));
-    expect(html).toContain(formatDZD(8_000, "ar"));
-    expect(html).toContain(createPublicTranslator("ar")("storefront.view.outOfStock"));
-    expect(html).toContain(`<link rel="stylesheet" href="${manifest.css}">`);
-    expect(existsSync(join(DIR, "public", manifest.css))).toBe(true);
-    expect(html).toContain('<link rel="icon" href="/favicon.svg"');
-    expect(existsSync(join(DIR, "public/favicon.svg"))).toBe(true);
-    expect(html).toContain('<meta name="viewport" content="width=device-width, initial-scale=1">');
-    expect(html).toContain('<meta name="robots" content="index, follow">');
+    const home = await get(store.env, "/sahel-store");
+    expect(home.response.status).toBe(200);
+    expect(home.text.startsWith('<!doctype html>\n<html lang="ar" dir="rtl">')).toBe(true);
+    expect(home.text).toContain(`<link rel="stylesheet" href="${manifest.css}">`);
+    expect(home.text).toContain(formatPrice(2_500, "ar"));
+    const product = await get(store.env, "/sahel-store/p/product_00000001?lang=fr");
+    expect(product.response.status).toBe(200);
+    expect(product.response.headers.get("Content-Language")).toBe("fr");
+    expect(product.text).toContain(`<script src="${manifest.js}" defer></script>`);
+    expect(product.text).toContain('<form id="order"');
+    const csp = product.response.headers.get("Content-Security-Policy") ?? "";
+    expect(csp).toContain("script-src 'self'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).not.toMatch(/script-src[^;]*unsafe/);
+    expect(csp).toContain("connect-src 'self'");
     store.database.close();
   });
 
-  it("renders French and English left to right, with canonical and alternate links", async () => {
-    const store = await publishTestStore({ locale: "ar" });
-    const fr = await getPage(store.env, "/sahel-store?lang=fr");
-    expect(fr.html.startsWith('<!doctype html>\n<html lang="fr" dir="ltr">')).toBe(true);
-    expect(fr.response.headers.get("Content-Language")).toBe("fr");
-    expect(fr.html).toContain('<link rel="canonical" href="https://shop.test/sahel-store?lang=fr">');
-    expect(fr.html).toContain('<link rel="alternate" hreflang="x-default" href="https://shop.test/sahel-store">');
-    for (const code of ["ar", "fr", "en"]) {
-      expect(fr.html).toContain(`<link rel="alternate" hreflang="${code}" href="https://shop.test/sahel-store?lang=${code}">`);
-    }
-    expect(fr.html).toContain(createPublicTranslator("fr")("storefront.view.outOfStock"));
-
-    const en = await getPage(store.env, "/sahel-store", { "Accept-Language": "en-GB,en;q=0.9" });
-    expect(en.html.startsWith('<!doctype html>\n<html lang="en" dir="ltr">')).toBe(true);
-
-    const published = await getPage(store.env, "/sahel-store");
-    expect(published.html).toContain('<link rel="canonical" href="https://shop.test/sahel-store">');
-    store.database.close();
-  });
-
-  it("offers the other two languages as plain links and marks the current one", async () => {
-    const store = await publishTestStore({ locale: "fr" });
-    const { html } = await getPage(store.env, "/sahel-store");
-    expect(html).toContain('href="/sahel-store?lang=ar"');
-    expect(html).toContain('href="/sahel-store?lang=en"');
-    expect(html).not.toContain('href="/sahel-store?lang=fr"');
-    expect(html).toContain('aria-current="true"');
-    store.database.close();
-  });
-
-  it.each(["sahara", "atlas", "oasis"] as const)("renders the %s template", async (template) => {
+  it.each(["sahara", "atlas", "oasis"] as const)("renders the %s voice on both pages", async (template) => {
     const store = await publishTestStore({ template });
-    const { response, html } = await getPage(store.env, "/sahel-store");
-    expect(response.status).toBe(200);
-    expect(html).toContain(`data-storefront-template="${template}"`);
-    store.database.close();
-  });
-
-  it("never lets seller text become markup or script", async () => {
-    const hostile = `"><img src=x onerror=alert(1)><script>alert(1)</script>`;
-    const scrub = (settings: Record<string, string | number | boolean | null>) =>
-      Object.fromEntries(Object.entries(settings).map(([key, value]) => [key, typeof value === "string" && !/url$/i.test(key) ? hostile : value]));
-    const store = await publishTestStore({
-      storeName: hostile,
-      description: hostile,
-      products: [
-        { id: "product_00000001", name: hostile, sku: hostile, images: null, price: 100, stock: 5, productVariants: [] },
-      ],
-      shapeTheme: (theme) => {
-        theme.announcement = { enabled: true, text: hostile };
-        theme.hero = { ...theme.hero, eyebrow: hostile, headline: hostile, body: hostile, ctaLabel: hostile };
-        theme.builder.seo = { title: hostile, description: hostile, socialImageUrl: null, noIndex: false };
-        theme.builder.contact = { phone: hostile, whatsapp: "javascript:alert(1)", email: hostile, address: hostile };
-        theme.builder.composition.sections = [
-          ...theme.builder.composition.sections.map((section) => ({
-            ...section,
-            settings: scrub(section.settings),
-            blocks: section.blocks.map((block) => ({ ...block, settings: scrub(block.settings) })),
-          })),
-          {
-            id: "media_hostile",
-            type: "media" as const,
-            enabled: true,
-            settings: { imageUrl: "https://images.example.test/media.jpg", title: hostile, body: hostile },
-            blocks: [],
-          },
-        ];
-      },
-    });
-    // The desktop refuses a non-https image, but the Worker must not rely on that:
-    // plant one in the stored artifact the way a compromised publisher could.
-    const row = store.database.prepare("SELECT artifact_json FROM storefront_release").get() as { artifact_json: string };
-    const planted = JSON.parse(row.artifact_json) as { theme: { builder: { composition: { sections: Array<{ id: string; settings: Record<string, unknown> }> } } } };
-    for (const section of planted.theme.builder.composition.sections) {
-      for (const key of Object.keys(section.settings)) if (/url$/i.test(key)) section.settings[key] = "javascript:alert(1)";
-    }
-    store.database.prepare("UPDATE storefront_release SET artifact_json = ?1").run(JSON.stringify(planted));
-    for (const lang of ["ar", "fr", "en"]) {
-      const { response, html } = await getPage(store.env, `/sahel-store?lang=${lang}`);
-      expect(response.status, lang).toBe(200);
-      expect(html, lang).not.toContain("<img src=x");
-      expect(html, lang).not.toContain("<script>alert");
-      // The contact line may show the seller's text "javascript:alert(1)" as words; it must never be a link target.
-      expect(html, lang).not.toMatch(/(?:href|src|srcset|action|formaction|poster|data)\s*=\s*["']?\s*javascript:/i);
-      expect(html, lang).not.toContain("images.example.test/media.jpg");
-      expect(html, lang).toContain("&lt;img src=x onerror=alert(1)&gt;");
-      expect(html.match(/<script/g)?.length, lang).toBe(1);
-      expect(html.match(/<\/script>/g)?.length, lang).toBe(1);
-      const ld = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "";
-      const graph = (JSON.parse(ld) as { "@graph": Array<Record<string, unknown>> })["@graph"];
-      expect(graph[0]?.name).toBe(hostile);
-      expect(graph.find((entry) => entry["@type"] === "Product")?.name).toBe(hostile);
-      expect(html, lang).toContain(`<title>${escapeHtml(hostile)}</title>`);
+    for (const path of ["/sahel-store", "/sahel-store/p/product_00000003"]) {
+      const { response, text } = await get(store.env, path);
+      expect(response.status, path).toBe(200);
+      expect(text).toContain(`data-voice="${template}"`);
     }
     store.database.close();
   });
 
-  it("describes products to search engines with price, currency and stock", async () => {
+  it("says 404 for an unknown product and for a product with a bad id, in the visitor's language", async () => {
     const store = await publishTestStore();
-    const { html } = await getPage(store.env, "/sahel-store");
-    const ld = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "";
-    type Offer = { price: number; priceCurrency: string; availability: string };
-    const graph = (JSON.parse(ld) as { "@graph": Array<{ "@type": string; url?: string; offers?: Offer }> })["@graph"];
-    expect(graph[0]).toMatchObject({ "@type": "Store", url: "https://shop.test/sahel-store" });
-    const offers = graph.filter((entry) => entry["@type"] === "Product").map((entry) => entry.offers as Offer);
-    expect(offers).toHaveLength(3);
-    expect(offers.map((offer) => offer.priceCurrency)).toEqual(["DZD", "DZD", "DZD"]);
-    expect(offers.map((offer) => offer.availability)).toEqual([
-      "https://schema.org/InStock", "https://schema.org/OutOfStock", "https://schema.org/InStock",
-    ]);
-    expect(offers.map((offer) => offer.price)).toEqual([2_500, 4_200, 8_000]);
+    const unknown = await get(store.env, "/sahel-store/p/product_99999999", { "Accept-Language": "en" });
+    expect(unknown.response.status).toBe(404);
+    expect(unknown.text).toContain("Store not found");
+    const bad = await get(store.env, "/sahel-store/p/a");
+    expect(bad.response.status).toBe(404);
+    expect(JSON.parse(bad.text)).toEqual({ error: "not_found" });
     store.database.close();
   });
 
-  it("keeps search engines out of a store whose seller asked for that", async () => {
-    const store = await publishTestStore({
-      shapeTheme: (theme) => { theme.builder.seo = { ...theme.builder.seo, noIndex: true }; },
-    });
-    const { html } = await getPage(store.env, "/sahel-store");
-    expect(html).toContain('<meta name="robots" content="noindex, nofollow">');
-    store.database.close();
-  });
-
-  it("says 404 and 503 in the visitor's language", async () => {
+  it("says 404 and 503 for a missing and a paused store", async () => {
     const store = await publishTestStore({ paused: true });
-    const missing = await getPage(store.env, "/nope-store", { "Accept-Language": "en" });
-    expect(missing.response.status).toBe(404);
-    expect(missing.html).toContain("Store not found");
-    const paused = await getPage(store.env, "/sahel-store", { "Accept-Language": "fr" });
+    expect((await get(store.env, "/nope-store", { "Accept-Language": "fr" })).response.status).toBe(404);
+    const paused = await get(store.env, "/sahel-store/p/product_00000001", { "Accept-Language": "fr" });
     expect(paused.response.status).toBe(503);
-    expect(paused.html).toContain("Boutique temporairement fermée");
+    expect(paused.text).toContain(createPublicTranslator("fr")("storefront.public.pausedTitle"));
     store.database.close();
   });
 
-  it("serves a repeat visit from the edge cache with the same page", async () => {
+  it("serves a repeat visit from the edge cache, one copy per page and language", async () => {
     const store = await publishTestStore();
     const cache = new MemoryCache();
     vi.stubGlobal("caches", { default: cache });
-    const first = await getPage(store.env, "/sahel-store?lang=fr");
-    const second = await getPage(store.env, "/sahel-store?lang=fr&utm_source=ad");
+    const first = await get(store.env, "/sahel-store/p/product_00000001?lang=fr");
+    const second = await get(store.env, "/sahel-store/p/product_00000001?lang=fr&utm_source=ad&fbclid=x");
     expect(first.response.headers.get("X-SF-Cache")).toBe("miss");
     expect(second.response.headers.get("X-SF-Cache")).toBe("hit");
-    expect(second.html).toBe(first.html);
-    const arabic = await getPage(store.env, "/sahel-store?lang=ar");
-    expect(arabic.response.headers.get("X-SF-Cache")).toBe("miss");
-    expect(arabic.html).toContain('lang="ar" dir="rtl"');
-    expect(cache.store.size).toBe(2);
+    expect(second.text).toBe(first.text);
+    await get(store.env, "/sahel-store/p/product_00000001?lang=ar");
+    await get(store.env, "/sahel-store?lang=fr");
+    expect(cache.store.size).toBe(3);
     store.database.close();
   });
 
@@ -299,14 +185,14 @@ describe("GET /<slug> through the real Worker", () => {
       productVariants: [],
     }));
     const store = await publishTestStore({ products });
-    await getPage(store.env, "/sahel-store");
+    await get(store.env, "/sahel-store");
     const started = performance.now();
-    const { response, html } = await getPage(store.env, "/sahel-store?lang=fr");
+    const { response, text } = await get(store.env, "/sahel-store?lang=fr");
     const elapsed = performance.now() - started;
     expect(response.status).toBe(200);
-    expect(html.match(/data-storefront-product=/g)?.length).toBe(100);
-    console.warn(`[page weight] 100 products: ${(html.length / 1024).toFixed(1)} KB html, ${gzipSync(html).length} bytes gzip, ${elapsed.toFixed(1)} ms in node (warm)`);
-    expect(html.length).toBeLessThan(400_000);
+    expect(text.match(/class="sf-card"/g)?.length).toBe(100);
+    console.warn(`[page weight] 100 products: ${(text.length / 1024).toFixed(1)} KB html, ${gzipSync(text).length} bytes gzip, ${elapsed.toFixed(1)} ms in node (warm)`);
+    expect(text.length).toBeLessThan(120_000);
     store.database.close();
   });
 });
@@ -314,21 +200,18 @@ describe("GET /<slug> through the real Worker", () => {
 describe("everything else on the host is untouched", () => {
   it("keeps the health check, the JSON store lookup and the JSON 404 for other paths", async () => {
     const store = await publishTestStore();
-    const health = await getPage(store.env, "/healthz");
-    expect(health.response.status).toBe(200);
-    expect(JSON.parse(health.html)).toEqual({ status: "ok" });
-    const lookup = await getPage(store.env, "/v1/storefront/sahel-store");
-    expect(lookup.response.status).toBe(200);
+    const health = await get(store.env, "/healthz");
+    expect(JSON.parse(health.text)).toEqual({ status: "ok" });
+    const lookup = await get(store.env, "/v1/storefront/sahel-store");
     expect(lookup.response.headers.get("Content-Type")).toContain("application/json");
-    expect(JSON.parse(lookup.html)).toMatchObject({ storefrontId: "storefront_12345678" });
-    for (const path of ["/ab", "/Sahel-Store", "/sahel_store", "/sahel-store/extra", "/robots.txt", "/favicon.ico"]) {
-      const other = await getPage(store.env, path);
+    expect(JSON.parse(lookup.text)).toMatchObject({ storefrontId: "storefront_12345678" });
+    for (const path of ["/ab", "/Sahel-Store", "/sahel_store", "/sahel-store/extra", "/sahel-store/p", "/robots.txt", "/favicon.ico", "/_sf/x.js"]) {
+      const other = await get(store.env, path);
       expect(other.response.status, path).toBe(404);
-      expect(JSON.parse(other.html), path).toEqual({ error: "not_found" });
+      expect(JSON.parse(other.text), path).toEqual({ error: "not_found" });
     }
     const post = await worker.default.fetch(new Request(`${ORIGIN}/sahel-store`, { method: "POST", body: "{}" }), store.env);
     expect(post.status).toBe(404);
-    expect((await getPage(store.env, "/sahel-store/")).response.status).toBe(200);
     store.database.close();
   });
 });

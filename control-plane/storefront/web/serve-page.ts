@@ -1,7 +1,6 @@
-import "./react-global";
 import manifest from "./asset-manifest.generated.json";
 import { servePublicStorePage as route, type CacheLike, type PageContext } from "./page-route";
-import { renderStorePage } from "./render-store-page";
+import { renderStorePage } from "./shop";
 import type { StorefrontWorkerEnvironment } from "../types";
 
 function edgeCache(): CacheLike | null {
@@ -10,19 +9,22 @@ function edgeCache(): CacheLike | null {
 }
 
 /**
- * The Worker's entry to the hosted page. worker.ts loads this module on first
- * use, so the React renderer is initialised only by a page view, never by a
- * checkout or a desktop call.
+ * The Worker's entry to the hosted page. worker.ts loads this module on first use, so the
+ * page renderer is initialised only by a page view, never by a checkout or a desktop call.
  */
 export function servePublicStorePage(
   request: Request,
   environment: StorefrontWorkerEnvironment,
   slug: string,
   context?: PageContext,
+  productId: string | null = null,
 ): Promise<Response> {
-  return route(request, environment, slug, context, {
-    render: renderStorePage,
-    cssPath: manifest.css,
-    cache: edgeCache(),
-  });
+  return route(
+    request,
+    environment,
+    slug,
+    context,
+    { render: renderStorePage, assets: { css: manifest.css, js: manifest.js, communes: manifest.communes }, cache: edgeCache() },
+    productId,
+  );
 }

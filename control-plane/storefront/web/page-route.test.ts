@@ -18,12 +18,12 @@ class MemoryCache implements CacheLike {
 }
 
 const render: RenderStorePage = (input) =>
-  `<html data-slug="${input.slug}" data-locale="${input.locale}" data-default="${input.defaultLocale}" data-origin="${input.origin}" data-css="${input.cssPath}" data-stock="${[...input.stock.entries()]
+  `<html data-slug="${input.slug}" data-product="${input.productId ?? ""}" data-locale="${input.locale}" data-default="${input.defaultLocale}" data-origin="${input.origin}" data-css="${input.assets.css}" data-ships="${input.shipping.length}" data-key="${input.receiptKey}" data-stock="${[...input.stock.entries()]
     .map(([key, row]) => `${key}=${row.remaining}@${row.unitPriceDzd}`)
     .join(",")}">ok</html>`;
 
 function deps(cache: CacheLike | null, overrides: Partial<PageDeps> = {}): PageDeps {
-  return { render, cssPath: "/_sf/test.css", cache, ...overrides };
+  return { render, assets: { css: "/_sf/test.css", js: "/_sf/test.js", communes: "/_sf/c.test" }, cache, ...overrides };
 }
 
 function get(path: string, headers: Record<string, string> = {}, method = "GET"): Request {
@@ -87,7 +87,7 @@ describe("GET /<slug> (page route)", () => {
     const first = await servePublicStorePage(get("/sahel-store?lang=fr"), counted.env, "sahel-store", undefined, deps(cache));
     expect(first.headers.get("X-SF-Cache")).toBe("miss");
     const queriesAfterMiss = counted.prepares();
-    expect(queriesAfterMiss).toBe(2);
+    expect(queriesAfterMiss).toBe(3); // the store and release, the stock, the delivery rules
     const firstBody = await first.text();
 
     const visitors: Array<[string, Record<string, string>]> = [
@@ -212,5 +212,32 @@ describe("GET /<slug> (page route)", () => {
     expect(await crash.text()).not.toContain("render failed");
     expect(cache.puts).toBe(0);
     healthy.database.close();
+  });
+
+  it("serves a product page under its own cache key, with the shipping rules and the seller's key", async () => {
+    const store = await publishTestStore();
+    const cache = new MemoryCache();
+    const home = await servePublicStorePage(get("/sahel-store?lang=fr"), store.env, "sahel-store", undefined, deps(cache));
+    const product = await servePublicStorePage(get("/sahel-store/p/product_00000001?lang=fr"), store.env, "sahel-store", undefined, deps(cache), "product_00000001");
+    const homeBody = await home.text();
+    const productBody = await product.text();
+    expect(homeBody).toContain('data-product=""');
+    expect(productBody).toContain('data-product="product_00000001"');
+    expect(productBody).toContain('data-ships="1"');
+    expect(productBody).toContain('data-key="desktop-key"');
+    expect(cache.store.size).toBe(2);
+    const again = await servePublicStorePage(get("/sahel-store/p/product_00000001?lang=fr"), store.env, "sahel-store", undefined, deps(cache), "product_00000001");
+    expect(again.headers.get("X-SF-Cache")).toBe("hit");
+    store.database.close();
+  });
+
+  it("says 404 when the renderer reports a product the release does not hold, and does not cache it as a page", async () => {
+    const store = await publishTestStore();
+    const cache = new MemoryCache();
+    const none: RenderStorePage = () => null;
+    const response = await servePublicStorePage(get("/sahel-store/p/product_99999999", { "Accept-Language": "en" }), store.env, "sahel-store", undefined, deps(cache, { render: none }), "product_99999999");
+    expect(response.status).toBe(404);
+    expect(await response.text()).toContain("Store not found");
+    store.database.close();
   });
 });

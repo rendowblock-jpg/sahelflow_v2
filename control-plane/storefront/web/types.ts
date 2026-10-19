@@ -1,5 +1,6 @@
 import type { PublicArtifact } from "../shared";
 import type { PublicLocale } from "./locale";
+import type { Assets, ShippingRow } from "./shop/ui";
 
 export type StockRow = { unitPriceDzd: number; remaining: number };
 
@@ -13,8 +14,15 @@ export type RenderStorePageInput = {
   defaultLocale: PublicLocale;
   artifact: PublicArtifact;
   stock: ReadonlyMap<string, StockRow>;
-  /** Hashed stylesheet path from the asset manifest. */
-  cssPath: string;
+  assets: Assets;
+  storefrontId: string;
+  releaseId: string;
+  /** The seller's receipt public key (JWK text): the browser encrypts the buyer's details with it. */
+  receiptKey: string;
+  shipping: readonly ShippingRow[];
+  /** Null for the store home. */
+  productId: string | null;
 };
 
-export type RenderStorePage = (input: RenderStorePageInput) => string;
+/** The page, or null when it asks for a product the release does not contain. */
+export type RenderStorePage = (input: RenderStorePageInput) => string | null;

@@ -11,7 +11,9 @@ import type { StorefrontTheme } from "../../../src/lib/storefront/presentation-t
 import { createDefaultStorefrontTheme } from "../../../src/lib/storefront/theme-default";
 import { publishRelease } from "../publish-release";
 import { TEST_WORKSPACE_ID, environment, openDatabase } from "../test-d1";
+import type { PublicArtifact } from "../shared";
 import type { StorefrontWorkerEnvironment } from "../types";
+import type { RenderStorePageInput } from "./types";
 
 export const TEST_STOREFRONT_ID = "storefront_12345678";
 export const TEST_SHOP_ID = "shop_12345678";
@@ -116,4 +118,33 @@ export async function publishTestStore(
     database.prepare("UPDATE storefront SET state = 'paused' WHERE storefront_id = ?1").run(ids.storefrontId);
   }
   return { database, env, slug, theme };
+}
+
+/** The exact input the page route would hand to the renderer for a store published by publishTestStore. */
+export function renderInputFor(store: PublishedTestStore, overrides: Partial<RenderStorePageInput> = {}): RenderStorePageInput {
+  const release = store.database
+    .prepare("SELECT release_id, locale, artifact_json FROM storefront_release")
+    .get() as { release_id: string; locale: "ar" | "fr" | "en"; artifact_json: string };
+  const stock = new Map(
+    (store.database.prepare("SELECT item_key, unit_price_dzd, remaining_quantity FROM storefront_allocation").all() as Array<{ item_key: string; unit_price_dzd: number; remaining_quantity: number }>)
+      .map((row) => [row.item_key, { unitPriceDzd: row.unit_price_dzd, remaining: row.remaining_quantity }]),
+  );
+  const shipping = (store.database.prepare("SELECT wilaya_code, delivery_mode, fee_dzd FROM storefront_shipping_rule").all() as Array<{ wilaya_code: string; delivery_mode: "home" | "desk"; fee_dzd: number }>)
+    .map((row) => ({ wilayaCode: row.wilaya_code, mode: row.delivery_mode, feeDzd: row.fee_dzd }));
+  const key = store.database.prepare("SELECT receipt_encryption_public_key AS k, storefront_id AS id FROM storefront").get() as { k: string; id: string };
+  return {
+    origin: "https://shop.test",
+    slug: store.slug,
+    locale: release.locale,
+    defaultLocale: release.locale,
+    artifact: JSON.parse(release.artifact_json) as PublicArtifact,
+    stock,
+    assets: { css: "/_sf/shop.test.css", js: "/_sf/shop.test.js", communes: "/_sf/c.test" },
+    storefrontId: key.id,
+    releaseId: release.release_id,
+    receiptKey: key.k,
+    shipping,
+    productId: null,
+    ...overrides,
+  };
 }

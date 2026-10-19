@@ -91,9 +91,12 @@ export async function handleStorefrontRequest(
   // The published store itself: GET /<slug>. Loaded on first use so the page
   // renderer is never initialised by a checkout or a desktop call.
   const pageMatch = /^\/([a-z0-9][a-z0-9-]{2,62})\/?$/.exec(url.pathname);
-  if ((request.method === "GET" || request.method === "HEAD") && pageMatch?.[1]) {
+  const productMatch = /^\/([a-z0-9][a-z0-9-]{2,62})\/p\/([A-Za-z0-9][A-Za-z0-9._-]{1,127})\/?$/.exec(url.pathname);
+  if ((request.method === "GET" || request.method === "HEAD") && (pageMatch?.[1] || productMatch?.[1])) {
     const { servePublicStorePage } = await import("./web/serve-page");
-    return servePublicStorePage(request, environment, pageMatch[1], context);
+    return productMatch?.[1]
+      ? servePublicStorePage(request, environment, productMatch[1], context, productMatch[2] ?? null)
+      : servePublicStorePage(request, environment, pageMatch?.[1] as string, context);
   }
   return json({ error: "not_found" }, 404);
 }

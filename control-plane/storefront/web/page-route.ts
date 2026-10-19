@@ -2,7 +2,9 @@ import { validPublicArtifact, type PublicArtifact } from "../shared";
 import type { StorefrontWorkerEnvironment } from "../types";
 import { parseAcceptLanguage, parsePublicLocale, type PublicLocale } from "./locale";
 import { renderNoticePage, type NoticeKind } from "./notice-page";
+import type { ShippingRow } from "./shop/ui";
 import type { RenderStorePage, StockRow } from "./types";
+import type { Assets } from "./shop/ui";
 
 /** The part of the Workers Cache API this route uses. */
 export type CacheLike = {
@@ -14,14 +16,14 @@ export type PageContext = { waitUntil: (promise: Promise<unknown>) => void };
 
 export type PageDeps = {
   render: RenderStorePage;
-  cssPath: string;
+  assets: Assets;
   cache: CacheLike | null;
 };
 
 /**
- * How long a rendered page may be reused. Short on purpose: sold-out and
- * low-stock badges ride on it, and checkout re-checks stock regardless. A new
- * release shows up within this window.
+ * How long a rendered page may be reused. Short on purpose: sold-out and low-stock
+ * badges ride on it, and checkout re-checks stock regardless. A new release shows up
+ * within this window; an order bound to the old release is retried by the page itself.
  */
 export const PAGE_TTL_SECONDS = 15;
 const NOTICE_TTL_SECONDS = 10;
@@ -40,6 +42,8 @@ const CONTENT_SECURITY_POLICY = [
 ].join("; ");
 
 type PageRow = {
+  storefront_id: string;
+  receipt_encryption_public_key: string;
   state: "active" | "paused";
   release_id: string | null;
   locale: PublicLocale | null;
@@ -47,21 +51,6 @@ type PageRow = {
 };
 
 type Built = { response: Response; cacheable: boolean };
-
-/**
- * One line per failure in the Worker log (observability is on), so a broken
- * store is findable. Only the store address and the error text: no visitor data.
- */
-function logFailure(stage: "database" | "artifact" | "render", slug: string, error: unknown): void {
-  console.error(
-    JSON.stringify({
-      event: "storefront_page_failed",
-      stage,
-      slug,
-      message: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300),
-    }),
-  );
-}
 
 function htmlResponse(
   html: string,
@@ -95,25 +84,43 @@ function notice(
   ttlSeconds: number,
   extra: Record<string, string> = {},
 ): Built {
-  const html = renderNoticePage({ locale, kind, cssPath: deps.cssPath });
+  const html = renderNoticePage({ locale, kind, cssPath: deps.assets.css });
   return {
-    response: htmlResponse(html, status, locale, deps.cssPath, ttlSeconds, extra),
+    response: htmlResponse(html, status, locale, deps.assets.css, ttlSeconds, extra),
     cacheable: ttlSeconds > 0,
   };
+}
+
+/**
+ * One line per failure in the Worker log (observability is on), so a broken store is
+ * findable. Only the store address and the error text: no visitor data.
+ */
+function logFailure(stage: "database" | "artifact" | "render", slug: string, error: unknown): void {
+  console.error(
+    JSON.stringify({
+      event: "storefront_page_failed",
+      stage,
+      slug,
+      message: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300),
+    }),
+  );
 }
 
 async function build(
   url: URL,
   environment: StorefrontWorkerEnvironment,
   slug: string,
+  productId: string | null,
   requested: PublicLocale | null,
   deps: PageDeps,
 ): Promise<Built> {
   let row: PageRow | null;
-  let allocations: Array<{ item_key: string; unit_price_dzd: number; remaining_quantity: number }>;
+  let allocations: Array<{ item_key: string; unit_price_dzd: number; remaining_quantity: number }> = [];
+  let shipping: Array<{ wilaya_code: string; delivery_mode: "home" | "desk"; fee_dzd: number }> = [];
   try {
     row = await environment.DB.prepare(
-      `SELECT s.state, r.release_id, r.locale, r.artifact_json
+      `SELECT s.storefront_id, s.receipt_encryption_public_key, s.state,
+              r.release_id, r.locale, r.artifact_json
          FROM storefront s
          LEFT JOIN storefront_release r
            ON r.release_id = s.active_release_id AND r.storefront_id = s.storefront_id
@@ -121,18 +128,24 @@ async function build(
     )
       .bind(slug)
       .first<PageRow>();
-    allocations = row?.release_id
-      ? ((
-          await environment.DB.prepare(
-            `SELECT item_key, unit_price_dzd, remaining_quantity
-               FROM storefront_allocation
-              WHERE release_id = ?1
-              ORDER BY item_key ASC`,
-          )
-            .bind(row.release_id)
-            .all<{ item_key: string; unit_price_dzd: number; remaining_quantity: number }>()
-        ).results ?? [])
-      : [];
+    if (row?.release_id) {
+      const [stock, rules] = await Promise.all([
+        environment.DB.prepare(
+          `SELECT item_key, unit_price_dzd, remaining_quantity
+             FROM storefront_allocation WHERE release_id = ?1 ORDER BY item_key ASC`,
+        )
+          .bind(row.release_id)
+          .all<{ item_key: string; unit_price_dzd: number; remaining_quantity: number }>(),
+        environment.DB.prepare(
+          `SELECT wilaya_code, delivery_mode, fee_dzd
+             FROM storefront_shipping_rule WHERE release_id = ?1 ORDER BY wilaya_code ASC`,
+        )
+          .bind(row.release_id)
+          .all<{ wilaya_code: string; delivery_mode: "home" | "desk"; fee_dzd: number }>(),
+      ]);
+      allocations = stock.results ?? [];
+      shipping = rules.results ?? [];
+    }
   } catch (error) {
     logFailure("database", slug, error);
     return notice("error", 503, requested ?? "ar", deps, 0, { "Retry-After": "30" });
@@ -162,6 +175,11 @@ async function build(
       { unitPriceDzd: allocation.unit_price_dzd, remaining: allocation.remaining_quantity },
     ]),
   );
+  const rules: ShippingRow[] = shipping.map((rule) => ({
+    wilayaCode: rule.wilaya_code,
+    mode: rule.delivery_mode,
+    feeDzd: rule.fee_dzd,
+  }));
   const locale = requested ?? row.locale;
   try {
     const html = deps.render({
@@ -171,9 +189,15 @@ async function build(
       defaultLocale: row.locale,
       artifact,
       stock,
-      cssPath: deps.cssPath,
+      assets: deps.assets,
+      storefrontId: row.storefront_id,
+      releaseId: row.release_id,
+      receiptKey: row.receipt_encryption_public_key,
+      shipping: rules,
+      productId,
     });
-    return { response: htmlResponse(html, 200, locale, deps.cssPath, PAGE_TTL_SECONDS), cacheable: true };
+    if (html === null) return notice("notFound", 404, locale, deps, NOTICE_TTL_SECONDS);
+    return { response: htmlResponse(html, 200, locale, deps.assets.css, PAGE_TTL_SECONDS), cacheable: true };
   } catch (error) {
     logFailure("render", slug, error);
     return notice("error", 500, locale, deps, 0, { "Retry-After": "300" });
@@ -187,11 +211,11 @@ function withCacheState(response: Response, state: "hit" | "miss"): Response {
 }
 
 /**
- * GET /<slug>: the published store as a server-rendered HTML page.
+ * GET /<slug> and GET /<slug>/p/<productId>: a published store as a server-rendered page.
  *
- * Every page view runs this Worker once, and on Workers Free that counts against
- * the account's 100,000 requests per day. The edge cache below spares the
- * database and the render, not the request itself.
+ * Every page view runs this Worker once, and on Workers Free that counts against the
+ * account's 100,000 requests per day. The edge cache below spares the database and the
+ * render, not the request itself.
  */
 export async function servePublicStorePage(
   request: Request,
@@ -199,19 +223,19 @@ export async function servePublicStorePage(
   slug: string,
   context: PageContext | undefined,
   deps: PageDeps,
+  productId: string | null = null,
 ): Promise<Response> {
   const url = new URL(request.url);
   const requested =
     parsePublicLocale(url.searchParams.get("lang")) ?? parseAcceptLanguage(request.headers.get("Accept-Language"));
-  // The key names the page, never the visitor: only the slug and the language
-  // choice vary the HTML, so two buyers share one cached copy.
-  const cacheKey = new Request(`${url.origin}/__sf/page/${slug}/${requested ?? "auto"}`);
+  // The key names the page, never the visitor: only the address and the language choice vary the HTML.
+  const cacheKey = new Request(`${url.origin}/__sf/page/${slug}/${productId ?? "home"}/${requested ?? "auto"}`);
 
   if (deps.cache) {
     const hit = await deps.cache.match(cacheKey).catch(() => undefined);
     if (hit) return withCacheState(hit, "hit");
   }
-  const built = await build(url, environment, slug, requested, deps);
+  const built = await build(url, environment, slug, productId, requested, deps);
   if (deps.cache && built.cacheable) {
     const stored = deps.cache.put(cacheKey, built.response.clone()).catch(() => undefined);
     if (context) context.waitUntil(stored);
