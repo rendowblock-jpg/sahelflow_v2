@@ -1,6 +1,6 @@
 import { validPublicArtifact, type PublicArtifact } from "../shared";
 import type { StorefrontWorkerEnvironment } from "../types";
-import { parseAcceptLanguage, parsePublicLocale, type PublicLocale } from "./locale";
+import { parsePublicLocale, type PublicLocale } from "./locale";
 import { renderNoticePage, type NoticeKind } from "./notice-page";
 import type { ShippingRow } from "./shop/ui";
 import type { RenderStorePage, StockRow } from "./types";
@@ -226,8 +226,10 @@ export async function servePublicStorePage(
   productId: string | null = null,
 ): Promise<Response> {
   const url = new URL(request.url);
-  const requested =
-    parsePublicLocale(url.searchParams.get("lang")) ?? parseAcceptLanguage(request.headers.get("Accept-Language"));
+  // Language: only an explicit ?lang= (the visitor tapped AR, FR or EN) overrides the language the seller published in.
+  // The browser's Accept-Language is deliberately ignored: an Algerian store is Arabic first, and a phone set to English
+  // must not turn an Arabic store into an English one. French and English stay one tap away as options.
+  const requested = parsePublicLocale(url.searchParams.get("lang"));
   // The key names the page, never the visitor: only the address and the language choice vary the HTML.
   const cacheKey = new Request(`${url.origin}/__sf/page/${slug}/${productId ?? "home"}/${requested ?? "auto"}`);
 

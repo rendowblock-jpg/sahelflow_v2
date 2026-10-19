@@ -65,7 +65,7 @@ describe("GET /<slug> (page route)", () => {
     store.database.close();
   });
 
-  it("chooses the language: ?lang, then Accept-Language, then the language the seller published in", async () => {
+  it("chooses the language: ?lang, else the language the seller published in; the browser language never decides", async () => {
     const store = await publishTestStore({ locale: "fr" });
     const locale = async (path: string, headers: Record<string, string> = {}) => {
       const response = await servePublicStorePage(get(path, headers), store.env, "sahel-store", undefined, deps(null));
@@ -73,10 +73,25 @@ describe("GET /<slug> (page route)", () => {
       return response.headers.get("Content-Language");
     };
     expect(await locale("/sahel-store")).toBe("fr");
-    expect(await locale("/sahel-store", { "Accept-Language": "ar-DZ,ar;q=0.9" })).toBe("ar");
+    expect(await locale("/sahel-store", { "Accept-Language": "ar-DZ,ar;q=0.9" })).toBe("fr");
     expect(await locale("/sahel-store?lang=en", { "Accept-Language": "ar" })).toBe("en");
-    expect(await locale("/sahel-store?lang=xx", { "Accept-Language": "en" })).toBe("en");
+    expect(await locale("/sahel-store?lang=xx", { "Accept-Language": "en" })).toBe("fr");
     expect(await locale("/sahel-store", { "Accept-Language": "es-ES" })).toBe("fr");
+    store.database.close();
+  });
+
+  it("serves the seller's language to every browser language from one stored copy", async () => {
+    const store = await publishTestStore({ locale: "ar" });
+    const cache = new MemoryCache();
+    const first = await servePublicStorePage(get("/sahel-store", { "Accept-Language": "en-US,en;q=0.9" }), store.env, "sahel-store", undefined, deps(cache));
+    expect(first.headers.get("Content-Language")).toBe("ar");
+    expect(first.headers.get("X-SF-Cache")).toBe("miss");
+    for (const header of ["fr-FR,fr;q=0.9", "ar-DZ,ar;q=0.9", "de", ""]) {
+      const again = await servePublicStorePage(get("/sahel-store", header ? { "Accept-Language": header } : {}), store.env, "sahel-store", undefined, deps(cache));
+      expect(again.headers.get("X-SF-Cache"), header).toBe("hit");
+      expect(again.headers.get("Content-Language")).toBe("ar");
+    }
+    expect(cache.puts).toBe(1);
     store.database.close();
   });
 
@@ -94,7 +109,7 @@ describe("GET /<slug> (page route)", () => {
       ["/sahel-store?lang=fr", {}],
       ["/sahel-store?lang=fr&utm_source=ad&fbclid=abc", { Cookie: "session=other", "User-Agent": "Mozilla/5.0 Phone" }],
       ["/sahel-store/?lang=fr", { Authorization: "Bearer visitor" }],
-      ["/sahel-store", { "Accept-Language": "fr-DZ,fr;q=0.9" }],
+      ["/sahel-store?lang=fr", { "Accept-Language": "en-US,en;q=0.9" }],
     ];
     for (const [path, headers] of visitors) {
       const hit = await servePublicStorePage(get(path, headers), counted.env, "sahel-store", undefined, deps(cache));
@@ -145,7 +160,7 @@ describe("GET /<slug> (page route)", () => {
     const store = await publishTestStore();
     const cache = new MemoryCache();
     const response = await servePublicStorePage(
-      get("/no-such-store", { "Accept-Language": "fr" }), store.env, "no-such-store", undefined, deps(cache),
+      get("/no-such-store?lang=fr"), store.env, "no-such-store", undefined, deps(cache),
     );
     expect(response.status).toBe(404);
     expect(response.headers.get("Content-Language")).toBe("fr");
@@ -235,7 +250,7 @@ describe("GET /<slug> (page route)", () => {
     const store = await publishTestStore();
     const cache = new MemoryCache();
     const none: RenderStorePage = () => null;
-    const response = await servePublicStorePage(get("/sahel-store/p/product_99999999", { "Accept-Language": "en" }), store.env, "sahel-store", undefined, deps(cache, { render: none }), "product_99999999");
+    const response = await servePublicStorePage(get("/sahel-store/p/product_99999999?lang=en"), store.env, "sahel-store", undefined, deps(cache, { render: none }), "product_99999999");
     expect(response.status).toBe(404);
     expect(await response.text()).toContain("Store not found");
     store.database.close();

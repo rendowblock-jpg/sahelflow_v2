@@ -1,11 +1,13 @@
 /**
  * Buyer language for the hosted store page.
  *
- * Same rules as the app's buyer-locale authority (src/lib/i18n/storefront-locale.ts):
- * an explicit ?lang= wins, then the browser's Accept-Language with Algeria's
- * preference breaking ties (Arabic, then French, then English). The Worker cannot
- * import that file because it also pulls every dashboard dictionary, so the
- * logic is repeated here and locale.test.ts keeps the two identical.
+ * The hosted page picks its language in page-route.ts: an explicit ?lang= wins, otherwise the language
+ * the seller published in (Arabic for an Algerian store). The browser's Accept-Language is NOT used there
+ * (Founder decision, 19 Oct 2026: Arabic first, French and English as options).
+ *
+ * parseAcceptLanguage below mirrors the app's buyer-locale authority (src/lib/i18n/storefront-locale.ts)
+ * and locale.test.ts keeps the two identical. The Worker cannot import that file because it also pulls
+ * every dashboard dictionary, so the logic is repeated here.
  */
 export type PublicLocale = "ar" | "fr" | "en";
 

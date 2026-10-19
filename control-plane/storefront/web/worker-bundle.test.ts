@@ -141,7 +141,7 @@ describe("GET /<slug> and /<slug>/p/<product> through the real Worker", () => {
 
   it("says 404 for an unknown product and for a product with a bad id, in the visitor's language", async () => {
     const store = await publishTestStore();
-    const unknown = await get(store.env, "/sahel-store/p/product_99999999", { "Accept-Language": "en" });
+    const unknown = await get(store.env, "/sahel-store/p/product_99999999?lang=en");
     expect(unknown.response.status).toBe(404);
     expect(unknown.text).toContain("Store not found");
     const bad = await get(store.env, "/sahel-store/p/a");
@@ -152,8 +152,8 @@ describe("GET /<slug> and /<slug>/p/<product> through the real Worker", () => {
 
   it("says 404 and 503 for a missing and a paused store", async () => {
     const store = await publishTestStore({ paused: true });
-    expect((await get(store.env, "/nope-store", { "Accept-Language": "fr" })).response.status).toBe(404);
-    const paused = await get(store.env, "/sahel-store/p/product_00000001", { "Accept-Language": "fr" });
+    expect((await get(store.env, "/nope-store?lang=fr")).response.status).toBe(404);
+    const paused = await get(store.env, "/sahel-store/p/product_00000001?lang=fr");
     expect(paused.response.status).toBe(503);
     expect(paused.text).toContain(createPublicTranslator("fr")("storefront.public.pausedTitle"));
     store.database.close();
