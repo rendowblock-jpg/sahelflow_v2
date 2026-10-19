@@ -26,6 +26,14 @@
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
+  },
+
+  // Hourly maintenance (control-plane/backup/scheduled.ts): releases uploads
+  // abandoned for 24 hours and removes trial data 30 days after the licence
+  // expired (ARCHITECTURE 7.2). Each run is bounded for the Free plan's
+  // 50-subrequest limit. One Cron Trigger of the account's five on Free.
+  "triggers": {
+    "crons": ["23 * * * *"]
   }
 
   // BACKUPS contains ciphertext only. Backup DEKs are wrapped by the local
