@@ -204,6 +204,9 @@ export class ConnectedPlatformClient {
     return this.requestJson<{
       commands: Array<{ relaySequence: number; commandId: string; envelope: ConnectedEnvelope }>;
       nextCursor: number;
+      /** Presence, so the caller can pace itself. Absent on an older relay. */
+      pairedDevices?: number;
+      activeDevices?: number;
     }>("control", "/v1/desktop/commands", {
       query: { workspaceId, shopId, after, limit },
     });
