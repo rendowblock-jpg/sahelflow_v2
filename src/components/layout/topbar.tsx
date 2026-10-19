@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UpdateChip } from "@/components/updater/update-chip";
 import { useI18n } from "@/hooks/use-i18n";
 import {
   dismissNotification,
@@ -391,6 +392,8 @@ export function Topbar({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <UpdateChip />
 
         <ThemeToggle />
 

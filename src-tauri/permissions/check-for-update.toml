@@ -1,0 +1,9 @@
+# The one command of its own that the SahelFlow workspace page may call. The
+# page is served from a loopback address, which Tauri treats as a remote
+# origin, so it can reach an app command only if a capability names it here.
+# The command only looks for a signed update; it cannot download, install or
+# stop anything by itself.
+[[permission]]
+identifier = "allow-check-for-update"
+description = "Lets the SahelFlow workspace ask the desktop shell to look for a signed update."
+commands.allow = ["check_for_update"]
