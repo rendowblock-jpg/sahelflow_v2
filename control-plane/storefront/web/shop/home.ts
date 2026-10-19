@@ -1,12 +1,15 @@
 import { formatPrice } from "./format";
-import { esc, httpsUrl, icon, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
+import { esc, httpsUrl, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
 import type { ShopProduct, ShopSection } from "./model";
 
 const RATIO_SIZE = { portrait: [800, 1000], square: [800, 800], landscape: [800, 600] } as const;
 
-function image(ctx: Ctx, url: string, alt: string, eager: boolean): string {
+const CARD_SIZES = "(min-width:1040px) 25vw, (min-width:720px) 33vw, 50vw";
+const HERO_SIZES = "(min-width:900px) 45vw, 92vw";
+
+function image(ctx: Ctx, url: string, alt: string, eager: boolean, sizes: string = CARD_SIZES): string {
   const [w, h] = RATIO_SIZE[ctx.theme.catalog.imageRatio];
-  return `<img src="${esc(url)}" alt="${esc(alt)}" width="${w}" height="${h}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" referrerpolicy="no-referrer">`;
+  return `<img ${imgAttrs(url, sizes)} alt="${esc(alt)}" width="${w}" height="${h}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async" referrerpolicy="no-referrer">`;
 }
 
 /** One product card. In a grid it fades in as it scrolls into view; in a rail (a horizontal scroller) it does not. */
@@ -60,7 +63,7 @@ function renderHero(ctx: Ctx, target: string): string {
     : "";
   const media = pics.length === 0
     ? `<div class="sf-hero-media sf-hero-ph" aria-hidden="true"></div>`
-    : `<div class="sf-hero-media" data-count="${pics.length}">${pics.map((product, index) => `<div class="sf-hero-pic">${image(ctx, product.images[0] as string, product.name, index === 0)}</div>`).join("")}${chip}</div>`;
+    : `<div class="sf-hero-media" data-count="${pics.length}">${pics.map((product, index) => `<div class="sf-hero-pic">${image(ctx, product.images[0] as string, product.name, index === 0, HERO_SIZES)}</div>`).join("")}${chip}</div>`;
   const blobs = style === "centered" ? '<span class="sf-blob sf-blob--a" aria-hidden="true"></span><span class="sf-blob sf-blob--b" aria-hidden="true"></span>' : "";
   return `<section class="sf-hero" data-style="${style}">${blobs}<div class="sf-wrap sf-hero-in">${text}${media}</div></section>`;
 }

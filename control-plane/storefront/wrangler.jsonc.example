@@ -16,6 +16,9 @@
       "database_id": "replace-with-production-d1-id"
     }
   ],
+  // Product photos: sellers' desktops upload them here; the media subdomain serves them with no Worker involved.
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "sahelflow-media" }],
+  "vars": { "MEDIA_ORIGIN": "https://media.sahelflow.com" },
   "services": [
     {
       "binding": "CONTROL",

@@ -22,8 +22,23 @@ export type RateLimiter = {
   limit: (input: { key: string }) => Promise<{ success: boolean }>;
 };
 
+/** The part of an R2 bucket the photo upload needs. */
+export type MediaBucket = {
+  put: (
+    key: string,
+    value: ArrayBuffer,
+    options?: { httpMetadata?: { contentType?: string; cacheControl?: string }; customMetadata?: Record<string, string> },
+  ) => Promise<unknown>;
+};
+
 export interface StorefrontWorkerEnvironment {
   DB: D1Database;
+  /** Sellers' product photos. Absent where photo hosting is not set up (uploads then answer 503). */
+  MEDIA?: MediaBucket;
+  /** https origin that serves the bucket (an R2 custom domain), for example https://media.sahelflow.com */
+  MEDIA_ORIGIN?: string;
+  /** Account-wide ceiling for all stored photos, in bytes (a number as text). Default 9 GB. */
+  MEDIA_GLOBAL_CAP_BYTES?: string;
   CONTROL: ServiceFetcher;
   CHECKOUT_RATE_LIMITER: RateLimiter;
 }
