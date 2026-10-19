@@ -14,6 +14,13 @@ import type { Locale } from "@/lib/i18n";
 const translations: Record<Locale, Record<string, string>> = {
   en: {
     "storefront.language.label": "Language",
+    "storefront.public.notFoundTitle": "Store not found",
+    "storefront.public.notFoundBody": "Check the link, or ask the seller for a new one.",
+    "storefront.public.pausedTitle": "Store temporarily closed",
+    "storefront.public.pausedBody": "Please come back soon: the store will reopen shortly.",
+    "storefront.public.errorTitle": "This store cannot be shown right now",
+    "storefront.public.errorBody": "Please try again in a few minutes.",
+    "storefront.public.metaFallback": "{{name}}: order online and pay cash on delivery.",
     "storefront.releaseHistory.title": "Release history",
     "storefront.releaseHistory.description":
       "Every publish is kept as its own version. Going back to an older version publishes it again as a new version.",
@@ -35,6 +42,13 @@ const translations: Record<Locale, Record<string, string>> = {
   },
   fr: {
     "storefront.language.label": "Langue",
+    "storefront.public.notFoundTitle": "Boutique introuvable",
+    "storefront.public.notFoundBody": "Vérifiez le lien ou demandez-en un nouveau au vendeur.",
+    "storefront.public.pausedTitle": "Boutique temporairement fermée",
+    "storefront.public.pausedBody": "Revenez bientôt : la boutique rouvrira prochainement.",
+    "storefront.public.errorTitle": "Cette boutique ne peut pas s'afficher pour le moment",
+    "storefront.public.errorBody": "Veuillez réessayer dans quelques minutes.",
+    "storefront.public.metaFallback": "{{name}} : commandez en ligne et payez à la livraison.",
     "storefront.releaseHistory.title": "Historique des versions",
     "storefront.releaseHistory.description":
       "Chaque publication est conservée comme une version. Revenir à une ancienne version la republie comme nouvelle version.",
@@ -57,6 +71,13 @@ const translations: Record<Locale, Record<string, string>> = {
   },
   ar: {
     "storefront.language.label": "اللغة",
+    "storefront.public.notFoundTitle": "المتجر غير موجود",
+    "storefront.public.notFoundBody": "تحقّق من الرابط أو اطلب من البائع رابطاً جديداً.",
+    "storefront.public.pausedTitle": "المتجر مغلق مؤقتاً",
+    "storefront.public.pausedBody": "عُد قريباً، سيفتح المتجر أبوابه من جديد بعد قليل.",
+    "storefront.public.errorTitle": "تعذّر عرض هذا المتجر حالياً",
+    "storefront.public.errorBody": "يرجى المحاولة مرة أخرى بعد بضع دقائق.",
+    "storefront.public.metaFallback": "{{name}}: اطلب أونلاين والدفع عند الاستلام.",
     "storefront.releaseHistory.title": "سجل الإصدارات",
     "storefront.releaseHistory.description":
       "تُحفظ كل عملية نشر كإصدار مستقل. الرجوع إلى إصدار قديم يعيد نشره كإصدار جديد.",
