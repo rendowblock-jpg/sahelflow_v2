@@ -204,7 +204,9 @@ export async function loadStorefrontRuntime(
     : options.createReceiptKeys
       ? await ensureStorefrontReceiptKeys(context)
       : null;
-  if (!receiptKeys) throw new Error("Storefront receipt key authority is not enrolled");
+  // No receipt keys means this shop never set up a hosted storefront. That is a
+  // normal resting state (the receipt worker goes idle), not a failure.
+  if (!receiptKeys) throw new ConnectedPlatformNotEnrolledError();
   return Object.freeze({
     client: new ConnectedPlatformClient({
       endpoints: endpoints(),

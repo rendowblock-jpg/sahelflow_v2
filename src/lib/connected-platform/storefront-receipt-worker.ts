@@ -8,9 +8,13 @@ import {
 import { logger } from "@/lib/logger";
 
 import { IDLE_POLL_INTERVAL_MS, isConnectedIdleState } from "./worker-idle";
+import {
+  POLL_ACTIVE_MS,
+  failureDelayMs,
+  receiptPollDelayMs,
+} from "./poll-cadence";
 
 const WORKER_KEY = Symbol.for("sahelflow.storefront-receipt-worker.v1");
-const POLL_INTERVAL_MS = 5_000;
 const CURSOR_KEY_PREFIX = "connected.storefront.receipt.cursor.v1";
 
 type WorkerState = { running: boolean; timer: ReturnType<typeof setTimeout> | null };
@@ -23,8 +27,13 @@ export function startStorefrontReceiptWorker(): void {
   workerGlobal[WORKER_KEY] = state;
 
   let idle = false;
+  // Quick right after a receipt, then relaxing (poll-cadence.ts). A customer's
+  // order only has to reach the desktop within about a minute.
+  let emptyStreak = 0;
+  let consecutiveFailures = 0;
+  let nextDelayMs = POLL_ACTIVE_MS;
   const schedule = () => {
-    state.timer = setTimeout(() => void tick(), idle ? IDLE_POLL_INTERVAL_MS : POLL_INTERVAL_MS);
+    state.timer = setTimeout(() => void tick(), idle ? IDLE_POLL_INTERVAL_MS : nextDelayMs);
     state.timer.unref?.();
   };
   const tick = async () => {
@@ -72,6 +81,12 @@ export function startStorefrontReceiptWorker(): void {
       }
       if (idle) logger.info("storefront.receipt_worker.resumed");
       idle = false;
+      consecutiveFailures = 0;
+      emptyStreak = result.imported + result.replayed > 0 ? 0 : emptyStreak + 1;
+      nextDelayMs = receiptPollDelayMs({
+        hadWork: result.imported + result.replayed > 0,
+        emptyStreak,
+      });
       recordWorkerSuccess("storefront-receipts");
     } catch (error) {
       if (isConnectedIdleState(error)) {
@@ -82,6 +97,11 @@ export function startStorefrontReceiptWorker(): void {
         return;
       }
       idle = false;
+      consecutiveFailures += 1;
+      // Back off instead of hammering a relay that is already struggling; the
+      // first retry stays quick so a one-off hiccup costs only five seconds.
+      nextDelayMs = failureDelayMs(consecutiveFailures);
+      emptyStreak = 0;
       // C1: the silent catch hid relay stalls (poison receipts, broken
       // decryption enrollment, relay outages) behind a permanently frozen
       // cursor. The cursor and canonical order idempotency retain their
@@ -94,6 +114,6 @@ export function startStorefrontReceiptWorker(): void {
       schedule();
     }
   };
-  state.timer = setTimeout(() => void tick(), POLL_INTERVAL_MS);
+  state.timer = setTimeout(() => void tick(), POLL_ACTIVE_MS);
   state.timer.unref?.();
 }

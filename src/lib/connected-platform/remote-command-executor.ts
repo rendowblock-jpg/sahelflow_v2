@@ -99,17 +99,34 @@ export async function executeQueuedRemoteCommands(input: Readonly<{
   context: ServiceContext;
   after: number;
   limit?: number;
-}>): Promise<Readonly<{ completed: number; nextCursor: number }>> {
+}>): Promise<Readonly<{
+  completed: number;
+  nextCursor: number;
+  /** What the relay said about paired and active phones; drives the poll pace. */
+  hint: Readonly<{ pairedDevices?: number; activeDevices?: number }>;
+}>> {
   const shop = input.context.shop;
   if (!shop) throw new Error("Remote command execution requires active shop authority");
   const context = { ...input.context, shop };
-  const [page, deviceList] = await Promise.all([
-    input.client.pollCommands(shop.workspaceId, shop.shopId, input.after, input.limit ?? 50),
-    input.client.listDevices(shop.workspaceId),
-  ]);
+  const page = await input.client.pollCommands(
+    shop.workspaceId,
+    shop.shopId,
+    input.after,
+    input.limit ?? 50,
+  );
   if (!Number.isSafeInteger(page.nextCursor) || page.nextCursor < input.after) {
     throw new Error("Remote command cursor is invalid");
   }
+  const hint = Object.freeze({
+    pairedDevices: page.pairedDevices,
+    activeDevices: page.activeDevices,
+  });
+  // The device list is only needed to open a command; asking for it on every
+  // empty poll doubled the traffic for nothing.
+  if (page.commands.length === 0) {
+    return Object.freeze({ completed: 0, nextCursor: page.nextCursor, hint });
+  }
+  const deviceList = await input.client.listDevices(shop.workspaceId);
   const devices = new Map(
     deviceList.devices.map(deviceRow).filter((value): value is RemoteDevice => value !== null)
       .map((device) => [device.deviceId, device] as const),
@@ -174,5 +191,5 @@ export async function executeQueuedRemoteCommands(input: Readonly<{
     await input.client.completeCommand(queued.commandId, state, resultEnvelope);
     completed += 1;
   }
-  return Object.freeze({ completed, nextCursor: page.nextCursor });
+  return Object.freeze({ completed, nextCursor: page.nextCursor, hint });
 }
