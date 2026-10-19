@@ -78,6 +78,7 @@ BEGIN
         FROM cloud_backup
        WHERE workspace_id = NEW.workspace_id
          AND state NOT IN ('failed','deleted')
+         AND NOT (NEW.retention_class = 'trial' AND retention_class = 'trial' AND state = 'verified')
     ), 0) > (
       SELECT backup_bytes FROM backup_workspace WHERE workspace_id = NEW.workspace_id
     ) THEN RAISE(ABORT, 'backup_quota_exceeded')
@@ -89,7 +90,7 @@ BEGIN
       SELECT 1
         FROM cloud_backup
        WHERE workspace_id = NEW.workspace_id
-         AND state NOT IN ('failed','deleted')
+         AND state IN ('initiated','uploading','awaiting_verification')
     ) THEN RAISE(ABORT, 'trial_backup_already_exists')
   END;
 END;

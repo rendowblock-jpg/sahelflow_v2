@@ -4,6 +4,9 @@ const KEEP_BY_CLASS = Object.freeze({
   daily: 7,
   weekly: 4,
   monthly: 6,
+  // ARCHITECTURE 7.2 / 10.3: a trial seller keeps ONE rolling cloud point; a newer
+  // verified backup replaces the older one instead of being refused.
+  trial: 1,
 } as const);
 
 type RotatingRetentionClass = keyof typeof KEEP_BY_CLASS;
