@@ -45,7 +45,7 @@ describe("GET /<slug> (page route)", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
     expect(response.headers.get("Content-Language")).toBe("ar");
-    expect(response.headers.get("Cache-Control")).toBe(`public, max-age=${PAGE_TTL_SECONDS}`);
+    expect(response.headers.get("Cache-Control")).toBe("no-cache");
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(response.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
     expect(response.headers.get("Link")).toBe("</_sf/test.css>; rel=preload; as=style");
@@ -77,6 +77,18 @@ describe("GET /<slug> (page route)", () => {
     expect(await locale("/sahel-store?lang=en", { "Accept-Language": "ar" })).toBe("en");
     expect(await locale("/sahel-store?lang=xx", { "Accept-Language": "en" })).toBe("fr");
     expect(await locale("/sahel-store", { "Accept-Language": "es-ES" })).toBe("fr");
+    store.database.close();
+  });
+
+  it("keeps a page a few seconds at the edge but tells browsers not to keep it at all", async () => {
+    const store = await publishTestStore();
+    const cache = new MemoryCache();
+    const first = await servePublicStorePage(get("/sahel-store"), store.env, "sahel-store", undefined, deps(cache));
+    expect(first.headers.get("Cache-Control")).toBe("no-cache");
+    expect([...cache.store.values()][0]?.headers.get("Cache-Control")).toBe(`public, max-age=${PAGE_TTL_SECONDS}`);
+    const hit = await servePublicStorePage(get("/sahel-store"), store.env, "sahel-store", undefined, deps(cache));
+    expect(hit.headers.get("X-SF-Cache")).toBe("hit");
+    expect(hit.headers.get("Cache-Control")).toBe("no-cache");
     store.database.close();
   });
 
@@ -164,7 +176,7 @@ describe("GET /<slug> (page route)", () => {
     );
     expect(response.status).toBe(404);
     expect(response.headers.get("Content-Language")).toBe("fr");
-    expect(response.headers.get("Cache-Control")).toBe("public, max-age=10");
+    expect(response.headers.get("Cache-Control")).toBe("no-cache");
     const body = await response.text();
     expect(body).toContain('<html lang="fr" dir="ltr">');
     expect(body).toContain('content="noindex, nofollow"');

@@ -207,6 +207,10 @@ async function build(
 function withCacheState(response: Response, state: "hit" | "miss"): Response {
   const copy = new Response(response.body, response);
   copy.headers.set("X-SF-Cache", state);
+  // The copy kept at the edge lives for max-age seconds. A browser must not keep the page at all: the zone's default
+  // 4-hour Browser Cache TTL would stretch a cacheable page to 4 hours, and a returning visitor would see an old price,
+  // stock level or paused store for hours (measured on staging, 19 Oct). Failures stay "no-store".
+  if ((copy.headers.get("Cache-Control") ?? "").startsWith("public")) copy.headers.set("Cache-Control", "no-cache");
   return copy;
 }
 
