@@ -28,6 +28,7 @@ export function renderNoticePage(input: { locale: PublicLocale; kind: NoticeKind
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>${escapeHtml(title)}</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="${escapeHtml(input.cssPath)}">
 </head>
 <body style="margin:0">

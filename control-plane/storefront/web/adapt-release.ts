@@ -38,7 +38,7 @@ export function adaptPublicRelease(input: {
   theme: Record<string, unknown>;
   products: readonly PublicProduct[];
   stock: ReadonlyMap<string, StockRow>;
-}): { draft: StorefrontStudioDraft; products: StorefrontStudioDraftProduct[] } {
+}): { draft: StorefrontStudioDraft; products: StorefrontStudioProduct[] } {
   const template = input.theme.template === "atlas" || input.theme.template === "oasis" ? input.theme.template : "sahara";
   const defaults = createDefaultStorefrontTheme(template);
   const storedBuilder = (input.theme.builder ?? {}) as Record<string, unknown>;
@@ -71,7 +71,7 @@ export function adaptPublicRelease(input: {
     groups.set(product.productId, group);
   }
 
-  const products: StorefrontStudioDraftProduct[] = [...groups.values()].map((group) => ({
+  const products: StorefrontStudioProduct[] = [...groups.values()].map((group) => ({
     id: group.id,
     name: group.name,
     price: Math.min(...group.prices),
@@ -92,5 +92,3 @@ export function adaptPublicRelease(input: {
     products,
   };
 }
-
-export type StorefrontStudioDraftProduct = StorefrontStudioProduct;

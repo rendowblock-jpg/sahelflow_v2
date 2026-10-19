@@ -1,3 +1,4 @@
+import "./react-global";
 import manifest from "./asset-manifest.generated.json";
 import { servePublicStorePage as route, type CacheLike, type PageContext } from "./page-route";
 import { renderStorePage } from "./render-store-page";

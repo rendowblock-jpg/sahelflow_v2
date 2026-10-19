@@ -50,14 +50,17 @@ const RENDERER_FILES = [
 function webSourceFiles(): string[] {
   const entries = readdirSync(WEB, { recursive: true }) as string[];
   return entries
-    .filter((entry) => /\.(ts|tsx)$/.test(entry) && !/\.(test|generated)\./.test(entry))
+    .filter((entry) => /\.(ts|tsx)$/.test(entry) && !/\.(test|generated)\.|(^|\/)test-support\./.test(entry))
     .map((entry) => join("control-plane/storefront/web", entry).split(sep).join("/"))
     .sort();
 }
 
-function scannedFiles(): string[] {
+/** Repo-relative paths of every source file the hosted page is built from. */
+export function storefrontPublicSourceFiles(): string[] {
   return [...RENDERER_FILES, ...webSourceFiles()];
 }
+
+const scannedFiles = storefrontPublicSourceFiles;
 
 const KEY_PATTERN = /["'`](storefront\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+)["'`]/g;
 

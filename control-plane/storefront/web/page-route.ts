@@ -31,7 +31,7 @@ const CONTENT_SECURITY_POLICY = [
   "base-uri 'none'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "img-src https:",
+  "img-src 'self' https:",
   "style-src 'self'",
   "style-src-attr 'unsafe-inline'",
   "script-src 'self'",
@@ -47,6 +47,21 @@ type PageRow = {
 };
 
 type Built = { response: Response; cacheable: boolean };
+
+/**
+ * One line per failure in the Worker log (observability is on), so a broken
+ * store is findable. Only the store address and the error text: no visitor data.
+ */
+function logFailure(stage: "database" | "artifact" | "render", slug: string, error: unknown): void {
+  console.error(
+    JSON.stringify({
+      event: "storefront_page_failed",
+      stage,
+      slug,
+      message: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300),
+    }),
+  );
+}
 
 function htmlResponse(
   html: string,
@@ -118,7 +133,8 @@ async function build(
             .all<{ item_key: string; unit_price_dzd: number; remaining_quantity: number }>()
         ).results ?? [])
       : [];
-  } catch {
+  } catch (error) {
+    logFailure("database", slug, error);
     return notice("error", 503, requested ?? "ar", deps, 0, { "Retry-After": "30" });
   }
 
@@ -135,7 +151,8 @@ async function build(
     const parsed: unknown = JSON.parse(row.artifact_json);
     if (!validPublicArtifact(parsed)) throw new Error("invalid artifact");
     artifact = parsed;
-  } catch {
+  } catch (error) {
+    logFailure("artifact", slug, error);
     return notice("error", 503, fallbackLocale, deps, 0, { "Retry-After": "300" });
   }
 
@@ -157,7 +174,8 @@ async function build(
       cssPath: deps.cssPath,
     });
     return { response: htmlResponse(html, 200, locale, deps.cssPath, PAGE_TTL_SECONDS), cacheable: true };
-  } catch {
+  } catch (error) {
+    logFailure("render", slug, error);
     return notice("error", 500, locale, deps, 0, { "Retry-After": "300" });
   }
 }

@@ -145,6 +145,7 @@ export function renderStorePage(input: RenderStorePageInput): string {
     ...(image ? [`<meta property="og:image" content="${escapeHtml(image)}">`] : []),
     `<meta name="theme-color" content="${escapeHtml(draft.theme.backgroundColor)}">`,
     '<meta name="color-scheme" content="light dark">',
+    '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
     `<link rel="stylesheet" href="${escapeHtml(input.cssPath)}">`,
     `<script type="application/ld+json">${jsonForScript({ "@context": "https://schema.org", "@graph": graph })}</script>`,
   ].join("\n");
