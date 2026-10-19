@@ -83,7 +83,11 @@ describe("hosted storefront contract", () => {
       resolve(process.cwd(), "control-plane/storefront/release-allocation.ts"),
       "utf8",
     ).replace(/\r\n?/g, "\n");
-    expect(source).toContain("MIN(?5, COALESCE");
+    // The part that comes from the parent is capped at the parent's leftovers; the
+    // stock the desktop newly freed (freshQuantity, ?6) is added on top. The
+    // behaviour is proven by control-plane/storefront/hosted-authority.test.ts.
+    expect(source).toContain("MIN(?5 - ?6, COALESCE");
+    expect(source).toContain("), 0)) + ?6");
     expect(source).toContain("receipt.state = 'received'");
     expect(source).not.toContain("receipt.state IN ('received', 'rejected')");
     expect(source).toContain("SUM(line.quantity)");

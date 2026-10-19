@@ -58,6 +58,12 @@ export function createStorefrontReleaseInput(input: Readonly<{
   locale: "ar" | "fr" | "en";
   draft: StorefrontStudioDraft;
   products: readonly StorefrontReleaseProduct[];
+  /**
+   * Per item: how much of its requested quantity is stock the desktop has newly
+   * freed and holds in its own provisional reservation. See ReleaseAllocation
+   * in control-plane/storefront/release-input.ts.
+   */
+  freshByItemKey?: ReadonlyMap<string, number>;
 }>): Record<string, unknown> {
   const draft = storefrontStudioDraftSchema.parse(input.draft);
   if (draft.theme.builder.shippingRules.length < 1) {
@@ -98,7 +104,16 @@ export function createStorefrontReleaseInput(input: Readonly<{
         ...(product.description ? { description: product.description } : {}),
         ...(imageUrls.length > 0 ? { imageUrls } : {}),
       });
-      allocations.push({ itemKey, unitPriceDzd: saleItem.price, quantity: saleItem.stock });
+      const fresh = input.freshByItemKey?.get(itemKey) ?? 0;
+      if (!Number.isSafeInteger(fresh) || fresh < 0 || fresh > saleItem.stock) {
+        throw new Error("Published storefront fresh allocation is invalid");
+      }
+      allocations.push({
+        itemKey,
+        unitPriceDzd: saleItem.price,
+        quantity: saleItem.stock,
+        ...(fresh > 0 ? { freshQuantity: fresh } : {}),
+      });
     }
   }
   const { domain: _privateDomain, shippingRules, ...publicBuilder } = draft.theme.builder;

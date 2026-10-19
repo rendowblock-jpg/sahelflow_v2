@@ -5,6 +5,13 @@ export type ReleaseAllocation = {
   itemKey: string;
   unitPriceDzd: number;
   quantity: number;
+  /**
+   * The part of `quantity` the desktop has newly freed and holds in its own
+   * provisional reservation: stock that was restocked, or that a pause gave
+   * back. Everything else in `quantity` comes from the parent release and stays
+   * capped at what that release still has unsold. Absent means 0.
+   */
+  freshQuantity?: number;
 };
 
 export type ReleaseShippingRule = {
@@ -53,6 +60,8 @@ export function parseReleaseInput(value: unknown): ParsedReleaseInput | null {
     const itemKey = String(row.itemKey ?? "");
     const unitPriceDzd = Number(row.unitPriceDzd);
     const quantity = Number(row.quantity);
+    if (row.freshQuantity !== undefined && typeof row.freshQuantity !== "number") return null;
+    const freshQuantity = row.freshQuantity === undefined ? 0 : row.freshQuantity;
     if (
       !ITEM_KEY.test(itemKey) ||
       allocationKeys.has(itemKey) ||
@@ -60,10 +69,14 @@ export function parseReleaseInput(value: unknown): ParsedReleaseInput | null {
       unitPriceDzd < 0 ||
       !Number.isSafeInteger(quantity) ||
       quantity < 0 ||
-      quantity > 1_000_000
+      quantity > 1_000_000 ||
+      !Number.isSafeInteger(freshQuantity) ||
+      freshQuantity < 0 ||
+      freshQuantity > quantity
     ) return null;
     allocationKeys.add(itemKey);
-    allocations.push({ itemKey, unitPriceDzd, quantity });
+    // Only a positive value is kept, so a request without it hashes exactly as before.
+    allocations.push({ itemKey, unitPriceDzd, quantity, ...(freshQuantity > 0 ? { freshQuantity } : {}) });
   }
   const productKeys = new Set(input.publicArtifact.products.map((product) => product.itemKey));
   if (

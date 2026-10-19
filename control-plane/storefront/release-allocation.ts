@@ -5,8 +5,13 @@ import type { D1Database, D1Statement } from "./types";
  * Move the active release's unsold delegation into a fresh immutable release.
  *
  * D1 executes the caller's statement batch as one transaction. For an item
- * that already exists in the parent release, the fresh delegation is capped at
- * the parent's remaining quantity. New catalog items may use the desktop's
+ * that already exists in the parent release, the part of the request that comes
+ * from the parent (`quantity - freshQuantity`) is capped at the parent's
+ * remaining quantity, so a sale that raced the republish is never delegated a
+ * second time. `freshQuantity` is stock the desktop has newly freed and holds in
+ * its own reservation (a restock, or what a pause gave back): without it a
+ * paused or sold-out item could never be offered again, because the parent has
+ * nothing left. New catalog items may use the desktop's
  * requested physical-stock authority less receipts still in `received`.
  * Rejected receipts restore their allocation and are sellable again. The final
  * statement retires every remaining parent allocation, so a checkout that raced
@@ -32,10 +37,10 @@ export function appendConservedAllocationStatements(
              WHEN EXISTS (
                SELECT 1 FROM storefront_allocation
                 WHERE release_id = ?4 AND item_key = ?2
-             ) THEN MIN(?5, COALESCE((
+             ) THEN MIN(?5 - ?6, COALESCE((
                SELECT remaining_quantity FROM storefront_allocation
                 WHERE release_id = ?4 AND item_key = ?2
-             ), 0))
+             ), 0)) + ?6
              ELSE MAX(0, ?5 - COALESCE((
                SELECT SUM(line.quantity)
                  FROM storefront_receipt_line line
@@ -53,10 +58,10 @@ export function appendConservedAllocationStatements(
              WHEN EXISTS (
                SELECT 1 FROM storefront_allocation
                 WHERE release_id = ?4 AND item_key = ?2
-             ) THEN MIN(?5, COALESCE((
+             ) THEN MIN(?5 - ?6, COALESCE((
                SELECT remaining_quantity FROM storefront_allocation
                 WHERE release_id = ?4 AND item_key = ?2
-             ), 0))
+             ), 0)) + ?6
              ELSE MAX(0, ?5 - COALESCE((
                SELECT SUM(line.quantity)
                  FROM storefront_receipt_line line
@@ -76,6 +81,7 @@ export function appendConservedAllocationStatements(
         allocation.unitPriceDzd,
         parentReleaseId,
         allocation.quantity,
+        allocation.freshQuantity ?? 0,
       ),
     );
   }
