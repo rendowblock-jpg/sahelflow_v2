@@ -286,6 +286,10 @@ export class ConnectedPlatformClient {
     }
     const body = new Uint8Array(input.body.byteLength);
     body.set(input.body);
+    // The backup Worker refuses an object unless the sender states the exact
+    // SHA-256 it expects R2 to store (control-plane/backup/r2-integrity.ts).
+    // Without this header every cloud backup upload fails with a 409.
+    const sha256 = createHash("sha256").update(body).digest("hex");
     let response: Response;
     try {
       response = await fetch(pathUrl(this.endpoints.backup, path, {
@@ -297,6 +301,7 @@ export class ConnectedPlatformClient {
           Authorization: `Bearer ${authorization}`,
           "Content-Type": "application/octet-stream",
           "Content-Length": String(body.byteLength),
+          "X-SahelFlow-SHA256": sha256,
         },
         body,
         cache: "no-store",

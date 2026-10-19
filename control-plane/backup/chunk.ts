@@ -24,7 +24,12 @@ export async function storeChunk(
   }
   const backup = await loadBackup(environment, workspaceId, backupId);
   if (!backup) return json({ error: "backup_not_found" }, 404);
-  if (backup.state === "verified" || backup.state === "deleted" || backup.state === "deleting") {
+  // A failed (expired) reservation is released from quota accounting, so a late
+  // upload must not be allowed to leave an object behind that nothing counts or cleans.
+  if (
+    backup.state === "verified" || backup.state === "deleted" ||
+    backup.state === "deleting" || backup.state === "failed"
+  ) {
     return json({ error: "backup_not_uploadable", state: backup.state }, 409);
   }
   const chunk = await environment.DB.prepare(

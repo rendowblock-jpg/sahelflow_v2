@@ -17,7 +17,10 @@ export async function storeManifest(
   }
   const backup = await loadBackup(environment, workspaceId, backupId);
   if (!backup) return json({ error: "backup_not_found" }, 404);
-  if (backup.state === "verified" || backup.state === "deleted" || backup.state === "deleting") {
+  if (
+    backup.state === "verified" || backup.state === "deleted" ||
+    backup.state === "deleting" || backup.state === "failed"
+  ) {
     return json({ error: "backup_not_uploadable", state: backup.state }, 409);
   }
   const outcome = await putExpectedObject(
