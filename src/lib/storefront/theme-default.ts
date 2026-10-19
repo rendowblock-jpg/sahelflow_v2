@@ -29,7 +29,7 @@ export function createDefaultStorefrontTheme(template: StorefrontTemplateId = "a
       showCategoryNavigation: template !== "oasis",
     },
     checkout: {
-      layout: template === "sahara" ? "drawer" : template === "oasis" ? "inline" : "sticky",
+      layout: template === "sahara" ? "drawer" : "sticky",
       showOrderNotes: true,
       showCodPromise: true,
       codPromiseText: "",
