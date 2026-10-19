@@ -235,6 +235,15 @@ export async function initiateBackup(
     if (message.includes("backup_entitlement_expired")) {
       return json({ error: "backup_not_entitled" }, 403);
     }
+    // Two identical requests at the same moment (a retry that overtook a slow
+    // first attempt): the batch rolled back on the primary key, nothing is half
+    // written. Answer for the reservation that won, exactly like a later retry.
+    if (/UNIQUE constraint failed|SQLITE_CONSTRAINT_PRIMARYKEY/i.test(message)) {
+      const stored = await loadBackup(environment, workspaceId, backupId);
+      if (stored && stored.state !== "failed") {
+        return answerForExisting(environment, stored, workspaceId, backupId, requested);
+      }
+    }
     return json({ error: "backup_plan_conflict" }, 409);
   }
   return json({
