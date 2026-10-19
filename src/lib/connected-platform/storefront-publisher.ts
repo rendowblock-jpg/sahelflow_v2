@@ -121,16 +121,20 @@ export async function publishHostedStorefront(input: Readonly<{
   // unsold allocation plus stock protected by this operation's provisional
   // reservation. Older accepted hosted orders therefore remain excluded even
   // when an item was absent from an intermediate release.
+  const provisional = await provisionalQuantityByItem(input.context, input.prepared.releaseId);
   const products = preparedHistory
     ? input.prepared.products
     : requestedDelegationProducts(
         input.prepared,
-        await provisionalQuantityByItem(input.context, input.prepared.releaseId),
+        provisional,
         new Map((history.activeAllocations ?? []).map((allocation) => [
           allocation.itemKey,
           allocation.remainingQuantity,
         ])),
       );
+  // The stock this operation freed (a restock, or what a pause gave back) is the
+  // part the hosted side must not cap at the parent's leftovers. A first release
+  // has no parent, so there is nothing to distinguish.
   const release = createStorefrontReleaseInput({
     workspaceId: shop.workspaceId,
     releaseId: input.prepared.releaseId,
@@ -138,6 +142,7 @@ export async function publishHostedStorefront(input: Readonly<{
     locale: input.prepared.locale,
     draft: input.prepared.draft,
     products,
+    ...(parentReleaseId ? { freshByItemKey: provisional } : {}),
   });
   const published = await input.client.publishStorefrontRelease(
     input.prepared.storefrontId,
