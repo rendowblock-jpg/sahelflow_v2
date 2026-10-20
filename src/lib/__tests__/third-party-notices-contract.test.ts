@@ -29,6 +29,15 @@ describe("third-party licence notices ship with the app", () => {
     expect(config.bundle.resources["licenses/"]).toBe("licenses/");
   });
 
+  it("makes the installed-MSI proof fail when the installed app has no licence text", () => {
+    // The bundle entry above only promises the file; this proof looks for it in the
+    // folder a real MSI install created, and checks it is the Manrope text.
+    const proof = read("scripts/verify-installed-windows-msi.ps1");
+    expect(proof).toContain('"licenses\\Manrope-OFL.txt"');
+    expect(proof).toContain("Copyright 2018 The Manrope Project Authors");
+    expect(proof).toContain("SIL OPEN FONT LICENSE Version 1.1");
+  });
+
   it("points the reader of the outline to the licence", () => {
     const source = read("src-tauri/src/native_splash.rs");
     expect(source).toContain("SIL Open Font");
