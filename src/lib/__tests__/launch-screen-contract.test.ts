@@ -83,6 +83,32 @@ describe("FD-068 launch screen", () => {
     expect(follower).toContain("return;");
   });
 
+  it("shows the full S and 100% only for a launch whose workspace reported ready", () => {
+    const open = launchModule.slice(launchModule.indexOf("pub fn open("));
+    const native = open.indexOf("if crate::native_splash::is_active()");
+    const webview = open.indexOf("WebviewWindowBuilder::new(");
+    const follower = open.slice(native, webview);
+    // The hand-off needs the window visible, no quit AND this launch's trace
+    // saying ui-ready; the recovery page also makes the window visible.
+    expect(follower).toContain("crate::native_splash::handoff_allowed(");
+    expect(follower).toContain("workspace_visible(&app)");
+    expect(follower).toContain("crate::native_splash::current_launch_stage(");
+    expect(follower).toContain("crate::native_splash::request_handoff()");
+    expect(follower).toContain("crate::native_splash::request_close()");
+    const splash = read("src-tauri/src/native_splash.rs");
+    expect(splash).toMatch(/latest_stage == Some\("ui-ready"\)/);
+    // The renderer paints "complete" by the same rule, from the hand-off flag.
+    expect(splash).toContain("super::shows_complete(");
+    expect(splash).toContain("super::WORKSPACE_READY.load(");
+  });
+
+  it("a panic in the native card ends the card, never the app", () => {
+    const splash = read("src-tauri/src/native_splash.rs");
+    expect(splash).toContain("run_guarded(|| imp::run(");
+    expect(splash).toContain("std::panic::catch_unwind(");
+    expect(splash).toMatch(/std::panic::catch_unwind\(std::panic::AssertUnwindSafe\(\|\| r\.frame\(\)\)\)/);
+  });
+
   it("treats closing the native card as quit, never as hide, and outlasts a slow launch", () => {
     const splash = read("src-tauri/src/native_splash.rs");
     const closeArm = splash.slice(
