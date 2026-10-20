@@ -31,7 +31,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
-import { intlLocale } from "@/lib/utils";
+import { formatInboxAge } from "@/lib/inbox-age";
 import { displayContactName } from "@/lib/validation/phone";
 
 /** "Active …" hint appears only after the thread has been idle this long. */
@@ -43,20 +43,7 @@ function relativeLastActive(
   now: number,
   locale: "ar" | "fr" | "en",
 ): string {
-  const diff = Math.max(0, now - value);
-  const rtf = new Intl.RelativeTimeFormat(intlLocale(locale), {
-    numeric: "auto",
-  });
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 60) return rtf.format(-minutes, "minute");
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return rtf.format(-hours, "hour");
-  const days = Math.floor(hours / 24);
-  if (days < 7) return rtf.format(-days, "day");
-  return new Intl.DateTimeFormat(intlLocale(locale), {
-    day: "numeric",
-    month: "short",
-  }).format(new Date(value));
+  return formatInboxAge(value, now, locale);
 }
 
 /**

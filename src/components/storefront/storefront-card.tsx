@@ -25,6 +25,7 @@ import {
 import { useI18n } from "@/hooks/use-i18n";
 import type { StorefrontConfig } from "@/lib/storefront/service";
 import type { StorefrontPerformance } from "@/lib/storefront/storefront-performance";
+import { calendarDayDiff } from "@/lib/calendar-days";
 import { cn, formatDZD, intlLocale } from "@/lib/utils";
 
 function relativeTime(iso: string, locale: string): string {
@@ -36,7 +37,8 @@ function relativeTime(iso: string, locale: string): string {
   if (Math.abs(minutes) < 60) return format.format(minutes, "minute");
   const hours = Math.round(minutes / 60);
   if (Math.abs(hours) < 24) return format.format(hours, "hour");
-  return format.format(Math.round(hours / 24), "day");
+  // Calendar days, so "yesterday" means the previous date, not 24 to 47 hours.
+  return format.format(calendarDayDiff(new Date(), new Date(iso)), "day");
 }
 
 /**
