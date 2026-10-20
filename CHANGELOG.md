@@ -10,6 +10,7 @@ SahelFlow 1.0 Stable has not been released.
 
 ### 2026-10-20 — after Internal.45 (merged to `main`, not published)
 
+- #550 (`12648c90`): the redesigned "Tide" startup card (the S mark fills with the launch progress; colours follow the preset; 100% only after ui-ready). Windows runner: compile, clippy and the full Rust suite pass; not drawn on a Windows screen.
 - #552 (`63ab8189`): a failed WhatsApp delivery keeps its Prisma error code in the diagnostics log, never the message or any value.
 - #551 (`ea90b973`): "yesterday" counts calendar days (inbox list, thread header hint, storefront card); a 31-hour-old message from two calendar days earlier no longer reads "yesterday".
 - #549 (`863efd2b`): the list search box stops emptying itself in a loop, the orders list keeps its rows while a search loads, and there is one clear control. Not seen on the Founder's machine.
