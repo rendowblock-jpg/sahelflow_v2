@@ -669,10 +669,18 @@ pub(crate) fn glow_step(progress: f32) -> u32 {
     (clamp01(progress) * GLOW_STEPS as f32).floor() as u32
 }
 
-/// The SahelFlow wordmark as a vector outline (Manrope SemiBold, SIL OFL 1.1,
-/// kerned, tracking -1.2%), so the name looks the same on every PC instead of
-/// depending on an installed font. Units: 1,000 per em, the origin is the
-/// left end of the baseline and y grows downward. Generated, not hand-edited.
+/// The SahelFlow wordmark as a vector outline (Manrope variable font at
+/// weight 650, kerned, tracking -1.2%), so the name looks the same on every PC
+/// instead of depending on an installed font. Units: 1,000 per em, the origin
+/// is the left end of the baseline and y grows downward. Generated, not
+/// hand-edited.
+///
+/// Font licence: Manrope is Copyright 2018 The Manrope Project Authors
+/// (https://github.com/googlefonts/manrope), licensed under the SIL Open Font
+/// License, Version 1.1. We treat the outline as a Modified Version of that font
+/// software, so it stays under the same licence; the full text is in
+/// `src-tauri/licenses/Manrope-OFL.txt`. The font name is not used as a name
+/// anywhere in the app, only the outline of the word "SahelFlow" is drawn.
 pub(crate) mod wordmark {
     #[derive(Clone, Copy, Debug)]
     pub(crate) enum Seg {
