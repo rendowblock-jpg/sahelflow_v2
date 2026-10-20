@@ -13,6 +13,7 @@ import {
   whatsappInboundEnvelopeSchema,
   type WhatsAppInboundEnvelope,
 } from "./inbound-ingress";
+import { ingressErrorCode } from "./ingress-error-code";
 import {
   extractWhatsAppMessageAttachment,
   sealWhatsAppMessageAttachmentWithKey,
@@ -146,13 +147,6 @@ function jidPhone(sourceId: string): string | null {
   const value =
     sourceId.slice(0, -"@s.whatsapp.net".length).split(":")[0] ?? "";
   return /^\d{6,20}$/.test(value) ? value : null;
-}
-
-function errorCode(error: unknown): string {
-  if (error instanceof z.ZodError) return "INVALID_PROVIDER_PAYLOAD";
-  if (error instanceof SahelFlowError) return error.code.slice(0, 128);
-  if (error instanceof Error && error.name) return error.name.slice(0, 128);
-  return "INGRESS_PROCESSING_FAILED";
 }
 
 function isQuarantineError(error: unknown): boolean {
@@ -361,7 +355,7 @@ async function markFailure(
   claim: ClaimedIngress,
   error: unknown,
 ): Promise<WhatsAppIngressProcessingResult> {
-  const code = errorCode(error);
+  const code = ingressErrorCode(error);
   const quarantine = isQuarantineError(error);
   const exhausted =
     claim.attemptNumber >= attemptBudget(claim.operatorRetryCount);
