@@ -634,6 +634,20 @@ foreach ($requiredRuntimePath in @(
 if (Test-Path -LiteralPath $forbiddenInstalledBunPath) {
     throw "Installed runtime still contains the retired Bun production executable."
 }
+# The startup card draws the word "SahelFlow" as an outline made from the Manrope font (SIL OFL 1.1),
+# which requires the copyright notice and the licence text to travel with every copy of the app.
+$installedManropeLicensePath = Join-Path $installedProductRoot "licenses\Manrope-OFL.txt"
+if (-not (Test-Path -LiteralPath $installedManropeLicensePath -PathType Leaf)) {
+    throw "Installed Manrope OFL licence is missing: $installedManropeLicensePath"
+}
+$installedManropeLicense = Get-Content -LiteralPath $installedManropeLicensePath -Raw
+if (
+    -not $installedManropeLicense.StartsWith("Copyright 2018 The Manrope Project Authors") -or
+    -not $installedManropeLicense.Contains("SIL OPEN FONT LICENSE Version 1.1")
+) {
+    throw "Installed Manrope OFL licence is not the expected text: $installedManropeLicensePath"
+}
+Write-Host "Installed Manrope OFL licence present ($((Get-Item -LiteralPath $installedManropeLicensePath).Length) bytes)."
 $installedRuntimeManifest = Read-JsonFile $installedJavascriptRuntimeManifestPath
 $installedRuntimeManifestSha256 = (
     Get-FileHash -LiteralPath $installedJavascriptRuntimeManifestPath -Algorithm SHA256
