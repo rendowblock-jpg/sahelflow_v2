@@ -23,6 +23,7 @@ import {
   trustedActorAuditIdentity,
 } from "@/lib/identity/authorization";
 import { storefrontService } from "@/lib/storefront/service";
+import type { StorefrontTemplateId } from "@/lib/storefront/presentation-types";
 import {
   ConflictError,
   ConnectedPlatformNotEnrolledError,
@@ -45,7 +46,7 @@ type ReleaseHistory = Readonly<{
   releases: readonly Readonly<{
     releaseId: string;
     parentReleaseId: string | null;
-    templateId: "sahara" | "atlas" | "oasis";
+    templateId: StorefrontTemplateId;
     locale: "ar" | "fr" | "en";
     artifactDigest: string;
     createdAt: string;

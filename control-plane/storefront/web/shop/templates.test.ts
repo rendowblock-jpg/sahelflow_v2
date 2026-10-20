@@ -114,3 +114,64 @@ describe("the three newer templates are drawn as themselves", () => {
     store.database.close();
   });
 });
+
+describe("the renderer is safe against a template id or a manifest it does not expect", () => {
+  it.each(["constructor", "__proto__", "toString", "hasOwnProperty", "vitrine", ""])(
+    "a stored template id %j draws the shared look: no skin, no preload, no tab bar, no exception",
+    async (template) => {
+      const store = await publishTestStore({ template: "atlas" });
+      const base = renderInputFor(store);
+      const artifact = { ...base.artifact, theme: { ...base.artifact.theme, template } } as typeof base.artifact;
+      const html = renderStorePage({ ...base, artifact });
+      expect(html).not.toBeNull();
+      expect(links(html as string)).toEqual(["/_sf/shop.test.css"]);
+      expect(preloads(html as string)).toEqual([]);
+      expect(html).not.toContain("sf-tabs");
+      store.database.close();
+    },
+  );
+
+  it("a template id is never printed raw into the data-voice attribute", async () => {
+    const store = await publishTestStore({ template: "atlas" });
+    const base = renderInputFor(store);
+    const hostile = `x"><script>alert(1)</script>`;
+    const artifact = { ...base.artifact, theme: { ...base.artifact.theme, template: hostile } } as typeof base.artifact;
+    const html = renderStorePage({ ...base, artifact }) as string;
+    expect(html).not.toContain("<script>alert(1)</script>");
+    expect(html).toContain('data-voice="x&quot;&gt;&lt;script&gt;');
+    store.database.close();
+  });
+
+  it.each(["sahara", "prime", "souk", "reel"] as const)("%s: a manifest without a skins table (an old deploy) still renders a page", async (template) => {
+    const store = await publishTestStore({ template });
+    const base = renderInputFor(store);
+    const html = renderStorePage({ ...base, assets: { ...base.assets, skins: undefined as never } }) as string;
+    expect(html).toContain(`data-voice="${template}"`);
+    expect(links(html)).toEqual(["/_sf/shop.test.css"]);
+    store.database.close();
+  });
+
+  it("a WhatsApp number with no digits makes no WhatsApp tab (and never a link to the wa.me root)", async () => {
+    const store = await publishTestStore({
+      template: "souk",
+      shapeTheme: (theme) => { theme.builder.contact = { phone: "0550123456", whatsapp: "---", email: "", address: "" }; },
+    });
+    const html = page(store);
+    const nav = /<nav class="sf-tabs"[\s\S]*?<\/nav>/.exec(html)?.[0] ?? "";
+    expect(nav).not.toBe(""); // the other tabs are still drawn
+    expect(nav).not.toContain("wa.me");
+    expect(nav).not.toContain("WhatsApp");
+    store.database.close();
+  });
+
+  it.each(["sahara", "atlas", "oasis"] as const)("%s: the page has no tab bar, no skin script and the same end of document as before", async (template) => {
+    const store = await publishTestStore({ template });
+    const html = page(store, { productId: "product_00000001" });
+    expect(html).not.toContain("sf-tabs");
+    expect(html).not.toContain("data-tabs");
+    expect(scripts(html)).toEqual(["/_sf/shop.test.js"]);
+    expect(html).toMatch(/<\/footer>\n<div id="sf-sticky"[\s\S]*?<\/div>\n<script src="\/_sf\/shop\.test\.js" defer><\/script>\n<\/body>/);
+    store.database.close();
+  });
+});
+

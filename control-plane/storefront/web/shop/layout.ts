@@ -79,13 +79,14 @@ export function renderTabBar(ctx: Ctx): string {
   const contact = theme.builder.contact;
   const tab = (name: "home" | "box" | "chat" | "phone", label: string, href: string, current = false, external = false) =>
     `<a class="sf-tab" href="${esc(href)}"${current ? ' aria-current="page"' : ""}${external ? ' target="_blank" rel="noopener noreferrer"' : ""}><span class="sf-tab-pill">${icon(name)}</span>${esc(label)}</a>`;
+  const waDigits = contact.whatsapp ? whatsappDigits(contact.whatsapp) : "";
   const tabs = [
     tab("home", t("storefront.shop.tabHome"), `/${slug}`, true),
     sections.some((section) => section.type === "product-grid") ? tab("box", t("storefront.view.navProducts"), "#catalog") : "",
     sections.some((section) => section.type === "support") && (contact.phone || contact.whatsapp || contact.email || contact.address)
       ? tab("phone", t("storefront.view.navContact"), "#contact")
       : "",
-    contact.whatsapp ? tab("chat", "WhatsApp", `https://wa.me/${whatsappDigits(contact.whatsapp)}`, false, true) : "",
+    waDigits ? tab("chat", "WhatsApp", `https://wa.me/${waDigits}`, false, true) : "",
   ].filter(Boolean);
   return tabs.length < 2 ? "" : `<nav class="sf-tabs" aria-label="${esc(t("storefront.shop.tabNav"))}">${tabs.join("")}</nav>`;
 }
@@ -106,11 +107,16 @@ const PRELOAD: Record<ShopTheme["template"], { ar: string | null; latin: string 
   reel: { ar: null, latin: "archivo-cond-800-latin" },
 };
 
+/** A value from a table only when the key is the table's OWN: "constructor" or "__proto__" never find a function or an object here. */
+function own<T>(table: Readonly<Record<string, T>> | undefined, key: string): T | undefined {
+  return table && Object.prototype.hasOwnProperty.call(table, key) ? table[key] : undefined;
+}
+
 export function documentShell(ctx: Ctx, page: PageParts): string {
   const { theme, locale, origin, assets } = ctx;
   const canonical = `${origin}${page.canonical}`;
-  const skin = assets.skins[theme.template];
-  const fontKey = PRELOAD[theme.template][locale === "ar" ? "ar" : "latin"];
+  const skin = own(assets.skins, theme.template);
+  const fontKey = own(PRELOAD, theme.template)?.[locale === "ar" ? "ar" : "latin"] ?? null;
   const preloadFont = fontKey ? assets.fonts[fontKey] : undefined;
   const alternates = [
     ...PUBLIC_LOCALES.map((code) => `<link rel="alternate" hreflang="${code}" href="${esc(`${origin}${ctx.path}?lang=${code}`)}">`),
@@ -143,7 +149,7 @@ export function documentShell(ctx: Ctx, page: PageParts): string {
   ].join("\n");
 
   const attrs = [
-    `data-voice="${theme.template}"`,
+    `data-voice="${esc(theme.template)}"`,
     `data-density="${theme.density}"`,
     `data-radius="${theme.radius}"`,
     `data-card="${theme.catalog.cardStyle}"`,
@@ -167,8 +173,7 @@ ${renderHeader(ctx)}
 ${page.main}
 </main>
 ${renderFooter(ctx, page.tagline)}
-${page.bar ?? ""}
-${page.tabs ?? ""}
+${page.bar ?? ""}${page.tabs ?? ""}
 ${page.script ? `<script src="${esc(assets.js)}" defer></script>` : ""}${page.script && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}
 </body>
 </html>`;

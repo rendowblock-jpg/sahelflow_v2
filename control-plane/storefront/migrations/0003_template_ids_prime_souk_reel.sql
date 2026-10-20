@@ -19,15 +19,13 @@
 -- triggers are created LAST: storefront_release_activate runs on every insert into storefront_release and would
 -- otherwise re-activate a paused store and move active_release_id while the rows are being put back.
 --
+-- The side tables are deliberately NOT dropped first (no DROP TABLE IF EXISTS): if an interrupted run ever left them behind, they may
+-- be the only copy of the data, and this file then stops at CREATE TABLE ("already exists") instead of erasing them.
 -- Run it ONCE, as one batch:  wrangler d1 execute <database> --remote --file migrations/0003_template_ids_prime_souk_reel.sql
 -- D1 rolls the whole batch back if a constraint is still violated at the end. Take a Time Travel bookmark first
 -- (wrangler d1 time-travel info <database>) and compare row counts of every storefront_* table before and after.
 
 PRAGMA defer_foreign_keys = on;
-
-DROP TABLE IF EXISTS zz_mig0003_hold_release;
-DROP TABLE IF EXISTS zz_mig0003_hold_allocation;
-DROP TABLE IF EXISTS zz_mig0003_hold_shipping_rule;
 
 CREATE TABLE zz_mig0003_hold_release AS
   SELECT release_id, storefront_id, parent_release_id, template_id, locale, artifact_json, artifact_digest, request_digest, created_at

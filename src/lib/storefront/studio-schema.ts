@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { STOREFRONT_TEMPLATE_IDS } from "./presentation-types";
+
 const color = z.string().regex(/^#[0-9a-f]{6}$/i);
 const text = (max: number) => z.string().max(max);
 const id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$/);
@@ -359,7 +361,7 @@ const storefrontBuilderSchema = z
 export const storefrontStudioThemeSchema = z
   .object({
     schemaVersion: z.literal(2),
-    template: z.enum(["sahara", "atlas", "oasis", "prime", "souk", "reel"]),
+    template: z.enum(STOREFRONT_TEMPLATE_IDS),
     primaryColor: color,
     accentColor: color,
     backgroundColor: color,

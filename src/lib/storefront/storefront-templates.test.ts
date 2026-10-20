@@ -59,16 +59,14 @@ describe("storefront template registry (ids)", () => {
 });
 
 describe("default palettes of the new templates read well", () => {
-  it.each(NEW_IDS)("%s: body text AAA on the page, secondary text AA on page and surface, button text AA, ink on the surface AAA", (id) => {
+  it.each(NEW_IDS)("%s: body text AAA on the page and on the surface, secondary text AA on page and surface, button text AA", (id) => {
     const theme = createDefaultStorefrontTheme(id);
     const style = storefrontThemeStyle(theme) as Record<string, string>;
     expect(contrastRatio(theme.textColor, theme.backgroundColor)).toBeGreaterThanOrEqual(7);
     expect(contrastRatio(style["--muted-foreground"] as string, theme.backgroundColor)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(style["--muted-foreground"] as string, theme.surfaceColor)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(style["--primary-foreground"] as string, theme.primaryColor)).toBeGreaterThanOrEqual(4.5);
-    // The ink to print on the surface is derived from the surface, never assumed to be the page text.
-    expect(style["--sf-on-surface"]).toBeDefined();
-    expect(contrastRatio(style["--sf-on-surface"] as string, theme.surfaceColor)).toBeGreaterThanOrEqual(7);
+    expect(contrastRatio(theme.textColor, theme.surfaceColor)).toBeGreaterThanOrEqual(7);
   });
 
   it("prime and reel are dark pages, souk is a light page", () => {

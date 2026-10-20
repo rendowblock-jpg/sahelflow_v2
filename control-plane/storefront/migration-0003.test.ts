@@ -198,4 +198,28 @@ describe("migration 0003: existing databases accept prime, souk and reel", () =>
     expect(MIGRATION.replace(/--.*$/gm, "")).not.toMatch(/legacy_alter_table|foreign_keys\s*=\s*off|writable_schema/i);
   });
 
+
+  it("refuses to run over a side table left by an earlier run, and changes nothing (it could be the only copy of the data)", () => {
+    const database = oldDatabase();
+    seed(database);
+    database.exec("CREATE TABLE zz_mig0003_hold_release AS SELECT * FROM storefront_release");
+    const before = snapshot(database);
+    expect(() => applyAsBatch(database, MIGRATION)).toThrow(/already exists/);
+    expect(snapshot(database)).toEqual(before);
+    expect(rows(database, "SELECT count(*) AS n FROM zz_mig0003_hold_release")).toEqual([{ n: 3 }]);
+  });
+
+  it("run a second time on a migrated database, it rebuilds the same rows and changes nothing", () => {
+    const database = oldDatabase();
+    seed(database);
+    applyAsBatch(database, MIGRATION);
+    const once = snapshot(database);
+    applyAsBatch(database, MIGRATION);
+    expect(snapshot(database)).toEqual(once);
+    expect(rows(database, "PRAGMA foreign_key_check")).toEqual([]);
+    expect(rows(database, "SELECT storefront_id, state, active_release_id FROM storefront ORDER BY storefront_id")).toEqual([
+      { storefront_id: "sf_a", state: "active", active_release_id: "rel_a2" },
+      { storefront_id: "sf_b", state: "paused", active_release_id: "rel_b1" },
+    ]);
+  });
 });
