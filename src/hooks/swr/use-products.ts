@@ -43,6 +43,8 @@ export function useProducts(
       : undefined;
 
   const { data, error, isLoading, mutate } = useSWR<ProductsResponse>(key, fetcher, {
+    // Keep the rows on screen while the answer for a new search loads (see use-orders).
+    keepPreviousData: true,
     fallbackData,
     revalidateOnFocus: false,
     dedupingInterval: 5000,
