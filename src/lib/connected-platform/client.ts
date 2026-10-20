@@ -434,7 +434,7 @@ export class ConnectedPlatformClient {
       releases: Array<{
         releaseId: string;
         parentReleaseId: string | null;
-        templateId: "sahara" | "atlas" | "oasis";
+        templateId: "sahara" | "atlas" | "oasis" | "prime" | "souk" | "reel";
         locale: "ar" | "fr" | "en";
         artifactDigest: string;
         createdAt: string;

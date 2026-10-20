@@ -30,4 +30,28 @@ export const STOREFRONT_TEMPLATE_PRESETS: Readonly<Record<StorefrontTemplateId, 
     surfaceColor: "#FFFFFF",
     textColor: "#17201B",
   },
+  // PRIME: the product alone on a lit stage. Forest-black page, brass for the one action, bone for text.
+  prime: {
+    primaryColor: "#C8A25B",
+    accentColor: "#ECD29A",
+    backgroundColor: "#07120E",
+    surfaceColor: "#0E1F17",
+    textColor: "#EFEAE0",
+  },
+  // SOUK: a market of colour chips. White page, ink text, saffron only for badges and counts.
+  souk: {
+    primaryColor: "#15172A",
+    accentColor: "#F4B61F",
+    backgroundColor: "#FFFFFF",
+    surfaceColor: "#F5F6FA",
+    textColor: "#15172A",
+  },
+  // REEL: black cinema. No accent colour of its own: the product's colourways are the colour.
+  reel: {
+    primaryColor: "#F1EFEA",
+    accentColor: "#D9D4C7",
+    backgroundColor: "#09090A",
+    surfaceColor: "#141416",
+    textColor: "#F1EFEA",
+  },
 };

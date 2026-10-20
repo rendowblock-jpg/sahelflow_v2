@@ -9,7 +9,7 @@ import { DZ_CLOCK, intlLocale } from "@/lib/utils";
 type Release = Readonly<{
   releaseId: string;
   parentReleaseId: string | null;
-  templateId: "sahara" | "atlas" | "oasis";
+  templateId: "sahara" | "atlas" | "oasis" | "prime" | "souk" | "reel";
   locale: "ar" | "fr" | "en";
   artifactDigest: string;
   createdAt: string;

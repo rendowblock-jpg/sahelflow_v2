@@ -157,6 +157,8 @@ export function storefrontThemeStyle(palette: StorefrontPalette): CSSProperties 
     "--sf-on-accent": readableOn(accent),
     "--sf-brand-text": brandTextOn(primary, background, text),
     "--sf-brand-text-on-surface": brandTextOn(primary, surface, text),
+    // The ink for anything printed ON the surface colour (a dark page has a dark surface, so this is light there).
+    "--sf-on-surface": readableOn(surface),
     "--sf-surface-muted": mixHex(text, surface, 0.04),
     "--sf-placeholder": mixHex(primary, surface, 0.09),
     "--sf-placeholder-ink": mixHex(primary, surface, 0.45),

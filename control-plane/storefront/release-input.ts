@@ -24,7 +24,7 @@ export type ParsedReleaseInput = {
   workspaceId: string;
   releaseId: string;
   parentReleaseId: string | null;
-  templateId: "sahara" | "atlas" | "oasis";
+  templateId: "sahara" | "atlas" | "oasis" | "prime" | "souk" | "reel";
   locale: "ar" | "fr" | "en";
   publicArtifact: PublicArtifact;
   allocations: ReleaseAllocation[];
@@ -44,7 +44,7 @@ export function parseReleaseInput(value: unknown): ParsedReleaseInput | null {
     !ID.test(workspaceId) ||
     !ID.test(releaseId) ||
     (parentReleaseId !== null && !ID.test(parentReleaseId)) ||
-    (templateId !== "sahara" && templateId !== "atlas" && templateId !== "oasis") ||
+    !["sahara", "atlas", "oasis", "prime", "souk", "reel"].includes(String(templateId)) ||
     (locale !== "ar" && locale !== "fr" && locale !== "en") ||
     !validPublicArtifact(input.publicArtifact) ||
     input.publicArtifact.theme.template !== templateId ||

@@ -66,7 +66,7 @@ export async function publishTestStore(
     storeName?: string;
     description?: string;
     locale?: "ar" | "fr" | "en";
-    template?: "sahara" | "atlas" | "oasis";
+    template?: "sahara" | "atlas" | "oasis" | "prime" | "souk" | "reel";
     products?: readonly StorefrontReleaseProduct[];
     shapeTheme?: (theme: StorefrontTheme) => void;
     paused?: boolean;

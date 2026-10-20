@@ -11,7 +11,7 @@ export type ShopSection = {
 
 /** The part of the published theme the public page reads. The cloud validated the whole theme at publish. */
 export type ShopTheme = {
-  template: "sahara" | "atlas" | "oasis";
+  template: "sahara" | "atlas" | "oasis" | "prime" | "souk" | "reel";
   primaryColor: string;
   accentColor: string;
   backgroundColor: string;

@@ -359,7 +359,7 @@ const storefrontBuilderSchema = z
 export const storefrontStudioThemeSchema = z
   .object({
     schemaVersion: z.literal(2),
-    template: z.enum(["sahara", "atlas", "oasis"]),
+    template: z.enum(["sahara", "atlas", "oasis", "prime", "souk", "reel"]),
     primaryColor: color,
     accentColor: color,
     backgroundColor: color,

@@ -2,7 +2,7 @@ import type { StorefrontPageComposition } from "./studio-sections";
 
 export const STOREFRONT_THEME_SCHEMA_VERSION = 2 as const;
 export const STOREFRONT_BUILDER_SCHEMA_VERSION = 1 as const;
-export const STOREFRONT_TEMPLATE_IDS = ["sahara", "atlas", "oasis"] as const;
+export const STOREFRONT_TEMPLATE_IDS = ["sahara", "atlas", "oasis", "prime", "souk", "reel"] as const;
 export type StorefrontTemplateId = (typeof STOREFRONT_TEMPLATE_IDS)[number];
 export type LegacyStorefrontTemplateId = "minimal" | "modern" | "classic";
 export type StorefrontHeroStyle = "editorial" | "split" | "centered";

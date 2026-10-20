@@ -57,7 +57,7 @@ export type ReleaseRow = {
   release_id: string;
   storefront_id: string;
   parent_release_id: string | null;
-  template_id: "sahara" | "atlas" | "oasis";
+  template_id: "sahara" | "atlas" | "oasis" | "prime" | "souk" | "reel";
   locale: "ar" | "fr" | "en";
   artifact_json: string;
   artifact_digest: string;

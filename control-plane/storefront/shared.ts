@@ -263,7 +263,7 @@ function validPublicTheme(value: unknown): value is PlainRecord {
   const checkout = record(theme.checkout);
   const trust = record(theme.trust);
   return Boolean(
-    theme.schemaVersion === 2 && ["sahara", "atlas", "oasis"].includes(String(theme.template)) &&
+    theme.schemaVersion === 2 && ["sahara", "atlas", "oasis", "prime", "souk", "reel"].includes(String(theme.template)) &&
     [theme.primaryColor, theme.accentColor, theme.backgroundColor, theme.surfaceColor, theme.textColor]
       .every((color) => typeof color === "string" && COLOR.test(color)) &&
     typeof theme.showPrices === "boolean" && typeof theme.showStock === "boolean" &&
