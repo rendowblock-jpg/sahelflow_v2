@@ -8,6 +8,23 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-20 — after Internal.45 (merged to `main`, not published)
+
+- #550 (`12648c90`): the redesigned "Tide" startup card (the S mark fills with the launch progress; colours follow the preset; 100% only after ui-ready). Windows runner: compile, clippy and the full Rust suite pass; not drawn on a Windows screen.
+- #552 (`63ab8189`): a failed WhatsApp delivery keeps its Prisma error code in the diagnostics log, never the message or any value.
+- #551 (`ea90b973`): "yesterday" counts calendar days (inbox list, thread header hint, storefront card); a 31-hour-old message from two calendar days earlier no longer reads "yesterday".
+- #549 (`863efd2b`): the list search box stops emptying itself in a loop, the orders list keeps its rows while a search loads, and there is one clear control. Not seen on the Founder's machine.
+
+### 2026-10-20 — documentation reconciled to Internal.45
+
+- `AGENTS.md`, both README files, `CURRENT_STATE.md`, `ROADMAP.md`, `WORKFLOW.md`, `WORKING_MEMORY.md` and `DECISIONS.md` now name Internal.45 as the published package, record that the Founder installed it in place on 2026-10-20 and what he reported, and list what was merged after it. The Internal.44 package record is retained in `CURRENT_STATE.md`. No decision changed; no ledger row converts; the active documentation is still 25 files.
+
+### 2026-10-19 — signed Internal.45 publication (FD-073)
+
+- Tag `sahelflow-v1.0.0-internal.45-9a8dac39545577e7395935c73452f55230f75e21`, published 2026-10-19T20:27:45Z by signed run `39315780619` (started by the dispatcher run `39315761767` on the merge of #548, first attempt): app `1.0.0-internal.45` / MSI `1.0.0.45`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`. Assets: MSI (sha256 `241dc55b…`) and `.sig`; `SahelFlow-Setup.exe` (sha256 `97cb895b…`) and `.sig`; the same installer under its versioned name; updater `latest.json` (sha256 `949ec18b…`) with `windows-x86_64` (Setup.exe), `windows-x86_64-msi` and `windows-x86_64-nsis` entries.
+- Source: the `main` tip `9a8dac39…` (#548). The signed train checked the source was the current tip, attested tree equality with the reviewed pull request, passed the signed install, launch, reopen and authenticated-UI proof, and verified the draft `latest.json` before publishing. Content: the FD-073 entry below.
+- Installed by the Founder in place on 2026-10-20; no ledger row converts.
+
 ### 2026-10-19 — FD-073 adopts the Internal.45 release authority
 
 - FD-073 authorizes one signed successor: app `1.0.0-internal.45` / MSI `1.0.0.45`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`, built from the exact `main` tip. Content merged after Internal.44 (`c1a66d9b…`):

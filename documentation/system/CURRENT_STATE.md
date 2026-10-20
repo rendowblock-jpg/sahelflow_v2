@@ -1,15 +1,64 @@
 # SahelFlow — Current State
 
 > **Status:** Source/evidence/release/provider truth for the current execution frontier
-> **Last assessed:** 2026-10-18
+> **Last assessed:** 2026-10-20
 > **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Published signed package:** Internal.44 / `1.0.0-internal.44` / MSI `1.0.0.44` / FD-072 / `customer-online`, published 2026-10-18T15:15:42Z. Founder-authorized launch candidate, not Beta or Stable.
-> **Installed truth:** the authority is `../operations/WORKING_MEMORY.md`. The Founder is installing Internal.43 in place (stated 2026-10-17); Internal.44 is published and not installed; no observation of either is recorded yet.
+> **Published signed package:** Internal.45 / `1.0.0-internal.45` / MSI `1.0.0.45` / FD-073 / `customer-online`, published 2026-10-19T20:27:45Z. Founder-authorized launch candidate, not Beta or Stable.
+> **Installed truth:** the authority is `../operations/WORKING_MEMORY.md`. The Founder installed Internal.45 in place and reported on it on 2026-10-20 (observations in §3 and in `WORKING_MEMORY.md`); no campaign row has converted.
 > **Protected `main`:** resolve it live from GitHub before acting. This document records released and observed facts, not branch tips.
 
 This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
 
-## 1. Latest published package — Internal.44
+## 1. Latest published package — Internal.45
+
+| Field | Value |
+|---|---|
+| Version | app `1.0.0-internal.45`, MSI `1.0.0.45`, channel `internal` |
+| Authority | FD-073 (`../product/DECISIONS.md`); mode `customer-online`; owned host `sahelflow.com`; trial origins `license.sahelflow.com` and `activate.sahelflow.com`; paid licences stay offline-signed |
+| Tag | `sahelflow-v1.0.0-internal.45-9a8dac39545577e7395935c73452f55230f75e21` |
+| Published | 2026-10-19T20:27:45Z by signed run `39315780619`, started by the `Dispatch signed internal version` workflow (run `39315761767`) on the merge of release PR #548 |
+| Source | protected `main` commit `9a8dac39…` (PR #548), the tip of `main` when the build ran |
+| MSI | `SahelFlow_1.0.0-internal.45_x64_en-US.msi`, sha256 `241dc55b944e2c4104f4a3978759e7c9e2c0a144403ce79b202279c512fdeebd` |
+| Setup.exe | `SahelFlow-Setup.exe` (per-machine NSIS, byte-identical to `SahelFlow_1.0.0-internal.45_x64-setup.exe`), sha256 `97cb895b353c5872cf339b97602deba8410a3f76ff1e60ab544299a49b48cdf7` |
+| Updater manifest | `latest.json`, sha256 `949ec18bffb3f4c0756bc32425d5f0ec70e1f837a73aa7a8c5b7dae744bfeea7`; entries `windows-x86_64` (Setup.exe), `windows-x86_64-msi` and `windows-x86_64-nsis` |
+
+**What it packages.** The Internal.44 line plus everything merged to `main` after it, listed under "What Internal.45 packages" below.
+
+**Verified on publication.** The signed run (38 steps, all succeeded) validated the exact source, checked that the source is the current tip of protected `main`, attested that the tree is identical to the reviewed pull-request tree under its risk-aware required gate, built and signed both installers into a draft release, verified the MSI and updater signatures, passed the signed install, launch and reopen proof and the authenticated hydrated WebView UI proof twice, verified the draft `latest.json`, created the tag and published. Exactly one release carries the tag, it is not a draft, and `releases/latest` resolves to it.
+
+**Not proven.** Any ledger row; `SahelFlow-Setup.exe` on a clean machine; the startup gain and palette latency; live WhatsApp delivery as a certification (the Founder's own test on 2026-10-20 is an observation, not a converted row); commerce or courier certification; the look of the redesigned card (the Founder judged the Internal.45 card not good enough, and the redesign, merged on 2026-10-20 as #550, has not been seen on a Windows screen).
+
+### What Internal.45 packages (merged after Internal.44)
+
+These pull requests were merged to protected `main` after Internal.44 and are packaged in Internal.45 (published 2026-10-19). The Founder installed Internal.45 and reported on it (§3); no ledger row converts without a named observation.
+
+- **#534** — `/agents` renders one `main` landmark: the AI canvas root is a `div` inside the layout's `main` (it had two `main` landmarks on desktop).
+- **#510** (`64282a8f`) — the workspace paints from the server's licence check instead of a second client fetch. The first attempt failed two required browser tests; the failed CI logs showed 8 hydration-mismatch warnings (0 on `main`) because the client's first render differed from the server HTML. The first client render now equals the server HTML (`useSyncExternalStore`, no lint suppression).
+- **#536** (`49441056`) — one inbound WhatsApp record stayed stuck and was retried every ~5 minutes: the messages SahelFlow sends itself come back from WhatsApp with `participant: ""`, which the app's strict schema refused with `REQUEST_VALIDATION_FAILED`. The sidecar now conforms three fields (participant, push name, timestamp) without changing what the app already accepts, and every refusal now logs the field paths and codes (never values).
+- **#537** (`8c4c0b79`) — messages that arrived while SahelFlow was closed were dropped: the sidecar discarded every inbound message until the connection reported `open`, but WhatsApp delivers the offline backlog before that. Inbound messages are now spooled under the saved-credentials account as soon as they arrive; the sidecar drops one only when no account is paired. New diagnostics: `inbound.early`, `offline.preview`, `offline.done`. Messages the old gate already dropped cannot be recovered by SahelFlow (they remain on the phone).
+- **#538** (`9184f760`) — "clear old notifications" now survives closing SahelFlow. The computed alerts kept their cleared list in the WebView's `localStorage`, and the packaged app serves from a loopback port chosen at random on every launch, so each launch was a new origin with an empty store. The cleared list is now kept per member in the existing `Setting` table (alert id plus a hash of its text, capped at 200, no customer text); an alert whose text changes still comes back.
+- **#539** (`fe0dcdf4`) — the startup card was redesigned (one smooth glow and shadow, one progress group, Minimize and Close chips, draggable) and follows the seller's colour mode and one of the four presets. The language, mode and preset are recorded in `launch-appearance.json` whenever they change, so a crashed launch still shows the right card. The "taking longer than usual" hint moved from 15 s to 45 s. Compiled and tested for Windows in CI; The Founder looked at it on the installed Internal.45 on 2026-10-20 and judged it low quality and generic; the redesign was merged on 2026-10-20 as #550 and has not been seen on a Windows screen.
+- **#540** (`1f8d8cc3`) — updates are quiet: a chip in the top bar, a download only when the seller clicks, then "Restart to update"; no dialog, no nagging (first check 90 s after launch, then every 6 h). The desktop shell now stops the contained servers and the WhatsApp sidecar through the same teardown a normal close uses before the installer starts (before, the plugin ended the process without it). **Never run with a real installer.** The chip appears only when a release newer than the installed one exists. The Windows administrator confirmation and the installer's progress window remain (per-machine install).
+- **Cloud backup and relay:** #543 the app's cloud backup upload is now accepted by the Worker (the app sent no `X-SahelFlow-SHA256`, so every upload was refused), a late upload to a failed reservation is refused, and a trial seller keeps one rolling point; #545 interrupted uploads resume, an 8th daily backup rotates the oldest out instead of being refused, verify checks every chunk, a licence with an unreadable expiry is refused, an hourly job purges expired trial data 30 days after expiry, and the desktop retries a transient failure twice; #544 the background workers call the cloud only while something is happening (the PR estimates about 144 calls a day per install with no phone paired, down from about 35,000), so a few installs cannot exhaust the account's request allowance.
+- **Hosted storefront stock:** #546 an item paused and then published again, or sold out and then restocked, is offered with its stock again instead of 0.
+- **Documents:** #535 and #541 record Internal.44 and the post-Internal.44 merges.
+
+### Source on `main` after Internal.45 (merged, not published)
+
+These pull requests are merged to protected `main` and are in no signed package yet. They ship only in a later signed successor on a Founder decision.
+
+- **#549** — the list search box emptied itself in a loop (it read its own commit back from the URL every 300 ms), the orders list dropped its rows on every new search, and the WebView drew a second clear button beside ours. The box now keeps what is typed, the lists keep their rows while a search loads, and there is one clear control. Reproduced with the real URL-state and data-fetching libraries; six new tests fail on the old code. **Not seen on the Founder's machine.**
+- **#551** — "yesterday" counts calendar days. The inbox list, the thread header's "active" hint and the storefront card's last-order time divided elapsed hours by 24, so a message from two calendar days earlier (31 hours) read "yesterday". One shared counter now compares dates on the device clock. **Not seen on the Founder's machine.**
+- **#552** — a failed WhatsApp delivery keeps its Prisma error code in the diagnostics log (for example `PrismaClientKnownRequestError:P2034`), never the message, the meta or any value. It makes the next failure explainable; it does not change what fails. **Not seen on the Founder's machine.**
+- **#550** (`12648c90`) — the startup card is redesigned ("Tide"): the SahelFlow S mark fills with the real launch progress instead of a bar, and every colour follows the seller's colour preset in light and dark. It shows a full S and 100% only when the workspace window is visible, the seller did not quit and this launch's trace says `ui-ready`. A panic in the card ends the card, not the app; the ripple switches itself off on slow PCs; the Manrope OFL licence text is a bundle resource. Compiled, linted (`clippy -D warnings`) and unit-tested on a Windows runner (run 39445822046, started by hand because the risk classifier skipped the Windows Rust job). **Never drawn on a Windows screen, speed on the Founder's Celeron unknown, licence in an installed MSI not yet proven.**
+
+### Release record, 2026-10-19 (Internal.45)
+
+- Release PR #548 merged 2026-10-19T20:01:00Z. The release request (`.github/release-requests/internal-45-fd073-customer-launch.json`) certifies the product commit `181fe52e…` with CI run `39243785762`, Phase 5 run `39243785756` and Phase 6-7 run `39243786135`.
+- The merge started the dispatcher (run `39315761767`), which started signed run `39315780619` (first attempt, 20:01:11Z). The release was published at 20:27:45Z. No earlier signed run exists for this tag.
+- Nothing else merged to `main` while the build ran (the next merge, #549, is 2026-10-20 12:06Z), so the source guard from PR #501 accepted the tip.
+
+### Previous package — Internal.44 (retained record)
 
 | Field | Value |
 |---|---|
@@ -26,7 +75,7 @@ This document distinguishes protected source, automated evidence, signed publica
 
 **Verified on publication.** The signed train passed its source guards (the source is the current tip of protected `main`; the tree is identical to the reviewed pull-request tree under its risk-aware required gate), built and signed both installers, verified the MSI and updater signatures, passed the signed install, launch and reopen proof and the authenticated hydrated WebView UI proof twice, verified the draft `latest.json`, created the tag and published. The observer workflow (run `39137857226`) finished green. `releases/latest` resolves to this tag.
 
-**Not proven.** An in-place update on a Founder machine (Internal.44 is not installed); `SahelFlow-Setup.exe` on a clean machine; any ledger row; the startup gain, the Inbox cause and palette latency (unmeasured until the Founder's trace and diagnostics from this build arrive); live WhatsApp delivery; commerce or courier certification.
+**Not proven.** an in-place update on a Founder machine (no installation of Internal.44 is separately recorded); `SahelFlow-Setup.exe` on a clean machine; any ledger row; the startup gain, the Inbox cause and palette latency (unmeasured until the Founder's trace and diagnostics from this build arrive); live WhatsApp delivery; commerce or courier certification.
 
 ### What Internal.44 packages (merged after Internal.43)
 
@@ -37,18 +86,6 @@ These pull requests were merged to protected `main` after Internal.43 and are pa
 - **Whole-app audit repairs:** **#511** Customers search, **#512** privacy export, **#513** palette search cancellation, **#514** WhatsApp inbound stubs, reactions and archived threads, **#515** three small COD defects, **#516** AI chat read permissions, **#517** stock availability, **#519** order creation only through the governed command, **#521** sign-in hygiene, **#522** WhatsApp spool quarantine and one key unlock per process, **#523** delivery status transitions and the Returns dead end, **#524** integration address checks and background-worker health, **#525** imports and exports, **#526** money and analytics, **#527** MCP audit and limits, **#528** AI chat hardening, **#529** CI test list, **#530** typo search budget, Inbox poll back-off and entry-page skip link, **#531** backup and key hygiene. Evidence and the findings left open are in `../operations/TRANSFORMATION_REGISTER.md` (section "Whole-app audit, 2026-10-17").
 
 **Measured and not measured.** The startup gain is a projection from the two Founder traces of 2026-10-17 (about 37 to 42 s for a repeat launch like the second, which took 148 s; about 80 to 130 s for the first launch after an update, which took 629 s). It is not measured on a build and must be compared with the next trace. Palette latency is unmeasured. The cause of the Inbox report is not established. PR #510 (licence boundary seed) was repaired and merged after Internal.44 (see the next section); it is not in Internal.44.
-
-### Source on `main` after Internal.44 (merged, not published)
-
-These pull requests are merged to protected `main` and are in no signed package yet. They ship only in a later signed successor on a Founder decision.
-
-- **#534** — `/agents` renders one `main` landmark: the AI canvas root is a `div` inside the layout's `main` (it had two `main` landmarks on desktop).
-- **#510** (`64282a8f`) — the workspace paints from the server's licence check instead of a second client fetch. The first attempt failed two required browser tests; the failed CI logs showed 8 hydration-mismatch warnings (0 on `main`) because the client's first render differed from the server HTML. The first client render now equals the server HTML (`useSyncExternalStore`, no lint suppression).
-- **#536** (`49441056`) — one inbound WhatsApp record stayed stuck and was retried every ~5 minutes: the messages SahelFlow sends itself come back from WhatsApp with `participant: ""`, which the app's strict schema refused with `REQUEST_VALIDATION_FAILED`. The sidecar now conforms three fields (participant, push name, timestamp) without changing what the app already accepts, and every refusal now logs the field paths and codes (never values).
-- **#537** (`8c4c0b79`) — messages that arrived while SahelFlow was closed were dropped: the sidecar discarded every inbound message until the connection reported `open`, but WhatsApp delivers the offline backlog before that. Inbound messages are now spooled under the saved-credentials account as soon as they arrive; the sidecar drops one only when no account is paired. New diagnostics: `inbound.early`, `offline.preview`, `offline.done`. Messages the old gate already dropped cannot be recovered by SahelFlow (they remain on the phone).
-- **#538** (`9184f760`) — "clear old notifications" now survives closing SahelFlow. The computed alerts kept their cleared list in the WebView's `localStorage`, and the packaged app serves from a loopback port chosen at random on every launch, so each launch was a new origin with an empty store. The cleared list is now kept per member in the existing `Setting` table (alert id plus a hash of its text, capped at 200, no customer text); an alert whose text changes still comes back.
-- **#539** (`fe0dcdf4`) — the startup card was redesigned (one smooth glow and shadow, one progress group, Minimize and Close chips, draggable) and follows the seller's colour mode and one of the four presets. The language, mode and preset are recorded in `launch-appearance.json` whenever they change, so a crashed launch still shows the right card. The "taking longer than usual" hint moved from 15 s to 45 s. Compiled and tested for Windows in CI; **never drawn on a Windows screen**: the Founder must look at an installed build.
-- **#540** (`1f8d8cc3`) — updates are quiet: a chip in the top bar, a download only when the seller clicks, then "Restart to update"; no dialog, no nagging (first check 90 s after launch, then every 6 h). The desktop shell now stops the contained servers and the WhatsApp sidecar through the same teardown a normal close uses before the installer starts (before, the plugin ended the process without it). **Never run with a real installer.** The chip appears only when a release newer than the installed one exists. The Windows administrator confirmation and the installer's progress window remain (per-machine install).
 
 ### Release record, 2026-10-18 (Internal.44)
 
@@ -94,10 +131,11 @@ Why the published tag is `3fa65206…` and not the `95681a52…` that PR #495 me
 
 ## 2. Published release ledger
 
-38 releases are published (Internal.1–5 and 12 have no published release). Source and digests are as GitHub reports them; the full digest is on each release page.
+39 releases are published (Internal.1–5 and 12 have no published release). Source and digests are as GitHub reports them; the full digest is on each release page.
 
 | Internal | Published (UTC) | Source commit | MSI sha256 (first 12) | Setup.exe |
 |---|---|---|---|---|
+| 45 | 2026-10-19 | `9a8dac39…` | `241dc55b944e…` | yes |
 | 44 | 2026-10-18 | `c1a66d9b…` | `b38775e5185b…` | yes |
 | 43 | 2026-10-17 | `3fa65206…` | `0dc5e8494c35…` | yes |
 | 42 | 2026-10-09 | `2e8900bd…` | `24613850d457…` | — |
@@ -137,17 +175,18 @@ Why the published tag is `3fa65206…` and not the `95681a52…` that PR #495 me
 | 7 | 2026-07-25 | `3db7e407…` | `c0aebc69f581…` | — |
 | 6 | 2026-07-25 | `772d09c3…` | `c06d49cab6f5…` | — |
 
-Authority decision per release: Internal.44 FD-072, Internal.43 FD-071, .42 FD-070, .41 FD-067, .40 FD-066, .39 FD-065, .38 FD-062, .37 FD-060, .36 FD-059, .35 FD-058, .34 FD-057, .33 FD-056, .32 FD-055, .31 FD-053, .30 FD-051, .29 FD-050, .28 FD-049, .27 FD-047, .25 FD-044, .24 FD-043. Every checkpoint from Internal.24 through Internal.39 was a Founder-offline package; customer-online licensing starts with Internal.40 (FD-066). Per-release content is in `../../CHANGELOG.md`.
+Authority decision per release: Internal.45 FD-073, Internal.44 FD-072, Internal.43 FD-071, .42 FD-070, .41 FD-067, .40 FD-066, .39 FD-065, .38 FD-062, .37 FD-060, .36 FD-059, .35 FD-058, .34 FD-057, .33 FD-056, .32 FD-055, .31 FD-053, .30 FD-051, .29 FD-050, .28 FD-049, .27 FD-047, .25 FD-044, .24 FD-043. Every checkpoint from Internal.24 through Internal.39 was a Founder-offline package; customer-online licensing starts with Internal.40 (FD-066). Per-release content is in `../../CHANGELOG.md`.
 
 ## 3. Founder-installed truth
 
 Published is not installed. The installed record below is what the Founder reported; `../operations/WORKING_MEMORY.md` is the authority and the last recorded checkpoint always wins over inference.
 
 - **Internal.24** was accepted for the retained whole-product visual/product gate (issue #221, 2026-08-25). That acceptance does not extend to later source and proves no provider or customer path.
-- Recorded in-place installs since then: Internal.27, 28, 29, 30 (2026-08-31), 31 (2026-09-01), 32, 33 (2026-09-03), 34 (2026-09-05), 37 (2026-09-11, visually rejected before any row converted), 39 (2026-10-01, per UI/UX ledger rows F-43..F-45), 40 (2026-10-03) and **41 (2026-10-08, the last the Founder reported to `WORKING_MEMORY`)**. No installation of Internal.35, 36, 38 or 42 is recorded.
+- Recorded in-place installs since then: Internal.27, 28, 29, 30 (2026-08-31), 31 (2026-09-01), 32, 33 (2026-09-03), 34 (2026-09-05), 37 (2026-09-11, visually rejected before any row converted), 39 (2026-10-01, per UI/UX ledger rows F-43..F-45), 40 (2026-10-03) and **41 (2026-10-08)**. No installation of Internal.35, 36, 38 or 42 is recorded. The latest installation reported to `WORKING_MEMORY` is Internal.45 (2026-10-20, below).
 - Internal.42 was evidently in use for the installed audit behind PR #490 and FD-071, but no installation of it is recorded; the Founder should confirm.
 - **Internal.43** is published and being installed in place; nothing converts until the installed observation names it.
-- **Internal.44** is published (2026-10-18) and not installed; nothing converts until the installed observation names it.
+- **Internal.44** is published (2026-10-18); no installation of it is separately recorded; nothing converts until an installed observation names it.
+- **Internal.45** is published (2026-10-19) and was installed in place by the Founder, who reported on it on 2026-10-20 (his diagnostics log shows its sidecar first running at 01:20Z). Reported: the startup card judged low quality and generic (the redesign was merged as #550 on 2026-10-20 and has not been seen on a Windows screen); a message that arrived while SahelFlow was closed was kept and delivered after the reopen (diagnostics 11:27Z); the list search box and the orders clear icon misbehaved (#549); a two-day-old message read "yesterday" (#551). **No row has converted**: nothing converts until an installed observation names the rows.
 
 ## 4. Live issues and provider boundary
 
