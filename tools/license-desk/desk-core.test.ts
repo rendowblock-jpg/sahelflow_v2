@@ -55,7 +55,7 @@ describe("License Desk core", () => {
         workspaceId: REQUEST.workspaceId,
         installationId: REQUEST.installationId,
         deviceBinding: REQUEST.deviceBinding,
-        appVersion: "1.0.0-internal.44",
+        appVersion: "1.0.0-internal.45",
         minimumRevocationEpoch: 1,
         now: new Date("2026-10-09T00:00:00Z"),
       },

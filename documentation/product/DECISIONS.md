@@ -2,13 +2,14 @@
 
 > **Status:** Authoritative register of approved Founder product and execution decisions. FD-001–FD-033 were consolidated from earlier addenda on 2026-07-29; later decisions are appended in numeric order as dated entries. FD-034–FD-044, FD-046 and FD-047 are version-bound release authority recorded in the protected release requests, not entries here
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-10-18 (FD-072 publication record added. No decision changed)
+> **Last amended:** 2026-10-20 (FD-073 publication record added. No decision changed)
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
 This register records approved product and execution decisions. Entries FD-001–FD-029 are consolidated policy statements; FD-030 onward are dated Founder directives. Detailed mechanisms remain subject to architecture, research, security review, provider certification and evidence gates, but engineering may not contradict these policies without a new numbered Founder decision. A later entry supersedes an earlier one only for the choice it names.
 
 ## Index (newest first)
 
+- FD-073 — One signed successor Internal.45 under the FD-066 customer launch (2026-10-19, ADOPTED)
 - FD-072 — One signed successor Internal.44 under the FD-066 customer launch (2026-10-17, ADOPTED)
 - FD-071 — One signed successor Internal.43 under the FD-066 customer launch (2026-10-14, ADOPTED)
 - FD-070 — One signed successor Internal.42 under the FD-066 customer launch (2026-10-09, ADOPTED)
@@ -1809,3 +1810,34 @@ one signed successor:
   no ledger row and does not turn source or CI evidence into installed or
   live-provider evidence. #306 logout stays LAST.
 - **Publication record (2026-10-18):** published 2026-10-18T15:15:42Z by signed run `39137845506` from the `main` tip `c1a66d9b…` (release PR #533); tag `sahelflow-v1.0.0-internal.44-c1a66d9b17d5a11a2b6d31d70729102609fb4be1`. Digests and the release ledger are in `system/CURRENT_STATE.md`. No decision changed.
+
+## FD-073 — One signed successor Internal.45 under the FD-066 customer launch (2026-10-19, ADOPTED)
+
+On 2026-10-19 the Founder directed: "just finish the work and make the internal 45
+release then we can go from there." That directive adopts the next customer-online
+release authority as one signed successor:
+
+- **Package:** app `1.0.0-internal.45` / MSI `1.0.0.45`, channel `internal`,
+  mode `customer-online`, owned host `sahelflow.com`. Paid licences stay
+  offline-signed. Trial origins stay `license.sahelflow.com` and
+  `activate.sahelflow.com`.
+- **Content:** protected `main` at the tip this release pull request merges
+  into. It carries everything merged after Internal.44 (`c1a66d9b…`):
+
+- **WhatsApp:** #536 one inbound record that stayed stuck and was retried every ~5 minutes is fixed (the messages SahelFlow sends itself came back with an empty `participant` that the app's strict schema refused; the sidecar now conforms three fields, and every refusal logs the field paths and codes, never values); #537 messages that arrived while SahelFlow was closed are kept (they were discarded until the connection reported `open`; messages the old gate already dropped cannot be recovered by SahelFlow and remain on the phone; new diagnostics `inbound.early`, `offline.preview`, `offline.done`).
+- **Startup, workspace and updates:** #539 the startup card is redesigned (theme-aware, Minimize and Close, follows the colour mode and the four presets; the "taking longer than usual" hint moves from 15 s to 45 s); #510 the workspace paints from the server's licence check instead of a second client fetch; #540 updates are quiet (a chip in the top bar, a download only on click, then "Restart to update") and the desktop stops its servers and the WhatsApp sidecar through the normal teardown before the installer starts. Windows still asks for one administrator confirmation (per-machine install).
+- **Notifications and interface:** #538 cleared notifications stay cleared after SahelFlow is reopened (kept per member, capped at 200 entries, no customer text); #534 the AI page renders one `main` landmark.
+- **Cloud backup and relay:** #543 the app's cloud backup upload is now accepted by the Worker (the app sent no `X-SahelFlow-SHA256`, so every upload was refused), a late upload to a failed reservation is refused, and a trial seller keeps one rolling point; #545 interrupted uploads resume, an 8th daily backup rotates the oldest out instead of being refused, verify checks every chunk, a licence with an unreadable expiry is refused, an hourly job purges expired trial data 30 days after expiry, and the desktop retries a transient failure twice; #544 the background workers call the cloud only while something is happening (the PR estimates about 144 calls a day per install with no phone paired, down from about 35,000), so a few installs cannot exhaust the account's request allowance.
+- **Hosted storefront stock:** #546 an item paused and then published again, or sold out and then restocked, is offered with its stock again instead of 0.
+- **Documents:** #535 and #541 record Internal.44 and the post-Internal.44 merges.
+- **Left out on purpose:** #547 (the public store page at `shop.sahelflow.com/<slug>`, a draft) and the findings in the transformation register's "Not in the next release" table.
+- **Measured and not measured:** the startup card and the update chip have never been drawn or run on a real Windows screen or with a real installer; the WhatsApp offline catch-up was tested in CI, not on a device; the desktop backup retry has not run against a real network or an installed app; the startup gain is still a projection, palette latency is unmeasured and the Inbox cause is not established; none of this is Founder-installed until it is installed and observed.
+
+- **Gates:** this release-authority PR merges only after its full Required
+  battery, including installed-MSI evidence, is green. The signed train builds
+  from that exact `main` tip and nothing else merges while it runs. The tag,
+  digests and publish time are recorded only after the signed run succeeds.
+- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
+  no ledger row and does not turn source or CI evidence into installed or
+  live-provider evidence. #306 logout stays LAST.
+- **Publication record (2026-10-19):** published 2026-10-19T20:27:45Z by signed run `39315780619` from the `main` tip `9a8dac39…` (release PR #548); tag `sahelflow-v1.0.0-internal.45-9a8dac39545577e7395935c73452f55230f75e21`. Digests and the release ledger are in `system/CURRENT_STATE.md`. No decision changed.

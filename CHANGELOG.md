@@ -8,6 +8,36 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-20 — after Internal.45 (merged to `main`, not published)
+
+- #550 (`12648c90`): the redesigned "Tide" startup card (the S mark fills with the launch progress; colours follow the preset; 100% only after ui-ready). Windows runner: compile, clippy and the full Rust suite pass; not drawn on a Windows screen.
+- #552 (`63ab8189`): a failed WhatsApp delivery keeps its Prisma error code in the diagnostics log, never the message or any value.
+- #551 (`ea90b973`): "yesterday" counts calendar days (inbox list, thread header hint, storefront card); a 31-hour-old message from two calendar days earlier no longer reads "yesterday".
+- #549 (`863efd2b`): the list search box stops emptying itself in a loop, the orders list keeps its rows while a search loads, and there is one clear control. Not seen on the Founder's machine.
+
+### 2026-10-20 — documentation reconciled to Internal.45
+
+- `AGENTS.md`, both README files, `CURRENT_STATE.md`, `ROADMAP.md`, `WORKFLOW.md`, `WORKING_MEMORY.md` and `DECISIONS.md` now name Internal.45 as the published package, record that the Founder installed it in place on 2026-10-20 and what he reported, and list what was merged after it. The Internal.44 package record is retained in `CURRENT_STATE.md`. No decision changed; no ledger row converts; the active documentation is still 25 files.
+
+### 2026-10-19 — signed Internal.45 publication (FD-073)
+
+- Tag `sahelflow-v1.0.0-internal.45-9a8dac39545577e7395935c73452f55230f75e21`, published 2026-10-19T20:27:45Z by signed run `39315780619` (started by the dispatcher run `39315761767` on the merge of #548, first attempt): app `1.0.0-internal.45` / MSI `1.0.0.45`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`. Assets: MSI (sha256 `241dc55b…`) and `.sig`; `SahelFlow-Setup.exe` (sha256 `97cb895b…`) and `.sig`; the same installer under its versioned name; updater `latest.json` (sha256 `949ec18b…`) with `windows-x86_64` (Setup.exe), `windows-x86_64-msi` and `windows-x86_64-nsis` entries.
+- Source: the `main` tip `9a8dac39…` (#548). The signed train checked the source was the current tip, attested tree equality with the reviewed pull request, passed the signed install, launch, reopen and authenticated-UI proof, and verified the draft `latest.json` before publishing. Content: the FD-073 entry below.
+- Installed by the Founder in place on 2026-10-20; no ledger row converts.
+
+### 2026-10-19 — FD-073 adopts the Internal.45 release authority
+
+- FD-073 authorizes one signed successor: app `1.0.0-internal.45` / MSI `1.0.0.45`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`, built from the exact `main` tip. Content merged after Internal.44 (`c1a66d9b…`):
+  - **WhatsApp:** #536 one inbound record that stayed stuck and was retried every ~5 minutes is fixed (the messages SahelFlow sends itself came back with an empty `participant` that the app's strict schema refused; the sidecar now conforms three fields, and every refusal logs the field paths and codes, never values); #537 messages that arrived while SahelFlow was closed are kept (they were discarded until the connection reported `open`; messages the old gate already dropped cannot be recovered by SahelFlow and remain on the phone; new diagnostics `inbound.early`, `offline.preview`, `offline.done`).
+  - **Startup, workspace and updates:** #539 the startup card is redesigned (theme-aware, Minimize and Close, follows the colour mode and the four presets; the "taking longer than usual" hint moves from 15 s to 45 s); #510 the workspace paints from the server's licence check instead of a second client fetch; #540 updates are quiet (a chip in the top bar, a download only on click, then "Restart to update") and the desktop stops its servers and the WhatsApp sidecar through the normal teardown before the installer starts. Windows still asks for one administrator confirmation (per-machine install).
+  - **Notifications and interface:** #538 cleared notifications stay cleared after SahelFlow is reopened (kept per member, capped at 200 entries, no customer text); #534 the AI page renders one `main` landmark.
+  - **Cloud backup and relay:** #543 the app's cloud backup upload is now accepted by the Worker (the app sent no `X-SahelFlow-SHA256`, so every upload was refused), a late upload to a failed reservation is refused, and a trial seller keeps one rolling point; #545 interrupted uploads resume, an 8th daily backup rotates the oldest out instead of being refused, verify checks every chunk, a licence with an unreadable expiry is refused, an hourly job purges expired trial data 30 days after expiry, and the desktop retries a transient failure twice; #544 the background workers call the cloud only while something is happening (the PR estimates about 144 calls a day per install with no phone paired, down from about 35,000), so a few installs cannot exhaust the account's request allowance.
+  - **Hosted storefront stock:** #546 an item paused and then published again, or sold out and then restocked, is offered with its stock again instead of 0.
+  - **Documents:** #535 and #541 record Internal.44 and the post-Internal.44 merges.
+  - **Left out on purpose:** #547 (the public store page at `shop.sahelflow.com/<slug>`, a draft) and the findings in the transformation register's "Not in the next release" table.
+  - **Measured and not measured:** the startup card and the update chip have never been drawn or run on a real Windows screen or with a real installer; the WhatsApp offline catch-up was tested in CI, not on a device; the desktop backup retry has not run against a real network or an installed app; the startup gain is still a projection, palette latency is unmeasured and the Inbox cause is not established; none of this is Founder-installed until it is installed and observed.
+- The tag, digests and publish time are recorded after the signed run succeeds. Published is not installed: no ledger row converts.
+
 ### 2026-10-18 — documentation reconciled to Internal.44
 
 - `AGENTS.md`, both README files, `CURRENT_STATE.md`, `ROADMAP.md`, `WORKFLOW.md`, `WORKING_MEMORY.md`, `TRANSFORMATION_REGISTER.md` and `DECISIONS.md` now name Internal.44 as the published package and record that it is not installed. The Internal.43 package record is retained in `CURRENT_STATE.md`. No decision changed; the active documentation is still 25 files.

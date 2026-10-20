@@ -96,7 +96,10 @@ export function useOrders(opts: UseOrdersOptions = {}) {
       : undefined;
   const hasCachedData = cache.get(key)?.data !== undefined;
 
-  const { data, error, isLoading, mutate } = useSWR<OrdersResponse>(key, fetcher, {
+  const { data, error, isLoading, isValidating, mutate } = useSWR<OrdersResponse>(key, fetcher, {
+    // A new search changes the key. Without this the rows the seller was reading vanish into an empty
+    // loading state on every committed query; keep them until the answer for the new key arrives.
+    keepPreviousData: true,
     fallbackData,
     // The exact server fallback can skip the duplicate first-hydration request
     // only when this SWR key has no older cached data. On a later revisit SWR
@@ -132,6 +135,8 @@ export function useOrders(opts: UseOrdersOptions = {}) {
     data: response,
     error,
     isLoading: isLoading && !response,
+    /** Rows are on screen but a newer answer is on its way (a search or a page change). */
+    isRefreshing: isValidating && response !== undefined,
     mutate,
     pagination: {
       page: currentPage,
