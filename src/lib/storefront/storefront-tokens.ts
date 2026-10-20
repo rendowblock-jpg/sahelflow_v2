@@ -99,7 +99,10 @@ export function mutedTextOn(text: string, background: string, ...surfaces: reado
     const candidate = mixHex(text, background, amount);
     if (grounds.every((ground) => contrastRatio(candidate, ground) >= 4.5)) return candidate;
   }
-  return text;
+  // No softened shade reads on every surface and neither does the seller's own text colour: take the colour whose
+  // weakest surface is best, never a silent AA failure that a clearer colour would avoid.
+  const weakest = (colour: string) => Math.min(...grounds.map((ground) => contrastRatio(colour, ground)));
+  return [text, LIGHT_TEXT, DARK_TEXT].reduce((best, colour) => (weakest(colour) > weakest(best) ? colour : best));
 }
 
 /** A brand colour usable as TEXT on `background` (links, prices, eyebrows). */
