@@ -457,7 +457,13 @@ pub fn open(app: &AppHandle, app_data_dir: &Path) {
                     }
                     thread::sleep(POLL_INTERVAL);
                 }
-                crate::native_splash::request_close();
+                // Only a launch whose workspace is really visible may show the
+                // full S and 100%; a timeout or a quit just closes the card.
+                if !quitting && workspace_visible(&app) {
+                    crate::native_splash::request_handoff();
+                } else {
+                    crate::native_splash::request_close();
+                }
                 if let (Some(painted), Ok(app_data_dir)) = (
                     crate::native_splash::painted_unix_ms(),
                     app.path().app_data_dir(),

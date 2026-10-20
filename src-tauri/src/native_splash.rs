@@ -33,6 +33,8 @@ const STATE_CLOSED: u8 = 4;
 
 static STATE: AtomicU8 = AtomicU8::new(STATE_IDLE);
 static CLOSE_REQUESTED: AtomicBool = AtomicBool::new(false);
+/// Set only when the workspace is really visible (see `request_handoff`).
+static WORKSPACE_READY: AtomicBool = AtomicBool::new(false);
 static QUIT_REQUESTED: AtomicBool = AtomicBool::new(false);
 static WINDOW: AtomicIsize = AtomicIsize::new(0);
 static STARTED_UNIX_MS: AtomicU64 = AtomicU64::new(0);
@@ -93,6 +95,14 @@ pub fn is_active() -> bool {
 
 /// Fade out and close. Safe to call at any time, from any thread.
 pub fn request_close() {
+    CLOSE_REQUESTED.store(true, Ordering::SeqCst);
+}
+
+/// The workspace is visible: fade out and close with the S shown full. A
+/// timeout or a failed launch calls `request_close` instead, and the card
+/// then never claims "100%".
+pub fn request_handoff() {
+    WORKSPACE_READY.store(true, Ordering::SeqCst);
     CLOSE_REQUESTED.store(true, Ordering::SeqCst);
 }
 
@@ -669,6 +679,13 @@ pub(crate) fn glow_step(progress: f32) -> u32 {
     (clamp01(progress) * GLOW_STEPS as f32).floor() as u32
 }
 
+/// Whether the card may show a full S and "100%". Only a launch whose
+/// workspace is really visible may: a timeout, a failed launch or a quit
+/// closes the card without claiming it finished.
+pub(crate) fn shows_complete(workspace_ready: bool, fading_out: bool, quit: bool) -> bool {
+    workspace_ready && fading_out && !quit
+}
+
 /// The SahelFlow wordmark as a vector outline (Manrope variable font at
 /// weight 650, kerned, tracking -1.2%), so the name looks the same on every PC
 /// instead of depending on an installed font. Units: 1,000 per em, the origin
@@ -895,7 +912,8 @@ mod imp {
                 0,
             )
         };
-        ok != 0 && enabled == 0
+        // If Windows cannot say, keep the card still: safest on a slow PC.
+        ok == 0 || enabled == 0
     }
 
     struct Fonts {
@@ -909,6 +927,8 @@ mod imp {
         near: *mut GpStringFormat,
         near_rtl: *mut GpStringFormat,
         far: *mut GpStringFormat,
+        /// Measures text for the status row: made once, never per frame.
+        typographic: *mut GpStringFormat,
     }
 
     impl Fonts {
@@ -956,6 +976,10 @@ mod imp {
                 GdipSetStringFormatLineAlign(format, StringAlignmentNear);
                 format
             };
+            let mut typographic: *mut GpStringFormat = std::ptr::null_mut();
+            if GdipStringFormatGetGenericTypographic(&mut typographic) != Ok {
+                typographic = std::ptr::null_mut();
+            }
             let fonts = Self {
                 family,
                 body: font(family, 13.5, FontStyleRegular),
@@ -967,6 +991,7 @@ mod imp {
                 near: format(false, StringAlignmentNear),
                 near_rtl: format(true, StringAlignmentNear),
                 far: format(false, StringAlignmentFar),
+                typographic,
             };
             if fonts.percent.is_null()
                 || fonts.body.is_null()
@@ -996,6 +1021,7 @@ mod imp {
                 self.near,
                 self.near_rtl,
                 self.far,
+                self.typographic,
             ] {
                 if !format.is_null() {
                     GdipDeleteStringFormat(format);
@@ -1457,7 +1483,11 @@ mod imp {
             let rtl = self.rtl();
             let closing = quit_requested();
             // The workspace is up and the card is on its way out: the S is full.
-            let finishing = self.closing_since.is_some() && !closing;
+            let finishing = super::shows_complete(
+                super::WORKSPACE_READY.load(Ordering::SeqCst),
+                self.closing_since.is_some(),
+                closing,
+            );
             self.reset_to_card_space(g);
 
             let fill = if finishing { 1.0 } else { self.progress.shown };
@@ -1478,7 +1508,8 @@ mod imp {
                     clamp01((stage_ms - STAGE_FADE_MS) / STAGE_FADE_MS),
                 )
             };
-            let label_width = measure_width(g, label, self.fonts.body) + 2.0;
+            let label_width =
+                measure_width(g, label, self.fonts.body, self.fonts.typographic) + 2.0;
             let row = label_width + STATUS_GAP * 2.0 + STATUS_DOT + PERCENT_WIDTH;
             let left = (CARD_WIDTH - row) / 2.0;
             let (stage_x, dot_x, percent_x) = if rtl {
@@ -1857,13 +1888,17 @@ mod imp {
 
     /// The width of `text` in card pixels (no side padding), for centring a
     /// row of several pieces. A rough per-letter guess if GDI+ cannot measure.
-    unsafe fn measure_width(g: *mut GpGraphics, text: &str, font: *mut GpFont) -> f32 {
+    unsafe fn measure_width(
+        g: *mut GpGraphics,
+        text: &str,
+        font: *mut GpFont,
+        typographic: *mut GpStringFormat,
+    ) -> f32 {
         if text.is_empty() {
             return 0.0;
         }
         let guess = text.chars().count() as f32 * 7.0;
-        let mut typographic: *mut GpStringFormat = std::ptr::null_mut();
-        if GdipStringFormatGetGenericTypographic(&mut typographic) != Ok || typographic.is_null() {
+        if typographic.is_null() {
             return guess;
         }
         let wide_text = wide(text);
@@ -1926,7 +1961,15 @@ mod imp {
             WM_TIMER => {
                 let keep = RENDERER.with(|cell| match cell.try_borrow_mut() {
                     Result::Ok(mut renderer) => {
-                        renderer.as_mut().map(|r| r.frame()).unwrap_or(false)
+                        // A panic must not unwind through the window
+                        // procedure: close the card and let the app start.
+                        renderer
+                            .as_mut()
+                            .map(|r| {
+                                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| r.frame()))
+                                    .unwrap_or(false)
+                            })
+                            .unwrap_or(false)
                     }
                     Result::Err(_) => true,
                 });
@@ -2253,6 +2296,35 @@ mod imp {
             None,
         );
         true
+    }
+}
+
+#[cfg(test)]
+mod completion_tests {
+    use super::shows_complete;
+
+    #[test]
+    fn a_launch_that_never_became_visible_never_shows_complete() {
+        // The follow thread gave up (timeout) or the card's own 30-minute
+        // limit fired: the card fades out but the workspace is not up.
+        assert!(!shows_complete(false, true, false));
+    }
+
+    #[test]
+    fn a_visible_workspace_fades_out_with_the_full_mark() {
+        assert!(shows_complete(true, true, false));
+    }
+
+    #[test]
+    fn nothing_is_complete_before_the_fade_out_starts() {
+        assert!(!shows_complete(true, false, false));
+        assert!(!shows_complete(false, false, false));
+    }
+
+    #[test]
+    fn quitting_never_shows_complete() {
+        assert!(!shows_complete(true, true, true));
+        assert!(!shows_complete(false, true, true));
     }
 }
 
