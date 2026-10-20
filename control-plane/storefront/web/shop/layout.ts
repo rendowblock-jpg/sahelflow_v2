@@ -2,7 +2,8 @@ import { storefrontScheme, storefrontThemeStyle } from "@/lib/storefront/storefr
 
 import { directionOf, PUBLIC_LOCALES, type PublicLocale } from "../locale";
 import { jsonForScript } from "../html";
-import { esc, preloadImage, type Ctx } from "./ui";
+import type { ShopTheme } from "./model";
+import { esc, icon, preloadImage, whatsappDigits, type Ctx } from "./ui";
 
 const LANGUAGE: Record<PublicLocale, { code: string; name: string }> = {
   ar: { code: "AR", name: "العربية" },
@@ -63,17 +64,54 @@ export type PageParts = {
   bodyAttrs?: string;
   main: string;
   bar?: string;
+  /** The bottom tab bar (Souk, home page only). */
+  tabs?: string;
   tagline: string;
 };
 
+/**
+ * Souk's bottom tab bar: the four places a shopper goes on a phone, one thumb away. Only links that lead somewhere are
+ * drawn (no contact section, no tab). It is drawn on the home page; a product page has its own order bar there.
+ */
+export function renderTabBar(ctx: Ctx): string {
+  const { t, theme, slug } = ctx;
+  const sections = theme.builder.composition.sections.filter((section) => section.enabled);
+  const contact = theme.builder.contact;
+  const tab = (name: "home" | "box" | "chat" | "phone", label: string, href: string, current = false, external = false) =>
+    `<a class="sf-tab" href="${esc(href)}"${current ? ' aria-current="page"' : ""}${external ? ' target="_blank" rel="noopener noreferrer"' : ""}><span class="sf-tab-pill">${icon(name)}</span>${esc(label)}</a>`;
+  const tabs = [
+    tab("home", t("storefront.shop.tabHome"), `/${slug}`, true),
+    sections.some((section) => section.type === "product-grid") ? tab("box", t("storefront.view.navProducts"), "#catalog") : "",
+    sections.some((section) => section.type === "support") && (contact.phone || contact.whatsapp || contact.email || contact.address)
+      ? tab("phone", t("storefront.view.navContact"), "#contact")
+      : "",
+    contact.whatsapp ? tab("chat", "WhatsApp", `https://wa.me/${whatsappDigits(contact.whatsapp)}`, false, true) : "",
+  ].filter(Boolean);
+  return tabs.length < 2 ? "" : `<nav class="sf-tabs" aria-label="${esc(t("storefront.shop.tabNav"))}">${tabs.join("")}</nav>`;
+}
+
 const OG_LOCALE: Record<PublicLocale, string> = { ar: "ar_DZ", fr: "fr_DZ", en: "en_GB" };
 
-/** The one display face each archetype loads on Arabic pages (the others never download). */
-const VOICE_FONT = { sahara: "naskh-bold", atlas: "kufi-bold", oasis: "kufi-regular" } as const;
+/**
+ * The one font file each template preloads: the face its main heading uses, Arabic file on Arabic pages, Latin file on
+ * French and English pages. Reel preloads no Arabic file: its Arabic display face is the heaviest (49 KB) and would compete
+ * with the first photo, so it swaps in instead.
+ */
+const PRELOAD: Record<ShopTheme["template"], { ar: string | null; latin: string | null }> = {
+  sahara: { ar: "naskh-bold", latin: null },
+  atlas: { ar: "kufi-bold", latin: null },
+  oasis: { ar: "kufi-regular", latin: null },
+  prime: { ar: "alexandria-300-arabic", latin: "jost-var-latin" },
+  souk: { ar: "readexpro-var-arabic", latin: "readexpro-var-latin" },
+  reel: { ar: null, latin: "archivo-cond-800-latin" },
+};
 
 export function documentShell(ctx: Ctx, page: PageParts): string {
   const { theme, locale, origin, assets } = ctx;
   const canonical = `${origin}${page.canonical}`;
+  const skin = assets.skins[theme.template];
+  const fontKey = PRELOAD[theme.template][locale === "ar" ? "ar" : "latin"];
+  const preloadFont = fontKey ? assets.fonts[fontKey] : undefined;
   const alternates = [
     ...PUBLIC_LOCALES.map((code) => `<link rel="alternate" hreflang="${code}" href="${esc(`${origin}${ctx.path}?lang=${code}`)}">`),
     `<link rel="alternate" hreflang="x-default" href="${esc(`${origin}${ctx.path}`)}">`,
@@ -96,8 +134,9 @@ export function documentShell(ctx: Ctx, page: PageParts): string {
     `<meta name="theme-color" content="${esc(theme.backgroundColor)}">`,
     '<link rel="icon" href="/favicon.svg" type="image/svg+xml">',
     `<link rel="stylesheet" href="${esc(assets.css)}">`,
-    ...(locale === "ar" && assets.fonts[VOICE_FONT[theme.template]]
-      ? [`<link rel="preload" as="font" type="font/woff2" href="${esc(assets.fonts[VOICE_FONT[theme.template]] as string)}" crossorigin>`]
+    ...(skin ? [`<link rel="stylesheet" href="${esc(skin.css)}">`] : []),
+    ...(preloadFont
+      ? [`<link rel="preload" as="font" type="font/woff2" href="${esc(preloadFont)}" crossorigin>`]
       : []),
     ...(page.preload ? [preloadImage(page.preload, "(min-width:900px) 540px, 100vw")] : []),
     `<script type="application/ld+json">${jsonForScript({ "@context": "https://schema.org", ...(page.jsonLd as object) })}</script>`,
@@ -112,6 +151,7 @@ export function documentShell(ctx: Ctx, page: PageParts): string {
     `data-scheme="${storefrontScheme(theme)}"`,
     `style="${esc(themeStyleAttribute(ctx))}"`,
     page.bodyAttrs ?? "",
+    page.tabs ? "data-tabs" : "",
   ].filter(Boolean).join(" ");
 
   return `<!doctype html>
@@ -128,7 +168,8 @@ ${page.main}
 </main>
 ${renderFooter(ctx, page.tagline)}
 ${page.bar ?? ""}
-${page.script ? `<script src="${esc(assets.js)}" defer></script>` : ""}
+${page.tabs ?? ""}
+${page.script ? `<script src="${esc(assets.js)}" defer></script>` : ""}${page.script && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}
 </body>
 </html>`;
 }

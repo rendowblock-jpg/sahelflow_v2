@@ -1,7 +1,7 @@
 import { directionOf } from "../locale";
 import { createPublicTranslator } from "../translator";
 import type { RenderStorePage } from "../types";
-import { documentShell } from "./layout";
+import { documentShell, renderTabBar } from "./layout";
 import { buildShopModel } from "./model";
 import { renderHome } from "./home";
 import { renderProduct } from "./product";
@@ -98,6 +98,7 @@ export const renderStorePage: RenderStorePage = (input) => {
     script: false,
     bodyAttrs: 'data-page="home"',
     main: home.main,
+    tabs: model.theme.template === "souk" ? renderTabBar(ctx) : "",
     tagline: home.tagline,
   });
 };

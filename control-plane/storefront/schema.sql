@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS storefront_release (
   release_id TEXT PRIMARY KEY NOT NULL,
   storefront_id TEXT NOT NULL,
   parent_release_id TEXT,
-  template_id TEXT NOT NULL CHECK(template_id IN ('sahara','atlas','oasis')),
+  template_id TEXT NOT NULL CHECK(template_id IN ('sahara','atlas','oasis','prime','souk','reel')),
   locale TEXT NOT NULL CHECK(locale IN ('ar','fr','en')),
   artifact_json TEXT NOT NULL,
   artifact_digest TEXT NOT NULL,

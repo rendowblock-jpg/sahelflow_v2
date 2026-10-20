@@ -45,6 +45,9 @@ const TEMPLATE_COPY: Record<StorefrontTemplateId, string> = {
   sahara: "storefront.studio.template.sahara",
   atlas: "storefront.studio.template.atlas",
   oasis: "storefront.studio.template.oasis",
+  prime: "storefront.studio.template.prime",
+  souk: "storefront.studio.template.souk",
+  reel: "storefront.studio.template.reel",
 };
 
 const WILAYA_CODES = (wilayasData as Array<{ code: number }>).map((wilaya) =>

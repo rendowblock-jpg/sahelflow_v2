@@ -1,5 +1,5 @@
-import { ID, ITEM_KEY, WILAYA, validPublicArtifact } from "./shared";
-import type { PublicArtifact } from "./shared";
+import { ID, ITEM_KEY, WILAYA, isTemplateId, validPublicArtifact } from "./shared";
+import type { PublicArtifact, TemplateId } from "./shared";
 
 export type ReleaseAllocation = {
   itemKey: string;
@@ -24,7 +24,7 @@ export type ParsedReleaseInput = {
   workspaceId: string;
   releaseId: string;
   parentReleaseId: string | null;
-  templateId: "sahara" | "atlas" | "oasis" | "prime" | "souk" | "reel";
+  templateId: TemplateId;
   locale: "ar" | "fr" | "en";
   publicArtifact: PublicArtifact;
   allocations: ReleaseAllocation[];
@@ -44,7 +44,7 @@ export function parseReleaseInput(value: unknown): ParsedReleaseInput | null {
     !ID.test(workspaceId) ||
     !ID.test(releaseId) ||
     (parentReleaseId !== null && !ID.test(parentReleaseId)) ||
-    !["sahara", "atlas", "oasis", "prime", "souk", "reel"].includes(String(templateId)) ||
+    !isTemplateId(templateId) ||
     (locale !== "ar" && locale !== "fr" && locale !== "en") ||
     !validPublicArtifact(input.publicArtifact) ||
     input.publicArtifact.theme.template !== templateId ||

@@ -93,14 +93,21 @@ function buildMessages(): string {
   return `${JSON.stringify(sorted, null, 2)}\n`;
 }
 
-const FONT_NAMES = ["naskh-bold", "kufi-bold", "kufi-regular"] as const;
+/** The newer templates. Each has styles/<id>.css (its @font-face rules and skin) and, for reel, client/reel.ts. */
+const SKINS = ["prime", "souk", "reel"] as const;
 
-/** The three subsetted Arabic faces (SIL OFL, see web/fonts/OFL.txt), hashed so they can be cached for a year. */
+/**
+ * Every subsetted face under web/fonts, in any sub-folder (SIL OFL, one licence file per family next to the fonts),
+ * hashed so it can be cached for a year. The file name without .woff2 is the key a stylesheet names as __SF_FONT_<key>__,
+ * so a name used twice is an error, not a silent overwrite.
+ */
 function buildFonts(): { paths: Record<string, string>; files: Map<string, Buffer> } {
   const paths: Record<string, string> = {};
   const files = new Map<string, Buffer>();
-  for (const name of FONT_NAMES) {
-    const data = readFileSync(join(WEB, `fonts/${name}.woff2`));
+  for (const file of walk(join(WEB, "fonts")).filter((path) => path.endsWith(".woff2")).sort()) {
+    const name = file.slice(file.lastIndexOf(sep) + 1, -".woff2".length);
+    if (paths[name]) throw new Error(`two font files are named ${name}.woff2`);
+    const data = readFileSync(file);
     const path = `/_sf/f.${createHash("sha256").update(data).digest("hex").slice(0, 10)}.${name}.woff2`;
     paths[name] = path;
     files.set(`${REL_PUBLIC}${path}`, data);
@@ -108,8 +115,8 @@ function buildFonts(): { paths: Record<string, string>; files: Map<string, Buffe
   return { paths, files };
 }
 
-async function buildCss(fontPaths: Record<string, string>): Promise<string> {
-  const source = readFileSync(join(WEB, "styles/shop.css"), "utf8").replace(/__SF_FONT_([a-z-]+)__/g, (_match, name: string) => {
+async function buildCss(fontPaths: Record<string, string>, file = "styles/shop.css"): Promise<string> {
+  const source = readFileSync(join(WEB, file), "utf8").replace(/__SF_FONT_([a-z0-9-]+)__/g, (_match, name: string) => {
     const path = fontPaths[name];
     if (!path) throw new Error(`stylesheet names an unknown font: ${name}`);
     return path;
@@ -123,9 +130,9 @@ async function buildCss(fontPaths: Record<string, string>): Promise<string> {
   return result.code;
 }
 
-async function buildScript(): Promise<string> {
+async function buildScript(entry = "client/shop.ts"): Promise<string> {
   const result = await build({
-    entryPoints: [join(WEB, "client/shop.ts")],
+    entryPoints: [join(WEB, entry)],
     bundle: true,
     write: false,
     format: "iife",
@@ -138,7 +145,7 @@ async function buildScript(): Promise<string> {
     logLevel: "silent",
   });
   const output = result.outputFiles[0];
-  if (!output) throw new Error("order-form script produced no output");
+  if (!output) throw new Error(`${entry} produced no output`);
   return output.text;
 }
 
@@ -175,11 +182,23 @@ export async function buildStorefrontPublic(): Promise<StorefrontPublicFiles> {
   const communes = buildCommunes();
   const cssPath = `/_sf/shop.${short(css)}.css`;
   const jsPath = `/_sf/shop.${short(js)}.js`;
+  const skinFiles = new Map<string, string>();
+  const skins: Record<string, { css: string; js?: string }> = {};
+  for (const id of SKINS) {
+    const skinCss = await buildCss(fonts.paths, `styles/${id}.css`);
+    skins[id] = { css: `/_sf/${id}.${short(skinCss)}.css` };
+    skinFiles.set(`${REL_PUBLIC}${skins[id].css}`, skinCss);
+    if (existsSync(join(WEB, `client/${id}.ts`))) {
+      const skinJs = await buildScript(`client/${id}.ts`);
+      skins[id].js = `/_sf/${id}.${short(skinJs)}.js`;
+      skinFiles.set(`${REL_PUBLIC}${skins[id].js}`, skinJs);
+    }
+  }
   const files = new Map<string, string | Buffer>([
     ["control-plane/storefront/web/messages.generated.json", buildMessages()],
     [
       "control-plane/storefront/web/asset-manifest.generated.json",
-      `${JSON.stringify({ css: cssPath, js: jsPath, communes: `/_sf/c.${communes.hash}`, fonts: fonts.paths }, null, 2)}\n`,
+      `${JSON.stringify({ css: cssPath, js: jsPath, communes: `/_sf/c.${communes.hash}`, fonts: fonts.paths, skins }, null, 2)}\n`,
     ],
     [`${REL_PUBLIC}${cssPath}`, css],
     [`${REL_PUBLIC}${jsPath}`, js],
@@ -188,6 +207,7 @@ export async function buildStorefrontPublic(): Promise<StorefrontPublicFiles> {
       "/_sf/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n",
     ],
   ]);
+  for (const [path, content] of skinFiles) files.set(path, content);
   for (const [path, content] of communes.files) files.set(path, content);
   for (const [path, content] of fonts.files) files.set(path, content);
   return files;

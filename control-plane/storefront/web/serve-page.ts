@@ -24,7 +24,7 @@ export function servePublicStorePage(
     environment,
     slug,
     context,
-    { render: renderStorePage, assets: { css: manifest.css, js: manifest.js, communes: manifest.communes, fonts: manifest.fonts }, cache: edgeCache() },
+    { render: renderStorePage, assets: { css: manifest.css, js: manifest.js, communes: manifest.communes, fonts: manifest.fonts, skins: manifest.skins }, cache: edgeCache() },
     productId,
   );
 }

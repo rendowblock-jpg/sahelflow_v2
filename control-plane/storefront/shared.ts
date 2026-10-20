@@ -10,6 +10,13 @@ export const MAX_CHECKOUT_ITEMS = 50;
 export const MAX_CIPHERTEXT_CHARS = 64 * 1024;
 export const MAX_POLL_LIMIT = 100;
 
+/** The template ids a release may carry. The Worker bundle cannot import from src/, so the list lives here (a test keeps it equal to the app's list). */
+export const TEMPLATE_IDS = ["sahara", "atlas", "oasis", "prime", "souk", "reel"] as const;
+export type TemplateId = (typeof TEMPLATE_IDS)[number];
+export function isTemplateId(value: unknown): value is TemplateId {
+  return typeof value === "string" && (TEMPLATE_IDS as readonly string[]).includes(value);
+}
+
 export function json(value: unknown, status = 200): Response {
   return Response.json(value, {
     status,
@@ -263,7 +270,7 @@ function validPublicTheme(value: unknown): value is PlainRecord {
   const checkout = record(theme.checkout);
   const trust = record(theme.trust);
   return Boolean(
-    theme.schemaVersion === 2 && ["sahara", "atlas", "oasis", "prime", "souk", "reel"].includes(String(theme.template)) &&
+    theme.schemaVersion === 2 && isTemplateId(theme.template) &&
     [theme.primaryColor, theme.accentColor, theme.backgroundColor, theme.surfaceColor, theme.textColor]
       .every((color) => typeof color === "string" && COLOR.test(color)) &&
     typeof theme.showPrices === "boolean" && typeof theme.showStock === "boolean" &&

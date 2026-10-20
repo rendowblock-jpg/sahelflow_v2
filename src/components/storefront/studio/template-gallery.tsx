@@ -26,6 +26,21 @@ const TEMPLATES: readonly {
     nameKey: "storefront.studio.template.oasis",
     roleKey: "storefront.studio.template.oasisRole",
   },
+  {
+    id: "prime",
+    nameKey: "storefront.studio.template.prime",
+    roleKey: "storefront.studio.template.primeRole",
+  },
+  {
+    id: "souk",
+    nameKey: "storefront.studio.template.souk",
+    roleKey: "storefront.studio.template.soukRole",
+  },
+  {
+    id: "reel",
+    nameKey: "storefront.studio.template.reel",
+    roleKey: "storefront.studio.template.reelRole",
+  },
 ] as const;
 
 function TemplatePreview({ id }: { id: StorefrontTemplateId }) {
@@ -73,6 +88,35 @@ function TemplatePreview({ id }: { id: StorefrontTemplateId }) {
             <span className="h-8 rounded-surface border bg-card shadow-sm" />
           </div>
         </>
+      ) : id === "prime" ? (
+        <div className="absolute inset-x-0 bottom-0 top-5 bg-[#07120e]">
+          <div className="absolute inset-x-0 top-0 h-[62%] bg-[radial-gradient(60%_80%_at_50%_30%,#2d6350,transparent)]" />
+          <span className="absolute start-1/2 top-[14%] h-[40%] w-[14%] -translate-x-1/2 rounded-t-md rounded-b-sm bg-[#efeae0]/90 rtl:translate-x-1/2" />
+          <span className="absolute inset-x-[30%] bottom-[22%] h-1.5 rounded-full bg-[#efeae0]/80" />
+          <span className="absolute inset-x-[38%] bottom-[8%] h-3 rounded-full bg-[#c8a25b]" />
+        </div>
+      ) : id === "souk" ? (
+        <div className="absolute inset-x-0 bottom-0 top-5 bg-white p-2.5">
+          <div className="grid grid-cols-3 gap-1.5">
+            <span className="h-11 rounded-control bg-[#d3e0be]" />
+            <span className="h-11 rounded-control bg-[#f6d5c4]" />
+            <span className="h-11 rounded-control bg-[#d9d0f0]" />
+            <span className="h-11 rounded-control bg-[#f7e8b0]" />
+            <span className="h-11 rounded-control bg-[#f3cfd6]" />
+            <span className="h-11 rounded-control bg-[#cfe3f0]" />
+          </div>
+          <span className="absolute inset-x-2.5 bottom-1.5 h-2 rounded-full bg-[#15172a]" />
+        </div>
+      ) : id === "reel" ? (
+        <div className="absolute inset-x-0 bottom-0 top-5 bg-[#09090a] px-2 pt-2.5">
+          <div className="flex gap-1.5">
+            <span className="h-14 w-[38%] shrink-0 rounded-sm border border-white/15 bg-white/10" />
+            <span className="h-14 w-[38%] shrink-0 rounded-sm border border-white/30 bg-white/20" />
+            <span className="h-14 w-[38%] shrink-0 rounded-sm border border-white/15 bg-white/10" />
+          </div>
+          <span className="mt-2 block h-2.5 w-2/3 rounded-sm bg-[#f1efea]" />
+          <span className="mt-1.5 block h-1.5 w-1/3 rounded-full bg-[#f1efea]/40" />
+        </div>
       ) : (
         <>
           <div className="grid h-[45%] grid-cols-[.82fr_1.18fr] gap-2 p-2.5">

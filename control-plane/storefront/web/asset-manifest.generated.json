@@ -3,8 +3,30 @@
   "js": "/_sf/shop.3b0096a848.js",
   "communes": "/_sf/c.c000d484f9",
   "fonts": {
-    "naskh-bold": "/_sf/f.d082c3db84.naskh-bold.woff2",
     "kufi-bold": "/_sf/f.9bd813edeb.kufi-bold.woff2",
-    "kufi-regular": "/_sf/f.f83396316a.kufi-regular.woff2"
+    "kufi-regular": "/_sf/f.f83396316a.kufi-regular.woff2",
+    "naskh-bold": "/_sf/f.d082c3db84.naskh-bold.woff2",
+    "alexandria-300-arabic": "/_sf/f.2ae64abb8b.alexandria-300-arabic.woff2",
+    "alexandria-400-arabic": "/_sf/f.36121d1cbf.alexandria-400-arabic.woff2",
+    "alexandria-500-arabic": "/_sf/f.baab0f2b12.alexandria-500-arabic.woff2",
+    "jost-var-latin": "/_sf/f.f309bd2edc.jost-var-latin.woff2",
+    "archivo-400-latin": "/_sf/f.559f4106ef.archivo-400-latin.woff2",
+    "archivo-cond-800-latin": "/_sf/f.209df2c866.archivo-cond-800-latin.woff2",
+    "arefruqaa-700-arabic": "/_sf/f.cf91497720.arefruqaa-700-arabic.woff2",
+    "plexarabic-400-arabic": "/_sf/f.c5e6714df4.plexarabic-400-arabic.woff2",
+    "readexpro-var-arabic": "/_sf/f.325dfc47a7.readexpro-var-arabic.woff2",
+    "readexpro-var-latin": "/_sf/f.629d5a9adc.readexpro-var-latin.woff2"
+  },
+  "skins": {
+    "prime": {
+      "css": "/_sf/prime.f76f60d417.css"
+    },
+    "souk": {
+      "css": "/_sf/souk.5db4107321.css"
+    },
+    "reel": {
+      "css": "/_sf/reel.59c51bb258.css",
+      "js": "/_sf/reel.999728e8e1.js"
+    }
   }
 }

@@ -139,7 +139,7 @@ export function renderInputFor(store: PublishedTestStore, overrides: Partial<Ren
     defaultLocale: release.locale,
     artifact: JSON.parse(release.artifact_json) as PublicArtifact,
     stock,
-    assets: { css: "/_sf/shop.test.css", js: "/_sf/shop.test.js", communes: "/_sf/c.test", fonts: { "naskh-bold": "/_sf/f.test.naskh-bold.woff2", "kufi-bold": "/_sf/f.test.kufi-bold.woff2", "kufi-regular": "/_sf/f.test.kufi-regular.woff2" } },
+    assets: { css: "/_sf/shop.test.css", js: "/_sf/shop.test.js", communes: "/_sf/c.test", skins: { prime: { css: "/_sf/prime.test.css" }, souk: { css: "/_sf/souk.test.css" }, reel: { css: "/_sf/reel.test.css", js: "/_sf/reel.test.js" } }, fonts: Object.fromEntries(["naskh-bold", "kufi-bold", "kufi-regular", "jost-var-latin", "alexandria-300-arabic", "readexpro-var-arabic", "readexpro-var-latin", "archivo-cond-800-latin"].map((name) => [name, `/_sf/f.test.${name}.woff2`])) },
     storefrontId: key.id,
     releaseId: release.release_id,
     receiptKey: key.k,
