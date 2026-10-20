@@ -36,6 +36,47 @@ describe("hosted page translator", () => {
     }
   });
 
+  it("builds no Intl.PluralRules for a message without plural forms (the shipped tables have none): the first one in a fresh Worker is a cost with no effect", () => {
+    // TypeScript types Intl.PluralRules as read-only; at runtime it is an ordinary writable property.
+    const intl = Intl as unknown as { PluralRules: typeof Intl.PluralRules };
+    const original = intl.PluralRules;
+    let built = 0;
+    intl.PluralRules = new Proxy(original, {
+      construct(target, args, newTarget) {
+        built += 1;
+        return Reflect.construct(target, args, newTarget);
+      },
+    }) as typeof Intl.PluralRules;
+    try {
+      for (const locale of PUBLIC_LOCALES) {
+        const t = createPublicTranslator(locale);
+        t("storefront.view.lowStock", { count: 3 });
+        t("storefront.view.lowStock", { count: 1 });
+      }
+    } finally {
+      intl.PluralRules = original;
+    }
+    expect(built).toBe(0);
+  });
+
+  it("still picks a plural form when a message has one (one translator builds the rules once)", () => {
+    const table = TABLES.en as Record<string, string>;
+    table["test.items_one"] = "{{count}} item";
+    table["test.items_other"] = "{{count}} items";
+    table["test.items"] = "fallback";
+    try {
+      const t = createPublicTranslator("en");
+      expect(t("test.items", { count: 1 })).toBe("1 item");
+      expect(t("test.items", { count: 3 })).toBe("3 items");
+      expect(t("test.items", { count: 0 })).toBe("0 items");
+      expect(t("test.items")).toBe("fallback");
+    } finally {
+      delete table["test.items_one"];
+      delete table["test.items_other"];
+      delete table["test.items"];
+    }
+  });
+
   it("never shows a raw key for a message the page uses", () => {
     for (const locale of PUBLIC_LOCALES) {
       const t = createPublicTranslator(locale);
