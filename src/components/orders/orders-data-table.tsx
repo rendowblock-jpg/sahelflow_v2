@@ -93,7 +93,7 @@ export function OrdersDataTable({
     onAfter: () => mutatePrefix("/api/orders"),
   });
 
-  const { data, error, isLoading, mutate, pagination } = useOrders({
+  const { data, error, isLoading, isRefreshing, mutate, pagination } = useOrders({
     status: statusFilter,
     fallback,
   });
@@ -253,16 +253,21 @@ export function OrdersDataTable({
   return (
     <div className="space-y-3">
       <OrdersFilterBar />
-      <DataTable
-        columns={columns}
-        data={data?.orders ?? []}
-        isLoading={isLoading}
-        pagination={pagination}
-        onRowClick={canOpenDetail ? (row) => router.push(`/orders/${row.id}`) : undefined}
-        bulkActions={fieldAccess.update ? bulkActions : undefined}
-        getRowId={(row) => row.id}
-        emptyState={emptyState}
-      />
+      <div
+        aria-busy={isRefreshing}
+        className={`transition-opacity duration-150 ${isRefreshing ? "opacity-60" : ""}`}
+      >
+        <DataTable
+          columns={columns}
+          data={data?.orders ?? []}
+          isLoading={isLoading}
+          pagination={pagination}
+          onRowClick={canOpenDetail ? (row) => router.push(`/orders/${row.id}`) : undefined}
+          bulkActions={fieldAccess.update ? bulkActions : undefined}
+          getRowId={(row) => row.id}
+          emptyState={emptyState}
+        />
+      </div>
       {slipPrintRoot}
     </div>
   );

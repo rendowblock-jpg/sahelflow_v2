@@ -10,7 +10,7 @@
  * so the seller never lands on a page that no longer exists.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -37,32 +37,51 @@ export function ListSearchInput({
   const [localValue, setLocalValue] = useState(q ?? "");
   const debouncedValue = useDebouncedValue(localValue, debounceMs);
 
-  // Commit the debounced query once it matches what the seller finished
-  // typing. Guarding on `debouncedValue === localValue` keeps a back/forward
-  // navigation (URL q changed externally) from being overwritten by a stale
-  // debounce that is still settling.
+  // `synced` is the query the box and the URL last agreed on: what this field
+  // committed, or what it adopted from outside. `inFlight` holds the queries it
+  // committed whose echo has not come back through `q` yet. Refs, not state:
+  // they track the URL's conversation with the box and must never re-render.
+  const synced = useRef(q ?? "");
+  const inFlight = useRef(new Set<string>());
+
+  const commit = useCallback(
+    (next: string) => {
+      if (next === synced.current) return;
+      synced.current = next;
+      inFlight.current.add(next);
+      void setParams({ q: next || null, page: 1 });
+    },
+    [setParams],
+  );
+
+  // Seller -> URL: commit once the pause after typing has passed and the
+  // debounce has caught up with the box.
   useEffect(() => {
     if (debouncedValue !== localValue) return;
-    const next = debouncedValue.trim() || null;
-    if (next === (q ?? null)) return;
-    void setParams({ q: next, page: 1 });
-  }, [debouncedValue, localValue, q, setParams]);
+    commit(debouncedValue.trim());
+  }, [debouncedValue, localValue, commit]);
 
-  // Adopt external q changes (clear-all chips, back/forward) unless the value
-  // plausibly originates from the seller's own in-flight typing.
+  // URL -> box: adopt a query that changed from OUTSIDE (clear-all chip,
+  // back/forward). The URL echoing what this field just committed is not a
+  // change: reading it back used to empty the box at the moment of the commit
+  // and flip the URL again 300 ms later, in a loop (Internal.45 report).
   useEffect(() => {
     const external = q ?? "";
-    if (external !== localValue && external !== debouncedValue) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate: adopt external URL state (back/forward, clear-all)
-      setLocalValue(external);
+    if (inFlight.current.has(external)) {
+      // Our own commit coming back; the newest one landing means none is left in flight.
+      if (external === synced.current) inFlight.current.clear();
+      return;
     }
-  }, [q, localValue, debouncedValue]);
+    if (external === synced.current) return;
+    synced.current = external;
+    inFlight.current.clear();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate: adopt external URL state (back/forward, clear-all)
+    setLocalValue(external);
+  }, [q]);
 
   function handleClear() {
     setLocalValue("");
-    if (q !== null) {
-      void setParams({ q: null, page: 1 });
-    }
+    commit("");
   }
 
   const resolvedPlaceholder = placeholder ?? t("common.search");
@@ -79,7 +98,8 @@ export function ListSearchInput({
         onChange={(event) => setLocalValue(event.target.value)}
         placeholder={resolvedPlaceholder}
         aria-label={resolvedPlaceholder}
-        className="ps-9 pe-8"
+        // The field draws its own clear button; the browser's second one is switched off.
+        className="ps-9 pe-8 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
         autoComplete="off"
       />
       {localValue ? (
