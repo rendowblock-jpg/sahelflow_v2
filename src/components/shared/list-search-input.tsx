@@ -75,7 +75,6 @@ export function ListSearchInput({
     if (external === synced.current) return;
     synced.current = external;
     inFlight.current.clear();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate: adopt external URL state (back/forward, clear-all)
     setLocalValue(external);
   }, [q]);
 
