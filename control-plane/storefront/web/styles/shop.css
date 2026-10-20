@@ -350,7 +350,7 @@ body[data-sticky]{padding-block-end:calc(96px + env(safe-area-inset-bottom,0px))
 .sf-sticky[data-state=hidden]{transform:translateY(125%);visibility:hidden;transition:transform .3s var(--e-io),visibility 0s .3s}
 .sf-sticky-thumb{flex:none;width:48px;height:48px;border-radius:calc(var(--rc) - 2px);object-fit:cover;background:var(--sf-placeholder)}
 .sf-sticky-price{display:grid;line-height:1.25;min-width:0}
-.sf-sticky-price small{color:var(--muted-foreground);font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sf-sticky-price small{color:var(--muted-foreground);font-size:12px;font-weight:600;line-height:1.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sf-sticky-price strong{font-size:19px;font-variant-numeric:tabular-nums}
 .sf-cta--bar{flex:1;min-width:0;min-height:52px;font-size:16px}
 @media (max-width:359px){.sf-sticky-thumb{display:none}}
