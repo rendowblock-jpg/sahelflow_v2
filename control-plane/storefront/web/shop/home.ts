@@ -33,7 +33,7 @@ export function renderCard(ctx: Ctx, product: ShopProduct, index: number, mode: 
   const picture = url
     ? image(ctx, url, product.name, false, mode === "grid" && index === 0 && theme.template === "sahara" ? FEATURED_SIZES : CARD_SIZES).replace('loading="lazy"', index < 2 ? 'loading="eager"' : 'loading="lazy"')
     : `<span class="sf-ph" aria-hidden="true">${esc([...product.name.trim()][0]?.toUpperCase() ?? "")}</span>`;
-  return `<li${mode === "grid" ? ' class="sf-rv"' : ""}><a class="sf-card" href="${esc(productHref(ctx.slug, product.id))}"><div class="sf-media"${vt ? ` style="view-transition-name:${vt}"` : ""}>${picture}${badge}</div><div class="sf-card-body"><h3 dir="auto">${esc(product.name)}</h3>${sku}${price}<span class="sf-card-cta">${esc(t("storefront.studio.orderNow"))}${icon("arrow", "sf-flip")}</span></div></a></li>`;
+  return `<li${mode === "grid" ? ' class="sf-rv"' : ""}><a class="sf-card" href="${esc(productHref(ctx.slug, product.id))}"><div class="sf-media"${vt ? ` style="view-transition-name:${vt}"` : ""}>${picture}${badge}</div><div class="sf-card-body"><h3 dir="auto">${esc(product.name)}</h3>${sku}${price}</div></a></li>`;
 }
 
 export function renderGrid(ctx: Ctx, products: readonly ShopProduct[], title: string, id?: string): string {
@@ -53,22 +53,24 @@ export function renderRail(ctx: Ctx, products: readonly ShopProduct[], title: st
 function renderHero(ctx: Ctx, target: string): string {
   const { t, theme, model, locale } = ctx;
   const style = theme.hero.style;
-  const eyebrow = theme.hero.eyebrow.trim() || (style === "centered" ? t("storefront.studio.payOnDelivery") : t("storefront.studio.algeriaCod"));
+  const eyebrow = theme.hero.eyebrow.trim(); // only what the seller wrote: a stock kicker above every headline is the template look
   const headline = theme.hero.headline.trim() || model.name;
   const body = theme.hero.body.trim() || model.description;
   const cta = theme.hero.ctaLabel.trim() || (style === "centered" ? t("storefront.studio.orderNow") : t("storefront.studio.shopNow"));
-  const text = `<div class="sf-hero-text"><p class="sf-eyebrow" dir="auto">${esc(eyebrow)}</p><h1 class="sf-h1" dir="auto">${esc(headline)}</h1>${body ? `<p class="sf-lead" dir="auto">${esc(body)}</p>` : ""}<a class="sf-btn" href="${target}">${esc(cta)}${icon("arrow", "sf-flip")}</a></div>`;
+  const text = `<div class="sf-hero-text">${eyebrow ? `<p class="sf-eyebrow" dir="auto">${esc(eyebrow)}</p>` : ""}<h1 class="sf-h1" dir="auto">${esc(headline)}</h1>${body ? `<p class="sf-lead" dir="auto">${esc(body)}</p>` : ""}<a class="sf-btn" href="${target}">${esc(cta)}${icon("arrow", "sf-flip")}</a></div>`;
   const withPicture = model.products.filter((product) => product.images[0]);
   const pics = withPicture.slice(0, style === "editorial" ? 3 : 1);
   const first = withPicture[0];
-  const chip = style === "split" && theme.showPrices && first
-    ? `<span class="sf-chip-price">${esc(t("storefront.shop.from", { price: formatPrice(first.from, locale) }))}</span>`
+  // The photograph is captioned like a gallery print: name and price, one line, linked to the product. No floating chip over the photo.
+  const caption = first
+    ? `<a class="sf-hero-cap" href="${esc(productHref(ctx.slug, first.id))}"><span dir="auto">${esc(first.name)}</span>${
+        theme.showPrices ? `<b>${esc(first.variants.length > 1 ? t("storefront.shop.from", { price: formatPrice(first.from, locale) }) : formatPrice(first.from, locale))}</b>` : ""
+      }</a>`
     : "";
   const media = pics.length === 0
     ? `<div class="sf-hero-media sf-hero-ph" aria-hidden="true"></div>`
-    : `<div class="sf-hero-media" data-count="${pics.length}">${pics.map((product, index) => `<div class="sf-hero-pic">${image(ctx, product.images[0] as string, product.name, index === 0, HERO_SIZES)}</div>`).join("")}${chip}</div>`;
-  const blobs = style === "centered" ? '<span class="sf-blob sf-blob--a" aria-hidden="true"></span><span class="sf-blob sf-blob--b" aria-hidden="true"></span>' : "";
-  return `<section class="sf-hero" data-style="${style}">${blobs}<div class="sf-wrap sf-hero-in">${text}${media}</div></section>`;
+    : `<div class="sf-hero-media" data-count="${pics.length}">${pics.map((product, index) => `<div class="sf-hero-pic">${image(ctx, product.images[0] as string, product.name, index === 0, HERO_SIZES)}</div>`).join("")}${caption}</div>`;
+  return `<section class="sf-hero" data-style="${style}"><div class="sf-wrap sf-hero-in">${text}${media}</div></section>`;
 }
 
 function renderTrust(ctx: Ctx): string {

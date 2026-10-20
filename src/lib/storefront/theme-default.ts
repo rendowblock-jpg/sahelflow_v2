@@ -12,8 +12,8 @@ export function createDefaultStorefrontTheme(template: StorefrontTemplateId = "a
     showPrices: true,
     showStock: false,
     density: template === "sahara" ? "airy" : "balanced",
-    radius: template === "sahara" ? "rounded" : "soft",
-    announcement: { enabled: template !== "atlas", text: "" },
+    radius: template === "oasis" ? "soft" : "sharp",
+    announcement: { enabled: true, text: "" },
     hero: {
       enabled: true,
       style: template === "sahara" ? "editorial" : template === "oasis" ? "centered" : "split",
@@ -24,7 +24,7 @@ export function createDefaultStorefrontTheme(template: StorefrontTemplateId = "a
     },
     catalog: {
       cardStyle: template === "sahara" ? "minimal" : template === "oasis" ? "outlined" : "elevated",
-      imageRatio: template === "sahara" ? "portrait" : template === "oasis" ? "landscape" : "square",
+      imageRatio: template === "atlas" ? "square" : "portrait",
       showSku: false,
       showCategoryNavigation: template !== "oasis",
     },

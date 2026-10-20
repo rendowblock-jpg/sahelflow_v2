@@ -29,18 +29,16 @@ export function languageNav(ctx: Ctx): string {
 }
 
 export function renderHeader(ctx: Ctx): string {
-  const initial = [...ctx.model.name.trim()][0]?.toUpperCase() ?? "•";
-  return `<header class="sf-head"><div class="sf-wrap sf-head-in"><a class="sf-brand" href="/${esc(ctx.slug)}"><span class="sf-mono" aria-hidden="true">${esc(initial)}</span><b dir="auto">${esc(ctx.model.name)}</b></a>${languageNav(ctx)}</div></header>`;
+  return `<header class="sf-head"><div class="sf-wrap sf-head-in"><a class="sf-brand" href="/${esc(ctx.slug)}"><b dir="auto">${esc(ctx.model.name)}</b></a>${languageNav(ctx)}</div></header>`;
 }
 
 export function renderAnnouncement(ctx: Ctx): string {
   const { theme, t } = ctx;
   if (!theme.announcement.enabled) return "";
   const text = esc(theme.announcement.text.trim() || t("storefront.studio.freePhoneConfirmation"));
-  // Three copies per set and two sets: the track slides by half its width, so the loop never shows a gap.
-  // Only the first copy is read by assistive technology; with reduced motion only the first copy is shown.
-  const first = `<span dir="auto">${text}</span><span dir="auto" aria-hidden="true">${text}</span><span dir="auto" aria-hidden="true">${text}</span>`;
-  return `<div class="sf-ann" role="note"><div class="sf-ann-track"><div class="sf-ann-set">${first}</div><div class="sf-ann-set" aria-hidden="true">${first}</div></div></div>`;
+  // One static line. A scrolling ticker repeated the text six times for assistive technology tools to skip, cut its words at the screen edges,
+  // and read as a discount shop; the line is centred, balanced over two lines when long, and never moves.
+  return `<div class="sf-ann" role="note"><p dir="auto">${text}</p></div>`;
 }
 
 export function renderFooter(ctx: Ctx, tagline: string): string {

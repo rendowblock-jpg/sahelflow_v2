@@ -81,7 +81,46 @@ function available(environment: StorefrontWorkerEnvironment): Response | null {
   return environment.MEDIA && origin(environment) ? null : json({ error: "media_unavailable" }, 503);
 }
 
-export async function checkMedia(
+/**
+ * A storage or database failure inside a media call is a clean, retryable 503. Left to throw, Cloudflare answers with its
+ * own HTML "Error 1101: Worker threw exception" page (seen on staging, 20 Oct 2026, one upload in 24), which no desktop
+ * client can read or act on. Every upload is idempotent, so "try again in 5 seconds" is always safe. The log line names the
+ * call and the store only: never the bearer token, the photo or the request.
+ */
+async function guarded(call: "check" | "put", storefrontId: string, run: () => Promise<Response>): Promise<Response> {
+  try {
+    return await run();
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: "storefront_media_failed",
+        call,
+        storefrontId,
+        message: error instanceof Error ? error.message.slice(0, 300) : String(error).slice(0, 300),
+      }),
+    );
+    const response = json({ error: "media_unavailable" }, 503);
+    response.headers.set("Retry-After", "5");
+    return response;
+  }
+}
+
+export function checkMedia(request: Request, environment: StorefrontWorkerEnvironment, storefrontId: string): Promise<Response> {
+  return guarded("check", storefrontId, () => checkMediaUnguarded(request, environment, storefrontId));
+}
+
+export function putMedia(
+  request: Request,
+  environment: StorefrontWorkerEnvironment,
+  storefrontId: string,
+  hash: string,
+  widthText: string,
+  url: URL,
+): Promise<Response> {
+  return guarded("put", storefrontId, () => putMediaUnguarded(request, environment, storefrontId, hash, widthText, url));
+}
+
+async function checkMediaUnguarded(
   request: Request,
   environment: StorefrontWorkerEnvironment,
   storefrontId: string,
@@ -116,7 +155,7 @@ export async function checkMedia(
   return json({ origin: origin(environment), widths: MEDIA_WIDTHS, present });
 }
 
-export async function putMedia(
+async function putMediaUnguarded(
   request: Request,
   environment: StorefrontWorkerEnvironment,
   storefrontId: string,

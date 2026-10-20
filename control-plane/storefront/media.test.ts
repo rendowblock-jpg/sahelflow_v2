@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   CHECK_LIMIT,
@@ -193,6 +193,70 @@ describe("hosted product photos", () => {
     expect((await check(bare, { workspaceId: TEST_WORKSPACE_ID, hashes: [HASH] })).status).toBe(503);
     const noOrigin = { ...env, MEDIA_ORIGIN: "http://insecure.example" } as StorefrontWorkerEnvironment;
     expect((await put(noOrigin, webp(3_000))).status).toBe(503);
+    store.database.close();
+  });
+});
+
+describe("a storage failure is a clean, retryable answer, never a thrown Worker exception", () => {
+  /** The same environment with its database throwing for every statement that touches the photo ledger. */
+  function ledgerDown(env: StorefrontWorkerEnvironment): StorefrontWorkerEnvironment {
+    return {
+      ...env,
+      DB: { prepare: (sql: string) => { if (sql.includes("storefront_media")) throw new Error("d1 is down"); return env.DB.prepare(sql); } },
+    } as unknown as StorefrontWorkerEnvironment;
+  }
+
+  it("answers 503 media_unavailable with Retry-After when the bucket throws, and records no ledger row", async () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { store, bucket, env } = await withStore();
+    bucket.put = async () => { throw new Error("r2 is down"); };
+    const response = await put(env, webp(3_000));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "media_unavailable" });
+    expect(response.headers.get("Retry-After")).toBe("5");
+    expect((store.database.prepare("SELECT COUNT(*) AS n FROM storefront_media").get() as { n: number }).n).toBe(0);
+    quiet.mockRestore();
+    store.database.close();
+  });
+
+  it("answers 503 when the photo ledger throws during an upload", async () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { store, env } = await withStore();
+    const response = await put(ledgerDown(env), webp(3_000));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "media_unavailable" });
+    quiet.mockRestore();
+    store.database.close();
+  });
+
+  it("answers 503 when the existence check throws", async () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { store, env } = await withStore();
+    const response = await check(ledgerDown(env), { workspaceId: TEST_WORKSPACE_ID, hashes: [HASH] });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("5");
+    quiet.mockRestore();
+    store.database.close();
+  });
+
+  it("logs one line naming the call and the store, and never the bearer token or the photo", async () => {
+    const logged: string[] = [];
+    const quiet = vi.spyOn(console, "error").mockImplementation((line: unknown) => { logged.push(String(line)); });
+    const { store, bucket, env } = await withStore();
+    bucket.put = async () => { throw new Error("r2 is down"); };
+    await put(env, webp(3_000));
+    quiet.mockRestore();
+    expect(logged).toHaveLength(1);
+    const entry = JSON.parse(logged[0] as string) as Record<string, unknown>;
+    expect(entry).toMatchObject({ event: "storefront_media_failed", call: "put", storefrontId: TEST_STOREFRONT_ID, message: "r2 is down" });
+    expect(logged[0]).not.toContain("t".repeat(40));
+    store.database.close();
+  });
+
+  it("still refuses a bad request with its own status: only an unexpected failure becomes 503", async () => {
+    const { store, env } = await withStore();
+    expect((await put(env, webp(3_000), { type: "image/png" })).status).toBe(415);
+    expect((await put(env, webp(3_000), { auth: false })).status).toBe(401);
     store.database.close();
   });
 });

@@ -8,26 +8,31 @@ export interface StorefrontTemplatePreset {
   textColor: string;
 }
 
+/**
+ * The colours each template opens with (a seller can change all five in the Studio; a stored store keeps its own).
+ * Each is a different world, not a different tint: sahara = chalk and madder red (Kabyle weaving, whitewashed walls),
+ * atlas = white and ink with one vermilion (newsprint, shop signs), oasis = sage and pine with clay (M'zab adobe).
+ */
 export const STOREFRONT_TEMPLATE_PRESETS: Readonly<Record<StorefrontTemplateId, StorefrontTemplatePreset>> = {
   sahara: {
-    primaryColor: "#7C3F22",
-    accentColor: "#F0A35E",
-    backgroundColor: "#FFF8F1",
-    surfaceColor: "#FFFFFF",
-    textColor: "#211A17",
+    primaryColor: "#8E2C1E",
+    accentColor: "#C9962E",
+    backgroundColor: "#F2EFE9",
+    surfaceColor: "#FBFAF7",
+    textColor: "#1B1613",
   },
   atlas: {
-    primaryColor: "#155E75",
-    accentColor: "#22A06B",
-    backgroundColor: "#F5F8FA",
-    surfaceColor: "#FFFFFF",
-    textColor: "#111827",
+    primaryColor: "#0E0E10",
+    accentColor: "#D9381E",
+    backgroundColor: "#FFFFFF",
+    surfaceColor: "#F6F6F4",
+    textColor: "#0E0E10",
   },
   oasis: {
-    primaryColor: "#2F6B4F",
-    accentColor: "#D97706",
-    backgroundColor: "#F4F7F2",
+    primaryColor: "#1F4A38",
+    accentColor: "#E8B79B",
+    backgroundColor: "#F1F3EC",
     surfaceColor: "#FFFFFF",
-    textColor: "#17201B",
+    textColor: "#14211B",
   },
 };
