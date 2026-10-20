@@ -5,6 +5,9 @@ import type { ShopProduct, ShopSection } from "./model";
 const RATIO_SIZE = { portrait: [800, 1000], square: [800, 800], landscape: [800, 600] } as const;
 
 const CARD_SIZES = "(min-width:1040px) 25vw, (min-width:720px) 33vw, 50vw";
+// Sahara's first grid card spans the whole row on a phone and two columns on wider screens (`.sf-grid>li:first-child`
+// in shop.css): its photo is chosen for that width, or a phone would take the small file for a card it fills.
+const FEATURED_SIZES = "(min-width:1040px) 50vw, (min-width:720px) 66vw, 92vw";
 const HERO_SIZES = "(min-width:900px) 45vw, 92vw";
 
 function image(ctx: Ctx, url: string, alt: string, eager: boolean, sizes: string = CARD_SIZES): string {
@@ -28,7 +31,7 @@ export function renderCard(ctx: Ctx, product: ShopProduct, index: number, mode: 
   const sku = theme.catalog.showSku && product.sku ? `<p class="sf-sku" dir="ltr">${esc(product.sku)}</p>` : "";
   const vt = transitionName(ctx, product.id);
   const picture = url
-    ? image(ctx, url, product.name, false).replace('loading="lazy"', index < 2 ? 'loading="eager"' : 'loading="lazy"')
+    ? image(ctx, url, product.name, false, mode === "grid" && index === 0 && theme.template === "sahara" ? FEATURED_SIZES : CARD_SIZES).replace('loading="lazy"', index < 2 ? 'loading="eager"' : 'loading="lazy"')
     : `<span class="sf-ph" aria-hidden="true">${esc([...product.name.trim()][0]?.toUpperCase() ?? "")}</span>`;
   return `<li${mode === "grid" ? ' class="sf-rv"' : ""}><a class="sf-card" href="${esc(productHref(ctx.slug, product.id))}"><div class="sf-media"${vt ? ` style="view-transition-name:${vt}"` : ""}>${picture}${badge}</div><div class="sf-card-body"><h3 dir="auto">${esc(product.name)}</h3>${sku}${price}<span class="sf-card-cta">${esc(t("storefront.studio.orderNow"))}${icon("arrow", "sf-flip")}</span></div></a></li>`;
 }

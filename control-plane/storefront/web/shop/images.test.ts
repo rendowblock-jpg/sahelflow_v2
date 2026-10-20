@@ -8,6 +8,15 @@ const HASH = "0123456789abcdef01234567";
 const BIG = `https://media.test/m/storefront_12345678/${HASH}-1280.webp`;
 const SMALL = `https://media.test/m/storefront_12345678/${HASH}-640.webp`;
 
+/** One column of the product grid, and the whole row that Sahara's first card spans (`.sf-grid>li:first-child` in shop.css). */
+const CARD_SIZES = "(min-width:1040px) 25vw, (min-width:720px) 33vw, 50vw";
+const FEATURED_SIZES = "(min-width:1040px) 50vw, (min-width:720px) 66vw, 92vw";
+
+function gridSizes(html: string): string[] {
+  const grid = html.match(/<ul class="sf-grid">([\s\S]*?)<\/ul>/)?.[1] ?? "";
+  return [...grid.matchAll(/ sizes="([^"]*)"/g)].map((match) => match[1] ?? "");
+}
+
 describe("responsive photos", () => {
   it("gives a hosted photo both widths, and a seller's own link just a source", () => {
     expect(imgAttrs(BIG, "100vw")).toBe(`src="${BIG}" srcset="${SMALL} 640w, ${BIG} 1280w" sizes="100vw"`);
@@ -42,7 +51,27 @@ describe("responsive photos", () => {
     expect(product).toContain(`<link rel="preload" as="image" href="${BIG}" imagesrcset=`);
     expect(product).toMatch(/class="sf-sticky-thumb" src="https:\/\/media\.test\/m\/storefront_12345678\/[0-9a-f]{24}-640\.webp" srcset=/);
     const home = renderStorePage(renderInputFor(store, { productId: null })) ?? "";
-    expect(home).toContain('sizes="(min-width:1040px) 25vw, (min-width:720px) 33vw, 50vw"');
+    // Sahara is the default template and its first card spans the row, so that photo is sized for the row.
+    expect(home).toContain(`srcset="${SMALL} 640w, ${BIG} 1280w" sizes="${FEATURED_SIZES}"`);
+    store.database.close();
+  });
+
+  it("sizes Sahara's first card for the whole row it spans and every other card for one column", async () => {
+    const products = SAMPLE_PRODUCTS.map((product) => ({ ...product, images: JSON.stringify([BIG]) }));
+    const store = await publishTestStore({ products });
+    const sizes = gridSizes(renderStorePage(renderInputFor(store, { productId: null })) ?? "");
+    expect(sizes.length).toBeGreaterThan(1);
+    expect(sizes[0]).toBe(FEATURED_SIZES);
+    expect(sizes.slice(1).every((value) => value === CARD_SIZES)).toBe(true);
+    store.database.close();
+  });
+
+  it.each(["atlas", "oasis"] as const)("gives every %s card the one-column width", async (template) => {
+    const products = SAMPLE_PRODUCTS.map((product) => ({ ...product, images: JSON.stringify([BIG]) }));
+    const store = await publishTestStore({ products, template });
+    const sizes = gridSizes(renderStorePage(renderInputFor(store, { productId: null })) ?? "");
+    expect(sizes.length).toBeGreaterThan(1);
+    expect(sizes.every((value) => value === CARD_SIZES)).toBe(true);
     store.database.close();
   });
 
