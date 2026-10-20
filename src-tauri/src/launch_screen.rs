@@ -457,7 +457,22 @@ pub fn open(app: &AppHandle, app_data_dir: &Path) {
                     }
                     thread::sleep(POLL_INTERVAL);
                 }
-                crate::native_splash::request_close();
+                // Only a launch whose workspace reported itself ready may show
+                // the full S and 100%. A timeout, a quit and the recovery page
+                // (which also makes the window visible) just close the card.
+                let latest_stage =
+                    crate::native_splash::process_started_unix_ms().and_then(|started| {
+                        crate::native_splash::current_launch_stage(&trace_path, started)
+                    });
+                if crate::native_splash::handoff_allowed(
+                    workspace_visible(&app),
+                    quitting || crate::native_splash::quit_requested(),
+                    latest_stage.as_deref(),
+                ) {
+                    crate::native_splash::request_handoff();
+                } else {
+                    crate::native_splash::request_close();
+                }
                 if let (Some(painted), Ok(app_data_dir)) = (
                     crate::native_splash::painted_unix_ms(),
                     app.path().app_data_dir(),
