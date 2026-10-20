@@ -174,6 +174,9 @@ const EDGE_INSET: f32 = 60.0;
 const PERCENT_WIDTH: f32 = 38.0;
 const STATUS_GAP: f32 = 10.0;
 const STATUS_DOT: f32 = 4.0;
+/// The dot's centre below the top of the status line: half the text line
+/// (an eyeballed value, not yet checked on a Windows screen).
+const STATUS_DOT_CENTER_Y: f32 = 9.5;
 const ENTRANCE_MS: f32 = 220.0;
 const ENTRANCE_FLOOR: f32 = 0.55;
 const SLOW_HINT_AFTER_MS: f32 = launch_screen::SLOW_HINT_AFTER_SECS as f32 * 1_000.0;
@@ -686,6 +689,123 @@ pub(crate) fn shows_complete(workspace_ready: bool, fading_out: bool, quit: bool
     workspace_ready && fading_out && !quit
 }
 
+/// A frame (paint plus present) slower than this many milliseconds, four
+/// times in a row, switches the ripple off: the card then holds still and
+/// cheap, so a slow PC keeps its CPU for starting SahelFlow.
+pub(crate) const SLOW_FRAME_MS: u128 = 45;
+pub(crate) const SLOW_FRAMES_BEFORE_CALM: u8 = 4;
+
+/// Counts slow frames and decides when the card goes calm. Calm is sticky:
+/// once a PC has shown it cannot keep up, the ripple does not come back
+/// during this launch (switching back and forth would look worse than either).
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct CalmGauge {
+    slow_in_a_row: u8,
+    calm: bool,
+}
+
+impl CalmGauge {
+    pub(crate) fn is_calm(&self) -> bool {
+        self.calm
+    }
+
+    /// Feed the time one frame took, in milliseconds. A frame longer than
+    /// `SLOW_FRAME_MS` is slow; one fast frame starts the count again.
+    pub(crate) fn observe(&mut self, frame_ms: u128) -> bool {
+        if self.calm {
+            return true;
+        }
+        if frame_ms > SLOW_FRAME_MS {
+            self.slow_in_a_row = self.slow_in_a_row.saturating_add(1);
+            if self.slow_in_a_row >= SLOW_FRAMES_BEFORE_CALM {
+                self.calm = true;
+            }
+        } else {
+            self.slow_in_a_row = 0;
+        }
+        self.calm
+    }
+}
+
+/// The status line slides 3 px down as it fades out and back up as the next
+/// one fades in (as in the approved mockup).
+const STAGE_SHIFT: f32 = 3.0;
+
+/// How the status line looks `stage_ms` after its text changed.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct StageSwap {
+    /// Still showing the old text (the first half of the change).
+    pub(crate) previous: bool,
+    pub(crate) alpha: f32,
+    /// Vertical offset in card pixels.
+    pub(crate) dy: f32,
+}
+
+pub(crate) fn stage_swap(stage_ms: f32, has_previous: bool) -> StageSwap {
+    if !has_previous {
+        return StageSwap {
+            previous: false,
+            alpha: 1.0,
+            dy: 0.0,
+        };
+    }
+    if stage_ms < STAGE_FADE_MS {
+        let k = clamp01(stage_ms / STAGE_FADE_MS);
+        StageSwap {
+            previous: true,
+            alpha: 1.0 - k,
+            dy: STAGE_SHIFT * k,
+        }
+    } else {
+        let k = clamp01((stage_ms - STAGE_FADE_MS) / STAGE_FADE_MS);
+        StageSwap {
+            previous: false,
+            alpha: k,
+            dy: STAGE_SHIFT * (1.0 - k),
+        }
+    }
+}
+
+/// The room the status text takes in the row. When the text changes, the room
+/// changes from the old width to the new one while both texts are faint, so
+/// the dot and the percent glide instead of jumping.
+pub(crate) fn stage_slot_width(previous: Option<f32>, current: f32, stage_ms: f32) -> f32 {
+    let Some(previous) = previous else {
+        return current;
+    };
+    let k = clamp01((stage_ms - STAGE_FADE_MS * 0.5) / STAGE_FADE_MS);
+    let eased = k * k * (3.0 - 2.0 * k);
+    previous + (current - previous) * eased
+}
+
+/// Where the three pieces of the status row start, in card pixels.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct StatusRow {
+    pub(crate) stage_x: f32,
+    pub(crate) dot_x: f32,
+    pub(crate) percent_x: f32,
+}
+
+/// The row `[stage] . [percent]`, centred on the card. In Arabic the percent
+/// sits on the left and the stage on the right (a mirror image).
+pub(crate) fn status_row(slot_width: f32, rtl: bool) -> StatusRow {
+    let row = slot_width + STATUS_GAP * 2.0 + STATUS_DOT + PERCENT_WIDTH;
+    let left = (CARD_WIDTH - row) / 2.0;
+    if rtl {
+        StatusRow {
+            stage_x: left + PERCENT_WIDTH + STATUS_GAP * 2.0 + STATUS_DOT,
+            dot_x: left + PERCENT_WIDTH + STATUS_GAP,
+            percent_x: left,
+        }
+    } else {
+        StatusRow {
+            stage_x: left,
+            dot_x: left + slot_width + STATUS_GAP,
+            percent_x: left + slot_width + STATUS_GAP * 2.0 + STATUS_DOT,
+        }
+    }
+}
+
 /// The SahelFlow wordmark as a vector outline (Manrope variable font at
 /// weight 650, kerned, tracking -1.2%), so the name looks the same on every PC
 /// instead of depending on an installed font. Units: 1,000 per em, the origin
@@ -827,11 +947,6 @@ mod imp {
     const STEADY_FRAME_MS: u32 = 66;
     const TRACE_POLL_MS: u128 = 200;
     const APP_ICON_RESOURCE: usize = 32_512;
-    /// A frame (paint plus present) slower than this many milliseconds, four
-    /// times in a row, switches the ripple off: the card then holds still and
-    /// cheap, so a slow PC keeps its CPU for starting SahelFlow.
-    const SLOW_FRAME_MS: u128 = 45;
-    const SLOW_FRAMES_BEFORE_CALM: u8 = 4;
 
     thread_local! {
         static RENDERER: RefCell<Option<Renderer>> = const { RefCell::new(None) };
@@ -924,9 +1039,6 @@ mod imp {
         tiny: *mut GpFont,
         center: *mut GpStringFormat,
         center_rtl: *mut GpStringFormat,
-        near: *mut GpStringFormat,
-        near_rtl: *mut GpStringFormat,
-        far: *mut GpStringFormat,
         /// Measures text for the status row: made once, never per frame.
         typographic: *mut GpStringFormat,
     }
@@ -988,9 +1100,6 @@ mod imp {
                 tiny: font(family, 12.0, FontStyleRegular),
                 center: format(false, StringAlignmentCenter),
                 center_rtl: format(true, StringAlignmentCenter),
-                near: format(false, StringAlignmentNear),
-                near_rtl: format(true, StringAlignmentNear),
-                far: format(false, StringAlignmentFar),
                 typographic,
             };
             if fonts.percent.is_null()
@@ -999,9 +1108,6 @@ mod imp {
                 || fonts.tiny.is_null()
                 || fonts.center.is_null()
                 || fonts.center_rtl.is_null()
-                || fonts.near.is_null()
-                || fonts.near_rtl.is_null()
-                || fonts.far.is_null()
             {
                 fonts.destroy();
                 return None;
@@ -1015,14 +1121,7 @@ mod imp {
                     GdipDeleteFont(font);
                 }
             }
-            for format in [
-                self.center,
-                self.center_rtl,
-                self.near,
-                self.near_rtl,
-                self.far,
-                self.typographic,
-            ] {
+            for format in [self.center, self.center_rtl, self.typographic] {
                 if !format.is_null() {
                     GdipDeleteStringFormat(format);
                 }
@@ -1071,9 +1170,10 @@ mod imp {
         stage_text: &'static str,
         stage_prev: &'static str,
         stage_changed: Instant,
-        /// Set after several slow frames: the ripple stops.
-        calm: bool,
-        slow_frames: u8,
+        /// Watches how long frames take; a slow PC loses the ripple.
+        gauge: CalmGauge,
+        /// The width of each status text, measured once.
+        label_widths: RefCell<Vec<(&'static str, f32)>>,
         last_signature: Option<Signature>,
     }
 
@@ -1122,7 +1222,7 @@ mod imp {
 
         fn signature(&self, lifetime_ms: f32) -> Signature {
             let hint = clamp01((lifetime_ms - SLOW_HINT_AFTER_MS) / 800.0);
-            let still = self.calm || self.reduced_motion;
+            let still = self.gauge.is_calm() || self.reduced_motion;
             let wave = if still {
                 0
             } else {
@@ -1162,6 +1262,29 @@ mod imp {
                 self.stage_prev = self.stage_text;
                 self.stage_text = current;
                 self.stage_changed = Instant::now();
+            }
+        }
+
+        /// The width of one status text, measured the first time it is shown
+        /// and remembered (a launch has only a handful of texts).
+        unsafe fn label_width(&self, g: *mut GpGraphics, text: &'static str) -> f32 {
+            let known = self
+                .label_widths
+                .borrow()
+                .iter()
+                .find(|(known, _)| *known == text)
+                .map(|(_, width)| *width);
+            if let Some(width) = known {
+                return width;
+            }
+            match measure_width(g, text, self.fonts.body, self.fonts.typographic) {
+                Some(width) => {
+                    let width = width + 2.0;
+                    self.label_widths.borrow_mut().push((text, width));
+                    width
+                }
+                // GDI+ could not measure it: a rough per-letter guess, not remembered.
+                None => text.chars().count() as f32 * 7.0 + 2.0,
             }
         }
 
@@ -1224,15 +1347,8 @@ mod imp {
             self.present(clamp01(opacity * entrance));
             // A slow PC keeps its CPU for starting SahelFlow: if frames keep
             // taking too long, the ripple stops and the card holds still.
-            if !self.calm && !self.reduced_motion && t > INTRO_LENGTH_MS {
-                if started.elapsed().as_millis() > SLOW_FRAME_MS {
-                    self.slow_frames = self.slow_frames.saturating_add(1);
-                    if self.slow_frames >= SLOW_FRAMES_BEFORE_CALM {
-                        self.calm = true;
-                    }
-                } else {
-                    self.slow_frames = 0;
-                }
+            if !self.reduced_motion && t > INTRO_LENGTH_MS {
+                self.gauge.observe(started.elapsed().as_millis());
             }
             true
         }
@@ -1282,6 +1398,13 @@ mod imp {
 
         unsafe fn copy_out(&self) -> Vec<u8> {
             std::slice::from_raw_parts(self.bits, self.byte_len).to_vec()
+        }
+
+        /// Like `copy_out`, but into a buffer that already exists, so the cached
+        /// layer is not allocated again at every glow step.
+        unsafe fn copy_out_into(&self, target: &mut Vec<u8>) {
+            target.clear();
+            target.extend_from_slice(std::slice::from_raw_parts(self.bits, self.byte_len));
         }
 
         /// The shadow and the card: painted once and cached.
@@ -1337,7 +1460,9 @@ mod imp {
                     self.copy_in(&self.base);
                     self.paint_intro(g, INTRO_LENGTH_MS + 1_000.0);
                     GdipFlush(g, FlushIntentionSync);
-                    self.settled = self.copy_out();
+                    let mut settled = std::mem::take(&mut self.settled);
+                    self.copy_out_into(&mut settled);
+                    self.settled = settled;
                     self.settled_step = step;
                 } else {
                     self.copy_in(&self.settled);
@@ -1498,33 +1623,24 @@ mod imp {
             // percent sits on the left and the stage on the right.
             let (alpha, _) = rise(t, 380.0);
             let stage_ms = self.stage_changed.elapsed().as_secs_f32() * 1_000.0;
-            let (label, label_alpha) = if self.stage_prev.is_empty() {
-                (self.stage_text, 1.0)
-            } else if stage_ms < STAGE_FADE_MS {
-                (self.stage_prev, 1.0 - stage_ms / STAGE_FADE_MS)
+            let has_previous = !self.stage_prev.is_empty();
+            let swap = stage_swap(stage_ms, has_previous);
+            let label = if swap.previous {
+                self.stage_prev
             } else {
-                (
-                    self.stage_text,
-                    clamp01((stage_ms - STAGE_FADE_MS) / STAGE_FADE_MS),
-                )
+                self.stage_text
             };
-            let label_width =
-                measure_width(g, label, self.fonts.body, self.fonts.typographic) + 2.0;
-            let row = label_width + STATUS_GAP * 2.0 + STATUS_DOT + PERCENT_WIDTH;
-            let left = (CARD_WIDTH - row) / 2.0;
-            let (stage_x, dot_x, percent_x) = if rtl {
-                (
-                    left + PERCENT_WIDTH + STATUS_GAP * 2.0 + STATUS_DOT,
-                    left + PERCENT_WIDTH + STATUS_GAP,
-                    left,
-                )
+            let previous_width = if has_previous {
+                Some(self.label_width(g, self.stage_prev))
             } else {
-                (
-                    left,
-                    left + label_width + STATUS_GAP,
-                    left + label_width + STATUS_GAP * 2.0 + STATUS_DOT,
-                )
+                None
             };
+            let slot = stage_slot_width(
+                previous_width,
+                self.label_width(g, self.stage_text),
+                stage_ms,
+            );
+            let row = status_row(slot, rtl);
             draw_text(
                 g,
                 label,
@@ -1534,18 +1650,18 @@ mod imp {
                 } else {
                     self.fonts.center
                 },
-                stage_x,
-                STATUS_TOP,
-                label_width,
-                with_alpha(p.text, alpha * label_alpha),
+                row.stage_x,
+                STATUS_TOP + swap.dy,
+                slot,
+                with_alpha(p.text, alpha * swap.alpha),
             );
             let mut dot: *mut GpSolidFill = std::ptr::null_mut();
             GdipCreateSolidFill(with_alpha(p.accent, alpha), &mut dot);
             GdipFillEllipse(
                 g,
                 dot.cast(),
-                dot_x,
-                STATUS_TOP + 9.5 - STATUS_DOT / 2.0,
+                row.dot_x,
+                STATUS_TOP + STATUS_DOT_CENTER_Y - STATUS_DOT / 2.0,
                 STATUS_DOT,
                 STATUS_DOT,
             );
@@ -1560,7 +1676,7 @@ mod imp {
                 &format!("{percent}%"),
                 self.fonts.percent,
                 self.fonts.center,
-                percent_x,
+                row.percent_x,
                 STATUS_TOP,
                 PERCENT_WIDTH,
                 with_alpha(p.muted, alpha),
@@ -1637,7 +1753,7 @@ mod imp {
             let origin_x = CARD_WIDTH / 2.0 - MARK_SIZE / 2.0 - 9.0 * unit;
             let origin_y = MARK_TOP - 7.0 * unit;
             let settle = 0.96 + 0.04 * appear;
-            let calm = self.calm || self.reduced_motion;
+            let calm = self.gauge.is_calm() || self.reduced_motion;
             let seconds = self.shown_at.elapsed().as_secs_f32();
             let level = mark_fill_level(fill);
             let amplitude = wave_amplitude(fill, calm);
@@ -1887,19 +2003,18 @@ mod imp {
     }
 
     /// The width of `text` in card pixels (no side padding), for centring a
-    /// row of several pieces. A rough per-letter guess if GDI+ cannot measure.
+    /// row of several pieces; `None` if GDI+ cannot measure it.
     unsafe fn measure_width(
         g: *mut GpGraphics,
         text: &str,
         font: *mut GpFont,
         typographic: *mut GpStringFormat,
-    ) -> f32 {
+    ) -> Option<f32> {
         if text.is_empty() {
-            return 0.0;
+            return Some(0.0);
         }
-        let guess = text.chars().count() as f32 * 7.0;
         if typographic.is_null() {
-            return guess;
+            return None;
         }
         let wide_text = wide(text);
         let layout = RectF {
@@ -1926,9 +2041,9 @@ mod imp {
             std::ptr::null_mut(),
         );
         if status == Ok && bounds.Width > 0.0 {
-            bounds.Width
+            Some(bounds.Width)
         } else {
-            guess
+            None
         }
     }
 
@@ -2273,8 +2388,8 @@ mod imp {
             stage_text: "",
             stage_prev: "",
             stage_changed: now,
-            calm: false,
-            slow_frames: 0,
+            gauge: CalmGauge::default(),
+            label_widths: RefCell::new(Vec::new()),
             last_signature: None,
         };
         // Paint the first frame before the window becomes visible, so the
@@ -2325,6 +2440,234 @@ mod completion_tests {
     fn quitting_never_shows_complete() {
         assert!(!shows_complete(true, true, true));
         assert!(!shows_complete(false, true, true));
+    }
+}
+
+#[cfg(test)]
+mod rhythm_tests {
+    use super::*;
+
+    fn near(a: f32, b: f32) -> bool {
+        (a - b).abs() < 1e-3
+    }
+
+    #[test]
+    fn a_new_gauge_is_awake() {
+        assert!(!CalmGauge::default().is_calm());
+    }
+
+    #[test]
+    fn four_slow_frames_in_a_row_calm_the_card() {
+        // The approved rule, in plain numbers: 4 frames, each over 45 ms.
+        let mut gauge = CalmGauge::default();
+        for _ in 0..3 {
+            assert!(!gauge.observe(80));
+        }
+        assert!(gauge.observe(80));
+        assert!(gauge.is_calm());
+    }
+
+    #[test]
+    fn one_fast_frame_starts_the_count_again() {
+        let mut gauge = CalmGauge::default();
+        for _ in 0..3 {
+            gauge.observe(80);
+        }
+        gauge.observe(10);
+        for _ in 0..3 {
+            assert!(
+                !gauge.observe(80),
+                "the earlier slow frames no longer count"
+            );
+        }
+        assert!(gauge.observe(80));
+    }
+
+    #[test]
+    fn the_limit_itself_is_not_slow() {
+        let mut gauge = CalmGauge::default();
+        for _ in 0..50 {
+            gauge.observe(45);
+        }
+        assert!(!gauge.is_calm(), "exactly 45 ms is still fast enough");
+        for _ in 0..3 {
+            gauge.observe(46);
+        }
+        assert!(!gauge.is_calm(), "three slow frames are not enough");
+        gauge.observe(46);
+        assert!(gauge.is_calm());
+    }
+
+    #[test]
+    fn calm_never_flips_back() {
+        let mut gauge = CalmGauge::default();
+        for _ in 0..4 {
+            gauge.observe(200);
+        }
+        for _ in 0..200 {
+            assert!(
+                gauge.observe(1),
+                "a fast frame later does not wake the ripple"
+            );
+        }
+        assert!(gauge.is_calm());
+    }
+
+    #[test]
+    fn the_first_status_line_is_simply_there() {
+        for t in [0.0, 50.0, 140.0, 5_000.0] {
+            let swap = stage_swap(t, false);
+            assert!(!swap.previous);
+            assert!(near(swap.alpha, 1.0) && near(swap.dy, 0.0));
+        }
+    }
+
+    #[test]
+    fn a_new_status_line_fades_the_old_out_then_the_new_in() {
+        let start = stage_swap(0.0, true);
+        assert!(start.previous && near(start.alpha, 1.0) && near(start.dy, 0.0));
+        let going = stage_swap(STAGE_FADE_MS / 2.0, true);
+        assert!(going.previous && near(going.alpha, 0.5) && near(going.dy, STAGE_SHIFT / 2.0));
+        let turn = stage_swap(STAGE_FADE_MS, true);
+        assert!(!turn.previous && near(turn.alpha, 0.0) && near(turn.dy, STAGE_SHIFT));
+        let coming = stage_swap(STAGE_FADE_MS * 1.5, true);
+        assert!(!coming.previous && near(coming.alpha, 0.5) && near(coming.dy, STAGE_SHIFT / 2.0));
+        for t in [STAGE_FADE_MS * 2.0, 5_000.0] {
+            let done = stage_swap(t, true);
+            assert!(!done.previous && near(done.alpha, 1.0) && near(done.dy, 0.0));
+        }
+    }
+
+    #[test]
+    fn the_swap_never_jumps_from_one_millisecond_to_the_next() {
+        let mut last = stage_swap(0.0, true);
+        let mut t = 1.0;
+        while t <= STAGE_FADE_MS * 2.0 + 10.0 {
+            let now = stage_swap(t, true);
+            assert!(
+                (now.alpha - last.alpha).abs() < 0.05,
+                "alpha jumped at {t} ms"
+            );
+            assert!((now.dy - last.dy).abs() < 0.1, "shift jumped at {t} ms");
+            last = now;
+            t += 1.0;
+        }
+    }
+
+    #[test]
+    fn the_first_slot_is_just_the_text_width() {
+        for t in [0.0, 100.0, 5_000.0] {
+            assert!(near(stage_slot_width(None, 120.0, t), 120.0));
+        }
+    }
+
+    #[test]
+    fn the_slot_changes_width_while_both_texts_are_faint() {
+        for (old, new) in [(160.0_f32, 100.0_f32), (100.0, 160.0)] {
+            assert!(near(stage_slot_width(Some(old), new, 0.0), old));
+            assert!(near(
+                stage_slot_width(Some(old), new, STAGE_FADE_MS * 0.5),
+                old
+            ));
+            assert!(near(
+                stage_slot_width(Some(old), new, STAGE_FADE_MS),
+                (old + new) / 2.0
+            ));
+            assert!(near(
+                stage_slot_width(Some(old), new, STAGE_FADE_MS * 1.5),
+                new
+            ));
+            assert!(near(stage_slot_width(Some(old), new, 5_000.0), new));
+            let (low, high) = (old.min(new), old.max(new));
+            let mut last = old;
+            let mut t = 0.0;
+            while t <= STAGE_FADE_MS * 2.0 {
+                let width = stage_slot_width(Some(old), new, t);
+                assert!(
+                    width >= low - 1e-3 && width <= high + 1e-3,
+                    "left its range at {t} ms"
+                );
+                assert!((width - last).abs() <= 1.0, "the row jumped at {t} ms");
+                last = width;
+                t += 1.0;
+            }
+        }
+    }
+
+    #[test]
+    fn the_status_row_is_centred_in_both_directions() {
+        for rtl in [false, true] {
+            for slot in [40.0_f32, 120.5, 260.0] {
+                let row = status_row(slot, rtl);
+                let (left, right) = if rtl {
+                    (row.percent_x, row.stage_x + slot)
+                } else {
+                    (row.stage_x, row.percent_x + PERCENT_WIDTH)
+                };
+                assert!(left > 0.0 && right < CARD_WIDTH, "rtl {rtl} slot {slot}");
+                assert!(
+                    near(left, CARD_WIDTH - right),
+                    "rtl {rtl} slot {slot} is off centre"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_pieces_follow_each_other_with_one_gap_in_reading_order() {
+        let slot = 120.0;
+        let latin = status_row(slot, false);
+        assert!(near(latin.stage_x + slot + STATUS_GAP, latin.dot_x));
+        assert!(near(latin.dot_x + STATUS_DOT + STATUS_GAP, latin.percent_x));
+        let arabic = status_row(slot, true);
+        assert!(near(
+            arabic.percent_x + PERCENT_WIDTH + STATUS_GAP,
+            arabic.dot_x
+        ));
+        assert!(near(arabic.dot_x + STATUS_DOT + STATUS_GAP, arabic.stage_x));
+    }
+
+    #[test]
+    fn arabic_is_the_mirror_image_of_latin() {
+        let slot = 133.0;
+        let latin = status_row(slot, false);
+        let arabic = status_row(slot, true);
+        assert!(near(latin.stage_x + slot + arabic.stage_x, CARD_WIDTH));
+        assert!(near(latin.dot_x + STATUS_DOT + arabic.dot_x, CARD_WIDTH));
+        assert!(near(
+            latin.percent_x + PERCENT_WIDTH + arabic.percent_x,
+            CARD_WIDTH
+        ));
+    }
+
+    #[test]
+    fn the_glow_steps_change_exactly_at_the_step_edges() {
+        assert_eq!(glow_step(-1.0), 0);
+        assert_eq!(glow_step(0.0499), 0);
+        assert_eq!(glow_step(0.0501), 1);
+        assert_eq!(glow_step(0.9999), GLOW_STEPS - 1);
+        assert_eq!(glow_step(1.0), GLOW_STEPS);
+        assert_eq!(glow_step(7.0), GLOW_STEPS);
+    }
+
+    #[test]
+    fn the_glow_strength_is_the_approved_one() {
+        // Dark cards glow a little more than light ones; both reach their
+        // end value only when the launch is complete.
+        assert!(near(glow_alpha(0.0, true), 0.05) && near(glow_alpha(1.0, true), 0.17));
+        assert!(near(glow_alpha(0.0, false), 0.035) && near(glow_alpha(1.0, false), 0.105));
+    }
+
+    #[test]
+    fn the_shown_progress_can_never_reach_one_even_if_the_target_did() {
+        let mut progress = Progress::new();
+        progress.target = 5.0;
+        for _ in 0..500 {
+            progress.tick();
+        }
+        assert!(progress.shown <= 0.99 + 1e-6, "shown {}", progress.shown);
+        assert!(progress.shown > 0.98, "it still gets close");
+        assert_eq!(progress.percent(), 99);
     }
 }
 
@@ -2585,11 +2928,20 @@ mod tests {
                 let dot = contrast(p.accent, end);
                 assert!(dot >= 3.0, "{look:?} status dot {dot:.2}:1 on {end:06X}");
             }
-            // A hovered chip keeps its icon legible.
-            let hover = over(p.chip_hover, p.card_bottom);
-            assert!(contrast(p.ink, hover) >= 4.5, "{look:?} hovered chip");
-            let pressed = over(p.chip_pressed, p.card_bottom);
-            assert!(contrast(p.ink, pressed) >= 4.5, "{look:?} pressed chip");
+            // A hovered chip keeps its icon legible. The chips sit at the top
+            // of the card, so its top colour counts as much as the bottom one.
+            for base in [p.card_top, p.card_bottom] {
+                let hover = over(p.chip_hover, base);
+                assert!(
+                    contrast(p.ink, hover) >= 4.5,
+                    "{look:?} hovered chip on {base:06X}"
+                );
+                let pressed = over(p.chip_pressed, base);
+                assert!(
+                    contrast(p.ink, pressed) >= 4.5,
+                    "{look:?} pressed chip on {base:06X}"
+                );
+            }
         }
         // White on the red Close states.
         assert!(contrast(0xFFFFFF, CLOSE_HOVER & 0x00FF_FFFF) >= 4.5);
