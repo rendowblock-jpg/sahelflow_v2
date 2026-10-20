@@ -46,7 +46,8 @@
     "resources": {
       "../prisma/": "prisma/",
       "resources/standalone/": "standalone/",
-      "resources/runtime/": "runtime/"
+      "resources/runtime/": "runtime/",
+      "licenses/": "licenses/"
     },
     "windows": {
       "wix": { "version": "1.0.0.45" },
