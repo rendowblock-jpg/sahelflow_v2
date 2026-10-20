@@ -8,7 +8,7 @@ function viaIntl(amount: number, locale: PublicLocale): string {
   return new Intl.NumberFormat(localeTag(locale), { maximumFractionDigits: 0 }).format(amount) + currencySuffix(locale);
 }
 
-/** Counts the Intl.NumberFormat objects built while `run` executes (a cold one costs 10-25 ms of Worker CPU on first use). */
+/** Counts the Intl.NumberFormat objects built while `run` executes (in Node the first one costs about 9 ms; no change was measured on Cloudflare). */
 function constructedWhile(run: () => void): number {
   const original = Intl.NumberFormat;
   let count = 0;
@@ -57,7 +57,7 @@ describe("formatPrice", () => {
     }
   });
 
-  it("builds no Intl.NumberFormat for a whole price: the first one in a fresh Worker costs more than the whole page", async () => {
+  it("builds no Intl.NumberFormat for a whole price", async () => {
     // A freshly loaded copy of the module: the fallback formatters other tests built (and it caches) must not hide a price that takes the Intl path.
     vi.resetModules();
     const fresh = await import("./format");

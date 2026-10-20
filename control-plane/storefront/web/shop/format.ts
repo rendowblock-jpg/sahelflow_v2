@@ -7,7 +7,11 @@ const GROUP: Record<PublicLocale, string> = { ar: ".", fr: "\u202f", en: "," };
 
 const FALLBACK: Partial<Record<PublicLocale, Intl.NumberFormat>> = {};
 
-/** Groups the digits of a whole number in threes. No Intl: the first Intl.NumberFormat in a fresh Worker costs 10-25 ms of CPU. */
+/**
+ * Groups the digits of a whole number in threes, by hand. Measured 20 Oct 2026: in Node the first Intl.NumberFormat costs about 9 ms, but on Cloudflare
+ * staging (three sweeps of about 196 cache misses) taking it out changed the page's CPU by 0.02 ms, that is, nothing. It stays because its output is
+ * proven equal to Intl (format.test.ts); do not expect a Cloudflare CPU gain from it.
+ */
 function group(amount: number, separator: string): string {
   const digits = String(amount);
   let out = "";

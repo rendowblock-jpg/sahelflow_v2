@@ -16,7 +16,7 @@ const PLURAL_FORMS = ["zero", "one", "two", "few", "many", "other"] as const;
  * as in the Studio preview.
  *
  * The language's plural rules are built only when a message actually has plural forms (key_one, key_other, ...).
- * The shipped tables have none, and the first Intl.PluralRules in a fresh Worker is a cost with no effect on the page.
+ * The shipped tables have none, so no PluralRules object is built for the page (in Node the first one costs 2-4 ms; no Cloudflare effect was measured).
  */
 export function createPublicTranslator(locale: PublicLocale): PublicTranslator {
   const table = TABLES[locale];

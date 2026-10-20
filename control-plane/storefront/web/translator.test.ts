@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createStorefrontTranslator } from "../../../src/lib/i18n/storefront-locale";
-import { PUBLIC_LOCALES } from "./locale";
+import { PUBLIC_LOCALES, type PublicLocale } from "./locale";
 import messages from "./messages.generated.json";
 import { createPublicTranslator } from "./translator";
 
@@ -36,8 +36,8 @@ describe("hosted page translator", () => {
     }
   });
 
-  it("builds no Intl.PluralRules for a message without plural forms (the shipped tables have none): the first one in a fresh Worker is a cost with no effect", () => {
-    // TypeScript types Intl.PluralRules as read-only; at runtime it is an ordinary writable property.
+  /** Counts the Intl.PluralRules objects built while `run` executes. TypeScript types Intl.PluralRules as read-only; at runtime it is an ordinary writable property. */
+  function pluralRulesBuiltWhile(run: () => void): number {
     const intl = Intl as unknown as { PluralRules: typeof Intl.PluralRules };
     const original = intl.PluralRules;
     let built = 0;
@@ -48,33 +48,67 @@ describe("hosted page translator", () => {
       },
     }) as typeof Intl.PluralRules;
     try {
+      run();
+    } finally {
+      intl.PluralRules = original;
+    }
+    return built;
+  }
+
+  /** Adds the given plural forms of `test.count` to a language's table for the duration of `run` (the shipped tables have no plural keys). English really has only one and other. */
+  function withPluralMessages(locale: PublicLocale, forms: readonly string[], run: () => void): void {
+    const table = TABLES[locale] as Record<string, string>;
+    const keys = forms.map((form) => [`test.count_${form}`, `${form}:{{count}}`] as const);
+    for (const [key, value] of keys) table[key] = value;
+    table["test.count"] = "base:{{count}}";
+    try {
+      run();
+    } finally {
+      for (const [key] of keys) delete table[key];
+      delete table["test.count"];
+    }
+  }
+
+  it("builds no Intl.PluralRules for a message without plural forms (the shipped tables have none)", () => {
+    const built = pluralRulesBuiltWhile(() => {
       for (const locale of PUBLIC_LOCALES) {
         const t = createPublicTranslator(locale);
         t("storefront.view.lowStock", { count: 3 });
         t("storefront.view.lowStock", { count: 1 });
       }
-    } finally {
-      intl.PluralRules = original;
-    }
+    });
     expect(built).toBe(0);
   });
 
-  it("still picks a plural form when a message has one (one translator builds the rules once)", () => {
-    const table = TABLES.en as Record<string, string>;
-    table["test.items_one"] = "{{count}} item";
-    table["test.items_other"] = "{{count}} items";
-    table["test.items"] = "fallback";
-    try {
+  it("builds the plural rules once per translator, not once per call", () => {
+    withPluralMessages("en", ["one", "other"], () => {
+      const built = pluralRulesBuiltWhile(() => {
+        const t = createPublicTranslator("en");
+        for (const count of [0, 1, 2, 5, 11]) t("test.count", { count });
+      });
+      expect(built).toBe(1);
+    });
+  });
+
+  it("picks the English plural form (one, other)", () => {
+    withPluralMessages("en", ["one", "other"], () => {
       const t = createPublicTranslator("en");
-      expect(t("test.items", { count: 1 })).toBe("1 item");
-      expect(t("test.items", { count: 3 })).toBe("3 items");
-      expect(t("test.items", { count: 0 })).toBe("0 items");
-      expect(t("test.items")).toBe("fallback");
-    } finally {
-      delete table["test.items_one"];
-      delete table["test.items_other"];
-      delete table["test.items"];
-    }
+      expect([0, 1, 2, 5].map((count) => t("test.count", { count }))).toEqual(["other:0", "one:1", "other:2", "other:5"]);
+      expect(t("test.count")).toBe("base:{{count}}");
+    });
+  });
+
+  it("picks all six Arabic plural forms (zero, one, two, few, many, other), written out from the CLDR rule and not from Intl", () => {
+    withPluralMessages("ar", ["zero", "one", "two", "few", "many", "other"], () => {
+      const t = createPublicTranslator("ar");
+      const expected: Array<[number, string]> = [
+        [0, "zero"], [1, "one"], [2, "two"], [3, "few"], [10, "few"], [11, "many"], [99, "many"],
+        [100, "other"], [101, "other"], [102, "other"], [103, "few"], [110, "few"], [111, "many"], [200, "other"],
+      ];
+      // The app's renderer wraps substituted values in invisible direction isolates (U+2066 to U+2069); only the chosen form matters here.
+      const plain = (text: string): string => text.replace(/[\u2066-\u2069]/g, "");
+      for (const [count, form] of expected) expect(plain(t("test.count", { count })), `count ${count}`).toBe(`${form}:${count}`);
+    });
   });
 
   it("never shows a raw key for a message the page uses", () => {
