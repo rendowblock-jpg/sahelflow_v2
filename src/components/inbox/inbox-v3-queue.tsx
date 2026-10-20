@@ -63,7 +63,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { toast } from "@/lib/toast";
-import { cn, intlLocale } from "@/lib/utils";
+import { formatInboxAge } from "@/lib/inbox-age";
+import { cn } from "@/lib/utils";
 
 const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread", "archived"];
 const WORKFLOW_FILTERS: WorkflowFilter[] = [
@@ -80,22 +81,7 @@ function relativeTime(
   now: number = Date.now(),
 ): string {
   if (!value) return "";
-  const diff = Math.max(0, now - value);
-  const rtf = new Intl.RelativeTimeFormat(
-    intlLocale(locale),
-    { numeric: "auto" },
-  );
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return rtf.format(0, "second");
-  if (minutes < 60) return rtf.format(-minutes, "minute");
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return rtf.format(-hours, "hour");
-  const days = Math.floor(hours / 24);
-  if (days < 7) return rtf.format(-days, "day");
-  return new Intl.DateTimeFormat(
-    intlLocale(locale),
-    { day: "numeric", month: "short" },
-  ).format(new Date(value));
+  return formatInboxAge(value, now, locale);
 }
 
 function queueLabel(
