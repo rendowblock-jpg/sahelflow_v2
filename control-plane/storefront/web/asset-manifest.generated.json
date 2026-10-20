@@ -19,13 +19,13 @@
   },
   "skins": {
     "prime": {
-      "css": "/_sf/prime.f76f60d417.css"
+      "css": "/_sf/prime.a6f9ad1137.css"
     },
     "souk": {
-      "css": "/_sf/souk.5db4107321.css"
+      "css": "/_sf/souk.b81383f5c6.css"
     },
     "reel": {
-      "css": "/_sf/reel.59c51bb258.css",
+      "css": "/_sf/reel.b360c29e31.css",
       "js": "/_sf/reel.999728e8e1.js"
     }
   }

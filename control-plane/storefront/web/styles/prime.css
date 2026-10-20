@@ -31,7 +31,8 @@ body[data-voice=prime] .sf-ann{background:transparent;color:var(--muted-foregrou
 
 /* ---- the stage: the first photo is lit from behind and melts into the page ---- */
 body[data-voice=prime] .sf-pdp-in{padding-block-start:52px}
-body[data-voice=prime] .sf-pdp-media{isolation:isolate}
+/* the glow below is wider than the photo on purpose; it must be cut at the photo's edge or the page scrolls sideways (measured +80 px) */
+body[data-voice=prime] .sf-pdp-media{isolation:isolate;overflow:hidden;overflow:clip}
 body[data-voice=prime] .sf-pdp-media::before{content:"";position:absolute;z-index:-1;inset:-4% -22% 0;background:radial-gradient(ellipse 50% 58% at 50% 44%,rgb(255 255 255/.12),transparent 76%);animation:pr-lamp 2.4s var(--e-out) both}
 @supports (background:color-mix(in srgb,red,blue)){
   body[data-voice=prime] .sf-pdp-media::before{background:radial-gradient(ellipse 50% 58% at 50% 44%,color-mix(in srgb,var(--primary) 38%,transparent),color-mix(in srgb,var(--primary) 12%,transparent) 55%,transparent 76%)}
@@ -87,7 +88,8 @@ body[data-voice=prime] .sf-sticky{border-block-start:1px solid var(--border);box
 body[data-voice=prime] .sf-hero-in{padding-block-start:76px;text-align:center}
 body[data-voice=prime] .sf-hero-text{justify-items:center}
 body[data-voice=prime] .sf-hero-text>:not(.sf-btn){text-align:center!important}
-body[data-voice=prime] .sf-hero-pic{border-radius:0;aspect-ratio:4/5}
+body[data-voice=prime] .sf-hero-pic{aspect-ratio:4/5}
+body[data-voice=prime] .sf-hero[data-style] .sf-hero-pic:nth-child(n){border-radius:0}
 body[data-voice=prime] .sf-hero-pic img{-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
 body[data-voice=prime] .sf-eyebrow{font-weight:400;color:var(--sf-accent,var(--primary))}
 body[data-voice=prime] .sf-card{border-radius:0}

@@ -19,7 +19,7 @@ const SHAPE: Readonly<Record<StorefrontTemplateId, Shape>> = {
   oasis: { density: "balanced", radius: "soft", announcement: true, hero: "centered", card: "outlined", ratio: "landscape", categoryNavigation: false, checkout: "sticky" },
   prime: { density: "airy", radius: "sharp", announcement: false, hero: "centered", card: "minimal", ratio: "portrait", categoryNavigation: false, checkout: "sticky" },
   souk: { density: "balanced", radius: "rounded", announcement: false, hero: "split", card: "elevated", ratio: "square", categoryNavigation: true, checkout: "sticky" },
-  reel: { density: "airy", radius: "sharp", announcement: false, hero: "editorial", card: "minimal", ratio: "landscape", categoryNavigation: false, checkout: "sticky" },
+  reel: { density: "airy", radius: "sharp", announcement: false, hero: "split", card: "minimal", ratio: "landscape", categoryNavigation: false, checkout: "sticky" },
 };
 
 export function createDefaultStorefrontTheme(template: StorefrontTemplateId = "atlas"): StorefrontTheme {

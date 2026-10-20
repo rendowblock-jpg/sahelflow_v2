@@ -16,6 +16,10 @@ body[data-voice=souk] .sf-h1{text-wrap:balance}
 /* ---- chrome ---- */
 body[data-voice=souk] .sf-head-in{min-height:56px}
 body[data-voice=souk] .sf-mono{border-radius:12px}
+/* language buttons at full 44 px touch size, no pill: the current one is tinted */
+body[data-voice=souk] .sf-lang{padding:0;background:none}
+body[data-voice=souk] .sf-lang-i{min-width:44px;height:44px;border-radius:14px}
+body[data-voice=souk] .sf-lang-i[aria-current]{background:var(--accent);box-shadow:none;color:var(--foreground)}
 body[data-voice=souk] .sf-brand b{font-weight:700}
 body[data-voice=souk] .sf-ann{background:var(--sf-accent,var(--primary));color:var(--sf-on-accent,var(--primary-foreground))}
 
@@ -25,7 +29,8 @@ body[data-voice=souk] .sf-hero-in{padding-block:26px 28px}
 body[data-voice=souk] .sf-hero .sf-eyebrow{color:var(--souk-ink);font-weight:600;letter-spacing:.08em}
 body[data-voice=souk] .sf-hero .sf-lead{color:#33354a}
 body[data-voice=souk] .sf-hero[data-style=split] .sf-hero-media{margin-inline:0}
-body[data-voice=souk] .sf-hero-pic{border-radius:18px;aspect-ratio:4/3}
+body[data-voice=souk] .sf-hero-pic{aspect-ratio:4/3}
+body[data-voice=souk] .sf-hero[data-style] .sf-hero-pic:nth-child(n){border-radius:18px}
 body[data-voice=souk] .sf-hero .sf-btn{background:var(--souk-ink);color:#fff}
 body[data-voice=souk] .sf-chip-price{background:var(--souk-ink);color:#fff;border-radius:0;padding-inline:26px 14px;clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%)}
 [dir=rtl] body[data-voice=souk] .sf-chip-price{padding-inline:14px 26px;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%)}
@@ -41,7 +46,8 @@ body[data-voice=souk] .sf-media img{border-radius:14px}
 body[data-voice=souk] .sf-card h3{grid-area:2/1;margin-block-start:10px;font-size:14.5px;font-weight:600;line-height:1.5}
 body[data-voice=souk] .sf-sku{grid-area:3/1}
 body[data-voice=souk] .sf-card-cta{display:none}
-body[data-voice=souk] .sf-card .sf-price{grid-area:1/1;align-self:end;justify-self:start;z-index:1;margin:0 0 16px 16px;margin-inline:16px 0;position:relative;padding:5px 12px 5px 24px;padding-inline:24px 12px;background:var(--primary);color:var(--primary-foreground);font-size:15px;font-weight:700;white-space:nowrap;clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%)}
+/* the tag may wrap to two lines ("from" + number) but never be wider than its tile: measured 164 px in a 154 px tile before this rule */
+body[data-voice=souk] .sf-card .sf-price{grid-area:1/1;align-self:end;justify-self:start;z-index:1;margin:0 0 14px;margin-inline-start:14px;position:relative;padding:5px 12px;padding-inline-start:24px;max-width:calc(100% - 28px);background:var(--primary);color:var(--primary-foreground);font-size:15px;font-weight:700;line-height:1.35;white-space:normal;text-wrap:balance;clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%)}
 [dir=rtl] body[data-voice=souk] .sf-card .sf-price{clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%)}
 body[data-voice=souk] .sf-card .sf-price::before{content:"";position:absolute;inset-inline-start:12px;top:50%;width:4px;height:4px;margin-block-start:-2px;border-radius:50%;background:currentColor;opacity:.9}
 body[data-voice=souk] :is(.sf-grid,.sf-rail)>li:nth-child(8n+1) .sf-media{--t:var(--souk-t1)}
@@ -66,7 +72,7 @@ body[data-voice=souk] .sf-buy::before{display:none}
 body[data-voice=souk] .sf-pname{font-size:clamp(26px,7.4vw,38px);font-weight:700}
 html[lang=ar] body[data-voice=souk] .sf-pname{font-size:clamp(26px,7vw,34px)}
 /* the big price is the tag again */
-body[data-voice=souk] .sf-price--lg{justify-self:start;position:relative;padding:6px 18px 6px 34px;padding-inline:34px 18px;background:var(--primary);color:var(--primary-foreground);font-size:clamp(24px,6.4vw,30px);font-weight:700;letter-spacing:0;clip-path:polygon(14px 0,100% 0,100% 100%,14px 100%,0 50%)}
+body[data-voice=souk] .sf-price--lg{justify-self:start;position:relative;padding:6px 18px;padding-inline-start:34px;background:var(--primary);color:var(--primary-foreground);font-size:clamp(24px,6.4vw,30px);font-weight:700;letter-spacing:0;clip-path:polygon(14px 0,100% 0,100% 100%,14px 100%,0 50%)}
 [dir=rtl] body[data-voice=souk] .sf-price--lg{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%)}
 body[data-voice=souk] .sf-price--lg::before{content:"";position:absolute;inset-inline-start:17px;top:50%;width:6px;height:6px;margin-block-start:-3px;border-radius:50%;background:currentColor;opacity:.9}
 body[data-voice=souk] .sf-chips span{background:var(--card);color:var(--souk-ink);font-weight:600}

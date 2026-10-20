@@ -27,7 +27,10 @@ body[data-voice=reel] .sf-ann{background:transparent;color:var(--muted-foregroun
 
 /* ---- the film strip: the gallery as frames, the nearest one full size ---- */
 body[data-voice=reel] .sf-pdp-in{padding-block-start:56px}
-body[data-voice=reel] .sf-pdp-media{margin-inline:0}
+/* full-bleed on a phone (the base sheet's negative margin stays) so the neighbouring frames peek in at both edges */
+/* the frames have a fixed width, so without this the grid column grows to the whole strip (measured: page 1195 px wide on a 360 px phone) */
+@media (max-width:899px){body[data-voice=reel] .sf-pdp-in{grid-template-columns:minmax(0,1fr)}}
+body[data-voice=reel] :is(.sf-pdp-media,.sf-gal){min-width:0}
 body[data-voice=reel] .sf-gal-track{gap:12px;padding-inline:max(var(--sf-pad),calc((100% - min(78vw,420px)) / 2));scroll-padding-inline:var(--sf-pad)}
 body[data-voice=reel] .sf-slide{flex:0 0 min(78vw,420px);aspect-ratio:4/5;max-height:62svh;scroll-snap-align:center;background:var(--card)}
 @supports (animation-timeline:view()){
@@ -64,7 +67,7 @@ body[data-voice=reel] .sf-sticky{background:#000;border-block-start:1px solid va
 
 /* ---- the home of a store with several products ---- */
 body[data-voice=reel] .sf-hero-in{padding-block-start:84px;gap:22px}
-body[data-voice=reel] .sf-hero-pic{border-radius:0}
+body[data-voice=reel] .sf-hero[data-style] .sf-hero-pic:nth-child(n){border-radius:0}
 body[data-voice=reel] .sf-eyebrow{font-weight:400;color:var(--muted-foreground)}
 body[data-voice=reel] .sf-btn{background:var(--foreground);color:var(--background)}
 body[data-voice=reel] .sf-grid>li:nth-child(odd){margin-block-start:0}
