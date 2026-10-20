@@ -67,10 +67,12 @@ pub fn start() {
         .spawn(move || {
             #[cfg(windows)]
             {
-                // A panic ends the card, never the app, and frees the
-                // "starting" state so the WebView launch window can take over.
+                // A panic ends the card, never the app. The state is freed so
+                // a later is_active() check sees no card, and the window handle
+                // is forgotten (Windows destroys a dead thread's windows).
                 if !run_guarded(|| imp::run(&app_data_dir, started_unix_ms)) {
                     STATE.store(STATE_FAILED, Ordering::SeqCst);
+                    WINDOW.store(0, Ordering::SeqCst);
                 }
             }
             #[cfg(not(windows))]
@@ -2762,6 +2764,22 @@ mod handoff_tests {
     }
 
     #[test]
+    fn stages_that_only_inform_never_hide_a_ready_workspace() {
+        // The follow thread records "splash-painted" right after its check;
+        // an informational stage must never turn a ready launch into an
+        // unfinished one.
+        let stages = [
+            "native-started",
+            "migration-started",
+            "runtime-ready",
+            "ui-navigation-started",
+            "ui-ready",
+            "splash-painted",
+        ];
+        assert!(allowed("informational", &stages, true, false));
+    }
+
+    #[test]
     fn the_recovery_page_is_not_a_finished_launch() {
         // The recovery document makes the same window visible but records
         // "ui-blocked" instead of "ui-ready".
@@ -2807,8 +2825,9 @@ mod handoff_tests {
         // The trace on disk is the last launch's until this one resets it.
         let (directory, trace) = write_trace("previous", &FULL_LAUNCH);
         let stage = current_launch_stage(&trace, 1_000_000);
-        assert!(!handoff_allowed(true, false, stage.as_deref()));
+        let verdict = handoff_allowed(true, false, stage.as_deref());
         std::fs::remove_dir_all(&directory).unwrap();
+        assert!(!verdict);
     }
 
     #[test]

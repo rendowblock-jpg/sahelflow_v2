@@ -90,8 +90,9 @@ describe("FD-068 launch screen", () => {
     const follower = open.slice(native, webview);
     // The hand-off needs the window visible, no quit AND this launch's trace
     // saying ui-ready; the recovery page also makes the window visible.
-    expect(follower).toContain("crate::native_splash::handoff_allowed(");
-    expect(follower).toContain("workspace_visible(&app)");
+    expect(follower).toMatch(
+      /crate::native_splash::handoff_allowed\(\s*workspace_visible\(&app\),[\s\S]*?latest_stage\.as_deref\(\)/,
+    );
     expect(follower).toContain("crate::native_splash::current_launch_stage(");
     expect(follower).toContain("crate::native_splash::request_handoff()");
     expect(follower).toContain("crate::native_splash::request_close()");
@@ -106,7 +107,9 @@ describe("FD-068 launch screen", () => {
     const splash = read("src-tauri/src/native_splash.rs");
     expect(splash).toContain("run_guarded(|| imp::run(");
     expect(splash).toContain("std::panic::catch_unwind(");
-    expect(splash).toMatch(/std::panic::catch_unwind\(std::panic::AssertUnwindSafe\(\|\| r\.frame\(\)\)\)/);
+    expect(splash).toMatch(
+      /std::panic::catch_unwind\(\s*std::panic::AssertUnwindSafe\(\|\| r\.frame\(\)\)\s*\)/,
+    );
   });
 
   it("treats closing the native card as quit, never as hide, and outlasts a slow launch", () => {
