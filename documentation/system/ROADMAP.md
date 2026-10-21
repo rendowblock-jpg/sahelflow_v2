@@ -12,7 +12,7 @@
 5. **#230** customer-online and Algerian-network closure.
 6. **Representative Beta**, then explicit **Stable** promotion.
 
-Source-level tracks run in parallel and carry no release authority and no installed evidence. The whole-app transformation (`../operations/TRANSFORMATION_HANDOFF.md`, section 4) is one; never present it as campaign progress.
+Source-level tracks run in parallel and carry no release authority and no installed evidence. The whole-app transformation (`../operations/TRANSFORMATION_REGISTER.md`, "Next work") is one; never present it as campaign progress.
 
 ## First Revenue Certification (FRC)
 

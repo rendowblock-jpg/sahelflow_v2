@@ -96,3 +96,22 @@ Business reset and privacy erase remove seller/customer/business/credential cont
 ## Review requirements
 
 The exact final head requires a separated adversarial code review covering crypto/context binding, backup format, parser limits, filesystem attacks, rollback, identity re-enrollment, lifecycle completeness, diagnostics and CI/release authority. No P0/P1 may remain. A reviewer must use `documentation/security/PHASE4_INDEPENDENT_REVIEW.md`; review evidence lives on the exact PR head and must not be fabricated in source.
+
+## Hosted storefront public edge
+
+Added 2026-10-21. The storefront Worker (`control-plane/storefront`) is the one SahelFlow surface that accepts unauthenticated traffic from the public internet, so it is modelled separately from the desktop. Controls below were read from the code on the date above; a control that is not named here is not claimed.
+
+**Assets:** the immutable release artifact (public catalog), cloud stock allocation, and the sealed checkout receipts that carry a customer's name, phone and address to the seller's desktop.
+
+**Trust boundary:** public internet to Worker. The Worker is multi-tenant: every query is scoped by storefront id, and price, stock and delivery rules are resolved server side, never taken from the browser.
+
+| Threat | Control read from the code | Not claimed |
+|---|---|---|
+| Customer data exposed at the edge | The stored receipt holds a sealed customer envelope (version, IV, ciphertext, AAD digest) whose shape and size the Worker validates (`receipt-protocol.ts`); the Worker does not decrypt it | Where the envelope is sealed on the client, and its key lifecycle, are specified in `ARCHITECTURE.md` section 12 and have not been re-audited here |
+| Duplicate or replayed order | Unique idempotency key per storefront; a reused key with a different request digest answers 409 (`checkout.ts`) | |
+| Checkout flooding | A per-client rate limiter binding answers 429 (`checkout.ts`) | No CAPTCHA or proof-of-work is present in the Worker |
+| Overselling | Cloud allocation is delegated by the desktop and consumed server side; success is returned only after a durable receipt exists | |
+| Cross-tenant read | Queries are scoped by storefront id | Not exercised by an independent review |
+| Hosted product photos (FD-076) | Not covered yet: upload authentication, quotas, content addressing, serving and takedown belong here once that work is on `main` | The whole row |
+
+Residual abuse cases to design for before any seller advertises: fake COD orders (risk scoring happens on the desktop after the order arrives, not at the edge), scraping, and hosted-photo abuse.

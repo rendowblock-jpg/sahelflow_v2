@@ -47,6 +47,15 @@ The official ANPDP notice describes personal data and controller concepts under 
 6. Explain that encrypted backups and recovery kits are separate artifacts; delete them explicitly when their purpose ends.
 7. Retain the non-PII operation receipt and any legally required decision record outside free-form customer data.
 
+## Hosted storefront (added 2026-10-21)
+
+A hosted store collects a buyer's name, phone and address on behalf of the seller. Engineering mapping only, not a legal conclusion:
+
+- **Where the data lives:** in a sealed customer envelope inside the checkout receipt, stored by the storefront Worker until the seller's desktop imports it. The Worker validates the envelope's shape and size and does not decrypt it (`control-plane/storefront/receipt-protocol.ts`).
+- **Minimization:** the receipt carries what the order needs; the desktop, not the edge, decides on risk scoring.
+- **Not yet defined here:** how long an imported or unimported receipt stays at the edge, the buyer-facing privacy notice on a store, and who is controller and who is processor for a store (the seller and SahelFlow respectively is the working assumption, which qualified review must confirm). These need an owner and a decision before a seller advertises.
+- **Hosted photos (FD-076):** product photos are seller content, not buyer personal data; a takedown path is required before production.
+
 ## Prohibited claims
 
 Do not state that SahelFlow, a source commit, an MSI or a seller is “Law 18-07 compliant,” “ANPDP approved” or legally certified based only on this mapping. Such a statement requires current qualified legal review, deployment facts, required filings/authorizations, organizational procedures and exact installed evidence.

@@ -15,8 +15,8 @@ This directory is the documentation authority for SahelFlow. Superseded material
 | The interface system every surface conforms to | `product/INTERFACE_SYSTEM.md` |
 | Engineering invariants and system shape | `system/ARCHITECTURE.md` |
 | Per-release history | `../CHANGELOG.md` |
-| Evidence ledgers (WhatsApp inbox, AI and order extraction, FRC-3 capabilities and journeys, campaign reconciliation, UI/UX triage, MCP surface, CodFlow extraction) | `operations/*_LEDGER.md`, `operations/CODFLOW_EXTRACTION_REGISTER.md` |
-| Source-level transformation track and its CORRECTED rows | `operations/TRANSFORMATION_REGISTER.md`, `operations/TRANSFORMATION_HANDOFF.md` |
+| Evidence ledgers (WhatsApp inbox, AI and order extraction, FRC-3 capabilities and journeys, MCP surface, CodFlow extraction) | `operations/*_LEDGER.md`, `operations/CODFLOW_EXTRACTION_REGISTER.md` |
+| Source-level transformation track and its CORRECTED rows | `operations/TRANSFORMATION_REGISTER.md` (also holds the next work and the method notes) |
 | Research and adopted findings | `research/RESEARCH.md`, `research/CODFLOW_EXTRACTION.md` |
 | Security and privacy evidence | `security/`, `privacy/` |
 

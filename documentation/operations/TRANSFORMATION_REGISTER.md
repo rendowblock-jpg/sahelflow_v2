@@ -1,9 +1,7 @@
 # SahelFlow — Whole-App Transformation Register
 
 > **Status:** Active transformation register
-> **Opened:** 2026-09-09 against protected `main` `406debe` (Internal.36 / FD-059 published;
-> installed at that time remained Internal.34 / FD-057 — corrected 2026-09-16: no Internal.36
-> Founder installation was ever recorded)
+> **Opened:** 2026-09-09 against protected `main` `406debe`.
 > **Authority:** `product/INTERFACE_SYSTEM.md` (the system every surface conforms to),
 > subordinate to Product, Experience, Architecture and Founder decisions.
 > **Scope:** the Founder directive of 2026-09-09 — *"not just UI and design work, it's full
@@ -22,20 +20,13 @@ live-provider, customer, Beta or Stable truth. Rows convert per the existing rul
 
 ## What the audit found to be sound
 
-Recorded so the transformation does not "fix" what is already right:
+Recorded so the transformation does not "fix" what is already right. The September counts are dropped (they went stale); the findings stand:
 
-- **RTL discipline** — 283 logical-property utilities, zero physical-direction hazards in
-  `src/components`. Keep as-is and preserve by construction.
-- **Route boundaries** — all 30 dashboard routes carry both `loading.tsx` and `error.tsx`.
-- **Locale parity** — `ar.json` / `fr.json` / `en.json` at exactly 2,838 lines each; no
-  hardcoded user-facing strings found in components.
-- **API authority** — 178 of 193 route handlers carry an auth guard; 187 use the shared
-  `withErrorHandler`. The 15 without guards are legitimately pre-auth (auth endpoints,
-  health, public storefront checkout, internal runtime IPC, provider status callback with
-  constant-time secret comparison). `/api/search` resolves per-permission gating inside
-  `universal-search-server.ts`.
-- **Domain layer** — durable outbox, proposal-bound AI actions, append-only money truth,
-  native containment. The transformation stays above this layer and does not weaken it.
+- **RTL discipline** — logical-property utilities throughout, no physical-direction hazards in `src/components`. Preserve by construction.
+- **Route boundaries** — every dashboard route carries both `loading.tsx` and `error.tsx`.
+- **Locale parity** — `ar.json`, `fr.json` and `en.json` stay line-for-line equal; no hardcoded user-facing strings in components.
+- **API authority** — route handlers carry an auth guard and the shared `withErrorHandler`; the handful without a guard are legitimately pre-auth (auth endpoints, health, public storefront checkout, internal runtime IPC, the provider status callback with a constant-time secret comparison). `/api/search` gates per permission inside `universal-search-server.ts`. The 2026-10-17 audit section below holds the later, measured version.
+- **Domain layer** — durable outbox, proposal-bound AI actions, append-only money truth, native containment. The transformation stays above this layer and does not weaken it.
 
 ---
 
@@ -165,31 +156,34 @@ A read-only audit covered ten layers (data, identity, COD core, money and intell
 
 ---
 
-## Execution order
+## Next work
 
-Foundations first, because every surface inherits them; then the two surfaces the Founder
-named; then the remainder in waves. Each wave lands green and self-contained.
+Everything mechanical, page-level and accessibility-shaped is closed. What remains is the expensive half; each item is a real project.
 
-1. **W1 — Token authority.** SYS-01, SYS-02, SYS-03, SYS-05, SYS-06. Collapse to one
-   resolved stylesheet system, establish the type ramp, three radii, semantic tints. Retire
-   `--text-2xs`.
-2. **W2 — Primitive layer.** SYS-07, SYS-08, UI-07, DEAD-01, DEAD-02. Build `PageShell`,
-   `Section`, `Row`, `Field`, `Panel`, `IconTile`, `EmptyState`, `Rail`, `Toolbar`,
-   `DataTable`. Delete the dead files and the duplicate state primitives.
-3. **W3 — Agents rebuilt.** IA-01, IA-03, IA-04, UI-01..UI-05, STR-01 (canvas). From the
-   information architecture up, on the new system.
-4. **W4 — Settings rebuilt.** IA-05 on the `Row`/`Section` grammar; 11 card-islands become
-   one coherent surface.
-5. **W5 — Navigation and page shell.** IA-01 across all 30 routes, IA-02 restored hierarchy,
-   UI-06 per-page skeletons.
-6. **W6 — Copy authority.** L10N-01 migration, L10N-02 locale-aware seed.
-7. **W7 — Structure.** Remaining STR-01 decomposition, STR-02/STR-03 triage. The canvas is
-   closed (PRs #416, #418, #419); the four remaining god components are next, `inbox-v3-thread`
-   first, on the `use-inbox-thread.ts` hook-extraction precedent.
-8. **W8 — Conformance sweep.** Every surface against `INTERFACE_SYSTEM.md` §14, recorded here.
+1. **STR-01 remainder.** The Agents canvas is closed. The components still far over the 400-line rule are `inbox-v3-thread.tsx` and `inbox-v3-queue.tsx` (read the current size with `wc -l`). Cut `inbox-v3-thread` first, in this order: the composer seam, then the list seam, then `inbox-v3-queue`, on the precedent of the verbatim bubble module, the view-state hook and the header seam already extracted. **Measure the pin exposure before every cut:** map every `expect(...).toContain(...)` string to the block that owns it, and do not forget `indexOf` ordering assertions and count assertions (`toHaveLength`).
+2. **TEST-01 — the structural one.** Many tests assert source text through `readFileSync` instead of rendering a component, which is why each repair had to convert contracts by hand. Convert per surface as it is rebuilt, never in bulk.
+3. **L10N-01, STR-02, SYS-04, UI-08, SYS-09, SYS-10** as their rows above describe. SYS-04 (arbitrary values) is retired continuously, in the surface that owns each one, not as one mechanical pass.
 
-SYS-04 (2,099 arbitrary values) is retired continuously across W1–W8 rather than as one
-mechanical pass, so each removal is verified in the surface that owns it.
+## Decisions a future session could undo by accident
+
+1. **The storefront radius carve-out is deliberate** (`--radius-storefront-soft` / `-round`). Collapsing it made two of the seller's three theme options render identically. Do not "finish the migration".
+2. **W4's Card to Panel migration is CORRECTED, not pending** (IA-05b). `settings-control-center.module.css` already strips border, radius and background from every card and adds hairlines, so Settings already renders as flat sections. Swapping in `Panel` would add borders and radii and make the surface more island-like.
+3. **IA-03 and IA-04 are CORRECTED / done as their rows state.** An empty third review column is not acceptable (Founder, installed build of 2026-09-11); the 1500px branch is deliberate and has behavioural e2e coverage at 1600px (`e2e/ai-workspace.spec.ts`).
+4. **`IconTile`'s scale follows its call sites**, not the reverse. It once shipped with proportions no tile had and was adopted zero times.
+5. **`PageShell` composes `PageHeader`.** The product once had two headings with two type scales; `PageHeader` is the single header implementation and `PageShell` owns the container. Do not render a second `<header>`.
+
+## Method notes that were paid for
+
+- **Grep the test suite for every string you are about to change, before you change it.**
+- **Deletions:** scan for `readFileSync("…")` path strings, not just `import` statements. A test that reads a deleted file fails at collection with `ENOENT`, and an import-only scan will not find it.
+- **Contract tests are design law:** when one pins a value you want to change, the adaptation goes code-side unless the pin is itself the defect. Every pin that blocked a repair was converted, never deleted or relaxed: restate the intent, assert it where the guarantee now lives, keep the wiring assertions on the file that still decides them.
+- **A codemod that touches `__tests__` can weaken a contract while appearing to update it.** One rewrite turned two `not.toContain(...)` prohibitions into prohibitions of different strings. Read a codemod's test diff separately from its source diff, and restate a prohibition as intent (a pattern over the class of defect) rather than letting it track the token you just introduced.
+- **A `toContain`-only re-anchoring sweep misses ordering assertions.** `f06-page-completion-contract` compares two `indexOf` results; with `>=` instead of `>` it would have passed while asserting nothing.
+- **Check a primitive against its call sites before adopting it.** Zero adoption of an available primitive is evidence about the primitive.
+- **A mechanical migration that flattens a user-facing setting is a functional regression wearing a conformance costume.** Grep for enums and theme values in the blast radius, not just class strings.
+- **Never push more than one slice ahead of CI.** `cancel-in-progress` means a second push discards the first push's evidence.
+- **Arabic is not a translated Latin skin.** Any new type step needs a matching rule in `arabic-system.css`, or adopting it silently strips Arabic's reading floor.
+- **"No importers" is not "unreferenced"** in a repository where many tests read source by path.
 
 ---
 
