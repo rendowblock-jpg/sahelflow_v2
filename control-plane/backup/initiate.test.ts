@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 
@@ -21,7 +21,9 @@ import type {
 // entitlement guard) are decided inside those triggers, so a hand-written fake could not test them.
 // Same approach and D1 adapter shape as auth.test.ts and storefront/hosted-authority.test.ts.
 // The object store is a recording stand-in: initiate may only delete from it, any other call throws.
-// One test also replaces the answer of db.batch() to simulate a write the database does not confirm.
+// One test also replaces the answer of db.batch() to simulate a write the database does not confirm, one makes
+// it throw. Other tests inject a change into the database from inside db.prepare() (a licence expiring, a
+// competing request's rows appearing) to reproduce a race; those rows pass through the same triggers as real ones.
 const { DatabaseSync: SqliteDatabase } = createRequire(import.meta.url)("node:sqlite") as {
   DatabaseSync: typeof DatabaseSync;
 };
@@ -55,7 +57,7 @@ function openDatabase(): DatabaseSync {
   const database = new SqliteDatabase(":memory:");
   // D1 enforces foreign keys; SQLite leaves them off unless asked.
   database.exec("PRAGMA foreign_keys = ON");
-  database.exec(readFileSync(join(process.cwd(), "control-plane/backup/schema.sql"), "utf8"));
+  database.exec(readFileSync(fileURLToPath(new URL("./schema.sql", import.meta.url)), "utf8"));
   opened.push(database);
   return database;
 }
@@ -101,6 +103,8 @@ type Hooks = {
   beforePrepare?: (sql: string) => void;
   /** When set, db.batch() answers this instead of running the statements. */
   batchResult?: () => D1RunResult[];
+  /** When set, db.batch() throws this instead of running the statements. */
+  batchError?: Error;
 };
 
 function d1(database: DatabaseSync, hooks: Hooks): D1Database {
@@ -110,6 +114,7 @@ function d1(database: DatabaseSync, hooks: Hooks): D1Database {
       return new SqliteStatement(database, query);
     },
     async batch(statements: D1Statement[]) {
+      if (hooks.batchError) throw hooks.batchError;
       if (hooks.batchResult) return hooks.batchResult();
       database.exec("BEGIN");
       try {
@@ -273,6 +278,7 @@ function age(database: DatabaseSync, backupId: string, modifier: string): void {
 const manifestKey = (backupId: string): string => `backup/${WORKSPACE}/${backupId}/manifest.bin`;
 const chunkKey = (backupId: string, index: number): string =>
   `backup/${WORKSPACE}/${backupId}/chunk-${String(index).padStart(5, "0")}.bin`;
+const sorted = (keys: readonly string[]): string[] => [...keys].sort();
 const numbered = (n: number): string => `backup-17600000${String(n).padStart(4, "0")}-aaaaaaaaaaaaaaaa`;
 
 // ---------------------------------------------------------------- requests it refuses
@@ -303,6 +309,12 @@ describe("initiateBackup: requests it refuses", () => {
     ["a backup id that starts with a dash", { backupId: `-${"b".repeat(10)}` }],
     ["a shop id of 7 characters", { shopId: "s".repeat(7) }],
     ["a shop id of 129 characters", { shopId: "s".repeat(129) }],
+    // These ids end up inside object-store keys: no path or separator characters.
+    ["a backup id with a slash", { backupId: "backup/../abcdef" }],
+    ["a backup id with a dot", { backupId: "backup.bin.abcdef" }],
+    ["a backup id with a space", { backupId: "backup id abcdef" }],
+    ["a shop id with a slash", { shopId: "shop/../abcdef" }],
+    ["a workspace id with a slash", { workspaceId: "work/../abcdef" }],
     ["no retention class", { retentionClass: undefined }],
     ["an unknown retention class", { retentionClass: "hourly" }],
     ["a wrapped key that is not base64", { wrappedDek: "not base64 !!!!!!!!" }],
@@ -463,6 +475,19 @@ describe("initiateBackup: reserving a plan", () => {
     const response = await initiate(h, plan());
     expect(response.status).toBe(503);
     expect(await bodyOf(response)).toEqual({ error: "backup_plan_unavailable" });
+    expect(count(h.database, "cloud_backup")).toBe(0);
+  });
+
+  // OBSERVED, not endorsed: an exception from db.batch() that matches none of the known trigger messages and is
+  // not a duplicate key falls through to the last return of initiate.ts and is reported as a plan conflict. A
+  // transient database failure would deserve a retryable 503 like the unconfirmed batch above. If that is
+  // changed, this is the test to update.
+  it("OBSERVED: an unexpected database failure is answered 409 backup_plan_conflict, with nothing stored", async () => {
+    const hooks: Hooks = { batchError: new Error("D1_ERROR: network connection lost") };
+    const h = await harness({}, hooks);
+    const response = await initiate(h, plan());
+    expect(response.status).toBe(409);
+    expect(await bodyOf(response)).toEqual({ error: "backup_plan_conflict" });
     expect(count(h.database, "cloud_backup")).toBe(0);
   });
 });
@@ -786,6 +811,25 @@ describe("initiateBackup: two identical requests at the same moment", () => {
     const { response } = await raced(plan(), { backup_bytes: 130 });
     expect(response.status).toBe(200);
   });
+
+  // What happens today, pinned, so that the two markers above cannot be failing for an unrelated reason.
+  it("TODAY a trial seller's duplicate is answered 409 trial_backup_already_exists and the winner's rows stay", async () => {
+    const trial = plan({ retentionClass: "trial" });
+    const { h, response } = await raced(trial, { license_type: "trial" }, trial);
+    expect(response.status).toBe(409);
+    expect(await bodyOf(response)).toEqual({ error: "trial_backup_already_exists" });
+    expect(backupOf(h.database, BACKUP)).toMatchObject({ state: "initiated", chunk_count: 2 });
+    expect(count(h.database, "cloud_backup")).toBe(1);
+    expect(count(h.database, "cloud_backup_chunk")).toBe(2);
+  });
+
+  it("TODAY a duplicate from a seller with exactly the allowance is answered 403 backup_quota_exceeded and the winner's rows stay", async () => {
+    const { h, response } = await raced(plan(), { backup_bytes: 130 });
+    expect(response.status).toBe(403);
+    expect(await bodyOf(response)).toEqual({ error: "backup_quota_exceeded" });
+    expect(count(h.database, "cloud_backup")).toBe(1);
+    expect(count(h.database, "cloud_backup_chunk")).toBe(2);
+  });
 });
 
 describe("initiateBackup: the quota rule for points that retention retires", () => {
@@ -836,6 +880,27 @@ describe("initiateBackup: the quota rule for points that retention retires", () 
     const response = await initiate(h, plan({ ...big, backupId: SECOND }));
     expect(response.status, JSON.stringify(await response.clone().json())).toBe(201);
   });
+
+  it("never retires a pinned point: one pinned point of the whole allowance leaves no room for another", async () => {
+    const h = await harness({ backup_bytes: 100 });
+    await reserve(h, { retentionClass: "pinned", backupId: numbered(1), ...hundred });
+    setState(h.database, numbered(1), "verified");
+    const response = await initiate(h, plan({ retentionClass: "pinned", backupId: numbered(2), ...hundred }));
+    expect(response.status).toBe(403);
+    expect(await bodyOf(response)).toEqual({ error: "backup_quota_exceeded" });
+  });
+
+  it("retires nothing while another backup of the same shop and class is still in flight", async () => {
+    const h = await shelf("daily", 7);
+    h.database.exec("UPDATE backup_workspace SET backup_bytes = 800");
+    // 7 verified points (700 bytes) and an eighth that fits, because the oldest verified one will be retired.
+    const eighth = await initiate(h, plan({ retentionClass: "daily", backupId: numbered(7), ...hundred }));
+    expect(eighth.status, JSON.stringify(await eighth.clone().json())).toBe(201);
+    // The eighth is still in flight, so retention has not run: the oldest point counts again and a ninth does not fit.
+    const ninth = await initiate(h, plan({ retentionClass: "daily", backupId: numbered(8), ...hundred }));
+    expect(ninth.status).toBe(403);
+    expect(await bodyOf(ninth)).toEqual({ error: "backup_quota_exceeded" });
+  });
 });
 
 describe("initiateBackup: the trial seller's one unfinished backup", () => {
@@ -847,6 +912,7 @@ describe("initiateBackup: the trial seller's one unfinished backup", () => {
     ["verified", 201],
     ["failed", 201],
     ["deleted", 201],
+    ["deleting", 201],
   ];
   const cases = earlier.map(([state, status]) => [`${state} gets ${status}`, state, status] as [string, string, number]);
 
@@ -895,7 +961,7 @@ describe("initiateBackup: releasing reservations that went nowhere", () => {
     expect(response.status).toBe(201);
     expect(backupOf(h.database, BACKUP)).toMatchObject({ state: "failed" });
     expect(backupOf(h.database, BACKUP)?.deleted_at).not.toBeNull();
-    expect(h.r2.deleted).toEqual([[manifestKey(BACKUP), chunkKey(BACKUP, 0), chunkKey(BACKUP, 1)]]);
+    expect(h.r2.deleted.map(sorted)).toEqual([sorted([manifestKey(BACKUP), chunkKey(BACKUP, 0), chunkKey(BACKUP, 1)])]);
   });
 
   it("releases a reservation that made no progress for 90 minutes when a different backup starts", async () => {
@@ -905,7 +971,7 @@ describe("initiateBackup: releasing reservations that went nowhere", () => {
     const response = await initiate(h, trialPlan({ backupId: SECOND }));
     expect(response.status).toBe(201);
     expect(backupOf(h.database, BACKUP)).toMatchObject({ state: "failed" });
-    expect(h.r2.deleted).toEqual([[manifestKey(BACKUP), chunkKey(BACKUP, 0), chunkKey(BACKUP, 1)]]);
+    expect(h.r2.deleted.map(sorted)).toEqual([sorted([manifestKey(BACKUP), chunkKey(BACKUP, 0), chunkKey(BACKUP, 1)])]);
   });
 
   it("keeps a reservation that is only 30 minutes old (409 trial_backup_already_exists), and deletes nothing", async () => {
@@ -917,6 +983,25 @@ describe("initiateBackup: releasing reservations that went nowhere", () => {
     expect(await bodyOf(response)).toEqual({ error: "trial_backup_already_exists" });
     expect(backupOf(h.database, BACKUP)).toMatchObject({ state: "initiated" });
     expect(h.r2.deleted).toEqual([]);
+  });
+
+  it("does not release a reservation that is 23 hours old when its own plan is resent: the day has not passed", async () => {
+    const h = await harness({ license_type: "trial" });
+    await reserve(h, trialPlan());
+    age(h.database, BACKUP, "-23 hours");
+    const again = await initiate(h, trialPlan());
+    expect(again.status).toBe(200);
+    expect(await bodyOf(again)).toMatchObject({ resumed: true, state: "initiated" });
+    expect(h.r2.deleted).toEqual([]);
+  });
+
+  it.each([[59, 409], [61, 201]])("a different backup starting after the reservation sat idle %i minutes is answered %i", async (minutes, status) => {
+    const h = await harness({ license_type: "trial" });
+    await reserve(h, trialPlan());
+    age(h.database, BACKUP, `-${minutes} minutes`);
+    const response = await initiate(h, trialPlan({ backupId: SECOND }));
+    expect(response.status, JSON.stringify(await response.clone().json())).toBe(status);
+    expect(backupOf(h.database, BACKUP)).toMatchObject({ state: status === 201 ? "failed" : "initiated" });
   });
 
   it.each([
