@@ -11,6 +11,13 @@ const ROOT: Record<Style, string> = { noir: "nx", lumen: "lx", atelier: "ax", pu
 const FONT: Record<Style, string> = { noir: "noir-500", lumen: "lumen-700", atelier: "atelier-700", pulse: "pulse-900", bloom: "bloom-700" };
 const SOLD_OUT = "product_00000002";
 
+/** A sample product by position; fails loudly instead of returning undefined. */
+function sample(index: number): (typeof SAMPLE_PRODUCTS)[number] {
+  const product = SAMPLE_PRODUCTS[index];
+  if (!product) throw new Error(`no sample product ${index}`);
+  return product;
+}
+
 type Store = Awaited<ReturnType<typeof publishTestStore>>;
 type Options = { mode?: "landing" | "store" | "absent"; locale?: "ar" | "fr"; contact?: boolean; headline?: string; storeName?: string; products?: Parameters<typeof publishTestStore>[0] extends infer O ? (O extends { products?: infer P } ? P : never) : never };
 
@@ -96,7 +103,7 @@ describe("landing page: one scrollable page that sells one product", () => {
   });
 
   it.each(STYLES)("%s: a landing page whose first product is sold out offers no order button anywhere", async (style) => {
-    const sold = [{ ...SAMPLE_PRODUCTS[1]!, id: "product_00000009" }, SAMPLE_PRODUCTS[0]!];
+    const sold = [{ ...sample(1), id: "product_00000009" }, sample(0)];
     const store = await publish(style, { mode: "landing", products: sold });
     const html = page(store);
     expect(html).toContain('data-sold="1"');
@@ -125,7 +132,7 @@ describe("store: home, catalogue, product pages", () => {
   });
 
   it.each(STYLES)("%s: a store with ONE product still opens on its catalogue (the seller chose a store)", async (style) => {
-    const store = await publish(style, { mode: "store", products: [SAMPLE_PRODUCTS[0]!] });
+    const store = await publish(style, { mode: "store", products: [sample(0)] });
     const html = page(store);
     expect(html).toContain('id="catalog"');
     expect(html).not.toContain('id="order"');
@@ -177,7 +184,7 @@ describe("five structures, not one skeleton in five colours", () => {
       store.database.close();
     }
     for (const style of STYLES) {
-      const html = pages.get(style)!;
+      const html = pages.get(style) ?? "";
       for (const other of STYLES) {
         if (other === style) continue;
         expect(html).not.toContain(`<article class="${ROOT[other]}"`);
@@ -213,7 +220,7 @@ describe("five structures, not one skeleton in five colours", () => {
 
 describe("what a seller or a buyer types is never markup", () => {
   const EVIL = '<img src=x onerror=alert(1)> "q" \'s\' &amp;';
-  const product = { ...SAMPLE_PRODUCTS[0]!, name: EVIL, sku: "S<1>", images: JSON.stringify(["https://images.example.test/a.jpg"]) };
+  const product = { ...sample(0), name: EVIL, sku: "S<1>", images: JSON.stringify(["https://images.example.test/a.jpg"]) };
 
   it.each(STYLES)("%s: product name, store name and hero headline are escaped on the landing page, the catalogue and the product page", async (style) => {
     for (const mode of ["landing", "store"] as const) {
@@ -229,7 +236,7 @@ describe("what a seller or a buyer types is never markup", () => {
 
 describe("the older templates are not touched by the styles", () => {
   it.each(OLD)("%s: no mode attribute, no header link, no style class, even if the theme carries a mode", async (template) => {
-    const store = await publish(template, { mode: "store", products: [SAMPLE_PRODUCTS[0]!] });
+    const store = await publish(template, { mode: "store", products: [sample(0)] });
     const html = page(store);
     expect(html).not.toContain("data-mode");
     expect(html).not.toContain("sf-hcta");
