@@ -52,6 +52,8 @@ afterEach(() => {
 
 function openDatabase(): DatabaseSync {
   const database = new SqliteDatabase(":memory:");
+  // D1 enforces foreign keys; SQLite leaves them off unless asked.
+  database.exec("PRAGMA foreign_keys = ON");
   database.exec(readFileSync(join(process.cwd(), "control-plane/backup/schema.sql"), "utf8"));
   opened.push(database);
   return database;
@@ -634,6 +636,7 @@ describe("initiateBackup: the quota", () => {
       const h = await sevenDailyPoints();
       const response = await initiate(h, next({ retentionClass: "weekly" }));
       expect(response.status).toBe(403);
+      expect(await bodyOf(response)).toEqual({ error: "backup_quota_exceeded" });
     });
   });
 });
@@ -731,9 +734,13 @@ describe("initiateBackup: two identical requests at the same moment", () => {
     }
   }
 
-  async function raced(winner: Record<string, unknown>): Promise<{ h: Harness; response: Response }> {
+  async function raced(
+    winner: Record<string, unknown>,
+    workspace: Partial<BackupWorkspaceRow> = {},
+    request: Record<string, unknown> = plan(),
+  ): Promise<{ h: Harness; response: Response }> {
     const hooks: Hooks = {};
-    const h = await harness({}, hooks);
+    const h = await harness(workspace, hooks);
     let fired = false;
     hooks.beforePrepare = (sql) => {
       // The other request got its reservation in between our read and our insert.
@@ -742,7 +749,7 @@ describe("initiateBackup: two identical requests at the same moment", () => {
         seedWinner(h.database, winner);
       }
     };
-    const response = await initiate(h, plan());
+    const response = await initiate(h, request);
     expect(fired).toBe(true);
     return { h, response };
   }
@@ -761,6 +768,116 @@ describe("initiateBackup: two identical requests at the same moment", () => {
     expect(await bodyOf(response)).toEqual({ error: "backup_plan_conflict" });
     expect(backupOf(h.database, BACKUP)).toMatchObject({ shop_id: OTHER_SHOP });
     expect(count(h.database, "cloud_backup_chunk")).toBe(2);
+  });
+
+  // In SQLite a BEFORE INSERT trigger runs before the primary key is checked, so the loser of the race
+  // meets the quota rule or the trial seller's lock before it can be recognised as a duplicate. The
+  // comment in initiate.ts says it should be answered like a later retry (200, resumed). These two
+  // tests state that intended answer and are marked as failing today: when the behaviour is fixed
+  // they will start passing, vitest will report them, and the marker can be removed.
+  it.fails("KNOWN LIMITATION: a trial seller's duplicate is answered 200 resumed", async () => {
+    const trial = plan({ retentionClass: "trial" });
+    const { response } = await raced(trial, { license_type: "trial" }, trial);
+    expect(response.status).toBe(200);
+  });
+
+  it.fails("KNOWN LIMITATION: a duplicate from a seller with exactly the allowance is answered 200 resumed", async () => {
+    const { response } = await raced(plan(), { backup_bytes: 130 });
+    expect(response.status).toBe(200);
+  });
+});
+
+describe("initiateBackup: the quota rule for points that retention retires", () => {
+  // retention.ts keeps 7 daily, 4 weekly and 6 monthly verified points per shop and class. When the
+  // next point verifies, the oldest goes, so the quota rule in schema.sql does not count it. With
+  // `held` verified points of 100 bytes in an allowance of exactly held * 100 bytes, a new 100 byte
+  // point fits only if exactly one point is exempt: 101 bytes must not fit, and with one point fewer
+  // than a full shelf nothing is exempt yet.
+  const rotating: Array<[string, number]> = [["daily", 7], ["weekly", 4], ["monthly", 6]];
+  const hundred = { manifestBytes: 50, chunks: [{ index: 0, sha256: B, byteSize: 50 }] };
+
+  async function shelf(retentionClass: string, held: number): Promise<Harness> {
+    const h = await harness({ backup_bytes: held * 100 });
+    for (let n = 0; n < held; n += 1) {
+      await reserve(h, { retentionClass, backupId: numbered(n), ...hundred });
+      h.database
+        .prepare("UPDATE cloud_backup SET state = 'verified', verified_at = datetime('now', ?2) WHERE backup_id = ?1")
+        .run(numbered(n), `-${20 - n} hours`);
+    }
+    return h;
+  }
+
+  it.each(rotating)("%s: a new 100 byte point fits beside %i held points, because the oldest will be retired", async (retentionClass, keep) => {
+    const h = await shelf(retentionClass, keep);
+    const response = await initiate(h, plan({ retentionClass, backupId: numbered(keep), ...hundred }));
+    expect(response.status, JSON.stringify(await response.clone().json())).toBe(201);
+  });
+
+  it.each(rotating)("%s: a 101 byte point does not fit beside %i held points, because only one is retired", async (retentionClass, keep) => {
+    const h = await shelf(retentionClass, keep);
+    const response = await initiate(h, plan({ retentionClass, backupId: numbered(keep), manifestBytes: 51, chunks: hundred.chunks }));
+    expect(response.status).toBe(403);
+    expect(await bodyOf(response)).toEqual({ error: "backup_quota_exceeded" });
+  });
+
+  it.each(rotating)("%s: with one point fewer than a full shelf (%i) nothing is retired yet, so a new point does not fit", async (retentionClass, keep) => {
+    const h = await shelf(retentionClass, keep - 1);
+    const response = await initiate(h, plan({ retentionClass, backupId: numbered(keep), ...hundred }));
+    expect(response.status).toBe(403);
+    expect(await bodyOf(response)).toEqual({ error: "backup_quota_exceeded" });
+  });
+
+  it("a trial seller's verified point is replaced by the next one, so it does not count", async () => {
+    const h = await harness({ license_type: "trial", backup_bytes: 1000 });
+    const big = { retentionClass: "trial", manifestBytes: 100, chunks: [{ index: 0, sha256: B, byteSize: 500 }] };
+    await reserve(h, big);
+    setState(h.database, BACKUP, "verified");
+    const response = await initiate(h, plan({ ...big, backupId: SECOND }));
+    expect(response.status, JSON.stringify(await response.clone().json())).toBe(201);
+  });
+});
+
+describe("initiateBackup: the trial seller's one unfinished backup", () => {
+  const trialPlan = (overrides: Record<string, unknown> = {}) => plan({ retentionClass: "trial", ...overrides });
+  const earlier: Array<[string, number]> = [
+    ["initiated", 409],
+    ["uploading", 409],
+    ["awaiting_verification", 409],
+    ["verified", 201],
+    ["failed", 201],
+    ["deleted", 201],
+  ];
+  const cases = earlier.map(([state, status]) => [`${state} gets ${status}`, state, status] as [string, string, number]);
+
+  it.each(cases)("an earlier backup that is %s", async (_label, state, status) => {
+    const h = await harness({ license_type: "trial" });
+    await reserve(h, trialPlan());
+    setState(h.database, BACKUP, state);
+    const response = await initiate(h, trialPlan({ backupId: SECOND }));
+    expect(response.status, JSON.stringify(await response.clone().json())).toBe(status);
+    if (status === 409) expect(await bodyOf(response)).toEqual({ error: "trial_backup_already_exists" });
+  });
+
+  it("applies to an extension licence as well", async () => {
+    const h = await harness({ license_type: "extension" });
+    await reserve(h, trialPlan());
+    const response = await initiate(h, trialPlan({ backupId: SECOND }));
+    expect(response.status).toBe(409);
+    expect(await bodyOf(response)).toEqual({ error: "trial_backup_already_exists" });
+  });
+});
+
+describe("initiateBackup: entitlement and allowance edges", () => {
+  it("lets a workspace entitled by the complete feature alone reserve", async () => {
+    const h = await harness({ features_json: JSON.stringify(["sahelflow.complete"]) });
+    expect((await initiate(h, plan())).status).toBe(201);
+  });
+
+  it("refuses every plan when the allowance is zero", async () => {
+    const h = await harness({ backup_bytes: 0 });
+    const response = await initiate(h, plan());
+    expect(response.status).toBe(403);
+    expect(await bodyOf(response)).toEqual({ error: "backup_quota_exceeded" });
   });
 });
 
