@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { checkDocs } from "../docs-gate";
 
@@ -12,6 +13,7 @@ type Manifest = {
   deadPathAllowed: Record<string, string[]>;
 };
 
+const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
 const roots: string[] = [];
 
 function baseManifest(): Manifest {
@@ -147,7 +149,7 @@ describe("docs gate", () => {
       "documentation/system/data.json": "{}\n",
       "AGENTS.md": "Root `src/components/foo/bar.tsx`, suffix `foo/bar.tsx`.\n",
       "documentation/product/DECISIONS.md":
-        "## FD-001 — one\n\nSee `../system/data.json` and `src/components/foo/bar.tsx:12`.\n",
+        "## FD-001 — one\n\nSee `../system/data.json` and `src/components/foo/bar.tsx:12:5`.\n",
     });
     expect(checkDocs(root)).toEqual([]);
   });
@@ -155,7 +157,7 @@ describe("docs gate", () => {
   it("does not check bare file names, placeholders, absolute paths or URLs", () => {
     const root = makeTree({
       "AGENTS.md":
-        "Runtime `latest.json`, `src/<name>/x.ts`, `src/*/y.ts`, `/opt/box/z.md`, `node_modules/next/a.js`, https://example.com/a/b.ts.\n",
+        "Runtime `latest.json`, `src/<name>/x.ts`, `src/*/y.ts`, `/opt/box/z.md`, `node_modules/next/a.js`, `https://example.com/a/b.ts`, `~/notes/c.md`.\n",
     });
     expect(checkDocs(root)).toEqual([]);
   });
@@ -196,7 +198,71 @@ describe("docs gate", () => {
     expect(rules(empty)).toEqual(["bad-manifest"]);
   });
 
+  it("still flags a dead path that carries a line and a column", () => {
+    const root = makeTree({ "AGENTS.md": "See `src/nope/ghost.ts:12:5`.\n" });
+    expect(checkDocs(root)).toEqual([
+      expect.objectContaining({ rule: "dead-path", file: "AGENTS.md" }),
+    ]);
+  });
+
+  it("does not let a suffix match hide a dead path anchored at a root directory", () => {
+    const root = makeTree({
+      "src/keep.ts": "export {};\n",
+      "packages/src/old/gone.ts": "export {};\n",
+      "AGENTS.md": "Was `src/old/gone.ts`.\n",
+    });
+    expect(checkDocs(root)).toEqual([
+      expect.objectContaining({ rule: "dead-path", file: "AGENTS.md" }),
+    ]);
+  });
+
+  it("catches the lowercase version form of a release name", () => {
+    const root = makeTree({ "AGENTS.md": "Built as 1.0.0-internal.15.\n" });
+    expect(checkDocs(root)).toEqual([
+      expect.objectContaining({ rule: "release-name", file: "AGENTS.md" }),
+    ]);
+  });
+
+  it("flags a release-name allowance that its file no longer needs", () => {
+    const manifest = baseManifest();
+    manifest.releaseNameFiles = ["CHANGELOG.md", "AGENTS.md"];
+    expect(checkDocs(makeTree({}, manifest))).toEqual([
+      expect.objectContaining({ rule: "stale-allowance", file: "documentation/MANIFEST.json" }),
+    ]);
+  });
+
+  it("flags a release-name allowance for a file that is not a listed doc", () => {
+    const manifest = baseManifest();
+    manifest.releaseNameFiles = ["CHANGELOG.md", "documentation/gone.md"];
+    expect(rules(makeTree({}, manifest))).toEqual(["stale-allowance"]);
+  });
+
+  it("flags an FD allowance that nothing references", () => {
+    const manifest = baseManifest();
+    manifest.undefinedFdAllowed = ["077"];
+    expect(rules(makeTree({}, manifest))).toEqual(["stale-allowance"]);
+  });
+
+  it.each([
+    ["an unterminated fence", "<!-- docs-gate:ignore-start -->\n`src/a/b.ts`\n"],
+    ["an end marker with no start", "text\n<!-- docs-gate:ignore-end -->\n"],
+    ["both markers on one line", "<!-- docs-gate:ignore-start --><!-- docs-gate:ignore-end -->\n"],
+  ])("flags %s instead of silently ignoring the rest of the document", (_name, body) => {
+    expect(rules(makeTree({ "AGENTS.md": body }))).toEqual(["bad-fence"]);
+  });
+
+  it.each([
+    ["a wrong formatVersion", { formatVersion: 2 }],
+    ["a ceiling that is not a number", { files: { "README.md": { maxBytes: "big" } } }],
+    ["releaseNameFiles that is not a list", { releaseNameFiles: "CHANGELOG.md" }],
+    ["undefinedFdAllowed that is not a list", { undefinedFdAllowed: 5 }],
+    ["deadPathAllowed with a non-list value", { deadPathAllowed: { "AGENTS.md": "x" } }],
+  ])("rejects a manifest with %s", (_name, patch) => {
+    const manifest = { ...baseManifest(), ...patch } as unknown as Manifest;
+    expect(rules(makeTree({}, manifest))).toEqual(["bad-manifest"]);
+  });
+
   it("passes on the real repository", () => {
-    expect(checkDocs(process.cwd())).toEqual([]);
+    expect(checkDocs(repoRoot)).toEqual([]);
   });
 });
