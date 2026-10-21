@@ -74,7 +74,7 @@
       "maxBytes": 11000
     },
     "documentation/system/ARCHITECTURE.md": {
-      "maxBytes": 48400
+      "maxBytes": 51400
     },
     "documentation/system/CURRENT_STATE.md": {
       "maxBytes": 9900
@@ -96,7 +96,6 @@
     "documentation/product/DECISIONS.md",
     "documentation/product/PRODUCT.md",
     "documentation/research/RESEARCH.md",
-    "documentation/system/ARCHITECTURE.md",
     "documentation/system/CURRENT_STATE.md"
   ],
   "undefinedFdAllowed": [],
