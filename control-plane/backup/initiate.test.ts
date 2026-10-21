@@ -20,7 +20,8 @@ import type {
 // Several outcomes (the quota, the one-backup lock of a trial seller, the pinned limit, the
 // entitlement guard) are decided inside those triggers, so a hand-written fake could not test them.
 // Same approach and D1 adapter shape as auth.test.ts and storefront/hosted-authority.test.ts.
-// Only the object store is a recording stand-in: initiate may delete objects, nothing else.
+// The object store is a recording stand-in: initiate may only delete from it, any other call throws.
+// One test also replaces the answer of db.batch() to simulate a write the database does not confirm.
 const { DatabaseSync: SqliteDatabase } = createRequire(import.meta.url)("node:sqlite") as {
   DatabaseSync: typeof DatabaseSync;
 };
