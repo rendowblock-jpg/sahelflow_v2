@@ -41,7 +41,7 @@
       "maxBytes": 36600
     },
     "documentation/operations/WORKFLOW.md": {
-      "maxBytes": 23500
+      "maxBytes": 17600
     },
     "documentation/product/DECISIONS.md": {
       "maxBytes": 94500
@@ -93,7 +93,6 @@
     "documentation/operations/TRANSFORMATION_REGISTER.md",
     "documentation/operations/UI_UX_TRIAGE_LEDGER.md",
     "documentation/operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md",
-    "documentation/operations/WORKFLOW.md",
     "documentation/product/DECISIONS.md",
     "documentation/product/INTERFACE_SYSTEM.md",
     "documentation/product/PRODUCT.md",
