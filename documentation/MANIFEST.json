@@ -1,0 +1,141 @@
+{
+  "formatVersion": 1,
+  "files": {
+    "AGENTS.md": {
+      "maxBytes": 13700
+    },
+    "CHANGELOG.md": {
+      "maxBytes": 60000
+    },
+    "README.md": {
+      "maxBytes": 5900
+    },
+    "documentation/README.md": {
+      "maxBytes": 11200
+    },
+    "documentation/operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md": {
+      "maxBytes": 20700
+    },
+    "documentation/operations/CODFLOW_EXTRACTION_REGISTER.md": {
+      "maxBytes": 17900
+    },
+    "documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md": {
+      "maxBytes": 48200
+    },
+    "documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md": {
+      "maxBytes": 30500
+    },
+    "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md": {
+      "maxBytes": 9600
+    },
+    "documentation/operations/TRANSFORMATION_HANDOFF.md": {
+      "maxBytes": 21000
+    },
+    "documentation/operations/TRANSFORMATION_REGISTER.md": {
+      "maxBytes": 63000
+    },
+    "documentation/operations/UI_UX_TRIAGE_LEDGER.md": {
+      "maxBytes": 58100
+    },
+    "documentation/operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md": {
+      "maxBytes": 34900
+    },
+    "documentation/operations/WORKFLOW.md": {
+      "maxBytes": 22300
+    },
+    "documentation/operations/WORKING_MEMORY.md": {
+      "maxBytes": 16700
+    },
+    "documentation/product/DECISIONS.md": {
+      "maxBytes": 118100
+    },
+    "documentation/product/EXPERIENCE.md": {
+      "maxBytes": 31200
+    },
+    "documentation/product/INTERFACE_SYSTEM.md": {
+      "maxBytes": 14400
+    },
+    "documentation/product/PRODUCT.md": {
+      "maxBytes": 21200
+    },
+    "documentation/research/CODFLOW_EXTRACTION.md": {
+      "maxBytes": 34400
+    },
+    "documentation/research/RESEARCH.md": {
+      "maxBytes": 36200
+    },
+    "documentation/security/ALGERIA_LAW_18_07_MAPPING.md": {
+      "maxBytes": 6400
+    },
+    "documentation/security/PHASE4_EVIDENCE_MATRIX.md": {
+      "maxBytes": 5600
+    },
+    "documentation/security/PHASE4_INDEPENDENT_REVIEW.md": {
+      "maxBytes": 6300
+    },
+    "documentation/security/PHASE4_THREAT_MODEL.md": {
+      "maxBytes": 10500
+    },
+    "documentation/system/ARCHITECTURE.md": {
+      "maxBytes": 46100
+    },
+    "documentation/system/CURRENT_STATE.md": {
+      "maxBytes": 32000
+    },
+    "documentation/system/ROADMAP.md": {
+      "maxBytes": 17300
+    }
+  },
+  "releaseNameFiles": [
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "README.md",
+    "documentation/README.md",
+    "documentation/operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md",
+    "documentation/operations/CODFLOW_EXTRACTION_REGISTER.md",
+    "documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md",
+    "documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md",
+    "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md",
+    "documentation/operations/TRANSFORMATION_REGISTER.md",
+    "documentation/operations/UI_UX_TRIAGE_LEDGER.md",
+    "documentation/operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md",
+    "documentation/operations/WORKFLOW.md",
+    "documentation/operations/WORKING_MEMORY.md",
+    "documentation/product/DECISIONS.md",
+    "documentation/product/INTERFACE_SYSTEM.md",
+    "documentation/product/PRODUCT.md",
+    "documentation/research/RESEARCH.md",
+    "documentation/system/ARCHITECTURE.md",
+    "documentation/system/CURRENT_STATE.md",
+    "documentation/system/ROADMAP.md"
+  ],
+  "undefinedFdAllowed": [
+    "034",
+    "038",
+    "039",
+    "040",
+    "041",
+    "043",
+    "044",
+    "046",
+    "047"
+  ],
+  "deadPathAllowed": {
+    "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md": [
+      "SF_DATA_DIR/mcp/endpoint.json"
+    ],
+    "documentation/operations/TRANSFORMATION_REGISTER.md": [
+      "settings/team-access-panel.tsx",
+      "inbox/whatsapp-ingress-recovery-panel.tsx",
+      "shared/premium-table.tsx",
+      "profile/current-identity-card.tsx",
+      "shared/operational-state.tsx",
+      "orders/cod-controls.tsx",
+      ".../truncate-after/route.ts"
+    ],
+    "documentation/research/CODFLOW_EXTRACTION.md": [
+      "cod-server/src/mcp/registry.ts",
+      "scripts/d1.mjs"
+    ]
+  }
+}

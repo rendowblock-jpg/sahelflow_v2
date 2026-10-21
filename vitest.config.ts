@@ -32,6 +32,7 @@ export default defineConfig({
       "scripts/__tests__/classify-pr-risk*.test.ts",
       "scripts/__tests__/desktop-build-context.test.ts",
       "scripts/__tests__/dev-reset-authority.test.ts",
+      "scripts/__tests__/docs-gate.test.ts",
       "scripts/__tests__/phase4-closure-authority.test.ts",
       "scripts/__tests__/privacy-erase-authority.test.ts",
       "scripts/__tests__/privacy-export-authority.test.ts",
