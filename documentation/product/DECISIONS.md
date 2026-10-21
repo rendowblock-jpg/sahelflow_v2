@@ -19,7 +19,7 @@ Entries are ordered by number, not by date, and the newest numbers are at the en
 
 ## Index (newest first)
 
-- FD-080 — Source licence: proprietary, all rights reserved (2026-10-21, ADOPTED; form chosen under delegation)
+- FD-080 — No repository licence file for now (2026-10-21, ADOPTED)
 - FD-079 — Per-machine Windows install (2026-10-18, ADOPTED under delegation)
 - FD-078 — Storefront templates Prime, Souk and Reel (2026-10-20, ADOPTED)
 - FD-077 — Arabic-first storefront (2026-10-19, ADOPTED)
@@ -658,7 +658,7 @@ This decision records the Founder’s 2026-08-04 provider-evidence boundary.
   effects stay fail-closed until its exact provider-issued contract is available;
   DHD remains absent from runtime registration.
 - Issue #201 installed hydrated-WebView evidence and real-provider evidence remain
-  required at the applicable Level 3 / representative beta / Stable gates, but
+  required at the applicable Level 3 [editorial note, 2026-10-21: that scheme is retired; see `../operations/WORKFLOW.md` section 5] / representative beta / Stable gates, but
   they are not Phase 3 implementation blockers.
 - This supersedes only lower Phase 3 roadmap/issue wording that required real
   provider accounts or issue #201 before Phase 3 could close. It does not weaken
@@ -1300,10 +1300,9 @@ Decided by the agent under the Founder's delegation of 2026-10-18 (the Founder m
 - `windows-release-build-contract` pins `perMachine`, and no CI lane installs `Setup.exe` over an older install.
 - Updates with no prompt need a small update service running with system rights. That is its own project, to be designed and authorized separately.
 
-## FD-080 — Source licence: proprietary, all rights reserved (2026-10-21, ADOPTED; form chosen under delegation)
+## FD-080 — No repository licence file for now (2026-10-21, ADOPTED)
 
-The Founder asked on 2026-10-21 for a licence for the SahelFlow repository if it was free and fast. The agent chose the form under that delegation: the source stays proprietary with all rights reserved (`../../LICENSE.md`), because SahelFlow is sold (FD-012) and an open-source licence would give it away. Third-party material keeps its own licences; the CodFlow attribution and the Apache License 2.0 text are in `../../NOTICE.md` (FD-061).
+The Founder decided on 2026-10-21 that the repository carries no licence or notice file for now ("don't do any license"). Agents must not add a `LICENSE`, `NOTICE` or licence section to the README unless he asks for one.
 
-- This governs the source in the repository. The right to run the application comes from a SahelFlow licence issued to the buyer (FD-001, FD-016).
-- The copyright holder is written as "SahelFlow", the same holder the public site's footer and `Cargo.toml` already use. The Founder should replace it with his legal name or entity, and may choose a different licence with a new numbered decision.
-- This is not legal advice.
+- This changes no product right. The right to run the application comes from a SahelFlow licence issued to the buyer (FD-001, FD-016).
+- Open point for the Founder, not a blocker: part of the code was derived from CodFlow (Apache License 2.0, upstream `github.com/bighadj22/codflow`; FD-061), and that licence asks anyone who passes on derived work to include a copy of it. Decide before the installer or the source is given to people outside the company. This is not legal advice.
