@@ -288,6 +288,13 @@ describe("craft floor: no label above a heading, numbers only for a real sequenc
 describe("the style sheets keep their promises", () => {
   const css = (id: Style) => readFileSync(join(process.cwd(), "control-plane/storefront/web/styles", `${id}.css`), "utf8");
 
+  it("pulse: the language switcher has no pill of its own - its links are drawn in the header's light colour, which vanished on the lime accent pill (1.24:1 measured on the live page)", () => {
+    const sheet = css("pulse");
+    expect(sheet).toContain("body[data-voice=pulse] .sf-head{background:var(--foreground);color:var(--background)");
+    expect(sheet).toMatch(/body\[data-voice=pulse\] \.sf-lang-i\{[^}]*color:inherit/);
+    expect(sheet).toContain("body[data-voice=pulse] .sf-lang{background:none}");
+  });
+
   it.each(STYLES)("%s: main clips sideways overflow (a phone browser stretches its layout viewport, and the fixed order bar with it, to the widest thing it finds, even for one animation frame; measured on Atelier: the price stamp's entrance made the page 376 px wide on a 360 px phone)", (style) => {
     expect(css(style)).toContain(`body[data-voice=${style}] main{overflow-x:clip}`);
     expect(css(style)).not.toContain(`body[data-voice=${style}]{overflow-x`);

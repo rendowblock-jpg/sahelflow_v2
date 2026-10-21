@@ -21,6 +21,7 @@ body[data-voice=pulse] ::selection{background:var(--foreground);color:var(--back
 body[data-voice=pulse] .sf-head{background:var(--foreground);color:var(--background);border-block-end:0;-webkit-backdrop-filter:none;backdrop-filter:none}
 body[data-voice=pulse] .sf-mono{border-radius:0;background:var(--background);color:var(--foreground);transform:rotate(-8deg);font-weight:900}
 body[data-voice=pulse] .sf-brand b{font-size:18px;font-weight:900;letter-spacing:-.02em;text-transform:uppercase}
+body[data-voice=pulse] .sf-lang{background:none}
 body[data-voice=pulse] .sf-lang-i{border-radius:0;color:inherit;font-weight:900}
 body[data-voice=pulse] .sf-lang-i[aria-current]{background:var(--background);color:var(--foreground)}
 body[data-voice=pulse] .sf-hcta{background:var(--sf-accent,var(--background));color:#fff;padding-inline:16px;font-weight:900;border:2px solid var(--background)}
