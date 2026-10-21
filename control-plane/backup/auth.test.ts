@@ -1,7 +1,7 @@
 import { generateKeyPairSync, sign as signBytes, type KeyObject } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 
@@ -24,6 +24,8 @@ import type {
 // on real SQLite, the engine D1 is built on, and verify real Ed25519 signatures. A hand-written fake
 // could not test "revoked_at IS NULL" or the expiry rule, because it would not evaluate the SQL.
 // Same approach and the same D1 adapter shape as control-plane/storefront/hosted-authority.test.ts.
+// The race tests inject a competing UPDATE from inside db.prepare(), after the Worker has read the row and
+// decided; the object store is a Proxy that throws on any use, because authentication must never touch it.
 const { DatabaseSync: SqliteDatabase } = createRequire(import.meta.url)("node:sqlite") as {
   DatabaseSync: typeof DatabaseSync;
 };
@@ -57,7 +59,7 @@ function openDatabase(): DatabaseSync {
   const database = new SqliteDatabase(":memory:");
   // D1 enforces foreign keys; SQLite leaves them off unless asked.
   database.exec("PRAGMA foreign_keys = ON");
-  database.exec(readFileSync(join(process.cwd(), "control-plane/backup/schema.sql"), "utf8"));
+  database.exec(readFileSync(fileURLToPath(new URL("./schema.sql", import.meta.url)), "utf8"));
   opened.push(database);
   return database;
 }
@@ -262,6 +264,13 @@ async function enrol(
 
 async function bodyOf(response: Response): Promise<Record<string, unknown>> {
   return (await response.json()) as Record<string, unknown>;
+}
+
+/** Responses that carry (or refuse) a token must never be cached, sniffed or given active content. */
+function expectHardened(response: Response): void {
+  expect(response.headers.get("Cache-Control")).toBe("no-store");
+  expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+  expect(response.headers.get("Content-Security-Policy")).toBe("default-src 'none'");
 }
 
 async function tokenOf(response: Response): Promise<string> {
@@ -499,9 +508,8 @@ describe("bootstrapBackupWorkspace: first enrolment", () => {
     const { database, env } = setup();
     const response = await enrol(env, claims());
     expect(response.status).toBe(201);
-    // The response carries the new token: it must never be cached or sniffed.
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    // The response carries the new token: it must never be cached, sniffed or given active content.
+    expectHardened(response);
     const body = await bodyOf(response);
     expect(body).toMatchObject({ workspaceId: WORKSPACE, backupBytes: 1_000_000, licenseType: "trial" });
     const token = body.backupToken as string;
@@ -542,7 +550,7 @@ describe("bootstrapBackupWorkspace: refreshing an enrolled workspace", () => {
     const response = await enrol(env, claims());
     expect(response.status).toBe(200);
     const body = await bodyOf(response);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expectHardened(response);
     expect(body).toMatchObject({ status: "refreshed", workspaceId: WORKSPACE });
     const newToken = body.backupToken as string;
     expect(newToken).not.toBe(oldToken);
@@ -609,16 +617,25 @@ describe("bootstrapBackupWorkspace: recovery transfer to a new installation", ()
   it("moves the workspace to the new installation and key when the epoch is higher", async () => {
     const { database, env } = setup();
     const oldToken = await tokenOf(await enrol(env, claims()));
-    const response = await enrol(env, moved({ backupBytes: 2_000_000 }), { signingKey: OTHER_SIGNING_KEY, recoveryTransfer: true });
+    const features = ["sahelflow.backup", "sahelflow.complete"];
+    const response = await enrol(
+      env,
+      moved({ backupBytes: 2_000_000, type: "extension", expiresAt: IN_TWO_YEARS, features }),
+      { signingKey: OTHER_SIGNING_KEY, recoveryTransfer: true },
+    );
     expect(response.status).toBe(200);
+    expectHardened(response);
     const body = await bodyOf(response);
-    expect(body).toMatchObject({ status: "recovered", workspaceId: WORKSPACE });
+    expect(body).toMatchObject({ status: "recovered", workspaceId: WORKSPACE, licenseType: "extension" });
     expect(workspaceRow(database)).toMatchObject({
       installation_id: OTHER_INSTALLATION,
       device_binding: OTHER_DEVICE,
       desktop_signing_public_key: OTHER_SIGNING_KEY,
       entitlement_revocation_epoch: 2,
       backup_bytes: 2_000_000,
+      license_type: "extension",
+      entitlement_expires_at: IN_TWO_YEARS,
+      features_json: JSON.stringify(features),
     });
     expect(await authenticates(env, oldToken)).toBe(false);
     expect(await authenticates(env, body.backupToken as string)).toBe(true);
@@ -688,6 +705,8 @@ describe("bootstrapBackupWorkspace: more writes that lose a race", () => {
     ["a refresh while the device changes", `UPDATE backup_workspace SET device_binding = '${OTHER_DEVICE}'`, claims(), {}],
     ["a refresh while the product major changes", "UPDATE backup_workspace SET product_major = 2", claims(), {}],
     ["a recovery while the licence changes", "UPDATE backup_workspace SET license_id = 'license-00000009'", moved(), recovery],
+    // The guard is strictly `<`: a request that lands the very same epoch first wins, ours must not apply.
+    ["a recovery while the same revocation epoch lands", "UPDATE backup_workspace SET entitlement_revocation_epoch = 2", moved(), recovery],
   ];
 
   it.each(races)("applies nothing for %s", async (_label, interference, next, options) => {
