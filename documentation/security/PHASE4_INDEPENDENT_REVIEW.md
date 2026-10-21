@@ -81,7 +81,7 @@ The review must identify:
 - CycloneDX SBOM contains resolved npm and Cargo components.
 - VEX statements correspond exactly to checked-in triage findings; an empty VEX is not treated as a clean audit.
 - Production dependency audit has no unresolved blocking finding.
-- Level 1/2/3 matrix and exact CI lanes match the changed consequences.
+- The evidence matrix (its Levels 1 to 3 are this document set's own scheme, not the retired gate levels) and the exact CI lanes match the changed consequences.
 - No release, Founder acceptance, Beta, Stable, legal certification or penetration-test claim is inferred.
 
 ## Severity and closure

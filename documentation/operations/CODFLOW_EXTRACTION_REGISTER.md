@@ -2,7 +2,7 @@
 
 > **Status:** Active scoped register for the FD-061 extraction program
 > **Opened:** 2026-09-13 (Founder directive "extract and implement all the things from CodFlow to SahelFlow fully and professionally")
-> **Authority:** FD-061 (`documentation/product/DECISIONS.md`) governs; this register is subordinate to `operations/WORKING_MEMORY.md`
+> **Authority:** FD-061 (`documentation/product/DECISIONS.md`) governs; this register is subordinate to `system/CURRENT_STATE.md`
 > **Upstream source:** `github.com/bighadj22/codflow` (Apache-2.0), knowledge pinned at `00f18fac…` (PR #114); extracted through the Founder's fork `rendowblock-jpg/codflow`
 > **Contract facts of record:** `documentation/research/CODFLOW_EXTRACTION.md`
 
@@ -59,6 +59,6 @@ explicit ask.
    acceptance, customer-online, Beta or Stable.
 3. A demonstrated defect found during extraction opens exactly one bounded
    repair; anything larger returns to the Founder.
-4. The register never competes with WORKING_MEMORY: the FD-058 installed
+4. The register never competes with CURRENT_STATE: the FD-058 installed
    campaign, FRC-3 resumption and the transformation program keep their own
    frontiers.

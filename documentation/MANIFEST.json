@@ -2,16 +2,16 @@
   "formatVersion": 1,
   "files": {
     "AGENTS.md": {
-      "maxBytes": 14400
+      "maxBytes": 7900
     },
     "CHANGELOG.md": {
-      "maxBytes": 60000
+      "maxBytes": 49500
     },
     "README.md": {
-      "maxBytes": 6400
+      "maxBytes": 2800
     },
     "documentation/README.md": {
-      "maxBytes": 11800
+      "maxBytes": 3700
     },
     "documentation/operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md": {
       "maxBytes": 21800
@@ -22,41 +22,29 @@
     "documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md": {
       "maxBytes": 50600
     },
-    "documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md": {
-      "maxBytes": 32000
-    },
     "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md": {
       "maxBytes": 10100
     },
-    "documentation/operations/TRANSFORMATION_HANDOFF.md": {
-      "maxBytes": 22000
-    },
     "documentation/operations/TRANSFORMATION_REGISTER.md": {
       "maxBytes": 66200
-    },
-    "documentation/operations/UI_UX_TRIAGE_LEDGER.md": {
-      "maxBytes": 61000
     },
     "documentation/operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md": {
       "maxBytes": 36600
     },
     "documentation/operations/WORKFLOW.md": {
-      "maxBytes": 23500
-    },
-    "documentation/operations/WORKING_MEMORY.md": {
-      "maxBytes": 17600
+      "maxBytes": 17300
     },
     "documentation/product/DECISIONS.md": {
-      "maxBytes": 124000
+      "maxBytes": 93200
     },
     "documentation/product/EXPERIENCE.md": {
-      "maxBytes": 32800
+      "maxBytes": 33500
     },
     "documentation/product/INTERFACE_SYSTEM.md": {
-      "maxBytes": 15100
+      "maxBytes": 15900
     },
     "documentation/product/PRODUCT.md": {
-      "maxBytes": 22300
+      "maxBytes": 23300
     },
     "documentation/research/CODFLOW_EXTRACTION.md": {
       "maxBytes": 36100
@@ -65,61 +53,41 @@
       "maxBytes": 38000
     },
     "documentation/security/ALGERIA_LAW_18_07_MAPPING.md": {
-      "maxBytes": 6900
+      "maxBytes": 8000
     },
     "documentation/security/PHASE4_EVIDENCE_MATRIX.md": {
-      "maxBytes": 6100
+      "maxBytes": 6000
     },
     "documentation/security/PHASE4_INDEPENDENT_REVIEW.md": {
-      "maxBytes": 6800
+      "maxBytes": 6700
     },
     "documentation/security/PHASE4_THREAT_MODEL.md": {
-      "maxBytes": 11000
+      "maxBytes": 13400
     },
     "documentation/system/ARCHITECTURE.md": {
-      "maxBytes": 48400
+      "maxBytes": 51400
     },
     "documentation/system/CURRENT_STATE.md": {
-      "maxBytes": 33600
+      "maxBytes": 9700
     },
     "documentation/system/ROADMAP.md": {
-      "maxBytes": 18100
+      "maxBytes": 8200
     }
   },
   "releaseNameFiles": [
-    "AGENTS.md",
     "CHANGELOG.md",
-    "README.md",
-    "documentation/README.md",
     "documentation/operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md",
     "documentation/operations/CODFLOW_EXTRACTION_REGISTER.md",
     "documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md",
-    "documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md",
     "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md",
     "documentation/operations/TRANSFORMATION_REGISTER.md",
-    "documentation/operations/UI_UX_TRIAGE_LEDGER.md",
     "documentation/operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md",
-    "documentation/operations/WORKFLOW.md",
-    "documentation/operations/WORKING_MEMORY.md",
     "documentation/product/DECISIONS.md",
-    "documentation/product/INTERFACE_SYSTEM.md",
     "documentation/product/PRODUCT.md",
     "documentation/research/RESEARCH.md",
-    "documentation/system/ARCHITECTURE.md",
-    "documentation/system/CURRENT_STATE.md",
-    "documentation/system/ROADMAP.md"
+    "documentation/system/CURRENT_STATE.md"
   ],
-  "undefinedFdAllowed": [
-    "034",
-    "038",
-    "039",
-    "040",
-    "041",
-    "043",
-    "044",
-    "046",
-    "047"
-  ],
+  "undefinedFdAllowed": [],
   "deadPathAllowed": {
     "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md": [
       "SF_DATA_DIR/mcp/endpoint.json"
