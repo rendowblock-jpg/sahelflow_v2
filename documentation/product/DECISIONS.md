@@ -19,7 +19,7 @@ Entries are ordered by number, not by date, and the newest numbers are at the en
 
 ## Index (newest first)
 
-- FD-080 — No repository licence file for now (2026-10-21, ADOPTED)
+- FD-080 — No repository licence or notice file (2026-10-21, ADOPTED)
 - FD-079 — Per-machine Windows install (2026-10-18, ADOPTED under delegation)
 - FD-078 — Storefront templates Prime, Souk and Reel (2026-10-20, ADOPTED)
 - FD-077 — Arabic-first storefront (2026-10-19, ADOPTED)
@@ -1300,9 +1300,9 @@ Decided by the agent under the Founder's delegation of 2026-10-18 (the Founder m
 - `windows-release-build-contract` pins `perMachine`, and no CI lane installs `Setup.exe` over an older install.
 - Updates with no prompt need a small update service running with system rights. That is its own project, to be designed and authorized separately.
 
-## FD-080 — No repository licence file for now (2026-10-21, ADOPTED)
+## FD-080 — No repository licence or notice file (2026-10-21, ADOPTED)
 
-The Founder decided on 2026-10-21 that the repository carries no licence or notice file for now ("don't do any license"). Agents must not add a `LICENSE`, `NOTICE` or licence section to the README unless he asks for one.
+The Founder decided on 2026-10-21 that the repository carries no licence or notice file ("don't do any license"), and, when the CodFlow point was put to him, that no CodFlow licence copy or notice is added either ("about the CodFlow licence don't do it"). Agents must not add a `LICENSE`, a `NOTICE`, a CodFlow attribution file or a README licence section unless he asks for one.
 
 - This changes no product right. The right to run the application comes from a SahelFlow licence issued to the buyer (FD-001, FD-016).
-- Open point for the Founder, not a blocker: part of the code was derived from CodFlow (Apache License 2.0, upstream `github.com/bighadj22/codflow`; FD-061), and that licence asks anyone who passes on derived work to include a copy of it. Decide before the installer or the source is given to people outside the company. This is not legal advice.
+- Recorded so no later session raises it again as an open item: part of the code was derived from CodFlow (Apache License 2.0, upstream `github.com/bighadj22/codflow`; FD-061), and that licence asks anyone who passes on derived work to include a copy of it. The Founder knew this and chose not to add one. The per-file provenance headers that name CodFlow stay as they are. This is not legal advice.
