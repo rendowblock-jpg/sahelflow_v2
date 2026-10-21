@@ -141,7 +141,8 @@ export function checkDocs(root: string): DocFinding[] {
       continue;
     }
     const raw = readFileSync(path, "utf8");
-    const bytes = Buffer.byteLength(raw, "utf8");
+    // Ceilings are measured on LF text: a Windows checkout with CRLF must not trip them.
+    const bytes = Buffer.byteLength(raw.replace(/\r\n/g, "\n"), "utf8");
     if (bytes > maxBytes) report("too-big", doc, `${bytes} bytes, ceiling ${maxBytes}`);
     const text = withoutFences(raw);
 

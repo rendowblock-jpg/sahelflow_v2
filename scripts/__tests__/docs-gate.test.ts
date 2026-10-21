@@ -95,6 +95,15 @@ describe("docs gate", () => {
     ]);
   });
 
+  it("measures the byte ceiling on LF text, so a CRLF checkout does not trip it", () => {
+    const lines = Array.from({ length: 99 }, () => "x".repeat(19)).join("\n");
+    const lf = `${lines}\n`;
+    expect(Buffer.byteLength(lf)).toBe(1980);
+    expect(Buffer.byteLength(lf.replace(/\n/g, "\r\n"))).toBeGreaterThan(2000);
+    expect(checkDocs(makeTree({ "README.md": lf }))).toEqual([]);
+    expect(checkDocs(makeTree({ "README.md": lf.replace(/\n/g, "\r\n") }))).toEqual([]);
+  });
+
   it("flags an FD id that no heading defines", () => {
     const root = makeTree({ "README.md": "See FD-099 for the rule.\n" });
     expect(checkDocs(root)).toEqual([
