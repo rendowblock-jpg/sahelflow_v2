@@ -223,3 +223,13 @@ describe("migration 0004: existing databases accept prime, souk and reel", () =>
     ]);
   });
 });
+
+describe("the migration files fit in one D1 import chunk", () => {
+  // Measured 21 Oct 2026 on a scratch D1 database holding a copy of staging: the same SQL with its comments stripped (2.6 KB) applied;
+  // padded so that the span from "DROP TABLE storefront_release" to the restore of the allocation rows crossed byte 4096, D1 rolled the whole
+  // import back with "FOREIGN KEY constraint failed". The rows of storefront_receipt_line point at allocation rows that the DROP cascades away,
+  // so a commit between the two statements sees dangling references. Keep each file well under 4096 bytes (comments count).
+  it.each(["0003_template_ids_prime_souk_reel.sql", "0004_template_ids_five_styles.sql"])("%s is under 4000 bytes", (file) => {
+    expect(Buffer.byteLength(readFileSync(join(ROOT, "migrations", file), "utf8"))).toBeLessThan(4000);
+  });
+});

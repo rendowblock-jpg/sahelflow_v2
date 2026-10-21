@@ -1,29 +1,8 @@
--- Prime, Souk and Reel: let an existing Storefront D1 database hold releases of the three new templates.
---
--- schema.sql already allows them, but a database created before this change still carries
---   CHECK(template_id IN ('sahara','atlas','oasis'))
--- on storefront_release, and SQLite cannot alter a CHECK constraint: the table has to be rebuilt.
---
--- DO NOT replace this with the usual "create new, copy, drop old, rename" recipe. It fails in two ways:
---  1. storefront_allocation and storefront_shipping_rule reference storefront_release with ON DELETE CASCADE, and
---     DROP TABLE performs an implicit DELETE that fires those cascades even with PRAGMA defer_foreign_keys = on.
---     Measured on a real D1 database (20 Oct 2026): parent rows kept, every child row silently gone.
---  2. Rows copied into a table with another name never repair the deferred violations of the tables that
---     reference storefront_release without a cascade (storefront_receipt, storefront_allocation_retirement,
---     storefront_pause_operation): SQLite lowers its violation counter only when a row is inserted into a table
---     that carries the parent's name. With any order on file the batch then fails at commit.
--- PRAGMA legacy_alter_table is refused by D1 (the batch is rolled back).
---
--- So: the release rows and the two cascading tables are held in side tables; the old table is dropped; the new one
--- is created under its FINAL name; the held rows go back into it, then into the two cascading tables. The two
--- triggers are created LAST: storefront_release_activate runs on every insert into storefront_release and would
--- otherwise re-activate a paused store and move active_release_id while the rows are being put back.
---
--- The side tables are deliberately NOT dropped first (no DROP TABLE IF EXISTS): if an interrupted run ever left them behind, they may
--- be the only copy of the data, and this file then stops at CREATE TABLE ("already exists") instead of erasing them.
--- Run it ONCE, as one batch:  wrangler d1 execute <database> --remote --file migrations/0004_template_ids_five_styles.sql
--- D1 rolls the whole batch back if a constraint is still violated at the end. Take a Time Travel bookmark first
--- (wrangler d1 time-travel info <database>) and compare row counts of every storefront_* table before and after.
+-- 0004: lets an existing storefront D1 database hold releases of noir, lumen, atelier, pulse and bloom. SQLite cannot alter a CHECK, so storefront_release is rebuilt
+-- through side tables (the usual drop-and-rename deletes every allocation and shipping rule by cascade). Triggers are created LAST.
+-- Run ONCE, as one batch, after a Time Travel bookmark:  wrangler d1 execute <db> --remote --file migrations/0004_template_ids_five_styles.sql
+-- KEEP THIS FILE UNDER 4000 BYTES. D1 commits an import in chunks of about 4 KB; a chunk boundary between the DROP and the restore of
+-- the child rows rolls the whole import back with a FOREIGN KEY error (measured 21 Oct 2026; migration-0004.test.ts has the details).
 
 PRAGMA defer_foreign_keys = on;
 
@@ -51,7 +30,6 @@ CREATE TABLE storefront_release (
   FOREIGN KEY(parent_release_id) REFERENCES storefront_release(release_id)
 );
 
--- No trigger exists on the new table yet, so putting the rows back changes nothing else.
 INSERT INTO storefront_release
   (release_id, storefront_id, parent_release_id, template_id, locale, artifact_json, artifact_digest, request_digest, created_at)
 SELECT release_id, storefront_id, parent_release_id, template_id, locale, artifact_json, artifact_digest, request_digest, created_at
