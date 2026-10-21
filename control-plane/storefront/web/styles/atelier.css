@@ -41,6 +41,7 @@ body[data-voice=atelier] .ax-stamp .sf-price--lg{margin:0;padding:6px;font-size:
 body[data-voice=atelier] .ax-quote{max-width:34ch;text-align:center}
 body[data-voice=atelier] .ax-quote .sf-sub{margin:0;font-size:20px;line-height:1.7;color:var(--sf-accent,var(--foreground));font-weight:700}
 body[data-voice=atelier] .ax-stock:empty{display:none}
+body[data-voice=atelier] .ax-collage .ax-cta{justify-self:center;width:min(100%,360px);justify-content:center}
 body[data-voice=atelier] .ax-story{padding-block:20px var(--sec)}
 body[data-voice=atelier] .ax-story .sf-more{border:0}
 body[data-voice=atelier] .ax-story .sf-desc{font-size:18px;line-height:1.9;white-space:pre-line}

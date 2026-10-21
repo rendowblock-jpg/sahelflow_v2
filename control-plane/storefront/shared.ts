@@ -1,6 +1,8 @@
 import type { StorefrontWorkerEnvironment } from "./types";
 
 export const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
+/** A block type ("faq", "testimonial"): the same pattern the Studio schema uses (two or more characters). It is a label, not an identifier, so it must not need the eight characters ID does. */
+export const BLOCK_TYPE = /^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$/;
 export const SLUG = /^[a-z0-9][a-z0-9-]{2,62}$/;
 export const WILAYA = /^(0[1-9]|[1-5][0-9]|6[0-9])$/;
 export const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
@@ -204,7 +206,7 @@ function validComposition(value: unknown): boolean {
       const block = record(rawBlock);
       if (!block || !exactKeys(block, ["id", "type", "settings"])) return false;
       const blockId = String(block.id ?? "");
-      if (!ID.test(blockId) || ids.has(blockId) || !ID.test(String(block.type ?? "")) || !validSettings(block.settings)) {
+      if (!ID.test(blockId) || ids.has(blockId) || !BLOCK_TYPE.test(String(block.type ?? "")) || !validSettings(block.settings)) {
         return false;
       }
       ids.add(blockId);

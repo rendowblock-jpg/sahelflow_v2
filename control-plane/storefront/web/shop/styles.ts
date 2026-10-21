@@ -99,7 +99,7 @@ function lumenProduct(ctx: Ctx, p: ProductParts): string {
 <header class="lx-top"><div class="sf-wrap"><h1 class="sf-h1 sf-pname" dir="auto">${p.name}</h1>${tag(p)}${p.sub}</div></header>
 <div class="sf-wrap lx-grid">
 <div class="lx-media"><i class="lx-mark" aria-hidden="true"></i>${p.gallery}</div>
-<div class="lx-sheet"><div class="lx-price">${p.priceEl}${p.stock}</div>${spec}${p.chips}${p.variants}${p.form}</div>
+<div class="lx-sheet"><div class="lx-price">${p.priceEl}${p.stock}</div>${cta(ctx, p, "lx-cta lx-cta--sheet")}${spec}${p.chips}${p.variants}${p.form}</div>
 <div class="lx-notes">${p.details}</div>
 </div>
 ${p.extras}${p.more}${p.contact}
@@ -119,7 +119,7 @@ function atelierProduct(ctx: Ctx, p: ProductParts): string {
   const list = items.length ? `<section class="ax-steps"><div class="sf-wrap"><ol>${items.join("")}</ol></div></section>` : "";
   return `<article class="ax" data-sold="${p.sold ? "1" : "0"}">
 <div class="sf-wrap ax-top"><h1 class="sf-h1 sf-pname ax-name" dir="auto">${p.name}</h1>${tag(p)}</div>
-<div class="sf-wrap ax-collage"><figure class="ax-photo">${p.gallery}<i class="ax-tape" aria-hidden="true"></i></figure><div class="ax-stamp">${p.priceEl}</div>${p.sub ? `<div class="ax-quote">${p.sub}</div>` : ""}<div class="ax-stock">${p.stock}</div></div>
+<div class="sf-wrap ax-collage"><figure class="ax-photo">${p.gallery}<i class="ax-tape" aria-hidden="true"></i></figure><div class="ax-stamp">${p.priceEl}</div>${p.sub ? `<div class="ax-quote">${p.sub}</div>` : ""}<div class="ax-stock">${p.stock}</div>${cta(ctx, p, "ax-cta")}</div>
 ${p.details ? `<section class="ax-story"><div class="sf-wrap sf-rv">${openDetails(p.details)}</div></section>` : ""}
 ${list}
 <section class="ax-order"><div class="sf-wrap sf-wrap--narrow">${p.variants}${p.form}</div></section>
