@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, extname, isAbsolute, resolve } from "node:path";
+import { checkDocs } from "./docs-gate";
 
 interface Finding {
   kind: "missing" | "link" | "drift";
@@ -178,26 +179,8 @@ const requiredFiles = [
   "README.md",
   "AGENTS.md",
   "CHANGELOG.md",
-  "documentation/README.md",
-  "documentation/product/PRODUCT.md",
-  "documentation/product/EXPERIENCE.md",
-  "documentation/product/DECISIONS.md",
-  "documentation/system/ARCHITECTURE.md",
-  "documentation/system/CURRENT_STATE.md",
-  "documentation/system/ROADMAP.md",
-  "documentation/operations/WORKFLOW.md",
-  "documentation/operations/WORKING_MEMORY.md",
-  "documentation/operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md",
-  "documentation/operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md",
-  "documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md",
-  "documentation/operations/UI_UX_TRIAGE_LEDGER.md",
-  "documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md",
-  "documentation/operations/TRANSFORMATION_REGISTER.md",
-  "documentation/product/INTERFACE_SYSTEM.md",
-  "documentation/operations/TRANSFORMATION_HANDOFF.md",
-  "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md",
+  "documentation/MANIFEST.json",
   "documentation/security/phase4-vulnerability-triage.json",
-  "documentation/research/RESEARCH.md",
   ".github/phase-checkpoints/phase3-durable-effects.json",
   ".github/phase-checkpoints/phase3-surface-inventory.json",
   ".github/phase-checkpoints/phase3-ai-actions.json",
@@ -260,14 +243,6 @@ const markdownFiles = walkMarkdown(repoRoot);
 const activeDocumentationFiles = walkMarkdown(
   resolve(repoRoot, "documentation"),
 );
-if (activeDocumentationFiles.length !== 25) {
-  report(
-    "drift",
-    "documentation/",
-    `expected 25 active Markdown files, found ${activeDocumentationFiles.length}`,
-  );
-}
-
 const markdownLinkPattern = /\[[^\]]*\]\(([^)]+)\)/g;
 for (const absoluteFile of markdownFiles) {
   const relativeFile = absoluteFile
@@ -289,6 +264,10 @@ for (const absoluteFile of markdownFiles) {
   }
 }
 
+for (const finding of checkDocs(repoRoot)) {
+  report("drift", finding.file, `[docs-gate:${finding.rule}] ${finding.detail}`);
+}
+
 const packagePath = resolve(repoRoot, "package.json");
 if (existsSync(packagePath)) {
   const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as {
@@ -301,85 +280,6 @@ if (existsSync(packagePath)) {
   }
 }
 
-requireMarkers("README.md", [
-  "documentation/README.md",
-  "Phase 5 closure",
-  "PR #220",
-  "Phase 6 — Arabic, RTL and accessibility parity",
-  "issues #201, #214, #221, #226 and #230",
-  "`1.0.0-internal.15`",
-  "31657621918",
-  "Founder acceptance remains open",
-]);
-requireMarkers("AGENTS.md", [
-  "one active implementation agent at a time",
-  "Verified product frontier",
-  "Exact next outcome",
-  "selected Level 1/2/3 gates",
-  "issue #221",
-  "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734",
-]);
-requireMarkers("documentation/README.md", [
-  "PR #250",
-  "PR #251",
-  "agent/internal-16-wave-4",
-  "`1.0.0-internal.15`",
-  "31657621918",
-  "Phase 6 — Arabic, RTL and accessibility parity",
-  "PR #220",
-  "Issues #221, #226 and #230 remain open",
-]);
-requireMarkers("documentation/product/DECISIONS.md", [
-  "## FD-028",
-  "## FD-029",
-  "## FD-030",
-  "## FD-031",
-  "## FD-032",
-  "## FD-033",
-  "Whole-product AAA rule",
-  "The Founder decides whether the Web Agent or Desktop Agent is active",
-]);
-requireMarkers("documentation/system/ROADMAP.md", [
-  "## Phase 3 — providers, inbox, AI and automations",
-  "## Phase 5 — whole-product AAA desktop experience",
-  "## Phase 6 — Arabic, RTL and accessibility parity",
-  "## Phase 9 — release certification and launch readiness",
-  "complete reconnaissance",
-  "expected-head merge",
-]);
-requireMarkers("documentation/system/CURRENT_STATE.md", [
-  "Phase 5 merged result and evidence",
-  "Active Phase 6 frontier",
-  "Internal.14 publication evidence",
-  "FD-031 exception boundary",
-  "FD-032 Founder-only offline checkpoint boundary",
-  "issue #214",
-  "not yet a commercially certified Stable release",
-]);
-requireMarkers("documentation/operations/WORKFLOW.md", [
-  "one active implementation agent; audit-first; batch remediation; tiered CI",
-  "Complete phase/package audit",
-  "Phase Problem Register",
-  "Level 1 — Task Gate",
-  "Frozen review and batch repair",
-  "Level 2 — Phase Checkpoint",
-  "Level 3 — Major Full Checkpoint",
-  "Whole-product AAA frontend program",
-]);
-requireMarkers("documentation/operations/WORKING_MEMORY.md", [
-  "Wave 4 — what is implemented",
-  "Exact next-session order",
-  "Hard rules",
-  "#221, #226, #230",
-  "31657621918",
-  "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734",
-]);
-requireMarkers("documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md", [
-  "Section 6 — Conversion rules (how a row changes class)",
-  "Installed conversion only by observation",
-  "No cross-SHA evidence mixing",
-  "J-01",
-]);
 requireMarkers("documentation/security/phase4-vulnerability-triage.json", [
   "authorityScope",
   "exactHeadAuditAuthority",
@@ -387,58 +287,13 @@ requireMarkers("documentation/security/phase4-vulnerability-triage.json", [
   "emptyFindingsMeaning",
   "bun audit --production",
 ]);
-requireMarkers("documentation/research/RESEARCH.md", [
-  "Research-first quality rule",
-  "No-AI-slop frontend rule",
-  "Research-to-implementation gate",
-  "NIST SP 800-218",
-]);
 requireMarkers("scripts/sf-verify.ts", [
   "file-level failure: import, collection, setup or hook",
   "failureMessage?: string",
   ".sf-vitest-failures.txt",
 ]);
 
-const expectedPhase = "Phase 6 — Arabic, RTL and accessibility parity";
-for (const relativePath of [
-  "documentation/README.md",
-  "documentation/system/ROADMAP.md",
-  "documentation/system/CURRENT_STATE.md",
-  "documentation/operations/WORKING_MEMORY.md",
-]) {
-  const content = contentOf(relativePath);
-  if (!content) continue;
-  const phase = /^> \*\*Active product phase:\*\* (.+)$/m
-    .exec(content)?.[1]
-    ?.trim();
-  if (phase !== expectedPhase) {
-    report(
-      "drift",
-      relativePath,
-      `active product phase must be '${expectedPhase}', found '${phase ?? "missing"}'`,
-    );
-  }
-}
-
-const expectedPhase5ProductBaseline =
-  "cf6bd90db27b3832c860a7c848ce3a0b8e5a3734";
 const expectedProtectedBase = "e9c92f08f39e8d87ddfd72d2e698418ae81fc084";
-for (const relativePath of [
-  "AGENTS.md",
-  "documentation/README.md",
-  "documentation/system/ROADMAP.md",
-  "documentation/system/CURRENT_STATE.md",
-  "documentation/operations/WORKING_MEMORY.md",
-]) {
-  const content = contentOf(relativePath);
-  if (content && !content.includes(expectedPhase5ProductBaseline)) {
-    report(
-      "drift",
-      relativePath,
-      "Phase 5 application-changing protected baseline is missing",
-    );
-  }
-}
 
 const stalePhase3FrontierMarkers = [
   "PR #203 remains unmerged",
@@ -781,5 +636,5 @@ if (findings.length > 0) {
 }
 
 console.log(
-  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} active documentation authorities; Phase 5 protected-source/browser closed; Phase 6 active; retained evidence tracked in issues #201, #214, #221, #226 and #230).`,
+  `Documentation authority audit passed (${markdownFiles.length} Markdown files; ${activeDocumentationFiles.length} under documentation/ checked against documentation/MANIFEST.json).`,
 );
