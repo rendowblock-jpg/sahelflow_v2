@@ -55,6 +55,8 @@ afterEach(() => {
 
 function openDatabase(): DatabaseSync {
   const database = new SqliteDatabase(":memory:");
+  // D1 enforces foreign keys; SQLite leaves them off unless asked.
+  database.exec("PRAGMA foreign_keys = ON");
   database.exec(readFileSync(join(process.cwd(), "control-plane/backup/schema.sql"), "utf8"));
   opened.push(database);
   return database;
@@ -497,6 +499,9 @@ describe("bootstrapBackupWorkspace: first enrolment", () => {
     const { database, env } = setup();
     const response = await enrol(env, claims());
     expect(response.status).toBe(201);
+    // The response carries the new token: it must never be cached or sniffed.
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
     const body = await bodyOf(response);
     expect(body).toMatchObject({ workspaceId: WORKSPACE, backupBytes: 1_000_000, licenseType: "trial" });
     const token = body.backupToken as string;
@@ -537,6 +542,7 @@ describe("bootstrapBackupWorkspace: refreshing an enrolled workspace", () => {
     const response = await enrol(env, claims());
     expect(response.status).toBe(200);
     const body = await bodyOf(response);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(body).toMatchObject({ status: "refreshed", workspaceId: WORKSPACE });
     const newToken = body.backupToken as string;
     expect(newToken).not.toBe(oldToken);
@@ -603,7 +609,7 @@ describe("bootstrapBackupWorkspace: recovery transfer to a new installation", ()
   it("moves the workspace to the new installation and key when the epoch is higher", async () => {
     const { database, env } = setup();
     const oldToken = await tokenOf(await enrol(env, claims()));
-    const response = await enrol(env, moved(), { signingKey: OTHER_SIGNING_KEY, recoveryTransfer: true });
+    const response = await enrol(env, moved({ backupBytes: 2_000_000 }), { signingKey: OTHER_SIGNING_KEY, recoveryTransfer: true });
     expect(response.status).toBe(200);
     const body = await bodyOf(response);
     expect(body).toMatchObject({ status: "recovered", workspaceId: WORKSPACE });
@@ -612,6 +618,7 @@ describe("bootstrapBackupWorkspace: recovery transfer to a new installation", ()
       device_binding: OTHER_DEVICE,
       desktop_signing_public_key: OTHER_SIGNING_KEY,
       entitlement_revocation_epoch: 2,
+      backup_bytes: 2_000_000,
     });
     expect(await authenticates(env, oldToken)).toBe(false);
     expect(await authenticates(env, body.backupToken as string)).toBe(true);
@@ -667,5 +674,128 @@ describe("bootstrapBackupWorkspace: a write that loses a race", () => {
     expect(after?.installation_id).toBe(INSTALLATION);
     expect(after?.desktop_signing_public_key).toBe(SIGNING_KEY);
     expect(after?.entitlement_revocation_epoch).toBe(epochAfter);
+  });
+});
+
+describe("bootstrapBackupWorkspace: more writes that lose a race", () => {
+  // Same idea as above: the interfering change lands after the Worker has decided, so only the
+  // UPDATE's own WHERE clause can stop a stale write. The row must be exactly as the other
+  // request left it: nothing of ours applied, and no new token.
+  const recovery = { signingKey: OTHER_SIGNING_KEY, recoveryTransfer: true };
+  const races: Array<[string, string, Claims, { signingKey?: string; recoveryTransfer?: unknown }]> = [
+    ["a refresh while the installation changes", "UPDATE backup_workspace SET installation_id = '00112233445566778899aabbccddeeff'", claims(), {}],
+    ["a refresh while the signing key changes", `UPDATE backup_workspace SET desktop_signing_public_key = '${OTHER_SIGNING_KEY}'`, claims(), {}],
+    ["a refresh while the device changes", `UPDATE backup_workspace SET device_binding = '${OTHER_DEVICE}'`, claims(), {}],
+    ["a refresh while the product major changes", "UPDATE backup_workspace SET product_major = 2", claims(), {}],
+    ["a recovery while the licence changes", "UPDATE backup_workspace SET license_id = 'license-00000009'", moved(), recovery],
+  ];
+
+  it.each(races)("applies nothing for %s", async (_label, interference, next, options) => {
+    const database = openDatabase();
+    let armed = false;
+    let left: BackupWorkspaceRow | undefined;
+    const env = environment(database, (sql) => {
+      if (armed && sql.trimStart().startsWith("UPDATE backup_workspace")) {
+        armed = false;
+        database.exec(interference);
+        left = workspaceRow(database);
+      }
+    });
+    await enrol(env, claims());
+    armed = true;
+    const response = await enrol(env, next, options);
+    expect(left).toBeDefined();
+    expect(response.status).toBe(409);
+    expect(await bodyOf(response)).toEqual({ error: "entitlement_refresh_conflict" });
+    expect(workspaceRow(database)).toEqual(left);
+  });
+});
+
+describe("bootstrapBackupWorkspace: what it stores", () => {
+  it("stores the quota, type, product major, features and expiry the licence states", async () => {
+    const { database, env } = setup();
+    await enrol(env, claims({ backupBytes: 1_000_000 }));
+    expect(workspaceRow(database)).toMatchObject({
+      backup_bytes: 1_000_000,
+      license_type: "trial",
+      product_major: 1,
+      features_json: JSON.stringify(["sahelflow.backup"]),
+      entitlement_expires_at: IN_A_YEAR,
+    });
+  });
+
+  it("replaces the stored quota on a refresh with the same licence", async () => {
+    const { database, env } = setup();
+    await enrol(env, claims());
+    const response = await enrol(env, claims({ backupBytes: 2_000_000 }));
+    expect(response.status).toBe(200);
+    expect(workspaceRow(database)?.backup_bytes).toBe(2_000_000);
+  });
+
+  it("replaces the stored quota, type, features and expiry on an upgrade", async () => {
+    const { database, env } = setup();
+    await enrol(env, claims());
+    const features = ["sahelflow.backup", "sahelflow.complete"];
+    const response = await enrol(env, permanent({ licenseId: OTHER_LICENSE, backupBytes: 5_000_000_000, features }));
+    expect(response.status).toBe(200);
+    expect(workspaceRow(database)).toMatchObject({
+      license_id: OTHER_LICENSE,
+      license_type: "permanent",
+      backup_bytes: 5_000_000_000,
+      features_json: JSON.stringify(features),
+      entitlement_expires_at: null,
+    });
+  });
+
+  it("answers 409 entitlement_refresh_rejected when the stored workspace belongs to another product major", async () => {
+    const { database, env } = setup();
+    await insertWorkspace(database, TOKEN, { product_major: 2 });
+    const response = await enrol(env, claims());
+    expect(response.status).toBe(409);
+    expect(await bodyOf(response)).toEqual({ error: "entitlement_refresh_rejected" });
+  });
+
+  // The expiry is stored as written and read back by SQL's datetime(). An expiry the Worker accepts
+  // but SQL cannot read would enrol a workspace that could never authenticate (see entitlement-expiry.ts).
+  it.each(["2099-01-01T00:00:00Z", "2099-01-01T02:00:00+02:00", "2099-01-01T00:00:00.5Z"])(
+    "a licence that expires %s can enrol and then authenticate",
+    async (expiresAt) => {
+      const { env } = setup();
+      const response = await enrol(env, claims({ expiresAt }));
+      expect(response.status).toBe(201);
+      expect(await authenticates(env, await tokenOf(response))).toBe(true);
+    },
+  );
+});
+
+describe("bootstrapBackupWorkspace: more licences it refuses", () => {
+  // Every case is validly signed, so only the claim check can refuse it.
+  const rejected: Array<[string, () => unknown]> = [
+    ["another domain", () => sign(claims({ domain: "sahelflow.license.entitlement.v1" }))],
+    ["another format version", () => sign(claims({ formatVersion: 1 }))],
+    ["an installation id in the wrong format", () => sign(claims({ installationId: "installation" }))],
+    ["a licence id that is too short", () => sign(claims({ licenseId: "short" }))],
+    ["a signature that is not base64", () => ({ ...sign(claims()), signature: "not base64!!" })],
+    ["no signature", () => ({ claims: claims() })],
+    ["a negative revocation epoch", () => sign(claims({ revocationEpoch: -1 }))],
+    ["a fractional revocation epoch", () => sign(claims({ revocationEpoch: 1.5 }))],
+    ["no shop slot", () => sign(claims({ shopSlots: 0 }))],
+    ["no member allowance", () => sign(claims({ memberLimit: 0 }))],
+    ["no device allowance", () => sign(claims({ deviceLimit: 0 }))],
+    ["a negative backup quota", () => sign(claims({ backupBytes: -1 }))],
+    ["a fractional backup quota", () => sign(claims({ backupBytes: 1.5 }))],
+    ["no features at all", () => sign(claims({ features: [] }))],
+    ["a feature that is not text", () => sign(claims({ features: [5] as unknown as string[] }))],
+  ];
+
+  it.each(rejected)("answers 403 entitlement_rejected for a licence with %s", async (_label, build) => {
+    const { database, env } = setup();
+    const response = await bootstrapBackupWorkspace(
+      post({ entitlement: build(), desktopSigningPublicKey: SIGNING_KEY }),
+      env,
+    );
+    expect(response.status).toBe(403);
+    expect(await bodyOf(response)).toEqual({ error: "entitlement_rejected" });
+    expect(workspaceCount(database)).toBe(0);
   });
 });
