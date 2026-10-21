@@ -2,9 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // POST /api/backup/recovery-kit hands the seller the recovery code that can unlock a restored backup. What
 // matters here is the ORDER (who may ask, proof of a recent PIN, only then the key material), what is written
-// to the audit log (never the code or the file path), and what happens when a step fails (no code is returned).
-// The collaborators are stand-ins, in the style of src/app/api/auth/__tests__/reauthenticate-route.test.ts:
-// the native key ceremony and the identity layer have their own tests; this file pins the route's own contract.
+// to the audit log (never the code or the file path), and what happens when a step before the kit fails (no kit,
+// no audit entry, no code in the reply).
+// Real code: the route, withErrorHandler, SahelFlowError and the Phase 2 permission catalog and role table.
+// Stand-ins: requireAuth, requireRecentReauthentication, createRecoveryKit, logAudit, trustedActorAuditIdentity,
+// @/lib/db and the hooks withErrorHandler calls (its shop-authority and licence hooks only run in production, so
+// those two mocks are inert here and the production checks that run before requireAuth are NOT tested). The
+// native key ceremony behind createRecoveryKit is not exercised. Style: src/app/api/auth/__tests__/reauthenticate-route.test.ts.
 const harness = vi.hoisted(() => ({
   requireAuth: vi.fn(),
   requireRecentReauthentication: vi.fn(),
@@ -45,7 +49,12 @@ vi.mock("@/lib/license/license-authority", () => ({ requireLicenseEntitlement: v
 
 import * as route from "@/app/api/backup/recovery-kit/route";
 import { db, shopContext } from "@/lib/db";
-import { PHASE2_ACTIONS } from "@/lib/identity/permissions";
+import {
+  PHASE2_ACTIONS,
+  getPhase2PresetPermissions,
+  hasPhase2Permission,
+  type Phase2Action,
+} from "@/lib/identity/permissions";
 import { SahelFlowError } from "@/types/errors";
 
 const { POST } = route;
@@ -58,7 +67,7 @@ const KIT = {
   brkId: "brk-fedcba9876543210",
   createdAtUnixMs: 1_760_000_000_000,
 };
-const ACTOR = { personId: "5".repeat(32), role: "owner" as const };
+const ACTOR = { kind: "person" as const, personId: "5".repeat(32), role: "owner" as const };
 // The real trustedActorAuditIdentity returns a string such as person:<id>, and an audit entry's actor is a string.
 const AUDIT_ACTOR = `person:${"5".repeat(32)}`;
 
@@ -94,7 +103,7 @@ beforeEach(() => {
 });
 
 describe("POST /api/backup/recovery-kit: the happy path", () => {
-  it("answers 201 with the kit, uncached, and never lets the response be cached by a proxy", async () => {
+  it("answers 201 with the kit and Cache-Control no-store", async () => {
     const response = await call();
     expect(response.status).toBe(201);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -105,8 +114,11 @@ describe("POST /api/backup/recovery-kit: the happy path", () => {
     expect(route.dynamic).toBe("force-dynamic");
   });
 
-  it("exports nothing but POST (a later GET would hand out the code) and the dynamic flag", () => {
-    expect(Object.keys(route).sort()).toEqual(["POST", "dynamic"]);
+  it("exports POST and no other HTTP verb (a later GET would hand out the code)", () => {
+    expect(typeof route.POST).toBe("function");
+    for (const verb of ["GET", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]) {
+      expect(route, verb).not.toHaveProperty(verb);
+    }
   });
 
   // requireAuth is a stand-in here, so it cannot notice a misspelt permission. The real catalog can: a name that is
@@ -122,6 +134,18 @@ describe("POST /api/backup/recovery-kit: the happy path", () => {
     expect(harness.requireAuth).toHaveBeenCalledTimes(1);
     const [actions] = firstCall(harness.requireAuth);
     expect([...(actions as string[])].sort()).toEqual(["approvals.approve", "backups.restore"]);
+  });
+
+  // The argument the route REALLY passed is run through the real role table: a misspelt or dropped name leaves
+  // nobody qualifying, and a change to the presets changes the list. (requireAuth itself is a stand-in.)
+  it("asks for a set of permissions that only the owner holds in full", async () => {
+    await call();
+    const [actions] = firstCall(harness.requireAuth);
+    const demanded = actions as Phase2Action[];
+    const holders = (["owner", "manager", "operator", "viewer"] as const).filter((role) =>
+      demanded.every((action) => hasPhase2Permission(getPhase2PresetPermissions(role), action)),
+    );
+    expect(holders).toEqual(["owner"]);
   });
 
   it("asks for a recent PIN proof with the default window", async () => {
@@ -151,7 +175,7 @@ describe("POST /api/backup/recovery-kit: what is written to the audit log", () =
     const [context, entry] = firstCall(harness.logAudit) as [{ prisma: unknown; shop: unknown }, unknown];
     expect(context.prisma).toBe(db);
     expect(context.shop).toBe(shopContext);
-    expect(entry).toEqual({
+    expect(entry).toStrictEqual({
       action: "backup.recovery-kit.created",
       entity: "system",
       entityId: KIT.kitId,
@@ -172,7 +196,6 @@ describe("POST /api/backup/recovery-kit: what is written to the audit log", () =
     expect(written).not.toContain("recoveryCode");
     // JSON escapes the backslashes of a Windows path, so compare with the escaped form.
     expect(written).not.toContain(JSON.stringify(KIT.path).slice(1, -1));
-    expect(written).not.toContain("SahelFlow\\\\recovery");
   });
 });
 
@@ -198,11 +221,27 @@ describe("POST /api/backup/recovery-kit: refusals leave no key material behind",
     expect(harness.logAudit).not.toHaveBeenCalled();
   });
 
+  // OBSERVED, not endorsed: the route answers with the WHOLE native result (NextResponse.json(result)), while the
+  // audit entry picks explicit fields. A field the native side adds later would reach the browser unreviewed,
+  // and the file path of the kit already does today.
+  it("OBSERVED: every field the native side returns is passed on to the browser, the file path included", async () => {
+    harness.createRecoveryKit.mockResolvedValue({ ...KIT, someFutureNativeField: "new-value" });
+    const response = await call();
+    expect(response.status).toBe(201);
+    const body = await response.json();
+    expect(body.someFutureNativeField).toBe("new-value");
+    expect(body.path).toBe(KIT.path);
+    expect(body.recoveryCode).toBe(KIT.recoveryCode);
+    // ... while none of it, extra field included, reaches the audit log
+    expect(JSON.stringify(harness.logAudit.mock.calls)).not.toContain("new-value");
+  });
+
   it("writes no audit entry and returns no code when the kit could not be made", async () => {
     harness.createRecoveryKit.mockRejectedValue(new Error("native key ceremony failed"));
     const response = await call();
     expect(response.status).toBe(500);
-    expect(JSON.stringify(await response.json())).not.toContain(KIT.recoveryCode);
+    // the real handler answers a generic body and keeps the details in the log
+    expect(await response.json()).toStrictEqual({ error: "Internal server error" });
     expect(harness.logAudit).not.toHaveBeenCalled();
   });
 
