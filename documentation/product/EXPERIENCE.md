@@ -1,11 +1,11 @@
 # SahelFlow 1.0 — Experience and Capability Contract
 
 > **Status:** Active experience authority
-> **Last consolidated:** 2026-08-26
+> **Last consolidated:** 2026-10-21
 > **Purpose:** Define every required capability, journey, operational state and
 > AAA user-experience standard in one place.
 
-A capability may be reused, hardened, migrated, replaced or newly implemented. Its presence in this atlas does not claim the current code is ready.
+A capability may be reused, hardened, migrated, replaced or newly implemented. Its presence in this atlas does not claim the current code is ready: this is the requirement. Per-capability and per-journey evidence (what is proven at source, installed, real-phone and live-provider level) is in `../operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md` and the WhatsApp and AI ledgers; the Founder-installed record is in `../system/CURRENT_STATE.md`.
 
 ## Experience thesis — quiet power
 
@@ -536,7 +536,7 @@ The presence of an adapter, mock, contract suite or open-source precedent is not
 - immutable publish;
 - release history;
 - rollback;
-- default hostname and certified custom subdomain;
+- default address `shop.sahelflow.com/<slug>` (FD-074); a custom domain stays conditional on its own certification;
 - domain/TLS status;
 - content-addressed media.
 
@@ -554,7 +554,8 @@ The presence of an adapter, mock, contract suite or open-source precedent is not
 - order receipt/status;
 - secure tracking;
 - WhatsApp confirmation/contact where appropriate;
-- Arabic/French/English;
+- Arabic first, with French and English (FD-077);
+- product photos hosted by SahelFlow (FD-076);
 - accessibility and performance;
 - SEO, Open Graph, structured data, sitemap and canonical/hreflang where applicable.
 
