@@ -50,7 +50,7 @@
       "maxBytes": 32800
     },
     "documentation/product/INTERFACE_SYSTEM.md": {
-      "maxBytes": 15100
+      "maxBytes": 16200
     },
     "documentation/product/PRODUCT.md": {
       "maxBytes": 22300
@@ -94,7 +94,6 @@
     "documentation/operations/UI_UX_TRIAGE_LEDGER.md",
     "documentation/operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md",
     "documentation/product/DECISIONS.md",
-    "documentation/product/INTERFACE_SYSTEM.md",
     "documentation/product/PRODUCT.md",
     "documentation/research/RESEARCH.md",
     "documentation/system/ARCHITECTURE.md",
