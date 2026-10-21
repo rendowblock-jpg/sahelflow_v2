@@ -35,6 +35,10 @@ bun run sf-audit       # documentation gate and release frontier
 
 Rust, MSI and installed-app checks run only in GitHub Actions (`.github/workflows/`). A change reaches `main` through a pull request whose required gates pass on its exact head.
 
+## Licence
+
+Proprietary, all rights reserved ([`LICENSE.md`](LICENSE.md)). Third-party notices, including the CodFlow attribution, are in [`NOTICE.md`](NOTICE.md).
+
 ## Documentation
 
 Start at [`AGENTS.md`](AGENTS.md) for the rules, then [`documentation/README.md`](documentation/README.md) for the map. Per-release history is in [`CHANGELOG.md`](CHANGELOG.md).

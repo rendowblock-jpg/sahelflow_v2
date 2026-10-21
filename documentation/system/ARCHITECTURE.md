@@ -27,7 +27,7 @@ This specification is the target; this table says where each plane's code is, so
 | Plane | Where | Notes |
 |---|---|---|
 | 2.1 Windows desktop | `src/` (app), `src-tauri/` (native shell and installer), `sidecars/` | |
-| 2.2 Cloudflare control plane | `control-plane/licensing`, `control-plane/backup`, `control-plane/connected`, `control-plane/storefront` | One Worker each. Each has a D1 database; an R2 bucket is bound only in `backup`; only `licensing` has a custom domain. No Queues or Durable Objects are configured in any of them |
+| 2.2 Cloudflare control plane | `control-plane/licensing`, `control-plane/backup`, `control-plane/connected`, `control-plane/storefront` | One Worker each. Only `licensing` has a committed `wrangler.toml`; the other three have `wrangler.jsonc.example` files, so for them this row reads the examples. Each has a D1 database; an R2 bucket is bound only in `backup`; only `licensing` has a custom domain. No Queues or Durable Objects appear in any of those files |
 | 2.3 Relay and projections | `control-plane/connected` | |
 | 2.4 Zero-knowledge backup | `control-plane/backup`, `src-tauri/src/backup_recovery` | |
 | 2.5 Hosted storefront | `control-plane/storefront` | Which public pages, hosted photos and templates are built is read from that folder, not from this document |

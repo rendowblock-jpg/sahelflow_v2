@@ -46,7 +46,7 @@ No lower layer silently weakens a higher one. Only the Founder's chat messages a
 
 - **Free:** read anything; create branches and push to them; open pull requests; watch CI and read logs; post evidence comments.
 - **Ask first (one "go" covers that one action):** merge a pull request; dispatch a signed build; delete releases, tags or branches; change repository settings, branch protection, rulesets, secrets or Actions permissions; touch `sahelflow.version.json` or `.github/release-requests/*` (merging those starts a signed release).
-- **Never:** bypass or weaken a check; force-merge or force-push; use a waiver; retry a failed gate blindly (a failure naming a service the diff cannot reach gets one re-run, with the evidence recorded first; a second identical failure is a defect); weaken Rust `--locked`, updater keys or release-source guards.
+- **Never:** bypass or weaken a check; force-merge or force-push; use a waiver; retry a failed gate blindly (a failure naming a service the diff cannot reach gets one re-run, with the evidence recorded first; a second identical failure is a defect); remove `--locked` from the Rust checks that use it, or weaken updater keys or release-source guards.
 - Never put a secret in chat, source, tests, issues or evidence. Scan diffs before committing.
 - One active implementation agent at a time (FD-029: the Founder decides which agent is active). If another session is working, do not edit its branches or pull requests: read the open pull requests and branches before creating your own, and never push to a branch you did not create.
 

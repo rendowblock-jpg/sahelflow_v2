@@ -99,7 +99,7 @@ The exact final head requires a separated adversarial code review covering crypt
 
 ## Hosted storefront public edge
 
-Added 2026-10-21. The storefront Worker (`control-plane/storefront`) is the one SahelFlow surface that accepts unauthenticated traffic from the public internet, so it is modelled separately from the desktop. Controls below were read from the code on the date above; a control that is not named here is not claimed.
+Added 2026-10-21. The storefront Worker (`control-plane/storefront`) is the surface that accepts public checkout traffic from buyers, so it is modelled separately from the desktop. (The licensing Worker's health and trial endpoints and the marketing site also answer public requests; they are outside this section.) Controls below were read from the code on the date above; a control that is not named here is not claimed.
 
 **Assets:** the immutable release artifact (public catalog), cloud stock allocation, and the sealed checkout receipts that carry a customer's name, phone and address to the seller's desktop.
 

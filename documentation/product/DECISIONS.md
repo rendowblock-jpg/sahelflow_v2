@@ -19,6 +19,7 @@ Entries are ordered by number, not by date, and the newest numbers are at the en
 
 ## Index (newest first)
 
+- FD-080 — Source licence: proprietary, all rights reserved (2026-10-21, ADOPTED; form chosen under delegation)
 - FD-079 — Per-machine Windows install (2026-10-18, ADOPTED under delegation)
 - FD-078 — Storefront templates Prime, Souk and Reel (2026-10-20, ADOPTED)
 - FD-077 — Arabic-first storefront (2026-10-19, ADOPTED)
@@ -820,7 +821,7 @@ This decision records the Founder’s explicit 2026-08-25 direction after accept
 ### Execution discipline and supersession
 
 - Heavy builds, Rust, MSI and full validation run in GitHub Actions. This machine is limited to lightweight inspection/edits and the real installed/provider observations that CI cannot prove.
-- A reproduced defect opens one bounded root-cause package and affected siblings, selected Level 1/2/3 gates, adversarial review and expected-head merge; deterministic failures are never retried away.
+- A reproduced defect opens one bounded root-cause package and affected siblings, selected gates [editorial note, 2026-10-21: the "Level 1/2/3" scheme is no longer used; read the risk-selected gates of `../operations/WORKFLOW.md` section 5], adversarial review and expected-head merge; deterministic failures are never retried away.
 - This decision supersedes FD-033’s historical Internal.16 exact-next-session sequence and any lower document that still says Founder Internal.24 inspection is next.
 - It preserves FD-030’s distinction between source conformance and live certification, FD-033’s assurance meaning, FD-044’s exact Internal.25 release authority, the Product/Experience/Architecture launch gates and every protected invariant.
 
@@ -1298,3 +1299,11 @@ Decided by the agent under the Founder's delegation of 2026-10-18 (the Founder m
 - `src-tauri/src/packaged_runtime.rs` treats the Program Files copy as the trust anchor for the server code that holds decrypted shop data; a per-user install would put that code where any program running as the user can write.
 - `windows-release-build-contract` pins `perMachine`, and no CI lane installs `Setup.exe` over an older install.
 - Updates with no prompt need a small update service running with system rights. That is its own project, to be designed and authorized separately.
+
+## FD-080 — Source licence: proprietary, all rights reserved (2026-10-21, ADOPTED; form chosen under delegation)
+
+The Founder asked on 2026-10-21 for a licence for the SahelFlow repository if it was free and fast. The agent chose the form under that delegation: the source stays proprietary with all rights reserved (`../../LICENSE.md`), because SahelFlow is sold (FD-012) and an open-source licence would give it away. Third-party material keeps its own licences; the CodFlow attribution and the Apache License 2.0 text are in `../../NOTICE.md` (FD-061).
+
+- This governs the source in the repository. The right to run the application comes from a SahelFlow licence issued to the buyer (FD-001, FD-016).
+- The copyright holder is written as "SahelFlow", the same holder the public site's footer and `Cargo.toml` already use. The Founder should replace it with his legal name or entity, and may choose a different licence with a new numbered decision.
+- This is not legal advice.

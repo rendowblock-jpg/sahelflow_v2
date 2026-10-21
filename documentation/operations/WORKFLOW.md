@@ -114,4 +114,4 @@ The one exposure no check closes is `main` moving during the roughly 14-minute b
 
 ## 13. Hard prohibitions
 
-The permission rules are in `../../AGENTS.md`. In addition: no cross-SHA evidence mixing; no retry-away of deterministic red; no hidden product change inside release-authority work; no destructive reset of the Founder's evidence or state for convenience; no branch-only signed release; no weakening of updater, signing, Rust `--locked` or release-source guards; no claim that automation equals Founder human acceptance.
+The permission rules are in `../../AGENTS.md`. In addition: no cross-SHA evidence mixing; no retry-away of deterministic red; no hidden product change inside release-authority work; no destructive reset of the Founder's evidence or state for convenience; no branch-only signed release; no weakening of updater, signing or release-source guards, and no removing `--locked` from the Rust checks that use it; no claim that automation equals Founder human acceptance.
