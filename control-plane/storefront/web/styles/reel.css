@@ -4,7 +4,7 @@
    paper ticket with notched sides. CSS only in this file; the motion script (client/reel.ts) is a separate, optional file. */
 @font-face{font-family:"Reel Display";src:url(__SF_FONT_archivo-cond-800-latin__) format("woff2");font-weight:800;font-display:swap;unicode-range:U+0020-007E,U+00A0-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2013-2014,U+2018-201A,U+201C-201E,U+2022,U+2026,U+20AC,U+2122,U+2212,U+202F}
 @font-face{font-family:"Reel Ruqaa";src:url(__SF_FONT_arefruqaa-700-arabic__) format("woff2");font-weight:700;font-display:swap;unicode-range:U+0600-06FF,U+200C-200F,U+2066-2069,U+066A-066C,U+FDF2}
-@font-face{font-family:"Reel Text";src:url(__SF_FONT_plexarabic-400-arabic__) format("woff2");font-weight:300 500;font-display:swap;unicode-range:U+0600-06FF,U+200C-200F,U+2066-2069,U+066A-066C,U+FDF2}
+@font-face{font-family:"Reel Text";src:url(__SF_FONT_reel-text-arabic-400__) format("woff2");font-weight:300 500;font-display:swap;unicode-range:U+0600-06FF,U+200C-200F,U+2066-2069,U+066A-066C,U+FDF2}
 @font-face{font-family:"Reel Text";src:url(__SF_FONT_archivo-400-latin__) format("woff2");font-weight:300 500;font-display:swap;unicode-range:U+0020-007E,U+00A0-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2013-2014,U+2018-201A,U+201C-201E,U+2022,U+2026,U+20AC,U+2122,U+2212,U+202F}
 
 body[data-voice=reel]{

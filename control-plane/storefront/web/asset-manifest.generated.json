@@ -13,7 +13,7 @@
     "archivo-400-latin": "/_sf/f.559f4106ef.archivo-400-latin.woff2",
     "archivo-cond-800-latin": "/_sf/f.209df2c866.archivo-cond-800-latin.woff2",
     "arefruqaa-700-arabic": "/_sf/f.cf91497720.arefruqaa-700-arabic.woff2",
-    "plexarabic-400-arabic": "/_sf/f.c5e6714df4.plexarabic-400-arabic.woff2",
+    "reel-text-arabic-400": "/_sf/f.1123ac301e.reel-text-arabic-400.woff2",
     "readexpro-var-arabic": "/_sf/f.325dfc47a7.readexpro-var-arabic.woff2",
     "readexpro-var-latin": "/_sf/f.629d5a9adc.readexpro-var-latin.woff2"
   },
@@ -25,7 +25,7 @@
       "css": "/_sf/souk.b81383f5c6.css"
     },
     "reel": {
-      "css": "/_sf/reel.b360c29e31.css",
+      "css": "/_sf/reel.149e0ad5e5.css",
       "js": "/_sf/reel.999728e8e1.js"
     }
   }
