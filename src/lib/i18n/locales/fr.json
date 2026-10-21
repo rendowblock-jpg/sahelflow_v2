@@ -2649,6 +2649,7 @@
   "storefront.studio.addSection": "Ajouter une section",
   "storefront.studio.mode.landing": "Page unique",
   "storefront.studio.mode.landingHint": "Une seule page à faire défiler, pour un produit",
+  "storefront.studio.mode.previewNote": "Cet aperçu montre vos couleurs et votre contenu dans une mise en page simplifiée. La mise en page propre au style apparaît sur votre page publiée.",
   "storefront.studio.mode.store": "Boutique",
   "storefront.studio.mode.storeHint": "Plusieurs pages : accueil, catalogue, fiches produit",
   "storefront.studio.mode.title": "Type de page",

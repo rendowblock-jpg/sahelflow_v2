@@ -107,6 +107,24 @@ describe("the page-type control (landing page / store)", () => {
   });
 });
 
+describe("the preview note (the Studio canvas draws a simplified layout)", () => {
+  const NOTE = "storefront.studio.mode.previewNote";
+
+  it.each(STOREFRONT_TEMPLATE_IDS)("%s: the note is shown for the five styles and for no other template", (id) => {
+    mount(id);
+    const shown = (document.body.textContent ?? "").includes(NOTE);
+    expect(shown).toBe(isStorefrontStyleId(id));
+    if (isStorefrontStyleId(id)) expect(modeControl()?.textContent).toContain(NOTE);
+  });
+
+  it("the note stays when the seller switches between landing page and store", () => {
+    mount("pulse", "store");
+    expect(modeControl()?.textContent).toContain(NOTE);
+    fireEvent.click(screen.getByRole("radio", { name: "storefront.studio.mode.landing" }));
+    expect(modeControl()?.textContent).toContain(NOTE);
+  });
+});
+
 describe("moving between templates in the gallery", () => {
   it("from an older template to a style: the style starts as a landing page", () => {
     const { committedTheme } = mount("sahara");
@@ -141,6 +159,7 @@ describe("the words", () => {
     "storefront.studio.mode.landingHint",
     "storefront.studio.mode.store",
     "storefront.studio.mode.storeHint",
+    "storefront.studio.mode.previewNote",
   ];
 
   it.each(["ar", "fr", "en"] as const)("%s: every new key has text", (locale) => {

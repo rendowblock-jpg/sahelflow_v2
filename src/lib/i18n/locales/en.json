@@ -2649,6 +2649,7 @@
   "storefront.studio.addSection": "Add section",
   "storefront.studio.mode.landing": "Landing page",
   "storefront.studio.mode.landingHint": "One scrollable page that sells one product",
+  "storefront.studio.mode.previewNote": "This preview shows your colours and content in a simple layout. The style's own layout appears on your published page.",
   "storefront.studio.mode.store": "Store",
   "storefront.studio.mode.storeHint": "Several pages: home, catalogue, product pages",
   "storefront.studio.mode.title": "Page type",

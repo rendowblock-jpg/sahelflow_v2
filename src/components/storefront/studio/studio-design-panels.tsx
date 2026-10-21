@@ -62,6 +62,7 @@ export function ThemePanel({ draft, commit }: { draft: StorefrontStudioDraft; co
             <p className="text-caption leading-4 text-muted-foreground">
               {t(theme.mode === "store" ? "storefront.studio.mode.storeHint" : "storefront.studio.mode.landingHint")}
             </p>
+            <p className="text-caption leading-4 text-muted-foreground">{t("storefront.studio.mode.previewNote")}</p>
           </div>
         ) : null}
       </section>
