@@ -1,272 +1,43 @@
-# SahelFlow — Final Roadmap
-
-> **Status:** Active dependency/completion program
-> **Last reconciled:** 2026-10-20 (re-resolve protected `main` before acting)
-> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Protected `main`:** resolve it live from GitHub; this roadmap records order of work, not branch tips.
-> **Published signed package:** Internal.45 / FD-073 / `customer-online` (tag `sahelflow-v1.0.0-internal.45-9a8dac39…`, published 2026-10-19T20:27:45Z). Founder-authorized launch candidate, not Stable.
-> **Latest recorded Founder-installed checkpoint:** Internal.45 (installed in place, reported 2026-10-20). Authority: `../operations/WORKING_MEMORY.md`.
-> **Current execution mode:** the installed campaign on Internal.45 with state preserved, then FRC-3 in order A→D→C→B. Convert rows only on the installed observation. #306 logout LAST.
-
-This roadmap is subordinate to Product, Experience, Architecture and explicit Founder decisions. It orders evidence and work; it never turns source/CI confidence into live-provider, customer-online, Beta or Stable truth.
-
-## Current position
-
-```text
-completed product/experience reconstruction
-→ Internal.24 signed publication
-→ Founder accepts installed Internal.24 (#221 closed)
-→ connected-installation secret protection (#300)
-→ WhatsApp protected Windows secret storage (#304)
-→ Gemini-bound tool-result privacy minimization (#305)
-→ Internal.25 / FD-044 signed publication (#307)
-→ FD-045 First Revenue Certification
-→ Internal.27 real LID outbound + durable inbound; manual-refresh live-push defect
-→ PR #315 dynamic-loopback/polling/receipt-identity source repair merged
-→ FD-048 source-first batch
-→ #316 Class-AAA durable Notifications source merge / PR #319
-→ #317 professional WhatsApp Inbox parity/certification ledger
-→ #324/#325/#327/#329 durable outbound image/video/document/voice-PTT merges
-→ #331 Inbox interaction parity merge (quotes, copy, progress/cancel, thumbnails, paste/drop)
-→ FD-049 Internal.28 signed publication + Founder-installed campaign (regressions repaired as #335/#336/#337, extended by #338/#339)
-→ FRC-2 AI/tools/order-extraction evidence matrix frozen (capability ledger + corpus frc2-1.0.0, #342/#343)
-→ FD-050 Internal.29 signed publication
-→ FD-051 Internal.30 + FD-053 Internal.31 + FD-055 Internal.32 signed publications and installed campaigns (round-2 / round-3 findings repaired on main)
-→ FD-056 Internal.33 signed publication + installed campaign (F-04..F-08 repaired via #391, INB-27 split via #392)
-→ FD-057 Internal.34 signed publication + installed campaign (F-09..F-13 + F-05 CRLF root cause repaired via #396/#397)
-→ FD-058 Internal.35 signed publication
-→ #399–#409 protected-main delta (i18n server-error rules, AAA eslint gates, FRC-3 ledger adoption, #303 security disposition, Phase 4 closure authority green)
-→ #411 behavioural UI evidence harness (render truth replaces source-text pinning on the agents/inbox surfaces)
-→ FD-059 Internal.36 signed publication (#412/#413)
-→ FD-060 Internal.37 signed publication (#423; Founder-installed 2026-09-11, visually rejected before campaign conversion; repairs merged as #424)
-→ FD-062 Internal.38 signed publication (#451)
-→ FD-065 Internal.39; FD-066 Internal.40 (customer-online licensing on the owned host sahelflow.com); FD-067 Internal.41
-→ FD-070 Internal.42 (WhatsApp durable dispatch, licence distribution, native splash, team access, walkthrough repairs)
-→ FD-071 Internal.43 (installed-audit repairs, messy-order extraction, SahelFlow-Setup.exe, window fix) published 2026-10-17
-→ FD-072 Internal.44 (the Internal.43 line plus startup, WhatsApp, search and the whole-app audit repairs) published 2026-10-18
-→ FD-073 Internal.45 (the Internal.44 line plus the redesigned startup card, WhatsApp offline catch-up, quiet updates and the cloud-backup repairs) published 2026-10-19 ← latest signed checkpoint
-→ Founder installed Internal.45 in place (2026-10-20); FD-058 installed campaign once on that candidate ← current gate
-→ FRC-3 Required capability/journey assurance ledger and demonstrated repairs (order A→D→C→B)
-→ FRC-4 commerce official dev/test certification work
-→ FRC-5 courier contract/sandbox or authorized-account certification work
-→ close only exact FRC-1–5 evidence actually observed
-→ FRC-6 certified first paid assisted deployment decision
-→ #230 customer-online/network closure
-→ representative Beta and remaining external gates
-→ explicit Stable promotion
-```
-
-Running in parallel at source level only, carrying no release authority and converting no installed row:
-
-```text
-Founder directive 2026-09-09 (whole-app transformation)
-→ product/INTERFACE_SYSTEM.md + operations/TRANSFORMATION_REGISTER.md adopted (#414)
-→ W1 token authority + W2 primitive layer + W3/W4/W5 surface and accessibility rows + W6 wash-band tints
-→ SEC-01 dependency remediation and SEC-02 enforced coverage ratchet
-→ remaining: STR-01 god-component decomposition, TEST-01 contract conversion,
-  L10N-01 copy authority, STR-02/STR-03 triage, SYS-04, W8 conformance sweep
-  (`../operations/TRANSFORMATION_HANDOFF.md` §4)
-```
-
-## FD-048 batched source-first order
-
-The FD-048 cadence is historically complete: #316 merged through PR #319, #317 completed, and FRC-2 frozen. FD-049 (2026-08-27) superseded its release cadence for Internal.28, and each subsequent checkpoint has followed the same discipline — freeze one exact protected-main candidate, separate release authority, one signed successor, one preserved in-place update, one installed campaign. Keep every row classified by evidence level and preserve external blockers.
-
-## First Revenue Certification definition
-
-The goal is the fastest honest route to first revenue with no paid infrastructure before revenue and no customer used as an undisclosed experiment.
-
-Completion confidence means:
-
-- every publicly promised Required capability/journey has current evidence at the applicable layer;
-- exact candidate has zero known P0/P1;
-- external/provider residual risks are explicit;
-- only exact live-certified provider actions are exposed or marketed;
-- unknown defects and future provider changes are not dishonestly warranted away.
-
-## FRC-1 — real-phone WhatsApp installed/provider proof
-
-Owner: issue #306. Retained installed evidence: Internal.27 plus the
-Founder-installed Internal.28–Internal.34 campaigns (text/image/video send,
-automatic no-refresh inbound and reopen verified; every reproduced regression
-repaired on main). Published candidate: Internal.45 / FD-073 (published 2026-10-19), which
-carries the Internal.42 durable-dispatch line; the remaining work is one
-installed campaign on the Founder's installed Internal.45.
-
-Required sequence:
-
-1. retain Internal.27 QR/link/reopen, exact LID outbound and durable inbound evidence;
-2. treat #315 and every later merged repair as packaged in the published checkpoints that contain them;
-3. verify the exact protected main behind the published candidate and update in place through the normal updater;
-4. preserve AppData, install/registry identity, keys and shop databases;
-5. verify exact installed version, normal launch and reopen;
-6. prove automatic no-refresh inbound, durable exact-once persistence and reopen;
-7. complete representative English and Arabic/RTL Inbox observation;
-8. exercise governed status and safe message-to-reviewed-order-draft behavior;
-9. validate #316/#317 installed/native/real-phone rows applicable to the candidate;
-10. normal disconnect/logout and local session retirement last.
+# SahelFlow — Roadmap
 
-Exit only with no actionable P0/P1. One reproduced failure opens one bounded repair root plus affected siblings; do not restart a broad WhatsApp/Inbox audit.
+> **Status:** The order of work to first revenue and the gates on the way. Subordinate to Product, Experience, Architecture and explicit Founder decisions.
+> **Not here:** what is in flight (open pull requests), the latest release, what is installed (`CURRENT_STATE.md`). This file orders evidence and work; it never turns source or CI confidence into live-provider, customer-online, Beta or Stable truth.
 
-## FRC-2 — AI, tools and order extraction
+## Order of work
 
-Freeze one evidence matrix covering:
+1. **Hosted storefront v1.** The current focus. Stores are served by SahelFlow at `shop.sahelflow.com/<slug>`, Arabic first, with product photos hosted by SahelFlow and three new templates named Prime, Souk and Reel. The Founder's storefront decisions are in `CURRENT_STATE.md`, section 6. Every storefront change keeps the protected invariants (durable publish, pause and rollback; server-authoritative checkout) and is judged against the AAA user-experience standard in `../product/EXPERIENCE.md`.
+2. **Workers Paid before any seller runs ads.** Until then the storefront stays on Cloudflare Workers Free.
+3. **The next signed release** only on the Founder's decision, built from the then-current tip of `main`, with nothing merged while it builds (`../operations/WORKFLOW.md`, section 11). Documentation catches up in a separate pull request that does not touch the release files.
+4. **The installed campaign** on the build the Founder installs: state preserved (no logout, no AppData reset, no protected-auth clearing), one pass over the rows that build contains, #306 logout last. Then **FRC-3** in order A, D, C, B. FRC-2, FRC-4 and FRC-5 proceed as access allows; FRC-6 follows only when its conditions hold.
+5. **#230** customer-online and Algerian-network closure.
+6. **Representative Beta**, then explicit **Stable** promotion.
 
-- seller-owned Gemini key creation/restriction/storage/test/rotation/disconnection;
-- current approved model and minimal real inference;
-- every model-exposed tool, schema, allowed data and mutation authority;
-- permission denial, current-state recheck, bound approval, replay/idempotency and audit;
-- streaming/stop/retry, partial/malformed, timeout, quota, offline and provider degradation;
-- field-aware privacy minimization for live and replayed tool results;
-- AR/FR/EN/Darija/mixed synthetic/redacted order corpus;
-- ambiguity, missing values, corrections, confidence and manual fallback;
-- message → extraction → human review → exactly-one canonical order;
-- T470/floor latency/resource evidence where applicable.
+Source-level tracks run in parallel and carry no release authority and no installed evidence. The whole-app transformation (`../operations/TRANSFORMATION_HANDOFF.md`, section 4) is one; never present it as campaign progress.
 
-Free-tier testing uses synthetic/redacted data. Core non-AI work remains fully functional when Gemini is absent.
+## First Revenue Certification (FRC)
 
-**Status (2026-08-28):** the FRC-2 source/evidence frontier is frozen.
-`operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md` freezes the 30-tool
-registry, the proposal/approval authority, the streaming/failure matrix,
-#305 field-aware privacy minimization and the `frc2-1.0.0` synthetic/redacted
-AR/FR/EN/Darija/mixed extraction corpus with its contract suite. Remaining
-matrix rows are external-blocked: seller-owned live key proof, installed
-Windows observation and T470 reference-floor runs. The frozen frontier was
-packaged and published from Internal.29 onward; the Founder campaign and ledger
-reconciliation remain the gate before FRC-3 conversions.
+Goal: the fastest honest route to first revenue, with no customer used as an undisclosed experiment. Completion confidence means every publicly promised Required capability and journey has current evidence at the applicable layer, the exact candidate has zero known P0/P1, residual external and provider risks are explicit, and only exact live-certified provider actions are exposed or marketed. Proven-so-far is in `CURRENT_STATE.md`, section 3.
 
-## FRC-3 — Required complete-product assurance
+**FRC-1 — real-phone WhatsApp installed/provider proof (#306).** On the installed candidate with state preserved: verify the exact version, normal launch and reopen; prove automatic no-refresh inbound with durable exact-once persistence; observe the Inbox in English and in Arabic RTL; exercise governed status and the safe message-to-reviewed-order-draft path; validate the #316 and #317 installed, native and real-phone rows that apply; disconnect and log out last. Exit only with no actionable P0/P1. One reproduced failure opens one bounded repair root plus its siblings; do not restart a broad WhatsApp or Inbox audit.
 
-Create a finite evidence ledger, not a speculative audit (adopted 2026-09-08: `../operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md` — rows convert only per its Section 6). Map:
+**FRC-2 — AI, tools and order extraction.** The evidence matrix and its frozen frontier are in `../operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`. Free-tier testing uses synthetic or redacted data. Core non-AI work stays fully functional when Gemini is absent.
 
-- Product Stable capability table;
-- all 27 Experience Required journeys;
-- page-completion contract for included public surfaces;
-- Architecture invariants;
-- exact source/tests;
-- signed/installed and Founder evidence;
-- external/provider/customer evidence still required.
+**FRC-3 — Required complete-product assurance.** A finite evidence ledger, not a speculative audit: `../operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md` maps capabilities, journeys, page-completion and architecture invariants to exact evidence. Classes: `proven`, `partially proven`, `externally blocked`, `demonstrated defect`; "implemented" alone is not `proven`. Related P0/P1 defects are repaired in one dependency-correct batch after complete reconnaissance of those roots only.
 
-Classify each row as `proven`, `partially proven`, `externally blocked`, or `demonstrated defect`. “Implemented” alone is not `proven`.
+**FRC-4 — commerce live certification** (Shopify, WooCommerce, YouCan). On official development or test environments, per capability: credentials, scopes, revoke and rotate; webhook signatures and replay; the order create, update, cancel, refund and fulfilment cases the contract supports; pagination, conflicts, duplicates and out-of-order events; scheduled reconciliation and repair of a deliberately missed event; rate limits, timeouts, outage, retry, kill switch; sanitized exact-environment evidence. Shopify and WooCommerce hybrid behaviour becomes public only after live certification. YouCan stays on conservative hooks plus polling until update and cancellation behaviour is proven.
 
-If the ledger exposes related P0/P1 defects, freeze one Phase Problem Register, perform complete reconnaissance for those roots only, implement one dependency-correct batch, freeze one exact head, run selected gates in GitHub Actions, perform adversarial review and use expected-head merge discipline.
+**FRC-5 — courier live certification.** Candidates are not promises. For each courier and action: a current provider-issued contract and auth scope; sandbox or demo credentials, or explicitly authorized real seller credentials through the protected secret interface; credential test, service area and fee, wilaya and commune mapping, create, label, track, and edit, cancel, return or pickup only where supported; duplicate and ambiguous-success handling, pagination, rate limit, outage, retry and reconciliation; sanitized evidence with limitations. Open-source wrappers can reveal edge cases but never certify a provider. Without authoritative access the provider or action stays hidden or disabled.
 
-## FRC-4 — commerce live certification
+**FRC-6 — first revenue and first customer.** One high-touch assisted deployment whose actual commerce and courier combination has passed FRC-1 through the applicable FRC-5 rows. Before any paid deployment: the promised scope and known limitations are written plainly; every promised integration and action is live-certified; no Stable or broad-provider claim is made; customer access and licensing authority is valid; #230 is satisfied or a newer explicit Founder decision creates a transparent bounded offline exception; support, recovery, data preservation and exit and refund terms are settled through commercial and legal review. FD-045 does not itself authorize distribution or an offline-customer exception.
 
-Providers: Shopify, WooCommerce and YouCan.
+## Gates that stay open
 
-Use official development/test environments where available and prove per capability:
+**Performance and reliability.** The budgets of the closed #226 remain regression criteria. Run focused measurements when a repair touches startup, provider workers, long AI sessions, Inbox scale or low-resource behaviour.
 
-- credentials/scopes and revoke/rotate/disconnect;
-- webhook/hook signatures and replay handling;
-- order create/update/cancel/refund/fulfillment cases supported by contract;
-- pagination, version/conflict, duplicate and out-of-order events;
-- scheduled overlap reconciliation and intentionally missed event repair;
-- rate limit, timeout, outage, retry, checkpoint and kill switch;
-- sanitized exact environment/account/adapter/artifact evidence.
+**Connected platform (#230).** The owned production hostname is provisioned (`sahelflow.com`). Still required: resilient primary and recovery ingress; bounded DNS, TCP, TLS and HTTP diagnostics and timeouts; representative Algerian fixed and mobile evidence; clean install, trial, recovery, reinstall, replay, expiry, clock and key-rotation cases; exact signed installed Windows proof. A `workers.dev` endpoint can support development but is never the sole production authority.
 
-Shopify/WooCommerce hybrid behavior becomes public only after live certification. YouCan remains conservative hooks plus polling/wider reconciliation until update/cancellation behavior is proven.
+**Stable** requires: FRC Required capability and journey closure; a Founder-selected live-certified provider launch set; #230 closed; a representative Algerian seller beta and live storefronts; independent security and privacy review including the applicable Law 18-07 review; recovery and incident drills; supported-Windows compatibility evidence; rollout, support, monitoring and rollback readiness; zero unresolved launch-blocking P0/P1; explicit Founder promotion.
 
-## FRC-5 — courier live certification
+## Delivery discipline
 
-Candidates are not promises. For each courier and each action:
-
-1. obtain current provider-issued contract and endpoint/auth scope;
-2. obtain sandbox/demo credentials or explicitly authorized real seller credentials through SahelFlow’s protected secret interface;
-3. verify credential test, service area/fee, wilaya/commune mapping, create, label, track/status, and edit/cancel/return/pickup only where supported;
-4. test duplicate/idempotency, ambiguous success, pagination, rate limit, outage, retry and reconciliation;
-5. retain sanitized capability-specific evidence and limitations;
-6. enable/publicize only the certified action set.
-
-Open-source wrappers may reveal edge cases but cannot certify a provider. If authoritative access is unavailable, keep the provider/action hidden or disabled.
-
-## FRC-6 — first revenue and first customer
-
-The target is one high-touch assisted deployment whose actual commerce/courier combination has passed FRC-1 through the applicable FRC-5 rows.
-
-Before any paid deployment:
-
-- exact promised scope and known limitations are written plainly;
-- every promised integration/action is live-certified;
-- no Stable or broad-provider claim is made;
-- customer access/licensing authority is valid;
-- #230 is satisfied, or a newer explicit Founder decision creates a transparent bounded offline exception;
-- support, recovery, data preservation and exit/refund terms are decided through applicable commercial/legal review.
-
-FD-045 does not itself authorize distribution or an offline-customer exception.
-
-## Phase 0–2 and Phase 4 — protected foundations
-
-Golden COD, identity/authorization/licensing/multi-shop, encryption, migration, backup/restore and replacement-install foundations remain protected. FRC reopens them only from direct evidence.
-
-## Phase 3 — providers, inbox, AI and automations
-
-The durable inbox/outbox/effect/proposal/automation architecture is source-complete. FD-030 correctly separated deterministic conformance from live certification. FRC-1, FRC-2, FRC-4 and FRC-5 now execute the remaining installed/live-account evidence.
-
-## Phase 5 — whole-product AAA desktop experience
-
-**Phase 5 closure** source baseline remains PR #220 at `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Issue #221 is now closed/completed after Founder acceptance of installed Internal.24. Do not restart generic visual discovery; FRC-3 maps existing evidence and reopens only demonstrated defects, and the transformation program (#414) works from demonstrated findings with exact evidence pointers rather than speculative reconstruction.
-
-## Phase 6 — Arabic, RTL and accessibility parity
-
-The shared source foundation and Founder human gate are retained. Each FRC installed/provider journey must still prove applicable AR/FR/EN, Arabic/RTL, accessibility, error/degraded and recovery presentation. Do not restart a generic RTL sweep. Any new typographic step needs a matching rule in `src/app/arabic-system.css`, or adopting it silently strips Arabic's reading floor.
-
-## Phase 7 — performance and reliability
-
-Issue #226 is closed/completed. Its budgets remain regression criteria. Run focused measurements when an FRC path or repair affects startup, provider workers, long AI sessions, Inbox scale or low-resource behavior.
-
-## Phase 8 — connected SahelFlow platform
-
-Connected source foundations exist, and FD-066 (2026-10-01) put customer-online licensing on the owned host `sahelflow.com`. #230 remains open P1 for the evidence it still requires:
-
-- the owned production hostname (provisioned: `sahelflow.com`);
-- resilient primary/recovery ingress;
-- bounded DNS/TCP/TLS/HTTP diagnostics and timeouts;
-- representative Algerian fixed/mobile evidence;
-- clean install/trial/recovery/reinstall/replay/expiry/clock/key-rotation cases;
-- exact signed installed Windows proof.
-
-A `workers.dev` endpoint can support development but does not satisfy the sole production authority requirement.
-
-## Phase 9 — release certification and launch readiness
-
-Internal.45 / FD-073 is the latest signed/published Internal checkpoint. Internal.24 through Internal.39 were Founder-offline packages; Internal.40 onward carry the FD-066 customer-online launch authority on `sahelflow.com`. None is Beta or Stable.
-
-Stable still requires:
-
-- FRC Required capability/journey closure;
-- Founder-selected live-certified provider launch set;
-- #230 customer-online closure;
-- representative Algerian seller beta and live storefronts;
-- independent security/privacy and applicable Law 18-07 review;
-- recovery/incident drills;
-- supported-Windows compatibility evidence;
-- rollout/support/monitoring/rollback readiness;
-- zero unresolved launch-blocking P0/P1;
-- explicit Founder promotion.
-
-## Audit/review/merge discipline
-
-For every FRC repair and every transformation slice:
-
-1. perform **complete reconnaissance** for the demonstrated package, not the whole repository;
-2. branch from current protected `main`;
-3. keep one active writer;
-4. map authority, consumers, tests and evidence;
-5. use targeted checks during implementation;
-6. freeze one exact head;
-7. run consequence-selected Level 1/2/3 evidence in GitHub Actions;
-8. perform adversarial review and close findings;
-9. use **expected-head merge** protection;
-10. verify durable protected source/tree;
-11. keep automated, installed, live-provider and customer evidence distinct.
-
-No force merge, waiver, protection bypass, updater-key weakening, Rust `--locked` weakening, destructive AppData reset or cross-SHA evidence mixing is authorized.
-
-## Historical anchors
-
-- Historical Internal.15 `1.0.0-internal.15`, signed run `31657621918`.
-- Historical retained evidence set: issues #201, #214, #221, #226 and #230.
-- PR #250, PR #251 and `agent/internal-16-wave-4` remain history.
-- Internal.24 / FD-043 is the Founder-accepted installed checkpoint of that era.
-- Internal.25 / FD-044 through Internal.44 / FD-072 remain retained publication history; Internal.45 / FD-073 is the current signed/published authority.
+For every repair and every transformation slice: complete reconnaissance of the demonstrated package, not the whole repository; branch from current protected `main`; map authority, consumers, tests and evidence; targeted checks while implementing; freeze one exact head; run the selected gates in GitHub Actions; adversarial review with findings closed; expected-head merge; verify the durable tree; keep automated, installed, live-provider and customer evidence distinct.

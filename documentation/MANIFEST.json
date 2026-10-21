@@ -2,16 +2,16 @@
   "formatVersion": 1,
   "files": {
     "AGENTS.md": {
-      "maxBytes": 14400
+      "maxBytes": 8100
     },
     "CHANGELOG.md": {
       "maxBytes": 60000
     },
     "README.md": {
-      "maxBytes": 6400
+      "maxBytes": 2700
     },
     "documentation/README.md": {
-      "maxBytes": 11800
+      "maxBytes": 3900
     },
     "documentation/operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md": {
       "maxBytes": 21800
@@ -42,9 +42,6 @@
     },
     "documentation/operations/WORKFLOW.md": {
       "maxBytes": 23500
-    },
-    "documentation/operations/WORKING_MEMORY.md": {
-      "maxBytes": 17600
     },
     "documentation/product/DECISIONS.md": {
       "maxBytes": 124000
@@ -80,17 +77,14 @@
       "maxBytes": 48400
     },
     "documentation/system/CURRENT_STATE.md": {
-      "maxBytes": 33600
+      "maxBytes": 11700
     },
     "documentation/system/ROADMAP.md": {
-      "maxBytes": 18100
+      "maxBytes": 8500
     }
   },
   "releaseNameFiles": [
-    "AGENTS.md",
     "CHANGELOG.md",
-    "README.md",
-    "documentation/README.md",
     "documentation/operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md",
     "documentation/operations/CODFLOW_EXTRACTION_REGISTER.md",
     "documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md",
@@ -100,14 +94,12 @@
     "documentation/operations/UI_UX_TRIAGE_LEDGER.md",
     "documentation/operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md",
     "documentation/operations/WORKFLOW.md",
-    "documentation/operations/WORKING_MEMORY.md",
     "documentation/product/DECISIONS.md",
     "documentation/product/INTERFACE_SYSTEM.md",
     "documentation/product/PRODUCT.md",
     "documentation/research/RESEARCH.md",
     "documentation/system/ARCHITECTURE.md",
-    "documentation/system/CURRENT_STATE.md",
-    "documentation/system/ROADMAP.md"
+    "documentation/system/CURRENT_STATE.md"
   ],
   "undefinedFdAllowed": [
     "034",
@@ -115,7 +107,6 @@
     "039",
     "040",
     "041",
-    "043",
     "044",
     "046",
     "047"
@@ -136,6 +127,10 @@
     "documentation/research/CODFLOW_EXTRACTION.md": [
       "cod-server/src/mcp/registry.ts",
       "scripts/d1.mjs"
+    ],
+    "documentation/operations/INTERNAL_30_CAMPAIGN_RECONCILIATION_LEDGER.md": [
+      "documentation/operations/WORKING_MEMORY.md",
+      "operations/WORKING_MEMORY.md"
     ]
   }
 }

@@ -199,8 +199,8 @@ Where the pinning artifact is a governance doc rather than a test, that is state
 | INB-27 | UI/UX triage | god-hook split DONE (source, #392) — converts on installed observation | Founder directive 2026-09-05 | Internal.35 installed observation |
 | #316 | CURRENT_STATE §4 | Notification Center source-merged (#319) — open for signed/installed/native evidence | issue #316 | Internal.35 native/installed rows |
 | #317 | CURRENT_STATE §4 | WhatsApp operational parity — capability-ledger implemented-unproven rows (media matrix, doc/voice re-verification, quoted-reply re-exercise, chat-delete first-try, composer visual pass) | issue #317 / inbox ledger | Internal.35 + real-phone matrix |
-| #399–#403 delta | WORKING_MEMORY | i18n server-error rules, eslint AAA gates, AI command-center AAA, docs — on protected `main`, NOT in Internal.35 | release authority (next FD) | first installed observation on next signed package |
-| PAT rotation | WORKING_MEMORY / CURRENT_STATE | chat-transited GitHub PAT to be rotated after the merge window | Founder security hygiene | next session action |
+| #399–#403 delta | CURRENT_STATE (then WORKING_MEMORY) | i18n server-error rules, eslint AAA gates, AI command-center AAA, docs — on protected `main`, NOT in Internal.35 | release authority (next FD) | first installed observation on next signed package |
+| PAT rotation | CURRENT_STATE | chat-transited GitHub PAT to be rotated after the merge window | Founder security hygiene | next session action |
 
 ### 5b. Externally blocked rows (22 rows; next evidence layer outside SahelFlow's control)
 
@@ -235,7 +235,7 @@ Where the pinning artifact is a governance doc rather than a test, that is state
 
 1. **Installed conversion only by observation.** A row becomes **proven (source+installed)** only when the Founder observes exactly that behavior on an installed signed candidate. Source merge, CI green, ephemeral CI-installed MSI evidence and review never convert a row (UI/UX triage rule 1; inbox/AI ledger evidence-layer ladders).
 2. **No cross-SHA evidence mixing.** Every installed observation binds to the exact tag/MSI digest of its candidate (e.g., R10/R7/R9 belong to Internal.30 `sahelflow-v1.0.0-internal.30-2eb8a337…`; the F-04..F-13 conversions belong to Internal.35). A repair merged after publication re-opens the row for the NEXT candidate (WORKFLOW §13; campaign ledger "Why this ledger exists").
-3. **No live-provider claim from source.** Provider-library API presence, mocks, adapters, contract tests, wrappers or test counts never equal live certification (EXPERIENCE §8/§15/§10; WORKING_MEMORY hard rule). Missing live-provider credentials stay **externally blocked**; a code defect is never relabeled "external" (WORKFLOW §10).
+3. **No live-provider claim from source.** Provider-library API presence, mocks, adapters, contract tests, wrappers or test counts never equal live certification (EXPERIENCE §8/§15/§10; AGENTS.md evidence rule). Missing live-provider credentials stay **externally blocked**; a code defect is never relabeled "external" (WORKFLOW §10).
 4. **"Implemented" is never "proven."** ROADMAP FRC-3 classification rule, applied verbatim in Sections 1–4.
 5. **One reproduced failure → one bounded repair.** A demonstrated P0/P1 root opens one repair scope plus named affected siblings; one exact head; consequence-selected gates in GitHub Actions; adversarial review; expected-head merge; deterministic red is never retried away (CURRENT_STATE §8; ROADMAP audit discipline).
 6. **#306 logout executes LAST** in every installed campaign (FRC-1 row order; every campaign ledger round).

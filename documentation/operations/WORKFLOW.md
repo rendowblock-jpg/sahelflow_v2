@@ -30,7 +30,7 @@ resolve protected main + open PR/issues + current signed release
 → perform installed/human/provider/external evidence that automation cannot prove
 ```
 
-At the current frontier no product rewrite is authorized. The next outcome is one installed campaign with state preserved on the Founder's Internal.45 (`../operations/WORKING_MEMORY.md`). Earlier repair lines (the Internal.27–42 campaigns, #346–#355, the deep-audit register) are recorded in `../../CHANGELOG.md` and the ledgers, not repeated here.
+At the current frontier no product rewrite is authorized. The next outcome is one installed campaign with state preserved on the Founder's Internal.45 (`../system/CURRENT_STATE.md`). Earlier repair lines (the Internal.27–42 campaigns, #346–#355, the deep-audit register) are recorded in `../../CHANGELOG.md` and the ledgers, not repeated here.
 
 Do not restart generic repository reconnaissance when a bounded current outcome is known. Do not rerun an unchanged passing exact head. Do not retry deterministic failures until they turn green without identifying/fixing the cause.
 
@@ -332,7 +332,7 @@ How a signed Internal release is produced, verified from the workflows and the 2
 4. The train attests that the source tree equals a reviewed merged PR's head tree and that `Required PR gate` was green there; builds and signs the MSI and the per-machine `SahelFlow-Setup.exe`; creates a draft release; installs the signed MSI and proves launch, reopen and authenticated UI twice; verifies that `latest.json` binds each installer to its own signature; compares the draft's assets byte-for-byte with the verified candidate; creates the tag; publishes.
 5. Publication requires exactly one release for the tag. Remove a stale draft for the same tag first.
 6. A failed gate is investigated, never retried blind. Record the failing step's text on the release PR first. One re-run is allowed only for a failure the diff cannot reach, with the evidence recorded before it; a second identical failure is a defect.
-7. After publication, update `../../CHANGELOG.md`, `../system/CURRENT_STATE.md` and `WORKING_MEMORY.md` in a documentation PR that does not touch the two release paths.
+7. After publication, update `../../CHANGELOG.md`, and `../system/CURRENT_STATE.md` (the Founder-installed record) in a documentation PR that does not touch the two release paths.
 
 The one exposure not closed by a check is `main` moving during the roughly 14-minute build. Closing it needs the draft release to exist before the build (the build action reuses an existing draft), which changes release mechanics and needs a Founder decision.
 

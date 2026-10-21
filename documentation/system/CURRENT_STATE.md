@@ -1,256 +1,83 @@
 # SahelFlow — Current State
 
-> **Status:** Source/evidence/release/provider truth for the current execution frontier
-> **Last assessed:** 2026-10-20
-> **Active product phase:** Phase 6 — Arabic, RTL and accessibility parity
-> **Published signed package:** Internal.45 / `1.0.0-internal.45` / MSI `1.0.0.45` / FD-073 / `customer-online`, published 2026-10-19T20:27:45Z. Founder-authorized launch candidate, not Beta or Stable.
-> **Installed truth:** the authority is `../operations/WORKING_MEMORY.md`. The Founder installed Internal.45 in place and reported on it on 2026-10-20 (observations in §3 and in `WORKING_MEMORY.md`); no campaign row has converted.
-> **Protected `main`:** resolve it live from GitHub before acting. This document records released and observed facts, not branch tips.
+> **Status:** What the Founder has installed, what is deliberately not claimed, and what is still undecided.
+> **Not here:** the latest release, its digests and run ids, the list of merged work, open pull requests, the `main` tip and issue states. Those are read from GitHub (`../../AGENTS.md`, "Live facts are read, not remembered"). Entries below that carry a date are Founder-reported facts; the rest stays true until a decision changes it.
 
-This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one.
+This document distinguishes protected source, automated evidence, signed publication, CI-installed evidence, Founder-installed judgment, live-provider certification, customer-online readiness, paid deployment, Beta and Stable. A lower evidence level never claims a higher one. Published is not installed.
 
-## 1. Latest published package — Internal.45
+## 1. Release channel
 
-| Field | Value |
+- Signed builds are published on the internal channel. None is Beta or Stable, and SahelFlow is not yet a commercially certified Stable release.
+- Early internal packages were Founder-offline. Customer-online licensing against the owned host `sahelflow.com` began with the FD-066 launch decision (Internal.40) and carries no Beta or Stable authority. The customer-online licence hosts are `license.sahelflow.com` and `activate.sahelflow.com`; a ready `/healthz` does not close #230.
+- Long-running issues: #164 (Phase 0–9 execution epic), #230 (Algerian-network installed trial), #306 (real-phone WhatsApp installed/provider certification; logout is the LAST row), #316 and #317 (notification and WhatsApp parity; source complete, installed and real-phone evidence still owed). #221 was closed on the Founder's acceptance of the installed Internal.24 (2026-08-25). #226 was closed; its budgets stay as regression criteria. #499 is a superseded agent note. Read each issue's state from the tracker.
+
+## 2. Founder-installed record
+
+Only the Founder can report this. Nothing converts until an installed observation names the rows.
+
+- **Internal.24** was accepted for the retained whole-product visual and product gate (#221). That acceptance does not extend to later source and proves no provider or customer path.
+- In-place installs recorded since: Internal.27, 28, 29, 30 (2026-08-31), 31 (2026-09-01), 32, 33 (2026-09-03), 34 (2026-09-05), 37 (2026-09-11, visually rejected before any row converted), 39 (2026-10-01), 40 (2026-10-03) and 41 (2026-10-08). No installation of Internal.35, 36, 38 or 42 is recorded.
+- Internal.42 was evidently in use for the installed audit behind PR #490 and FD-071; the Founder should confirm. On 2026-10-17 he said he was installing Internal.43; completion is not recorded. No installation of Internal.44 is recorded.
+- **Internal.45** was installed in place and reported on 2026-10-20 (his diagnostics log shows its WhatsApp sidecar first running at 01:20Z that day). No campaign row has converted on Internal.42 to 45.
+
+Reported on Internal.45 (2026-10-20), observations only:
+
+- The startup card was judged low quality and generic. A redesign (#550) was merged afterwards and has not been seen on a Windows screen.
+- A message sent while SahelFlow was closed was kept and delivered after the reopen (diagnostics 11:27Z: `offline.preview`, `inbound.early`, `inbound.spooled`, `offline.done`, then `inbound.committed` on attempt 3 after a first-attempt database error that cleared by itself; #552 now logs the error code).
+- The list search box emptied itself and the orders list showed two clear icons (#549); a message two calendar days old read "yesterday" (#551). Both were repaired in source.
+- The WhatsApp link was down from 04:31Z to 09:20Z ("Current WhatsApp Web version could not be verified for device pairing") and recovered by itself.
+- 18 messages that the previous build discarded while closed (`inbound.dropped`, `no-paired-account`) cannot be recovered by SahelFlow.
+
+## 3. First Revenue Certification (FD-045)
+
+The commercial goal is fast, honest first revenue without lowering correctness, privacy, provider or launch evidence. "99.99% sure" means every defined Required matrix executed at the applicable layer, exact-candidate evidence, zero known P0/P1 and disclosed residual risk. It is not a warranty against unknown defects or future provider changes. The order and gates are in `ROADMAP.md`.
+
+| Package | Proven so far and what is owed |
 |---|---|
-| Version | app `1.0.0-internal.45`, MSI `1.0.0.45`, channel `internal` |
-| Authority | FD-073 (`../product/DECISIONS.md`); mode `customer-online`; owned host `sahelflow.com`; trial origins `license.sahelflow.com` and `activate.sahelflow.com`; paid licences stay offline-signed |
-| Tag | `sahelflow-v1.0.0-internal.45-9a8dac39545577e7395935c73452f55230f75e21` |
-| Published | 2026-10-19T20:27:45Z by signed run `39315780619`, started by the `Dispatch signed internal version` workflow (run `39315761767`) on the merge of release PR #548 |
-| Source | protected `main` commit `9a8dac39…` (PR #548), the tip of `main` when the build ran |
-| MSI | `SahelFlow_1.0.0-internal.45_x64_en-US.msi`, sha256 `241dc55b944e2c4104f4a3978759e7c9e2c0a144403ce79b202279c512fdeebd` |
-| Setup.exe | `SahelFlow-Setup.exe` (per-machine NSIS, byte-identical to `SahelFlow_1.0.0-internal.45_x64-setup.exe`), sha256 `97cb895b353c5872cf339b97602deba8410a3f76ff1e60ab544299a49b48cdf7` |
-| Updater manifest | `latest.json`, sha256 `949ec18bffb3f4c0756bc32425d5f0ec70e1f837a73aa7a8c5b7dae744bfeea7`; entries `windows-x86_64` (Setup.exe), `windows-x86_64-msi` and `windows-x86_64-nsis` |
+| FRC-1 WhatsApp installed/provider proof (#306) | Internal.27 proved a real `numeric@lid` reply and exact-once durable inbound; the live-push CSP root was repaired (#315) and durable dispatch reworked (#487). Owed: the installed campaign on a candidate that contains the rows, logout last |
+| FRC-2 AI, tools and order extraction | Source and evidence frontier frozen 2026-08-28 and reworked under FD-064. Live-key, installed-observation and T470 floor-device rows are external-blocked |
+| FRC-3 Required capability and journey assurance | Ledger adopted 2026-09-08. Rows convert only on installed observation, in order A, D, C, B |
+| FRC-4 commerce live certification | Blocked on official Shopify and YouCan development environments and a controlled WooCommerce store |
+| FRC-5 courier live certification | Blocked on provider-issued contracts and sandbox, demo or authorized real-account evidence per provider and action |
+| FRC-6 first paid assisted deployment | Not authorized by FD-045 alone. FD-066 (2026-10-01) is the launch authority for customer-online licensing on `sahelflow.com`; marketing may advertise built integrations, none of which is live-certified, and customers must be told what they rely on |
 
-**What it packages.** The Internal.44 line plus everything merged to `main` after it, listed under "What Internal.45 packages" below.
+Unverified integrations stay hidden, disabled or explicitly conditional. A provider can be certified for tracking while create, edit and cancel remain unsupported.
 
-**Verified on publication.** The signed run (38 steps, all succeeded) validated the exact source, checked that the source is the current tip of protected `main`, attested that the tree is identical to the reviewed pull-request tree under its risk-aware required gate, built and signed both installers into a draft release, verified the MSI and updater signatures, passed the signed install, launch and reopen proof and the authenticated hydrated WebView UI proof twice, verified the draft `latest.json`, created the tag and published. Exactly one release carries the tag, it is not a draft, and `releases/latest` resolves to it.
+## 4. Provider and AI boundaries
 
-**Not proven.** Any ledger row; `SahelFlow-Setup.exe` on a clean machine; the startup gain and palette latency; live WhatsApp delivery as a certification (the Founder's own test on 2026-10-20 is an observation, not a converted row); commerce or courier certification; the look of the redesigned card (the Founder judged the Internal.45 card not good enough, and the redesign, merged on 2026-10-20 as #550, has not been seen on a Windows screen).
-
-### What Internal.45 packages (merged after Internal.44)
-
-These pull requests were merged to protected `main` after Internal.44 and are packaged in Internal.45 (published 2026-10-19). The Founder installed Internal.45 and reported on it (§3); no ledger row converts without a named observation.
-
-- **#534** — `/agents` renders one `main` landmark: the AI canvas root is a `div` inside the layout's `main` (it had two `main` landmarks on desktop).
-- **#510** (`64282a8f`) — the workspace paints from the server's licence check instead of a second client fetch. The first attempt failed two required browser tests; the failed CI logs showed 8 hydration-mismatch warnings (0 on `main`) because the client's first render differed from the server HTML. The first client render now equals the server HTML (`useSyncExternalStore`, no lint suppression).
-- **#536** (`49441056`) — one inbound WhatsApp record stayed stuck and was retried every ~5 minutes: the messages SahelFlow sends itself come back from WhatsApp with `participant: ""`, which the app's strict schema refused with `REQUEST_VALIDATION_FAILED`. The sidecar now conforms three fields (participant, push name, timestamp) without changing what the app already accepts, and every refusal now logs the field paths and codes (never values).
-- **#537** (`8c4c0b79`) — messages that arrived while SahelFlow was closed were dropped: the sidecar discarded every inbound message until the connection reported `open`, but WhatsApp delivers the offline backlog before that. Inbound messages are now spooled under the saved-credentials account as soon as they arrive; the sidecar drops one only when no account is paired. New diagnostics: `inbound.early`, `offline.preview`, `offline.done`. Messages the old gate already dropped cannot be recovered by SahelFlow (they remain on the phone).
-- **#538** (`9184f760`) — "clear old notifications" now survives closing SahelFlow. The computed alerts kept their cleared list in the WebView's `localStorage`, and the packaged app serves from a loopback port chosen at random on every launch, so each launch was a new origin with an empty store. The cleared list is now kept per member in the existing `Setting` table (alert id plus a hash of its text, capped at 200, no customer text); an alert whose text changes still comes back.
-- **#539** (`fe0dcdf4`) — the startup card was redesigned (one smooth glow and shadow, one progress group, Minimize and Close chips, draggable) and follows the seller's colour mode and one of the four presets. The language, mode and preset are recorded in `launch-appearance.json` whenever they change, so a crashed launch still shows the right card. The "taking longer than usual" hint moved from 15 s to 45 s. Compiled and tested for Windows in CI; The Founder looked at it on the installed Internal.45 on 2026-10-20 and judged it low quality and generic; the redesign was merged on 2026-10-20 as #550 and has not been seen on a Windows screen.
-- **#540** (`1f8d8cc3`) — updates are quiet: a chip in the top bar, a download only when the seller clicks, then "Restart to update"; no dialog, no nagging (first check 90 s after launch, then every 6 h). The desktop shell now stops the contained servers and the WhatsApp sidecar through the same teardown a normal close uses before the installer starts (before, the plugin ended the process without it). **Never run with a real installer.** The chip appears only when a release newer than the installed one exists. The Windows administrator confirmation and the installer's progress window remain (per-machine install).
-- **Cloud backup and relay:** #543 the app's cloud backup upload is now accepted by the Worker (the app sent no `X-SahelFlow-SHA256`, so every upload was refused), a late upload to a failed reservation is refused, and a trial seller keeps one rolling point; #545 interrupted uploads resume, an 8th daily backup rotates the oldest out instead of being refused, verify checks every chunk, a licence with an unreadable expiry is refused, an hourly job purges expired trial data 30 days after expiry, and the desktop retries a transient failure twice; #544 the background workers call the cloud only while something is happening (the PR estimates about 144 calls a day per install with no phone paired, down from about 35,000), so a few installs cannot exhaust the account's request allowance.
-- **Hosted storefront stock:** #546 an item paused and then published again, or sold out and then restocked, is offered with its stock again instead of 0.
-- **Documents:** #535 and #541 record Internal.44 and the post-Internal.44 merges.
-
-### Source on `main` after Internal.45 (merged, not published)
-
-These pull requests are merged to protected `main` and are in no signed package yet. They ship only in a later signed successor on a Founder decision.
-
-- **#549** — the list search box emptied itself in a loop (it read its own commit back from the URL every 300 ms), the orders list dropped its rows on every new search, and the WebView drew a second clear button beside ours. The box now keeps what is typed, the lists keep their rows while a search loads, and there is one clear control. Reproduced with the real URL-state and data-fetching libraries; six new tests fail on the old code. **Not seen on the Founder's machine.**
-- **#551** — "yesterday" counts calendar days. The inbox list, the thread header's "active" hint and the storefront card's last-order time divided elapsed hours by 24, so a message from two calendar days earlier (31 hours) read "yesterday". One shared counter now compares dates on the device clock. **Not seen on the Founder's machine.**
-- **#552** — a failed WhatsApp delivery keeps its Prisma error code in the diagnostics log (for example `PrismaClientKnownRequestError:P2034`), never the message, the meta or any value. It makes the next failure explainable; it does not change what fails. **Not seen on the Founder's machine.**
-- **#550** (`12648c90`) — the startup card is redesigned ("Tide"): the SahelFlow S mark fills with the real launch progress instead of a bar, and every colour follows the seller's colour preset in light and dark. It shows a full S and 100% only when the workspace window is visible, the seller did not quit and this launch's trace says `ui-ready`. A panic in the card ends the card, not the app; the ripple switches itself off on slow PCs; the Manrope OFL licence text is a bundle resource. Compiled, linted (`clippy -D warnings`) and unit-tested on a Windows runner (run 39445822046, started by hand because the risk classifier skipped the Windows Rust job). **Never drawn on a Windows screen, speed on the Founder's Celeron unknown, licence in an installed MSI not yet proven.**
-
-### Release record, 2026-10-19 (Internal.45)
-
-- Release PR #548 merged 2026-10-19T20:01:00Z. The release request (`.github/release-requests/internal-45-fd073-customer-launch.json`) certifies the product commit `181fe52e…` with CI run `39243785762`, Phase 5 run `39243785756` and Phase 6-7 run `39243786135`.
-- The merge started the dispatcher (run `39315761767`), which started signed run `39315780619` (first attempt, 20:01:11Z). The release was published at 20:27:45Z. No earlier signed run exists for this tag.
-- Nothing else merged to `main` while the build ran (the next merge, #549, is 2026-10-20 12:06Z), so the source guard from PR #501 accepted the tip.
-
-### Previous package — Internal.44 (retained record)
-
-| Field | Value |
-|---|---|
-| Version | app `1.0.0-internal.44`, MSI `1.0.0.44`, channel `internal` |
-| Authority | FD-072 (`../product/DECISIONS.md`); mode `customer-online`; owned host `sahelflow.com`; trial origins `license.sahelflow.com` and `activate.sahelflow.com`; paid licences stay offline-signed |
-| Tag | `sahelflow-v1.0.0-internal.44-c1a66d9b17d5a11a2b6d31d70729102609fb4be1` |
-| Published | 2026-10-18T15:15:42Z by signed run `39137845506`, started by the `Dispatch signed internal version` workflow (run `39137834611`) on the merge of release PR #533 |
-| Source | protected `main` commit `c1a66d9b…` (PR #533), the tip of `main` when the build ran |
-| MSI | `SahelFlow_1.0.0-internal.44_x64_en-US.msi`, sha256 `b38775e5185b3f6746a87193e715581836f85719a4c4d84d0e6f92debc362ffa` |
-| Setup.exe | `SahelFlow-Setup.exe` (per-machine NSIS, byte-identical to `SahelFlow_1.0.0-internal.44_x64-setup.exe`), sha256 `e1b57dbf93cc47d339c585814da3103ba58ba7b46724bf1ff3bd393f72c94017` |
-| Updater manifest | `latest.json`, sha256 `d9448ceaa2c140ca0791ab3291be541d27e1d751557723eb94e3db210b9c1a1f`; entries `windows-x86_64` (Setup.exe), `windows-x86_64-msi` and `windows-x86_64-nsis` |
-
-**What it packages.** The Internal.43 line plus everything merged to `main` after it, listed under "What Internal.44 packages" below.
-
-**Verified on publication.** The signed train passed its source guards (the source is the current tip of protected `main`; the tree is identical to the reviewed pull-request tree under its risk-aware required gate), built and signed both installers, verified the MSI and updater signatures, passed the signed install, launch and reopen proof and the authenticated hydrated WebView UI proof twice, verified the draft `latest.json`, created the tag and published. The observer workflow (run `39137857226`) finished green. `releases/latest` resolves to this tag.
-
-**Not proven.** an in-place update on a Founder machine (no installation of Internal.44 is separately recorded); `SahelFlow-Setup.exe` on a clean machine; any ledger row; the startup gain, the Inbox cause and palette latency (unmeasured until the Founder's trace and diagnostics from this build arrive); live WhatsApp delivery; commerce or courier certification.
-
-### What Internal.44 packages (merged after Internal.43)
-
-These pull requests were merged to protected `main` after Internal.43 and are packaged in Internal.44. None of them is Founder-installed truth until that build is installed and observed.
-
-- **Reported on Internal.43 (2026-10-17):** **#503** the launch no longer waits for the packaged-server file pre-read; **#504** the startup card is rebuilt and closing it quits instead of hiding a running launch; **#506** the server no longer loads every route module at boot (a `strace` of the unpacked Internal.43 server opened 871 files, 28.6 MB; the same measurement after the change opened 483, 4.0 MB); **#505** and **#508** WhatsApp survives a cold start and the sidecar records where its time goes (diagnostics only); **#507** search finds a record the seller mistyped; **#509** the AI delete confirmation no longer overlaps and the composer draws one focus ring.
-- **Release mechanics and documents:** **#501** a signed build's source must be the current tip of `main`; **#502** the documentation archive is retired.
-- **Whole-app audit repairs:** **#511** Customers search, **#512** privacy export, **#513** palette search cancellation, **#514** WhatsApp inbound stubs, reactions and archived threads, **#515** three small COD defects, **#516** AI chat read permissions, **#517** stock availability, **#519** order creation only through the governed command, **#521** sign-in hygiene, **#522** WhatsApp spool quarantine and one key unlock per process, **#523** delivery status transitions and the Returns dead end, **#524** integration address checks and background-worker health, **#525** imports and exports, **#526** money and analytics, **#527** MCP audit and limits, **#528** AI chat hardening, **#529** CI test list, **#530** typo search budget, Inbox poll back-off and entry-page skip link, **#531** backup and key hygiene. Evidence and the findings left open are in `../operations/TRANSFORMATION_REGISTER.md` (section "Whole-app audit, 2026-10-17").
-
-**Measured and not measured.** The startup gain is a projection from the two Founder traces of 2026-10-17 (about 37 to 42 s for a repeat launch like the second, which took 148 s; about 80 to 130 s for the first launch after an update, which took 629 s). It is not measured on a build and must be compared with the next trace. Palette latency is unmeasured. The cause of the Inbox report is not established. PR #510 (licence boundary seed) was repaired and merged after Internal.44 (see the next section); it is not in Internal.44.
-
-### Release record, 2026-10-18 (Internal.44)
-
-- Release PR #533 merged 2026-10-18T14:50:58Z. The release request (`.github/release-requests/internal-44-fd072-customer-launch.json`) certifies the product commit `8875f43d…` with CI run `39112454243`, Phase 5 run `39112454231` and Phase 6-7 run `39112454227`.
-- The merge started the dispatcher (run `39137834611`, 14:51:01Z), which started signed run `39137845506` (first attempt, 14:51:10Z). The release was published at 15:15:42Z and the run finished at about 15:17Z. No earlier attempt failed.
-- Nothing else merged to `main` while the build ran, so the source guard from PR #501 accepted the tip. The exposure noted in the Internal.43 record (a merge during the roughly 14-minute build) did not occur.
-
-### Previous package — Internal.43 (retained record)
-
-
-| Field | Value |
-|---|---|
-| Version | app `1.0.0-internal.43`, MSI `1.0.0.43`, channel `internal` |
-| Authority | FD-071 (`../product/DECISIONS.md`); mode `customer-online`; owned host `sahelflow.com`; trial origins `license.sahelflow.com` and `activate.sahelflow.com`; paid licences stay offline-signed |
-| Tag | `sahelflow-v1.0.0-internal.43-3fa652062295f3b2d82a66cc9e0c0cc159a21f38` |
-| Published | 2026-10-17T14:59:16Z by signed run `39041467501`, started by the `Dispatch signed internal version` workflow (run `39041457742`) |
-| Source | protected `main` commit `3fa65206…` (PR #500); its tree is identical to PR #500's reviewed head tree |
-| MSI | `SahelFlow_1.0.0-internal.43_x64_en-US.msi`, sha256 `0dc5e8494c35150cecac02c87b0e0509179cd3ed262f1227fa7b80098a45a27f` |
-| Setup.exe | `SahelFlow-Setup.exe` (per-machine NSIS, byte-identical to `SahelFlow_1.0.0-internal.43_x64-setup.exe`), sha256 `f5c91bd41211e0032987f9f9145961e7a93c2c793155b35e6bec5aff56e6992f` |
-| Updater manifest | `latest.json`, sha256 `1b906657cc32888d3f8769d4d60e3dc064ff746f708a14140cced64381977e8b` |
-
-**What it packages.** It builds on the Internal.42 line (PR #487: WhatsApp durable dispatch, licence distribution by `SFLA1` code and offline License Desk, native first-frame splash, team access, the W-01..W-23 walkthrough repairs) and adds:
-
-- **#490** — the installed Internal.42 audit repairs across orders, couriers, storefront, WhatsApp, AI, team login, the startup card and the search crash.
-- **#492** — the messy-demo-order extraction repair; the inbox AI status line shows whether Gemini ran.
-- **#493** — the first `SahelFlow-Setup.exe`: a per-machine NSIS installer beside the MSI, two updater entries, `/get/windows` serving it.
-- **#498** — the workspace window is no longer created maximized before the authenticated UI is ready (changes packaged content in `src-tauri/tauri.conf.json` and `src-tauri/src/startup_recovery/proven.rs`).
-- Evidence and CI only, no product change: **#494** and **#496** (installed-UI evidence harness), **#497** (CI failure digest workflow), **#500** (Setup.exe manifest signature in `release.yml`).
-- Release authority: **#491** (FD-071) and **#495** (re-certification).
-
-**Verified on publication.** The signed install/launch/reopen and authenticated-UI-twice steps passed on the signed MSI; the draft assets matched the locally verified candidate byte-for-byte; each `latest.json` entry carries the signature of the file it points at; `releases/latest` resolves to this tag.
-
-**Not proven.** An in-place update on a Founder machine; `SahelFlow-Setup.exe` on a clean machine (first shipped here); any ledger row; the root cause of the earlier window-visibility timing failures (the explanation behind #498, a Tauri/tao dependency behaviour, is an inference from dependency source and is supported only by green installed lanes); live WhatsApp delivery; commerce or courier certification.
-
-### Release record, 2026-10-17
-
-Why the published tag is `3fa65206…` and not the `95681a52…` that PR #495 merged as:
-
-- The release request certified the product content at head `d0159346…` (CI `38971978571`, Phase 5 `38971978516`, Phase 6-7 `38971978457`). PR #495 merged as `95681a52…` after its Required battery was green on head `c0d38890…`.
-- Signed run `39013736331` (from `95681a52…`) built and signed both installers and passed the installed-UI proof, then stopped at "Download and verify draft latest.json": the `windows-x86_64` entry pointed at `SahelFlow-Setup.exe` but carried the MSI's signature. PR #500 fixed the workflow and added a contract pin.
-- Runs `39035937811` and `39038240457` then failed earlier, at "Build signed updater artifacts into a draft release", with `403 Resource not accessible by integration`. Probe workflows showed that GitHub refuses `GITHUB_TOKEN` creating the draft release at a commit that `main` has already moved past (PR #500 had moved it), while the tip of `main`, the branch name and descendants of `main` all work. GitHub's exact rule is not documented; the observed rule is what the workflow now encodes. Evidence is on PR #495.
-- Internal.43 was therefore released from the tip of `main` through the dispatcher workflow. `release.yml` now refuses any other source in its first source step (PR #501). The remaining exposure is `main` moving during the roughly 14-minute build; closing it needs the draft release to exist before the build and is an open Founder decision.
-
-## 2. Published release ledger
-
-39 releases are published (Internal.1–5 and 12 have no published release). Source and digests are as GitHub reports them; the full digest is on each release page.
-
-| Internal | Published (UTC) | Source commit | MSI sha256 (first 12) | Setup.exe |
-|---|---|---|---|---|
-| 45 | 2026-10-19 | `9a8dac39…` | `241dc55b944e…` | yes |
-| 44 | 2026-10-18 | `c1a66d9b…` | `b38775e5185b…` | yes |
-| 43 | 2026-10-17 | `3fa65206…` | `0dc5e8494c35…` | yes |
-| 42 | 2026-10-09 | `2e8900bd…` | `24613850d457…` | — |
-| 41 | 2026-10-03 | `5e611a87…` | `b1887e650a1f…` | — |
-| 40 | 2026-10-02 | `6e96dafc…` | `3fbda1fb5d20…` | — |
-| 39 | 2026-10-01 | `ac4fe24c…` | `e2b980e45d94…` | — |
-| 38 | 2026-09-16 | `9bf89927…` | `6c06feddca9e…` | — |
-| 37 | 2026-09-11 | `cd1114de…` | `20e836e25742…` | — |
-| 36 | 2026-09-08 | `4e527f05…` | `5d5b03e28432…` | — |
-| 35 | 2026-09-06 | `f45e6e1c…` | `97bcd5dccd48…` | — |
-| 34 | 2026-09-05 | `0cdd5ce2…` | `dc3d37717b03…` | — |
-| 33 | 2026-09-03 | `cc081c86…` | `16a8ce71e269…` | — |
-| 32 | 2026-09-01 | `677dc463…` | `34417299864c…` | — |
-| 31 | 2026-08-31 | `38c95aa8…` | `12da89bde688…` | — |
-| 30 | 2026-08-30 | `2eb8a337…` | `bef15026fc3f…` | — |
-| 29 | 2026-08-28 | `a34917e5…` | `c3afdadc8a3f…` | — |
-| 28 | 2026-08-28 | `d104da72…` | `004ce6e3ebdd…` | — |
-| 27 | 2026-08-26 | `4e395b01…` | `64865032b4a5…` | — |
-| 26 | 2026-08-25 | `4d092234…` | `c35f3dd5c681…` | — |
-| 25 | 2026-08-25 | `36dc7fb6…` | `9de9c18bde37…` | — |
-| 24 | 2026-08-23 | `1037f125…` | `ccd28a77f680…` | — |
-| 23 | 2026-08-20 | `936f807d…` | `17fe40f6d4d4…` | — |
-| 22 | 2026-08-19 | `e1199a8e…` | `82a97839441f…` | — |
-| 21 | 2026-08-17 | `8365c3d4…` | `42c9c9a33884…` | — |
-| 20 | 2026-08-16 | `7c794f72…` | `40f654145ffb…` | — |
-| 19 | 2026-08-15 | `42e50f22…` | `044475e079a3…` | — |
-| 18 | 2026-08-15 | `5cb7f504…` | `f5e3b1ed9a9f…` | — |
-| 17 | 2026-08-14 | `898904a1…` | `62af5f9dad82…` | — |
-| 16 | 2026-08-14 | `c8200fdd…` | `eb2c1d1d19fe…` | — |
-| 15 | 2026-08-13 | `371aebc2…` | `f204b5821e6b…` | — |
-| 14 | 2026-08-10 | `2d60e2e7…` | `3352033a867f…` | — |
-| 13 | 2026-07-28 | `fb32faed…` | `d050621aee76…` | — |
-| 11 | 2026-07-27 | `1b9c5223…` | `d9628418dbd8…` | — |
-| 10 | 2026-07-26 | `ab3c1fb4…` | `df9f038c3be3…` | — |
-| 9 | 2026-07-26 | `d516e5fe…` | `2619e9101f0a…` | — |
-| 8 | 2026-07-26 | `1cd9a27f…` | `5d5dc9a26bc3…` | — |
-| 7 | 2026-07-25 | `3db7e407…` | `c0aebc69f581…` | — |
-| 6 | 2026-07-25 | `772d09c3…` | `c06d49cab6f5…` | — |
-
-Authority decision per release: Internal.45 FD-073, Internal.44 FD-072, Internal.43 FD-071, .42 FD-070, .41 FD-067, .40 FD-066, .39 FD-065, .38 FD-062, .37 FD-060, .36 FD-059, .35 FD-058, .34 FD-057, .33 FD-056, .32 FD-055, .31 FD-053, .30 FD-051, .29 FD-050, .28 FD-049, .27 FD-047, .25 FD-044, .24 FD-043. Every checkpoint from Internal.24 through Internal.39 was a Founder-offline package; customer-online licensing starts with Internal.40 (FD-066). Per-release content is in `../../CHANGELOG.md`.
-
-## 3. Founder-installed truth
-
-Published is not installed. The installed record below is what the Founder reported; `../operations/WORKING_MEMORY.md` is the authority and the last recorded checkpoint always wins over inference.
-
-- **Internal.24** was accepted for the retained whole-product visual/product gate (issue #221, 2026-08-25). That acceptance does not extend to later source and proves no provider or customer path.
-- Recorded in-place installs since then: Internal.27, 28, 29, 30 (2026-08-31), 31 (2026-09-01), 32, 33 (2026-09-03), 34 (2026-09-05), 37 (2026-09-11, visually rejected before any row converted), 39 (2026-10-01, per UI/UX ledger rows F-43..F-45), 40 (2026-10-03) and **41 (2026-10-08)**. No installation of Internal.35, 36, 38 or 42 is recorded. The latest installation reported to `WORKING_MEMORY` is Internal.45 (2026-10-20, below).
-- Internal.42 was evidently in use for the installed audit behind PR #490 and FD-071, but no installation of it is recorded; the Founder should confirm.
-- **Internal.43** is published and being installed in place; nothing converts until the installed observation names it.
-- **Internal.44** is published (2026-10-18); no installation of it is separately recorded; nothing converts until an installed observation names it.
-- **Internal.45** is published (2026-10-19) and was installed in place by the Founder, who reported on it on 2026-10-20 (his diagnostics log shows its sidecar first running at 01:20Z). Reported: the startup card judged low quality and generic (the redesign was merged as #550 on 2026-10-20 and has not been seen on a Windows screen); a message that arrived while SahelFlow was closed was kept and delivered after the reopen (diagnostics 11:27Z); the list search box and the orders clear icon misbehaved (#549); a two-day-old message read "yesterday" (#551). **No row has converted**: nothing converts until an installed observation names the rows.
-
-## 4. Live issues and provider boundary
-
-- **#221** closed/completed (accepted installed Internal.24). **#226** closed/completed; its budgets stay as regression criteria.
-- **#306** open — real-phone WhatsApp installed/provider certification; logout is the LAST row.
-- **#316** and **#317** open for installed and real-phone evidence only; their source is complete and packaged.
-- **#230** open — Algerian-network installed trial evidence. Under FD-066 the licence hosts `license.sahelflow.com` and `activate.sahelflow.com` are live and reported ready on `/healthz`; that does not close #230.
-- **#164** open — the Phase 0–9 execution epic. **#499** is the 2026-10-17 agent handoff note, superseded by `../operations/WORKING_MEMORY.md`.
-- PR **#456** (artifact hygiene) was closed on 2026-10-18: its whole patch was already on `main` through #495. Its branch `ops/artifact-hygiene-sweeper` is kept until the Founder decides.
-
-Source conformance and signed Windows proof do not close #306 or #230.
-
-## 5. First Revenue Certification (FRC) — FD-045
-
-The commercial objective is fast, honest first revenue with no paid infrastructure before revenue and without lowering correctness, privacy, provider or launch evidence. “99.99% sure” means every defined Required matrix executed at the applicable layer, exact-candidate evidence, zero known P0/P1 and disclosed residual risk; it is not a warranty against unknown defects or future provider changes.
-
-| Package | State |
-|---|---|
-| FRC-1 WhatsApp installed/provider proof (#306) | Internal.27 proved a real `numeric@lid` reply and exact-once durable inbound; the live-push CSP root was repaired (#315); durable dispatch and receipts were reworked (#487). Remaining: the installed campaign on a candidate that contains the rows, logout LAST |
-| FRC-2 AI, tools and order extraction | Source frontier frozen 2026-08-28 (`../operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md`); reworked under FD-064 (`frc2-2.0.0` corpus). Live-key, installed-observation and T470 rows are external-blocked |
-| FRC-3 Required capability/journey assurance | Ledger adopted 2026-09-08 (`../operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md`). Rows convert only on installed observation; order A→D→C→B |
-| FRC-4 commerce live certification | Blocked on official Shopify/YouCan development environments and a controlled WooCommerce store |
-| FRC-5 courier live certification | Blocked on provider-issued contracts and sandbox/demo or authorized real-account evidence per provider and action |
-| FRC-6 first paid assisted deployment | Not authorized by FD-045 alone. FD-066 (2026-10-01) is the Founder's launch authority for customer-online licensing on `sahelflow.com`; marketing may advertise built integrations, none of which is live-certified, and customers must be told what they rely on |
-
-Unverified integrations stay hidden, disabled or explicitly conditional in the product. A provider can be certified for tracking while create/edit/cancel remains unsupported.
-
-## 6. Provider and AI boundaries
-
-- **WhatsApp** is implemented through an unofficial WhatsApp Web library. Passing FRC-1 proves the named installed journey; it cannot warrant that Meta will never change or block the protocol. Windows packaging never uses plaintext multi-file auth; see `../../sidecars/whatsapp/README.md`.
+- **WhatsApp** is implemented through an unofficial WhatsApp Web library. Passing FRC-1 proves the named installed journey; it cannot warrant that Meta will never change or block the protocol. Windows packaging never uses plaintext multi-file auth (`../../sidecars/whatsapp/README.md`).
 - **Gemini** is seller-owned-key and privacy-safe: free-tier testing uses synthetic or redacted inputs, and consent gates what leaves the device. Core operation and manual fallbacks stay independent of AI. Order creation stays review-first (FD-064). The local MCP agent surface (FD-063) is proposal-gated; no installed observation of it is recorded.
-- **Couriers and commerce** remain conditional until each action has current provider evidence (`../research/CODFLOW_EXTRACTION.md` supplies upstream contract research, not certification).
+- **Couriers and commerce** stay conditional until each action has current provider evidence. `../research/CODFLOW_EXTRACTION.md` supplies upstream contract research, not certification.
 
-## 7. Current non-claims
+## 5. Current non-claims
 
-- Real-phone WhatsApp/provider certification is not established.
-- The complete AI/tool/order-extraction matrix is not executed on an installed build.
-- #316 and #317 are source-complete and packaged but unproven on an installed build with a real phone.
+- Real-phone WhatsApp and provider certification is not established.
+- The complete AI, tool and order-extraction matrix is not executed on an installed build.
+- #316 and #317 are source-complete but unproven on an installed build with a real phone.
 - Live Shopify, WooCommerce, YouCan and courier action certification is not established by adapter source alone.
 - Algerian-network trial readiness (#230) is not closed.
-- Beta and Stable are not established. SahelFlow is **not yet a commercially certified Stable release**.
+- Beta and Stable are not established.
 
-## 8. Historical continuity
+## 6. Open decisions and pending records
 
-Retained so that the audit gate and old references keep resolving; none of it is the current frontier.
+**Waiting for the Founder**
 
-### Phase 5 merged result and evidence
+- **F-1:** whether `POST /api/extraction` should require a licence (`requireLicense()`). Unchanged pending a recorded decision.
+- **Release mechanics:** a signed build fails if `main` moves while it runs. Closing that needs the draft release created before the build (the build action reuses an existing draft), which changes release mechanics (`../operations/WORKFLOW.md`, section 11).
+- **Inbox cause:** needs the Founder's diagnostics from an installed build; no fix is chosen blind.
+- **Residency** (tray and start with Windows): decide after a new build's startup is measured.
+- The deferred items in the "Not in the next release" table of `../operations/TRANSFORMATION_REGISTER.md` (each waits for a Founder decision, a migration or a Windows test).
 
-PR #220 remains the historical application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`. Later product work supersedes it as current source without erasing its evidence.
+**Decided, not yet numbered in `../product/DECISIONS.md`**
 
-### Active Phase 6 frontier
+- **Storefront (the Founder, 2026-10-19 and 2026-10-20):** stores are served by SahelFlow at `shop.sahelflow.com/<slug>`, with no separate store domain or account. The storefront Worker stays on Cloudflare Workers Free and moves to Workers Paid before any seller runs ads, so the hosted page does not depend on a 60-second page cache lifetime. Product photos are hosted by SahelFlow on Cloudflare R2. The storefront is Arabic first, with French and English. The template names Prime, Souk and Reel are the Founder's. These supersede the `seller-slug.sahelflow.app` wording still in `../product/DECISIONS.md` and `../product/PRODUCT.md`. Whether this amends the zero-paid-infrastructure rule of FD-045 is for the Founder's wording when it is numbered.
+- **Update path (2026-10-18, decided by the agent under the Founder's delegation):** SahelFlow stays a per-machine install (Program Files). Updates keep one Windows administrator confirmation and the installer's small progress window; the app reopens through the startup card. Reasons: switching `nsis.installMode` to `currentUser` does not migrate an existing per-machine install (a second copy would appear in `%LOCALAPPDATA%`); `both` stays elevated; `src-tauri/src/packaged_runtime.rs` treats the Program Files copy as the trust anchor for the server code that holds decrypted shop data, and a per-user install would put that code where any program running as the user can write; `windows-release-build-contract` pins `perMachine` and no CI lane installs `Setup.exe` over an older install. Updates with no prompt need a small update service running with system rights, which is its own project to be designed and authorized separately.
 
-The active semantic phase label remains Phase 6 — Arabic, RTL and accessibility parity. #221 human closure is retained; FRC closes external, provider and customer evidence without reopening a generic Phase 6 sweep.
+**Ask for after the next build is installed**
 
-### Internal.14 publication evidence
+- A screenshot of the redesigned startup card (light and dark, the four presets, Arabic, French and English, a slow start), a Minimize and Close test, and the update chip (it appears only when a release newer than the installed one exists).
+- The build's `startup-trace.json` and a fresh WhatsApp diagnostics log: look for `offline.preview`, `offline.done`, `inbound.early`, `inbound.dropped`. The startup gain and the Inbox cause can be measured only on it.
+- Two oddities in the existing log are not investigated: a `provider.error` "init queries" timeout (408) exactly 60 seconds after every `connection.open`, and `upserts 0` in the first 300 seconds after open.
+- The Founder must not clear the WhatsApp spool.
 
-Internal.14 remains historical signed/installed evidence. It does not override later checkpoints or current issue states.
-
-### FD-031 exception boundary
-
-FD-031 was a one-time Internal.14 exception and is not reusable for FRC, provider or customer evidence.
-
-### FD-032 Founder-only offline checkpoint boundary
-
-FD-032 established the Founder-offline distinction for the early Internal checkpoints. Customer-online authority began with FD-066 (Internal.40) and is still not Beta or Stable.
-
-The historical evidence set included **issue #214** and issues #201, #221, #226 and #230. Current truth is in section 4.
+**Blocked sidecar rows:** INB-13, INB-14, INB-19 and INB-32 (reactions, delete-for-everyone, avatars, typing and presence) stay blocked until a capability probe and a contract revision.

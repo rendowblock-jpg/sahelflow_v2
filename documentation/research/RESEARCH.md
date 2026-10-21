@@ -252,7 +252,7 @@ Founder decisions.
 - FD-028 is the explicit Founder change-control decision.
 - `ROADMAP.md` solely owns Phase 0–9 dependency and exit order.
 - `WORKFLOW.md` solely owns research, implementation, review, CI and evidence.
-- `WORKING_MEMORY.md` contains current truth and one exact next outcome.
+- The current-truth document (then `WORKING_MEMORY.md`, since folded into `CURRENT_STATE.md`) contains current truth and one exact next outcome.
 - Issue #164 is a live dashboard, never an eleventh authority.
 - Existing Product, Experience and Architecture requirements remain unchanged
   unless an explicit Founder or owning-authority decision changes them.

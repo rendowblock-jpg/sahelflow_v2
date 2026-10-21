@@ -545,7 +545,7 @@ actions, compressed desktop mobile layouts and superficial RTL.
 
 - `ROADMAP.md` is the sole phase/dependency program.
 - `WORKFLOW.md` is the sole research/execution/review/evidence process.
-- `WORKING_MEMORY.md` contains only current truth and exact next outcome.
+- The current-truth document (then `WORKING_MEMORY.md`, since folded into `CURRENT_STATE.md`) contains only current truth and exact next outcome.
 - Issue #164 tracks phase status and PR/evidence links; it is not another
   authority.
 - No new permanent masterplan, gap report, wave, prompt, status or handoff is
@@ -1309,7 +1309,7 @@ Binding boundaries:
   `documentation/operations/CODFLOW_EXTRACTION_REGISTER.md` (EX-0…), one
   bounded reviewed PR per slice, CI green on the exact head before any
   merge, expected-head discipline. The register is subordinate to
-  WORKING_MEMORY and converts no installed row.
+  WORKING_MEMORY (since folded into CURRENT_STATE) and converts no installed row.
 - Every extracted file or module adapted from CodFlow source carries a
   provenance header naming the upstream repo, commit and Apache-2.0
   license; substantial derivative regions stay attributable.
@@ -1428,7 +1428,7 @@ Founder agent-surface decision, 2026-09-21, converting the EX-5 study
 (`documentation/research/CODFLOW_EXTRACTION.md` §7) into implementation
 under FD-061. It settles the five points the study left open; row-level
 state lives in `documentation/operations/MCP_AGENT_SURFACE_LEDGER.md`
-(MCP-01…MCP-15), which is subordinate to WORKING_MEMORY and converts no
+(MCP-01…MCP-15), which is subordinate to WORKING_MEMORY (since folded into CURRENT_STATE) and converts no
 installed row. Recorded in this register on 2026-09-28, alongside the
 Founder's directive of the same day to complete the Agents surface on every
 layer, which this decision's engine carries.
