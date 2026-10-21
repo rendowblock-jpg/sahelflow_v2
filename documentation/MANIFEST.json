@@ -44,7 +44,7 @@
       "maxBytes": 23500
     },
     "documentation/product/DECISIONS.md": {
-      "maxBytes": 124000
+      "maxBytes": 94500
     },
     "documentation/product/EXPERIENCE.md": {
       "maxBytes": 32800
@@ -77,7 +77,7 @@
       "maxBytes": 48400
     },
     "documentation/system/CURRENT_STATE.md": {
-      "maxBytes": 11800
+      "maxBytes": 9900
     },
     "documentation/system/ROADMAP.md": {
       "maxBytes": 8500
@@ -101,16 +101,7 @@
     "documentation/system/ARCHITECTURE.md",
     "documentation/system/CURRENT_STATE.md"
   ],
-  "undefinedFdAllowed": [
-    "034",
-    "038",
-    "039",
-    "040",
-    "041",
-    "044",
-    "046",
-    "047"
-  ],
+  "undefinedFdAllowed": [],
   "deadPathAllowed": {
     "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md": [
       "SF_DATA_DIR/mcp/endpoint.json"
