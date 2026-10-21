@@ -264,10 +264,15 @@ function boot(): void {
     form.addEventListener("focusin", typingCheck);
     form.addEventListener("focusout", () => setTimeout(typingCheck, 0));
   }
-  document.getElementById("sf-bar-cta")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    form.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-  });
+  // Every link to the order form scrolls there by script. The browser's own jump to #order stopped 137 px short on the Atelier page
+  // (measured on staging, 21 Oct 2026, Chromium: the form ended 221 px below the top instead of 84; removing almost any one of the page's
+  // animations made the jump exact, so the cause is a race inside the browser, not the layout). scrollIntoView honours scroll-padding and lands exactly.
+  for (const link of Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href="#order"]'))) {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      form.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    });
+  }
 
   // ---- the order
   const pendingKey = `sf:order:${d.slug}`;
