@@ -121,25 +121,22 @@ Destructive administration, license transfer, recovery keys, backup restoration,
 
 ## 8. Storefront standard
 
-SahelFlow operates one shared multi-tenant storefront platform with isolated tenant data and immutable releases.
+SahelFlow operates one shared multi-tenant storefront platform with isolated tenant data and immutable releases. This section is the contract; what is built, and what is only designed, is stated in `../system/ARCHITECTURE.md` section 12 and `../system/CURRENT_STATE.md`.
 
 Every entitled shop receives:
 
-- a default `seller-slug.sahelflow.app` store;
+- a hosted store at `shop.sahelflow.com/<slug>` (FD-074); there is no separate store domain, and a custom seller domain stays conditional on its own certification;
+- an Arabic-first store (FD-077): Arabic is the default language and the first design target, with French and English beside it;
+- product photos hosted by SahelFlow (FD-076), not linked from sites SahelFlow does not control;
 - controlled brand customization;
 - private preview;
 - validation;
 - atomic publish;
 - version history and rollback;
 - durable COD checkout while the desktop is offline;
-- bounded cloud stock allocation to prevent overselling;
-- certified custom-subdomain support.
+- bounded cloud stock allocation to prevent overselling.
 
-Launch includes three genuinely distinct templates:
-
-1. Minimal Conversion;
-2. Visual Editorial;
-3. Bold COD Landing.
+Launch includes three genuinely distinct templates. The published ones are `sahara`, `atlas` and `oasis` (the id list in `src/lib/storefront/presentation-types.ts`; the Studio names their roles: `atlas` minimal conversion, `sahara` visual editorial, `oasis` bold COD landing). The Founder's three new templates, Prime, Souk and Reel (FD-078), are added by their own change and ship only in a later signed release.
 
 The north-star outcome is **profitable confirmed and delivered COD orders per 1,000 qualified visitors**. Public `best-in-market` claims require comparative evidence, real seller results, production performance data, and independent review.
 
