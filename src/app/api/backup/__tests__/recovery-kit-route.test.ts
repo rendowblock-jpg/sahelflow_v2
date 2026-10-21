@@ -45,6 +45,7 @@ vi.mock("@/lib/license/license-authority", () => ({ requireLicenseEntitlement: v
 
 import * as route from "@/app/api/backup/recovery-kit/route";
 import { db, shopContext } from "@/lib/db";
+import { PHASE2_ACTIONS } from "@/lib/identity/permissions";
 import { SahelFlowError } from "@/types/errors";
 
 const { POST } = route;
@@ -106,6 +107,14 @@ describe("POST /api/backup/recovery-kit: the happy path", () => {
 
   it("exports nothing but POST (a later GET would hand out the code) and the dynamic flag", () => {
     expect(Object.keys(route).sort()).toEqual(["POST", "dynamic"]);
+  });
+
+  // requireAuth is a stand-in here, so it cannot notice a misspelt permission. The real catalog can: a name that is
+  // not in it would fail closed for everybody, including the owner, and no other test in this file would show it.
+  it("demands permissions that really exist in the action catalog", () => {
+    for (const action of ["backups.restore", "approvals.approve"]) {
+      expect(PHASE2_ACTIONS as readonly string[], action).toContain(action);
+    }
   });
 
   it("demands both the restore and the approval permission, nothing less", async () => {

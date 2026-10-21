@@ -5,12 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // What matters: only an authorised person with a recent PIN proof gets in (before the body is even read); the
 // secrets are written under the canonical key names; unknown fields are refused BEFORE anything is written; no
 // response and no audit entry ever holds a secret value; the retired "noest" name lands in the EcoTrack
-// namespace; and every change invalidates the provider's certification and leaves an audit entry.
+// namespace; and every SUCCESSFUL change invalidates the provider's certification and then leaves an audit entry
+// (two OBSERVED tests pin what happens when a step in between fails).
 //
 // Real code under test: the route, withErrorHandler (so the status and code of each refusal are the real ones),
 // zod, SahelFlowError and the delivery key helpers (deliverySecretKeys, normalizeDeliveryProvider). Stand-ins:
 // the identity layer (requireAuth, requireRecentReauthentication, trusted-actor identity), the audit writer, the
-// database handle, the certification store, the logger/monitoring/licence hooks withErrorHandler calls, and the
+// database handle, the certification store, the logger and monitoring hooks withErrorHandler calls (its shop-authority and licence hooks only run when NODE_ENV is production, so those two mocks are inert here), and the
 // secret store itself, which is a Map so the tests read back what was really stored and removed.
 const h = vi.hoisted(() => ({
   store: new Map<string, string>(),
@@ -54,6 +55,7 @@ vi.mock("@/lib/license/license-authority", () => ({ requireLicenseEntitlement: v
 
 import * as route from "@/app/api/delivery/credentials/route";
 import { db, shopContext } from "@/lib/db";
+import { PHASE2_ACTIONS } from "@/lib/identity/permissions";
 import { SahelFlowError } from "@/types/errors";
 
 const { GET, POST, DELETE } = route;
@@ -64,6 +66,20 @@ const ACTOR = { personId: "5".repeat(32), role: "owner" as const };
 const AUDIT_ACTOR = `person:${"5".repeat(32)}`;
 const SECRET_ID = "SECRET-API-ID-0001";
 const SECRET_TOKEN = "SECRET-API-TOKEN-0002";
+const NOEST_FIELDS = ["carrierName", "apiToken", "userGuid", "createOrderUrl", "validateOrderUrl", "trackingsUrl", "feesUrl"];
+// The real providerCertificationStatus returns one entry per provider, each with its four capabilities.
+const capability = (status: string) => ({ status, expiresAt: null, lastCheckedAt: null, reasonCode: null, lastErrorCode: null });
+const CERTIFICATIONS = [
+  {
+    provider: "ecotrack",
+    capabilities: {
+      connection: capability("certified"),
+      fees: capability("source_reviewed"),
+      booking: capability("source_reviewed"),
+      tracking: capability("uncertified"),
+    },
+  },
+];
 
 const FIELDS = {
   yalidine: ["apiId", "apiToken"],
@@ -98,6 +114,22 @@ function firstOrder(spy: { mock: { invocationCallOrder: number[] } }): number {
   return first;
 }
 
+function lastOrder(spy: { mock: { invocationCallOrder: number[] } }): number {
+  const last = spy.mock.invocationCallOrder[spy.mock.invocationCallOrder.length - 1];
+  if (last === undefined) throw new Error("the stand-in was never called");
+  return last;
+}
+
+/** Every call must carry the shop's own context: the real setSecret binds the ciphertext to it. */
+function expectShopContext(spy: { mock: { calls: unknown[][] } }): void {
+  expect(spy.mock.calls.length).toBeGreaterThan(0);
+  for (const call of spy.mock.calls) {
+    const context = call[0] as { prisma?: unknown; shop?: unknown };
+    expect(context.prisma).toBe(db);
+    expect(context.shop).toBe(shopContext);
+  }
+}
+
 function auditEntry(): Record<string, unknown> {
   const call = h.logAudit.mock.calls[0];
   if (!call) throw new Error("no audit entry was written");
@@ -111,7 +143,7 @@ beforeEach(() => {
   h.logAudit.mockReset().mockResolvedValue(undefined);
   h.auditIdentity.mockReset().mockReturnValue(AUDIT_ACTOR);
   h.invalidate.mockReset().mockResolvedValue(undefined);
-  h.certStatus.mockReset().mockResolvedValue({ yalidine: { status: "certified" } });
+  h.certStatus.mockReset().mockResolvedValue(CERTIFICATIONS);
   h.setSecret.mockReset().mockImplementation(async (_context: unknown, key: string, value: string) => {
     h.store.set(key, value);
   });
@@ -124,6 +156,12 @@ beforeEach(() => {
 describe("/api/delivery/credentials: who may use it", () => {
   it("is never statically rendered or cached by the framework", () => {
     expect(route.dynamic).toBe("force-dynamic");
+  });
+
+  // requireAuth is a stand-in here, so it cannot notice a misspelt permission. The real catalog can: a name that is
+  // not in it would fail closed for everybody, including the owner, and no other test in this file would show it.
+  it("demands a permission that really exists in the action catalog", () => {
+    expect(PHASE2_ACTIONS as readonly string[]).toContain(PERMISSION);
   });
 
   it.each([
@@ -213,9 +251,8 @@ describe("GET: which credentials are configured (never the values)", () => {
   });
 
   it("passes the certification status through", async () => {
-    h.certStatus.mockResolvedValue({ ecotrack: { status: "source_reviewed" } });
     const body = await (await GET()).json();
-    expect(body.certifications).toEqual({ ecotrack: { status: "source_reviewed" } });
+    expect(body.certifications).toEqual(CERTIFICATIONS);
   });
 });
 
@@ -253,6 +290,9 @@ describe("POST: saving credentials", () => {
     const order = [h.requireAuth, h.requireRecent, h.setSecret, h.invalidate, h.logAudit].map(firstOrder);
     expect(order).toEqual([...order].sort((a, b) => a - b));
     expect(new Set(order).size).toBe(5);
+    expect(lastOrder(h.setSecret)).toBeLessThan(firstOrder(h.invalidate));
+    expect(h.invalidate).toHaveBeenCalledTimes(1);
+    expect(h.logAudit).toHaveBeenCalledTimes(1);
   });
 
   it("files the retired noest name under EcoTrack and creates no noest secret", async () => {
@@ -298,7 +338,10 @@ describe("POST: saving credentials", () => {
   ])("answers 400 REQUEST_VALIDATION_FAILED for %s and writes nothing", async (_label, body) => {
     const response = await POST(post(body));
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ code: "REQUEST_VALIDATION_FAILED" });
+    const reply = await response.json();
+    expect(reply).toMatchObject({ code: "REQUEST_VALIDATION_FAILED" });
+    // zod's issue list is returned to the caller: it must not echo the submitted secret.
+    expect(JSON.stringify(reply)).not.toContain(SECRET_TOKEN);
     expect(h.setSecret).not.toHaveBeenCalled();
     expect(h.invalidate).not.toHaveBeenCalled();
     expect(h.logAudit).not.toHaveBeenCalled();
@@ -374,21 +417,25 @@ describe("DELETE: removing a provider's credentials", () => {
     const order = [h.requireAuth, h.requireRecent, h.deleteSecret, h.invalidate, h.logAudit].map(firstOrder);
     expect(order).toEqual([...order].sort((a, b) => a - b));
     expect(new Set(order).size).toBe(5);
+    // Every removal comes before the certification is invalidated, which is done once, then one audit entry.
+    expect(lastOrder(h.deleteSecret)).toBeLessThan(firstOrder(h.invalidate));
+    expect(h.invalidate).toHaveBeenCalledTimes(1);
+    expect(h.logAudit).toHaveBeenCalledTimes(1);
   });
 
   it("removes EcoTrack's old noest-named secrets together with the canonical ones", async () => {
     h.store.set("delivery_ecotrack_apiToken", SECRET_TOKEN);
-    h.store.set("delivery_noest_apiToken", "old-secret");
-    h.store.set("delivery_noest_userGuid", "old-guid");
+    for (const field of NOEST_FIELDS) h.store.set(`delivery_noest_${field}`, `old-${field}`);
     h.store.set("delivery_yalidine_apiToken", "keep-me");
     const response = await DELETE(del("?provider=ecotrack"));
     expect(response.status).toBe(200);
     expect(stored()).toEqual({ delivery_yalidine_apiToken: "keep-me" });
     const before = auditEntry().before as Record<string, boolean>;
     expect(before.delivery_ecotrack_apiToken).toBe(true);
-    expect(before.delivery_noest_apiToken).toBe(true);
-    expect(before.delivery_noest_userGuid).toBe(true);
-    expect(before.delivery_noest_feesUrl).toBe(false);
+    for (const field of NOEST_FIELDS) expect(before[`delivery_noest_${field}`], field).toBe(true);
+    expect(before.delivery_ecotrack_feesUrl).toBe(false);
+    // 7 canonical keys + the 7 retired noest keys
+    expect((auditEntry().metadata as { keys: string[] }).keys).toHaveLength(14);
   });
 
   it("treats the retired noest name as EcoTrack", async () => {
@@ -414,5 +461,132 @@ describe("DELETE: removing a provider's credentials", () => {
     expect(h.invalidate).not.toHaveBeenCalled();
     expect(h.logAudit).not.toHaveBeenCalled();
     expect(h.store.size).toBe(3);
+  });
+});
+
+describe("every collaborator is called with the shop's own context", () => {
+  it("POST: secret store, certification store and audit log", async () => {
+    await POST(post({ provider: "yalidine", credentials: { apiId: SECRET_ID, apiToken: SECRET_TOKEN } }));
+    expectShopContext(h.setSecret);
+    expectShopContext(h.invalidate);
+    expectShopContext(h.logAudit);
+  });
+
+  it("DELETE: secret store, certification store and audit log", async () => {
+    h.store.set("delivery_yalidine_apiToken", SECRET_TOKEN);
+    await DELETE(del("?provider=yalidine"));
+    expectShopContext(h.hasSecret);
+    expectShopContext(h.deleteSecret);
+    expectShopContext(h.invalidate);
+    expectShopContext(h.logAudit);
+  });
+
+  it("GET: secret store and certification store", async () => {
+    await GET();
+    expectShopContext(h.hasSecret);
+    expectShopContext(h.certStatus);
+  });
+});
+
+describe("failures after the secrets were touched", () => {
+  // OBSERVED, not endorsed: the certification store is a real database write and can fail. By then the secrets
+  // have already been written or removed, and the audit entry (which comes last) is never written.
+  it("OBSERVED POST: a failing certification store leaves the secrets saved and writes no audit entry", async () => {
+    h.invalidate.mockRejectedValue(new Error("certification store unavailable"));
+    const response = await POST(post({ provider: "yalidine", credentials: { apiToken: SECRET_TOKEN } }));
+    expect(response.status).toBe(500);
+    expect(stored()).toEqual({ delivery_yalidine_apiToken: SECRET_TOKEN });
+    expect(h.logAudit).not.toHaveBeenCalled();
+    expect(JSON.stringify(await response.json())).not.toContain(SECRET_TOKEN);
+  });
+
+  it("OBSERVED DELETE: a failing certification store leaves the secrets already removed and writes no audit entry", async () => {
+    h.store.set("delivery_yalidine_apiToken", SECRET_TOKEN);
+    h.invalidate.mockRejectedValue(new Error("certification store unavailable"));
+    const response = await DELETE(del("?provider=yalidine"));
+    expect(response.status).toBe(500);
+    expect(stored()).toEqual({});
+    expect(h.logAudit).not.toHaveBeenCalled();
+  });
+
+  it("a failing secret store never puts the secret in the response, even if its error message did", async () => {
+    h.setSecret.mockRejectedValue(new Error(`write failed for ${SECRET_TOKEN}`));
+    const response = await POST(post({ provider: "yalidine", credentials: { apiToken: SECRET_TOKEN } }));
+    expect(response.status).toBe(500);
+    const text = JSON.stringify(await response.json());
+    expect(text).not.toContain(SECRET_TOKEN);
+    expect(text).toContain("Internal server error");
+  });
+});
+
+describe("providers and field names", () => {
+  it("stores every ZR Express field under its canonical key", async () => {
+    const fields = { apiId: "zr-id", apiKey: "zr-key", apiToken: "zr-token", tenant: "zr-tenant" };
+    const response = await POST(post({ provider: "zrexpress", credentials: fields }));
+    expect(response.status).toBe(200);
+    expect(stored()).toEqual({
+      delivery_zrexpress_apiId: "zr-id",
+      delivery_zrexpress_apiKey: "zr-key",
+      delivery_zrexpress_apiToken: "zr-token",
+      delivery_zrexpress_tenant: "zr-tenant",
+    });
+    expect(h.invalidate.mock.calls[0]?.[1]).toBe("zrexpress");
+  });
+
+  it("stores a Maystro token under its canonical key", async () => {
+    const response = await POST(post({ provider: "maystro", credentials: { apiToken: SECRET_TOKEN } }));
+    expect(response.status).toBe(200);
+    expect(stored()).toEqual({ delivery_maystro_apiToken: SECRET_TOKEN });
+    expect(h.invalidate.mock.calls[0]?.[1]).toBe("maystro");
+  });
+
+  it.each([
+    ["a field with a trailing space", "apiToken "],
+    ["a field in another letter case", "APITOKEN"],
+    ["a field that looks like a path", "../apiToken"],
+    ["a field that names the whole key", "delivery_yalidine_apiToken"],
+  ])("refuses %s and writes nothing", async (_label, field) => {
+    const response = await POST(post({ provider: "yalidine", credentials: { [field]: SECRET_TOKEN } }));
+    expect(response.status).toBe(400);
+    const reply = await response.json();
+    expect(reply).toMatchObject({ code: "DELIVERY_CREDENTIAL_FIELDS_INVALID" });
+    expect(JSON.stringify(reply)).not.toContain(SECRET_TOKEN);
+    expect(stored()).toEqual({});
+    expect(h.logAudit).not.toHaveBeenCalled();
+  });
+
+  it("refuses the full canonical key as a field name even through the retired noest name", async () => {
+    const response = await POST(post({ provider: "noest", credentials: { delivery_ecotrack_apiToken: SECRET_TOKEN } }));
+    expect(response.status).toBe(400);
+    expect(stored()).toEqual({});
+  });
+
+  it("never stores anything for a field called __proto__", async () => {
+    // A computed key makes this an own property, which JSON carries. Whether zod drops it or the allow-list
+    // refuses it, nothing may be stored.
+    const response = await POST(post({ provider: "yalidine", credentials: { ["__proto__"]: SECRET_TOKEN } }));
+    expect([200, 400]).toContain(response.status);
+    expect(stored()).toEqual({});
+    expect(h.setSecret).not.toHaveBeenCalled();
+  });
+
+  it("counts the old noest name only for EcoTrack, not for the other providers", async () => {
+    for (const field of [...NOEST_FIELDS, "apiId", "apiKey", "tenant"]) h.store.set(`delivery_noest_${field}`, "old");
+    const body = await (await GET()).json();
+    expect(body.providers.ecotrack.apiToken).toBe(true);
+    expect(body.providers.ecotrack.userGuid).toBe(true);
+    for (const provider of ["yalidine", "maystro", "zrexpress"]) {
+      expect(Object.values(body.providers[provider]).every((configured) => configured === false), provider).toBe(true);
+    }
+  });
+
+  // OBSERVED, not endorsed: the schema does not trim, so a secret of only spaces is stored and GET reports the
+  // field as configured, while the certification code (credentialEntries) trims it and treats it as missing.
+  it("OBSERVED: a secret made only of spaces is accepted and stored, and GET then reports it as configured", async () => {
+    const response = await POST(post({ provider: "maystro", credentials: { apiToken: "   " } }));
+    expect(response.status).toBe(200);
+    expect(stored()).toEqual({ delivery_maystro_apiToken: "   " });
+    const body = await (await GET()).json();
+    expect(body.providers.maystro.apiToken).toBe(true);
   });
 });
