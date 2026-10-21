@@ -62,6 +62,9 @@ function promises(ctx: Ctx): Promised[] {
 /** The long description is open by default on the pages that tell a story. */
 const openDetails = (html: string): string => html.replace('<details class="sf-more">', '<details class="sf-more" open>');
 
+/** The seller's own tagline (the Studio's "eyebrow" field), shown under the name and only when they wrote one. */
+const tag = (p: ProductParts): string => (p.kicker ? `<p class="sf-tag" dir="auto">${p.kicker}</p>` : "");
+
 const cta = (ctx: Ctx, p: ProductParts, cls: string): string =>
   p.sold ? "" : `<a class="${cls}" href="#order"><span>${esc(ctx.t("storefront.studio.orderNow"))}</span>${icon("arrow", "sf-flip")}</a>`;
 
@@ -69,9 +72,8 @@ const cta = (ctx: Ctx, p: ProductParts, cls: string): string =>
 function noirProduct(ctx: Ctx, p: ProductParts): string {
   return `<article class="nx" data-sold="${p.sold ? "1" : "0"}">
 <section class="nx-stage"><div class="sf-wrap nx-in">
-<p class="nx-kicker" dir="auto">${p.kicker}</p>
 <div class="nx-photo">${p.gallery}</div>
-<div class="nx-title"><h1 class="sf-h1 sf-pname" dir="auto">${p.name}</h1>${p.sub}</div>
+<div class="nx-title"><h1 class="sf-h1 sf-pname" dir="auto">${p.name}</h1>${tag(p)}${p.sub}</div>
 <div class="nx-price">${p.priceEl}${p.stock}</div>
 ${cta(ctx, p, "nx-cta")}
 </div></section>
@@ -94,7 +96,7 @@ function lumenProduct(ctx: Ctx, p: ProductParts): string {
   if (ctx.theme.trust.showCodBadge) rows.push([t("storefront.studio.cashOnDelivery"), icon("check")]);
   const spec = rows.length ? `<dl class="lx-spec">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>` : "";
   return `<article class="lx" data-sold="${p.sold ? "1" : "0"}">
-<header class="lx-top"><div class="sf-wrap"><p class="lx-kicker"><span aria-hidden="true">№</span> <span dir="auto">${p.kicker}</span></p><h1 class="sf-h1 sf-pname" dir="auto">${p.name}</h1>${p.sub}</div></header>
+<header class="lx-top"><div class="sf-wrap"><h1 class="sf-h1 sf-pname" dir="auto">${p.name}</h1>${tag(p)}${p.sub}</div></header>
 <div class="sf-wrap lx-grid">
 <div class="lx-media"><i class="lx-mark" aria-hidden="true"></i>${p.gallery}</div>
 <div class="lx-sheet"><div class="lx-price">${p.priceEl}${p.stock}</div>${spec}${p.chips}${p.variants}${p.form}</div>
@@ -106,12 +108,17 @@ ${p.data}</article>`;
 
 /* ------------------------------------------------------------------ ATELIER: paper from a workshop ---- */
 function atelierProduct(ctx: Ctx, p: ProductParts): string {
-  const steps = promises(ctx);
-  const list = steps.length
-    ? `<section class="ax-steps"><div class="sf-wrap"><ol>${steps.map((s, n) => `<li class="sf-rv"><b class="ax-n" aria-hidden="true">${n + 1}</b><span class="ax-t">${icon(s.i)}<span dir="auto">${esc(s.l)}</span></span></li>`).join("")}</ol></div></section>`
-    : "";
+  const all = promises(ctx);
+  // The three promises that happen in this order (a call to confirm, the delivery, the cash) are numbered; support is not a step.
+  const sequence = all.filter((s) => s.i !== "headset");
+  const aside = all.filter((s) => s.i === "headset");
+  const numbered = sequence.length >= 2;
+  const row = (s: Promised, n: number | null) =>
+    `<li class="sf-rv">${n === null ? "" : `<b class="ax-n" aria-hidden="true">${n}</b>`}<span class="ax-t">${icon(s.i)}<span dir="auto">${esc(s.l)}</span></span></li>`;
+  const items = [...sequence.map((s, n) => row(s, numbered ? n + 1 : null)), ...aside.map((s) => row(s, null))];
+  const list = items.length ? `<section class="ax-steps"><div class="sf-wrap"><ol>${items.join("")}</ol></div></section>` : "";
   return `<article class="ax" data-sold="${p.sold ? "1" : "0"}">
-<div class="sf-wrap ax-top"><p class="ax-kicker" dir="auto">${p.kicker}</p><h1 class="sf-h1 sf-pname ax-name" dir="auto">${p.name}</h1></div>
+<div class="sf-wrap ax-top"><h1 class="sf-h1 sf-pname ax-name" dir="auto">${p.name}</h1>${tag(p)}</div>
 <div class="sf-wrap ax-collage"><figure class="ax-photo">${p.gallery}<i class="ax-tape" aria-hidden="true"></i></figure><div class="ax-stamp">${p.priceEl}</div>${p.sub ? `<div class="ax-quote">${p.sub}</div>` : ""}<div class="ax-stock">${p.stock}</div></div>
 ${p.details ? `<section class="ax-story"><div class="sf-wrap sf-rv">${openDetails(p.details)}</div></section>` : ""}
 ${list}
@@ -127,7 +134,7 @@ function pulseProduct(ctx: Ctx, p: ProductParts): string {
   const set = `<span class="px-set">${words.map((w) => `<span dir="auto">${esc(w)}</span>`).join("")}</span>`;
   return `<article class="px" data-sold="${p.sold ? "1" : "0"}">
 <div class="px-marquee" aria-hidden="true"><div class="px-track">${set}${set}${set}${set}</div></div>
-<section class="sf-wrap px-hero"><h1 class="sf-h1 sf-pname px-giant" dir="auto">${p.name}</h1>
+<section class="sf-wrap px-hero"><h1 class="sf-h1 sf-pname px-giant" dir="auto">${p.name}</h1>${tag(p)}
 <div class="px-row"><div class="px-photo">${p.gallery}</div><div class="px-sticker">${p.priceEl}</div></div>
 ${p.sub}${p.stock}${cta(ctx, p, "px-cta")}</section>
 <section class="sf-wrap sf-wrap--narrow px-order">${p.chips}${p.variants}${p.form}${p.details}</section>
@@ -143,7 +150,7 @@ function bloomProduct(ctx: Ctx, p: ProductParts): string {
     : "";
   return `<article class="bx" data-sold="${p.sold ? "1" : "0"}">
 <section class="sf-wrap bx-hero"><div class="bx-arch"><i class="bx-halo" aria-hidden="true"></i>${p.gallery}</div>
-<div class="bx-intro"><p class="bx-kicker" dir="auto">${p.kicker}</p><h1 class="sf-h1 sf-pname" dir="auto">${p.name}</h1>${p.sub}<div class="bx-price">${p.priceEl}${p.stock}</div>${cta(ctx, p, "bx-cta")}</div></section>
+<div class="bx-intro"><h1 class="sf-h1 sf-pname" dir="auto">${p.name}</h1>${tag(p)}${p.sub}<div class="bx-price">${p.priceEl}${p.stock}</div>${cta(ctx, p, "bx-cta")}</div></section>
 ${ritual}
 ${p.details ? `<section class="sf-wrap sf-wrap--narrow bx-detail sf-rv">${openDetails(p.details)}</section>` : ""}
 <section class="sf-wrap sf-wrap--narrow bx-order">${p.variants}${p.form}</section>
@@ -175,7 +182,8 @@ function pic(product: ShopProduct, eager: boolean, cls = ""): string {
 /** The store's opening section. The seller's words (eyebrow, headline, body, button) when written, the store's name otherwise. */
 export function styleHero(style: StyleId, ctx: Ctx, target: string): string {
   const { t, theme, model } = ctx;
-  const eyebrow = esc(theme.hero.eyebrow.trim() || t("storefront.studio.algeriaCod"));
+  const eyebrow = esc(theme.hero.eyebrow.trim());
+  const tagLine = eyebrow ? `<p class="sf-tag" dir="auto">${eyebrow}</p>` : "";
   const headline = esc(theme.hero.headline.trim() || model.name);
   const bodyText = theme.hero.body.trim() || model.description.trim();
   const body = bodyText ? `<p class="sf-lead" dir="auto">${esc(bodyText)}</p>` : "";
@@ -187,19 +195,19 @@ export function styleHero(style: StyleId, ctx: Ctx, target: string): string {
 
   switch (style) {
     case "noir":
-      return `<section class="nx-cover"><div class="sf-wrap nx-in"><p class="nx-kicker" dir="auto">${eyebrow}</p>${first ? `<div class="nx-orb">${pic(first, true)}</div>` : ""}<h1 class="sf-h1 nx-brand" dir="auto">${headline}</h1>${body}${go("nx-cta")}</div></section>`;
+      return `<section class="nx-cover"><div class="sf-wrap nx-in">${first ? `<div class="nx-orb">${pic(first, true)}</div>` : ""}<h1 class="sf-h1 nx-brand" dir="auto">${headline}</h1>${tagLine}${body}${go("nx-cta")}</div></section>`;
     case "lumen":
-      return `<section class="lx-cover"><div class="sf-wrap"><p class="lx-kicker" dir="auto">${eyebrow}</p><h1 class="sf-h1 lx-brand" dir="auto">${headline}</h1><div class="lx-meta">${body}<span class="lx-count">${count}</span></div>${go("lx-cta")}</div></section>`;
+      return `<section class="lx-cover"><div class="sf-wrap"><h1 class="sf-h1 lx-brand" dir="auto">${headline}</h1>${tagLine}<div class="lx-meta">${body}<span class="lx-count">${count}</span></div>${go("lx-cta")}</div></section>`;
     case "atelier":
-      return `<section class="ax-cover"><div class="sf-wrap ax-cover-in"><div class="ax-cover-text"><p class="ax-kicker" dir="auto">${eyebrow}</p><h1 class="sf-h1 ax-brand" dir="auto">${headline}</h1>${body}${go("ax-cta")}</div><div class="ax-cover-pics">${withPic.slice(0, 2).map((product, index) => `<figure class="ax-piece ax-piece--${index + 1}">${pic(product, index === 0)}</figure>`).join("")}</div></div></section>`;
+      return `<section class="ax-cover"><div class="sf-wrap ax-cover-in"><div class="ax-cover-text"><h1 class="sf-h1 ax-brand" dir="auto">${headline}</h1>${tagLine}${body}${go("ax-cta")}</div><div class="ax-cover-pics">${withPic.slice(0, 2).map((product, index) => `<figure class="ax-piece ax-piece--${index + 1}">${pic(product, index === 0)}</figure>`).join("")}</div></div></section>`;
     case "pulse": {
       const words = promises(ctx).map((s) => s.l);
       if (words.length === 0) words.push(t("storefront.studio.cashOnDelivery"));
       const set = `<span class="px-set">${words.map((w) => `<span dir="auto">${esc(w)}</span>`).join("")}</span>`;
-      return `<section class="px-cover"><div class="px-marquee" aria-hidden="true"><div class="px-track">${set}${set}${set}${set}</div></div><div class="sf-wrap px-cover-in"><h1 class="sf-h1 px-giant" dir="auto">${headline}</h1><span class="px-sticker px-sticker--count">${count}</span>${body}${go("px-cta")}</div></section>`;
+      return `<section class="px-cover"><div class="px-marquee" aria-hidden="true"><div class="px-track">${set}${set}${set}${set}</div></div><div class="sf-wrap px-cover-in"><h1 class="sf-h1 px-giant" dir="auto">${headline}</h1>${tagLine}<span class="px-sticker px-sticker--count">${count}</span>${body}${go("px-cta")}</div></section>`;
     }
     case "bloom":
-      return `<section class="bx-cover"><div class="sf-wrap bx-cover-in"><p class="bx-kicker" dir="auto">${eyebrow}</p><h1 class="sf-h1 bx-brand" dir="auto">${headline}</h1>${body}<div class="bx-bouquet" aria-hidden="${withPic.length ? "false" : "true"}">${withPic.slice(0, 3).map((product, index) => `<figure class="bx-bloom bx-bloom--${index + 1}">${pic(product, index === 0)}</figure>`).join("")}</div>${go("bx-cta")}</div></section>`;
+      return `<section class="bx-cover"><div class="sf-wrap bx-cover-in"><h1 class="sf-h1 bx-brand" dir="auto">${headline}</h1>${tagLine}${body}<div class="bx-bouquet" aria-hidden="${withPic.length ? "false" : "true"}">${withPic.slice(0, 3).map((product, index) => `<figure class="bx-bloom bx-bloom--${index + 1}">${pic(product, index === 0)}</figure>`).join("")}</div>${go("bx-cta")}</div></section>`;
   }
 }
 

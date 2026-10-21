@@ -198,7 +198,7 @@ ${theme.checkout.showOrderNotes ? field("notes", t("storefront.view.notes"), '<t
   const parts = (): ProductParts => ({
     product,
     sold,
-    kicker: esc(theme.hero.eyebrow.trim() || model.name),
+    kicker: esc(theme.hero.eyebrow.trim()),
     gallery: gallery(ctx, product),
     name: esc(product.name),
     sub,

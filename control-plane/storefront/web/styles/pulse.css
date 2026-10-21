@@ -37,7 +37,7 @@ body[data-voice=pulse] .px-set span::after{content:"";position:absolute;inset-in
 
 /* the product: a poster */
 body[data-voice=pulse] .px-hero{padding-block:26px 18px}
-body[data-voice=pulse] .px-giant{margin:0;font-size:clamp(46px,17vw,150px);line-height:.9;letter-spacing:-.05em;text-transform:uppercase;overflow-wrap:anywhere}
+body[data-voice=pulse] .px-giant{margin:0;font-size:clamp(46px,17vw,150px);line-height:.9;letter-spacing:-.04em;text-transform:uppercase;overflow-wrap:anywhere}
 html[lang=ar] body[data-voice=pulse] .px-giant{line-height:1.15;letter-spacing:0;text-transform:none}
 body[data-voice=pulse] .px-row{position:relative;margin-block:26px 34px}
 body[data-voice=pulse] .px-photo{background:#fff;border:3px solid var(--ink);box-shadow:var(--hard) var(--hard) 0 var(--ink);transform:rotate(-1.4deg)}
@@ -86,3 +86,11 @@ body[data-voice=pulse] .px-photo{animation:px-slam .8s .12s var(--e-out) both}
   @keyframes px-tilt{from{transform:rotate(-2.6deg)}to{transform:rotate(1.4deg)}}
   body[data-voice=pulse] .px-photo{animation:px-slam .8s .12s var(--e-out) both,px-tilt linear both;animation-timeline:auto,view();animation-range:normal,cover 0% cover 100%}
 }
+
+/* browser surfaces: caret, check marks and the loading placeholder follow the palette */
+body[data-voice=pulse]{caret-color:var(--primary);accent-color:var(--primary)}
+body[data-voice=pulse] :is(.sf-media,.sf-slide,.sf-hero-pic,.sf-panel-pic){background-image:none;animation:none}
+body[data-voice=pulse] .sf-tag{margin:0;font-size:14px;line-height:1.7;font-weight:500;color:var(--muted-foreground)}
+/* nothing may widen the page. A phone browser stretches its layout viewport to the widest thing it ever finds, even for one animation frame, and never shrinks it back;
+   the fixed order bar then stretches with it and sits off screen. "clip" (unlike "hidden") makes no scroll container, so sticky parts keep working. */
+body[data-voice=pulse] main{overflow-x:clip}

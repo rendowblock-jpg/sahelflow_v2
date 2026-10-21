@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { renderStorePage } from "./index";
@@ -19,7 +21,7 @@ function sample(index: number): (typeof SAMPLE_PRODUCTS)[number] {
 }
 
 type Store = Awaited<ReturnType<typeof publishTestStore>>;
-type Options = { mode?: "landing" | "store" | "absent"; locale?: "ar" | "fr"; contact?: boolean; headline?: string; storeName?: string; products?: Parameters<typeof publishTestStore>[0] extends infer O ? (O extends { products?: infer P } ? P : never) : never };
+type Options = { eyebrow?: string; badges?: "all" | "cod-only"; mode?: "landing" | "store" | "absent"; locale?: "ar" | "fr"; contact?: boolean; headline?: string; storeName?: string; products?: Parameters<typeof publishTestStore>[0] extends infer O ? (O extends { products?: infer P } ? P : never) : never };
 
 async function publish(template: Style | (typeof OLD)[number], options: Options = {}): Promise<Store> {
   return publishTestStore({
@@ -33,6 +35,8 @@ async function publish(template: Style | (typeof OLD)[number], options: Options 
       else if (options.mode) bag.mode = options.mode;
       theme.builder.contact = options.contact === false ? { phone: "", whatsapp: "", email: "", address: "" } : { phone: "0550123456", whatsapp: "0550123456", email: "a@b.test", address: "Alger" };
       if (options.headline) theme.hero.headline = options.headline;
+      if (options.eyebrow !== undefined) theme.hero.eyebrow = options.eyebrow;
+      if (options.badges === "cod-only") theme.trust = { showCodBadge: true, showPhoneConfirmationBadge: false, showDeliveryBadge: false, showSupportBadge: false };
     },
   });
 }
@@ -245,5 +249,59 @@ describe("the older templates are not touched by the styles", () => {
     // one product and the older templates: the home is still the product page, whatever the mode says
     expect(html).toContain('id="order"');
     store.database.close();
+  });
+});
+
+describe("craft floor: no label above a heading, numbers only for a real sequence", () => {
+  it.each(STYLES)("%s: no eyebrow-style label is drawn before the h1, on the landing page, the catalogue or the product page", async (style) => {
+    for (const mode of ["landing", "store"] as const) {
+      const store = await publish(style, { mode, eyebrow: "" });
+      for (const html of [page(store), page(store, "product_00000001")]) {
+        expect(html).not.toMatch(/-kicker/);
+        expect(html).not.toContain("№");
+        expect(html).not.toContain('class="sf-tag"');
+      }
+      store.database.close();
+    }
+  });
+
+  it.each(STYLES)("%s: a tagline the seller wrote is drawn once, under the name, and nothing is invented when they wrote none", async (style) => {
+    const store = await publish(style, { mode: "landing", eyebrow: "عبارة البائع" });
+    const html = page(store);
+    expect(count(html, /class="sf-tag"/g)).toBe(1);
+    expect(html.indexOf("</h1>")).toBeLessThan(html.indexOf('class="sf-tag"'));
+    store.database.close();
+  });
+
+  it("Atelier numbers the three promises that happen in order (call, delivery, cash); support is a plain line; one promise alone gets no number", async () => {
+    const all = await publish("atelier", { mode: "landing", badges: "all" });
+    const html = page(all);
+    expect(count(html, /class="ax-n"/g)).toBe(3);
+    expect(count(html, /<li class="sf-rv">/g)).toBeGreaterThanOrEqual(4);
+    all.database.close();
+    const one = await publish("atelier", { mode: "landing", badges: "cod-only" });
+    expect(count(page(one), /class="ax-n"/g)).toBe(0);
+    one.database.close();
+  });
+});
+
+describe("the style sheets keep their promises", () => {
+  const css = (id: Style) => readFileSync(join(process.cwd(), "control-plane/storefront/web/styles", `${id}.css`), "utf8");
+
+  it.each(STYLES)("%s: main clips sideways overflow (a phone browser stretches its layout viewport, and the fixed order bar with it, to the widest thing it finds, even for one animation frame; measured on Atelier: the price stamp's entrance made the page 376 px wide on a 360 px phone)", (style) => {
+    expect(css(style)).toContain(`body[data-voice=${style}] main{overflow-x:clip}`);
+    expect(css(style)).not.toContain(`body[data-voice=${style}]{overflow-x`);
+  });
+
+  it.each(STYLES)("%s: no letter-spacing tighter than -0.04em", (style) => {
+    const values = [...css(style).matchAll(/letter-spacing:(-?[\d.]+)em/g)].map((m) => Number(m[1]));
+    expect(values.length).toBeGreaterThan(0);
+    for (const value of values) expect(value).toBeGreaterThanOrEqual(-0.04);
+  });
+
+  it.each(STYLES)("%s: caret and check marks follow the palette, and the photo placeholder shimmer is off (a cut-out photo is transparent)", (style) => {
+    const text = css(style);
+    expect(text).toContain(`body[data-voice=${style}]{caret-color:var(--primary);accent-color:var(--primary)}`);
+    expect(text).toMatch(new RegExp(`body\\[data-voice=${style}\\] :is\\(\\.sf-media,\\.sf-slide,\\.sf-hero-pic,\\.sf-panel-pic\\)\\{background-image:none;animation:none\\}`));
   });
 });

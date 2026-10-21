@@ -27,7 +27,6 @@ body[data-voice=lumen] .sf-nav a{border-inline-start:1px solid var(--rule-soft)}
 
 /* the product: header block, picture + sheet */
 body[data-voice=lumen] .lx-top{padding-block:28px 22px;border-block-end:1px solid var(--rule)}
-body[data-voice=lumen] .lx-kicker{margin:0 0 10px;color:var(--muted-foreground);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
 body[data-voice=lumen] .lx-top .sf-pname{margin:0;font-size:clamp(30px,8.4vw,52px);line-height:1.08;letter-spacing:-.035em}
 html[lang=ar] body[data-voice=lumen] .lx-top .sf-pname{line-height:1.3}
 body[data-voice=lumen] .lx-top .sf-sub{margin:10px 0 0;max-width:60ch}
@@ -35,7 +34,7 @@ body[data-voice=lumen] .lx-grid{display:grid;gap:0 56px;padding-block:24px var(-
 body[data-voice=lumen] .lx-media{position:relative;background:#fff;border:1px solid var(--rule)}
 body[data-voice=lumen] .lx-media .sf-gal{position:relative}
 body[data-voice=lumen] .lx-media .sf-slide{max-height:none;aspect-ratio:1/1;background-color:#fff}
-body[data-voice=lumen] .lx-media .sf-slide img{object-fit:contain;padding:8%}
+body[data-voice=lumen] .lx-media .sf-slide img{object-fit:contain;padding:3%}
 body[data-voice=lumen] .lx-media .sf-count{inset-block-end:12px}
 body[data-voice=lumen] .lx-media .sf-dots{inset-block-end:16px}
 body[data-voice=lumen] .lx-media .sf-dots i{background:rgb(14 17 20/.25);box-shadow:none}
@@ -47,7 +46,7 @@ body[data-voice=lumen] .lx-mark{position:absolute;inset:8px;z-index:2;pointer-ev
   linear-gradient(var(--rule),var(--rule)) right bottom/14px 1px no-repeat,linear-gradient(var(--rule),var(--rule)) right bottom/1px 14px no-repeat}
 body[data-voice=lumen] .lx-sheet{display:grid;gap:18px;align-content:start;min-width:0;padding-block-start:22px}
 body[data-voice=lumen] .lx-price{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding-block-end:18px;border-block-end:1px solid var(--rule)}
-body[data-voice=lumen] .lx-price .sf-price--lg{margin:0;font-size:clamp(46px,13vw,84px);font-weight:700;letter-spacing:-.045em;line-height:1;color:var(--sf-accent,var(--foreground));font-variant-numeric:tabular-nums}
+body[data-voice=lumen] .lx-price .sf-price--lg{margin:0;font-size:clamp(46px,13vw,84px);font-weight:700;letter-spacing:-.04em;line-height:1;color:var(--sf-accent,var(--foreground));font-variant-numeric:tabular-nums}
 body[data-voice=lumen] .lx-spec{margin:0;display:grid}
 body[data-voice=lumen] .lx-spec>div{display:flex;justify-content:space-between;align-items:center;gap:14px;padding-block:11px;border-block-end:1px dashed var(--rule-soft)}
 body[data-voice=lumen] .lx-spec dt{color:var(--muted-foreground);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
@@ -68,7 +67,7 @@ body[data-voice=lumen] .lx-notes .sf-more{border-block:1px solid var(--rule)}
 
 /* store: the cover and the index */
 body[data-voice=lumen] .lx-cover{padding-block:46px 26px;border-block-end:1px solid var(--rule)}
-body[data-voice=lumen] .lx-brand{margin:10px 0 0;font-size:clamp(46px,14vw,120px);line-height:.95;letter-spacing:-.05em;overflow-wrap:anywhere}
+body[data-voice=lumen] .lx-brand{margin:10px 0 0;font-size:clamp(46px,14vw,96px);line-height:.95;letter-spacing:-.04em;overflow-wrap:anywhere}
 html[lang=ar] body[data-voice=lumen] .lx-brand{line-height:1.25}
 body[data-voice=lumen] .lx-meta{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-block:22px}
 body[data-voice=lumen] .lx-meta .sf-lead{margin:0;max-width:52ch}
@@ -95,3 +94,11 @@ body[data-voice=lumen] .lx-top::after{content:"";position:absolute;inset-inline:
   @keyframes lx-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
   body[data-voice=lumen] .lx-spec>div{animation:lx-rise linear both;animation-timeline:view();animation-range:entry 0% entry 60%}
 }
+
+/* browser surfaces: caret, check marks and the loading placeholder follow the palette */
+body[data-voice=lumen]{caret-color:var(--primary);accent-color:var(--primary)}
+body[data-voice=lumen] :is(.sf-media,.sf-slide,.sf-hero-pic,.sf-panel-pic){background-image:none;animation:none}
+body[data-voice=lumen] .sf-tag{margin:0;font-size:14px;line-height:1.7;font-weight:500;color:var(--muted-foreground)}
+/* nothing may widen the page. A phone browser stretches its layout viewport to the widest thing it ever finds, even for one animation frame, and never shrinks it back;
+   the fixed order bar then stretches with it and sits off screen. "clip" (unlike "hidden") makes no scroll container, so sticky parts keep working. */
+body[data-voice=lumen] main{overflow-x:clip}

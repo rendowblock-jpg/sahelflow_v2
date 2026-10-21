@@ -26,8 +26,6 @@ body[data-voice=atelier] .sf-nav a{border-radius:var(--rb)}
 
 /* the product: name, collage, story, steps, order */
 body[data-voice=atelier] .ax-top{padding-block:30px 8px}
-body[data-voice=atelier] .ax-kicker{margin:0 0 18px;display:inline-flex;align-items:center;gap:10px;color:var(--sf-accent,var(--primary));font-size:14px;font-weight:700}
-body[data-voice=atelier] .ax-kicker::before{content:"";width:26px;height:2px;background:currentColor}
 body[data-voice=atelier] .ax-name{margin:0;font-size:clamp(40px,12.4vw,88px);line-height:1.1;overflow-wrap:anywhere}
 html[lang=ar] body[data-voice=atelier] .ax-name{line-height:1.3}
 body[data-voice=atelier] .ax-name::after{content:"";display:block;width:132px;height:10px;margin-block-start:14px;background:radial-gradient(circle at 5px 5px,transparent 3px,var(--primary) 3px 4.5px,transparent 4.5px) 0 0/10px 10px repeat-x}
@@ -88,10 +86,18 @@ body[data-voice=atelier] .sf-price{color:var(--primary);font-weight:700}
 
 /* motion: the photo is laid down, the stamp is pressed */
 @keyframes ax-lay{from{opacity:0;transform:translateY(34px) rotate(3.5deg)}to{opacity:1;transform:rotate(-1.6deg)}}
-@keyframes ax-press{0%{opacity:0;transform:scale(1.8) rotate(-18deg)}60%{opacity:1;transform:scale(.94) rotate(11deg)}100%{opacity:1;transform:scale(1) rotate(9deg)}}
+@keyframes ax-press{0%{opacity:0;transform:scale(1.25) rotate(-14deg)}60%{opacity:1;transform:scale(.94) rotate(11deg)}100%{opacity:1;transform:scale(1) rotate(9deg)}}
 @keyframes ax-fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 body[data-voice=atelier] .ax-photo{animation:ax-lay .9s var(--e-out) both}
 body[data-voice=atelier] .ax-stamp{animation:ax-press .55s .7s var(--e-spring) both}
 body[data-voice=atelier] :is(.ax-top,.ax-quote){animation:ax-fade .8s var(--e-out) both}
 body[data-voice=atelier] .ax-piece--1{animation:ax-fade .9s var(--e-out) both}
 body[data-voice=atelier] .ax-piece--2{animation:ax-fade .9s .15s var(--e-out) both}
+
+/* browser surfaces: caret, check marks and the loading placeholder follow the palette */
+body[data-voice=atelier]{caret-color:var(--primary);accent-color:var(--primary)}
+body[data-voice=atelier] :is(.sf-media,.sf-slide,.sf-hero-pic,.sf-panel-pic){background-image:none;animation:none}
+body[data-voice=atelier] .sf-tag{margin:0;font-size:14px;line-height:1.7;font-weight:500;color:var(--muted-foreground)}
+/* nothing may widen the page. A phone browser stretches its layout viewport to the widest thing it ever finds, even for one animation frame, and never shrinks it back;
+   the fixed order bar then stretches with it and sits off screen. "clip" (unlike "hidden") makes no scroll container, so sticky parts keep working. */
+body[data-voice=atelier] main{overflow-x:clip}
