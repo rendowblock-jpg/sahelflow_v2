@@ -46,6 +46,46 @@ export const STOREFRONT_TEMPLATE_PRESETS: Readonly<Record<StorefrontTemplateId, 
     surfaceColor: "#F5F6FA",
     textColor: "#15172A",
   },
+  // NOIR: a jeweller's window at night. Warm black, champagne for the one action, ivory for text.
+  noir: {
+    primaryColor: "#D9C7A3",
+    accentColor: "#B8935A",
+    backgroundColor: "#0F0E0D",
+    surfaceColor: "#1A1815",
+    textColor: "#F1EBDF",
+  },
+  // LUMEN: a lit spec sheet. Cool paper, graphite ink, one signal orange for the number that matters.
+  lumen: {
+    primaryColor: "#0E1114",
+    accentColor: "#D93A0B",
+    backgroundColor: "#F2F4F5",
+    surfaceColor: "#FFFFFF",
+    textColor: "#0E1114",
+  },
+  // ATELIER: paper from a workshop. Warm cream, brown ink, terracotta for the action, olive for the small print.
+  atelier: {
+    primaryColor: "#A9461F",
+    accentColor: "#5E6B3A",
+    backgroundColor: "#F2E9DA",
+    surfaceColor: "#FBF6EC",
+    textColor: "#2A1F18",
+  },
+  // PULSE: a drop. Acid lime field, black ink, a red sticker.
+  pulse: {
+    primaryColor: "#0B0B0B",
+    accentColor: "#E5271B",
+    backgroundColor: "#DDF93A",
+    surfaceColor: "#FFFFFF",
+    textColor: "#0B0B0B",
+  },
+  // BLOOM: a ritual. Blush page, plum ink, rose for the action, peach for the soft shapes.
+  bloom: {
+    primaryColor: "#B73A62",
+    accentColor: "#F2B8A2",
+    backgroundColor: "#FCF0EB",
+    surfaceColor: "#FFFFFF",
+    textColor: "#3A2230",
+  },
   // REEL: black cinema. No accent colour of its own: the product's colourways are the colour.
   reel: {
     primaryColor: "#F1EFEA",

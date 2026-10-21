@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { STOREFRONT_TEMPLATE_IDS } from "./presentation-types";
+import { STOREFRONT_PAGE_MODES, STOREFRONT_TEMPLATE_IDS } from "./presentation-types";
 
 const color = z.string().regex(/^#[0-9a-f]{6}$/i);
 const text = (max: number) => z.string().max(max);
@@ -362,6 +362,7 @@ export const storefrontStudioThemeSchema = z
   .object({
     schemaVersion: z.literal(2),
     template: z.enum(STOREFRONT_TEMPLATE_IDS),
+    mode: z.enum(STOREFRONT_PAGE_MODES).optional(),
     primaryColor: color,
     accentColor: color,
     backgroundColor: color,

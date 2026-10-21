@@ -8,7 +8,7 @@ const { DatabaseSync: Sqlite } = createRequire(import.meta.url)("node:sqlite") a
 
 const ROOT = join(process.cwd(), "control-plane/storefront");
 const SCHEMA = readFileSync(join(ROOT, "schema.sql"), "utf8");
-const MIGRATION = readFileSync(join(ROOT, "migrations/0003_template_ids_prime_souk_reel.sql"), "utf8");
+const MIGRATION = readFileSync(join(ROOT, "migrations/0004_template_ids_five_styles.sql"), "utf8");
 
 const NEW_LIST = "'sahara','atlas','oasis','prime','souk','reel'";
 const OLD_LIST = "'sahara','atlas','oasis'";
@@ -86,7 +86,7 @@ const normalise = (sql: string) => sql.replace(/IF NOT EXISTS /gi, "").replace(/
 const objects = (database: DatabaseSync) =>
   rows(database, "SELECT type, name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name").map((row) => `${row.type}:${row.name}`);
 
-describe("migration 0003: existing databases accept prime, souk and reel", () => {
+describe("migration 0004: existing databases accept prime, souk and reel", () => {
   it("the old shape really refuses the new ids (the situation the migration fixes)", () => {
     const database = oldDatabase();
     seed(database);
@@ -150,7 +150,7 @@ describe("migration 0003: existing databases accept prime, souk and reel", () =>
     const definition = (database: DatabaseSync) =>
       normalise((rows(database, "SELECT sql FROM sqlite_master WHERE name = 'storefront_release'")[0] as { sql: string }).sql);
     expect(definition(migrated)).toBe(definition(fresh));
-    expect(objects(migrated).filter((name) => name.includes("zz_mig0003") || name.includes("_new"))).toEqual([]);
+    expect(objects(migrated).filter((name) => name.includes("zz_mig0004") || name.includes("_new"))).toEqual([]);
   });
 
   it("works on a database that has no orders yet, and on a completely empty one", () => {
@@ -189,8 +189,8 @@ describe("migration 0003: existing databases accept prime, souk and reel", () =>
 
   it("is written as the header says: held copies first, final name, triggers last, no forbidden pragma", () => {
     const at = (needle: string) => MIGRATION.indexOf(needle);
-    expect(at("CREATE TABLE zz_mig0003_hold_release")).toBeGreaterThan(-1);
-    expect(at("CREATE TABLE zz_mig0003_hold_shipping_rule")).toBeLessThan(at("DROP TABLE storefront_release;"));
+    expect(at("CREATE TABLE zz_mig0004_hold_release")).toBeGreaterThan(-1);
+    expect(at("CREATE TABLE zz_mig0004_hold_shipping_rule")).toBeLessThan(at("DROP TABLE storefront_release;"));
     expect(at("CREATE TABLE storefront_release (")).toBeGreaterThan(at("DROP TABLE storefront_release;"));
     expect(MIGRATION).not.toContain("RENAME TO");
     expect(at("INSERT INTO storefront_allocation")).toBeGreaterThan(at("CREATE TABLE storefront_release ("));
@@ -202,11 +202,11 @@ describe("migration 0003: existing databases accept prime, souk and reel", () =>
   it("refuses to run over a side table left by an earlier run, and changes nothing (it could be the only copy of the data)", () => {
     const database = oldDatabase();
     seed(database);
-    database.exec("CREATE TABLE zz_mig0003_hold_release AS SELECT * FROM storefront_release");
+    database.exec("CREATE TABLE zz_mig0004_hold_release AS SELECT * FROM storefront_release");
     const before = snapshot(database);
     expect(() => applyAsBatch(database, MIGRATION)).toThrow(/already exists/);
     expect(snapshot(database)).toEqual(before);
-    expect(rows(database, "SELECT count(*) AS n FROM zz_mig0003_hold_release")).toEqual([{ n: 3 }]);
+    expect(rows(database, "SELECT count(*) AS n FROM zz_mig0004_hold_release")).toEqual([{ n: 3 }]);
   });
 
   it("run a second time on a migrated database, it rebuilds the same rows and changes nothing", () => {

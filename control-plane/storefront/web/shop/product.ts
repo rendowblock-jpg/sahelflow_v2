@@ -4,6 +4,7 @@ import { currencySuffix, formatPrice, localeTag } from "./format";
 import { renderContact, renderFaq, renderRail, renderTestimonials } from "./home";
 import { esc, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
 import type { ShopProduct } from "./model";
+import { frameProduct, styleOf, type ProductParts } from "./styles";
 
 type Fees = Record<string, [number | null, number | null]>;
 
@@ -190,13 +191,39 @@ ${theme.checkout.showOrderNotes ? field("notes", t("storefront.view.notes"), '<t
     ? `<details class="sf-more"><summary><span>${esc(t("storefront.shop.details"))}</span>${icon("chevron", "sf-faq-i")}</summary><div class="sf-desc" dir="auto">${esc(full)}</div></details>`
     : "";
 
-  const main = `<article class="sf-pdp" data-sold="${sold ? "1" : "0"}"><div class="sf-wrap sf-pdp-in">
+  const dataScript = `<script type="application/json" id="sf-data">${JSON.stringify(data).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029")}</script>`;
+  const style = styleOf(theme);
+  const feeValues = Object.values(fees).flatMap((entry) => entry).filter((value): value is number => value !== null);
+  // Built only for a style: gallery() reserves the picture's transition name, so calling it twice would change the older pages.
+  const parts = (): ProductParts => ({
+    product,
+    sold,
+    kicker: esc(theme.hero.eyebrow.trim() || model.name),
+    gallery: gallery(ctx, product),
+    name: esc(product.name),
+    sub,
+    priceEl: theme.showPrices ? `<p class="sf-price sf-price--lg" data-sf="price">${esc(price)}</p>` : "",
+    stock: stockNote,
+    chips: trustChips(ctx),
+    variants: variantPicker(ctx, product, current.itemKey),
+    form,
+    details,
+    extras,
+    more,
+    contact: renderContact(ctx, true),
+    data: dataScript,
+    sku: product.sku && theme.catalog.showSku ? product.sku : null,
+    feeMin: feeValues.length ? Math.min(...feeValues) : null,
+    feeMax: feeValues.length ? Math.max(...feeValues) : null,
+  });
+
+  const main = style ? frameProduct(style, ctx, parts()) : `<article class="sf-pdp" data-sold="${sold ? "1" : "0"}"><div class="sf-wrap sf-pdp-in">
 <div class="sf-pdp-media">${gallery(ctx, product)}</div>
 <div class="sf-buy"><h1 class="sf-h1 sf-pname" dir="auto">${esc(product.name)}</h1>${sub}${theme.showPrices ? `<p class="sf-price sf-price--lg" data-sf="price">${esc(price)}</p>` : ""}${stockNote}${product.sku && theme.catalog.showSku ? `<p class="sf-sku" dir="ltr">${esc(product.sku)}</p>` : ""}${trustChips(ctx)}${variantPicker(ctx, product, current.itemKey)}${form}
 ${details}</div>
 </div></article>
 ${extras}${more}${renderContact(ctx, true)}
-<script type="application/json" id="sf-data">${JSON.stringify(data).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029")}</script>`;
+${dataScript}`;
 
   const thumb = product.images[0]
     ? `<img class="sf-sticky-thumb" ${imgAttrs(product.images[0], "48px", 640)} alt="" width="48" height="48" loading="lazy" decoding="async" referrerpolicy="no-referrer">`

@@ -2,8 +2,16 @@ import type { StorefrontPageComposition } from "./studio-sections";
 
 export const STOREFRONT_THEME_SCHEMA_VERSION = 2 as const;
 export const STOREFRONT_BUILDER_SCHEMA_VERSION = 1 as const;
-export const STOREFRONT_TEMPLATE_IDS = ["sahara", "atlas", "oasis", "prime", "souk", "reel"] as const;
+export const STOREFRONT_TEMPLATE_IDS = ["sahara", "atlas", "oasis", "prime", "souk", "reel", "noir", "lumen", "atelier", "pulse", "bloom"] as const;
 export type StorefrontTemplateId = (typeof STOREFRONT_TEMPLATE_IDS)[number];
+/** The five styles that come in two forms: a one-page COD landing page, or a store of several pages. */
+export const STOREFRONT_STYLE_IDS = ["noir", "lumen", "atelier", "pulse", "bloom"] as const;
+export type StorefrontStyleId = (typeof STOREFRONT_STYLE_IDS)[number];
+export const STOREFRONT_PAGE_MODES = ["landing", "store"] as const;
+export type StorefrontPageMode = (typeof STOREFRONT_PAGE_MODES)[number];
+export function isStorefrontStyleId(id: string): id is StorefrontStyleId {
+  return (STOREFRONT_STYLE_IDS as readonly string[]).includes(id);
+}
 export type LegacyStorefrontTemplateId = "minimal" | "modern" | "classic";
 export type StorefrontHeroStyle = "editorial" | "split" | "centered";
 export type StorefrontCardStyle = "minimal" | "elevated" | "outlined";
@@ -84,6 +92,8 @@ export interface StorefrontBuilderState {
 export interface StorefrontTheme {
   schemaVersion: typeof STOREFRONT_THEME_SCHEMA_VERSION;
   template: StorefrontTemplateId;
+  /** Only the five styles read it; the older templates have none and their pages do not change. */
+  mode?: StorefrontPageMode;
   primaryColor: string;
   accentColor: string;
   backgroundColor: string;

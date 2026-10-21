@@ -1,4 +1,4 @@
-import { STOREFRONT_TEMPLATE_IDS, type StorefrontTemplateId, type StorefrontTheme } from "./presentation-types";
+import { isStorefrontStyleId, STOREFRONT_TEMPLATE_IDS, type StorefrontTemplateId, type StorefrontTheme } from "./presentation-types";
 import { createDefaultStorefrontTheme } from "./theme-default";
 import { storefrontStudioThemeSchema } from "./studio-schema";
 import { STOREFRONT_TEMPLATE_PRESETS } from "./template-presets";
@@ -82,6 +82,8 @@ export function switchStorefrontTemplate(
     showCodPromise: theme.checkout.showCodPromise,
     codPromiseText: theme.checkout.codPromiseText,
   };
+  // The seller's choice between landing page and store survives a move from one style to another.
+  if (theme.mode && isStorefrontStyleId(nextTemplate)) next.mode = theme.mode;
   next.trust = { ...theme.trust };
   next.builder = structuredClone(theme.builder);
   return next;

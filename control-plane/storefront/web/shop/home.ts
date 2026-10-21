@@ -1,6 +1,7 @@
 import { formatPrice } from "./format";
 import { esc, httpsUrl, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
 import type { ShopProduct, ShopSection } from "./model";
+import { lumenIndex, styleHero, styleOf } from "./styles";
 
 const RATIO_SIZE = { portrait: [800, 1000], square: [800, 800], landscape: [800, 600] } as const;
 
@@ -130,20 +131,27 @@ export function renderHome(ctx: Ctx): { main: string; tagline: string } {
   const { theme, model, t } = ctx;
   const sections = theme.builder.composition.sections.filter((section) => section.enabled);
   const parts: string[] = [];
+  const style = styleOf(theme);
   let tagline = "";
   for (const section of sections) {
     switch (section.type) {
       case "hero":
-        if (theme.hero.enabled) parts.push(renderHero(ctx, "#catalog"));
+        if (theme.hero.enabled) parts.push(style ? styleHero(style, ctx, "#catalog") : renderHero(ctx, "#catalog"));
         break;
       case "trust":
         parts.push(renderTrust(ctx));
         break;
       case "featured-products":
+        // A style shows its catalogue once; the featured row is skipped when a catalogue section follows.
+        if (style && sections.some((other) => other.type === "product-grid")) break;
         parts.push(renderRail(ctx, model.products.slice(0, 4), str(section.settings.title) || t("storefront.view.navProducts")));
         break;
       case "product-grid":
-        parts.push(renderGrid(ctx, model.products, str(section.settings.title) || t("storefront.view.navProducts"), "catalog"));
+        parts.push(
+          style === "lumen"
+            ? lumenIndex(ctx, model.products, str(section.settings.title) || t("storefront.view.navProducts"), "catalog")
+            : renderGrid(ctx, model.products, str(section.settings.title) || t("storefront.view.navProducts"), "catalog"),
+        );
         break;
       case "media":
         parts.push(renderMedia(ctx, section));

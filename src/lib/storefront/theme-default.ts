@@ -1,5 +1,5 @@
 import type { StorefrontTemplateId, StorefrontTheme } from "./presentation-types";
-import { STOREFRONT_THEME_SCHEMA_VERSION } from "./presentation-types";
+import { isStorefrontStyleId, STOREFRONT_THEME_SCHEMA_VERSION } from "./presentation-types";
 import { STOREFRONT_TEMPLATE_PRESETS } from "./template-presets";
 import { createDefaultStorefrontBuilderState } from "./builder-default";
 
@@ -20,6 +20,11 @@ const SHAPE: Readonly<Record<StorefrontTemplateId, Shape>> = {
   prime: { density: "airy", radius: "sharp", announcement: false, hero: "centered", card: "minimal", ratio: "portrait", categoryNavigation: false, checkout: "sticky" },
   souk: { density: "balanced", radius: "rounded", announcement: false, hero: "split", card: "elevated", ratio: "square", categoryNavigation: true, checkout: "sticky" },
   reel: { density: "airy", radius: "sharp", announcement: false, hero: "split", card: "minimal", ratio: "landscape", categoryNavigation: false, checkout: "sticky" },
+  noir: { density: "airy", radius: "sharp", announcement: false, hero: "centered", card: "minimal", ratio: "portrait", categoryNavigation: false, checkout: "sticky" },
+  lumen: { density: "balanced", radius: "soft", announcement: false, hero: "split", card: "outlined", ratio: "square", categoryNavigation: true, checkout: "sticky" },
+  atelier: { density: "airy", radius: "soft", announcement: false, hero: "editorial", card: "minimal", ratio: "portrait", categoryNavigation: false, checkout: "sticky" },
+  pulse: { density: "compact", radius: "sharp", announcement: true, hero: "centered", card: "outlined", ratio: "square", categoryNavigation: false, checkout: "sticky" },
+  bloom: { density: "airy", radius: "rounded", announcement: false, hero: "centered", card: "elevated", ratio: "portrait", categoryNavigation: false, checkout: "sticky" },
 };
 
 export function createDefaultStorefrontTheme(template: StorefrontTemplateId = "atlas"): StorefrontTheme {
@@ -28,6 +33,8 @@ export function createDefaultStorefrontTheme(template: StorefrontTemplateId = "a
   return {
     schemaVersion: STOREFRONT_THEME_SCHEMA_VERSION,
     template,
+    // A COD seller sells one product from an ad: the five styles start as a landing page. The older templates have no mode.
+    ...(isStorefrontStyleId(template) ? { mode: "landing" as const } : {}),
     ...palette,
     showPrices: true,
     showStock: false,

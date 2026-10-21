@@ -24,8 +24,12 @@ describe("the template id list lives in four places and they stay equal", () => 
     expect(listIn(readFileSync(join(ROOT, "schema.sql"), "utf8"), "storefront_release")).toEqual([...TEMPLATE_IDS]);
   });
 
-  it("migration 0003, for an existing database, allows exactly those ids", () => {
-    expect(listIn(readFileSync(join(ROOT, "migrations/0003_template_ids_prime_souk_reel.sql"), "utf8"), "storefront_release")).toEqual([...TEMPLATE_IDS]);
+  it("the newest migration, for an existing database, allows exactly those ids", () => {
+    expect(listIn(readFileSync(join(ROOT, "migrations/0004_template_ids_five_styles.sql"), "utf8"), "storefront_release")).toEqual([...TEMPLATE_IDS]);
+  });
+
+  it("migration 0003 is history: it keeps the six ids it shipped with", () => {
+    expect(listIn(readFileSync(join(ROOT, "migrations/0003_template_ids_prime_souk_reel.sql"), "utf8"), "storefront_release")).toEqual(["sahara", "atlas", "oasis", "prime", "souk", "reel"]);
   });
 
   it.each(TEMPLATE_IDS)("%s: the Studio accepts a default theme of that template and it has a palette", (id) => {
@@ -43,7 +47,7 @@ describe("isTemplateId", () => {
   it.each(TEMPLATE_IDS)("accepts %s", (id) => expect(isTemplateId(id)).toBe(true));
 
   it.each([
-    "", " prime", "Prime", "PRIME", "prime ", "vitrine", "comptoir", "scene", "lumen", "agora", "kinetic",
+    "", " prime", "Prime", "PRIME", "prime ", "vitrine", "comptoir", "scene", "agora", "kinetic",
     "__proto__", "constructor", "prototype", "toString", "hasOwnProperty", "length", "0", "1",
   ])("refuses %j, including names that exist on every JavaScript object", (value) => {
     expect(isTemplateId(value)).toBe(false);

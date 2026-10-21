@@ -5,6 +5,7 @@ import { documentShell, renderTabBar } from "./layout";
 import { buildShopModel } from "./model";
 import { renderHome } from "./home";
 import { renderProduct } from "./product";
+import { headExtra, isStoreMode, styleOf } from "./styles";
 import { productHref, type Ctx } from "./ui";
 
 /**
@@ -20,14 +21,18 @@ export const renderStorePage: RenderStorePage = (input) => {
   const t = createPublicTranslator(input.locale);
   // A store with exactly one product is an ad landing page: its home IS the product page.
   const single = model.products.length === 1 ? model.products[0] : undefined;
+  // A style set to "landing" is one page selling its first product; set to "store" its home is the catalogue, even for one product.
+  const style = styleOf(model.theme);
+  const store = isStoreMode(model.theme);
+  const featured = style ? (store ? undefined : model.products[0]) : single;
   const product = input.productId
     ? model.products.find((candidate) => candidate.id === input.productId)
-    : single;
+    : featured;
   if (input.productId && !product) return null;
 
   const path = input.productId && product ? productHref(input.slug, product.id) : `/${input.slug}`;
   // A one-product store has one address for that page: its home.
-  const canonicalPath = single && product ? `/${input.slug}` : path;
+  const canonicalPath = featured && product && product.id === featured.id ? `/${input.slug}` : path;
   const ctx: Ctx = {
     t,
     locale: input.locale,
@@ -51,7 +56,7 @@ export const renderStorePage: RenderStorePage = (input) => {
 
   if (product) {
     const page = renderProduct(ctx, product);
-    const title = single && !input.productId
+    const title = featured && !input.productId
       ? seo.title.trim() || `${product.name} — ${model.name}`
       : `${product.name} — ${model.name}`;
     const description = product.description
@@ -66,9 +71,11 @@ export const renderStorePage: RenderStorePage = (input) => {
       preload: page.preload,
       jsonLd: page.jsonLd,
       script: true,
-      bodyAttrs: `data-page="product"${page.bar ? " data-sticky" : ""}`,
+      bodyAttrs: `data-page="product"${page.bar ? " data-sticky" : ""}${style ? ` data-mode="${store ? "store" : "landing"}"` : ""}`,
       main: page.main,
       bar: page.bar,
+      headExtra: headExtra(ctx, product),
+      fx: Boolean(style),
       tagline: "",
     });
   }
@@ -96,8 +103,10 @@ export const renderStorePage: RenderStorePage = (input) => {
       ],
     },
     script: false,
-    bodyAttrs: 'data-page="home"',
+    bodyAttrs: `data-page="home"${style ? ` data-mode="${store ? "store" : "landing"}"` : ""}`,
     main: home.main,
+    headExtra: headExtra(ctx, undefined),
+    fx: Boolean(style),
     tabs: model.theme.template === "souk" ? renderTabBar(ctx) : "",
     tagline: home.tagline,
   });

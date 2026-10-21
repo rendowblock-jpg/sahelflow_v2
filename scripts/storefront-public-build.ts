@@ -94,7 +94,7 @@ function buildMessages(): string {
 }
 
 /** The newer templates. Each has styles/<id>.css (its @font-face rules and skin) and, for reel, client/reel.ts. */
-const SKINS = ["prime", "souk", "reel"] as const;
+const SKINS = ["prime", "souk", "reel", "noir", "lumen", "atelier", "pulse", "bloom"] as const;
 
 /**
  * Every subsetted face under web/fonts, in any sub-folder (SIL OFL, one licence file per family next to the fonts),

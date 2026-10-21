@@ -29,9 +29,9 @@ export function languageNav(ctx: Ctx): string {
   return `<nav class="sf-lang" aria-label="${esc(ctx.t("storefront.language.label"))}">${links}</nav>`;
 }
 
-export function renderHeader(ctx: Ctx): string {
+export function renderHeader(ctx: Ctx, extra = ""): string {
   const initial = [...ctx.model.name.trim()][0]?.toUpperCase() ?? "•";
-  return `<header class="sf-head"><div class="sf-wrap sf-head-in"><a class="sf-brand" href="/${esc(ctx.slug)}"><span class="sf-mono" aria-hidden="true">${esc(initial)}</span><b dir="auto">${esc(ctx.model.name)}</b></a>${languageNav(ctx)}</div></header>`;
+  return `<header class="sf-head"><div class="sf-wrap sf-head-in"><a class="sf-brand" href="/${esc(ctx.slug)}"><span class="sf-mono" aria-hidden="true">${esc(initial)}</span><b dir="auto">${esc(ctx.model.name)}</b></a>${extra}${languageNav(ctx)}</div></header>`;
 }
 
 export function renderAnnouncement(ctx: Ctx): string {
@@ -66,6 +66,10 @@ export type PageParts = {
   bar?: string;
   /** The bottom tab bar (Souk, home page only). */
   tabs?: string;
+  /** What a style adds to the header: its two links (store) or its order button (landing page). */
+  headExtra?: string;
+  /** A style loads its own script on every page (the older templates only on a product page). */
+  fx?: boolean;
   tagline: string;
 };
 
@@ -105,6 +109,12 @@ const PRELOAD: Record<ShopTheme["template"], { ar: string | null; latin: string 
   prime: { ar: "alexandria-300-arabic", latin: "jost-var-latin" },
   souk: { ar: "readexpro-var-arabic", latin: "readexpro-var-latin" },
   reel: { ar: null, latin: "archivo-cond-800-latin" },
+  // The five styles: one file holds the Arabic and the Latin letters, so both languages preload the heading weight.
+  noir: { ar: "noir-500", latin: "noir-500" },
+  lumen: { ar: "lumen-700", latin: "lumen-700" },
+  atelier: { ar: "atelier-700", latin: "atelier-700" },
+  pulse: { ar: "pulse-900", latin: "pulse-900" },
+  bloom: { ar: "bloom-700", latin: "bloom-700" },
 };
 
 /** A value from a table only when the key is the table's OWN: "constructor" or "__proto__" never find a function or an object here. */
@@ -168,13 +178,13 @@ ${head}
 <body ${attrs}>
 <a class="sf-skip" href="#main">${esc(ctx.t("storefront.shop.skip"))}</a>
 ${renderAnnouncement(ctx)}
-${renderHeader(ctx)}
+${renderHeader(ctx, page.headExtra ?? "")}
 <main id="main">
 ${page.main}
 </main>
 ${renderFooter(ctx, page.tagline)}
 ${page.bar ?? ""}${page.tabs ?? ""}
-${page.script ? `<script src="${esc(assets.js)}" defer></script>` : ""}${page.script && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}
+${page.script ? `<script src="${esc(assets.js)}" defer></script>` : ""}${(page.script || page.fx) && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}
 </body>
 </html>`;
 }

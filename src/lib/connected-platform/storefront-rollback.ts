@@ -42,7 +42,7 @@ export type PreparedStorefrontRollback = Readonly<{
 export type HostedRollbackResult = HostedPublishTransfer & Readonly<{
   sourceReleaseId: string;
   previousReleaseId: string;
-  templateId: "sahara" | "atlas" | "oasis" | "prime" | "souk" | "reel";
+  templateId: import("@/lib/storefront/presentation-types").StorefrontTemplateId;
   locale: "ar" | "fr" | "en";
   publicArtifact: unknown;
   shippingRules: readonly {

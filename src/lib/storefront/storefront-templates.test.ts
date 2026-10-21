@@ -9,7 +9,7 @@ import { normalizeStorefrontTheme } from "./theme-normalize";
 import { STOREFRONT_TEMPLATE_PRESETS } from "./template-presets";
 import { createDefaultStorefrontTheme } from "./theme-default";
 
-const NEW_IDS = ["prime", "souk", "reel"] as const satisfies readonly StorefrontTemplateId[];
+const NEW_IDS = ["prime", "souk", "reel", "noir", "lumen", "atelier", "pulse", "bloom"] as const satisfies readonly StorefrontTemplateId[];
 
 function releaseFor(template: StorefrontTemplateId) {
   const theme = createDefaultStorefrontTheme(template);
@@ -25,8 +25,8 @@ function releaseFor(template: StorefrontTemplateId) {
 }
 
 describe("storefront template registry (ids)", () => {
-  it("keeps the three published ids and adds prime, souk and reel", () => {
-    expect([...STOREFRONT_TEMPLATE_IDS]).toEqual(["sahara", "atlas", "oasis", "prime", "souk", "reel"]);
+  it("keeps the three published ids and the earlier three, then adds the five styles", () => {
+    expect([...STOREFRONT_TEMPLATE_IDS]).toEqual(["sahara", "atlas", "oasis", "prime", "souk", "reel", "noir", "lumen", "atelier", "pulse", "bloom"]);
   });
 
   it.each(STOREFRONT_TEMPLATE_IDS)("%s has a palette, a default theme the Studio schema accepts, and survives normalisation", (id) => {

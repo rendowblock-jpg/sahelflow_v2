@@ -11,7 +11,9 @@ export type ShopSection = {
 
 /** The part of the published theme the public page reads. The cloud validated the whole theme at publish. */
 export type ShopTheme = {
-  template: "sahara" | "atlas" | "oasis" | "prime" | "souk" | "reel";
+  template: import("../../shared").TemplateId;
+  /** The five styles only: one scrollable landing page, or a store of several pages. Absent in older themes. */
+  mode?: "landing" | "store";
   primaryColor: string;
   accentColor: string;
   backgroundColor: string;
