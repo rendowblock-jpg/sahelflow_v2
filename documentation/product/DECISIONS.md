@@ -21,10 +21,10 @@ Entries are ordered by number, not by date, and the newest numbers are at the en
 
 - FD-079 — Per-machine Windows install (2026-10-18, ADOPTED under delegation)
 - FD-078 — Storefront templates Prime, Souk and Reel (2026-10-20, ADOPTED)
-- FD-077 — Arabic-first storefront (October 2026, ADOPTED)
+- FD-077 — Arabic-first storefront (2026-10-19, ADOPTED)
 - FD-076 — Hosted product photos (2026-10-19, ADOPTED)
-- FD-075 — Storefront Worker plan (2026-10-20, ADOPTED)
-- FD-074 — Hosted store address (2026-10-19, ADOPTED)
+- FD-075 — Storefront Worker plan (2026-10-19 and 2026-10-20, ADOPTED)
+- FD-074 — Hosted store address (2026-10-19, ADOPTED; address form under delegation)
 - FD-073 — One signed successor Internal.45 under the FD-066 customer launch (2026-10-19, ADOPTED)
 - FD-072 — One signed successor Internal.44 under the FD-066 customer launch (2026-10-17, ADOPTED)
 - FD-071 — One signed successor Internal.43 under the FD-066 customer launch (2026-10-14, ADOPTED)
@@ -1260,29 +1260,31 @@ On 2026-10-19 the Founder directed: "just finish the work and make the internal 
 
 The release authority is `.github/release-requests/internal-45-fd073-customer-launch.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
-## FD-074 — Hosted store address (2026-10-19, ADOPTED)
+## FD-074 — Hosted store address (2026-10-19, ADOPTED; address form under delegation)
 
-The Founder's decision of 2026-10-19: hosted stores are served by SahelFlow at `https://shop.sahelflow.com/<slug>` (staging: `shop-staging.sahelflow.com`). There is no separate store domain, no separate Cloudflare account for stores and no per-seller subdomain.
+The Founder decided on 2026-10-19 that stores get **no separate store domain and no second Cloudflare account**: public stores stay on `sahelflow.com`, in the same account.
+
+The address form `https://shop.sahelflow.com/<slug>` (staging: `shop-staging.sahelflow.com`) was chosen by the agent under the Founder's delegation of storefront decisions. A per-store subdomain (`<slug>.sahelflow.com`) cannot be served from R2 on the Free plan, because an R2 custom domain is keyed by host, and a path needs no DNS record or certificate. The Founder may reverse this with a new numbered decision.
 
 - Supersedes the `seller-slug.sahelflow.app` wording of FD-006 and of `PRODUCT.md` section 8.
 - Custom seller domains stay conditional on their own certification (FD-006).
 
-## FD-075 — Storefront Worker plan (2026-10-20, ADOPTED)
+## FD-075 — Storefront Worker plan (2026-10-19 and 2026-10-20, ADOPTED)
 
-The Founder's decision of 2026-10-20: the hosted storefront stays on Cloudflare Workers Free for now and moves to Workers Paid **before any seller runs advertising to a store**. A store page therefore must not depend on a 60-second page cache lifetime to stay inside the free CPU limit.
+The Founder decided on 2026-10-19 to stay on Cloudflare Workers Free for now, and on 2026-10-20 that the hosted storefront moves to Workers Paid **before any seller runs advertising to a store**. A store page therefore must not depend on a 60-second page cache lifetime to stay inside the free CPU limit.
 
 - Relation to FD-045: the zero-paid-infrastructure rule stands for everything else. For the storefront Worker, the paid plan is an authorized cost once the first seller advertises. A different reading needs a new numbered decision.
 
 ## FD-076 — Hosted product photos (2026-10-19, ADOPTED)
 
-The Founder's decision of 2026-10-19: product photos shown on hosted stores are stored and served by SahelFlow (Cloudflare R2, content-named files, served from a SahelFlow media subdomain), not linked from sites SahelFlow does not control. Uploads are authenticated by the desktop app.
+The Founder decided on 2026-10-19 that product photos shown on hosted stores are stored and served by SahelFlow (Cloudflare R2, content-named files, served from a SahelFlow media subdomain), not linked from sites SahelFlow does not control. Uploads are authenticated by the desktop app.
 
 - Supersedes the seller-supplied external `https` image addresses of the current release payload once this work lands.
 - The production media bucket, a usage monitor and a takedown path must exist before any production deploy that carries it.
 
-## FD-077 — Arabic-first storefront (October 2026, ADOPTED)
+## FD-077 — Arabic-first storefront (2026-10-19, ADOPTED)
 
-The Founder's decision: hosted stores are designed Arabic first. Arabic is the default language and the first design target (right-to-left layout and Arabic typography); French and English are supported beside it. The AAA bar of `../product/EXPERIENCE.md` applies to every store template.
+The Founder's rule of 2026-10-19: hosted stores are designed Arabic first. Arabic is the default language and the first design target (right-to-left layout and Arabic typography); French and English are supported beside it. The AAA bar of `../product/EXPERIENCE.md` applies to every store template.
 
 ## FD-078 — Storefront templates Prime, Souk and Reel (2026-10-20, ADOPTED)
 
