@@ -298,7 +298,7 @@ describe("the style sheets keep their promises", () => {
   it.each(STYLES)("%s: on a phone the shop name may use two lines and the header order button steps aside (the fixed bottom bar already carries it) - measured on staging, the name was cut to 0-75 px of 81-124 px on 19 of 40 page loads", (style) => {
     const sheet = css(style);
     expect(sheet).toContain(`@media (max-width:430px){body[data-voice=${style}] .sf-hcta{display:none}`);
-    expect(sheet).toContain(`body[data-voice=${style}] .sf-brand b{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;line-height:1.1}}`);
+    expect(sheet).toContain(`body[data-voice=${style}] .sf-brand b{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;line-height:1.5}}`);
   });
 
   it.each(STYLES)("%s: main clips sideways overflow (a phone browser stretches its layout viewport, and the fixed order bar with it, to the widest thing it finds, even for one animation frame; measured on Atelier: the price stamp's entrance made the page 376 px wide on a 360 px phone)", (style) => {

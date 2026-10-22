@@ -104,4 +104,4 @@ body[data-voice=lumen] .sf-tag{margin:0;font-size:14px;line-height:1.7;font-weig
 /* nothing may widen the page. A phone browser stretches its layout viewport to the widest thing it ever finds, even for one animation frame, and never shrinks it back;
    the fixed order bar then stretches with it and sits off screen. "clip" (unlike "hidden") makes no scroll container, so sticky parts keep working. */
 body[data-voice=lumen] main{overflow-x:clip}
-@media (max-width:430px){body[data-voice=lumen] .sf-hcta{display:none}body[data-voice=lumen] .sf-brand b{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;line-height:1.1}}
+@media (max-width:430px){body[data-voice=lumen] .sf-hcta{display:none}body[data-voice=lumen] .sf-brand b{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;line-height:1.5}}
