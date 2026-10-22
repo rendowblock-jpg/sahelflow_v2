@@ -63,13 +63,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Next.js 16.4 requires every URL to build a COMPLETE parallel-route tree.
-  // The (dashboard) layout has a `@modal/[...catchAll]` slot (it closes the
-  // Settings modal on client navigation), so /login, /setup, /join and the
-  // public storefront pages match that slot without a `children` page and
-  // answer 404. Keep the legacy loose matching until the slot is restructured
-  // (src/lib/__tests__/next-route-matching-contract.test.ts pins both sides).
-  deprecated: { looseRouteMatching: true },
   output: "standalone",
   // The standalone server resolves seller dashboard dictionaries at RUNTIME
   // from `resolve(process.cwd(), "src/lib/i18n/locales/<locale>.json")`
