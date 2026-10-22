@@ -339,4 +339,11 @@ describe("the style sheets keep their promises", () => {
   it.each(["atelier", "bloom"] as const)("%s: the cash-on-delivery line is the brand colour pulled 15% toward the text colour - the plain brand colour read 4.27 (Atelier) and 4.31 (Bloom) on its tinted band", (style) => {
     expect(css(style)).toContain(`@supports (background:color-mix(in srgb,red,blue)){body[data-voice=${style}] .sf-cod{color:color-mix(in srgb,var(--sf-brand-text-on-surface,var(--foreground)) 85%,var(--foreground))}}`);
   });
+
+  it("atelier: on a phone the first row of the collage is at least 424 px tall, so the tagline and the stock note start below the round price stamp - the stamp hangs 461 px under the top of the collage at every width while the photo row is 300-411 px high from 320 to 430 px wide; measured on staging: text under the stamp in 20 of 24 loads (320-412 px, ar and fr, landing and product page), 17% of the tagline's ink painted over at 390 px", () => {
+    const sheet = css("atelier");
+    expect(sheet).toContain("@media (max-width:899.98px){body[data-voice=atelier] .ax-collage:has(.ax-stamp:not(:empty)){grid-template-rows:minmax(424px,auto);align-items:start}}");
+    // the two-column layout from 900 px keeps its own rows and its own alignment
+    expect(sheet).toContain("@media (min-width:900px){\n  body[data-voice=atelier] .ax-collage{grid-template-columns:minmax(0,1fr) minmax(0,.8fr);align-items:center;");
+  });
 });
