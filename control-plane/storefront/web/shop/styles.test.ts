@@ -353,4 +353,21 @@ describe("the style sheets keep their promises", () => {
     expect(sheet).not.toContain("[dir=rtl] body[data-voice=pulse] .px-photo .sf-count");
   });
 
+  it("words stay whole in small boxes (trust tiles, order summary labels, Pulse order bar, Lumen product rows, narrow header): the page-wide overflow-wrap:anywhere stays as the safety net for long names, but short labels opt out of it", () => {
+    const sheetOf = (id: string) => readFileSync(join(process.cwd(), "control-plane/storefront/web/styles", id + ".css"), "utf8");
+    const shop = sheetOf("shop");
+    const lumen = sheetOf("lumen");
+    // the safety net for long product names stays in place
+    expect(shop).toMatch(/body\{[^}]*overflow-wrap:anywhere\}/);
+    expect(shop).toContain(".sf-trust li>span:not(.sf-chip){min-width:0;overflow-wrap:normal}");
+    expect(shop).toContain("@media (max-width:399px){.sf-trust li{gap:8px;padding:12px}.sf-trust .sf-chip{width:36px;height:36px}.sf-trust .sf-chip .sf-i{width:18px;height:18px}}");
+    expect(shop).toContain("@media (max-width:359px){.sf-trust{grid-template-columns:1fr}}");
+    expect(shop).toContain(".sf-sum dt{flex:0 0 auto;max-width:60%}");
+    expect(shop).toContain("body[data-voice] .sf-sticky .sf-cta--bar{min-width:max-content;padding-inline:14px;overflow-wrap:normal}");
+    expect(shop).toContain("@media (max-width:389px){body[data-voice] .sf-head .sf-lang-i{min-width:36px}body[data-voice] .sf-head .sf-nav a{padding-inline:8px}}");
+    expect(shop).toContain("@media (max-width:359px){body[data-voice] .sf-head .sf-lang-i{min-width:32px}body[data-voice] .sf-head .sf-nav a{padding-inline:6px}}");
+    expect(shop).toContain("@media (max-width:359px){body[data-voice] .sf-head .sf-mono{width:30px;height:30px;font-size:14px}body[data-voice] .sf-head .sf-brand{gap:6px}body[data-voice] .sf-head .sf-brand b{font-size:14px}}");
+    expect(lumen).toContain("@media (max-width:479px){\nbody[data-voice=lumen] .lx-row{grid-template-columns:24px 56px minmax(0,1fr) 18px;column-gap:12px;row-gap:2px}\nbody[data-voice=lumen] .lx-row-n{grid-area:1/1/3/2}\nbody[data-voice=lumen] .lx-row-pic{grid-area:1/2/3/3}\nbody[data-voice=lumen] .lx-row-name{grid-area:1/3/2/4;align-self:end}\nbody[data-voice=lumen] .lx-row-price{grid-area:2/3/3/4;align-self:start;white-space:normal}\nbody[data-voice=lumen] .lx-row-go{grid-area:1/4/3/5;align-self:center}\n}");
+  });
+
 });

@@ -106,3 +106,12 @@ body[data-voice=lumen] .sf-tag{margin:0;font-size:14px;line-height:1.7;font-weig
    the fixed order bar then stretches with it and sits off screen. "clip" (unlike "hidden") makes no scroll container, so sticky parts keep working. */
 body[data-voice=lumen] main{overflow-x:clip}
 @media (max-width:430px){body[data-voice=lumen] .sf-hcta{display:none}body[data-voice=lumen] .sf-brand b{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;line-height:1.8}}
+/* product rows on a phone: the price goes under the name, so the name keeps a readable column instead of 40 px */
+@media (max-width:479px){
+body[data-voice=lumen] .lx-row{grid-template-columns:24px 56px minmax(0,1fr) 18px;column-gap:12px;row-gap:2px}
+body[data-voice=lumen] .lx-row-n{grid-area:1/1/3/2}
+body[data-voice=lumen] .lx-row-pic{grid-area:1/2/3/3}
+body[data-voice=lumen] .lx-row-name{grid-area:1/3/2/4;align-self:end}
+body[data-voice=lumen] .lx-row-price{grid-area:2/3/3/4;align-self:start;white-space:normal}
+body[data-voice=lumen] .lx-row-go{grid-area:1/4/3/5;align-self:center}
+}
