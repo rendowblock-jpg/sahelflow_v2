@@ -45,6 +45,7 @@ body[data-voice=pulse] .px-photo{background:#fff;border:3px solid var(--ink);box
 body[data-voice=pulse] .px-photo .sf-slide{max-height:46svh;aspect-ratio:4/3;background-color:#fff}
 body[data-voice=pulse] .px-photo .sf-slide img{object-fit:contain;padding:6%}
 body[data-voice=pulse] .px-photo .sf-count{inset-block-end:12px;border-radius:0;background:var(--ink)}
+[dir=ltr] body[data-voice=pulse] .px-photo .sf-count{inset-inline-end:auto;inset-inline-start:16px}
 body[data-voice=pulse] .px-photo .sf-dots{inset-block-end:16px}
 body[data-voice=pulse] .px-photo .sf-dots i{background:rgb(11 11 11/.3);box-shadow:none}
 body[data-voice=pulse] .px-photo .sf-dots i[aria-current]{background:var(--ink)}
