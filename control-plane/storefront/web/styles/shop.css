@@ -374,6 +374,15 @@ body[data-voice=sahara] .sf-buy{border-radius:36px 36px 0 0}
 body[data-voice=sahara] .sf-foot strong{letter-spacing:.06em}
 .sf-foot small{font-size:12px;opacity:.8}
 
+/* words stay whole. The page-wide overflow-wrap:anywhere (a safety net for long product names) let small boxes shrink to one letter and break words in the middle ("téléphoniqu|e"). Short labels now keep their word width and the box next to them shrinks instead. Measured with a probe over 5 styles x 3 pages x ar/fr/en x 320/360/390/430 px. */
+.sf-trust li>span:not(.sf-chip){min-width:0;overflow-wrap:normal}
+@media (max-width:399px){.sf-trust li{gap:8px;padding:12px}.sf-trust .sf-chip{width:36px;height:36px}.sf-trust .sf-chip .sf-i{width:18px;height:18px}}
+@media (max-width:359px){.sf-trust{grid-template-columns:1fr}}
+.sf-sum dt{flex:0 0 auto;max-width:60%}
+body[data-voice] .sf-sticky .sf-cta--bar{min-width:max-content;padding-inline:14px;overflow-wrap:normal}
+@media (max-width:389px){body[data-voice] .sf-head .sf-lang-i{min-width:36px}body[data-voice] .sf-head .sf-nav a{padding-inline:8px}}
+@media (max-width:359px){body[data-voice] .sf-head .sf-lang-i{min-width:32px}body[data-voice] .sf-head .sf-nav a{padding-inline:6px}}
+@media (max-width:359px){body[data-voice] .sf-head .sf-mono{width:30px;height:30px;font-size:14px}body[data-voice] .sf-head .sf-brand{gap:6px}body[data-voice] .sf-head .sf-brand b{font-size:14px}}
 /* plain notice pages (not found, paused, error): no theme variables on <body> */
 .sf-notice{display:grid;min-height:100vh;min-height:100dvh;place-items:center;padding:2rem;text-align:center;background:#fafaf9;color:#1c1917}
 .sf-notice h1{font-size:1.25rem;font-weight:700;margin:0}
