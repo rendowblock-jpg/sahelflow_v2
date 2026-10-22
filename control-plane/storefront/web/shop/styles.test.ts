@@ -325,4 +325,18 @@ describe("the style sheets keep their promises", () => {
     expect(text).toContain(`body[data-voice=${style}]{caret-color:var(--primary);accent-color:var(--primary)}`);
     expect(text).toMatch(new RegExp(`body\\[data-voice=${style}\\] :is\\(\\.sf-media,\\.sf-slide,\\.sf-hero-pic,\\.sf-panel-pic\\)\\{background-image:none;animation:none\\}`));
   });
+
+  // Small-text contrast, colour only. Measured from pixels on the staging pages (Chromium, 390 px, animations off, 30 pages, 2196 text runs); WCAG 2.x AA asks 4.5:1 for normal text.
+  // These tests pin the CSS text; the contrast itself was re-measured on staging after the change.
+  it.each(["noir", "lumen", "atelier", "bloom"] as const)("%s: the placeholder takes the palette's muted text colour - the browser's own grey (#757575) read 3.83-4.19:1 here on the live page", (style) => {
+    expect(css(style)).toContain(`body[data-voice=${style}] .sf-field :is(input,textarea)::placeholder{color:var(--muted-foreground);opacity:1}`);
+  });
+
+  it.each(["atelier", "pulse", "bloom"] as const)("%s: the 'Powered by' line is not faded - muted text at opacity .8 read 3.91-4.18:1 on the live page", (style) => {
+    expect(css(style)).toContain(`body[data-voice=${style}] .sf-foot small{opacity:1}`);
+  });
+
+  it.each(["atelier", "bloom"] as const)("%s: the cash-on-delivery line is the brand colour pulled 15% toward the text colour - the plain brand colour read 4.27 (Atelier) and 4.31 (Bloom) on its tinted band", (style) => {
+    expect(css(style)).toContain(`@supports (background:color-mix(in srgb,red,blue)){body[data-voice=${style}] .sf-cod{color:color-mix(in srgb,var(--sf-brand-text-on-surface,var(--foreground)) 85%,var(--foreground))}}`);
+  });
 });

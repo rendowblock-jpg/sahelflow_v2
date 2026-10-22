@@ -97,6 +97,9 @@ body[data-voice=bloom] .bx-bloom--2{animation-delay:.12s}body[data-voice=bloom] 
 
 /* browser surfaces: caret, check marks and the loading placeholder follow the palette */
 body[data-voice=bloom]{caret-color:var(--primary);accent-color:var(--primary)}
+body[data-voice=bloom] .sf-field :is(input,textarea)::placeholder{color:var(--muted-foreground);opacity:1}
+body[data-voice=bloom] .sf-foot small{opacity:1}
+@supports (background:color-mix(in srgb,red,blue)){body[data-voice=bloom] .sf-cod{color:color-mix(in srgb,var(--sf-brand-text-on-surface,var(--foreground)) 85%,var(--foreground))}}
 body[data-voice=bloom] :is(.sf-media,.sf-slide,.sf-hero-pic,.sf-panel-pic){background-image:none;animation:none}
 body[data-voice=bloom] .sf-tag{margin:0;font-size:14px;line-height:1.7;font-weight:500;color:var(--muted-foreground)}
 /* nothing may widen the page. A phone browser stretches its layout viewport to the widest thing it ever finds, even for one animation frame, and never shrinks it back;

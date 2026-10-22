@@ -87,6 +87,7 @@ body[data-voice=noir] .nx-photo .sf-gal{animation:nx-unveil 1.3s .15s var(--e-io
 
 /* browser surfaces: caret, check marks and the loading placeholder follow the palette */
 body[data-voice=noir]{caret-color:var(--primary);accent-color:var(--primary)}
+body[data-voice=noir] .sf-field :is(input,textarea)::placeholder{color:var(--muted-foreground);opacity:1}
 body[data-voice=noir] :is(.sf-media,.sf-slide,.sf-hero-pic,.sf-panel-pic){background-image:none;animation:none}
 body[data-voice=noir] .sf-tag{margin:0;font-size:14px;line-height:1.7;font-weight:500;color:var(--muted-foreground)}
 /* nothing may widen the page. A phone browser stretches its layout viewport to the widest thing it ever finds, even for one animation frame, and never shrinks it back;

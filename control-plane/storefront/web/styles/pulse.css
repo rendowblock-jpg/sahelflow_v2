@@ -90,6 +90,7 @@ body[data-voice=pulse] .px-photo{animation:px-slam .8s .12s var(--e-out) both}
 
 /* browser surfaces: caret, check marks and the loading placeholder follow the palette */
 body[data-voice=pulse]{caret-color:var(--primary);accent-color:var(--primary)}
+body[data-voice=pulse] .sf-foot small{opacity:1}
 body[data-voice=pulse] :is(.sf-media,.sf-slide,.sf-hero-pic,.sf-panel-pic){background-image:none;animation:none}
 body[data-voice=pulse] .sf-tag{margin:0;font-size:14px;line-height:1.7;font-weight:500;color:var(--muted-foreground)}
 /* nothing may widen the page. A phone browser stretches its layout viewport to the widest thing it ever finds, even for one animation frame, and never shrinks it back;
