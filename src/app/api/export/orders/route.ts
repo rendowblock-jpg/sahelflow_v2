@@ -11,6 +11,7 @@ import {
   exportedRowCount,
   exportRowHeaders,
 } from "@/lib/import/export-audit";
+import { attachmentContentDisposition } from "@/lib/import/export-disposition";
 import {
   collectBoundedXlsxRows,
   createPagedCsvStream,
@@ -176,7 +177,10 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         ...exportRowHeaders(summary),
-        "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.xlsx"`,
+        "Content-Disposition": attachmentContentDisposition(
+          `${filePrefix}-${fileSuffix}.xlsx`,
+          `orders-${fileSuffix}.xlsx`,
+        ),
       },
     });
   }
@@ -185,7 +189,10 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       ...exportRowHeaders(summary),
-      "Content-Disposition": `attachment; filename="${filePrefix}-${fileSuffix}.csv"`,
+      "Content-Disposition": attachmentContentDisposition(
+        `${filePrefix}-${fileSuffix}.csv`,
+        `orders-${fileSuffix}.csv`,
+      ),
       "Cache-Control": "no-store",
     },
   });
