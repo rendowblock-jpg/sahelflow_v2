@@ -1,6 +1,6 @@
 import { formatPrice } from "./format";
 import type { ShopProduct, ShopTheme } from "./model";
-import { esc, icon, imgAttrs, productHref, type Ctx } from "./ui";
+import { autoDir, esc, icon, imgAttrs, productHref, type Ctx } from "./ui";
 
 /**
  * The five styles (noir, lumen, atelier, pulse, bloom). Each one is a landing page (one scrollable page that sells one
@@ -63,7 +63,7 @@ function promises(ctx: Ctx): Promised[] {
 const openDetails = (html: string): string => html.replace('<details class="sf-more">', '<details class="sf-more" open>');
 
 /** The seller's own tagline (the Studio's "eyebrow" field), shown under the name and only when they wrote one. */
-const tag = (p: ProductParts): string => (p.kicker ? `<p class="sf-tag" dir="auto">${p.kicker}</p>` : "");
+const tag = (ctx: Ctx, p: ProductParts): string => (p.kicker ? `<p class="sf-tag"${autoDir(ctx, ctx.theme.hero.eyebrow.trim())}>${p.kicker}</p>` : "");
 
 const cta = (ctx: Ctx, p: ProductParts, cls: string): string =>
   p.sold ? "" : `<a class="${cls}" href="#order"><span>${esc(ctx.t("storefront.studio.orderNow"))}</span>${icon("arrow", "sf-flip")}</a>`;
@@ -73,7 +73,7 @@ function noirProduct(ctx: Ctx, p: ProductParts): string {
   return `<article class="nx" data-sold="${p.sold ? "1" : "0"}">
 <section class="nx-stage"><div class="sf-wrap nx-in">
 <div class="nx-photo">${p.gallery}</div>
-<div class="nx-title"><h1 class="sf-h1 sf-pname" dir="auto">${p.name}</h1>${tag(p)}${p.sub}</div>
+<div class="nx-title"><h1 class="sf-h1 sf-pname"${autoDir(ctx, p.product.name)}>${p.name}</h1>${tag(ctx, p)}${p.sub}</div>
 <div class="nx-price">${p.priceEl}${p.stock}</div>
 ${cta(ctx, p, "nx-cta")}
 </div></section>
@@ -96,7 +96,7 @@ function lumenProduct(ctx: Ctx, p: ProductParts): string {
   if (ctx.theme.trust.showCodBadge) rows.push([t("storefront.studio.cashOnDelivery"), icon("check")]);
   const spec = rows.length ? `<dl class="lx-spec">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>` : "";
   return `<article class="lx" data-sold="${p.sold ? "1" : "0"}">
-<header class="lx-top"><div class="sf-wrap"><h1 class="sf-h1 sf-pname" dir="auto">${p.name}</h1>${tag(p)}${p.sub}</div></header>
+<header class="lx-top"><div class="sf-wrap"><h1 class="sf-h1 sf-pname"${autoDir(ctx, p.product.name)}>${p.name}</h1>${tag(ctx, p)}${p.sub}</div></header>
 <div class="sf-wrap lx-grid">
 <div class="lx-media"><i class="lx-mark" aria-hidden="true"></i>${p.gallery}</div>
 <div class="lx-sheet"><div class="lx-price">${p.priceEl}${p.stock}</div>${cta(ctx, p, "lx-cta lx-cta--sheet")}${spec}${p.chips}${p.variants}${p.form}</div>
@@ -114,11 +114,11 @@ function atelierProduct(ctx: Ctx, p: ProductParts): string {
   const aside = all.filter((s) => s.i === "headset");
   const numbered = sequence.length >= 2;
   const row = (s: Promised, n: number | null) =>
-    `<li class="sf-rv">${n === null ? "" : `<b class="ax-n" aria-hidden="true">${n}</b>`}<span class="ax-t">${icon(s.i)}<span dir="auto">${esc(s.l)}</span></span></li>`;
+    `<li class="sf-rv">${n === null ? "" : `<b class="ax-n" aria-hidden="true">${n}</b>`}<span class="ax-t">${icon(s.i)}<span${autoDir(ctx, s.l)}>${esc(s.l)}</span></span></li>`;
   const items = [...sequence.map((s, n) => row(s, numbered ? n + 1 : null)), ...aside.map((s) => row(s, null))];
   const list = items.length ? `<section class="ax-steps"><div class="sf-wrap"><ol>${items.join("")}</ol></div></section>` : "";
   return `<article class="ax" data-sold="${p.sold ? "1" : "0"}">
-<div class="sf-wrap ax-top"><h1 class="sf-h1 sf-pname ax-name" dir="auto">${p.name}</h1>${tag(p)}</div>
+<div class="sf-wrap ax-top"><h1 class="sf-h1 sf-pname ax-name"${autoDir(ctx, p.product.name)}>${p.name}</h1>${tag(ctx, p)}</div>
 <div class="sf-wrap ax-collage"><figure class="ax-photo">${p.gallery}<i class="ax-tape" aria-hidden="true"></i></figure><div class="ax-stamp">${p.priceEl}</div>${p.sub ? `<div class="ax-quote">${p.sub}</div>` : ""}<div class="ax-stock">${p.stock}</div>${cta(ctx, p, "ax-cta")}</div>
 ${p.details ? `<section class="ax-story"><div class="sf-wrap sf-rv">${openDetails(p.details)}</div></section>` : ""}
 ${list}
@@ -131,10 +131,10 @@ ${p.data}</article>`;
 function pulseProduct(ctx: Ctx, p: ProductParts): string {
   const words = promises(ctx).map((s) => s.l);
   if (words.length === 0) words.push(ctx.t("storefront.studio.cashOnDelivery"));
-  const set = `<span class="px-set">${words.map((w) => `<span dir="auto">${esc(w)}</span>`).join("")}</span>`;
+  const set = `<span class="px-set">${words.map((w) => `<span${autoDir(ctx, w)}>${esc(w)}</span>`).join("")}</span>`;
   return `<article class="px" data-sold="${p.sold ? "1" : "0"}">
 <div class="px-marquee" aria-hidden="true"><div class="px-track">${set}${set}${set}${set}</div></div>
-<section class="sf-wrap px-hero"><h1 class="sf-h1 sf-pname px-giant" dir="auto">${p.name}</h1>${tag(p)}
+<section class="sf-wrap px-hero"><h1 class="sf-h1 sf-pname px-giant"${autoDir(ctx, p.product.name)}>${p.name}</h1>${tag(ctx, p)}
 <div class="px-row"><div class="px-photo">${p.gallery}</div><div class="px-sticker">${p.priceEl}</div></div>
 ${p.sub}${p.stock}${cta(ctx, p, "px-cta")}</section>
 <section class="sf-wrap sf-wrap--narrow px-order">${p.chips}${p.variants}${p.form}${p.details}</section>
@@ -146,11 +146,11 @@ ${p.data}</article>`;
 function bloomProduct(ctx: Ctx, p: ProductParts): string {
   const steps = promises(ctx);
   const ritual = steps.length
-    ? `<section class="sf-wrap sf-wrap--narrow bx-ritual"><ol>${steps.map((s) => `<li class="sf-rv"><span class="bx-node">${icon(s.i)}</span><span class="bx-step" dir="auto">${esc(s.l)}</span></li>`).join("")}</ol></section>`
+    ? `<section class="sf-wrap sf-wrap--narrow bx-ritual"><ol>${steps.map((s) => `<li class="sf-rv"><span class="bx-node">${icon(s.i)}</span><span class="bx-step"${autoDir(ctx, s.l)}>${esc(s.l)}</span></li>`).join("")}</ol></section>`
     : "";
   return `<article class="bx" data-sold="${p.sold ? "1" : "0"}">
 <section class="sf-wrap bx-hero"><div class="bx-arch"><i class="bx-halo" aria-hidden="true"></i>${p.gallery}</div>
-<div class="bx-intro"><h1 class="sf-h1 sf-pname" dir="auto">${p.name}</h1>${tag(p)}${p.sub}<div class="bx-price">${p.priceEl}${p.stock}</div>${cta(ctx, p, "bx-cta")}</div></section>
+<div class="bx-intro"><h1 class="sf-h1 sf-pname"${autoDir(ctx, p.product.name)}>${p.name}</h1>${tag(ctx, p)}${p.sub}<div class="bx-price">${p.priceEl}${p.stock}</div>${cta(ctx, p, "bx-cta")}</div></section>
 ${ritual}
 ${p.details ? `<section class="sf-wrap sf-wrap--narrow bx-detail sf-rv">${openDetails(p.details)}</section>` : ""}
 <section class="sf-wrap sf-wrap--narrow bx-order">${p.variants}${p.form}</section>
@@ -183,10 +183,11 @@ function pic(product: ShopProduct, eager: boolean, cls = ""): string {
 export function styleHero(style: StyleId, ctx: Ctx, target: string): string {
   const { t, theme, model } = ctx;
   const eyebrow = esc(theme.hero.eyebrow.trim());
-  const tagLine = eyebrow ? `<p class="sf-tag" dir="auto">${eyebrow}</p>` : "";
-  const headline = esc(theme.hero.headline.trim() || model.name);
+  const tagLine = eyebrow ? `<p class="sf-tag"${autoDir(ctx, theme.hero.eyebrow.trim())}>${eyebrow}</p>` : "";
+  const headlineText = theme.hero.headline.trim() || model.name;
+  const headline = esc(headlineText);
   const bodyText = theme.hero.body.trim() || model.description.trim();
-  const body = bodyText ? `<p class="sf-lead" dir="auto">${esc(bodyText)}</p>` : "";
+  const body = bodyText ? `<p class="sf-lead"${autoDir(ctx, bodyText)}>${esc(bodyText)}</p>` : "";
   const label = esc(theme.hero.ctaLabel.trim() || t("storefront.view.navProducts"));
   const withPic = model.products.filter((product) => product.images[0]);
   const count = esc(t("storefront.view.productsCount", { count: model.products.length }));
@@ -195,19 +196,19 @@ export function styleHero(style: StyleId, ctx: Ctx, target: string): string {
 
   switch (style) {
     case "noir":
-      return `<section class="nx-cover"><div class="sf-wrap nx-in">${first ? `<div class="nx-orb">${pic(first, true)}</div>` : ""}<h1 class="sf-h1 nx-brand" dir="auto">${headline}</h1>${tagLine}${body}${go("nx-cta")}</div></section>`;
+      return `<section class="nx-cover"><div class="sf-wrap nx-in">${first ? `<div class="nx-orb">${pic(first, true)}</div>` : ""}<h1 class="sf-h1 nx-brand"${autoDir(ctx, headlineText)}>${headline}</h1>${tagLine}${body}${go("nx-cta")}</div></section>`;
     case "lumen":
-      return `<section class="lx-cover"><div class="sf-wrap"><h1 class="sf-h1 lx-brand" dir="auto">${headline}</h1>${tagLine}<div class="lx-meta">${body}<span class="lx-count">${count}</span></div>${go("lx-cta")}</div></section>`;
+      return `<section class="lx-cover"><div class="sf-wrap"><h1 class="sf-h1 lx-brand"${autoDir(ctx, headlineText)}>${headline}</h1>${tagLine}<div class="lx-meta">${body}<span class="lx-count">${count}</span></div>${go("lx-cta")}</div></section>`;
     case "atelier":
-      return `<section class="ax-cover"><div class="sf-wrap ax-cover-in"><div class="ax-cover-text"><h1 class="sf-h1 ax-brand" dir="auto">${headline}</h1>${tagLine}${body}${go("ax-cta")}</div><div class="ax-cover-pics">${withPic.slice(0, 2).map((product, index) => `<figure class="ax-piece ax-piece--${index + 1}">${pic(product, index === 0)}</figure>`).join("")}</div></div></section>`;
+      return `<section class="ax-cover"><div class="sf-wrap ax-cover-in"><div class="ax-cover-text"><h1 class="sf-h1 ax-brand"${autoDir(ctx, headlineText)}>${headline}</h1>${tagLine}${body}${go("ax-cta")}</div><div class="ax-cover-pics">${withPic.slice(0, 2).map((product, index) => `<figure class="ax-piece ax-piece--${index + 1}">${pic(product, index === 0)}</figure>`).join("")}</div></div></section>`;
     case "pulse": {
       const words = promises(ctx).map((s) => s.l);
       if (words.length === 0) words.push(t("storefront.studio.cashOnDelivery"));
-      const set = `<span class="px-set">${words.map((w) => `<span dir="auto">${esc(w)}</span>`).join("")}</span>`;
-      return `<section class="px-cover"><div class="px-marquee" aria-hidden="true"><div class="px-track">${set}${set}${set}${set}</div></div><div class="sf-wrap px-cover-in"><h1 class="sf-h1 px-giant" dir="auto">${headline}</h1>${tagLine}<span class="px-sticker px-sticker--count">${count}</span>${body}${go("px-cta")}</div></section>`;
+      const set = `<span class="px-set">${words.map((w) => `<span${autoDir(ctx, w)}>${esc(w)}</span>`).join("")}</span>`;
+      return `<section class="px-cover"><div class="px-marquee" aria-hidden="true"><div class="px-track">${set}${set}${set}${set}</div></div><div class="sf-wrap px-cover-in"><h1 class="sf-h1 px-giant"${autoDir(ctx, headlineText)}>${headline}</h1>${tagLine}<span class="px-sticker px-sticker--count">${count}</span>${body}${go("px-cta")}</div></section>`;
     }
     case "bloom":
-      return `<section class="bx-cover"><div class="sf-wrap bx-cover-in"><h1 class="sf-h1 bx-brand" dir="auto">${headline}</h1>${tagLine}${body}<div class="bx-bouquet" aria-hidden="${withPic.length ? "false" : "true"}">${withPic.slice(0, 3).map((product, index) => `<figure class="bx-bloom bx-bloom--${index + 1}">${pic(product, index === 0)}</figure>`).join("")}</div>${go("bx-cta")}</div></section>`;
+      return `<section class="bx-cover"><div class="sf-wrap bx-cover-in"><h1 class="sf-h1 bx-brand"${autoDir(ctx, headlineText)}>${headline}</h1>${tagLine}${body}<div class="bx-bouquet" aria-hidden="${withPic.length ? "false" : "true"}">${withPic.slice(0, 3).map((product, index) => `<figure class="bx-bloom bx-bloom--${index + 1}">${pic(product, index === 0)}</figure>`).join("")}</div>${go("bx-cta")}</div></section>`;
   }
 }
 
@@ -227,9 +228,9 @@ export function lumenIndex(ctx: Ctx, products: readonly ShopProduct[], title: st
       : "";
     const out = product.soldOut ? `<small class="lx-row-out">${esc(t("storefront.view.outOfStock"))}</small>` : "";
     const sku = theme.catalog.showSku && product.sku ? `<small dir="ltr">${esc(product.sku)}</small>` : "";
-    return `<li class="sf-rv"><a class="lx-row" href="${esc(productHref(ctx.slug, product.id))}"><span class="lx-row-n" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><span class="lx-row-pic">${thumb}</span><span class="lx-row-name"><b dir="auto">${esc(product.name)}</b>${sku}${out}</span>${price}${icon("arrow", "sf-flip lx-row-go")}</a></li>`;
+    return `<li class="sf-rv"><a class="lx-row" href="${esc(productHref(ctx.slug, product.id))}"><span class="lx-row-n" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><span class="lx-row-pic">${thumb}</span><span class="lx-row-name"><b${autoDir(ctx, product.name)}>${esc(product.name)}</b>${sku}${out}</span>${price}${icon("arrow", "sf-flip lx-row-go")}</a></li>`;
   });
-  return `<section class="sf-sec" id="${id}"><div class="sf-wrap"><div class="sf-sec-head sf-rv"><h2 class="sf-h2" dir="auto">${esc(title)}</h2><span class="sf-muted">${esc(t("storefront.view.productsCount", { count: products.length }))}</span></div><ol class="lx-index">${rows.join("")}</ol></div></section>`;
+  return `<section class="sf-sec" id="${id}"><div class="sf-wrap"><div class="sf-sec-head sf-rv"><h2 class="sf-h2"${autoDir(ctx, title)}>${esc(title)}</h2><span class="sf-muted">${esc(t("storefront.view.productsCount", { count: products.length }))}</span></div><ol class="lx-index">${rows.join("")}</ol></div></section>`;
 }
 
 /**

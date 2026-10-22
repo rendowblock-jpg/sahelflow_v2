@@ -1,5 +1,5 @@
 {
-  "css": "/_sf/shop.6f36c54770.css",
+  "css": "/_sf/shop.5931c9048c.css",
   "js": "/_sf/shop.eb3439dbaa.js",
   "communes": "/_sf/c.c000d484f9",
   "fonts": {
@@ -30,30 +30,30 @@
   },
   "skins": {
     "prime": {
-      "css": "/_sf/prime.a6f9ad1137.css"
+      "css": "/_sf/prime.dad4b5e045.css"
     },
     "souk": {
       "css": "/_sf/souk.b81383f5c6.css"
     },
     "reel": {
-      "css": "/_sf/reel.149e0ad5e5.css",
+      "css": "/_sf/reel.2bd34aa715.css",
       "js": "/_sf/reel.bbd844599f.js"
     },
     "noir": {
-      "css": "/_sf/noir.a94f1cf113.css",
+      "css": "/_sf/noir.47799160ae.css",
       "js": "/_sf/noir.2458713c84.js"
     },
     "lumen": {
-      "css": "/_sf/lumen.349ff67a37.css"
+      "css": "/_sf/lumen.8c6a4f0ba1.css"
     },
     "atelier": {
-      "css": "/_sf/atelier.2a4e51dbb2.css"
+      "css": "/_sf/atelier.fbc157e967.css"
     },
     "pulse": {
-      "css": "/_sf/pulse.99d3f43381.css"
+      "css": "/_sf/pulse.95cc89874e.css"
     },
     "bloom": {
-      "css": "/_sf/bloom.b08c176cc0.css"
+      "css": "/_sf/bloom.e9831be1da.css"
     }
   }
 }

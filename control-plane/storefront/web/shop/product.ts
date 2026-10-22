@@ -2,7 +2,7 @@ import wilayas from "../../../../data/wilayas.json";
 
 import { currencySuffix, formatPrice, localeTag } from "./format";
 import { renderContact, renderFaq, renderRail, renderTestimonials } from "./home";
-import { esc, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
+import { autoDir, esc, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
 import type { ShopProduct } from "./model";
 import { frameProduct, styleOf, type ProductParts } from "./styles";
 
@@ -186,9 +186,9 @@ ${theme.checkout.showOrderNotes ? field("notes", t("storefront.view.notes"), '<t
     .join("");
 
   const { lead, full } = splitDescription(product.description);
-  const sub = lead ? `<p class="sf-sub" dir="auto">${esc(lead)}</p>` : "";
+  const sub = lead ? `<p class="sf-sub"${autoDir(ctx, lead)}>${esc(lead)}</p>` : "";
   const details = full
-    ? `<details class="sf-more"><summary><span>${esc(t("storefront.shop.details"))}</span>${icon("chevron", "sf-faq-i")}</summary><div class="sf-desc" dir="auto">${esc(full)}</div></details>`
+    ? `<details class="sf-more"><summary><span>${esc(t("storefront.shop.details"))}</span>${icon("chevron", "sf-faq-i")}</summary><div class="sf-desc"${autoDir(ctx, full)}>${esc(full)}</div></details>`
     : "";
 
   const dataScript = `<script type="application/json" id="sf-data">${JSON.stringify(data).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029")}</script>`;
@@ -219,7 +219,7 @@ ${theme.checkout.showOrderNotes ? field("notes", t("storefront.view.notes"), '<t
 
   const main = style ? frameProduct(style, ctx, parts()) : `<article class="sf-pdp" data-sold="${sold ? "1" : "0"}"><div class="sf-wrap sf-pdp-in">
 <div class="sf-pdp-media">${gallery(ctx, product)}</div>
-<div class="sf-buy"><h1 class="sf-h1 sf-pname" dir="auto">${esc(product.name)}</h1>${sub}${theme.showPrices ? `<p class="sf-price sf-price--lg" data-sf="price">${esc(price)}</p>` : ""}${stockNote}${product.sku && theme.catalog.showSku ? `<p class="sf-sku" dir="ltr">${esc(product.sku)}</p>` : ""}${trustChips(ctx)}${variantPicker(ctx, product, current.itemKey)}${form}
+<div class="sf-buy"><h1 class="sf-h1 sf-pname"${autoDir(ctx, product.name)}>${esc(product.name)}</h1>${sub}${theme.showPrices ? `<p class="sf-price sf-price--lg" data-sf="price">${esc(price)}</p>` : ""}${stockNote}${product.sku && theme.catalog.showSku ? `<p class="sf-sku" dir="ltr">${esc(product.sku)}</p>` : ""}${trustChips(ctx)}${variantPicker(ctx, product, current.itemKey)}${form}
 ${details}</div>
 </div></article>
 ${extras}${more}${renderContact(ctx, true)}
@@ -229,7 +229,7 @@ ${dataScript}`;
     ? `<img class="sf-sticky-thumb" ${imgAttrs(product.images[0], GALLERY_SIZES, 640)} alt="" width="48" height="48" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
     : "";
   const bar = showBar
-    ? `<div id="sf-sticky" class="sf-sticky">${thumb}<div class="sf-sticky-price"><small dir="auto">${esc(product.name)}</small><strong data-sf="bar-total">${esc(price)}</strong></div><a id="sf-bar-cta" class="sf-cta sf-cta--bar" href="#order">${esc(t("storefront.studio.orderNow"))}</a></div>`
+    ? `<div id="sf-sticky" class="sf-sticky">${thumb}<div class="sf-sticky-price"><small${autoDir(ctx, product.name)}>${esc(product.name)}</small><strong data-sf="bar-total">${esc(price)}</strong></div><a id="sf-bar-cta" class="sf-cta sf-cta--bar" href="#order">${esc(t("storefront.studio.orderNow"))}</a></div>`
     : "";
 
   const base = `${ctx.origin}${productHref(slug, product.id)}`;

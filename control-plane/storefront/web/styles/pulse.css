@@ -40,6 +40,7 @@ body[data-voice=pulse] .px-set span::after{content:"";position:absolute;inset-in
 body[data-voice=pulse] .px-hero{padding-block:26px 18px}
 body[data-voice=pulse] .px-giant{margin:0;font-size:clamp(40px,13vw,130px);line-height:.92;letter-spacing:-.04em;text-transform:uppercase;overflow-wrap:anywhere}
 html[lang=ar] body[data-voice=pulse] .px-giant{font-size:clamp(38px,11.5vw,112px);line-height:1.15;letter-spacing:0;text-transform:none}
+html:not([lang=ar]) body[data-voice=pulse] .px-giant:lang(ar){line-height:1.15;letter-spacing:0;text-transform:none}
 body[data-voice=pulse] .px-row{position:relative;margin-block:20px 38px}
 body[data-voice=pulse] .px-photo{background:#fff;border:3px solid var(--ink);box-shadow:var(--hard) var(--hard) 0 var(--ink);transform:rotate(-1.4deg)}
 body[data-voice=pulse] .px-photo .sf-slide{max-height:46svh;aspect-ratio:4/3;background-color:#fff}
