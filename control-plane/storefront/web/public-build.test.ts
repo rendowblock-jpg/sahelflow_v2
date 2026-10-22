@@ -1,6 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
+import { ESLint } from "eslint";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -85,5 +86,26 @@ describe("generated page files", () => {
     expect(js).not.toMatch(/https?:\/\/(?!wa\.me)/);
     expect(js).toContain("/v1/storefront/");
     expect(js).toContain("RSA-OAEP");
+  });
+});
+
+describe("the generated scripts are not linted as source", () => {
+  // First real CI run of the storefront stack (22 Oct): `eslint .` read the committed, minified bundles in public/_sf and reported 97 errors
+  // (91 in the page script, 3 each in the Noir and Reel scripts; prefer-const and the like). `main` has no script there, so nothing had ever linted one.
+  // The bundles are build output of scripts/storefront-public-build.ts; the source they come from is linted.
+  const eslint = new ESLint({ cwd: ROOT });
+
+  it("every script in public/_sf is ignored by the repository's lint rules", async () => {
+    const scripts = readdirSync(join(PUBLIC, "_sf")).filter((f) => f.endsWith(".js"));
+    expect(scripts.length).toBeGreaterThanOrEqual(3);
+    for (const file of scripts) {
+      expect(await eslint.isPathIgnored(join(PUBLIC, "_sf", file)), file).toBe(true);
+    }
+  });
+
+  it("the source those scripts are built from is still linted", async () => {
+    for (const file of ["control-plane/storefront/web/client/noir.ts", "control-plane/storefront/web/shop/styles.ts", "control-plane/storefront/web/public-build.test.ts"]) {
+      expect(await eslint.isPathIgnored(join(ROOT, file)), file).toBe(false);
+    }
   });
 });

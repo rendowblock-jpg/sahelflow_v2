@@ -56,6 +56,9 @@ const eslintConfig = [
       "data/**",
       "scripts/**",
       "sidecars/**",
+      // Storefront public files: minified build output of scripts/storefront-public-build.ts (page, Noir and Reel scripts, hashed styles, fonts).
+      // The source they are built from stays linted; web/public-build.test.ts pins both halves.
+      "control-plane/storefront/public/**",
       // Static marketing site (sahelflow.com): plain build script + assets
       "marketing/**",
       // Agent tooling (standalone bun scripts, not app code)
