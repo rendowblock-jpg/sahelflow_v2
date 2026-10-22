@@ -634,47 +634,45 @@ describe("GET /api/export/deliveries: the language", () => {
     await response.arrayBuffer();
   });
 
-  // The route puts the Arabic word for "deliveries" straight into the Content-Disposition header (issue #565). A header
-  // value can only hold characters up to code point 255, so the real NextResponse throws. The control below pins that
-  // platform fact; the OBSERVED tests check that the 500 is that very error (the logged cause), not any other failure,
-  // and the it.fails test states the answer a seller expects and holds only the status, so a fix cannot hide behind a
-  // second assertion that fails for another reason.
-  it("control: the platform refuses an Arabic file name in a header value", () => {
+  // The route used to put the Arabic word for "deliveries" straight into the Content-Disposition header (issue #565). A
+  // header value can only hold characters up to code point 255, so the real NextResponse threw and the seller got a
+  // generic 500 after the rows had been counted and the audit entry written. The control below pins that platform fact;
+  // the tests after it pin the fix: an ASCII fallback in filename and the real name in filename* (RFC 5987), a header the
+  // platform accepts, and a download that arrives.
+  it("control: the platform refuses an Arabic file name written straight into a header value", () => {
     expect(() => new Headers({ "Content-Disposition": 'attachment; filename="\u062a\u0648\u0635\u064a\u0644\u0627\u062a-2026-10-21.csv"' })).toThrow(TypeError);
   });
 
-  function loggedCause(): Error | undefined {
-    return h.logError.mock.calls.flat().find((arg): arg is Error => arg instanceof Error);
-  }
+  const ARABIC_DELIVERIES = "\u062a\u0648\u0635\u064a\u0644\u0627\u062a";
 
-  it.fails("EXPECTED (fails today): answers 200 when the page language is Arabic", async () => {
+  it.each([
+    ["CSV", "csv", ""],
+    ["XLSX", "xlsx", "?format=xlsx"],
+  ])("answers 200 for an Arabic %s download, naming the file in Arabic in filename* and in English in filename", async (_label, extension, query) => {
     setLocale("ar");
-    const response = await GET(get());
+    const response = await GET(get(query));
     expect(response.status).toBe(200);
-  });
-
-  it("OBSERVED: answers a generic 500 when the page language is Arabic, because the header is refused, after it has already counted and audited", async () => {
-    setLocale("ar");
-    const response = await GET(get());
-    expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ error: "Internal server error" });
-    const cause = loggedCause();
-    expect(cause).toBeInstanceOf(TypeError);
-    expect(cause?.message).toMatch(/ByteString|greater than 255/);
+    const header = response.headers.get("Content-Disposition") ?? "";
+    expect(header).toBe(
+      `attachment; filename="deliveries-${TODAY}.${extension}"; filename*=UTF-8''${encodeURIComponent(`${ARABIC_DELIVERIES}-${TODAY}.${extension}`)}`,
+    );
+    // Every character of the header is plain ASCII, and the extended name decodes back to the Arabic file name.
+    expect(header).toMatch(/^[\x20-\x7E]+$/);
+    const extended = /filename\*=UTF-8''([^;]+)$/.exec(header)?.[1] ?? "";
+    expect(decodeURIComponent(extended)).toBe(`${ARABIC_DELIVERIES}-${TODAY}.${extension}`);
+    await response.arrayBuffer();
     expect(h.count).toHaveBeenCalledTimes(1);
     expect(h.logAudit).toHaveBeenCalledTimes(1);
+    expect(extension === "xlsx" ? h.toXlsx : h.findMany).toHaveBeenCalled();
   });
 
-  it("OBSERVED: does the same for an Arabic XLSX download, after the rows were read and the file was written", async () => {
-    setLocale("ar");
-    const response = await GET(get("?format=xlsx"));
-    expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ error: "Internal server error" });
-    // The writer ran, so the throw can only come from building the response.
-    expect(h.toXlsx).toHaveBeenCalledTimes(1);
-    const cause = loggedCause();
-    expect(cause).toBeInstanceOf(TypeError);
-    expect(cause?.message).toMatch(/ByteString|greater than 255/);
+  it("still names the English and French files with a single plain filename, as before", async () => {
+    for (const [locale, prefix] of [["en", "deliveries"], ["fr", "livraisons"]] as const) {
+      setLocale(locale);
+      const header = (await GET(get())).headers.get("Content-Disposition");
+      expect(header).toBe(`attachment; filename="${prefix}-${TODAY}.csv"`);
+      expect(header).not.toContain("filename*");
+    }
   });
 });
 
