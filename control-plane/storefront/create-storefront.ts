@@ -1,4 +1,5 @@
 import { ID, authorizeDesktop, json, validRsaJwk } from "./shared";
+import { isReservedStoreSlug } from "./slugs";
 import type { StorefrontWorkerEnvironment } from "./types";
 
 export async function createStorefront(
@@ -31,6 +32,7 @@ export async function createStorefront(
   ) {
     return json({ error: "invalid_request" }, 400);
   }
+  if (isReservedStoreSlug(slug)) return json({ error: "slug_reserved" }, 400);
   const authority = await authorizeDesktop(request, environment, workspaceId);
   if (!authority) {
     return json({ error: "unauthorized" }, 401);

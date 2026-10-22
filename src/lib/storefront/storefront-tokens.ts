@@ -88,15 +88,21 @@ export function mixHex(a: string, b: string, amount: number): string {
 }
 
 /**
- * A text colour for secondary copy that still clears 4.5:1 on `background`:
- * starts soft and darkens (or lightens) toward the text colour until it reads.
+ * A text colour for secondary copy that still clears 4.5:1 on `background` AND on every other surface it
+ * is painted on (`surfaces`: a card, a tinted pill, a muted band): starts soft and darkens (or lightens)
+ * toward the text colour until it reads on all of them. Checking only the page background left the
+ * language pill (muted text on the brand tint) at 4.27 to 4.48:1.
  */
-export function mutedTextOn(text: string, background: string): string {
+export function mutedTextOn(text: string, background: string, ...surfaces: readonly string[]): string {
+  const grounds = [background, ...surfaces];
   for (const amount of [0.64, 0.72, 0.8, 0.88, 1]) {
     const candidate = mixHex(text, background, amount);
-    if (contrastRatio(candidate, background) >= 4.5) return candidate;
+    if (grounds.every((ground) => contrastRatio(candidate, ground) >= 4.5)) return candidate;
   }
-  return text;
+  // No softened shade reads on every surface and neither does the seller's own text colour: take the colour whose
+  // weakest surface is best, never a silent AA failure that a clearer colour would avoid.
+  const weakest = (colour: string) => Math.min(...grounds.map((ground) => contrastRatio(colour, ground)));
+  return [text, LIGHT_TEXT, DARK_TEXT].reduce((best, colour) => (weakest(colour) > weakest(best) ? colour : best));
 }
 
 /** A brand colour usable as TEXT on `background` (links, prices, eyebrows). */
@@ -124,6 +130,7 @@ export function storefrontThemeStyle(palette: StorefrontPalette): CSSProperties 
   const accent = palette.accentColor;
   const onPrimary = readableOn(primary);
   const muted = mixHex(text, background, 0.05);
+  const accentTint = mixHex(primary, background, 0.1);
   const border = mixHex(text, background, 0.14);
 
   const vars: Record<string, string> = {
@@ -139,8 +146,8 @@ export function storefrontThemeStyle(palette: StorefrontPalette): CSSProperties 
     "--secondary": muted,
     "--secondary-foreground": text,
     "--muted": muted,
-    "--muted-foreground": mutedTextOn(text, background),
-    "--accent": mixHex(primary, background, 0.1),
+    "--muted-foreground": mutedTextOn(text, background, surface, accentTint, muted),
+    "--accent": accentTint,
     "--accent-foreground": text,
     "--border": border,
     "--input": mixHex(text, background, 0.22),

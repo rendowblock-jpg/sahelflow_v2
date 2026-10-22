@@ -4,7 +4,7 @@ import type { StorefrontWorkerEnvironment } from "./types";
 type ReleaseHistoryRow = {
   release_id: string;
   parent_release_id: string | null;
-  template_id: "sahara" | "atlas" | "oasis";
+  template_id: import("./shared").TemplateId;
   locale: "ar" | "fr" | "en";
   artifact_digest: string;
   created_at: string;

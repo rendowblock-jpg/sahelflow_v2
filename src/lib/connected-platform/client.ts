@@ -434,7 +434,7 @@ export class ConnectedPlatformClient {
       releases: Array<{
         releaseId: string;
         parentReleaseId: string | null;
-        templateId: "sahara" | "atlas" | "oasis";
+        templateId: import("@/lib/storefront/presentation-types").StorefrontTemplateId;
         locale: "ar" | "fr" | "en";
         artifactDigest: string;
         createdAt: string;

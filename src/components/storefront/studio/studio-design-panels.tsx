@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useI18n } from "@/hooks/use-i18n";
 import type { StorefrontPalette } from "@/lib/storefront/storefront-tokens";
 import type { StorefrontStudioDraft } from "@/lib/storefront/studio-draft";
+import { isStorefrontStyleId, type StorefrontPageMode } from "@/lib/storefront/presentation-types";
 import { switchStorefrontTemplate } from "@/lib/storefront/theme-normalize";
 import { cn, formatDZD } from "@/lib/utils";
 
@@ -47,6 +48,23 @@ export function ThemePanel({ draft, commit }: { draft: StorefrontStudioDraft; co
           value={theme.template}
           onChange={(template) => commit({ ...draft, theme: switchStorefrontTemplate(theme, template) })}
         />
+        {isStorefrontStyleId(theme.template) ? (
+          <div className="mt-4 space-y-1.5" data-storefront-mode={theme.mode ?? "landing"}>
+            <SegmentedField<StorefrontPageMode>
+              label={t("storefront.studio.mode.title")}
+              value={theme.mode ?? "landing"}
+              options={[
+                { value: "landing", label: t("storefront.studio.mode.landing") },
+                { value: "store", label: t("storefront.studio.mode.store") },
+              ]}
+              onChange={(mode) => patchTheme({ mode })}
+            />
+            <p className="text-caption leading-4 text-muted-foreground">
+              {t(theme.mode === "store" ? "storefront.studio.mode.storeHint" : "storefront.studio.mode.landingHint")}
+            </p>
+            <p className="text-caption leading-4 text-muted-foreground">{t("storefront.studio.mode.previewNote")}</p>
+          </div>
+        ) : null}
       </section>
 
       <section className="space-y-4 border-t pt-5">

@@ -45,6 +45,14 @@ const TEMPLATE_COPY: Record<StorefrontTemplateId, string> = {
   sahara: "storefront.studio.template.sahara",
   atlas: "storefront.studio.template.atlas",
   oasis: "storefront.studio.template.oasis",
+  prime: "storefront.studio.template.prime",
+  souk: "storefront.studio.template.souk",
+  reel: "storefront.studio.template.reel",
+  noir: "storefront.studio.template.noir",
+  lumen: "storefront.studio.template.lumen",
+  atelier: "storefront.studio.template.atelier",
+  pulse: "storefront.studio.template.pulse",
+  bloom: "storefront.studio.template.bloom",
 };
 
 const WILAYA_CODES = (wilayasData as Array<{ code: number }>).map((wilaya) =>

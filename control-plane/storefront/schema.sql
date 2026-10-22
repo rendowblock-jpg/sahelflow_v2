@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS storefront_release (
   release_id TEXT PRIMARY KEY NOT NULL,
   storefront_id TEXT NOT NULL,
   parent_release_id TEXT,
-  template_id TEXT NOT NULL CHECK(template_id IN ('sahara','atlas','oasis')),
+  template_id TEXT NOT NULL CHECK(template_id IN ('sahara','atlas','oasis','prime','souk','reel','noir','lumen','atelier','pulse','bloom')),
   locale TEXT NOT NULL CHECK(locale IN ('ar','fr','en')),
   artifact_json TEXT NOT NULL,
   artifact_digest TEXT NOT NULL,
@@ -168,3 +168,15 @@ BEGIN
           AND line.release_id = NEW.release_id
      );
 END;
+
+-- Hosted product photos: one row per stored size. The bytes live in R2; this ledger enforces the quotas.
+CREATE TABLE IF NOT EXISTS storefront_media (
+  storefront_id TEXT NOT NULL,
+  hash TEXT NOT NULL,
+  width INTEGER NOT NULL CHECK(width IN (640, 1280)),
+  bytes INTEGER NOT NULL CHECK(bytes > 0),
+  sha256 TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(storefront_id, hash, width),
+  FOREIGN KEY(storefront_id) REFERENCES storefront(storefront_id) ON DELETE CASCADE
+);

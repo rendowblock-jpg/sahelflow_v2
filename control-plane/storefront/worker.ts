@@ -1,6 +1,7 @@
 import { checkout } from "./checkout";
 import { createStorefront } from "./create-storefront";
 import { listReleases } from "./list-releases";
+import { checkMedia, putMedia } from "./media";
 import { pauseStorefront } from "./pause-storefront";
 import { publicStorefront } from "./public-storefront";
 import { publishRelease } from "./publish-release";
@@ -8,6 +9,7 @@ import { completeReceipt, pollReceipts, receiptStatus } from "./receipts";
 import { rollbackRelease } from "./rollback-release";
 import { json } from "./shared";
 import type { StorefrontWorkerEnvironment } from "./types";
+import type { PageContext } from "./web/page-route";
 
 async function health(environment: StorefrontWorkerEnvironment): Promise<Response> {
   try {
@@ -26,6 +28,7 @@ async function health(environment: StorefrontWorkerEnvironment): Promise<Respons
 export async function handleStorefrontRequest(
   request: Request,
   environment: StorefrontWorkerEnvironment,
+  context?: PageContext,
 ): Promise<Response> {
   const url = new URL(request.url);
   if (request.method === "GET" && url.pathname === "/healthz") {
@@ -47,6 +50,16 @@ export async function handleStorefrontRequest(
   }
   if (request.method === "GET" && releaseMatch?.[1]) {
     return listReleases(request, environment, releaseMatch[1], url);
+  }
+  const mediaCheckMatch =
+    /^\/v1\/desktop\/storefronts\/([A-Za-z0-9][A-Za-z0-9_-]{7,127})\/media\/check$/.exec(url.pathname);
+  if (request.method === "POST" && mediaCheckMatch?.[1]) {
+    return checkMedia(request, environment, mediaCheckMatch[1]);
+  }
+  const mediaPutMatch =
+    /^\/v1\/desktop\/storefronts\/([A-Za-z0-9][A-Za-z0-9_-]{7,127})\/media\/([0-9a-f]{24})\/(640|1280)$/.exec(url.pathname);
+  if (request.method === "PUT" && mediaPutMatch?.[1]) {
+    return putMedia(request, environment, mediaPutMatch[1], mediaPutMatch[2] as string, mediaPutMatch[3] as string, url);
   }
   const rollbackMatch =
     /^\/v1\/desktop\/storefronts\/([A-Za-z0-9][A-Za-z0-9_-]{7,127})\/rollback$/.exec(
@@ -86,7 +99,22 @@ export async function handleStorefrontRequest(
   if (request.method === "GET" && receiptMatch?.[1]) {
     return receiptStatus(environment, receiptMatch[1]);
   }
+  // The published store itself: GET /<slug>. Loaded on first use so the page
+  // renderer is never initialised by a checkout or a desktop call.
+  const pageMatch = /^\/([a-z0-9][a-z0-9-]{2,62})\/?$/.exec(url.pathname);
+  const productMatch = /^\/([a-z0-9][a-z0-9-]{2,62})\/p\/([A-Za-z0-9][A-Za-z0-9._-]{1,127})\/?$/.exec(url.pathname);
+  if ((request.method === "GET" || request.method === "HEAD") && (pageMatch?.[1] || productMatch?.[1])) {
+    const { servePublicStorePage } = await import("./web/serve-page");
+    return productMatch?.[1]
+      ? servePublicStorePage(request, environment, productMatch[1], context, productMatch[2] ?? null)
+      : servePublicStorePage(request, environment, pageMatch?.[1] as string, context);
+  }
   return json({ error: "not_found" }, 404);
 }
 
-export default { fetch: handleStorefrontRequest };
+const worker = {
+  fetch: (request: Request, environment: StorefrontWorkerEnvironment, context?: PageContext) =>
+    handleStorefrontRequest(request, environment, context),
+};
+
+export default worker;

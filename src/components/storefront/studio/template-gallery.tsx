@@ -12,6 +12,31 @@ const TEMPLATES: readonly {
   roleKey: string;
 }[] = [
   {
+    id: "noir",
+    nameKey: "storefront.studio.template.noir",
+    roleKey: "storefront.studio.template.noirRole",
+  },
+  {
+    id: "lumen",
+    nameKey: "storefront.studio.template.lumen",
+    roleKey: "storefront.studio.template.lumenRole",
+  },
+  {
+    id: "atelier",
+    nameKey: "storefront.studio.template.atelier",
+    roleKey: "storefront.studio.template.atelierRole",
+  },
+  {
+    id: "pulse",
+    nameKey: "storefront.studio.template.pulse",
+    roleKey: "storefront.studio.template.pulseRole",
+  },
+  {
+    id: "bloom",
+    nameKey: "storefront.studio.template.bloom",
+    roleKey: "storefront.studio.template.bloomRole",
+  },
+  {
     id: "atlas",
     nameKey: "storefront.studio.template.atlas",
     roleKey: "storefront.studio.template.atlasRole",
@@ -25,6 +50,21 @@ const TEMPLATES: readonly {
     id: "oasis",
     nameKey: "storefront.studio.template.oasis",
     roleKey: "storefront.studio.template.oasisRole",
+  },
+  {
+    id: "prime",
+    nameKey: "storefront.studio.template.prime",
+    roleKey: "storefront.studio.template.primeRole",
+  },
+  {
+    id: "souk",
+    nameKey: "storefront.studio.template.souk",
+    roleKey: "storefront.studio.template.soukRole",
+  },
+  {
+    id: "reel",
+    nameKey: "storefront.studio.template.reel",
+    roleKey: "storefront.studio.template.reelRole",
   },
 ] as const;
 
@@ -73,6 +113,69 @@ function TemplatePreview({ id }: { id: StorefrontTemplateId }) {
             <span className="h-8 rounded-surface border bg-card shadow-sm" />
           </div>
         </>
+      ) : id === "prime" ? (
+        <div className="absolute inset-x-0 bottom-0 top-5 bg-[#07120e]">
+          <div className="absolute inset-x-0 top-0 h-[62%] bg-[radial-gradient(60%_80%_at_50%_30%,#2d6350,transparent)]" />
+          <span className="absolute start-1/2 top-[14%] h-[40%] w-[14%] -translate-x-1/2 rounded-t-md rounded-b-sm bg-[#efeae0]/90 rtl:translate-x-1/2" />
+          <span className="absolute inset-x-[30%] bottom-[22%] h-1.5 rounded-full bg-[#efeae0]/80" />
+          <span className="absolute inset-x-[38%] bottom-[8%] h-3 rounded-full bg-[#c8a25b]" />
+        </div>
+      ) : id === "noir" ? (
+        <div className="absolute inset-x-0 bottom-0 top-5 bg-[#0f0e0d]">
+          <span className="absolute left-1/2 top-3 h-14 w-14 -translate-x-1/2 rounded-full bg-[radial-gradient(circle,#d9c7a3_0%,#8a7650_38%,transparent_70%)] opacity-90" />
+          <span className="absolute inset-x-8 bottom-4 h-1.5 rounded-full bg-[#f1ebdf]/80" />
+          <span className="absolute inset-x-14 bottom-2 h-1 rounded-full bg-[#d9c7a3]/60" />
+        </div>
+      ) : id === "lumen" ? (
+        <div className="absolute inset-x-0 bottom-0 top-5 bg-[#f2f4f5] p-2.5">
+          <span className="block h-7 w-1/2 rounded-sm bg-[#0e1114]" />
+          <div className="mt-2 space-y-1">
+            <span className="flex gap-1"><span className="h-1.5 w-4 bg-[#d93a0b]" /><span className="h-1.5 flex-1 bg-[#0e1114]/20" /></span>
+            <span className="flex gap-1"><span className="h-1.5 w-4 bg-[#0e1114]/40" /><span className="h-1.5 flex-1 bg-[#0e1114]/20" /></span>
+            <span className="flex gap-1"><span className="h-1.5 w-4 bg-[#0e1114]/40" /><span className="h-1.5 flex-1 bg-[#0e1114]/20" /></span>
+          </div>
+        </div>
+      ) : id === "atelier" ? (
+        <div className="absolute inset-x-0 bottom-0 top-5 bg-[#f2e9da]">
+          <span className="absolute start-3 top-3 h-12 w-12 rotate-[-4deg] rounded-sm bg-[#a9461f]/80" />
+          <span className="absolute start-14 top-5 h-12 w-14 rotate-[3deg] rounded-sm bg-[#5e6b3a]/70" />
+          <span className="absolute inset-x-3 bottom-3 h-1.5 rounded-full bg-[#2a1f18]/70" />
+          <span className="absolute bottom-5 end-3 h-1.5 w-1/4 rounded-full bg-[#2a1f18]/30" />
+        </div>
+      ) : id === "pulse" ? (
+        <div className="absolute inset-x-0 bottom-0 top-5 bg-[#ddf93a]">
+          <span className="absolute inset-x-0 top-0 h-2.5 bg-[#0b0b0b]" />
+          <span className="absolute inset-x-2 top-5 h-4 bg-[#0b0b0b]" />
+          <span className="absolute inset-x-2 top-10 h-4 w-2/3 bg-[#0b0b0b]" />
+          <span className="absolute bottom-2 end-3 size-7 rotate-12 rounded-full bg-[#e5271b]" />
+        </div>
+      ) : id === "bloom" ? (
+        <div className="absolute inset-x-0 bottom-0 top-5 bg-[#fcf0eb]">
+          <span className="absolute start-1/2 top-3 h-16 w-12 -translate-x-1/2 rounded-t-full bg-[#f2b8a2]" />
+          <span className="absolute inset-x-10 bottom-3 h-3 rounded-full bg-[#b73a62]" />
+        </div>
+      ) : id === "souk" ? (
+        <div className="absolute inset-x-0 bottom-0 top-5 bg-white p-2.5">
+          <div className="grid grid-cols-3 gap-1.5">
+            <span className="h-11 rounded-control bg-[#d3e0be]" />
+            <span className="h-11 rounded-control bg-[#f6d5c4]" />
+            <span className="h-11 rounded-control bg-[#d9d0f0]" />
+            <span className="h-11 rounded-control bg-[#f7e8b0]" />
+            <span className="h-11 rounded-control bg-[#f3cfd6]" />
+            <span className="h-11 rounded-control bg-[#cfe3f0]" />
+          </div>
+          <span className="absolute inset-x-2.5 bottom-1.5 h-2 rounded-full bg-[#15172a]" />
+        </div>
+      ) : id === "reel" ? (
+        <div className="absolute inset-x-0 bottom-0 top-5 bg-[#09090a] px-2 pt-2.5">
+          <div className="flex gap-1.5">
+            <span className="h-14 w-[38%] shrink-0 rounded-sm border border-white/15 bg-white/10" />
+            <span className="h-14 w-[38%] shrink-0 rounded-sm border border-white/30 bg-white/20" />
+            <span className="h-14 w-[38%] shrink-0 rounded-sm border border-white/15 bg-white/10" />
+          </div>
+          <span className="mt-2 block h-2.5 w-2/3 rounded-sm bg-[#f1efea]" />
+          <span className="mt-1.5 block h-1.5 w-1/3 rounded-full bg-[#f1efea]/40" />
+        </div>
       ) : (
         <>
           <div className="grid h-[45%] grid-cols-[.82fr_1.18fr] gap-2 p-2.5">

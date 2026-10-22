@@ -5,6 +5,10 @@
   "compatibility_date": "2026-08-13",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
+  // The store stylesheet, the order-form script and the commune lists are static
+  // assets: served by Cloudflare without running the Worker, so they cost nothing
+  // against the request budget. Regenerate with: bun scripts/storefront-public-build.ts
+  "assets": { "directory": "./public" },
   "d1_databases": [
     {
       "binding": "DB",
@@ -12,6 +16,9 @@
       "database_id": "replace-with-production-d1-id"
     }
   ],
+  // Product photos: sellers' desktops upload them here; the media subdomain serves them with no Worker involved.
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "sahelflow-media" }],
+  "vars": { "MEDIA_ORIGIN": "https://media.sahelflow.com" },
   "services": [
     {
       "binding": "CONTROL",

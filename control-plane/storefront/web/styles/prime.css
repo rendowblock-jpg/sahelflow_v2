@@ -1,0 +1,126 @@
+/* PRIME: the product alone on a lit stage. Loaded after shop.css, only for stores whose template is "prime".
+   Forest-black page, brass for the one action, bone for text; the order form is a sheet of bone paper.
+   Everything here reads the seller's palette (custom properties on <body>), so a seller who recolours Prime still gets a
+   coherent page. Light type with generous leading; no letter-spacing on Arabic (the base sheet already forbids it). */
+@font-face{font-family:"Prime Latin";src:url(__SF_FONT_jost-var-latin__) format("woff2");font-weight:200 900;font-display:swap;unicode-range:U+0020-007E,U+00A0-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2013-2014,U+2018-201A,U+201C-201E,U+2022,U+2026,U+20AC,U+2122,U+2212,U+202F}
+@font-face{font-family:"Prime Arabic";src:url(__SF_FONT_alexandria-300-arabic__) format("woff2");font-weight:100 300;font-display:swap;unicode-range:U+0600-06FF,U+200C-200F,U+2066-2069,U+066A-066C,U+FDF2}
+@font-face{font-family:"Prime Arabic";src:url(__SF_FONT_alexandria-400-arabic__) format("woff2");font-weight:400;font-display:swap;unicode-range:U+0600-06FF,U+200C-200F,U+2066-2069,U+066A-066C,U+FDF2}
+@font-face{font-family:"Prime Arabic";src:url(__SF_FONT_alexandria-500-arabic__) format("woff2");font-weight:500 900;font-display:swap;unicode-range:U+0600-06FF,U+200C-200F,U+2066-2069,U+066A-066C,U+FDF2}
+
+body[data-voice=prime]{
+  --sf-font:"Prime Latin","Prime Arabic","Noto Sans Arabic","Segoe UI",Tahoma,system-ui,-apple-system,sans-serif;
+  --sf-display:var(--sf-font);--fs-hero:clamp(40px,12vw,64px);--lh-body:1.8;
+  /* the two colours of the paper sheet, saved before the sheet re-points --background / --foreground */
+  --p-bone:var(--foreground);--p-ink:var(--background);
+  font-weight:300}
+html[lang=ar] body[data-voice=prime]{--lh-body:1.95;font-weight:400}
+body[data-voice=prime] :is(.sf-h1,.sf-h2,.sf-h3){font-weight:200;letter-spacing:-.01em;line-height:1.2}
+html[lang=ar] body[data-voice=prime] :is(.sf-h1,.sf-h2,.sf-h3){font-weight:300;line-height:1.5}
+body[data-voice=prime] :is(.sf-sub,.sf-lead,.sf-body,.sf-desc){font-weight:inherit}
+body[data-voice=prime] ::selection{background:var(--primary);color:var(--primary-foreground)}
+
+/* ---- chrome: a quiet bar over the stage ---- */
+body[data-voice=prime] .sf-head{position:absolute;inset-inline:0;background:transparent;border-block-end:0;-webkit-backdrop-filter:none;backdrop-filter:none}
+body[data-voice=prime] .sf-mono{display:none}
+body[data-voice=prime] .sf-brand b{font-size:14px;font-weight:500;letter-spacing:.34em;text-transform:uppercase}
+body[data-voice=prime] .sf-lang{background:none;padding:0}
+body[data-voice=prime] .sf-lang-i{min-width:44px;height:44px;border-radius:0;background:none;box-shadow:none;font-weight:400}
+body[data-voice=prime] .sf-lang-i[aria-current]{background:none;box-shadow:none;color:var(--foreground)}
+body[data-voice=prime] .sf-lang-i[aria-current]::before{content:"";position:absolute;inset-inline:10px;inset-block-end:8px;height:1px;background:var(--primary)}
+body[data-voice=prime] .sf-ann{background:transparent;color:var(--muted-foreground);border-block-end:1px solid var(--border);font-weight:400}
+
+/* ---- the stage: the first photo is lit from behind and melts into the page ---- */
+body[data-voice=prime] .sf-pdp-in{padding-block-start:52px}
+/* the glow below is wider than the photo on purpose; it must be cut at the photo's edge or the page scrolls sideways (measured +80 px) */
+body[data-voice=prime] .sf-pdp-media{isolation:isolate;overflow:hidden;overflow:clip}
+body[data-voice=prime] .sf-pdp-media::before{content:"";position:absolute;z-index:-1;inset:-4% -22% 0;background:radial-gradient(ellipse 50% 58% at 50% 44%,rgb(255 255 255/.12),transparent 76%);animation:pr-lamp 2.4s var(--e-out) both}
+@supports (background:color-mix(in srgb,red,blue)){
+  body[data-voice=prime] .sf-pdp-media::before{background:radial-gradient(ellipse 50% 58% at 50% 44%,color-mix(in srgb,var(--primary) 38%,transparent),color-mix(in srgb,var(--primary) 12%,transparent) 55%,transparent 76%)}
+}
+body[data-voice=prime] .sf-slide{max-height:58svh}
+body[data-voice=prime] .sf-gal-track{-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
+body[data-voice=prime] .sf-slide:first-child img{animation:pr-rise 1.4s var(--e-out) both}
+body[data-voice=prime] .sf-count{background:transparent;color:var(--muted-foreground);font-weight:400;inset-block-end:58px}
+body[data-voice=prime] .sf-dots{inset-block-end:58px}
+body[data-voice=prime] .sf-dots i{background:var(--border);box-shadow:none}
+body[data-voice=prime] .sf-dots i[aria-current]{background:var(--primary)}
+@keyframes pr-lamp{from{opacity:0;transform:scale(.82)}}
+@keyframes pr-rise{from{transform:translateY(22px) scale(.985)}}
+@keyframes pr-sweep{from{background-position:130% 0}to{background-position:-30% 0}}
+@keyframes pr-drift{to{transform:translateY(-4%) scale(1.05)}}
+/* scroll-driven, where the browser can: the photo drifts up slowly and a band of light crosses it */
+@supports (animation-timeline:scroll()){
+  @media (prefers-reduced-motion:no-preference){
+    body[data-voice=prime] .sf-slide:first-child img{animation:pr-rise 1.4s var(--e-out) both,pr-drift linear both;animation-timeline:auto,scroll(root);animation-range:normal,0 70vh}
+    body[data-voice=prime] .sf-slide:first-child::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 40%,rgb(255 255 255/.16) 50%,transparent 60%) 130% 0/250% 100% no-repeat;animation:pr-sweep linear both;animation-timeline:scroll(root);animation-range:0 80vh}
+  }
+}
+
+/* ---- name, price, promises ---- */
+body[data-voice=prime] .sf-buy{margin-block-start:-40px;padding:0;background:none;border-radius:0;box-shadow:none;justify-items:center;text-align:center;gap:14px}
+body[data-voice=prime] .sf-buy::before{display:none}
+body[data-voice=prime] .sf-buy [dir=auto]{text-align:center}
+body[data-voice=prime] .sf-pname{font-size:clamp(36px,11vw,58px);overflow-wrap:break-word}
+html[lang=ar] body[data-voice=prime] .sf-pname{font-size:clamp(34px,10vw,52px)}
+body[data-voice=prime] .sf-sub{max-width:30ch;margin:0;text-wrap:balance}
+body[data-voice=prime] .sf-price--lg{font-weight:200;font-size:clamp(30px,8vw,40px);letter-spacing:0;color:var(--sf-accent,var(--primary))}
+body[data-voice=prime] .sf-note{color:var(--sf-accent,var(--primary))}
+/* the promises become a plain list with brass dots: what happens, in order of how a buyer thinks about it */
+body[data-voice=prime] .sf-chips{display:grid;gap:0;overflow:visible;margin:10px 0 0;padding:0;justify-self:stretch;max-width:32em;margin-inline:auto;border-inline-start:1px solid var(--border);text-align:start}
+body[data-voice=prime] .sf-chips span{display:block;position:relative;padding:0 26px 22px;background:none;border-radius:0;color:var(--foreground);font-size:17px;font-weight:300;line-height:1.7}
+body[data-voice=prime] .sf-chips span:last-child{padding-block-end:0}
+body[data-voice=prime] .sf-chips span::before{content:"";position:absolute;inset-inline-start:-4px;top:.7em;width:7px;height:7px;border-radius:50%;background:var(--primary)}
+body[data-voice=prime] .sf-chips .sf-i{display:none}
+body[data-voice=prime] .sf-pill span{border-radius:0}
+body[data-voice=prime] .sf-more{border-color:var(--border)}
+body[data-voice=prime] .sf-btn,body[data-voice=prime] .sf-cta--bar{border-radius:0}
+
+/* ---- sections below: hairlines, no cards ---- */
+body[data-voice=prime] :is(.sf-faq,.sf-quote,.sf-tile,.sf-panel,.sf-trust li){background:none;box-shadow:none;border:1px solid var(--border)}
+body[data-voice=prime] .sf-faq{border-inline:0;border-radius:0}
+body[data-voice=prime] .sf-quote::before{color:var(--primary);opacity:.5}
+body[data-voice=prime] .sf-chip{background:none;border:1px solid var(--border);color:var(--primary)}
+body[data-voice=prime] .sf-foot{background:none;border-block-start:1px solid var(--border);border-radius:0}
+body[data-voice=prime] .sf-foot strong{font-weight:300;letter-spacing:.2em;text-transform:uppercase;font-size:clamp(18px,5vw,26px)}
+body[data-voice=prime] .sf-sticky{border-block-start:1px solid var(--border);box-shadow:none}
+
+/* ---- the home of a store with several products ---- */
+body[data-voice=prime] .sf-hero-in{padding-block-start:76px;text-align:center}
+body[data-voice=prime] .sf-hero-text{justify-items:center}
+body[data-voice=prime] .sf-hero-text>:not(.sf-btn){text-align:center!important}
+body[data-voice=prime] .sf-hero-pic{aspect-ratio:4/5}
+body[data-voice=prime] .sf-hero[data-style] .sf-hero-pic:nth-child(n){border-radius:0}
+body[data-voice=prime] .sf-hero-pic img{-webkit-mask-image:linear-gradient(#000 72%,transparent);mask-image:linear-gradient(#000 72%,transparent)}
+body[data-voice=prime] .sf-eyebrow{font-weight:400;color:var(--sf-accent,var(--primary))}
+body[data-voice=prime] .sf-card{border-radius:0}
+body[data-voice=prime] .sf-media{border-radius:0}
+body[data-voice=prime] .sf-card-body{padding-inline:0}
+body[data-voice=prime] .sf-price{font-weight:300;color:var(--sf-accent,var(--primary))}
+
+/* ---- the order form: a sheet of bone paper. Inside it the tokens are re-pointed, so every control of the shared form
+   (inputs, mode cards, stepper, summary, button) draws ink on bone with no extra rules ---- */
+body[data-voice=prime] :is(.sf-form,.sf-thanks){
+  --background:var(--p-bone);--foreground:var(--p-ink);--card:var(--p-bone);--ring:var(--p-ink);
+  --primary:var(--p-ink);--primary-foreground:var(--p-bone);--sf-brand-text:var(--p-ink);--sf-brand-text-on-surface:var(--p-ink);
+  --muted-foreground:var(--p-ink);--input:var(--p-ink);--border:var(--p-ink);--accent:var(--p-bone);
+  --sf-danger:#a3321f;--sf-ok:#2e6b4a;
+  background:var(--p-bone);color:var(--p-ink);border-radius:0;box-shadow:none;text-align:start;justify-self:stretch;width:100%}
+@supports (background:color-mix(in srgb,red,blue)){
+  body[data-voice=prime] :is(.sf-form,.sf-thanks){
+    --muted-foreground:color-mix(in srgb,var(--p-ink) 74%,var(--p-bone));--input:color-mix(in srgb,var(--p-ink) 55%,var(--p-bone));
+    --border:color-mix(in srgb,var(--p-ink) 22%,var(--p-bone));--accent:color-mix(in srgb,var(--p-ink) 7%,var(--p-bone))}
+}
+body[data-voice=prime] .sf-form{padding:34px 22px 30px;gap:22px}
+body[data-voice=prime] .sf-form .sf-h3{font-weight:300}
+body[data-voice=prime] .sf-field :is(input,select,textarea){background:transparent;border-width:0 0 1px;border-radius:0;padding-inline:0;min-height:52px;font-weight:400}
+body[data-voice=prime] .sf-field :is(input,select,textarea):focus{box-shadow:0 1px 0 var(--p-ink)}
+body[data-voice=prime] .sf-field label{font-weight:400;font-size:13px}
+body[data-voice=prime] .sf-field.is-ok::after{inset-inline-end:2px}
+body[data-voice=prime] :is(.sf-stepper,.sf-mode-in,.sf-pill span){border-radius:0}
+body[data-voice=prime] .sf-mode-in{background:transparent}
+body[data-voice=prime] .sf-mode input:checked+.sf-mode-in{background:var(--accent)}
+body[data-voice=prime] .sf-sum{background:none;padding-inline:0;border-block-start:1px solid var(--border)}
+body[data-voice=prime] .sf-cod{background:none;padding-inline:0;font-weight:400}
+body[data-voice=prime] .sf-form .sf-cta{border-radius:0}
+body[data-voice=prime] .sf-thanks{padding:40px 22px}
+body[data-voice=prime] .sf-thanks-icon{background:none;border:1px solid var(--p-ink);color:var(--p-ink)}

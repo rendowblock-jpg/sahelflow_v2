@@ -1,6 +1,8 @@
 import type { StorefrontWorkerEnvironment } from "./types";
 
 export const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
+/** A block type ("faq", "testimonial"): the same pattern the Studio schema uses (two or more characters). It is a label, not an identifier, so it must not need the eight characters ID does. */
+export const BLOCK_TYPE = /^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$/;
 export const SLUG = /^[a-z0-9][a-z0-9-]{2,62}$/;
 export const WILAYA = /^(0[1-9]|[1-5][0-9]|6[0-9])$/;
 export const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
@@ -9,6 +11,13 @@ export const MAX_ARTIFACT_BYTES = 256 * 1024;
 export const MAX_CHECKOUT_ITEMS = 50;
 export const MAX_CIPHERTEXT_CHARS = 64 * 1024;
 export const MAX_POLL_LIMIT = 100;
+
+/** The template ids a release may carry. The Worker bundle cannot import from src/, so the list lives here (a test keeps it equal to the app's list). */
+export const TEMPLATE_IDS = ["sahara", "atlas", "oasis", "prime", "souk", "reel", "noir", "lumen", "atelier", "pulse", "bloom"] as const;
+export type TemplateId = (typeof TEMPLATE_IDS)[number];
+export function isTemplateId(value: unknown): value is TemplateId {
+  return typeof value === "string" && (TEMPLATE_IDS as readonly string[]).includes(value);
+}
 
 export function json(value: unknown, status = 200): Response {
   return Response.json(value, {
@@ -197,7 +206,7 @@ function validComposition(value: unknown): boolean {
       const block = record(rawBlock);
       if (!block || !exactKeys(block, ["id", "type", "settings"])) return false;
       const blockId = String(block.id ?? "");
-      if (!ID.test(blockId) || ids.has(blockId) || !ID.test(String(block.type ?? "")) || !validSettings(block.settings)) {
+      if (!ID.test(blockId) || ids.has(blockId) || !BLOCK_TYPE.test(String(block.type ?? "")) || !validSettings(block.settings)) {
         return false;
       }
       ids.add(blockId);
@@ -252,7 +261,11 @@ function validBuilder(value: unknown): boolean {
 
 function validPublicTheme(value: unknown): value is PlainRecord {
   const theme = record(value);
+  // "mode" exists only in themes of the five styles; a theme published before it has none and stays valid.
+  const hasMode = theme ? Object.prototype.hasOwnProperty.call(theme, "mode") : false;
+  if (theme && hasMode && !(theme.mode === "landing" || theme.mode === "store")) return false;
   if (!theme || !exactKeys(theme, [
+    ...(hasMode ? ["mode"] : []),
     "schemaVersion", "template", "primaryColor", "accentColor", "backgroundColor", "surfaceColor",
     "textColor", "showPrices", "showStock", "density", "radius", "announcement", "hero", "catalog",
     "checkout", "trust", "builder",
@@ -263,7 +276,7 @@ function validPublicTheme(value: unknown): value is PlainRecord {
   const checkout = record(theme.checkout);
   const trust = record(theme.trust);
   return Boolean(
-    theme.schemaVersion === 2 && ["sahara", "atlas", "oasis"].includes(String(theme.template)) &&
+    theme.schemaVersion === 2 && isTemplateId(theme.template) &&
     [theme.primaryColor, theme.accentColor, theme.backgroundColor, theme.surfaceColor, theme.textColor]
       .every((color) => typeof color === "string" && COLOR.test(color)) &&
     typeof theme.showPrices === "boolean" && typeof theme.showStock === "boolean" &&

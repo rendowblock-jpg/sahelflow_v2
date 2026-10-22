@@ -1,0 +1,59 @@
+{
+  "css": "/_sf/shop.a4b1368430.css",
+  "js": "/_sf/shop.eb3439dbaa.js",
+  "communes": "/_sf/c.c000d484f9",
+  "fonts": {
+    "atelier-400": "/_sf/f.51421458d0.atelier-400.woff2",
+    "atelier-700": "/_sf/f.0bc3b9d90a.atelier-700.woff2",
+    "bloom-400": "/_sf/f.c267b89e69.bloom-400.woff2",
+    "bloom-700": "/_sf/f.901b0df7bd.bloom-700.woff2",
+    "kufi-bold": "/_sf/f.9bd813edeb.kufi-bold.woff2",
+    "kufi-regular": "/_sf/f.f83396316a.kufi-regular.woff2",
+    "lumen-400": "/_sf/f.20254f8a24.lumen-400.woff2",
+    "lumen-700": "/_sf/f.630f48a32f.lumen-700.woff2",
+    "naskh-bold": "/_sf/f.d082c3db84.naskh-bold.woff2",
+    "noir-300": "/_sf/f.72431b4842.noir-300.woff2",
+    "noir-500": "/_sf/f.39dab5f839.noir-500.woff2",
+    "alexandria-300-arabic": "/_sf/f.2ae64abb8b.alexandria-300-arabic.woff2",
+    "alexandria-400-arabic": "/_sf/f.36121d1cbf.alexandria-400-arabic.woff2",
+    "alexandria-500-arabic": "/_sf/f.baab0f2b12.alexandria-500-arabic.woff2",
+    "jost-var-latin": "/_sf/f.f309bd2edc.jost-var-latin.woff2",
+    "pulse-500": "/_sf/f.744de70fa2.pulse-500.woff2",
+    "pulse-900": "/_sf/f.eaff003f35.pulse-900.woff2",
+    "archivo-400-latin": "/_sf/f.559f4106ef.archivo-400-latin.woff2",
+    "archivo-cond-800-latin": "/_sf/f.209df2c866.archivo-cond-800-latin.woff2",
+    "arefruqaa-700-arabic": "/_sf/f.cf91497720.arefruqaa-700-arabic.woff2",
+    "reel-text-arabic-400": "/_sf/f.1123ac301e.reel-text-arabic-400.woff2",
+    "maghreb-500": "/_sf/f.916bdc393c.maghreb-500.woff2",
+    "readexpro-var-arabic": "/_sf/f.325dfc47a7.readexpro-var-arabic.woff2",
+    "readexpro-var-latin": "/_sf/f.629d5a9adc.readexpro-var-latin.woff2"
+  },
+  "skins": {
+    "prime": {
+      "css": "/_sf/prime.a6f9ad1137.css"
+    },
+    "souk": {
+      "css": "/_sf/souk.b81383f5c6.css"
+    },
+    "reel": {
+      "css": "/_sf/reel.149e0ad5e5.css",
+      "js": "/_sf/reel.bbd844599f.js"
+    },
+    "noir": {
+      "css": "/_sf/noir.a94f1cf113.css",
+      "js": "/_sf/noir.2458713c84.js"
+    },
+    "lumen": {
+      "css": "/_sf/lumen.1d1708217f.css"
+    },
+    "atelier": {
+      "css": "/_sf/atelier.e7c11f53c7.css"
+    },
+    "pulse": {
+      "css": "/_sf/pulse.fa67a54b9e.css"
+    },
+    "bloom": {
+      "css": "/_sf/bloom.b08c176cc0.css"
+    }
+  }
+}
