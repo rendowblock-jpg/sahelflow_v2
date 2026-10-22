@@ -226,7 +226,7 @@ ${extras}${more}${renderContact(ctx, true)}
 ${dataScript}`;
 
   const thumb = product.images[0]
-    ? `<img class="sf-sticky-thumb" ${imgAttrs(product.images[0], "48px", 640)} alt="" width="48" height="48" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
+    ? `<img class="sf-sticky-thumb" ${imgAttrs(product.images[0], GALLERY_SIZES, 640)} alt="" width="48" height="48" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
     : "";
   const bar = showBar
     ? `<div id="sf-sticky" class="sf-sticky">${thumb}<div class="sf-sticky-price"><small dir="auto">${esc(product.name)}</small><strong data-sf="bar-total">${esc(price)}</strong></div><a id="sf-bar-cta" class="sf-cta sf-cta--bar" href="#order">${esc(t("storefront.studio.orderNow"))}</a></div>`

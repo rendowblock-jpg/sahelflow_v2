@@ -41,6 +41,11 @@ describe("responsive photos", () => {
     expect(product).toContain(`srcset="${SMALL} 640w, ${BIG} 1280w" sizes="(min-width:900px) 540px, 100vw"`);
     expect(product).toContain(`<link rel="preload" as="image" href="${BIG}" imagesrcset=`);
     expect(product).toMatch(/class="sf-sticky-thumb" src="https:\/\/media\.test\/m\/storefront_12345678\/[0-9a-f]{24}-640\.webp" srcset=/);
+    // The sticky bar shows the SAME photo as the first slide, 48 px wide. With sizes="48px" a phone asked for the 640 px file while the hero took the 1280 px file of the
+    // same photo (density 2.6), so a second 124-143 KB download ran during the hero (lab, 22 Oct). The thumb now states the slide's sizes, so both pick the same file.
+    const thumb = product.match(/<img class="sf-sticky-thumb"[^>]*>/)?.[0] ?? "";
+    expect(thumb).toContain(`srcset="${SMALL} 640w, ${BIG} 1280w" sizes="(min-width:900px) 540px, 100vw"`);
+    expect(thumb).not.toContain("48px");
     const home = renderStorePage(renderInputFor(store, { productId: null })) ?? "";
     expect(home).toContain('sizes="(min-width:1040px) 25vw, (min-width:720px) 33vw, 50vw"');
     store.database.close();
