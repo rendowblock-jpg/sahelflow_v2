@@ -346,4 +346,11 @@ describe("the style sheets keep their promises", () => {
     // the two-column layout from 900 px keeps its own rows and its own alignment
     expect(sheet).toContain("@media (min-width:900px){\n  body[data-voice=atelier] .ax-collage{grid-template-columns:minmax(0,1fr) minmax(0,.8fr);align-items:center;");
   });
+  it("pulse: in a left-to-right page (French, English) the slide counter sits at the start side of the photo, not under the round price sticker - the sticker hangs at the end side of the photo and the counter's end side is the same corner (the counter keeps direction:ltr, the sticker follows the page), so '1 / 2' was hidden under the sticker at every width from 320 to 430 px (12 of 24 loads measured on staging)", () => {
+    const sheet = css("pulse");
+    expect(sheet).toContain("[dir=ltr] body[data-voice=pulse] .px-photo .sf-count{inset-inline-end:auto;inset-inline-start:16px}");
+    // right-to-left keeps the shared place: there the sticker is on the other side
+    expect(sheet).not.toContain("[dir=rtl] body[data-voice=pulse] .px-photo .sf-count");
+  });
+
 });
