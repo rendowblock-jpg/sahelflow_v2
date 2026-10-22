@@ -2,6 +2,7 @@
 
 > **Status:** Required exact-head closure matrix  
 > **Rule:** Source presence is not behavior evidence. A row passes only from the exact final PR head and the named lane/receipt.
+> **Note (2026-10-21):** "Level 1" to "Level 3" below name this matrix's own evidence tiers. They are not the retired repository-wide "Level 1/2/3" gate scheme; for the gates a change runs today read `../operations/WORKFLOW.md` section 5.
 
 ## Level 1 — deterministic unit, parser and property evidence
 

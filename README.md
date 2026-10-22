@@ -1,50 +1,40 @@
 # SahelFlow
 
-SahelFlow is a **Windows-first, local-first operations system for Algerian COD sellers**. It combines governed COD orders, customers, products, delivery/returns, COD settlement, WhatsApp/Inbox, automations, AI, analytics, multi-shop, storefront/connected services, licensing and recovery under one protected authority model.
+SahelFlow is a **Windows-first, local-first operations system for Algerian cash-on-delivery sellers**. One protected authority model covers orders, customers, products, delivery and returns, COD settlement, a WhatsApp inbox, automations, AI assistance, analytics, multi-shop, a hosted storefront, licensing and recovery. The desktop app is the authority for orders, stock and money; Cloudflare Workers carry only licensing, encrypted backup and relay, and the public storefront.
 
-The active documentation entry point is [`documentation/README.md`](documentation/README.md). Protected GitHub source, exact Actions evidence and signed releases outrank stale chat or historical handoffs.
+## Status
 
-## Current repository truth
+Pre-release. Signed builds are published on the internal channel and are not Beta or Stable. For the current build, read [GitHub Releases](https://github.com/rendowblock-jpg/sahelflow_v2/releases) and `sahelflow.version.json`; this file does not repeat version numbers. What has and has not been proven on an installed build, and what is deliberately not claimed, is in [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md).
 
-> Re-resolve protected `main` from GitHub before every write, review, merge, package or evidence claim. Release facts below are immutable; branch tips are deliberately not recorded here because they go stale the moment `main` moves.
+## Repository map
 
-- **Published signed package:** **Internal.45** — app `1.0.0-internal.45`, MSI `1.0.0.45`, authority **FD-073**, mode `customer-online`, channel `internal`, owned host `sahelflow.com`. Tag `sahelflow-v1.0.0-internal.45-9a8dac39545577e7395935c73452f55230f75e21`, published 2026-10-19T20:27:45Z. A Founder-authorized launch candidate, not Stable or Beta. Internal.43 (FD-071) was the first release to ship `SahelFlow-Setup.exe` (per-machine installer) beside the MSI.
-- **Installed truth:** the latest recorded Founder-installed checkpoint is Internal.45 (installed in place and reported on 2026-10-20; the installations of Internal.42 to 44 are not separately recorded). No campaign row has converted on Internal.42 to 45. The authority is [`documentation/operations/WORKING_MEMORY.md`](documentation/operations/WORKING_MEMORY.md).
-- Issue #221 is **closed/completed**: the Founder accepted installed Internal.24 for its retained whole-product human gate. #226 is closed/completed with its budgets retained as regression criteria.
-- Issue #306 is **open**: real-phone WhatsApp installed/provider certification; logout stays LAST.
-- Issues #316 and #317 are **open for installed/real-phone evidence only** — their source is complete and packaged.
-- Issue #230 is **open**: Algerian-network installed trial evidence. The licence hosts `license.sahelflow.com` and `activate.sahelflow.com` reported ready on `/healthz`; that does not close #230.
-- Customer-online licensing against `sahelflow.com` is the Founder-authorized launch authority (FD-066, carried by FD-071). It does not create Beta or Stable authority.
+| Path | What it holds |
+|---|---|
+| `src/` | the Next.js app: routes, API handlers, components, domain logic |
+| `src-tauri/` | the Rust desktop shell, native bridge, installer and updater |
+| `sidecars/` | the WhatsApp and MCP sidecars |
+| `control-plane/` | Cloudflare Workers: licensing, backup, connected relay, storefront |
+| `prisma/` | the per-shop database schema and migrations |
+| `marketing/` | the public marketing and download site |
+| `e2e/`, `tests/` | browser and integration tests; unit tests sit beside their source |
+| `scripts/` | build, verification and release tooling |
+| `documentation/` | product, architecture, workflow and decision records |
 
-Per-release history is in [`CHANGELOG.md`](CHANGELOG.md); the release ledger with digests and the 2026-10-17 release record are in [`documentation/system/CURRENT_STATE.md`](documentation/system/CURRENT_STATE.md).
+## Build and check
 
-## First Revenue Certification
+Bun 1.3.14 (see `packageManager` in `package.json`).
 
-The current execution program is **First Revenue Certification (FRC)** under FD-045: fast, honest first revenue with no paid infrastructure before revenue, without lowering correctness, privacy, provider or launch evidence. “99.99% sure” means every defined Required matrix was executed at the applicable layer, the exact candidate has zero known P0/P1, and residual external risks are disclosed. It is not a warranty against unknown defects or future third-party changes.
+```
+bun install --frozen-lockfile
+bun run typecheck      # tsc --noEmit
+bun run lint
+bun run test           # vitest; export the three variables printed by the next command first
+bun run test:sandbox -- <dir>   # prints SF_TEST_ROOT, SF_DATA_DIR and DATABASE_URL for a disposable sandbox
+bun run sf-audit       # documentation gate and release frontier
+```
 
-Order: the installed campaign on Internal.45 (state preserved, one pass over the rows it contains, #306 logout LAST) → FRC-3 Required capability/journey assurance (A→D→C→B) → FRC-4 commerce and FRC-5 courier live certification (blocked on official development environments, provider contracts and sandbox or authorized-account evidence) → FRC-6 first paid assisted deployment. Unverified integrations stay hidden, disabled or explicitly conditional; a provider can be certified for one action while others remain unsupported. The detail is in [`documentation/system/ROADMAP.md`](documentation/system/ROADMAP.md).
+Rust, MSI and installed-app checks run only in GitHub Actions (`.github/workflows/`). A change reaches `main` through a pull request whose required gates pass on its exact head.
 
-## Zero-budget boundary
+## Documentation
 
-- Local/source/CI, real-phone WhatsApp and synthetic/redacted Gemini certification need no purchased infrastructure.
-- Google's free Gemini tier is used only under the privacy-safe seller-owned-key contract; real client PII is not silently sent.
-- A `workers.dev` route may support technical testing but is not the sole business-critical customer authority.
-- No documentation statement spends money or silently waives a gate; funding, offline-customer exceptions and commercial terms need an explicit Founder decision.
-
-## Historical semantic continuity
-
-- **Phase 5 closure:** PR #220 remains the historical application-changing protected baseline `cf6bd90db27b3832c860a7c848ce3a0b8e5a3734`.
-- The active phase label remains **Phase 6 — Arabic, RTL and accessibility parity** for continuity while FRC executes across Phase 9-adjacent external gates.
-- Historical Internal.15 is `1.0.0-internal.15`; signed run `31657621918` remains retained evidence.
-- The historical evidence set included **issues #201, #214, #221, #226 and #230**. Current truth is #221/#226 completed, #230 and #306 open.
-- The former statement **Founder acceptance remains open** is historical and superseded by #221 closure on accepted Internal.24.
-
-## Evidence discipline
-
-- A green source tree is not a signed release; a signed release is not installed, provider or customer proof.
-- Adapter code, mocks, open-source wrappers and test counts do not prove a live integration.
-- No cross-SHA evidence mixing, retry-away of deterministic red, force merge, waiver, protection bypass, signing-key weakening or release-source substitution.
-- Preserve Founder AppData, registry/install identity, keys, shop databases and retained evidence.
-- Heavy builds, Rust, MSI and complete validation run in GitHub Actions; the agent sandbox is for inspection, bounded edits and targeted checks.
-
-Superseded documentation is deleted, not archived; git history is the record. The documentation under `documentation/` plus live protected source/GitHub define current execution truth.
+Start at [`AGENTS.md`](AGENTS.md) for the rules, then [`documentation/README.md`](documentation/README.md) for the map. Per-release history is in [`CHANGELOG.md`](CHANGELOG.md).

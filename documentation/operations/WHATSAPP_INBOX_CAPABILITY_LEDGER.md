@@ -4,8 +4,7 @@
 > **Scope:** Individual WhatsApp conversations in the Founder-offline desktop product
 > **Snapshot date:** 2026-09-01
 > **Source baseline:** protected `main` after the round-2 campaign repair line #370–#375 (B3 named sidecar rejections with `code:reason` propagation #372; R4 raw mic `DOMException.name` #370; B5 fully coded server shapes #371 + client reason surfacing #375; FD-054 demo coexist #374) on top of the FD-050 repair series #346–#353 and the deep-audit register #355
-> **Signed/installed baseline:** Internal.31 / FD-053 (latest Founder-installed, 2026-09-01)
-> **Latest signed/published:** Internal.31 / FD-053 (tag `sahelflow-v1.0.0-internal.31-38c95aa8f5e1f3d44326c727efd0d8fd54cba20a`, Founder-installed; packages the FD-051 repair line #362–#366 AND the #359 six-wave stream). The round-2 repairs #370–#375 ride protected `main` and are packaged in the Internal.32 successor (FD-055). Retained Internal.30 publication: tag `sahelflow-v1.0.0-internal.30-2eb8a33749118e233240019bf2df9a47d586a04d`, MSI digest `sha256:bef15026fc3f7394f2b10d15a809229418c585191509c78941a27461fbc8210e`)
+> **Installed and published truth:** not recorded in this ledger. The rows below are the evidence snapshot of the date above; each row names the build its observation was made on, and wording such as "pending in-place update" or "Internal.28/29 candidate" is the state at that date. Read what the Founder has installed in `../system/CURRENT_STATE.md` and the latest release on GitHub.
 
 This ledger is the first required deliverable for issue #317. It separates what
 the source can do from automated, signed/installed and real-phone/provider

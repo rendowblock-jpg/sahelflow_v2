@@ -1,0 +1,109 @@
+{
+  "formatVersion": 1,
+  "files": {
+    "AGENTS.md": {
+      "maxBytes": 7900
+    },
+    "CHANGELOG.md": {
+      "maxBytes": 49500
+    },
+    "README.md": {
+      "maxBytes": 2800
+    },
+    "documentation/README.md": {
+      "maxBytes": 3700
+    },
+    "documentation/operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md": {
+      "maxBytes": 21800
+    },
+    "documentation/operations/CODFLOW_EXTRACTION_REGISTER.md": {
+      "maxBytes": 18800
+    },
+    "documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md": {
+      "maxBytes": 50600
+    },
+    "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md": {
+      "maxBytes": 10100
+    },
+    "documentation/operations/TRANSFORMATION_REGISTER.md": {
+      "maxBytes": 66200
+    },
+    "documentation/operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md": {
+      "maxBytes": 36600
+    },
+    "documentation/operations/WORKFLOW.md": {
+      "maxBytes": 17300
+    },
+    "documentation/product/DECISIONS.md": {
+      "maxBytes": 93200
+    },
+    "documentation/product/EXPERIENCE.md": {
+      "maxBytes": 33500
+    },
+    "documentation/product/INTERFACE_SYSTEM.md": {
+      "maxBytes": 15900
+    },
+    "documentation/product/PRODUCT.md": {
+      "maxBytes": 23300
+    },
+    "documentation/research/CODFLOW_EXTRACTION.md": {
+      "maxBytes": 36100
+    },
+    "documentation/research/RESEARCH.md": {
+      "maxBytes": 38000
+    },
+    "documentation/security/ALGERIA_LAW_18_07_MAPPING.md": {
+      "maxBytes": 8000
+    },
+    "documentation/security/PHASE4_EVIDENCE_MATRIX.md": {
+      "maxBytes": 6000
+    },
+    "documentation/security/PHASE4_INDEPENDENT_REVIEW.md": {
+      "maxBytes": 6700
+    },
+    "documentation/security/PHASE4_THREAT_MODEL.md": {
+      "maxBytes": 13400
+    },
+    "documentation/system/ARCHITECTURE.md": {
+      "maxBytes": 51400
+    },
+    "documentation/system/CURRENT_STATE.md": {
+      "maxBytes": 9700
+    },
+    "documentation/system/ROADMAP.md": {
+      "maxBytes": 8200
+    }
+  },
+  "releaseNameFiles": [
+    "CHANGELOG.md",
+    "documentation/operations/AI_ORDER_EXTRACTION_CAPABILITY_LEDGER.md",
+    "documentation/operations/CODFLOW_EXTRACTION_REGISTER.md",
+    "documentation/operations/FRC3_REQUIRED_CAPABILITY_JOURNEY_LEDGER.md",
+    "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md",
+    "documentation/operations/TRANSFORMATION_REGISTER.md",
+    "documentation/operations/WHATSAPP_INBOX_CAPABILITY_LEDGER.md",
+    "documentation/product/DECISIONS.md",
+    "documentation/product/PRODUCT.md",
+    "documentation/research/RESEARCH.md",
+    "documentation/system/CURRENT_STATE.md"
+  ],
+  "undefinedFdAllowed": [],
+  "deadPathAllowed": {
+    "documentation/operations/MCP_AGENT_SURFACE_LEDGER.md": [
+      "SF_DATA_DIR/mcp/endpoint.json"
+    ],
+    "documentation/operations/TRANSFORMATION_REGISTER.md": [
+      "settings/team-access-panel.tsx",
+      "inbox/whatsapp-ingress-recovery-panel.tsx",
+      "shared/premium-table.tsx",
+      "profile/current-identity-card.tsx",
+      "shared/operational-state.tsx",
+      "orders/cod-controls.tsx",
+      ".../truncate-after/route.ts"
+    ],
+    "documentation/research/CODFLOW_EXTRACTION.md": [
+      "cod-server/src/mcp/registry.ts",
+      "scripts/d1.mjs"
+    ]
+  }
+}

@@ -6,9 +6,7 @@
 > the Founder-offline desktop product
 > **Snapshot date:** 2026-09-01
 > **Source baseline:** protected `main` after the round-2 campaign repair line #370–#375 (contains #363/#373 D1 key acceptance, carriage and boundary work; frozen corpus `frc2-1.0.0` merged through #342)
-> **Signed/installed baseline:** Internal.31 / FD-053 (latest Founder-installed, 2026-09-01)
-> **Latest signed/published:** Internal.31 / FD-053 (tag
-> `sahelflow-v1.0.0-internal.31-38c95aa8f5e1f3d44326c727efd0d8fd54cba20a`; packages the FD-051 repair line #362–#366 AND the #359 six-wave stream, Founder-installed; the round-2 D1 repairs #370–#375 ride protected `main` and are packaged in the Internal.32 successor)
+> **Installed and published truth:** not recorded in this ledger. The rows below are the evidence snapshot of the date above; each row names the build its observation was made on, and wording such as "pending in-place update" or "Internal.28/29 candidate" is the state at that date. Read what the Founder has installed in `../system/CURRENT_STATE.md` and the latest release on GitHub.
 
 This ledger is the FRC-2 required deliverable. It separates what the AI source can
 do from automated, signed/installed, founder-observed and live-provider evidence.

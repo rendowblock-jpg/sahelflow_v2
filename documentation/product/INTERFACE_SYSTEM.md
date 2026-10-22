@@ -10,21 +10,7 @@
 
 ## Why this document exists
 
-SahelFlow has a strong engine and an interface assembled surface by surface. The
-measured consequence, at the 2026-09-09 audit of protected `main` `406debe`:
-
-- shared **class names merging across ten stylesheets** resolved only by import order, so
-  the effective style of `.card-hover` and `.animate-fade-in` existed in neither file
-  alone (token *ownership* is deliberately partitioned and is sound);
-- **2,099** arbitrary Tailwind values bypassing tokens that already exist;
-- **1,200 of 1,291** type-size usages are `text-xs` / `text-sm` / `text-2xs` — 34 are
-  larger than `text-base`, so no screen carries hierarchy;
-- **8** corner radii and 20+ unauthorized one-off alpha tints in active use;
-- **zero** shared row/field/section primitives, so 11 settings panels each invent their
-  own geometry and the same icon tile is hand-rolled **36** times.
-
-No amount of per-page redesign fixes that, because there is nothing for a page to
-conform to. This document is the thing to conform to.
+An interface assembled surface by surface drifts: shared class names merge across stylesheets and resolve by import order, arbitrary values bypass tokens that already exist, type sizes cluster at one or two steps so no screen carries hierarchy, one-off radii and alpha tints multiply, and the same row, field or icon tile is hand-rolled again on every page. No amount of per-page redesign fixes that, because there is nothing for a page to conform to. This document is the thing to conform to. Measured counts of that drift change with every change to the code; read them from the code (`git grep`), not from here. The status of each surface is recorded in `operations/TRANSFORMATION_REGISTER.md`.
 
 ---
 
@@ -57,11 +43,11 @@ carries real hierarchy.
 | `--text-body-sm` | 13px / 20px | 400 | Secondary text, metadata |
 | `--text-caption` | 12px / 16px | 500 | Labels, timestamps, badge text |
 
-**`--text-2xs` (11px) is retired.** It is used 150 times today. `arabic-system.css:36`
-already lifts it to 12px, but only under `html[dir="rtl"] [data-sahelflow-shell="desktop"]`
-— so Arabic is correct inside the dashboard and falls back to 11px on login, setup, join
-and storefront, while French and English render 11px at all 150 sites. Every occurrence
-migrates to `--text-caption`. No interface text in this product renders below 12px in any
+**`--text-2xs` (11px) is retired.** `arabic-system.css` lifts it to 12px, but only under
+`html[dir="rtl"] [data-sahelflow-shell="desktop"]` — so Arabic is correct inside the dashboard and
+falls back to 11px on login, setup, join and storefront, while French and English render 11px
+wherever it is still used. The token is still defined; every remaining use migrates to
+`--text-caption`. No interface text in this product renders below 12px in any
 locale or on any surface, and the floor stops depending on a shell attribute being
 present.
 
@@ -150,22 +136,21 @@ than pinning a literal alpha.
 
 ## 6. The primitive layer (the missing middle)
 
-Between shadcn atoms and page components there is currently nothing, and page components
-run to 2,235 lines. These primitives are the layer that ends that.
+Between shadcn atoms and page components sits a primitive layer, so that a page does not re-derive rows, fields and sections inside one large file. Where each primitive lives, and whether it exists yet, is stated in the Status column; read `src/components/system/index.ts` for the barrel.
 
-| Primitive | Replaces | Contract |
-|---|---|---|
-| `PageShell` | Per-page ad-hoc shells; the `sr-only` `<h1>` pattern | Visible page identity, optional actions, optional rail. **Every route uses it.** |
-| `Section` | Hand-rolled heading + description + spacing | Title, optional description, content, consistent rhythm |
-| `Row` | 11 settings panels' bespoke geometry | Label + description on one side, control on the other, hairline separated |
-| `Field` | Per-form label/help/error markup | Label, control, help text, error, required state, `aria-describedby` wiring |
-| `Panel` | Ad-hoc `<Card>` + border + radius combinations | One radius, one padding, one border treatment |
-| `IconTile` | 36 hand-rolled copies | 3 sizes, semantic tone, no per-site tint |
-| `StateSurface` (promoted) | `empty-state` (2 uses), `empty-states` (11 copies), `operational-state` (deleted) | The canonical empty / loading / failure surface: tone, size, actions, details, live region. Adopted rather than replaced — it was the best-built of the four. |
-| `Rail` | The always-present Agents/Inbox rails | Disclosure-capable side surface that is present only when it carries content |
-| `Toolbar` | Per-surface filter/action rows | Consistent control grouping, wrap behaviour, RTL-safe |
-| `DataTable` | Per-page table markup; the dead `premium-table` | Sorting, selection, empty/loading/error, sticky header, virtualization hook |
-| `EntryShell` | Four bespoke centred cards on setup, sign-in, join and the licence lockout | One brand rail (identity, promise, three proof points, support line) beside one task column with the language switch; the rail folds into an identity row below the large breakpoint |
+| Primitive | Replaces | Contract | Status |
+|---|---|---|---|
+| `PageShell` | Per-page ad-hoc shells; the `sr-only` `<h1>` pattern | Visible page identity, optional actions, optional rail. **The target is every route.** | In `system/`; adopted by Inbox and Agents only. Other routes still use `PageHeader` (`shared/`). |
+| `Section` | Hand-rolled heading + description + spacing | Title, optional description, content, consistent rhythm | In `system/` (`Section`, `SectionStack`) |
+| `Row` | Bespoke settings-panel geometry | Label + description on one side, control on the other, hairline separated | In `system/` (`Row`, `RowGroup`) |
+| `Field` | Per-form label/help/error markup | Label, control, help text, error, required state, `aria-describedby` wiring | In `system/` |
+| `Panel` | Ad-hoc `<Card>` + border + radius combinations | One radius, one padding, one border treatment | In `system/` (with `PanelHeader`, `PanelTitle`, `PanelDescription`, `PanelContent`, `PanelFooter`) |
+| `IconTile` | Hand-rolled icon tiles | 3 sizes, semantic tone, no per-site tint | In `system/` |
+| `StateSurface` (promoted) | Parallel empty-state components | The canonical empty / loading / failure surface: tone, size, actions, details, live region. Adopted rather than replaced — it was the best-built of the alternatives. | Implemented in `shared/state-surface.tsx`; `shared/empty-state.tsx` composes it. |
+| `Rail` | The always-present Agents/Inbox rails | Disclosure-capable side surface that is present only when it carries content | **Not implemented** (target) |
+| `Toolbar` | Per-surface filter/action rows | Consistent control grouping, wrap behaviour, RTL-safe | In `system/` (`Toolbar`, `ToolbarGroup`, `ToolbarSpacer`) |
+| `DataTable` | Per-page table markup | Sorting, selection, empty/loading/error, sticky header, virtualization hook | Implemented in `components/data-table/` (not in `system/`) |
+| `EntryShell` | Four bespoke centred cards on setup, sign-in, join and the licence lockout | One brand rail (identity, promise, three proof points, support line) beside one task column with the language switch; the rail folds into an identity row below the large breakpoint | In `system/` |
 
 Rules:
 
@@ -178,12 +163,12 @@ Rules:
 
 ## 7. Page grammar
 
-Every route renders through `PageShell` and therefore has:
+The target is that every route renders through `PageShell` (today only Inbox and Agents do; the rest use `PageHeader`) and therefore has:
 
 - a page title — **visible** on document routes. Full-height workspaces (Inbox,
   Agents) whose canvas already carries identity keep an `sr-only` `<h1>` so the
-  heading exists for assistive tech without a second chrome band. Founder-installed
-  Internal.37 rejected the visible workspace `PageHeader` on those two surfaces;
+  heading exists for assistive tech without a second chrome band. the Founder rejected the
+  visible workspace `PageHeader` on those two surfaces (installed build of 2026-09-11);
 - a single place for page-level actions;
 - consistent gutter, max content width and section rhythm;
 - a skeleton that mirrors *this page's* layout, not a generic full-page shimmer.
@@ -234,8 +219,8 @@ still working. Durations 120–200ms, standard easing, and every animation respe
 
 ## 11. Copy and localization
 
-- **One copy authority.** The three locale files are the system of record. The 39 inline
-  TypeScript translation modules (5,979 lines) are migrated into it.
+- **One copy authority.** The three locale files are the system of record. Inline TypeScript
+  translation modules are migrated into them as their surfaces are rebuilt.
 - Every string that reaches a seller exists in AR, FR and EN at parity.
 - Seeded and demo content is locale-aware. Content in one language inside an interface in
   another is a defect, not a placeholder.
@@ -258,9 +243,9 @@ still working. Durations 120–200ms, standard easing, and every animation respe
 
 ## 13. Component-size discipline
 
-A component over **400 lines** is a defect to be split. The current 2,235 / 1,752 / 1,727 /
-1,496 / 1,325-line components are the mechanism by which patterns get re-derived inside a
-single file, and they are decomposed as their surfaces are rebuilt.
+A component over **400 lines** is a defect to be split: large single files are the mechanism by
+which patterns get re-derived. The components that still exceed it are tracked in
+`operations/TRANSFORMATION_REGISTER.md` and decomposed as their surfaces are rebuilt.
 
 ---
 
@@ -268,7 +253,7 @@ single file, and they are decomposed as their surfaces are rebuilt.
 
 A surface is conformant when it:
 
-1. renders through `PageShell` with a visible title;
+1. renders through `PageShell` with a visible title (or, for a full-height workspace, the workspace variant with an `sr-only` title);
 2. introduces no arbitrary values, radii, tints or type sizes outside this system;
 3. uses the primitive layer for every row, field, section, panel, empty state and tile;
 4. holds layout from 1024px to 2560px in LTR and RTL across all three locales;
@@ -296,5 +281,5 @@ import { PageShell, Section, Row, RowGroup, Field, Panel, IconTile, Toolbar } fr
 `src/components/ui/` remains the shadcn atom layer (Button, Input, Dialog, …)
 and is consumed *by* the primitives. `src/components/shared/` is legacy: its
 members either migrate into `system/` or retire as their surfaces are rebuilt.
-`StateSurface` is already promoted through the barrel as the canonical empty /
-loading / failure surface.
+`StateSurface` is the canonical empty / loading / failure surface; it is re-exported
+through the barrel and its implementation still lives in `shared/state-surface.tsx`.

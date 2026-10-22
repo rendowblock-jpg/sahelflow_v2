@@ -1,14 +1,31 @@
 # SahelFlow 1.0 — Consolidated Founder Decisions
 
-> **Status:** Authoritative register of approved Founder product and execution decisions. FD-001–FD-033 were consolidated from earlier addenda on 2026-07-29; later decisions are appended in numeric order as dated entries. FD-034–FD-044, FD-046 and FD-047 are version-bound release authority recorded in the protected release requests, not entries here
+> **Status:** Authoritative register of approved Founder product and execution decisions. FD-001–FD-033 were consolidated from earlier addenda on 2026-07-29; later decisions are appended in numeric order as dated entries. FD-034–FD-044, FD-046 and FD-047 are version-bound release authority recorded in the protected release requests, not entries here (the table below FD-033 lists them). Entries that only authorized a signed release are stubs: the decision (date, quote, scope) is kept, the package list lives in the release request, the GitHub release and `CHANGELOG.md`
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-10-20 (FD-073 publication record added. No decision changed)
+> **Last amended:** 2026-10-21 (release records reduced to stubs, back-pointers added to superseded clauses, FD-034 to FD-047 table, FD-074 to FD-079 added)
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
 This register records approved product and execution decisions. Entries FD-001–FD-029 are consolidated policy statements; FD-030 onward are dated Founder directives. Detailed mechanisms remain subject to architecture, research, security review, provider certification and evidence gates, but engineering may not contradict these policies without a new numbered Founder decision. A later entry supersedes an earlier one only for the choice it names.
 
+## Change control
+
+A Founder decision can be changed only by a new numbered decision that states
+exactly what it supersedes. Engineering documents, code comments, agents, tests,
+issues and external research cannot silently amend this register.
+
+## Change-control reading note
+
+Entries are ordered by number, not by date, and the newest numbers are at the end of the file. FD-067 (2026-10-03) precedes FD-068 and FD-069 (both 2026-10-01) because FD-066 reserved its number. The `## Change control` section above applies to every entry.
+
 ## Index (newest first)
 
+- FD-080 — No repository licence or notice file (2026-10-21, ADOPTED)
+- FD-079 — Per-machine Windows install (2026-10-18, ADOPTED under delegation)
+- FD-078 — Storefront templates Prime, Souk and Reel (2026-10-20, ADOPTED)
+- FD-077 — Arabic-first storefront (2026-10-19, ADOPTED)
+- FD-076 — Hosted product photos (2026-10-19, ADOPTED)
+- FD-075 — Storefront Worker plan (2026-10-19 and 2026-10-20, ADOPTED)
+- FD-074 — Hosted store address (2026-10-19, ADOPTED; address form under delegation)
 - FD-073 — One signed successor Internal.45 under the FD-066 customer launch (2026-10-19, ADOPTED)
 - FD-072 — One signed successor Internal.44 under the FD-066 customer launch (2026-10-17, ADOPTED)
 - FD-071 — One signed successor Internal.43 under the FD-066 customer launch (2026-10-14, ADOPTED)
@@ -69,11 +86,7 @@ This register records approved product and execution decisions. Entries FD-001�
 - FD-003 — Online machine-bound signed trial
 - FD-002 — Complete lockout after trial expiry
 - FD-001 — One complete one-time edition
-
-## Change-control reading note
-
-Entries are ordered by number, not by date, and the newest numbers are at the end of the file. FD-067 (2026-10-03) precedes FD-068 and FD-069 (both 2026-10-01) because FD-066 reserved its number. The `## Change control` section sits between FD-068 and FD-069.
----
+- FD-034 to FD-047 (except FD-045): release-authority table below FD-033
 
 ## FD-001 — One complete one-time edition
 
@@ -139,6 +152,8 @@ Entries are ordered by number, not by date, and the newest numbers are at the en
   provider pricing quarterly.
 
 ## FD-006 — Shared multi-tenant COD storefront and AAA standard
+
+> **Amended by FD-074:** stores are served at `shop.sahelflow.com/<slug>`; the `seller-slug.sahelflow.app` wording below is superseded. Custom subdomains stay conditional on their own certification.
 
 - One shared storefront platform, not one repository/deployment per seller.
 - One hosted storefront per entitled shop with default
@@ -240,6 +255,7 @@ Entries are ordered by number, not by date, and the newest numbers are at the en
   audit reason.
 - Price comes from one versioned authority across product, payment, license,
   Founder operations, terms and support.
+- Launch offer (Founder, 2026-10-01): 17,000 DZD for the first 20 sellers; the marketing site shows the price and the offer (`marketing/src/config.mjs`).
 
 ## FD-013 — Five-year maintenance and connected-service continuity
 
@@ -389,6 +405,8 @@ recurring fees, destructive retention or local lockout.
 
 ## FD-024 — Two coding agents with GitHub as durable truth
 
+> **Superseded in part by FD-029 (Agent use):** the Founder decides which agent is active, and FD-029 allocates no simultaneous lanes. The rest of this entry stands.
+
 - Active agents are ChatGPT Web Agentic Coding Agent and Desktop Agent.
 - GLM, Codex Cloud and legacy handoff systems are not fallback authority.
 - Either agent may implement; one owns each branch/package and the other reviews.
@@ -400,6 +418,8 @@ recurring fees, destructive retention or local lockout.
   Actions can perform them.
 
 ## FD-025 — Authenticated workspace is the first normal-launch window
+
+> **Superseded in part by FD-068:** the "no splash" clause. The rest of this entry stands.
 
 - Successful launch shows no splash, fake dashboard or intermediate shell.
 - The single window remains hidden only while the signed local runtime starts,
@@ -545,7 +565,7 @@ actions, compressed desktop mobile layouts and superficial RTL.
 
 - `ROADMAP.md` is the sole phase/dependency program.
 - `WORKFLOW.md` is the sole research/execution/review/evidence process.
-- `WORKING_MEMORY.md` contains only current truth and exact next outcome.
+- The current-truth document (then `WORKING_MEMORY.md`, since folded into `CURRENT_STATE.md`) contains only current truth and exact next outcome.
 - Issue #164 tracks phase status and PR/evidence links; it is not another
   authority.
 - No new permanent masterplan, gap report, wave, prompt, status or handoff is
@@ -613,6 +633,8 @@ This decision clarifies how FD-028 is executed. It does not replace the Phase
 
 ## FD-030 — Phase 3 provider conformance closure; live accounts deferred to representative beta
 
+> **Superseded in part by FD-033:** the NOEST sentence below (NOEST is no longer a supported runtime provider identity). The rest of this entry stands.
+
 This decision records the Founder’s 2026-08-04 provider-evidence boundary.
 
 - The Founder is not currently operating an e-commerce seller account and cannot
@@ -636,7 +658,7 @@ This decision records the Founder’s 2026-08-04 provider-evidence boundary.
   effects stay fail-closed until its exact provider-issued contract is available;
   DHD remains absent from runtime registration.
 - Issue #201 installed hydrated-WebView evidence and real-provider evidence remain
-  required at the applicable Level 3 / representative beta / Stable gates, but
+  required at the applicable Level 3 [editorial note, 2026-10-21: that scheme is retired; see `../operations/WORKFLOW.md` section 5] / representative beta / Stable gates, but
   they are not Phase 3 implementation blockers.
 - This supersedes only lower Phase 3 roadmap/issue wording that required real
   provider accounts or issue #201 before Phase 3 could close. It does not weaken
@@ -670,28 +692,9 @@ Internal.14 only.
 
 ## FD-032 — Internal.15 Founder-only offline checkpoint; customer release still requires live trial certification
 
-This decision records the Founder's explicit 2026-08-13 direction for
-`1.0.0-internal.15` / MSI `1.0.0.15` only.
+The Founder's explicit 2026-08-13 direction authorized Internal.15 (`1.0.0-internal.15`) solely as a Founder/internal-lab checkpoint on the existing signed permanent offline entitlement, packaging no online-trial service address. A customer release still required live trial certification and #230 at the time; FD-066 later set the customer-online launch authority.
 
-- Internal.15 may be signed and published solely as a Founder/internal-lab checkpoint
-  for the Founder T470 using the existing signed permanent offline entitlement.
-- The Internal.15 release artifact must package no `SF_LICENSE_SERVICE_URL`, must not
-  expose an online-trial action, and must fail that endpoint closed if called directly.
-- The authority is exact and version-bound: `sahelflow.version.json` must declare
-  `founder-offline-only`, `FD-032`, Internal.15, the internal channel and a null owned
-  host suffix. Any later version or mismatched authority fails the version/build gate.
-- Trial and permanent public verification keyrings remain mandatory. Permanent signed
-  activation, recovery, installation identity, AppData preservation and installed
-  runtime evidence are not weakened.
-- Issue #230 remains open P1. Before any release to users, SahelFlow still requires a
-  verified SahelFlow-owned domain, distinct primary/recovery HTTPS trial ingress,
-  protected bindings, representative Algerian fixed/mobile reachability, forced
-  recovery, and signed installed customer-trial evidence.
-- This checkpoint is not a customer release, online-trial certification, Founder
-  acceptance, Beta or Stable. It does not change FD-003's customer trial contract.
-- This supersedes only the earlier PR #245 instruction that owned-domain provisioning
-  blocks the Founder-only Internal.15 checkpoint. It does not supersede the owned-domain
-  requirement for user distribution and does not reuse or extend FD-031.
+The release authority is `.github/release-requests/internal-15.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-033 — Internal.16 completion convergence, first-revenue bootstrap and whole-product assurance
 
@@ -748,7 +751,30 @@ Repeated manifestations of those classes do not reopen Founder screenshot discov
 
 The installed inspection is closed. The next session reads live protected `main` plus this decision, Current State, Roadmap, Workflow and Working Memory; creates/uses the one Internal.16 application branch from exact documentation-merged main; performs one exact-source whole-product reconnaissance; freezes the combined Problem Register/contracts/acceptance matrix; then begins the large implementation wave. It must not spend another session reconstructing Parts 1–3 from chat.
 
+## Release-authority decisions without an entry (FD-034 to FD-047)
+
+These decisions authorized one signed offline-only Internal checkpoint each. They exist as version-bound authority in the release workflow's allow-list and in the release requests, not as entries here. FD-045 has its own entry below.
+
+| Decision | Package | Where it is recorded |
+|---|---|---|
+| FD-034 | Internal.16 | listed in `release.yml`; no release request in the tree |
+| FD-035 | - | number not used by any file |
+| FD-036 | Internal.17 | listed in `release.yml`; `internal-17-publication-retry.json` carries no decision id |
+| FD-037 | Internal.18 | `.github/release-requests/internal-18-founder-visual-correction.json` |
+| FD-038 | Internal.19 | `.github/release-requests/internal-19-founder-convergence.json` |
+| FD-039 | Internal.20 | `.github/release-requests/internal-20-founder-aaa-experience.json` |
+| FD-040 | Internal.21 | `.github/release-requests/internal-21-founder-aaa-experience.json` |
+| FD-041 | Internal.22 | `.github/release-requests/internal-22-founder-aaa-experience.json` |
+| FD-042 | Internal.23 | `.github/release-requests/internal-23-founder-repair.json` |
+| FD-043 | Internal.24 | `.github/release-requests/internal-24-founder-automations.json` |
+| FD-044 | Internal.25 | `.github/release-requests/internal-25-founder-provider-checkpoint.json` |
+| FD-046 | Internal.26 | `.github/release-requests/internal-26-frc1-repair-checkpoint.json` |
+| FD-047 | Internal.27 | `.github/release-requests/internal-27-frc1-lid-reply-checkpoint.json` |
+
+
 ## FD-045 — Zero-budget First Revenue Certification and evidence-bounded public promises
+
+> **Amended by FD-066 and FD-075:** the owned production domain `sahelflow.com` exists (FD-066), and FD-075 names the one planned paid-plan trigger (the storefront Worker, before any seller runs ads). The zero-paid-infrastructure rule otherwise stands.
 
 This decision records the Founder’s explicit 2026-08-25 direction after accepting installed Internal.24 and publishing the protected provider/security checkpoint Internal.25 / FD-044.
 
@@ -795,7 +821,7 @@ This decision records the Founder’s explicit 2026-08-25 direction after accept
 ### Execution discipline and supersession
 
 - Heavy builds, Rust, MSI and full validation run in GitHub Actions. This machine is limited to lightweight inspection/edits and the real installed/provider observations that CI cannot prove.
-- A reproduced defect opens one bounded root-cause package and affected siblings, selected Level 1/2/3 gates, adversarial review and expected-head merge; deterministic failures are never retried away.
+- A reproduced defect opens one bounded root-cause package and affected siblings, selected gates [editorial note, 2026-10-21: the "Level 1/2/3" scheme is no longer used; read the risk-selected gates of `../operations/WORKFLOW.md` section 5], adversarial review and expected-head merge; deterministic failures are never retried away.
 - This decision supersedes FD-033’s historical Internal.16 exact-next-session sequence and any lower document that still says Founder Internal.24 inspection is next.
 - It preserves FD-030’s distinction between source conformance and live certification, FD-033’s assurance meaning, FD-044’s exact Internal.25 release authority, the Product/Experience/Architecture launch gates and every protected invariant.
 
@@ -864,76 +890,25 @@ Experience, Architecture and release invariant.
 
 ## FD-049 — One signed/installed successor after #317, before FRC-2
 
-The Founder's 2026-08-27 direction supersedes the FD-048 batching boundary for
-the timing of the next installed checkpoint: once the #317 professional
-WhatsApp Inbox parity package is complete on protected `main`, one combined
-signed successor (Internal.28) is authorized so the Founder can install and
-test the retained Inbox/media work in place. FRC-2 through FRC-5 resume only
-after that installed Founder observation.
+The Founder's 2026-08-27 direction authorized one combined signed successor, Internal.28, once the #317 professional WhatsApp Inbox parity package was complete on protected `main`, so the Founder could install and test the Inbox and media work in place. It superseded FD-048's batching boundary for the timing of that installed checkpoint only.
 
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier that exists when
-  #317 completes; no speculative FRC work is bundled.
-- FD-045 evidence rules are unchanged: release-authority PR, exact-head review,
-  required gates, expected-head merge, signed run, in-place preserved install.
-- The installed campaign still executes the retained #306 real-phone rows
-  (automatic no-refresh inbound, reopen, EN/AR observation, governed status,
-  reviewed extraction, logout last) plus applicable #316/#317 native rows.
-- No customer-online, Beta, Stable or paid-deployment authority is created.
-  #230 and the zero-budget boundary are unaffected.
+The release authority is `.github/release-requests/internal-28-fd049-founder-parity-checkpoint.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-050 — One signed successor (Internal.29) after FRC-2, before FRC-3
 
-The Founder's 2026-08-28 instruction ("let's go on and start FRC-2 professionally
-and when it's completed fully we make the internal.29 and test everything")
-supersedes the FD-048/FD-049 sequencing for the checkpoint that follows the FRC-2
-AI/tools/order-extraction source frontier: once FRC-2's evidence matrix and its
-source packages are complete on protected `main`, one combined signed successor
-(Internal.29) is authorized so the Founder can install in place, re-verify the
-Internal.28 campaign fixes and exercise the FRC-2 rows before FRC-3 resumes.
+The Founder's 2026-08-28 instruction ("let's go on and start FRC-2 professionally and when it's completed fully we make the internal.29 and test everything") authorized one combined signed successor, Internal.29, after the FRC-2 source frontier and before FRC-3.
 
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier that exists when
-  FRC-2 completes; no speculative FRC-3+ work is bundled.
-- FD-045 evidence rules are unchanged: release-authority PR, exact-head review,
-  required gates, expected-head merge, signed run, in-place preserved install.
-- The Internal.29 installed campaign re-verifies the Internal.28 fixes (quoted
-  replies to received and sent messages, real PDF/Word document delivery, voice
-  recording, permanent multi-select chat delete, compacted composer EN/AR) and
-  the applicable FRC-2 matrix rows (key lifecycle, reviewed extraction,
-  proposal approval/replay).
-- No customer-online, Beta, Stable or paid-deployment authority is created.
-  #230 and the zero-budget boundary are unaffected.
+The release authority is `.github/release-requests/internal-29-fd050-frc2-frontier-checkpoint.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-051 — One signed successor (Internal.30) packaging the two repair lines, before FRC-3
 
-The Founder's 2026-08-30 instruction ("Cut the successor") authorizes exactly
-one combined signed successor (Internal.30) packaging the protected-main
-frontier that exists at cutting time: the FD-050 installed-campaign repair
-line (#346–#353, `b1b5a033`) and the deep-audit remediation register (#355,
-`14c059b7`), reconciled into the active documentation (#354/#356). It is cut
-from the quiet post-reconciliation frontier (`720d697a`) so the audited repair
-lines ship without coupling to the parallel frontend/UI work stream, which
-becomes the next candidate after this successor.
+The Founder's 2026-08-30 instruction ("Cut the successor") authorized one combined signed successor, Internal.30, packaging the protected-main frontier at cutting time before FRC-3.
 
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier at the release
-  head; the parallel frontend/UI stream is NOT bundled and no speculative
-  work is included.
-- FD-045 evidence rules are unchanged: release-authority PR, exact-head review,
-  required gates, expected-head merge, signed run, in-place preserved install.
-- The Internal.30 installed campaign re-verifies the FD-050 campaign rows
-  (B1–B5, D1, delivery-receipt enum truth on a real outbound, C1 sleep/wake
-  auto-receive) plus the deep-audit register's audit-affected rows, the
-  retained FRC-2 repair rows, the #306 real-phone rows and the applicable
-  matrix rows.
-- No customer-online, Beta, Stable or paid-deployment authority is created.
-  #230 and the zero-budget boundary are unaffected.
+The release authority is `.github/release-requests/internal-30-fd051-repair-lines-successor.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-052 — Demo data coexists with real operations (option A)
+
+> **Superseded by FD-054:** demo data may load into a shop that already holds real data, and the removal question this entry deferred is resolved there.
 
 Founder directive during the FD-051 installed campaign (2026-08-31). The
 blanket demo guard that made the workspace read-only while demo data was
@@ -961,30 +936,9 @@ Binding boundaries:
 
 ## FD-053 — One signed successor (Internal.31) packaging the campaign repair line and the six-wave stream
 
-The Founder's 2026-08-31 directive ("they do all work for now let's continue
-and make the next signed release"), issued after the FD-051 installed-campaign
-evidence report, authorizes exactly one combined signed successor (Internal.31)
-packaging the protected-main frontier at cutting time: the FD-051 installed-
-campaign repair line (#362–#365: B3 sidecar media MIME, D1 Gemini key-format
-acceptance + region mapping, B5 coded delete errors, B4 mic-failure
-diagnostics), the FD-052 demo-coexist implementation (#366), and the frontend
-Class-AAA six-wave stream (#359), which receives its first installed/Founder
-observation on this package (delta row D3).
+The Founder's 2026-08-31 directive ("they do all work for now let's continue and make the next signed release") authorized one combined signed successor, Internal.31.
 
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier at the release
-  head; certification cites the tree-identical product head (`569e921…`,
-  git-diff empty against squash `f0fca29…`) and its green CI/Phase 5/Phase 6-7
-  runs.
-- FD-045 evidence rules are unchanged: release-authority PR, exact-head review,
-  required gates, expected-head merge, signed run, in-place preserved install.
-- The Internal.31 installed campaign re-verifies R3–R6 (B3/B4/B5/D1 repairs),
-  R11 (FRC-2 key lifecycle, performable through the #363 gate fix) and D3
-  (six-wave first observations); the retained #306 logout row executes LAST,
-  after every other row is green.
-- No customer-online, Beta, Stable or paid-deployment authority is created.
-  #230 and the zero-budget boundary are unaffected.
+The release authority is `.github/release-requests/internal-31-fd053-signed-successor.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-054 — Demo data loads into a shop that already contains real data
 
@@ -1025,267 +979,39 @@ Binding boundaries:
 
 ## FD-055 — One signed successor (Internal.32) packaging the round-2 campaign repair line
 
-The Founder's 2026-09-01 directive ("merge all PRs and make the update"),
-issued after the Internal.31 installed-campaign round-2 findings, authorizes
-exactly one combined signed successor (Internal.32) packaging the
-protected-main frontier at cutting time: the round-2 repair line #370 (R4 raw
-`DOMException.name` in voice banners), #371 (B5 coded shape-400s),
-#372 (B3 named sidecar rejections + `code:reason` propagation), #373 (D1
-rounds 2-4: probe diagnostics, the documented `?key=` carriage, the
-verify-then-store whitespace boundary), #374 (FD-054 demo coexist with real
-data) and #375 (B5 client reason surfacing).
+The Founder's 2026-09-01 directive ("merge all PRs and make the update") authorized one combined signed successor, Internal.32.
 
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier at the release
-  head; certification cites the tree-identical product head and its green
-  CI/Phase 5/Phase 6-7 runs.
-- FD-045 evidence rules are unchanged: release-authority PR, exact-head
-  review, required gates, expected-head merge, signed run, in-place preserved
-  install.
-- The Internal.32 installed campaign re-verifies the round-2 rows (R3-R6
-  surfacing), R11 (FRC-2 key lifecycle — the Founder rotates the
-  screenshot-exposed Gemini key first) and D3 (six-wave first observations if
-  not yet recorded on Internal.31); the retained #306 logout row executes
-  LAST, after every other row is green.
-- No customer-online, Beta, Stable or paid-deployment authority is created.
-  #230 and the zero-budget boundary are unaffected.
+The release authority is `.github/release-requests/internal-32-fd055-signed-successor.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-056 — One signed successor (Internal.33) packaging the triage-ledger quality line
 
-The Founder's 2026-09-02 directive ("complete all the work professionally and
-flawlessly then make the update"), issued after the Internal.32 release-freeze
-quality line went green, authorizes exactly one combined signed successor
-(Internal.33) packaging the protected-main frontier at cutting time: the
-consolidated UI/UX triage line on PR #387 — the AAA message-surface repair
-waves (F-01..F-03 founder findings, thread/queue/composer polish, AI trust
-killers), the ledger completion waves (AI-07/08/11/14/15/16/18/19/20/22,
-INB-03/11/20/25/26/29, INB-30 i18n authority, AI-25 capability explainer),
-the wave-11..15 line (INB-24 voice gestures with preview-before-send, AI-21
-composer screenshot extraction, INB-16 SSRF-disciplined link previews, AI-26
-truthful provider turn signals, INB-28 media-sender factory, INB-11
-render-window virtualization, AI-13 thumbs feedback loop, INB-12
-pin/mute/archive state truth), the qs 6.16.0 security pin and the
-archive-queue type-truth repair.
+The Founder's 2026-09-02 directive ("complete all the work professionally and flawlessly then make the update") authorized one combined signed successor, Internal.33.
 
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier at the release
-  head; certification cites the tree-identical product head and its green
-  CI/Phase 5/Phase 6-7 runs.
-- FD-045 evidence rules are unchanged: release-authority PR, exact-head
-  review, required gates, expected-head merge, signed run, in-place preserved
-  install.
-- Sidecar-probe rows (INB-13/14/19/32) stay BLOCKED — no real-session probe
-  capability exists in this environment; INB-27 god-hook split stays OPEN by
-  recorded disposition (18-file contract churn vs release integrity).
-- The Internal.33 installed campaign re-verifies the wave rows on the founder
-  install (voice gestures, attachments, link previews, turn signals,
-  pin/mute/archive, feedback loop); the retained #306 logout row executes
-  LAST, after every other row is green. The Founder rotates the
-  screenshot-exposed Gemini key before real AI usage.
-- No customer-online, Beta, Stable or paid-deployment authority is created.
-  #230 and the zero-budget boundary are unaffected.
+The release authority is `.github/release-requests/internal-33-fd056-signed-successor.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-057 — One signed successor (Internal.34) packaging the post-campaign repair line
 
-The Founder's 2026-09-05 directive ("Release Internal.34"), issued after the
-Internal.33 installed-campaign findings were repaired at source and the last
-open source ledger row closed, authorizes exactly one combined signed
-successor (Internal.34) packaging the protected-main frontier at cutting
-time: the Internal.33 campaign repair line on PR #391 — F-04 delete-contract
-repair, F-05 AI thinking-budget, F-06 agents-page functional completion,
-F-07 queue header (squash 1847396) — and the INB-27 god-hook split on PR
-#392: the 2,381-line workspace inbox hook decomposed into seven
-src/hooks/inbox/ concern hooks (chat queue, drafts, thread, outbox,
-transport) behind a 458-line facade with zero component-consumer changes and
-the ten contract files re-anchored to the same invariants (squash 9dc8e74,
-expected-head discipline).
+The Founder's 2026-09-05 directive ("Release Internal.34") authorized one combined signed successor, Internal.34.
 
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier at the release
-  head; certification cites the tree-identical product head (9dc8e74 equal to
-  the reviewed PR #392 head 80395e2, tree ce742113) and its green CI/Phase 5/
-  Phase 6-7 runs at that exact head; the docs-only reconciliation PR #393
-  carries zero source delta and marks the INB-27 ledger row DONE (source).
-- FD-045 evidence rules are unchanged: release-authority PR, exact-head
-  review, required gates, expected-head merge, signed run, in-place preserved
-  install.
-- Sidecar-probe rows (INB-13/14/19/32) stay BLOCKED — no real-session probe
-  capability exists in this environment.
-- The Internal.34 installed campaign re-verifies the F-04..F-08 findings and
-  the INB-27 concern-hook waves on the founder install and continues the
-  retained Internal.33 campaign rows and D3 six-wave observations; the
-  retained #306 logout row executes LAST, after every other row is green.
-  The Founder rotates the screenshot-exposed Gemini key before real AI
-  usage.
-- No customer-online, Beta, Stable or paid-deployment authority is created.
-  #230 and the zero-budget boundary are unaffected.
+The release authority is `.github/release-requests/internal-34-fd057-signed-successor.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-058 — One signed successor (Internal.35) packaging the Internal.34 installed-campaign repair line
 
-The Founder's 2026-09-06 directive ("go with 1 then 2" — merge the two open
-campaign PRs, then cut the signed successor packaging both lines), issued
-after every lane of both PRs passed at their exact heads, authorizes exactly
-one combined signed successor (Internal.35) packaging the protected-main
-frontier at cutting time: PR #396 — the Internal.34 installed-campaign AI
-line (F-09 truthful provider-verdict banners, F-10 bounded busy-retry chat
-delete, F-11 wrap-protected select toolbar, F-12 Class-AAA agents
-redesign) plus the F-05 residual root cause — the Gemini alt=sse stream
-parser was blind to Google's CRLF event framing, so every real chat turn
-parsed to a bare-empty verdict while the non-streaming verify probe
-succeeded (squash `dcd82f8…`) — and PR #397 — the notifications show-all
-workspace repair F-13 (N-1 pagination wipe, N-2 duplicate-id rendering,
-N-3 per-row mark-read, N-4 preferences skeleton, N-5 unread surfacing,
-N-6 preference-state chips, N-7 semantic day headers, N-8 inbox-v3
-presentation grammar) (expected-head discipline against the reviewed
-branch head).
+The Founder's 2026-09-06 directive ("go with 1 then 2": merge the two open campaign pull requests, then cut the signed successor) authorized one combined signed successor, Internal.35.
 
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier at the release
-  head; certification cites the product head and its green CI/Phase 5/
-  Phase 6-7 runs at that exact head (tree-identity with the reviewed PR
-  heads recorded in the release request).
-- FD-045 evidence rules are unchanged: release-authority PR, exact-head
-  review, required gates, expected-head merge, signed run, in-place
-  preserved install.
-- The Internal.35 installed campaign re-verifies F-05 residual (chat must
-  stream), F-09..F-13, and continues the retained campaign rows; the
-  retained #306 logout row executes LAST, after every other row is green.
-  The Founder rotates the chat-transited GitHub PAT after the merge window.
-- No customer-online, Beta, Stable or paid-deployment authority is created.
-  #230 and the zero-budget boundary are unaffected.
+The release authority is `.github/release-requests/internal-35-fd058-signed-successor.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-059 — One signed successor (Internal.36) packaging the #399–#411 protected-main frontier
 
-The Founder's 2026-09-08 directive ("let's go with D" — prepare the next
-signed successor packaging the #399–#411 delta as Internal.36), followed by
-the Founder's 2026-09-08 adoption directive ("continue and complete the work
-fully"), issued after
-live verification that protected `main` at `7052db9…` (PR #411, tree
-`1214fe83…`, tree-identical to the reviewed PR #411 head `72cbef96…`) carries
-the full required-gate line green at that exact head (CI run 34271651655,
-Phase 5 run 34271651439, Phase 6-7 run 34271651432 — success, 0 failed),
-authorizes exactly one combined signed successor (Internal.36) packaging the
-protected-main frontier since Internal.35 (release source `f45e6e1…`).
-FD-059 is ADOPTED by the 2026-09-08 adoption directive; the sequencing
-boundary below is resolved to option (b) — one combined campaign on the
-installed Internal.36 candidate — as part of that adoption. The packaged
-frontier:
+The Founder's 2026-09-08 directives ("let's go with D", then "continue and complete the work fully") authorized one combined signed successor, Internal.36.
 
-- PR #399/#401/#404/#410 (docs-only): frontier reconciliation to
-  Internal.35 and its delta records; route-boundary and ledger adjacency
-  corrections.
-- PR #400 (41f7e14…): AI agents AAA command-center redesign — work-rail
-  pulse, decision-block thread, review navigation.
-- PR #402 (a08bc00…): AAA eslint gates tightened — `no-console` as error in
-  API surface, exhaustive-deps warning.
-- PR #403 (418d665…): trilingual (AR/FR/EN) phone/license/shop-lifecycle
-  server-error rules.
-- PR #405 (c32b857…): P3 AI micro-repairs — F-2 quota-comment source truth,
-  F-3 legacy idempotency namespace pin, AI-17/AI-23 ledger conversions;
-  F-1 (`requireLicense()` on `POST /api/extraction`) remains untouched
-  pending its recorded Founder decision.
-- PR #406 (c50f297…): adoption of the FRC-3 Required capability/journey
-  assurance ledger (order A→D→C→B).
-- Issue #407 resolved by PR #408 (b2db189…) — phase4 triage adopted as the
-  live accepted-disposition (VEX) authority — and PR #409 (9f3704f…) — the
-  8 unclassified Prisma models classified, closure test CI-attached
-  (Phase 4 closure authority green).
-- PR #411 (7052db9…): behavioral UI-evidence infrastructure (per-file
-  happy-dom render harness; 3 render suites / 12 behavioral tests), AI
-  proposal-card corrections (aria-expanded disclosure, created-at truth,
-  arm-then-confirm per AI-23), agents-surface AAA subtraction,
-  ConversationRow memoization, hover floating clusters.
-
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier at the release
-  head; certification cites the product head and its green CI/Phase 5/
-  Phase 6-7 runs at that exact head (tree-identity with the reviewed PR
-  #411 head recorded in the release request).
-- FD-045 evidence rules are unchanged: release-authority PR, exact-head
-  review, required gates, expected-head merge, signed run, in-place
-  preserved install.
-- Sequencing — RESOLVED to option (b) by the adoption directive: one
-  combined campaign. The Founder skips the interim Internal.35 install and
-  runs the FD-058 campaign rows (F-05 residual, F-09..F-13, retained
-  FD-050 rows, D3 waves, applicable #316/#317 native rows, retained #306
-  rows) once, on the installed Internal.36 candidate, which contains every
-  Internal.35 repair. This decision supersedes only the sequencing boundary
-  of FD-058; every FD-058 publication fact remains retained evidence. Ledger
-  rows convert only on that installed observation, per the FRC-3 conversion
-  rules. The updater channel serves Internal.36 to the installed Internal.34
-  after publication.
-- The retained #306 logout row executes LAST, after every other row is
-  green, on whichever installed candidate the campaign runs. The Founder
-  rotates the chat-transited GitHub PAT after the merge window.
-- No customer-online, Beta, Stable or paid-deployment authority is created.
-  #230 and the zero-budget boundary are unaffected.
+The release authority is `.github/release-requests/internal-36-fd059-signed-successor.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-060 — One signed successor (Internal.37) packaging the #413–#422 plus #421 protected-main frontier
 
-The Founder's 2026-09-11 directive ("complete all the needed work and make
-the next signed release"), issued after live verification that protected
-`main` at `e9a64953…` (PR #421 squash, tree `88dfc65d…`, tree-identical to
-the reviewed PR #421 head `96244f19…`) carries the required-gate line green
-at that exact reviewed head (CI run 34485792321, Phase 5 run 34485792153,
-Phase 6-7 run 34485792154 — success, 0 failed; native/Windows lanes
-risk-classified skips on the test-only #421 head, with the full
-installed-MSI battery required on this release-authority head), authorizes
-exactly one combined signed successor (Internal.37) packaging the
-protected-main frontier since Internal.36 (release source `4e527f05…`).
-FD-060 is ADOPTED by that same 2026-09-11 directive. The packaged frontier:
+The Founder's 2026-09-11 directive ("complete all the needed work and make the next signed release") authorized one combined signed successor, Internal.37. The Founder installed it and visually rejected it before any campaign row converted.
 
-- PR #413 (docs-only): Internal.36 FD-059 publication record.
-- PR #414 (`29987b0f…`): whole-app transformation W1–W6 — interface system
-  authority, primitive layer, FN-01 shop-creation repair, SEC-01 dependency
-  remediation, SEC-02 enforced coverage ratchet.
-- PR #415 (docs-only): re-anchor entry-point documents to Internal.36.
-- PR #416 (`730641b7…`): STR-01 slice 1 — AI composer deck extracted from
-  `ai-decision-canvas.tsx`.
-- PR #418 (`319a06b5…`): STR-01 slice 2 — conversation log extracted into
-  `ai-message-log.tsx`.
-- PR #419 (`c9b8c88b…`): STR-01 slice 3 — AI-22 keyboard surface extracted
-  into `use-ai-canvas-shortcuts.ts`.
-- PR #420 (docs-only): close `ai-decision-canvas` under STR-01.
-- PR #422 (`9c200d4e…`): e2e governed Orders journey CI latency budget.
-- PR #421 (`e9a64953…`): TEST-01 behavioural evidence for the AI-22
-  keyboard surface (13 happy-dom tests).
-
-Remaining STR-01 god components (`inbox-v3-thread`, `storefront-studio`,
-`automation-builder`, `inbox-v3-queue`), remaining TEST-01 source-text
-pin conversion, L10N-01 copy-authority migration and SYS-04 arbitrary-value
-retirement ride protected `main` after this package and carry no release
-authority.
-
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier at the release
-  head; certification cites the product head and its green CI/Phase 5/
-  Phase 6-7 runs at that exact head (tree-identity with the reviewed PR
-  #421 head recorded in the release request).
-- FD-045 evidence rules are unchanged: release-authority PR, exact-head
-  review, required gates, expected-head merge, signed run, in-place
-  preserved install.
-- Sequencing — one combined campaign. The Founder skips the uninstalled
-  Internal.35 and Internal.36 candidates and runs the FD-058 campaign rows
-  (F-05 residual, F-09..F-13, retained FD-050 rows, D3 waves, applicable
-  #316/#317 native rows, retained #306 rows) once, on the installed
-  Internal.37 candidate, which contains every Internal.35 repair, the
-  Internal.36 frontier and the #414–#421 line. This decision supersedes
-  only the sequencing boundary of FD-059; every FD-059 and FD-058
-  publication fact remains retained evidence. Ledger rows convert only on
-  that installed observation, per the FRC-3 conversion rules. The updater
-  channel serves Internal.37 to the installed Internal.34 after
-  publication.
-- The retained #306 logout row executes LAST, after every other row is
-  green, on the installed Internal.37 candidate. The Founder rotates the
-  chat-transited GitHub PAT after the merge window.
-- No customer-online, Beta, Stable or paid-deployment authority is created.
-  #230 and the zero-budget boundary are unaffected.
+The release authority is `.github/release-requests/internal-37-fd060-signed-successor.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-061 — CodFlow extraction program (2026-09-13, ADOPTED)
 
@@ -1309,7 +1035,7 @@ Binding boundaries:
   `documentation/operations/CODFLOW_EXTRACTION_REGISTER.md` (EX-0…), one
   bounded reviewed PR per slice, CI green on the exact head before any
   merge, expected-head discipline. The register is subordinate to
-  WORKING_MEMORY and converts no installed row.
+  WORKING_MEMORY (since folded into CURRENT_STATE) and converts no installed row.
 - Every extracted file or module adapted from CodFlow source carries a
   provenance header naming the upstream repo, commit and Apache-2.0
   license; substantial derivative regions stay attributable.
@@ -1333,102 +1059,19 @@ Binding boundaries:
 
 ## FD-062 — One signed successor (Internal.38) packaging the #424–#450 protected-main frontier
 
-The Founder's 2026-09-16 directive ("let's complete all the work and make
-the next signed release"), issued after live verification that protected
-`main` at `03105969…` (PR #449 squash) is the frontier on top of the FD-060
-packaged Internal.37 line — the #436–#446 EX-4 storefront slices each
-carried their full hosted battery green at the exact head (17 success /
-3 risk-classified skips / 0 failed), and the docs-only #447–#449 records
-ride the same tree — authorizes exactly one combined signed successor
-(Internal.38) packaging the protected-main frontier since Internal.37
-(release source `cd1114de…`). FD-062 is ADOPTED by that same 2026-09-16
-directive. The packaged frontier:
+The Founder's 2026-09-16 directive ("let's complete all the work and make the next signed release") authorized one combined signed successor, Internal.38.
 
-- PR #424 (`27c0d72c…`): Internal.37 Founder visual repair — F-14 inbox
-  queue/header density and RTL names, F-15 canvas-first Agents
-  presentation. This is the source repair for the recorded 2026-09-11
-  visual rejection of the installed Internal.37.
-- PR #425 (`66cba527…`): canonical money/phone formatters; the
-  built-but-unreachable `change-pin` and shop-lifecycle Settings surfaces
-  wired with contract tests.
-- PR #426 (`9f1a58a8…`): STR-01 (1/4) — MessageBubble cluster extracted
-  into `inbox-thread-message.tsx`.
-- PR #427 (`eb0309a7…`): STR-01 (2/4) — thread view state extracted into
-  `use-inbox-thread-view.ts`.
-- PR #428 (docs-only): frontier reconciled to the Internal.37 / FD-060
-  reality.
-- PR #429 (docs-only): FD-061 adoption — CodFlow extraction register and
-  research record.
-- PR #430 (`abed8cd2…`): EX-1 — Yalidine adapter repaired to the
-  live-proven CodFlow contract (verbatim 36-status mapper,
-  order-id-keyed create response, `deleted===true` delete truth,
-  histories envelope, commune-name matching).
-- PR #432 (`7eee8d00…`): EX-2 — ZR Express (`zr-express-v2` dialect) and
-  EcoTrack (true v1 dialect) adapters reconciled to the live-proven
-  CodFlow contracts; webhooks deliberately not extracted.
-- PR #434 (`1904c8cc…`): EX-3 — Meta Pixel + Conversions API engine
-  (MetaPixelConfig / CapiEventLedger / CapiAttemptLog, `(order, stage,
-  event)` claim uniqueness, event_id dedup with the browser pixel,
-  SHA-256 PII hashing, 7-day attribution guard, test-mode routing,
-  durable outbox delivery with the 5×30s retry matrix, desktop-fired
-  `Purchase_Delivered`, write-only-token Settings panel).
-- PRs #436/#438/#440/#442/#444/#446 (`6b976ba0…`/`e0b65fce…`/`6e34f783…`/
-  `963f06d0…`/`0122ebca…`/`b5f9fbba…`): EX-4 storefront enrichment in six
-  slices — abandoned-cart recovery ledger; order-verified reviews;
-  quantity-tier offers; WebP image pipeline; per-product landing pages;
-  Turnstile + WhatsApp OTP checkout gates (StorefrontGateConfig with the
-  secrets in the encrypted Secret authority and fail-closed arming).
-- PRs #431/#433/#435/#437/#439/#441/#443/#445/#447/#448/#449 (docs-only):
-  the CodFlow extraction register records, the EX-5 MCP agentic surface
-  study (research/CODFLOW_EXTRACTION.md §7) and the EX-6 control-plane
-  deployment playbook (§8).
-- PR #450 (`1ea580b6…`): STR-01 (3/4) — thread header cluster extracted
-  into `inbox-thread-header.tsx`.
-
-Remaining STR-01 seams (`inbox-v3-thread` composer and list, then
-`storefront-studio`, `automation-builder`, `inbox-v3-queue`), remaining
-TEST-01 source-text pin conversion, L10N-01 copy-authority migration and
-SYS-04 arbitrary-value retirement ride protected `main` after this package
-and carry no release authority.
-
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier at the
-  release head; certification cites the product head and its green
-  CI/Phase 5/Phase 6-7 runs at that exact head (tree-identity with the
-  reviewed release-PR head recorded in the release request).
-- FD-045 evidence rules are unchanged: release-authority PR, exact-head
-  review, required gates, expected-head merge, signed run, in-place
-  preserved install.
-- Sequencing — one combined campaign. The Founder skips the uninstalled
-  Internal.35 and Internal.36 candidates and runs the FD-058 campaign
-  rows (F-04..F-13 including the F-05 CRLF residual, the retained FD-050
-  rows B1–B5, D1, delivery-receipt enum truth and C1, the D3 waves, the
-  deep-audit register's audit-affected rows, applicable #316/#317 native
-  rows and the retained #306 rows) once, on the installed Internal.38
-  candidate, which contains every Internal.35/36/37 repair, the FD-060
-  packaged frontier and the #424–#450 line — including the F-14/F-15
-  repairs whose absence caused the recorded 2026-09-11 visual rejection
-  of Internal.37. This decision supersedes only the candidate-choice
-  boundary of FD-060 (the installed Internal.37 was visually rejected
-  before any campaign-row conversion and cannot be republished); every
-  FD-060 publication fact remains retained evidence. Ledger rows convert
-  only on that installed observation, per the FRC-3 conversion rules.
-  The updater channel serves Internal.38 to the installed Internal.37
-  after publication.
-- The retained #306 logout row executes LAST, after every other row is
-  green, on the installed Internal.38 candidate. The Founder rotates the
-  chat-transited GitHub PAT after the merge window.
-- No customer-online, Beta, Stable or paid-deployment authority is
-  created. #230 and the zero-budget boundary are unaffected.
+The release authority is `.github/release-requests/internal-38-fd062-signed-successor.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-063 — Local MCP agentic surface (EX-5 conversion, 2026-09-21, ADOPTED)
+
+> **Partly superseded by FD-064:** MCP-14 is withdrawn, and order extraction is no longer out of scope.
 
 Founder agent-surface decision, 2026-09-21, converting the EX-5 study
 (`documentation/research/CODFLOW_EXTRACTION.md` §7) into implementation
 under FD-061. It settles the five points the study left open; row-level
 state lives in `documentation/operations/MCP_AGENT_SURFACE_LEDGER.md`
-(MCP-01…MCP-15), which is subordinate to WORKING_MEMORY and converts no
+(MCP-01…MCP-15), which is subordinate to WORKING_MEMORY (since folded into CURRENT_STATE) and converts no
 installed row. Recorded in this register on 2026-09-28, alongside the
 Founder's directive of the same day to complete the Agents surface on every
 layer, which this decision's engine carries.
@@ -1494,61 +1137,15 @@ Binding boundaries:
   expectation (`frc2-2.0.0`). Gemini work keeps synthetic/redacted inputs; no
   live-provider or installed claim is made from source, mocks or CI.
 
-
 ## FD-065 — One signed successor (Internal.39) packaging protected main through #469
 
-The Founder's 2026-10-01 directive ("make the next signed release"), issued
-after live verification that protected `main` is `cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e`
-(PR #469) and that this commit is tree-identical (`9b32b86a15753bcbfb3d2c969514e789c7ed8aa8`)
-to the reviewed PR #469 head `e37de85834dd51d80b2d753960bab8f24f61a031`,
-authorizes exactly one combined signed successor (Internal.39) packaging the
-protected-main frontier since Internal.38 (release source
-`9bf899274074f6f20935d224b96e8b1d14fc9690`). FD-065 is ADOPTED by that same
-2026-10-01 directive. The packaged frontier is that exact tree, including:
+The Founder's 2026-10-01 directive ("make the next signed release") authorized one combined signed successor, Internal.39.
 
-- #452/#453: Internal.38 publication record and frontier reconcile.
-- #454/#459–#462: FD-063 local MCP agentic surface and FD-064 order extraction
-  (offline reader first, Gemini as the incomplete-reading completer, seller
-  review before an order exists). MCP-14 stays withdrawn.
-- #458: premium wave (bidi, notifications, search, settings modal, inbox, agents).
-- #463/#464: Founder review F-16…F-33 (Agents, Settings, in-place search,
-  interactive stat cards, Deep Ocean mark, chart-hover colour boundary,
-  Arabic placeholders).
-- #465: documentation reconcile to #464.
-- #466/#467: storefront Studio, storefronts hub, themed public store, and the
-  four-step new-store setup with a live preview. Dependency audit cleared
-  (Next.js 16.3.6).
-- #468: automation flow builder, live hub, and templates that run as promised.
-- #469: risk scoring without look-ahead, and a Risk page built around seller
-  decisions (F-42).
-
-Required source gates at the reviewed head, zero failed checks: CI run
-`36811358867`, Phase 5 run `36811358707`, Phase 6-7 run `36811358722`.
-Native and installed-MSI lanes were risk-classified skips on that source-only
-head. The full installed-MSI battery is required on this release-authority
-head. Certification cites product head
-`cbb27fbcd43d55c11a68ccb7f42b4a595a21c88e`.
-
-Binding boundaries:
-
-- The successor packages exactly the protected-main frontier at the release
-  head. FD-045 evidence rules are unchanged: release-authority PR, exact-head
-  review, required gates, expected-head merge, signed run, in-place preserved
-  install.
-- Sequencing — one combined campaign. Internal.38 was published and not
-  Founder-installed, so it cannot observe F-16…F-42. This decision supersedes
-  only FD-062's candidate choice. Every FD-062 publication fact remains
-  retained evidence. The Founder installs Internal.39 in place (no logout, no
-  AppData reset, no protected-auth clearing) and runs the FD-058 campaign
-  once on that installed candidate. Ledger rows convert only on that
-  observation, and only for rows the candidate contains.
-- The retained #306 logout row executes LAST. The Founder rotates the
-  chat-transited GitHub PAT after the merge window.
-- No customer-online, Beta, Stable or paid-deployment authority is created.
-  #230 and the zero-budget boundary are unaffected. Publication is not
-  installation.
+The release authority is `.github/release-requests/internal-39-fd065-signed-successor.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-066 — Launch to first paying clients on sahelflow.com (2026-10-01, ADOPTED)
+
+> **Pricing display amended (Founder, 2026-10-01; see FD-012):** the marketing site shows the 35,000 DZD price and the launch offer; the "no public prices" wording below is superseded.
 
 The Founder's 2026-10-01 directive ("the most important final deep dive …
 after it I start selling the app … production grade finished work for
@@ -1585,27 +1182,9 @@ claim.
 
 ## FD-067 — One signed successor Internal.41 under the FD-066 customer launch (2026-10-03, ADOPTED)
 
-FD-067 is the customer-online release authority slot that FD-066 reserved.
-The Founder's 2026-10-03 resumption directive to prepare the Internal.41
-release-authority envelope adopts it as one signed successor:
+FD-067 is the customer-online release authority slot that FD-066 reserved. The Founder's 2026-10-03 resumption directive to prepare the Internal.41 release-authority envelope adopted it as one signed successor, Internal.41.
 
-- **Package:** app `1.0.0-internal.41` / MSI `1.0.0.41`, channel `internal`,
-  mode `customer-online`, owned host `sahelflow.com`, trial origins
-  `license.sahelflow.com` (primary) and `activate.sahelflow.com` (recovery);
-  paid licences stay offline-signed after BaridiMob/CCP payment.
-- **Content:** protected `main` `4bebfd83…` (PR #484) — the Internal.40
-  installed-campaign repair line (Gemini `thoughtSignature` round-trip with
-  seller-chosen model and thinking effort, WhatsApp send queued at 202 then
-  dispatched in the background, search/combobox/order-detail/launch-screen
-  repairs, the PIN-rail Algeria live map) plus #483's acceptance of
-  concatenated license keyrings.
-- **Gates:** the release-authority PR merges only after its full Required
-  battery, including installed-MSI evidence, is green; the signed train
-  publishes from exact protected `main`; the tag, digest and publish time
-  are recorded only after that run succeeds.
-- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
-  no ledger row; rows convert only on the Founder's installed Internal.41
-  observation, with #306 logout LAST.
+The release authority is `.github/release-requests/internal-41-fd067-customer-launch.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-068 — Branded launch screen while the workspace starts (2026-10-01, ADOPTED)
 
@@ -1630,12 +1209,6 @@ the bounded recovery document. It is never shown during installation-root
 rotation. Creating it can fail without affecting startup. Contract:
 `src/lib/__tests__/launch-screen-contract.test.ts`; module:
 `src-tauri/src/launch_screen.rs`.
-
-## Change control
-
-A Founder decision can be changed only by a new numbered decision that states
-exactly what it supersedes. Engineering documents, code comments, agents, tests,
-issues and external research cannot silently amend this register.
 
 ## FD-069 — Google Sheets through a seller-owned Apps Script bridge (2026-10-01, ADOPTED)
 
@@ -1666,178 +1239,70 @@ guide, not as a certified provider claim.
 
 ## FD-070 — One signed successor Internal.42 under the FD-066 customer launch (2026-10-09, ADOPTED)
 
-The Founder's 2026-10-09 directive to make the next signed release once PR
-#487 merged adopts the next customer-online release authority as one signed
-successor:
+The Founder's 2026-10-09 directive to make the next signed release once PR #487 merged adopted the next customer-online release authority as one signed successor, Internal.42.
 
-- **Package:** app `1.0.0-internal.42` / MSI `1.0.0.42`, channel `internal`,
-  mode `customer-online`, owned host `sahelflow.com`, trial origins
-  `license.sahelflow.com` (primary) and `activate.sahelflow.com` (recovery);
-  paid licences stay offline-signed after BaridiMob/CCP payment.
-- **Content:** protected `main` `dc73b83f…` (PR #487) — WhatsApp durable
-  dispatch and stale-status repairs, the WhatsApp diagnostics file, licence
-  distribution (permanent package default, `SFLA1` activation code /
-  `.sflicense`, PIN step, offline License Desk), the native first-frame splash
-  with deferred workspace window, team access across layers, the command
-  palette and theme-aware PIN map, and the full walkthrough repairs
-  (UI/UX triage ledger rows W-01..W-23).
-- **Gates:** the release-authority PR merges only after its full Required
-  battery, including installed-MSI evidence, is green; the signed train
-  publishes from exact protected `main`; the tag, digest and publish time
-  are recorded only after that run succeeds.
-- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
-  no ledger row; rows convert only on the Founder's installed Internal.42
-  observation, with #306 logout LAST. Live WhatsApp delivery stays
-  uncertified until that campaign.
-- **Next:** a `SahelFlow-Setup.exe` download for new clients (Founder,
-  2026-10-09) follows under its own authority. Internal.43 ships as an MSI.
-  Amended by FD-071 (2026-10-15): the Setup.exe source and the named
-  `SahelFlow-Setup.exe` download asset ship inside Internal.43's signed
-  publication; its installed-evidence lane follows on first shipped
-  observation.
+The release authority is `.github/release-requests/internal-42-fd070-customer-launch.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-071 — One signed successor Internal.43 under the FD-066 customer launch (2026-10-14, ADOPTED)
 
-The Founder's directive to make the next signed release once the installed
-audit fixes were complete adopts the next customer-online release authority
-as one signed successor:
+The Founder's 2026-10-14 directive to make the next signed release once the installed audit fixes were complete adopted the next customer-online release authority as one signed successor, Internal.43. Amended 2026-10-15 by the Founder: the messy-order extraction repair (#492) and the per-machine `SahelFlow-Setup.exe` outcome (#493) land before the release, so Internal.43 is the first release to ship `SahelFlow-Setup.exe` beside the MSI.
 
-- **Package:** app `1.0.0-internal.43` / MSI `1.0.0.43`, channel `internal`,
-  mode `customer-online`, owned host `sahelflow.com`. Paid licences stay
-  offline-signed. Trial origins stay `license.sahelflow.com` and
-  `activate.sahelflow.com`.
-- **Content:** protected `main` `d75eb813…` (PR #490) — the installed Internal.42
-  audit repairs for orders, couriers, storefront, WhatsApp, AI, team login,
-  the startup card, and the search crash.
-- **Gates:** this release-authority PR merges only after its full Required
-  battery, including installed-MSI evidence, is green. The signed train
-  publishes from that exact `main` commit. The tag, digest, and publish time
-  are recorded only after that run succeeds.
-- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
-  no ledger row. #306 logout stays LAST.
-- **Amended (2026-10-15, Founder directive — the extraction repair and the
-  Setup.exe outcome land before this release):** the packaged content extends
-  from `d75eb813…` (PR #490) to protected `main` `cdb907db…` — the same audit
-  repairs, plus **PR #492** (the messy-demo-order extraction repair: offline
-  reader, smart router, the inbox AI status line, eight pinned extraction
-  demo chats, the repaired offline-reader suites, and rich-seed order messages
-  that name their own contact) and **PR #493** (the `SahelFlow-Setup.exe`
-  source outcome: per-machine NSIS beside the MSI from one version authority,
-  dual updater entries with the manifest bound to the named download,
-  `/get/windows` serving the Setup.exe, and the contract pins). The signed
-  train builds and publishes both installer shapes under this authority, so
-  new clients receive `SahelFlow-Setup.exe` through Internal.43's
-  publication. The named Setup.exe installed-evidence lane stays with the
-  Setup.exe's own first-shipped observation. Certification of the product
-  content at head `80956e46…` (PR #493, tree-identical to this content):
-  CI `38739256979`, Phase 5 `38739256999`, Phase 6-7 `38739256948`, including
-  the installed-MSI evidence lane. Everything else in this decision stands.
-- **Amended (2026-10-15, installed-UI evidence-harness timing repair):** the
-  first signed train execution under this authority (run `38750028169`) failed
-  twice on two different timing assertions of the installed-UI evidence lane —
-  attempt 1 `ui-launch-3` (evidence-mtime versus first-visibility clock
-  capture) and attempt 2 `ui-close-1` (the 15-second shutdown-receipt
-  deadline) — on two different runners of the same image with zero
-  product-source delta, after the same lane had passed 3/3 on PR #493's
-  installed-MSI gate. Diagnostics for both attempts were recorded before any
-  retry and a third blind retry was not taken. PR #494 repaired the harness
-  semantics-preservingly (durable evidence snapshot at first visibility
-  replaces the mtime-vs-clock comparison; the shutdown-receipt deadline
-  widens to 45 seconds with the receipt's content contract unchanged) and
-  merged as `09b5963b…` after its full Required battery, including the
-  installed-MSI lane, was green at head `21cd66e9…`. The packaged content is
-  unchanged — the certification above stays at product head `80956e46…` — and
-  the signed train re-executes from exact protected main with the repaired
-  harness. Everything else in this decision stands.
-
-  > **Superseded in part (2026-10-17):** the sentence "The packaged content is
-  > unchanged — the certification above stays at product head `80956e46…`" no
-  > longer holds. PR #498 later changed packaged content (the workspace window is
-  > no longer created maximized before the authenticated UI is ready:
-  > `src-tauri/tauri.conf.json` and `src-tauri/src/startup_recovery/proven.rs`), and
-  > the release request records the re-certification at product head `d0159346…`.
-  > See the execution record below.
-
-- **Execution record (2026-10-17; no decision changed):** the signed train under
-  this authority failed three times before it published, for independent
-  reasons, each recorded on PR #495 before any retry. (1) Run `39013736331`
-  stopped at its manifest gate because the `windows-x86_64` entry of
-  `latest.json` pointed at `SahelFlow-Setup.exe` but carried the MSI signature;
-  PR #500 fixed `release.yml` and added a contract pin. (2) Runs `39035937811`
-  and `39038240457` then failed at draft-release creation with
-  `403 Resource not accessible by integration`: protected `main` had moved past
-  the source `95681a52…` (PR #500 moved it), and GitHub refuses that call at a
-  commit `main` has moved past, while the tip of `main`, the branch name and
-  descendants of `main` all work (three probe workflows). The release was
-  therefore built from the protected-main tip `3fa65206…` (tree identical to
-  PR #500's reviewed head) through the dispatcher workflow, under the release
-  request's `exact-protected-main` source policy, and published as tag
-  `sahelflow-v1.0.0-internal.43-3fa652062295f3b2d82a66cc9e0c0cc159a21f38` at
-  2026-10-17T14:59:16Z (signed run `39041467501`). Beyond the amendments above
-  the package carries PR #494 and #496 (installed-UI evidence harness), #497
-  (CI failure digest workflow), #498 (window behaviour) and #500. PR #501 adds a
-  first-step guard so `release.yml` refuses any source that is not the tip of
-  `main`. Digests and the release ledger are in `system/CURRENT_STATE.md`.
+The release authority is `.github/release-requests/internal-43-fd071-customer-launch.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-072 — One signed successor Internal.44 under the FD-066 customer launch (2026-10-17, ADOPTED)
 
-After the whole-app read-only audit of 2026-10-17 the Founder directed: "complete
-the work left and fixes and improvement to be done from the audit findings and
-then update the documentation files and everything to main then make the
-release." That directive adopts the next customer-online release authority as
-one signed successor:
+After the whole-app read-only audit of 2026-10-17 the Founder directed: "complete the work left and fixes and improvement to be done from the audit findings and then update the documentation files and everything to main then make the release." That adopted the next customer-online release authority as one signed successor, Internal.44.
 
-- **Package:** app `1.0.0-internal.44` / MSI `1.0.0.44`, channel `internal`,
-  mode `customer-online`, owned host `sahelflow.com`. Paid licences stay
-  offline-signed. Trial origins stay `license.sahelflow.com` and
-  `activate.sahelflow.com`.
-- **Content:** protected `main` at the tip this release pull request merges
-  into. It carries everything merged after Internal.43 (`3fa65206…`):
-
-- **Reported on Internal.43 (2026-10-17):** #503 the launch no longer waits for the packaged-server file pre-read; #504 the startup card is rebuilt and closing it quits instead of hiding a running launch; #506 the server loads route modules lazily instead of all at boot; #505 and #508 WhatsApp survives a cold start, retries status callbacks, and records inbound and timing diagnostics (the Inbox cause is not established); #507 search finds a record the seller mistyped; #509 the AI delete confirmation no longer overlaps and the composer draws one focus ring.
-- **Whole-app audit repairs, data and money:** #511 the Customers page search can match; #512 the privacy export includes five omitted models and its gate runs; #515 uncollected COD is no longer "disputed", the API accepts `+213` phones, and a product edit is audited; #517 stock availability no longer subtracts a confirmed manual hold twice; #519 orders are created only through the governed command; #525 imports and exports (non-negative stock, one schema for preview and commit, audited, idempotent expenses import, truncation reported); #526 one bad order no longer breaks the COD workspace, the Expenses figures agree (they include the cost of goods sold), expense edits are audited, and risk analytics needs the Risk page grants (an Operator or Viewer now gets 403); #531 deleting a backup removes the local copy first, a swallowed audit failure leaves a code-only signal, a packaged process refuses the development key override.
-- **Whole-app audit repairs, access, integrations and AI:** #516 AI chat read tools follow the member's role (an Operator can no longer read profit or cost through chat); #521 sign-in limits are per account on a server-derived key and first-run setup is create-only; #523 delivery status moves follow an explicit table and are audited, and the Returns page no longer offers a dialog that could only fail; #524 seller-supplied integration addresses are checked before use, six background workers record a failure code, and one malformed hosted receipt no longer stalls a page; #527 MCP grants and refused calls are audited, read audits are coalesced per minute, request size is bounded; #528 the Gemini key is carried in a header for legacy-format keys and scrubbed from errors, name redaction and the tool-loop ending are fixed.
-- **Whole-app audit repairs, WhatsApp, search and interface:** #514 WhatsApp inbound ignores undecryptable stubs and reactions and brings an archived thread back; #522 one unreadable inbound-spool record is set aside instead of stopping the sidecar, and the protected key is unlocked once per process; #513 the palette's server search stops when the browser cancels it; #530 typo search always tries one shorter spelling (on a slow PC a search that finds nothing is about twice as slow; unmeasured), the Inbox fallback poll backs off from 3 s to 15 s, and the sign-in, setup, join and licence pages get a skip link.
-- **Release mechanics, tests and documents:** #501 a signed build's source must be the current tip of `main`; #502 the documentation archive is retired; #520 and #529 test-only (the Settings window test waits for its open animation; three script contract tests join the vitest lane); the audit register and the merged-not-published record.
-- **Left out on purpose:** #510 (licence-boundary seed, draft: it failed two required browser tests) and the findings in the transformation register's "Not in the next release" table (each needs a Founder decision, a database migration or a Windows test).
-- **Measured and not measured:** the startup gain is a projection from two Founder traces, not a measurement of this build; palette latency is unmeasured; the Inbox cause is not established and needs the diagnostics from this build; the WhatsApp sidecar fix was tested in CI, not on a device; none of this is Founder-installed until it is installed and observed.
-
-- **Gates:** this release-authority PR merges only after its full Required
-  battery, including installed-MSI evidence, is green. The signed train builds
-  from that exact `main` tip and nothing else merges while it runs. The tag,
-  digests and publish time are recorded only after the signed run succeeds.
-- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
-  no ledger row and does not turn source or CI evidence into installed or
-  live-provider evidence. #306 logout stays LAST.
-- **Publication record (2026-10-18):** published 2026-10-18T15:15:42Z by signed run `39137845506` from the `main` tip `c1a66d9b…` (release PR #533); tag `sahelflow-v1.0.0-internal.44-c1a66d9b17d5a11a2b6d31d70729102609fb4be1`. Digests and the release ledger are in `system/CURRENT_STATE.md`. No decision changed.
+The release authority is `.github/release-requests/internal-44-fd072-customer-launch.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
 ## FD-073 — One signed successor Internal.45 under the FD-066 customer launch (2026-10-19, ADOPTED)
 
-On 2026-10-19 the Founder directed: "just finish the work and make the internal 45
-release then we can go from there." That directive adopts the next customer-online
-release authority as one signed successor:
+On 2026-10-19 the Founder directed: "just finish the work and make the internal 45 release then we can go from there." That adopted the next customer-online release authority as one signed successor, Internal.45.
 
-- **Package:** app `1.0.0-internal.45` / MSI `1.0.0.45`, channel `internal`,
-  mode `customer-online`, owned host `sahelflow.com`. Paid licences stay
-  offline-signed. Trial origins stay `license.sahelflow.com` and
-  `activate.sahelflow.com`.
-- **Content:** protected `main` at the tip this release pull request merges
-  into. It carries everything merged after Internal.44 (`c1a66d9b…`):
+The release authority is `.github/release-requests/internal-45-fd073-customer-launch.json`. What the package contained: the commits between the previous release tag and this one (`git log <previous tag>..<this tag>`), the GitHub release notes and `CHANGELOG.md`; this register keeps the decision, not the package list. Publication is not installation (`../system/CURRENT_STATE.md`).
 
-- **WhatsApp:** #536 one inbound record that stayed stuck and was retried every ~5 minutes is fixed (the messages SahelFlow sends itself came back with an empty `participant` that the app's strict schema refused; the sidecar now conforms three fields, and every refusal logs the field paths and codes, never values); #537 messages that arrived while SahelFlow was closed are kept (they were discarded until the connection reported `open`; messages the old gate already dropped cannot be recovered by SahelFlow and remain on the phone; new diagnostics `inbound.early`, `offline.preview`, `offline.done`).
-- **Startup, workspace and updates:** #539 the startup card is redesigned (theme-aware, Minimize and Close, follows the colour mode and the four presets; the "taking longer than usual" hint moves from 15 s to 45 s); #510 the workspace paints from the server's licence check instead of a second client fetch; #540 updates are quiet (a chip in the top bar, a download only on click, then "Restart to update") and the desktop stops its servers and the WhatsApp sidecar through the normal teardown before the installer starts. Windows still asks for one administrator confirmation (per-machine install).
-- **Notifications and interface:** #538 cleared notifications stay cleared after SahelFlow is reopened (kept per member, capped at 200 entries, no customer text); #534 the AI page renders one `main` landmark.
-- **Cloud backup and relay:** #543 the app's cloud backup upload is now accepted by the Worker (the app sent no `X-SahelFlow-SHA256`, so every upload was refused), a late upload to a failed reservation is refused, and a trial seller keeps one rolling point; #545 interrupted uploads resume, an 8th daily backup rotates the oldest out instead of being refused, verify checks every chunk, a licence with an unreadable expiry is refused, an hourly job purges expired trial data 30 days after expiry, and the desktop retries a transient failure twice; #544 the background workers call the cloud only while something is happening (the PR estimates about 144 calls a day per install with no phone paired, down from about 35,000), so a few installs cannot exhaust the account's request allowance.
-- **Hosted storefront stock:** #546 an item paused and then published again, or sold out and then restocked, is offered with its stock again instead of 0.
-- **Documents:** #535 and #541 record Internal.44 and the post-Internal.44 merges.
-- **Left out on purpose:** #547 (the public store page at `shop.sahelflow.com/<slug>`, a draft) and the findings in the transformation register's "Not in the next release" table.
-- **Measured and not measured:** the startup card and the update chip have never been drawn or run on a real Windows screen or with a real installer; the WhatsApp offline catch-up was tested in CI, not on a device; the desktop backup retry has not run against a real network or an installed app; the startup gain is still a projection, palette latency is unmeasured and the Inbox cause is not established; none of this is Founder-installed until it is installed and observed.
+## FD-074 — Hosted store address (2026-10-19, ADOPTED; address form under delegation)
 
-- **Gates:** this release-authority PR merges only after its full Required
-  battery, including installed-MSI evidence, is green. The signed train builds
-  from that exact `main` tip and nothing else merges while it runs. The tag,
-  digests and publish time are recorded only after the signed run succeeds.
-- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
-  no ledger row and does not turn source or CI evidence into installed or
-  live-provider evidence. #306 logout stays LAST.
-- **Publication record (2026-10-19):** published 2026-10-19T20:27:45Z by signed run `39315780619` from the `main` tip `9a8dac39…` (release PR #548); tag `sahelflow-v1.0.0-internal.45-9a8dac39545577e7395935c73452f55230f75e21`. Digests and the release ledger are in `system/CURRENT_STATE.md`. No decision changed.
+The Founder decided on 2026-10-19 that stores get **no separate store domain and no second Cloudflare account**: public stores stay on `sahelflow.com`, in the same account.
+
+The address form `https://shop.sahelflow.com/<slug>` (staging: `shop-staging.sahelflow.com`) was chosen by the agent under the Founder's delegation of storefront decisions. A per-store subdomain (`<slug>.sahelflow.com`) cannot be served from R2 on the Free plan, because an R2 custom domain is keyed by host, and a path needs no DNS record or certificate. The Founder may reverse this with a new numbered decision.
+
+- Supersedes the `seller-slug.sahelflow.app` wording of FD-006 and of `PRODUCT.md` section 8.
+- Custom seller domains stay conditional on their own certification (FD-006).
+
+## FD-075 — Storefront Worker plan (2026-10-19 and 2026-10-20, ADOPTED)
+
+The Founder decided on 2026-10-19 to stay on Cloudflare Workers Free for now, and on 2026-10-20 that the hosted storefront moves to Workers Paid **before any seller runs advertising to a store**. A store page therefore must not depend on a 60-second page cache lifetime to stay inside the free CPU limit.
+
+- Relation to FD-045: the zero-paid-infrastructure rule stands for everything else. For the storefront Worker, the paid plan is an authorized cost once the first seller advertises. A different reading needs a new numbered decision.
+
+## FD-076 — Hosted product photos (2026-10-19, ADOPTED)
+
+The Founder decided on 2026-10-19 that product photos shown on hosted stores are stored and served by SahelFlow (Cloudflare R2, content-named files, served from a SahelFlow media subdomain), not linked from sites SahelFlow does not control. Uploads are authenticated by the desktop app.
+
+- Supersedes the seller-supplied external `https` image addresses of the current release payload once this work lands.
+- The production media bucket, a usage monitor and a takedown path must exist before any production deploy that carries it.
+
+## FD-077 — Arabic-first storefront (2026-10-19, ADOPTED)
+
+The Founder's rule of 2026-10-19: hosted stores are designed Arabic first. Arabic is the default language and the first design target (right-to-left layout and Arabic typography); French and English are supported beside it. The AAA bar of `../product/EXPERIENCE.md` applies to every store template.
+
+## FD-078 — Storefront templates Prime, Souk and Reel (2026-10-20, ADOPTED)
+
+The three new hosted-store templates are named Prime, Souk and Reel (the Founder's names). The existing templates (`sahara`, `atlas`, `oasis`) stay published and unchanged. A template change reaches sellers only in a later signed release, on the Founder's decision.
+
+## FD-079 — Per-machine Windows install (2026-10-18, ADOPTED under delegation)
+
+Decided by the agent under the Founder's delegation of 2026-10-18 (the Founder may reverse it with a new numbered decision). SahelFlow stays a per-machine install (Program Files). Updates keep one Windows administrator confirmation and the installer's small progress window; the app reopens through the startup card.
+
+- Switching `nsis.installMode` to `currentUser` does not migrate an existing per-machine install (a second copy would appear in `%LOCALAPPDATA%`), and `both` stays elevated.
+- `src-tauri/src/packaged_runtime.rs` treats the Program Files copy as the trust anchor for the server code that holds decrypted shop data; a per-user install would put that code where any program running as the user can write.
+- `windows-release-build-contract` pins `perMachine`, and no CI lane installs `Setup.exe` over an older install.
+- Updates with no prompt need a small update service running with system rights. That is its own project, to be designed and authorized separately.
+
+## FD-080 — No repository licence or notice file (2026-10-21, ADOPTED)
+
+The Founder decided on 2026-10-21 that the repository carries no licence or notice file ("don't do any license"), and, when the CodFlow point was put to him, that no CodFlow licence copy or notice is added either ("about the CodFlow licence don't do it"). Agents must not add a `LICENSE`, a `NOTICE`, a CodFlow attribution file or a README licence section unless he asks for one.
+
+- This changes no product right. The right to run the application comes from a SahelFlow licence issued to the buyer (FD-001, FD-016).
+- Recorded so no later session raises it again as an open item: part of the code was derived from CodFlow (Apache License 2.0, upstream `github.com/bighadj22/codflow`; FD-061), and that licence asks anyone who passes on derived work to include a copy of it. The Founder knew this and chose not to add one. The per-file provenance headers that name CodFlow stay as they are. This is not legal advice.

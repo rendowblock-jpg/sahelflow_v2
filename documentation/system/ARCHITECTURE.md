@@ -4,7 +4,7 @@
 > **Product authority:** [`../product/PRODUCT.md`](../product/PRODUCT.md)
 > **Experience authority:** [`../product/EXPERIENCE.md`](../product/EXPERIENCE.md)
 > **Current-state authority:** [`CURRENT_STATE.md`](CURRENT_STATE.md)
-> **Last consolidated:** 2026-08-26
+> **Last consolidated:** 2026-10-21
 
 This document defines the final target and invariants. It does not claim the
 current implementation already satisfies them; source and evidence status
@@ -20,6 +20,23 @@ This document cannot silently amend product scope, pricing, entitlements, suppor
 
 SahelFlow 1.0 is a **desktop-authoritative, selectively connected system**.
 
+### Where each plane lives in the repository
+
+This specification is the target; this table says where each plane's code is, so a reader can check what exists instead of assuming it. It states no status that goes stale: read the named place.
+
+| Plane | Where | Notes |
+|---|---|---|
+| 2.1 Windows desktop | `src/` (app), `src-tauri/` (native shell and installer), `sidecars/` | |
+| 2.2 Cloudflare control plane | `control-plane/licensing`, `control-plane/backup`, `control-plane/connected`, `control-plane/storefront` | One Worker each. Only `licensing` has a committed `wrangler.toml`; the other three have `wrangler.jsonc.example` files, so for them this row reads the examples. Each has a D1 database; an R2 bucket is bound only in `backup`; only `licensing` has a custom domain. No Queues or Durable Objects appear in any of those files |
+| 2.3 Relay and projections | `control-plane/connected` | |
+| 2.4 Zero-knowledge backup | `control-plane/backup`, `src-tauri/src/backup_recovery` | |
+| 2.5 Hosted storefront | `control-plane/storefront` | Which public pages, hosted photos and templates are built is read from that folder, not from this document |
+| 2.6 PWA and browser clients | `src/app/manifest.ts`, `src/components/pwa` | |
+| 2.7 Providers | `src/lib/integrations`, `src/lib/ai`, `sidecars/whatsapp`, `sidecars/mcp` | |
+| 2.8 Founder administration | `tools/license-desk` (the Founder's offline licence desk) | No code referring to a separate online "Founder Console" was found |
+
+Parts of this specification are intentionally ahead of the code. The ones found to have no implementation when this table was written are marked **(target, not built)** in place.
+
 ### 2.1 Canonical Windows desktop installation
 
 - Sole authority for canonical operational business mutations and full private operational records.
@@ -34,7 +51,8 @@ A cloud receipt, queue acknowledgement or projection is not a canonical desktop 
 ### 2.2 Cloudflare control plane
 
 - Holds only licensing, entitlement, tenant/member/device/session, routing, payment/support/release and bounded operational metadata.
-- Uses Workers, D1, Queues, hibernating Durable Objects, R2 and approved custom-hostname infrastructure according to measured need.
+- Uses Workers, D1, Queues, hibernating Durable Objects, R2 and approved custom-hostname infrastructure according to measured need. This permits those services; it does not say they are in use (see the table above).
+- Runs on the free Workers plan until a numbered decision moves a Worker to the paid plan. The first such decision is FD-075: the storefront Worker moves before any seller runs advertising.
 - Uses one SahelFlow-operated multi-tenant deployment. Seller-owned Cloudflare
   accounts are not the default architecture.
 - Does not become the seller's operational business database.
@@ -63,6 +81,7 @@ A cloud receipt, queue acknowledgement or projection is not a canonical desktop 
 - Accepts durable public checkout receipts while the desktop may be offline.
 - Relays/imports receipts to the allocated canonical desktop/shop.
 - Distinguishes receipt acceptance from canonical order commitment.
+- Serves each store at `https://shop.sahelflow.com/<slug>` with no separate store domain (FD-074), Arabic first (FD-077), with product photos hosted by SahelFlow (FD-076). The published templates are `sahara`, `atlas` and `oasis`; Prime, Souk and Reel are decided (FD-078).
 
 ### 2.6 PWA/browser clients
 
@@ -261,7 +280,7 @@ The seller-controlled recovery kit includes:
 - tested replacement-install restore ceremony;
 - rotation/revocation semantics.
 
-#### Optional assisted recovery
+#### Optional assisted recovery (target, not built)
 
 Assisted recovery requires both:
 
@@ -269,6 +288,8 @@ Assisted recovery requires both:
 - a separate Founder offline share.
 
 Neither SahelFlow, Cloudflare, the Founder share nor the enrolled-device share alone can decrypt operational backups. The ceremony is explicit, authenticated, audited and revocable.
+
+No code implements the two-share ceremony (searched `src`, `src-tauri`, `control-plane`, `tools` and `sidecars`). Independent seller recovery above is built (`src-tauri/src/backup_recovery`).
 
 ### 6.3 Secrets
 
@@ -609,7 +630,7 @@ No specific courier is a locked Founder promise merely because current code or a
 
 ### 12.3 Domains, media and public safety
 
-Domain ownership/TLS are verified. Media is content-addressed, versioned, scanned, bounded and tenant-isolated. Arbitrary seller JavaScript/unrestricted HTML is forbidden. Custom domains remain conditional on certification.
+Domain ownership/TLS are verified. Media is content-addressed, versioned, scanned, bounded and tenant-isolated, and is hosted by SahelFlow (FD-076). Arbitrary seller JavaScript/unrestricted HTML is forbidden. Custom domains remain conditional on certification.
 
 ## 13. AI architecture
 
@@ -736,9 +757,11 @@ Package, Cargo, Tauri, updater, About UI, payment/support surfaces and release n
 
 Release channels are `internal`, `beta`, `stable`. Stable is Windows x64 only at launch. Candidate build/sign/test/evidence occurs before publication. Updater accepts only signed compatible artifacts and supports staged rollout/hold. Data rollback is normally compatible forward repair, not destructive down-migration.
 
-Every merged work package that changes the installed product receives a unique
-monotonically increasing Internal version. Its exact protected-main source is
-bound to the signed MSI, signature, update manifest and retained evidence.
+A new Internal version is cut only on a numbered Founder release decision (see
+`../product/DECISIONS.md`); merged work waits on `main` until then, so `main` can be
+ahead of the latest signed package. Each version is unique and monotonically
+increasing, and its exact protected-main source is bound to the signed MSI, signature,
+update manifest and retained evidence.
 
 The packaged Next.js standalone runtime executes directly from the MSI
 installation under protected `Program Files` using a pinned, checksum-verified
@@ -893,6 +916,6 @@ This specification does not authorize:
 ## Consolidation provenance
 
 This document consolidates the earlier superseding-ADR register (2026-07-15) and
-the Internal.5-era updater trust contract, and incorporates their governing
+the earliest updater trust contract, and incorporates their governing
 decisions. Those snapshots were retired from the working tree; they remain in git
 history. Where any recovered wording differs, this document is the authority.

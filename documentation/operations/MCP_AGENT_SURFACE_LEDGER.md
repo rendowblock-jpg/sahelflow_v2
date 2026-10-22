@@ -4,7 +4,7 @@
 > **Opened:** 2026-09-21
 > **Authority:** FD-063 (Founder agent-surface decision, 2026-09-21) converting
 > `documentation/research/CODFLOW_EXTRACTION.md` §7 from study to implementation
-> **Branch:** `feat/fd063-mcp-agent-surface`
+> **Branch:** merged and deleted; the MCP source is an ancestor of the published Internal.45 package
 > **Evidence class:** source only. This ledger converts **no** installed row, carries
 > **no** release authority and produces **no** provider or customer evidence.
 
@@ -54,7 +54,7 @@ Gemini-only. The replacement target is the **agent** surface, not extraction.
 | MCP-12 | Durable `McpAgentGrant` model: per-agent scope narrowing, instant revocation, connected-agent list | **DONE (source)** | additive migration `2026092800000000_fd063_mcp_agent_grants`; `src/lib/mcp/grants.ts` (hash-only secret storage, fail-closed ingress, narrowing in listing and execution, 20 active grants cap); `/api/mcp/grants`, `/api/mcp/grants/[id]/revoke`, `/api/mcp/invocations`; `src/lib/mcp/__tests__/agent-grants.test.ts` |
 | MCP-13 | `/agents` Connected agents control surface: connected agents with create/revoke, tool catalog with permission + annotation badges, invocation log, approval routing | **DONE (source)** | pinned rail entry + canvas surface (`src/components/ai/connected/**`, `/agents?view=connected`); grants shown by hint only, secret revealed once; proposed calls open the agent's transcript session, where the existing approval authority lives; trilingual copy `src/lib/i18n/connected-agents.ts`; `connected-agents-contract.test.ts` |
 | MCP-14 | Retire the Gemini chat agent loop and its routes/components/tests | **WITHDRAWN (FD-064)** | the Founder keeps the in-app Gemini agent and chat selectable beside connected agents; Gemini's primary role becomes order extraction |
-| MCP-15 | Installed observation on a signed candidate | **BLOCKED** | Internal.38 does not contain the MCP source (#459–#462). Observation waits on a later signed candidate |
+| MCP-15 | Installed observation on a signed candidate | **BLOCKED** | The MCP source (#459–#462) is in the published Internal.45 package. What is missing is a Founder-installed observation of it (none recorded in `../system/CURRENT_STATE.md`) |
 
 ## What slice 1 changes and does not change
 
