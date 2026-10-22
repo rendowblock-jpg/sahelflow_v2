@@ -26,16 +26,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // The in-memory database models the newest-first order only (it throws on any other orderBy) and scopes the cursor lookup to the
 // test's WhatsApp thread (it finds nothing without that scope); real SQL ordering and filtering are NOT tested.
 //
-// Tests that say "(observed)" pin what looks unintended and should be updated if the route changes on purpose. The two that matter
-// are about paging (issue 574): on the first page `take` equals the limit, so the route can never see the extra row that sets
-// hasMore, and the first page never offers an older cursor; and on a later page the cursor is built from the NEWEST row of the
-// page, not the oldest. The three `it.fails` tests state the intended paging (an older cursor on the first page, a cursor from the
-// oldest row, and a walk of the whole thread); when the route is fixed they go red and the observed tests next to them must be
-// deleted. The inbox hook (use-inbox-thread.ts) takes the cursor only from this answer and puts older pages in front of the loaded
-// ones, so a first page that offered a cursor built from the newest row would show some messages twice: both defects need fixing
-// together. Others: the seconds part of the cursor is validated but not used (the row decides); a cursor that matches no message is
-// ignored without a word; a thread with an outbound sticker gives it no media link; the answer carries a customer's messages with
-// no Cache-Control header; a malformed percent escape in the jid is a generic 500.
+// Tests that say "(observed)" pin what looks unintended and should be updated if the route changes on purpose. Paging (issue 574) was
+// fixed together with this file: the route asks for limit + 1 rows on EVERY page, so the first page can say hasMore and offer an older
+// cursor, and the cursor is built from the OLDEST message of the page, so echoing it walks the thread once with no overlap. Both had to
+// change together: the inbox (use-inbox-thread.ts) takes the cursor only from this answer and puts older pages in front of the loaded
+// ones without de-duplication. Others: the seconds part of the cursor is validated but not used (the row decides); a cursor that
+// matches no message is ignored without a word; a thread with an outbound sticker gives it no media link; the answer carries a
+// customer's messages with no Cache-Control header; a malformed percent escape in the jid is a generic 500.
 const h = vi.hoisted(() => ({
   getAuthority: vi.fn(),
   resolveIdentity: vi.fn(),
@@ -563,9 +560,9 @@ describe("GET /api/whatsapp/chats/[jid]/messages: the size of the window", () =>
     ["a limit in exponent form, read up to the e", "?limit=1e3", 1],
     ["a limit followed by letters", "?limit=12abc", 12],
     ["a hexadecimal limit, read as 0 and raised to 1", "?limit=0x10", 1],
-  ])("asks the database for %s (%s) with take %i", async (_label, query, take) => {
+  ])("asks the database for %s (%s): %i messages and one extra row to learn whether more exist", async (_label, query, limit) => {
     await get(JID_RAW, query);
-    expect(convArgs().select.messages.take).toBe(take);
+    expect(convArgs().select.messages.take).toBe(limit + 1);
   });
 
   it("returns the newest messages of a thread longer than the limit, oldest first", async () => {
@@ -586,11 +583,11 @@ describe("GET /api/whatsapp/chats/[jid]/messages: the older-messages cursor", ()
 
   function expectFirstPageQuery(limit: number): void {
     expect(h.cursorFind).not.toHaveBeenCalled();
-    expect(convArgs().select.messages.take).toBe(limit);
+    expect(convArgs().select.messages.take).toBe(limit + 1);
     expect(convArgs().select.messages.where).toBeUndefined();
   }
 
-  it("asks for no cursor lookup and no extra row when no cursor is sent", async () => {
+  it("asks for no cursor lookup and for one extra row when no cursor is sent", async () => {
     await get(JID_RAW, "?limit=3");
     expectFirstPageQuery(3);
   });
@@ -674,7 +671,7 @@ describe("GET /api/whatsapp/chats/[jid]/messages: the older-messages cursor", ()
     const { response, body } = await load(JID_RAW, "?limit=3&before=1760000006:ghost");
     expect(response.status).toBe(200);
     expect(h.cursorFind).toHaveBeenCalledTimes(1);
-    expect(convArgs().select.messages.take).toBe(3);
+    expect(convArgs().select.messages.take).toBe(4);
     expect(convArgs().select.messages.where).toBeUndefined();
     expect(ids(body)).toEqual(["m8", "m9", "m10"]);
   });
@@ -719,56 +716,75 @@ describe("GET /api/whatsapp/chats/[jid]/messages: the older-messages cursor", ()
     expect(byMessageId(body, "m5").quoted).toEqual({ fromMe: true, preview: "body 2", messageType: "text" });
   });
 
-  // OBSERVED, not endorsed: the cursor is built from the first row of the page, which is the NEWEST one (the rows are newest
-  // first), so loading older again starts at the page just loaded and goes back by one message.
-  it("builds the older cursor from the newest message of the page (observed)", async () => {
+  it("builds the older cursor from the OLDEST message of the page", async () => {
     const { body } = await load(JID_RAW, "?limit=3&before=1760000006:m6");
     expect(ids(body)).toEqual(["m3", "m4", "m5"]);
-    expect(body.olderCursor).toBe(`${BASE + 5}:m5`);
-  });
-
-  it("writes the seconds of the older cursor as whole seconds, cutting the milliseconds off (observed message: the newest of the page)", async () => {
-    const rows = Array.from({ length: 10 }, (_, index) => row(index + 1));
-    rows[4] = row(5, { timestamp: new Date((BASE + 5) * 1000 + 999) });
-    setThread(rows);
-    const { body } = await load(JID_RAW, "?limit=3&before=1760000006:m6");
-    expect(ids(body)).toEqual(["m3", "m4", "m5"]);
-    expect(body.olderCursor).toBe(`${BASE + 5}:m5`);
-  });
-
-  it.fails("EXPECTED (fails today): builds the older cursor from the OLDEST message of the page", async () => {
-    const { body } = await load(JID_RAW, "?limit=3&before=1760000006:m6");
+    expect(body.hasMore).toBe(true);
     expect(body.olderCursor).toBe(`${BASE + 3}:m3`);
   });
 
-  // OBSERVED, not endorsed: on the first page the route asks for exactly `limit` rows, so it can never receive the extra row that
-  // would tell it more exist. hasMore is always false and no older cursor is offered, and the inbox (use-inbox-thread.ts) takes
-  // both only from this answer. The stand-in database obeys `take`, as a real one does.
-  it("answers hasMore false and no older cursor on the first page even when older messages exist (observed)", async () => {
+  it("writes the seconds of the older cursor as whole seconds, cutting the milliseconds off", async () => {
+    const rows = Array.from({ length: 10 }, (_, index) => row(index + 1));
+    rows[2] = row(3, { timestamp: new Date((BASE + 3) * 1000 + 999) });
+    setThread(rows);
+    const { body } = await load(JID_RAW, "?limit=3&before=1760000006:m6");
+    expect(ids(body)).toEqual(["m3", "m4", "m5"]);
+    expect(body.olderCursor).toBe(`${BASE + 3}:m3`);
+  });
+
+  // Issue 574, part 1: the first page used to ask for exactly `limit` rows and so could never see the extra row that sets hasMore.
+  it("offers an older cursor on the first page when older messages exist", async () => {
     const { body } = await load(JID_RAW, "?limit=4");
     expect(ids(body)).toEqual(["m7", "m8", "m9", "m10"]);
+    expect(body.hasMore).toBe(true);
+    expect(body.olderCursor).toBe(`${BASE + 7}:m7`);
+  });
+
+  it("answers hasMore false and no cursor on the first page when the whole thread fits the limit", async () => {
+    const { body } = await load(JID_RAW, "?limit=10");
+    expect(body.messages).toHaveLength(10);
     expect(body.hasMore).toBe(false);
     expect(body.olderCursor).toBeNull();
   });
 
-  it.fails("EXPECTED (fails today): offers an older cursor on the first page when older messages exist", async () => {
-    const { body } = await load(JID_RAW, "?limit=4");
-    expect(ids(body)).toEqual(["m7", "m8", "m9", "m10"]);
-    expect(body.hasMore).toBe(true);
-    expect(body.olderCursor).not.toBeNull();
+  it("answers hasMore false for a thread of exactly `limit` messages and true for one more", async () => {
+    setThread(Array.from({ length: 4 }, (_, index) => row(index + 1)));
+    const exact = (await load(JID_RAW, "?limit=4")).body;
+    expect([exact.messages.length, exact.hasMore, exact.olderCursor]).toEqual([4, false, null]);
+    setThread(Array.from({ length: 5 }, (_, index) => row(index + 1)));
+    const over = (await load(JID_RAW, "?limit=4")).body;
+    expect([over.messages.length, over.hasMore, over.olderCursor]).toEqual([4, true, `${BASE + 2}:m2`]);
   });
 
-  // A half fix (only one of the two defects) would turn only one of the tests above green; this walk needs both.
-  it.fails("EXPECTED (fails today): echoing olderCursor walks the whole thread once, with no overlap", async () => {
+  async function walkThread(limit: number): Promise<{ seen: string[]; pages: number }> {
     const seen: string[] = [];
-    let query = "?limit=4";
-    for (let page = 0; page < 5; page += 1) {
+    let query = `?limit=${limit}`;
+    let pages = 0;
+    for (; pages < 30; ) {
       const { body } = await load(JID_RAW, query);
+      pages += 1;
       seen.unshift(...ids(body));
-      if (!body.olderCursor) break;
-      query = `?limit=4&before=${encodeURIComponent(body.olderCursor)}`;
+      if (!body.hasMore) break;
+      expect(body.olderCursor).not.toBeNull();
+      query = `?limit=${limit}&before=${encodeURIComponent(body.olderCursor as string)}`;
     }
-    expect(seen).toEqual(Array.from({ length: 10 }, (_, index) => `m${index + 1}`));
+    return { seen, pages };
+  }
+
+  // Issue 574, part 2: the inbox puts each older page in front of the loaded ones without de-duplication, so the walk must show every
+  // message once. A fix of only one of the two defects turns only some of these green.
+  it.each([1, 3, 4, 5, 8, 9, 10])("echoing olderCursor walks a thread of %i messages once, with no overlap", async (count) => {
+    setThread(Array.from({ length: count }, (_, index) => row(index + 1)));
+    const { seen, pages } = await walkThread(4);
+    expect(seen).toEqual(Array.from({ length: count }, (_, index) => `m${index + 1}`));
+    expect(pages).toBe(Math.ceil(count / 4));
+  });
+
+  it("walks a thread whose messages share one second without skipping or repeating any", async () => {
+    const T = new Date((BASE + 50) * 1000);
+    setThread(Array.from({ length: 6 }, (_, index) => row(index + 1, { id: `t${index + 1}`, timestamp: T })));
+    const { seen } = await walkThread(4);
+    expect(seen).toEqual(["t1", "t2", "t3", "t4", "t5", "t6"]);
   });
 });
 

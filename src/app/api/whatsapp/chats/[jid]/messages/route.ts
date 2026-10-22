@@ -88,7 +88,8 @@ export const GET = withErrorHandler(
       select: {
         messages: {
           orderBy: [{ timestamp: "desc" }, { id: "desc" }],
-          take: cursorBefore ? limit + 1 : limit,
+          // One extra row on EVERY page tells us whether older messages exist (issue 574); it is trimmed off below.
+          take: limit + 1,
           where: cursorBefore
             ? {
                 OR: [
@@ -332,7 +333,9 @@ export const GET = withErrorHandler(
 
     // Ledger INB-11: the client pages older history by echoing this opaque
     // composite cursor; null means the local thread has reached its beginning.
-    const oldestRow = rows.length > 0 ? rows[0] : undefined;
+    // Rows are newest first, so the OLDEST row shown is the last one (issue 574):
+    // the next page starts strictly below it and never repeats a message.
+    const oldestRow = rows.length > 0 ? rows[rows.length - 1] : undefined;
     const olderCursor =
       hasMore && oldestRow
         ? `${Math.floor(oldestRow.timestamp.getTime() / 1_000)}:${oldestRow.id}`
