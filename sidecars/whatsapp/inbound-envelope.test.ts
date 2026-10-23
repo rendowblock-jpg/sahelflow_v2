@@ -18,10 +18,13 @@ describe("conformParticipant", () => {
       "213555000111@s.whatsapp.net",
     );
     expect(conformParticipant("a".repeat(256))).toBe("a".repeat(256));
+    // The app counts characters, not UTF-16 units (zod 4.5 and later): 255 letters
+    // and one emoji are 256 characters, so the app accepts them and so must we.
+    expect(conformParticipant(`${"a".repeat(255)}😀`)).toBe(`${"a".repeat(255)}😀`);
   });
 
   it("drops what the app would refuse: empty, blank, over-long or not a string", () => {
-    for (const value of ["", "   ", "a".repeat(257), null, undefined, 42, {}, []]) {
+    for (const value of ["", "   ", "a".repeat(257), `${"a".repeat(256)}😀`, null, undefined, 42, {}, []]) {
       expect(conformParticipant(value)).toBeUndefined();
     }
   });
@@ -31,20 +34,25 @@ describe("conformPushName", () => {
   it("keeps a display name, trimmed, and keeps an empty one empty (the app accepts and stores it that way)", () => {
     expect(conformPushName(" Amina ")).toBe("Amina");
     expect(conformPushName("x".repeat(256))).toBe("x".repeat(256));
+    // 255 letters and an emoji are 256 characters (257 UTF-16 units): the app accepts that, so it stays.
+    expect(conformPushName(`${"a".repeat(255)}😀`)).toBe(`${"a".repeat(255)}😀`);
+    expect(conformPushName("😀".repeat(256))).toBe("😀".repeat(256));
     expect(conformPushName("")).toBe("");
     expect(conformPushName("   ")).toBe("");
   });
 
   it("shortens an over-long name instead of letting it block the message", () => {
     expect(conformPushName("y".repeat(400))).toBe("y".repeat(256));
+    expect(conformPushName("😀".repeat(300))).toBe("😀".repeat(256));
+    expect(conformPushName(`${"a".repeat(256)}😀`)).toBe("a".repeat(256));
   });
 
-  it("never ends on half of a surrogate pair", () => {
+  it("counts characters the way the app does and never ends on half of a surrogate pair", () => {
     const shortened = conformPushName(`${"a".repeat(255)}😀tail`) ?? "";
-    expect(shortened.length).toBeLessThanOrEqual(256);
+    expect(Array.from(shortened).length).toBeLessThanOrEqual(256);
     const last = shortened.charCodeAt(shortened.length - 1);
     expect(last >= 0xd800 && last <= 0xdbff).toBe(false);
-    expect(shortened).toBe("a".repeat(255));
+    expect(shortened).toBe(`${"a".repeat(255)}😀`);
   });
 
   it("drops a value that is not a string", () => {
