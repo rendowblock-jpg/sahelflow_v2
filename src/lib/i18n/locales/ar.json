@@ -1648,6 +1648,7 @@
   "orders.detail.backToOrders": "العودة إلى الطلبات",
   "orders.detail.customerNotFound": "العميل غير موجود",
   "orders.detail.edit": "تعديل",
+  "orders.detail.editConflict": "تغيّرت هذه الطلبية في الأثناء. حدّث الصفحة ثم أعد المحاولة.",
   "orders.detail.editFailed": "فشل في حفظ التعديلات",
   "orders.detail.editSaved": "تم حفظ التعديلات",
   "orders.detail.items": "المنتجات",

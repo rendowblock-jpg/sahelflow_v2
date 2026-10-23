@@ -149,10 +149,21 @@ export async function executeManualOrderEdit(
         );
       }
 
+      // Order.deliveryCost is nullable: no fee recorded means 0, so editing it
+      // to 0 is not a change and the total never has a null in its sum.
+      const previousFee = order.deliveryCost ?? 0;
+      const stored: Record<ManualOrderEditField, string | number | null> = {
+        address: order.address,
+        commune: order.commune,
+        deliveryCost: previousFee,
+        notes: order.notes,
+        phone: order.phone,
+        wilaya: order.wilaya,
+      };
       const changed = EDITABLE_FIELDS.filter(
         (field) =>
           field in requested &&
-          (requested as Record<string, unknown>)[field] !== order[field],
+          (requested as Record<string, unknown>)[field] !== stored[field],
       );
       if (changed.length === 0) {
         throw new ValidationError("Nothing to change", "order.edit");
@@ -167,7 +178,7 @@ export async function executeManualOrderEdit(
       // The total moves by exactly the fee difference. It is not recomputed
       // from the lines, so an edit never rewrites money it was not asked to.
       const totalPrice = changed.includes("deliveryCost")
-        ? order.totalPrice - order.deliveryCost + (requested.deliveryCost ?? 0)
+        ? order.totalPrice - previousFee + (requested.deliveryCost ?? 0)
         : order.totalPrice;
       const orderVersion = data.expectedVersion + 1;
 
@@ -202,7 +213,7 @@ export async function executeManualOrderEdit(
               ...changedFlags,
               ...(changed.includes("deliveryCost")
                 ? {
-                    deliveryCostFrom: order.deliveryCost,
+                    deliveryCostFrom: previousFee,
                     deliveryCostTo: requested.deliveryCost ?? 0,
                   }
                 : {}),
@@ -220,7 +231,7 @@ export async function executeManualOrderEdit(
         orderNumber: order.orderNumber,
         status: order.status,
         version: orderVersion,
-        deliveryCost: requested.deliveryCost ?? order.deliveryCost,
+        deliveryCost: requested.deliveryCost ?? previousFee,
         totalPrice,
         changed,
       };
@@ -234,7 +245,7 @@ export async function executeManualOrderEdit(
           before: {
             status: order.status,
             version: order.version,
-            deliveryCost: order.deliveryCost,
+            deliveryCost: previousFee,
             totalPrice: order.totalPrice,
           },
           after: {

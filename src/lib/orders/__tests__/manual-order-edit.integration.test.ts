@@ -57,7 +57,7 @@ async function count(table: string): Promise<number> {
 async function seedOrder(
   options: {
     status?: string;
-    deliveryCost?: number;
+    deliveryCost?: number | null;
     totalPrice?: number;
     sourceMetadata?: string | null;
     source?: string;
@@ -97,7 +97,7 @@ async function seedOrder(
       version: 1,
       customerId: customer.id,
       totalPrice: options.totalPrice ?? 2500 * quantity + (options.deliveryCost ?? 600),
-      deliveryCost: options.deliveryCost ?? 600,
+      deliveryCost: options.deliveryCost === undefined ? 600 : options.deliveryCost,
       wilaya: "Alger",
       commune: "Alger Centre",
       address: "12 rue Didouche Mourad",
@@ -254,11 +254,40 @@ describe("canonical order edit before confirmation (S03a-03)", () => {
     });
   });
 
+  it("treats a stored delivery fee of null as 0", async () => {
+    // Order.deliveryCost is nullable. An order with no fee recorded has a total of items only.
+    const { order } = await seedOrder({ deliveryCost: null, totalPrice: 5000 });
+
+    await expect(
+      executeManualOrderEdit(context, edit(order.id, "edit-null-fee-zero", { deliveryCost: 0 })),
+    ).rejects.toThrow(/nothing to change/i);
+
+    const result = await executeManualOrderEdit(
+      context,
+      edit(order.id, "edit-null-fee-set", { deliveryCost: 700 }),
+    );
+    expect(result.result).toMatchObject({ deliveryCost: 700, totalPrice: 5700, version: 2 });
+    expect(JSON.parse((await db.orderChange.findFirstOrThrow()).payload ?? "{}")).toMatchObject({
+      deliveryCostFrom: 0,
+      deliveryCostTo: 700,
+    });
+  });
+
   it("can clear the notes", async () => {
     const { order } = await seedOrder();
     const result = await executeManualOrderEdit(
       context,
       edit(order.id, "edit-clear-notes", { notes: null }),
+    );
+    expect(result.result.changed).toEqual(["notes"]);
+    expect((await db.order.findUniqueOrThrow({ where: { id: order.id } })).notes).toBeNull();
+  });
+
+  it("stores an emptied note as no note", async () => {
+    const { order } = await seedOrder();
+    const result = await executeManualOrderEdit(
+      context,
+      edit(order.id, "edit-blank-notes", { notes: "   " }),
     );
     expect(result.result.changed).toEqual(["notes"]);
     expect((await db.order.findUniqueOrThrow({ where: { id: order.id } })).notes).toBeNull();
@@ -295,6 +324,46 @@ describe("canonical order edit before confirmation (S03a-03)", () => {
     expect(after).toMatchObject({ address: "First change", version: 2 });
     expect(await count("BusinessCommand")).toBe(1);
     expect(await db.orderChange.count({ where: { orderId: order.id } })).toBe(1);
+  });
+
+  it("refuses when the order moved to another version without an edit", async () => {
+    const { order } = await seedOrder();
+    await db.order.update({ where: { id: order.id }, data: { version: 5 } });
+
+    await expect(
+      executeManualOrderEdit(
+        context,
+        edit(order.id, "edit-version-moved", { address: "Late address" }, 1),
+      ),
+    ).rejects.toThrow(/order .* version conflict: expected 1, current 5/i);
+
+    expect(
+      (await db.order.findUniqueOrThrow({ where: { id: order.id } })).address,
+    ).toBe("12 rue Didouche Mourad");
+    expect(await count("BusinessCommand")).toBe(0);
+  });
+
+  it("edits the same order again, each time at the version it shows", async () => {
+    const { order } = await seedOrder();
+
+    const first = await executeManualOrderEdit(
+      context,
+      edit(order.id, "edit-twice-first", { address: "First address" }, 1),
+    );
+    const second = await executeManualOrderEdit(
+      context,
+      edit(order.id, "edit-twice-second", { phone: "0770112233" }, 2),
+    );
+
+    expect(first.result.version).toBe(2);
+    expect(second.result).toMatchObject({ version: 3, changed: ["phone"] });
+    expect(await db.order.findUniqueOrThrow({ where: { id: order.id } })).toMatchObject({
+      address: "First address",
+      phone: "0770112233",
+      version: 3,
+    });
+    expect(await count("BusinessCommand")).toBe(2);
+    expect(await db.orderChange.count({ where: { orderId: order.id } })).toBe(2);
   });
 
   it("lets only one of two simultaneous edits at the same version win", async () => {
