@@ -2,7 +2,7 @@
 
 > **Status:** Authoritative register of approved Founder product and execution decisions. FD-001–FD-033 were consolidated from earlier addenda on 2026-07-29; later decisions are appended in numeric order as dated entries. FD-034–FD-044, FD-046 and FD-047 are version-bound release authority recorded in the protected release requests, not entries here (the table below FD-033 lists them). Entries that only authorized a signed release are stubs: the decision (date, quote, scope) is kept, the package list lives in the release request, the GitHub release and `CHANGELOG.md`
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-10-23 (header and index; FD-081 adopted. No earlier decision changed)
+> **Last amended:** 2026-10-23 (FD-081 adopted; its publication record added. No decision changed)
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
 This register records approved product and execution decisions. Entries FD-001–FD-029 are consolidated policy statements; FD-030 onward are dated Founder directives. Detailed mechanisms remain subject to architecture, research, security review, provider certification and evidence gates, but engineering may not contradict these policies without a new numbered Founder decision. A later entry supersedes an earlier one only for the choice it names.
@@ -1330,3 +1330,4 @@ merged:
 - **Not Stable:** Beta/Stable authority is unchanged. This authority converts
   no ledger row and does not turn source or CI evidence into installed or
   live-provider evidence. #306 logout stays LAST.
+- **Publication record (2026-10-23):** published 2026-10-23T21:11:39Z by signed run `40019008290` (second attempt: the first failed at the installed reopen-after-key-rotation check, which had failed once before and is not explained; it was re-run once) from the `main` tip `db68bfe2…` (release PR #601); tag `sahelflow-v1.0.0-internal.46-db68bfe2420c2e3079fbfd433de740b966336ebc`. Digests are in `CHANGELOG.md`. No decision changed.

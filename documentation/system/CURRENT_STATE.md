@@ -19,6 +19,7 @@ Only the Founder can report this. Nothing converts until an installed observatio
 - In-place installs recorded since: Internal.27, 28, 29, 30 (2026-08-31), 31 (2026-09-01), 32, 33 (2026-09-03), 34 (2026-09-05), 37 (2026-09-11, visually rejected before any row converted), 39 (2026-10-01), 40 (2026-10-03) and 41 (2026-10-08). No installation of Internal.35, 36, 38 or 42 is recorded.
 - Internal.42 was evidently in use for the installed audit behind PR #490 and FD-071; the Founder should confirm. On 2026-10-17 he said he was installing Internal.43; completion is not recorded. No installation of Internal.44 is recorded.
 - **Internal.45** was installed in place and reported on 2026-10-20 (his diagnostics log shows its WhatsApp sidecar first running at 01:20Z that day). No campaign row has converted on Internal.42 to 45.
+- **Internal.46** was published on 2026-10-23 (FD-081) and is NOT installed; no installation is recorded and no row converts. It packages everything merged after Internal.45, including the redesigned startup card (#550), which has not been seen on a Windows screen.
 
 Reported on Internal.45 (2026-10-20), observations only:
 
