@@ -8,6 +8,11 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-23 — after Internal.46 (merged to `main`, not published)
+
+- #604 (`6bea8b41`): `zod` 4.4.3 to 4.6.7, with an `overrides` entry for the copy `eslint-plugin-react-hooks` carries, because advisory GHSA-mrhx-c7xc-m3w5 (high; memory exhaustion on oversized collections) failed the production dependency audit of every pull request. Two changes that came with zod 4.5 were repaired test first: `max()` counts characters, not UTF-16 units (the WhatsApp sidecar's field fitting now does too), and a union of plain types is written as a `type` list (the test-only tool-schema converter turns it back into `anyOf`). The installed Internal.46 still contains zod 4.4.3.
+- #603 (`24ecef24`): the installed-app proof failed at the reopen after the protected-key rotation (`verify-installed-windows-msi.ps1:1220`) three times within six hours on unrelated changes (#593, the first signed Internal.46 attempt, #604), each passing on one re-run, cause unknown. Its error now carries what the launch did (outcome, exit code, lifetime, startup diagnostic, processes). CI script only.
+
 ### 2026-10-23 — signed Internal.46 publication (FD-081)
 
 - Tag `sahelflow-v1.0.0-internal.46-db68bfe2420c2e3079fbfd433de740b966336ebc`, published 2026-10-23T21:11:39Z by signed run `40019008290` (started by the dispatcher run `40018990719` on the merge of #601): app `1.0.0-internal.46` / MSI `1.0.0.46`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`. Assets: MSI (sha256 `2171cd38…`) and `.sig`; `SahelFlow-Setup.exe` (sha256 `7212876b…`) and `.sig`; the same installer under its versioned name; updater `latest.json` (sha256 `b539a950…`) with `windows-x86_64`, `windows-x86_64-msi` and `windows-x86_64-nsis` entries.
