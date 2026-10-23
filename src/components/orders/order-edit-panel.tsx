@@ -27,6 +27,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { toast } from "@/lib/toast";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { manualOrderRequestFingerprint } from "@/lib/orders/manual-order-command-key";
 
 interface OrderItem {
   id: string;
@@ -41,6 +42,13 @@ interface OrderItem {
 interface OrderEditPanelProps {
   orderId: string;
   readOnly?: boolean;
+  /**
+   * Set for a PENDING canonical order: the panel then edits only the delivery
+   * destination, phone, notes and delivery fee, through the governed command
+   * (POST /api/orders/[id]/edit), with this as the version it was opened on.
+   * The order lines stay read-only; they are not governed by that command.
+   */
+  canonicalVersion?: number;
   initialItems: OrderItem[];
   initialDeliveryCost: number;
   initialWilaya: string;
@@ -55,6 +63,7 @@ interface OrderEditPanelProps {
 export function OrderEditPanel({
   orderId,
   readOnly = false,
+  canonicalVersion,
   initialItems,
   initialDeliveryCost,
   initialWilaya,
@@ -68,6 +77,7 @@ export function OrderEditPanel({
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const canonical = canonicalVersion !== undefined;
 
   // Editable state
   const [items, setItems] = useState(initialItems);
@@ -106,32 +116,74 @@ export function OrderEditPanel({
   async function saveEdit() {
     startTransition(async () => {
       try {
-        // B7-1: totalPrice is server-derived money truth — the PATCH body
-        // sends only the inputs (items + deliveryCost) it is derived from.
-        const res = await fetch(`/api/orders/${orderId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            items: items.map((i) => ({
-              id: i.id,
-              productId: i.productId,
-              productName: i.productName,
-              productVariantName: i.productVariantName,
-              quantity: i.quantity,
-              unitPrice: i.unitPrice,
-              total: i.total,
-            })),
-            deliveryCost: parseInt(deliveryCost) || 0,
-            wilaya,
-            commune,
-            address,
-            phone,
-            notes: notes || null,
-          }),
-        });
+        let res: Response;
+        if (canonical) {
+          // Governed edit: send only what changed. The key is derived from the
+          // order, the version and the exact request, so a retry of the same
+          // save replays instead of writing twice, and a different save at the
+          // same version cannot reuse it.
+          const changes: Record<string, unknown> = {};
+          const strip = (value: string) => value.replace(/\s+/g, "");
+          if (wilaya !== initialWilaya) changes.wilaya = wilaya;
+          if (commune !== initialCommune) changes.commune = commune;
+          if (address !== initialAddress) changes.address = address;
+          if (strip(phone) !== strip(initialPhone)) changes.phone = phone;
+          const nextCost = parseInt(deliveryCost) || 0;
+          if (nextCost !== initialDeliveryCost) changes.deliveryCost = nextCost;
+          if (notes !== (initialNotes ?? "")) changes.notes = notes || null;
+          if (Object.keys(changes).length === 0) {
+            setIsEditing(false);
+            return;
+          }
+          const requestJson = JSON.stringify({
+            expectedVersion: canonicalVersion,
+            ...changes,
+          });
+          const idempotencyKey = `order-edit-${orderId}-v${canonicalVersion}-${manualOrderRequestFingerprint(requestJson)}`;
+          res = await fetch(`/api/orders/${orderId}/edit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...changes,
+              expectedVersion: canonicalVersion,
+              idempotencyKey,
+              correlationId: `order-edit-ui:${idempotencyKey}`,
+            }),
+          });
+        } else {
+          // B7-1: totalPrice is server-derived money truth — the PATCH body
+          // sends only the inputs (items + deliveryCost) it is derived from.
+          res = await fetch(`/api/orders/${orderId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              items: items.map((i) => ({
+                id: i.id,
+                productId: i.productId,
+                productName: i.productName,
+                productVariantName: i.productVariantName,
+                quantity: i.quantity,
+                unitPrice: i.unitPrice,
+                total: i.total,
+              })),
+              deliveryCost: parseInt(deliveryCost) || 0,
+              wilaya,
+              commune,
+              address,
+              phone,
+              notes: notes || null,
+            }),
+          });
+        }
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
+          if (canonical && data.code === "CONFLICT") {
+            // Shown as is: the generic translator below would replace an
+            // already translated sentence with "Failed to save".
+            toast.error(t("orders.detail.editConflict"));
+            return;
+          }
           throw new Error(data.error ?? t("orders.detail.editFailed"));
         }
 
@@ -203,26 +255,36 @@ export function OrderEditPanel({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">{t("orders.detail.qty")}</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(i, "quantity", parseInt(e.target.value) || 1)}
-                    className="w-16 h-8 text-sm tabular-nums"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">{t("orders.detail.price")}</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={item.unitPrice}
-                    onChange={(e) => updateItem(i, "unitPrice", parseInt(e.target.value) || 0)}
-                    className="w-24 h-8 text-sm tabular-nums"
-                  />
-                </div>
+                {canonical ? (
+                  <>
+                    <div className="text-sm tabular-nums text-muted-foreground">
+                      {item.quantity} × {formatDZD(item.unitPrice, locale)}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">{t("orders.detail.qty")}</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(i, "quantity", parseInt(e.target.value) || 1)}
+                        className="w-16 h-8 text-sm tabular-nums"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">{t("orders.detail.price")}</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={item.unitPrice}
+                        onChange={(e) => updateItem(i, "unitPrice", parseInt(e.target.value) || 0)}
+                        className="w-24 h-8 text-sm tabular-nums"
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="text-sm font-medium w-24 text-end tabular-nums">
                   {formatDZD(item.total, locale)}
                 </div>

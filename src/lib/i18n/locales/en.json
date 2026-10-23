@@ -1648,6 +1648,7 @@
   "orders.detail.backToOrders": "Back to orders",
   "orders.detail.customerNotFound": "Customer not found",
   "orders.detail.edit": "Edit",
+  "orders.detail.editConflict": "This order changed in the meantime. Refresh the page and try again.",
   "orders.detail.editFailed": "Failed to save changes",
   "orders.detail.editSaved": "Changes saved",
   "orders.detail.items": "Items",

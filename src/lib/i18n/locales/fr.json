@@ -1648,6 +1648,7 @@
   "orders.detail.backToOrders": "Retour aux commandes",
   "orders.detail.customerNotFound": "Client introuvable",
   "orders.detail.edit": "Modifier",
+  "orders.detail.editConflict": "Cette commande a changé entre-temps. Actualisez la page puis réessayez.",
   "orders.detail.editFailed": "Échec de l'enregistrement des modifications",
   "orders.detail.editSaved": "Modifications enregistrées",
   "orders.detail.items": "Articles",

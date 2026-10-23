@@ -349,7 +349,12 @@ export default async function OrderDetailPage({
         <div className="lg:col-span-2 space-y-6">
           <OrderEditPanel
             orderId={order.id}
-            readOnly={canonicalManual}
+            readOnly={canonicalManual && order.status !== "pending"}
+            canonicalVersion={
+              canonicalManual && order.status === "pending"
+                ? order.version
+                : undefined
+            }
             initialItems={order.items.map((i) => ({
               id: i.id,
               productId: i.productId,
