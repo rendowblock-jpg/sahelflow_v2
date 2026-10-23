@@ -8,6 +8,7 @@ import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import { db, shopContext } from "@/lib/db";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
+import { orderAddressFor } from "@/lib/orders/stop-desk-address";
 import { stockHeldAgainstOnHand } from "@/lib/orders/stock-availability";
 import { loadActiveStockHolds, stockHoldKey } from "@/lib/orders/stock-holds";
 import { captureOrderPlacement } from "@/lib/meta/capi-placement";
@@ -134,7 +135,8 @@ const submitSchema = z.object({
     phone: dzPhone,
     wilaya: z.string().trim().min(1).max(120),
     commune: z.string().trim().min(1).max(120),
-    address: z.string().trim().min(1).max(500),
+    // Empty is allowed here and decided below with the delivery mode: a stop-desk buyer has no street address.
+    address: z.string().trim().max(500).default(""),
   }),
   items: z
     .array(
@@ -167,6 +169,14 @@ const submitSchema = z.object({
     .trim()
     .regex(/^[a-z0-9-]{3,60}$/)
     .optional(),
+}).superRefine((value, context) => {
+  if (value.deliveryMode === "home" && value.customer.address.length === 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["customer", "address"],
+      message: "Address is required for home delivery",
+    });
+  }
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
@@ -343,6 +353,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     );
   }
 
+  const orderAddress = orderAddressFor(input.customer.address, input.deliveryMode);
+  if (orderAddress === null) {
+    return NextResponse.json(
+      { error: "Address is required for home delivery", code: "REQUEST_VALIDATION_FAILED" },
+      { status: 400 },
+    );
+  }
+
   const command = await createCanonicalSourceOrder(
     {
       prisma: db,
@@ -355,11 +373,12 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       source: "storefront",
       sourceIdentity: config.slug,
       sourceOrderId,
-      newCustomer: input.customer,
+      // A stop-desk buyer's saved customer record keeps no address rather than the desk text.
+      newCustomer: { ...input.customer, address: input.customer.address || undefined },
       items: kernelItems,
       wilaya: input.customer.wilaya,
       commune: input.customer.commune,
-      address: input.customer.address,
+      address: orderAddress,
       phone: input.customer.phone,
       deliveryCost,
       // FD-061 EX-4: landing-page attribution rides the input-derived

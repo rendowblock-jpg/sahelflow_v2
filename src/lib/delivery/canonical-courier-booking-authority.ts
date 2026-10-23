@@ -32,6 +32,11 @@ import {
   type ShipmentResult,
 } from "@/lib/integrations/delivery/types";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
+import {
+  isStopDeskPlaceholder,
+  STOP_DESK_NOT_BOOKABLE_CODE,
+  STOP_DESK_NOT_BOOKABLE_MESSAGE,
+} from "@/lib/orders/stop-desk-address";
 import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 import {
   ConflictError,
@@ -283,6 +288,16 @@ export async function queueCanonicalCourierBooking(
       ) {
         throw new ConflictError(
           `Courier booking requires confirmed/ready/reserved/not_created; current state is ${order.status}/${order.fulfillmentState}/${order.inventoryState}/${order.deliveryState}`,
+        );
+      }
+
+      // STORE-DESK-BOOKING: a stop-desk order carries only the placeholder address. Booking it would
+      // send a HOME delivery to the text "Stop desk", so refuse before anything is created.
+      if (isStopDeskPlaceholder(order.address)) {
+        throw new SahelFlowError(
+          STOP_DESK_NOT_BOOKABLE_MESSAGE,
+          STOP_DESK_NOT_BOOKABLE_CODE,
+          409,
         );
       }
 
