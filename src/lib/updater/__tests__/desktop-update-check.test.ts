@@ -174,14 +174,14 @@ describe("the update the shell hands back downloads and installs through the she
     const update = await offered();
     const events: UpdateDownloadEvent[] = [];
     invoke.mockImplementationOnce(async () => {
-      const channel = channels[0]!;
-      channel.onmessage?.({ event: "Progress", data: { downloaded: 1_000, contentLength: 10_000 } });
-      channel.onmessage?.({ event: "Progress", data: { downloaded: 4_000, contentLength: 10_000 } });
+      const channel = channels[0];
+      channel?.onmessage?.({ event: "Progress", data: { downloaded: 1_000, contentLength: 10_000 } });
+      channel?.onmessage?.({ event: "Progress", data: { downloaded: 4_000, contentLength: 10_000 } });
       // The same figure twice, and a figure that went down, add nothing.
-      channel.onmessage?.({ event: "Progress", data: { downloaded: 4_000, contentLength: 10_000 } });
-      channel.onmessage?.({ event: "Progress", data: { downloaded: 3_000, contentLength: 10_000 } });
-      channel.onmessage?.({ event: "Progress", data: { downloaded: 10_000, contentLength: 10_000 } });
-      channel.onmessage?.({ event: "Finished" });
+      channel?.onmessage?.({ event: "Progress", data: { downloaded: 4_000, contentLength: 10_000 } });
+      channel?.onmessage?.({ event: "Progress", data: { downloaded: 3_000, contentLength: 10_000 } });
+      channel?.onmessage?.({ event: "Progress", data: { downloaded: 10_000, contentLength: 10_000 } });
+      channel?.onmessage?.({ event: "Finished" });
       return 99;
     });
     await update.download((event) => events.push(event));
@@ -200,7 +200,7 @@ describe("the update the shell hands back downloads and installs through the she
     const update = await offered();
     const events: UpdateDownloadEvent[] = [];
     invoke.mockImplementationOnce(async () => {
-      channels[0]!.onmessage?.({ event: "Progress", data: { downloaded: 500, contentLength: null } });
+      channels[0]?.onmessage?.({ event: "Progress", data: { downloaded: 500, contentLength: null } });
       return 99;
     });
     await update.download((event) => events.push(event));
@@ -210,7 +210,7 @@ describe("the update the shell hands back downloads and installs through the she
   it("downloads fine when nobody listens for progress", async () => {
     const update = await offered();
     invoke.mockImplementationOnce(async () => {
-      channels[0]!.onmessage?.({ event: "Progress", data: { downloaded: 500, contentLength: 1_000 } });
+      channels[0]?.onmessage?.({ event: "Progress", data: { downloaded: 500, contentLength: 1_000 } });
       return 99;
     });
     await expect(update.download()).resolves.toBeUndefined();
