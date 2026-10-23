@@ -1,4 +1,5 @@
 import { validPublicArtifact, type PublicArtifact } from "../shared";
+import { withMotherFeeFallback } from "../wilaya-fallback";
 import type { StorefrontWorkerEnvironment } from "../types";
 import { parsePublicLocale, type PublicLocale } from "./locale";
 import { renderNoticePage, type NoticeKind } from "./notice-page";
@@ -175,11 +176,14 @@ async function build(
       { unitPriceDzd: allocation.unit_price_dzd, remaining: allocation.remaining_quantity },
     ]),
   );
-  const rules: ShippingRow[] = shipping.map((rule) => ({
-    wilayaCode: rule.wilaya_code,
-    mode: rule.delivery_mode,
-    feeDzd: rule.fee_dzd,
-  }));
+  // Wilayas 59..69 (Loi 26-06) with no rule of their own are offered on their mother's fees; checkout prices them the same way.
+  const rules: ShippingRow[] = withMotherFeeFallback(
+    shipping.map((rule) => ({
+      wilayaCode: rule.wilaya_code,
+      mode: rule.delivery_mode,
+      feeDzd: rule.fee_dzd,
+    })),
+  );
   const locale = requested ?? row.locale;
   try {
     const html = deps.render({

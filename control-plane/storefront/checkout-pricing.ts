@@ -1,5 +1,6 @@
 import type { CheckoutLineInput } from "./checkout-input";
 import type { AllocationRow, StorefrontWorkerEnvironment } from "./types";
+import { motherWilaya } from "./wilaya-fallback";
 
 export type PricedCheckoutLine = CheckoutLineInput & { unitPriceDzd: number };
 
@@ -47,13 +48,19 @@ export async function resolveCheckoutPricing(
     lines.push({ ...item, unitPriceDzd: allocation.unit_price_dzd });
   }
 
-  const shipping = await environment.DB.prepare(
-    `SELECT fee_dzd
-       FROM storefront_shipping_rule
-      WHERE release_id = ?1 AND wilaya_code = ?2 AND delivery_mode = ?3`,
-  )
-    .bind(releaseId, wilayaCode, deliveryMode)
-    .first<{ fee_dzd: number }>();
+  const feeFor = (code: string) =>
+    environment.DB.prepare(
+      `SELECT fee_dzd
+         FROM storefront_shipping_rule
+        WHERE release_id = ?1 AND wilaya_code = ?2 AND delivery_mode = ?3`,
+    )
+      .bind(releaseId, code, deliveryMode)
+      .first<{ fee_dzd: number }>();
+  // A wilaya created by Loi 26-06 (59..69) with no rule of its own is served on its mother's fee for the same mode;
+  // the same rule builds the page's fee table (wilaya-fallback.ts), so the price shown is the price charged.
+  let shipping = await feeFor(wilayaCode);
+  const mother = shipping ? null : motherWilaya(wilayaCode);
+  if (!shipping && mother) shipping = await feeFor(mother);
   if (!shipping) return { ok: false, error: "delivery_unavailable" };
 
   const totalDzd = subtotalDzd + shipping.fee_dzd;
