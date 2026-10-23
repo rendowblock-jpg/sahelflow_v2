@@ -167,9 +167,11 @@ export async function executeManualOrderLinesEdit(
           `Order ${order.id} version conflict: expected ${data.expectedVersion}, current ${order.version}`,
         );
       }
-      if (order.inventoryState !== null && order.inventoryState !== "unreserved") {
+      // Fail closed: only a plainly unreserved order is edited. An order typed in by the seller is
+      // created "unreserved", so a missing or any other state means something else touched it.
+      if (order.inventoryState !== "unreserved") {
         throw new ConflictError(
-          `Order ${order.id} already holds stock (${order.inventoryState}); its lines cannot be edited`,
+          `Order ${order.id} holds stock or has no inventory state (${order.inventoryState ?? "none"}); its lines cannot be edited`,
         );
       }
 

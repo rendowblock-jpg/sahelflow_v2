@@ -11,6 +11,7 @@ import {
   trustedManualOrderSourceMetadata,
 } from "../manual-order-authority";
 import { executeManualOrderDecision } from "../manual-confirmation";
+import { executeManualOrderEdit } from "../manual-order-edit";
 import { executeManualOrderLinesEdit } from "../manual-order-lines-edit";
 
 /**
@@ -537,6 +538,46 @@ describe("editing the lines of a pending order the seller typed in (S03a-03B)", 
     await expect(
       executeManualOrderLinesEdit(context, linesCommand(order.id, "lines-legacy", [{ id: item.id, quantity: 9 }])),
     ).rejects.toMatchObject({ code: "ORDER_LINES_NOT_EDITABLE_FOR_SOURCE" });
+  });
+
+  it("refuses an order whose inventory state is missing: only a plainly unreserved order is edited", async () => {
+    const { order, item } = await seedOrder();
+    await db.order.update({ where: { id: order.id }, data: { inventoryState: null } });
+    await expect(
+      executeManualOrderLinesEdit(context, linesCommand(order.id, "lines-no-state", [{ id: item.id, quantity: 9 }])),
+    ).rejects.toThrow(/holds stock or has no inventory state/i);
+    expect(await db.orderItem.findUniqueOrThrow({ where: { id: item.id } })).toMatchObject({ quantity: 2 });
+  });
+
+  it("refuses a line that names both an existing line and a product", async () => {
+    const { order, item, product } = await seedOrder();
+    await expect(
+      executeManualOrderLinesEdit(
+        context,
+        linesCommand(order.id, "lines-both", [{ id: item.id, productId: product.id, quantity: 3 }]),
+      ),
+    ).rejects.toThrow(/not both/i);
+    expect(await count("BusinessCommand")).toBe(0);
+  });
+
+  it("refuses when another command already moved the order to a newer version", async () => {
+    // The contact edit takes the order from version 1 to 2 through its own aggregate, so the
+    // lines command's own aggregate at version 1 is still free: only the order's version stops it.
+    const { order, item } = await seedOrder();
+    await executeManualOrderEdit(context, {
+      orderId: order.id,
+      expectedVersion: 1,
+      idempotencyKey: "contact-edit-first",
+      address: "Moved on address 1",
+    });
+
+    await expect(
+      executeManualOrderLinesEdit(
+        context,
+        linesCommand(order.id, "lines-after-contact-edit", [{ id: item.id, quantity: 9 }], 1),
+      ),
+    ).rejects.toThrow(/Order .* version conflict: expected 1, current 2/i);
+    expect(await db.orderItem.findUniqueOrThrow({ where: { id: item.id } })).toMatchObject({ quantity: 2 });
   });
 
   it("refuses an order that already holds stock", async () => {
