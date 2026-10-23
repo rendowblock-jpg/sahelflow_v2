@@ -44,7 +44,7 @@ describe("GET /api/integrations/worker-health", () => {
     const response = await call();
     expect(response.status).toBe(200);
     const body = (await response.json()) as { workers: Array<Record<string, unknown>> };
-    expect(body.workers).toHaveLength(6);
+    expect(body.workers).toHaveLength(7);
     expect(body.workers.find((w) => w.worker === "commerce-sync")).toMatchObject({
       status: "failing",
       lastFailureCode: "LICENSE_EXPIRED",

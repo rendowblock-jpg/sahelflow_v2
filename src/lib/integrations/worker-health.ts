@@ -28,6 +28,7 @@ export const BACKGROUND_WORKER_IDS = [
   "meta-capi",
   "google-sheets-bridge",
   "storefront-receipts",
+  "scheduled-reconcile",
 ] as const;
 
 export type BackgroundWorkerId = (typeof BACKGROUND_WORKER_IDS)[number];

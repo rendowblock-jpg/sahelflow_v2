@@ -135,6 +135,7 @@ describe("every background worker reports instead of swallowing (source pins)", 
     ["src/lib/meta/capi-worker.ts", "meta-capi"],
     ["src/lib/integrations/google-sheets/bridge-worker.ts", "google-sheets-bridge"],
     ["src/lib/connected-platform/storefront-receipt-worker.ts", "storefront-receipts"],
+    ["src/lib/integrations/reconcile-worker.ts", "scheduled-reconcile"],
   ];
 
   it.each(WORKERS)("%s records success and failure for %s", (path, id) => {
