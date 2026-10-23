@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies, headers } from "next/headers";
-import { Inter, Noto_Sans_Arabic } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import "./phase5.css";
 import "./product-system.css";
@@ -29,8 +29,12 @@ import { getI18n, resolveSellerLocale } from "@/lib/i18n-server";
 import { ServerLocaleProvider } from "@/lib/i18n/server-locale-context";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
-const inter = Inter({
-  subsets: ["latin"],
+// Both faces are files in the repository (src/app/fonts, SIL OFL 1.1 texts in src-tauri/licenses), not a download:
+// next/font/google asked fonts.googleapis.com at every dev-server start and every build, and when that request failed
+// in CI the whole page answered with a module error (register NEW-CI-FONT-FLAKE).
+const inter = localFont({
+  src: "./fonts/inter-latin-wght-normal.woff2",
+  weight: "100 900",
   variable: "--font-inter",
   display: "swap",
 });
@@ -39,9 +43,9 @@ const inter = Inter({
 // replaced it with IBM Plex Sans Arabic. Restore the neutral, highly legible
 // application face and keep the Arabic stack sans-serif all the way through
 // fallback so packaged font failure cannot drop the workbench into editorial type.
-const arabicSans = Noto_Sans_Arabic({
-  subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
+const arabicSans = localFont({
+  src: "./fonts/noto-sans-arabic-arabic-wght-normal.woff2",
+  weight: "100 900",
   variable: "--font-arabic",
   display: "swap",
 });
