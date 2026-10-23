@@ -284,7 +284,7 @@ html[lang=ar] .sf-pname{font-size:clamp(30px,8.4vw,38px)}
 .sf-grp{border:0;margin:0;padding:0;display:grid;gap:14px;counter-increment:step}
 .sf-grp>legend{display:flex;align-items:center;gap:10px;padding:0;margin-block-end:2px;font-size:15px;font-weight:800;font-family:var(--sf-display)}
 .sf-grp>legend::before{content:counter(step);flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--primary);color:var(--primary-foreground);font:800 13px var(--sf-font)}
-.sf-qty{display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700;font-size:14px}
+.sf-qty{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;font-weight:700;font-size:14px}
 .sf-stepper{display:inline-flex;align-items:center;border:1.5px solid var(--input);border-radius:var(--rb);background:var(--background)}
 .sf-stepper button{width:48px;height:48px;border:0;background:none;color:inherit;display:grid;place-items:center;cursor:pointer;border-radius:var(--rb);transition:background-color .15s,transform .15s var(--e-spring)}
 .sf-stepper button:active{transform:scale(.88);background:var(--accent)}
