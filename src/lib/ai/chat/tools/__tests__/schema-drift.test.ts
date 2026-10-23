@@ -177,6 +177,40 @@ describe("zodToJsonSchema — basic types", () => {
     });
   });
 
+  // zod 4.5 and later write a union of plain types as `type: [...]`. The hand-written
+  // schemas the drift test compares against use anyOf, so the converter keeps that style.
+  it("keeps a nullable plain type as anyOf, like the hand-written schemas", async () => {
+    const { z } = await import("zod");
+    expect(zodToJsonSchema(z.string().nullable())).toEqual({
+      anyOf: [{ type: "string" }, { type: "null" }],
+    });
+  });
+
+  it("keeps a description beside the anyOf of a union", async () => {
+    const { z } = await import("zod");
+    const out = zodToJsonSchema(z.union([z.string(), z.number()]).describe("an id or a count"));
+    expect(out).toEqual({
+      anyOf: [{ type: "string" }, { type: "number" }],
+      description: "an id or a count",
+    });
+  });
+
+  it("writes integer as number inside a union too", async () => {
+    const { z } = await import("zod");
+    const out = zodToJsonSchema(z.union([z.int(), z.string()]));
+    expect(out).toEqual({ anyOf: [{ type: "number" }, { type: "string" }] });
+  });
+
+  it("applies the same rule to a union inside an object property", async () => {
+    const { z } = await import("zod");
+    const out = zodToJsonSchema(z.object({ ref: z.union([z.string(), z.number()]) }));
+    expect(out).toEqual({
+      type: "object",
+      properties: { ref: { anyOf: [{ type: "string" }, { type: "number" }] } },
+      required: ["ref"],
+    });
+  });
+
   it("strips $schema and additionalProperties (not in hand-written schemas)", async () => {
     const { z } = await import("zod");
     const out = zodToJsonSchema(z.object({ a: z.string() }));

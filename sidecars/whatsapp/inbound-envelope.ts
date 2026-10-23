@@ -32,9 +32,9 @@ const MAX_REPORT_CHARS = 150;
 export function conformParticipant(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
-  return trimmed.length >= 1 && trimmed.length <= APP_FIELD_MAX
-    ? trimmed
-    : undefined;
+  // The app counts characters (code points), not UTF-16 units, since zod 4.5.
+  const length = Array.from(trimmed).length;
+  return length >= 1 && length <= APP_FIELD_MAX ? trimmed : undefined;
 }
 
 /**
@@ -45,12 +45,10 @@ export function conformParticipant(value: unknown): string | undefined {
 export function conformPushName(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   let name = value.trim();
-  if (name.length > APP_FIELD_MAX) {
-    name = name.slice(0, APP_FIELD_MAX);
-    // Never end on half of a surrogate pair.
-    const last = name.charCodeAt(name.length - 1);
-    if (last >= 0xd800 && last <= 0xdbff) name = name.slice(0, -1);
-    name = name.trim();
+  const characters = Array.from(name);
+  if (characters.length > APP_FIELD_MAX) {
+    // Cut by characters (code points), as the app counts them: never half of a surrogate pair.
+    name = characters.slice(0, APP_FIELD_MAX).join("").trim();
   }
   return name;
 }
