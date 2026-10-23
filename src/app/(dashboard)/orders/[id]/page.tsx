@@ -64,6 +64,7 @@ import { CanonicalCustomerReturnActions } from "@/components/orders/canonical-cu
 import { CanonicalOrderRecoveryActions } from "@/components/orders/canonical-order-recovery-actions";
 import {
   isImportPendingOrderAuthority,
+  isSellerTypedOrderAuthority,
   isTrustedManualOrderAuthority,
 } from "@/lib/orders/manual-order-authority";
 import {
@@ -348,6 +349,8 @@ export default async function OrderDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <OrderEditPanel
+            // A new version remounts the panel, so what it shows after a save is what is stored.
+            key={`${order.id}:${order.version}`}
             orderId={order.id}
             readOnly={canonicalManual && order.status !== "pending"}
             canonicalVersion={
@@ -355,9 +358,14 @@ export default async function OrderDetailPage({
                 ? order.version
                 : undefined
             }
+            linesEditable={
+              order.status === "pending" &&
+              isSellerTypedOrderAuthority(order.source, order.sourceMetadata)
+            }
             initialItems={order.items.map((i) => ({
               id: i.id,
               productId: i.productId,
+              productVariantId: i.productVariantId ?? null,
               productName: i.productName,
               productVariantName: i.productVariantName ?? null,
               quantity: i.quantity,

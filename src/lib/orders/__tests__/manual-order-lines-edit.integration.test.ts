@@ -127,7 +127,8 @@ async function seedOrder(
     },
     include: { items: true },
   });
-  return { order, item: order.items[0]!, product, customer };
+  const item = order.items[0] as (typeof order.items)[number];
+  return { order, item, product, customer };
 }
 
 async function seedProduct(
@@ -570,7 +571,7 @@ describe("editing the lines of a pending order the seller typed in (S03a-03B)", 
     const changes = await db.orderChange.findMany({ where: { orderId: order.id } });
     expect(changes).toHaveLength(1);
     expect(changes[0]).toMatchObject({ actionType: "edit", status: "confirmed" });
-    const payload = changes[0]!.payload ?? "";
+    const payload = changes[0]?.payload ?? "";
     expect(payload).not.toContain("SECRET-PRODUCT-NAME");
     expect(JSON.parse(payload)).toMatchObject({
       linesEdited: true,
