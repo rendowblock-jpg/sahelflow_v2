@@ -8,6 +8,13 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-23 — signed Internal.46 publication (FD-081)
+
+- Tag `sahelflow-v1.0.0-internal.46-db68bfe2420c2e3079fbfd433de740b966336ebc`, published 2026-10-23T21:11:39Z by signed run `40019008290` (started by the dispatcher run `40018990719` on the merge of #601): app `1.0.0-internal.46` / MSI `1.0.0.46`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`. Assets: MSI (sha256 `2171cd38…`) and `.sig`; `SahelFlow-Setup.exe` (sha256 `7212876b…`) and `.sig`; the same installer under its versioned name; updater `latest.json` (sha256 `b539a950…`) with `windows-x86_64`, `windows-x86_64-msi` and `windows-x86_64-nsis` entries.
+- Source: the `main` tip `db68bfe2…` (#601). **Second attempt.** The first attempt built and signed the installers, then failed at the signed install proof: `verify-installed-windows-msi.ps1:1220`, the app did not reopen about 2 s after the native protected-key rotation (the rotation itself exited 0). The same line failed once on #593 and passed on the next run; the cause is not known (register row NEW-CI-INSTALLED-MSI-FLAKE). The evidence was posted on #601 and the failed job was re-run once; the second attempt passed every step and published. Nothing was published by hand.
+- Hosted storefront, on the Founder's yes and after the publication: the production storefront database took migration 0004 (all eleven style ids; it held no rows) and the storefront Worker was deployed (no media bucket). The live site serves the commune files for wilayas 58, 59 and 69; there are no stores yet, so no store page was rendered there.
+- Published, NOT installed: no installation of Internal.46 is recorded and no ledger row converts.
+
 ### 2026-10-23 — FD-081 adopts the Internal.46 release authority
 
 - FD-081 authorizes one signed successor: app `1.0.0-internal.46` / MSI `1.0.0.46`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`, built from the exact `main` tip. Content merged after Internal.45 (`9a8dac39…`):
@@ -335,59 +342,6 @@ SahelFlow 1.0 Stable has not been released.
   coordination.
 - Established the source → signed artifact → Founder-observed → Stable evidence
   ladder.
-
-## [1.0.0-internal.11] — 2026-07-27
-
-- Added the guarded Algerian COD demonstration workspace and richer installed UI
-  evidence.
-- Passed exact-head run `30243181965` and signed run `30244003253`.
-- Founder reported installing through the in-app updater and that the UI opened
-  and was usable.
-- Remained unaccepted because first and subsequent launches were materially slow
-  and complete post-install identity, preservation and lifecycle evidence was not
-  recorded.
-
-## [1.0.0-internal.10] — 2026-07-26
-
-- Repaired authenticated loopback Tauri capability and CSP access for the updater.
-- Established the single hidden-until-ready normal-launch window contract.
-- Installed in place with registry and shop-database identities preserved.
-- Dashboard opened after multiple minutes and was not accepted.
-
-## [1.0.0-internal.9] — 2026-07-26
-
-- Improved startup layout, viewport containment, runtime-listening evidence and
-  version-scoped Node compile cache.
-- Installed Internal.8 could not invoke the updater from the authenticated
-  loopback workspace.
-
-## [1.0.0-internal.8] — 2026-07-25
-
-- Replaced the failing packaged Bun Next.js server with pinned official Node.js
-  22.23.1.
-- Passed authenticated dashboard and close/reopen on the clean installed runner.
-- Remained unaccepted at approximately 42.5 seconds to UI.
-
-## [1.0.0-internal.7] — 2026-07-25
-
-- Removed interactive copying/hashing of the 3,985-file standalone graph.
-- Reduced runtime preparation to 271 ms, then failed because packaged Bun exited
-  while loading the protected Next.js entrypoint.
-
-## [1.0.0-internal.6] — 2026-07-25
-
-- Added bounded startup recovery and stage evidence.
-- Installed over Internal.5 with AppData preserved.
-- Recursive standalone verification took roughly 14 minutes and was not accepted.
-
-## [1.0.0-internal.5] — 2026-07-24
-
-- Added desktop-owned WebView authentication handoff.
-- Kept the window hidden until authenticated hydrated UI readiness.
-- Passed signed run `30055297869` and retained-artifact verification.
-- Founder upgraded over Internal.4 without uninstall or AppData loss.
-- Real setup/login/workspace UI, normal close and reopen passed.
-- Remains the latest Founder-accepted baseline.
 
 ## Earlier internal history
 
