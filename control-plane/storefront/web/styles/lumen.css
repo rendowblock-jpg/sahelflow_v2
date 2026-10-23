@@ -29,6 +29,7 @@ body[data-voice=lumen] .sf-nav a{border-inline-start:1px solid var(--rule-soft)}
 body[data-voice=lumen] .lx-top{padding-block:28px 22px;border-block-end:1px solid var(--rule)}
 body[data-voice=lumen] .lx-top .sf-pname{margin:0;font-size:clamp(30px,8.4vw,52px);line-height:1.08;letter-spacing:-.035em}
 html[lang=ar] body[data-voice=lumen] .lx-top .sf-pname{line-height:1.3}
+html:not([lang=ar]) body[data-voice=lumen] .lx-top .sf-pname:lang(ar){line-height:1.3}
 body[data-voice=lumen] .lx-top .sf-sub{margin:10px 0 0;max-width:60ch}
 body[data-voice=lumen] .lx-grid{display:grid;gap:0 56px;padding-block:24px var(--sec)}
 body[data-voice=lumen] .lx-media{position:relative;background:#fff;border:1px solid var(--rule)}
@@ -69,6 +70,7 @@ body[data-voice=lumen] .lx-notes .sf-more{border-block:1px solid var(--rule)}
 body[data-voice=lumen] .lx-cover{padding-block:46px 26px;border-block-end:1px solid var(--rule)}
 body[data-voice=lumen] .lx-brand{margin:10px 0 0;font-size:clamp(46px,14vw,96px);line-height:.95;letter-spacing:-.04em;overflow-wrap:anywhere}
 html[lang=ar] body[data-voice=lumen] .lx-brand{line-height:1.25}
+html:not([lang=ar]) body[data-voice=lumen] .lx-brand:lang(ar){line-height:1.25}
 body[data-voice=lumen] .lx-meta{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-block:22px}
 body[data-voice=lumen] .lx-meta .sf-lead{margin:0;max-width:52ch}
 body[data-voice=lumen] .lx-count{flex:none;padding:6px 12px;background:var(--sf-accent,var(--primary));color:var(--sf-on-accent,#fff);font-size:13px;font-weight:700}

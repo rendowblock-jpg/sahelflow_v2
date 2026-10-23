@@ -16,6 +16,7 @@ body[data-voice=prime]{
 html[lang=ar] body[data-voice=prime]{--lh-body:1.95;font-weight:400}
 body[data-voice=prime] :is(.sf-h1,.sf-h2,.sf-h3){font-weight:200;letter-spacing:-.01em;line-height:1.2}
 html[lang=ar] body[data-voice=prime] :is(.sf-h1,.sf-h2,.sf-h3){font-weight:300;line-height:1.5}
+html:not([lang=ar]) body[data-voice=prime] :is(.sf-h1,.sf-h2,.sf-h3):lang(ar){line-height:1.5}
 body[data-voice=prime] :is(.sf-sub,.sf-lead,.sf-body,.sf-desc){font-weight:inherit}
 body[data-voice=prime] ::selection{background:var(--primary);color:var(--primary-foreground)}
 

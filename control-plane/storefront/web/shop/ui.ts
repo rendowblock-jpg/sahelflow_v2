@@ -5,6 +5,39 @@ import type { ShopModel, ShopTheme } from "./model";
 
 export const esc = escapeHtml;
 
+/** True when the first letter of the text is Arabic script, the letter the browser's own dir="auto" looks at (digits, signs, quotes and emoji before it do not count). */
+const ARABIC_FIRST = /^[^\p{L}]*\p{Script=Arabic}/u;
+
+/**
+ * The direction attribute of a piece of the seller's own text. The text sets its own direction (dir="auto"). When the text
+ * is Arabic and the page is not (a seller writes Arabic, the buyer opens the page in French or English) it also says
+ * lang="ar": the Arabic-only rules of the stylesheets (no letter spacing, no capitals, taller lines) hang on that tag,
+ * because the page language is "fr" or "en" and those rules never matched. An Arabic page gets nothing more than dir="auto".
+ * Pass the text as the seller wrote it, not escaped: "&quot;" would hide the Arabic letter behind a Latin one.
+ */
+export function autoDir(ctx: Pick<Ctx, "locale">, text: string): string {
+  return arabicAttrs(ctx, text) || ' dir="auto"';
+}
+
+/**
+ * Escaped text for a place that has no element of its own around the words (a button label, an option name): Arabic text on a
+ * page that is not Arabic gets a tagged span, anything else is the escaped text as before. The span covers the words and nothing
+ * beside them, so a "sold out" note next to an Arabic option name keeps the page's language.
+ */
+export function arabicSpan(ctx: Pick<Ctx, "locale">, text: string): string {
+  const attrs = arabicAttrs(ctx, text);
+  return attrs ? `<span${attrs}>${esc(text)}</span>` : esc(text);
+}
+
+/**
+ * The same tag for the places that carry no dir="auto" today (a button label, an option name, the monogram letter): the tag
+ * when the text is Arabic and the page is not, and an empty string otherwise, so an Arabic page, and a page with Latin text,
+ * stay byte for byte what they were.
+ */
+export function arabicAttrs(ctx: Pick<Ctx, "locale">, text: string): string {
+  return ctx.locale !== "ar" && ARABIC_FIRST.test(text) ? ' dir="auto" lang="ar"' : "";
+}
+
 export type ShippingRow = { wilayaCode: string; mode: "home" | "desk"; feeDzd: number };
 
 /** Built, hashed files. `skins` holds the extra stylesheet (and, for Reel, script) of the newer templates; the first three need none. */
