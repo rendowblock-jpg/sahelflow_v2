@@ -5,7 +5,7 @@ process.env.SF_MASTER_KEY =
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { getCanonicalCourierPosition } from "@/lib/delivery/canonical-courier-effect-runtime";
+import { getCanonicalCourierPosition } from "@/lib/delivery/canonical-courier";
 import type { ServiceContext } from "@/lib/data/service-base";
 import {
   canonicalSourceOrderSourceMetadata,

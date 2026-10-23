@@ -31,7 +31,7 @@ export const COURIER_PER_CYCLE = 40;
 export const COURIER_PROVIDER_FAILURE_LIMIT = 3;
 /**
  * The delivery statuses for which the courier position offers a "sync" action
- * (canonical-courier-effect-runtime.ts, getCanonicalCourierPosition). A test
+ * (getCanonicalCourierPosition, through the courier facade). A test
  * pins this list against that function so the two cannot drift apart.
  */
 export const OPEN_COURIER_STATUSES = [
