@@ -89,6 +89,15 @@ function normalize(node: unknown): unknown {
       }
       out[key] = normalize(value);
     }
+    // zod 4.5 and later write a union of plain types as `type: ["string", "number"]`. The
+    // hand-written schemas the drift test compares against use anyOf, so keep that style.
+    const kinds = out.type;
+    if (Array.isArray(kinds) && kinds.length > 1 && kinds.every((kind) => typeof kind === "string")) {
+      const rest = { ...out };
+      delete rest.type;
+      const unique = [...new Set(kinds.map((kind) => (kind === "integer" ? "number" : kind)))];
+      return { anyOf: unique.map((kind) => ({ type: kind })), ...rest };
+    }
     return out;
   }
   return node;
