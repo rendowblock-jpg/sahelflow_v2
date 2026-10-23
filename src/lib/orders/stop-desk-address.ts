@@ -25,3 +25,20 @@ export function orderAddressFor(
   if (typed.length > 0) return typed;
   return deliveryMode === "desk" ? STOP_DESK_ADDRESS : null;
 }
+
+/**
+ * True when the order's address is only the placeholder above (any case, any spacing). Such an order has no
+ * street to deliver to: it must not be booked as a home delivery. An address the buyer actually typed
+ * (even one that contains the words "stop desk") is NOT the placeholder.
+ */
+export function isStopDeskPlaceholder(address: string | null | undefined): boolean {
+  const normalised = (address ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+  return normalised === STOP_DESK_ADDRESS.toLowerCase();
+}
+
+/** Stable code the UI can branch on (CODED + ENGLISH-VERBATIM strategy, see translate-server-error.ts). */
+export const STOP_DESK_NOT_BOOKABLE_CODE = "STOP_DESK_ORDER_NOT_BOOKABLE";
+
+/** The English text is matched by a rule in translate-server-error.ts: keep the two byte-identical. */
+export const STOP_DESK_NOT_BOOKABLE_MESSAGE =
+  "This order is for stop-desk pickup and has no delivery address, so SahelFlow cannot book it with a courier. Book it in your courier's own dashboard.";

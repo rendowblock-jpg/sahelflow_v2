@@ -86,6 +86,8 @@ const RULES: readonly ErrorRule[] = [
   // Courier connection not set up / not verified (PROVIDER_CAPABILITY_UNCERTIFIED)
   { match: "capability is not enabled", key: "deliveries.errors.courierNotConnected" },
   { match: "connection is not certified", key: "deliveries.errors.courierNotConnected" },
+  // STORE-DESK-BOOKING: stop-desk order with only the placeholder address (STOP_DESK_ORDER_NOT_BOOKABLE)
+  { match: "stop-desk pickup and has no delivery address", key: "deliveries.errors.stopDeskNotBookable" },
   { match: "must be confirmed before shipping", key: "deliveries.errors.mustBeConfirmed" },
   { match: "pas de numéro de suivi", key: "deliveries.errors.noTrackingNumber" },
 
