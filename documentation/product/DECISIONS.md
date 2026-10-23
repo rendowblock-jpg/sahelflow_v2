@@ -2,7 +2,7 @@
 
 > **Status:** Authoritative register of approved Founder product and execution decisions. FD-001–FD-033 were consolidated from earlier addenda on 2026-07-29; later decisions are appended in numeric order as dated entries. FD-034–FD-044, FD-046 and FD-047 are version-bound release authority recorded in the protected release requests, not entries here (the table below FD-033 lists them). Entries that only authorized a signed release are stubs: the decision (date, quote, scope) is kept, the package list lives in the release request, the GitHub release and `CHANGELOG.md`
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-10-21 (release records reduced to stubs, back-pointers added to superseded clauses, FD-034 to FD-047 table, FD-074 to FD-079 added)
+> **Last amended:** 2026-10-23 (header and index; FD-081 adopted. No earlier decision changed)
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
 This register records approved product and execution decisions. Entries FD-001–FD-029 are consolidated policy statements; FD-030 onward are dated Founder directives. Detailed mechanisms remain subject to architecture, research, security review, provider certification and evidence gates, but engineering may not contradict these policies without a new numbered Founder decision. A later entry supersedes an earlier one only for the choice it names.
@@ -19,6 +19,7 @@ Entries are ordered by number, not by date, and the newest numbers are at the en
 
 ## Index (newest first)
 
+- FD-081 — One signed successor Internal.46 under the FD-066 customer launch (2026-10-23, ADOPTED)
 - FD-080 — No repository licence or notice file (2026-10-21, ADOPTED)
 - FD-079 — Per-machine Windows install (2026-10-18, ADOPTED under delegation)
 - FD-078 — Storefront templates Prime, Souk and Reel (2026-10-20, ADOPTED)
@@ -1306,3 +1307,26 @@ The Founder decided on 2026-10-21 that the repository carries no licence or noti
 
 - This changes no product right. The right to run the application comes from a SahelFlow licence issued to the buyer (FD-001, FD-016).
 - Recorded so no later session raises it again as an open item: part of the code was derived from CodFlow (Apache License 2.0, upstream `github.com/bighadj22/codflow`; FD-061), and that licence asks anyone who passes on derived work to include a copy of it. The Founder knew this and chose not to add one. The per-file provenance headers that name CodFlow stay as they are. This is not legal advice.
+
+## FD-081 — One signed successor Internal.46 under the FD-066 customer launch (2026-10-23, ADOPTED)
+
+On 2026-10-23 the Founder directed: "okay look finish all the work is left then make
+the release." That directive adopts the next customer-online release authority as
+one signed successor, to be built only after the pull requests then in flight had
+merged:
+
+- **Package:** app `1.0.0-internal.46` / MSI `1.0.0.46`, channel `internal`,
+  mode `customer-online`, owned host `sahelflow.com`. Paid licences stay
+  offline-signed. Trial origins stay `license.sahelflow.com` and
+  `activate.sahelflow.com`.
+- **Content:** protected `main` at the tip this release pull request merges
+  into. It carries everything merged after Internal.45 (`9a8dac39…`);
+  the list is in `CHANGELOG.md`, section 2026-10-23.
+
+- **Gates:** this release-authority PR merges only after its full Required
+  battery, including installed-MSI evidence, is green. The signed train builds
+  from that exact `main` tip and nothing else merges while it runs. The tag,
+  digests and publish time are recorded only after the signed run succeeds.
+- **Not Stable:** Beta/Stable authority is unchanged. This authority converts
+  no ledger row and does not turn source or CI evidence into installed or
+  live-provider evidence. #306 logout stays LAST.

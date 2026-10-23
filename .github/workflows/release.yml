@@ -388,12 +388,12 @@ jobs:
             }
             'customer-online' {
               if (
-                $authority.version -cne '1.0.0-internal.45' -or
-                $authority.licensing.authorityDecision -cne 'FD-073' -or
+                $authority.version -cne '1.0.0-internal.46' -or
+                $authority.licensing.authorityDecision -cne 'FD-081' -or
                 $authority.channel -cne 'internal' -or
                 $authority.licensing.ownedHostSuffix -cne 'sahelflow.com'
               ) {
-                throw 'customer-online licensing is authorized only for exact FD-073/Internal.45 on the internal channel with owned host sahelflow.com'
+                throw 'customer-online licensing is authorized only for exact FD-081/Internal.46 on the internal channel with owned host sahelflow.com'
               }
               if ([string]::IsNullOrWhiteSpace($authority.licensing.ownedHostSuffix)) {
                 throw 'customer-online releases require licensing.ownedHostSuffix'
