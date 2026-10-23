@@ -84,6 +84,8 @@ describe("AutoPullPanel", () => {
     const toggle = await screen.findByRole("switch");
     await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("false"));
     expect(fetchMock.mock.calls[0]![0]).toBe("/api/integrations/auto-pull");
+    // never a cached answer: a stale "on" would be a lie about what the app does
+    expect((fetchMock.mock.calls[0]![1] as RequestInit).cache).toBe("no-store");
   });
 
   it("shows the shop switch for the shop page and ignores the courier value", async () => {
@@ -150,6 +152,9 @@ describe("AutoPullPanel", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
+    // the answer did not match the request, so it must not be reported as saved
+    expect(harness.toastError).toHaveBeenCalledWith(getAutoPullCopy("en").failed);
+    expect(harness.toastSuccess).not.toHaveBeenCalled();
   });
 
   it("puts the switch back and says so when the save fails", async () => {
@@ -220,6 +225,64 @@ describe("AutoPullPanel", () => {
 
     await act(async () => { fireEvent.click(toggle); });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays read-only when the server says this person may not change it, whatever the page believed", async () => {
+    answer(200, {
+      switches: { courier: false, commerce: true },
+      canManage: { courier: false, commerce: true },
+    });
+    await mount("courier", true);
+
+    const toggle = await screen.findByRole("switch");
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("false"));
+    expect(toggle.hasAttribute("disabled") || toggle.getAttribute("aria-disabled") === "true").toBe(true);
+    await act(async () => { fireEvent.click(toggle); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("tells a read-only viewer why the switch does not move", async () => {
+    answer(200, state(true, true));
+    await mount("courier", false);
+
+    await screen.findByRole("switch");
+    await waitFor(() =>
+      expect(screen.getByText(new RegExp(getAutoPullCopy("en").readOnly))).toBeTruthy(),
+    );
+  });
+
+  it("says nothing about read-only to someone who can change it", async () => {
+    answer(200, state(true, true));
+    await mount("courier", true);
+
+    await screen.findByRole("switch");
+    await waitFor(() => expect(screen.getByText(getAutoPullCopy("en").courier.onHint)).toBeTruthy());
+    expect(screen.queryByText(new RegExp(getAutoPullCopy("en").readOnly))).toBeNull();
+  });
+
+  it("labels the switch with its sentence, so a screen reader and a click on the words both reach it", async () => {
+    answer(200, state(true, true));
+    await mount("courier");
+
+    await screen.findByRole("switch");
+    const labelled = screen.getByLabelText(getAutoPullCopy("en").courier.label);
+    expect(labelled.getAttribute("role")).toBe("switch");
+  });
+
+  it("shows 'Loading…' again while a retry is in flight, and hides the retry button", async () => {
+    answer(500, { error: "boom" });
+    let release: (value: Response) => void = () => undefined;
+    fetchMock.mockReturnValueOnce(new Promise<Response>((resolve) => { release = resolve; }));
+    await mount("courier");
+    const retry = await screen.findByRole("button", { name: getAutoPullCopy("en").retry });
+
+    await act(async () => { fireEvent.click(retry); });
+
+    expect(screen.getByText(getAutoPullCopy("en").loading)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: getAutoPullCopy("en").retry })).toBeNull();
+    await act(async () => {
+      release(new Response(JSON.stringify(state(true, true)), { status: 200, headers: { "Content-Type": "application/json" } }));
+    });
   });
 
   it("offers a retry when the state cannot be read, instead of a switch that claims to be on", async () => {

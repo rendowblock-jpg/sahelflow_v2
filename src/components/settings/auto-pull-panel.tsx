@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
 import { Panel, PanelDescription, PanelHeader, PanelTitle } from "@/components/system";
@@ -48,23 +48,28 @@ export function AutoPullPanel({ kind, canManage }: { kind: Kind; canManage: bool
   const manageable = canManage && serverAllows;
   const switchId = `auto-pull-${kind}`;
 
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch(ENDPOINT, { cache: "no-store" });
-      const data: unknown = await response.json().catch(() => null);
-      const current = readSwitch(data, kind);
-      if (!response.ok || current === null) throw new Error("unreadable");
-      setValue(current);
-      setServerAllows(readCanManage(data, kind));
-      setPhase("ready");
-    } catch {
-      setPhase("failed");
-    }
-  }, [kind]);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(ENDPOINT, { cache: "no-store" });
+        const data: unknown = await response.json().catch(() => null);
+        const current = readSwitch(data, kind);
+        if (!response.ok || current === null) throw new Error("unreadable");
+        if (cancelled) return;
+        setValue(current);
+        setServerAllows(readCanManage(data, kind));
+        setPhase("ready");
+      } catch {
+        if (!cancelled) setPhase("failed");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [kind, reloadToken]);
 
   async function change(next: boolean) {
     if (saving || phase !== "ready" || !manageable) return;
@@ -105,7 +110,7 @@ export function AutoPullPanel({ kind, canManage }: { kind: Kind; canManage: bool
             variant="outline"
             onClick={() => {
               setPhase("loading");
-              void load();
+              setReloadToken((count) => count + 1);
             }}
           >
             <RefreshCw className="size-3.5" aria-hidden="true" />

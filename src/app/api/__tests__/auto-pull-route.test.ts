@@ -22,6 +22,7 @@ import {
 const harness = vi.hoisted(() => ({
   allowed: new Set<string>(),
   authenticated: true,
+  failKey: null as string | null,
   actorContext: { shop: { shopId: "shop-a" }, actor: { kind: "person", personId: "p1" } },
 }));
 
@@ -47,6 +48,18 @@ vi.mock("@/lib/identity/authorization", async () => {
     },
     trustedActionAllowed: (_context: unknown, action: string) => harness.allowed.has(action),
     trustedActorAuditIdentity: () => "person:p1",
+  };
+});
+
+// Fault injection for the atomicity test: the write of one chosen key fails.
+vi.mock("@/lib/settings", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/settings")>();
+  return {
+    ...actual,
+    setSetting: async (context: never, key: string, value: string | number | boolean) => {
+      if (harness.failKey === key) throw new Error("injected write failure");
+      return actual.setSetting(context, key, value);
+    },
   };
 });
 
@@ -81,6 +94,7 @@ const context = { prisma: rawDb as never };
 beforeEach(async () => {
   harness.allowed = new Set();
   harness.authenticated = true;
+  harness.failKey = null;
   await rawDb.setting.deleteMany({
     where: { key: { in: [AUTO_PULL_COURIER_KEY, AUTO_PULL_COMMERCE_KEY] } },
   });
@@ -276,6 +290,27 @@ describe("PUT /api/integrations/auto-pull", () => {
       courierChanged: true,
       commerceChanged: true,
     });
+  });
+
+  it("writes both switches or neither: a failure on the second leaves the first untouched", async () => {
+    harness.allowed = new Set(["delivery.credentials.manage", "integrations.manage"]);
+    harness.failKey = AUTO_PULL_COMMERCE_KEY;
+
+    const response = await PUT(request("PUT", { courier: false, commerce: false }));
+
+    expect(response.status).toBe(500);
+    expect(await stored(AUTO_PULL_COURIER_KEY)).toBeNull();
+    expect(await stored(AUTO_PULL_COMMERCE_KEY)).toBeNull();
+    expect(await rawDb.auditLog.count({ where: { action: "auto_pull.updated" } })).toBe(0);
+  });
+
+  it("answers with the stored state, not with what was asked for", async () => {
+    harness.allowed = new Set(["delivery.credentials.manage"]);
+    await rawDb.setting.create({ data: { key: AUTO_PULL_COMMERCE_KEY, value: "false" } });
+
+    const body = await json(await PUT(request("PUT", { courier: false })));
+
+    expect(body.switches).toEqual({ courier: false, commerce: false });
   });
 
   it("is a no-op for the stored value when asked for what is already true, and still answers 200", async () => {

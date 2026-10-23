@@ -95,8 +95,8 @@ export const PUT = withErrorHandler(async (request: NextRequest): Promise<NextRe
       action: "auto_pull.updated",
       entity: "settings",
       actor: trustedActorAuditIdentity(actorContext.actor),
-      before,
-      after,
+      before: { ...before },
+      after: { ...after },
       metadata: {
         courierChanged: input.courier !== undefined,
         commerceChanged: input.commerce !== undefined,
