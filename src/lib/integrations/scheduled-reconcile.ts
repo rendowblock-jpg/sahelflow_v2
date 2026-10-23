@@ -43,6 +43,34 @@ export const OPEN_COURIER_STATUSES = [
 ] as const;
 export const COMMERCE_PLATFORMS = ["shopify", "woocommerce", "youcan"] as const;
 
+/**
+ * The seller's off switches (stored in the key-value Setting table, so no
+ * migration). Both default to ON. Only the exact text "false" turns one off: a
+ * damaged or unknown value leaves the pull on, which is what the seller was told
+ * the default is.
+ */
+export const AUTO_PULL_COURIER_KEY = "auto_pull_courier";
+export const AUTO_PULL_COMMERCE_KEY = "auto_pull_commerce";
+
+export interface AutoPullSwitches {
+  courier: boolean;
+  commerce: boolean;
+}
+
+export async function loadAutoPullSwitches(
+  context: ServiceContext,
+): Promise<AutoPullSwitches> {
+  const rows = await context.prisma.setting.findMany({
+    where: { key: { in: [AUTO_PULL_COURIER_KEY, AUTO_PULL_COMMERCE_KEY] } },
+    select: { key: true, value: true },
+  });
+  const off = new Set(rows.filter((row) => row.value === "false").map((row) => row.key));
+  return {
+    courier: !off.has(AUTO_PULL_COURIER_KEY),
+    commerce: !off.has(AUTO_PULL_COMMERCE_KEY),
+  };
+}
+
 export interface ReconcileState {
   /** Last delivery id handled; the next cycle continues after it. null = start over. */
   courierCursor: string | null;
@@ -94,6 +122,17 @@ function count(codes: Record<string, number>, error: unknown): void {
   codes[code] = (codes[code] ?? 0) + 1;
 }
 
+function emptyCourierReport(): ReconcileReport["courier"] {
+  return {
+    ran: false,
+    attempted: 0,
+    synced: 0,
+    failed: 0,
+    stoppedProviders: [],
+    failureCodes: {},
+  };
+}
+
 async function reconcileCourier(
   context: ServiceContext,
   state: ReconcileState,
@@ -102,14 +141,7 @@ async function reconcileCourier(
   intervalMs: number,
   perCycle: number,
 ): Promise<ReconcileReport["courier"]> {
-  const report: ReconcileReport["courier"] = {
-    ran: false,
-    attempted: 0,
-    synced: 0,
-    failed: 0,
-    stoppedProviders: [],
-    failureCodes: {},
-  };
+  const report = emptyCourierReport();
   if (now - state.lastCourierAt < intervalMs) return report;
   state.lastCourierAt = now;
   report.ran = true;
@@ -217,14 +249,23 @@ export async function runScheduledReconcile(
 ): Promise<ReconcileReport> {
   const now = options.now ?? Date.now();
   const intervalMs = options.intervalMs ?? RECONCILE_INTERVAL_MS;
-  const courier = await reconcileCourier(
-    context,
-    state,
-    deps,
-    now,
-    intervalMs,
-    options.courierPerCycle ?? COURIER_PER_CYCLE,
-  );
-  const commerce = await reconcileCommerce(context, state, deps, now, intervalMs);
+  // Read on every cycle, so a change takes effect at the next one. While a
+  // switch is off its clock and cursor are left alone: switching it back on
+  // starts the pull at the next tick instead of waiting out an interval that
+  // was spent switched off.
+  const switches = await loadAutoPullSwitches(context);
+  const courier = switches.courier
+    ? await reconcileCourier(
+        context,
+        state,
+        deps,
+        now,
+        intervalMs,
+        options.courierPerCycle ?? COURIER_PER_CYCLE,
+      )
+    : emptyCourierReport();
+  const commerce = switches.commerce
+    ? await reconcileCommerce(context, state, deps, now, intervalMs)
+    : { queued: [], failed: 0, failureCodes: {} };
   return { courier, commerce };
 }
