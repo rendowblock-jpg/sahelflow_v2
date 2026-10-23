@@ -33,6 +33,8 @@ async function seedHold(options: {
   kind: "manual" | "storefront-delegation" | "storefront-provisional" | "legacy";
   /** Write the 'reserve' movement even for a kind that normally has none. */
   withMovement?: boolean;
+  /** Open this hold under an existing command instead of a new one (a command that opens several holds). */
+  reuseCommandId?: string;
   /** Type of the movement that is written (default 'reserve'). */
   movementType?: string;
   /** Write the movement under a different command than the one that opened the hold. */
@@ -40,22 +42,24 @@ async function seedHold(options: {
   state?: "active" | "consumed" | "released";
 }) {
   sequence += 1;
-  const commandId = `cmd_hold_${sequence}`;
-  await rawDb.businessCommand.create({
-    data: {
-      id: commandId,
-      idempotencyKey: `hold-key-${sequence}-${commandId}`,
-      commandType: "test.reservation",
-      aggregateType: "product",
-      aggregateId: options.productId,
-      requestHash: "d".repeat(64),
-      status: "committed",
-      actor: "test",
-      correlationId: `hold-corr-${sequence}`,
-      expectedVersion: 0,
-      committedVersion: 1,
-    },
-  });
+  const commandId = options.reuseCommandId ?? `cmd_hold_${sequence}`;
+  if (!options.reuseCommandId) {
+    await rawDb.businessCommand.create({
+      data: {
+        id: commandId,
+        idempotencyKey: `hold-key-${sequence}-${commandId}`,
+        commandType: "test.reservation",
+        aggregateType: "product",
+        aggregateId: options.productId,
+        requestHash: "d".repeat(64),
+        status: "committed",
+        actor: "test",
+        correlationId: `hold-corr-${sequence}`,
+        expectedVersion: 0,
+        committedVersion: 1,
+      },
+    });
+  }
   const reservationKey =
     options.kind === "manual"
       ? `${commandId}:reserve:item_${sequence}`
@@ -112,6 +116,7 @@ async function seedHold(options: {
       },
     });
   }
+  return { commandId, reservationId };
 }
 
 async function submit(
@@ -254,6 +259,30 @@ describe("storefront stock check and holds that already lowered stock (LEAD-02)"
     });
 
     expect((await submit([{ productId: product.id, quantity: 2 }])).status).toBe(409);
+  });
+
+  it("counts a hold in full when only a sibling hold of the same command has a reserve movement", async () => {
+    // One command opened two holds but wrote a reserve movement for only the first.
+    const product = await setup(4);
+    const first = await seedHold({ productId: product.id, quantity: 1, kind: "manual" });
+    await seedHold({
+      productId: product.id,
+      quantity: 3,
+      kind: "legacy",
+      reuseCommandId: first.commandId,
+    });
+
+    expect((await submit([{ productId: product.id, quantity: 2 }])).status).toBe(409);
+    expect((await submit([{ productId: product.id, quantity: 1 }])).status).toBe(201);
+  });
+
+  it("adds up every hold that counts, not just one of them", async () => {
+    const product = await setup(10);
+    await seedHold({ productId: product.id, quantity: 3, kind: "storefront-delegation" });
+    await seedHold({ productId: product.id, quantity: 2, kind: "storefront-provisional" });
+
+    expect((await submit([{ productId: product.id, quantity: 6 }])).status).toBe(409);
+    expect((await submit([{ productId: product.id, quantity: 5 }])).status).toBe(201);
   });
 
   it("mixes the two kinds: only the storefront hold comes off the stock", async () => {
