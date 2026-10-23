@@ -95,7 +95,7 @@ describe("data/communes.json integrity (58 wilayas)", () => {
   it("gives each wilaya cut by the 2026 reform the number of communes it had before the cut", () => {
     const counts: Record<number, number> = {};
     for (const code of Object.keys(COUNT_BEFORE_2026)) counts[Number(code)] = 0;
-    for (const c of communes) if (c.wilayaCode in counts) counts[c.wilayaCode] += 1;
+    for (const c of communes) if (c.wilayaCode in counts) counts[c.wilayaCode] = (counts[c.wilayaCode] ?? 0) + 1;
     expect(counts).toEqual(COUNT_BEFORE_2026);
   });
 
