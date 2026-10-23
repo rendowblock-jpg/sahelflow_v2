@@ -334,6 +334,24 @@ describe("editing the lines of a pending order the seller typed in (S03a-03B)", 
     });
   });
 
+  it("refuses a product whose variants are all switched off: it is not sold as a plain product", async () => {
+    const { order, item } = await seedOrder();
+    const { product } = await seedProduct("Switched off", 1000, {
+      variants: [{ name: "Only", price: 400, isActive: false }],
+    });
+    await expect(
+      executeManualOrderLinesEdit(
+        context,
+        linesCommand(order.id, "lines-all-variants-off", [
+          { id: item.id, quantity: 2 },
+          { productId: product.id, quantity: 1 },
+        ]),
+      ),
+    ).rejects.toThrow(/none are active/i);
+    expect(await db.orderItem.count({ where: { orderId: order.id } })).toBe(1);
+    expect(await count("BusinessCommand")).toBe(0);
+  });
+
   it("refuses a variant given to a product that has none", async () => {
     const { order, item } = await seedOrder();
     const { product } = await seedProduct("Plain", 1000);
