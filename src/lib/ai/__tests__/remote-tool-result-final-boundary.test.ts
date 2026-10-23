@@ -111,24 +111,23 @@ describe("remote tool-result final privacy boundary", () => {
   });
 
   it("fails closed when one commune label resolves to multiple commune identities", () => {
-    const ambiguousAlias = serializeToolResultForRemoteModel("get_order_details", {
-      orderNumber: "ORD-5201",
-      status: "confirmed",
-      wilaya: "Tiaret",
-      commune: "ملاكو",
-    }) as Record<string, unknown>;
+    // "الاربعاء" (Larbaa) is the real Arabic name of a commune in three wilayas (Batna, Blida, Tissemsilt).
+    // The same-wilaya case (one label, two communes of one wilaya) is pinned on fixed data in location-authority.test.ts.
     const aliasWithoutWilaya = serializeToolResultForRemoteModel(
       "get_customer_details",
       {
         id: "customer-ambiguous-commune",
         name: "Karim",
-        commune: "ملاكو",
+        commune: "الاربعاء",
         orders: [],
       },
     ) as Record<string, unknown>;
-    // "Larbaa" is a real commune of three different wilayas (Batna, Blida and Tissemsilt):
-    // without a wilaya it matches several identities. (The old "El Ogla in Tébessa" fixture was a
-    // duplicate-row data error, fixed; the same-wilaya rule is pinned in location-authority.test.ts.)
+    const aliasWithWilaya = serializeToolResultForRemoteModel("get_order_details", {
+      orderNumber: "ORD-5201",
+      status: "confirmed",
+      wilaya: "Batna",
+      commune: "الاربعاء",
+    }) as Record<string, unknown>;
     const sharedFrenchName = serializeToolResultForRemoteModel(
       "get_customer_details",
       {
@@ -139,10 +138,11 @@ describe("remote tool-result final privacy boundary", () => {
       },
     ) as Record<string, unknown>;
 
-    expect(ambiguousAlias.wilaya).toBe("Tiaret");
-    expect(ambiguousAlias.commune).toBeNull();
     expect(aliasWithoutWilaya.commune).toBeNull();
     expect(sharedFrenchName.commune).toBeNull();
+    // A wilaya that has exactly one such commune picks it.
+    expect(aliasWithWilaya.wilaya).toBe("Batna");
+    expect(aliasWithWilaya.commune).toBe("Larbaa");
   });
 
   it("canonicalizes or withholds location fields across customer-linked reads", () => {

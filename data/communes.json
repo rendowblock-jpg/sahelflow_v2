@@ -598,7 +598,7 @@
     "code": 86,
     "wilayaCode": 3,
     "name": "El Haouaita",
-    "nameAr": "الهوارية",
+    "nameAr": "الحويطة",
     "postCode": "3023"
   },
   {
@@ -1753,7 +1753,7 @@
     "code": 251,
     "wilayaCode": 7,
     "name": "Lioua",
-    "nameAr": "لواء",
+    "nameAr": "ليوة",
     "postCode": "7022"
   },
   {
@@ -2936,7 +2936,7 @@
     "code": 420,
     "wilayaCode": 13,
     "name": "Souahlia",
-    "nameAr": "تونان",
+    "nameAr": "السواحلية",
     "postCode": "13029"
   },
   {
@@ -2985,7 +2985,7 @@
     "code": 427,
     "wilayaCode": 13,
     "name": "Beni Ouarsous",
-    "nameAr": "برج عريمة",
+    "nameAr": "بني ورسوس",
     "postCode": "13036"
   },
   {
@@ -3321,7 +3321,7 @@
     "code": 475,
     "wilayaCode": 14,
     "name": "Nadorah",
-    "nameAr": "ملاكو",
+    "nameAr": "الناظورة",
     "postCode": "14031"
   },
   {
@@ -8066,8 +8066,8 @@
   {
     "code": 1153,
     "wilayaCode": 32,
-    "name": "Sidi Ameur",
-    "nameAr": "سيدي عامر",
+    "name": "Sidi Amar",
+    "nameAr": "سيدي عمر",
     "postCode": "32018"
   },
   {
