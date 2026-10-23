@@ -92,6 +92,14 @@ export function formatTimeOfDay(
   }).format(value);
 }
 
+/**
+ * The date and time of a row in an exported file (orders, deliveries, returns): the language's own date and separator, then
+ * the time on the 24-hour clock (DZ_CLOCK). Without DZ_CLOCK the French and Arabic files read "4:05:07 PM" and "4:05:07 م".
+ */
+export function formatExportDateTime(value: Date, locale: string = "fr"): string {
+  return value.toLocaleString(intlLocale(locale), DZ_CLOCK);
+}
+
 /** Canonical integer-DZD formatter for every seller-facing surface. */
 export function formatDZD(amount: number, locale: string = "fr"): string {
   const resolved = supportedLocale(locale);

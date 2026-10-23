@@ -14,7 +14,7 @@ import {
 import { getI18n } from "@/lib/i18n-server";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { deliveryStatusI18nKey } from "@/lib/shared/status-colors";
-import { intlLocale } from "@/lib/utils";
+import { formatExportDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +50,6 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     },
   );
   const { t, locale } = await getI18n();
-  const localeTag = intlLocale(locale);
   const columns = [
     { key: "trackingNumber", label: t("export.deliveries.tracking") },
     { key: "provider", label: t("export.deliveries.provider") },
@@ -96,7 +95,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       commune: delivery.order.commune,
       status: t(deliveryStatusI18nKey(delivery.status)),
       cost: delivery.cost ?? 0,
-      createdAt: delivery.createdAt.toLocaleString(localeTag),
+      createdAt: formatExportDateTime(delivery.createdAt, locale),
     }));
   };
 
