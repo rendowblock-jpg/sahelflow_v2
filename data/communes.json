@@ -505,56 +505,56 @@
   },
   {
     "code": 73,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "Gueltat Sidi Saad",
     "nameAr": "قلتة سيدي سعد",
     "postCode": "3010"
   },
   {
     "code": 74,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "Ain Sidi Ali",
     "nameAr": "عين سيدي علي",
     "postCode": "3011"
   },
   {
     "code": 75,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "Beidha",
     "nameAr": "بيضاء",
     "postCode": "3012"
   },
   {
     "code": 76,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "Brida",
     "nameAr": "بريدة",
     "postCode": "3013"
   },
   {
     "code": 77,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "El Ghicha",
     "nameAr": "الغيشة",
     "postCode": "3014"
   },
   {
     "code": 78,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "Hadj Mechri",
     "nameAr": "الحاج المشري",
     "postCode": "3015"
   },
   {
     "code": 79,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "Sebgag",
     "nameAr": "سبقاق",
     "postCode": "3016"
   },
   {
     "code": 80,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "Taouiala",
     "nameAr": "تاويالة",
     "postCode": "3017"
@@ -568,7 +568,7 @@
   },
   {
     "code": 82,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "Aflou",
     "nameAr": "أفلو",
     "postCode": "3019"
@@ -582,14 +582,14 @@
   },
   {
     "code": 84,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "Oued Morra",
     "nameAr": "وادي مرة",
     "postCode": "3021"
   },
   {
     "code": 85,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "Oued M'zi",
     "nameAr": "وادي مزي",
     "postCode": "3022"
@@ -603,7 +603,7 @@
   },
   {
     "code": 87,
-    "wilayaCode": 3,
+    "wilayaCode": 59,
     "name": "Sidi Bouzid",
     "nameAr": "سيدي بوزيد",
     "postCode": "3024"
@@ -904,14 +904,14 @@
   },
   {
     "code": 130,
-    "wilayaCode": 5,
+    "wilayaCode": 60,
     "name": "Bitam",
     "nameAr": "بيطام",
     "postCode": "5014"
   },
   {
     "code": 131,
-    "wilayaCode": 5,
+    "wilayaCode": 60,
     "name": "Azil Abedelkader",
     "nameAr": "عزيل عبد القادر",
     "postCode": "5015"
@@ -932,7 +932,7 @@
   },
   {
     "code": 134,
-    "wilayaCode": 5,
+    "wilayaCode": 60,
     "name": "Tilatou",
     "nameAr": "تيلاطو",
     "postCode": "5018"
@@ -1009,7 +1009,7 @@
   },
   {
     "code": 145,
-    "wilayaCode": 5,
+    "wilayaCode": 60,
     "name": "Seggana",
     "nameAr": "سقانة",
     "postCode": "5029"
@@ -1100,14 +1100,14 @@
   },
   {
     "code": 158,
-    "wilayaCode": 5,
+    "wilayaCode": 60,
     "name": "Barika",
     "nameAr": "بريكة",
     "postCode": "5042"
   },
   {
     "code": 159,
-    "wilayaCode": 5,
+    "wilayaCode": 60,
     "name": "Djezzar",
     "nameAr": "الجزار",
     "postCode": "5043"
@@ -1191,14 +1191,14 @@
   },
   {
     "code": 171,
-    "wilayaCode": 5,
+    "wilayaCode": 60,
     "name": "M Doukal",
     "nameAr": "أمدوكال",
     "postCode": "5055"
   },
   {
     "code": 172,
-    "wilayaCode": 5,
+    "wilayaCode": 60,
     "name": "Ouled Ammar",
     "nameAr": "أولاد عمار",
     "postCode": "5056"
@@ -1618,7 +1618,7 @@
   },
   {
     "code": 232,
-    "wilayaCode": 7,
+    "wilayaCode": 61,
     "name": "Branis",
     "nameAr": "البرانس",
     "postCode": "7003"
@@ -1716,28 +1716,28 @@
   },
   {
     "code": 246,
-    "wilayaCode": 7,
+    "wilayaCode": 61,
     "name": "El Kantara",
     "nameAr": "القنطرة",
     "postCode": "7017"
   },
   {
     "code": 247,
-    "wilayaCode": 7,
+    "wilayaCode": 61,
     "name": "Ain Zaatout",
     "nameAr": "عين زعطوط",
     "postCode": "7018"
   },
   {
     "code": 248,
-    "wilayaCode": 7,
+    "wilayaCode": 61,
     "name": "El Outaya",
     "nameAr": "لوطاية",
     "postCode": "7019"
   },
   {
     "code": 249,
-    "wilayaCode": 7,
+    "wilayaCode": 61,
     "name": "Djemorah",
     "nameAr": "جمورة",
     "postCode": "7020"
@@ -2549,7 +2549,7 @@
   },
   {
     "code": 365,
-    "wilayaCode": 12,
+    "wilayaCode": 62,
     "name": "Bir El Ater",
     "nameAr": "بئر العاتر",
     "postCode": "12002"
@@ -2598,7 +2598,7 @@
   },
   {
     "code": 372,
-    "wilayaCode": 12,
+    "wilayaCode": 62,
     "name": "Negrine",
     "nameAr": "نقرين",
     "postCode": "12009"
@@ -2640,7 +2640,7 @@
   },
   {
     "code": 378,
-    "wilayaCode": 12,
+    "wilayaCode": 62,
     "name": "El Ogla El Melha",
     "nameAr": "العقلة المالحة",
     "postCode": "12015"
@@ -2731,7 +2731,7 @@
   },
   {
     "code": 391,
-    "wilayaCode": 12,
+    "wilayaCode": 62,
     "name": "Ferkane",
     "nameAr": "فـــــــركـــــان",
     "postCode": "12028"
@@ -2801,7 +2801,7 @@
   },
   {
     "code": 401,
-    "wilayaCode": 13,
+    "wilayaCode": 63,
     "name": "El Gor",
     "nameAr": "الغور",
     "postCode": "13010"
@@ -2955,7 +2955,7 @@
   },
   {
     "code": 423,
-    "wilayaCode": 13,
+    "wilayaCode": 63,
     "name": "El Aricha",
     "nameAr": "العريشة",
     "postCode": "13032"
@@ -3018,7 +3018,7 @@
   },
   {
     "code": 432,
-    "wilayaCode": 13,
+    "wilayaCode": 63,
     "name": "Sidi Djilali",
     "nameAr": "سيدي الجيلالي",
     "postCode": "13041"
@@ -3032,7 +3032,7 @@
   },
   {
     "code": 434,
-    "wilayaCode": 13,
+    "wilayaCode": 63,
     "name": "Bouihi",
     "nameAr": "البويھي",
     "postCode": "13043"
@@ -3165,7 +3165,7 @@
   },
   {
     "code": 453,
-    "wilayaCode": 14,
+    "wilayaCode": 64,
     "name": "Zmalet El Emir Abdelkade",
     "nameAr": "زمالة الأمير عبد القادر",
     "postCode": "14009"
@@ -3305,14 +3305,14 @@
   },
   {
     "code": 473,
-    "wilayaCode": 14,
+    "wilayaCode": 64,
     "name": "Ksar Chellala",
     "nameAr": "قصر الشلالة",
     "postCode": "14029"
   },
   {
     "code": 474,
-    "wilayaCode": 14,
+    "wilayaCode": 64,
     "name": "Rechaiga",
     "nameAr": "الرشايقة",
     "postCode": "14030"
@@ -3347,7 +3347,7 @@
   },
   {
     "code": 479,
-    "wilayaCode": 14,
+    "wilayaCode": 64,
     "name": "Hamadia",
     "nameAr": "الحمادية",
     "postCode": "14035"
@@ -3375,14 +3375,14 @@
   },
   {
     "code": 483,
-    "wilayaCode": 14,
+    "wilayaCode": 64,
     "name": "Serghine",
     "nameAr": "سرغين",
     "postCode": "14039"
   },
   {
     "code": 484,
-    "wilayaCode": 14,
+    "wilayaCode": 64,
     "name": "Bougara",
     "nameAr": "بوقرة",
     "postCode": "14040"
@@ -4306,28 +4306,28 @@
   },
   {
     "code": 616,
-    "wilayaCode": 17,
+    "wilayaCode": 66,
     "name": "Sed Rahal",
     "nameAr": "سد رحال",
     "postCode": "17006"
   },
   {
     "code": 617,
-    "wilayaCode": 17,
+    "wilayaCode": 66,
     "name": "Faidh El Botma",
     "nameAr": "فيض البطمة",
     "postCode": "17007"
   },
   {
     "code": 618,
-    "wilayaCode": 17,
+    "wilayaCode": 65,
     "name": "Birine",
     "nameAr": "البيرين",
     "postCode": "17008"
   },
   {
     "code": 619,
-    "wilayaCode": 17,
+    "wilayaCode": 65,
     "name": "Bouira Lahdab",
     "nameAr": "بويرة الأحداب",
     "postCode": "17009"
@@ -4341,7 +4341,7 @@
   },
   {
     "code": 621,
-    "wilayaCode": 17,
+    "wilayaCode": 65,
     "name": "El Khemis",
     "nameAr": "الخميس",
     "postCode": "17011"
@@ -4383,42 +4383,42 @@
   },
   {
     "code": 627,
-    "wilayaCode": 17,
+    "wilayaCode": 66,
     "name": "Messaad",
     "nameAr": "مسعد",
     "postCode": "17017"
   },
   {
     "code": 628,
-    "wilayaCode": 17,
+    "wilayaCode": 66,
     "name": "Guettara",
     "nameAr": "قتارة",
     "postCode": "17018"
   },
   {
     "code": 629,
-    "wilayaCode": 17,
+    "wilayaCode": 65,
     "name": "Sidi Ladjel",
     "nameAr": "سيدي لعجال",
     "postCode": "17019"
   },
   {
     "code": 630,
-    "wilayaCode": 17,
+    "wilayaCode": 65,
     "name": "Had Sahary",
     "nameAr": "حد الصحاري",
     "postCode": "17020"
   },
   {
     "code": 631,
-    "wilayaCode": 17,
+    "wilayaCode": 65,
     "name": "Guernini",
     "nameAr": "القرنيني",
     "postCode": "17021"
   },
   {
     "code": 632,
-    "wilayaCode": 17,
+    "wilayaCode": 66,
     "name": "Selmana",
     "nameAr": "سلمانة",
     "postCode": "17022"
@@ -4432,7 +4432,7 @@
   },
   {
     "code": 634,
-    "wilayaCode": 17,
+    "wilayaCode": 66,
     "name": "Oum Laadham",
     "nameAr": "ام العظام",
     "postCode": "17024"
@@ -4467,7 +4467,7 @@
   },
   {
     "code": 639,
-    "wilayaCode": 17,
+    "wilayaCode": 66,
     "name": "Deldoul",
     "nameAr": "دلدول",
     "postCode": "17029"
@@ -4481,35 +4481,35 @@
   },
   {
     "code": 641,
-    "wilayaCode": 17,
+    "wilayaCode": 65,
     "name": "Ain Oussera",
     "nameAr": "عين وسارة",
     "postCode": "17031"
   },
   {
     "code": 642,
-    "wilayaCode": 17,
+    "wilayaCode": 65,
     "name": "Benhar",
     "nameAr": "بنهار",
     "postCode": "17032"
   },
   {
     "code": 643,
-    "wilayaCode": 17,
+    "wilayaCode": 65,
     "name": "Hassi Fedoul",
     "nameAr": "حاسي فدول",
     "postCode": "17033"
   },
   {
     "code": 644,
-    "wilayaCode": 17,
+    "wilayaCode": 66,
     "name": "Amourah",
     "nameAr": "عمورة",
     "postCode": "17034"
   },
   {
     "code": 645,
-    "wilayaCode": 17,
+    "wilayaCode": 65,
     "name": "Ain Fekka",
     "nameAr": "عين افقة",
     "postCode": "17035"
@@ -6301,14 +6301,14 @@
   },
   {
     "code": 901,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Ouled Maaref",
     "nameAr": "أولاد معرف",
     "postCode": "26003"
   },
   {
     "code": 902,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Ain Boucif",
     "nameAr": "عين بوسيف",
     "postCode": "26004"
@@ -6336,7 +6336,7 @@
   },
   {
     "code": 906,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Derrag",
     "nameAr": "دراڨ",
     "postCode": "26008"
@@ -6350,7 +6350,7 @@
   },
   {
     "code": 908,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Bouaiche",
     "nameAr": "بوعيش",
     "postCode": "26010"
@@ -6399,14 +6399,14 @@
   },
   {
     "code": 915,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Kef Lakhdar",
     "nameAr": "الكاف الأخضر",
     "postCode": "26017"
   },
   {
     "code": 916,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Chelalet El Adhaoura",
     "nameAr": "شلالة العذاورة",
     "postCode": "26018"
@@ -6434,14 +6434,14 @@
   },
   {
     "code": 920,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Ouled Hellal",
     "nameAr": "أولاد هلال",
     "postCode": "26022"
   },
   {
     "code": 921,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Tafraout",
     "nameAr": "تافراوت",
     "postCode": "26023"
@@ -6455,7 +6455,7 @@
   },
   {
     "code": 923,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Boghar",
     "nameAr": "بوغار",
     "postCode": "26025"
@@ -6497,14 +6497,14 @@
   },
   {
     "code": 929,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Sidi Demed",
     "nameAr": "سيدي دامد",
     "postCode": "26031"
   },
   {
     "code": 930,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Aziz",
     "nameAr": "عزيز",
     "postCode": "26032"
@@ -6525,7 +6525,7 @@
   },
   {
     "code": 933,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Ksar El Boukhari",
     "nameAr": "قصر البخاري",
     "postCode": "26035"
@@ -6546,7 +6546,7 @@
   },
   {
     "code": 936,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Chabounia",
     "nameAr": "الشهبونية",
     "postCode": "26038"
@@ -6560,21 +6560,21 @@
   },
   {
     "code": 938,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Cheniguel",
     "nameAr": "شنيڨل",
     "postCode": "26040"
   },
   {
     "code": 939,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Ain Ouksir",
     "nameAr": "عين القصير",
     "postCode": "26041"
   },
   {
     "code": 940,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Oum El Djellil",
     "nameAr": "أم الجليل",
     "postCode": "26042"
@@ -6623,7 +6623,7 @@
   },
   {
     "code": 947,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Meftaha",
     "nameAr": "المفاتحة",
     "postCode": "26049"
@@ -6637,7 +6637,7 @@
   },
   {
     "code": 949,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Boughzoul",
     "nameAr": "بوغزول",
     "postCode": "26051"
@@ -6679,14 +6679,14 @@
   },
   {
     "code": 955,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "El Ouinet",
     "nameAr": "العوينات",
     "postCode": "26057"
   },
   {
     "code": 956,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Ouled Antar",
     "nameAr": "أولاد عنتر",
     "postCode": "26058"
@@ -6728,7 +6728,7 @@
   },
   {
     "code": 962,
-    "wilayaCode": 26,
+    "wilayaCode": 67,
     "name": "Saneg",
     "nameAr": "سانڨ",
     "postCode": "26064"
@@ -7001,14 +7001,14 @@
   },
   {
     "code": 1001,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Khoubana",
     "nameAr": "خبانة",
     "postCode": "28007"
   },
   {
     "code": 1002,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "M'cif",
     "nameAr": "مسيف",
     "postCode": "28008"
@@ -7092,56 +7092,56 @@
   },
   {
     "code": 1014,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Bou Saada",
     "nameAr": "بوسعادة",
     "postCode": "28020"
   },
   {
     "code": 1015,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Ouled Sidi Brahim",
     "nameAr": "أولاد سيدي ابراهيم",
     "postCode": "28021"
   },
   {
     "code": 1016,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Sidi Ameur",
     "nameAr": "سيدي عامر",
     "postCode": "28022"
   },
   {
     "code": 1017,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Tamsa",
     "nameAr": "تامسة",
     "postCode": "28023"
   },
   {
     "code": 1018,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Ben Srour",
     "nameAr": "بن سرور",
     "postCode": "28024"
   },
   {
     "code": 1019,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Ouled Slimane",
     "nameAr": "أولاد سليمان",
     "postCode": "28025"
   },
   {
     "code": 1020,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "El Houamed",
     "nameAr": "الحوامد",
     "postCode": "28026"
   },
   {
     "code": 1021,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "El Hamel",
     "nameAr": "الهامل",
     "postCode": "28027"
@@ -7183,49 +7183,49 @@
   },
   {
     "code": 1027,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Zarzour",
     "nameAr": "الزرزور",
     "postCode": "28033"
   },
   {
     "code": 1028,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Mouhamed Boudiaf",
     "nameAr": "محمد بوضياف",
     "postCode": "28034"
   },
   {
     "code": 1029,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Benzouh",
     "nameAr": "بن الزوه",
     "postCode": "28035"
   },
   {
     "code": 1030,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Bir Foda",
     "nameAr": "بير الفضة",
     "postCode": "28036"
   },
   {
     "code": 1031,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Ain Fares",
     "nameAr": "عين فارس",
     "postCode": "28037"
   },
   {
     "code": 1032,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Sidi M'hamed",
     "nameAr": "سيدي محمد",
     "postCode": "28038"
   },
   {
     "code": 1033,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Menaa",
     "nameAr": "مناعة",
     "postCode": "28039"
@@ -7239,28 +7239,28 @@
   },
   {
     "code": 1035,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Ain El Melh",
     "nameAr": "عين الملح",
     "postCode": "28041"
   },
   {
     "code": 1036,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Medjedel",
     "nameAr": "مجدل",
     "postCode": "28042"
   },
   {
     "code": 1037,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Slim",
     "nameAr": "سليم",
     "postCode": "28043"
   },
   {
     "code": 1038,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Ain Rich",
     "nameAr": "عين الريش",
     "postCode": "28044"
@@ -7274,14 +7274,14 @@
   },
   {
     "code": 1040,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Oulteme",
     "nameAr": "ولتام",
     "postCode": "28046"
   },
   {
     "code": 1041,
-    "wilayaCode": 28,
+    "wilayaCode": 68,
     "name": "Djebel Messaad",
     "nameAr": "جبل مساعد",
     "postCode": "28047"
@@ -7988,21 +7988,21 @@
   },
   {
     "code": 1142,
-    "wilayaCode": 32,
+    "wilayaCode": 69,
     "name": "El Biodh Sidi Cheikh",
     "nameAr": "الابيض سيدي الشيخ",
     "postCode": "32007"
   },
   {
     "code": 1143,
-    "wilayaCode": 32,
+    "wilayaCode": 69,
     "name": "Ain El Orak",
     "nameAr": "عين العراك",
     "postCode": "32008"
   },
   {
     "code": 1144,
-    "wilayaCode": 32,
+    "wilayaCode": 69,
     "name": "Arbaouat",
     "nameAr": "أربوات",
     "postCode": "32009"
@@ -8030,14 +8030,14 @@
   },
   {
     "code": 1148,
-    "wilayaCode": 32,
+    "wilayaCode": 69,
     "name": "Boussemghoun",
     "nameAr": "بوسمغون",
     "postCode": "32013"
   },
   {
     "code": 1149,
-    "wilayaCode": 32,
+    "wilayaCode": 69,
     "name": "Chellala",
     "nameAr": "شلالة",
     "postCode": "32014"
@@ -8051,7 +8051,7 @@
   },
   {
     "code": 1151,
-    "wilayaCode": 32,
+    "wilayaCode": 69,
     "name": "El Bnoud",
     "nameAr": "البنود",
     "postCode": "32016"
@@ -8072,7 +8072,7 @@
   },
   {
     "code": 1154,
-    "wilayaCode": 32,
+    "wilayaCode": 69,
     "name": "El Mehara",
     "nameAr": "المھارة",
     "postCode": "32019"

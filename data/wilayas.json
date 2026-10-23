@@ -346,5 +346,71 @@
     "name": "El Meniaa",
     "nameAr": "المنيعة",
     "zone": "south"
+  },
+  {
+    "code": 59,
+    "name": "Aflou",
+    "nameAr": "آفلو",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 60,
+    "name": "Barika",
+    "nameAr": "بريكة",
+    "zone": "east"
+  },
+  {
+    "code": 61,
+    "name": "El Kantara",
+    "nameAr": "القنطرة",
+    "zone": "south"
+  },
+  {
+    "code": 62,
+    "name": "Bir El Ater",
+    "nameAr": "بئر العاتر",
+    "zone": "east"
+  },
+  {
+    "code": 63,
+    "name": "El Aricha",
+    "nameAr": "العريشة",
+    "zone": "west"
+  },
+  {
+    "code": 64,
+    "name": "Ksar Chellala",
+    "nameAr": "قصر الشلالة",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 65,
+    "name": "Aïn Ouessara",
+    "nameAr": "عين وسارة",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 66,
+    "name": "Messaad",
+    "nameAr": "مسعد",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 67,
+    "name": "Ksar El Boukhari",
+    "nameAr": "قصر البخاري",
+    "zone": "north"
+  },
+  {
+    "code": 68,
+    "name": "Bou Saada",
+    "nameAr": "بوسعادة",
+    "zone": "highPlateaux"
+  },
+  {
+    "code": 69,
+    "name": "El Abiodh Sidi Cheikh",
+    "nameAr": "الأبيض سيدي الشيخ",
+    "zone": "highPlateaux"
   }
 ]
