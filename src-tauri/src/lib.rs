@@ -57,6 +57,7 @@ fn compiled_license_configuration() -> [(&'static str, &'static str); 3] {
     ]
 }
 mod startup_recovery;
+mod update_progress;
 
 use runtime_protocol::RuntimeProtocol;
 use runtime_supervisor::{RestartDecision, RuntimeSupervisor};
@@ -336,7 +337,11 @@ pub fn run() {
         // first is a property of each update, so it is attached where the
         // update is created: `check_for_update` below.
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![check_for_update])
+        .invoke_handler(tauri::generate_handler![
+            check_for_update,
+            download_update,
+            install_downloaded_update
+        ])
         .on_window_event(|_window, _event| {
             #[cfg(not(debug_assertions))]
             if _window.label() == "main" {
@@ -798,6 +803,99 @@ async fn check_for_update(webview: tauri::Webview) -> Result<Option<UpdateOffer>
         body,
         raw_json,
     }))
+}
+
+/// What the workspace hears while an update downloads. The same shape as the
+/// plugin's own download events, with one difference that matters: `Progress`
+/// carries the bytes received so far (not one chunk) and arrives a few times a
+/// second (see `update_progress`), not once per network chunk.
+#[derive(Clone, serde::Serialize)]
+#[serde(tag = "event", content = "data")]
+enum UpdateDownloadEvent {
+    #[serde(rename_all = "camelCase")]
+    Progress {
+        downloaded: u64,
+        content_length: Option<u64>,
+    },
+    Finished,
+}
+
+/// The downloaded installer, kept in the window's resource table until the
+/// seller clicks "Restart to update", exactly where the plugin keeps its own.
+struct DownloadedUpdate(Vec<u8>);
+
+impl tauri::Resource for DownloadedUpdate {}
+
+/// Downloads the offered update. Same work as the plugin's `download` command
+/// (the same `Update::download`, the same signature check) with one change: the
+/// window is told about progress a few times a second instead of once per
+/// network chunk. The plugin's way ran thousands of scripts in the window during
+/// one download and starved every other page on a slow PC.
+#[tauri::command]
+async fn download_update(
+    webview: tauri::Webview,
+    rid: tauri::ResourceId,
+    on_event: tauri::ipc::Channel<UpdateDownloadEvent>,
+) -> Result<tauri::ResourceId, String> {
+    use tauri::Manager;
+    use tauri_plugin_updater::Update;
+
+    let update = webview
+        .resources_table()
+        .get::<Update>(rid)
+        .map_err(|error| error.to_string())?;
+    let update = (*update).clone();
+    let mut throttle = update_progress::ProgressThrottle::new();
+    let mut content_length: Option<u64> = None;
+    let bytes = update
+        .download(
+            |chunk_length, total| {
+                content_length = total;
+                if let Some(report) = throttle.record(chunk_length, total, Instant::now()) {
+                    let _ = on_event.send(UpdateDownloadEvent::Progress {
+                        downloaded: report.downloaded,
+                        content_length: report.total,
+                    });
+                }
+            },
+            || {},
+        )
+        .await
+        .map_err(|error| error.to_string())?;
+    // Whatever the clock said, the window ends on the true figure.
+    let last = throttle.finish(content_length);
+    let _ = on_event.send(UpdateDownloadEvent::Progress {
+        downloaded: last.downloaded,
+        content_length: last.total,
+    });
+    let _ = on_event.send(UpdateDownloadEvent::Finished);
+    Ok(webview.resources_table().add(DownloadedUpdate(bytes)))
+}
+
+/// Installs what `download_update` kept. The same call as the plugin's own
+/// `install` command, so the update's before-exit hook (`check_for_update`
+/// attached it) still stops the contained trees before the installer starts.
+/// Async, so the blocking teardown never runs on the window's thread.
+#[tauri::command]
+async fn install_downloaded_update(
+    webview: tauri::Webview,
+    rid: tauri::ResourceId,
+    bytes_rid: tauri::ResourceId,
+) -> Result<(), String> {
+    use tauri::Manager;
+    use tauri_plugin_updater::Update;
+
+    let update = webview
+        .resources_table()
+        .get::<Update>(rid)
+        .map_err(|error| error.to_string())?;
+    let bytes = webview
+        .resources_table()
+        .get::<DownloadedUpdate>(bytes_rid)
+        .map_err(|error| error.to_string())?;
+    update.install(&bytes.0).map_err(|error| error.to_string())?;
+    let _ = webview.resources_table().close(bytes_rid);
+    Ok(())
 }
 
 /// Waits until the shutdown has finished or the limit passes. True when it
