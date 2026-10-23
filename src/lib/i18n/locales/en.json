@@ -3266,6 +3266,7 @@
   "license.details.supportUntil": "Updates and support until",
   "license.details.licenseId": "Licence number",
   "deliveries.errors.courierNotConnected": "This courier is not connected yet. Connect and verify it in Settings → Delivery, then try again.",
+  "deliveries.errors.stopDeskNotBookable": "This order is for pickup at a courier stop-desk, so it has no delivery address and SahelFlow cannot book it with a courier. Book it in your courier’s own dashboard.",
   "validation.required": "This field is required.",
   "validation.wilayaRequired": "Choose a wilaya.",
   "validation.communeRequired": "Choose a commune.",

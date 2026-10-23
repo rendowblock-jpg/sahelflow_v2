@@ -27,6 +27,7 @@ import { NotFoundError, SahelFlowError, ValidationError } from "@/types/errors";
 import { logger } from "@/lib/logger";
 import type { ConnectedPlatformClient, StorefrontReceipt } from "./client";
 import { releaseRejectedStorefrontReceiptDelegation } from "./storefront-receipt-delegation";
+import { orderAddressFor } from "@/lib/orders/stop-desk-address";
 
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
 const ITEM_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$/;
@@ -61,7 +62,8 @@ const customerSchema = z.object({
   phone: z.string().trim().min(1).max(40),
   wilayaCode: z.string().regex(/^(0[1-9]|[1-5][0-9]|6[0-9])$/),
   commune: z.string().trim().min(1).max(120),
-  address: z.string().trim().min(1).max(500),
+  // May be empty for a stop-desk receipt: decryptStorefrontReceiptCustomer decides, with the receipt's delivery mode.
+  address: z.string().trim().max(500),
   notes: z.string().trim().max(500).nullable().optional(),
 }).strict();
 
@@ -149,7 +151,11 @@ export function decryptStorefrontReceiptCustomer(
     if (customer.wilayaCode !== receipt.wilayaCode) {
       throw new Error("Storefront customer wilaya binding is invalid");
     }
-    return customer;
+    // STORE-DESK-ADDRESS: the delivery mode is bound into the sealed payload's authenticated data, so it cannot
+    // be flipped to excuse a missing address.
+    const address = orderAddressFor(customer.address, receipt.deliveryMode);
+    if (address === null) throw new Error("Storefront customer address is required for home delivery");
+    return { ...customer, address };
   } finally {
     contentKey.fill(0);
     plaintext?.fill(0);
