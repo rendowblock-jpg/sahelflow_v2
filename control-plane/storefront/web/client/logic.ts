@@ -76,7 +76,8 @@ export function validate(values: { name: string; phone: string; wilaya: string; 
   if (!isValidPhone(values.phone)) errors.phone = true;
   if (!values.wilaya) errors.wilaya = true;
   if (!values.commune) errors.commune = true;
-  if (values.address.trim().length < 5) errors.address = true;
+  // A stop-desk buyer collects at the courier's desk and has no street address to give.
+  if (values.mode !== "desk" && values.address.trim().length < 5) errors.address = true;
   if (!values.mode) errors.mode = true;
   return errors;
 }

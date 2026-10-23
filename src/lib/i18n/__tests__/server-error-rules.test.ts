@@ -61,3 +61,15 @@ describe("translateServerError rule coverage", () => {
     expect(translateServerError(undefined, t, FALLBACK)).toBe(FALLBACK);
   });
 });
+
+describe("stop-desk booking refusal (STORE-DESK-BOOKING)", () => {
+  it("maps the coded English refusal to its seller-facing key", () => {
+    expect(
+      translateServerError(
+        "This order is for stop-desk pickup and has no delivery address, so SahelFlow cannot book it with a courier. Book it in your courier's own dashboard.",
+        t,
+        FALLBACK,
+      ),
+    ).toBe("deliveries.errors.stopDeskNotBookable");
+  });
+});

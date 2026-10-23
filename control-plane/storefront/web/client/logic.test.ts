@@ -115,6 +115,32 @@ describe("form validation", () => {
     expect(validate({ ...good, address: "    " }).address).toBe(true);
     expect(validate({ ...good, phone: "+213 555 12 34 56" })).toEqual({});
   });
+
+  describe("stop-desk orders (STORE-DESK-ADDRESS)", () => {
+    const desk = { ...good, mode: "desk" as const };
+
+    it("does not ask a stop-desk buyer for an address", () => {
+      expect(validate({ ...desk, address: "" })).toEqual({});
+      expect(validate({ ...desk, address: "    " })).toEqual({});
+      expect(validate({ ...desk, address: "ab" })).toEqual({});
+    });
+
+    it("still asks a home-delivery buyer for one", () => {
+      expect(validate({ ...good, address: "" }).address).toBe(true);
+      expect(validate({ ...good, address: "abcd" }).address).toBe(true);
+      expect(validate({ ...good, address: "abcde" })).toEqual({});
+    });
+
+    it("still asks for an address until a mode is chosen", () => {
+      expect(validate({ ...good, address: "", mode: null })).toEqual({ address: true, mode: true });
+    });
+
+    it("keeps checking every other field in desk mode", () => {
+      expect(validate({ ...desk, address: "", name: "A", phone: "123", wilaya: "", commune: "" })).toEqual({
+        name: true, phone: true, wilaya: true, commune: true,
+      });
+    });
+  });
 });
 
 describe("formatPhone", () => {

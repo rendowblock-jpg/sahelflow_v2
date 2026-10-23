@@ -12,19 +12,22 @@ const binding = {
   deliveryMode: "home" as const,
 };
 
-async function receipt(): Promise<{ receipt: StorefrontReceipt; privateKey: string }> {
+async function receipt(
+  options: { deliveryMode?: "home" | "desk"; address?: string } = {},
+): Promise<{ receipt: StorefrontReceipt; privateKey: string }> {
   const keys = generateConnectedKeyPair();
+  const bound = { ...binding, deliveryMode: options.deliveryMode ?? binding.deliveryMode };
   const encrypted = await encryptStorefrontCustomer(
     {
       name: "Amina",
       phone: "0555123456",
       wilayaCode: "16",
       commune: "Alger Centre",
-      address: "1 Didouche Mourad",
+      address: options.address ?? "1 Didouche Mourad",
       notes: null,
     },
     keys.encryptionPublicKeyJwk,
-    binding,
+    bound,
   );
   return {
     privateKey: keys.encryptionPrivateKeyPkcs8,
@@ -39,7 +42,7 @@ async function receipt(): Promise<{ receipt: StorefrontReceipt; privateKey: stri
       requestDigest: "b".repeat(64),
       ...encrypted,
       wilayaCode: binding.wilayaCode,
-      deliveryMode: binding.deliveryMode,
+      deliveryMode: bound.deliveryMode,
       subtotalDzd: 2_500,
       shippingDzd: 500,
       totalDzd: 3_000,
@@ -59,6 +62,34 @@ describe("hosted storefront receipt cryptography", () => {
       commune: "Alger Centre",
       address: "1 Didouche Mourad",
       notes: null,
+    });
+  });
+
+  describe("stop-desk receipts (STORE-DESK-ADDRESS)", () => {
+    it("gives a desk receipt with no address the fixed stop-desk text", async () => {
+      for (const address of ["", "   "]) {
+        const value = await receipt({ deliveryMode: "desk", address });
+        expect(decryptStorefrontReceiptCustomer(value.receipt, value.privateKey).address).toBe("Stop desk");
+      }
+    });
+
+    it("keeps an address a desk buyer did type", async () => {
+      const value = await receipt({ deliveryMode: "desk", address: "Bureau Yalidine Kouba" });
+      expect(decryptStorefrontReceiptCustomer(value.receipt, value.privateKey).address).toBe("Bureau Yalidine Kouba");
+    });
+
+    it("still refuses a home receipt with no address", async () => {
+      for (const address of ["", "   "]) {
+        const value = await receipt({ deliveryMode: "home", address });
+        expect(() => decryptStorefrontReceiptCustomer(value.receipt, value.privateKey)).toThrow(/address/i);
+      }
+    });
+
+    it("cannot be turned into a desk receipt afterwards to excuse a missing address", async () => {
+      const value = await receipt({ deliveryMode: "home", address: "" });
+      expect(() =>
+        decryptStorefrontReceiptCustomer({ ...value.receipt, deliveryMode: "desk" }, value.privateKey),
+      ).toThrow(/binding/i);
     });
   });
 

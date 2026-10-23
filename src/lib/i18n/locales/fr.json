@@ -3266,6 +3266,7 @@
   "license.details.supportUntil": "Mises à jour et support jusqu’au",
   "license.details.licenseId": "Numéro de licence",
   "deliveries.errors.courierNotConnected": "Ce transporteur n’est pas encore connecté. Connectez-le et vérifiez-le dans Paramètres → Livraison, puis réessayez.",
+  "deliveries.errors.stopDeskNotBookable": "Cette commande est à retirer dans un point relais du transporteur : elle n’a pas d’adresse de livraison et SahelFlow ne peut pas la confier au transporteur. Créez l’expédition dans l’espace de votre transporteur.",
   "validation.required": "Ce champ est obligatoire.",
   "validation.wilayaRequired": "Choisissez une wilaya.",
   "validation.communeRequired": "Choisissez une commune.",

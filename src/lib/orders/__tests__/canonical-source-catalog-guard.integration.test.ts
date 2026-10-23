@@ -27,10 +27,14 @@ async function clean(): Promise<void> {
   await db.$executeRawUnsafe('DELETE FROM "InventoryReservation"');
   await db.$executeRawUnsafe('DELETE FROM "OutboxIntent"');
   await db.$executeRawUnsafe('DELETE FROM "DomainEvent"');
+  // A courier-booking test that ran earlier in the same database leaves these rows, and they
+  // reference BusinessCommand: without this the DELETE below fails with a FOREIGN KEY error.
+  await db.$executeRawUnsafe('DELETE FROM "CanonicalDeliveryEvent"');
   await db.$executeRawUnsafe('DELETE FROM "BusinessCommand"');
   await db.$executeRawUnsafe('DELETE FROM "BusinessAggregateVersion"');
   await db.auditLog.deleteMany();
   await db.orderChange.deleteMany();
+  await db.delivery.deleteMany();
   await db.orderItem.deleteMany();
   await db.order.deleteMany();
   await db.productVariant.deleteMany();

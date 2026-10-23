@@ -144,6 +144,10 @@ function boot(): void {
       const label = form.querySelector<HTMLElement>(`[data-sf="fee-${m}"]`);
       if (label) label.textContent = fee === null ? "—" : fee === 0 ? d.i.free ?? "0" : money(fee);
     }
+    // STORE-DESK-ADDRESS: a stop-desk buyer collects at the courier's desk and has no street address to give, so the box
+    // stops being required (the form is novalidate; validate() in logic.ts is the real gate) and a stale error goes away.
+    els.address.required = mode !== "desk";
+    if (mode === "desk") clearFieldError("address");
     const fee = wilaya && mode ? feeFor(d.fees, wilaya, mode) : null;
     const sums = totals(current.p, quantity, fee);
     put(els.subtotal, money(sums.subtotal));
