@@ -8,6 +8,20 @@ SahelFlow 1.0 Stable has not been released.
 
 ## [Unreleased]
 
+### 2026-10-23 — FD-081 adopts the Internal.46 release authority
+
+- FD-081 authorizes one signed successor: app `1.0.0-internal.46` / MSI `1.0.0.46`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`, built from the exact `main` tip. Content merged after Internal.45 (`9a8dac39…`):
+  - **Stores:** five new styles (Noir, Lumen, Atelier, Pulse, Bloom; #564) and layout fixes in them (#576, #577, #579, the quantity row, words kept whole in small boxes, the Pulse strip); the seller's Arabic text on a French or English page gets no letter spacing (#583).
+  - **Checkout:** a stop-desk buyer needs no street address and courier booking refuses such an order (#594); the sold-out check no longer subtracts confirmed orders twice (#591).
+  - **Orders and money:** a pending order can be edited (#589); the cash reconciliation counts every delivered order and settlement (#588); the orders list filtered by wilaya also finds storefront orders (#599); 24-hour export dates (#585) and Arabic export file names (#570).
+  - **Couriers and shops:** the app pulls courier statuses and shop orders by itself every ten minutes, with an off switch (#590, #592); a booking carries the wilaya's French name, not a code (#597).
+  - **Inbox:** older WhatsApp messages can be loaded (#582).
+  - **Wilayas:** the 11 wilayas created by Loi 26-06 (59 to 69) with their 108 communes as in the official annex; a new wilaya is priced on its mother wilaya's fee and booked under its name (#596, #597, #600); 33 commune rows corrected (#595, #598).
+  - **Data safety:** the database refuses any later edit of five stock, money and event tables (a migration; no row changes; #593).
+  - **Startup:** the "Tide" startup card (#550), merged after Internal.45.
+  - **Not measured:** merged on green CI only. Nothing was seen on a phone, a Windows screen or an installed build; the couriers were never called; the new Arabic and French texts are unread by a native speaker.
+- The tag, digests and publish time are recorded after the signed run succeeds. Published is not installed: no ledger row converts.
+
 ### 2026-10-20 — after Internal.45 (merged to `main`, not published)
 
 - #550 (`12648c90`): the redesigned "Tide" startup card (the S mark fills with the launch progress; colours follow the preset; 100% only after ui-ready). Windows runner: compile, clippy and the full Rust suite pass; not drawn on a Windows screen.
