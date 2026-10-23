@@ -298,13 +298,13 @@ describe("Orders workbench", () => {
     });
   });
 
-  it("maps the wilaya code to the stored English wilaya name", async () => {
+  it("matches the wilaya code against every spelling an order can hold (name, Arabic name, code)", async () => {
     mocks.count.mockResolvedValue(1);
 
     await getOrdersWorkbenchPage(context("owner"), { wilayaCode: 16 });
 
     expect(mocks.findMany.mock.calls[0]?.[0]?.where).toMatchObject({
-      wilaya: "Alger",
+      wilaya: { in: ["Alger", "الجزائر", "16"] },
     });
 
     // Unknown codes degrade to an unfiltered list rather than a dead end.
@@ -385,7 +385,7 @@ describe("Orders workbench", () => {
     );
 
     const where = mocks.groupBy.mock.calls[0]?.[0]?.where;
-    expect(where).toMatchObject({ wilaya: "Alger" });
+    expect(where).toMatchObject({ wilaya: { in: ["Alger", "الجزائر", "16"] } });
     expect(where).not.toHaveProperty("status");
     expect(counts).toEqual({ all: 7, delivered: 4, pending: 3 });
     expect(total).toBe(7);

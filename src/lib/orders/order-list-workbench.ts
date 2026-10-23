@@ -21,7 +21,7 @@ import type {
   OrdersWorkbenchResponse,
   WorkbenchFieldAccess,
 } from "@/types/workbench";
-import wilayasData from "../../../data/wilayas.json";
+import { wilayaStoredSpellings } from "@/lib/wilaya-display";
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -45,7 +45,7 @@ export interface OrdersWorkbenchFilters {
   status?: OrderStatus;
   /** Free text: order number, customer name, phone, wilaya. */
   q?: string | null;
-  /** Algerian wilaya code (1-58) resolved to the stored English wilaya name. */
+  /** Algerian wilaya code (1-69): matches the wilaya however the order stored it (French name, Arabic name or code). */
   wilayaCode?: number | null;
   /** Inclusive createdAt lower bound. Date-only strings cover the whole UTC day. */
   dateFrom?: string | null;
@@ -163,13 +163,6 @@ export function ordersWorkbenchOrderBy(
 
 type BlindIndexClient = Parameters<typeof deriveExistingShopBlindIndex>[0];
 
-const WILAYA_NAMES_BY_CODE = new Map<number, string>(
-  (wilayasData as Array<{ code: number; name: string }>).map((wilaya) => [
-    wilaya.code,
-    wilaya.name,
-  ]),
-);
-
 async function orderSearchIndexes(q: string) {
   const [phoneIndex, nameIndex] = await Promise.all([
     deriveExistingShopBlindIndex(
@@ -259,9 +252,10 @@ export async function buildOrdersWorkbenchWhere(
   }
 
   if (filters.wilayaCode != null && Number.isFinite(filters.wilayaCode)) {
-    const wilayaName = WILAYA_NAMES_BY_CODE.get(filters.wilayaCode);
-    if (wilayaName) {
-      where.wilaya = wilayaName;
+    // An order keeps the wilaya as written: a manual order the French name, a hosted-storefront order the 2-digit code.
+    const spellings = wilayaStoredSpellings(filters.wilayaCode);
+    if (spellings) {
+      where.wilaya = { in: spellings };
     }
   }
 
