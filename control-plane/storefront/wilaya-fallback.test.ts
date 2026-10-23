@@ -28,6 +28,12 @@ describe("mother wilaya of the eleven new wilayas (Loi 26-06, JO n.25 art. 52 bi
     expect(motherWilaya("59")).toBe("03");
     expect(motherWilaya("66")).toBe("17");
   });
+
+  it("answers null for the names every object inherits (a lookup table is not a safe-key set)", () => {
+    for (const code of ["constructor", "__proto__", "toString", "hasOwnProperty", "valueOf"]) {
+      expect(motherWilaya(code)).toBeNull();
+    }
+  });
 });
 
 describe("withMotherFeeFallback", () => {
@@ -51,6 +57,11 @@ describe("withMotherFeeFallback", () => {
   it("feeds two new wilayas from one mother (Djelfa -> 65 and 66)", () => {
     const out = withMotherFeeFallback([rule("17", "home", 700)]);
     expect(out.filter((r) => ["65", "66"].includes(r.wilayaCode)).map(key).sort()).toEqual(["65:home:700", "66:home:700"]);
+  });
+
+  it("adds one row, not two, when the input lists the mother's rule twice (the database cannot, a caller could)", () => {
+    const out = withMotherFeeFallback([rule("03", "home", 600), rule("03", "home", 600)]);
+    expect(out.filter((r) => r.wilayaCode === "59")).toHaveLength(1);
   });
 
   it("never lets a mother borrow from a child, and never touches old wilayas", () => {
