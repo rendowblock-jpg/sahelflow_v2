@@ -6,6 +6,10 @@
  * The golden pins in `surface-contract.test.ts` fix the vocabulary and limits;
  * these tests prove the runtime actually enforces them.
  */
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
@@ -219,7 +223,14 @@ describe("loopback transport authorization", () => {
   const request = (headers: Record<string, string>) =>
     new Request("http://127.0.0.1:3000/api/mcp", { method: "POST", headers });
 
+  let dataRoot = "";
+
   beforeEach(() => {
+    // An empty data folder of its own, and no token file named by the shell: the per-launch token file an earlier app launch
+    // leaves in the real data folder (<data>/mcp/transport-token) must not decide what these tests see.
+    dataRoot = mkdtempSync(join(tmpdir(), "sf-mcp-transport-"));
+    vi.stubEnv("SF_DATA_DIR", dataRoot);
+    vi.stubEnv("MCP_SIDECAR_TOKEN_FILE", "");
     resetMcpTransportToken();
     vi.stubEnv("MCP_SIDECAR_TOKEN", "launch-token");
   });
@@ -227,6 +238,7 @@ describe("loopback transport authorization", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     resetMcpTransportToken();
+    rmSync(dataRoot, { recursive: true, force: true });
   });
 
   it("accepts the launch token on loopback and returns the connection label", async () => {
