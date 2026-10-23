@@ -26,7 +26,7 @@ import {
 } from "@/lib/orders/order-list-workbench";
 import { orderStatusSchema } from "@/lib/validation";
 import type { OrderStatus } from "@/types/domain";
-import { intlLocale } from "@/lib/utils";
+import { formatExportDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +108,6 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     },
   );
 
-  const localeTag = intlLocale(locale);
   const columns = [
     { key: "orderNumber", label: t("export.orders.orderNumber") },
     { key: "status", label: t("export.orders.status") },
@@ -161,7 +160,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       deliveryCost: order.deliveryCost ?? 0,
       deliveryProvider: order.delivery?.provider ?? "",
       source: order.source,
-      createdAt: order.createdAt.toLocaleString(localeTag),
+      createdAt: formatExportDateTime(order.createdAt, locale),
     }));
   };
 

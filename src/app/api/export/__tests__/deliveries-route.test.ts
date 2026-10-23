@@ -52,7 +52,7 @@ import {
   hasPhase2Permission,
   type Phase2Action,
 } from "@/lib/identity/permissions";
-import { intlLocale } from "@/lib/utils";
+import { formatExportDateTime, intlLocale } from "@/lib/utils";
 import { SahelFlowError } from "@/types/errors";
 
 const { GET } = route;
@@ -610,21 +610,21 @@ describe("GET /api/export/deliveries: the language", () => {
     const response = await GET(get());
     expect(response.headers.get("Content-Disposition")).toBe(`attachment; filename="${prefix}-${TODAY}.csv"`);
     const text = await response.text();
-    const stamp = delivery(1).createdAt.toLocaleString(intlLocale(locale));
+    const stamp = formatExportDateTime(delivery(1).createdAt, locale);
     // A date with a comma in it is written between quotes.
     const field = stamp.includes(",") ? `"${stamp}"` : stamp;
     expect(lineAt(text, 1).endsWith(field)).toBe(true);
   });
 
-  // The date expectations above compare the route with the formatter it calls, so they cannot see which clock it writes.
-  // OBSERVED, not endorsed: src/lib/utils.ts says every seller-facing time is written on a 24-hour clock (DZ_CLOCK)
-  // because the fr-DZ and ar-DZ patterns are 12-hour; this route calls toLocaleString(locale) without it, so the French
-  // file carries AM/PM times while the English one does not. Update the test if the route is changed on purpose.
-  it("OBSERVED: writes the French time on a 12-hour clock (AM/PM) and the English one on a 24-hour clock", async () => {
-    setLocale("fr");
-    expect(lineAt(await (await GET(get())).text(), 1)).toMatch(/\b(AM|PM)\b/);
-    setLocale("en");
-    expect(lineAt(await (await GET(get())).text(), 1)).not.toMatch(/\b(AM|PM)\b/);
+  // The date expectations above compare the route with the formatter it calls, so they cannot see which clock it writes;
+  // this one reads the clock itself. src/lib/utils.ts says every seller-facing time is written on a 24-hour clock (DZ_CLOCK)
+  // because the fr-DZ and ar-DZ patterns are 12-hour, and the route used to write "4:05:07 PM" in French (issue 566).
+  // export-clock.test.ts checks the same for the orders and returns exports, at more hours.
+  it.each(["fr", "ar", "en"])("writes the time on a 24-hour clock in %s: no AM/PM, no Arabic day-period letter", async (locale) => {
+    setLocale(locale);
+    const row = lineAt(await (await GET(get())).text(), 1);
+    expect(row).not.toMatch(/\b(AM|PM)\b|[\u0635\u0645]/u);
+    expect(row).toMatch(/\d{2}:\d{2}:\d{2}"?$/);
   });
 
   it("names the XLSX file with the French word too", async () => {
