@@ -31,6 +31,7 @@ import { ChangePinPanel } from "@/components/settings/change-pin-panel";
 import { CollaborationAdminPanel } from "@/components/settings/collaboration-admin-panel";
 import { CommerceIntegrationsPanel } from "@/components/settings/commerce-integrations-panel";
 import { CommerceSyncRecoveryPanel } from "@/components/settings/commerce-sync-recovery-panel";
+import { AutoPullPanel } from "@/components/settings/auto-pull-panel";
 import { GoogleSheetsBridgePanel } from "@/components/settings/google-sheets-bridge-panel";
 import { DailyReportPanel } from "@/components/settings/daily-report-panel";
 import { DangerZonePanel } from "@/components/settings/danger-zone-panel";
@@ -213,6 +214,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
           canManage={access.commerceManage}
           canSync={access.commerceSync}
         />
+        <AutoPullPanel kind="commerce" canManage={access.commerceManage} />
         <GoogleSheetsBridgePanel canManage={access.commerceManage} />
         {access.commerceManage ? <CommerceSyncRecoveryPanel /> : null}
       </>
@@ -227,7 +229,12 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     description: "pageDeliveryDescription",
     keywords: "yalidine zr express courier transporteur توصيل api credentials identifiants",
     visible: (access) => access.delivery,
-    render: () => <DeliveryCredentialsPanel />,
+    render: ({ access }) => (
+      <>
+        <DeliveryCredentialsPanel />
+        <AutoPullPanel kind="courier" canManage={access.delivery} />
+      </>
+    ),
   },
   {
     id: "meta-pixel",
