@@ -370,4 +370,13 @@ describe("the style sheets keep their promises", () => {
     expect(lumen).toContain("@media (max-width:479px){\nbody[data-voice=lumen] .lx-row{grid-template-columns:24px 56px minmax(0,1fr) 18px;column-gap:12px;row-gap:2px}\nbody[data-voice=lumen] .lx-row-n{grid-area:1/1/3/2}\nbody[data-voice=lumen] .lx-row-pic{grid-area:1/2/3/3}\nbody[data-voice=lumen] .lx-row-name{grid-area:1/3/2/4;align-self:end}\nbody[data-voice=lumen] .lx-row-price{grid-area:2/3/3/4;align-self:start;white-space:normal}\nbody[data-voice=lumen] .lx-row-go{grid-area:1/4/3/5;align-self:center}\n}");
   });
 
+  it("the quantity row wraps instead of squeezing its label: at 320 px the label + the 142 px stepper do not fit on one line, and the page-wide overflow-wrap:anywhere let the label shrink to 54 px, so 'Quantité' / 'Quantity' broke in the middle (72 words in the probe of the published templates, all at 320 px). A rule that only stopped the label from shrinking was tried and measured: it made the form 8 px wider and pushed the whole buy column 8 px past its box, so the row has to be allowed to wrap", () => {
+    const shop = readFileSync(join(process.cwd(), "control-plane/storefront/web/styles", "shop.css"), "utf8");
+    // the safety net for long product names stays
+    expect(shop).toMatch(/body\{[^}]*overflow-wrap:anywhere\}/);
+    expect(shop).toContain(".sf-qty{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;font-weight:700;font-size:14px}");
+    // the rule that kept the label from shrinking, without letting the row wrap, widened the form: it must not come back
+    expect(shop).not.toContain(".sf-qty>span{overflow-wrap:normal}");
+  });
+
 });
