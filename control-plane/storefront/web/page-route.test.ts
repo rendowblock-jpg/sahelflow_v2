@@ -268,3 +268,56 @@ describe("GET /<slug> (page route)", () => {
     store.database.close();
   });
 });
+
+describe("GET /<slug> shipping table for the new wilayas (STORE-WILAYA69 step A)", () => {
+  type Row = { wilayaCode: string; mode: "home" | "desk"; feeDzd: number };
+  const capture = (): { rows: () => Row[]; render: RenderStorePage } => {
+    let seen: Row[] = [];
+    return {
+      rows: () => seen,
+      render: (input) => {
+        seen = [...input.shipping] as Row[];
+        return "<html>ok</html>";
+      },
+    };
+  };
+  const sorted = (rows: Row[]) => rows.map((r) => `${r.wilayaCode}:${r.mode}:${r.feeDzd}`).sort();
+
+  it("offers a new wilaya on its mother's fees when the release has no rule for it", async () => {
+    const store = await publishTestStore({
+      shapeTheme: (theme) => {
+        theme.builder.shippingRules = [
+          { wilayaCode: "03", deliveryMode: "home", feeDzd: 600 },
+          { wilayaCode: "03", deliveryMode: "desk", feeDzd: 400 },
+          { wilayaCode: "16", deliveryMode: "home", feeDzd: 500 },
+        ];
+      },
+    });
+    const seen = capture();
+    const response = await servePublicStorePage(get("/sahel-store"), store.env, "sahel-store", undefined, deps(null, { render: seen.render }));
+    expect(response.status).toBe(200);
+    expect(sorted(seen.rows())).toEqual(["03:desk:400", "03:home:600", "16:home:500", "59:desk:400", "59:home:600"]);
+  });
+
+  it("keeps the seller's own rule for a new wilaya and fills only what is missing", async () => {
+    const store = await publishTestStore({
+      shapeTheme: (theme) => {
+        theme.builder.shippingRules = [
+          { wilayaCode: "03", deliveryMode: "home", feeDzd: 600 },
+          { wilayaCode: "03", deliveryMode: "desk", feeDzd: 400 },
+          { wilayaCode: "59", deliveryMode: "home", feeDzd: 900 },
+        ];
+      },
+    });
+    const seen = capture();
+    await servePublicStorePage(get("/sahel-store"), store.env, "sahel-store", undefined, deps(null, { render: seen.render }));
+    expect(sorted(seen.rows().filter((r) => r.wilayaCode === "59"))).toEqual(["59:desk:400", "59:home:900"]);
+  });
+
+  it("leaves a release with no priced mother exactly as it was", async () => {
+    const store = await publishTestStore();
+    const seen = capture();
+    await servePublicStorePage(get("/sahel-store"), store.env, "sahel-store", undefined, deps(null, { render: seen.render }));
+    expect(sorted(seen.rows())).toEqual(["16:home:500"]);
+  });
+});
