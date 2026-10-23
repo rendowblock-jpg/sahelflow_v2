@@ -1,10 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
 
 import { renderStorePage } from "./index";
 import { STYLE_IDS } from "./styles";
-import { autoDir } from "./ui";
+import { arabicAttrs, autoDir } from "./ui";
 import { publishTestStore, renderInputFor, SAMPLE_PRODUCTS } from "../test-support";
 
 /**
@@ -58,6 +59,30 @@ describe("autoDir: dir=auto, plus lang=ar for Arabic text on a page that is not 
   });
 });
 
+
+describe("arabicAttrs: the same tag for the places that carry no dir=auto today, and nothing at all where an Arabic page must stay as it was", () => {
+  const fr = { locale: "fr" as const };
+  const ar = { locale: "ar" as const };
+
+  it("gives dir=auto and lang=ar to Arabic text on a page that is not Arabic", () => {
+    expect(arabicAttrs(fr, "اكتشف المجموعة")).toBe(' dir="auto" lang="ar"');
+    expect(arabicAttrs({ locale: "en" }, "2 ساعات")).toBe(' dir="auto" lang="ar"');
+  });
+
+  it("gives nothing on an Arabic page, for Latin text, for empty text, and when a Latin letter comes first", () => {
+    expect(arabicAttrs(ar, "اكتشف المجموعة")).toBe("");
+    expect(arabicAttrs(fr, "Découvrir")).toBe("");
+    expect(arabicAttrs(fr, "")).toBe("");
+    expect(arabicAttrs(fr, "iPhone 15 حافظة")).toBe("");
+  });
+
+  it("autoDir is dir=auto plus whatever arabicAttrs adds", () => {
+    for (const text of ["اكتشف المجموعة", "Découvrir", ""]) {
+      for (const page of [fr, ar]) expect(autoDir(page, text)).toBe(arabicAttrs(page, text) || ' dir="auto"');
+    }
+  });
+});
+
 /* ------------------------------------------------------------------ the rendered pages ---- */
 
 type Locale = "ar" | "fr" | "en";
@@ -79,6 +104,46 @@ function autoElements(html: string): Array<{ tag: string; text: string; tagged: 
   return found;
 }
 
+/**
+ * Every piece of text on the page that starts with an Arabic letter, whose nearest lang attribute is not "ar".
+ * This is the rule itself, so it also catches a seller text nobody thought to tag (a button label, an option name):
+ * the reader above only sees elements that already carry dir="auto".
+ */
+function arabicTextOutsideLangAr(html: string): string[] {
+  const window = new Window({ settings: { disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableCSSFileLoading: true, disableIframePageLoading: true } });
+  try {
+    const document = new window.DOMParser().parseFromString(html, "text/html");
+    const found: string[] = [];
+    const nearestLang = (element: Element | null): string => {
+      for (let current = element; current; current = current.parentElement) {
+        const lang = current.getAttribute("lang");
+        if (lang) return lang;
+      }
+      return "";
+    };
+    const walk = (node: Node): void => {
+      for (const child of Array.from(node.childNodes)) {
+        if (child.nodeType === 3) {
+          const text = (child.textContent ?? "").trim();
+          if (ARABIC_FIRST.test(text) && nearestLang(child.parentElement) !== "ar") found.push(`<${child.parentElement?.tagName.toLowerCase() ?? "?"}${child.parentElement?.getAttribute("class") ? `.${child.parentElement.getAttribute("class")?.split(" ").join(".")}` : ""}> ${text.slice(0, 40)}`);
+        } else if (child.nodeType === 1) {
+          const name = (child as Element).tagName.toLowerCase();
+          if (name !== "script" && name !== "style" && name !== "noscript" && name !== "template") walk(child);
+        }
+      }
+    };
+    walk(document.body as unknown as Node);
+    return found;
+  } finally {
+    void window.happyDOM.close();
+  }
+}
+
+/** How many Arabic texts the page has in all (a page with none would pass the rule for nothing). */
+function arabicTextCount(html: string): number {
+  return (unescape(html.replace(/<(script|style)[\s\S]*?<\/\1>/g, "").replace(/<[^>]*>/g, "\n")).match(/^[^\S\n]*[^\p{L}\n]*\p{Script=Arabic}/gmu) ?? []).length;
+}
+
 const ARABIC = {
   storeName: "متجر الساحل",
   announcement: "شحن مجاني لكل الولايات",
@@ -93,6 +158,10 @@ const ARABIC = {
   address: "شارع ديدوش مراد، الجزائر",
   product: "ساعة حائط",
   second: "مرآة جدارية للصالون",
+  cta: "اكتشف المجموعة",
+  cod: "الدفع عند الاستلام مضمون",
+  small: "صغير",
+  large: "كبير",
   description: "ساعة حائط أنيقة بتصميم عصري.\n\nمصنوعة من الخشب الطبيعي، تعمل بمحرك صامت، وتصلح للصالون وغرفة النوم.",
 } as const;
 
@@ -104,7 +173,7 @@ function sample(index: number): (typeof SAMPLE_PRODUCTS)[number] {
 }
 
 const PRODUCTS = [
-  { ...sample(0), id: "product_00000001", name: ARABIC.product, description: ARABIC.description, images: JSON.stringify(["https://images.example.test/a-1.jpg"]) },
+  { ...sample(0), id: "product_00000001", name: ARABIC.product, description: ARABIC.description, productVariants: [{ id: "variant_small", name: ARABIC.small, price: 2_400, stock: 4, isActive: true }, { id: "variant_large", name: ARABIC.large, price: 2_900, stock: 3, isActive: true }], images: JSON.stringify(["https://images.example.test/a-1.jpg"]) },
   { ...sample(0), id: "product_00000002", name: ARABIC.second, sku: "AR-2", description: "", images: JSON.stringify(["https://images.example.test/a-2.jpg"]) },
   { ...sample(2), id: "product_00000003", name: "Tapis berbère" },
 ] as unknown as typeof SAMPLE_PRODUCTS;
@@ -118,7 +187,8 @@ async function arabicStore(template: (typeof STYLE_IDS)[number] | "sahara" | "at
     shapeTheme: (theme) => {
       (theme as unknown as { mode: string }).mode = mode;
       theme.announcement = { enabled: true, text: ARABIC.announcement };
-      theme.hero = { ...theme.hero, eyebrow: ARABIC.eyebrow, headline: ARABIC.headline, body: ARABIC.body };
+      theme.hero = { ...theme.hero, eyebrow: ARABIC.eyebrow, headline: ARABIC.headline, body: ARABIC.body, ctaLabel: ARABIC.cta };
+      theme.checkout = { ...theme.checkout, showCodPromise: true, codPromiseText: ARABIC.cod };
       theme.builder.contact = { phone: "0550123456", whatsapp: "0550123456", email: "a@b.test", address: ARABIC.address };
       theme.builder.composition.sections = [
         ...theme.builder.composition.sections.filter((section) => section.type !== "faq" && section.type !== "testimonials"),
@@ -145,9 +215,12 @@ describe("the pages tag the seller's Arabic text with lang=ar when the page is n
       it(`${style} ${mode}: French and English pages - every dir=auto text that starts with an Arabic letter carries lang=ar, no other does`, async () => {
         const store = await arabicStore(style, mode);
         let tagged = 0;
+        let arabicSeen = 0;
         for (const locale of ["fr", "en"] as const) {
           for (const productId of PAGES) {
             const html = render(store, locale, productId);
+            expect(arabicTextOutsideLangAr(html), `${style} ${mode} ${locale} ${productId ?? "home"}: Arabic text outside a lang=ar element`).toEqual([]);
+            arabicSeen += arabicTextCount(html);
             for (const element of autoElements(html)) {
               const arabic = ARABIC_FIRST.test(element.text);
               expect(element.tagged, `${style} ${mode} ${locale} ${productId ?? "home"}: <${element.tag}> "${element.text.slice(0, 40)}"`).toBe(arabic);
@@ -157,6 +230,7 @@ describe("the pages tag the seller's Arabic text with lang=ar when the page is n
         }
         // the scenario really exercised the sites (a page with nothing tagged would pass the loop above)
         expect(tagged).toBeGreaterThan(25);
+        expect(arabicSeen).toBeGreaterThan(40);
         store.database.close();
       });
 
@@ -176,7 +250,9 @@ describe("the pages tag the seller's Arabic text with lang=ar when the page is n
     const store = await arabicStore(template, "store");
     let tagged = 0;
     for (const productId of PAGES) {
-      for (const element of autoElements(render(store, "fr", productId))) {
+      const html = render(store, "fr", productId);
+      expect(arabicTextOutsideLangAr(html), `${template} ${productId ?? "home"}: Arabic text outside a lang=ar element`).toEqual([]);
+      for (const element of autoElements(html)) {
         expect(element.tagged, `${template} ${productId ?? "home"}: <${element.tag}> "${element.text.slice(0, 40)}"`).toBe(ARABIC_FIRST.test(element.text));
         if (element.tagged) tagged += 1;
       }
@@ -207,6 +283,74 @@ describe("the pages tag the seller's Arabic text with lang=ar when the page is n
       for (const tag of tags) expect(tag, tag).toContain('class="sf-lang-i"');
     }
     store.database.close();
+  });
+});
+
+
+describe("a tag that covers only the seller's words, never the words of the page next to them", () => {
+  async function french(mode: "landing" | "store") {
+    const [first, second] = PRODUCTS;
+    if (!first || !second) throw new Error("the Arabic sample products are missing");
+    const soldOutSmall = { ...first, productVariants: [{ id: "variant_small", name: ARABIC.small, price: 2_400, stock: 0, isActive: true }, { id: "variant_large", name: ARABIC.large, price: 2_900, stock: 3, isActive: true }] };
+    return publishTestStore({
+      template: "lumen",
+      locale: "fr",
+      storeName: ARABIC.storeName,
+      products: [soldOutSmall, second] as unknown as typeof SAMPLE_PRODUCTS,
+      shapeTheme: (theme) => {
+        (theme as unknown as { mode: string }).mode = mode;
+      },
+    });
+  }
+  /** Runs a check on the parsed page, then closes the window. */
+  function inPage(html: string, check: (body: HTMLElement) => void): void {
+    const window = new Window({ settings: { disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableCSSFileLoading: true, disableIframePageLoading: true } });
+    try {
+      check(new window.DOMParser().parseFromString(html, "text/html").body as unknown as HTMLElement);
+    } finally {
+      void window.happyDOM.close();
+    }
+  }
+
+  it("a sold-out option: its name is Arabic, the word 'sold out' next to it stays French", async () => {
+    const store = await french("landing");
+    inPage(render(store, "fr", null), (root) => {
+      const pill = root.querySelector("label.sf-pill.is-out");
+      expect(pill, "the sold-out option is drawn").not.toBeNull();
+      expect(pill?.querySelector('[lang="ar"]')?.textContent).toBe(ARABIC.small);
+      const soldOut = pill?.querySelector("small");
+      expect(soldOut, "the sold-out note is drawn").not.toBeNull();
+      expect(soldOut?.closest('[lang="ar"]')).toBeNull();
+    });
+    store.database.close();
+  });
+
+  it("the footer line 'store name · SahelFlow': the name is Arabic, the rest of the line is not", async () => {
+    const store = await french("store");
+    inPage(render(store, "fr", null), (root) => {
+      const line = root.querySelector(".sf-foot small");
+      expect(line, "the footer line is drawn").not.toBeNull();
+      expect(line?.closest('[lang="ar"]')).toBeNull();
+      const name = line?.querySelector('[lang="ar"]');
+      expect(name?.textContent).toBe(ARABIC.storeName);
+      expect(name?.getAttribute("dir")).toBe("auto");
+      expect(line?.textContent).toContain("SahelFlow");
+    });
+    store.database.close();
+  });
+
+  it("on an Arabic page the same two places are drawn with no extra element", async () => {
+    for (const mode of ["landing", "store"] as const) {
+      const store = await french(mode);
+      inPage(render(store, "ar", "product_00000001"), (root) => {
+        // the option name sits straight in the option's span, the footer line holds only text
+        expect(root.querySelectorAll("label.sf-pill").length, `${mode}: the options are drawn`).toBeGreaterThan(0);
+        expect(root.querySelectorAll("label.sf-pill > span > span").length, `${mode}: a span inside an option`).toBe(0);
+        expect(root.querySelectorAll(".sf-foot small > *").length, `${mode}: an element inside the footer line`).toBe(0);
+        expect(root.querySelectorAll('[lang="ar"]:not(.sf-lang-i)').length, `${mode}: lang=ar on an Arabic page`).toBe(0);
+      });
+      store.database.close();
+    }
   });
 });
 

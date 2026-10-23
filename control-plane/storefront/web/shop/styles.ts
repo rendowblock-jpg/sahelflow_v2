@@ -1,6 +1,6 @@
 import { formatPrice } from "./format";
 import type { ShopProduct, ShopTheme } from "./model";
-import { autoDir, esc, icon, imgAttrs, productHref, type Ctx } from "./ui";
+import { arabicAttrs, autoDir, esc, icon, imgAttrs, productHref, type Ctx } from "./ui";
 
 /**
  * The five styles (noir, lumen, atelier, pulse, bloom). Each one is a landing page (one scrollable page that sells one
@@ -188,10 +188,11 @@ export function styleHero(style: StyleId, ctx: Ctx, target: string): string {
   const headline = esc(headlineText);
   const bodyText = theme.hero.body.trim() || model.description.trim();
   const body = bodyText ? `<p class="sf-lead"${autoDir(ctx, bodyText)}>${esc(bodyText)}</p>` : "";
-  const label = esc(theme.hero.ctaLabel.trim() || t("storefront.view.navProducts"));
+  const labelText = theme.hero.ctaLabel.trim() || t("storefront.view.navProducts");
+  const label = esc(labelText);
   const withPic = model.products.filter((product) => product.images[0]);
   const count = esc(t("storefront.view.productsCount", { count: model.products.length }));
-  const go = (cls: string) => `<a class="${cls}" href="${target}"><span>${label}</span>${icon("arrow", "sf-flip")}</a>`;
+  const go = (cls: string) => `<a class="${cls}" href="${target}"><span${arabicAttrs(ctx, labelText)}>${label}</span>${icon("arrow", "sf-flip")}</a>`;
   const first = withPic[0];
 
   switch (style) {

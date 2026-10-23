@@ -16,7 +16,26 @@ const ARABIC_FIRST = /^[^\p{L}]*\p{Script=Arabic}/u;
  * Pass the text as the seller wrote it, not escaped: "&quot;" would hide the Arabic letter behind a Latin one.
  */
 export function autoDir(ctx: Pick<Ctx, "locale">, text: string): string {
-  return ctx.locale !== "ar" && ARABIC_FIRST.test(text) ? ' dir="auto" lang="ar"' : ' dir="auto"';
+  return arabicAttrs(ctx, text) || ' dir="auto"';
+}
+
+/**
+ * Escaped text for a place that has no element of its own around the words (a button label, an option name): Arabic text on a
+ * page that is not Arabic gets a tagged span, anything else is the escaped text as before. The span covers the words and nothing
+ * beside them, so a "sold out" note next to an Arabic option name keeps the page's language.
+ */
+export function arabicSpan(ctx: Pick<Ctx, "locale">, text: string): string {
+  const attrs = arabicAttrs(ctx, text);
+  return attrs ? `<span${attrs}>${esc(text)}</span>` : esc(text);
+}
+
+/**
+ * The same tag for the places that carry no dir="auto" today (a button label, an option name, the monogram letter): the tag
+ * when the text is Arabic and the page is not, and an empty string otherwise, so an Arabic page, and a page with Latin text,
+ * stay byte for byte what they were.
+ */
+export function arabicAttrs(ctx: Pick<Ctx, "locale">, text: string): string {
+  return ctx.locale !== "ar" && ARABIC_FIRST.test(text) ? ' dir="auto" lang="ar"' : "";
 }
 
 export type ShippingRow = { wilayaCode: string; mode: "home" | "desk"; feeDzd: number };

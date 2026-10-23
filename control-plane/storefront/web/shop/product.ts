@@ -2,7 +2,7 @@ import wilayas from "../../../../data/wilayas.json";
 
 import { currencySuffix, formatPrice, localeTag } from "./format";
 import { renderContact, renderFaq, renderRail, renderTestimonials } from "./home";
-import { autoDir, esc, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
+import { arabicAttrs, arabicSpan, autoDir, esc, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
 import type { ShopProduct } from "./model";
 import { frameProduct, styleOf, type ProductParts } from "./styles";
 
@@ -55,7 +55,7 @@ function variantPicker(ctx: Ctx, product: ShopProduct, selected: string): string
   const pills = product.variants
     .map((variant) => {
       const out = variant.remaining <= 0;
-      return `<label class="sf-pill${out ? " is-out" : ""}"><input type="radio" name="variant" value="${esc(variant.itemKey)}"${variant.itemKey === selected ? " checked" : ""}${out ? " disabled" : ""}><span>${esc(variant.label ?? ctx.t("storefront.view.landing.variantStandard"))}${out ? ` <small>· ${esc(ctx.t("storefront.view.landing.soldOut"))}</small>` : ""}</span></label>`;
+      return `<label class="sf-pill${out ? " is-out" : ""}"><input type="radio" name="variant" value="${esc(variant.itemKey)}"${variant.itemKey === selected ? " checked" : ""}${out ? " disabled" : ""}><span>${arabicSpan(ctx, variant.label ?? ctx.t("storefront.view.landing.variantStandard"))}${out ? ` <small>· ${esc(ctx.t("storefront.view.landing.soldOut"))}</small>` : ""}</span></label>`;
     })
     .join("");
   return `<fieldset class="sf-opts"><legend>${esc(ctx.t("storefront.view.landing.variant"))}</legend><div class="sf-pills">${pills}</div></fieldset>`;
@@ -154,11 +154,12 @@ export function renderProduct(ctx: Ctx, product: ShopProduct): ProductPage {
   const modeCard = (mode: "home" | "desk", label: string) =>
     `<label class="sf-mode"><input type="radio" name="mode" value="${mode}"><span class="sf-mode-in"><b>${esc(label)}</b><small data-sf="fee-${mode}">—</small></span></label>`;
 
+  const codText = theme.checkout.showCodPromise && theme.checkout.codPromiseText.trim() ? theme.checkout.codPromiseText.trim() : t("storefront.view.landing.codBadge");
   const form = sold
     ? `<div class="sf-form sf-form--out"><p>${esc(t("storefront.view.landing.soldOut"))}</p></div>`
     : `<form id="order" class="sf-form" novalidate autocomplete="on" aria-labelledby="order-title">
 <h2 id="order-title" class="sf-h3">${esc(t("storefront.view.completeOrder"))}</h2>
-<p class="sf-cod">${icon("check")}<span>${esc(theme.checkout.showCodPromise && theme.checkout.codPromiseText.trim() ? theme.checkout.codPromiseText.trim() : t("storefront.view.landing.codBadge"))}</span></p>
+<p class="sf-cod">${icon("check")}<span${arabicAttrs(ctx, codText)}>${esc(codText)}</span></p>
 <div class="sf-qty"><span id="qty-label">${esc(t("storefront.view.landing.quantity"))}</span><div class="sf-stepper" role="group" aria-labelledby="qty-label"><button type="button" data-sf="qty-minus" aria-label="${esc(t("storefront.view.decreaseQty"))}">${icon("minus")}</button><output data-sf="qty" aria-live="polite">1</output><button type="button" data-sf="qty-plus" aria-label="${esc(t("storefront.view.increaseQty"))}">${icon("plus")}</button></div></div>
 <fieldset class="sf-grp"><legend>${esc(t("storefront.shop.stepContact"))}</legend>
 ${field("name", t("storefront.view.fullName"), '<input id="f-name" name="name" type="text" autocomplete="name" maxlength="120" required aria-describedby="e-name">')}

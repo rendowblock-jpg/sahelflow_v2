@@ -1,5 +1,5 @@
 import { formatPrice } from "./format";
-import { autoDir, esc, httpsUrl, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
+import { arabicSpan, autoDir, esc, httpsUrl, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
 import type { ShopProduct, ShopSection } from "./model";
 import { lumenIndex, styleHero, styleOf } from "./styles";
 
@@ -55,7 +55,7 @@ function renderHero(ctx: Ctx, target: string): string {
   const headline = theme.hero.headline.trim() || model.name;
   const body = theme.hero.body.trim() || model.description;
   const cta = theme.hero.ctaLabel.trim() || (style === "centered" ? t("storefront.studio.orderNow") : t("storefront.studio.shopNow"));
-  const text = `<div class="sf-hero-text"><p class="sf-eyebrow"${autoDir(ctx, eyebrow)}>${esc(eyebrow)}</p><h1 class="sf-h1"${autoDir(ctx, headline)}>${esc(headline)}</h1>${body ? `<p class="sf-lead"${autoDir(ctx, body)}>${esc(body)}</p>` : ""}<a class="sf-btn" href="${target}">${esc(cta)}${icon("arrow", "sf-flip")}</a></div>`;
+  const text = `<div class="sf-hero-text"><p class="sf-eyebrow"${autoDir(ctx, eyebrow)}>${esc(eyebrow)}</p><h1 class="sf-h1"${autoDir(ctx, headline)}>${esc(headline)}</h1>${body ? `<p class="sf-lead"${autoDir(ctx, body)}>${esc(body)}</p>` : ""}<a class="sf-btn" href="${target}">${arabicSpan(ctx, cta)}${icon("arrow", "sf-flip")}</a></div>`;
   const withPicture = model.products.filter((product) => product.images[0]);
   const pics = withPicture.slice(0, style === "editorial" ? 3 : 1);
   const first = withPicture[0];
