@@ -13,6 +13,7 @@ import {
 } from "@/lib/orders/manual-order-authority";
 import { SahelFlowError } from "@/types/errors";
 import {
+  COURIER_PER_CYCLE,
   COURIER_PROVIDER_FAILURE_LIMIT,
   OPEN_COURIER_STATUSES,
   RECONCILE_INTERVAL_MS,
@@ -301,6 +302,57 @@ describe("scheduled courier reconciliation (INT-03)", () => {
     expect(call).toBe(5);
     expect(report.courier.stoppedProviders).toEqual([]);
     expect(report.courier).toMatchObject({ attempted: 5, synced: 1, failed: 4 });
+  });
+});
+
+describe("scheduled courier reconciliation: what is selected (INT-03)", () => {
+  it("does not let legacy deliveries use up the batch of canonical ones", async () => {
+    for (let index = 0; index < 3; index += 1) {
+      await seedDelivery({ sourceMetadata: null });
+    }
+    const canonical = [await seedDelivery(), await seedDelivery()];
+    const { deps, courierCalls } = recorder();
+
+    const report = await runScheduledReconcile(context, newReconcileState(), deps, {
+      now: T0,
+      courierPerCycle: 2,
+    });
+
+    expect([...courierCalls].sort()).toEqual(canonical.map((c) => c.order.id).sort());
+    expect(report.courier.attempted).toBe(2);
+  });
+
+  it("skips an order whose metadata names the manual authority but whose source is another one", async () => {
+    // seedDelivery stamps the trusted-manual metadata by default; a storefront source with it is not canonical.
+    await seedDelivery({ source: "storefront" });
+    const { deps, courierCalls } = recorder();
+
+    const report = await runScheduledReconcile(context, newReconcileState(), deps, {
+      now: T0,
+    });
+
+    expect(courierCalls).toEqual([]);
+    expect(report.courier.attempted).toBe(0);
+  });
+
+  it("runs a cycle every ten minutes and takes forty parcels at most", () => {
+    // These two numbers are what a courier's rate limit sees; pin them so a change is a decision.
+    expect(RECONCILE_INTERVAL_MS).toBe(10 * 60_000);
+    expect(COURIER_PER_CYCLE).toBe(40);
+  });
+
+  it("takes the default batch when no size is given", async () => {
+    for (let index = 0; index < COURIER_PER_CYCLE + 3; index += 1) {
+      await seedDelivery();
+    }
+    const { deps, courierCalls } = recorder();
+
+    const report = await runScheduledReconcile(context, newReconcileState(), deps, {
+      now: T0,
+    });
+
+    expect(courierCalls).toHaveLength(COURIER_PER_CYCLE);
+    expect(report.courier.attempted).toBe(COURIER_PER_CYCLE);
   });
 });
 

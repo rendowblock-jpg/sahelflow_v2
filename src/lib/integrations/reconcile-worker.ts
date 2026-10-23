@@ -43,6 +43,10 @@ export function startScheduledReconcileWorker(): void {
   };
 
   const tick = async () => {
+    // Defence in depth, as in the sibling workers. With the single timer chain
+    // below the next tick is only scheduled after this one has finished, so
+    // `running` is already false here today; the guard matters the day a second
+    // way to trigger a tick is added. No test can reach it (mutation W4).
     if (state.running) return schedule(TICK_MS);
     state.running = true;
     try {
