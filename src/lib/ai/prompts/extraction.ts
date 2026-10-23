@@ -4,7 +4,7 @@
  * Major upgrades:
  *  - 7 few-shot examples covering Darija, Arabic script, French, code-switching
  *  - Arabic-Indic digit normalization guidance (٠١٢٣٤٥٦٧٨٩ → 0123456789)
- *  - Full 58-wilaya enumeration so Gemini returns the canonical French name
+ *  - Full 69-wilaya enumeration so Gemini returns the canonical French name
  *  - Common Darija COD vocabulary (cash = "khlas", delivery = "tawsil", etc.)
  *  - Explicit handling of exchange orders (بدل / échange)
  *  - Price-with-dinar-word handling ("خمسة الاف" = 5000)
@@ -56,14 +56,16 @@ Number words in Darija:
 
 ## Wilaya enumeration
 
-Algeria has 58 wilayas. Return the French name (canonical form). Common ones:
+Algeria has 69 wilayas (11 were created in 2026: 59 to 69). Return the French name (canonical form). Common ones:
 Alger, Oran, Constantine, Annaba, Blida, Batna, Sétif, Djelfa, Sidi Bel Abbès,
 Biskra, Tébessa, Tlemcen, Tiaret, Béjaïa, Tizi Ouzou, Skikda, Médéa, Mostaganem,
 Bordj Bou Arréridj, Chlef, Boumerdès, Bouira, El Oued, Ghardaïa, Khenchela,
 Souk Ahras, Tipaza, Mila, Aïn Defla, Naâma, Tissemsilt, Relizane, Ouargla,
 Mascara, Jijel, Laghouat, M'Sila, Adrar, Béchar, Tamanrasset, Illizi,
 Bordj Badji Mokhtar, Djanet, In Guezzam, In Salah, Touggourt, El M'Ghair,
-El Meniaa, Ouled Djellal, Béni Abbès, Timimoun, Tindouf
+El Meniaa, Ouled Djellal, Béni Abbès, Timimoun, Tindouf, Aflou, Barika,
+El Kantara, Bir El Ater, El Aricha, Ksar Chellala, Aïn Ouessara, Messaad,
+Ksar El Boukhari, Bou Saada, El Abiodh Sidi Cheikh
 
 If the message mentions a wilaya number (e.g. "wilaya 16"), map:
 1=Adrar, 2=Chlef, 3=Laghouat, 4=Oum El Bouaghi, 5=Batna, 6=Béjaïa,
@@ -76,7 +78,9 @@ If the message mentions a wilaya number (e.g. "wilaya 16"), map:
 41=Souk Ahras, 42=Tipaza, 43=Mila, 44=Aïn Defla, 45=Naâma, 46=Aïn Témouchent,
 47=Ghardaïa, 48=Relizane, 49=Timimoun, 50=Bordj Badji Mokhtar, 51=Ouled Djellal,
 52=Béni Abbès, 53=In Salah, 54=In Guezzam, 55=Touggourt, 56=Djanet,
-57=El M'Ghair, 58=El Meniaa
+57=El M'Ghair, 58=El Meniaa, 59=Aflou, 60=Barika, 61=El Kantara,
+62=Bir El Ater, 63=El Aricha, 64=Ksar Chellala, 65=Aïn Ouessara, 66=Messaad,
+67=Ksar El Boukhari, 68=Bou Saada, 69=El Abiodh Sidi Cheikh
 
 ## Phone number normalization
 
