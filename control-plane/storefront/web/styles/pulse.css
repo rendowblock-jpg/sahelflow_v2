@@ -35,6 +35,14 @@ body[data-voice=pulse] .px-track{display:inline-flex;width:max-content;animation
 body[data-voice=pulse] .px-set{display:inline-flex;flex:none}
 body[data-voice=pulse] .px-set span{position:relative;padding-inline:26px}
 body[data-voice=pulse] .px-set span::after{content:"";position:absolute;inset-inline-end:-4px;top:50%;width:9px;height:9px;margin-top:-4px;background:currentColor;transform:rotate(45deg)}
+/* less motion: no slide, one copy of the words, wrapped, centred and compact (the page-wide reduced-motion rule used to freeze the first 390 px of the 4-copy track, cut mid-word) */
+@media (prefers-reduced-motion:reduce){
+body[data-voice=pulse] .px-marquee{white-space:normal;text-align:center;padding-block:6px;font-size:13px;line-height:1.35}
+body[data-voice=pulse] .px-marquee .px-track{animation:none;display:block;width:auto}
+body[data-voice=pulse] .px-marquee .px-set{display:flex;flex-wrap:wrap;justify-content:center}
+body[data-voice=pulse] .px-marquee .px-set span{padding-inline:14px}
+body[data-voice=pulse] .px-marquee .px-set~.px-set{display:none}
+}
 
 /* the product: a poster */
 body[data-voice=pulse] .px-hero{padding-block:26px 18px}
