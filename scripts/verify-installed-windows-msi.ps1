@@ -1217,7 +1217,22 @@ $rotationLaunch = Wait-ForLaunchOutcome `
     -Phase "launch-after-protected-rotation"
 $launches += $rotationLaunch
 if ($rotationLaunch.outcome -ne "ready") {
-    throw "SahelFlow did not reopen with the rotated protected installation root."
+    # This line failed twice in CI (PR 593 and the first attempt of Internal.46), each time about 2 s after the
+    # rotation, and the artifact never said why. Put what the launch observed into the message so the next
+    # failure names its own cause: how it ended, the exit code, how long it lived, the startup diagnostic the
+    # app wrote, and the processes still running.
+    $rotationLaunchDetail = [ordered]@{
+        outcome = $rotationLaunch.outcome
+        exitCode = $rotationLaunch.exitCode
+        livedMs = [math]::Round(((Get-Date) - $rotationLaunchStartedAt).TotalMilliseconds)
+        endpointState = $rotationLaunch.endpoint.state
+        diagnostic = $rotationLaunch.diagnostic
+        processTree = @($rotationLaunch.processTree | Select-Object Name, ProcessId, ParentProcessId)
+    } | ConvertTo-Json -Depth 5 -Compress
+    if ($rotationLaunchDetail.Length -gt 2000) {
+        $rotationLaunchDetail = $rotationLaunchDetail.Substring(0, 2000)
+    }
+    throw "SahelFlow did not reopen with the rotated protected installation root. Observed launch: $rotationLaunchDetail"
 }
 $closures += Close-SahelFlowNormally -Process $rotationLaunchProcess
 
