@@ -15,8 +15,9 @@ import type { ActiveStockHold } from "@/lib/orders/stock-availability";
  *
  * Manual confirmation reads the same fact with its own per-product query
  * (activeStockHolds in manual-confirmation.ts), inside its transaction. The two
- * must keep agreeing; stock-hold-producers.test.ts pins the producers of a hold
- * and the SQL of both readers.
+ * must keep agreeing. stock-hold-producers.test.ts pins the producers of a hold
+ * and manual confirmation's reader; THIS reader is covered by
+ * src/app/api/__tests__/storefront-submit-stock-holds.test.ts on real SQLite.
  */
 
 type HoldRow = {
