@@ -127,6 +127,48 @@ describe("AutoPullPanel", () => {
     expect(sentBody(1)).toEqual({ courier: false });
   });
 
+  it("moves the switch to what the server stored once a save is answered", async () => {
+    answer(200, state(true, true));
+    answer(200, state(false, true));
+    await mount("courier");
+    const toggle = await screen.findByRole("switch");
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
+
+    await act(async () => { fireEvent.click(toggle); });
+
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("false"));
+    await waitFor(() => expect(screen.getByText(getAutoPullCopy("en").courier.offHint)).toBeTruthy());
+  });
+
+  it("moves it back on, too", async () => {
+    answer(200, state(false, true));
+    answer(200, state(true, true));
+    await mount("courier");
+    const toggle = await screen.findByRole("switch");
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("false"));
+
+    await act(async () => { fireEvent.click(toggle); });
+
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
+  });
+
+  it("shows the switch as disabled while a save is in flight, not only ignoring the click", async () => {
+    answer(200, state(true, true));
+    let release: (value: Response) => void = () => undefined;
+    fetchMock.mockReturnValueOnce(new Promise<Response>((resolve) => { release = resolve; }));
+    await mount("courier");
+    const toggle = await screen.findByRole("switch");
+    await waitFor(() => expect(toggle.hasAttribute("disabled")).toBe(false));
+
+    await act(async () => { fireEvent.click(toggle); });
+
+    expect(toggle.hasAttribute("disabled")).toBe(true);
+    await act(async () => {
+      release(new Response(JSON.stringify(state(false, true)), { status: 200, headers: { "Content-Type": "application/json" } }));
+    });
+    await waitFor(() => expect(toggle.hasAttribute("disabled")).toBe(false));
+  });
+
   it("sends the shop switch under its own key", async () => {
     answer(200, state(true, true));
     answer(200, state(true, false));
