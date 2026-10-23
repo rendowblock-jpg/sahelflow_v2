@@ -108,9 +108,10 @@ export interface CanonicalCodWorkspaceSummary {
   /** Orders left out of every list and total above (MNY-03). */
   flaggedOrders: CanonicalCodFlaggedOrder[];
   /**
-   * True when the read was capped (MNY-01): more delivered orders than the
-   * newest ORDER_WINDOW, or more settlements than the newest SETTLEMENT_WINDOW,
-   * exist, so the totals above cover only the newest rows.
+   * True when a hard cap stopped the read (MNY-01): more delivered orders
+   * than ORDER_HARD_CAP, or more settlements than SETTLEMENT_HARD_CAP, exist,
+   * so the totals above cover only the newest rows. Below the caps every
+   * order and settlement is read, in pages.
    */
   truncated: { orders: boolean; settlements: boolean };
 }
@@ -271,10 +272,52 @@ function lineAmounts(lines: SettlementLineShape[]): {
   };
 }
 
-/** Newest delivered orders read for the workspace; one more is fetched to detect a cap. */
-const ORDER_WINDOW = 5000;
-/** Newest settlements read for the workspace; one more is fetched to detect a cap. */
-const SETTLEMENT_WINDOW = 100;
+/**
+ * Delivered orders are read in pages of this size, newest first. The page also bounds every IN list the position
+ * builder sends (SQLite allows 32,766 variables per statement), so it must stay far below that.
+ */
+const ORDER_PAGE = 1000;
+/**
+ * Delivered orders read in all; one more is fetched to know that the cap cut the read (MNY-01). Orders are read by id, so when the cap
+ * cuts the read it leaves out the oldest created orders. Measured on SQLite: 60,000 orders read in a few seconds, linear in the count.
+ */
+const ORDER_HARD_CAP = 100_000;
+/** Settlements (each with its lines) are read in pages of this size, newest first. */
+const SETTLEMENT_PAGE = 100;
+/** Settlements read in all; one more is fetched to know that the cap cut the read (MNY-01). */
+const SETTLEMENT_HARD_CAP = 2000;
+/** The settlement list the workspace shows; totals and review counts cover every settlement read. */
+const SETTLEMENT_DISPLAY = 100;
+/** Ids per IN list when a page of settlement lines points at orders. */
+const ID_LIST_CHUNK = 1000;
+
+/** The part of an order row the position builder reads. */
+interface DeliveredOrderRow {
+  id: string;
+  orderNumber: string;
+  version: number;
+  deliveredAt: Date | null;
+  source: unknown;
+  sourceMetadata: unknown;
+  customer: { name: string };
+}
+
+const DELIVERED_ORDER_SELECT = {
+  id: true,
+  orderNumber: true,
+  version: true,
+  deliveredAt: true,
+  source: true,
+  sourceMetadata: true,
+  customer: { select: { name: true } },
+} as const;
+
+const DELIVERED_ORDER_WHERE = {
+  deletedAt: null,
+  status: "delivered",
+  deliveryState: "delivered",
+  codState: { not: null },
+} as const;
 
 interface CanonicalCodOrderPositions {
   positions: CanonicalCodOrderPosition[];
@@ -293,42 +336,77 @@ function receivableFlagReason(
 
 /**
  * Build the COD position of every delivered canonical order, or (with
- * `orderId`) of that one order through a direct query that does not depend on
- * the order being inside the newest-ORDER_WINDOW window. An order whose
- * receivable record is inconsistent is flagged, not thrown: one bad row must
- * not take down the workspace or the positions of unrelated orders.
+ * `orderId`) of that one order through a direct query. The orders are read in
+ * pages of ORDER_PAGE by id (the primary key: each page costs the page size, not
+ * the table size, where Prisma's cursor+skip re-read every remaining row and a
+ * delivery-date order has no index) up to ORDER_HARD_CAP, then listed newest
+ * delivery first. The totals are exact below the cap and `truncated` is true
+ * only when the cap cut the read (MNY-01). An order whose receivable record is inconsistent is flagged,
+ * not thrown: one bad row must not take down the workspace or the positions
+ * of unrelated orders.
  */
 async function buildOrderPositions(
   context: BusinessPrincipalContext,
   options: { orderId?: string } = {},
 ): Promise<CanonicalCodOrderPositions> {
-  const scoped = options.orderId !== undefined;
-  const fetched = await context.prisma.order.findMany({
-    where: {
-      deletedAt: null,
-      status: "delivered",
-      deliveryState: "delivered",
-      codState: { not: null },
-      ...(options.orderId !== undefined ? { id: options.orderId } : {}),
-    },
-    select: {
-      id: true,
-      orderNumber: true,
-      version: true,
-      source: true,
-      sourceMetadata: true,
-      customer: { select: { name: true } },
-    },
-    orderBy: { deliveredAt: "desc" },
-    take: scoped ? 1 : ORDER_WINDOW + 1,
-  });
-  const truncated = !scoped && fetched.length > ORDER_WINDOW;
-  const orders = truncated ? fetched.slice(0, ORDER_WINDOW) : fetched;
+  if (options.orderId !== undefined) {
+    const one = await context.prisma.order.findMany({
+      where: { ...DELIVERED_ORDER_WHERE, id: options.orderId },
+      select: DELIVERED_ORDER_SELECT,
+      orderBy: { deliveredAt: "desc" },
+      take: 1,
+    });
+    const part = await positionsForOrders(context, one);
+    return { ...part, truncated: false };
+  }
+
+  const positions: CanonicalCodOrderPosition[] = [];
+  const flagged: CanonicalCodFlaggedOrder[] = [];
+  /** Delivery time of every order read (an order with no delivery date sorts after all the others). */
+  const deliveredAtById = new Map<string, number>();
+  let seen = 0;
+  let cursor: string | undefined;
+  let truncated = false;
+  for (;;) {
+    const take = Math.min(ORDER_PAGE, ORDER_HARD_CAP + 1 - seen);
+    const page: DeliveredOrderRow[] = await context.prisma.order.findMany({
+      where: cursor === undefined ? DELIVERED_ORDER_WHERE : { ...DELIVERED_ORDER_WHERE, id: { lt: cursor } },
+      select: DELIVERED_ORDER_SELECT,
+      orderBy: { id: "desc" },
+      take,
+    });
+    const rows = seen + page.length > ORDER_HARD_CAP ? page.slice(0, ORDER_HARD_CAP - seen) : page;
+    truncated = rows.length < page.length;
+    for (const row of rows) deliveredAtById.set(row.id, row.deliveredAt?.getTime() ?? Number.NEGATIVE_INFINITY);
+    const part = await positionsForOrders(context, rows);
+    for (const position of part.positions) positions.push(position);
+    for (const entry of part.flagged) flagged.push(entry);
+    seen += rows.length;
+    const last = page[page.length - 1];
+    if (truncated || page.length < take || last === undefined) break;
+    cursor = last.id;
+  }
+  const newestDeliveryFirst = (a: { orderId: string }, b: { orderId: string }): number => {
+    const timeA = deliveredAtById.get(a.orderId) ?? Number.NEGATIVE_INFINITY;
+    const timeB = deliveredAtById.get(b.orderId) ?? Number.NEGATIVE_INFINITY;
+    if (timeA !== timeB) return timeB > timeA ? 1 : -1;
+    return a.orderId < b.orderId ? 1 : a.orderId > b.orderId ? -1 : 0;
+  };
+  positions.sort(newestDeliveryFirst);
+  flagged.sort(newestDeliveryFirst);
+  return { positions, flagged, truncated };
+}
+
+/** The positions of one page of delivered orders. */
+async function positionsForOrders(
+  context: BusinessPrincipalContext,
+  orders: readonly DeliveredOrderRow[],
+): Promise<{ positions: CanonicalCodOrderPosition[]; flagged: CanonicalCodFlaggedOrder[] }> {
   const canonical = orders.filter((order) =>
     isTrustedManualOrderAuthority(order.source, order.sourceMetadata),
   );
   const orderIds = canonical.map((order) => order.id);
-  if (orderIds.length === 0) return { positions: [], flagged: [], truncated };
+  if (orderIds.length === 0) return { positions: [], flagged: [] };
 
   const [receivableMovements, collections, courierDeductions, lines] = await Promise.all([
     context.prisma.financialMovement.findMany({
@@ -467,19 +545,15 @@ async function buildOrderPositions(
       lastSettlementAt: lineSummary.lastAt,
     };
   });
-  return { positions, flagged, truncated };
+  return { positions, flagged };
 }
 
-async function buildSettlementSummaries(
-  context: BusinessPrincipalContext,
-): Promise<{
-  summaries: CanonicalCodSettlementSummary[];
-  reviewLines: CanonicalCodReviewLine[];
-  truncated: boolean;
-}> {
-  const fetchedSettlements = await context.prisma.codSettlement.findMany({
-    orderBy: { receivedAt: "desc" },
-    take: SETTLEMENT_WINDOW + 1,
+/** One page of settlements, newest first, each with its lines (the type of a row is taken from this call, so it keeps the lines). */
+function readSettlementPage(context: BusinessPrincipalContext, take: number, cursor: string | undefined) {
+  return context.prisma.codSettlement.findMany({
+    orderBy: [{ receivedAt: "desc" }, { id: "desc" }],
+    take,
+    ...(cursor !== undefined ? { cursor: { id: cursor }, skip: 1 } : {}),
     include: {
       lines: {
         include: {
@@ -489,10 +563,42 @@ async function buildSettlementSummaries(
       },
     },
   });
-  const truncated = fetchedSettlements.length > SETTLEMENT_WINDOW;
-  const settlements = truncated
-    ? fetchedSettlements.slice(0, SETTLEMENT_WINDOW)
-    : fetchedSettlements;
+}
+type SettlementWithLines = Awaited<ReturnType<typeof readSettlementPage>>[number];
+
+async function buildSettlementSummaries(
+  context: BusinessPrincipalContext,
+): Promise<{
+  summaries: CanonicalCodSettlementSummary[];
+  reviewLines: CanonicalCodReviewLine[];
+  truncated: boolean;
+}> {
+  const summaries: CanonicalCodSettlementSummary[] = [];
+  const reviewLines: CanonicalCodReviewLine[] = [];
+  let seen = 0;
+  let cursor: string | undefined;
+  let truncated = false;
+  for (;;) {
+    const take = Math.min(SETTLEMENT_PAGE, SETTLEMENT_HARD_CAP + 1 - seen);
+    const page = await readSettlementPage(context, take, cursor);
+    const rows = seen + page.length > SETTLEMENT_HARD_CAP ? page.slice(0, SETTLEMENT_HARD_CAP - seen) : page;
+    truncated = rows.length < page.length;
+    await summarizeSettlementPage(context, rows, summaries, reviewLines);
+    seen += rows.length;
+    const last = page[page.length - 1];
+    if (truncated || page.length < take || last === undefined) break;
+    cursor = last.id;
+  }
+  return { summaries, reviewLines, truncated };
+}
+
+/** Adds one page of settlements to the summaries and to the lines that need review. */
+async function summarizeSettlementPage(
+  context: BusinessPrincipalContext,
+  settlements: readonly SettlementWithLines[],
+  summaries: CanonicalCodSettlementSummary[],
+  reviewLines: CanonicalCodReviewLine[],
+): Promise<void> {
   const matchedOrderIds = Array.from(
     new Set(
       settlements.flatMap((settlement) =>
@@ -503,16 +609,15 @@ async function buildSettlementSummaries(
       ),
     ),
   );
-  const orders = matchedOrderIds.length
-    ? await context.prisma.order.findMany({
-        where: { id: { in: matchedOrderIds }, deletedAt: null },
-        select: { id: true, orderNumber: true, version: true },
-      })
-    : [];
-  const orderById = new Map(orders.map((order) => [order.id, order]));
+  const orderById = new Map<string, { id: string; orderNumber: string; version: number }>();
+  for (let from = 0; from < matchedOrderIds.length; from += ID_LIST_CHUNK) {
+    const found = await context.prisma.order.findMany({
+      where: { id: { in: matchedOrderIds.slice(from, from + ID_LIST_CHUNK) }, deletedAt: null },
+      select: { id: true, orderNumber: true, version: true },
+    });
+    for (const order of found) orderById.set(order.id, order);
+  }
 
-  const summaries: CanonicalCodSettlementSummary[] = [];
-  const reviewLines: CanonicalCodReviewLine[] = [];
   for (const settlement of settlements) {
     let grossAmount = 0;
     let feeAmount = 0;
@@ -577,8 +682,6 @@ async function buildSettlementSummaries(
       lineCount: settlement.lines.length,
     });
   }
-
-  return { summaries, reviewLines, truncated };
 }
 
 export async function getCanonicalCodOrderPosition(
@@ -648,7 +751,7 @@ export async function getCanonicalCodWorkspaceSummary(
     awaitingCollection,
     awaitingRemittance,
     disputed,
-    recentSettlements: settlementData.summaries,
+    recentSettlements: settlementData.summaries.slice(0, SETTLEMENT_DISPLAY),
     reviewLines: settlementData.reviewLines,
     flaggedOrders: orderData.flagged,
     truncated: {
