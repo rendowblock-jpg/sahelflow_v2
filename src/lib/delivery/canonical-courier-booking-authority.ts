@@ -31,6 +31,7 @@ import {
   type ShipmentRequest,
   type ShipmentResult,
 } from "@/lib/integrations/delivery/types";
+import { carrierWilayaName } from "./carrier-wilaya";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
 import {
   isStopDeskPlaceholder,
@@ -381,7 +382,7 @@ export async function queueCanonicalCourierBooking(
         customer: {
           name: order.customer.name,
           phone: order.customer.phone,
-          wilaya: order.wilaya,
+          wilaya: carrierWilayaName(order.wilaya),
           commune: order.commune,
           address: order.address,
         },
