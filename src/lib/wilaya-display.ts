@@ -44,3 +44,18 @@ export function displayWilaya(
   if (!row) return value;
   return locale === "ar" ? row.nameAr || row.name : row.name;
 }
+
+const BY_CODE = new Map<number, WilayaRow>((wilayas as WilayaRow[]).map((row) => [row.code, row]));
+
+/**
+ * Every way an order can hold this wilaya in its `wilaya` column: a manual order keeps the French name, a
+ * hosted-storefront order keeps the 2-digit code, and an Arabic spelling is possible too. The orders list filters
+ * with these (`wilaya IN (...)`). Null when `code` is not a wilaya.
+ */
+export function wilayaStoredSpellings(code: number): string[] | null {
+  if (!Number.isInteger(code)) return null;
+  const row = BY_CODE.get(code);
+  if (!row) return null;
+  const spellings = [row.name, row.nameAr ?? "", String(code), String(code).padStart(2, "0")];
+  return spellings.filter((value, index) => value !== "" && spellings.indexOf(value) === index);
+}
