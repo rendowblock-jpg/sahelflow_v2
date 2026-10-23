@@ -8,6 +8,8 @@ import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
 import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import { db, shopContext } from "@/lib/db";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
+import { stockHeldAgainstOnHand } from "@/lib/orders/stock-availability";
+import { loadActiveStockHolds, stockHoldKey } from "@/lib/orders/stock-holds";
 import { captureOrderPlacement } from "@/lib/meta/capi-placement";
 import { fireCapiStageForOrder } from "@/lib/meta/capi-triggers";
 import { convertAbandonedCart } from "@/lib/storefront/abandoned-cart-service";
@@ -50,11 +52,16 @@ type SellableLine = {
   quantity: number;
 };
 
-function sellableKey(productId: string, productVariantId: string | null): string {
-  return `${productId}\u0000${productVariantId ?? ""}`;
-}
+const sellableKey = stockHoldKey;
 
-/** Catalog stock minus active reservations. The request quantity ceiling is not stock. */
+/**
+ * Catalog stock minus the active holds that are NOT already out of it (LEAD-02).
+ * A manual confirmation lowers stock and opens a hold for the same quantity, so
+ * that unit must not be taken off a second time; a storefront hold is carved out
+ * of physical stock without lowering it and still is. The rule is
+ * stockHeldAgainstOnHand (stock-availability.ts); anything it cannot classify is
+ * counted in full. The request quantity ceiling is not stock.
+ */
 async function sellableStockExhausted(items: readonly SellableLine[]): Promise<boolean> {
   const demand = new Map<string, SellableLine>();
   for (const item of items) {
@@ -77,17 +84,7 @@ async function sellableStockExhausted(items: readonly SellableLine[]): Promise<b
     },
   });
   const productById = new Map(products.map((product) => [product.id, product]));
-  const reservations = await db.inventoryReservation.findMany({
-    where: { state: "active", productId: { in: productIds } },
-    select: { productId: true, productVariantId: true, quantity: true },
-  });
-  const reservedByKey = new Map<string, number>();
-  for (const reservation of reservations) {
-    const key = sellableKey(reservation.productId, reservation.productVariantId);
-    const quantity = (reservedByKey.get(key) ?? 0) + reservation.quantity;
-    if (!Number.isSafeInteger(quantity)) return true;
-    reservedByKey.set(key, quantity);
-  }
+  const holdsByKey = await loadActiveStockHolds(db, productIds);
   for (const item of demand.values()) {
     const product = productById.get(item.productId);
     if (!product) return true;
@@ -101,7 +98,17 @@ async function sellableStockExhausted(items: readonly SellableLine[]): Promise<b
     } else {
       stock = product.stock;
     }
-    const reserved = reservedByKey.get(sellableKey(item.productId, item.productVariantId)) ?? 0;
+    let reserved: number;
+    try {
+      reserved = stockHeldAgainstOnHand(
+        holdsByKey.get(sellableKey(item.productId, item.productVariantId)) ?? [],
+      );
+    } catch {
+      // Defensive and not reachable today: the database engine refuses to read a
+      // quantity outside Int before this point ("does not fit in an INT column"),
+      // so no test can reach this. If a hold ever were out of range, refuse the sale.
+      return true;
+    }
     if (!Number.isSafeInteger(stock) || stock - reserved < item.quantity) return true;
   }
   return false;
