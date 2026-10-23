@@ -126,21 +126,23 @@ describe("remote tool-result final privacy boundary", () => {
         orders: [],
       },
     ) as Record<string, unknown>;
-    const duplicateFrenchName = serializeToolResultForRemoteModel(
-      "get_order_details",
+    // "Larbaa" is a real commune of three different wilayas (Batna, Blida and Tissemsilt):
+    // without a wilaya it matches several identities. (The old "El Ogla in Tébessa" fixture was a
+    // duplicate-row data error, fixed; the same-wilaya rule is pinned in location-authority.test.ts.)
+    const sharedFrenchName = serializeToolResultForRemoteModel(
+      "get_customer_details",
       {
-        orderNumber: "ORD-5202",
-        status: "confirmed",
-        wilaya: "Tébessa",
-        commune: "El Ogla",
+        id: "customer-shared-commune",
+        name: "Samir",
+        commune: "Larbaa",
+        orders: [],
       },
     ) as Record<string, unknown>;
 
     expect(ambiguousAlias.wilaya).toBe("Tiaret");
     expect(ambiguousAlias.commune).toBeNull();
     expect(aliasWithoutWilaya.commune).toBeNull();
-    expect(duplicateFrenchName.wilaya).toBe("Tébessa");
-    expect(duplicateFrenchName.commune).toBeNull();
+    expect(sharedFrenchName.commune).toBeNull();
   });
 
   it("canonicalizes or withholds location fields across customer-linked reads", () => {
