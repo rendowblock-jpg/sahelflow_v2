@@ -14,6 +14,7 @@ body[data-voice=reel]{
 html[lang=ar] body[data-voice=reel]{--sf-display:"Reel Ruqaa","Reel Display","Noto Naskh Arabic",serif;--lh-body:1.9}
 body[data-voice=reel] :is(.sf-h1,.sf-h2,.sf-h3){font-weight:800;line-height:.98;text-transform:uppercase;font-stretch:62%}
 html[lang=ar] body[data-voice=reel] :is(.sf-h1,.sf-h2,.sf-h3){font-weight:700;line-height:1.3;text-transform:none;font-stretch:normal}
+html:not([lang=ar]) body[data-voice=reel] :is(.sf-h1,.sf-h2,.sf-h3):lang(ar){line-height:1.3;text-transform:none}
 html[lang=fr] body[data-voice=reel] :is(.sf-h1,.sf-h2,.sf-h3),html[lang=en] body[data-voice=reel] :is(.sf-h1,.sf-h2,.sf-h3){letter-spacing:.01em}
 
 /* ---- chrome ---- */
@@ -63,6 +64,7 @@ body[data-voice=reel] .sf-chip{background:none;border:1px solid var(--border);bo
 body[data-voice=reel] .sf-foot{background:none;border-block-start:1px solid var(--border);border-radius:0}
 body[data-voice=reel] .sf-foot strong{text-transform:uppercase}
 html[lang=ar] body[data-voice=reel] .sf-foot strong{text-transform:none}
+html:not([lang=ar]) body[data-voice=reel] .sf-foot strong:lang(ar){text-transform:none}
 body[data-voice=reel] .sf-sticky{background:#000;border-block-start:1px solid var(--border);box-shadow:none}
 
 /* ---- the home of a store with several products ---- */
@@ -75,6 +77,7 @@ body[data-voice=reel] .sf-media{border-radius:0}
 body[data-voice=reel] .sf-card{border-radius:0}
 body[data-voice=reel] .sf-card-body h3{font-family:var(--sf-display);font-size:19px;font-weight:800;text-transform:uppercase;font-stretch:62%}
 html[lang=ar] body[data-voice=reel] .sf-card-body h3{font-weight:700;text-transform:none;font-stretch:normal;font-size:20px}
+html:not([lang=ar]) body[data-voice=reel] .sf-card-body h3:lang(ar){text-transform:none}
 body[data-voice=reel] .sf-price{color:var(--foreground);font-weight:500}
 
 /* ---- the order form: a paper ticket. Notched sides, dashed tear line under the heading; the tokens inside are re-pointed

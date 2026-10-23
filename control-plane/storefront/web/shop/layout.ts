@@ -3,7 +3,7 @@ import { storefrontScheme, storefrontThemeStyle } from "@/lib/storefront/storefr
 import { directionOf, PUBLIC_LOCALES, type PublicLocale } from "../locale";
 import { jsonForScript } from "../html";
 import type { ShopTheme } from "./model";
-import { esc, icon, preloadImage, whatsappDigits, type Ctx } from "./ui";
+import { arabicAttrs, autoDir, esc, icon, preloadImage, whatsappDigits, type Ctx } from "./ui";
 
 const LANGUAGE: Record<PublicLocale, { code: string; name: string }> = {
   ar: { code: "AR", name: "العربية" },
@@ -31,22 +31,32 @@ export function languageNav(ctx: Ctx): string {
 
 export function renderHeader(ctx: Ctx, extra = ""): string {
   const initial = [...ctx.model.name.trim()][0]?.toUpperCase() ?? "•";
-  return `<header class="sf-head"><div class="sf-wrap sf-head-in"><a class="sf-brand" href="/${esc(ctx.slug)}"><span class="sf-mono" aria-hidden="true">${esc(initial)}</span><b dir="auto">${esc(ctx.model.name)}</b></a>${extra}${languageNav(ctx)}</div></header>`;
+  return `<header class="sf-head"><div class="sf-wrap sf-head-in"><a class="sf-brand" href="/${esc(ctx.slug)}"><span class="sf-mono"${arabicAttrs(ctx, initial)} aria-hidden="true">${esc(initial)}</span><b${autoDir(ctx, ctx.model.name)}>${esc(ctx.model.name)}</b></a>${extra}${languageNav(ctx)}</div></header>`;
 }
 
 export function renderAnnouncement(ctx: Ctx): string {
   const { theme, t } = ctx;
   if (!theme.announcement.enabled) return "";
-  const text = esc(theme.announcement.text.trim() || t("storefront.studio.freePhoneConfirmation"));
+  const raw = theme.announcement.text.trim() || t("storefront.studio.freePhoneConfirmation");
+  const text = esc(raw);
+  const dir = autoDir(ctx, raw);
   // Three copies per set and two sets: the track slides by half its width, so the loop never shows a gap.
   // Only the first copy is read by assistive technology; with reduced motion only the first copy is shown.
-  const first = `<span dir="auto">${text}</span><span dir="auto" aria-hidden="true">${text}</span><span dir="auto" aria-hidden="true">${text}</span>`;
+  const first = `<span${dir}>${text}</span><span${dir} aria-hidden="true">${text}</span><span${dir} aria-hidden="true">${text}</span>`;
   return `<div class="sf-ann" role="note"><div class="sf-ann-track"><div class="sf-ann-set">${first}</div><div class="sf-ann-set" aria-hidden="true">${first}</div></div></div>`;
+}
+
+/** "store name · SahelFlow". When the name is Arabic on a page that is not, only the name carries the tag, not the words next to it. */
+function footerBrand(ctx: Ctx): string {
+  const attrs = arabicAttrs(ctx, ctx.model.name);
+  if (!attrs) return esc(ctx.t("storefront.studio.footerBrand", { name: ctx.model.name }));
+  const marker = "\u0001";
+  return esc(ctx.t("storefront.studio.footerBrand", { name: marker })).split(marker).join(`<span${attrs}>${esc(ctx.model.name)}</span>`);
 }
 
 export function renderFooter(ctx: Ctx, tagline: string): string {
   const { t, model } = ctx;
-  return `<footer class="sf-foot"><div class="sf-wrap"><strong dir="auto">${esc(model.name)}</strong>${tagline ? `<span dir="auto">${esc(tagline)}</span>` : ""}<small>${esc(t("storefront.studio.footerBrand", { name: model.name }))} · ${esc(t("storefront.view.poweredBy"))}</small></div></footer>`;
+  return `<footer class="sf-foot"><div class="sf-wrap"><strong${autoDir(ctx, model.name)}>${esc(model.name)}</strong>${tagline ? `<span${autoDir(ctx, tagline)}>${esc(tagline)}</span>` : ""}<small>${footerBrand(ctx)} · ${esc(t("storefront.view.poweredBy"))}</small></div></footer>`;
 }
 
 export type PageParts = {

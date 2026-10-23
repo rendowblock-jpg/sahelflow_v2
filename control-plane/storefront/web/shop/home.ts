@@ -1,5 +1,5 @@
 import { formatPrice } from "./format";
-import { esc, httpsUrl, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
+import { arabicSpan, autoDir, esc, httpsUrl, icon, imgAttrs, productHref, str, transitionName, whatsappDigits, type Ctx } from "./ui";
 import type { ShopProduct, ShopSection } from "./model";
 import { lumenIndex, styleHero, styleOf } from "./styles";
 
@@ -31,7 +31,7 @@ export function renderCard(ctx: Ctx, product: ShopProduct, index: number, mode: 
   const picture = url
     ? image(ctx, url, product.name, false).replace('loading="lazy"', index < 2 ? 'loading="eager"' : 'loading="lazy"')
     : `<span class="sf-ph" aria-hidden="true">${esc([...product.name.trim()][0]?.toUpperCase() ?? "")}</span>`;
-  return `<li${mode === "grid" ? ' class="sf-rv"' : ""}><a class="sf-card" href="${esc(productHref(ctx.slug, product.id))}"><div class="sf-media"${vt ? ` style="view-transition-name:${vt}"` : ""}>${picture}${badge}</div><div class="sf-card-body"><h3 dir="auto">${esc(product.name)}</h3>${sku}${price}<span class="sf-card-cta">${esc(t("storefront.studio.orderNow"))}${icon("arrow", "sf-flip")}</span></div></a></li>`;
+  return `<li${mode === "grid" ? ' class="sf-rv"' : ""}><a class="sf-card" href="${esc(productHref(ctx.slug, product.id))}"><div class="sf-media"${vt ? ` style="view-transition-name:${vt}"` : ""}>${picture}${badge}</div><div class="sf-card-body"><h3${autoDir(ctx, product.name)}>${esc(product.name)}</h3>${sku}${price}<span class="sf-card-cta">${esc(t("storefront.studio.orderNow"))}${icon("arrow", "sf-flip")}</span></div></a></li>`;
 }
 
 export function renderGrid(ctx: Ctx, products: readonly ShopProduct[], title: string, id?: string): string {
@@ -39,13 +39,13 @@ export function renderGrid(ctx: Ctx, products: readonly ShopProduct[], title: st
   if (products.length === 0) {
     return `<section class="sf-sec"${id ? ` id="${id}"` : ""}><div class="sf-wrap"><h2 class="sf-h2">${esc(title)}</h2><p class="sf-muted">${esc(t("storefront.view.noProducts"))}</p></div></section>`;
   }
-  return `<section class="sf-sec"${id ? ` id="${id}"` : ""}><div class="sf-wrap"><div class="sf-sec-head sf-rv"><h2 class="sf-h2" dir="auto">${esc(title)}</h2><span class="sf-muted">${esc(t("storefront.view.productsCount", { count: products.length }))}</span></div><ul class="sf-grid">${products.map((product, index) => renderCard(ctx, product, index)).join("")}</ul></div></section>`;
+  return `<section class="sf-sec"${id ? ` id="${id}"` : ""}><div class="sf-wrap"><div class="sf-sec-head sf-rv"><h2 class="sf-h2"${autoDir(ctx, title)}>${esc(title)}</h2><span class="sf-muted">${esc(t("storefront.view.productsCount", { count: products.length }))}</span></div><ul class="sf-grid">${products.map((product, index) => renderCard(ctx, product, index)).join("")}</ul></div></section>`;
 }
 
 /** A swipeable row of products with the next card peeking in. */
 export function renderRail(ctx: Ctx, products: readonly ShopProduct[], title: string): string {
   if (products.length === 0) return "";
-  return `<section class="sf-sec"><div class="sf-wrap"><div class="sf-sec-head sf-rv"><h2 class="sf-h2" dir="auto">${esc(title)}</h2></div><ul class="sf-rail">${products.map((product, index) => renderCard(ctx, product, index, "rail")).join("")}</ul></div></section>`;
+  return `<section class="sf-sec"><div class="sf-wrap"><div class="sf-sec-head sf-rv"><h2 class="sf-h2"${autoDir(ctx, title)}>${esc(title)}</h2></div><ul class="sf-rail">${products.map((product, index) => renderCard(ctx, product, index, "rail")).join("")}</ul></div></section>`;
 }
 
 function renderHero(ctx: Ctx, target: string): string {
@@ -55,7 +55,7 @@ function renderHero(ctx: Ctx, target: string): string {
   const headline = theme.hero.headline.trim() || model.name;
   const body = theme.hero.body.trim() || model.description;
   const cta = theme.hero.ctaLabel.trim() || (style === "centered" ? t("storefront.studio.orderNow") : t("storefront.studio.shopNow"));
-  const text = `<div class="sf-hero-text"><p class="sf-eyebrow" dir="auto">${esc(eyebrow)}</p><h1 class="sf-h1" dir="auto">${esc(headline)}</h1>${body ? `<p class="sf-lead" dir="auto">${esc(body)}</p>` : ""}<a class="sf-btn" href="${target}">${esc(cta)}${icon("arrow", "sf-flip")}</a></div>`;
+  const text = `<div class="sf-hero-text"><p class="sf-eyebrow"${autoDir(ctx, eyebrow)}>${esc(eyebrow)}</p><h1 class="sf-h1"${autoDir(ctx, headline)}>${esc(headline)}</h1>${body ? `<p class="sf-lead"${autoDir(ctx, body)}>${esc(body)}</p>` : ""}<a class="sf-btn" href="${target}">${arabicSpan(ctx, cta)}${icon("arrow", "sf-flip")}</a></div>`;
   const withPicture = model.products.filter((product) => product.images[0]);
   const pics = withPicture.slice(0, style === "editorial" ? 3 : 1);
   const first = withPicture[0];
@@ -89,17 +89,17 @@ function renderMedia(ctx: Ctx, section: ShopSection): string {
   if (!(eyebrow || title || body || url)) return "";
   const alt = str(section.settings.imageAlt) || title || ctx.model.name;
   const end = str(section.settings.align) === "media-end";
-  return `<section class="sf-sec"><div class="sf-wrap sf-rv"><div class="sf-panel${url ? " sf-panel--media" : ""}${end ? " sf-panel--end" : ""}">${url ? `<div class="sf-panel-pic"><img src="${esc(url)}" alt="${esc(alt)}" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div>` : ""}<div class="sf-panel-text">${eyebrow ? `<p class="sf-eyebrow" dir="auto">${esc(eyebrow)}</p>` : ""}${title ? `<h2 class="sf-h2" dir="auto">${esc(title)}</h2>` : ""}${body ? `<p class="sf-body" dir="auto">${esc(body)}</p>` : ""}</div></div></div></section>`;
+  return `<section class="sf-sec"><div class="sf-wrap sf-rv"><div class="sf-panel${url ? " sf-panel--media" : ""}${end ? " sf-panel--end" : ""}">${url ? `<div class="sf-panel-pic"><img src="${esc(url)}" alt="${esc(alt)}" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div>` : ""}<div class="sf-panel-text">${eyebrow ? `<p class="sf-eyebrow"${autoDir(ctx, eyebrow)}>${esc(eyebrow)}</p>` : ""}${title ? `<h2 class="sf-h2"${autoDir(ctx, title)}>${esc(title)}</h2>` : ""}${body ? `<p class="sf-body"${autoDir(ctx, body)}>${esc(body)}</p>` : ""}</div></div></div></section>`;
 }
 
 function renderTestimonials(ctx: Ctx, section: ShopSection): string {
   const entries = section.blocks.filter((block) => str(block.settings.quote));
   if (entries.length === 0) return "";
   const title = str(section.settings.title) || ctx.t("storefront.view.reviewsTitle");
-  return `<section class="sf-sec"><div class="sf-wrap"><h2 class="sf-h2 sf-rv" dir="auto">${esc(title)}</h2><div class="sf-quotes">${entries.map((entry) => {
+  return `<section class="sf-sec"><div class="sf-wrap"><h2 class="sf-h2 sf-rv"${autoDir(ctx, title)}>${esc(title)}</h2><div class="sf-quotes">${entries.map((entry) => {
     const name = str(entry.settings.name);
     const role = str(entry.settings.role);
-    return `<figure class="sf-quote"><blockquote dir="auto">${esc(str(entry.settings.quote))}</blockquote>${name ? `<figcaption><b dir="auto">${esc(name)}</b>${role ? ` <span class="sf-muted" dir="auto">${esc(role)}</span>` : ""}</figcaption>` : ""}</figure>`;
+    return `<figure class="sf-quote"><blockquote${autoDir(ctx, str(entry.settings.quote))}>${esc(str(entry.settings.quote))}</blockquote>${name ? `<figcaption><b${autoDir(ctx, name)}>${esc(name)}</b>${role ? ` <span class="sf-muted"${autoDir(ctx, role)}>${esc(role)}</span>` : ""}</figcaption>` : ""}</figure>`;
   }).join("")}</div></div></section>`;
 }
 
@@ -107,7 +107,7 @@ function renderFaq(ctx: Ctx, section: ShopSection): string {
   const entries = section.blocks.filter((block) => str(block.settings.question) && str(block.settings.answer));
   if (entries.length === 0) return "";
   const title = str(section.settings.title) || ctx.t("storefront.view.faqTitle");
-  return `<section class="sf-sec"><div class="sf-wrap sf-wrap--narrow sf-rv"><h2 class="sf-h2" dir="auto">${esc(title)}</h2><div class="sf-faq">${entries.map((entry) => `<details><summary dir="auto"><span>${esc(str(entry.settings.question))}</span>${icon("chevron", "sf-faq-i")}</summary><p dir="auto">${esc(str(entry.settings.answer))}</p></details>`).join("")}</div></div></section>`;
+  return `<section class="sf-sec"><div class="sf-wrap sf-wrap--narrow sf-rv"><h2 class="sf-h2"${autoDir(ctx, title)}>${esc(title)}</h2><div class="sf-faq">${entries.map((entry) => `<details><summary${autoDir(ctx, str(entry.settings.question))}><span>${esc(str(entry.settings.question))}</span>${icon("chevron", "sf-faq-i")}</summary><p${autoDir(ctx, str(entry.settings.answer))}>${esc(str(entry.settings.answer))}</p></details>`).join("")}</div></div></section>`;
 }
 
 export function renderContact(ctx: Ctx, heading: boolean): string {
@@ -115,7 +115,7 @@ export function renderContact(ctx: Ctx, heading: boolean): string {
   const c = theme.builder.contact;
   const tiles: string[] = [];
   const tile = (i: "phone" | "chat" | "mail" | "pin", label: string, value: string, href?: string, ltr = true, ext = false) => {
-    const inner = `<span class="sf-chip">${icon(i)}</span><span class="sf-tile-text"><small>${esc(label)}</small><b${ltr ? ' dir="ltr"' : ' dir="auto"'}>${esc(value)}</b></span>`;
+    const inner = `<span class="sf-chip">${icon(i)}</span><span class="sf-tile-text"><small>${esc(label)}</small><b${ltr ? ' dir="ltr"' : autoDir(ctx, value)}>${esc(value)}</b></span>`;
     tiles.push(href ? `<a class="sf-tile" href="${esc(href)}"${ext ? ' target="_blank" rel="noopener noreferrer"' : ""}>${inner}</a>` : `<div class="sf-tile">${inner}</div>`);
   };
   if (c.phone) tile("phone", t("storefront.view.callUs"), c.phone, `tel:${c.phone.replace(/\s/g, "")}`);

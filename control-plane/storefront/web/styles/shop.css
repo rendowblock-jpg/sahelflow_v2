@@ -21,6 +21,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-padding-block-st
 }
 html[lang=ar]{--sf-font:"Segoe UI","Noto Sans Arabic","Noto Kufi Arabic","Geeza Pro","Droid Arabic Kufi",Tahoma,system-ui,-apple-system,sans-serif;--lh-body:1.85}
 html[lang=ar] *{letter-spacing:normal!important;text-transform:none!important}
+html:not([lang=ar]) [dir=auto]:lang(ar),html:not([lang=ar]) [dir=auto]:lang(ar) *{letter-spacing:normal!important;text-transform:none!important}
 body{margin:0;min-height:100vh;min-height:100dvh;background:var(--background,#fff);color:var(--foreground,#111);font-family:var(--sf-font);font-size:16px;line-height:var(--lh-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-wrap:anywhere}
 html[lang=ar] body{font-size:17px}
 [hidden]{display:none!important}
@@ -49,6 +50,7 @@ body[data-voice=atlas] :is(.sf-h1,.sf-h2,.sf-h3){font-weight:800;letter-spacing:
 body[data-voice=oasis] :is(.sf-h1,.sf-h2,.sf-h3){font-weight:400;letter-spacing:-.02em}
 html[lang=ar] body[data-voice=atlas] :is(.sf-h1,.sf-h2,.sf-h3){font-weight:700}
 html[lang=ar] body :is(.sf-h1,.sf-h2,.sf-h3){line-height:1.32}
+html:not([lang=ar]) body :is(.sf-h1,.sf-h2,.sf-h3):lang(ar){line-height:1.32}
 html[lang=ar] body[data-voice=sahara] .sf-h1{font-size:calc(var(--fs-hero) * .86)}
 
 .sf-skip{position:absolute;inset-inline-start:8px;top:-72px;z-index:99;background:var(--foreground);color:var(--background);padding:12px 18px;border-radius:var(--rc);font-weight:700;text-decoration:none}
