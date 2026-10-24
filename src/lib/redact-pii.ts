@@ -88,6 +88,9 @@ const SAFE_STRING_KEYS = new Set(
     "format",
     "algorithm",
     "safeField",
+    // Last four digits of a phone number: already stored in plaintext as
+    // PhoneReputation.last4 and shown in Settings.
+    "last4",
     "trustedPrincipalSubject",
     "handlerPrincipal",
   ].map(normalizeKey),
