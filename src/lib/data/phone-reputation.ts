@@ -7,6 +7,7 @@
  * migration before the runtime becomes authoritative.
  */
 import "server-only";
+import { logAudit } from "@/lib/audit";
 import type { ServiceContext } from "@/lib/data/service-base";
 import {
   deriveExistingShopBlindIndex,
@@ -14,6 +15,16 @@ import {
 } from "@/lib/crypto/protected-record";
 
 type BlindIndexClient = Parameters<typeof deriveShopBlindIndex>[0];
+
+/** Audit keeps a short excerpt of each note, never the whole free text. */
+const AUDIT_NOTE_LIMIT = 200;
+
+function auditExcerpt(text: string | null | undefined): string {
+  // Cut by code point so an Arabic or emoji character is never split.
+  return Array.from(text ?? "")
+    .slice(0, AUDIT_NOTE_LIMIT)
+    .join("");
+}
 
 function normalizePhone(phone: string): string {
   return phone.replace(/\s+/g, "");
@@ -56,7 +67,14 @@ export async function reportBadPhone(
   const now = new Date();
   const noteEntry = orderId ? `[${orderId}] ${reason}` : reason;
 
-  await db.phoneReputation.upsert({
+  // Read before the upsert: `notes` is overwritten below, so this is the only
+  // moment the earlier reason can be kept for the audit row.
+  const previous = await db.phoneReputation.findUnique({
+    where: { phoneHash },
+    select: { notes: true },
+  });
+
+  const saved = await db.phoneReputation.upsert({
     where: { phoneHash },
     create: {
       phoneHash,
@@ -73,6 +91,24 @@ export async function reportBadPhone(
       notes: noteEntry,
     },
   });
+
+  // A re-report leaves one audit row. Only the last four digits are written:
+  // never the full number or the blind index. `from`/`to` are the keys the
+  // audit redactor keeps as text.
+  if (previous) {
+    await logAudit(context, {
+      action: "phone_reputation.re_reported",
+      entity: "phone_reputation",
+      entityId: saved?.id,
+      actor: "user",
+      metadata: {
+        last4,
+        from: auditExcerpt(previous.notes),
+        to: auditExcerpt(noteEntry),
+        reportCount: saved?.reportCount,
+      },
+    });
+  }
 
   let total = 1;
   try {

@@ -15,7 +15,7 @@ import {
   SahelFlowError,
   ValidationError,
 } from "@/types/errors";
-import { createOrderSchema, updateOrderSchema } from "@/lib/validation";
+import { updateOrderSchema } from "@/lib/validation";
 import {
   assertCanTransition,
   triggersStockDeduction,
@@ -29,7 +29,7 @@ import {
   recordStatusChangeInTx,
   type OrderChangeTransactionClient,
 } from "@/lib/data/order-change-service";
-import { withServiceError, nextOrderNumber } from "./service-base";
+import { withServiceError } from "./service-base";
 import {
   deductOrderItemStock,
   restoreOrderItemStock,
@@ -39,7 +39,6 @@ import {
   detectLowStock,
   dispatchLowStock,
   type TriggerEvent,
-  type TriggerPayload,
 } from "@/lib/automations/engine";
 import {
   isImportPendingOrderAuthority,
@@ -261,16 +260,6 @@ async function dispatchCommittedStatusTransition(
   ]);
 }
 
-type OrderCreateOptions =
-  | {
-      tx: OrderChangeTransactionClient;
-      afterCommit: (effect: () => Promise<void>) => void;
-    }
-  | {
-      tx?: undefined;
-      afterCommit?: undefined;
-    };
-
 export const orderService = {
   async list(ctx: ServiceContext, opts?: {
     limit?: number;
@@ -304,134 +293,6 @@ export const orderService = {
       include: { items: true },
     });
     return row ? toDomain(row as unknown as Record<string, unknown>) : null;
-  },
-
-  /**
-   * Create a new order (draft status by default).
-   * Calculates totalPrice from items + deliveryCost.
-   * Does NOT deduct stock (that happens on confirmation).
-   *
-   * Phase 1 bug 1.3: accepts an optional \`tx\` so the 4 order-creation paths
-   * (storefront/submit, import/orders, ecommerce sync-engine, AI core-tools)
-   * can route through this canonical service instead of bypassing it. This
-   * ensures every created order gets:
-   *   - an OrderChange "created" ledger entry (powers the order timeline)
-   *   - the \`order.created\` automation trigger (so "new order → WhatsApp
-   *     notify" automations fire for storefront/import/sync/AI orders, not
-   *     just manual UI orders)
-   * If \`opts.tx\` is provided, the order.create + ledger entry participate in
-   * the caller's $transaction (atomic with the caller's customer-find-or-
-   * create, etc.). Callers that own the transaction must collect the supplied
-   * post-commit effect and invoke it only after `$transaction` resolves.
-   */
-  async create(
-    ctx: ServiceContext,
-    input: unknown,
-    opts?: OrderCreateOptions,
-  ): Promise<Order> {
-    return withServiceError(async () => {
-      const data = createOrderSchema.parse(input);
-
-      if (data.status === "confirmed") {
-        throw new ValidationError(
-          "Orders cannot be created directly as confirmed; use the governed confirmation command",
-          "status",
-        );
-      }
-
-      if (opts?.tx && !opts.afterCommit) {
-        throw new Error("Caller-owned order transactions require an afterCommit collector");
-      }
-
-      const client = opts?.tx ?? ctx.prisma;
-      const customer = await client.customer.findFirst({
-        where: { id: data.customerId, deletedAt: null },
-      });
-      if (!customer) throw new NotFoundError("Customer", data.customerId);
-
-      const itemsTotal = data.items.reduce(
-        (sum, item) => sum + item.unitPrice * item.quantity,
-        0,
-      );
-      const totalPrice = itemsTotal + (data.deliveryCost ?? 0);
-      const orderNumber = await nextOrderNumber(
-        client as ServiceContext["prisma"],
-        data.orderNumberPrefix ?? "ORD",
-      );
-      const orderCreateData = {
-        orderNumber,
-        status: data.status ?? "draft",
-        customerId: data.customerId,
-        totalPrice,
-        deliveryCost: data.deliveryCost ?? null,
-        wilaya: data.wilaya,
-        commune: data.commune,
-        address: data.address,
-        phone: data.phone,
-        source: data.source,
-        sourceOrderId: data.sourceOrderId ?? null,
-        sourceMetadata: data.sourceMetadata ? JSON.stringify(data.sourceMetadata) : null,
-        notes: data.notes ?? null,
-        items: {
-          create: data.items.map((item) => ({
-            productId: item.productId ?? null,
-            productVariantId: item.productVariantId ?? null,
-            productName: item.productName,
-            productVariantName: item.productVariantName ?? null,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.unitPrice * item.quantity,
-          })),
-        },
-      } as const;
-
-      let row;
-      if (opts?.tx) {
-        row = await opts.tx.order.create({ data: orderCreateData, include: { items: true } });
-        await recordOrderChangeInTx(opts.tx, {
-          orderId: row.id,
-          actionType: "created",
-          payload: { orderNumber: row.orderNumber, itemCount: row.items.length, totalPrice },
-        });
-      } else {
-        row = await ctx.prisma.$transaction(async (tx) => {
-          const created = await tx.order.create({ data: orderCreateData, include: { items: true } });
-          await recordOrderChangeInTx(tx, {
-            orderId: created.id,
-            actionType: "created",
-            payload: { orderNumber: created.orderNumber, itemCount: created.items.length, totalPrice },
-          });
-          return created;
-        });
-      }
-
-      const triggerPayload: TriggerPayload = {
-        orderId: row.id,
-        orderNumber: row.orderNumber,
-        customerId: row.customerId,
-        customerName: customer.name,
-        customerPhone: customer.phone,
-        totalPrice: row.totalPrice,
-        wilaya: row.wilaya,
-      };
-      const dispatchCreated = () =>
-        dispatchTrigger(
-          ctx,
-          "order.created" as TriggerEvent,
-          triggerPayload,
-          {
-            triggerKey: `order.created:${row.id}`,
-            occurredAt: row.createdAt,
-          },
-        );
-      if (opts?.tx) {
-        opts.afterCommit(dispatchCreated);
-      } else {
-        await dispatchCreated();
-      }
-
-      return toDomain(row as unknown as Record<string, unknown>);
-    }, "Order");
   },
 
   /**

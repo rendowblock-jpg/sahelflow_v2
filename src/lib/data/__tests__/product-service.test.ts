@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { productService } from "../product-service";
 import { createTestPrisma, disconnectTestPrisma, seedProduct, seedCategory } from "./helpers";
-import { NotFoundError, ConflictError, ValidationError } from "@/types/errors";
+import { NotFoundError, ConflictError } from "@/types/errors";
 
 let db: PrismaClient;
 
@@ -228,43 +228,6 @@ describe("productService.delete", () => {
     expect(found).not.toBeNull();
     expect(found!.deletedAt).not.toBeNull();
     expect(found!.isActive).toBe(false);
-  });
-});
-
-// ── stock management ─────────────────────────────────────────────────────────
-
-describe("productService.deductStock", () => {
-  it("decrements stock", async () => {
-    const created = await seedProduct(db, { stock: 50 });
-    await productService.deductStock({ prisma: db as never }, created.id, 10);
-    const updated = await db.product.findUnique({ where: { id: created.id } });
-    expect(updated!.stock).toBe(40);
-  });
-
-  it("rejects non-positive quantity", async () => {
-    const created = await seedProduct(db);
-    await expect(
-      productService.deductStock({ prisma: db as never }, created.id, 0),
-    ).rejects.toThrow(ValidationError);
-    await expect(
-      productService.deductStock({ prisma: db as never }, created.id, -5),
-    ).rejects.toThrow(ValidationError);
-  });
-});
-
-describe("productService.restoreStock", () => {
-  it("increments stock", async () => {
-    const created = await seedProduct(db, { stock: 50 });
-    await productService.restoreStock({ prisma: db as never }, created.id, 10);
-    const updated = await db.product.findUnique({ where: { id: created.id } });
-    expect(updated!.stock).toBe(60);
-  });
-
-  it("rejects non-positive quantity", async () => {
-    const created = await seedProduct(db);
-    await expect(
-      productService.restoreStock({ prisma: db as never }, created.id, 0),
-    ).rejects.toThrow(ValidationError);
   });
 });
 

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
-import { DZ_CLOCK, formatDZD, intlLocale } from "@/lib/utils";
+import { DZ_CLOCK, formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import {
   getAiWorkspaceCopy,
@@ -113,7 +113,7 @@ function summaryValue(
       // wrapped in RLM marks that fight the app's own bidi isolation.
       return formatDZD(value, locale);
     }
-    return new Intl.NumberFormat(intlLocale(locale)).format(value);
+    return numberFormatter(intlLocale(locale)).format(value);
   }
   if (typeof value === "boolean") return value ? "✓" : "—";
   if (typeof value === "string" && ORDER_STATUS_SUMMARY_FIELDS.has(key)) {

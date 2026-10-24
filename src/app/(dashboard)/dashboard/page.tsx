@@ -40,7 +40,7 @@ import {
 import { getRiskAnalyticsReport } from "@/lib/risk-engine";
 import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
-import { formatDZD, intlLocale } from "@/lib/utils";
+import { formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 import { displayWilaya } from "@/lib/wilaya-display";
 
@@ -78,10 +78,10 @@ export default async function DashboardPage() {
 
   const dateLocale =
     intlLocale(locale);
-  const integerFormatter = new Intl.NumberFormat(dateLocale, {
+  const integerFormatter = numberFormatter(dateLocale, {
     maximumFractionDigits: 0,
   });
-  const percentFormatter = new Intl.NumberFormat(dateLocale, {
+  const percentFormatter = numberFormatter(dateLocale, {
     style: "percent",
     maximumFractionDigits: 0,
   });

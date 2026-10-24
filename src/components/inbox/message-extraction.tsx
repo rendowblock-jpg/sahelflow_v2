@@ -6,11 +6,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, Loader2, RefreshCw, ShieldAlert,
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  EXTRACTION_DELIVERY_COST,
-  ExtractionReview,
-  type ReviewedOrder,
-} from "@/components/inbox/extraction/extraction-review";
+import { ExtractionReview, type ReviewedOrder } from "@/components/inbox/extraction/extraction-review";
 import { ExtractionSourcePane } from "@/components/inbox/extraction/extraction-source-pane";
 import {
   ORDER_SOURCE_MAX_SELECTED,
@@ -196,7 +192,7 @@ export function MessageExtraction({
             name: reviewed.customer.name || copy("customerTitle"),
           },
           items: reviewed.items,
-          deliveryCost: EXTRACTION_DELIVERY_COST,
+          deliveryCost: reviewed.deliveryCost,
           notes: reviewed.notes,
         }),
       });

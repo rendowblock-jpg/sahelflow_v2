@@ -5,6 +5,7 @@ process.env.SF_MASTER_KEY =
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { db, shopContext } from "@/lib/db";
+import { ConflictError } from "@/types/errors";
 import { persistWhatsAppPhoneOutbound } from "../phone-outbound";
 
 const ACCOUNT_ID = "213555999000:12@s.whatsapp.net";
@@ -17,10 +18,10 @@ const context = {
   whatsAppProviderAccountId: ACCOUNT_ID,
 };
 
-function envelope(id = PROVIDER_ID) {
+function envelope(id = PROVIDER_ID, accountId = ACCOUNT_ID) {
   return {
     spoolId: "c".repeat(64),
-    accountId: ACCOUNT_ID,
+    accountId,
     receivedAt: "2026-08-03T12:00:00.000Z",
     message: {
       key: { remoteJid: JID, fromMe: true as const, id },
@@ -73,6 +74,58 @@ describe("phone-sent fromMe messages", () => {
       where: { sourceId: JID },
     });
     expect(conversation.channel).toBe("whatsapp");
+  });
+
+  it("accepts a record spooled under an earlier device index of the same paired number", async () => {
+    const stored = await persistWhatsAppPhoneOutbound(
+      context,
+      envelope(PROVIDER_ID, "213555999000:5@s.whatsapp.net"),
+    );
+
+    expect(stored).toMatchObject({ messageId: PROVIDER_ID, created: true });
+    expect(await db.message.count()).toBe(1);
+  });
+
+  it("rejects a message from another number, even on the paired device index", async () => {
+    await expect(
+      persistWhatsAppPhoneOutbound(
+        context,
+        envelope(PROVIDER_ID, "213555888000:12@s.whatsapp.net"),
+      ),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(await db.message.count()).toBe(0);
+  });
+
+  it("uses the received time when the phone message has no provider time (MSG-15)", async () => {
+    const noTime = envelope("PHONEWAMID-NOTIME");
+    noTime.message.messageTimestamp = 0;
+
+    await persistWhatsAppPhoneOutbound(context, noTime);
+    const again = await persistWhatsAppPhoneOutbound(context, {
+      ...noTime,
+      receivedAt: "2026-08-09T09:00:00.000Z",
+    });
+
+    expect(again.replayed).toBe(true);
+    const message = await db.message.findUniqueOrThrow({
+      where: { id: "PHONEWAMID-NOTIME" },
+    });
+    expect(message.timestamp.toISOString()).toBe("2026-08-03T12:00:00.000Z");
+    const conversation = await db.conversation.findFirstOrThrow({
+      where: { sourceId: JID },
+    });
+    expect(conversation.lastMessageAt?.toISOString()).toBe(
+      "2026-08-03T12:00:00.000Z",
+    );
+  });
+
+  it("keeps the real provider time of a phone message", async () => {
+    await persistWhatsAppPhoneOutbound(context, envelope("PHONEWAMID-REAL"));
+
+    const message = await db.message.findUniqueOrThrow({
+      where: { id: "PHONEWAMID-REAL" },
+    });
+    expect(message.timestamp.getTime()).toBe(1_786_020_000 * 1_000);
   });
 
   it("does not create a second message when the app already owns the provider id", async () => {

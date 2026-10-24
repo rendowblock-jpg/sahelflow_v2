@@ -12,11 +12,10 @@
  * booking-sync, delivery-create and delivery-sync entries).
  *
  * Usage:
- *   export const POST = withErrorHandler(async (req) => {
- *     const body = await req.json();
- *     const order = await orderService.create({ prisma: db, shop: shopContext }, body);
- *     return NextResponse.json({ order }, { status: 201 });
- *   }, "POST /api/orders");
+ *   export const GET = withErrorHandler(async () => {
+ *     const orders = await orderService.list({ prisma: db, shop: shopContext });
+ *     return NextResponse.json({ orders });
+ *   }, "GET /api/orders");
  *
  * Error mapping:
  *   - ZodError        → 400 { error: "Validation failed", details,

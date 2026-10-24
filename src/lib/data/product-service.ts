@@ -302,34 +302,6 @@ export const productService = {
     }, "Product");
   },
 
-  async deductStock(
-    context: ServiceContext,
-    productId: string,
-    quantity: number,
-  ): Promise<void> {
-    if (quantity <= 0) {
-      throw new ValidationError("Quantity must be positive", "quantity");
-    }
-    await context.prisma.product.update({
-      where: { id: productId },
-      data: { stock: { decrement: quantity } },
-    });
-  },
-
-  async restoreStock(
-    context: ServiceContext,
-    productId: string,
-    quantity: number,
-  ): Promise<void> {
-    if (quantity <= 0) {
-      throw new ValidationError("Quantity must be positive", "quantity");
-    }
-    await context.prisma.product.update({
-      where: { id: productId },
-      data: { stock: { increment: quantity } },
-    });
-  },
-
   async listLowStock(context: ServiceContext): Promise<Product[]> {
     const rows = await context.prisma.product.findMany({
       where: {

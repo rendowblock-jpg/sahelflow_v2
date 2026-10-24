@@ -12,6 +12,7 @@ import {
   formatTimeOfDay,
   intlLocale,
   isolateLtr,
+  numberFormatter,
 } from "@/lib/utils";
 
 const root = process.cwd();
@@ -194,12 +195,13 @@ describe("seller-facing locale formatting", () => {
     expect(intlLocale("en")).toBe("en-GB");
   });
 
-  it("uses the platform's Algerian Arabic number conventions with the local DZD suffix", () => {
-    const expectedNumber = new Intl.NumberFormat("ar-DZ", {
+  it("uses the platform's Algerian Arabic number conventions (French thousands space) with the local DZD suffix", () => {
+    const expectedNumber = numberFormatter("ar-DZ", {
       style: "decimal",
       maximumFractionDigits: 0,
     }).format(1_893_500);
 
+    expect(expectedNumber).toBe("1\u202f893\u202f500");
     expect(formatDZD(1_893_500, "ar")).toBe(`${expectedNumber} دج`);
   });
 

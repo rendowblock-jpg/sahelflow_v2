@@ -3,6 +3,7 @@ import { listWilayaRisks, seedWilayaRiskProfiles, assessOrderRisk } from "@/lib/
 import { requireAuth } from "@/lib/auth/server";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { db, shopContext } from "@/lib/db";
+import { DEFAULT_LOCALE, LOCALES, type Locale } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +23,12 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  // Assess a single wilaya (?wilaya=Oran)
+  // Assess a single wilaya (?wilaya=Oran&locale=ar). Text is French unless a
+  // supported locale is asked for.
   if (wilaya) {
-    const assessment = await assessOrderRisk(context, wilaya);
+    const asked = req.nextUrl.searchParams.get("locale") ?? "";
+    const locale = (LOCALES as readonly string[]).includes(asked) ? (asked as Locale) : DEFAULT_LOCALE;
+    const assessment = await assessOrderRisk(context, wilaya, locale);
     return NextResponse.json({ wilaya, ...assessment });
   }
 

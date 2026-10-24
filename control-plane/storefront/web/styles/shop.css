@@ -374,6 +374,8 @@ body[data-voice=sahara] .sf-buy{border-radius:36px 36px 0 0}
 .sf-foot .sf-wrap{display:grid;gap:8px;justify-items:center}
 .sf-foot strong{color:var(--foreground);font:700 clamp(24px,7vw,40px)/1.1 var(--sf-display)}
 body[data-voice=sahara] .sf-foot strong{letter-spacing:.06em}
+html[lang=ar] .sf-foot strong{line-height:1.4}
+html:not([lang=ar]) .sf-foot strong:lang(ar){line-height:1.4}
 .sf-foot small{font-size:12px;opacity:.8}
 
 /* words stay whole. The page-wide overflow-wrap:anywhere (a safety net for long product names) let small boxes shrink to one letter and break words in the middle ("téléphoniqu|e"). Short labels now keep their word width and the box next to them shrinks instead. Measured with a probe over 5 styles x 3 pages x ar/fr/en x 320/360/390/430 px. */

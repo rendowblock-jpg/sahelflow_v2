@@ -20,7 +20,7 @@ interface CodPosition {
   orderId: string;
   orderNumber: string;
   orderVersion: number;
-  customerName: string;
+  customerName: string | null;
   collectionId: string | null;
   provider: string | null;
   codState: string;

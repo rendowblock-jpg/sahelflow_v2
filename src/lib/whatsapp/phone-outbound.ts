@@ -5,7 +5,9 @@ import { z } from "zod";
 
 import type { ServiceContext } from "@/lib/data/service-base";
 import { ConflictError, SahelFlowError } from "@/types/errors";
+import { isSameWhatsAppAccount } from "../../../sidecars/whatsapp/auth-tokens";
 import { deterministicWhatsAppMessageId } from "../../../sidecars/whatsapp/send-receipts";
+import { storedMessageTime } from "./message-time";
 import { sidecar } from "./sidecar-client";
 import { messageText, normalizeWhatsAppMessageContent } from "./types";
 
@@ -141,7 +143,7 @@ export async function persistWhatsAppPhoneOutbound(
     );
   }
   const expectedAccountId = await resolveProviderAccountId(context);
-  if (input.accountId !== expectedAccountId) {
+  if (!isSameWhatsAppAccount(input.accountId, expectedAccountId)) {
     throw new ConflictError(
       "WhatsApp phone message belongs to a different paired account",
     );
@@ -155,7 +157,12 @@ export async function persistWhatsAppPhoneOutbound(
 
   const content = normalizeWhatsAppMessageContent(input.message.message);
   const body = Array.from(messageText(content)).slice(0, 4000).join("");
-  const timestamp = new Date(input.message.messageTimestamp * 1_000);
+  // Time 0 means the provider gave none; use when the sidecar received it.
+  const timestamp = storedMessageTime(
+    null,
+    input.message.messageTimestamp,
+    input.receivedAt,
+  );
   const contactPhone = jid.endsWith("@s.whatsapp.net")
     ? jid.slice(0, jid.indexOf("@"))
     : null;

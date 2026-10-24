@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { RUNTIME_UI_READY_PATH } from "@/lib/runtime-auth";
+import { buildUiTiming } from "@/lib/runtime/ui-timing";
 
 const RETRY_WINDOW_MS = 75_000;
 const REQUEST_TIMEOUT_MS = 5_000;
@@ -23,6 +24,16 @@ function delay(milliseconds: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+/** The timing body, or undefined: the ready signal never depends on it. */
+function timingBody(): string | undefined {
+  try {
+    const timing = buildUiTiming(window.performance);
+    return Object.keys(timing).length > 0 ? JSON.stringify({ timing }) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Proves the page has hydrated before any desktop/native readiness side effect.
  * Browser evidence also waits on this marker so form interaction can never race
@@ -40,6 +51,10 @@ export function RuntimeUiReadyBeacon() {
 
     void (async () => {
       const deadline = Date.now() + RETRY_WINDOW_MS;
+      // Built once; a retry resends the same numbers.
+      const body = timingBody();
+      const headers: Record<string, string> = { "X-SahelFlow-UI-Ready": "1" };
+      if (body !== undefined) headers["Content-Type"] = "application/json";
       while (!controller.signal.aborted && Date.now() < deadline) {
         const requestController = new AbortController();
         const abortRequest = () => requestController.abort();
@@ -54,7 +69,8 @@ export function RuntimeUiReadyBeacon() {
             method: "POST",
             cache: "no-store",
             credentials: "same-origin",
-            headers: { "X-SahelFlow-UI-Ready": "1" },
+            headers,
+            body,
             signal: requestController.signal,
           });
           if (response.ok) return;

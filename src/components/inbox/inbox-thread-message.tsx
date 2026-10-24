@@ -51,7 +51,7 @@ export function bubbleDeliveryStatus(
 }
 import { Button } from "@/components/ui/button";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
-import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
+import { cn, DZ_CLOCK, intlLocale, numberFormatter } from "@/lib/utils";
 import { whatsappSendFailureCopy } from "@/hooks/inbox/inbox-workspace-shared";
 
 function messageTime(value: number, locale: "ar" | "fr" | "en"): string {
@@ -149,7 +149,7 @@ function isMediaMessage(message: InboxMessage): boolean {
 
 function formatBytes(value: number, locale: "ar" | "fr" | "en"): string {
   if (value < 1_024) return `${value} B`;
-  const formatter = new Intl.NumberFormat(intlLocale(locale), {
+  const formatter = numberFormatter(intlLocale(locale), {
     maximumFractionDigits: 1,
   });
   if (value < 1_024 * 1_024) return `${formatter.format(value / 1_024)} KB`;

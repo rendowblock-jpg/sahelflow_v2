@@ -231,4 +231,58 @@ describe("CAPI outbox effect runtime (FD-061 EX-3)", () => {
     expect(logs).toHaveLength(1);
     expect(logs[0]?.status).toBe("expired");
   });
+
+  it("hung send: a request that never answers is retried and the drain moves on", async () => {
+    // Only timers are faked, so the real SQLite round-trips keep running.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      let calls = 0;
+      let firstCallSeen: () => void = () => {};
+      const firstCall = new Promise<void>((resolve) => {
+        firstCallSeen = resolve;
+      });
+      const fetchMock = vi.fn(async () => {
+        calls += 1;
+        if (calls === 1) {
+          firstCallSeen();
+          return new Promise<Response>(() => {});
+        }
+        return jsonResponse({ events_received: 1, fbtrace_id: "trace-2" });
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      const hungOrderId = await queueCheckoutOrder();
+      // Same customer and product: the seed helpers keep the phone unique.
+      const first = await db.order.findUniqueOrThrow({
+        where: { id: hungOrderId },
+        include: { items: true },
+      });
+      const second = await seedOrder(db, {
+        customerId: first.customerId ?? undefined,
+        productId: first.items[0]?.productId ?? undefined,
+      });
+      await queueCapiStage(context, {
+        orderId: second.id,
+        stage: "checkout",
+        triggeredAt: new Date(),
+      });
+      const otherOrderId = second.id;
+
+      const draining = drainDueCapiSends(context);
+      await firstCall;
+      await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+      const outcome = await draining;
+
+      expect(outcome.retried).toBe(1);
+      expect(outcome.sent).toBe(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      const ledgers = await Promise.all([loadLedger(hungOrderId), loadLedger(otherOrderId)]);
+      const retried = ledgers.filter((row) => row?.status === "claimed");
+      expect(retried).toHaveLength(1);
+      expect(retried[0]?.attempts).toBe(1);
+      expect(retried[0]?.lastError).toMatch(/timed out/i);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

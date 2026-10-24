@@ -25,7 +25,7 @@ import {
 } from "@/lib/i18n/risk-workspace";
 import { requireTrustedAction, trustedActionAllowed } from "@/lib/identity/authorization";
 import { getRiskAnalyticsReport, getRiskConfig, getRiskRules, listBlacklistedCustomers } from "@/lib/risk-engine";
-import { formatDZD, intlLocale } from "@/lib/utils";
+import { formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import { displayWilaya } from "@/lib/wilaya-display";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -86,10 +86,10 @@ export default async function RiskPage({
   const kpis = report.kpis;
   const outcomes = report.insights.outcomes;
   const dateLocale = intlLocale(locale);
-  const integerFormatter = new Intl.NumberFormat(dateLocale, { maximumFractionDigits: 0 });
-  const percentFormatter = new Intl.NumberFormat(dateLocale, { style: "percent", maximumFractionDigits: 1 });
-  const decimalFormatter = new Intl.NumberFormat(dateLocale, { maximumFractionDigits: 1 });
-  const signedPointsFormatter = new Intl.NumberFormat(dateLocale, { signDisplay: "exceptZero", maximumFractionDigits: 1 });
+  const integerFormatter = numberFormatter(dateLocale, { maximumFractionDigits: 0 });
+  const percentFormatter = numberFormatter(dateLocale, { style: "percent", maximumFractionDigits: 1 });
+  const decimalFormatter = numberFormatter(dateLocale, { maximumFractionDigits: 1 });
+  const signedPointsFormatter = numberFormatter(dateLocale, { signDisplay: "exceptZero", maximumFractionDigits: 1 });
   const pct = (value: number) => percentFormatter.format(value);
   const riskCopy = (key: RiskWorkspaceCopyKey, values?: Record<string, string | number>) =>
     getRiskWorkspaceCopy(locale, key, values);

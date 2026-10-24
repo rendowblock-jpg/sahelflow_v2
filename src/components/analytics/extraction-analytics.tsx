@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useI18n } from "@/hooks/use-i18n";
-import { intlLocale } from "@/lib/utils";
+import { intlLocale, numberFormatter } from "@/lib/utils";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 
 interface ExtractionData {
@@ -48,15 +48,15 @@ export function ExtractionAnalytics() {
   // separator and Eastern Arabic digits must follow the active language).
   const localeTag =
     intlLocale(locale);
-  const percentFormatter = new Intl.NumberFormat(localeTag, {
+  const percentFormatter = numberFormatter(localeTag, {
     style: "percent",
     maximumFractionDigits: 1,
   });
-  const percentCompactFormatter = new Intl.NumberFormat(localeTag, {
+  const percentCompactFormatter = numberFormatter(localeTag, {
     style: "percent",
     maximumFractionDigits: 0,
   });
-  const integerFormatter = new Intl.NumberFormat(localeTag, {
+  const integerFormatter = numberFormatter(localeTag, {
     maximumFractionDigits: 0,
   });
   const [data, setData] = useState<ExtractionData | null>(null);

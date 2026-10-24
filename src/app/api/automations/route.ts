@@ -6,14 +6,26 @@ import { requireAuth } from "@/lib/auth/server";
 import { canonicalizeAutomationMutation } from "@/lib/automations/contracts";
 import { assertSellerAutomationWritePolicy } from "@/lib/automations/seller-policy";
 import { logAudit } from "@/lib/audit";
+import {
+  automationCreateData,
+  createAutomationOnce,
+  splitAutomationCreateKey,
+} from "@/lib/automations/create-command";
+import { businessPrincipalFromTrustedActor } from "@/lib/business-truth/principal";
 import { db, shopContext } from "@/lib/db";
 import { assertAutomationEffectGrants } from "@/lib/automations/authoring-grants";
 import { assertTrustedAction, trustedActorAuditIdentity } from "@/lib/identity/authorization";
+import { NotFoundError } from "@/types/errors";
 
-/** POST — Create one fully validated, seller-compatible automation definition. */
+/**
+ * POST — Create one fully validated, seller-compatible automation definition.
+ * With an optional `idempotencyKey` (UUID) the create goes through the command kernel, so a repeat of the same request replays
+ * the first automation (INT-14). Without a key the request is handled as before.
+ */
 export const POST = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireAuth("automations.manage");
-  const input = canonicalizeAutomationMutation(await req.json());
+  const { body, idempotencyKey } = splitAutomationCreateKey(await req.json());
+  const input = canonicalizeAutomationMutation(body);
   assertSellerAutomationWritePolicy(input);
   // INT-05: the author must hold the grant of every outward effect they script.
   assertAutomationEffectGrants(input.steps, (action) =>
@@ -21,24 +33,24 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   );
   const context = { prisma: db, shop: shopContext };
 
-  const automation = await context.prisma.automation.create({
-    data: {
-      name: input.name,
-      trigger: input.trigger,
-      action: input.action,
-      isActive: input.isActive,
-      dryRun: input.dryRun,
-      conditions: input.conditions ? JSON.stringify(input.conditions) : null,
-      steps: JSON.stringify(input.steps),
-      config: JSON.stringify(input.steps[0]!.config),
-      maxRetries: input.maxRetries,
-      retryDelayMs: input.retryDelayMs,
-      retryCount: 0,
-      lastError: null,
-      nextRunAt: null,
-      runCount: 0,
-    },
-  });
+  if (idempotencyKey !== undefined) {
+    const command = await createAutomationOnce(
+      { ...context, businessPrincipal: businessPrincipalFromTrustedActor(actorContext) },
+      idempotencyKey,
+      input,
+    );
+    const stored = await context.prisma.automation.findUnique({ where: { id: command.result.automationId } });
+    if (!stored) throw new NotFoundError("Automation", command.result.automationId);
+    return NextResponse.json(
+      {
+        automation: stored,
+        command: { id: command.commandId, aggregateVersion: command.aggregateVersion, replayed: command.replayed },
+      },
+      { status: 201 },
+    );
+  }
+
+  const automation = await context.prisma.automation.create({ data: automationCreateData(input) });
 
   await logAudit(context, {
     action: "automation.created",

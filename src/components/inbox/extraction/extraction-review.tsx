@@ -23,6 +23,7 @@ import {
   normalizeDZPhone,
 } from "@/lib/validation/phone";
 import wilayasData from "../../../../data/wilayas.json";
+import { initialExtractionDeliveryCost, parseDeliveryCost } from "./extraction-delivery-cost";
 import { ExtractionItemRow, type CatalogOption, type DraftItem } from "./extraction-item-row";
 
 const WILAYAS = wilayasData as Array<{ code: number; name: string; nameAr: string }>;
@@ -31,12 +32,11 @@ export interface ReviewedOrder {
   customer: { name: string; phone: string; wilaya: string; commune: string; address: string };
   items: Array<{ productName: string; quantity: number }>;
   notes?: string;
+  /** Whole DZD, exactly what the seller saw in the delivery-cost field. */
+  deliveryCost: number;
 }
 
 type Copy = (key: OrderExtractionCopyKey, params?: Record<string, string | number>) => string;
-
-/** The delivery charge a reviewed WhatsApp order is created with (shown before creation). */
-export const EXTRACTION_DELIVERY_COST = 600;
 
 let draftKey = 0;
 const nextKey = () => `item-${(draftKey += 1)}`;
@@ -83,7 +83,12 @@ export function ExtractionReview({
   const [wilaya, setWilaya] = useState(order?.wilaya ?? "");
   const [commune, setCommune] = useState(order?.commune ?? "");
   const [address, setAddress] = useState(order?.address ?? "");
+  const [deliveryCostText, setDeliveryCostText] = useState(() =>
+    String(initialExtractionDeliveryCost(order?.wilaya)),
+  );
 
+  const deliveryCost = parseDeliveryCost(deliveryCostText);
+  const deliveryCostValid = deliveryCost !== null;
   const phoneValid = isValidDZMobilePhone(phone);
   const itemsResolved =
     items.length > 0 &&
@@ -105,7 +110,7 @@ export function ExtractionReview({
       onSubmit={(event) => {
         event.preventDefault();
         setPhoneTouched(true);
-        if (missing.length > 0) return;
+        if (missing.length > 0 || deliveryCost === null) return;
         onCreate({
           customer: {
             name: name.trim(),
@@ -116,6 +121,7 @@ export function ExtractionReview({
           },
           items: items.map((item) => ({ productName: item.productName.trim(), quantity: item.quantity })),
           notes: order?.notes,
+          deliveryCost,
         });
       }}
     >
@@ -224,6 +230,25 @@ export function ExtractionReview({
             <Input id={`${fieldId}-address`} dir="auto" value={address} onChange={(event) => setAddress(event.target.value)} className="h-9" />
           </div>
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`${fieldId}-delivery-cost`}>{copy("deliveryCostLabel")}</Label>
+          <Input
+            id={`${fieldId}-delivery-cost`}
+            dir="auto"
+            inputMode="numeric"
+            autoComplete="off"
+            value={deliveryCostText}
+            onChange={(event) => setDeliveryCostText(event.target.value)}
+            aria-invalid={!deliveryCostValid}
+            aria-describedby={deliveryCostValid ? undefined : `${fieldId}-delivery-cost-error`}
+            className="h-9 tabular-nums"
+          />
+          {deliveryCostValid ? null : (
+            <p id={`${fieldId}-delivery-cost-error`} className="text-caption text-destructive" role="alert">
+              {copy("deliveryCostInvalid")}
+            </p>
+          )}
+        </div>
         {order?.notes ? (
           <p className="text-caption text-muted-foreground" dir="auto" data-sf-user-content="true">
             {copy("notes")}: {order.notes}
@@ -249,12 +274,12 @@ export function ExtractionReview({
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-muted-foreground">{copy("deliveryFee")}</dt>
-              <dd className="tabular-nums">{formatDZD(EXTRACTION_DELIVERY_COST, locale)}</dd>
+              <dd className="tabular-nums">{deliveryCost === null ? "—" : formatDZD(deliveryCost, locale)}</dd>
             </div>
             <div className="flex justify-between gap-3 text-title-3">
               <dt>{copy("total")}</dt>
               <dd className="tabular-nums">
-                {formatDZD(subtotal + EXTRACTION_DELIVERY_COST, locale)}
+                {deliveryCost === null ? "—" : formatDZD(subtotal + deliveryCost, locale)}
               </dd>
             </div>
           </dl>
@@ -265,7 +290,7 @@ export function ExtractionReview({
             {copy("stillNeeded", { fields: missing.join(" · ") })}
           </p>
         ) : null}
-        {variant === "workspace" && missing.length === 0 ? (
+        {variant === "workspace" && missing.length === 0 && deliveryCostValid ? (
           <p className="flex items-center gap-1.5 text-caption text-success" role="status">
             <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
             {copy("ready")}
@@ -274,7 +299,7 @@ export function ExtractionReview({
         <Button
           type="submit"
           size={variant === "workspace" ? "default" : "sm"}
-          disabled={creating || missing.length > 0}
+          disabled={creating || missing.length > 0 || !deliveryCostValid}
           className="w-full"
         >
           {creating ? (

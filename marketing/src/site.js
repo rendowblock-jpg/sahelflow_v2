@@ -340,6 +340,8 @@
     input.style.setProperty("--fill", `${((Number(input.value) - min) / (max - min)) * 100}%`);
   };
   for (const form of $$("[data-calc]")) {
+    // Enter in a field must not reload the page. Done here, not as an inline attribute, so the page's CSP needs no inline handlers.
+    form.addEventListener("submit", (event) => event.preventDefault());
     const kind = form.dataset.calc;
     const cur = form.dataset.currency;
     const inputs = Object.fromEntries($$("[data-calc-input]", form).map((i) => [i.name, i]));

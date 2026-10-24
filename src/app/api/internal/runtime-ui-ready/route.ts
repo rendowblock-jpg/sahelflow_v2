@@ -18,6 +18,8 @@ import {
   readLaunchAppearance,
   recordLaunchAppearance,
 } from "@/lib/runtime/launch-appearance";
+import { UI_TIMING_BODY_MAX_BYTES, type UiTiming } from "@/lib/runtime/ui-timing";
+import { parseUiTimingBody } from "@/lib/runtime/ui-timing-schema";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -84,6 +86,7 @@ function recordUiDiagnostic(
     attempt: number;
     instanceId?: string;
     appVersion?: string;
+    uiTiming?: UiTiming;
   },
 ) {
   if (!dataDir) return false;
@@ -97,6 +100,34 @@ function recordUiDiagnostic(
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * The page's timing numbers, or null. A missing, oversized, unreadable or
+ * malformed body never changes the answer to the ready report.
+ */
+async function readUiTiming(request: NextRequest): Promise<UiTiming | null> {
+  try {
+    const declared = Number(request.headers.get("content-length") ?? 0);
+    if (!(declared <= UI_TIMING_BODY_MAX_BYTES)) return null;
+    const reader = request.body?.getReader();
+    if (!reader) return null;
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > UI_TIMING_BODY_MAX_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+      chunks.push(value);
+    }
+    return parseUiTimingBody(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    return null;
   }
 }
 
@@ -198,6 +229,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const uiTiming = await readUiTiming(request);
+
   const acknowledgment = {
     formatVersion: 1,
     protocolVersion: RUNTIME_PROTOCOL_VERSION,
@@ -240,6 +273,7 @@ export async function POST(request: NextRequest) {
     attempt,
     instanceId,
     appVersion,
+    ...(uiTiming ? { uiTiming } : {}),
   });
   if (!diagnosticPersisted) {
     rmSync(ackPath, { force: true });
