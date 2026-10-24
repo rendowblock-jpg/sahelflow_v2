@@ -2270,7 +2270,10 @@ mod imp {
                     ),
                     Ok
                 );
-                assert_eq!(GdipGetImageGraphicsContext(bitmap.cast(), &mut graphics), Ok);
+                assert_eq!(
+                    GdipGetImageGraphicsContext(bitmap.cast(), &mut graphics),
+                    Ok
+                );
                 // The same modes the card itself runs with.
                 GdipSetSmoothingMode(graphics, SmoothingModeAntiAlias);
                 GdipSetPixelOffsetMode(graphics, PixelOffsetModeHighQuality);
@@ -2284,7 +2287,8 @@ mod imp {
             let mut worst = 0_i32;
             for (wanted, got) in layer.iter().zip(&surface) {
                 for shift in [0_u32, 8, 16, 24] {
-                    let difference = (((wanted >> shift) & 0xFF) as i32 - ((got >> shift) & 0xFF) as i32).abs();
+                    let difference =
+                        (((wanted >> shift) & 0xFF) as i32 - ((got >> shift) & 0xFF) as i32).abs();
                     worst = worst.max(difference);
                 }
             }
@@ -2714,7 +2718,10 @@ pub(crate) mod glow_layer_tests {
             let slope = value - previous;
             assert!(slope <= 0.0, "it rises at step {step}");
             // A kink is a sudden change of slope; a bell changes it gently.
-            assert!((slope - previous_slope).abs() < 0.01, "a kink at step {step}");
+            assert!(
+                (slope - previous_slope).abs() < 0.01,
+                "a kink at step {step}"
+            );
             previous = value;
             previous_slope = slope;
         }
@@ -2742,21 +2749,31 @@ pub(crate) mod glow_layer_tests {
             for pixel in &pixels {
                 let a = channel(*pixel, 24);
                 for shift in [0, 8, 16] {
-                    assert!(channel(*pixel, shift) <= a, "{pixel:#010x} is not premultiplied");
+                    assert!(
+                        channel(*pixel, shift) <= a,
+                        "{pixel:#010x} is not premultiplied"
+                    );
                 }
             }
             assert_eq!(pixels[0], 0, "top-left corner");
             assert_eq!(pixels[W * H - 1], 0, "bottom-right corner");
             let centre = pixels[108 * W + 300];
             let wanted = (255.0 * alpha).round() as i32;
-            assert!((channel(centre, 24) as i32 - wanted).abs() <= 1, "centre alpha");
+            assert!(
+                (channel(centre, 24) as i32 - wanted).abs() <= 1,
+                "centre alpha"
+            );
         }
     }
 
     #[test]
     fn nothing_is_drawn_for_no_opacity_or_no_radius() {
-        assert!(glow_layer(W, H, CENTER, GLOW_RADIUS, SKY, 0.0).iter().all(|p| *p == 0));
-        assert!(glow_layer(W, H, CENTER, 0.0, SKY, 0.1).iter().all(|p| *p == 0));
+        assert!(glow_layer(W, H, CENTER, GLOW_RADIUS, SKY, 0.0)
+            .iter()
+            .all(|p| *p == 0));
+        assert!(glow_layer(W, H, CENTER, 0.0, SKY, 0.1)
+            .iter()
+            .all(|p| *p == 0));
     }
 
     #[test]
