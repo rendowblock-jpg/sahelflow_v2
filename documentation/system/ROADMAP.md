@@ -7,7 +7,7 @@
 
 1. **Hosted storefront v1.** The current focus. Stores are served by SahelFlow at `shop.sahelflow.com/<slug>`, Arabic first, with product photos hosted by SahelFlow and three new templates named Prime, Souk and Reel. The Founder's storefront decisions are FD-074 to FD-078 in `../product/DECISIONS.md`. Every storefront change keeps the protected invariants (durable publish, pause and rollback; server-authoritative checkout) and is judged against the AAA user-experience standard in `../product/EXPERIENCE.md`.
 2. **Workers Paid before any seller runs ads.** Until then the storefront stays on Cloudflare Workers Free.
-3. **The next signed release** only on the Founder's decision, built from the then-current tip of `main`, with nothing merged while it builds (`../operations/WORKFLOW.md`, section 11). Documentation catches up in a separate pull request that does not touch the release files.
+3. **The next signed release** only on the Founder's decision at that moment. On 2026-10-24 he set the trigger: it is built when all work the agent can finish alone is finished. It is built from the then-current tip of `main`, with nothing merged while it builds (`../operations/WORKFLOW.md`, section 11). Documentation catches up in a separate pull request that does not touch the release files.
 4. **The installed campaign** on the build the Founder installs: state preserved (no logout, no AppData reset, no protected-auth clearing), one pass over the rows that build contains, #306 logout last. Then **FRC-3** in order A, D, C, B. FRC-2, FRC-4 and FRC-5 proceed as access allows; FRC-6 follows only when its conditions hold.
 5. **#230** customer-online and Algerian-network closure.
 6. **Representative Beta**, then explicit **Stable** promotion.
