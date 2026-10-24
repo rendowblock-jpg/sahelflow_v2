@@ -123,6 +123,14 @@ describe("normalizePhone", () => {
     expect(normalizePhone("0555123456")).toBe("0555123456");
   });
 
+  it("reads Arabic-Indic and Eastern Arabic-Indic digits like 0-9 (PB-PHONE-ARABIC-DIGITS)", () => {
+    // /\D/ treats these digits as separators, so such a cell used to become "".
+    expect(normalizePhone("٠٦٥٥١٢٣٤٥٦")).toBe("0655123456");
+    expect(normalizePhone("۰۶۵۵۱۲۳۴۵۶")).toBe("0655123456");
+    expect(normalizePhone("+٢١٣ ٦٥٥ ١٢ ٣٤ ٥٦")).toBe("0655123456");
+    expect(normalizePhone("0655١٢٣٤٥٦")).toBe("0655123456");
+  });
+
   it("returns digits only for unknown formats", () => {
     expect(normalizePhone("1234567890")).toBe("1234567890");
   });

@@ -2,6 +2,7 @@
  * Import field configs — expected fields + aliases for auto-detecting column
  * mappings. Aliases cover French, English, and Arabic common column names.
  */
+import { toAsciiDigits } from "@/lib/phone-patterns";
 
 export interface FieldConfig {
   key: string;
@@ -107,9 +108,12 @@ export function parseNumber(value: string): number {
   return Number.isFinite(number) ? number : 0;
 }
 
-/** Clean a phone number to 0XXXXXXXXX format. */
+/**
+ * Clean a phone number to 0XXXXXXXXX format. Arabic-Indic digits become 0-9
+ * first because /\D/ would strip them as separators.
+ */
 export function normalizePhone(value: string): string {
-  let digits = value.replace(/\D/g, "");
+  let digits = toAsciiDigits(value).replace(/\D/g, "");
   if (digits.startsWith("213")) digits = `0${digits.slice(3)}`;
   if (digits.startsWith("00")) digits = `0${digits.slice(2)}`;
   return digits;

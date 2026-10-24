@@ -24,6 +24,8 @@
  */
 import { z } from "zod";
 
+import { toAsciiDigits } from "../phone-patterns";
+
 /** The canonical Algerian mobile mask, used as THE placeholder everywhere. */
 export const DZ_PHONE_PLACEHOLDER = "05 55 12 34 56";
 
@@ -33,10 +35,12 @@ const DZ_MOBILE_REGEX = /^0[5-7]\d{8}$/;
 /**
  * Normalize any user-entered phone to the local digits-only form
  * ("0555123456"). Strips separators and canonicalizes +213 / 00213 / 213
- * prefixes. Returns "" for empty input.
+ * prefixes. Returns "" for empty input. Arabic-Indic and Eastern Arabic-Indic
+ * digits become 0-9 first: /\D/ counts them as separators, so a number typed
+ * on an Arabic keyboard would otherwise be stripped to "".
  */
 export function normalizeDZPhone(raw: string): string {
-  const digits = (raw ?? "").replace(/\D/g, "");
+  const digits = toAsciiDigits(raw ?? "").replace(/\D/g, "");
   if (!digits) return "";
   let national: string;
   if (digits.startsWith("00213")) national = digits.slice(5);
