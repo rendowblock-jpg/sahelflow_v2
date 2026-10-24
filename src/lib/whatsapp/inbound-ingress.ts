@@ -5,10 +5,17 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
-import { sealBusinessCommandResultWithKey } from "@/lib/business-truth/result-codec";
+import {
+  openBusinessCommandResultWithKey,
+  sealBusinessCommandResultWithKey,
+} from "@/lib/business-truth/result-codec";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { ConflictError, SahelFlowError } from "@/types/errors";
-import { hashWhatsAppAccountId } from "../../../sidecars/whatsapp/auth-tokens";
+import {
+  hashWhatsAppAccountId,
+  isSameWhatsAppAccount,
+  normalizeWhatsAppAccountId,
+} from "../../../sidecars/whatsapp/auth-tokens";
 import { sidecar } from "./sidecar-client";
 
 const INGRESS_SCOPE_PURPOSE = "sahelflow/whatsapp/ingress-scope/v1";
@@ -54,6 +61,7 @@ interface ExistingIngress {
   id: string;
   ingressKey: string;
   payloadHash: string;
+  payloadJson: string;
   status: string;
 }
 
@@ -148,11 +156,72 @@ function isUniqueViolation(error: unknown): boolean {
   );
 }
 
+function hashProviderContent(accountId: string, message: unknown): string {
+  return createHash("sha256")
+    .update(
+      canonicalJson({
+        provider: PROVIDER,
+        environment: ENVIRONMENT,
+        eventType: EVENT_TYPE,
+        accountId,
+        message,
+      }),
+    )
+    .digest("hex");
+}
+
+interface IncomingContent {
+  accountId: string;
+  message: unknown;
+  payloadHash: string;
+}
+
+// Rows stored before the hash used the bare number carry a hash over the raw
+// account id, device index included. The ingress key already proves the same
+// number, so only the content is left to compare. After a relink the index in
+// the new delivery differs from the one the old hash used; the row's sealed
+// payload still holds the old id, so the hash is rebuilt from that.
+function matchesEarlierHash(
+  existing: ExistingIngress,
+  incoming: IncomingContent,
+  envelopeKey: Buffer,
+): boolean {
+  if (
+    existing.payloadHash ===
+    hashProviderContent(incoming.accountId, incoming.message)
+  ) {
+    return true;
+  }
+  try {
+    const stored = openBusinessCommandResultWithKey<{ accountId?: unknown }>(
+      existing.payloadJson,
+      {
+        commandId: existing.id,
+        idempotencyKey: `provider-ingress:${existing.ingressKey}`,
+        requestHash: existing.payloadHash,
+      },
+      envelopeKey,
+    );
+    return (
+      typeof stored.accountId === "string" &&
+      isSameWhatsAppAccount(stored.accountId, incoming.accountId) &&
+      existing.payloadHash ===
+        hashProviderContent(stored.accountId, incoming.message)
+    );
+  } catch {
+    return false;
+  }
+}
+
 function assertExactReplay(
   existing: ExistingIngress,
-  payloadHash: string,
+  incoming: IncomingContent,
+  envelopeKey: Buffer,
 ): PersistWhatsAppIngressResult {
-  if (existing.payloadHash !== payloadHash) {
+  if (
+    existing.payloadHash !== incoming.payloadHash &&
+    !matchesEarlierHash(existing, incoming, envelopeKey)
+  ) {
     throw new ConflictError(
       "WhatsApp provider event identity is already bound to different content",
     );
@@ -171,7 +240,7 @@ export async function persistWhatsAppInbound(
 ): Promise<PersistWhatsAppIngressResult> {
   const input = whatsappInboundEnvelopeSchema.parse(rawInput);
   const expectedAccountId = await resolveProviderAccountId(context);
-  if (input.accountId !== expectedAccountId) {
+  if (!isSameWhatsAppAccount(input.accountId, expectedAccountId)) {
     throw new ConflictError(
       "WhatsApp inbound event belongs to a different paired account",
     );
@@ -195,15 +264,29 @@ export async function persistWhatsAppInbound(
     accountId: input.accountId,
     message: input.message,
   };
-  const payloadHash = createHash("sha256")
-    .update(canonicalJson(providerPayload))
-    .digest("hex");
+  // The hash covers the number without its device index, like the ingress
+  // key does, so the same message hashes the same after a relink.
+  const incoming: IncomingContent = {
+    accountId: input.accountId,
+    message: input.message,
+    payloadHash: hashProviderContent(
+      normalizeWhatsAppAccountId(input.accountId),
+      input.message,
+    ),
+  };
+  const { payloadHash } = incoming;
 
   const existing = await context.prisma.providerIngressEvent.findUnique({
     where: { ingressKey },
-    select: { id: true, ingressKey: true, payloadHash: true, status: true },
+    select: {
+      id: true,
+      ingressKey: true,
+      payloadHash: true,
+      payloadJson: true,
+      status: true,
+    },
   });
-  if (existing) return assertExactReplay(existing, payloadHash);
+  if (existing) return assertExactReplay(existing, incoming, envelopeKey);
 
   const ingressEventId = randomUUID();
   const payloadJson = sealBusinessCommandResultWithKey(
@@ -249,9 +332,15 @@ export async function persistWhatsAppInbound(
     if (!isUniqueViolation(error)) throw error;
     const raced = await context.prisma.providerIngressEvent.findUnique({
       where: { ingressKey },
-      select: { id: true, ingressKey: true, payloadHash: true, status: true },
+      select: {
+        id: true,
+        ingressKey: true,
+        payloadHash: true,
+        payloadJson: true,
+        status: true,
+      },
     });
     if (!raced) throw error;
-    return assertExactReplay(raced, payloadHash);
+    return assertExactReplay(raced, incoming, envelopeKey);
   }
 }

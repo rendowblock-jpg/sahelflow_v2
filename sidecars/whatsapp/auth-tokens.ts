@@ -66,6 +66,24 @@ export function normalizeWhatsAppAccountId(accountId: string): string {
   return digits;
 }
 
+/**
+ * Whether two provider ids name the same paired account. The hash that scopes
+ * every ingress and effect key reads only the phone number, so this must too:
+ * a relink brings the same number back under a new device index, and a raw
+ * string compare would refuse every record spooled before it.
+ * Equal strings stay equal, so nothing accepted before is refused now.
+ */
+export function isSameWhatsAppAccount(left: string, right: string): boolean {
+  if (left === right) return true;
+  try {
+    return (
+      normalizeWhatsAppAccountId(left) === normalizeWhatsAppAccountId(right)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function hashWhatsAppAccountId(accountId: string): string {
   return createHash("sha256")
     .update(PROVIDER_ACCOUNT_PURPOSE)
