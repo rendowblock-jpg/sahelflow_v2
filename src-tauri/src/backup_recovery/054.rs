@@ -604,14 +604,11 @@ mod tests {
         fs::remove_dir_all(root).expect("remove restore drill directory");
     }
 
-    // KNOWN GAP (restore drill, 24 Oct 2026): preflight_database runs integrity_check, which
-    // says "ok" for a zero-byte file because SQLite treats it as a new empty database. A
-    // database that lost all its bytes (failed copy, disk full, power cut) therefore passes the
-    // integrity gate. Restore is still guarded by the migration-history check
-    // (applied_migration_vector), but the gate itself should refuse a file with no schema.
+    // SQLite says "ok" to integrity_check for a zero-byte file because it treats it as a new
+    // empty database. A database that lost all its bytes (failed copy, disk full, power cut)
+    // must not pass the gate, or it would be backed up and restored as if it were a shop.
     #[test]
-    #[ignore = "KNOWN GAP: preflight_database accepts a zero-byte database as ok"]
-    fn known_gap_zero_byte_database_is_refused_by_preflight() {
+    fn zero_byte_database_is_refused_by_preflight() {
         let root = test_directory("restore-drill-empty");
         let empty = root.join("empty.db");
         fs::write(&empty, b"").expect("zero-byte database");

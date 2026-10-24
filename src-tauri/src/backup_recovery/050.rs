@@ -2,6 +2,14 @@
 
 fn preflight_database(path: &Path) -> Result<(), IoError> {
     reject_symlink_if_present(path)?;
+    // SQLite reads a zero-byte file as a new empty database and says "ok". Every caller holds
+    // a shop database that must contain data, so an empty file is a failed copy, not a shop.
+    if fs::metadata(path).is_ok_and(|meta| meta.is_file() && meta.len() == 0) {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            format!("database file is empty (0 bytes): {}", path.display()),
+        ));
+    }
     let connection = Connection::open_with_flags(
         path,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
