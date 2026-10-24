@@ -202,7 +202,8 @@ describe("the page may call exactly three commands of its own: look, download, i
 
   it("the install command is the only place that starts the installer, and it never stops or exits by itself", () => {
     const command = rustFunction("async fn install_downloaded_update(");
-    expect(command).toContain("update.install(&bytes.0)");
+    // rustfmt may split the call over several lines; the text is compared without whitespace.
+    expect(command.replace(/\s+/g, "")).toContain("update.install(&bytes.0)");
     for (const forbidden of [".download(", ".exit(", "stop_contained_trees", "download_and_install"]) {
       expect(command, forbidden).not.toContain(forbidden);
     }
