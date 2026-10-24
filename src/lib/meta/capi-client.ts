@@ -24,6 +24,9 @@ const DZ_COUNTRY_CODE = "213";
 
 export const META_CAPI_ENDPOINT = `${META_API_BASE}/${META_API_VERSION}`;
 
+/** Longest one Meta request (answer and body) may take before it counts as a retryable failure. */
+export const CAPI_REQUEST_TIMEOUT_MS = 15_000;
+
 function sha256hex(value: string): string {
   return createHash("sha256").update(value.toLowerCase().replace(/\s+/g, ""), "utf8").digest("hex");
 }
@@ -87,6 +90,12 @@ export interface CapiResult {
   httpStatus?: number;
 }
 
+type CapiResponseBody = {
+  events_received?: number;
+  fbtrace_id?: string;
+  error?: { message?: string };
+} | null;
+
 export async function sendCapiEvent(
   pixelId: string,
   accessToken: string,
@@ -134,22 +143,41 @@ export async function sendCapiEvent(
 
   const url = `${META_CAPI_ENDPOINT}/${pixelId}/events?access_token=${encodeURIComponent(accessToken)}`;
 
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
-    throw new Error(`Meta CAPI network error: ${err instanceof Error ? err.message : String(err)}`);
-  }
+  // A hung connection must not hold the single-flight outbox worker: give up
+  // after the limit and let the retry matrix handle it. Meta dedups the retry
+  // on event_id, so a request that did land is not counted twice.
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`Meta CAPI request timed out after ${CAPI_REQUEST_TIMEOUT_MS} ms`));
+      controller.abort();
+    }, CAPI_REQUEST_TIMEOUT_MS);
+  });
 
-  const json = (await res.json().catch(() => null)) as {
-    events_received?: number;
-    fbtrace_id?: string;
-    error?: { message?: string };
-  } | null;
+  const exchange = async () => {
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      throw new Error(`Meta CAPI network error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    const parsed = (await response.json().catch(() => null)) as CapiResponseBody;
+    return { res: response, json: parsed };
+  };
+
+  let res: Response;
+  let json: CapiResponseBody;
+  try {
+    ({ res, json } = await Promise.race([exchange(), timedOut]));
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (res.status >= 500) {
     throw new Error(`Meta CAPI server error ${res.status}: ${json?.error?.message ?? "no message"}`);
