@@ -43,6 +43,7 @@ vi.mock("@/lib/identity/trusted-actor", () => ({
 vi.mock("@/lib/identity/authorization", () => ({
   requireTrustedAction: harness.requireTrustedAction,
   assertTrustedAction: harness.assertTrustedAction,
+  trustedActionAllowed: () => true,
 }));
 
 vi.mock("@/lib/business-truth/principal", () => ({
