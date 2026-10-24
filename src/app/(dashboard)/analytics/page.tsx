@@ -669,14 +669,14 @@ export default async function AnalyticsPage({
         <CardContent>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {comparisonStats.map((stat) => {
+              const change = stat.change;
               const isPositive =
-                stat.key === "returnRate"
-                  ? stat.change < 0
-                  : stat.change > 0;
+                change !== null &&
+                (stat.key === "returnRate" ? change < 0 : change > 0);
               const Icon =
-                stat.change > 0
+                change !== null && change > 0
                   ? ArrowUp
-                  : stat.change < 0
+                  : change !== null && change < 0
                     ? ArrowDown
                     : Minus;
               return (
@@ -690,11 +690,14 @@ export default async function AnalyticsPage({
                       isPositive
                         ? "border-emerald-500/20 text-success"
                         : "border-red-500/20 text-destructive",
-                      stat.change === 0 && "text-muted-foreground",
+                      (change === null || change === 0) &&
+                        "text-muted-foreground",
                     )}
                   >
                     <Icon className="size-3" aria-hidden="true" />
-                    {percentFormatter.format(Math.abs(stat.change) / 100)}
+                    {change === null
+                      ? "—"
+                      : percentFormatter.format(Math.abs(change) / 100)}
                   </Badge>
                 </div>
               );

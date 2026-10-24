@@ -18,6 +18,8 @@
  * operational context is retained only after that PII is replaced.
  */
 
+import { replacePhoneNumbers } from "./phone-patterns";
+
 const KEY_SEPARATOR_REGEX = /[^a-z0-9]/g;
 
 function normalizeKey(key: string): string {
@@ -137,8 +139,6 @@ function isSafeStringValue(normalizedKey: string, value: string): boolean {
   );
 }
 
-const PHONE_REGEX = /\b0\d(?:\s?\d{2}){4}\b/g;
-const INT_PHONE_REGEX = /\+213\s?\d(?:\s?\d{2}){4}/g;
 const EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
 const ERROR_OWN_FIELDS = new Set(["message", "name", "stack"]);
 
@@ -180,10 +180,7 @@ function redactStoredToolCall(entry: unknown): unknown {
 }
 
 function scrubEmbeddedPii(value: string): string {
-  return value
-    .replace(PHONE_REGEX, "[PHONE]")
-    .replace(INT_PHONE_REGEX, "[PHONE]")
-    .replace(EMAIL_REGEX, "[EMAIL]");
+  return replacePhoneNumbers(value, () => "[PHONE]").replace(EMAIL_REGEX, "[EMAIL]");
 }
 
 function redactUnapprovedString(value: string): string {

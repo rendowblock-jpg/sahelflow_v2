@@ -10,6 +10,7 @@ import type {
 import { toast } from "@/lib/toast";
 import {
   LIVE_RECOVERY_POLL_MS,
+  OPEN_SOCKET_POLL_MS,
   recoveryPollDelayMs,
   STATUS_RECOVERY_POLL_MS,
   mapDeliveryStatus,
@@ -183,8 +184,12 @@ export function useInboxTransportRuntime({
   }, [status]);
 
   useEffect(() => {
-    if (wsOpen || sending) return;
+    if (sending) return;
 
+    // While the push channel is open the chat list and the open thread are
+    // still re-read slowly, because the push has no replay and no heartbeat: a
+    // frame it drops would otherwise show only after a reload.
+    //
     // While the push channel is down, the durable projection is the only way
     // the Inbox learns anything, including that WhatsApp came back. A
     // connected account refreshes the chats and the open thread at the live
@@ -217,9 +222,11 @@ export function useInboxTransportRuntime({
       try {
         await loadChats();
         if (cancelled || sendingRef.current) return;
-        // Off the live cadence only the status matters; the thread refreshes
-        // once WhatsApp is connected again.
-        if (!liveCadence) return;
+        // With the push channel down and WhatsApp not connected only the
+        // status matters; the thread refreshes once WhatsApp is connected
+        // again. An open channel re-reads the thread whatever the status says,
+        // like the chat list above.
+        if (!wsOpen && !liveCadence) return;
         const chat = activeChatRef.current;
         if (chat) await loadMessages(chat, { background: true });
       } finally {
@@ -232,9 +239,13 @@ export function useInboxTransportRuntime({
     const scheduleNext = () => {
       if (cancelled) return;
       window.clearTimeout(timerId);
+      // An open socket keeps a flat slow cadence; a closed one backs off.
+      const delayMs = wsOpen
+        ? OPEN_SOCKET_POLL_MS
+        : recoveryPollDelayMs(baseDelayMs, completedCycles);
       timerId = window.setTimeout(() => {
         void refreshDurableProjection().finally(scheduleNext);
-      }, recoveryPollDelayMs(baseDelayMs, completedCycles));
+      }, delayMs);
     };
     // A seller returning to the tab gets a refresh now, at the full rate,
     // instead of waiting out a backed-off delay.

@@ -33,13 +33,16 @@ export function processShopContext(): ShopContext {
     process.env.VITEST === "true";
   const development = process.env.NODE_ENV === "development";
   const packaged = process.env.NODE_ENV === "production";
+  // A packaged process never takes the test identities, even if SF_TEST_ROOT
+  // leaks into its environment.
+  const testFallback = !packaged && testing;
 
   if (packaged) {
     assertMasterKeyRotationInactive();
     assertProtectedDataMigrationInactive();
   }
 
-  const fallbackShopId = testing ? "test" : development ? "default" : "";
+  const fallbackShopId = testFallback ? "test" : development ? "default" : "";
   const shopId = process.env.SF_ACTIVE_SHOP_ID ?? fallbackShopId;
   const registryRevision = Number.parseInt(
     process.env.SF_REGISTRY_REVISION ?? (!packaged && (testing || development) ? "1" : "0"),
@@ -50,13 +53,13 @@ export function processShopContext(): ShopContext {
     (!packaged && (testing || development) ? "0".repeat(64) : "");
   const workspaceId =
     process.env.SF_WORKSPACE_ID ??
-    (testing ? TEST_WORKSPACE_ID : development ? "0".repeat(32) : "");
+    (testFallback ? TEST_WORKSPACE_ID : development ? "0".repeat(32) : "");
   const installationId =
     process.env.SF_INSTALLATION_ID ??
-    (testing ? TEST_INSTALLATION_ID : development ? "0".repeat(32) : "");
+    (testFallback ? TEST_INSTALLATION_ID : development ? "0".repeat(32) : "");
   const shopIncarnationId =
     process.env.SF_SHOP_INCARNATION_ID ??
-    (testing ? TEST_SHOP_INCARNATION_ID : development ? "0".repeat(32) : "");
+    (testFallback ? TEST_SHOP_INCARNATION_ID : development ? "0".repeat(32) : "");
   const databaseFileId =
     process.env.SF_DATABASE_FILE_ID ??
     (!packaged && (testing || development) ? basename(databasePath) : "");

@@ -10,8 +10,9 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/ai/attachments/[id] — one image a seller attached to an Agents
  * chat turn, opened from its sealed payload for the chat that shows it.
- * Same authority as reading the conversation (`ai.use`); never cached by
- * shared caches.
+ * Same authority as reading the conversation (`ai.use`); never stored by any
+ * cache, because the image is customer data and this route has no per-chat
+ * ownership check yet.
  */
 export const GET = withErrorHandler(
   async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
@@ -29,7 +30,7 @@ export const GET = withErrorHandler(
       headers: {
         "Content-Type": row.mediaType,
         "Content-Length": String(bytes.length),
-        "Cache-Control": "private, max-age=86400, immutable",
+        "Cache-Control": "private, no-store",
         "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy": "default-src 'none'; sandbox",
       },

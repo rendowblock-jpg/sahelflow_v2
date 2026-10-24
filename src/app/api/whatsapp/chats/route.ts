@@ -17,6 +17,44 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// The sidecar status is a side note on the chat list. It starts together with
+// the database work and gets only this long, so a slow sidecar cannot hold the
+// list back. No answer in time reads as "not reachable".
+const SIDECAR_PROBE_TIMEOUT_MS = 1_500;
+
+type SidecarProbe =
+  | { kind: "status"; status: string }
+  | { kind: "unreachable" }
+  | { kind: "failed"; error: unknown };
+
+// Never rejects, so a probe nobody awaits (the database failed first) cannot
+// raise an unhandled rejection. An error that is not a sidecar error is handed
+// back as "failed" and rethrown by the caller, as before.
+function probeSidecar(): Promise<SidecarProbe> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<SidecarProbe>((resolve) => {
+    timer = setTimeout(
+      () => resolve({ kind: "unreachable" }),
+      SIDECAR_PROBE_TIMEOUT_MS,
+    );
+  });
+  const answer = (async (): Promise<SidecarProbe> => {
+    try {
+      const { status } = await sidecar.status(SIDECAR_PROBE_TIMEOUT_MS);
+      return { kind: "status", status };
+    } catch (error) {
+      if (
+        error instanceof SidecarUnavailableError ||
+        error instanceof SidecarRequestError
+      ) {
+        return { kind: "unreachable" };
+      }
+      return { kind: "failed", error };
+    }
+  })();
+  return Promise.race([answer, timedOut]).finally(() => clearTimeout(timer));
+}
+
 function parseLabels(value: string | null): string[] {
   if (!value) return [];
   try {
@@ -45,6 +83,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const limit = Number.isFinite(requested)
     ? Math.max(1, Math.min(requested, 500))
     : 50;
+
+  const sidecarProbe = probeSidecar();
 
   // The shop database is the inbox authority. Provider transport state may be
   // degraded or disconnected without changing which conversations exist, their
@@ -167,19 +207,10 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
   // Transport health is projection metadata only. Any provider/network failure
   // must not invalidate already-committed local inbox truth.
-  let sidecarReachable = true;
-  let sidecarStatus: string | null = null;
-  try {
-    sidecarStatus = (await sidecar.status()).status;
-  } catch (error) {
-    if (
-      !(error instanceof SidecarUnavailableError) &&
-      !(error instanceof SidecarRequestError)
-    ) {
-      throw error;
-    }
-    sidecarReachable = false;
-  }
+  const probe = await sidecarProbe;
+  if (probe.kind === "failed") throw probe.error;
+  const sidecarReachable = probe.kind === "status";
+  const sidecarStatus = probe.kind === "status" ? probe.status : null;
 
   return NextResponse.json({
     chats,

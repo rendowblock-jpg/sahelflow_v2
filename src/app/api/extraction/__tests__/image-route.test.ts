@@ -816,7 +816,19 @@ describe("POST /api/extraction/image: the metric", () => {
     for (const forbidden of ["Amine", "0555123456", "private-customer-order", "Casque", "bytes"]) expect(text).not.toContain(forbidden);
   });
 
-  it("names the model gemini-image when Gemini read the picture", async () => {
+  it("records the model the result names when Gemini read the picture", async () => {
+    await call();
+    expect((firstCall(h.metric)[1] as { modelVersion?: string }).modelVersion).toBe("gemini-test");
+  });
+
+  // An older result, or one without a usable model name, keeps the fixed label rather than a blank.
+  it.each([
+    ["no raw part", undefined],
+    ["a raw part without a model", { source: "screenshot" }],
+    ["a blank model", { model: "   " }],
+    ["a model that is not text", { model: 3 }],
+  ])("keeps the gemini-image label when the result has %s", async (_label, raw) => {
+    h.extract.mockResolvedValue({ ...RESULT, raw });
     await call();
     expect((firstCall(h.metric)[1] as { modelVersion?: string }).modelVersion).toBe("gemini-image");
   });

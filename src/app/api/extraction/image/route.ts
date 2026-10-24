@@ -6,6 +6,7 @@ import {
   MAX_EXTRACTION_IMAGE_BYTES,
   recordExtractionMetric,
 } from "@/lib/ai/extraction";
+import { geminiModelVersion } from "@/lib/ai/extraction/model-version";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { getCurrentUserKey, requireAuth } from "@/lib/auth/server";
 import { db, shopContext } from "@/lib/db";
@@ -211,7 +212,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     isComplete: result.isComplete,
     missingFields: result.missingFields,
     latencyMs: Date.now() - start,
-    modelVersion: result.method === "gemini" ? "gemini-image" : undefined,
+    modelVersion: geminiModelVersion(result, "gemini-image"),
   }).catch(() => { /* best-effort */ });
 
   return NextResponse.json({ result });

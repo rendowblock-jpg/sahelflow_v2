@@ -8,6 +8,7 @@ import "server-only";
 import { db, shopContext } from "@/lib/db";
 import { analyticsService, type AnalyticsReport } from "@/lib/data/analytics";
 import type { DashboardFieldAccess } from "@/lib/identity/dashboard-projection";
+import { addShopDays, startOfShopDay } from "@/lib/time/shop-day";
 
 /** Full report for the analytics page (default 30 days). */
 export async function getAnalyticsReport(days = 30): Promise<AnalyticsReport> {
@@ -29,18 +30,6 @@ type DashboardSeriesOrder = {
   createdAt: Date;
   totalPrice: number;
 };
-
-function startOfLocalDay(value: Date): Date {
-  const result = new Date(value);
-  result.setHours(0, 0, 0, 0);
-  return result;
-}
-
-function addLocalDays(value: Date, days: number): Date {
-  const result = new Date(value);
-  result.setDate(result.getDate() + days);
-  return result;
-}
 
 const EMPTY_DELIVERY_PERFORMANCE: AnalyticsReport["deliveryPerformance"] = {
   deliveryRate: 0,
@@ -95,7 +84,7 @@ export async function getDashboardAnalytics(
   }
 
   const now = new Date();
-  const periodStart = startOfLocalDay(addLocalDays(now, -6));
+  const periodStart = startOfShopDay(addShopDays(now, -6));
 
   const orderRowsPromise: Promise<DashboardSeriesOrder[]> = !fieldAccess.analytics
     ? Promise.resolve([])

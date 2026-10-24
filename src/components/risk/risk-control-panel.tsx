@@ -121,6 +121,12 @@ export function RiskControlPanel({ config: initialConfig }: Props) {
                   max={2}
                   step={0.1}
                 />
+                {/* No scoring step reads the behavior weight, so say so instead of implying an effect. */}
+                {key === "behavior" && (
+                  <p data-risk-control-note="not-used-yet" className="text-xs text-muted-foreground">
+                    {t("risk.control.notUsedYetNote")}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -171,12 +177,23 @@ export function RiskControlPanel({ config: initialConfig }: Props) {
                 { key: "autoHoldCritical", labelKey: "risk.control.autoActions.autoHoldCritical" },
                 { key: "autoFlagBlacklist", labelKey: "risk.control.autoActions.autoFlagBlacklist" },
               ] as const).map(({ key, labelKey }) => (
-                <div key={key} className="flex items-center justify-between rounded-surface border p-3">
-                  <Label className="text-sm font-normal cursor-pointer">{t(labelKey)}</Label>
-                  <Switch
-                    checked={config.autoActions[key]}
-                    onCheckedChange={(v) => updateAutoAction(key, v)}
-                  />
+                <div key={key} className="space-y-1.5 rounded-surface border p-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-normal cursor-pointer">{t(labelKey)}</Label>
+                    <Switch
+                      checked={config.autoActions[key]}
+                      onCheckedChange={(v) => updateAutoAction(key, v)}
+                      aria-describedby={`risk-control-note-${key}`}
+                    />
+                  </div>
+                  {/* The engine only labels orders; it never confirms, holds or blocks one. */}
+                  <p
+                    id={`risk-control-note-${key}`}
+                    data-risk-control-note="recommendation-only"
+                    className="text-xs text-muted-foreground"
+                  >
+                    {t("risk.control.recommendationOnlyNote")}
+                  </p>
                 </div>
               ))}
             </div>
@@ -199,11 +216,19 @@ export function RiskControlPanel({ config: initialConfig }: Props) {
                   }))
                 }
                 className="w-32"
+                aria-describedby="risk-control-note-autoBlacklistReturnRate"
               />
               <span className="text-sm text-muted-foreground">
                 ({(config.autoBlacklistReturnRate * 100).toFixed(0)}%)
               </span>
             </div>
+            <p
+              id="risk-control-note-autoBlacklistReturnRate"
+              data-risk-control-note="not-used-yet"
+              className="text-xs text-muted-foreground"
+            >
+              {t("risk.control.notUsedYetNote")}
+            </p>
           </div>
 
           {/* Actions */}

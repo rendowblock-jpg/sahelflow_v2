@@ -89,6 +89,15 @@ test.describe("Storefront Studio authoring", () => {
     expect(createResponse.ok()).toBeTruthy();
     const created = (await createResponse.json()).config as { id: string };
 
+    // Autosave PATCHes /api/storefront/config/[id], a route nothing above has
+    // requested yet. `next dev` compiles a route on its first request, and that
+    // compile can eat most of the 15 s "Saved" wait below. Request it once now,
+    // outside any wait, so the compile happens here. The status does not
+    // matter: any request builds the route.
+    await page.request.get(`/api/storefront/config/${encodeURIComponent(created.id)}`, {
+      timeout: 60_000,
+    });
+
     await page.goto(`/storefronts/${encodeURIComponent(created.id)}/studio`, {
       waitUntil: "domcontentloaded",
     });

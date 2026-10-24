@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractOrder, recordExtractionMetric } from "@/lib/ai/extraction";
+import { geminiModelVersion } from "@/lib/ai/extraction/model-version";
 
 // Session 29 fix (AUDIT-7 AI1): recordExtractionMetric was defined but never
 // called outside tests → extraction analytics dashboard was permanently empty.
@@ -138,7 +139,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     isComplete: result.isComplete,
     missingFields: result.missingFields,
     latencyMs: Date.now() - start,
-    modelVersion: result.method === "gemini" ? "gemini" : undefined,
+    modelVersion: geminiModelVersion(result, "gemini"),
   }).catch(() => { /* best-effort */ });
 
   return NextResponse.json({
