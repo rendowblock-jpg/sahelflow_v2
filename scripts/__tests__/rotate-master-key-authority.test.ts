@@ -25,14 +25,83 @@ const stagedRuntimeSource = readFileSync(
   "utf8",
 );
 
+// Pins that read source text must not be fooled by a call that was only
+// commented out, and must check place and order (inside which function,
+// before which statement), not just that a phrase exists somewhere.
+function stripComments(text: string): string {
+  return text.replace(
+    /("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
+    (_match, quoted: string | undefined) => quoted ?? "",
+  );
+}
+
+function matchBraces(code: string, open: number): string {
+  let depth = 0;
+  for (let index = open; index < code.length; index += 1) {
+    if (code[index] === "{") depth += 1;
+    if (code[index] === "}") {
+      depth -= 1;
+      if (depth === 0) return code.slice(open + 1, index);
+    }
+  }
+  throw new Error("Unbalanced braces in pinned source");
+}
+
+function functionBody(code: string, name: string): string {
+  const found = new RegExp(`function ${name}\\(`).exec(code);
+  if (!found) throw new Error(`Pinned function not found: ${name}`);
+  return matchBraces(code, code.indexOf("{", found.index));
+}
+
+// The statement that follows `condition`: a block, or one line up to its `;`.
+function branchBody(code: string, condition: string): string {
+  const at = code.indexOf(condition);
+  if (at === -1) throw new Error(`Pinned branch not found: ${condition}`);
+  const after = at + condition.length;
+  const start = after + code.slice(after).search(/\S/);
+  if (code[start] === "{") return matchBraces(code, start);
+  return code.slice(start, code.indexOf(";", start) + 1);
+}
+
+// Every snippet must occur in `text`, each after the one before it.
+function expectInOrder(text: string, snippets: readonly string[]): void {
+  let from = 0;
+  for (const snippet of snippets) {
+    const at = text.indexOf(snippet, from);
+    expect(at, `"${snippet}" is missing after offset ${from}`).toBeGreaterThan(-1);
+    from = at + snippet.length;
+  }
+}
+
+function count(text: string, pattern: RegExp): number {
+  return (text.match(pattern) ?? []).length;
+}
+
 describe("installation-wide master-key rotation authority", () => {
   it("discovers registered shops and includes the provisioning template", () => {
     expect(source).toContain('"shop-registry.json"');
     expect(source).toContain('"shops"');
     expect(source).toContain('"shop-template.db"');
-    expect(source).toContain("encryptCustomerData(oldPlaintext, newKey)");
     expect(source).toContain("SF_ROTATION_STAGE_");
-    expect(source).toContain("parsed.shops.map(validateRegistryTarget)");
+
+    // Every registered shop becomes a target through validateRegistryTarget,
+    // which rejects a bad shop ID or file name and a missing database instead
+    // of skipping the shop. The provisioning template is added after them.
+    const code = stripComments(source);
+    expectInOrder(functionBody(code, "loadRotationTargets"), [
+      "existsSync(REGISTRY_PATH)",
+      "parsed.formatVersion !== REGISTRY_FORMAT_VERSION",
+      "parsed.shops.map((shop) => validateRegistryTarget(parsed, shop))",
+      "existsSync(SHOP_TEMPLATE_PATH)",
+      'id: "system-shop-template"',
+    ]);
+    expectInOrder(functionBody(code, "validateRegistryTarget"), [
+      "invalid shop ID",
+      "invalid database file identity",
+      "if (!existsSync(databasePath))",
+      "throw new Error(`Registered shop database is missing",
+      "return {",
+    ]);
   });
 
   it("uses one old/new key pair for every target before committing the keyfile", () => {
@@ -52,6 +121,25 @@ describe("installation-wide master-key rotation authority", () => {
     expect(source.slice(rotateTarget, commitKeyfile)).not.toContain(
       "renameSync(SIDECAR_PATH",
     );
+
+    // Every legacy value that opens under the old key is written back under
+    // the NEW key, never the old one. A value that already opens under the new
+    // key is left alone, so a resumed rotation can run again safely.
+    const code = stripComments(source);
+    const encryptCalls = [...code.matchAll(/\bencryptString\(([^)]*)\)/g)];
+    expect(encryptCalls.length).toBeGreaterThanOrEqual(2);
+    for (const call of encryptCalls) expect(call[1]).toMatch(/,\s*newKey$/);
+    expectInOrder(functionBody(code, "rotateStoredValue"), [
+      "decryptString(payload, oldKey)",
+      "encryptString(plaintext, newKey)",
+      "decryptString(payload, newKey)",
+      'state: "already-new"',
+    ]);
+    expectInOrder(functionBody(code, "rotateSecrets"), [
+      "decryptString(payload, oldKey)",
+      "encryptString(plaintext, newKey)",
+      "tx.secret.update(",
+    ]);
   });
 
   it("re-wraps Secrets for every shop and fails instead of skipping corruption", () => {
@@ -66,9 +154,52 @@ describe("installation-wide master-key rotation authority", () => {
   });
 
   it("keeps the old keyfile authoritative until every database succeeds", () => {
-    expect(source).toContain(
-      "A crash leaves the old keyfile plus reusable sidecar",
+    const code = stripComments(source);
+    const commitBody = functionBody(code, "commitKeyfile");
+    const loadBody = functionBody(code, "loadOrCreateNewKey");
+    const mainBody = functionBody(code, "main");
+
+    // The shared keyfile is written in one place only: commitKeyfile.
+    const keyfileWrite =
+      /\b(?:renameSync|copyFileSync|writeFileSync|appendFileSync|unlinkSync|rmSync|truncateSync|linkSync|symlinkSync)\s*\([^;]*\bKEYFILE_PATH\b/g;
+    expect(count(code, keyfileWrite)).toBeGreaterThan(0);
+    expect(count(commitBody, keyfileWrite)).toBe(count(code, keyfileWrite));
+    expect(count(code, /"master\.key"/g)).toBe(1);
+
+    // commitKeyfile runs once: after every database, the connected
+    // installation authority and the identity authority were rotated, and
+    // never in a dry run.
+    expect(count(mainBody, /commitKeyfile\(/g)).toBe(1);
+    expectInOrder(mainBody, [
+      "for (const target of targets)",
+      "rotateTarget(target, oldKey, newKey",
+      "rotateConnectedInstallationAuthorityProtection(",
+      "rotateIdentityAuthorityAuthentication(",
+      "if (DRY_RUN)",
+      "commitKeyfile(newKey)",
+      "keyfileCommitted = true",
+    ]);
+    const afterIdentity = mainBody.slice(
+      mainBody.indexOf("rotateIdentityAuthorityAuthentication("),
     );
+    expect(branchBody(afterIdentity, "if (DRY_RUN)")).toContain("return;");
+
+    // A crash leaves the sidecar: it is removed only by --force inside
+    // loadOrCreateNewKey, and consumed only by the final rename in
+    // commitKeyfile.
+    const sidecarRemoval = /\b(?:unlinkSync|rmSync)\(\s*SIDECAR_PATH\b/g;
+    expect(count(code, sidecarRemoval)).toBe(1);
+    expect(count(loadBody, sidecarRemoval)).toBe(1);
+    const sidecarRename = /\brenameSync\(\s*SIDECAR_PATH\b/g;
+    expect(count(code, sidecarRename)).toBe(1);
+    expect(count(commitBody, sidecarRename)).toBe(1);
+
+    // A rerun resumes with the key the sidecar already holds.
+    expectInOrder(loadBody, [
+      "existsSync(SIDECAR_PATH)",
+      "readKey(SIDECAR_PATH)",
+      "return resumed;",
+    ]);
     expect(source).toContain("loadOrCreateNewKey(oldKey)");
     expect(source).toContain(
       "Keep ${SIDECAR_PATH}; rerunning will resume with the same new key.",
@@ -76,24 +207,60 @@ describe("installation-wide master-key rotation authority", () => {
   });
 
   it("durably persists the sidecar before entering the mutation window", () => {
-    const sidecarWrite = source.indexOf("function writeDurableSidecar");
-    const fileFlush = source.indexOf("fsyncSync(sidecarHandle)", sidecarWrite);
-    const posixDirectoryFlush = source.indexOf("fsyncDirectory(dataDir())", fileFlush);
-    const windowsWriteThrough = source.indexOf(
-      "MOVEFILE_WRITE_THROUGH",
-      fileFlush,
-    );
-    const loadSidecar = source.indexOf("loadOrCreateNewKey(oldKey)");
-    const mutationWindow = source.indexOf(
-      "mutationWindowEntered = true",
-      loadSidecar,
-    );
+    const code = stripComments(source);
+    const writeSidecar = functionBody(code, "writeDurableSidecar");
 
-    expect(sidecarWrite).toBeGreaterThan(-1);
-    expect(fileFlush).toBeGreaterThan(sidecarWrite);
-    expect(posixDirectoryFlush).toBeGreaterThan(fileFlush);
-    expect(windowsWriteThrough).toBeGreaterThan(fileFlush);
+    // The key bytes reach the disk before the file gets its final name, and
+    // the naming itself is durable: write-through on Windows, a directory
+    // flush after the rename elsewhere.
+    expectInOrder(writeSidecar, [
+      "writeFileSync(sidecarHandle",
+      "fsyncSync(sidecarHandle)",
+      'process.platform === "win32"',
+      "moveFileWriteThroughWindows(temporaryPath, SIDECAR_PATH)",
+      "renameSync(temporaryPath, SIDECAR_PATH)",
+      "fsyncDirectory(dataDir())",
+    ]);
+
+    // The Windows move must really carry MOVEFILE_WRITE_THROUGH (0x8). The
+    // flag is passed as a number, so its name in the error text proves nothing.
+    const moveBody = functionBody(code, "moveFileWriteThroughWindows");
+    const moveEx =
+      /MoveFileEx\(\s*\$\{powershellLiteral\(source\)\},\s*\$\{powershellLiteral\(target\)\},\s*(\d+)\s*\)/.exec(
+        moveBody,
+      );
+    expect(moveEx, "MoveFileEx call with numeric flags").not.toBeNull();
+    const moveFlags = Number(moveEx?.[1]);
+    expect(moveFlags & 0x8).toBe(0x8);
+    // DELAY_UNTIL_REBOOT would publish the sidecar only at the next boot.
+    expect(moveFlags & 0x4).toBe(0);
+    // A move that failed must stop the rotation, not be ignored.
+    expect(moveBody).toMatch(/if \(result\.status !== 0\) \{\s*throw /);
+
+    // Only the durable writer gives the sidecar its name, and only
+    // loadOrCreateNewKey calls it, before it hands the new key out.
+    const sidecarPublish =
+      /\b(?:renameSync|copyFileSync|moveFileWriteThroughWindows)\(\s*\w+,\s*SIDECAR_PATH\s*\)/g;
+    expect(count(code, sidecarPublish)).toBe(2);
+    expect(count(writeSidecar, sidecarPublish)).toBe(2);
+    expect(count(code, /writeFileSync\(\s*SIDECAR_PATH/g)).toBe(0);
+    expect(count(code, /writeDurableSidecar\(/g)).toBe(2);
+    expectInOrder(functionBody(code, "loadOrCreateNewKey"), [
+      "writeDurableSidecar(newKey)",
+      "return newKey;",
+    ]);
+
+    // The sidecar exists before the mutation window opens, and the old keyfile
+    // is replaced only after that.
+    const mainBody = functionBody(code, "main");
+    const loadSidecar = mainBody.indexOf("loadOrCreateNewKey(oldKey)");
+    const mutationWindow = mainBody.indexOf("mutationWindowEntered = true");
+    expect(loadSidecar).toBeGreaterThan(-1);
+    expect(count(mainBody, /mutationWindowEntered = true/g)).toBe(1);
     expect(mutationWindow).toBeGreaterThan(loadSidecar);
+    expect(mainBody.indexOf("commitKeyfile(newKey)")).toBeGreaterThan(
+      mutationWindow,
+    );
   });
 
   it("proves the desktop runtime is stopped before scanning databases", () => {
@@ -118,10 +285,34 @@ describe("installation-wide master-key rotation authority", () => {
   });
 
   it("blocks packaged startup and production writes while the lease exists", () => {
-    expect(contextSource).toContain(
-      "if (packaged) assertMasterKeyRotationInactive()",
+    // Packaged startup: the lease/sidecar guard runs before any shop context
+    // value is read or returned.
+    const context = stripComments(contextSource);
+    expect(context).toContain(
+      'import { assertMasterKeyRotationInactive } from "@/lib/maintenance/master-key-rotation"',
     );
-    expect(authoritySource).toContain("assertMasterKeyRotationInactive()");
+    expect(context).toContain(
+      'const packaged = process.env.NODE_ENV === "production"',
+    );
+    const contextBody = functionBody(context, "processShopContext");
+    expect(branchBody(contextBody, "if (packaged)")).toContain(
+      "assertMasterKeyRotationInactive()",
+    );
+    expectInOrder(contextBody, [
+      "if (packaged)",
+      "const shopId",
+      "return Object.freeze(",
+    ]);
+
+    // Production writes: the same guard runs before the registry is read.
+    const authority = stripComments(authoritySource);
+    expect(authority).toContain(
+      'import { assertMasterKeyRotationInactive } from "@/lib/maintenance/master-key-rotation"',
+    );
+    expectInOrder(functionBody(authority, "assertProcessShopAuthority"), [
+      "assertMasterKeyRotationInactive()",
+      "readFileSync(registryPath",
+    ]);
   });
 
   it("records lock ownership and safely recovers dead or malformed owners", () => {
