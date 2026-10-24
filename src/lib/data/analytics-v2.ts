@@ -502,10 +502,12 @@ export async function getPeriodComparison(
     previousDelivered + previousReturned > 0
       ? (previousReturned / (previousDelivered + previousReturned)) * 100
       : 0;
-  const pctChange = (value: number, baseline: number) =>
+  // Growth from nothing has no meaningful percentage ("+100 %" would be
+  // false); null lets the page show a dash, like the summary cards do.
+  const pctChange = (value: number, baseline: number): number | null =>
     baseline === 0
       ? value > 0
-        ? 100
+        ? null
         : 0
       : ((value - baseline) / baseline) * 100;
 
