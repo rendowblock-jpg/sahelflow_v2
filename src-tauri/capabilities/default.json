@@ -22,6 +22,8 @@
     "notification:allow-register-listener",
     "stronghold:default",
     "updater:default",
-    "allow-check-for-update"
+    "allow-check-for-update",
+    "allow-download-update",
+    "allow-install-downloaded-update"
   ]
 }
