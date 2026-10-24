@@ -263,7 +263,7 @@ function calculatorSection(locale) {
       <p class="calc-note">${icon("lock")}<span>${esc(c.note)}</span></p>
       <a class="text-link" href="${href(locale, "product/risk")}">${esc(c.cta)}${arrow()}</a>
     </div>
-    <form class="calc-card reveal" data-calc="returns" data-currency="${locale === "ar" ? "دج" : "DA"}" onsubmit="return false">
+    <form class="calc-card reveal" data-calc="returns" data-currency="${locale === "ar" ? "دج" : "DA"}">
       ${field("orders", c.orders, d.orders, 50, 5000, 50, "")}
       ${field("rate", c.rate, d.rate, 5, 50, 1, " %")}
       ${field("fee", c.fee, d.fee, 200, 1500, 50, locale === "ar" ? " دج" : " DA")}
@@ -550,7 +550,7 @@ export function pricingPage(locale) {
   const calc = base
     ? `<section class="section">
   <div class="container">
-    <form class="calc-card pricing-calc reveal" data-calc="licence" data-base="${base}" data-extra="${PACKAGE.extraShopPriceDzd}" data-included="${PACKAGE.includedShops}" data-months="${PACKAGE.updateYears * 12}" data-currency="${locale === "ar" ? "دج" : "DA"}" onsubmit="return false">
+    <form class="calc-card pricing-calc reveal" data-calc="licence" data-base="${base}" data-extra="${PACKAGE.extraShopPriceDzd}" data-included="${PACKAGE.includedShops}" data-months="${PACKAGE.updateYears * 12}" data-currency="${locale === "ar" ? "دج" : "DA"}">
       <h2 class="calc-title">${icon("calculator")}<span>${esc(p.calc.title)}</span></h2>
       <label class="calc-field"><span class="calc-label">${esc(p.calc.shops)}</span>
         <span class="calc-control"><input type="range" name="shops" min="${PACKAGE.includedShops}" max="${PACKAGE.maximumShops}" step="1" value="${PACKAGE.includedShops}" data-calc-input><output data-calc-out="shops">${PACKAGE.includedShops}</output></span>
@@ -639,7 +639,7 @@ export function whyPage(locale) {
 <section class="section">
   <div class="container">
     ${sectionHead({ title: w.costTitle, lead: w.costLead, center: true })}
-    <form class="calc-card cost-calc reveal" data-calc="cost" data-sahel="${sahel}" data-currency="${locale === "ar" ? "دج" : "DA"}" onsubmit="return false">
+    <form class="calc-card cost-calc reveal" data-calc="cost" data-sahel="${sahel}" data-currency="${locale === "ar" ? "دج" : "DA"}">
       <label class="calc-field"><span class="calc-label">${esc(w.costMonthly)}</span>
         <span class="calc-control"><input type="range" name="monthly" min="1900" max="24500" step="100" value="${monthly}" data-calc-input><output data-calc-out="monthly">${money(monthly, locale)}</output></span></label>
       <label class="calc-field"><span class="calc-label">${esc(w.costYears)}</span>

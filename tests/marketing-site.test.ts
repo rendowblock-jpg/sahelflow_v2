@@ -1,4 +1,5 @@
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -110,5 +111,33 @@ describe("sahelflow.com build", () => {
       const html = readFileSync(join(out, page), "utf8");
       for (const match of html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)) expect(match[1]?.startsWith("/"), `${page} → ${match[1]}`).toBe(true);
     }
+  });
+
+  it("allows only the page's own inline script by hash, never every inline script", () => {
+    const headers = readFileSync(join(out, "_headers"), "utf8");
+    const csp = /Content-Security-Policy:\s*(.+)/.exec(headers)?.[1] ?? "";
+    const scriptSrc = /(?:^|;\s*)script-src ([^;]*)/.exec(csp)?.[1] ?? "";
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+    expect(scriptSrc).not.toContain("'unsafe-eval'");
+    // The inline speculation rules are data the browser reads; Chromium needs this keyword for them.
+    expect(scriptSrc).toContain("'inline-speculation-rules'");
+
+    const inlineHashes = new Set<string>();
+    for (const page of files.filter((file) => file.endsWith(".html"))) {
+      const html = readFileSync(join(out, page), "utf8");
+      // No inline event handler or javascript: link, which a hash cannot allow.
+      expect(html, page).not.toMatch(/<[^>]+\son[a-z]+\s*=/i);
+      expect(html, page).not.toMatch(/href\s*=\s*["']\s*javascript:/i);
+      for (const match of html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/g)) {
+        const attributes = match[1] ?? "";
+        if (/\ssrc=/.test(attributes)) continue;
+        const type = /\stype="([^"]*)"/.exec(attributes)?.[1] ?? "";
+        // Only classic and module scripts run; JSON-LD and speculation rules are data.
+        if (type !== "" && type !== "module" && type !== "text/javascript") continue;
+        inlineHashes.add(`'sha256-${createHash("sha256").update(match[2] ?? "").digest("base64")}'`);
+      }
+    }
+    expect(inlineHashes.size).toBeGreaterThan(0);
+    for (const hash of inlineHashes) expect(scriptSrc, hash).toContain(hash);
   });
 });
