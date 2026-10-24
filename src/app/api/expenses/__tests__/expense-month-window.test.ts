@@ -50,21 +50,21 @@ describe.each(HOST_TIME_ZONES)("GET /api/expenses month filter, host set to %s",
   });
 
   it("October runs from 1 Oct 00:00 to 1 Nov 00:00 Algeria time", async () => {
-    await GET(list("2026-10"), undefined as never);
+    await GET(list("2026-10"));
     const where = harness.findMany.mock.calls[0]![0].where;
     expect(where.date.gte.toISOString()).toBe("2026-09-30T23:00:00.000Z");
     expect(where.date.lt.toISOString()).toBe("2026-10-31T23:00:00.000Z");
   });
 
   it("December rolls over to January of the next year", async () => {
-    await GET(list("2026-12"), undefined as never);
+    await GET(list("2026-12"));
     const where = harness.findMany.mock.calls[0]![0].where;
     expect(where.date.gte.toISOString()).toBe("2026-11-30T23:00:00.000Z");
     expect(where.date.lt.toISOString()).toBe("2026-12-31T23:00:00.000Z");
   });
 
   it("a malformed month lists unfiltered", async () => {
-    await GET(list("2026-13"), undefined as never);
+    await GET(list("2026-13"));
     expect(harness.findMany.mock.calls[0]![0].where).toEqual({ deletedAt: null });
   });
 });
