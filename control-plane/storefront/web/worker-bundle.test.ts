@@ -100,7 +100,9 @@ describe("the bundled Worker", () => {
       expect(existsSync(join(PUBLIC, path)), path).toBe(true);
     }
     const files = readdirSync(join(PUBLIC, manifest.communes));
-    expect(files).toHaveLength(69);
+    expect(files.filter((file) => /^\d\d\.json$/.test(file))).toHaveLength(69);
+    expect(files).toContain("all.json");
+    expect(files).toHaveLength(70);
     const alger = JSON.parse(readFileSync(join(PUBLIC, manifest.communes, "16.json"), "utf8")) as Array<[string, string]>;
     expect(alger.length).toBeGreaterThan(40);
     expect(alger.some(([latin, arabic]) => latin === "Bab Ezzouar" && arabic.length > 0)).toBe(true);
