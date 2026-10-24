@@ -53,7 +53,9 @@ export const customerService = {
   async list(ctx: ServiceContext, opts?: { limit?: number; offset?: number }): Promise<Customer[]> {
     const rows = await ctx.prisma.customer.findMany({
       where: { deletedAt: null },
-      orderBy: { createdAt: "desc" },
+      // The id breaks a tie on createdAt, so two customers made in the same millisecond keep
+      // one fixed order and limit/offset pages never repeat or skip a row.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: opts?.limit ?? 50,
       skip: opts?.offset ?? 0,
     });

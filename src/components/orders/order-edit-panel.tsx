@@ -12,7 +12,7 @@
  * fields become inputs; when not, they render as read-only display.
  */
 
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { Button } from "@/components/ui/button";
@@ -28,10 +28,24 @@ import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { toast } from "@/lib/toast";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 import { manualOrderRequestFingerprint } from "@/lib/orders/manual-order-command-key";
+import { OrderLinesEditor } from "@/components/orders/order-lines-editor";
+import {
+  linesCommandPayload,
+  linesDiffer,
+  linesFromItems,
+  linesItemsTotal,
+  type EditableLine,
+  type PanelItem,
+} from "@/components/orders/order-lines-edit";
+import {
+  fetchProductOptions,
+  type OrderFormProduct,
+} from "@/components/orders/order-product-combobox";
 
 interface OrderItem {
   id: string;
   productId: string | null;
+  productVariantId?: string | null;
   productName: string;
   productVariantName: string | null;
   quantity: number;
@@ -49,6 +63,12 @@ interface OrderEditPanelProps {
    * The order lines stay read-only; they are not governed by that command.
    */
   canonicalVersion?: number;
+  /**
+   * Set for a pending order the seller typed in: its lines can then be corrected (quantity,
+   * price, remove, add a product) through POST /api/orders/[id]/lines. Not set for a hosted
+   * storefront order or any other canonical order, whose lines stay read-only.
+   */
+  linesEditable?: boolean;
   initialItems: OrderItem[];
   initialDeliveryCost: number;
   initialWilaya: string;
@@ -64,6 +84,7 @@ export function OrderEditPanel({
   orderId,
   readOnly = false,
   canonicalVersion,
+  linesEditable = false,
   initialItems,
   initialDeliveryCost,
   initialWilaya,
@@ -81,6 +102,33 @@ export function OrderEditPanel({
 
   // Editable state
   const [items, setItems] = useState(initialItems);
+  const panelItems = useMemo<PanelItem[]>(
+    () => initialItems.map((item) => ({ ...item, productVariantId: item.productVariantId ?? null })),
+    [initialItems],
+  );
+  const [lines, setLines] = useState<EditableLine[]>(() => linesFromItems(panelItems));
+  const [catalog, setCatalog] = useState<OrderFormProduct[]>([]);
+  const newLineCounter = useRef(0);
+  const nextLineKey = useCallback(() => `new:${++newLineCounter.current}`, []);
+  const registerCatalog = useCallback((fetched: OrderFormProduct[]) => {
+    setCatalog((previous) => {
+      const known = new Set(previous.map((product) => product.id));
+      const additions = fetched.filter((product) => !known.has(product.id));
+      return additions.length ? [...previous, ...additions] : previous;
+    });
+  }, []);
+  useEffect(() => {
+    if (!isEditing || !linesEditable || catalog.length > 0) return;
+    let cancelled = false;
+    void fetchProductOptions("")
+      .then((products) => {
+        if (!cancelled) registerCatalog(products);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditing, linesEditable, catalog.length, registerCatalog]);
   const [deliveryCost, setDeliveryCost] = useState(String(initialDeliveryCost));
   const [wilaya, setWilaya] = useState(initialWilaya);
   const [commune, setCommune] = useState(initialCommune);
@@ -95,6 +143,7 @@ export function OrderEditPanel({
   function cancelEdit() {
     // Reset to initial values
     setItems(initialItems);
+    setLines(linesFromItems(panelItems));
     setDeliveryCost(String(initialDeliveryCost));
     setWilaya(initialWilaya);
     setCommune(initialCommune);
@@ -131,25 +180,60 @@ export function OrderEditPanel({
           const nextCost = parseInt(deliveryCost) || 0;
           if (nextCost !== initialDeliveryCost) changes.deliveryCost = nextCost;
           if (notes !== (initialNotes ?? "")) changes.notes = notes || null;
-          if (Object.keys(changes).length === 0) {
+          const linesChanged = linesEditable && linesDiffer(panelItems, lines);
+          const fieldsChanged = Object.keys(changes).length > 0;
+          if (!linesChanged && !fieldsChanged) {
             setIsEditing(false);
             return;
           }
-          const requestJson = JSON.stringify({
-            expectedVersion: canonicalVersion,
-            ...changes,
-          });
-          const idempotencyKey = `order-edit-${orderId}-v${canonicalVersion}-${manualOrderRequestFingerprint(requestJson)}`;
-          res = await fetch(`/api/orders/${orderId}/edit`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+          let version = canonicalVersion;
+          let last: Response | null = null;
+          if (linesChanged) {
+            // The items first: the other fields follow at the version this save answers.
+            const payload = linesCommandPayload(panelItems, lines);
+            const linesJson = JSON.stringify({ expectedVersion: version, lines: payload });
+            const linesKey = `order-lines-${orderId}-v${version}-${manualOrderRequestFingerprint(linesJson)}`;
+            last = await fetch(`/api/orders/${orderId}/lines`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                expectedVersion: version,
+                lines: payload,
+                idempotencyKey: linesKey,
+                correlationId: `order-lines-ui:${linesKey}`,
+              }),
+            });
+            if (last.ok && fieldsChanged) {
+              const saved = (await last.json().catch(() => ({}))) as { order?: { version?: number } };
+              version = saved.order?.version ?? (version ?? 0) + 1;
+            }
+          }
+          if (fieldsChanged && (last === null || last.ok)) {
+            const requestJson = JSON.stringify({
+              expectedVersion: version,
               ...changes,
-              expectedVersion: canonicalVersion,
-              idempotencyKey,
-              correlationId: `order-edit-ui:${idempotencyKey}`,
-            }),
-          });
+            });
+            const idempotencyKey = `order-edit-${orderId}-v${version}-${manualOrderRequestFingerprint(requestJson)}`;
+            last = await fetch(`/api/orders/${orderId}/edit`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...changes,
+                expectedVersion: version,
+                idempotencyKey,
+                correlationId: `order-edit-ui:${idempotencyKey}`,
+              }),
+            });
+            if (linesChanged && !last.ok) {
+              // The items are saved and the order moved on: show what really is stored.
+              toast.error(t("orders.detail.editPartial"));
+              setIsEditing(false);
+              router.refresh();
+              void mutatePrefix("/api/orders");
+              return;
+            }
+          }
+          res = last as Response;
         } else {
           // B7-1: totalPrice is server-derived money truth — the PATCH body
           // sends only the inputs (items + deliveryCost) it is derived from.
@@ -224,7 +308,9 @@ export function OrderEditPanel({
   }
 
   // Edit mode: render editable fields
-  const itemsTotal = items.reduce((sum, i) => sum + i.total, 0);
+  const itemsTotal = linesEditable
+    ? linesItemsTotal(lines)
+    : items.reduce((sum, i) => sum + i.total, 0);
   const total = itemsTotal + (parseInt(deliveryCost) || 0);
 
   return (
@@ -246,7 +332,16 @@ export function OrderEditPanel({
           <CardTitle className="text-base">{t("orders.detail.items")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {items.map((item, i) => (
+          {linesEditable ? (
+            <OrderLinesEditor
+              lines={lines}
+              onChange={setLines}
+              products={catalog}
+              onProductsLoaded={registerCatalog}
+              nextKey={nextLineKey}
+              disabled={isPending}
+            />
+          ) : items.map((item, i) => (
             <div key={item.id} className="flex items-center gap-3 py-2 border-b last:border-0">
               <div className="flex-1 space-y-0.5">
                 <p className="text-sm font-medium">{item.productName}</p>
