@@ -19,6 +19,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "ai.ask.customerPrompt":
       "About the customer {{name}}: review their order history, delivery performance and risk signals. Tell me what needs attention next, using my real shop data only.",
     "ai.canvas.regenerate": "Regenerate",
+    "ai.markdownTableLabel": "Table",
     "ai.history.rename": "Rename session",
     "ai.history.renameSave": "Save the new name",
     "ai.history.renameCancel": "Cancel renaming",
@@ -34,6 +35,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "ai.ask.customerPrompt":
       "À propos du client {{name}} : examine son historique de commandes, sa performance de livraison et ses signaux de risque. Dis-moi ce qui demande attention ensuite, en n’utilisant que mes données réelles.",
     "ai.canvas.regenerate": "Régénérer",
+    "ai.markdownTableLabel": "Tableau",
     "ai.history.rename": "Renommer la session",
     "ai.history.renameSave": "Enregistrer le nouveau nom",
     "ai.history.renameCancel": "Annuler le renommage",
@@ -50,6 +52,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "ai.ask.customerPrompt":
       "بخصوص العميل {{name}}: راجع سجل طلباته وأداء التوصيل وإشارات المخاطر لديه. أخبرني بما يحتاج إلى اهتمام تالياً، باستخدام بيانات متجري الحقيقية فقط.",
     "ai.canvas.regenerate": "إعادة التوليد",
+    "ai.markdownTableLabel": "جدول",
     "ai.history.rename": "إعادة تسمية الجلسة",
     "ai.history.renameSave": "حفظ الاسم الجديد",
     "ai.history.renameCancel": "إلغاء إعادة التسمية",

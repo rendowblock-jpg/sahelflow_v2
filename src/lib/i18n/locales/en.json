@@ -975,6 +975,7 @@
   "import.lineN": "Line {{n}}:",
   "import.missingFile": "Missing file",
   "import.previewFailed": "Analysis failed",
+  "import.previewTableLabel": "Preview of the rows to import",
   "import.rowLimitExceeded": "The import file exceeds the maximum of {{count}} data rows",
   "import.success": "{{count}} items imported successfully",
   "import.totalLabel": "Total:",
