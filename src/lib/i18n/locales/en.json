@@ -1214,6 +1214,8 @@
   "inbox.typeMessage": "Type a message...",
   "inbox.unarchived": "Unarchived",
   "inbox.unknownContact": "Unknown",
+  "inbox.unofficialNoticeBody": "SahelFlow connects to your WhatsApp the same way WhatsApp Web does. It is not the official WhatsApp Business API, and WhatsApp can restrict a number that sends bulk or automatic messages. Reply to customers who wrote to you first, and never send the same message to many people. If WhatsApp restricts your number, SahelFlow cannot lift the restriction.",
+  "inbox.unofficialNoticeTitle": "Unofficial WhatsApp connection",
   "inbox.unpin": "Unpin",
   "inbox.whatsappConnected": "WhatsApp connected",
   "inbox.wilayaLabel": "Wilaya:",

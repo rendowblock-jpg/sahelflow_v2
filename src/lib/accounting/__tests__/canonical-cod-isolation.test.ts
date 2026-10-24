@@ -28,6 +28,8 @@ interface Fixture {
   id: string;
   /** Delivery time; by default the order at position i was delivered i seconds before position 0. null = no delivery date. */
   deliveredAt?: Date | null;
+  /** Creation time; by default 700 orders in a row share one instant (a bulk import), so page boundaries fall inside a group. */
+  createdAt?: Date;
   /** Amounts of the cod_receivable_created movements written for the order. */
   receivables: number[];
 }
@@ -37,10 +39,12 @@ interface Scenario {
   settlementCount?: number;
   /** 1-based positions (newest first) of settlements that carry one line with no order: it needs review. */
   unmatchedSettlements?: number[];
+  /** The stand-in answers the second order page with the last row of the first page again, as a row that moved during the read would. */
+  repeatLastRowOnSecondPage?: boolean;
 }
 
 /** What the projection asked the stand-in for, so the tests can see HOW it read, not only what it got back. */
-const reads = { orderPages: [] as Array<{ take?: number; after?: string }>, widestIdList: 0, settlementPages: [] as Array<{ take?: number }> };
+const reads = { orderPages: [] as Array<{ take?: number; boundary?: Date; skip?: number }>, widestIdList: 0, settlementPages: [] as Array<{ take?: number }> };
 
 function good(id: string, amount = 10_000): Fixture {
   return { id, receivables: [amount] };
@@ -53,6 +57,7 @@ function context(scenario: Scenario): BusinessPrincipalContext {
     orderNumber: `SF-${index + 1}`,
     version: 1,
     deliveredAt: entry.deliveredAt === undefined ? new Date(Date.UTC(2026, 6, 30, 12, 0, 0) - index * 1000) : entry.deliveredAt,
+    createdAt: entry.createdAt ?? new Date(Date.UTC(2026, 5, 1, 12, 0, 0) - Math.floor(index / 700) * 1000),
     source: "manual",
     sourceMetadata: trustedManualOrderSourceMetadata(),
     customer: { name: `Customer ${index + 1}` },
@@ -73,22 +78,51 @@ function context(scenario: Scenario): BusinessPrincipalContext {
         : [],
     }),
   );
-  const byIdDesc = [...orders].sort((left, right) => (left.id < right.id ? 1 : left.id > right.id ? -1 : 0));
   /** The slice a Prisma findMany with take / skip / cursor{id} would return from `rows`, which are already in the order asked for. */
   const page = <T extends { id: string }>(rows: T[], args: { take?: number; skip?: number; cursor?: { id: string } }): T[] => {
     const from = (args.cursor ? rows.findIndex((row) => row.id === args.cursor?.id) : 0) + (args.skip ?? 0);
     return rows.slice(from, args.take === undefined ? undefined : from + args.take);
   };
+  type OrderBy = Array<Record<string, "asc" | "desc">> | Record<string, "asc" | "desc">;
+  /** Rows sorted as `orderBy` asks (a key list, or one key): the two shapes the projection uses, id alone and createdAt then id. */
+  const sorted = (orderBy: OrderBy): typeof orders => {
+    const keys = (Array.isArray(orderBy) ? orderBy : [orderBy]).flatMap((entry) => Object.entries(entry));
+    return [...orders].sort((left, right) => {
+      for (const [key, direction] of keys) {
+        const a = (left as unknown as Record<string, { getTime?: () => number } | string>)[key];
+        const b = (right as unknown as Record<string, { getTime?: () => number } | string>)[key];
+        const x = typeof a === "string" ? a : (a?.getTime?.() ?? 0);
+        const y = typeof b === "string" ? b : (b?.getTime?.() ?? 0);
+        if (x !== y) return (x < y ? -1 : 1) * (direction === "desc" ? -1 : 1);
+      }
+      return 0;
+    });
+  };
   const prisma = {
     order: {
-      findMany: async (args: { where?: { id?: string | { in: string[] } | { lt: string } }; take?: number }) => {
+      findMany: async (args: {
+        where?: { id?: string | { in: string[] } | { lt: string }; createdAt?: { lte: Date } };
+        orderBy?: OrderBy;
+        take?: number;
+        skip?: number;
+      }) => {
         const wanted = args.where?.id;
         if (typeof wanted === "object" && "in" in wanted) return orders.filter((entry) => wanted.in.includes(entry.id));
         if (typeof wanted === "string") return orders.filter((entry) => entry.id === wanted).slice(0, args.take);
         const after = typeof wanted === "object" ? wanted.lt : undefined;
-        reads.orderPages.push({ take: args.take, after });
-        // `orderBy: { id: "desc" }` with the bound `id < after`, as SQLite would answer it
-        return byIdDesc.filter((entry) => after === undefined || entry.id < after).slice(0, args.take);
+        const boundary = args.where?.createdAt?.lte;
+        reads.orderPages.push({ take: args.take, boundary, skip: args.skip });
+        const answer = page(
+          sorted(args.orderBy ?? { id: "desc" }).filter(
+            (entry) => (after === undefined || entry.id < after) && (boundary === undefined || entry.createdAt.getTime() <= boundary.getTime()),
+          ),
+          { take: args.take, skip: args.skip },
+        );
+        if (scenario.repeatLastRowOnSecondPage && reads.orderPages.length === 2) {
+          const firstPageLast = sorted(args.orderBy ?? { id: "desc" })[(reads.orderPages[0]?.take ?? 0) - 1];
+          return firstPageLast ? [firstPageLast, ...answer.slice(0, -1)] : answer;
+        }
+        return answer;
       },
     },
     financialMovement: {
@@ -201,9 +235,37 @@ describe("COD reconciliation reads every delivered order and settlement, and say
     expect(summary.totals.expectedReceivable).toBe(12_345 * 1_000);
     expect(reads.orderPages).toHaveLength(13);
     for (const read of reads.orderPages) expect(read.take).toBeLessThanOrEqual(1_000);
-    expect(reads.orderPages[0]?.after).toBeUndefined();
-    expect(reads.orderPages.slice(1).every((read) => read.after !== undefined)).toBe(true);
+    expect(reads.orderPages[0]?.boundary).toBeUndefined();
+    expect(reads.orderPages[0]?.skip).toBeUndefined();
+    expect(reads.orderPages.slice(1).every((read) => read.boundary !== undefined && (read.skip ?? 0) > 0)).toBe(true);
     expect(reads.widestIdList).toBeLessThanOrEqual(1_000);
+  });
+
+  it("pages by createdAt: every order once when 2,500 share ONE createdAt, the offset counting the rows already read on it (MNY-01B)", async () => {
+    const sameInstant = new Date("2026-06-01T12:00:00Z");
+    const orders = many(2_500).map((entry) => ({ ...entry, createdAt: sameInstant }));
+    const summary = await getCanonicalCodWorkspaceSummary(context({ orders }));
+    const ids = summary.awaitingCollection.map((entry) => entry.orderId);
+    expect(ids).toHaveLength(2_500);
+    expect(new Set(ids).size).toBe(2_500);
+    expect(reads.orderPages.map((read) => read.skip)).toEqual([undefined, 1_000, 2_000]);
+    expect(reads.orderPages.map((read) => read.boundary?.getTime())).toEqual([undefined, sameInstant.getTime(), sameInstant.getTime()]);
+  });
+
+  it("pages by createdAt: every order once when each has its own createdAt, the offset stepping over the boundary row only (MNY-01B)", async () => {
+    const orders = many(2_500).map((entry, index) => ({ ...entry, createdAt: new Date(Date.UTC(2026, 5, 1, 12, 0, 0) - index * 1000) }));
+    const summary = await getCanonicalCodWorkspaceSummary(context({ orders }));
+    const ids = summary.awaitingCollection.map((entry) => entry.orderId);
+    expect(ids).toHaveLength(2_500);
+    expect(new Set(ids).size).toBe(2_500);
+    expect(reads.orderPages.map((read) => read.skip)).toEqual([undefined, 1, 1]);
+  });
+
+  it("counts a row that comes back on a later page once (a row that moved during the read, MNY-01B)", async () => {
+    const summary = await getCanonicalCodWorkspaceSummary(context({ orders: many(2_500), repeatLastRowOnSecondPage: true }));
+    const ids = summary.awaitingCollection.map((entry) => entry.orderId);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(summary.counts.receivable).toBe(ids.length);
   });
 
   it("does not claim truncation at exactly 100,000 delivered orders, and flags it at 100,001 (the hard cap)", async () => {

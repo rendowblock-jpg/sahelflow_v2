@@ -154,6 +154,30 @@ export function isSellerTypedOrderAuthority(
 }
 
 /**
+ * Sources whose PENDING order holds no stock (createCanonicalSourceOrder writes inventoryState "unreserved" and nothing else) and
+ * whose lines the seller may correct before confirming. Left out on purpose: shopify, woocommerce, youcan (the platform owns the
+ * price and may cancel or re-sync) and google_sheets (a sheet re-sync may rewrite the order): they wait for a product decision.
+ */
+const SELLER_EDITABLE_LINES_SOURCES: readonly CanonicalOrderSource[] = ["whatsapp", "ai_chat", "csv", "xlsx", "storefront"];
+
+/**
+ * An order whose lines the seller may edit while it is pending: one he typed in himself, or a canonical order from one of the
+ * SELLER_EDITABLE_LINES_SOURCES. A hosted-storefront order is never editable: its stock is a pool reserved at the storefront and
+ * its receipt is bound to the lines. Any hosted marker keeps an order out, valid or not (fail closed). Legacy and import-pending
+ * orders carry no canonical metadata and stay out too.
+ */
+export function isSellerEditableLinesAuthority(
+  source: unknown,
+  sourceMetadata: unknown,
+): boolean {
+  if (isSellerTypedOrderAuthority(source, sourceMetadata)) return true;
+  const authority = readCanonicalSourceOrderAuthority(source, sourceMetadata);
+  if (!authority || !SELLER_EDITABLE_LINES_SOURCES.includes(authority.source)) return false;
+  const details = authority.sourceDetails;
+  return !(details && ("hostedDelegationAuthority" in details || "hostedReleaseId" in details));
+}
+
+/**
  * Compatibility name retained while the remaining Phase 1 call sites are
  * migrated. It now identifies every order adopted by the canonical command
  * kernel, including the original trusted-manual authority.

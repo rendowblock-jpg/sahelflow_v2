@@ -51,14 +51,14 @@ export function NotificationFeedList({
     >
       {groups.map((group, index) => (
         <div key={group.key} data-day-group={group.key}>
-          <h3
+          <h2
             className={cn(
               "sticky top-0 z-20 bg-card/95 px-4 py-2 text-caption font-medium text-muted-foreground backdrop-blur-sm",
               index > 0 && "border-t border-border/70",
             )}
           >
             {group.label}
-          </h3>
+          </h2>
           <ul className="divide-y divide-border/60">
             {group.items.map((item) => (
               <NotificationFeedRow

@@ -278,8 +278,9 @@ function lineAmounts(lines: SettlementLineShape[]): {
  */
 const ORDER_PAGE = 1000;
 /**
- * Delivered orders read in all; one more is fetched to know that the cap cut the read (MNY-01). Orders are read by id, so when the cap
- * cuts the read it leaves out the oldest created orders. Measured on SQLite: 60,000 orders read in a few seconds, linear in the count.
+ * Delivered orders read in all; one more is fetched to know that the cap cut the read (MNY-01). Orders are read newest created first,
+ * so when the cap cuts the read it leaves out the oldest created orders. Measured on SQLite (MNY-01B): 60,000 orders in under 4 s,
+ * the order query itself 0.2 s, flat per page.
  */
 const ORDER_HARD_CAP = 100_000;
 /** Settlements (each with its lines) are read in pages of this size, newest first. */
@@ -294,6 +295,8 @@ const ID_LIST_CHUNK = 1000;
 /** The part of an order row the position builder reads. */
 interface DeliveredOrderRow {
   id: string;
+  /** What the pages are cut by (see buildOrderPositions). */
+  createdAt: Date;
   orderNumber: string;
   version: number;
   deliveredAt: Date | null;
@@ -304,6 +307,7 @@ interface DeliveredOrderRow {
 
 const DELIVERED_ORDER_SELECT = {
   id: true,
+  createdAt: true,
   orderNumber: true,
   version: true,
   deliveredAt: true,
@@ -337,10 +341,12 @@ function receivableFlagReason(
 /**
  * Build the COD position of every delivered canonical order, or (with
  * `orderId`) of that one order through a direct query. The orders are read in
- * pages of ORDER_PAGE by id (the primary key: each page costs the page size, not
- * the table size, where Prisma's cursor+skip re-read every remaining row and a
- * delivery-date order has no index) up to ORDER_HARD_CAP, then listed newest
- * delivery first. The totals are exact below the cap and `truncated` is true
+ * pages of ORDER_PAGE, newest created first (createdAt, then id), up to ORDER_HARD_CAP,
+ * then listed newest delivery first. A page starts at `createdAt <= the last createdAt
+ * read` and skips the rows already read at that instant: SQLite then seeks the
+ * (status, createdAt) index and sorts only those ties. Keyed by id alone it chose the
+ * deliveryState index and sorted every remaining order for each page, so the read
+ * grew with the square of the order count (MNY-01B: 12 s at 60,000 orders). The totals are exact below the cap and `truncated` is true
  * only when the cap cut the read (MNY-01). An order whose receivable record is inconsistent is flagged,
  * not thrown: one bad row must not take down the workspace or the positions
  * of unrelated orders.
@@ -365,26 +371,36 @@ async function buildOrderPositions(
   /** Delivery time of every order read (an order with no delivery date sorts after all the others). */
   const deliveredAtById = new Map<string, number>();
   let seen = 0;
-  let cursor: string | undefined;
+  /** createdAt of the last row of the previous page, and how many rows already read share exactly that instant. */
+  let boundary: Date | undefined;
+  let tied = 0;
   let truncated = false;
   for (;;) {
     const take = Math.min(ORDER_PAGE, ORDER_HARD_CAP + 1 - seen);
     const page: DeliveredOrderRow[] = await context.prisma.order.findMany({
-      where: cursor === undefined ? DELIVERED_ORDER_WHERE : { ...DELIVERED_ORDER_WHERE, id: { lt: cursor } },
+      where: boundary === undefined ? DELIVERED_ORDER_WHERE : { ...DELIVERED_ORDER_WHERE, createdAt: { lte: boundary } },
       select: DELIVERED_ORDER_SELECT,
-      orderBy: { id: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take,
+      ...(boundary !== undefined && tied > 0 ? { skip: tied } : {}),
     });
-    const rows = seen + page.length > ORDER_HARD_CAP ? page.slice(0, ORDER_HARD_CAP - seen) : page;
-    truncated = rows.length < page.length;
+    const capped = seen + page.length > ORDER_HARD_CAP ? page.slice(0, ORDER_HARD_CAP - seen) : page;
+    truncated = capped.length < page.length;
+    // A row that changed state during the read can shift the offset by one: never count an order twice.
+    const rows = capped.filter((row) => !deliveredAtById.has(row.id));
     for (const row of rows) deliveredAtById.set(row.id, row.deliveredAt?.getTime() ?? Number.NEGATIVE_INFINITY);
     const part = await positionsForOrders(context, rows);
     for (const position of part.positions) positions.push(position);
     for (const entry of part.flagged) flagged.push(entry);
-    seen += rows.length;
+    seen += capped.length;
     const last = page[page.length - 1];
     if (truncated || page.length < take || last === undefined) break;
-    cursor = last.id;
+    // The rows at the end of this page on the last createdAt, plus those already skipped when the page began on the same instant.
+    const lastTime = last.createdAt.getTime();
+    let run = 0;
+    for (let index = page.length - 1; index >= 0 && page[index]?.createdAt.getTime() === lastTime; index -= 1) run += 1;
+    tied = boundary !== undefined && boundary.getTime() === lastTime ? tied + run : run;
+    boundary = last.createdAt;
   }
   const newestDeliveryFirst = (a: { orderId: string }, b: { orderId: string }): number => {
     const timeA = deliveredAtById.get(a.orderId) ?? Number.NEGATIVE_INFINITY;

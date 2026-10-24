@@ -1,13 +1,30 @@
 /**
- * Order status transition rules — the state machine.
+ * Order status transition rules — the legacy state machine.
  *
- * This is the TypeScript source of truth for which status transitions
- * are allowed. It mirrors the business logic (not a DB constraint):
+ * ALLOWED_TRANSITIONS below is the rule. The usual path is
+ * draft → pending → confirmed → shipped → delivered; the other edges
+ * (cancelled, refused, returned) are only those listed in the table.
  *
- *   draft → pending → confirmed → shipped → delivered
- *                                     │         │
- *                                     │         └→ returned (Session 30: post-delivery returns)
- *                                     └→ refused / cancelled
+ * Authoritative for:
+ *   - the legacy status path: `orderService.updateStatus` / `updateStatusInTx`
+ *     (src/lib/data/order-service.ts) call `assertCanTransition` from here,
+ *     and so do the callers that go through them (status and bulk routes,
+ *     delivery sync, AI tools and actions, automation run-processor);
+ *   - the buttons and badge menu: which next statuses are offered
+ *     (src/lib/orders/order-action-dispatch.ts,
+ *     src/components/orders/order-status-badge.tsx);
+ *   - the automation catalog: which status targets a seller can pick
+ *     (src/lib/automations/catalog.ts).
+ *
+ * NOT authoritative for the canonical order commands. They do not import this
+ * file; each enforces its own guard on status plus fulfilment, inventory and
+ * COD state: src/lib/orders/manual-confirmation.ts (pending only),
+ * src/lib/orders/canonical-fulfillment.ts (pack, ship, deliver),
+ * src/lib/orders/canonical-customer-return.ts with
+ * src/lib/orders/canonical-return-authority.ts (returns) and
+ * src/lib/orders/canonical-order-recovery.ts (cancellation). Changing a rule
+ * here does not change what those commands accept, and the reverse. When a
+ * rule changes, change both sides and their tests.
  *
  * Terminal states (returned, refused, cancelled) cannot
  * transition OUT to a different status. "delivered" is no longer terminal

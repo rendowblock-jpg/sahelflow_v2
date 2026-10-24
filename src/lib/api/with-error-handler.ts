@@ -1,7 +1,7 @@
 /**
  * withErrorHandler — HOF that wraps a Next.js App Router route handler with
- * consistent error handling. Eliminates the ~700 lines of duplicated
- * try/catch boilerplate across 44 API routes (handoff T-005).
+ * consistent error handling. Replaces the try/catch boilerplate that each
+ * API route used to repeat.
  *
  * FD-052 option A (coexist): the Algerian demo workspace no longer freezes
  * ordinary mutations. Real commerce/inbox/provider operations run while demo

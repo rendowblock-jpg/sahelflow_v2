@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import type { ChartConfig } from "@/components/ui/chart";
 import {
   buildOrdersDrillDownUrl,
@@ -715,7 +716,7 @@ export default async function AnalyticsPage({
         </CardHeader>
         <CardContent className="p-0">
           {skuProjection.rows.length > 0 ? (
-            <div className="overflow-x-auto">
+            <ScrollRegion label={t("analytics.skuPnl")}>
               <table className="w-full">
                 <thead className="sticky top-0 z-10 border-b bg-muted">
                   <tr className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -788,7 +789,7 @@ export default async function AnalyticsPage({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           ) : (
             <p className="p-8 text-center text-sm text-muted-foreground">
               {t("analytics.noSkuData")}
