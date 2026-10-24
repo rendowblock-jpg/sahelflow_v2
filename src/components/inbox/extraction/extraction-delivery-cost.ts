@@ -2,9 +2,10 @@
 export const EXTRACTION_DELIVERY_COST = 600;
 
 /**
- * The starting value of the delivery-cost field. The app keeps no per-wilaya
- * delivery price the inbox can read (the order form also starts at 600), so
- * the wilaya does not change it yet; it is a parameter so a table can slot in.
+ * The starting value of the delivery-cost field. The only per-wilaya prices
+ * are the storefront shipping rules, which the inbox cannot read without a
+ * request and which split into home and desk fees; the order form also starts
+ * at 600. So the wilaya does not change it; it is a parameter for later.
  */
 export function initialExtractionDeliveryCost(_wilaya?: string): number {
   return EXTRACTION_DELIVERY_COST;

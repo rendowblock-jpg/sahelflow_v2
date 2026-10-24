@@ -90,6 +90,15 @@ describe("extraction review: delivery cost", () => {
     expect(onCreate).not.toHaveBeenCalled();
   });
 
+  it("does not say the order is ready while the delivery cost is invalid", () => {
+    mount("workspace");
+    expect(screen.queryByText(copy("ready"))).not.toBeNull();
+    fireEvent.change(field(), { target: { value: "abc" } });
+    expect(screen.queryByText(copy("ready"))).toBeNull();
+    fireEvent.change(field(), { target: { value: "700" } });
+    expect(screen.queryByText(copy("ready"))).not.toBeNull();
+  });
+
   it("reads Arabic-Indic digits typed on an Arabic keyboard", () => {
     const onCreate = mount();
     fireEvent.change(field(), { target: { value: "٧٥٠" } });

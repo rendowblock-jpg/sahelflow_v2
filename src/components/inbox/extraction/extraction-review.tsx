@@ -290,7 +290,7 @@ export function ExtractionReview({
             {copy("stillNeeded", { fields: missing.join(" · ") })}
           </p>
         ) : null}
-        {variant === "workspace" && missing.length === 0 ? (
+        {variant === "workspace" && missing.length === 0 && deliveryCostValid ? (
           <p className="flex items-center gap-1.5 text-caption text-success" role="status">
             <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
             {copy("ready")}

@@ -7,7 +7,7 @@ import {
 } from "../extraction-delivery-cost";
 
 describe("initialExtractionDeliveryCost", () => {
-  // The app keeps no per-wilaya delivery price the inbox can read (the order
+  // No per-wilaya price is readable in the inbox without a request (the order
   // form starts at 600 too), so every wilaya starts at the same 600.
   it("is 600 whatever the wilaya", () => {
     expect(EXTRACTION_DELIVERY_COST).toBe(600);
