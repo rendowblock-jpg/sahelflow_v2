@@ -18,9 +18,12 @@ export const GET = withErrorHandler(async () => {
   const principal = businessPrincipalFromTrustedActor(actor);
   const grant = sidecar.wsGrantBundle(principal.subjectId);
   if (!grant) {
+    // No helper credential yet (nothing linked, or the helper is starting) is a
+    // normal state, not a fault. A 200 keeps the browser console quiet on every
+    // page; the only caller treats a missing token as "not connected".
     return NextResponse.json(
-      { error: "Sidecar WebSocket grant unavailable", token: null },
-      { status: 503 },
+      { token: null, connected: false },
+      { headers: { "Cache-Control": "no-store" } },
     );
   }
   const sidecarUrl =
