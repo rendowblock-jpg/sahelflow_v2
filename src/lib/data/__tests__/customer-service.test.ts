@@ -24,11 +24,28 @@ describe("customerService.list", () => {
   });
 
   it("returns customers ordered by createdAt desc", async () => {
-    await seedCustomer(db, { name: "First", phone: "0555000001" });
-    await seedCustomer(db, { name: "Second", phone: "0555000002" });
+    const first = await seedCustomer(db, { name: "First", phone: "0555000001" });
+    const second = await seedCustomer(db, { name: "Second", phone: "0555000002" });
+    // Explicit times: two writes can land in the same millisecond and then neither order is "newest".
+    await db.customer.update({ where: { id: first.id }, data: { createdAt: new Date("2026-10-01T10:00:00.000Z") } });
+    await db.customer.update({ where: { id: second.id }, data: { createdAt: new Date("2026-10-01T10:00:01.000Z") } });
     const result = await customerService.list({ prisma: db as never });
     expect(result).toHaveLength(2);
     expect(result[0]!.name).toBe("Second");
+  });
+
+  it("breaks a tie on createdAt by id, newest id first, so the order and the pages never depend on the database's scan order", async () => {
+    // Three customers written in the OPPOSITE order of their ids, all in the same millisecond.
+    const moment = new Date("2026-10-01T10:00:00.000Z");
+    for (const [id, phone] of [["cust-a", "0555000011"], ["cust-b", "0555000012"], ["cust-c", "0555000013"]] as const) {
+      const row = await seedCustomer(db, { name: id, phone });
+      await db.customer.update({ where: { id: row.id }, data: { id, createdAt: moment } });
+    }
+    const all = await customerService.list({ prisma: db as never });
+    expect(all.map((row) => row.id)).toEqual(["cust-c", "cust-b", "cust-a"]);
+    const first = await customerService.list({ prisma: db as never }, { limit: 2, offset: 0 });
+    const second = await customerService.list({ prisma: db as never }, { limit: 2, offset: 2 });
+    expect([...first, ...second].map((row) => row.id)).toEqual(["cust-c", "cust-b", "cust-a"]);
   });
 
   it("respects limit + offset", async () => {
