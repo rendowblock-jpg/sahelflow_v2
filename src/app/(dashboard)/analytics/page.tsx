@@ -61,7 +61,7 @@ import {
   STATUS_CHART_COLORS,
   statusI18nKey,
 } from "@/lib/shared/status-colors";
-import { cn, formatDZD, intlLocale } from "@/lib/utils";
+import { cn, formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -123,19 +123,19 @@ export default async function AnalyticsPage({
   const showSkuCost = skuProjection.fieldAccess.cost;
 
   const dateLocale = intlLocale(locale);
-  const integerFormatter = new Intl.NumberFormat(dateLocale, {
+  const integerFormatter = numberFormatter(dateLocale, {
     maximumFractionDigits: 0,
   });
-  const percentFormatter = new Intl.NumberFormat(dateLocale, {
+  const percentFormatter = numberFormatter(dateLocale, {
     style: "percent",
     maximumFractionDigits: 1,
   });
-  const signedPercentFormatter = new Intl.NumberFormat(dateLocale, {
+  const signedPercentFormatter = numberFormatter(dateLocale, {
     style: "percent",
     signDisplay: "exceptZero",
     maximumFractionDigits: 1,
   });
-  const hourFormatter = new Intl.NumberFormat(dateLocale, {
+  const hourFormatter = numberFormatter(dateLocale, {
     minimumIntegerDigits: 2,
     useGrouping: false,
   });

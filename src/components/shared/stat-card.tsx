@@ -13,7 +13,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useI18n } from "@/hooks/use-i18n";
-import { cn, formatDZD, intlLocale } from "@/lib/utils";
+import { cn, formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 
 export type StatCardEmphasis = "standard" | "primary" | "supporting";
 export type StatCardTone =
@@ -160,7 +160,7 @@ export function StatCard({
   const formatSparkValue = (value: number) =>
     sparkFormat === "currency"
       ? formatDZD(value, locale)
-      : new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 0 }).format(value);
+      : numberFormatter(intlLocale(locale), { maximumFractionDigits: 0 }).format(value);
   const explored =
     sparkDated && activeSpark !== null ? spark?.[activeSpark] ?? null : null;
   const exploredDay = explored ? formatDay(explored.date, dayFormatter) : "";
@@ -174,7 +174,7 @@ export function StatCard({
   const toneStyle = toneClasses[tone];
   const trendText =
     hasTrend && !directionOnly
-      ? new Intl.NumberFormat(
+      ? numberFormatter(
           intlLocale(locale),
           {
             style: "percent",

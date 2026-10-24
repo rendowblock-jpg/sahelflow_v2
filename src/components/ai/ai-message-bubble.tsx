@@ -32,7 +32,7 @@ import {
   getAiDecisionCopy,
   type AiDecisionLocale,
 } from "@/lib/i18n/ai-decision-workspace";
-import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
+import { cn, DZ_CLOCK, intlLocale, numberFormatter } from "@/lib/utils";
 
 /**
  * STR-01 — extracted verbatim from `ai-decision-canvas.tsx`, which had grown to
@@ -188,7 +188,7 @@ const MessageBubble = memo(function MessageBubble({
                   <div className="flex items-center justify-between gap-3">
                     <dt className="text-muted-foreground">{getAiDecisionCopy(locale, "tokensLabel")}</dt>
                     <dd dir="ltr" className="font-medium tabular-nums">
-                      {message.signal.totalTokens.toLocaleString(intlLocale(locale))}
+                      {numberFormatter(intlLocale(locale)).format(message.signal.totalTokens)}
                     </dd>
                   </div>
                 ) : null}

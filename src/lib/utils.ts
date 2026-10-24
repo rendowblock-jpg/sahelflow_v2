@@ -57,6 +57,43 @@ export function intlLocale(locale: string = "fr"): string {
   return LOCALE_MAP[supportedLocale(locale)];
 }
 
+/** What `numberFormatter` returns: the part of `Intl.NumberFormat` the app uses. */
+export type SellerNumberFormat = Pick<Intl.NumberFormat, "format" | "formatToParts" | "resolvedOptions">;
+
+/**
+ * THE way to format a number for a seller: use it instead of `new Intl.NumberFormat(...)`.
+ *
+ * CLDR groups Algerian Arabic thousands with a dot ("12.500"), a seller reads that as a decimal
+ * point, and French on the same screen says "12 500". Arabic therefore takes French's separator.
+ * Everything else stays the locale's own (Western digits, decimal comma, compact units, percent).
+ * The separator is read from fr-DZ so Arabic can never drift from French.
+ */
+export function numberFormatter(locale: string, options?: Intl.NumberFormatOptions): SellerNumberFormat {
+  const base = new Intl.NumberFormat(locale, options);
+  if (!/^ar(?:-|$)/i.test(base.resolvedOptions().locale)) return base;
+
+  const formatToParts: SellerNumberFormat["formatToParts"] = (value) =>
+    base
+      .formatToParts(value)
+      .map((part) => (part.type === "group" ? { ...part, value: frenchGroupSeparator() } : part));
+  return {
+    format: (value) =>
+      formatToParts(value)
+        .map((part) => part.value)
+        .join(""),
+    formatToParts,
+    resolvedOptions: () => base.resolvedOptions(),
+  };
+}
+
+let frenchGroup: string | undefined;
+function frenchGroupSeparator(): string {
+  frenchGroup ??=
+    new Intl.NumberFormat(LOCALE_MAP.fr).formatToParts(1_000_000).find((part) => part.type === "group")?.value ??
+    "\u00a0";
+  return frenchGroup;
+}
+
 /**
  * THE clock convention for every seller-facing time in SahelFlow: 24-hour.
  *
@@ -104,7 +141,7 @@ export function formatExportDateTime(value: Date, locale: string = "fr"): string
 export function formatDZD(amount: number, locale: string = "fr"): string {
   const resolved = supportedLocale(locale);
   return (
-    new Intl.NumberFormat(LOCALE_MAP[resolved], {
+    numberFormatter(LOCALE_MAP[resolved], {
       style: "decimal",
       maximumFractionDigits: 0,
     }).format(amount) + DZD_SUFFIX[resolved]
@@ -114,7 +151,7 @@ export function formatDZD(amount: number, locale: string = "fr"): string {
 /** Bare locale-aware integer number for contexts that provide their own unit. */
 export function formatDZDBare(amount: number, locale: string = "fr"): string {
   const resolved = supportedLocale(locale);
-  return new Intl.NumberFormat(LOCALE_MAP[resolved], {
+  return numberFormatter(LOCALE_MAP[resolved], {
     style: "decimal",
     maximumFractionDigits: 0,
   }).format(amount);
@@ -134,7 +171,7 @@ export function formatCompactNumber(
   locale: string = "fr",
 ): string {
   const resolved = supportedLocale(locale);
-  return new Intl.NumberFormat(LOCALE_MAP[resolved], {
+  return numberFormatter(LOCALE_MAP[resolved], {
     notation: "compact",
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
@@ -230,7 +267,7 @@ function formatOperationalAgeUnit(
   unit: OperationalAgeUnit,
   locale: SupportedLocale,
 ): string {
-  return new Intl.NumberFormat(LOCALE_MAP[locale], {
+  return numberFormatter(LOCALE_MAP[locale], {
     style: "unit",
     unit,
     unitDisplay: "short",

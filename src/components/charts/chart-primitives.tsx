@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { cn, formatDZD, formatDZDShort, intlLocale, type SupportedLocale } from "@/lib/utils";
+import { cn, formatDZD, formatDZDShort, intlLocale, type SupportedLocale, numberFormatter } from "@/lib/utils";
 import type { ChartConfig } from "./chart-types";
 
 export type ChartFormatter =
@@ -49,13 +49,13 @@ export function resolveFormatter(
       return (value) => formatDZDShort(value, locale);
     case "number":
       return (value) =>
-        new Intl.NumberFormat(
+        numberFormatter(
           intlLocale(locale),
           { maximumFractionDigits: 2 },
         ).format(value);
     case "percent":
       return (value) =>
-        new Intl.NumberFormat(
+        numberFormatter(
           intlLocale(locale),
           { style: "percent", maximumFractionDigits: 0 },
         ).format(value / 100);
