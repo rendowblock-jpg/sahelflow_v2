@@ -22,24 +22,32 @@ type FetchInit = {
 
 const NAVIGATION = {
   responseStart: 800,
+  domInteractive: 6000,
   responseEnd: 9000,
   domContentLoadedEventEnd: 15_100,
   loadEventEnd: 0,
 };
 const RESOURCES = [
-  { name: "http://127.0.0.1:3101/_next/static/chunks/app.js?v=1", initiatorType: "script", transferSize: 2048, decodedBodySize: 8192 },
-  { name: "http://127.0.0.1:3101/_next/static/css/site.css", initiatorType: "link", transferSize: 1024, decodedBodySize: 4096 },
+  { name: "http://127.0.0.1:3101/_next/static/chunks/app.js?v=1", initiatorType: "script", transferSize: 2048, decodedBodySize: 8192, duration: 12_000.6 },
+  { name: "http://127.0.0.1:3101/_next/static/css/site.css", initiatorType: "link", transferSize: 1024, decodedBodySize: 4096, duration: 300 },
 ];
 const EXPECTED_TIMING = {
   responseStartMs: 800,
   responseEndMs: 9000,
+  domInteractiveMs: 6000,
   domContentLoadedEventEndMs: 15_100,
   firstContentfulPaintMs: 14_000,
+  largestContentfulPaintMs: 18_500,
   beaconMs: 1000,
   scriptCount: 1,
   scriptTransferBytes: 2048,
   scriptDecodedBytes: 8192,
   resourceCount: 2,
+  resourceTransferBytes: 3072,
+  slowResources: [
+    { name: "/_next/static/chunks/app.js", ms: 12_001 },
+    { name: "/_next/static/css/site.css", ms: 300 },
+  ],
 };
 
 let nowMs = 0;
@@ -47,7 +55,20 @@ let cleanup: void | (() => void);
 let dataset: Record<string, string>;
 let getEntriesByType: ReturnType<typeof vi.fn>;
 
-function install(options: { hostname?: string; performance?: unknown } = {}) {
+// A browser that reports one buffered largest-contentful-paint candidate in a later task.
+class FakeObserver {
+  static supportedEntryTypes = ["largest-contentful-paint"];
+  constructor(private readonly callback: (list: { getEntries(): Array<{ startTime: number }> }) => void) {}
+  observe() {
+    setTimeout(() => this.callback({ getEntries: () => [{ startTime: 18_500.2 }] }), 0);
+  }
+  takeRecords() {
+    return [];
+  }
+  disconnect() {}
+}
+
+function install(options: { hostname?: string; performance?: unknown; observer?: unknown } = {}) {
   dataset = {};
   getEntriesByType = vi.fn((type: string) =>
     type === "navigation"
@@ -60,6 +81,7 @@ function install(options: { hostname?: string; performance?: unknown } = {}) {
   );
   vi.stubGlobal("window", {
     location: { hostname: options.hostname ?? "127.0.0.1" },
+    PerformanceObserver: options.observer,
     performance: "performance" in options ? options.performance : { now: () => nowMs, getEntriesByType },
     setTimeout: (...args: Parameters<typeof setTimeout>) => setTimeout(...args),
     clearTimeout: (id: Parameters<typeof clearTimeout>[0]) => clearTimeout(id),
@@ -91,7 +113,7 @@ afterEach(() => {
 
 describe("RuntimeUiReadyBeacon", () => {
   it("sends the page timings once, with the ready signal and every existing option", async () => {
-    install();
+    install({ observer: FakeObserver });
     const fetchMock = vi.fn(async () => ({ ok: true }));
     vi.stubGlobal("fetch", fetchMock);
     mount();
@@ -109,7 +131,22 @@ describe("RuntimeUiReadyBeacon", () => {
     });
     expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(JSON.parse(init.body as string)).toEqual({ timing: EXPECTED_TIMING });
-    expect(init.body).not.toMatch(/http|chunks|\.js|\.css/);
+    expect(init.body).not.toMatch(/http|127\.0\.0\.1|\?v=1/);
+  });
+
+  it("still sends the other timings when the browser cannot report largest-contentful-paint", async () => {
+    for (const observer of [undefined, class { static supportedEntryTypes = ["paint"]; }]) {
+      install({ observer });
+      const fetchMock = vi.fn(async () => ({ ok: true }));
+      vi.stubGlobal("fetch", fetchMock);
+      mount();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const { largestContentfulPaintMs: _omitted, ...rest } = EXPECTED_TIMING;
+      expect(JSON.parse(sentInit(fetchMock, 0).body as string)).toEqual({ timing: rest });
+      cleanup?.();
+      cleanup = undefined;
+    }
   });
 
   it("builds the timings once and resends the same body when the first request fails", async () => {
