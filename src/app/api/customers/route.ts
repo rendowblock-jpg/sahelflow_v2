@@ -6,6 +6,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import {
   assertTrustedAction,
   requireTrustedAction,
+  trustedActorAuditIdentity,
 } from "@/lib/identity/authorization";
 import { assertCustomerCreateFieldAuthority } from "@/lib/identity/customer-authorization";
 import { projectCustomerForTrustedActor } from "@/lib/identity/customer-projection";
@@ -35,7 +36,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const body = await req.json();
   const data = createCustomerSchema.parse(body);
 
-  const customer = await customerService.create({ prisma: db, shop: shopContext }, data);
+  const customer = await customerService.create({ prisma: db, shop: shopContext }, data, {
+    auditActor: trustedActorAuditIdentity(actorContext.actor),
+  });
 
   return NextResponse.json(
     { customer: projectCustomerForTrustedActor(actorContext, customer) },
