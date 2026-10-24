@@ -319,4 +319,303 @@ mod tests {
         );
         assert_ne!(aad, changed);
     }
+
+    // Restore drill: a backup nobody restored is not a backup. These tests use the same
+    // primitives the product uses (snapshot at backup time, replace + sidecar cleanup +
+    // preflight at restore time) on a shop-shaped WAL database, and compare real rows.
+    const SHOP_TABLES: [(&str, &str); 4] = [
+        ("Customer", "id || '|' || name || '|' || phone"),
+        (
+            "Order",
+            "id || '|' || customerId || '|' || status || '|' || totalCents || '|' || COALESCE(note, '')",
+        ),
+        (
+            "OrderLine",
+            "id || '|' || orderId || '|' || sku || '|' || qty || '|' || unitCents",
+        ),
+        (
+            "CashMovement",
+            "id || '|' || COALESCE(orderId, '') || '|' || kind || '|' || amountCents",
+        ),
+    ];
+
+    fn seed_shop_database(path: &Path) -> Connection {
+        let connection = Connection::open(path).expect("open shop fixture");
+        connection
+            .execute_batch(
+                r#"
+                PRAGMA journal_mode = WAL;
+                PRAGMA wal_autocheckpoint = 0;
+                PRAGMA foreign_keys = ON;
+                CREATE TABLE Customer (id TEXT PRIMARY KEY, name TEXT NOT NULL, phone TEXT NOT NULL);
+                CREATE TABLE "Order" (
+                    id TEXT PRIMARY KEY,
+                    customerId TEXT NOT NULL REFERENCES Customer(id),
+                    status TEXT NOT NULL,
+                    totalCents INTEGER NOT NULL,
+                    note TEXT
+                );
+                CREATE TABLE OrderLine (
+                    id TEXT PRIMARY KEY,
+                    orderId TEXT NOT NULL REFERENCES "Order"(id),
+                    sku TEXT NOT NULL,
+                    qty INTEGER NOT NULL,
+                    unitCents INTEGER NOT NULL
+                );
+                CREATE INDEX OrderLine_orderId ON OrderLine(orderId);
+                CREATE TABLE CashMovement (
+                    id TEXT PRIMARY KEY,
+                    orderId TEXT REFERENCES "Order"(id),
+                    kind TEXT NOT NULL,
+                    amountCents INTEGER NOT NULL
+                );
+                BEGIN;
+                "#,
+            )
+            .expect("shop fixture schema");
+        for customer in 0..12 {
+            connection
+                .execute(
+                    "INSERT INTO Customer (id, name, phone) VALUES (?1, ?2, ?3)",
+                    rusqlite::params![
+                        format!("cus-{customer:03}"),
+                        format!("زبون {customer} \u{0623}\u{062d}\u{0645}\u{062f}"),
+                        format!("0555{customer:06}")
+                    ],
+                )
+                .expect("customer row");
+        }
+        for order in 0..60 {
+            let order_id = format!("ord-{order:04}");
+            connection
+                .execute(
+                    r#"INSERT INTO "Order" (id, customerId, status, totalCents, note)
+                       VALUES (?1, ?2, ?3, ?4, ?5)"#,
+                    rusqlite::params![
+                        order_id,
+                        format!("cus-{:03}", order % 12),
+                        if order % 5 == 0 { "returned" } else { "delivered" },
+                        (order as i64 + 1) * 125_000,
+                        if order % 7 == 0 { Some("الدفع عند الاستلام") } else { None }
+                    ],
+                )
+                .expect("order row");
+            for line in 0..3 {
+                connection
+                    .execute(
+                        "INSERT INTO OrderLine (id, orderId, sku, qty, unitCents) VALUES (?1, ?2, ?3, ?4, ?5)",
+                        rusqlite::params![
+                            format!("{order_id}-l{line}"),
+                            order_id,
+                            format!("SKU-{}", (order + line) % 9),
+                            line + 1,
+                            40_000 + line as i64 * 5_000
+                        ],
+                    )
+                    .expect("order line row");
+            }
+            connection
+                .execute(
+                    "INSERT INTO CashMovement (id, orderId, kind, amountCents) VALUES (?1, ?2, 'cod-collected', ?3)",
+                    rusqlite::params![
+                        format!("cash-{order:04}"),
+                        order_id,
+                        (order as i64 + 1) * 125_000
+                    ],
+                )
+                .expect("cash row");
+        }
+        connection.execute_batch("COMMIT;").expect("commit shop fixture");
+        connection
+    }
+
+    fn shop_fingerprint(connection: &Connection) -> Vec<(String, i64, String)> {
+        SHOP_TABLES
+            .iter()
+            .map(|(table, columns)| {
+                let count: i64 = connection
+                    .query_row(&format!("SELECT COUNT(*) FROM \"{table}\""), [], |row| {
+                        row.get(0)
+                    })
+                    .expect("row count");
+                let rows: String = connection
+                    .query_row(
+                        &format!(
+                            "SELECT COALESCE(group_concat(r, ';'), '') FROM (SELECT {columns} AS r FROM \"{table}\" ORDER BY id)"
+                        ),
+                        [],
+                        |row| row.get(0),
+                    )
+                    .expect("row content");
+                ((*table).to_owned(), count, rows)
+            })
+            .collect()
+    }
+
+    fn open_and_fingerprint(path: &Path) -> Vec<(String, i64, String)> {
+        let connection = Connection::open(path).expect("open database for fingerprint");
+        shop_fingerprint(&connection)
+    }
+
+    fn integrity_and_foreign_key_failures(path: &Path) -> (String, i64) {
+        let connection = Connection::open(path).expect("open database for integrity check");
+        let integrity: String = connection
+            .query_row("PRAGMA integrity_check", [], |row| row.get(0))
+            .expect("integrity_check");
+        let failures: i64 = connection
+            .query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |row| {
+                row.get(0)
+            })
+            .expect("foreign_key_check");
+        (integrity, failures)
+    }
+
+    #[test]
+    fn shop_backup_restores_every_row_on_a_fresh_machine_and_over_an_older_database() {
+        let root = test_directory("restore-drill-round-trip");
+        let live_path = root.join("live").join("shop.db");
+        fs::create_dir_all(live_path.parent().unwrap()).unwrap();
+        let writer = seed_shop_database(&live_path);
+        let committed = shop_fingerprint(&writer);
+        assert_eq!(committed[1].1, 60, "fixture must hold 60 orders");
+        assert_eq!(committed[2].1, 180, "fixture must hold 180 order lines");
+
+        // The shop is open and a sale is half written when the backup runs: the committed
+        // rows live only in the -wal file and the open transaction must not leak in.
+        writer
+            .execute_batch(
+                r#"
+                BEGIN IMMEDIATE;
+                INSERT INTO "Order" (id, customerId, status, totalCents, note)
+                    VALUES ('ord-inflight', 'cus-000', 'pending', 999, NULL);
+                INSERT INTO OrderLine (id, orderId, sku, qty, unitCents)
+                    VALUES ('ord-inflight-l0', 'ord-inflight', 'SKU-0', 1, 999);
+                "#,
+            )
+            .expect("open an uncommitted sale");
+        let snapshot = root.join("backup").join("snapshot.db");
+        create_verified_snapshot(&live_path, &snapshot).expect("backup of a live database");
+        writer.execute_batch("ROLLBACK;").expect("end the open sale");
+        let digest = sha256_file(&snapshot).expect("backup digest");
+
+        // Restore 1: a fresh machine with no shop file at all.
+        let fresh = root.join("fresh-machine").join("shops").join("shop.db");
+        replace_from_verified_source(&snapshot, &fresh, &digest).expect("restore on a fresh machine");
+        remove_sqlite_sidecars(&fresh).expect("remove sidecars");
+        preflight_database(&fresh).expect("restored database passes preflight");
+        assert_eq!(open_and_fingerprint(&fresh), committed);
+        assert_eq!(
+            integrity_and_foreign_key_failures(&fresh),
+            ("ok".to_owned(), 0)
+        );
+
+        // Restore 2: an older local database with a leftover -wal file next to it.
+        let older = root.join("older-machine").join("shops").join("shop.db");
+        fs::create_dir_all(older.parent().unwrap()).unwrap();
+        {
+            let old = seed_shop_database(&older);
+            old.execute_batch(r#"DELETE FROM CashMovement; DELETE FROM OrderLine; DELETE FROM "Order" WHERE id > 'ord-0009';"#)
+                .expect("make the older database different");
+        }
+        let mut stale_wal = older.as_os_str().to_os_string();
+        stale_wal.push("-wal");
+        let stale_wal = PathBuf::from(stale_wal);
+        fs::write(&stale_wal, vec![0x5a_u8; 8192]).expect("leftover wal from the older database");
+        replace_from_verified_source(&snapshot, &older, &digest).expect("restore over older database");
+        remove_sqlite_sidecars(&older).expect("remove sidecars");
+        assert!(!stale_wal.exists(), "the older database's wal must not survive");
+        preflight_database(&older).expect("restored database passes preflight");
+        assert_eq!(open_and_fingerprint(&older), committed);
+        assert_eq!(
+            integrity_and_foreign_key_failures(&older),
+            ("ok".to_owned(), 0)
+        );
+        drop(writer);
+        fs::remove_dir_all(root).expect("remove restore drill directory");
+    }
+
+    #[test]
+    fn corrupt_restore_source_is_refused_and_the_live_database_is_left_untouched() {
+        let root = test_directory("restore-drill-corrupt");
+        let source_path = root.join("source.db");
+        let source = seed_shop_database(&source_path);
+        let good = root.join("good.db");
+        create_verified_snapshot(&source_path, &good).expect("good backup");
+        drop(source);
+        let good_digest = sha256_file(&good).expect("good digest");
+        let good_bytes = fs::read(&good).expect("good bytes");
+        assert!(good_bytes.len() > 16 * 1024, "fixture must span several pages");
+
+        let live = root.join("shops").join("shop.db");
+        fs::create_dir_all(live.parent().unwrap()).unwrap();
+        {
+            let current = seed_shop_database(&live);
+            current
+                .execute_batch(r#"DELETE FROM CashMovement; DELETE FROM OrderLine; DELETE FROM "Order" WHERE id > 'ord-0004';"#)
+                .expect("live database differs from the backup");
+        }
+        remove_sqlite_sidecars(&live).expect("close out live sidecars");
+        let live_digest = sha256_file(&live).expect("live digest");
+        let live_rows = open_and_fingerprint(&live);
+        remove_sqlite_sidecars(&live).expect("close out live sidecars");
+        assert_eq!(sha256_file(&live).expect("live digest again"), live_digest);
+
+        let mut garbage = vec![0_u8; good_bytes.len()];
+        for (index, byte) in garbage.iter_mut().enumerate() {
+            *byte = (index * 31 % 251) as u8;
+        }
+        let cases: Vec<(&str, Vec<u8>)> = vec![
+            ("empty", Vec::new()),
+            ("half-file", good_bytes[..good_bytes.len() / 2].to_vec()),
+            ("cut-mid-page", good_bytes[..good_bytes.len() - 1000].to_vec()),
+            ("first-page-only", good_bytes[..4096].to_vec()),
+            ("garbage", garbage),
+        ];
+        for (label, bytes) in cases {
+            let bad = root.join(format!("bad-{label}.db"));
+            fs::write(&bad, &bytes).expect("write corrupt backup");
+
+            // Layer 1: the digest recorded at backup time catches a change in storage.
+            let by_digest = replace_from_verified_source(&bad, &live, &good_digest);
+            assert!(by_digest.is_err(), "{label}: digest mismatch must refuse the restore");
+            assert_eq!(
+                sha256_file(&live).expect("live digest after refusal"),
+                live_digest,
+                "{label}: the live database file changed"
+            );
+            let leftovers: Vec<_> = fs::read_dir(live.parent().unwrap())
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+                .filter(|name| name != "shop.db")
+                .collect();
+            assert!(leftovers.is_empty(), "{label}: refusal left files behind: {leftovers:?}");
+
+            // Layer 2: if the bad file is what was recorded (a bad source snapshot), the
+            // integrity gate that runs before the swap must still refuse it.
+            // A zero-byte file is a valid empty SQLite database: see the KNOWN GAP test below.
+            if label != "empty" {
+                assert!(
+                    preflight_database(&bad).is_err(),
+                    "{label}: preflight_database accepted a corrupt backup"
+                );
+            }
+        }
+        assert_eq!(open_and_fingerprint(&live), live_rows);
+        fs::remove_dir_all(root).expect("remove restore drill directory");
+    }
+
+    // SQLite says "ok" to integrity_check for a zero-byte file because it treats it as a new
+    // empty database. A database that lost all its bytes (failed copy, disk full, power cut)
+    // must not pass the gate, or it would be backed up and restored as if it were a shop.
+    #[test]
+    fn zero_byte_database_is_refused_by_preflight() {
+        let root = test_directory("restore-drill-empty");
+        let empty = root.join("empty.db");
+        fs::write(&empty, b"").expect("zero-byte database");
+        assert!(
+            preflight_database(&empty).is_err(),
+            "a zero-byte file passed the integrity gate"
+        );
+        fs::remove_dir_all(root).expect("remove restore drill directory");
+    }
 }
