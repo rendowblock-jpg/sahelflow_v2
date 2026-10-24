@@ -71,11 +71,11 @@ function mount() {
   effects.length = 0;
   RuntimeUiReadyBeacon();
   expect(effects).toHaveLength(1);
-  cleanup = effects[0]();
+  cleanup = effects[0]?.();
 }
 
 function sentInit(fetchMock: ReturnType<typeof vi.fn>, call: number): FetchInit {
-  return fetchMock.mock.calls[call][1] as FetchInit;
+  return (fetchMock.mock.calls[call] as unknown[] | undefined)?.[1] as FetchInit;
 }
 
 beforeEach(() => {
@@ -99,7 +99,7 @@ describe("RuntimeUiReadyBeacon", () => {
 
     expect(dataset.sfHydrated).toBe("true");
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toBe(RUNTIME_UI_READY_PATH);
+    expect((fetchMock.mock.calls[0] as unknown[] | undefined)?.[0]).toBe(RUNTIME_UI_READY_PATH);
     const init = sentInit(fetchMock, 0);
     expect(init).toMatchObject({
       method: "POST",

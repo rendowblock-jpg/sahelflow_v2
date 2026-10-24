@@ -71,7 +71,7 @@ describe("buildUiTiming", () => {
         resource: [{ name: "http://127.0.0.1:3101/_next/chunks/private.js", initiatorType: "script", transferSize: 1, decodedBodySize: 2 }],
       }),
     );
-    expect(Object.keys(result).every((key) => ALL_KEYS.includes(key))).toBe(true);
+    expect(Object.keys(result).every((key) => (ALL_KEYS as readonly string[]).includes(key))).toBe(true);
     for (const value of Object.values(result)) {
       expect(Number.isInteger(value)).toBe(true);
     }

@@ -55,20 +55,20 @@ describe("extraction review: delivery cost", () => {
     fireEvent.change(field(), { target: { value: "900" } });
     fireEvent.click(create());
     expect(onCreate).toHaveBeenCalledTimes(1);
-    expect(onCreate.mock.calls[0][0].deliveryCost).toBe(900);
+    expect(onCreate.mock.calls[0]?.[0]?.deliveryCost).toBe(900);
   });
 
   it("sends the prefilled value when the seller does not touch it", () => {
     const onCreate = mount();
     fireEvent.click(create());
-    expect(onCreate.mock.calls[0][0].deliveryCost).toBe(600);
+    expect(onCreate.mock.calls[0]?.[0]?.deliveryCost).toBe(600);
   });
 
   it("accepts a free delivery (0)", () => {
     const onCreate = mount();
     fireEvent.change(field(), { target: { value: "0" } });
     fireEvent.click(create());
-    expect(onCreate.mock.calls[0][0].deliveryCost).toBe(0);
+    expect(onCreate.mock.calls[0]?.[0]?.deliveryCost).toBe(0);
   });
 
   it("shows the edited cost and the total built from it", () => {
@@ -103,6 +103,6 @@ describe("extraction review: delivery cost", () => {
     const onCreate = mount();
     fireEvent.change(field(), { target: { value: "٧٥٠" } });
     fireEvent.click(create());
-    expect(onCreate.mock.calls[0][0].deliveryCost).toBe(750);
+    expect(onCreate.mock.calls[0]?.[0]?.deliveryCost).toBe(750);
   });
 });

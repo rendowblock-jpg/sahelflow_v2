@@ -14,7 +14,7 @@ vi.mock("@/lib/wilaya-risk/engine", () => ({
 import { GET } from "../route";
 
 function get(query: string) {
-  return GET(new NextRequest(`http://localhost/api/wilaya-risk?${query}`), { params: Promise.resolve({}) } as never);
+  return GET(new NextRequest(`http://localhost/api/wilaya-risk?${query}`));
 }
 
 describe("GET /api/wilaya-risk locale", () => {

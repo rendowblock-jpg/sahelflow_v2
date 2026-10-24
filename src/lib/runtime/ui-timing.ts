@@ -60,7 +60,7 @@ function entries(performance: unknown, type: string): unknown[] | undefined {
 
 function endsWithScriptExtension(name: unknown): boolean {
   if (typeof name !== "string") return false;
-  const path = name.split(/[?#]/, 1)[0];
+  const path = name.split(/[?#]/, 1)[0] ?? "";
   return path.endsWith(".js") || path.endsWith(".mjs");
 }
 
