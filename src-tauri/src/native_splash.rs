@@ -715,53 +715,67 @@ pub(crate) fn dither(x: u32, y: u32) -> f32 {
     (52.982_92_f32 * inner).fract()
 }
 
-/// The glow behind the mark as premultiplied ARGB pixels, row by row, `width` by
-/// `height`, `center` and `radius` in those pixels, `color` as 0xAARRGGBB (its
-/// alpha is ignored) and `alpha` the glow's peak opacity. GDI+'s own gradient
-/// brush cut this glow into flat steps 8 to 28 px wide on the Founder's card
-/// (his Internal.46 picture); here every channel is dithered on its way to 8 bits,
-/// so no step is wider than one level.
-pub(crate) fn glow_layer(
-    width: usize,
-    height: usize,
-    center: (f32, f32),
-    radius: f32,
-    color: u32,
-    alpha: f32,
-) -> Vec<u32> {
-    glow_layer_with(width, height, center, radius, color, alpha, dither)
+/// Where, how wide and how strong the glow is, in the pixels of the buffer it is blended into.
+#[derive(Clone, Copy)]
+pub(crate) struct Glow {
+    /// The centre, in pixels from the top-left corner of the area it is blended into.
+    pub(crate) center: (f32, f32),
+    pub(crate) radius: f32,
+    /// The glow's colour as 0xAARRGGBB (its alpha is ignored).
+    pub(crate) color: u32,
+    /// The glow's opacity at its centre, 0 to 1.
+    pub(crate) alpha: f32,
 }
 
-fn glow_layer_with(
-    width: usize,
-    height: usize,
-    center: (f32, f32),
-    radius: f32,
-    color: u32,
-    alpha: f32,
+/// Blends the glow over `pixels` (premultiplied ARGB, row after row, `stride` pixels per row), only inside
+/// `area` = (left, top, width, height). The mix is done here, in plain sRGB, and every channel is dithered on
+/// its way to 8 bits, so no step is wider than one level. GDI+ must not composite this glow: on real Windows
+/// it turned a clean layer into steps of about two levels on the dark card and made the glow brighter than
+/// designed (and its own gradient brush showed flat rings 8 to 28 px wide on the Founder's Internal.46 card).
+/// A dark glow over an opaque card, over a partly transparent edge, or over nothing at all (a clear buffer)
+/// are all the same formula; the result is always a valid premultiplied pixel.
+pub(crate) fn blend_glow(
+    pixels: &mut [u32],
+    stride: usize,
+    area: (usize, usize, usize, usize),
+    glow: Glow,
+) {
+    blend_glow_with(pixels, stride, area, glow, dither);
+}
+
+fn blend_glow_with(
+    pixels: &mut [u32],
+    stride: usize,
+    area: (usize, usize, usize, usize),
+    glow: Glow,
     noise: impl Fn(u32, u32) -> f32,
-) -> Vec<u32> {
-    let mut pixels = vec![0_u32; width * height];
-    let alpha = clamp01(alpha);
-    if alpha <= 0.0 || radius <= 0.0 {
-        return pixels;
+) {
+    let (left, top, width, height) = area;
+    let alpha = clamp01(glow.alpha);
+    if alpha <= 0.0 || glow.radius <= 0.0 || width == 0 || height == 0 {
+        return;
     }
-    let red = ((color >> 16) & 0xFF) as f32;
-    let green = ((color >> 8) & 0xFF) as f32;
-    let blue = (color & 0xFF) as f32;
+    // An area that does not fit the buffer is refused, never half drawn.
+    if stride == 0 || left + width > stride || (top + height) * stride > pixels.len() {
+        return;
+    }
+    let red = ((glow.color >> 16) & 0xFF) as f32;
+    let green = ((glow.color >> 8) & 0xFF) as f32;
+    let blue = (glow.color & 0xFF) as f32;
     // The curve sampled every 1/16 pixel: the loop then costs one square root
     // and one lookup per pixel.
     const SAMPLES_PER_PIXEL: f32 = 16.0;
-    let table: Vec<f32> = (0..=(radius * SAMPLES_PER_PIXEL).ceil() as usize + 1)
-        .map(|index| glow_profile(index as f32 / SAMPLES_PER_PIXEL / radius))
+    let table: Vec<f32> = (0..=(glow.radius * SAMPLES_PER_PIXEL).ceil() as usize + 1)
+        .map(|index| glow_profile(index as f32 / SAMPLES_PER_PIXEL / glow.radius))
         .collect();
     for y in 0..height {
-        let dy = y as f32 + 0.5 - center.1;
-        if dy.abs() >= radius {
+        let dy = y as f32 + 0.5 - glow.center.1;
+        if dy.abs() >= glow.radius {
             continue;
         }
+        let row = (top + y) * stride + left;
         for x in 0..width {
-            let dx = x as f32 + 0.5 - center.0;
+            let dx = x as f32 + 0.5 - glow.center.0;
             let position = (dx * dx + dy * dy).sqrt() * SAMPLES_PER_PIXEL;
             let index = position as usize;
             if index + 1 >= table.len() {
@@ -772,14 +786,45 @@ fn glow_layer_with(
             if strength <= 0.0 {
                 continue;
             }
-            let grain = noise(x as u32, y as u32);
-            // A premultiplied channel can never exceed the alpha: the cut is
-            // monotonic and no colour channel is above 255.
-            let level = |full: f32| ((full * strength + grain).floor() as u32).min(255);
-            pixels[y * width + x] =
-                (level(255.0) << 24) | (level(red) << 16) | (level(green) << 8) | level(blue);
+            let keep = 1.0 - strength;
+            let grain = noise((left + x) as u32, (top + y) as u32);
+            // The surface keeps what the glow lets through, the glow adds its colour: premultiplied, so the
+            // glow's own part of the alpha is its strength. Both sides are cut with the same grain, and no
+            // colour channel can pass the alpha: the cut is monotonic and the glow's channels are at most 255.
+            let mix = |surface: u32, glow_channel: f32| {
+                ((surface as f32 * keep + glow_channel * strength + grain).floor() as u32).min(255)
+            };
+            let surface = pixels[row + x];
+            pixels[row + x] = (mix(surface >> 24, 255.0) << 24)
+                | (mix((surface >> 16) & 0xFF, red) << 16)
+                | (mix((surface >> 8) & 0xFF, green) << 8)
+                | mix(surface & 0xFF, blue);
         }
     }
+}
+
+/// The glow alone, as premultiplied ARGB pixels over nothing: `width` by `height`, `center` and `radius` in those
+/// pixels. The portable tests measure the glow through this.
+pub(crate) fn glow_layer(
+    width: usize,
+    height: usize,
+    center: (f32, f32),
+    radius: f32,
+    color: u32,
+    alpha: f32,
+) -> Vec<u32> {
+    let mut pixels = vec![0_u32; width * height];
+    blend_glow(
+        &mut pixels,
+        width,
+        (0, 0, width, height),
+        Glow {
+            center,
+            radius,
+            color,
+            alpha,
+        },
+    );
     pixels
 }
 
@@ -1684,36 +1729,51 @@ mod imp {
             self.reset_to_card_space(g);
         }
 
-        /// The light behind the mark: one smooth radial falloff, cut by the
-        /// card's rounded corners, that wakes up as the card fills.
+        /// The light behind the mark: one smooth radial falloff that wakes up as
+        /// the card fills. It is blended straight into the card's pixels (see
+        /// `blend_glow`), not composited by GDI+, which stepped and brightened it.
         unsafe fn paint_glow(&self, g: *mut GpGraphics, strength: f32) {
             let level = glow_step(self.progress.shown) as f32 / GLOW_STEPS as f32;
             let alpha = clamp01(strength) * glow_alpha(level, self.palette.dark);
             if alpha <= 0.0 {
                 return;
             }
-            self.reset_to_card_space(g);
-            let card = rounded_rect(0.5, 0.5, CARD_WIDTH - 1.0, CARD_HEIGHT - 1.0, CARD_RADIUS);
-            GdipSetClipPath(g, card, CombineModeReplace);
-            // The glow is computed pixel by pixel (see `glow_layer`): GDI+'s gradient
-            // brush cut it into flat bands on a dark card. The clip above is kept in
-            // device pixels, so the layer is drawn 1:1 with no transform.
-            GdipResetWorldTransform(g);
+            // GDI+ draws into the same memory: let it finish before the pixels are touched.
+            GdipFlush(g, FlushIntentionSync);
             let scale = self.scale;
-            let left = (SHADOW_MARGIN * scale).round() as i32;
-            let width = (CARD_WIDTH * scale).round() as i32;
-            let height = (CARD_HEIGHT * scale).round() as i32;
-            let layer = glow_layer(
-                width as usize,
-                height as usize,
-                (CARD_WIDTH / 2.0 * scale, MARK_CENTER_Y * scale),
-                GLOW_RADIUS * scale,
-                self.palette.glow,
-                alpha,
+            let (stride, rows) = (self.width as usize, self.height as usize);
+            if self.byte_len != stride * rows * 4 {
+                return;
+            }
+            let margin = (SHADOW_MARGIN * scale).round() as usize;
+            // One device pixel in from the card's edge: the border and its soft edge stay as drawn.
+            // The glow never reaches the rounded corners (their distance from its centre is over its radius).
+            let inset = scale.ceil().max(1.0) as usize;
+            let width = (CARD_WIDTH * scale).round() as usize;
+            let height = (CARD_HEIGHT * scale).round() as usize;
+            if width <= 2 * inset || height <= 2 * inset {
+                return;
+            }
+            let pixels = std::slice::from_raw_parts_mut(self.bits.cast::<u32>(), stride * rows);
+            blend_glow(
+                pixels,
+                stride,
+                (
+                    margin + inset,
+                    margin + inset,
+                    width - 2 * inset,
+                    height - 2 * inset,
+                ),
+                Glow {
+                    center: (
+                        CARD_WIDTH / 2.0 * scale - inset as f32,
+                        MARK_CENTER_Y * scale - inset as f32,
+                    ),
+                    radius: GLOW_RADIUS * scale,
+                    color: self.palette.glow,
+                    alpha,
+                },
             );
-            draw_glow_layer(g, &layer, width, height, left, left);
-            GdipResetClip(g);
-            GdipDeletePath(card);
         }
 
         /// The mark with its fill, the status row, the slow hint and the
@@ -2181,60 +2241,6 @@ mod imp {
         }
     }
 
-    /// Draws a premultiplied glow layer onto the card surface, one layer pixel to
-    /// one device pixel: no scaling and no half-pixel blur, so the grain the layer
-    /// carries is what reaches the screen.
-    unsafe fn draw_glow_layer(
-        g: *mut GpGraphics,
-        layer: &[u32],
-        width: i32,
-        height: i32,
-        left: i32,
-        top: i32,
-    ) {
-        if width <= 0 || height <= 0 || layer.len() != width as usize * height as usize {
-            return;
-        }
-        let mut bitmap: *mut GpBitmap = std::ptr::null_mut();
-        if GdipCreateBitmapFromScan0(
-            width,
-            height,
-            width * 4,
-            PIXEL_FORMAT_32BPP_PARGB,
-            layer.as_ptr().cast(),
-            &mut bitmap,
-        ) != Ok
-            || bitmap.is_null()
-        {
-            return;
-        }
-        let mut interpolation: InterpolationMode = 0;
-        let mut offset: PixelOffsetMode = 0;
-        GdipGetInterpolationMode(g, &mut interpolation);
-        GdipGetPixelOffsetMode(g, &mut offset);
-        GdipSetInterpolationMode(g, InterpolationModeNearestNeighbor);
-        GdipSetPixelOffsetMode(g, PixelOffsetModeHalf);
-        GdipDrawImageRectRectI(
-            g,
-            bitmap.cast(),
-            left,
-            top,
-            width,
-            height,
-            0,
-            0,
-            width,
-            height,
-            UnitPixel,
-            std::ptr::null(),
-            0,
-            std::ptr::null_mut(),
-        );
-        GdipSetInterpolationMode(g, interpolation);
-        GdipSetPixelOffsetMode(g, offset);
-        GdipDisposeImage(bitmap.cast());
-    }
-
     unsafe extern "system" fn window_proc(
         window: HWND,
         message: u32,
@@ -2590,112 +2596,6 @@ mod imp {
         );
         true
     }
-
-    /// Runs only where GDI+ exists (the Windows lanes of CI). The card draws the glow layer through
-    /// `draw_glow_layer`; this checks what lands on a real GDI+ surface. On the first real Windows run
-    /// GDI+ kept the grain exactly (the local deviation of the surface equalled the layer's) and lowered
-    /// every value by about one level; a comparison with the exact curve counted that shift as steps,
-    /// so the yardstick here is the local deviation, which an overall offset does not change.
-    /// It is the last item of `imp` on purpose (clippy: no items after a test module).
-    #[cfg(test)]
-    mod glow_draw_tests {
-        use super::*;
-        use crate::native_splash::glow_layer_tests::{green_row, inner_span, local_deviation, SKY};
-
-        const W: usize = 600;
-        const H: usize = 360;
-        /// An opaque dark card colour, like the real card under the glow.
-        const CARD: u32 = 0xFF08_1E1D;
-
-        unsafe fn render(layer: &[u32], background: u32) -> Vec<u32> {
-            let (width, height) = (W as i32, H as i32);
-            let mut surface = vec![background; W * H];
-            let mut bitmap: *mut GpBitmap = std::ptr::null_mut();
-            let mut graphics: *mut GpGraphics = std::ptr::null_mut();
-            assert_eq!(
-                GdipCreateBitmapFromScan0(
-                    width,
-                    height,
-                    width * 4,
-                    PIXEL_FORMAT_32BPP_PARGB,
-                    surface.as_mut_ptr().cast(),
-                    &mut bitmap,
-                ),
-                Ok
-            );
-            assert_eq!(
-                GdipGetImageGraphicsContext(bitmap.cast(), &mut graphics),
-                Ok
-            );
-            // The same modes the card itself runs with.
-            GdipSetSmoothingMode(graphics, SmoothingModeAntiAlias);
-            GdipSetPixelOffsetMode(graphics, PixelOffsetModeHighQuality);
-            GdipSetCompositingQuality(graphics, CompositingQualityHighQuality);
-            draw_glow_layer(graphics, layer, width, height, 0, 0);
-            GdipFlush(graphics, FlushIntentionSync);
-            GdipDeleteGraphics(graphics);
-            GdipDisposeImage(bitmap.cast());
-            surface
-        }
-
-        #[test]
-        fn the_glow_layer_keeps_its_grain_on_a_gdi_surface() {
-            let mut token: usize = 0;
-            let input = GdiplusStartupInput {
-                GdiplusVersion: 1,
-                DebugEventCallback: 0,
-                SuppressBackgroundThread: 0,
-                SuppressExternalCodecs: 1,
-            };
-            assert_eq!(
-                unsafe { GdiplusStartup(&mut token, &input, std::ptr::null_mut()) },
-                Ok
-            );
-            for alpha in [0.05_f32, 0.086, 0.17] {
-                let layer = glow_layer(W, H, (300.0, MARK_CENTER_Y), GLOW_RADIUS, SKY, alpha);
-                // A clear surface (as in the first Windows run) and the dark card the glow really lies on.
-                for (name, background) in [("clear", 0_u32), ("card", CARD)] {
-                    let surface = unsafe { render(&layer, background) };
-                    if background == 0 {
-                        let mut worst = 0_i32;
-                        for (wanted, got) in layer.iter().zip(&surface) {
-                            for shift in [0_u32, 8, 16, 24] {
-                                let difference = (((wanted >> shift) & 0xFF) as i32
-                                    - ((got >> shift) & 0xFF) as i32)
-                                    .abs();
-                                worst = worst.max(difference);
-                            }
-                        }
-                        assert!(worst <= 2, "GDI+ changed the glow by up to {worst} levels");
-                    }
-                    for y in [60_usize, 108, 250] {
-                        let (from, to) = inner_span(y);
-                        let layer_row = green_row(&layer, y);
-                        let surface_row = green_row(&surface, y);
-                        let layer_deviation = local_deviation(&layer_row, from, to);
-                        let surface_deviation = local_deviation(&surface_row, from, to);
-                        let mean =
-                            |row: &[f32]| row[from..to].iter().sum::<f32>() / (to - from) as f32;
-                        eprintln!(
-                            "GLOWWIN alpha {alpha} {name} row {y}: deviation layer {layer_deviation:.3} surface {surface_deviation:.3}; mean green layer {:.2} surface {:.2}",
-                            mean(&layer_row),
-                            mean(&surface_row),
-                        );
-                        // Steps come back as a larger local deviation. Internal.46 showed 3.85 to 4.00 levels.
-                        assert!(
-                            surface_deviation <= layer_deviation + 0.35,
-                            "alpha {alpha} {name} row {y}: GDI+ added steps: {surface_deviation} against {layer_deviation} for the layer"
-                        );
-                        assert!(
-                            surface_deviation < 1.0,
-                            "alpha {alpha} {name} row {y}: the surface steps by {surface_deviation} levels"
-                        );
-                    }
-                }
-            }
-            unsafe { GdiplusShutdown(token) };
-        }
-    }
 }
 
 #[cfg(test)]
@@ -2769,6 +2669,127 @@ pub(crate) mod glow_layer_tests {
             .windows(6)
             .map(|window| (window.iter().sum::<f32>() / 6.0).abs())
             .fold(0.0, f32::max)
+    }
+
+    /// An opaque dark card colour, like the real card under the glow.
+    const CARD: u32 = 0xFF08_1E1D;
+
+    fn glow_at(alpha: f32) -> Glow {
+        Glow {
+            center: CENTER,
+            radius: GLOW_RADIUS,
+            color: SKY,
+            alpha,
+        }
+    }
+
+    #[test]
+    fn blended_over_the_card_the_glow_has_no_steps_and_the_designed_strength() {
+        for alpha in [0.05_f32, 0.086, 0.17] {
+            let mut pixels = vec![CARD; W * H];
+            blend_glow(&mut pixels, W, (0, 0, W, H), glow_at(alpha));
+            let card = channel(CARD, 8) as f32;
+            let sky = channel(SKY, 8) as f32;
+            for y in [60_usize, 108, 250] {
+                let (from, to) = inner_span(y);
+                let row = green_row(&pixels, y);
+                let deviation = local_deviation(&row, from, to);
+                assert!(
+                    deviation < 0.6,
+                    "alpha {alpha} row {y}: the glow steps by {deviation}"
+                );
+                // The strength is the plain sRGB mix, to within a third of a level on average.
+                let dy = y as f32 + 0.5 - CENTER.1;
+                let mut error = 0.0_f32;
+                for (x, value) in row.iter().enumerate().take(to).skip(from) {
+                    let dx = x as f32 + 0.5 - CENTER.0;
+                    let share = alpha * glow_profile((dx * dx + dy * dy).sqrt() / GLOW_RADIUS);
+                    error += value - (card * (1.0 - share) + sky * share);
+                }
+                let mean_error = error / (to - from) as f32;
+                assert!(
+                    mean_error.abs() < 0.3,
+                    "alpha {alpha} row {y}: off by {mean_error} levels"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_staircase_over_the_card_is_still_refused() {
+        let mut best = f32::MAX;
+        for alpha in [0.086_f32, 0.17] {
+            let mut pixels = vec![CARD; W * H];
+            blend_glow(&mut pixels, W, (0, 0, W, H), glow_at(alpha));
+            for pixel in &mut pixels {
+                let green = (channel(*pixel, 8) + 1) / 3 * 3;
+                *pixel = (*pixel & !0x0000_FF00) | (green << 8);
+            }
+            for y in [60_usize, 108, 250] {
+                let (from, to) = inner_span(y);
+                best = best.min(local_deviation(&green_row(&pixels, y), from, to));
+            }
+        }
+        assert!(
+            best > 0.65,
+            "a three-level staircase over the card only reaches {best}"
+        );
+    }
+
+    #[test]
+    fn the_blend_stays_inside_its_area_and_keeps_a_half_clear_surface_valid() {
+        // Premultiplied: half opaque, channels at most the alpha.
+        let surface = 0x8040_1010_u32;
+        let mut pixels = vec![surface; W * H];
+        let area = (50_usize, 40_usize, 200_usize, 120_usize);
+        blend_glow(
+            &mut pixels,
+            W,
+            area,
+            Glow {
+                center: (100.0, 60.0),
+                radius: 90.0,
+                color: SKY,
+                alpha: 0.17,
+            },
+        );
+        let mut changed = 0;
+        for y in 0..H {
+            for x in 0..W {
+                let pixel = pixels[y * W + x];
+                let inside =
+                    x >= area.0 && x < area.0 + area.2 && y >= area.1 && y < area.1 + area.3;
+                if !inside {
+                    assert_eq!(pixel, surface, "pixel {x},{y} is outside the area");
+                    continue;
+                }
+                if pixel != surface {
+                    changed += 1;
+                }
+                let alpha = channel(pixel, 24);
+                assert!(
+                    alpha >= channel(surface, 24),
+                    "the glow made {x},{y} more clear"
+                );
+                for shift in [0, 8, 16] {
+                    assert!(
+                        channel(pixel, shift) <= alpha,
+                        "{pixel:#010x} is not premultiplied"
+                    );
+                }
+            }
+        }
+        assert!(changed > 1000, "the glow changed only {changed} pixels");
+    }
+
+    #[test]
+    fn an_area_that_does_not_fit_or_no_opacity_leaves_the_surface_alone() {
+        let mut pixels = vec![CARD; W * H];
+        blend_glow(&mut pixels, W, (300, 0, 400, 10), glow_at(0.17));
+        blend_glow(&mut pixels, W, (0, 0, W, H + 1), glow_at(0.17));
+        blend_glow(&mut pixels, 0, (0, 0, W, H), glow_at(0.17));
+        blend_glow(&mut pixels, W, (0, 0, W, H), glow_at(0.0));
+        assert!(pixels.iter().all(|pixel| *pixel == CARD));
     }
 
     #[test]
