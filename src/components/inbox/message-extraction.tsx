@@ -24,6 +24,7 @@ import {
   type OrderExtractionLocale,
 } from "@/lib/i18n/order-extraction";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { toAsciiDigits } from "@/lib/phone-patterns";
 
 interface MessageExtractionProps {
   conversationId?: string;
@@ -50,8 +51,8 @@ interface ExtractionResponse {
   ai: { consent: boolean; available: boolean };
 }
 
-function algerianPhoneToWhatsAppJid(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
+export function algerianPhoneToWhatsAppJid(phone: string): string {
+  const digits = toAsciiDigits(phone).replace(/\D/g, "");
   const international = digits.startsWith("0")
     ? `213${digits.slice(1)}`
     : digits.startsWith("213")

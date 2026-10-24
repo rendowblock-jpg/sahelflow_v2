@@ -95,6 +95,31 @@ describe("parseNumber", () => {
   it("returns 0 for Infinity/NaN", () => {
     expect(parseNumber("Infinity")).toBe(0);
   });
+
+  // A sheet filled on an Arabic keyboard holds Arabic-Indic (U+0660-0669) or
+  // Eastern (U+06F0-06F9) digits; they used to be stripped to "" and read as 0.
+  it("reads Arabic-Indic and Eastern Arabic-Indic digits (PB-PHONE-FOLLOWUPS)", () => {
+    expect(parseNumber("١٥٠٠")).toBe(1500);
+    expect(parseNumber("۱۵۰۰")).toBe(1500);
+    expect(parseNumber("١٥٠٠ د.ج")).toBe(1500);
+    expect(parseNumber("-٥")).toBe(-5);
+    expect(parseNumber("15٠٠")).toBe(1500);
+  });
+
+  it("reads the Arabic decimal and thousands separators", () => {
+    expect(parseNumber("١٬٥٠٠٫٥")).toBe(1500.5);
+    expect(parseNumber("١٬٥٠٠")).toBe(1500);
+    expect(parseNumber("١،٥٠٠")).toBe(1500);
+    expect(parseNumber("۱٬۵۰۰٫۲۵")).toBe(1500.25);
+    expect(parseNumber("1500٫5")).toBe(1500.5);
+    expect(parseNumber("1٬500")).toBe(1500);
+  });
+
+  it("keeps the ASCII comma rule as it is (comma is dropped)", () => {
+    expect(parseNumber("1,500")).toBe(1500);
+    expect(parseNumber("1,500.5")).toBe(1500.5);
+    expect(parseNumber("1,5")).toBe(15);
+  });
 });
 
 // ── normalizePhone ───────────────────────────────────────────────────────────
@@ -121,6 +146,14 @@ describe("normalizePhone", () => {
 
   it("handles already-normalized numbers", () => {
     expect(normalizePhone("0555123456")).toBe("0555123456");
+  });
+
+  it("reads Arabic-Indic and Eastern Arabic-Indic digits like 0-9 (PB-PHONE-ARABIC-DIGITS)", () => {
+    // /\D/ treats these digits as separators, so such a cell used to become "".
+    expect(normalizePhone("٠٦٥٥١٢٣٤٥٦")).toBe("0655123456");
+    expect(normalizePhone("۰۶۵۵۱۲۳۴۵۶")).toBe("0655123456");
+    expect(normalizePhone("+٢١٣ ٦٥٥ ١٢ ٣٤ ٥٦")).toBe("0655123456");
+    expect(normalizePhone("0655١٢٣٤٥٦")).toBe("0655123456");
   });
 
   it("returns digits only for unknown formats", () => {
