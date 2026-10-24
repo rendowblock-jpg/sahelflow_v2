@@ -58,8 +58,17 @@ function TabsList({
 
 function TabsTrigger({
   className,
+  linksToPage = false,
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+}: React.ComponentProps<typeof TabsPrimitive.Trigger> & {
+  /**
+   * The tab is a link to a page that is rendered again, so no panel with Radix's generated
+   * id exists in the document. Set this instead of passing `aria-controls={undefined}` from
+   * a server page: React drops undefined props at the server/client boundary, so Radix
+   * would keep the default and axe (aria-valid-attr-value) fails the selected tab.
+   */
+  linksToPage?: boolean
+}) {
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
@@ -71,6 +80,7 @@ function TabsTrigger({
         className
       )}
       {...props}
+      {...(linksToPage ? { "aria-controls": undefined } : null)}
     />
   )
 }
