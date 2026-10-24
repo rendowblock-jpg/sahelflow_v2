@@ -691,6 +691,98 @@ pub(crate) fn glow_step(progress: f32) -> u32 {
     (clamp01(progress) * GLOW_STEPS as f32).floor() as u32
 }
 
+/// How wide the bell of the glow is, as a fraction of its radius.
+const GLOW_BELL: f32 = 0.5;
+
+/// The shape of the glow for a distance given as a fraction of its radius: 1 at
+/// the centre, about 0.3 at 55% of the way out (the approved concept: .05 falling
+/// to .015 at 55%), and exactly 0 at the rim. A bell curve, so it has no kink
+/// where a straight-line gradient would show a ring.
+pub(crate) fn glow_profile(fraction: f32) -> f32 {
+    if fraction >= 1.0 {
+        return 0.0;
+    }
+    let rim = (-(1.0 / GLOW_BELL).powi(2)).exp();
+    let t = fraction.max(0.0) / GLOW_BELL;
+    ((-t * t).exp() - rim) / (1.0 - rim)
+}
+
+/// A repeatable value in [0, 1) for a pixel (interleaved gradient noise). Added
+/// before a colour is cut to 8 bits, it turns the flat bands of a slow dark
+/// gradient into fine grain that the eye averages away.
+pub(crate) fn dither(x: u32, y: u32) -> f32 {
+    let inner = (0.067_110_56_f32 * x as f32 + 0.005_837_15_f32 * y as f32).fract();
+    (52.982_92_f32 * inner).fract()
+}
+
+/// The glow behind the mark as premultiplied ARGB pixels, row by row, `width` by
+/// `height`, `center` and `radius` in those pixels, `color` as 0xAARRGGBB (its
+/// alpha is ignored) and `alpha` the glow's peak opacity. GDI+'s own gradient
+/// brush cut this glow into flat steps 8 to 28 px wide on the Founder's card
+/// (his Internal.46 picture); here every channel is dithered on its way to 8 bits,
+/// so no step is wider than one level.
+pub(crate) fn glow_layer(
+    width: usize,
+    height: usize,
+    center: (f32, f32),
+    radius: f32,
+    color: u32,
+    alpha: f32,
+) -> Vec<u32> {
+    glow_layer_with(width, height, center, radius, color, alpha, dither)
+}
+
+fn glow_layer_with(
+    width: usize,
+    height: usize,
+    center: (f32, f32),
+    radius: f32,
+    color: u32,
+    alpha: f32,
+    noise: impl Fn(u32, u32) -> f32,
+) -> Vec<u32> {
+    let mut pixels = vec![0_u32; width * height];
+    let alpha = clamp01(alpha);
+    if alpha <= 0.0 || radius <= 0.0 {
+        return pixels;
+    }
+    let red = ((color >> 16) & 0xFF) as f32;
+    let green = ((color >> 8) & 0xFF) as f32;
+    let blue = (color & 0xFF) as f32;
+    // The curve sampled every 1/16 pixel: the loop then costs one square root
+    // and one lookup per pixel.
+    const SAMPLES_PER_PIXEL: f32 = 16.0;
+    let table: Vec<f32> = (0..=(radius * SAMPLES_PER_PIXEL).ceil() as usize + 1)
+        .map(|index| glow_profile(index as f32 / SAMPLES_PER_PIXEL / radius))
+        .collect();
+    for y in 0..height {
+        let dy = y as f32 + 0.5 - center.1;
+        if dy.abs() >= radius {
+            continue;
+        }
+        for x in 0..width {
+            let dx = x as f32 + 0.5 - center.0;
+            let position = (dx * dx + dy * dy).sqrt() * SAMPLES_PER_PIXEL;
+            let index = position as usize;
+            if index + 1 >= table.len() {
+                continue;
+            }
+            let from = table[index];
+            let strength = alpha * (from + (table[index + 1] - from) * position.fract());
+            if strength <= 0.0 {
+                continue;
+            }
+            let grain = noise(x as u32, y as u32);
+            // A premultiplied channel can never exceed the alpha: the cut is
+            // monotonic and no colour channel is above 255.
+            let level = |full: f32| ((full * strength + grain).floor() as u32).min(255);
+            pixels[y * width + x] =
+                (level(255.0) << 24) | (level(red) << 16) | (level(green) << 8) | level(blue);
+        }
+    }
+    pixels
+}
+
 /// Whether the card may show a full S and "100%". Only a launch whose
 /// workspace is really visible may: a timeout, a failed launch or a quit
 /// closes the card without claiming it finished.
@@ -1603,30 +1695,23 @@ mod imp {
             self.reset_to_card_space(g);
             let card = rounded_rect(0.5, 0.5, CARD_WIDTH - 1.0, CARD_HEIGHT - 1.0, CARD_RADIUS);
             GdipSetClipPath(g, card, CombineModeReplace);
-            let mut path: *mut GpPath = std::ptr::null_mut();
-            GdipCreatePath(FillModeAlternate, &mut path);
-            GdipAddPathEllipse(
-                path,
-                CARD_WIDTH / 2.0 - GLOW_RADIUS,
-                MARK_CENTER_Y - GLOW_RADIUS,
-                GLOW_RADIUS * 2.0,
-                GLOW_RADIUS * 2.0,
+            // The glow is computed pixel by pixel (see `glow_layer`): GDI+'s gradient
+            // brush cut it into flat bands on a dark card. The clip above is kept in
+            // device pixels, so the layer is drawn 1:1 with no transform.
+            GdipResetWorldTransform(g);
+            let scale = self.scale;
+            let left = (SHADOW_MARGIN * scale).round() as i32;
+            let width = (CARD_WIDTH * scale).round() as i32;
+            let height = (CARD_HEIGHT * scale).round() as i32;
+            let layer = glow_layer(
+                width as usize,
+                height as usize,
+                (CARD_WIDTH / 2.0 * scale, MARK_CENTER_Y * scale),
+                GLOW_RADIUS * scale,
+                self.palette.glow,
+                alpha,
             );
-            let mut brush: *mut GpPathGradient = std::ptr::null_mut();
-            if GdipCreatePathGradientFromPath(path, &mut brush) == Ok {
-                GdipSetPathGradientCenterColor(brush, with_alpha(self.palette.glow, alpha));
-                let edge = [with_alpha(self.palette.glow, 0.0)];
-                let mut count = 1;
-                GdipSetPathGradientSurroundColorsWithCount(brush, edge.as_ptr(), &mut count);
-                // Position 0 is the rim and 1 the centre: full strength at the
-                // centre, 30% at 45% of the way in, nothing at the rim.
-                let positions = [0.0_f32, 0.45, 1.0];
-                let factors = [0.0_f32, 0.3, 1.0];
-                GdipSetPathGradientBlend(brush, factors.as_ptr(), positions.as_ptr(), 3);
-                GdipFillPath(g, brush.cast(), path);
-                GdipDeleteBrush(brush.cast());
-            }
-            GdipDeletePath(path);
+            draw_glow_layer(g, &layer, width, height, left, left);
             GdipResetClip(g);
             GdipDeletePath(card);
         }
@@ -2096,6 +2181,128 @@ mod imp {
         }
     }
 
+    /// Draws a premultiplied glow layer onto the card surface, one layer pixel to
+    /// one device pixel: no scaling and no half-pixel blur, so the grain the layer
+    /// carries is what reaches the screen.
+    unsafe fn draw_glow_layer(
+        g: *mut GpGraphics,
+        layer: &[u32],
+        width: i32,
+        height: i32,
+        left: i32,
+        top: i32,
+    ) {
+        if width <= 0 || height <= 0 || layer.len() != width as usize * height as usize {
+            return;
+        }
+        let mut bitmap: *mut GpBitmap = std::ptr::null_mut();
+        if GdipCreateBitmapFromScan0(
+            width,
+            height,
+            width * 4,
+            PIXEL_FORMAT_32BPP_PARGB,
+            layer.as_ptr().cast(),
+            &mut bitmap,
+        ) != Ok
+            || bitmap.is_null()
+        {
+            return;
+        }
+        let mut interpolation: InterpolationMode = 0;
+        let mut offset: PixelOffsetMode = 0;
+        GdipGetInterpolationMode(g, &mut interpolation);
+        GdipGetPixelOffsetMode(g, &mut offset);
+        GdipSetInterpolationMode(g, InterpolationModeNearestNeighbor);
+        GdipSetPixelOffsetMode(g, PixelOffsetModeHalf);
+        GdipDrawImageRectRectI(
+            g,
+            bitmap.cast(),
+            left,
+            top,
+            width,
+            height,
+            0,
+            0,
+            width,
+            height,
+            UnitPixel,
+            std::ptr::null(),
+            0,
+            std::ptr::null_mut(),
+        );
+        GdipSetInterpolationMode(g, interpolation);
+        GdipSetPixelOffsetMode(g, offset);
+        GdipDisposeImage(bitmap.cast());
+    }
+
+    /// Runs only where GDI+ exists (the Windows lanes of CI): the glow layer must
+    /// reach a real GDI+ surface unchanged and still be free of steps.
+    #[cfg(test)]
+    mod glow_draw_tests {
+        use super::*;
+        use crate::native_splash::glow_layer_tests::{worst_window_error, SKY, WINDOW_ERROR_LIMIT};
+
+        #[test]
+        fn the_glow_layer_reaches_a_gdi_surface_one_pixel_to_one_pixel() {
+            let (width, height) = (600_i32, 360_i32);
+            let alpha = 0.086;
+            let layer = glow_layer(600, 360, (300.0, MARK_CENTER_Y), GLOW_RADIUS, SKY, alpha);
+            let mut surface = vec![0_u32; 600 * 360];
+            unsafe {
+                let mut token: usize = 0;
+                let input = GdiplusStartupInput {
+                    GdiplusVersion: 1,
+                    DebugEventCallback: 0,
+                    SuppressBackgroundThread: 0,
+                    SuppressExternalCodecs: 1,
+                };
+                assert_eq!(GdiplusStartup(&mut token, &input, std::ptr::null_mut()), Ok);
+                let mut bitmap: *mut GpBitmap = std::ptr::null_mut();
+                let mut graphics: *mut GpGraphics = std::ptr::null_mut();
+                assert_eq!(
+                    GdipCreateBitmapFromScan0(
+                        width,
+                        height,
+                        width * 4,
+                        PIXEL_FORMAT_32BPP_PARGB,
+                        surface.as_mut_ptr().cast(),
+                        &mut bitmap,
+                    ),
+                    Ok
+                );
+                assert_eq!(
+                    GdipGetImageGraphicsContext(bitmap.cast(), &mut graphics),
+                    Ok
+                );
+                // The same modes the card itself runs with.
+                GdipSetSmoothingMode(graphics, SmoothingModeAntiAlias);
+                GdipSetPixelOffsetMode(graphics, PixelOffsetModeHighQuality);
+                GdipSetCompositingQuality(graphics, CompositingQualityHighQuality);
+                draw_glow_layer(graphics, &layer, width, height, 0, 0);
+                GdipFlush(graphics, FlushIntentionSync);
+                GdipDeleteGraphics(graphics);
+                GdipDisposeImage(bitmap.cast());
+                GdiplusShutdown(token);
+            }
+            let mut worst = 0_i32;
+            for (wanted, got) in layer.iter().zip(&surface) {
+                for shift in [0_u32, 8, 16, 24] {
+                    let difference =
+                        (((wanted >> shift) & 0xFF) as i32 - ((got >> shift) & 0xFF) as i32).abs();
+                    worst = worst.max(difference);
+                }
+            }
+            assert!(worst <= 2, "GDI+ changed the glow by up to {worst} levels");
+            for y in [60_usize, 108, 250] {
+                let error = worst_window_error(&surface, y, alpha);
+                assert!(
+                    error <= WINDOW_ERROR_LIMIT,
+                    "row {y} of the GDI+ surface steps: window error {error} over {WINDOW_ERROR_LIMIT}"
+                );
+            }
+        }
+    }
+
     unsafe extern "system" fn window_proc(
         window: HWND,
         message: u32,
@@ -2450,6 +2657,170 @@ mod imp {
             None,
         );
         true
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod glow_layer_tests {
+    use super::*;
+
+    const W: usize = 600;
+    const H: usize = 360;
+    const CENTER: (f32, f32) = (300.0, MARK_CENTER_Y);
+    /// A light teal like the sky arc that lights a dark card.
+    pub(crate) const SKY: u32 = 0xFF2D_D4BF;
+    /// The most a mean over six neighbouring pixels may stray from the exact
+    /// curve, in levels. The grain reaches about 0.36; the staircase that shipped
+    /// in Internal.46 (flat steps of three or more levels) strays by a level or more.
+    pub(crate) const WINDOW_ERROR_LIMIT: f32 = 0.45;
+
+    fn channel(pixel: u32, shift: u32) -> u32 {
+        (pixel >> shift) & 0xFF
+    }
+
+    /// The largest distance, in levels, between the exact green curve of row `y`
+    /// and the mean of any six neighbouring pixels of `pixels`. A staircase makes
+    /// this large; grain around the exact curve keeps it small.
+    pub(crate) fn worst_window_error(pixels: &[u32], y: usize, alpha: f32) -> f32 {
+        let green = channel(SKY, 8) as f32;
+        let errors: Vec<f32> = (0..W)
+            .filter_map(|x| {
+                let dx = x as f32 + 0.5 - CENTER.0;
+                let dy = y as f32 + 0.5 - CENTER.1;
+                let distance = (dx * dx + dy * dy).sqrt();
+                (distance < GLOW_RADIUS - 1.0).then(|| {
+                    channel(pixels[y * W + x], 8) as f32
+                        - green * alpha * glow_profile(distance / GLOW_RADIUS)
+                })
+            })
+            .collect();
+        errors
+            .windows(6)
+            .map(|window| (window.iter().sum::<f32>() / 6.0).abs())
+            .fold(0.0, f32::max)
+    }
+
+    #[test]
+    fn the_profile_is_one_at_the_centre_about_a_third_at_55_percent_and_zero_at_the_rim() {
+        assert!((glow_profile(0.0) - 1.0).abs() < 1e-6);
+        let at_55 = glow_profile(0.55);
+        assert!((0.25..=0.35).contains(&at_55), "0.55 gives {at_55}");
+        assert!(glow_profile(1.0).abs() < 1e-6 && glow_profile(2.0) == 0.0);
+        assert!(glow_profile(0.999) >= 0.0);
+    }
+
+    #[test]
+    fn the_profile_only_falls_and_has_no_kink() {
+        let mut previous = glow_profile(0.0);
+        let mut previous_slope = 0.0_f32;
+        for step in 1..=200 {
+            let value = glow_profile(step as f32 / 200.0);
+            let slope = value - previous;
+            assert!(slope <= 0.0, "it rises at step {step}");
+            // A kink is a sudden change of slope; a bell changes it gently.
+            assert!(
+                (slope - previous_slope).abs() < 0.01,
+                "a kink at step {step}"
+            );
+            previous = value;
+            previous_slope = slope;
+        }
+    }
+
+    #[test]
+    fn the_grain_is_repeatable_inside_zero_to_one_and_unbiased() {
+        let mut sum = 0.0_f64;
+        for y in 0..64_u32 {
+            for x in 0..64_u32 {
+                let value = dither(x, y);
+                assert!((0.0..1.0).contains(&value), "{value} at {x},{y}");
+                assert_eq!(value, dither(x, y));
+                sum += f64::from(value);
+            }
+        }
+        let mean = sum / 4096.0;
+        assert!((mean - 0.5).abs() < 0.02, "mean {mean}");
+    }
+
+    #[test]
+    fn every_pixel_is_a_valid_premultiplied_colour_and_the_corners_stay_clear() {
+        for alpha in [0.035_f32, 0.086, 0.17] {
+            let pixels = glow_layer(W, H, CENTER, GLOW_RADIUS, SKY, alpha);
+            for pixel in &pixels {
+                let a = channel(*pixel, 24);
+                for shift in [0, 8, 16] {
+                    assert!(
+                        channel(*pixel, shift) <= a,
+                        "{pixel:#010x} is not premultiplied"
+                    );
+                }
+            }
+            assert_eq!(pixels[0], 0, "top-left corner");
+            assert_eq!(pixels[W * H - 1], 0, "bottom-right corner");
+            let centre = pixels[108 * W + 300];
+            let wanted = (255.0 * alpha).round() as i32;
+            assert!(
+                (channel(centre, 24) as i32 - wanted).abs() <= 1,
+                "centre alpha"
+            );
+        }
+    }
+
+    #[test]
+    fn nothing_is_drawn_for_no_opacity_or_no_radius() {
+        assert!(glow_layer(W, H, CENTER, GLOW_RADIUS, SKY, 0.0)
+            .iter()
+            .all(|p| *p == 0));
+        assert!(glow_layer(W, H, CENTER, 0.0, SKY, 0.1)
+            .iter()
+            .all(|p| *p == 0));
+    }
+
+    #[test]
+    fn the_glow_follows_the_exact_curve_within_one_level_and_does_not_step() {
+        for alpha in [0.05_f32, 0.086, 0.17] {
+            let pixels = glow_layer(W, H, CENTER, GLOW_RADIUS, SKY, alpha);
+            for y in [60_usize, 108, 250] {
+                let error = worst_window_error(&pixels, y, alpha);
+                assert!(
+                    error <= WINDOW_ERROR_LIMIT,
+                    "alpha {alpha} row {y}: window error {error} over {WINDOW_ERROR_LIMIT}"
+                );
+            }
+            let green = channel(SKY, 8) as f32;
+            for x in 0..W {
+                let dx = x as f32 + 0.5 - CENTER.0;
+                let dy = 108.0 + 0.5 - CENTER.1;
+                let distance = (dx * dx + dy * dy).sqrt();
+                if distance < GLOW_RADIUS - 1.0 {
+                    let wanted = green * alpha * glow_profile(distance / GLOW_RADIUS);
+                    let got = channel(pixels[108 * W + x], 8) as f32;
+                    assert!((got - wanted).abs() < 1.0, "x {x}: {got} against {wanted}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_staircase_like_the_one_that_shipped_is_refused() {
+        // Internal.46 showed flat steps of three levels or more. Cut a good layer
+        // the same way (green rounded to a multiple of three) and the check must
+        // fail it, or the check proves nothing.
+        let mut worst = 0.0_f32;
+        for alpha in [0.086_f32, 0.17] {
+            let mut stepped = glow_layer(W, H, CENTER, GLOW_RADIUS, SKY, alpha);
+            for pixel in &mut stepped {
+                let green = (channel(*pixel, 8) + 1) / 3 * 3;
+                *pixel = (*pixel & !0x0000_FF00) | (green << 8);
+            }
+            for y in [60_usize, 108, 250] {
+                worst = worst.max(worst_window_error(&stepped, y, alpha));
+            }
+        }
+        assert!(
+            worst > 2.0 * WINDOW_ERROR_LIMIT,
+            "a three-level staircase only reaches {worst}"
+        );
     }
 }
 

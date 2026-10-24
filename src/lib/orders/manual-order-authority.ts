@@ -137,6 +137,23 @@ export function isCanonicalOrderAuthority(
 }
 
 /**
+ * An order the seller typed in himself: source "manual" under the trusted-manual
+ * authority. Unlike isTrustedManualOrderAuthority (which also answers true for
+ * every canonical SOURCE order), this is false for a hosted-storefront order, an
+ * imported order and a legacy order. Its lines are the seller's own, so they hold
+ * no stock before confirmation and depend on nothing held elsewhere.
+ */
+export function isSellerTypedOrderAuthority(
+  source: unknown,
+  sourceMetadata: unknown,
+): boolean {
+  return (
+    source === "manual" &&
+    hasAuthority(sourceMetadata, TRUSTED_MANUAL_ORDER_AUTHORITY)
+  );
+}
+
+/**
  * Compatibility name retained while the remaining Phase 1 call sites are
  * migrated. It now identifies every order adopted by the canonical command
  * kernel, including the original trusted-manual authority.

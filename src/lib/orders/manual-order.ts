@@ -10,6 +10,7 @@ import { recordOrderChangeInTx } from "@/lib/data/order-change-service";
 import { nextOrderNumber } from "@/lib/data/service-base";
 import { normalizePhone } from "@/lib/import/fields";
 import { trustedManualOrderSourceMetadata } from "@/lib/orders/manual-order-authority";
+import { resolveCatalogLine } from "@/lib/orders/manual-order-catalog-line";
 import type { Order } from "@/types/domain";
 import { NotFoundError, ValidationError } from "@/types/errors";
 
@@ -175,53 +176,7 @@ export async function createTrustedManualOrder(
       const canonicalItems = data.items.map((item) => {
         const product = productById.get(item.productId);
         if (!product) throw new NotFoundError("Product", item.productId);
-
-        const allVariants = product.productVariants;
-        const activeVariants = allVariants.filter((variant) => variant.isActive);
-        if (allVariants.length > 0 && activeVariants.length === 0) {
-          throw new ValidationError(
-            `Product '${product.name}' has variants but none are active`,
-            "items.productVariantId",
-          );
-        }
-
-        if (activeVariants.length > 0) {
-          const variant = item.productVariantId
-            ? activeVariants.find(
-                (candidate) => candidate.id === item.productVariantId,
-              )
-            : undefined;
-          if (!variant) {
-            throw new ValidationError(
-              `Product '${product.name}' requires one exact active variant`,
-              "items.productVariantId",
-            );
-          }
-          return {
-            productId: product.id,
-            productVariantId: variant.id,
-            productName: product.name,
-            productVariantName: variant.name,
-            quantity: item.quantity,
-            unitPrice: variant.price ?? product.price,
-          };
-        }
-
-        if (item.productVariantId) {
-          throw new ValidationError(
-            `Product '${product.name}' has no variants`,
-            "items.productVariantId",
-          );
-        }
-
-        return {
-          productId: product.id,
-          productVariantId: null,
-          productName: product.name,
-          productVariantName: null,
-          quantity: item.quantity,
-          unitPrice: product.price,
-        };
+        return resolveCatalogLine(product, item);
       });
 
       const itemsTotal = canonicalItems.reduce(
