@@ -6,6 +6,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { db, shopContext } from "@/lib/db";
 import { ConflictError } from "@/types/errors";
+import { hashWhatsAppAccountId } from "../../../../sidecars/whatsapp/auth-tokens";
 import {
   persistWhatsAppInbound,
   type WhatsAppInboundEnvelope,
@@ -104,6 +105,31 @@ describe("durable WhatsApp inbound ingress", () => {
       persistWhatsAppInbound(
         context,
         envelope({ accountId: "213555888000:14@s.whatsapp.net" }),
+      ),
+    ).rejects.toThrow(/different paired account/i);
+    await expect(db.providerIngressEvent.count()).resolves.toBe(0);
+  });
+
+  it("accepts a record spooled under an earlier device index of the same paired number", async () => {
+    // After a relink the same number answers with a new device index. A
+    // record spooled before it must still land, under the same account hash.
+    const result = await persistWhatsAppInbound(
+      context,
+      envelope({ accountId: "213555999000:5@s.whatsapp.net" }),
+    );
+
+    expect(result.replayed).toBe(false);
+    const stored = await db.providerIngressEvent.findUniqueOrThrow({
+      where: { id: result.ingressEventId },
+    });
+    expect(stored.providerAccountHash).toBe(hashWhatsAppAccountId(ACCOUNT_ID));
+  });
+
+  it("still rejects another number that happens to use the paired device index", async () => {
+    await expect(
+      persistWhatsAppInbound(
+        context,
+        envelope({ accountId: "213555888000:12@s.whatsapp.net" }),
       ),
     ).rejects.toThrow(/different paired account/i);
     await expect(db.providerIngressEvent.count()).resolves.toBe(0);
