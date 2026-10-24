@@ -4,7 +4,11 @@ import {
   persistedCustomerIdsForQuery,
   persistedOrderIdsForQuery,
 } from "@/lib/search/local-search-projection";
-import { compactSearchText, matchesSearchQuery } from "@/lib/search/universal-search";
+import {
+  compactSearchText,
+  matchesSearchQuery,
+  normalizeSearchText,
+} from "@/lib/search/universal-search";
 import { wilayaStoredSpellings } from "@/lib/wilaya-display";
 
 /**
@@ -94,16 +98,111 @@ export async function orderListFoldCandidates(
   return { orderIds, customerIds, wilayaSpellings: contact ? foldedWilayaSpellings(q) : [] };
 }
 
+/** Cheap fingerprint of a table: changes when a row is added, removed or edited (updatedAt moves). */
+export interface RowSignature {
+  count: number;
+  newest: number;
+}
+
+export function rowSignature(count: number, newest: Date | null | undefined): RowSignature {
+  return { count, newest: newest?.getTime() ?? 0 };
+}
+
+export interface FoldedRowCache {
+  /** One name per row shape (the fields that are folded). */
+  key: string;
+  signature: () => Promise<RowSignature>;
+}
+
+interface FoldedField {
+  label: string;
+  compact: string;
+}
+
+interface CachedRows {
+  signature: RowSignature;
+  rows: Array<{ id: string; fields: FoldedField[] }>;
+}
+
+/**
+ * A change in the last second before the rows were read is never cached: two
+ * edits in the same millisecond would leave the fingerprint unchanged.
+ */
+const CACHE_QUIET_MS = 1000;
+const rowCache = new Map<string, CachedRows>();
+
+export function clearFoldedRowCache(): void {
+  rowCache.clear();
+}
+
+function foldFields(fields: ReadonlyArray<string | null | undefined>): FoldedField[] {
+  const folded: FoldedField[] = [];
+  for (const field of fields) {
+    if (!field) continue;
+    const label = normalizeSearchText(field);
+    if (label) folded.push({ label, compact: compactSearchText(field) });
+  }
+  return folded;
+}
+
+/** Same rule as matchesSearchQuery, on fields that were folded once. */
+function matchesFolded(query: string, fields: readonly FoldedField[]): boolean {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return true;
+  const compactQuery = compactSearchText(query);
+  const tokens = normalizedQuery.split(" ").filter(Boolean);
+  for (const { label, compact } of fields) {
+    if (label.includes(normalizedQuery)) return true;
+    if (compactQuery && compact.includes(compactQuery)) return true;
+    if (tokens.length > 1 && tokens.every((token) => label.includes(token))) return true;
+  }
+  return false;
+}
+
+export function matchesFoldedFields(
+  query: string,
+  fields: ReadonlyArray<string | null | undefined>,
+): boolean {
+  return matchesFolded(query, foldFields(fields));
+}
+
+async function readSignature(cache: FoldedRowCache): Promise<RowSignature | null> {
+  try {
+    return await cache.signature();
+  } catch {
+    return null; // no fingerprint: read the rows every time, as before
+  }
+}
+
 /**
  * Ids of the rows whose fields match the typed text after folding both sides.
  * Returns null when the table is over the cap: the caller keeps its SQL filter.
+ * With `cache`, the folded rows are kept per process while the table's
+ * fingerprint is unchanged, so typing does not reload and re-fold them.
  */
 export async function foldedRowIds<T extends { id: string }>(
   load: (take: number) => Promise<T[]>,
   q: string,
   fieldsOf: (row: T) => ReadonlyArray<string | null | undefined>,
+  cache?: FoldedRowCache,
 ): Promise<string[] | null> {
+  // The fingerprint is read before the rows: a change in between only costs one extra reload.
+  const signature = cache ? await readSignature(cache) : null;
+  if (cache && signature) {
+    if (signature.count > LIST_SEARCH_ROW_CAP) return null;
+    const hit = rowCache.get(cache.key);
+    if (hit && hit.signature.count === signature.count && hit.signature.newest === signature.newest) {
+      return hit.rows.filter((row) => matchesFolded(q, row.fields)).map((row) => row.id);
+    }
+  }
+  const readAt = Date.now();
   const rows = await load(LIST_SEARCH_ROW_CAP + 1);
   if (rows.length > LIST_SEARCH_ROW_CAP) return null;
+  if (cache && signature && signature.newest <= readAt - CACHE_QUIET_MS) {
+    const folded = rows.map((row) => ({ id: row.id, fields: foldFields(fieldsOf(row)) }));
+    rowCache.set(cache.key, { signature, rows: folded });
+    return folded.filter((row) => matchesFolded(q, row.fields)).map((row) => row.id);
+  }
+  if (cache) rowCache.delete(cache.key);
   return rows.filter((row) => matchesSearchQuery(q, fieldsOf(row))).map((row) => row.id);
 }

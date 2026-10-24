@@ -1,4 +1,4 @@
-import { foldedRowIds } from "@/lib/search/list-search-candidates";
+import { foldedRowIds, rowSignature } from "@/lib/search/list-search-candidates";
 import "server-only";
 
 import { db } from "@/lib/db";
@@ -165,6 +165,17 @@ async function queryProducts(
           }),
         searchText,
         (row) => [row.name, row.sku],
+        {
+          key: "product:name+sku",
+          signature: async () => {
+            const stats = await db.product.aggregate({
+              where: { deletedAt: null },
+              _count: { _all: true },
+              _max: { updatedAt: true },
+            });
+            return rowSignature(stats._count._all, stats._max.updatedAt);
+          },
+        },
       )
     : null;
   const where = productListWhere({ ...opts, foldedIds });

@@ -1,10 +1,13 @@
 import "server-only";
 
+import { Prisma } from "@prisma/client";
+
 import {
   deriveExistingShopBlindIndexes,
   deriveShopBlindIndexes,
 } from "@/lib/crypto/protected-record";
 import { db, shopContext } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import {
   compactSearchText,
   normalizeSearchText,
@@ -20,6 +23,11 @@ const PROJECTION_PAGE_SIZE = 400;
 const CUSTOMER_RELEVANCE_BOOST = 64;
 const CANDIDATE_SCAN_BUDGET = DEFAULT_CANDIDATE_LIMIT * 4;
 const STABLE_BUILD_ATTEMPTS = 3;
+/** Rows one list search may refresh itself; the rest of a backlog belongs to warmLocalSearchProjection. */
+const LIST_SEARCH_DRAIN_ROWS = 8;
+/** Sub-selects per token lookup query (SQLite allows 500 terms in one compound select). */
+const TOKEN_LOOKUP_CHUNK = 100;
+const WARM_BATCH_ATTEMPTS = 3;
 const CUSTOMER_DIRTY_BATCH_SIZE = 64;
 const CUSTOMER_WARM_BATCH_LIMIT = 1_024;
 const CUSTOMER_TOKEN_FAMILY = "customer";
@@ -402,19 +410,65 @@ async function queryTokenHashes(
   );
 }
 
-/** One query for all hashes of a search; each hash keeps at most CANDIDATE_SCAN_BUDGET ids. */
-async function idsForTokenHashes(
+type TokenRow = { entityId: string; tokenHash: string };
+
+/**
+ * One bounded sub-select per hash, forced onto the (family, tokenHash) index.
+ * Without table statistics SQLite prefers the primary-key index (it also holds
+ * entityId) and walks every token row of the family to filter tokenHash, which
+ * took 200+ ms at 10,000 customers. A LIMIT per hash means one very common token
+ * can never use up the rows of another hash of the same search.
+ */
+export function tokenLookupSql(family: string, hashes: readonly string[]): Prisma.Sql {
+  return Prisma.join(
+    hashes.map(
+      (hash) => Prisma.sql`SELECT "tokenHash", "entityId" FROM (SELECT "tokenHash", "entityId" FROM "SearchProjectionToken" INDEXED BY "SearchProjectionToken_family_tokenHash_idx" WHERE "family" = ${family} AND "tokenHash" = ${hash} LIMIT ${CANDIDATE_SCAN_BUDGET})`,
+    ),
+    " UNION ALL ",
+  );
+}
+
+async function tokenRowsByIndex(
   family: string,
   hashes: readonly string[],
-): Promise<Map<string, Set<string>>> {
-  const buckets = new Map<string, Set<string>>();
-  if (hashes.length === 0) return buckets;
-  const rows = await db.searchProjectionToken.findMany({
+): Promise<TokenRow[]> {
+  const rows: TokenRow[] = [];
+  for (let start = 0; start < hashes.length; start += TOKEN_LOOKUP_CHUNK) {
+    const chunk = hashes.slice(start, start + TOKEN_LOOKUP_CHUNK);
+    rows.push(...(await db.$queryRaw<TokenRow[]>(tokenLookupSql(family, chunk))));
+  }
+  return rows;
+}
+
+/** Same rows through the model API, if the hinted query cannot run (index missing, client without raw SQL). */
+async function tokenRowsByModel(
+  family: string,
+  hashes: readonly string[],
+): Promise<TokenRow[]> {
+  return db.searchProjectionToken.findMany({
     where: { family, tokenHash: { in: [...hashes] } },
     select: { entityId: true, tokenHash: true },
     orderBy: { entityId: "asc" },
     take: CANDIDATE_SCAN_BUDGET * hashes.length,
   });
+}
+
+/** All hashes of a search; each hash keeps at most CANDIDATE_SCAN_BUDGET ids. */
+export async function idsForTokenHashes(
+  family: string,
+  hashes: readonly string[],
+): Promise<Map<string, Set<string>>> {
+  const buckets = new Map<string, Set<string>>();
+  if (hashes.length === 0) return buckets;
+  let rows: TokenRow[];
+  try {
+    rows = await tokenRowsByIndex(family, hashes);
+  } catch (error) {
+    logger.warn("search.projection.token-lookup-fallback", {
+      failure: error instanceof Error ? error.name : "unknown",
+    });
+    rows = await tokenRowsByModel(family, hashes);
+  }
   for (const row of rows) {
     const bucket = buckets.get(row.tokenHash) ?? new Set<string>();
     if (bucket.size < CANDIDATE_SCAN_BUDGET) bucket.add(row.entityId);
@@ -479,12 +533,16 @@ async function ensureTokenFoldRebuild(): Promise<void> {
 
 let tokenFoldChecked = false;
 
-async function readyForListSearch(refresh: () => Promise<boolean>): Promise<void> {
+async function readyForListSearch(
+  refresh: (limit?: number) => Promise<boolean>,
+): Promise<void> {
   if (!tokenFoldChecked) {
     await ensureTokenFoldRebuild();
     tokenFoldChecked = true;
   }
-  await refresh();
+  // Only the newest few rows (live edits come first): a backlog of thousands
+  // is drained by the warm-up, never inside the request that is typing.
+  await refresh(LIST_SEARCH_DRAIN_ROWS);
 }
 
 /** Customer ids whose persisted tokens match the text. Empty (never throws) when the search authority is missing. */
@@ -540,12 +598,14 @@ async function hasDirtyProjectionRows(family: string): Promise<boolean> {
   return row !== null;
 }
 
-async function refreshCustomerProjectionBatch(): Promise<boolean> {
+async function refreshCustomerProjectionBatch(
+  limit = CUSTOMER_DIRTY_BATCH_SIZE,
+): Promise<boolean> {
   const dirty: ProjectionDirtyRow[] = await db.searchProjectionDirty.findMany({
     where: { family: CUSTOMER_TOKEN_FAMILY },
     select: { entityId: true, revision: true },
     orderBy: [{ revision: "desc" }, { entityId: "asc" }],
-    take: CUSTOMER_DIRTY_BATCH_SIZE,
+    take: limit,
   });
   if (dirty.length === 0) return true;
 
@@ -623,12 +683,14 @@ async function refreshCustomerProjectionBatch(): Promise<boolean> {
   return !(await hasDirtyProjectionRows(CUSTOMER_TOKEN_FAMILY));
 }
 
-async function refreshOrderProjectionBatch(): Promise<boolean> {
+async function refreshOrderProjectionBatch(
+  limit = ORDER_DIRTY_BATCH_SIZE,
+): Promise<boolean> {
   const dirty: ProjectionDirtyRow[] = await db.searchProjectionDirty.findMany({
     where: { family: ORDER_TOKEN_FAMILY },
     select: { entityId: true, revision: true },
     orderBy: [{ revision: "desc" }, { entityId: "asc" }],
-    take: ORDER_DIRTY_BATCH_SIZE,
+    take: limit,
   });
   if (dirty.length === 0) return true;
 
@@ -702,16 +764,34 @@ async function refreshOrderProjectionBatch(): Promise<boolean> {
   return !(await hasDirtyProjectionRows(ORDER_TOKEN_FAMILY));
 }
 
-async function warmCustomerProjection(): Promise<void> {
-  for (let batch = 0; batch < CUSTOMER_WARM_BATCH_LIMIT; batch += 1) {
-    if (await refreshCustomerProjectionBatch()) return;
+/**
+ * Refresh batches until nothing is dirty. A batch that fails (SQLite has one
+ * writer: a busy database ends in a socket timeout) is tried again a few times
+ * before the warm-up gives up, so one slow moment does not leave thousands of rows.
+ */
+async function drainDirtyRows(
+  refresh: () => Promise<boolean>,
+  batchLimit: number,
+): Promise<void> {
+  let failures = 0;
+  for (let batch = 0; batch < batchLimit; ) {
+    try {
+      if (await refresh()) return;
+      batch += 1;
+      failures = 0;
+    } catch (error) {
+      failures += 1;
+      if (failures >= WARM_BATCH_ATTEMPTS) throw error;
+    }
   }
 }
 
+async function warmCustomerProjection(): Promise<void> {
+  await drainDirtyRows(() => refreshCustomerProjectionBatch(), CUSTOMER_WARM_BATCH_LIMIT);
+}
+
 async function warmOrderProjection(): Promise<void> {
-  for (let batch = 0; batch < ORDER_WARM_BATCH_LIMIT; batch += 1) {
-    if (await refreshOrderProjectionBatch()) return;
-  }
+  await drainDirtyRows(() => refreshOrderProjectionBatch(), ORDER_WARM_BATCH_LIMIT);
 }
 
 async function queryPersistedCustomers(
@@ -1077,18 +1157,49 @@ export async function warmLocalSearchProjection(
   if (scope.customer || scope.order) {
     try {
       await ensureTokenFoldRebuild();
-    } catch {
+    } catch (error) {
       // The next warm retries; search keeps serving the rows already indexed.
+      logger.warn("search.projection.fold-rebuild-failed", {
+        failure: error instanceof Error ? error.message : "unknown",
+      });
     }
   }
-  const work: Promise<unknown>[] = [];
-  if (scope.customer) work.push(warmCustomerProjection());
-  if (scope.conversation) {
-    work.push(cached(shopId, "conversation", buildConversationIndex));
+  const failed: Array<{ branch: string; reason: unknown }> = [];
+  const track = async (branch: string, run: () => Promise<unknown>): Promise<void> => {
+    try {
+      await run();
+    } catch (reason) {
+      failed.push({ branch, reason });
+    }
+  };
+  const work: Array<Promise<void>> = [];
+  // SQLite has one writer. Run together, the customer and order warm-ups made one
+  // of them time out (P1008) at 10,000 rows and the rest stayed unindexed, so they take turns.
+  if (scope.customer || scope.order) {
+    work.push(
+      (async () => {
+        if (scope.customer) await track("customer", warmCustomerProjection);
+        if (scope.order) await track("order", warmOrderProjection);
+      })(),
+    );
   }
-  if (scope.product) work.push(cached(shopId, "product", buildProductIndex));
-  if (scope.order) work.push(warmOrderProjection());
-  if (scope.delivery) work.push(cached(shopId, "delivery", buildDeliveryIndex));
-  if (scope.return) work.push(cached(shopId, "return", buildReturnIndex));
-  await Promise.allSettled(work);
+  if (scope.conversation) {
+    work.push(track("conversation", () => cached(shopId, "conversation", buildConversationIndex)));
+  }
+  if (scope.product) work.push(track("product", () => cached(shopId, "product", buildProductIndex)));
+  if (scope.delivery) work.push(track("delivery", () => cached(shopId, "delivery", buildDeliveryIndex)));
+  if (scope.return) work.push(track("return", () => cached(shopId, "return", buildReturnIndex)));
+  // Every branch runs to its end first; a failed one is then reported, not hidden.
+  await Promise.all(work);
+  if (failed.length === 0) return;
+  for (const { branch, reason } of failed) {
+    logger.warn("search.projection.warm-failed", {
+      branch,
+      failure: reason instanceof Error ? reason.message : "unknown",
+    });
+  }
+  throw new Error(
+    `Search projection warm-up failed: ${failed.map((entry) => entry.branch).join(", ")}`,
+    { cause: failed[0]!.reason },
+  );
 }

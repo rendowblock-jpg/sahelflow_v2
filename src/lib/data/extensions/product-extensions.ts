@@ -5,7 +5,7 @@
  * actually selling (units, revenue, order count) vs. just sitting in
  * the catalog — essential for inventory decisions.
  */
-import { foldedRowIds } from "@/lib/search/list-search-candidates";
+import { foldedRowIds, rowSignature } from "@/lib/search/list-search-candidates";
 import "server-only";
 import type { ServiceContext } from "../service-base";
 
@@ -48,6 +48,17 @@ export const productServiceExtensions = {
         }),
       q,
       (row) => [row.name],
+      {
+        key: "product:name",
+        signature: async () => {
+          const stats = await ctx.prisma.product.aggregate({
+            where: { deletedAt: null },
+            _count: { _all: true },
+            _max: { updatedAt: true },
+          });
+          return rowSignature(stats._count._all, stats._max.updatedAt);
+        },
+      },
     );
     const rows = await ctx.prisma.product.findMany({
       where: {
