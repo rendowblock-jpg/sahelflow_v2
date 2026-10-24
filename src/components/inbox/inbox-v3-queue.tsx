@@ -65,6 +65,7 @@ import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { toast } from "@/lib/toast";
 import { formatInboxAge } from "@/lib/inbox-age";
 import { cn } from "@/lib/utils";
+import { matchesSearchQuery } from "@/lib/search/universal-search";
 
 const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread", "archived"];
 const WORKFLOW_FILTERS: WorkflowFilter[] = [
@@ -495,13 +496,11 @@ export function InboxV3Queue({
     [chats, currentMemberId, queueFilter, workflowFilter],
   );
 
-  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const normalizedQuery = query.trim();
   const localMatches = useMemo(() => {
     if (!normalizedQuery) return baseRows;
     return baseRows.filter((chat) =>
-      [chat.name, chat.phone, chat.lastMessageText]
-        .filter(Boolean)
-        .some((value) => value!.toLocaleLowerCase().includes(normalizedQuery)),
+      matchesSearchQuery(normalizedQuery, [chat.name, chat.phone, chat.lastMessageText]),
     );
   }, [baseRows, normalizedQuery]);
 

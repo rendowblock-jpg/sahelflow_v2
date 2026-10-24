@@ -14,6 +14,7 @@ import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
+import { matchesSearchQuery, normalizeSearchText } from "@/lib/search/universal-search";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     "customers.contact.read",
     { shopId: actorContext.shop.shopId },
   );
-  const query = req.nextUrl.searchParams.get("q")?.trim().toLocaleLowerCase();
+  const query = normalizeSearchText(req.nextUrl.searchParams.get("q") ?? "");
   if (!query) return NextResponse.json({ results: [] });
 
   // Local-first shops can search deeper than the 100-row live queue without
@@ -56,18 +57,18 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     .filter((conversation) => {
       if (
         canReadContact &&
-        conversation.contactName?.toLocaleLowerCase().includes(query)
+        matchesSearchQuery(query, [conversation.contactName])
       ) {
         return true;
       }
       if (
         canReadContact &&
-        conversation.contactPhone?.toLocaleLowerCase().includes(query)
+        matchesSearchQuery(query, [conversation.contactPhone])
       ) {
         return true;
       }
       return conversation.messages.some((message) =>
-        message.body?.toLocaleLowerCase().includes(query),
+        normalizeSearchText(message.body ?? "").includes(query),
       );
     })
     .slice(0, 100)
@@ -75,10 +76,10 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       const lastMessage = conversation.messages[0];
       const matchType =
         canReadContact &&
-        conversation.contactName?.toLocaleLowerCase().includes(query)
+        matchesSearchQuery(query, [conversation.contactName])
           ? "name"
           : canReadContact &&
-              conversation.contactPhone?.toLocaleLowerCase().includes(query)
+              matchesSearchQuery(query, [conversation.contactPhone])
             ? "phone"
             : "message";
 

@@ -13,6 +13,7 @@ import type { RefObject } from "react";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import type { InboxWorkspaceCopy } from "@/hooks/inbox/inbox-workspace-shared";
 import { toast } from "@/lib/toast";
+import { matchesSearchQuery } from "@/lib/search/universal-search";
 
 type UseInboxThreadViewParams = {
   /** The conversation's durable message projection (already page-bounded). */
@@ -69,13 +70,11 @@ export function useInboxThreadView({
     };
   }, [activeConversationKey]);
 
-  const normalizedThreadQuery = threadSearchQuery.trim().toLowerCase();
+  const normalizedThreadQuery = threadSearchQuery.trim();
   const threadMatchIds = useMemo(() => {
     if (normalizedThreadQuery.length < 2) return [] as string[];
     return messages
-      .filter((message) =>
-        message.body.toLowerCase().includes(normalizedThreadQuery),
-      )
+      .filter((message) => matchesSearchQuery(normalizedThreadQuery, [message.body]))
       .map((message) => message.id);
   }, [messages, normalizedThreadQuery]);
   const threadMatchCount = threadMatchIds.length;
