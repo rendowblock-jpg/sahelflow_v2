@@ -279,7 +279,7 @@ export default async function RiskPage({
                 </p>
               ) : null}
               <div className="overflow-x-auto" data-risk-confirmation-table="true">
-                <Table>
+                <Table scrollLabel={t("risk.confirmationByLevel.title")}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("risk.confirmationByLevel.level")}</TableHead>
@@ -307,7 +307,7 @@ export default async function RiskPage({
                 </Table>
               </div>
               {report.topFactors.length > 0 ? (
-                <Table>
+                <Table scrollLabel={t("risk.topFactors.title")}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("risk.topFactors.factor")}</TableHead>
