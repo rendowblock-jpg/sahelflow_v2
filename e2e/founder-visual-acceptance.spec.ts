@@ -377,7 +377,7 @@ test.describe.serial("Founder visual correction evidence", () => {
     );
     const studioPreview = await visibleBox(
       page,
-      '[data-storefront-studio="v2"] [data-studio-body] > main',
+      '[data-storefront-studio="v2"] [data-studio-body] > [data-studio-preview]',
     );
     const studioInspector = await visibleBox(
       page,
