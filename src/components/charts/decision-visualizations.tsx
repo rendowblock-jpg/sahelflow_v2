@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -249,6 +249,8 @@ export function OutcomeProgress({
   className?: string;
 }) {
   const percent = clampPercent(value);
+  // The visible label names the bar for screen readers (WCAG 4.1.2).
+  const labelId = useId();
   return (
     <div
       className={cn("space-y-6", className)}
@@ -260,13 +262,16 @@ export function OutcomeProgress({
             <div className="text-3xl font-semibold tracking-tight tabular-nums text-foreground rtl:tracking-normal">
               {displayValue}
             </div>
-            <div className="mt-1 text-sm text-muted-foreground">{label}</div>
+            <div id={labelId} className="mt-1 text-sm text-muted-foreground">
+              {label}
+            </div>
           </div>
           <div className="text-xs tabular-nums text-muted-foreground">0–100%</div>
         </div>
         <div
           className="mt-4 h-2.5 overflow-hidden rounded-full bg-muted/65 ring-1 ring-inset ring-border/70"
           role="progressbar"
+          aria-labelledby={labelId}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(percent)}

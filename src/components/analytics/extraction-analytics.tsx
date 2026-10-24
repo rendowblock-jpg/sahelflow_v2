@@ -152,8 +152,8 @@ export function ExtractionAnalytics() {
         <CardHeader>
           <CardTitle className="text-base">{t("analytics.extraction.byMethod")}</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
+        <CardContent>
+          <Table scrollLabel={t("analytics.extraction.byMethod")}>
             <TableHeader>
               <TableRow>
                 <TableHead>{t("analytics.extraction.methods")}</TableHead>
@@ -184,8 +184,8 @@ export function ExtractionAnalytics() {
         <CardHeader>
           <CardTitle className="text-base">{t("analytics.extraction.trend")}</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
+        <CardContent>
+          <Table scrollLabel={t("analytics.extraction.trend")}>
             <TableHeader>
               <TableRow>
                 <TableHead>{t("common.date")}</TableHead>

@@ -7,6 +7,7 @@ import {
   ChartEmpty,
 } from "@/components/charts/chart-primitives";
 import { Badge } from "@/components/ui/badge";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import {
   Table,
   TableBody,
@@ -125,75 +126,73 @@ export async function CourierPerformanceSection({
               {t("analytics.courier.empty")}
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("analytics.courier.provider")}</TableHead>
+            <Table scrollLabel={t("analytics.courier.title")}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("analytics.courier.provider")}</TableHead>
+                  <TableHead className="text-end">
+                    {t("analytics.courier.shipments")}
+                  </TableHead>
+                  <TableHead className="text-end">
+                    {t("analytics.delivered")}
+                  </TableHead>
+                  <TableHead className="text-end">
+                    {t("analytics.deliveryRate")}
+                  </TableHead>
+                  <TableHead className="text-end">
+                    {t("analytics.courier.avgDeliveryDays")}
+                  </TableHead>
+                  <TableHead className="text-end">
+                    {t("analytics.courier.returnRefusalRate")}
+                  </TableHead>
+                  {feesIncluded ? (
                     <TableHead className="text-end">
-                      {t("analytics.courier.shipments")}
+                      {t("analytics.courier.fees")}
                     </TableHead>
-                    <TableHead className="text-end">
-                      {t("analytics.delivered")}
-                    </TableHead>
-                    <TableHead className="text-end">
-                      {t("analytics.deliveryRate")}
-                    </TableHead>
-                    <TableHead className="text-end">
-                      {t("analytics.courier.avgDeliveryDays")}
-                    </TableHead>
-                    <TableHead className="text-end">
-                      {t("analytics.courier.returnRefusalRate")}
-                    </TableHead>
+                  ) : null}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {providers.map((provider) => (
+                  <TableRow key={provider.provider}>
+                    <TableCell className="font-medium">
+                      {provider.provider}
+                    </TableCell>
+                    <TableCell className="text-end tabular-nums">
+                      {integerFormatter.format(provider.shipments)}
+                    </TableCell>
+                    <TableCell className="text-end tabular-nums">
+                      {integerFormatter.format(provider.delivered)}
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <Badge
+                        variant="outline"
+                        className={rateTone(provider.deliveryRate)}
+                      >
+                        {percentFormatter.format(
+                          provider.deliveryRate / 100,
+                        )}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-end tabular-nums">
+                      {provider.avgDeliveryDays === null
+                        ? "—"
+                        : daysFormatter.format(provider.avgDeliveryDays)}
+                    </TableCell>
+                    <TableCell className="text-end tabular-nums">
+                      {percentFormatter.format(provider.returnRate / 100)}
+                    </TableCell>
                     {feesIncluded ? (
-                      <TableHead className="text-end">
-                        {t("analytics.courier.fees")}
-                      </TableHead>
+                      <TableCell className="text-end tabular-nums">
+                        {provider.totalFees === null
+                          ? "—"
+                          : formatDZD(provider.totalFees, locale)}
+                      </TableCell>
                     ) : null}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {providers.map((provider) => (
-                    <TableRow key={provider.provider}>
-                      <TableCell className="font-medium">
-                        {provider.provider}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
-                        {integerFormatter.format(provider.shipments)}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
-                        {integerFormatter.format(provider.delivered)}
-                      </TableCell>
-                      <TableCell className="text-end">
-                        <Badge
-                          variant="outline"
-                          className={rateTone(provider.deliveryRate)}
-                        >
-                          {percentFormatter.format(
-                            provider.deliveryRate / 100,
-                          )}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
-                        {provider.avgDeliveryDays === null
-                          ? "—"
-                          : daysFormatter.format(provider.avgDeliveryDays)}
-                      </TableCell>
-                      <TableCell className="text-end tabular-nums">
-                        {percentFormatter.format(provider.returnRate / 100)}
-                      </TableCell>
-                      {feesIncluded ? (
-                        <TableCell className="text-end tabular-nums">
-                          {provider.totalFees === null
-                            ? "—"
-                            : formatDZD(provider.totalFees, locale)}
-                        </TableCell>
-                      ) : null}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -207,7 +206,7 @@ export async function CourierPerformanceSection({
           accent="bg-amber-500/10 dark:bg-amber-500/15"
           config={{}}
         >
-          <div className="overflow-x-auto">
+          <ScrollRegion label={t("analytics.courier.matrix.title")}>
             <table
               className="w-full border-separate border-spacing-0 text-sm"
               data-courier-matrix="true"
@@ -289,7 +288,7 @@ export async function CourierPerformanceSection({
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </ChartCard>
       ) : totalShipments > 0 ? (
         <ChartCard
