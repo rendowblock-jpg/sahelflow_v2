@@ -1,5 +1,35 @@
 import type { NextConfig } from "next";
 
+const connectSrc =
+  "connect-src 'self' ipc: http://ipc.localhost https://generativelanguage.googleapis.com https://api.yalidine.app " +
+  "https://api.youcan.shop https://*.myshopify.com https://backend.maystro-delivery.com " +
+  "https://b.maystro-delivery.com https://procolis.com ws://127.0.0.1:* ws://localhost:* " +
+  "https://*.ingest.sentry.io https://*.sentry.io"; // T-H5: Sentry error reporting
+
+/**
+ * Public store pages (/storefront/<slug>, its landing pages) are opened by
+ * buyers, not sellers. They need the page's own inline bootstrap and same-origin
+ * calls, but never eval, so they drop 'unsafe-eval' and refuse framing. Only the
+ * dev server keeps eval (hot reload). connect-src stays the app's: the shared
+ * root layout still reports errors and talks to the native shell, and that is
+ * not proven unnecessary here.
+ */
+function storefrontPageContentSecurityPolicy(): string {
+  const evalForDevServer = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
+  return [
+    "default-src 'self'",
+    `script-src 'self'${evalForDevServer} 'unsafe-inline'`,
+    connectSrc,
+    "img-src 'self' data: blob:",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
+
 /**
  * Production output mode: "standalone".
  *
@@ -33,10 +63,7 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value:
       "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; " +
-      "connect-src 'self' ipc: http://ipc.localhost https://generativelanguage.googleapis.com https://api.yalidine.app " +
-      "https://api.youcan.shop https://*.myshopify.com https://backend.maystro-delivery.com " +
-      "https://b.maystro-delivery.com https://procolis.com ws://127.0.0.1:* ws://localhost:* " +
-      "https://*.ingest.sentry.io https://*.sentry.io; " +  // T-H5: Sentry error reporting
+      connectSrc + "; " +
       "img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; " +
       "object-src 'none'; base-uri 'self'; form-action 'self'",
   },
@@ -122,6 +149,14 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: securityHeaders,
+      },
+      // After the rule above on purpose: when two rules set the same header
+      // the later one wins, so this replaces the app policy for store pages only.
+      {
+        source: "/storefront/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: storefrontPageContentSecurityPolicy() },
+        ],
       },
       // FD-061 EX-4: uploaded product images are content-addressed by a
       // random UUID — a stored file is never rewritten in place, so the
