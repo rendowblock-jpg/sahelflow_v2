@@ -17,12 +17,29 @@
  */
 
 :root {
-  --sf-motion-micro: 110ms;
-  --sf-motion-state: 160ms;
-  --sf-motion-surface: 210ms;
-  --sf-motion-page: 250ms;
-  --sf-motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --sf-motion-ease-state: cubic-bezier(0.2, 0, 0, 1);
+  /* Durations. Press and toggle feedback, hover and colour, dropdown and row,
+   * route enter, sheet and dialog (hard cap 400ms). */
+  --sf-dur-micro: 100ms;
+  --sf-dur-fast: 150ms;
+  --sf-dur-base: 200ms;
+  --sf-dur-page: 250ms;
+  --sf-dur-panel: 300ms;
+
+  /* Easings. out = entering, in = leaving, standard = state change, expo = the
+   * house curve for hero entrances. Spinners and progress use `linear`. */
+  --sf-ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --sf-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --sf-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --sf-ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Older names, kept because other stylesheets read them. They point at the
+   * tokens above; the three shorter durations moved by 10ms. */
+  --sf-motion-micro: var(--sf-dur-micro);
+  --sf-motion-state: var(--sf-dur-fast);
+  --sf-motion-surface: var(--sf-dur-base);
+  --sf-motion-page: var(--sf-dur-page);
+  --sf-motion-ease-out: var(--sf-ease-expo);
+  --sf-motion-ease-state: var(--sf-ease-out);
   --sf-motion-inline-entry: -10px;
   --sf-motion-row-nudge: 2px;
 }
@@ -171,7 +188,7 @@ html[dir="rtl"],
 
 /* Entry surfaces (setup, sign-in, join, licence) arrive once, then hold. */
 [data-sf-entry] [data-sf-entry-reveal] {
-  animation: sf-surface-enter 200ms var(--sf-motion-ease-out) both;
+  animation: sf-surface-enter var(--sf-dur-base) var(--sf-ease-expo) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

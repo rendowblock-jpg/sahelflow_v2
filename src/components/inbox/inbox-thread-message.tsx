@@ -215,7 +215,7 @@ function CopyMessageButton({
       }}
       aria-live="polite"
       className={cn(
-        "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
+        "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
         state === "failed"
           ? "text-destructive opacity-100"
           : state === "copied"
@@ -526,7 +526,7 @@ export const MessageBubble = memo(function MessageBubble({
               type="button"
               onClick={() => onReply(message)}
               aria-label={copy("replyToMessage")}
-              className="inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium text-muted-foreground opacity-0 outline-none transition-all hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100"
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium text-muted-foreground opacity-0 outline-none transition-[color,background-color,opacity] hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/message:opacity-100"
             >
               <Reply className="size-3 icon-rtl-flip" aria-hidden="true" />
               {copy("replyToMessage")}
@@ -544,7 +544,7 @@ export const MessageBubble = memo(function MessageBubble({
               onClick={() => onChooseCandidate(message.id)}
               aria-pressed={candidate}
               className={cn(
-                "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring",
+                "ms-2 inline-flex min-h-7 items-center gap-1.5 rounded-control px-2 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 candidate
                   ? "bg-primary-soft text-primary"
                   : "text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground group-hover/message:opacity-100 focus-visible:opacity-100",

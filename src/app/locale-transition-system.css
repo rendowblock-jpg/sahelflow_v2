@@ -22,26 +22,10 @@ html[data-locale-transition="pending"] #main-content::after {
   z-index: 2;
   inset: 0;
   pointer-events: none;
-  background:
-    linear-gradient(
-      105deg,
-      transparent 0%,
-      transparent 36%,
-      color-mix(in srgb, var(--foreground) 4%, transparent) 48%,
-      transparent 60%,
-      transparent 100%
-    ) 100% 0 / 220% 100% no-repeat,
-    var(--background);
-  animation: sf-locale-reconcile 900ms ease-in-out infinite;
-}
-
-@keyframes sf-locale-reconcile {
-  from {
-    background-position: 100% 0, 0 0;
-  }
-  to {
-    background-position: -120% 0, 0 0;
-  }
+  /* Solid cover. The 2px locale progress bar (experience-system.css) shows
+   * that work is running; a moving gradient over the whole area repainted every
+   * frame for nothing. */
+  background: var(--background);
 }
 
 @media (prefers-reduced-motion: reduce) {
