@@ -13,9 +13,19 @@ export function asciiDigits(value: string): string {
     .replace(/[\u06f0-\u06f9]/g, (c) => String(c.charCodeAt(0) - 0x06f0));
 }
 
+/**
+ * "+213 (0) 655 12 34 56": the national trunk zero written in brackets right after the country
+ * code is not part of the number. Same pattern as the app's normalizeDZPhone (src/lib/validation/phone.ts);
+ * the parity test in logic.test.ts keeps the two in step.
+ */
+const TRUNK_ZERO_AFTER_COUNTRY_CODE =
+  /^([\s\u200e\u200f\u202a-\u202e\u2066-\u2069]*(?:\+|00)?[\s\u200e\u200f\u202a-\u202e\u2066-\u2069]*213)[\s.\-\u200e\u200f]*\(\s*0\s*\)/;
+
 /** Same result as the app's normalizeDZPhone for ASCII input; also reads Arabic-Indic digits. */
 export function normalizePhone(raw: string): string {
-  const digits = asciiDigits(raw ?? "").replace(/\D/g, "");
+  const digits = asciiDigits(raw ?? "")
+    .replace(TRUNK_ZERO_AFTER_COUNTRY_CODE, "$1")
+    .replace(/\D/g, "");
   if (!digits) return "";
   let national: string;
   if (digits.startsWith("00213")) national = digits.slice(5);

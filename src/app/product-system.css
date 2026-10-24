@@ -263,23 +263,26 @@ html[data-appearance-transition="active"] *::after {
 }
 ::view-transition-old(root) { animation-name: sf-theme-out; }
 ::view-transition-new(root) { animation-name: sf-theme-in; }
+/* Opacity only: a filter on the full-viewport snapshot repaints it every frame. */
 @keyframes sf-theme-out {
-  to { opacity: 0.72; filter: saturate(0.9); }
+  to { opacity: 0.72; }
 }
 @keyframes sf-theme-in {
-  from { opacity: 0.72; filter: saturate(0.9); }
+  from { opacity: 0.72; }
 }
 
-/* ── Governed motion grammar ─────────────────────────────────────────────── */
+/* ── Governed motion grammar ───────────────────────────────────────────────
+ * The one transition rule for every control. No box-shadow: a focus ring or
+ * elevation change snaps instead of repainting a blurred shadow per frame. */
 button,
 a,
 [role="button"],
 input,
 select,
 textarea {
-  transition-property: background-color, border-color, color, box-shadow, opacity, transform;
-  transition-duration: var(--sf-motion-state);
-  transition-timing-function: var(--sf-motion-ease-state);
+  transition-property: background-color, border-color, color, opacity, transform;
+  transition-duration: var(--sf-dur-fast);
+  transition-timing-function: var(--sf-ease-standard);
 }
 .animate-fade-up {
   animation-duration: var(--sf-motion-surface);

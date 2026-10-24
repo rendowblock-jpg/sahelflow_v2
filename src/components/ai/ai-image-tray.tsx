@@ -307,7 +307,7 @@ export function AiImageTray({
               data-ai-image-remove="true"
               disabled={disabled || extracting}
               onClick={() => tray.remove(item.key)}
-              className="absolute end-1 top-1 flex size-5 items-center justify-center rounded-full bg-foreground/75 text-background opacity-90 transition hover:opacity-100 focus-visible:opacity-100 disabled:opacity-40"
+              className="absolute end-1 top-1 flex size-5 items-center justify-center rounded-full bg-foreground/75 text-background opacity-90 transition-opacity hover:opacity-100 focus-visible:opacity-100 disabled:opacity-40"
             >
               <X className="size-3" aria-hidden="true" />
             </button>
@@ -322,7 +322,7 @@ export function AiImageTray({
                 disabled={disabled || tray.extractingKey !== null}
                 onClick={() => void tray.extractOrder(item.key)}
                 className={cn(
-                  "absolute bottom-1 start-1 flex size-5 items-center justify-center rounded-full bg-foreground/75 text-background transition",
+                  "absolute bottom-1 start-1 flex size-5 items-center justify-center rounded-full bg-foreground/75 text-background transition-opacity",
                   "opacity-0 focus-visible:opacity-100 group-hover/chip:opacity-100 disabled:opacity-40",
                 )}
               >

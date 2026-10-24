@@ -188,7 +188,6 @@ export function Sidebar({
     <aside
       className={cn(
         "flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-e border-sidebar-border bg-sidebar",
-        "transition-[width] duration-200 ease-out motion-reduce:transition-none",
         collapsed ? "w-[68px]" : "w-[260px]",
       )}
       aria-label={t("nav.sidebarLabel")}
