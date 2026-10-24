@@ -16,16 +16,19 @@ This document distinguishes protected source, automated evidence, signed publica
 Only the Founder can report this. Nothing converts until an installed observation names the rows.
 
 - **Internal.24** was accepted for the retained whole-product visual and product gate (#221). That acceptance does not extend to later source and proves no provider or customer path.
-- In-place installs recorded since: Internal.27, 28, 29, 30 (2026-08-31), 31 (2026-09-01), 32, 33 (2026-09-03), 34 (2026-09-05), 37 (2026-09-11, visually rejected before any row converted), 39 (2026-10-01), 40 (2026-10-03) and 41 (2026-10-08). No installation of Internal.35, 36, 38 or 42 is recorded.
+- In-place installs recorded since: Internal.27 to 34 (the last on 2026-09-05), 37 (2026-09-11, visually rejected before any row converted), 39 (2026-10-01), 40 (2026-10-03) and 41 (2026-10-08). No installation of Internal.35, 36, 38 or 42 is recorded.
 - Internal.42 was evidently in use for the installed audit behind PR #490 and FD-071; the Founder should confirm. On 2026-10-17 he said he was installing Internal.43; completion is not recorded. No installation of Internal.44 is recorded.
-- **Internal.45** was installed in place and reported on 2026-10-20 (his diagnostics log shows its WhatsApp sidecar first running at 01:20Z that day). No campaign row has converted on Internal.42 to 45.
-- **Internal.46** was published on 2026-10-23 (FD-081) and is NOT installed; no installation is recorded and no row converts. On 2026-10-23 the Founder started the in-app update from Internal.45 and reported that the rest of the app stopped responding while the download percentage counted; whether the install finished is not recorded. It packages everything merged after Internal.45, including the redesigned startup card (#550), which has not been seen on a Windows screen.
+- **Internal.45** was installed in place and reported on 2026-10-20. No campaign row has converted on Internal.42 to 45.
+- **Internal.46** was published on 2026-10-23 (FD-081). That day the Founder started the in-app update from Internal.45 and reported that the rest of the app stopped responding while the download percentage counted. A screenshot he sent that evening shows Internal.46's startup card, so it ran on his PC; how it was installed is not recorded. No campaign row has converted on it.
+
+Reported on Internal.46 (2026-10-23), observations only:
+
+- The redesigned startup card (#550) was judged low quality. Measured on his screenshot, the glow behind the logo climbs in flat bands 8 to 28 px wide, 3 to 5 brightness levels each; the layout and the text contrast (5.9 to 13.6 to 1) are fine. A repair merged on 2026-10-24 is in no build and has not been seen on a Windows screen.
+- His startup trace shows 39.6 s from click to usable, 27.2 s of it between the runtime being ready and the page being ready (one launch, one PC).
 
 Reported on Internal.45 (2026-10-20), observations only:
 
-- The startup card was judged low quality and generic. A redesign (#550) was merged afterwards and has not been seen on a Windows screen.
-- A message sent while SahelFlow was closed was kept and delivered after the reopen (diagnostics 11:27Z: `offline.preview`, `inbound.early`, `inbound.spooled`, `offline.done`, then `inbound.committed` on attempt 3 after a first-attempt database error that cleared by itself; #552 now logs the error code).
-- The list search box emptied itself and the orders list showed two clear icons (#549); a message two calendar days old read "yesterday" (#551). Both were repaired in source.
+- A message sent while SahelFlow was closed was kept and delivered after the reopen (diagnostics 11:27Z: `offline.preview`, `inbound.early`, `inbound.spooled`, `offline.done`, then `inbound.committed` on attempt 3 after a first-attempt database error that cleared by itself; #552 logs the code).
 - The WhatsApp link was down from 04:31Z to 09:20Z ("Current WhatsApp Web version could not be verified for device pairing") and recovered by itself.
 - 18 messages that the previous build discarded while closed (`inbound.dropped`, `no-paired-account`) cannot be recovered by SahelFlow.
 
@@ -73,8 +76,8 @@ Unverified integrations stay hidden, disabled or explicitly conditional. A provi
 
 **Ask for after the next build is installed**
 
-- A screenshot of the redesigned startup card (light and dark, the four presets, Arabic, French and English, a slow start), a Minimize and Close test, and the update chip (it appears only when a release newer than the installed one exists).
-- The build's `startup-trace.json` and a fresh WhatsApp diagnostics log: look for `offline.preview`, `offline.done`, `inbound.early`, `inbound.dropped`. The startup gain and the Inbox cause can be measured only on it.
+- A screenshot of the repaired startup card (light and dark, the four presets, Arabic, French and English, a slow start), a Minimize and Close test, and the update chip (it appears only when a release newer than the installed one exists).
+- The build's `startup-trace.json`, `startup-trace.prev.json` (the launch before it) and `runtime-ui-diagnostic.json` (page-load numbers only), and a fresh WhatsApp diagnostics log: look for `offline.preview`, `offline.done`, `inbound.early`, `inbound.dropped`. The startup gain and the Inbox cause can be measured only on it.
 - Two oddities in the existing log are not investigated: a `provider.error` "init queries" timeout (408) exactly 60 seconds after every `connection.open`, and `upserts 0` in the first 300 seconds after open.
 - The Founder must not clear the WhatsApp spool.
 

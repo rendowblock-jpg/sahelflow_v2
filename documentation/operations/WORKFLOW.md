@@ -50,6 +50,8 @@ Use the cheapest check that can catch the changed boundary: TypeScript and ESLin
 
 **CI (`.github/workflows/ci.yml`).** It runs on pull requests that target `main`, and a new push to the same branch cancels the run in progress. A job named `classify` runs `scripts/classify-pr-risk.ts`, which reads the changed paths and selects lanes: quality, Tauri, Windows standalone, Windows Rust parity and installed-MSI (documentation-only changes are classified separately). The `authority` job always runs `sf-version` and `sf-audit` (the documentation gate, `../MANIFEST.json`, and the release-frontier check). The quality lane runs Prisma generation, `sf-verify`, the full Vitest suite with coverage and `bun audit --production`. Two further workflows add the browser evidence (Phase 5 Experience gate; Phase 6-7 completion gate). **Required checks on `main`:** `Required PR gate` (waits for every selected lane), `Required Phase 5 Experience gate` and `Required Phase 6-7 completion gate`. Draft pull requests skip the heavy and browser jobs, so a draft proves nothing about them.
 
+**Native-only changes skip the Windows lanes.** The classifier selects no Windows lane for a change that touches only some native Rust files (the startup card did not). Start `windows-rust-release-parity.yml` by hand on the branch and read its result before merging.
+
 **An advisory can turn `main` red with no change.** The production dependency audit fails every pull request as soon as a new advisory covers a locked version. The fix is a dependency pull request (override or bump, lockfile regenerated, audit and frozen install checked, behavior smoke-tested), not a re-run.
 
 ## 6. Evidence
