@@ -216,7 +216,7 @@ export default async function AccountingPage() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table scrollLabel={t("accounting.recentExpenses")}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("accounting.expenseDate")}</TableHead>

@@ -390,7 +390,7 @@ export function BackupRestorePanel({
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-surface border">
-                  <Table>
+                  <Table scrollLabel={copy.title}>
                     <TableHeader>
                       <TableRow>
                         <TableHead>{copy.backup}</TableHead>
