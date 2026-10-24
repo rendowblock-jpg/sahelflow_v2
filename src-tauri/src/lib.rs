@@ -893,7 +893,9 @@ async fn install_downloaded_update(
         .resources_table()
         .get::<DownloadedUpdate>(bytes_rid)
         .map_err(|error| error.to_string())?;
-    update.install(&bytes.0).map_err(|error| error.to_string())?;
+    update
+        .install(&bytes.0)
+        .map_err(|error| error.to_string())?;
     let _ = webview.resources_table().close(bytes_rid);
     Ok(())
 }
