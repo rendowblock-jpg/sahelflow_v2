@@ -266,7 +266,10 @@ async function sidecarFetch<T>(
 }
 
 export const sidecar = {
-  status: () => sidecarFetch<SidecarStatus>("/status"),
+  // A caller that only wants a quick health note may pass a shorter timeout;
+  // without one the 8 s default of sidecarFetch applies.
+  status: (timeoutMs?: number) =>
+    sidecarFetch<SidecarStatus>("/status", undefined, timeoutMs),
 
   qr: () =>
     sidecarFetch<{ qr: string | null }>("/qr").catch((error) => {
