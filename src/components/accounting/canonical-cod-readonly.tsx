@@ -120,7 +120,7 @@ export async function CanonicalCodReadOnly({
             <StateSurface icon={CheckCircle2} title={text.noReview} tone="success" size="inline" />
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table scrollLabel={text.review}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{text.order}</TableHead>
@@ -171,7 +171,7 @@ export async function CanonicalCodReadOnly({
             <span className="text-sm text-muted-foreground">—</span>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table scrollLabel={text.recent}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{text.provider}</TableHead>
