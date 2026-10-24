@@ -372,8 +372,9 @@ describe("POST /api/delivery/sync — canonical orders use the canonical sync", 
       (await db.delivery.findUniqueOrThrow({ where: { id: deliveryId } })).status,
     );
     expect(body.status).toBe("out_for_delivery");
-    expect(Array.isArray(body.events)).toBe(true);
-    expect(body.events.length).toBeGreaterThan(0);
+    const events = body.events;
+    expect(Array.isArray(events)).toBe(true);
+    expect((events as unknown[]).length).toBeGreaterThan(0);
     expect(body).toHaveProperty("estimatedDelivery");
     expect(
       (await db.order.findUniqueOrThrow({ where: { id: orderId } })).status,
