@@ -1,7 +1,7 @@
 # SahelFlow 1.0 — Product Contract
 
 > **Status:** Founder-approved product baseline
-> **Last consolidated:** 2026-08-26
+> **Last consolidated:** 2026-10-24
 > **Public release:** SahelFlow 1.0 / app version 1.0.0
 > **Commercial edition:** One complete edition
 
@@ -136,7 +136,7 @@ Every entitled shop receives:
 - durable COD checkout while the desktop is offline;
 - bounded cloud stock allocation to prevent overselling.
 
-Launch includes three genuinely distinct templates. The published ones are `sahara`, `atlas` and `oasis` (the id list in `src/lib/storefront/presentation-types.ts`; the Studio names their roles: `atlas` minimal conversion, `sahara` visual editorial, `oasis` bold COD landing). The Founder's three new templates, Prime, Souk and Reel (FD-078), are added by their own change and ship only in a later signed release.
+Launch includes three genuinely distinct templates. The template ids are the list `STOREFRONT_TEMPLATE_IDS` in `src/lib/storefront/presentation-types.ts` (`ARCHITECTURE.md` section 2.5 lists the copies); the Studio names the roles of the original three: `atlas` minimal conversion, `sahara` visual editorial, `oasis` bold COD landing. Prime, Souk and Reel (FD-078) are in that list too.
 
 The north-star outcome is **profitable confirmed and delivered COD orders per 1,000 qualified visitors**. Public `best-in-market` claims require comparative evidence, real seller results, production performance data, and independent review.
 
@@ -263,7 +263,7 @@ Unless separately amended and certified, the first release excludes:
 
 Every public statement must match verified behavior at a named release and commit. Historical plans, internal versions, prototypes, placeholders, adapter existence, or test counts cannot be converted into product claims without current evidence.
 
-Under FD-045 First Revenue Certification, public provider scope is capability-specific: only the exact provider/version/environment/action with current live evidence may be promised. A narrower fully certified first-customer scope is valid; advertising unverified integrations to make the product appear broader is not.
+FD-045 made public provider scope capability-specific: only the exact provider/version/environment/action with current live evidence may be promised. FD-066 supersedes that for marketing copy only: the marketing site at `sahelflow.com` may advertise every integration the product ships (WhatsApp, Yalidine, ZR Express, EcoTrack, Maystro, Shopify, YouCan, WooCommerce, Meta Pixel, Gemini), even where it has no live-provider certification; WhatsApp runs on an unofficial provider. FD-066 records this integrity risk as accepted: each first customer is onboarded knowing which integration they rely on, and in-app provider truth (degraded and unsupported states) is unchanged. Outside marketing copy the evidence rule above still holds, and until the Stable evidence exists the customer release is a Founder-authorized launch release, not a Stable claim.
 
 ## 18. Stable capability contract
 
