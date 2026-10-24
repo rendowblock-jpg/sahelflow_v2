@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { renderStorePage } from "./index";
 import { STYLE_IDS } from "./styles";
-import { arabicAttrs, autoDir } from "./ui";
+import { arabicAttrs, arabicSpan, autoDir } from "./ui";
 import { publishTestStore, renderInputFor, SAMPLE_PRODUCTS } from "../test-support";
 
 /**
@@ -48,7 +48,7 @@ describe("autoDir: dir=auto, plus lang=ar for Arabic text on a page that is not 
     expect(autoDir(fr, "- 50% ساعة")).toBe(' dir="auto" lang="ar"');
   });
 
-  it("a Latin letter first keeps the text Latin, even when Arabic words follow (the browser sets that line left to right too)", () => {
+  it("Latin text with only a few Arabic words stays Latin (the browser sets that line left to right too)", () => {
     expect(autoDir(fr, "iPhone 15 حافظة")).toBe(' dir="auto"');
     expect(autoDir(fr, "2 pièces ساعة")).toBe(' dir="auto"');
   });
@@ -69,7 +69,7 @@ describe("arabicAttrs: the same tag for the places that carry no dir=auto today,
     expect(arabicAttrs({ locale: "en" }, "2 ساعات")).toBe(' dir="auto" lang="ar"');
   });
 
-  it("gives nothing on an Arabic page, for Latin text, for empty text, and when a Latin letter comes first", () => {
+  it("gives nothing on an Arabic page, for Latin text, for empty text, and when Latin letters are the majority", () => {
     expect(arabicAttrs(ar, "اكتشف المجموعة")).toBe("");
     expect(arabicAttrs(fr, "Découvrir")).toBe("");
     expect(arabicAttrs(fr, "")).toBe("");
@@ -80,6 +80,52 @@ describe("arabicAttrs: the same tag for the places that carry no dir=auto today,
     for (const text of ["اكتشف المجموعة", "Découvrir", ""]) {
       for (const page of [fr, ar]) expect(autoDir(page, text)).toBe(arabicAttrs(page, text) || ' dir="auto"');
     }
+  });
+});
+
+describe("Arabic words after a Latin first letter: Arabic letters at least half of all the letters", () => {
+  const fr = { locale: "fr" as const };
+  const ar = { locale: "ar" as const };
+  const TAGGED = ' dir="auto" lang="ar"';
+  const PLAIN = ' dir="auto"';
+
+  // [text, tagged on a French page, why]. Only letters are counted: digits, signs, spaces and emoji are not.
+  const table: Array<[string, boolean, string]> = [
+    ["Nike حذاء رياضي", true, "Latin first, Arabic 9 letters against Latin 4"],
+    ["Nike حذاء", true, "Latin first, 4 against 4: a tie is tagged (see the rule in ui.ts)"],
+    ["حذاء Nike", true, "Arabic first, 4 against 4"],
+    ["حذاء Nike Air Max", true, "Arabic first stays tagged even when Latin letters are more (as before)"],
+    ["iPhone 15 هاتف", false, "Latin 6 letters against Arabic 4"],
+    ["Nike Air حذاء", false, "Latin 7 letters against Arabic 4"],
+    ["Nike حذاء 123456789", true, "digits are not letters: still 4 against 4"],
+    ["iPhone ١٢٣٤٥٦٧٨ هاتف", false, "Arabic-Indic digits are not Arabic letters: still 6 against 4"],
+    ["Pack كـتـاب", true, "the stretching stroke (tatweel) belongs to the Arabic letters: 6 against 4"],
+    ["Pack كتابة", true, "Latin first, Arabic 5 against Latin 4"],
+    ["Montre murale", false, "pure Latin"],
+    ["ساعة حائط", true, "pure Arabic"],
+    ["گل Rose", true, "Persian first, 2 against 4 Latin: first letter, as before"],
+    ["שלום Nike", false, "another script is not Arabic"],
+    ["12345", false, "digits only"],
+    ["😀 50%", false, "no letters at all"],
+    ["", false, "empty"],
+    ["   ", false, "blank"],
+  ];
+
+  it.each(table)("%j is %s on a French page (%s)", (text, tagged) => {
+    expect(autoDir(fr, text)).toBe(tagged ? TAGGED : PLAIN);
+    expect(arabicAttrs(fr, text)).toBe(tagged ? TAGGED : "");
+  });
+
+  it("an Arabic page gets nothing more than dir=auto for every case", () => {
+    for (const [text] of table) {
+      expect(autoDir(ar, text)).toBe(PLAIN);
+      expect(arabicAttrs(ar, text)).toBe("");
+    }
+  });
+
+  it("a button label or option name with Arabic majority gets a tagged span, escaped", () => {
+    expect(arabicSpan(fr, "Nike حذاء <رياضي>")).toBe(`<span${TAGGED}>Nike حذاء &lt;رياضي&gt;</span>`);
+    expect(arabicSpan(fr, "iPhone 15 هاتف")).toBe("iPhone 15 هاتف");
   });
 });
 

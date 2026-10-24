@@ -9,6 +9,21 @@ export const esc = escapeHtml;
 const ARABIC_FIRST = /^[^\p{L}]*\p{Script=Arabic}/u;
 
 /**
+ * Whether a piece of the seller's text is Arabic for styling (lang="ar"): its first letter is Arabic (as before), or Arabic
+ * letters are at least half of all its letters ("Nike حذاء رياضي" starts Latin but is an Arabic line). Only letters count:
+ * digits, signs, spaces and emoji do not. A tie is Arabic on purpose: letter spacing on joined Arabic letters breaks the
+ * words, while a missing Latin spacing on a tied line is only a little plainer. Script_Extensions keeps the stretching
+ * stroke (tatweel) with the Arabic letters.
+ */
+function isArabicText(text: string): boolean {
+  if (ARABIC_FIRST.test(text)) return true;
+  const letters = text.replace(/\P{L}/gu, "");
+  if (!letters) return false;
+  const arabic = letters.replace(/\P{scx=Arabic}/gu, "");
+  return Array.from(arabic).length * 2 >= Array.from(letters).length;
+}
+
+/**
  * The direction attribute of a piece of the seller's own text. The text sets its own direction (dir="auto"). When the text
  * is Arabic and the page is not (a seller writes Arabic, the buyer opens the page in French or English) it also says
  * lang="ar": the Arabic-only rules of the stylesheets (no letter spacing, no capitals, taller lines) hang on that tag,
@@ -35,7 +50,7 @@ export function arabicSpan(ctx: Pick<Ctx, "locale">, text: string): string {
  * stay byte for byte what they were.
  */
 export function arabicAttrs(ctx: Pick<Ctx, "locale">, text: string): string {
-  return ctx.locale !== "ar" && ARABIC_FIRST.test(text) ? ' dir="auto" lang="ar"' : "";
+  return ctx.locale !== "ar" && isArabicText(text) ? ' dir="auto" lang="ar"' : "";
 }
 
 export type ShippingRow = { wilayaCode: string; mode: "home" | "desk"; feeDzd: number };
