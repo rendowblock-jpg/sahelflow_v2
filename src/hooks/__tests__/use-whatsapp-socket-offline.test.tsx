@@ -41,7 +41,7 @@ function setVisibility(next: DocumentVisibilityState) {
 }
 
 function gaps(): number[] {
-  return fetchTimes.slice(1).map((time, index) => time - fetchTimes[index]);
+  return fetchTimes.slice(1).map((time, index) => time - fetchTimes[index]!);
 }
 
 describe("useWhatsAppSocket when the helper is off", () => {

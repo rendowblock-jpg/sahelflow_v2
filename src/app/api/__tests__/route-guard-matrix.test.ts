@@ -133,7 +133,7 @@ function loadAliases(): Array<{ prefix: string; exact: boolean; target: string }
   const config = ts.readConfigFile(resolve(root, "tsconfig.json"), ts.sys.readFile);
   const paths = (config.config?.compilerOptions?.paths ?? {}) as Record<string, string[]>;
   return Object.entries(paths)
-    .map(([key, [target]]) => ({
+    .map(([key, [target = ""]]) => ({
       prefix: key.endsWith("*") ? key.slice(0, -1) : key,
       exact: !key.endsWith("*"),
       target: resolve(root, target.endsWith("*") ? target.slice(0, -1) : target),
@@ -405,7 +405,7 @@ function scanAll(): HandlerReport[] {
 
 /** "auth/login/route.ts#POST" -> "/api/auth/login" (dynamic segments kept). */
 function apiPath(key: string): string {
-  return "/api/" + key.split("#")[0].replace(/\/?route\.ts$/, "");
+  return "/api/" + key.split("#")[0]!.replace(/\/?route\.ts$/, "");
 }
 
 // ---------------------------------------------------------------------------

@@ -356,7 +356,9 @@ export function scoreUniversalSearchCandidate(
 
   const label = normalizeSearchText(candidate.label);
   const sublabel = normalizeSearchText(candidate.sublabel ?? "");
-  const keywords = (candidate.keywords ?? []).map(normalizeSearchText);
+  const keywords = (candidate.keywords ?? []).map((keyword) =>
+    normalizeSearchText(keyword),
+  );
   const compactQuery = compactSearchText(query);
   const compactLabel = compactSearchText(label);
   const compactSublabel = compactSearchText(sublabel);

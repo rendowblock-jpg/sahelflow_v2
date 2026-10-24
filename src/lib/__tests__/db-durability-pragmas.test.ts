@@ -38,7 +38,7 @@ async function scalar(client: Readable, pragma: string): Promise<unknown> {
     unknown
   >[];
   expect(rows).toHaveLength(1);
-  return Object.values(rows[0])[0];
+  return Object.values(rows[0]!)[0];
 }
 
 async function readPragmas(client: Readable): Promise<Pragmas> {
@@ -65,10 +65,10 @@ async function readInOneStatement(client: Readable): Promise<Pragmas> {
   )) as Record<string, unknown>[];
   expect(rows).toHaveLength(1);
   return {
-    journalMode: String(rows[0].journalMode).toLowerCase(),
-    synchronous: Number(rows[0].synchronous),
-    foreignKeys: Number(rows[0].foreignKeys),
-    busyTimeout: Number(rows[0].busyTimeout),
+    journalMode: String(rows[0]!.journalMode).toLowerCase(),
+    synchronous: Number(rows[0]!.synchronous),
+    foreignKeys: Number(rows[0]!.foreignKeys),
+    busyTimeout: Number(rows[0]!.busyTimeout),
   };
 }
 
@@ -94,7 +94,7 @@ function expectDurable(all: Pragmas[]): void {
   expect(distinct((p) => p.foreignKeys)).toEqual([1]);
   const timeouts = distinct((p) => p.busyTimeout) as number[];
   expect(Math.min(...timeouts)).toBeGreaterThanOrEqual(5000);
-  expect(["delete", "wal"]).toContain(all[0].journalMode);
+  expect(["delete", "wal"]).toContain(all[0]!.journalMode);
 }
 
 const scratch: string[] = [];
@@ -205,9 +205,10 @@ describe("a write acknowledged before the process is killed (PB-DATA-DURABILITY)
 
     const reopened = new PrismaClient({ datasourceUrl: `file:${file}` });
     try {
-      const [{ n, top }] = (await reopened.$queryRawUnsafe(
+      const [first] = (await reopened.$queryRawUnsafe(
         "SELECT count(*) AS n, max(id) AS top FROM t",
       )) as { n: number | bigint; top: number | bigint }[];
+      const { n, top } = first!;
       const integrity = (await reopened.$queryRawUnsafe(
         "PRAGMA integrity_check",
       )) as { integrity_check: string }[];
