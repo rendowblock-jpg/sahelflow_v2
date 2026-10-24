@@ -855,12 +855,13 @@ mod tests {
         assert!(html.contains("&lt;script&gt;bad()&lt;/script&gt;"));
     }
 
+    /// What `run_scripted_retry` returns: attempts used, the final result, then
+    /// the attempts the operation saw, the failures reported and the sleeps (ms).
+    type ScriptedRetry = (u8, Result<u8, String>, Vec<u8>, Vec<u8>, Vec<u64>);
+
     /// Runs `retry_with_backoff` against a scripted operation that fails the
     /// first `failures` times, recording every call, failure and sleep.
-    fn run_scripted_retry(
-        backoff: Backoff,
-        failures: u8,
-    ) -> (u8, Result<u8, String>, Vec<u8>, Vec<u8>, Vec<u64>) {
+    fn run_scripted_retry(backoff: Backoff, failures: u8) -> ScriptedRetry {
         let mut calls = Vec::new();
         let mut failed = Vec::new();
         let mut sleeps = Vec::new();

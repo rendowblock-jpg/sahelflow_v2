@@ -348,7 +348,7 @@ test.describe.serial("Founder visual correction evidence", () => {
     );
     const storefrontPreview = await visibleBox(
       page,
-      '[data-storefront-studio="bootstrap"] > div.grid > main',
+      '[data-storefront-studio="bootstrap"] > div.grid > div',
     );
     expectRightOf(storefrontSetup, storefrontPreview, "RTL Storefront setup rail");
     expectWidthBetween(storefrontSetup, 390, 410, "RTL Storefront setup steps");
