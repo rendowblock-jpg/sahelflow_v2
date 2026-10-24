@@ -258,7 +258,7 @@ describe("CAPI outbox effect runtime (FD-061 EX-3)", () => {
       });
       const second = await seedOrder(db, {
         customerId: first.customerId ?? undefined,
-        productId: first.items[0]?.productId,
+        productId: first.items[0]?.productId ?? undefined,
       });
       await queueCapiStage(context, {
         orderId: second.id,
