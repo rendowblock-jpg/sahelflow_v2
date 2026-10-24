@@ -87,13 +87,6 @@ const registry = new Map<string, ChatTool>();
 const REMOTE_CONVERSATION_MESSAGES_DESCRIPTION =
   "Read privacy-safe context signals for recent conversation messages. Returns direction, timestamps, extraction flags, and bounded semantic tags/attributes. Verbatim message body text stays local and is not exposed to the remote model; use this for coarse context only, not exact-message summarization or drafting that requires the customer's original wording.";
 
-function legacyVitestHarness(): boolean {
-  return (
-    (process.env.NODE_ENV === "test" || process.env.VITEST === "true") &&
-    process.env.SF_AI_ACTION_POLICY_TEST !== "true"
-  );
-}
-
 function refused(refusal: AiToolRefusal): ToolResult {
   return {
     success: false,
@@ -134,29 +127,37 @@ function proposalPermissions(
   return [...new Set<Phase2Action>(["approvals.request", "ai.use", ...required])];
 }
 
+/** What a mutating tool hands the registry: its definition, never a body. */
+export type GatedToolRegistration = Pick<ChatTool, "definition">;
+
+function isMutatingClass(executionClass: string): boolean {
+  return executionClass === "sensitive" || executionClass === "blocked";
+}
+
+/**
+ * Registers a read tool together with its body. A tool whose policy is
+ * sensitive or blocked cannot be registered here: its body must never be
+ * reachable from the registry (use `registerGatedTool`).
+ */
 export function registerTool(tool: ChatTool): void {
   const policy = getAiToolPolicy(tool.definition.name);
-  const execute: ChatTool["execute"] = async (rawParams, context) => {
-    // Existing tool unit/integration suites intentionally exercise the legacy
-    // tool bodies directly. Keep that compatibility confined to Vitest and let
-    // dedicated policy tests opt into the production boundary explicitly.
-    if (legacyVitestHarness() && !context.aiActionExecution) {
-      return tool.execute(rawParams, context);
-    }
-
-    if (policy.executionClass === "blocked") {
-      throw new SahelFlowError(
-        `AI tool '${tool.definition.name}' is disabled until its provider authority converges`,
-        policy.blockedReasonCode ?? "AI_TOOL_BLOCKED",
-        409,
-      );
-    }
-    if (policy.executionClass !== "sensitive") {
+  if (isMutatingClass(policy.executionClass)) {
+    throw new SahelFlowError(
+      `AI tool '${tool.definition.name}' is mutating and must be registered without a body`,
+      "AI_TOOL_BODY_NOT_REGISTRABLE",
+      500,
+    );
+  }
+  const body = tool.execute;
+  const definition = tool.definition;
+  registry.set(definition.name, {
+    definition,
+    execute: async (rawParams, context) => {
       const actor = context.actor;
-      if (!actor) return tool.execute(rawParams, context);
+      if (!actor) return body(rawParams, context);
 
       const access = resolveChatReadAccess(
-        tool.definition.name,
+        definition.name,
         await permissionProbe(actor),
       );
       if (!access.allowed) {
@@ -165,16 +166,41 @@ export function registerTool(tool: ChatTool): void {
           missingPermissions: access.missing,
         });
       }
-      const result = await tool.execute(rawParams, context);
+      const result = await body(rawParams, context);
       return result.success && access.withheldPaths.length > 0
         ? { ...result, data: withholdPaths(result.data, access.withheldPaths) }
         : result;
-    }
+    },
+  });
+}
 
+/**
+ * Registers a sensitive or blocked tool. The registry keeps only the
+ * definition; the entry can create one persisted proposal (sensitive) or
+ * refuse (blocked). Nothing here can run the tool's own body.
+ */
+export function registerGatedTool(tool: GatedToolRegistration): void {
+  const definition = tool.definition;
+  const policy = getAiToolPolicy(definition.name);
+  if (!isMutatingClass(policy.executionClass)) {
+    throw new SahelFlowError(
+      `AI tool '${definition.name}' is a read tool and must be registered with its body`,
+      "AI_TOOL_BODY_REQUIRED",
+      500,
+    );
+  }
+  const execute: ChatTool["execute"] = async (rawParams, context) => {
+    if (policy.executionClass === "blocked") {
+      throw new SahelFlowError(
+        `AI tool '${definition.name}' is disabled until its provider authority converges`,
+        policy.blockedReasonCode ?? "AI_TOOL_BLOCKED",
+        409,
+      );
+    }
     // The body knows `confirmed` and refuses it. Return that refusal before
     // argument parsing so a governed confirmation never becomes a proposal
     // and never throws out of the agent as an internal error.
-    if (isGovernedOrderConfirmation(tool.definition.name, rawParams)) {
+    if (isGovernedOrderConfirmation(definition.name, rawParams)) {
       return {
         success: false,
         error: AI_GOVERNED_CONFIRMATION_REFUSAL,
@@ -183,7 +209,7 @@ export function registerTool(tool: ChatTool): void {
 
     // Malformed arguments keep their coded validation error (the routes map it
     // to a 400), so parse first. Nothing is persisted before the check below.
-    const params = parseSensitiveAiToolArgs(tool.definition.name, rawParams);
+    const params = parseSensitiveAiToolArgs(definition.name, rawParams);
 
     // A member who cannot request this action gets a readable refusal before
     // any proposal is created (the proposal service checks the same grants
@@ -211,7 +237,7 @@ export function registerTool(tool: ChatTool): void {
     }
     let handle: Awaited<ReturnType<typeof runtime.createProposal>>;
     try {
-      handle = await runtime.createProposal(tool.definition.name, params);
+      handle = await runtime.createProposal(definition.name, params);
     } catch (error) {
       // S06a-03: a coded refusal of the proposal service (missing grant, record
       // not found, stale request message, ...) is something the model can
@@ -236,15 +262,15 @@ export function registerTool(tool: ChatTool): void {
       success: true,
       data: {
         pending_action_proposal: true,
-        tool: tool.definition.name,
+        tool: definition.name,
         proposal: handle.proposal,
         proposalDigest: handle.proposalDigest,
       },
     };
   };
 
-  registry.set(tool.definition.name, {
-    definition: tool.definition,
+  registry.set(definition.name, {
+    definition,
     execute,
   });
 }
