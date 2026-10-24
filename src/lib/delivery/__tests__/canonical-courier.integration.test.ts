@@ -17,7 +17,7 @@ import {
 } from "@/lib/business-truth/payload-codec";
 import {
   createTestPrisma,
-  disconnectTestPrisma,
+  teardownTestPrisma,
   TEST_SHOP_CONTEXT,
 } from "@/lib/data/__tests__/helpers";
 import {
@@ -48,7 +48,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await disconnectTestPrisma(db);
+  // Clean as well as disconnect: the rows this file writes (delivery events, business commands)
+  // have RESTRICT keys, and the files that run after it clean only the tables they know.
+  await teardownTestPrisma(db);
 });
 
 async function readyOrder() {
