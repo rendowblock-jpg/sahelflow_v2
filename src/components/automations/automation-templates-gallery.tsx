@@ -23,9 +23,9 @@ export function AutomationTemplatesGallery({ canManage }: { canManage: boolean }
     <div className="space-y-8">
       {CATEGORIES.map((category) => (
         <section key={category} className="space-y-3">
-          <h3 className="text-caption font-semibold uppercase tracking-wider text-muted-foreground">
+          <h2 className="text-caption font-semibold uppercase tracking-wider text-muted-foreground">
             {c(`template.category.${category}`)}
-          </h3>
+          </h2>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {AUTOMATION_TEMPLATES.filter((template) => template.category === category).map((template) => {
               const preset = template.build(locale);
@@ -65,7 +65,7 @@ export function AutomationTemplatesGallery({ canManage }: { canManage: boolean }
                       );
                     })}
                   </div>
-                  <h4 className="mt-3.5 text-body font-semibold">{c(template.nameKey)}</h4>
+                  <h3 className="mt-3.5 text-body font-semibold">{c(template.nameKey)}</h3>
                   <p className="mt-1 text-body-sm leading-5 text-muted-foreground">{c(template.descKey)}</p>
                   <p className="mt-3 flex flex-wrap items-center gap-x-1 text-caption text-muted-foreground">
                     <span className="font-medium text-foreground">{trigger ? t(trigger.labelKey) : preset.trigger}</span>

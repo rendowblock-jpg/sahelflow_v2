@@ -238,6 +238,16 @@ export function AutomationBuilder({
       className="flex h-full min-h-0 flex-col bg-background"
     >
       <header className="flex h-14 shrink-0 items-center gap-2 border-b px-2 sm:px-3">
+        {/* The name field is the visible title; this is the page's h1. */}
+        <h1 className="sr-only">
+          {automation ? (
+            <>
+              {c("workspace.edit")}: <bdi>{automation.name}</bdi>
+            </>
+          ) : (
+            c("flow.newTitle")
+          )}
+        </h1>
         <Link
           href="/automations?tab=my"
           aria-label={c("flow.back")}
@@ -327,7 +337,7 @@ export function AutomationBuilder({
       ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
-        <main className="relative min-w-0 flex-1 bg-muted/40 bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:16px_16px] px-6 lg:overflow-y-auto">
+        <div className="relative min-w-0 flex-1 bg-muted/40 bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:16px_16px] px-6 lg:overflow-y-auto">
           <FlowCanvas
             trigger={flow.trigger}
             conditions={flow.conditions}
@@ -346,7 +356,7 @@ export function AutomationBuilder({
             }}
             onRemove={removeStep}
           />
-        </main>
+        </div>
 
         <aside
           data-automation-inspector="true"

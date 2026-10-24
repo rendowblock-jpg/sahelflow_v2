@@ -422,7 +422,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
           </footer>
         </aside>
 
-        <main className="relative min-h-0 min-w-0 max-lg:hidden">
+        <div className="relative min-h-0 min-w-0 max-lg:hidden">
           <div className="absolute inset-x-0 top-3 z-10 flex justify-center">
             <div
               role="radiogroup"
@@ -456,7 +456,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
               <StudioCanvas draft={draft} products={products} device={device} />
             </div>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );

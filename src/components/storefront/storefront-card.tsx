@@ -79,11 +79,14 @@ export function StorefrontCard({
         {preview}
         {canMutate ? (
           // A sibling overlay, not a wrapper: the miniature contains the
-          // store's own links, and links cannot nest.
+          // store's own links, and links cannot nest. It stays out of the tab
+          // order and the accessibility tree ("Open studio" below is the real
+          // link) but still carries the same name, so no link is nameless.
           <Link
             href={studioHref}
             tabIndex={-1}
             aria-hidden="true"
+            aria-label={t("storefront.list.openStudio")}
             className="absolute inset-0"
           />
         ) : null}
@@ -110,9 +113,9 @@ export function StorefrontCard({
 
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="min-w-0">
-          <h3 dir="auto" className="truncate text-title-3 font-semibold">
+          <h2 dir="auto" className="truncate text-title-3 font-semibold">
             {config.name}
-          </h3>
+          </h2>
           <div className="mt-1 flex min-w-0 items-center gap-1.5 text-body-sm text-muted-foreground">
             <Globe className="size-3.5 shrink-0" aria-hidden="true" />
             <bdi dir="ltr" className="truncate font-mono text-caption">
