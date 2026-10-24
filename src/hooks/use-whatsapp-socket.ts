@@ -36,6 +36,18 @@ interface UseWhatsAppSocketResult {
 const MESSAGE_DEDUP_WINDOW_MS = 10 * 60_000;
 const MAX_RECENT_MESSAGE_KEYS = 1_000;
 
+// PB-WS-TOKEN-QUIET: "no helper" (new seller, helper restarting) is a normal
+// state, so a missed token must not become a retry storm on a slow machine.
+// Waits are 2 s, 4 s, 8 s ... capped at one minute, plus up to 20% jitter so
+// several tabs do not retry in step.
+const RECONNECT_BASE_MS = 2_000;
+const RECONNECT_MAX_MS = 60_000;
+const RECONNECT_JITTER = 0.2;
+
+function tabHidden(): boolean {
+  return document.visibilityState === "hidden";
+}
+
 export function useWhatsAppSocket(
   options: UseWhatsAppSocketOptions = {},
 ): UseWhatsAppSocketResult {
@@ -70,6 +82,7 @@ export function useWhatsAppSocket(
     let renewalTimer: ReturnType<typeof setTimeout> | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let closed = false;
+    let lastAttemptAt = Number.NEGATIVE_INFINITY;
     const maxReconnectAttempts = 20;
 
     const clearRenewal = () => {
@@ -79,11 +92,17 @@ export function useWhatsAppSocket(
 
     const scheduleReconnect = () => {
       if (closed || reconnectTimer) return;
+      // A hidden tab makes no requests; the visibility handler restarts us.
+      if (tabHidden()) return;
       if (reconnectAttempt.current >= maxReconnectAttempts) {
         setStatus("disconnected");
         return;
       }
-      const delay = Math.min(1000 * 2 ** reconnectAttempt.current, 15_000);
+      const base = Math.min(
+        RECONNECT_BASE_MS * 2 ** reconnectAttempt.current,
+        RECONNECT_MAX_MS,
+      );
+      const delay = base + base * RECONNECT_JITTER * Math.random();
       reconnectAttempt.current += 1;
       reconnectTimer = setTimeout(() => {
         reconnectTimer = null;
@@ -154,6 +173,8 @@ export function useWhatsAppSocket(
 
     const open = async (renewing: boolean) => {
       if (closed) return;
+      if (!renewing && tabHidden()) return;
+      lastAttemptAt = Date.now();
       const connection = await getWhatsAppWsConnection();
       if (closed) return;
       if (!connection) {
@@ -231,6 +252,8 @@ export function useWhatsAppSocket(
       ) {
         return;
       }
+      // Focus and visibility often fire together; one try per base wait.
+      if (Date.now() - lastAttemptAt < RECONNECT_BASE_MS) return;
       if (reconnectTimer) {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;
