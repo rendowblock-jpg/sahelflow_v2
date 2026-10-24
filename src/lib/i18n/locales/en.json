@@ -1260,6 +1260,8 @@
   "integrations.noApiRequired": "No RC or Meta approval needed — works with any store that supports webhooks.",
   "integrations.noestDesc": "Create and validate NOEST Express shipments with the links NOEST gives you",
   "integrations.notConnected": "Not connected",
+  "integrations.notLiveTested": "Not tested against a live store yet",
+  "integrations.notLiveTestedHint": "This connection has not been tested against a live store yet. Check that orders arrive before relying on it.",
   "integrations.ordersReceived": "Orders received",
   "integrations.placeholder.maystroApiToken": "Maystro API Token",
   "integrations.placeholder.noestCreateUrl": "Paste the order-creation link from your NOEST documentation",

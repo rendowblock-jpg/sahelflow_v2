@@ -14,6 +14,7 @@ import {
 import { projectOrderForTrustedActor } from "@/lib/identity/order-projection";
 import { resolveCanonicalNamedItems } from "@/lib/orders/canonical-named-items";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
+import { orderMoneySchema } from "@/lib/orders/money-limits";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
 import { messageText } from "@/lib/whatsapp/types";
 import { NotFoundError, ValidationError } from "@/types/errors";
@@ -41,7 +42,7 @@ const schema = z.object({
     )
     .min(1)
     .max(200),
-  deliveryCost: z.number().int().nonnegative().default(600),
+  deliveryCost: orderMoneySchema.default(600),
   notes: z.string().trim().max(2000).optional(),
 });
 

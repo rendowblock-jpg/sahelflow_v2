@@ -1260,6 +1260,8 @@
   "integrations.noApiRequired": "لا حاجة لسجل تجاري أو موافقة Meta — يعمل مع أي متجر يدعم webhooks.",
   "integrations.noestDesc": "أنشئ شحنات NOEST Express وثبّتها عبر الروابط التي توفرها NOEST",
   "integrations.notConnected": "غير متصل",
+  "integrations.notLiveTested": "لم يُجرَّب على متجر حقيقي بعد",
+  "integrations.notLiveTestedHint": "لم نختبر هذا الربط على متجر حقيقي بعد. تأكّد أن الطلبات تصل قبل أن تعتمد عليه.",
   "integrations.ordersReceived": "طلبيات وصلت",
   "integrations.placeholder.maystroApiToken": "رمز API لـ Maystro",
   "integrations.placeholder.noestCreateUrl": "ألصق رابط إنشاء الطلبيات من وثائق NOEST",

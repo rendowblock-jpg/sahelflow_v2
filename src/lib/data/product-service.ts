@@ -42,6 +42,38 @@ function toDomainCategory(row: Record<string, unknown>): Category {
   return row as unknown as Category;
 }
 
+// How many order numbers the refusal names; the rest are counted.
+const MAX_NAMED_STOCK_HOLDERS = 5;
+
+// Tells the seller which orders hold the stock so he can ship or cancel them.
+// Returns "" when no holder can be named, so the plain refusal still works.
+async function describeStockHolders(
+  tx: OrderChangeTransactionClient,
+  productId: string,
+): Promise<string> {
+  const named = await tx.$queryRaw<Array<{ orderNumber: string }>>`
+    SELECT DISTINCT o."orderNumber" AS "orderNumber"
+    FROM "InventoryReservation" r
+    JOIN "Order" o ON o."id" = r."orderId"
+    WHERE r."productId" = ${productId}
+      AND r."state" = 'active'
+    ORDER BY o."orderNumber"
+    LIMIT ${MAX_NAMED_STOCK_HOLDERS}
+  `;
+  if (named.length === 0) return "";
+  const total = await tx.$queryRaw<Array<{ holders: number | bigint }>>`
+    SELECT COUNT(DISTINCT r."orderId") AS "holders"
+    FROM "InventoryReservation" r
+    JOIN "Order" o ON o."id" = r."orderId"
+    WHERE r."productId" = ${productId}
+      AND r."state" = 'active'
+  `;
+  const more = Math.max(0, Number(total[0]?.holders ?? 0) - named.length);
+  const numbers = named.map((row) => row.orderNumber).join(", ");
+  const label = named.length === 1 ? "order" : "orders";
+  return ` (held by ${label} ${numbers}${more > 0 ? ` and ${more} more` : ""})`;
+}
+
 async function assertCanonicalCatalogMutationAllowed(
   tx: OrderChangeTransactionClient,
   productId: string,
@@ -55,7 +87,7 @@ async function assertCanonicalCatalogMutationAllowed(
   `;
   if (activeReservations.length > 0) {
     throw new SahelFlowError(
-      "Product or variant stock is governed by an active reservation",
+      `Product or variant stock is governed by an active reservation${await describeStockHolders(tx, productId)}`,
       "CANONICAL_STOCK_ADJUSTMENT_REQUIRED",
       409,
     );

@@ -165,6 +165,13 @@ function buildCommunes(): { hash: string; files: Map<string, string> } {
     list.sort((a, b) => a[0].localeCompare(b[0], "fr"));
     serialised.set(code, JSON.stringify(list));
   }
+  // One index of every commune for the checkout's search box: [latin, arabic, wilayaCode], French alphabetical, then wilaya code, so
+  // namesakes sit side by side. The code is the same two-digit string as the file names, so the page needs no conversion.
+  const index: Array<[string, string, string]> = [];
+  for (const [code, json] of serialised) for (const [latin, arabic] of JSON.parse(json) as Array<[string, string]>) index.push([latin, arabic, code]);
+  index.sort((a, b) => a[0].localeCompare(b[0], "fr") || (a[2] < b[2] ? -1 : a[2] > b[2] ? 1 : 0));
+  serialised.set("all", JSON.stringify(index));
+  // The folder name is the hash of every file in it (the index too), so a change to any list gives the page a new, never-cached address.
   const hash = createHash("sha256").update([...serialised.entries()].map(([code, json]) => `${code}${json}`).join("\n")).digest("hex").slice(0, 10);
   const files = new Map<string, string>();
   for (const [code, json] of serialised) files.set(`${REL_PUBLIC}/_sf/c.${hash}/${code}.json`, json);

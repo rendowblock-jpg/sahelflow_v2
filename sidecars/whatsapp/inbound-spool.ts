@@ -130,6 +130,8 @@ export interface WhatsAppInboundSpoolOptions {
   quarantineMaxAgeMs?: number;
   /** How often the idle spool restates its depth in the diagnostics (default 5 min). */
   statusEveryMs?: number;
+  /** Called with how many quarantined files were just removed for good (age or count limit). */
+  onQuarantinePruned?: (removed: number) => void;
   onCommitted: (
     envelope: WhatsAppInboundSpoolEnvelope,
     receipt: InboundCommitReceipt,
@@ -237,6 +239,8 @@ interface SpoolIndexEntry {
   nextAttemptAtMs: number | null;
   /** Memory only: the app's own ingress state from its last answer. */
   appStatus: string | null;
+  /** Code of the last delivery failure (never content), read back from the record. */
+  lastErrorCode: string | null;
 }
 
 /** A spool file that could not be turned into a record. Carries a code, never content. */
@@ -366,6 +370,7 @@ export class WhatsAppInboundSpool {
   private readonly quarantineMaxAgeMs: number;
   private readonly statusEveryMs: number;
   private readonly onCommitted: WhatsAppInboundSpoolOptions["onCommitted"];
+  private readonly onQuarantinePruned: WhatsAppInboundSpoolOptions["onQuarantinePruned"];
   private flushPromise: Promise<void> | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   // What is queued, by id: just the facts the scheduler needs. The record
@@ -411,6 +416,7 @@ export class WhatsAppInboundSpool {
       throw new Error("WhatsApp inbound spool encryption key must be 32 bytes");
     }
     this.onCommitted = options.onCommitted;
+    this.onQuarantinePruned = options.onQuarantinePruned;
     this.ensureDirectory();
     // Read what is already queued once. A record that cannot be read is moved
     // to the quarantine folder with a reason code instead of stopping the
@@ -525,6 +531,7 @@ export class WhatsAppInboundSpool {
         ? Date.parse(record.nextAttemptAt)
         : null,
       appStatus: appStatus === undefined ? (existing?.appStatus ?? null) : appStatus,
+      lastErrorCode: record.lastErrorCode ?? null,
     });
     this.unreadable.delete(spoolId);
   }
@@ -695,6 +702,12 @@ export class WhatsAppInboundSpool {
       }
       if (removed > 0) {
         this.diagnostics.record("spool.quarantine-pruned", { removed });
+        // These records are gone for good: the health report must be able to say so.
+        try {
+          this.onQuarantinePruned?.(removed);
+        } catch {
+          // A reporting fault must not stop the prune.
+        }
       }
       if (failed > 0) {
         this.diagnostics.record("spool.quarantine-prune-failed", {
@@ -748,6 +761,25 @@ export class WhatsAppInboundSpool {
       quarantined: this.quarantineCount(),
       quarantinedSinceStart: this.quarantinedSinceStart,
     };
+  }
+
+  /**
+   * The code of the last failure of the oldest waiting record that has failed
+   * (for example APP_INGRESS_TIMEOUT). A code only, from memory: no disk access.
+   */
+  lastFailureCode(): string | null {
+    let oldest: SpoolIndexEntry | null = null;
+    for (const entry of this.index.values()) {
+      if (!entry.lastErrorCode) continue;
+      if (
+        oldest === null ||
+        entry.receivedAtMs < oldest.receivedAtMs ||
+        (entry.receivedAtMs === oldest.receivedAtMs && entry.sequence < oldest.sequence)
+      ) {
+        oldest = entry;
+      }
+    }
+    return oldest?.lastErrorCode ?? null;
   }
 
   private emitStatus(why: "start" | "periodic"): void {

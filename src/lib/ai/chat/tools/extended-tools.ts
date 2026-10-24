@@ -24,8 +24,8 @@ import "server-only";
 
 
 import { z } from "zod";
-import type { ToolContext, ToolResult } from "./registry";
-import { registerTool } from "./registry";
+import type { ChatTool, ToolContext, ToolResult } from "./registry";
+import { registerGatedTool, registerTool } from "./registry";
 import { assessOrderRisk } from "@/lib/wilaya-risk/engine";
 import type { DbClient } from "@/lib/db";
 import { productService } from "@/lib/data/product-service";
@@ -637,7 +637,7 @@ export const updateProductStockSchema = z.object({
   reason: z.string().optional().describe("Optional reason for the adjustment"),
 });
 
-registerTool({
+export const updateProductStockTool: ChatTool = {
   definition: {
     name: "update_product_stock",
     description:
@@ -701,7 +701,9 @@ registerTool({
       return { success: false, error: err instanceof Error ? err.message : "Erreur" };
     }
   },
-});
+};
+
+registerGatedTool(updateProductStockTool);
 
 // ── Tool 17: cancel_order ───────────────────────────────────────────────────
 
@@ -712,7 +714,7 @@ export const cancelOrderSchema = z.object({
   reason: z.string().optional().describe("Reason for cancellation"),
 });
 
-registerTool({
+export const cancelOrderTool: ChatTool = {
   definition: {
     name: "cancel_order",
     description:
@@ -783,7 +785,9 @@ registerTool({
       return { success: false, error: err instanceof Error ? err.message : "Erreur" };
     }
   },
-});
+};
+
+registerGatedTool(cancelOrderTool);
 
 // ── Tool 18: get_wilaya_risk ────────────────────────────────────────────────
 
@@ -836,3 +840,12 @@ registerTool({
     }
   },
 });
+
+/**
+ * Bodies kept only so tests can exercise them directly (see
+ * `__tests__/support/legacy-tool-bodies.ts`). The registry never receives them.
+ */
+export const legacyMutatingTools: readonly ChatTool[] = [
+  updateProductStockTool,
+  cancelOrderTool,
+];
