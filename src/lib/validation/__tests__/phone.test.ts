@@ -168,9 +168,6 @@ describe("Arabic-Indic and Eastern Arabic-Indic digits (PB-PHONE-ARABIC-DIGITS)"
 
   it("keeps ASCII behaviour unchanged, including the existing '(0)' result", () => {
     expect(normalizeDZPhone("0655 12 34 56")).toBe("0655123456");
-    // Existing behaviour, not endorsed: the "(0)" trunk digit is kept as a
-    // digit after the 213 prefix, so this does not become a valid mobile.
-    expect(normalizeDZPhone("+213 (0) 655 12 34 56")).toBe("00655123456");
     expect(normalizeDZPhone("")).toBe("");
     expect(normalizeDZPhone("abc")).toBe("");
   });
@@ -178,5 +175,38 @@ describe("Arabic-Indic and Eastern Arabic-Indic digits (PB-PHONE-ARABIC-DIGITS)"
   it("returns '' for text with no digits in any script", () => {
     expect(normalizeDZPhone("رقم الهاتف")).toBe("");
     expect(isValidDZMobilePhone("رقم الهاتف")).toBe(false);
+  });
+});
+
+describe("'(0)' trunk digit after the 213 country code (PB-PHONE-FOLLOWUPS)", () => {
+  // Sellers write "+213 (0) 655 12 34 56": the 0 in brackets is the national
+  // trunk digit and must be dropped, like the AI extraction already does.
+  const spellings: Array<[string, string]> = [
+    ["+213 (0) 655 12 34 56", "0655123456"],
+    ["+213(0)655123456", "0655123456"],
+    ["+213 (0)655 12 34 56", "0655123456"],
+    ["00213 (0) 655 12 34 56", "0655123456"],
+    ["213 (0) 655 12 34 56", "0655123456"],
+    ["+213 ( 0 ) 655 12 34 56", "0655123456"],
+    ["\u200e+213 (0) 655 12 34 56", "0655123456"],
+    ["+٢١٣ (٠) ٦٥٥ ١٢ ٣٤ ٥٦", "0655123456"],
+    ["+۲۱۳(۰)۶۵۵۱۲۳۴۵۶", "0655123456"],
+  ];
+
+  for (const [input, expected] of spellings) {
+    it(`reads ${JSON.stringify(input)} as ${expected}`, () => {
+      expect(normalizeDZPhone(input)).toBe(expected);
+      expect(isValidDZMobilePhone(input)).toBe(true);
+    });
+  }
+
+  it("leaves every other input exactly as before", () => {
+    // Only a "(0)" right after the 213 country code is a trunk digit.
+    expect(normalizeDZPhone("(0) 655 12 34 56")).toBe("0655123456");
+    expect(normalizeDZPhone("0 (0) 655 12 34 56")).toBe("00655123456");
+    expect(normalizeDZPhone("+213 655 (0) 12 34 56")).toBe("06550123456");
+    expect(normalizeDZPhone("+213 655 12 34 56")).toBe("0655123456");
+    // Not endorsed, only pinned: a kept trunk zero without brackets.
+    expect(normalizeDZPhone("+213 0655 12 34 56")).toBe("00655123456");
   });
 });

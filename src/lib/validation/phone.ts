@@ -33,6 +33,14 @@ export const DZ_PHONE_PLACEHOLDER = "05 55 12 34 56";
 const DZ_MOBILE_REGEX = /^0[5-7]\d{8}$/;
 
 /**
+ * "+213 (0) 655 12 34 56": sellers write the national trunk zero in brackets
+ * right after the country code. It is not part of the number, so it is dropped
+ * (same rule as the AI extraction). Anything else with "(0)" is left alone.
+ */
+const TRUNK_ZERO_AFTER_COUNTRY_CODE =
+  /^([\s\u200e\u200f\u202a-\u202e\u2066-\u2069]*(?:\+|00)?[\s\u200e\u200f\u202a-\u202e\u2066-\u2069]*213)[\s.\-\u200e\u200f]*\(\s*0\s*\)/;
+
+/**
  * Normalize any user-entered phone to the local digits-only form
  * ("0555123456"). Strips separators and canonicalizes +213 / 00213 / 213
  * prefixes. Returns "" for empty input. Arabic-Indic and Eastern Arabic-Indic
@@ -40,7 +48,9 @@ const DZ_MOBILE_REGEX = /^0[5-7]\d{8}$/;
  * on an Arabic keyboard would otherwise be stripped to "".
  */
 export function normalizeDZPhone(raw: string): string {
-  const digits = toAsciiDigits(raw ?? "").replace(/\D/g, "");
+  const digits = toAsciiDigits(raw ?? "")
+    .replace(TRUNK_ZERO_AFTER_COUNTRY_CODE, "$1")
+    .replace(/\D/g, "");
   if (!digits) return "";
   let national: string;
   if (digits.startsWith("00213")) national = digits.slice(5);
