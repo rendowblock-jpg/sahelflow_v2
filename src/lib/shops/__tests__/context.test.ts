@@ -61,4 +61,37 @@ describe("process ShopContext", () => {
     delete process.env.SF_MIGRATION_SET_SHA256;
     expect(() => processShopContext()).toThrow(/complete trusted ShopContext/);
   });
+
+  it("does not invent test identities in production when SF_TEST_ROOT is set", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SF_TEST_ROOT", resolve("shop-context", "test-root"));
+    delete process.env.SF_WORKSPACE_ID;
+    delete process.env.SF_INSTALLATION_ID;
+    delete process.env.SF_ACTIVE_SHOP_ID;
+    delete process.env.SF_SHOP_INCARNATION_ID;
+    process.env.SF_DATABASE_FILE_ID = "shop-a.db";
+    process.env.SF_REGISTRY_REVISION = "12";
+    process.env.SF_MIGRATION_SET_SHA256 = "a".repeat(64);
+    process.env.DATABASE_URL = `file:${resolve("shop-context", "shop-a.db")}`;
+    expect(() => processShopContext()).toThrow(/complete trusted ShopContext/);
+  });
+
+  it("still falls back to the test identities outside production", () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("SF_TEST_ROOT", resolve("shop-context", "test-root"));
+    delete process.env.SF_WORKSPACE_ID;
+    delete process.env.SF_INSTALLATION_ID;
+    delete process.env.SF_ACTIVE_SHOP_ID;
+    delete process.env.SF_SHOP_INCARNATION_ID;
+    process.env.SF_DATABASE_FILE_ID = "shop-a.db";
+    process.env.SF_REGISTRY_REVISION = "12";
+    process.env.SF_MIGRATION_SET_SHA256 = "a".repeat(64);
+    process.env.DATABASE_URL = `file:${resolve("shop-context", "shop-a.db")}`;
+    expect(processShopContext()).toMatchObject({
+      workspaceId: "a".repeat(32),
+      installationId: "b".repeat(32),
+      shopId: "test",
+      shopIncarnationId: "c".repeat(32),
+    });
+  });
 });

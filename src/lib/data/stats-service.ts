@@ -9,6 +9,7 @@
 import type { DashboardStats } from "@/types/domain";
 import type { ServiceContext } from "./service-base";
 import { grossRevenue } from "./metrics";
+import { addShopDays, startOfShopDay } from "@/lib/time/shop-day";
 import { getProfitabilitySeries } from "@/lib/accounting/profitability";
 
 export interface DashboardStatsAccess {
@@ -32,14 +33,10 @@ export const statsService = {
     const canReadDeliveries = access.deliveries ?? true;
     const canReadProducts = access.products ?? true;
 
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const startOfYesterday = new Date(startOfDay);
-    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-
-    const startOfTomorrow = new Date(startOfDay);
-    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+    // Shop days (Algeria), not the host's: see lib/time/shop-day.ts.
+    const startOfDay = startOfShopDay(new Date());
+    const startOfYesterday = addShopDays(startOfDay, -1);
+    const startOfTomorrow = addShopDays(startOfDay, 1);
 
     const todayPeriod = { from: startOfDay, to: startOfTomorrow };
     const yesterdayPeriod = { from: startOfYesterday, to: startOfDay };

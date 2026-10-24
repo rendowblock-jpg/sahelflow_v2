@@ -38,6 +38,12 @@ export const STATUS_RECOVERY_POLL_MS = 10_000;
  * is down for a while must not keep hitting the local server every 3 s.
  */
 export const RECOVERY_POLL_FULL_RATE_CYCLES = 5;
+/**
+ * While the push channel is open the chat list is still re-read this often,
+ * so a message the push missed (a dropped frame, a half-dead socket) shows up
+ * without a reload. Slow on purpose: the push does the real-time work.
+ */
+export const OPEN_SOCKET_POLL_MS = 60_000;
 export const RECOVERY_POLL_MAX_MS = 15_000;
 
 /**

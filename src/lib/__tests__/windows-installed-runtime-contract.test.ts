@@ -445,6 +445,46 @@ describe("installed Windows runtime contract", () => {
     expect(authority).toContain("released_process_authority_can_be_reacquired");
   });
 
+  it("keeps respawning the WhatsApp sidecar forever instead of giving up after a few crashes", () => {
+    const desktop = read("src-tauri/src/lib.rs");
+    const start = desktop.indexOf("fn schedule_sidecar_respawn(");
+    const end = desktop.indexOf("\nfn ", start + 1);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const schedule = desktop.slice(start, end);
+
+    // The delay comes from the pure function, and nothing after that line may
+    // return before the retry thread is started.
+    const delay = schedule.indexOf(
+      "let delay_seconds = sidecar_respawn_delay_seconds(next_attempt);",
+    );
+    expect(delay).toBeGreaterThan(-1);
+    expect(schedule.slice(delay)).not.toMatch(/\breturn\b/);
+    expect(schedule.slice(delay)).toContain("std::thread::spawn(move ||");
+    expect(schedule).not.toContain("MAX_ATTEMPTS");
+    expect(schedule).not.toContain("exceeded its restart budget");
+    expect(schedule).not.toContain("CRITICAL");
+    expect(desktop).not.toContain("remains offline until restart");
+
+    // The guards that stop a stale or shutting-down runtime still run first.
+    const guard = schedule.indexOf("let runtime_allows_respawn");
+    const generation = schedule.indexOf("respawn.next_attempt(generation)");
+    expect(guard).toBeGreaterThan(-1);
+    expect(generation).toBeGreaterThan(guard);
+    expect(delay).toBeGreaterThan(generation);
+    expect(schedule).toContain(
+      "children.supervisor.current_generation() == generation",
+    );
+    expect(schedule).toContain("children.supervisor.allows_restart()");
+
+    // 5 s, 15 s, 60 s, then every 5 minutes with no last attempt.
+    expect(desktop).toMatch(
+      /fn sidecar_respawn_delay_seconds\(attempt: u8\) -> u64 \{\s*match attempt \{\s*0 \| 1 => 5,\s*2 => 15,\s*3 => 60,\s*_ => 300,\s*\}\s*\}/,
+    );
+    expect(desktop).toContain("fn respawn_delay_settles_at_five_minutes_and_never_gives_up()");
+    expect(desktop).toContain("self.attempts.saturating_add(1)");
+  });
+
   it("installs the exact signed MSI and dispatches only from protected-main release authority", () => {
     const release = read(".github/workflows/release.yml");
     const dispatcher = read(

@@ -270,6 +270,96 @@ describe("WhatsApp sidecar client", () => {
     vi.useRealTimers();
   });
 
+  it("bounds a JSON body that never ends, with the same error as a header timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      const request = { signal: null as AbortSignal | null };
+      fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+        request.signal = init.signal ?? null;
+        // Headers arrive at once; the body then stalls. Like a real fetch,
+        // the body stream errors when the request is aborted.
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            init.signal?.addEventListener("abort", () => {
+              controller.error(
+                Object.assign(new Error("aborted"), { name: "AbortError" }),
+              );
+            });
+          },
+        });
+        return Promise.resolve(
+          new Response(body, {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      });
+
+      let settled = false;
+      const pending = sidecar
+        .status()
+        .catch((failure) => failure)
+        .finally(() => {
+          settled = true;
+        });
+      await vi.advanceTimersByTimeAsync(7_999);
+      expect(settled).toBe(false);
+      expect(request.signal?.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+      const caught = await pending;
+      expect(request.signal?.aborted).toBe(true);
+      expect(caught).toBeInstanceOf(SidecarUnavailableError);
+      expect(caught).toMatchObject({
+        message: "Sidecar request timed out",
+        ambiguous: true,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("honours a shorter status timeout for a body that never ends", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            init.signal?.addEventListener("abort", () => {
+              controller.error(
+                Object.assign(new Error("aborted"), { name: "AbortError" }),
+              );
+            });
+          },
+        });
+        return Promise.resolve(new Response(body, { status: 200 }));
+      });
+      let settled = false;
+      const pending = sidecar
+        .status(1_500)
+        .catch((failure) => failure)
+        .finally(() => {
+          settled = true;
+        });
+      await vi.advanceTimersByTimeAsync(1_500);
+      expect(settled).toBe(true);
+      expect(await pending).toBeInstanceOf(SidecarUnavailableError);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("leaves no timer running once a JSON body has been read", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockResolvedValue(response(200, { status: "connected" }));
+      await expect(sidecar.status()).resolves.toEqual({ status: "connected" });
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps the media timeout active until the response body is consumed", async () => {
     vi.useFakeTimers();
     const request = { signal: null as AbortSignal | null };
