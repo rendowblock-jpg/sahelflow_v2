@@ -119,7 +119,7 @@ describe("GET /api/whatsapp/chats sidecar status probe", () => {
   });
 
   it("keeps a sidecar that is down as not reachable", async () => {
-    h.sidecarStatus.mockRejectedValue(new SidecarUnavailableError());
+    h.sidecarStatus.mockRejectedValue(new SidecarUnavailableError("sidecar down"));
     const body = await (await call()).json();
     expect(body.sidecarReachable).toBe(false);
     expect(body.sidecarStatus).toBeNull();
@@ -133,7 +133,7 @@ describe("GET /api/whatsapp/chats sidecar status probe", () => {
 
   it("does not leave an unhandled rejection when the database fails first", async () => {
     h.findMany.mockRejectedValue(new Error("database down"));
-    h.sidecarStatus.mockRejectedValue(new SidecarUnavailableError());
+    h.sidecarStatus.mockRejectedValue(new SidecarUnavailableError("sidecar down"));
     await expect(call()).rejects.toThrow("database down");
     await vi.advanceTimersByTimeAsync(PROBE_BOUND_MS * 2);
   });
