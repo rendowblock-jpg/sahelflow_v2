@@ -89,7 +89,7 @@ describe("the desktop shell closes properly before the installer runs", () => {
     // The update goes where the plugin's own download and install look for it.
     expect(command).toContain("webview.resources_table().add(update)");
     expect(rust).toContain("#[tauri::command]\nasync fn check_for_update(");
-    expect(rust).toContain(".invoke_handler(tauri::generate_handler![check_for_update])");
+    // The registered commands are pinned in "registers those three commands" below.
   });
 
   it("the hook takes the shutdown, hides the workspace, then stops the contained trees", () => {
@@ -138,7 +138,7 @@ describe("the desktop shell closes properly before the installer runs", () => {
   });
 });
 
-describe("the page may call exactly one command of its own, and only to look", () => {
+describe("the page may call exactly three commands of its own: look, download, install", () => {
   const capability = JSON.parse(read("src-tauri/capabilities/default.json")) as {
     permissions: string[];
     remote?: { urls: string[] };
@@ -151,16 +151,28 @@ describe("the page may call exactly one command of its own, and only to look", (
     // refused unless a capability for that origin lists its permission.
     expect(capability.remote?.urls).toContain("http://127.0.0.1:*");
     const ownPermissions = capability.permissions.filter((entry) => !entry.includes(":"));
-    expect(ownPermissions).toEqual(["allow-check-for-update"]);
+    expect(ownPermissions).toEqual([
+      "allow-check-for-update",
+      "allow-download-update",
+      "allow-install-downloaded-update",
+    ]);
     expect(permissionFile).toContain('identifier = "allow-check-for-update"');
     expect(permissionFile).toContain('commands.allow = ["check_for_update"]');
-    expect(permissionFile.match(/\[\[permission\]\]/g)).toHaveLength(1);
+    expect(permissionFile).toContain('identifier = "allow-download-update"');
+    expect(permissionFile).toContain('commands.allow = ["download_update"]');
+    expect(permissionFile).toContain('identifier = "allow-install-downloaded-update"');
+    expect(permissionFile).toContain('commands.allow = ["install_downloaded_update"]');
+    expect(permissionFile.match(/\[\[permission\]\]/g)).toHaveLength(3);
+    // Nothing is newly reachable: the page already holds the plugin's own download and install.
+    expect(capability.permissions).toContain("updater:default");
   });
 
-  it("registers that one command and no other", () => {
+  it("registers those three commands and no other", () => {
     const handlers = /generate_handler!\[([^\]]*)\]/.exec(rust);
     expect(handlers?.[1]?.split(",").map((name) => name.trim()).filter(Boolean)).toEqual([
       "check_for_update",
+      "download_update",
+      "install_downloaded_update",
     ]);
   });
 
@@ -168,6 +180,45 @@ describe("the page may call exactly one command of its own, and only to look", (
     const command = rustFunction("async fn check_for_update(");
     for (const forbidden of [".download(", ".install(", "download_and_install", ".exit(", "stop_contained_trees"]) {
       expect(command, forbidden).not.toContain(forbidden);
+    }
+  });
+
+  it("the download tells the window a few times a second, not once per network chunk", () => {
+    const command = rustFunction("async fn download_update(");
+    expect(command).toContain("update_progress::ProgressThrottle::new()");
+    expect(command).toContain("throttle.record(");
+    // The only sends are the throttled report, the final figure and the end.
+    expect(command.match(/on_event\.send\(/g)).toHaveLength(3);
+    expect(command).toContain("throttle.finish(");
+    // The raw chunk callback never sends by itself.
+    const callback = command.slice(command.indexOf("|chunk_length, total|"), command.indexOf("|| {},"));
+    expect(callback.match(/on_event\.send\(/g)).toHaveLength(1);
+    expect(callback).toContain("if let Some(report)");
+    for (const forbidden of [".install(", ".exit(", "stop_contained_trees", "download_and_install"]) {
+      expect(command, forbidden).not.toContain(forbidden);
+    }
+    expect(rust).toContain("mod update_progress;");
+  });
+
+  it("the install command is the only place that starts the installer, and it never stops or exits by itself", () => {
+    const command = rustFunction("async fn install_downloaded_update(");
+    // rustfmt may split the call over several lines; the text is compared without whitespace.
+    expect(command.replace(/\s+/g, "")).toContain("update.install(&bytes.0)");
+    for (const forbidden of [".download(", ".exit(", "stop_contained_trees", "download_and_install"]) {
+      expect(command, forbidden).not.toContain(forbidden);
+    }
+    expect(rust.match(/\.install\(/g)).toHaveLength(1);
+    // Async, so the hook's blocking teardown never runs on the window's thread.
+    expect(rust).toContain("#[tauri::command]\nasync fn install_downloaded_update(");
+    expect(rust).toContain("#[tauri::command]\nasync fn download_update(");
+  });
+
+  it("the bridge downloads and installs through those commands, not the plugin's", () => {
+    expect(bridge).toContain('DOWNLOAD_UPDATE_COMMAND = "download_update"');
+    expect(bridge).toContain('INSTALL_DOWNLOADED_UPDATE_COMMAND = "install_downloaded_update"');
+    const bridgeCode = bridge.replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const forbidden of ["resource.download(", "resource.install(", "downloadAndInstall", "plugin:updater"]) {
+      expect(bridgeCode, forbidden).not.toContain(forbidden);
     }
   });
 

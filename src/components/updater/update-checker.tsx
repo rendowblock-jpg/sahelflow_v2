@@ -80,7 +80,7 @@ export function UpdateChecker() {
             const { checkForDesktopUpdate } = await import("@/lib/updater/desktop-update-check");
             const update = await checkForDesktopUpdate();
             if (cancelled) {
-              void update?.close().catch(() => undefined);
+              void update?.close?.().catch(() => undefined);
               return;
             }
             if (update) {
