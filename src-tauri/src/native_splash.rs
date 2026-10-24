@@ -2235,74 +2235,6 @@ mod imp {
         GdipDisposeImage(bitmap.cast());
     }
 
-    /// Runs only where GDI+ exists (the Windows lanes of CI): the glow layer must
-    /// reach a real GDI+ surface unchanged and still be free of steps.
-    #[cfg(test)]
-    mod glow_draw_tests {
-        use super::*;
-        use crate::native_splash::glow_layer_tests::{worst_window_error, SKY, WINDOW_ERROR_LIMIT};
-
-        #[test]
-        fn the_glow_layer_reaches_a_gdi_surface_one_pixel_to_one_pixel() {
-            let (width, height) = (600_i32, 360_i32);
-            let alpha = 0.086;
-            let layer = glow_layer(600, 360, (300.0, MARK_CENTER_Y), GLOW_RADIUS, SKY, alpha);
-            let mut surface = vec![0_u32; 600 * 360];
-            unsafe {
-                let mut token: usize = 0;
-                let input = GdiplusStartupInput {
-                    GdiplusVersion: 1,
-                    DebugEventCallback: 0,
-                    SuppressBackgroundThread: 0,
-                    SuppressExternalCodecs: 1,
-                };
-                assert_eq!(GdiplusStartup(&mut token, &input, std::ptr::null_mut()), Ok);
-                let mut bitmap: *mut GpBitmap = std::ptr::null_mut();
-                let mut graphics: *mut GpGraphics = std::ptr::null_mut();
-                assert_eq!(
-                    GdipCreateBitmapFromScan0(
-                        width,
-                        height,
-                        width * 4,
-                        PIXEL_FORMAT_32BPP_PARGB,
-                        surface.as_mut_ptr().cast(),
-                        &mut bitmap,
-                    ),
-                    Ok
-                );
-                assert_eq!(
-                    GdipGetImageGraphicsContext(bitmap.cast(), &mut graphics),
-                    Ok
-                );
-                // The same modes the card itself runs with.
-                GdipSetSmoothingMode(graphics, SmoothingModeAntiAlias);
-                GdipSetPixelOffsetMode(graphics, PixelOffsetModeHighQuality);
-                GdipSetCompositingQuality(graphics, CompositingQualityHighQuality);
-                draw_glow_layer(graphics, &layer, width, height, 0, 0);
-                GdipFlush(graphics, FlushIntentionSync);
-                GdipDeleteGraphics(graphics);
-                GdipDisposeImage(bitmap.cast());
-                GdiplusShutdown(token);
-            }
-            let mut worst = 0_i32;
-            for (wanted, got) in layer.iter().zip(&surface) {
-                for shift in [0_u32, 8, 16, 24] {
-                    let difference =
-                        (((wanted >> shift) & 0xFF) as i32 - ((got >> shift) & 0xFF) as i32).abs();
-                    worst = worst.max(difference);
-                }
-            }
-            assert!(worst <= 2, "GDI+ changed the glow by up to {worst} levels");
-            for y in [60_usize, 108, 250] {
-                let error = worst_window_error(&surface, y, alpha);
-                assert!(
-                    error <= WINDOW_ERROR_LIMIT,
-                    "row {y} of the GDI+ surface steps: window error {error} over {WINDOW_ERROR_LIMIT}"
-                );
-            }
-        }
-    }
-
     unsafe extern "system" fn window_proc(
         window: HWND,
         message: u32,
@@ -2658,6 +2590,112 @@ mod imp {
         );
         true
     }
+
+    /// Runs only where GDI+ exists (the Windows lanes of CI). The card draws the glow layer through
+    /// `draw_glow_layer`; this checks what lands on a real GDI+ surface. On the first real Windows run
+    /// GDI+ kept the grain exactly (the local deviation of the surface equalled the layer's) and lowered
+    /// every value by about one level; a comparison with the exact curve counted that shift as steps,
+    /// so the yardstick here is the local deviation, which an overall offset does not change.
+    /// It is the last item of `imp` on purpose (clippy: no items after a test module).
+    #[cfg(test)]
+    mod glow_draw_tests {
+        use super::*;
+        use crate::native_splash::glow_layer_tests::{green_row, inner_span, local_deviation, SKY};
+
+        const W: usize = 600;
+        const H: usize = 360;
+        /// An opaque dark card colour, like the real card under the glow.
+        const CARD: u32 = 0xFF08_1E1D;
+
+        unsafe fn render(layer: &[u32], background: u32) -> Vec<u32> {
+            let (width, height) = (W as i32, H as i32);
+            let mut surface = vec![background; W * H];
+            let mut bitmap: *mut GpBitmap = std::ptr::null_mut();
+            let mut graphics: *mut GpGraphics = std::ptr::null_mut();
+            assert_eq!(
+                GdipCreateBitmapFromScan0(
+                    width,
+                    height,
+                    width * 4,
+                    PIXEL_FORMAT_32BPP_PARGB,
+                    surface.as_mut_ptr().cast(),
+                    &mut bitmap,
+                ),
+                Ok
+            );
+            assert_eq!(
+                GdipGetImageGraphicsContext(bitmap.cast(), &mut graphics),
+                Ok
+            );
+            // The same modes the card itself runs with.
+            GdipSetSmoothingMode(graphics, SmoothingModeAntiAlias);
+            GdipSetPixelOffsetMode(graphics, PixelOffsetModeHighQuality);
+            GdipSetCompositingQuality(graphics, CompositingQualityHighQuality);
+            draw_glow_layer(graphics, layer, width, height, 0, 0);
+            GdipFlush(graphics, FlushIntentionSync);
+            GdipDeleteGraphics(graphics);
+            GdipDisposeImage(bitmap.cast());
+            surface
+        }
+
+        #[test]
+        fn the_glow_layer_keeps_its_grain_on_a_gdi_surface() {
+            let mut token: usize = 0;
+            let input = GdiplusStartupInput {
+                GdiplusVersion: 1,
+                DebugEventCallback: 0,
+                SuppressBackgroundThread: 0,
+                SuppressExternalCodecs: 1,
+            };
+            assert_eq!(
+                unsafe { GdiplusStartup(&mut token, &input, std::ptr::null_mut()) },
+                Ok
+            );
+            for alpha in [0.05_f32, 0.086, 0.17] {
+                let layer = glow_layer(W, H, (300.0, MARK_CENTER_Y), GLOW_RADIUS, SKY, alpha);
+                // A clear surface (as in the first Windows run) and the dark card the glow really lies on.
+                for (name, background) in [("clear", 0_u32), ("card", CARD)] {
+                    let surface = unsafe { render(&layer, background) };
+                    if background == 0 {
+                        let mut worst = 0_i32;
+                        for (wanted, got) in layer.iter().zip(&surface) {
+                            for shift in [0_u32, 8, 16, 24] {
+                                let difference = (((wanted >> shift) & 0xFF) as i32
+                                    - ((got >> shift) & 0xFF) as i32)
+                                    .abs();
+                                worst = worst.max(difference);
+                            }
+                        }
+                        assert!(worst <= 2, "GDI+ changed the glow by up to {worst} levels");
+                    }
+                    for y in [60_usize, 108, 250] {
+                        let (from, to) = inner_span(y);
+                        let layer_row = green_row(&layer, y);
+                        let surface_row = green_row(&surface, y);
+                        let layer_deviation = local_deviation(&layer_row, from, to);
+                        let surface_deviation = local_deviation(&surface_row, from, to);
+                        let mean =
+                            |row: &[f32]| row[from..to].iter().sum::<f32>() / (to - from) as f32;
+                        eprintln!(
+                            "GLOWWIN alpha {alpha} {name} row {y}: deviation layer {layer_deviation:.3} surface {surface_deviation:.3}; mean green layer {:.2} surface {:.2}",
+                            mean(&layer_row),
+                            mean(&surface_row),
+                        );
+                        // Steps come back as a larger local deviation. Internal.46 showed 3.85 to 4.00 levels.
+                        assert!(
+                            surface_deviation <= layer_deviation + 0.35,
+                            "alpha {alpha} {name} row {y}: GDI+ added steps: {surface_deviation} against {layer_deviation} for the layer"
+                        );
+                        assert!(
+                            surface_deviation < 1.0,
+                            "alpha {alpha} {name} row {y}: the surface steps by {surface_deviation} levels"
+                        );
+                    }
+                }
+            }
+            unsafe { GdiplusShutdown(token) };
+        }
+    }
 }
 
 #[cfg(test)]
@@ -2698,6 +2736,66 @@ pub(crate) mod glow_layer_tests {
             .windows(6)
             .map(|window| (window.iter().sum::<f32>() / 6.0).abs())
             .fold(0.0, f32::max)
+    }
+
+    /// The green channel of every pixel of row `y` (the glow is light teal, so green carries most of its steps).
+    pub(crate) fn green_row(pixels: &[u32], y: usize) -> Vec<f32> {
+        (0..W)
+            .map(|x| channel(pixels[y * W + x], 8) as f32)
+            .collect()
+    }
+
+    /// The part of row `y` that lies well inside the glow (25 px in from its edge).
+    pub(crate) fn inner_span(y: usize) -> (usize, usize) {
+        let dy = y as f32 + 0.5 - CENTER.1;
+        let half = (GLOW_RADIUS * GLOW_RADIUS - dy * dy).max(0.0).sqrt();
+        (
+            (CENTER.0 - half + 25.0).max(0.0) as usize,
+            ((CENTER.0 + half - 25.0) as usize).min(W),
+        )
+    }
+
+    /// How far the mean of six neighbouring samples strays from the mean of the 41 samples around them, at the
+    /// worst place in `from..to`, in levels. Flat steps make it large; an overall offset does not change it.
+    pub(crate) fn local_deviation(row: &[f32], from: usize, to: usize) -> f32 {
+        let last = row.len() - 1;
+        let around = |i: usize| {
+            let lo = i.saturating_sub(20);
+            let hi = (i + 20).min(last);
+            row[lo..=hi].iter().sum::<f32>() / (hi - lo + 1) as f32
+        };
+        let strays: Vec<f32> = (from..to).map(|i| row[i] - around(i)).collect();
+        strays
+            .windows(6)
+            .map(|window| (window.iter().sum::<f32>() / 6.0).abs())
+            .fold(0.0, f32::max)
+    }
+
+    #[test]
+    fn the_local_deviation_tells_grain_from_steps() {
+        // Measured values: grain 0.29 to 0.50, a staircase of three-level steps 0.73 to 1.29, the steps in the
+        // Founder's Internal.46 picture 3.85 to 4.00 (the same yardstick).
+        let mut grain_worst = 0.0_f32;
+        let mut staircase_best = f32::MAX;
+        for alpha in [0.05_f32, 0.086, 0.17] {
+            let good = glow_layer(W, H, CENTER, GLOW_RADIUS, SKY, alpha);
+            let mut stepped = good.clone();
+            for pixel in &mut stepped {
+                let green = (channel(*pixel, 8) + 1) / 3 * 3;
+                *pixel = (*pixel & !0x0000_FF00) | (green << 8);
+            }
+            for y in [60_usize, 108, 250] {
+                let (from, to) = inner_span(y);
+                grain_worst = grain_worst.max(local_deviation(&green_row(&good, y), from, to));
+                staircase_best =
+                    staircase_best.min(local_deviation(&green_row(&stepped, y), from, to));
+            }
+        }
+        assert!(grain_worst < 0.6, "the grain reaches {grain_worst}");
+        assert!(
+            staircase_best > 0.65,
+            "a three-level staircase only reaches {staircase_best}"
+        );
     }
 
     #[test]
