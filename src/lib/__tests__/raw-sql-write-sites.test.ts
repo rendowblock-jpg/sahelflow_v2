@@ -22,6 +22,11 @@ const PINNED_RAW_WRITE_FILES = [
   "src/lib/connected-platform/storefront-delegation.ts",
   "src/lib/orders/canonical-order-recovery.ts",
   "src/lib/orders/canonical-return-authority.ts",
+  // Queues every customer and order for a token rebuild once (INSERT OR IGNORE into
+  // SearchProjectionDirty, one marker row in SearchProjectionRevision). Index tables
+  // only: no PII column, no codec involved. Runs on the shop client inside one
+  // transaction, from search routes (withErrorHandler) and the warm-up.
+  "src/lib/search/local-search-projection.ts",
 ];
 
 function productionSources(dir: string, found: string[] = []): string[] {
