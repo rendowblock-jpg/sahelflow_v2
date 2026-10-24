@@ -343,7 +343,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <Table>
+                <Table scrollLabel={t("customers.orderHistory")}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>#</TableHead>
