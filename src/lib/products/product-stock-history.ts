@@ -14,7 +14,7 @@ import type { DbClient } from "@/lib/db";
  *   - "ai.product.stock_adjusted.v1"    — governed AI action (command kernel),
  *                                         before/after {stock, variantStock}
  *
- * Order-driven movements (productService.deductStock / restoreStock) and plain
+ * Order-driven movements (deductOrderItemStock / restoreOrderItemStock) and plain
  * manual product edits do NOT write audit rows today, so the history below is
  * explicitly partial — the product page says so next to the table. A proper
  * movement ledger (source: order/manual/AI, actor, delta, reason) needs a

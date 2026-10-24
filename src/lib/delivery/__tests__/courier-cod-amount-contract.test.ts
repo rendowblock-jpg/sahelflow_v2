@@ -4,7 +4,8 @@
  *
  * Verified in the code (audit lead S03c-05):
  *   - Order.totalPrice = Σ items + deliveryCost at creation
- *     (order-service.ts) and again on any price-bearing edit;
+ *     (manual-order.ts, canonical-source-order.ts) and again on any
+ *     price-bearing edit (order-service.ts);
  *   - a canonical order cannot be edited at all, and a legacy order's price
  *     fields are locked once it is confirmed, which is the status a shipment
  *     needs before it can be booked, so the total cannot drift between the
@@ -27,6 +28,8 @@ const canonicalBooking = read(
   "src/lib/delivery/canonical-courier-booking-authority.ts",
 );
 const orderService = read("src/lib/data/order-service.ts");
+const manualOrder = read("src/lib/orders/manual-order.ts");
+const canonicalSourceOrder = read("src/lib/orders/canonical-source-order.ts");
 
 function sourceFiles(dir: string): string[] {
   const out: string[] = [];
@@ -73,8 +76,11 @@ describe("courier COD amount == order total (S03c-05)", () => {
   });
 
   it("the order total includes the delivery cost when the order is created and when it is re-priced", () => {
-    expect(orderService).toMatch(
-      /const totalPrice = itemsTotal \+ \(data\.deliveryCost \?\? 0\)/,
+    expect(manualOrder).toMatch(
+      /const totalPrice = itemsTotal \+ data\.deliveryCost;/,
+    );
+    expect(canonicalSourceOrder).toMatch(
+      /const totalPrice = itemsTotal \+ data\.deliveryCost;/,
     );
     expect(orderService).toContain("effectiveDeliveryCost");
     expect(orderService).toContain("recomputedTotalPrice");

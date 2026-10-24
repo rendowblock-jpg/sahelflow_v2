@@ -116,7 +116,7 @@ export const createOrderSchema = z.object({
   notes: z.string().nullable().optional(),
   deliveryCost: nonNegInt.nullable().optional(),
   // Phase 1 bug 1.3: optional fields so storefront/import/sync/AI paths can
-  // route through orderService.create without losing their per-path data.
+  // keep their per-path data.
   //   - status: import path creates orders with user-specified status
   //     (default "pending" — historical imports). Service defaults to "draft".
   //   - sourceOrderId: e-commerce sync dedupes by [source, sourceOrderId]

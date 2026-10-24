@@ -120,7 +120,6 @@ import { POST as storefrontPost } from "@/app/api/storefront/submit/route";
 import "@/lib/ai/chat/tools/core-tools";
 import { getTool, type ToolContext } from "@/lib/ai/chat/tools/registry";
 import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
-import { orderService } from "@/lib/data/order-service";
 import { syncPlatform } from "@/lib/integrations/ecommerce/sync-engine";
 import { executeManualOrderDecision } from "@/lib/orders/manual-confirmation";
 import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
@@ -250,39 +249,6 @@ function normalizedOrder(
 }
 
 describe("order creation path regression coverage", () => {
-  it("orderService.create writes the created timeline and trigger", async () => {
-    await configureOrderCreatedAutomation();
-    const customer = await rawDb.customer.create({
-      data: {
-        name: "Direct Create Test",
-        phone: "0555123456",
-        nameBlindIndex: "direct-create-test",
-        wilaya: "Alger",
-        commune: "Bab Ezzouar",
-        address: "123 Rue Didouche",
-      },
-    });
-    const order = await orderService.create(
-      { prisma: rawDb as never },
-      {
-        customerId: customer.id,
-        items: [{ productName: "Test Product", quantity: 2, unitPrice: 2500 }],
-        wilaya: "Alger",
-        commune: "Bab Ezzouar",
-        address: "123 Rue Didouche",
-        phone: "0555123456",
-        source: "manual",
-      },
-    );
-
-    expect(
-      await rawDb.orderChange.count({
-        where: { orderId: order.id, actionType: "created" },
-      }),
-    ).toBe(1);
-    expect((await waitForCreatedLog()).length).toBeGreaterThan(0);
-  });
-
   it("storefront writes a canonical created order and trigger", async () => {
     await configureOrderCreatedAutomation();
     const product = await seedProduct({ price: 2500 });
