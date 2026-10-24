@@ -30,6 +30,7 @@ import {
   type CanonicalReturnOrder,
   type CanonicalReturnOrderItem,
 } from "@/lib/orders/canonical-return-authority";
+import { orderMoneySchema } from "@/lib/orders/money-limits";
 import { TRUSTED_MANUAL_ORDER_AUTHORITY } from "@/lib/orders/manual-order-authority";
 import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
 
@@ -70,7 +71,7 @@ export const canonicalCustomerReturnRequestSchema = z
     reasonCode: reasonCodeSchema,
     items: z.array(requestedItemSchema).min(1).max(500),
     exchangeItems: z.array(exchangeItemSchema).min(1).max(500).optional(),
-    exchangeDeliveryCost: z.number().int().nonnegative().safe().default(0),
+    exchangeDeliveryCost: orderMoneySchema.default(0),
     occurredAt: occurredAtSchema,
     idempotencyKey: idempotencyKeySchema,
     correlationId: correlationIdSchema,

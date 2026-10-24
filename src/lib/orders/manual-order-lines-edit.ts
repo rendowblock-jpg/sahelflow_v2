@@ -11,6 +11,7 @@ import {
   resolveCatalogLine,
   type CatalogLine,
 } from "@/lib/orders/manual-order-catalog-line";
+import { assertOrderTotalWithinLimit, orderMoneySchema } from "@/lib/orders/money-limits";
 import { redactPii } from "@/lib/redact-pii";
 import {
   ConflictError,
@@ -46,8 +47,6 @@ import {
  * version conflict. The kernel claims one aggregate per (order, version).
  */
 
-const MAX_ORDER_TOTAL = 2_147_483_647; // Order.totalPrice is a 32-bit Int
-
 export const manualOrderLinesEditSchema = z
   .object({
     orderId: z.string().min(1),
@@ -62,7 +61,7 @@ export const manualOrderLinesEditSchema = z
             productId: z.string().min(1).optional(),
             productVariantId: z.string().min(1).nullable().optional(),
             quantity: z.number().int().min(1).max(100_000),
-            unitPrice: z.number().int().nonnegative().optional(),
+            unitPrice: orderMoneySchema.optional(),
           })
           .strict(),
       )
@@ -271,9 +270,7 @@ export async function executeManualOrderLinesEdit(
       );
       const deliveryCost = order.deliveryCost ?? 0;
       const totalPrice = itemsTotal + deliveryCost;
-      if (!Number.isSafeInteger(totalPrice) || totalPrice > MAX_ORDER_TOTAL) {
-        throw new ValidationError("The order total is too large", "lines");
-      }
+      assertOrderTotalWithinLimit(totalPrice, "lines");
       const orderVersion = data.expectedVersion + 1;
 
       const claimed = await tx.order.updateMany({
