@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 describe("Founder Arabic UI system", () => {
   it("uses the intended modern Arabic sans authority rather than the Internal.17 font regression", () => {
     const layout = read("src/app/layout.tsx");
-    expect(layout).toContain("Noto_Sans_Arabic");
+    expect(layout).toContain("noto-sans-arabic-arabic-wght-normal.woff2");
     expect(layout).not.toContain("IBM_Plex_Sans_Arabic");
     expect(layout).toContain('variable: "--font-arabic"');
     expect(layout).toContain('import "./arabic-system.css"');
