@@ -1,6 +1,6 @@
 import "server-only";
 import type { ServiceContext } from "@/lib/data/service-base";
-import { foldedRowIds } from "@/lib/search/list-search-candidates";
+import { foldedRowIds, rowSignature } from "@/lib/search/list-search-candidates";
 
 export async function listCannedResponses(context: ServiceContext) {
   // Audit S3-14: bounded list — only the search path was capped before.
@@ -51,6 +51,16 @@ export async function searchCannedResponses(context: ServiceContext, query: stri
       }),
     query,
     (row) => [row.shortCode, row.content, row.description],
+    {
+      key: "canned",
+      signature: async () => {
+        const stats = await context.prisma.cannedResponse.aggregate({
+          _count: { _all: true },
+          _max: { updatedAt: true },
+        });
+        return rowSignature(stats._count._all, stats._max.updatedAt);
+      },
+    },
   );
   return context.prisma.cannedResponse.findMany({
     where: {
