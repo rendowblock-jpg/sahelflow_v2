@@ -272,9 +272,15 @@ describe("Orders workbench", () => {
         {
           OR: [
             { orderNumber: { contains: "ORD-1" } },
+            // Folded candidates (empty here: the projection is mocked away).
+            { id: { in: [] } },
             { wilaya: { contains: "ORD-1" } },
+            { wilaya: { in: [] } },
+            { customerId: { in: [] } },
             {
-              phoneBlindIndex: { in: ["idx:Order:phone:ORD-1"] },
+              phoneBlindIndex: {
+                in: ["idx:Order:phone:ORD-1", "idx:Order:phone:ord1"],
+              },
             },
             {
               customer: {
@@ -282,6 +288,7 @@ describe("Orders workbench", () => {
               },
             },
             { phone: { contains: "ORD-1" } },
+            { phone: { contains: "ord1" } },
             { customer: { name: { contains: "ORD-1" } } },
           ],
         },
@@ -294,7 +301,7 @@ describe("Orders workbench", () => {
     await getOrdersWorkbenchPage(context("viewer"), { q: "ORD-1" });
     const viewerWhere = mocks.findMany.mock.calls[0]?.[0]?.where;
     expect(viewerWhere?.AND?.[0]).toEqual({
-      OR: [{ orderNumber: { contains: "ORD-1" } }],
+      OR: [{ orderNumber: { contains: "ORD-1" } }, { id: { in: [] } }],
     });
   });
 

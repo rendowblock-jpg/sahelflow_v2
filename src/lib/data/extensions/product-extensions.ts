@@ -5,6 +5,7 @@
  * actually selling (units, revenue, order count) vs. just sitting in
  * the catalog — essential for inventory decisions.
  */
+import { foldedRowIds } from "@/lib/search/list-search-candidates";
 import "server-only";
 import type { ServiceContext } from "../service-base";
 
@@ -38,11 +39,21 @@ export const productServiceExtensions = {
     const q = query.trim();
     if (!q) return [];
 
+    const foldedIds = await foldedRowIds(
+      (take) =>
+        ctx.prisma.product.findMany({
+          where: { deletedAt: null },
+          select: { id: true, name: true },
+          take,
+        }),
+      q,
+      (row) => [row.name],
+    );
     const rows = await ctx.prisma.product.findMany({
       where: {
         AND: [
           opts?.activeOnly ? { isActive: true } : {},
-          { name: { contains: q } },
+          { OR: [{ name: { contains: q } }, { id: { in: foldedIds ?? [] } }] },
           { deletedAt: null },
         ],
       },

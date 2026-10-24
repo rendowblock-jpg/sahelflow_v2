@@ -4,6 +4,9 @@
 import "server-only";
 import type { ServiceContext } from "../service-base";
 import { deriveExistingShopBlindIndex } from "@/lib/crypto/protected-record";
+import { phoneQueryForms } from "@/lib/search/list-search-candidates";
+import { persistedCustomerIdsForQuery } from "@/lib/search/local-search-projection";
+import { matchesSearchQuery } from "@/lib/search/universal-search";
 
 export interface CustomerStats {
   totalOrders: number;
@@ -55,10 +58,14 @@ export const customerServiceExtensions = {
     const q = query.trim();
     if (!q) return [];
 
-    const [phoneIndexes, nameIndexes] = await Promise.all([
-      searchableIndexes(ctx, q, "phone"),
+    // The whole name / whole phone hashes still match as before. The token ids
+    // add partial names, spelling variants and +213 / Arabic-digit phones.
+    const [phoneIndexLists, nameIndexes, tokenIds] = await Promise.all([
+      Promise.all(phoneQueryForms(q).map((form) => searchableIndexes(ctx, form, "phone"))),
       searchableIndexes(ctx, q.toLowerCase(), "name"),
+      persistedCustomerIdsForQuery(q),
     ]);
+    const phoneIndexes = phoneIndexLists.flat();
     const plaintextFallback = process.env.NODE_ENV === "test";
 
     const rows = await ctx.prisma.customer.findMany({
@@ -67,6 +74,7 @@ export const customerServiceExtensions = {
         OR: [
           { nameBlindIndex: { in: nameIndexes } },
           { phone: { in: phoneIndexes } },
+          { id: { in: tokenIds } },
           ...(plaintextFallback
             ? [
                 { name: { contains: q } },
@@ -76,8 +84,6 @@ export const customerServiceExtensions = {
         ],
       },
       orderBy: { createdAt: "desc" },
-      take: opts?.limit ?? 50,
-      skip: opts?.offset ?? 0,
       select: {
         id: true,
         name: true,
@@ -92,7 +98,14 @@ export const customerServiceExtensions = {
         createdAt: true,
       },
     });
-    return rows as unknown as CustomerListItem[];
+    // Token hits are candidates (grams, wilaya, commune): keep the rows whose
+    // name or phone really contains the text, then page. The set is bounded by
+    // the token scan budget plus the exact hits.
+    const matched = (rows as unknown as CustomerListItem[]).filter((row) =>
+      matchesSearchQuery(q, [row.name, row.phone, row.phone2]),
+    );
+    const offset = opts?.offset ?? 0;
+    return matched.slice(offset, offset + (opts?.limit ?? 50));
   },
 
   async getStats(ctx: ServiceContext, customerId: string): Promise<CustomerStats> {
