@@ -15,7 +15,7 @@ import type { AiToolCallView } from "@/components/ai/ai-workspace-types";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn, formatDZD, intlLocale } from "@/lib/utils";
+import { cn, formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import { useI18n } from "@/hooks/use-i18n";
 import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import {
@@ -219,7 +219,7 @@ function formatValue(
       // wrapped in RLM marks that fight the app's own bidi isolation.
       return formatDZD(value, locale);
     }
-    return new Intl.NumberFormat(intlLocale(locale)).format(value);
+    return numberFormatter(intlLocale(locale)).format(value);
   }
   if (typeof value === "string" && STATUS_FIELDS.has(key)) {
     return localizeStatus(

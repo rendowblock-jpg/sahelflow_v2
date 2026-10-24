@@ -142,3 +142,112 @@ describe("POST /api/integrations/connect — row-first ordering + compensation (
     expect(harness.setSecret).not.toHaveBeenCalled();
   });
 });
+
+describe("POST /api/integrations/connect — only declared secret fields (INT-13)", () => {
+  const written = () =>
+    harness.setSecret.mock.calls.map((call) => call[1] as string);
+  const deleted = () =>
+    harness.deleteSecret.mock.calls.map((call) => (call as unknown as unknown[])[1] as string);
+
+  it("does not store a supplied field the provider does not declare", async () => {
+    const response = await POST(
+      connectRequest({
+        provider: "shopify",
+        accessToken: "token-a",
+        shopDomain: "shop.example.com",
+        apiKey: "stray-key",
+        consumerKey: "stray-consumer",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(written()).toEqual([
+      "ecommerce_shopify_accessToken",
+      "ecommerce_shopify_shopDomain",
+    ]);
+  });
+
+  it("ignores (does not reject) a malformed value in an undeclared field", async () => {
+    const response = await POST(
+      connectRequest({
+        provider: "shopify",
+        accessToken: "token-a",
+        siteUrl: "not a url",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(written()).toEqual(["ecommerce_shopify_accessToken"]);
+  });
+
+  it("still rejects a malformed siteUrl where the provider declares it", async () => {
+    const response = await POST(
+      connectRequest({
+        provider: "woocommerce",
+        siteUrl: "not a url",
+        consumerKey: "ck",
+        consumerSecret: "cs",
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(harness.setSecret).not.toHaveBeenCalled();
+  });
+
+  it("deletes a stored secret whose field the provider does not declare", async () => {
+    const response = await POST(
+      connectRequest({ provider: "shopify", accessToken: "token-a" }),
+    );
+    expect(response.status).toBe(200);
+    expect(deleted()).toEqual(
+      expect.arrayContaining([
+        "ecommerce_shopify_apiKey",
+        "ecommerce_shopify_apiToken",
+        "ecommerce_shopify_apiId",
+        "ecommerce_shopify_siteUrl",
+        "ecommerce_shopify_consumerKey",
+        "ecommerce_shopify_consumerSecret",
+      ]),
+    );
+  });
+
+  it("keeps a declared field the seller did not supply this time", async () => {
+    const response = await POST(
+      connectRequest({ provider: "shopify", accessToken: "token-b" }),
+    );
+    expect(response.status).toBe(200);
+    expect(written()).toEqual(["ecommerce_shopify_accessToken"]);
+    // shopDomain was stored earlier; retyping only the token must not touch it.
+    expect(deleted()).not.toContain("ecommerce_shopify_shopDomain");
+    expect(deleted()).not.toContain("ecommerce_shopify_accessToken");
+  });
+
+  it("never deletes a declared field of the provider being connected", async () => {
+    const response = await POST(
+      connectRequest({
+        provider: "woocommerce",
+        siteUrl: "https://shop.example.com",
+        consumerKey: "ck",
+      }),
+    );
+    expect(response.status).toBe(200);
+    for (const key of [
+      "ecommerce_woocommerce_siteUrl",
+      "ecommerce_woocommerce_consumerKey",
+      "ecommerce_woocommerce_consumerSecret",
+    ]) {
+      expect(deleted()).not.toContain(key);
+    }
+    expect(deleted()).toContain("ecommerce_woocommerce_accessToken");
+  });
+
+  it("still requires one declared credential: an undeclared field alone is a coded 400", async () => {
+    const response = await POST(
+      connectRequest({ provider: "youcan", apiKey: "stray-key" }),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      code: "REQUEST_VALIDATION_FAILED",
+    });
+    expect(harness.upsert).not.toHaveBeenCalled();
+    expect(harness.setSecret).not.toHaveBeenCalled();
+    expect(harness.deleteSecret).not.toHaveBeenCalled();
+  });
+});

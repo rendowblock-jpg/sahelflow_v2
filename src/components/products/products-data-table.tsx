@@ -26,7 +26,7 @@ import {
 import { useI18n } from "@/hooks/use-i18n";
 import { useListSearchScope } from "@/hooks/use-list-search-scope";
 import { translateServerError } from "@/lib/i18n/translate-server-error";
-import { formatDZD, intlLocale } from "@/lib/utils";
+import { formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import type { Category } from "@/types/domain";
 
 interface ProductsDataTableProps {
@@ -46,7 +46,7 @@ export function ProductsDataTable({
   const categoryNames = new Map(
     categories.map((category) => [category.id, category.name]),
   );
-  const integerFormatter = new Intl.NumberFormat(
+  const integerFormatter = numberFormatter(
     intlLocale(locale),
     { maximumFractionDigits: 0 },
   );

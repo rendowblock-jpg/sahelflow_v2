@@ -57,6 +57,8 @@ interface BucketEntry {
   failCount: number;
   /** ms timestamp until which the bucket is locked out */
   lockedUntil: number;
+  /** ms timestamp of the last attempt or failure (drives idle eviction) */
+  lastSeen: number;
 }
 
 const WINDOW_MS = 60_000;
@@ -68,10 +70,17 @@ export const FAILED_ATTEMPT_MIN_MS = 1_000;
 /**
  * Team-member buckets are keyed on a client-typed login id, so their number is
  * bounded: past this many tracked accounts, unseen ids share one overflow
- * bucket. Tracked buckets are never evicted (evicting one would reset its
- * failure count). A real shop has a handful of members.
+ * bucket. A bucket is only evicted once it is idle and not locked out (see
+ * FAILED_BUCKET_IDLE_MS), so junk ids cannot hold the cap for ever. A real shop
+ * has a handful of members.
  */
 export const MEMBER_BUCKET_CAP = 256;
+
+/**
+ * A bucket with failures is dropped after this long without an attempt. It is
+ * as long as the longest lockout, so a locked bucket is never dropped early.
+ */
+export const FAILED_BUCKET_IDLE_MS = 15 * 60_000;
 
 /**
  * Lockout schedule — checked top-down (highest threshold first). On the Nth
@@ -88,21 +97,21 @@ const LOCKOUT_SCHEDULE: ReadonlyArray<{ fails: number; lockMs: number }> = [
 
 const entries = new Map<string, BucketEntry>();
 
+/** Drop idle buckets: no failures after one window, with failures after FAILED_BUCKET_IDLE_MS. */
+function sweepIdleBuckets(now: number): void {
+  for (const [key, e] of entries) {
+    const idleMs = e.failCount === 0 ? WINDOW_MS : FAILED_BUCKET_IDLE_MS;
+    if (now > e.lockedUntil && now - e.lastSeen > idleMs) entries.delete(key);
+  }
+}
+
 /** Periodic cleanup of stale entries (every 5 min) to bound memory. */
 if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, e] of entries) {
-      // Remove entries that are past their window AND not locked AND have no recent fails
-      if (now - e.windowStart > WINDOW_MS && now > e.lockedUntil && e.failCount === 0) {
-        entries.delete(key);
-      }
-    }
-  }, 5 * 60_000).unref?.();
+  setInterval(() => sweepIdleBuckets(Date.now()), 5 * 60_000).unref?.();
 }
 
 function freshEntry(now: number): BucketEntry {
-  return { windowCount: 0, windowStart: now, failCount: 0, lockedUntil: 0 };
+  return { windowCount: 0, windowStart: now, failCount: 0, lockedUntil: 0, lastSeen: now };
 }
 
 /**
@@ -157,6 +166,7 @@ export function recordLoginAttempt(key: string): void {
     e.windowCount = 0;
   }
   e.windowCount++;
+  e.lastSeen = now;
 }
 
 /**
@@ -171,6 +181,7 @@ export function recordLoginFailure(key: string): RateLimitResult {
     entries.set(key, e);
   }
   e.failCount++;
+  e.lastSeen = now;
   // Find the applicable lockout (highest threshold <= failCount)
   for (const tier of LOCKOUT_SCHEDULE) {
     if (e.failCount >= tier.fails) {
@@ -254,6 +265,8 @@ export function getMemberLoginLimiterKey(loginId: string): string {
   if (!LOGIN_ID_PATTERN.test(normalised)) return MEMBER_OVERFLOW_KEY;
   const key = `${MEMBER_KEY_PREFIX}${normalised}`;
   if (entries.has(key)) return key;
+  // At the cap, free idle buckets first so stale junk ids do not push real members to the overflow bucket.
+  if (trackedMemberBuckets() >= MEMBER_BUCKET_CAP) sweepIdleBuckets(Date.now());
   return trackedMemberBuckets() < MEMBER_BUCKET_CAP ? key : MEMBER_OVERFLOW_KEY;
 }
 

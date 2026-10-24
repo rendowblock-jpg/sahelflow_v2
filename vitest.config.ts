@@ -36,11 +36,10 @@ export default defineConfig({
       "scripts/__tests__/phase4-closure-authority.test.ts",
       "scripts/__tests__/privacy-erase-authority.test.ts",
       "scripts/__tests__/privacy-export-authority.test.ts",
+      "scripts/__tests__/rotate-master-key-authority.test.ts",
       "scripts/__tests__/verify-protected-raw-access.test.ts",
       // Not listed on purpose (OPS-01): protected-data-migration-cli,
-      // verify-updater-artifact and verify-updater-contract spawn `bun`, and
-      // rotate-master-key-authority pins source text that no longer matches
-      // (it asserts a lease guard in the trusted-context module).
+      // verify-updater-artifact and verify-updater-contract spawn `bun`.
     ],
     exclude: ["**/node_modules/**", "src-tauri", "playwright-report"],
     // Database-backed tests in src/lib/data/__tests__/ use a shared SQLite DB

@@ -1,4 +1,4 @@
-import { intlLocale } from "@/lib/utils";
+import { intlLocale, numberFormatter } from "@/lib/utils";
 
 export type RiskWorkspaceLocale = "en" | "fr" | "ar";
 export type RiskWorkspaceCopyKey = keyof (typeof COPY)["en"];
@@ -207,7 +207,7 @@ export function formatPositiveRiskPoints(
 ): string {
   const safePoints = Number.isFinite(points) ? Math.max(0, points) : 0;
   const resolvedLocale = numberLocale(locale);
-  const formatted = new Intl.NumberFormat(resolvedLocale, {
+  const formatted = numberFormatter(resolvedLocale, {
     signDisplay: "exceptZero",
     maximumFractionDigits: 1,
   }).format(safePoints);

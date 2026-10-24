@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { SahelFlowError } from "@/types/errors";
+import { ECOMMERCE_SECRET_KEYS } from "@/lib/integrations/ecommerce/types";
 
 /**
  * Connect an e-commerce integration (YouCan, Shopify, WooCommerce).
@@ -21,33 +22,63 @@ import { SahelFlowError } from "@/types/errors";
  * not free-text fields.
  */
 const credentialString = z.string().max(2048).optional();
+const siteUrlSchema = z.string().url();
+
+/**
+ * INT-13: only the secret fields a provider DECLARES (ECOMMERCE_SECRET_KEYS)
+ * are stored. Order is the write order. Any other supplied field is ignored.
+ */
+const CREDENTIAL_FIELDS = [
+  "accessToken",
+  "shopDomain",
+  "siteUrl",
+  "consumerKey",
+  "consumerSecret",
+] as const;
+
+/**
+ * Every field name this route has ever stored under `ecommerce_<provider>_`.
+ * Older builds stored any of them for any provider, so a leftover can only be
+ * one of these. Naming them avoids a prefix scan that could hit other keys.
+ */
+const EVER_STORED_FIELDS = [
+  ...CREDENTIAL_FIELDS,
+  "apiToken",
+  "apiId",
+  "apiKey",
+] as const;
 
 const ConnectSchema = z
   .object({
     provider: z.enum(["shopify", "woocommerce", "youcan"]),
     accessToken: credentialString,
     shopDomain: credentialString,
-    siteUrl: z.string().url().max(2048).optional(),
+    siteUrl: credentialString,
     consumerKey: credentialString,
     consumerSecret: credentialString,
-    apiToken: credentialString,
-    apiId: credentialString,
-    apiKey: credentialString,
   })
-  .refine(
-    (data) =>
-      Boolean(
-        data.accessToken ||
-          data.shopDomain ||
-          data.siteUrl ||
-          data.consumerKey ||
-          data.consumerSecret ||
-          data.apiToken ||
-          data.apiId ||
-          data.apiKey,
-      ),
-    { message: "At least one credential field required" },
-  );
+  .superRefine((data, ctx) => {
+    const declared = ECOMMERCE_SECRET_KEYS[data.provider];
+    // A URL check only matters where the provider really stores a site URL.
+    if (
+      declared.siteUrl &&
+      data.siteUrl !== undefined &&
+      !siteUrlSchema.safeParse(data.siteUrl).success
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["siteUrl"],
+        message: "Invalid URL",
+      });
+    }
+    // I-M4: a connect with nothing to store would only create an empty row.
+    if (!CREDENTIAL_FIELDS.some((field) => declared[field] && data[field])) {
+      ctx.addIssue({
+        code: "custom",
+        message: "At least one credential field required",
+      });
+    }
+  });
 
 export const POST = withErrorHandler(async (req: Request) => {
   const actorContext = await requireAuth("integrations.manage");
@@ -65,11 +96,21 @@ export const POST = withErrorHandler(async (req: Request) => {
     );
   }
 
-  const { provider, ...creds } = parsed.data;
+  const { provider } = parsed.data;
+  const declared = ECOMMERCE_SECRET_KEYS[provider];
   const context = { prisma: db, shop: shopContext };
-  const credentials = Object.entries(creds).filter(
-    (entry): entry is [string, string] => Boolean(entry[1]),
-  );
+  // Only declared fields the seller actually typed. A declared field left out
+  // is never cleared: the settings dialog opens empty and sends just the edits.
+  const credentials: Array<[field: string, secretKey: string, value: string]> =
+    [];
+  for (const field of CREDENTIAL_FIELDS) {
+    const secretKey = declared[field];
+    const value = parsed.data[field];
+    if (secretKey && value) credentials.push([field, secretKey, value]);
+  }
+  const staleSecretKeys = EVER_STORED_FIELDS.filter(
+    (field) => !declared[field],
+  ).map((field) => `ecommerce_${provider}_${field}`);
 
   // Audit S2-8: the Integration row is upserted FIRST, in one transaction with
   // its audit record, so secrets can never exist without their owning row.
@@ -95,7 +136,7 @@ export const POST = withErrorHandler(async (req: Request) => {
       actor: trustedActorAuditIdentity(actorContext.actor),
       metadata: {
         provider,
-        fields: credentials.map(([key]) => key),
+        fields: credentials.map(([field]) => field),
       },
     });
   });
@@ -105,8 +146,12 @@ export const POST = withErrorHandler(async (req: Request) => {
   // surface a coded 502 instead of leaving a half-connected integration.
   const writtenSecretKeys: string[] = [];
   try {
-    for (const [key, value] of credentials) {
-      const secretKey = `ecommerce_${provider}_${key}`; // was integration_ — mismatched loader
+    // Leftovers of an undeclared field are dropped first, so nothing a loader
+    // never reads (and the seller never sees) stays stored. Idempotent.
+    for (const secretKey of staleSecretKeys) {
+      await deleteSecret(context, secretKey);
+    }
+    for (const [, secretKey, value] of credentials) {
       await setSecret(context, secretKey, value);
       writtenSecretKeys.push(secretKey);
     }

@@ -25,7 +25,7 @@ import {
   type CourierPerformanceMetrics,
   type WilayaCourierMatrix,
 } from "@/lib/analytics/courier-metrics";
-import { cn, formatDZD, intlLocale } from "@/lib/utils";
+import { cn, formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import wilayasData from "../../../data/wilayas.json";
 
 /**
@@ -90,14 +90,14 @@ export async function CourierPerformanceSection({
   const { t, locale } = await getI18n();
   const dateLocale =
     intlLocale(locale);
-  const integerFormatter = new Intl.NumberFormat(dateLocale, {
+  const integerFormatter = numberFormatter(dateLocale, {
     maximumFractionDigits: 0,
   });
-  const percentFormatter = new Intl.NumberFormat(dateLocale, {
+  const percentFormatter = numberFormatter(dateLocale, {
     style: "percent",
     maximumFractionDigits: 1,
   });
-  const daysFormatter = new Intl.NumberFormat(dateLocale, {
+  const daysFormatter = numberFormatter(dateLocale, {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });

@@ -25,7 +25,7 @@ describe("Class-AAA analytics locale and hierarchy contract", () => {
     const statCard = read("src/components/shared/stat-card.tsx");
     const utils = read("src/lib/utils.ts");
 
-    expect(analytics).toContain("new Intl.NumberFormat(dateLocale");
+    expect(analytics).toContain("numberFormatter(dateLocale");
     expect(analytics).toContain("percentFormatter.format(value / 100)");
     expect(analytics).toContain("hourFormatter.format(hour)");
     expect(analytics).toContain("displayValue: fmtPercent(wilaya.returnRate)");

@@ -28,6 +28,8 @@ export interface QueueDailyWhatsAppReportInput {
   reportDate: string;
   phone: string;
   text: string;
+  /** "manual" is the seller's Test send; it is a separate durable send from the scheduled one. */
+  trigger?: "cron" | "manual";
 }
 
 export interface DailyWhatsAppReportResult {
@@ -43,15 +45,22 @@ function deterministicUuid(value: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
 
-function reportIdentity(context: DailyReportContext, reportDate: string): string {
-  return JSON.stringify([
+function reportIdentity(
+  context: DailyReportContext,
+  reportDate: string,
+  trigger: "cron" | "manual",
+): string {
+  const parts = [
     "daily-whatsapp-report-v1",
     context.shop.workspaceId,
     context.shop.installationId,
     context.shop.shopId,
     context.shop.shopIncarnationId,
     reportDate,
-  ]);
+  ];
+  // Scheduled identities stay as they were; a Test send must not replay or block them.
+  if (trigger === "manual") parts.push("manual-test");
+  return JSON.stringify(parts);
 }
 
 /**
@@ -68,7 +77,9 @@ export async function queueDailyWhatsAppReport(
   const reportDate = reportDateSchema.parse(rawInput.reportDate);
   const phone = z.string().trim().min(1).max(100).parse(rawInput.phone);
   const text = z.string().trim().min(1).max(4000).parse(rawInput.text);
-  const messageId = deterministicUuid(reportIdentity(context, reportDate));
+  const messageId = deterministicUuid(
+    reportIdentity(context, reportDate, rawInput.trigger ?? "cron"),
+  );
   const commandContext: DailyReportCommandContext = {
     ...context,
     businessPrincipal: systemBusinessPrincipal("scheduler"),

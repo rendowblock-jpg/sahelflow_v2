@@ -947,10 +947,25 @@ html[dir="rtl"] body {
 [data-focus-owner="frame"]:focus-visible {
   outline: none;
 }
+/* Windows high-contrast mode drops box-shadow, so any focus ring drawn with a
+   shadow vanishes there. This one block puts a real system outline back on
+   every keyboard-focused element, including the two fields whose own rules
+   switch the outline off (the AI composer frame above, and the command-palette
+   query field in experience-system.css). The ":root" prefix keeps the
+   query-field restore ahead of that file, which loads later with the same
+   specificity. The
+   command palette keeps focus on its input and marks the active row with a
+   background, which this mode also drops, so that row gets an inset outline. */
 @media (forced-colors: active) {
-  [data-focus-owner="frame"]:focus-visible {
+  :focus-visible,
+  [data-focus-owner="frame"]:focus-visible,
+  :root [data-universal-search="v2"] [data-slot="command-input"]:focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 2px;
+  }
+  [data-slot="command-item"][data-selected="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
   }
 }
 

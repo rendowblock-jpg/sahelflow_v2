@@ -50,6 +50,7 @@ import { StepEditor } from "./flow/step-editor";
 import { RunHistory } from "./flow/run-history";
 import { TriggerPicker } from "./flow/trigger-picker";
 import type { AutomationRunSummary } from "@/lib/automations/automation-readiness";
+import { automationCreateKeyForDraft, type AutomationDraftKey } from "@/lib/automations/create-key";
 
 export type { AutomationBuilderAutomation, AutomationBuilderPreset } from "./flow/flow-model";
 
@@ -103,6 +104,8 @@ export function AutomationBuilder({
     automation || preset ? "step-0" : "trigger",
   );
   const [saving, setSaving] = useState(false);
+  // One key per new draft: a retry or a second Ctrl+S of the same content replays the first create instead of making a copy.
+  const draftKeyRef = useRef<AutomationDraftKey | null>(null);
   const [inspectorView, setInspectorView] = useState<"edit" | "runs">("edit");
   const [stepKeys, setStepKeys] = useState<string[]>(() => flow.steps.map(() => crypto.randomUUID()));
   // Keys follow structural edits; anything else that changes the count
@@ -173,16 +176,19 @@ export function AutomationBuilder({
     if (!valid || saving) return;
     setSaving(true);
     try {
+      const payload = flowPayload(flow, isActive);
+      if (!isEdit) draftKeyRef.current = automationCreateKeyForDraft(draftKeyRef.current, JSON.stringify(payload));
       const response = await fetch(isEdit ? `/api/automations/${automation?.id}` : "/api/automations", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(flowPayload(flow, isActive)),
+        body: JSON.stringify(isEdit ? payload : { ...payload, idempotencyKey: draftKeyRef.current?.key }),
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error ?? t("automations.updateFailed"));
       }
       setSnapshot(JSON.stringify([flow, isActive]));
+      draftKeyRef.current = null;
       if (isEdit) {
         toast.success(t("automations.editor.updated"));
         router.refresh();

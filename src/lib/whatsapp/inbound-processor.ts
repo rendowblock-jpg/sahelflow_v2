@@ -18,6 +18,7 @@ import {
   extractWhatsAppMessageAttachment,
   sealWhatsAppMessageAttachmentWithKey,
 } from "./message-attachments";
+import { storedMessageTime } from "./message-time";
 import { messageText, normalizeWhatsAppMessageContent } from "./types";
 
 export const AUTOMATION_TRIGGER_EFFECT_TYPE = "automation.trigger.v1";
@@ -430,6 +431,13 @@ async function applyClaim(
 ): Promise<WhatsAppIngressProcessingResult> {
   const providerTimestamp =
     claim.providerTimestamp ?? new Date(input.message.messageTimestamp * 1_000);
+  // The command payload and the event keep the provider's own time (they are
+  // hashed or replayed as-is); everything stored for the inbox uses this one.
+  const storedAt = storedMessageTime(
+    claim.providerTimestamp,
+    input.message.messageTimestamp,
+    input.receivedAt,
+  );
   const sourceId = input.message.key.remoteJid;
   const contactPhone = jidPhone(sourceId);
   const contactName =
@@ -507,10 +515,10 @@ async function applyClaim(
           contactName,
           contactPhone,
           sourceId,
-          lastMessageAt: providerTimestamp,
+          lastMessageAt: storedAt,
           unreadCount: 1,
           status: "open",
-          waitingSince: providerTimestamp,
+          waitingSince: storedAt,
         },
         update: {
           contactName,
@@ -528,12 +536,12 @@ async function applyClaim(
           id: conversation.id,
           OR: [
             { lastMessageAt: null },
-            { lastMessageAt: { lt: providerTimestamp } },
+            { lastMessageAt: { lt: storedAt } },
           ],
         },
         data: {
-          lastMessageAt: providerTimestamp,
-          waitingSince: providerTimestamp,
+          lastMessageAt: storedAt,
+          waitingSince: storedAt,
         },
       });
 
@@ -543,7 +551,7 @@ async function applyClaim(
           conversationId: conversation.id,
           body,
           direction: "inbound",
-          timestamp: providerTimestamp,
+          timestamp: storedAt,
           deliveryStatus: null,
           messageType: canonicalMessageType,
           attachments: protectedAttachment,
@@ -567,9 +575,9 @@ async function applyClaim(
           targetId: conversation.id,
           sourceRecordId: claim.id,
           link: `/inbox?conversation=${encodeURIComponent(conversation.id)}`,
-          occurredAt: providerTimestamp,
+          occurredAt: storedAt,
           expiresAt: new Date(
-            providerTimestamp.getTime() + 365 * 24 * 60 * 60 * 1_000,
+            storedAt.getTime() + 365 * 24 * 60 * 60 * 1_000,
           ),
         },
         update: {},

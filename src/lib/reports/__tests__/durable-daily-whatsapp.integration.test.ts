@@ -97,6 +97,38 @@ describe("durable daily WhatsApp report", () => {
     expect(outbox.payloadJson).not.toContain(input.text);
   });
 
+  it("sends a manual Test and the scheduled report of the same day as two separate sends", async () => {
+    const input = {
+      reportDate: "2026-08-03",
+      phone: "0555000111",
+      text: "Rapport du jour",
+    };
+    const test = await queueDailyWhatsAppReport(context, {
+      ...input,
+      trigger: "manual",
+    });
+    provider.send.mockResolvedValueOnce({
+      ok: true,
+      id: "WA-DAILY-RECEIPT-3",
+      status: "sent",
+    });
+    const scheduled = await queueDailyWhatsAppReport(context, input);
+
+    expect(scheduled.effectKey).not.toBe(test.effectKey);
+    expect(scheduled.replayed).toBe(false);
+    expect(scheduled.effect.state).toBe("succeeded");
+    expect(provider.send).toHaveBeenCalledTimes(2);
+
+    // The scheduled identity is unchanged: a plain call and an explicit "cron" call agree.
+    const explicit = await queueDailyWhatsAppReport(context, {
+      ...input,
+      trigger: "cron",
+    });
+    expect(explicit.effectKey).toBe(scheduled.effectKey);
+    expect(explicit.replayed).toBe(true);
+    expect(provider.send).toHaveBeenCalledTimes(2);
+  });
+
   it("uses a distinct durable identity for a different report date", async () => {
     const first = await queueDailyWhatsAppReport(context, {
       reportDate: "2026-08-01",

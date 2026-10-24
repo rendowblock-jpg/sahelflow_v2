@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import {
   assertTrustedAction,
   requireTrustedAction,
+  trustedActionAllowed,
 } from "@/lib/identity/authorization";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,16 @@ export const GET = withErrorHandler(
       },
       id,
     );
-    return NextResponse.json({ position });
+    // The COD workspace and the customers API show a name only with
+    // customers.contact.read; a custom allowlist can hold financials without it.
+    const canReadName = trustedActionAllowed(
+      actorContext,
+      "customers.contact.read",
+      { shopId: actorContext.shop.shopId },
+    );
+    return NextResponse.json({
+      position: canReadName ? position : { ...position, customerName: null },
+    });
   },
   "GET /api/orders/[id]/cod/position",
 );

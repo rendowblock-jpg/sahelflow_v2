@@ -16,6 +16,8 @@ import { shopDateString } from "@/lib/time/shop-day";
  * effect is the send authority; this marker is allowed to fail and replay.
  */
 const DAILY_REPORT_LAST_SENT_KEY = "daily_report_last_sent_at";
+/** The seller's Test send keeps its own marker, so it never suppresses the scheduled send. */
+const DAILY_REPORT_LAST_TEST_KEY = "daily_report_last_test_at";
 
 /** Format a Date as the Algiers-local calendar date "YYYY-MM-DD". */
 function getAlgiersTodayDate(d: Date = new Date()): string {
@@ -71,7 +73,11 @@ async function executeReport(
   }
 
   const reportDate = getAlgiersTodayDate();
-  const lastSent = await getSetting(context, DAILY_REPORT_LAST_SENT_KEY);
+  const markerKey =
+    trigger === "manual"
+      ? DAILY_REPORT_LAST_TEST_KEY
+      : DAILY_REPORT_LAST_SENT_KEY;
+  const lastSent = await getSetting(context, markerKey);
   if (lastSent === reportDate) {
     return NextResponse.json({ ok: true, skipped: "already sent today" });
   }
@@ -86,6 +92,7 @@ async function executeReport(
     reportDate,
     phone,
     text: report.message,
+    trigger,
   });
   const state = delivery.effect.state;
   const accepted = ["queued", "processing", "retrying"].includes(state);
@@ -95,8 +102,8 @@ async function executeReport(
   if (succeeded) {
     try {
       await db.setting.upsert({
-        where: { key: DAILY_REPORT_LAST_SENT_KEY },
-        create: { key: DAILY_REPORT_LAST_SENT_KEY, value: reportDate },
+        where: { key: markerKey },
+        create: { key: markerKey, value: reportDate },
         update: { value: reportDate },
       });
       markerPersisted = true;

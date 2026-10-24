@@ -1,5 +1,5 @@
 import type { Locale } from "@/lib/i18n";
-import { intlLocale } from "@/lib/utils";
+import { intlLocale, numberFormatter } from "@/lib/utils";
 
 /**
  * Pure playback math for the VoiceNotePlayer (R5-e). Kept free of React and
@@ -36,10 +36,10 @@ export function nextVoiceNoteSpeed(current: number): VoiceNoteSpeed {
  */
 export function formatVoiceNoteClock(seconds: number, locale: Locale): string {
   const safe = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
-  const digits = new Intl.NumberFormat(intlLocale(locale), {
+  const digits = numberFormatter(intlLocale(locale), {
     useGrouping: false,
   });
-  const padded = new Intl.NumberFormat(intlLocale(locale), {
+  const padded = numberFormatter(intlLocale(locale), {
     useGrouping: false,
     minimumIntegerDigits: 2,
   });
