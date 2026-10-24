@@ -74,6 +74,13 @@ const fail = (code: string): ExtractionResult => ({
 export interface GeminiExtractorOptions { apiKey: string; timeoutMs?: number }
 
 /**
+ * Longest text the order route accepts per field
+ * (src/app/api/orders/source/whatsapp/route.ts:28-43). A longer model value
+ * would make the draft fail on submit, so it is cut here instead.
+ */
+const TEXT_CAPS = { customerName: 200, commune: 120, address: 500, notes: 2000, productName: 300 } as const;
+
+/**
  * A model answer is held to the same canonical forms as the offline reader
  * (FD-064): 0XXXXXXXXX phones, official wilaya names, catalog item names.
  * A value that cannot be made canonical is dropped and reported missing
@@ -85,9 +92,14 @@ export function canonicalizeOrder(
 ): ExtractedOrder {
   const phone = normalizePhone(order.phone) ?? normalizePhone(input.knownPhone);
   const wilaya = canonicalWilaya(order.wilaya);
-  const clean = (value: string | undefined) => value?.replace(/\s+/g, " ").trim() || undefined;
+  const clean = (value: string | undefined, max: number) =>
+    value?.replace(/\s+/g, " ").trim().slice(0, max).trimEnd() || undefined;
+  const customerName = clean(order.customerName, TEXT_CAPS.customerName);
+  const commune = clean(order.commune, TEXT_CAPS.commune);
+  const address = clean(order.address, TEXT_CAPS.address);
+  const notes = clean(order.notes, TEXT_CAPS.notes);
   const items = order.items
-    .map((item) => ({ ...item, productName: item.productName.replace(/\s+/g, " ").trim() }))
+    .map((item) => ({ ...item, productName: clean(item.productName, TEXT_CAPS.productName) ?? "" }))
     .filter((item) => item.productName)
     .map((item) => {
       const quantity = Math.min(Math.max(item.quantity, 1), 999);
@@ -102,13 +114,13 @@ export function canonicalizeOrder(
     });
   return {
     items,
-    ...(clean(order.customerName) ? { customerName: clean(order.customerName) } : {}),
+    ...(customerName ? { customerName } : {}),
     ...(phone ? { phone } : {}),
     ...(wilaya ? { wilaya } : {}),
-    ...(clean(order.commune) ? { commune: clean(order.commune) } : {}),
-    ...(clean(order.address) ? { address: clean(order.address) } : {}),
+    ...(commune ? { commune } : {}),
+    ...(address ? { address } : {}),
     ...(order.totalPrice !== undefined ? { totalPrice: Math.round(order.totalPrice) } : {}),
-    ...(clean(order.notes) ? { notes: clean(order.notes) } : {}),
+    ...(notes ? { notes } : {}),
   };
 }
 
