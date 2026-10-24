@@ -415,3 +415,40 @@ describe("the stylesheets give Arabic seller text on a French or English page th
     }
   });
 });
+
+/**
+ * The footer's store name is drawn at 24-40 px with `font: 700 ... / 1.1`, which is tight for Arabic: the marks above and
+ * below the letters of a joined line reach into the neighbouring lines. The Arabic page, and a store name tagged lang=ar
+ * on a French or English page, get a normal line height; Latin names keep 1.1.
+ */
+describe("the footer store name has room for Arabic", () => {
+  const lineHeight = (line: string | undefined): number => {
+    const match = /\{(?:[^}]*;)?line-height:([0-9.]+)(?:;[^}]*)?\}$/.exec(line ?? "");
+    return match ? Number(match[1]) : Number.NaN;
+  };
+  const lines = sheet("shop.css").split("\n");
+
+  it("keeps 1.1 for Latin names (the shared rule is unchanged)", () => {
+    const base = lines.find((line) => line.startsWith(".sf-foot strong{"));
+    expect(base, "the shared footer name rule").toBeDefined();
+    expect(base).toContain("/1.1 var(--sf-display)");
+  });
+
+  it("gives the Arabic page a line height of at least 1.3, and tagged Arabic text on other pages the same", () => {
+    const arabic = lines.find((line) => line.startsWith("html[lang=ar] .sf-foot strong{"));
+    expect(arabic, "html[lang=ar] .sf-foot strong rule").toBeDefined();
+    expect(lineHeight(arabic)).toBeGreaterThanOrEqual(1.3);
+    const tagged = lines.find((line) => line.startsWith("html:not([lang=ar]) .sf-foot strong:lang(ar){"));
+    expect(tagged, "twin for Arabic text on a French or English page").toBeDefined();
+    expect(lineHeight(tagged)).toBe(lineHeight(arabic));
+  });
+
+  it("is not tightened again by a style sheet", () => {
+    for (const file of sheets.filter((name) => name !== "shop.css")) {
+      for (const line of sheet(file).split("\n")) {
+        if (!line.includes(".sf-foot strong")) continue;
+        expect(/line-height|font:/.test(line), `${file}: ${line.slice(0, 90)}`).toBe(false);
+      }
+    }
+  });
+});
