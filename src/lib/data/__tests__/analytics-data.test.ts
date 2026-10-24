@@ -235,6 +235,51 @@ describe("advanced analytics profitability authority", () => {
     expect(comparison.current.revenue).toBe(3000);
   });
 
+  it("has no percent change when the previous period was zero", async () => {
+    const now = new Date();
+    await seedOrderWithItem({ status: "delivered", totalPrice: 3000, createdAt: now });
+    await seedOrderWithItem({ status: "returned", totalPrice: 2000, createdAt: now });
+    const current = {
+      from: new Date(now.getTime() - 86_400_000),
+      to: new Date(now.getTime() + 1_000),
+    };
+    const previous = {
+      from: new Date(now.getTime() - 2 * 86_400_000),
+      to: current.from,
+    };
+    const comparison = await getPeriodComparison(current, previous);
+    expect(comparison.previous.orders).toBe(0);
+    expect(comparison.current.returnRate).toBeGreaterThan(0);
+    // Growth from nothing is not "+100 %": same rule as the summary cards.
+    expect(comparison.changes.orders).toBeNull();
+    expect(comparison.changes.revenue).toBeNull();
+    expect(comparison.changes.delivered).toBeNull();
+    expect(comparison.changes.returnRate).toBeNull();
+  });
+
+  it("keeps real percent changes and zero-to-zero as 0", async () => {
+    const now = new Date();
+    const lastPeriod = new Date(now.getTime() - 1.5 * 86_400_000);
+    await seedOrderWithItem({ status: "pending", createdAt: lastPeriod });
+    await seedOrderWithItem({ status: "pending", createdAt: lastPeriod });
+    await seedOrderWithItem({ status: "pending", createdAt: now });
+    await seedOrderWithItem({ status: "pending", createdAt: now });
+    await seedOrderWithItem({ status: "pending", createdAt: now });
+    const current = {
+      from: new Date(now.getTime() - 86_400_000),
+      to: new Date(now.getTime() + 1_000),
+    };
+    const previous = {
+      from: new Date(now.getTime() - 2 * 86_400_000),
+      to: current.from,
+    };
+    const comparison = await getPeriodComparison(current, previous);
+    expect(comparison.changes.orders).toBe(50);
+    // No delivered orders in either period: nothing changed.
+    expect(comparison.changes.delivered).toBe(0);
+    expect(comparison.changes.returnRate).toBe(0);
+  });
+
   it("uses the immutable delivery-time cost snapshot for SKU margin", async () => {
     const category = await db.category.create({ data: { name: "P&L" } });
     const product = await db.product.create({
