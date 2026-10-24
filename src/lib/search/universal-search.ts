@@ -53,27 +53,119 @@ const ARABIC_DIGITS: Record<string, string> = {
 };
 
 /**
+ * Arabic letters that sellers spell in more than one way, folded to one form:
+ * alef wasla to alef, alef maqsura and Persian yeh to ya, ta marbuta to ha,
+ * Persian kaf to Arabic kaf. (Hamza on alef, waw and ya is already removed by
+ * NFKD + mark removal below.)
+ */
+const ARABIC_LETTER_FOLDS: Record<string, string> = {
+  "ٱ": "ا",
+  "ى": "ي",
+  "ی": "ي",
+  "ة": "ه",
+  "ک": "ك",
+};
+
+/** Bidi marks, embeddings, isolates, zero-width spaces and the BOM. */
+const INVISIBLE_MARKS = /[\u061C\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/gu;
+
+export interface SearchFoldOptions {
+  /**
+   * Fold Arabic letter variants and drop invisible bidi marks. Default true.
+   * Turn off ONLY for the keyed tokens of the persisted customer/order index:
+   * they were written without this fold and are not rebuilt yet.
+   */
+  foldLetters?: boolean;
+  /** Read +213 / 00213 / 213 as the national 0 in compactSearchText. Default true. */
+  nationalPhone?: boolean;
+}
+
+/**
  * Normalize seller input consistently across Arabic, French, English and mixed
  * technical values. NFKD + mark removal deliberately makes French accents and
  * Arabic hamza/diacritics search-insensitive while preserving the displayed
  * source value. Search must also not fail because the seller typed Arabic-Indic
- * digits, tatweel, compatibility-width characters or repeated whitespace.
+ * digits, tatweel, compatibility-width characters, bidi marks, ya/alef-maqsura
+ * or ha/ta-marbuta variants, or repeated whitespace.
  */
-export function normalizeSearchText(value: string): string {
-  return value
+export function normalizeSearchText(
+  value: string,
+  options: SearchFoldOptions = {},
+): string {
+  let text = value
     .normalize("NFKD")
     .replace(/\p{M}/gu, "")
     .replace(/[٠-٩۰-۹]/gu, (digit) => ARABIC_DIGITS[digit] ?? digit)
     .replace(/ـ/gu, "")
-    .replace(/[’‘`´]/gu, "'")
-    .toLocaleLowerCase()
-    .trim()
-    .replace(/\s+/gu, " ");
+    .replace(/[’‘`´]/gu, "'");
+  if (options.foldLetters !== false) {
+    text = text
+      .replace(INVISIBLE_MARKS, "")
+      .replace(/[ٱىیةک]/gu, (letter) => ARABIC_LETTER_FOLDS[letter] ?? letter);
+  }
+  return text.toLocaleLowerCase().trim().replace(/\s+/gu, " ");
+}
+
+/**
+ * Digits-only phone typed with the country code: "+213 655 12 34 56",
+ * "00213655123456", a bare 12-digit "213655123456" or "+213 (0) 655 ..."
+ * become the national "0655123456". Anything with letters, or a bare number
+ * of another length, is left alone so order and tracking numbers are safe.
+ */
+function toNationalPhone(normalized: string, compact: string): string {
+  if (!/^\d+$/u.test(compact)) return compact;
+  let rest: string | null = null;
+  if (compact.startsWith("00213")) rest = compact.slice(5);
+  else if (compact.startsWith("213")) {
+    const typedWithPlus = /^\+\s*213/u.test(normalized);
+    if (typedWithPlus || compact.length === 12) rest = compact.slice(3);
+  }
+  if (rest === null) return compact;
+  if (rest.length === 10 && rest.startsWith("0")) rest = rest.slice(1);
+  return `0${rest}`;
 }
 
 /** Normalize phone/order/tracking forms while preserving letters and digits. */
-export function compactSearchText(value: string): string {
-  return normalizeSearchText(value).replace(/[^\p{L}\p{N}]+/gu, "");
+export function compactSearchText(
+  value: string,
+  options: SearchFoldOptions = {},
+): string {
+  const normalized = normalizeSearchText(value, options);
+  const compact = normalized.replace(/[^\p{L}\p{N}]+/gu, "");
+  return options.nationalPhone === false
+    ? compact
+    : toNationalPhone(normalized, compact);
+}
+
+/**
+ * Does the seller's typed text match any of these stored values? Folds both
+ * sides (see normalizeSearchText), reads phones and SKUs across separators
+ * and country codes, and for several words needs every word in one value.
+ * This is the one predicate for lists filtered in memory (pickers, inbox).
+ */
+export function matchesSearchQuery(
+  query: string,
+  fields: ReadonlyArray<string | null | undefined>,
+): boolean {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return true;
+
+  const compactQuery = compactSearchText(query);
+  const tokens = normalizedQuery.split(" ").filter(Boolean);
+
+  for (const field of fields) {
+    if (!field) continue;
+    const label = normalizeSearchText(field);
+    if (!label) continue;
+    if (label.includes(normalizedQuery)) return true;
+    // Phones and SKUs match across separators: "0555 12" -> "055512".
+    if (compactQuery && compactSearchText(field).includes(compactQuery)) return true;
+    // Multi-word queries match when every token is present in one field.
+    if (tokens.length > 1 && tokens.every((token) => label.includes(token))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function tokenPrefixMatch(haystack: string, query: string): boolean {

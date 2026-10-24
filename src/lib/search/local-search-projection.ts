@@ -35,6 +35,16 @@ const ORDER_TOKEN_REFERENCE = {
   field: "order-token",
 } as const;
 
+/**
+ * Customer and order tokens are stored as keyed hashes written BEFORE the
+ * Arabic letter fold (ة/ه, ى/ي, bidi marks) and the +213 phone fold existed.
+ * Until every row is queued for a rebuild, index and query must both keep the
+ * old spelling or an existing customer stops matching its own name. The
+ * query side may already read +213 as 0: stored phones are national numbers.
+ */
+const STORED_TOKEN_FOLD = { foldLetters: false, nationalPhone: false } as const;
+const STORED_TOKEN_QUERY_FOLD = { foldLetters: false } as const;
+
 type BlindIndexClient = Parameters<typeof deriveShopBlindIndexes>[0];
 
 type ProjectedCandidate = UniversalSearchCandidate & {
@@ -316,7 +326,7 @@ function addPersistentValueTokens(
   rawValue: string,
   primary = false,
 ): void {
-  const normalized = normalizeSearchText(rawValue);
+  const normalized = normalizeSearchText(rawValue, STORED_TOKEN_FOLD);
   if (!normalized) return;
 
   if (primary) target.add(`primary-normalized:${normalized}`);
@@ -329,7 +339,7 @@ function addPersistentValueTokens(
     }
   }
 
-  const compact = compactSearchText(normalized);
+  const compact = compactSearchText(normalized, STORED_TOKEN_FOLD);
   if (compact.length < 2) return;
   if (primary) target.add(`primary-compact:${compact}`);
   target.add(`exact-compact:${compact}`);
@@ -346,8 +356,8 @@ function persistentQueryKeys(rawQuery: string): {
   prefixKeys: string[];
   gramKeys: string[];
 } {
-  const query = normalizeSearchText(rawQuery);
-  const compact = compactSearchText(query);
+  const query = normalizeSearchText(rawQuery, STORED_TOKEN_QUERY_FOLD);
+  const compact = compactSearchText(query, STORED_TOKEN_QUERY_FOLD);
   return {
     exactKeys: [
       `primary-normalized:${query}`,
@@ -406,7 +416,7 @@ async function persistedIdsForQuery(
   rawQuery: string,
   unavailableMessage: string,
 ): Promise<string[]> {
-  const query = normalizeSearchText(rawQuery);
+  const query = normalizeSearchText(rawQuery, STORED_TOKEN_QUERY_FOLD);
   if (query.length < 2) return [];
   const { exactKeys, prefixKeys, gramKeys } = persistentQueryKeys(query);
   const hashByKey = await queryTokenHashes(
