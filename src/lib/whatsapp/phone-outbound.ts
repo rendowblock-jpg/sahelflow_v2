@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import type { ServiceContext } from "@/lib/data/service-base";
 import { ConflictError, SahelFlowError } from "@/types/errors";
+import { isSameWhatsAppAccount } from "../../../sidecars/whatsapp/auth-tokens";
 import { deterministicWhatsAppMessageId } from "../../../sidecars/whatsapp/send-receipts";
 import { sidecar } from "./sidecar-client";
 import { messageText, normalizeWhatsAppMessageContent } from "./types";
@@ -141,7 +142,7 @@ export async function persistWhatsAppPhoneOutbound(
     );
   }
   const expectedAccountId = await resolveProviderAccountId(context);
-  if (input.accountId !== expectedAccountId) {
+  if (!isSameWhatsAppAccount(input.accountId, expectedAccountId)) {
     throw new ConflictError(
       "WhatsApp phone message belongs to a different paired account",
     );

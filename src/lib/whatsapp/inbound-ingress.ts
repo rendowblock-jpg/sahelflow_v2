@@ -8,7 +8,10 @@ import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { sealBusinessCommandResultWithKey } from "@/lib/business-truth/result-codec";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { ConflictError, SahelFlowError } from "@/types/errors";
-import { hashWhatsAppAccountId } from "../../../sidecars/whatsapp/auth-tokens";
+import {
+  hashWhatsAppAccountId,
+  isSameWhatsAppAccount,
+} from "../../../sidecars/whatsapp/auth-tokens";
 import { sidecar } from "./sidecar-client";
 
 const INGRESS_SCOPE_PURPOSE = "sahelflow/whatsapp/ingress-scope/v1";
@@ -171,7 +174,7 @@ export async function persistWhatsAppInbound(
 ): Promise<PersistWhatsAppIngressResult> {
   const input = whatsappInboundEnvelopeSchema.parse(rawInput);
   const expectedAccountId = await resolveProviderAccountId(context);
-  if (input.accountId !== expectedAccountId) {
+  if (!isSameWhatsAppAccount(input.accountId, expectedAccountId)) {
     throw new ConflictError(
       "WhatsApp inbound event belongs to a different paired account",
     );
