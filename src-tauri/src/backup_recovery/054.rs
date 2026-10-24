@@ -618,4 +618,316 @@ mod tests {
         );
         fs::remove_dir_all(root).expect("remove restore drill directory");
     }
+
+    // Restore chain through the real entry points: create_backup -> prepare_restore ->
+    // rescue + cutover. create_backup seals with Windows-only AES-GCM, so the two chain tests
+    // are cfg(windows) and run on the Windows CI lane only. apply_pending_restore itself is not
+    // called: its first step rebinds the installation root with Windows DPAPI and no
+    // InstallationRootKey can be built in a test. The cutover replays the same calls
+    // apply_staged_restore makes for each staged shop.
+    #[cfg(windows)]
+    const CHAIN_ROOT_KEY: [u8; 32] = [0x5a; 32];
+    const CHAIN_SHOP_ID: &str = "shop1abc";
+    const CHAIN_SHOP_FILE: &str = "shop1abc.db";
+
+    struct ChainShop {
+        app: PathBuf,
+        downloads: PathBuf,
+        documents: PathBuf,
+        live: PathBuf,
+    }
+
+    fn chain_shop(label: &str) -> ChainShop {
+        let base = test_directory(label);
+        let app = base.join("app");
+        let live = app.join("shops").join(CHAIN_SHOP_FILE);
+        fs::create_dir_all(live.parent().unwrap()).unwrap();
+        fs::create_dir_all(app.join("system")).unwrap();
+        {
+            let connection = seed_shop_database(&live);
+            connection
+                .execute_batch(&format!(
+                    r#"
+                    ALTER TABLE Customer ADD COLUMN phoneEnc TEXT;
+                    ALTER TABLE Customer ADD COLUMN phone2 TEXT;
+                    ALTER TABLE Customer ADD COLUMN address TEXT;
+                    ALTER TABLE Customer ADD COLUMN notes TEXT;
+                    ALTER TABLE "Order" ADD COLUMN phone TEXT;
+                    ALTER TABLE "Order" ADD COLUMN address TEXT;
+                    ALTER TABLE "Order" ADD COLUMN notes TEXT;
+                    CREATE TABLE Conversation (id TEXT PRIMARY KEY, contactName TEXT, contactPhone TEXT);
+                    CREATE TABLE Message (id TEXT PRIMARY KEY, messageType TEXT NOT NULL, attachments TEXT, body TEXT);
+                    CREATE TABLE Secret (id TEXT PRIMARY KEY, ciphertext TEXT);
+                    CREATE TABLE PhoneReputation (id TEXT PRIMARY KEY);
+                    CREATE TABLE Setting (key TEXT PRIMARY KEY, value TEXT);
+                    CREATE TABLE Session (id TEXT PRIMARY KEY);
+                    CREATE TABLE AuthSecret (id TEXT PRIMARY KEY);
+                    CREATE TABLE OutboxIntent (effectKey TEXT PRIMARY KEY, effectType TEXT, status TEXT, outcomeState TEXT, receiptJson TEXT);
+                    CREATE TABLE AuditLog (id INTEGER PRIMARY KEY, action TEXT, entity TEXT, entityId TEXT, metadata TEXT);
+                    CREATE TABLE ProtectedKeyAuthority (
+                        purpose TEXT PRIMARY KEY, formatVersion INTEGER, algorithm TEXT,
+                        keyVersion INTEGER, keyId TEXT, wrappingKeyId TEXT, wrappedKey TEXT
+                    );
+                    CREATE TABLE "_prisma_migrations" (
+                        migration_name TEXT NOT NULL, checksum TEXT NOT NULL, started_at INTEGER NOT NULL,
+                        finished_at INTEGER, rolled_back_at INTEGER
+                    );
+                    INSERT INTO "_prisma_migrations" (migration_name, checksum, started_at, finished_at, rolled_back_at)
+                    VALUES ('20260809000000_restore_chain', '{}', 1, 2, NULL);
+                    "#,
+                    "a".repeat(64)
+                ))
+                .expect("shop schema beyond the drill fixture");
+        }
+        remove_sqlite_sidecars(&live).expect("close out fixture sidecars");
+        let registry = ShopRegistry {
+            format_version: REGISTRY_FORMAT_VERSION,
+            revision: 1,
+            workspace_id: "10".repeat(16),
+            installation_id: "30".repeat(16),
+            active_shop_id: Some(CHAIN_SHOP_ID.to_owned()),
+            shops: vec![ShopRecord {
+                id: CHAIN_SHOP_ID.to_owned(),
+                incarnation_id: "ab".repeat(16),
+                name: "Chain shop".to_owned(),
+                database_file: CHAIN_SHOP_FILE.to_owned(),
+                icon: None,
+                created_at: "2026-10-24T00:00:00Z".to_owned(),
+            }],
+        };
+        write_json_atomic(&app.join(REGISTRY_FILE), &registry).expect("registry");
+        ChainShop {
+            app,
+            downloads: base.join("downloads"),
+            documents: base.join("documents"),
+            live,
+        }
+    }
+
+    // After the backup: one customer and order added, two orders deleted, one rewritten.
+    fn chain_change_shop(live: &Path) {
+        let connection = Connection::open(live).expect("open live shop");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO Customer (id, name, phone) VALUES ('cus-900', 'زبون جديد', '0555999999');
+                INSERT INTO "Order" (id, customerId, status, totalCents, note)
+                    VALUES ('ord-9000', 'cus-900', 'pending', 777000, 'after the backup');
+                INSERT INTO OrderLine (id, orderId, sku, qty, unitCents)
+                    VALUES ('ord-9000-l0', 'ord-9000', 'SKU-X', 2, 1000);
+                DELETE FROM CashMovement WHERE orderId IN ('ord-0001', 'ord-0002');
+                DELETE FROM OrderLine WHERE orderId IN ('ord-0001', 'ord-0002');
+                DELETE FROM "Order" WHERE id IN ('ord-0001', 'ord-0002');
+                UPDATE "Order" SET status = 'cancelled', totalCents = 1 WHERE id = 'ord-0003';
+                "#,
+            )
+            .expect("change the live shop after the backup");
+        drop(connection);
+        remove_sqlite_sidecars(live).expect("close out live sidecars");
+    }
+
+    // create_rescue is what apply_pending_restore runs before it touches a shop. It needs no
+    // crypto, so this part of the chain runs everywhere.
+    #[test]
+    fn rescue_keeps_the_pre_restore_shop_and_a_damaged_rescue_is_not_trusted() {
+        let shop = chain_shop("restore-rescue");
+        chain_change_shop(&shop.live);
+        let current = open_and_fingerprint(&shop.live);
+        remove_sqlite_sidecars(&shop.live).expect("close out sidecars");
+        let live_digest = sha256_file(&shop.live).expect("live digest");
+        let journal = test_restore_journal(RestoreJournalState::Staged);
+
+        create_rescue(&shop.app, &journal).expect("create_rescue");
+        let rescue = restore_rescue_root(&shop.app).join(&journal.unsigned.rescue_directory);
+        assert!(rescue.join("rescue-manifest.json").is_file());
+        assert_eq!(
+            sha256_file(&rescue.join("shop-registry.json")).expect("rescued registry"),
+            sha256_file(&shop.app.join(REGISTRY_FILE)).expect("live registry")
+        );
+        let rescued_file = rescue.join("shops").join(CHAIN_SHOP_FILE);
+        assert_eq!(
+            open_and_fingerprint(&rescued_file),
+            current,
+            "the rescue must hold the pre-restore rows"
+        );
+        assert_eq!(
+            sha256_file(&shop.live).expect("live digest after rescue"),
+            live_digest,
+            "taking the rescue must not change the live shop"
+        );
+
+        // After a crash apply runs create_rescue again: it must re-validate, not rebuild.
+        create_rescue(&shop.app, &journal).expect("create_rescue is repeatable");
+        let mut bytes = fs::read(&rescued_file).expect("rescued bytes");
+        let middle = bytes.len() / 2;
+        bytes[middle] ^= 0x01;
+        fs::write(&rescued_file, bytes).expect("damage the rescue");
+        assert!(
+            create_rescue(&shop.app, &journal).is_err(),
+            "a damaged rescue must not be trusted"
+        );
+        fs::remove_dir_all(shop.app.parent().unwrap()).expect("remove restore chain directory");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn restore_chain_returns_the_shop_to_the_backed_up_rows_and_keeps_the_pre_restore_state() {
+        let shop = chain_shop("restore-chain");
+        let backed_up = open_and_fingerprint(&shop.live);
+        remove_sqlite_sidecars(&shop.live).expect("close out sidecars");
+        let authority = discover_backup_authority(&shop.app).expect("backup authority");
+        let summary = create_backup(
+            &shop.app,
+            &shop.downloads,
+            &shop.documents,
+            &CHAIN_ROOT_KEY,
+            &authority,
+        )
+        .expect("create_backup");
+        assert_eq!(summary.shop_count, 1);
+
+        chain_change_shop(&shop.live);
+        let changed = open_and_fingerprint(&shop.live);
+        remove_sqlite_sidecars(&shop.live).expect("close out sidecars");
+        assert_ne!(changed, backed_up, "the fixture must differ from the backup");
+        let changed_digest = sha256_file(&shop.live).expect("changed shop digest");
+
+        let prepared = prepare_restore(
+            &shop.app,
+            &shop.downloads,
+            &shop.documents,
+            &CHAIN_ROOT_KEY,
+            &authority,
+            &summary.backup_id,
+            None,
+        )
+        .expect("prepare_restore");
+        assert!(prepared.restart_required);
+        assert_eq!(prepared.source_shop_count, 1);
+        assert_eq!(
+            sha256_file(&shop.live).expect("live digest after prepare"),
+            changed_digest,
+            "prepare_restore must not touch the live shop"
+        );
+
+        assert!(pending_restore_path(&shop.app).exists());
+        let journal = read_restore_journal(&shop.app, &CHAIN_ROOT_KEY).expect("restore journal");
+        assert_eq!(journal.unsigned.state, RestoreJournalState::Staged);
+        assert_eq!(journal.unsigned.backup_id, summary.backup_id);
+        let staging = validated_restore_directory(
+            &restore_staging_root(&shop.app),
+            &journal.unsigned.staging_directory,
+            true,
+        )
+        .expect("staging directory");
+        let manifest_path = staging.join("restore-manifest.json");
+        assert_eq!(
+            sha256_file(&manifest_path).expect("manifest digest"),
+            journal.unsigned.manifest_sha256
+        );
+        let staged: StagedRestoreManifest =
+            read_json_limited(&manifest_path, MAX_JSON_BYTES).expect("staged manifest");
+        validate_staged_restore(&staged, &journal, &staging).expect("staged set authenticates");
+        assert_eq!(staged.staged_objects.len(), 1);
+        let object = &staged.staged_objects[0];
+        let staged_path = safe_relative_path(&staging, &object.staged_file).expect("staged path");
+        // Read a copy so the staged file keeps the exact bytes the manifest digest covers.
+        let probe = shop.app.join("staged-probe.db");
+        fs::copy(&staged_path, &probe).expect("copy staged database");
+        assert_eq!(open_and_fingerprint(&probe), backed_up, "staged rows differ from the backup");
+
+        // What apply does before it touches a shop: keep the current state as the rescue.
+        create_rescue(&shop.app, &journal).expect("create_rescue");
+        let rescue = restore_rescue_root(&shop.app).join(&journal.unsigned.rescue_directory);
+        assert!(rescue.join("rescue-manifest.json").is_file());
+        assert_eq!(
+            sha256_file(&rescue.join("shop-registry.json")).expect("rescued registry"),
+            sha256_file(&shop.app.join(REGISTRY_FILE)).expect("live registry")
+        );
+        assert_eq!(
+            open_and_fingerprint(&rescue.join("shops").join(CHAIN_SHOP_FILE)),
+            changed,
+            "the rescue must hold the pre-restore rows"
+        );
+        // Cutover, as apply_staged_restore does for each staged shop.
+        let target = shop.app.join("shops").join(&object.database_file);
+        replace_from_verified_source(&staged_path, &target, &object.sha256).expect("cutover");
+        remove_sqlite_sidecars(&target).expect("sidecars");
+        preflight_database(&target).expect("restored shop passes preflight");
+        assert_eq!(sha256_file(&target).expect("restored digest"), object.sha256);
+        assert_eq!(open_and_fingerprint(&target), backed_up, "restored rows differ from the backup");
+        fs::remove_dir_all(shop.app.parent().unwrap()).expect("remove restore chain directory");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn tampered_or_truncated_backup_is_refused_at_prepare_and_the_live_shop_is_untouched() {
+        let shop = chain_shop("restore-chain-tamper");
+        let authority = discover_backup_authority(&shop.app).expect("backup authority");
+        let summary = create_backup(
+            &shop.app,
+            &shop.downloads,
+            &shop.documents,
+            &CHAIN_ROOT_KEY,
+            &authority,
+        )
+        .expect("create_backup");
+        chain_change_shop(&shop.live);
+        let live_digest = sha256_file(&shop.live).expect("live digest");
+
+        let container = backup_root(&shop.downloads)
+            .expect("backup root")
+            .join(format!("{}{BACKUP_SUFFIX}", summary.backup_id));
+        let victim = if container.is_dir() {
+            container.join(OBJECTS_DIRECTORY).join("shop-00.sfo")
+        } else {
+            container.clone()
+        };
+        let pristine = fs::read(&victim).expect("backup object bytes");
+        assert!(pristine.len() > 1000, "fixture must be larger than a header");
+        let mut flipped = pristine.clone();
+        let middle = flipped.len() / 2;
+        flipped[middle] ^= 0x01;
+        let cases: Vec<(&str, Vec<u8>)> = vec![
+            ("flipped-byte", flipped),
+            ("truncated-half", pristine[..pristine.len() / 2].to_vec()),
+            ("zero-bytes", Vec::new()),
+        ];
+        for (label, bytes) in cases {
+            fs::write(&victim, &bytes).expect("damage the backup");
+            let outcome = prepare_restore(
+                &shop.app,
+                &shop.downloads,
+                &shop.documents,
+                &CHAIN_ROOT_KEY,
+                &authority,
+                &summary.backup_id,
+                None,
+            );
+            assert!(outcome.is_err(), "{label}: prepare_restore accepted a damaged backup");
+            assert_eq!(
+                sha256_file(&shop.live).expect("live digest after refusal"),
+                live_digest,
+                "{label}: the live shop changed"
+            );
+            assert!(!pending_restore_path(&shop.app).exists(), "{label}: a restore is pending");
+            let staged_left = fs::read_dir(restore_staging_root(&shop.app))
+                .map(|entries| entries.count())
+                .unwrap_or(0);
+            assert_eq!(staged_left, 0, "{label}: staging was left behind");
+        }
+        // The refusals above came from the damage: the same backup, repaired, prepares.
+        fs::write(&victim, &pristine).expect("repair the backup");
+        prepare_restore(
+            &shop.app,
+            &shop.downloads,
+            &shop.documents,
+            &CHAIN_ROOT_KEY,
+            &authority,
+            &summary.backup_id,
+            None,
+        )
+        .expect("the undamaged backup prepares");
+        fs::remove_dir_all(shop.app.parent().unwrap()).expect("remove restore chain directory");
+    }
 }
