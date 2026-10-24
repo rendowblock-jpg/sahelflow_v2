@@ -333,16 +333,87 @@ fn maximize_before_show(window: &WebviewWindow) {
     }
 }
 
+/// A bounded retry schedule: `attempts` tries in total, waiting `first_delay`
+/// after the first failure and doubling the wait up to `max_delay`.
+#[derive(Clone, Copy)]
+struct Backoff {
+    attempts: u8,
+    first_delay: Duration,
+    max_delay: Duration,
+}
+
+/// Showing the workspace window sends a message to the WebView. Right after a
+/// quick close and reopen (or a protected-key rotation relaunch) that message
+/// can fail for a moment ("failed to send message to the webview") while the
+/// previous instance's WebView is still going down. 8 tries over about 4.5 s
+/// (100, 200, 400, 800, then 1000 ms waits) ride that out; a permanent failure
+/// still ends in SF-WINDOW-SHOW-BLOCKED.
+const WINDOW_SHOW_BACKOFF: Backoff = Backoff {
+    attempts: 8,
+    first_delay: Duration::from_millis(100),
+    max_delay: Duration::from_secs(1),
+};
+
+/// Run `operation` (given the 1-based attempt number) until it succeeds or the
+/// attempts are used up. `on_failure` sees every failed attempt, `sleep` is the
+/// wait between attempts (never after the last one). Returns the number of
+/// attempts made with the final result; on exhaustion that is the LAST error.
+fn retry_with_backoff<T, E>(
+    backoff: Backoff,
+    mut operation: impl FnMut(u8) -> Result<T, E>,
+    mut on_failure: impl FnMut(u8, &E),
+    mut sleep: impl FnMut(Duration),
+) -> (u8, Result<T, E>) {
+    let attempts = backoff.attempts.max(1);
+    let mut delay = backoff.first_delay.min(backoff.max_delay);
+    let mut attempt = 1;
+    loop {
+        match operation(attempt) {
+            Ok(value) => return (attempt, Ok(value)),
+            Err(error) => {
+                on_failure(attempt, &error);
+                if attempt >= attempts {
+                    return (attempt, Err(error));
+                }
+                sleep(delay);
+                delay = delay.saturating_mul(2).min(backoff.max_delay);
+                attempt += 1;
+            }
+        }
+    }
+}
+
+fn window_show_blocked_detail(attempts: u8, error: &dyn std::fmt::Display) -> String {
+    format!(
+        "the authenticated workspace was ready but the desktop window could not be shown: {error} (after {attempts} attempts)"
+    )
+}
+
 fn monitor_packaged_ui(app: tauri::AppHandle, window: WebviewWindow, app_data_dir: PathBuf) {
     thread::spawn(move || {
         if wait_for_matching_ui_ready(&app_data_dir, PACKAGED_UI_READY_TIMEOUT) {
             record_startup_stage(&app_data_dir, "ui-ready", None);
-            maximize_before_show(&window);
-            if let Err(error) = window.show().and_then(|_| window.set_focus()) {
-                let detail = format!("the authenticated workspace was ready but the desktop window could not be shown: {error}");
+            // The maximize is part of each attempt: if it hit the same
+            // transient, the retry gives the window its size back too.
+            let (attempts, shown) = retry_with_backoff(
+                WINDOW_SHOW_BACKOFF,
+                |_attempt| {
+                    maximize_before_show(&window);
+                    window.show().and_then(|_| window.set_focus())
+                },
+                |attempt, error| {
+                    record_startup_stage(&app_data_dir, "window-show-failed", Some(attempt));
+                    eprintln!(
+                        "[sahelflow] the workspace window could not be shown (attempt {attempt} of {}): {error}",
+                        WINDOW_SHOW_BACKOFF.attempts
+                    );
+                },
+                thread::sleep,
+            );
+            if let Err(error) = shown {
+                let detail = window_show_blocked_detail(attempts, &error);
                 eprintln!("[sahelflow] FATAL: {detail}");
                 let _ = show_blocked(&app, "SF-WINDOW-SHOW-BLOCKED", &detail);
-                return;
             }
             return;
         }
@@ -782,5 +853,94 @@ mod tests {
         let html = recovery_html("SF-TEST", "<script>bad()</script>", "C:\\report.json");
         assert!(!html.contains("<script>bad()</script>"));
         assert!(html.contains("&lt;script&gt;bad()&lt;/script&gt;"));
+    }
+
+    /// Runs `retry_with_backoff` against a scripted operation that fails the
+    /// first `failures` times, recording every call, failure and sleep.
+    fn run_scripted_retry(
+        backoff: Backoff,
+        failures: u8,
+    ) -> (u8, Result<u8, String>, Vec<u8>, Vec<u8>, Vec<u64>) {
+        let mut calls = Vec::new();
+        let mut failed = Vec::new();
+        let mut sleeps = Vec::new();
+        let (attempts, result) = retry_with_backoff(
+            backoff,
+            |attempt| {
+                calls.push(attempt);
+                if attempt <= failures {
+                    Err(format!("webview not ready on attempt {attempt}"))
+                } else {
+                    Ok(attempt)
+                }
+            },
+            |attempt, _error| failed.push(attempt),
+            |delay| sleeps.push(delay.as_millis() as u64),
+        );
+        (attempts, result, calls, failed, sleeps)
+    }
+
+    #[test]
+    fn window_show_retry_succeeds_on_the_first_attempt_without_sleeping() {
+        let (attempts, result, calls, failed, sleeps) = run_scripted_retry(WINDOW_SHOW_BACKOFF, 0);
+
+        assert_eq!(attempts, 1);
+        assert_eq!(result, Ok(1));
+        assert_eq!(calls, vec![1]);
+        assert!(failed.is_empty());
+        assert!(sleeps.is_empty());
+    }
+
+    #[test]
+    fn window_show_retry_recovers_after_three_transient_failures() {
+        let (attempts, result, calls, failed, sleeps) = run_scripted_retry(WINDOW_SHOW_BACKOFF, 3);
+
+        assert_eq!(attempts, 4);
+        assert_eq!(result, Ok(4));
+        assert_eq!(calls, vec![1, 2, 3, 4]);
+        assert_eq!(failed, vec![1, 2, 3]);
+        assert_eq!(sleeps, vec![100, 200, 400]);
+    }
+
+    #[test]
+    fn window_show_retry_gives_up_with_the_last_error_and_a_capped_schedule() {
+        let (attempts, result, calls, failed, sleeps) =
+            run_scripted_retry(WINDOW_SHOW_BACKOFF, u8::MAX);
+
+        assert_eq!(attempts, 8);
+        assert_eq!(
+            result,
+            Err("webview not ready on attempt 8".to_string()),
+            "the error of the LAST attempt is the one reported"
+        );
+        assert_eq!(calls, vec![1, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(failed, vec![1, 2, 3, 4, 5, 6, 7, 8]);
+        // No sleep after the last attempt; doubling stops at the 1 s cap.
+        assert_eq!(sleeps, vec![100, 200, 400, 800, 1000, 1000, 1000]);
+        assert!(sleeps.iter().sum::<u64>() <= 5_000);
+    }
+
+    #[test]
+    fn window_show_retry_always_makes_at_least_one_attempt() {
+        let backoff = Backoff {
+            attempts: 0,
+            ..WINDOW_SHOW_BACKOFF
+        };
+        let (attempts, result, calls, _, sleeps) = run_scripted_retry(backoff, u8::MAX);
+
+        assert_eq!(attempts, 1);
+        assert!(result.is_err());
+        assert_eq!(calls, vec![1]);
+        assert!(sleeps.is_empty());
+    }
+
+    #[test]
+    fn window_show_blocked_detail_keeps_the_text_and_adds_the_attempt_count() {
+        let detail = window_show_blocked_detail(8, &"failed to send message to the webview");
+
+        assert!(detail.starts_with(
+            "the authenticated workspace was ready but the desktop window could not be shown: failed to send message to the webview"
+        ));
+        assert!(detail.contains("8 attempts"));
     }
 }
