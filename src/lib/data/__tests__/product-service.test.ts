@@ -4,7 +4,14 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { productService } from "../product-service";
-import { createTestPrisma, disconnectTestPrisma, seedProduct, seedCategory } from "./helpers";
+import {
+  createTestPrisma,
+  disconnectTestPrisma,
+  seedProduct,
+  seedCategory,
+  seedCustomer,
+  seedOrder,
+} from "./helpers";
 import { NotFoundError, ConflictError } from "@/types/errors";
 
 let db: PrismaClient;
@@ -183,6 +190,126 @@ describe("productService.update", () => {
     await expect(
       productService.update({ prisma: db as never }, p1.id, { sku: "SKU2" }),
     ).rejects.toThrow(ConflictError);
+  });
+});
+
+// ── update: stock refusal names the holding orders ──────────────────────────
+
+describe("productService.update stock refusal", () => {
+  // A reservation row needs a command row (foreign key); the state is the only
+  // thing these tests care about.
+  async function hold(
+    orderId: string,
+    productId: string,
+    state: "active" | "released" | "consumed",
+  ): Promise<void> {
+    const id = `${state}-${orderId}`;
+    await db.$executeRaw`
+      INSERT INTO "BusinessCommand" ("id", "idempotencyKey", "commandType", "aggregateType",
+        "aggregateId", "requestHash", "status", "actor", "correlationId", "expectedVersion")
+      VALUES (${id}, ${id}, 'test', 'order', ${orderId}, 'h', 'committed', 'test', ${id}, 0)
+    `;
+    await db.$executeRaw`
+      INSERT INTO "InventoryReservation" ("id", "reservationKey", "orderId", "productId",
+        "quantity", "state", "createdByCommandId")
+      VALUES (${id}, ${id}, ${orderId}, ${productId}, 1, ${state}, ${id})
+    `;
+  }
+
+  async function holders(
+    productId: string,
+    states: Array<"active" | "released" | "consumed">,
+  ): Promise<string[]> {
+    const customer = await seedCustomer(db);
+    const numbers: string[] = [];
+    for (const state of states) {
+      const order = await seedOrder(db, {
+        customerId: customer.id,
+        productId,
+        status: "confirmed",
+      });
+      await hold(order.id, productId, state);
+      numbers.push(order.orderNumber);
+    }
+    return numbers;
+  }
+
+  async function refusalMessage(productId: string): Promise<string> {
+    try {
+      await productService.update({ prisma: db as never }, productId, { stock: 50 });
+    } catch (error) {
+      expect(error).toMatchObject({ code: "CANONICAL_STOCK_ADJUSTMENT_REQUIRED" });
+      return (error as Error).message;
+    }
+    throw new Error("stock edit was not refused");
+  }
+
+  it("refusal lists up to 5 order numbers holding the product", async () => {
+    const product = await seedProduct(db, { stock: 10 });
+    const numbers = await holders(product.id, ["active", "active"]);
+
+    const message = await refusalMessage(product.id);
+
+    for (const number of numbers) expect(message).toContain(number);
+    expect(message).not.toMatch(/more/);
+  });
+
+  it("released and consumed reservations are not listed", async () => {
+    const product = await seedProduct(db, { stock: 10 });
+    const [active, released, consumed] = await holders(product.id, [
+      "active",
+      "released",
+      "consumed",
+    ]);
+
+    const message = await refusalMessage(product.id);
+
+    expect(message).toContain(active);
+    expect(message).not.toContain(released);
+    expect(message).not.toContain(consumed);
+  });
+
+  it("an order holding the product in two lines is named once", async () => {
+    const product = await seedProduct(db, { stock: 10 });
+    const customer = await seedCustomer(db);
+    const order = await seedOrder(db, {
+      customerId: customer.id,
+      productId: product.id,
+      status: "confirmed",
+    });
+    await hold(order.id, product.id, "active");
+    await db.$executeRaw`
+      INSERT INTO "InventoryReservation" ("id", "reservationKey", "orderId", "productId",
+        "quantity", "state", "createdByCommandId")
+      VALUES ('second-line', 'second-line', ${order.id}, ${product.id}, 1, 'active', ${`active-${order.id}`})
+    `;
+
+    const message = await refusalMessage(product.id);
+
+    expect(message.split(order.orderNumber)).toHaveLength(2);
+    expect(message).not.toMatch(/more/);
+  });
+
+  it("more than 5 holders: message says how many more", async () => {
+    const product = await seedProduct(db, { stock: 10 });
+    const numbers = await holders(product.id, Array(7).fill("active"));
+
+    const message = await refusalMessage(product.id);
+
+    const named = numbers.filter((number) => message.includes(number));
+    expect(named).toHaveLength(5);
+    expect(message).toContain("2 more");
+  });
+
+  it("no active reservation: stock edit still works", async () => {
+    const product = await seedProduct(db, { stock: 10 });
+    await holders(product.id, ["released", "consumed"]);
+
+    const updated = await productService.update({ prisma: db as never }, product.id, {
+      stock: 50,
+    });
+
+    expect(updated.stock).toBe(50);
   });
 });
 
