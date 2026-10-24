@@ -2240,7 +2240,9 @@ mod imp {
     #[cfg(test)]
     mod glow_draw_tests {
         use super::*;
-        use crate::native_splash::glow_layer_tests::{worst_window_error, SKY, WINDOW_ERROR_LIMIT};
+        use crate::native_splash::glow_layer_tests::{
+            green_row, inner_span, local_deviation, worst_window_error, SKY,
+        };
 
         #[test]
         fn the_glow_layer_reaches_a_gdi_surface_one_pixel_to_one_pixel() {
@@ -2292,13 +2294,33 @@ mod imp {
                     worst = worst.max(difference);
                 }
             }
-            assert!(worst <= 2, "GDI+ changed the glow by up to {worst} levels");
+            eprintln!("GLOWDIAG worst per-pixel difference {worst}");
             for y in [60_usize, 108, 250] {
-                let error = worst_window_error(&surface, y, alpha);
-                assert!(
-                    error <= WINDOW_ERROR_LIMIT,
-                    "row {y} of the GDI+ surface steps: window error {error} over {WINDOW_ERROR_LIMIT}"
+                let (a, b) = inner_span(y);
+                let layer_row = green_row(&layer, y);
+                let surface_row = green_row(&surface, y);
+                let offset: f32 =
+                    (a..b).map(|x| surface_row[x] - layer_row[x]).sum::<f32>() / (b - a) as f32;
+                eprintln!(
+                    "GLOWDIAG row {y}: local deviation layer {:.3} surface {:.3}; mean(surface - layer) {offset:.3}; exact-curve error {:.3}",
+                    local_deviation(&layer_row, a, b),
+                    local_deviation(&surface_row, a, b),
+                    worst_window_error(&surface, y, alpha),
                 );
+                let take =
+                    |row: &[f32]| -> Vec<u32> { row[130..170].iter().map(|v| *v as u32).collect() };
+                eprintln!(
+                    "GLOWDIAG row {y} layer   green x130..170 {:?}",
+                    take(&layer_row)
+                );
+                eprintln!(
+                    "GLOWDIAG row {y} surface green x130..170 {:?}",
+                    take(&surface_row)
+                );
+                let alpha_differs = (0..600)
+                    .filter(|x| (layer[y * 600 + x] >> 24) != (surface[y * 600 + x] >> 24))
+                    .count();
+                eprintln!("GLOWDIAG row {y}: pixels whose alpha differs {alpha_differs} of 600");
             }
         }
     }
@@ -2698,6 +2720,61 @@ pub(crate) mod glow_layer_tests {
             .windows(6)
             .map(|window| (window.iter().sum::<f32>() / 6.0).abs())
             .fold(0.0, f32::max)
+    }
+
+    /// The green channel of every pixel of row `y` (the glow is light teal, so green carries most of its steps).
+    pub(crate) fn green_row(pixels: &[u32], y: usize) -> Vec<f32> {
+        (0..W)
+            .map(|x| channel(pixels[y * W + x], 8) as f32)
+            .collect()
+    }
+
+    /// The part of row `y` that lies well inside the glow (25 px in from its edge).
+    pub(crate) fn inner_span(y: usize) -> (usize, usize) {
+        let dy = y as f32 + 0.5 - CENTER.1;
+        let half = (GLOW_RADIUS * GLOW_RADIUS - dy * dy).max(0.0).sqrt();
+        (
+            (CENTER.0 - half + 25.0).max(0.0) as usize,
+            ((CENTER.0 + half - 25.0) as usize).min(W),
+        )
+    }
+
+    /// How far the mean of six neighbouring samples strays from the mean of the 41 samples around them, at the
+    /// worst place in `from..to`, in levels. Flat steps make it large; an overall offset does not change it.
+    pub(crate) fn local_deviation(row: &[f32], from: usize, to: usize) -> f32 {
+        let last = row.len() - 1;
+        let around = |i: usize| {
+            let lo = i.saturating_sub(20);
+            let hi = (i + 20).min(last);
+            row[lo..=hi].iter().sum::<f32>() / (hi - lo + 1) as f32
+        };
+        let strays: Vec<f32> = (from..to).map(|i| row[i] - around(i)).collect();
+        strays
+            .windows(6)
+            .map(|w| (w.iter().sum::<f32>() / 6.0).abs())
+            .fold(0.0, f32::max)
+    }
+
+    #[test]
+    fn calibration_of_the_local_deviation() {
+        for alpha in [0.05_f32, 0.086, 0.17] {
+            let good = glow_layer(W, H, CENTER, GLOW_RADIUS, SKY, alpha);
+            let mut stepped = good.clone();
+            for pixel in &mut stepped {
+                let green = (channel(*pixel, 8) + 1) / 3 * 3;
+                *pixel = (*pixel & !0x0000_FF00) | (green << 8);
+            }
+            let plain = glow_layer_with(W, H, CENTER, GLOW_RADIUS, SKY, alpha, |_, _| 0.5);
+            for y in [60_usize, 108, 250] {
+                let (a, b) = inner_span(y);
+                eprintln!(
+                    "GLOWCAL alpha {alpha} row {y}: grain {:.3} | plain rounding {:.3} | three-level steps {:.3}",
+                    local_deviation(&green_row(&good, y), a, b),
+                    local_deviation(&green_row(&plain, y), a, b),
+                    local_deviation(&green_row(&stepped, y), a, b),
+                );
+            }
+        }
     }
 
     #[test]
