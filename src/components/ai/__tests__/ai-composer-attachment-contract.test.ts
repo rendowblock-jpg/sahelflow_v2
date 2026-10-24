@@ -124,6 +124,10 @@ describe("AI composer images and screenshot reading (AI-21)", () => {
     // Reading an image back needs the same authority as the conversation.
     expect(read).toContain('requireAuth("ai.use")');
     expect(read).toContain("nosniff");
+    // A chat image is customer data: the browser must not keep it for a day.
+    expect(read).toContain('"Cache-Control": "private, no-store"');
+    expect(read).not.toContain("immutable");
+    expect(read).not.toContain("max-age");
   });
 
   it("ships every composer-attachment key in en/fr/ar", () => {

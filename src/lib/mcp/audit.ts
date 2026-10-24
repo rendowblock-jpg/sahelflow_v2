@@ -22,21 +22,62 @@ import { MCP_AUDIT_MAX_DEPTH, MCP_AUDIT_STRING_LIMIT } from "./contracts";
 
 const ELIDED = "[elided]";
 const TRUNCATED_DEPTH = "[depth]";
+const MASKED = "[REDACTED]";
+
+/**
+ * Argument keys that carry free text about a person or a delivery. A short
+ * address or note is still PII, so these values are masked whatever their
+ * length. Ids, counts, enums and places (wilaya, commune) are not in this list
+ * and stay readable. Keys are compared lower-case without separators.
+ */
+const FREE_TEXT_KEYS = new Set(
+  [
+    "name",
+    "fullName",
+    "firstName",
+    "lastName",
+    "customerName",
+    "contactName",
+    "recipient",
+    "address",
+    "addressLine1",
+    "addressLine2",
+    "note",
+    "notes",
+    "deliveryNotes",
+    "comment",
+    "comments",
+    "message",
+    "messageBody",
+    "body",
+    "text",
+    "reason",
+    "query",
+    "email",
+  ].map((key) => key.toLowerCase()),
+);
+
+function isFreeTextKey(key: string): boolean {
+  return FREE_TEXT_KEYS.has(key.toLowerCase().replace(/[^a-z0-9]/g, ""));
+}
 
 /**
  * Bound and de-identify an arbitrary value for an audit row.
  *
  * Strings longer than `MCP_AUDIT_STRING_LIMIT` are elided rather than
- * truncated, because a truncated address or note is still PII. Nesting deeper
- * than `MCP_AUDIT_MAX_DEPTH` collapses to a marker.
+ * truncated, because a truncated address or note is still PII. Strings under a
+ * free-text key (see FREE_TEXT_KEYS) are masked at any length, including those
+ * nested below that key. Nesting deeper than `MCP_AUDIT_MAX_DEPTH` collapses to
+ * a marker.
  */
-export function redactForAudit(value: unknown, depth = 0): unknown {
+export function redactForAudit(value: unknown, depth = 0, freeText = false): unknown {
   if (depth > MCP_AUDIT_MAX_DEPTH) return TRUNCATED_DEPTH;
   if (value === null || value === undefined) return null;
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value === "bigint") return Number(value);
   if (typeof value === "string") {
+    if (freeText && value.length > 0) return MASKED;
     if (value.length > MCP_AUDIT_STRING_LIMIT) return ELIDED;
     return redactPhonesInText(value);
   }
@@ -44,12 +85,12 @@ export function redactForAudit(value: unknown, depth = 0): unknown {
     return Number.isNaN(value.getTime()) ? null : value.toISOString();
   }
   if (Array.isArray(value)) {
-    return value.slice(0, 200).map((entry) => redactForAudit(entry, depth + 1));
+    return value.slice(0, 200).map((entry) => redactForAudit(entry, depth + 1, freeText));
   }
   if (typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-      out[key] = redactForAudit(entry, depth + 1);
+      out[key] = redactForAudit(entry, depth + 1, freeText || isFreeTextKey(key));
     }
     return out;
   }
