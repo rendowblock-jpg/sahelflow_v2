@@ -55,7 +55,8 @@ describe("phone reputation re-report audit (MNY-18)", () => {
 
     const rows = await auditRows();
     expect(rows).toHaveLength(1);
-    const [entry] = rows;
+    const entry = rows[0];
+    if (!entry) throw new Error("no audit row was written");
     expect(entry.entity).toBe("phone_reputation");
 
     const stored = await db.phoneReputation.findFirstOrThrow();
@@ -91,7 +92,7 @@ describe("phone reputation re-report audit (MNY-18)", () => {
 
     const rows = await auditRows();
     expect(rows).toHaveLength(2);
-    expect(JSON.parse(rows[1].metadata ?? "{}")).toMatchObject({
+    expect(JSON.parse(rows[1]?.metadata ?? "{}")).toMatchObject({
       from: "[o2] b",
       to: "[o3] c",
       reportCount: 3,
@@ -102,7 +103,8 @@ describe("phone reputation re-report audit (MNY-18)", () => {
     await reportBadPhone(ctx(), PHONE, "x".repeat(300), "o1");
     await reportBadPhone(ctx(), PHONE, "y".repeat(400), "o2");
 
-    const [entry] = await auditRows();
+    const entry = (await auditRows())[0];
+    if (!entry) throw new Error("no audit row was written");
     const metadata = JSON.parse(entry.metadata ?? "{}");
     expect(metadata.from).toHaveLength(200);
     expect(metadata.to).toHaveLength(200);

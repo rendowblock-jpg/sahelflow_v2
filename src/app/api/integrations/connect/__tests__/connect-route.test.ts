@@ -147,7 +147,7 @@ describe("POST /api/integrations/connect — only declared secret fields (INT-13
   const written = () =>
     harness.setSecret.mock.calls.map((call) => call[1] as string);
   const deleted = () =>
-    harness.deleteSecret.mock.calls.map((call) => call[1] as string);
+    harness.deleteSecret.mock.calls.map((call) => (call as unknown as unknown[])[1] as string);
 
   it("does not store a supplied field the provider does not declare", async () => {
     const response = await POST(

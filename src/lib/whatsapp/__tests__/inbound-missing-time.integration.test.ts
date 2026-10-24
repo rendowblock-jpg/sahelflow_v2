@@ -173,6 +173,6 @@ describe("inbound message with no provider time (MSG-15)", () => {
     const [first] = await db.conversation.findMany({
       orderBy: { lastMessageAt: "desc" },
     });
-    expect(first.sourceId).toBe(JID);
+    expect(first?.sourceId).toBe(JID);
   });
 });

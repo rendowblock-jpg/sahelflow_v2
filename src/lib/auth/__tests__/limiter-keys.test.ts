@@ -187,14 +187,14 @@ describe("idle failed member buckets are evicted (LEAD-01)", () => {
     vi.useFakeTimers();
     const keys = fillWithFailedJunkIds();
     vi.advanceTimersByTime(IDLE_MS - 1_000);
-    recordLoginFailure(keys[0]); // still active: its idle clock restarts
+    recordLoginFailure(keys[0] as string); // still active: its idle clock restarts
     vi.advanceTimersByTime(2_000);
 
     getMemberLoginLimiterKey("unseen.one"); // at the cap: sweeps idle buckets
     // keys[0] is still tracked with its failures: the next one keeps it locked.
-    expect(recordLoginFailure(keys[0]).locked).toBe(true);
+    expect(recordLoginFailure(keys[0] as string).locked).toBe(true);
     // keys[1] was evicted and starts from zero: one failure does not lock it.
-    expect(recordLoginFailure(keys[1]).locked).toBe(false);
+    expect(recordLoginFailure(keys[1] as string).locked).toBe(false);
   });
 
   it("never evicts a bucket that is still locked out", () => {

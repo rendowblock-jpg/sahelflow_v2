@@ -121,8 +121,8 @@ describe("daily report: a manual Test send is independent of the scheduled send 
     expect(body.whatsappSent).toBe(true);
     expect(harness.queue).toHaveBeenCalledTimes(2);
     // The Test send and the scheduled send must be separate durable sends.
-    expect(harness.queue.mock.calls[0][1]).toMatchObject({ trigger: "manual" });
-    expect(harness.queue.mock.calls[1][1].trigger ?? "cron").toBe("cron");
+    expect(harness.queue.mock.calls[0]?.[1]).toMatchObject({ trigger: "manual" });
+    expect(harness.queue.mock.calls[1]?.[1]?.trigger ?? "cron").toBe("cron");
   });
 
   it("still writes the marker for the scheduled send and skips a second scheduled run", async () => {
