@@ -1214,6 +1214,8 @@
   "inbox.typeMessage": "اكتب رسالة...",
   "inbox.unarchived": "تم إلغاء الأرشفة",
   "inbox.unknownContact": "غير معروف",
+  "inbox.unofficialNoticeBody": "يتصل SahelFlow بواتساب الخاص بك بالطريقة نفسها التي يعمل بها واتساب ويب. هذه ليست واجهة واتساب للأعمال الرسمية، وقد يقيّد واتساب أي رقم يرسل رسائل جماعية أو آلية. ردّ على الزبائن الذين راسلوك أولاً، ولا ترسل الرسالة نفسها إلى عدد كبير من الأشخاص. إذا قيّد واتساب رقمك، فلا يستطيع SahelFlow رفع هذا التقييد.",
+  "inbox.unofficialNoticeTitle": "اتصال واتساب غير رسمي",
   "inbox.unpin": "إلغاء التثبيت",
   "inbox.whatsappConnected": "WhatsApp متصل",
   "inbox.wilayaLabel": "الولاية:",
