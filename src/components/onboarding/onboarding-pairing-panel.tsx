@@ -15,6 +15,7 @@ import {
   deriveWhatsAppPairingPhase,
   type WhatsAppPairingSnapshot,
 } from "@/components/inbox/whatsapp-pairing-state";
+import { WhatsAppUnofficialNotice } from "@/components/inbox/whatsapp-unofficial-notice";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/use-i18n";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
@@ -196,6 +197,10 @@ export function OnboardingPairingPanel({
       data-onboarding-pairing={phase}
       className="overflow-hidden rounded-surface border"
     >
+      <div className="px-6 pt-5">
+        <WhatsAppUnofficialNotice />
+      </div>
+
       <div className="px-6 py-6">
         {phase === "starting" || phase === "waiting-qr" ? (
           <div className="flex min-h-64 flex-col items-center justify-center text-center">
