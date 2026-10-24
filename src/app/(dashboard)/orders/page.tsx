@@ -365,11 +365,11 @@ export default async function OrdersPage({
           <TabsList className="h-auto w-fit max-w-full min-w-0 flex-wrap justify-start">
             {STATUS_FILTERS.map((filter) => (
               // The tabs are links to a re-rendered page, so no panel with the
-              // generated id exists; without this Radix names one anyway.
+              // generated id exists; see TabsTrigger for why this is a prop.
               <TabsTrigger
                 key={filter.value}
                 value={filter.value}
-                aria-controls={undefined}
+                linksToPage
                 asChild
               >
                 <Link
