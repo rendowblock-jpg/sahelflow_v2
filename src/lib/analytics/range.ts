@@ -11,9 +11,16 @@
  * `?days=N` links keep working: 7/30/90 map to presets, any other positive N
  * resolves to an equivalent custom window so old shares never change meaning.
  *
- * Pure and timezone-local: every consumer (page RSC, client controls, tests)
- * derives the exact same window from the same params + clock.
+ * Pure and pinned to the shop day (Africa/Algiers, see lib/time/shop-day.ts):
+ * every consumer (page RSC, client controls, tests) derives the exact same
+ * window from the same params + clock, whatever zone the computer is set to.
  */
+import {
+  addShopDays,
+  parseShopDate,
+  shopDateString,
+  startOfShopDay,
+} from "@/lib/time/shop-day";
 
 export type AnalyticsRangePreset = "7d" | "30d" | "90d" | "custom";
 
@@ -64,44 +71,18 @@ export interface AnalyticsRangeParams {
   days?: string | null;
 }
 
-function startOfDay(value: Date): Date {
-  const result = new Date(value);
-  result.setHours(0, 0, 0, 0);
-  return result;
-}
+// Day edges are shop (Algeria) time, not the host's.
+const startOfDay = startOfShopDay;
+const addDays = addShopDays;
 
-function addDays(value: Date, count: number): Date {
-  const result = new Date(value);
-  result.setDate(result.getDate() + count);
-  return result;
-}
-
-/** Local YYYY-MM-DD for URL params and drill-down links. */
-export function toIsoDate(value: Date): string {
-  const offset = value.getTimezoneOffset() * 60000;
-  return new Date(value.getTime() - offset).toISOString().slice(0, 10);
-}
+/** Shop-day YYYY-MM-DD for URL params and drill-down links. */
+export const toIsoDate = shopDateString;
 
 /** Strict YYYY-MM-DD parser — anything else (including "2026-1-5") is invalid. */
 function parseIsoDate(value: string | null | undefined): Date | null {
   if (!value) return null;
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
-  if (!match) return null;
-  const [, year, month, day] = match;
-  const parsed = new Date(
-    Number.parseInt(year!, 10),
-    Number.parseInt(month!, 10) - 1,
-    Number.parseInt(day!, 10),
-  );
-  // Reject calendar-impossible dates (e.g. 2026-02-31) that Date rolls over.
-  if (
-    parsed.getFullYear() !== Number.parseInt(year!, 10) ||
-    parsed.getMonth() !== Number.parseInt(month!, 10) - 1 ||
-    parsed.getDate() !== Number.parseInt(day!, 10)
-  ) {
-    return null;
-  }
-  return startOfDay(parsed);
+  // Rejects calendar-impossible dates (e.g. 2026-02-31) too.
+  return parseShopDate(value.trim());
 }
 
 function buildRange(
@@ -169,8 +150,7 @@ export function resolveAnalyticsRange(
       // Clamp: no future windows, bounded span, bounded look-back.
       const cappedTo =
         to.getTime() > today.getTime() ? new Date(today) : new Date(to);
-      const cappedFrom = new Date(cappedTo);
-      cappedFrom.setDate(cappedFrom.getDate() - (MAX_ANALYTICS_RANGE_DAYS - 1));
+      const cappedFrom = addDays(cappedTo, -(MAX_ANALYTICS_RANGE_DAYS - 1));
       const flooredFrom = addDays(today, -MAX_LOOKBACK_DAYS);
       const fromFinal =
         from.getTime() < cappedFrom.getTime()

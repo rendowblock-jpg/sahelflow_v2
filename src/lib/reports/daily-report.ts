@@ -24,6 +24,7 @@ import { formatDZDBare as formatDZD } from "@/lib/utils";
 import type { Locale } from "@/lib/i18n";
 import { loadTranslationsSync } from "@/lib/i18n-server";
 import { intlLocale } from "@/lib/utils";
+import { addShopDays, SHOP_TIME_ZONE, startOfShopDay } from "@/lib/time/shop-day";
 
 export interface DailyReport {
   date: Date; // the day being reported (yesterday)
@@ -51,7 +52,7 @@ export interface DailyReport {
  *  (which is "11 juillet" in Algiers). */
 function formatDateLocalized(date: Date, locale: Locale): string {
   return date.toLocaleDateString(intlLocale(locale), {
-    timeZone: "Africa/Algiers",
+    timeZone: SHOP_TIME_ZONE,
     weekday: "short",
     day: "numeric",
     month: "long",
@@ -74,36 +75,13 @@ function makeT(locale: Locale) {
 }
 
 /**
- * Compute yesterday's date range in the Africa/Algiers timezone.
- *
- * Returns UTC Date objects representing [startOfYesterdayAlgiers,
- * endOfYesterdayAlgiers] where end is exclusive (startOfTodayAlgiers).
- * The range covers 24 hours of Algerian local time.
- *
- * Uses `Intl.DateTimeFormat` with `en-CA` (which produces ISO-8601
- * "YYYY-MM-DD") to get the Algiers-local calendar date, then constructs
- * UTC Date objects at the corresponding UTC instants (Algiers is UTC+1,
- * so Algiers-midnight = previous-day-23:00 UTC).
+ * Yesterday's range in shop time (Africa/Algiers): [start, end) where end is
+ * the start of today. Algiers is UTC+1, so Algiers-midnight is 23:00 UTC of
+ * the day before; the edges come from the shared shop-day helper.
  */
 function getAlgiersYesterdayRange(d: Date = new Date()): { start: Date; end: Date } {
-  const algiersFmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Africa/Algiers",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const todayStr = algiersFmt.format(d); // "YYYY-MM-DD" in Algiers
-  // Construct the UTC instant for "midnight Algiers on today's date" using
-  // an ISO-8601 string with explicit +01:00 offset. This correctly accounts
-  // for the UTC+1 offset (Algiers has had no DST since 1981, but using the
-  // explicit offset is more robust than hardcoding `-1 hour` and is also
-  // self-documenting).
-  //   todayStr = "2026-07-12" → "2026-07-12T00:00:00+01:00"
-  //            → UTC instant 2026-07-11T23:00:00Z (= start of today in Algiers)
-  const startTodayAlgiersUtc = new Date(`${todayStr}T00:00:00+01:00`);
-  const startYesterdayAlgiersUtc = new Date(startTodayAlgiersUtc.getTime() - 24 * 60 * 60 * 1000);
-  // end = startOfTodayAlgiers (exclusive upper bound)
-  return { start: startYesterdayAlgiersUtc, end: startTodayAlgiersUtc };
+  const end = startOfShopDay(d);
+  return { start: addShopDays(end, -1), end };
 }
 
 /**

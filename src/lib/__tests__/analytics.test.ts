@@ -228,17 +228,17 @@ describe("analyticsService.buildSalesByHour", () => {
   it("produces 24 buckets and assigns orders to the correct hour", () => {
     const orders = [
       makeOrder({
-        createdAt: new Date(2026, 5, 15, 8, 0),
+        createdAt: new Date("2026-06-15T07:00:00.000Z"), // 08:00 shop time (UTC+1)
         totalPrice: 100,
         status: "delivered",
       }),
       makeOrder({
-        createdAt: new Date(2026, 5, 15, 8, 30),
+        createdAt: new Date("2026-06-15T07:30:00.000Z"), // 08:30 shop time
         totalPrice: 200,
         status: "delivered",
       }),
       makeOrder({
-        createdAt: new Date(2026, 5, 15, 14, 0),
+        createdAt: new Date("2026-06-15T13:00:00.000Z"), // 14:00 shop time
         totalPrice: 300,
         status: "delivered",
       }),

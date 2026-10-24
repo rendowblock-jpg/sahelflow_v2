@@ -45,6 +45,7 @@ import {
   isImportPendingOrderAuthority,
   isTrustedManualOrderAuthority,
 } from "@/lib/orders/manual-order-authority";
+import { startOfShopDay } from "@/lib/time/shop-day";
 
 function toDomain(row: Record<string, unknown>): Order {
   return row as unknown as Order;
@@ -629,8 +630,7 @@ export const orderService = {
 
   /** Get orders created today (for dashboard). */
   async listToday(ctx: ServiceContext): Promise<Order[]> {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    const startOfDay = startOfShopDay(new Date());
     const rows = await ctx.prisma.order.findMany({
       where: { createdAt: { gte: startOfDay }, deletedAt: null },
       include: { items: true },
