@@ -23,7 +23,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { getInboxMediaCopy } from "@/lib/i18n/inbox-media";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import type { InboxLocalMediaProjection } from "@/lib/whatsapp/types";
-import { cn, intlLocale } from "@/lib/utils";
+import { cn, intlLocale, numberFormatter } from "@/lib/utils";
 
 const PENDING_MEDIA_POLL_MS = 3_000;
 const MAX_PENDING_MEDIA_BATCH = 200;
@@ -181,7 +181,7 @@ export function documentKind(
 
 function formatBytes(value: number, locale: "ar" | "fr" | "en"): string {
   if (value < 1_024) return `${value} B`;
-  const formatter = new Intl.NumberFormat(intlLocale(locale), {
+  const formatter = numberFormatter(intlLocale(locale), {
     maximumFractionDigits: 1,
   });
   if (value < 1_024 * 1_024) return `${formatter.format(value / 1_024)} KB`;

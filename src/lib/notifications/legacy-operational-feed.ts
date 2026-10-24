@@ -4,7 +4,7 @@ import { trustedActionAllowed } from "@/lib/identity/authorization";
 import { requireTrustedActor } from "@/lib/identity/trusted-actor";
 import { getI18n } from "@/lib/i18n-server";
 import { deliveryProviderLabel } from "@/lib/shared";
-import { intlLocale } from "@/lib/utils";
+import { intlLocale, numberFormatter } from "@/lib/utils";
 import { displayWilaya } from "@/lib/wilaya-display";
 
 /** Convert snake_case delivery status to camelCase for i18n lookup. */
@@ -261,12 +261,12 @@ export async function listLegacyOperationalNotifications() {
           ? t("notif.newOrder.body", {
               customer: order.customer?.name ?? t("common.unknown"),
               wilaya: wilayaName(order.wilaya),
-              total: order.totalPrice.toLocaleString(numLocale),
+              total: numberFormatter(numLocale).format(order.totalPrice),
             })
           : canReadContacts
             ? `${order.customer?.name ?? t("common.unknown")} · ${wilayaName(order.wilaya)}`
             : canReadFinancials
-              ? `${wilayaName(order.wilaya)} · ${order.totalPrice.toLocaleString(numLocale)}`
+              ? `${wilayaName(order.wilaya)} · ${numberFormatter(numLocale).format(order.totalPrice)}`
               : wilayaName(order.wilaya),
       time: formatRelativeTime(minutesAgo, t),
       read: minutesAgo > 60,
