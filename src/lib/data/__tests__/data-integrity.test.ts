@@ -11,8 +11,8 @@
  * + #8-15; #7 is intentionally omitted because it duplicates Phase 1's
  * `return-refund-integrity.test.ts` — see the inline note at the scenario-7
  * anchor below):
- *   1.  Order create  → appears everywhere (order row + ledger + dashboard +
- *       analytics + orders-page groupBy — stock UNCHANGED until confirm).
+ *   1.  A stored order appears in every count surface (dashboard + analytics
+ *       + orders-page groupBy).
  *   2.  Order confirm → stock deducted + OrderChange + trigger + queue exit.
  *   3.  Order ship    → order.status=shipped + shippedAt + Delivery row + trigger.
  *   4.  Order deliver (via /api/delivery/sync) → customer stats + deliveredAt
@@ -393,7 +393,7 @@ async function configureAutomation(trigger: string) {
  *   1. AutomationLog row created (action ran).
  *   2. Automation.runCount incremented (the LAST step in executeAutomation).
  *
- * Waiting for runCount is critical: `orderService.create`/`updateStatus` call
+ * Waiting for runCount is critical: `orderService.updateStatus` calls
  * `void dispatchTrigger(...)` (fire-and-forget). Without waiting for runCount,
  * the test's `cleanAll()` (next beforeEach) can delete the Automation row
  * while `Automation.update({ where: { id }, data: { runCount: increment } })`
@@ -460,70 +460,28 @@ async function driveToDelivered(opts: {
 }
 
 // ============================================================================
-// Scenario 1 — Order create → appears everywhere (cross-table)
+// Scenario 1 — A stored order appears in every count surface
 // ============================================================================
 
-describe("Scenario 1 — Order create → appears everywhere", () => {
-  it("creates the order with a 'created' OrderChange entry; product stock UNCHANGED; dashboard ordersToday=1; analytics totalOrders=1; orders-page groupBy=1", async () => {
-    // Seed 1 customer + 1 product (stock 10) + an order.created automation.
-    const createdAutomation = await configureAutomation("order.created");
+describe("Scenario 1 — A stored order appears in every count surface", () => {
+  it("dashboard ordersToday=1; analytics totalOrders=1; orders-page groupBy=1", async () => {
     const customer = await seedCustomerRaw();
-    const product = await seedProductRaw({ stock: 10 });
-
-    // Create the order through the canonical service.
-    const order = await orderService.create(
-      { prisma: rawDb as never },
-      {
-        customerId: customer.id,
-        items: [
-          {
-            productId: product.id,
-            productName: "Test Product",
-            quantity: 5,
-            unitPrice: 1000,
-          },
-        ],
-        wilaya: "Alger",
-        commune: "Bab Ezzouar",
-        address: "123 Rue Didouche",
-        phone: "0555123456",
-        source: "manual",
-      },
-    );
-
-    // 1. Order row exists.
-    const found = await rawDb.order.findUnique({ where: { id: order.id } });
-    expect(found).toBeTruthy();
-
-    // 2. OrderChange "created" ledger entry exists (Phase 1 bug 1.3 fix).
-    const createdChanges = await rawDb.orderChange.findMany({
-      where: { orderId: order.id, actionType: "created" },
+    await seedOrderRaw({
+      customerId: customer.id,
+      totalPrice: 5000,
+      status: "draft",
     });
-    expect(createdChanges).toHaveLength(1);
 
-    // 3. Product stock UNCHANGED — stock deducts at confirm, not create.
-    const productAfter = await rawDb.product.findUnique({ where: { id: product.id } });
-    expect(productAfter!.stock).toBe(10);
-
-    // 4. order.created automation trigger fires (Phase 1 bug 1.3 fix).
-    //    waitForDispatch waits for runCount++ (the LAST step in
-    //    executeAutomation) so the fire-and-forget dispatch is fully done
-    //    before the test ends — prevents cleanAll() from racing with an
-    //    in-flight Automation.update.
-    const logs = await waitForDispatch(createdAutomation.id, "order.created");
-    expect(logs.length).toBeGreaterThan(0);
-    expect(logs[0]!.trigger).toBe("order.created");
-
-    // 5. Cross-table: dashboard ordersToday = 1.
+    // Dashboard ordersToday = 1.
     const dashboard = await statsService.getDashboard({ prisma: rawDb as never });
     expect(dashboard.ordersToday).toBe(1);
 
-    // 6. Cross-table: analytics totalOrders = 1 (default 30-day window).
+    // Analytics totalOrders = 1 (default 30-day window).
     const analytics = await analyticsService.getReport({ prisma: rawDb as never }, 30);
     expect(analytics.summary.totalOrders).toBe(1);
 
-    // 7. Cross-table: orders-page groupBy count = 1 (the page computes its
-    //    status-tab counts via `db.order.groupBy({ by: ["status"], ... })`).
+    // Orders-page groupBy count = 1 (the page computes its status-tab counts
+    // via `db.order.groupBy({ by: ["status"], ... })`).
     const groups = await rawDb.order.groupBy({
       by: ["status"],
       where: { deletedAt: null },

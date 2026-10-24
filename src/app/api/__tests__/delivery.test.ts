@@ -41,8 +41,8 @@ vi.mock("@/lib/integrations/delivery", () => ({
 }));
 
 
-// Mock the automation dispatcher so orderService.create/updateStatus's
-// fire-and-forget dispatchTrigger('order.created'/'order.{status}') is a no-op.
+// Mock the automation dispatcher so orderService.updateStatus's
+// fire-and-forget dispatchTrigger('order.{status}') is a no-op.
 // Without this, the dispatch can still be in flight when the next test's
 // cleanDb() runs (or when the next test file starts), causing flaky races
 // with other test files that share the SQLite file (see Phase 3 worklog note
