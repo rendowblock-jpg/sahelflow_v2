@@ -60,7 +60,8 @@ describe("generated page files", () => {
   it("make a small stylesheet that keeps the fallbacks, the focus ring and reduced motion", () => {
     const css = readFileSync(join(PUBLIC, manifest.css), "utf8");
     console.warn(`[weight] css ${css.length} bytes, ${gzipSync(css).length} gzip`);
-    expect(gzipSync(css).length).toBeLessThan(8_000);
+    // Was 8,000 (7,950 used). The forced-colors block in shop.css costs about 150 bytes gzip, so the ceiling moved to 8,300.
+    expect(gzipSync(css).length).toBeLessThan(8_300);
     for (const needle of [".sf-cta", ".sf-sticky", ".sf-gal-track", "scroll-snap-type", "prefers-reduced-motion", "@supports", ":focus-visible", "env(safe-area-inset-bottom", ".sf-notice", "inset-inline"]) {
       expect(css, needle).toContain(needle);
     }
