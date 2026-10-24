@@ -81,4 +81,11 @@ describe("redactPii", () => {
     expect(input[0]!.thoughtSignature).toBe(signature);
     expect(input[0]!.args.phone).toBe("0555123456");
   });
+
+  it("keeps a last4 tail but still redacts the full phone beside it", () => {
+    expect(redactPii({ last4: "3456", phone: "0555123456" })).toEqual({
+      last4: "3456",
+      phone: "[REDACTED]",
+    });
+  });
 });
