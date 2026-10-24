@@ -22,6 +22,7 @@ import {
 } from "echarts/core";
 import { SVGRenderer } from "echarts/renderers";
 
+import { CHART_MOTION_MS } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
 import { normalizeChartColor } from "./chart-color";
 import { useChartMotion } from "./chart-motion";
@@ -188,7 +189,7 @@ function withRuntimePolicy(
     ...option,
     animation: !reducedMotion,
     animationDuration: reducedMotion ? 0 : baseDuration,
-    animationDurationUpdate: reducedMotion ? 0 : Math.min(baseDuration, 280),
+    animationDurationUpdate: reducedMotion ? 0 : Math.min(baseDuration, CHART_MOTION_MS.update),
     animationEasing: "cubicOut",
     animationEasingUpdate: "cubicOut",
     aria: {

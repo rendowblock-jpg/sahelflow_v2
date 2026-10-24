@@ -181,7 +181,7 @@ export function AiComposerDeck({
               tray.addFiles(files);
             }}
             className={cn(
-              "relative rounded-surface border bg-card shadow-(--elevation-1) transition",
+              "relative rounded-surface border bg-card shadow-(--elevation-1) transition-[border-color,box-shadow]",
               "focus-within:border-ring/60 focus-within:shadow-(--elevation-2)",
               dragging ? "border-primary border-dashed" : "border-border",
             )}

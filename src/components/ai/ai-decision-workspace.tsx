@@ -281,7 +281,7 @@ export function AiDecisionWorkspace({
     >
       <div
         className={cn(
-          "h-full shrink-0 overflow-hidden transition-[width] duration-200 ease-out motion-reduce:transition-none",
+          "h-full shrink-0 overflow-hidden",
           railCollapsed ? "w-14" : "w-66",
         )}
       >
