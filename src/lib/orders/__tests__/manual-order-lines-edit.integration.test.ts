@@ -24,14 +24,57 @@ const db = new PrismaClient();
 const context = { prisma: db as never } satisfies ServiceContext;
 let sequence = 0;
 
+type ForeignKeyEdge = { child: string; parent: string };
+let linkedTablesCache: { tables: string[]; edges: ForeignKeyEdge[] } | undefined;
+
+/**
+ * Every table that points at a business command, directly or through another
+ * table, read from SQLite's own foreign-key list and ordered children first.
+ * The keys are RESTRICT, so one row left in any of them by an EARLIER test file
+ * (canonical-courier.integration leaves CanonicalDeliveryEvent rows) makes
+ * DELETE FROM "BusinessCommand" fail, and with it every test of this file.
+ */
+async function commandLinkedTables(): Promise<{ tables: string[]; edges: ForeignKeyEdge[] }> {
+  if (linkedTablesCache) return linkedTablesCache;
+  const all = await db.$queryRawUnsafe<ForeignKeyEdge[]>(
+    `SELECT m.name AS child, f."table" AS parent FROM sqlite_master AS m, pragma_foreign_key_list(m.name) AS f WHERE m.type = 'table'`,
+  );
+  const linked = new Set<string>(["BusinessCommand"]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const edge of all) {
+      if (linked.has(edge.parent) && !linked.has(edge.child)) {
+        linked.add(edge.child);
+        grew = true;
+      }
+    }
+  }
+  linked.delete("BusinessCommand");
+  const remaining = new Set(linked);
+  const tables: string[] = [];
+  while (remaining.size > 0) {
+    const ready = [...remaining].filter(
+      (table) => !all.some((edge) => edge.parent === table && edge.child !== table && remaining.has(edge.child)),
+    );
+    if (ready.length === 0) throw new Error(`foreign keys form a cycle among ${[...remaining].join(", ")}`);
+    for (const table of ready) {
+      if (!/^[A-Za-z0-9_]+$/.test(table)) throw new Error(`unexpected table name ${table}`);
+      tables.push(table);
+      remaining.delete(table);
+    }
+  }
+  linkedTablesCache = {
+    tables,
+    edges: all.filter((edge) => linked.has(edge.child) && linked.has(edge.parent)),
+  };
+  return linkedTablesCache;
+}
+
 async function clean(): Promise<void> {
-  await db.$executeRawUnsafe('DELETE FROM "CompensationFact"');
-  await db.$executeRawUnsafe('DELETE FROM "ProjectionInvalidation"');
-  await db.$executeRawUnsafe('DELETE FROM "FinancialMovement"');
-  await db.$executeRawUnsafe('DELETE FROM "InventoryMovement"');
-  await db.$executeRawUnsafe('DELETE FROM "InventoryReservation"');
-  await db.$executeRawUnsafe('DELETE FROM "OutboxIntent"');
-  await db.$executeRawUnsafe('DELETE FROM "DomainEvent"');
+  for (const table of (await commandLinkedTables()).tables) {
+    await db.$executeRawUnsafe(`DELETE FROM "${table}"`);
+  }
   await db.$executeRawUnsafe('DELETE FROM "BusinessCommand"');
   await db.$executeRawUnsafe('DELETE FROM "BusinessAggregateVersion"');
   await db.auditLog.deleteMany();
@@ -183,6 +226,23 @@ afterAll(async () => {
 });
 
 describe("editing the lines of a pending order the seller typed in (S03a-03B)", () => {
+  it("clears every table that points at a business command, children first, so rows another test file left behind cannot block the cleanup", async () => {
+    const { tables, edges } = await commandLinkedTables();
+    expect(tables).toEqual(
+      expect.arrayContaining(["CanonicalDeliveryEvent", "DomainEvent", "InventoryReservation", "OutboxIntent"]),
+    );
+    expect(tables).not.toContain("BusinessCommand");
+    for (const edge of edges) {
+      if (edge.child !== edge.parent) {
+        expect(tables.indexOf(edge.child), `${edge.child} must be cleared before ${edge.parent}`).toBeLessThan(
+          tables.indexOf(edge.parent),
+        );
+      }
+    }
+    // The command rows themselves are cleared after every table above.
+    expect(await count("BusinessCommand")).toBe(0);
+  });
+
   it("changes a quantity, recomputes the total from the lines and writes every fact", async () => {
     const { order, item, product } = await seedOrder();
 
