@@ -6,7 +6,7 @@ import { z } from "zod";
 import { executeBusinessCommand } from "@/lib/business-truth/command-kernel";
 import type { BusinessCommandResult } from "@/lib/business-truth/contracts";
 import type { BusinessPrincipalContext } from "@/lib/business-truth/principal";
-import { isSellerTypedOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { isSellerEditableLinesAuthority } from "@/lib/orders/manual-order-authority";
 import {
   resolveCatalogLine,
   type CatalogLine,
@@ -21,15 +21,19 @@ import {
 
 /**
  * order.manual.editLines.v1 (S03a-03B): correct the LINES of a pending order the
- * seller typed in himself. Before this command a wrong product, quantity or price on
- * such an order could only be fixed by rejecting it and typing it again.
+ * seller typed in himself, or one received from WhatsApp, a CSV/XLSX import, the AI
+ * chat (once submitted) or the local storefront. Before this command a wrong product,
+ * quantity or price on such an order could only be fixed by rejecting it and typing it
+ * again.
  *
- * Why it is safe for this kind of order and no other: a pending manual order holds no
- * stock (inventoryState "unreserved", no reservation, no inventory movement); the
- * confirmation that follows reads the lines as they are then and reserves exactly
- * those. A hosted-storefront order is different: its stock is delegated at the
- * storefront and the receipt is bound to its lines, so it answers a coded 409.
- * Imported and legacy orders answer the same 409 until their own paths are read.
+ * Why it is safe for these orders: a pending order holds no stock (inventoryState
+ * "unreserved", no reservation, no inventory movement); the confirmation that follows
+ * reads the lines as they are then and reserves exactly those. The inventoryState check
+ * below still refuses any order that holds stock. A hosted-storefront order is
+ * different: its stock is delegated at the storefront and the receipt is bound to its
+ * lines. Shopify, WooCommerce, YouCan and Google Sheets orders (the platform owns the
+ * price, a re-sync may rewrite them), legacy and import-pending orders answer the same
+ * coded 409 (see isSellerEditableLinesAuthority).
  *
  * The new list REPLACES the old one:
  *  - a line with `id` is an existing line; only its quantity and, if given, its unit
@@ -150,9 +154,9 @@ export async function executeManualOrderLinesEdit(
         include: { items: true },
       });
       if (!order) throw new NotFoundError("Order", data.orderId);
-      if (!isSellerTypedOrderAuthority(order.source, order.sourceMetadata)) {
+      if (!isSellerEditableLinesAuthority(order.source, order.sourceMetadata)) {
         throw new SahelFlowError(
-          "The lines of this order cannot be edited here: only an order typed in by the seller can",
+          "The lines of this order cannot be edited here: only an order typed in by the seller, or received from WhatsApp, an import, the AI chat or the local storefront, can be",
           "ORDER_LINES_NOT_EDITABLE_FOR_SOURCE",
           409,
         );
