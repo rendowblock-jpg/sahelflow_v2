@@ -3,19 +3,15 @@
  *
  * - Gross order value is an operational measure based on orders placed in the
  *   period, excluding cancelled and draft rows.
- * - Realized revenue is earned at delivery from the governed profitability
- *   authority. Later returns do not erase delivery; refunds and reversals are
- *   explicit downstream financial facts.
- * - The legacy `netRevenue()` entry point remains net of refunds and live
- *   Delivery-row costs for backward compatibility. New accounting readers must
- *   use the full profitability projection.
+ * - Earned (realized) and net revenue are not computed here. Read them from
+ *   `getProfitabilityProjection()` in `@/lib/accounting/profitability`, the one
+ *   authority for them.
  *
  * All periods are half-open `[from, to)` and all money is integer DZD.
  */
 import "server-only";
 
 import type { DbClient } from "@/lib/db";
-import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 
 /** Half-open period window `[from, to)`. */
 export interface Period {
@@ -61,41 +57,6 @@ export async function grossRevenue(db: DbClient, period: Period): Promise<number
     _sum: { totalPrice: true },
   });
   return agg._sum.totalPrice ?? 0;
-}
-
-/**
- * Realized revenue (period) — earned delivery revenue.
- *
- * Reads the governed profitability projection whose canonical authority is the
- * append-only `cod_receivable_created` movement. Historical delivered orders
- * without canonical facts remain readable through the projection's explicit
- * compatibility path. Collection and remittance cash transfers never count as
- * additional revenue.
- */
-export async function realizedRevenue(db: DbClient, period: Period): Promise<number> {
-  const projection = await getProfitabilityProjection(db, period);
-  return projection.grossRevenue;
-}
-
-/**
- * Legacy net revenue compatibility metric.
- *
- * Historically this helper meant realized revenue after refunds and active
- * Delivery-row costs. Preserve that behavior while dashboard, analytics,
- * accounting, reports and AI use `getProfitabilityProjection()` directly.
- */
-export async function netRevenue(db: DbClient, period: Period): Promise<number> {
-  const [projection, deliveryCosts] = await Promise.all([
-    getProfitabilityProjection(db, period),
-    db.delivery.aggregate({
-      where: {
-        createdAt: { gte: period.from, lt: period.to },
-        deletedAt: null,
-      },
-      _sum: { cost: true },
-    }),
-  ]);
-  return projection.netRevenue - (deliveryCosts._sum.cost ?? 0);
 }
 
 /**

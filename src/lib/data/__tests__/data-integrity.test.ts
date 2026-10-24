@@ -191,11 +191,10 @@ import { analyticsService } from "@/lib/data/analytics";
 // inconsistent per-surface behavior.
 import {
   grossRevenue,
-  realizedRevenue,
-  netRevenue,
   deliveryRate,
   courierDeliveryRate,
 } from "@/lib/data/metrics";
+import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 import { getCodReconciliationSummary, markCodCollected } from "@/lib/data/cod-service";
 import { getConfirmationQueue, getStaleOrderCount } from "@/lib/data/confirmation-queue";
 import { createBackup, restoreBackup, deleteBackup } from "@/lib/backup";
@@ -1050,8 +1049,8 @@ describe("Scenario 9 — Low-stock consistency (bell vs products page vs dashboa
 //
 // Canonical expected values (per DATA_INTEGRITY_PLAN.md Phase 4):
 //   grossRevenue(today)     = 1000 + 2000 + 3000 = 6000  (excludes cancelled + draft; INCLUDES returned)
-//   realizedRevenue(today)  = 1000  (deliveredAt today AND status="delivered" — o3 excluded by status)
-//   netRevenue(30d)         = 1000  (realized - refunds(0) - deliveryCosts(0); no Delivery rows in setup)
+//   projection.grossRevenue(today) = 1000  (deliveredAt today AND status="delivered" — o3 excluded by status)
+//   projection.netRevenue(30d)     = 1000  (no refunds, no Delivery rows in setup)
 //   deliveryRate(today)     = 1/4 = 25%  (by order.status, not delivery.status)
 //   courierDeliveryRate     = 0/0 = 0%   (no Delivery rows)
 
@@ -1112,8 +1111,8 @@ describe("Scenario 10 — Revenue formula consistency (Phase 4 canonical definit
     // ── Canonical metrics (metrics.ts) ──────────────────────────────────────
     // Single source of truth. Every surface below must agree with these.
     expect(await grossRevenue(rawDb as never, todayPeriod)).toBe(6000);
-    expect(await realizedRevenue(rawDb as never, todayPeriod)).toBe(1000);
-    expect(await netRevenue(rawDb as never, last30d)).toBe(1000);
+    expect((await getProfitabilityProjection(rawDb as never, todayPeriod)).grossRevenue).toBe(1000);
+    expect((await getProfitabilityProjection(rawDb as never, last30d)).netRevenue).toBe(1000);
 
     const dr = await deliveryRate(rawDb as never, todayPeriod);
     expect(dr).toEqual({ rate: 25, delivered: 1, total: 4 });
@@ -1121,9 +1120,9 @@ describe("Scenario 10 — Revenue formula consistency (Phase 4 canonical definit
     const cdr = await courierDeliveryRate(rawDb as never);
     expect(cdr).toEqual({ rate: 0, delivered: 0, total: 0 });
 
-    // ── Dashboard (stats-service.ts → delegates to grossRevenue + realizedRevenue) ─
+    // ── Dashboard (stats-service.ts) ─
     // dashboard.revenueToday        = grossRevenue(today) = 6000
-    // dashboard.realizedRevenueToday = realizedRevenue(today) = 1000
+    // dashboard.realizedRevenueToday = 1000 (same value as the projection above)
     const dash = await statsService.getDashboard({ prisma: rawDb as never });
     expect(dash.revenueToday).toBe(6000);
     expect(dash.realizedRevenueToday).toBe(1000);
@@ -1135,20 +1134,19 @@ describe("Scenario 10 — Revenue formula consistency (Phase 4 canonical definit
     expect(analytics.summary.totalRevenue).toBe(6000);
     expect(analytics.summary.totalOrders).toBe(4);
 
-    // ── Accounting (page.tsx → delegates to netRevenue(period)) ──────────────
-    // accounting revenue = netRevenue(30d) = realized - refunds - deliveryCosts
-    //                    = 1000 - 0 - 0 = 1000
+    // ── Accounting (page.tsx reads the profitability projection) ─────────────
+    // accounting revenue = projection.netRevenue(30d) = 1000
     // (No Delivery rows in this setup — orderService.updateStatus("shipped")
     //  does NOT create a Delivery row; that's done by /api/delivery/create.)
-    expect(await netRevenue(rawDb as never, last30d)).toBe(1000);
+    expect((await getProfitabilityProjection(rawDb as never, last30d)).netRevenue).toBe(1000);
 
     // ── Phase 4 consolidated variant table ───────────────────────────────────
     // | Surface              | Canonical fn           | Filter                                              | Value  |
     // |----------------------|------------------------|-----------------------------------------------------|--------|
     // | Dashboard gross      | grossRevenue(today)    | createdAt today, status NOT IN [cancelled, draft]   | 6000   |
-    // | Dashboard realized   | realizedRevenue(today) | deliveredAt today, status = delivered               | 1000   |
+    // | Dashboard realized   | projection.grossRevenue| deliveredAt today, status = delivered               | 1000   |
     // | Analytics total      | grossRevenue(period)   | createdAt in 30d, status NOT IN [cancelled, draft]  | 6000   |
-    // | Accounting revenue   | netRevenue(30d)        | realized - refunds - deliveryCosts                  | 1000   |
+    // | Accounting revenue   | projection.netRevenue | realized - refunds - deliveryCosts                  | 1000   |
     // | Delivery rate        | deliveryRate(today)    | delivered orders / total orders (by order.status)   | 25%    |
     // | Courier delivery     | courierDeliveryRate    | delivered Deliveries / total Deliveries (all-time)  | 0%     |
   });
