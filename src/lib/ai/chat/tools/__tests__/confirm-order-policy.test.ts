@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AI_GOVERNED_CONFIRMATION_REFUSAL } from "@/lib/ai/actions/contracts";
 import { runWithAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
@@ -8,12 +8,7 @@ import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 
 const context = { db: {}, shop: TEST_SHOP_CONTEXT };
 
-beforeEach(() => {
-  process.env.SF_AI_ACTION_POLICY_TEST = "true";
-});
-
 afterEach(() => {
-  delete process.env.SF_AI_ACTION_POLICY_TEST;
   vi.restoreAllMocks();
 });
 

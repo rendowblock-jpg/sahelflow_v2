@@ -36,6 +36,7 @@ vi.mock("@/lib/integrations/delivery/provider-capability", () => ({
 
 import "@/lib/ai/chat/tools/advanced-tools"; // side-effect: registers 12 tools
 import { getTool, type ToolContext } from "../registry";
+import { getLegacyTool } from "@/lib/ai/chat/tools/__tests__/support/legacy-tool-bodies";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -78,7 +79,7 @@ function ctx(): ToolContext {
 
 describe("create_product", () => {
   it("creates a new product with valid input", async () => {
-    const tool = getTool("create_product")!;
+    const tool = getLegacyTool("create_product")!;
     const result = await tool.execute({
       name: "Wireless Headphones",
       price: 4500,
@@ -95,7 +96,7 @@ describe("create_product", () => {
   });
 
   it("creates a product with default stock when omitted", async () => {
-    const tool = getTool("create_product")!;
+    const tool = getLegacyTool("create_product")!;
     const result = await tool.execute({ name: "Minimal Product", price: 1000 }, ctx());
 
     expect(result.success).toBe(true);
@@ -104,7 +105,7 @@ describe("create_product", () => {
   });
 
   it("returns error when required fields are missing", async () => {
-    const tool = getTool("create_product")!;
+    const tool = getLegacyTool("create_product")!;
     const result = await tool.execute({ name: "No Price" }, ctx());
 
     expect(result.success).toBe(false);
@@ -112,7 +113,7 @@ describe("create_product", () => {
   });
 
   it("returns error for a negative price", async () => {
-    const tool = getTool("create_product")!;
+    const tool = getLegacyTool("create_product")!;
     const result = await tool.execute({ name: "Bad", price: -100 }, ctx());
 
     expect(result.success).toBe(false);
@@ -127,7 +128,7 @@ describe("update_product_price", () => {
     const cat = await seedCategory(db);
     const product = await seedProduct(db, { name: "Widget", price: 1000, categoryId: cat.id });
 
-    const tool = getTool("update_product_price")!;
+    const tool = getLegacyTool("update_product_price")!;
     const result = await tool.execute({ productId: product.id, newPrice: 1500 }, ctx());
 
     expect(result.success).toBe(true);
@@ -137,7 +138,7 @@ describe("update_product_price", () => {
   });
 
   it("returns error for a non-existent product", async () => {
-    const tool = getTool("update_product_price")!;
+    const tool = getLegacyTool("update_product_price")!;
     const result = await tool.execute({ productId: "cnonexistent123456789", newPrice: 1000 }, ctx());
 
     expect(result.success).toBe(false);
@@ -148,7 +149,7 @@ describe("update_product_price", () => {
     const cat = await seedCategory(db);
     const product = await seedProduct(db, { categoryId: cat.id });
 
-    const tool = getTool("update_product_price")!;
+    const tool = getLegacyTool("update_product_price")!;
     const result = await tool.execute({ productId: product.id, newPrice: -50 }, ctx());
 
     expect(result.success).toBe(false);
@@ -205,7 +206,7 @@ describe("get_product_details", () => {
 
 describe("create_customer", () => {
   it("creates a new customer with valid input", async () => {
-    const tool = getTool("create_customer")!;
+    const tool = getLegacyTool("create_customer")!;
     const result = await tool.execute({
       name: "Karim Haddad",
       phone: "0770123456",
@@ -223,7 +224,7 @@ describe("create_customer", () => {
   });
 
   it("returns error when required fields are missing", async () => {
-    const tool = getTool("create_customer")!;
+    const tool = getLegacyTool("create_customer")!;
     const result = await tool.execute({ name: "No Phone" }, ctx());
 
     expect(result.success).toBe(false);
@@ -233,7 +234,7 @@ describe("create_customer", () => {
   it("returns error on duplicate phone (unique constraint)", async () => {
     await seedCustomer(db, { phone: "0770111222" });
 
-    const tool = getTool("create_customer")!;
+    const tool = getLegacyTool("create_customer")!;
     const result = await tool.execute({ name: "Dup", phone: "0770111222" }, ctx());
 
     expect(result.success).toBe(false);
@@ -248,7 +249,7 @@ describe("update_customer_notes", () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
     await db.customer.update({ where: { id: customer.id }, data: { notes: "Première note" } });
 
-    const tool = getTool("update_customer_notes")!;
+    const tool = getLegacyTool("update_customer_notes")!;
     const result = await tool.execute({ customerId: customer.id, notes: "Nouvelle note" }, ctx());
 
     expect(result.success).toBe(true);
@@ -261,7 +262,7 @@ describe("update_customer_notes", () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
     await db.customer.update({ where: { id: customer.id }, data: { notes: "Old note" } });
 
-    const tool = getTool("update_customer_notes")!;
+    const tool = getLegacyTool("update_customer_notes")!;
     const result = await tool.execute({ customerId: customer.id, notes: "Brand new", mode: "replace" }, ctx());
 
     expect(result.success).toBe(true);
@@ -271,7 +272,7 @@ describe("update_customer_notes", () => {
   });
 
   it("returns error for a non-existent customer", async () => {
-    const tool = getTool("update_customer_notes")!;
+    const tool = getLegacyTool("update_customer_notes")!;
     const result = await tool.execute({ customerId: "cnonexistent123456789", notes: "x" }, ctx());
 
     expect(result.success).toBe(false);
@@ -328,7 +329,7 @@ describe("assign_order_to_delivery", () => {
       },
     });
 
-    const tool = getTool("assign_order_to_delivery")!;
+    const tool = getLegacyTool("assign_order_to_delivery")!;
     const result = await tool.execute({ orderNumber: "ORD-0001", provider: "yalidine" }, ctx());
 
     expect(result.success).toBe(true);
@@ -351,7 +352,7 @@ describe("assign_order_to_delivery", () => {
     });
     await db.delivery.create({ data: { orderId: order.id, provider: "yalidine", status: "created" } });
 
-    const tool = getTool("assign_order_to_delivery")!;
+    const tool = getLegacyTool("assign_order_to_delivery")!;
     const result = await tool.execute({ orderNumber: "ORD-0001", provider: "yalidine" }, ctx());
 
     expect(result.success).toBe(false);
@@ -364,7 +365,7 @@ describe("assign_order_to_delivery", () => {
       data: { orderNumber: "ORD-0001", status: "draft", customerId: customer.id, totalPrice: 1000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
     });
 
-    const tool = getTool("assign_order_to_delivery")!;
+    const tool = getLegacyTool("assign_order_to_delivery")!;
     const result = await tool.execute({ orderNumber: "ORD-0001", provider: "yalidine" }, ctx());
 
     expect(result.success).toBe(false);
@@ -372,7 +373,7 @@ describe("assign_order_to_delivery", () => {
   });
 
   it("returns error when the order is not found", async () => {
-    const tool = getTool("assign_order_to_delivery")!;
+    const tool = getLegacyTool("assign_order_to_delivery")!;
     const result = await tool.execute({ orderNumber: "ORD-9999", provider: "yalidine" }, ctx());
 
     expect(result.success).toBe(false);
@@ -386,7 +387,7 @@ describe("assign_order_to_delivery", () => {
     });
     mockAdapter.createShipment.mockResolvedValueOnce({ success: false, trackingId: "", cost: 0, error: "API error" });
 
-    const tool = getTool("assign_order_to_delivery")!;
+    const tool = getLegacyTool("assign_order_to_delivery")!;
     const result = await tool.execute({ orderNumber: "ORD-0001", provider: "yalidine" }, ctx());
 
     expect(result.success).toBe(false);

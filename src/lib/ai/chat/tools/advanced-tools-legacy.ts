@@ -21,8 +21,8 @@ import "server-only";
 
 
 import { z } from "zod";
-import type { ToolContext, ToolResult } from "./registry";
-import { registerTool } from "./registry";
+import type { ChatTool, ToolContext, ToolResult } from "./registry";
+import { registerGatedTool, registerTool } from "./registry";
 import { getDeliveryAdapter, loadDeliveryCredentials } from "@/lib/integrations/delivery";
 import type { DbClient } from "@/lib/db";
 // AI-M13: reuse the existing phone normalizer from the import module so the
@@ -50,7 +50,7 @@ const createProductSchema = z.object({
   cost: z.number().int().min(0).optional(),
 });
 
-registerTool({
+export const createProductTool: ChatTool = {
   definition: {
     name: "create_product",
     description:
@@ -88,7 +88,9 @@ registerTool({
       return { success: false, error: err instanceof Error ? err.message : "Erreur" };
     }
   },
-});
+};
+
+registerGatedTool(createProductTool);
 
 // ── Tool 20: update_product_price ───────────────────────────────────────────
 
@@ -99,7 +101,7 @@ export const updateProductPriceSchema = z.object({
   newPrice: z.number().int().min(0),
 });
 
-registerTool({
+export const updateProductPriceTool: ChatTool = {
   definition: {
     name: "update_product_price",
     description: "Update a product's selling price. Useful for promotions or price adjustments.",
@@ -136,7 +138,9 @@ registerTool({
       return { success: false, error: err instanceof Error ? err.message : "Erreur" };
     }
   },
-});
+};
+
+registerGatedTool(updateProductPriceTool);
 
 // ── Tool 21: get_product_details ────────────────────────────────────────────
 
@@ -204,7 +208,7 @@ const createCustomerSchema = z.object({
   notes: z.string().optional(),
 });
 
-registerTool({
+export const createCustomerTool: ChatTool = {
   definition: {
     name: "create_customer",
     description: "Add a new customer manually. Phone is required (used as the unique identifier).",
@@ -259,7 +263,9 @@ registerTool({
       return { success: false, error: err instanceof Error ? err.message : "Erreur" };
     }
   },
-});
+};
+
+registerGatedTool(createCustomerTool);
 
 // ── Tool 23: update_customer_notes ──────────────────────────────────────────
 
@@ -269,7 +275,7 @@ const updateCustomerNotesSchema = z.object({
   mode: z.enum(["append", "replace"]).optional().default("append"),
 });
 
-registerTool({
+export const updateCustomerNotesTool: ChatTool = {
   definition: {
     name: "update_customer_notes",
     description: "Add notes to a customer (append mode) or replace existing notes. Useful for recording customer preferences or issues.",
@@ -308,7 +314,9 @@ registerTool({
       return { success: false, error: err instanceof Error ? err.message : "Erreur" };
     }
   },
-});
+};
+
+registerGatedTool(updateCustomerNotesTool);
 
 // ── Tool 24: get_customer_orders ────────────────────────────────────────────
 
@@ -361,7 +369,7 @@ const assignOrderToDeliverySchema = z.object({
   weight: z.number().min(0).optional().default(0.5),
 });
 
-registerTool({
+export const assignOrderToDeliveryTool: ChatTool = {
   definition: {
     name: "assign_order_to_delivery",
     description:
@@ -580,7 +588,9 @@ registerTool({
       return { success: false, error: err instanceof Error ? err.message : "Erreur" };
     }
   },
-});
+};
+
+registerGatedTool(assignOrderToDeliveryTool);
 
 // ── Tool 26: get_delivery_cost_comparison ───────────────────────────────────
 
@@ -963,3 +973,15 @@ registerTool({
     }
   },
 });
+
+/**
+ * Bodies kept only so tests can exercise them directly (see
+ * `__tests__/support/legacy-tool-bodies.ts`). The registry never receives them.
+ */
+export const legacyMutatingTools: readonly ChatTool[] = [
+  createProductTool,
+  updateProductPriceTool,
+  createCustomerTool,
+  updateCustomerNotesTool,
+  assignOrderToDeliveryTool,
+];
