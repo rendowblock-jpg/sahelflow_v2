@@ -110,7 +110,8 @@ describe("the fallback poll in use-inbox-transport", () => {
 
 // MSG-16 / S05a-08: while the WebSocket is open the chat list was never
 // polled, so a message the push missed showed only after a reload. An open
-// socket now gets one slow catch-up poll of the chat list.
+// socket now gets one slow catch-up poll of the chat list, and in the same tick
+// the open conversation is re-read in the background (NEW-INBOX-THREAD-POLL).
 describe("the catch-up poll while the WebSocket is open", () => {
   const OPEN_POLL_MS = 60_000;
   let visibility = "visible";
@@ -163,11 +164,63 @@ describe("the catch-up poll while the WebSocket is open", () => {
     const { loadChats, loadMessages } = mount();
     await vi.advanceTimersByTimeAsync(OPEN_POLL_MS - 1);
     expect(loadChats).not.toHaveBeenCalled();
+    expect(loadMessages).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(loadChats).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(OPEN_POLL_MS * 10);
     expect(loadChats).toHaveBeenCalledTimes(11);
+    expect(loadMessages).toHaveBeenCalledTimes(11);
+  });
+
+  it("re-reads the open conversation in the same tick, in the background", async () => {
+    const { params, loadChats, loadMessages } = mount();
+    await vi.advanceTimersByTimeAsync(OPEN_POLL_MS);
+    expect(loadChats).toHaveBeenCalledTimes(1);
+    expect(loadMessages).toHaveBeenCalledTimes(1);
+    expect(loadMessages).toHaveBeenCalledWith(params.refs.activeChatRef.current, {
+      background: true,
+    });
+  });
+
+  it("reads the conversation that is open when the tick fires, not the one open at mount", async () => {
+    const { params, loadMessages } = mount();
+    const next = { conversationId: "c2" } as never;
+    params.refs.activeChatRef.current = next;
+    await vi.advanceTimersByTimeAsync(OPEN_POLL_MS);
+    expect(loadMessages).toHaveBeenCalledTimes(1);
+    expect(loadMessages).toHaveBeenCalledWith(next, { background: true });
+  });
+
+  it("refreshes only the chat list when no conversation is open", async () => {
+    const { loadChats, loadMessages } = mount({
+      refs: { activeChatRef: { current: null }, sendingRef: { current: false } },
+    });
+    await vi.advanceTimersByTimeAsync(OPEN_POLL_MS * 2);
+    expect(loadChats).toHaveBeenCalledTimes(2);
     expect(loadMessages).not.toHaveBeenCalled();
+  });
+
+  it("re-reads the open conversation with the socket open even when WhatsApp is not connected", async () => {
+    const { loadChats, loadMessages } = mount({
+      sidecarReachable: false,
+      sidecarStatus: null,
+    });
+    await vi.advanceTimersByTimeAsync(OPEN_POLL_MS);
+    expect(loadChats).toHaveBeenCalledTimes(1);
+    expect(loadMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not start a second tick while the conversation read is still running", async () => {
+    const loadMessages = vi.fn(() => new Promise<void>(() => {}));
+    const { loadChats } = mount({ loadMessages });
+    await vi.advanceTimersByTimeAsync(OPEN_POLL_MS * 5);
+    expect(loadChats).toHaveBeenCalledTimes(1);
+    expect(loadMessages).toHaveBeenCalledTimes(1);
+    // A returning tab must not overlap the read that is still in flight either.
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(loadChats).toHaveBeenCalledTimes(1);
+    expect(loadMessages).toHaveBeenCalledTimes(1);
   });
 
   it("does not start a second refresh while one is still running", async () => {
@@ -178,20 +231,23 @@ describe("the catch-up poll while the WebSocket is open", () => {
   });
 
   it("does not poll while the tab is hidden, and refreshes when it returns", async () => {
-    const { loadChats } = mount();
+    const { loadChats, loadMessages } = mount();
     visibility = "hidden";
     await vi.advanceTimersByTimeAsync(OPEN_POLL_MS * 3);
     expect(loadChats).not.toHaveBeenCalled();
+    expect(loadMessages).not.toHaveBeenCalled();
     visibility = "visible";
     document.dispatchEvent(new Event("visibilitychange"));
     await vi.advanceTimersByTimeAsync(0);
     expect(loadChats).toHaveBeenCalledTimes(1);
+    expect(loadMessages).toHaveBeenCalledTimes(1);
   });
 
   it("stays quiet while a send is running", async () => {
-    const { loadChats } = mount({ sending: true });
+    const { loadChats, loadMessages } = mount({ sending: true });
     await vi.advanceTimersByTimeAsync(OPEN_POLL_MS * 3);
     expect(loadChats).not.toHaveBeenCalled();
+    expect(loadMessages).not.toHaveBeenCalled();
   });
 
   it("stops on unmount", async () => {
