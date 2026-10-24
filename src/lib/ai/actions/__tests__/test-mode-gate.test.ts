@@ -89,7 +89,7 @@ describe("AI tool registry under NODE_ENV=test and VITEST=true", () => {
     "%s only creates a proposal when a runtime exists",
     async (name, args) => {
       const { db, touched } = untouchableDb();
-      const createProposal = vi.fn(async () => ({
+      const createProposal = vi.fn(async (_tool: string) => ({
         proposal: { id: "proposal-1" },
         proposalDigest: "digest-1",
       }));

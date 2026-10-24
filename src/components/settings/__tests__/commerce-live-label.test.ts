@@ -70,7 +70,7 @@ describe("commerce live-store label: panel and strings", () => {
     for (const key of KEYS) {
       for (const messages of [ar, fr, en]) {
         expect(typeof messages[key]).toBe("string");
-        expect(messages[key].trim().length).toBeGreaterThan(0);
+        expect((messages[key] ?? "").trim().length).toBeGreaterThan(0);
       }
       expect(ar[key]).not.toBe(en[key]);
       expect(ar[key]).toMatch(/[\u0600-\u06FF]/);
