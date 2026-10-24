@@ -241,7 +241,7 @@ function parseDecls(source: string): Decl[] {
       prop: text.slice(0, colon).trim().toLowerCase(),
       value: text.slice(colon + 1).trim().replace(/\s+/g, " "),
       line: bufLine,
-      rule: stack.length ? stack[stack.length - 1].id : 0,
+      rule: stack.length ? stack[stack.length - 1]!.id : 0,
       context: stack.map((s) => s.head),
     });
   };
@@ -396,8 +396,8 @@ function tsxViolations(kind: "all" | "bare" | "layout" | "long"): string[] {
       for (const raw of tokens) {
         const arbitrary = /(?:^|:)transition-\[([^\]]+)\]/.exec(raw);
         if (kind === "layout" && arbitrary) {
-          for (const part of arbitrary[1].split(",")) {
-            const prop = part.replace(/_/g, " ").trim().split(" ")[0];
+          for (const part of arbitrary[1]!.split(",")) {
+            const prop = part.replace(/_/g, " ").trim().split(" ")[0] ?? "";
             if (LAYOUT_PROPS.has(prop) && !allowed(f.rel, prop)) found.push(`${at} transition-[${prop}]`);
           }
         }
