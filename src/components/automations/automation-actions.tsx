@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Copy,
@@ -38,6 +38,7 @@ import {
   getAutomationWorkspaceCopy,
   type AutomationWorkspaceCopyKey,
 } from "@/lib/i18n/automation-workspace";
+import { newAutomationCreateKey } from "@/lib/automations/create-key";
 import { toast } from "@/lib/toast";
 
 interface AutomationActionsProps {
@@ -75,6 +76,8 @@ export function AutomationActions({
   const { t, locale } = useI18n();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  // A ref, because two clicks in the same moment both see loading === false.
+  const duplicatingRef = useRef(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const c = (key: AutomationWorkspaceCopyKey) =>
     getAutomationWorkspaceCopy(locale, key);
@@ -153,7 +156,8 @@ export function AutomationActions({
   }
 
   const duplicate = async () => {
-    if (repairRequired) return;
+    if (repairRequired || duplicatingRef.current) return;
+    duplicatingRef.current = true;
     setLoading(true);
     try {
       const steps = parseJson(automation.steps);
@@ -176,6 +180,7 @@ export function AutomationActions({
           ...(config && typeof config === "object" ? { config } : {}),
           maxRetries: automation.maxRetries ?? 2,
           retryDelayMs: automation.retryDelayMs ?? 500,
+          idempotencyKey: newAutomationCreateKey(),
         }),
       });
       if (!response.ok) throw new Error("AUTOMATION_DUPLICATE_FAILED");
@@ -184,6 +189,7 @@ export function AutomationActions({
     } catch {
       toast.error(t("common.error"));
     } finally {
+      duplicatingRef.current = false;
       setLoading(false);
     }
   };
@@ -247,7 +253,7 @@ export function AutomationActions({
               event.preventDefault();
               void duplicate();
             }}
-            disabled={repairRequired}
+            disabled={repairRequired || loading}
           >
             <Copy className="size-4" />
             {c("workspace.duplicate")}
