@@ -413,7 +413,8 @@ export function StorefrontStudio({
           )}
         </aside>
 
-        <main className="relative min-h-0 min-w-0 flex-1">
+        {/* A div, not a main: the dashboard shell already owns the page's one <main>. */}
+        <div data-studio-preview="true" className="relative min-h-0 min-w-0 flex-1">
           <StudioCanvas
             draft={draft}
             products={products}
@@ -448,7 +449,7 @@ export function StorefrontStudio({
               </button>
             </div>
           ) : null}
-        </main>
+        </div>
 
         <aside
           data-studio-inspector="true"

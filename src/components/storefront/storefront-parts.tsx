@@ -22,7 +22,9 @@ import type {
   StorefrontBlock,
   StorefrontSection,
 } from "@/lib/storefront/studio-sections";
+import { toAsciiDigits } from "@/lib/phone-patterns";
 import { cn } from "@/lib/utils";
+import { toWhatsAppDigits } from "@/lib/whatsapp/deep-link";
 
 /**
  * Shared building blocks of the storefront renderer (public store and Studio
@@ -123,8 +125,12 @@ export function hasContact(contact: StorefrontContactInfo): boolean {
   );
 }
 
-function whatsappHref(value: string): string {
-  const digits = value.replace(/\D/g, "");
+export function whatsappHref(value: string): string {
+  // Algerian mobiles in any spelling (Arabic digits, 00213, "+213 (0)") first;
+  // a foreign or landline contact keeps its own digits.
+  const dz = toWhatsAppDigits(value);
+  if (dz) return `https://wa.me/${dz}`;
+  const digits = toAsciiDigits(value).replace(/\D/g, "");
   const international = digits.startsWith("0") ? `213${digits.slice(1)}` : digits;
   return `https://wa.me/${international}`;
 }

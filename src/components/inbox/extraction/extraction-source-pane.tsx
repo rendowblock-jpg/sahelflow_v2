@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { ExtractedOrder } from "@/lib/ai/extraction";
 import type { OrderExtractionCopyKey } from "@/lib/i18n/order-extraction";
+import { toAsciiDigits } from "@/lib/phone-patterns";
 import { cn } from "@/lib/utils";
 
 type Copy = (key: OrderExtractionCopyKey, params?: Record<string, string | number>) => string;
@@ -38,7 +39,7 @@ function escapeRegExp(value: string): string {
  * separators, so "0555 12 34 56", "+213555123456" and "0555123456" all light
  * up the same span.
  */
-function needlesFor(order: ExtractedOrder | null): Array<{ pattern: RegExp; kind: Kind }> {
+export function needlesFor(order: ExtractedOrder | null): Array<{ pattern: RegExp; kind: Kind }> {
   if (!order) return [];
   const needles: Array<{ pattern: RegExp; kind: Kind }> = [];
   const text = (value: string | undefined, kind: Kind) => {
@@ -51,7 +52,7 @@ function needlesFor(order: ExtractedOrder | null): Array<{ pattern: RegExp; kind
     text(item.sourceText ?? item.productName, "product");
   }
   text(order.customerName, "customer");
-  const digits = order.phone?.replace(/\D/g, "") ?? "";
+  const digits = toAsciiDigits(order.phone ?? "").replace(/\D/g, "");
   if (digits.length >= 9) {
     const tail = digits.slice(-9).split("").join("[\\s.\\-]?");
     needles.push({

@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 
+import { CHART_MOTION_MS } from "@/lib/motion/tokens";
+
 const QUERY = "(prefers-reduced-motion: reduce)";
 
 function subscribe(callback: () => void): () => void {
@@ -31,7 +33,7 @@ export function useChartMotion() {
   return {
     reducedMotion,
     isAnimationActive: !reducedMotion,
-    fastDuration: reducedMotion ? 0 : 320,
-    baseDuration: reducedMotion ? 0 : 420,
+    fastDuration: reducedMotion ? 0 : CHART_MOTION_MS.update,
+    baseDuration: reducedMotion ? 0 : CHART_MOTION_MS.firstDraw,
   } as const;
 }
