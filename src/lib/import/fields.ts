@@ -101,9 +101,13 @@ export const CUSTOMER_FIELDS: FieldConfig[] = [
   },
 ];
 
-/** Convert a string to a number, stripping non-digit chars. */
+/**
+ * Convert a string to a number, stripping non-digit chars. Arabic-Indic digits
+ * become 0-9 and U+066B (Arabic decimal separator) becomes "."; the Arabic
+ * thousands marks (U+066C, U+060C) and "," are dropped with the other symbols.
+ */
 export function parseNumber(value: string): number {
-  const cleaned = value.replace(/[^\d.-]/g, "");
+  const cleaned = toAsciiDigits(value).replace(/\u066B/g, ".").replace(/[^\d.-]/g, "");
   const number = Number(cleaned);
   return Number.isFinite(number) ? number : 0;
 }
