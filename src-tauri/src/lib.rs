@@ -57,6 +57,7 @@ fn compiled_license_configuration() -> [(&'static str, &'static str); 3] {
     ]
 }
 mod startup_recovery;
+mod startup_trace_history;
 mod update_progress;
 
 use runtime_protocol::RuntimeProtocol;
@@ -372,6 +373,13 @@ pub fn run() {
                 app.manage(std::sync::Mutex::new(SidecarRespawnState::default()));
                 app.manage(ShutdownCoordinator::default());
                 let app_handle = app.handle().clone();
+                // Keep the last launch's trace before this launch overwrites it.
+                // A second copy of the app never reaches this line: the
+                // single-instance plugin ends it while the app is built, and
+                // the process authority above refuses a process that runs next
+                // to another desktop or a rotation. Only the launch that owns
+                // the app rotates the file, so a running launch keeps its trace.
+                startup_trace_history::keep_previous_trace(&app_data_dir);
                 startup_recovery::reset_startup_trace(&app_data_dir);
                 startup_recovery::record_startup_stage(
                     &app_data_dir,
