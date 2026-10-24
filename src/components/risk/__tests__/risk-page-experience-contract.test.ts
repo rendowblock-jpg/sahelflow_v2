@@ -135,3 +135,75 @@ describe("Risk Engine seller workspace contract", () => {
     );
   });
 });
+
+describe("Risk control panel does not promise actions the engine never takes", () => {
+  // autoConfirmLow / autoHoldCritical only pick a label (scoring.ts levelToAction);
+  // the return-rate threshold and the behavior weight are read by nothing.
+  const NOTE_KEYS = [
+    "risk.control.recommendationOnlyNote",
+    "risk.control.notUsedYetNote",
+  ] as const;
+
+  function section(panel: string, from: string, to: string): string {
+    const start = panel.indexOf(from);
+    const end = panel.indexOf(to, start + from.length);
+    expect(start, `${from} marker`).toBeGreaterThan(-1);
+    expect(end, `${to} marker`).toBeGreaterThan(start);
+    return panel.slice(start, end);
+  }
+
+  it("shows the recommendation-only note on each of the three automatic toggles", () => {
+    const panel = source("../risk-control-panel.tsx");
+    const toggles = section(panel, "{/* Auto-actions */}", "{/* Auto-blacklist threshold */}");
+
+    expect(toggles).toContain('t("risk.control.recommendationOnlyNote")');
+    expect(toggles).toContain('data-risk-control-note="recommendation-only"');
+    // The note sits inside the per-toggle row, so every toggle gets it.
+    const row = section(toggles, ".map(({ key, labelKey }) => (", "))}");
+    expect(row).toContain("risk.control.recommendationOnlyNote");
+  });
+
+  it("says the return-rate threshold and the behavior weight are not used yet", () => {
+    const panel = source("../risk-control-panel.tsx");
+    const threshold = section(panel, "{/* Auto-blacklist threshold */}", "{/* Actions */}");
+    const weights = section(panel, "{/* Weights */}", "{/* Thresholds */}");
+
+    expect(threshold).toContain('t("risk.control.notUsedYetNote")');
+    expect(threshold).toContain('data-risk-control-note="not-used-yet"');
+    expect(weights).toContain('key === "behavior"');
+    expect(weights).toContain('t("risk.control.notUsedYetNote")');
+  });
+
+  it("keeps every setting: nothing removed, renamed or re-wired", () => {
+    const panel = source("../risk-control-panel.tsx");
+
+    for (const name of [
+      "autoConfirmLow",
+      "autoHoldCritical",
+      "autoFlagBlacklist",
+      "autoBlacklistReturnRate",
+    ]) {
+      expect(panel).toContain(name);
+    }
+    expect(panel).toContain('{ key: "behavior", labelKey: "risk.control.weights.behavior" }');
+  });
+
+  it("has the same note keys, as real text, in Arabic, French and English", () => {
+    const read = (locale: string) =>
+      JSON.parse(source(`../../../lib/i18n/locales/${locale}.json`)) as Record<string, unknown>;
+    const ar = read("ar");
+    const fr = read("fr");
+    const en = read("en");
+
+    for (const key of NOTE_KEYS) {
+      for (const [name, bundle] of [["ar", ar], ["fr", fr], ["en", en]] as const) {
+        const text = bundle[key];
+        expect(typeof text, `${name}:${key}`).toBe("string");
+        expect((text as string).trim().length, `${name}:${key} not empty`).toBeGreaterThan(20);
+      }
+      expect(ar[key]).toMatch(/[\u0600-\u06FF]/);
+      expect(fr[key]).not.toBe(en[key]);
+      expect(ar[key]).not.toBe(en[key]);
+    }
+  });
+});

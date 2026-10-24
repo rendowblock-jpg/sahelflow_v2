@@ -2200,6 +2200,8 @@
   "risk.control.autoActions.autoFlagBlacklist": "تمييز تلقائي لعملاء القائمة السوداء",
   "risk.control.autoActions.autoHoldCritical": "وضع الطلبات الحرجة في الانتظار",
   "risk.control.autoBlacklistReturnRate": "عتبة القائمة السوداء التلقائية (معدل الإرجاع)",
+  "risk.control.notUsedYetNote": "محفوظ، لكنه غير مستعمل بعد. تغييره لا يغيّر أي طلب ولا درجة الخطر.",
+  "risk.control.recommendationOnlyNote": "حاليًا هذا الخيار يكتب توصية على الطلب فقط. لا يؤكّد أي طلب ولا يضعه في الانتظار ولا يمنعه من تلقاء نفسه.",
   "risk.control.reset": "إعادة التعيين إلى الافتراضي",
   "risk.control.resetConfirm": "إعادة تعيين جميع إعدادات المخاطر إلى القيم الافتراضية؟",
   "risk.control.save": "حفظ التكوين",

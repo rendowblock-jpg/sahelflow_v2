@@ -2200,6 +2200,8 @@
   "risk.control.autoActions.autoFlagBlacklist": "Signaler automatiquement les clients sur liste noire",
   "risk.control.autoActions.autoHoldCritical": "Mettre en attente les commandes critiques",
   "risk.control.autoBlacklistReturnRate": "Seuil de liste noire automatique (taux de retour)",
+  "risk.control.notUsedYetNote": "Enregistré, mais pas encore utilisé. Le modifier ne change aucune commande ni aucun score de risque.",
+  "risk.control.recommendationOnlyNote": "Pour l’instant, ce réglage ne fait qu’ajouter une recommandation sur la commande. Il ne confirme, ne met en attente et ne bloque aucune commande de lui-même.",
   "risk.control.reset": "Réinitialiser aux valeurs par défaut",
   "risk.control.resetConfirm": "Réinitialiser tous les paramètres de risque aux valeurs par défaut ?",
   "risk.control.save": "Enregistrer la configuration",

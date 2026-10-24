@@ -2200,6 +2200,8 @@
   "risk.control.autoActions.autoFlagBlacklist": "Auto-flag blacklisted customers",
   "risk.control.autoActions.autoHoldCritical": "Hold critical orders",
   "risk.control.autoBlacklistReturnRate": "Auto-blacklist return-rate threshold",
+  "risk.control.notUsedYetNote": "Saved, but not used yet. Changing it does not change any order or any risk score.",
+  "risk.control.recommendationOnlyNote": "For now this only adds a recommendation to the order. It does not confirm, hold or block any order by itself.",
   "risk.control.reset": "Reset to defaults",
   "risk.control.resetConfirm": "Reset all risk settings to defaults?",
   "risk.control.save": "Save configuration",
