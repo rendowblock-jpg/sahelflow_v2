@@ -1421,7 +1421,10 @@ fn create_shop_template(
     fs::create_dir_all(&system_dir)?;
     let target = system_dir.join("shop-template.db");
     let marker = system_dir.join("shop-template.sha256");
+    // A zero-byte file passes preflight (SQLite reads it as a new empty database), so it
+    // must fall through to the rebuild below instead of being trusted as the template.
     if target.exists()
+        && fs::metadata(&target)?.len() > 0
         && marker.exists()
         && fs::read_to_string(&marker)?.trim() == migration_set_sha256
     {
@@ -2567,6 +2570,41 @@ mod tests {
                 |row| row.get(0),
             )
             .expect("count applied migrations")
+    }
+
+    // The template is the source for every new shop. A zero-byte file passes SQLite's own
+    // integrity check (it reads as a new empty database), so a failed copy that left 0 bytes
+    // behind a matching marker must be rebuilt, never trusted.
+    #[test]
+    fn zero_byte_shop_template_is_rebuilt_not_trusted() {
+        let root = test_root("zero-template");
+        let migrations = vec![Migration {
+            name: "20260101000000_init".to_owned(),
+            checksum: "a".repeat(64),
+            sql: "CREATE TABLE \"Customer\" (id TEXT PRIMARY KEY, name TEXT NOT NULL);".to_owned(),
+        }];
+        let migration_set = "b".repeat(64);
+        create_shop_template(&root, &migrations, &migration_set).expect("first template");
+        let template = root.join("system/shop-template.db");
+        assert!(fs::metadata(&template).expect("template").len() > 0);
+
+        fs::write(&template, b"").expect("simulate a failed copy that left 0 bytes");
+        create_shop_template(&root, &migrations, &migration_set).expect("second template call");
+
+        assert!(
+            fs::metadata(&template).expect("template after").len() > 0,
+            "a zero-byte template was trusted: new shops would be blank files"
+        );
+        let connection = Connection::open(&template).expect("open rebuilt template");
+        let tables: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'Customer'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("template schema");
+        assert_eq!(tables, 1, "the rebuilt template has no schema");
+        fs::remove_dir_all(root).expect("remove test root");
     }
 
     #[test]
