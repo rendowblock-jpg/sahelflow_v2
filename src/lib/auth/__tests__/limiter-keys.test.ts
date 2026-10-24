@@ -146,6 +146,70 @@ describe("member buckets are bounded", () => {
   });
 });
 
+describe("idle failed member buckets are evicted (LEAD-01)", () => {
+  const IDLE_MS = 15 * 60_000;
+
+  function fillWithFailedJunkIds(): string[] {
+    const keys: string[] = [];
+    for (let i = 0; i < MEMBER_BUCKET_CAP; i++) {
+      const key = getMemberLoginLimiterKey(`junk${i}.x`);
+      recordLoginAttempt(key);
+      // Two failures: below the first lockout, so one more would lock the bucket.
+      recordLoginFailure(key);
+      recordLoginFailure(key);
+      keys.push(key);
+    }
+    return keys;
+  }
+
+  it("lets an unseen member get its own bucket once the failed junk ids have been idle for 15 minutes", () => {
+    vi.useFakeTimers();
+    fillWithFailedJunkIds();
+    const overflow = getMemberLoginLimiterKey("unseen.one");
+    expect(overflow).toBe(getMemberLoginLimiterKey("unseen.two"));
+
+    vi.advanceTimersByTime(IDLE_MS + 1);
+    const own = getMemberLoginLimiterKey("unseen.one");
+    expect(own).toBe("login:member:unseen.one");
+    expect(own).not.toBe(overflow);
+    expect(getMemberLoginLimiterKey("unseen.two")).toBe("login:member:unseen.two");
+  });
+
+  it("keeps a failed bucket that is not yet 15 minutes idle", () => {
+    vi.useFakeTimers();
+    fillWithFailedJunkIds();
+    vi.advanceTimersByTime(IDLE_MS - 1_000);
+    const overflow = getMemberLoginLimiterKey("unseen.one");
+    expect(overflow).toBe("login:member:*");
+  });
+
+  it("drops the failure count of an evicted bucket and keeps one that was used again", () => {
+    vi.useFakeTimers();
+    const keys = fillWithFailedJunkIds();
+    vi.advanceTimersByTime(IDLE_MS - 1_000);
+    recordLoginFailure(keys[0]); // still active: its idle clock restarts
+    vi.advanceTimersByTime(2_000);
+
+    getMemberLoginLimiterKey("unseen.one"); // at the cap: sweeps idle buckets
+    // keys[0] is still tracked with its failures: the next one keeps it locked.
+    expect(recordLoginFailure(keys[0]).locked).toBe(true);
+    // keys[1] was evicted and starts from zero: one failure does not lock it.
+    expect(recordLoginFailure(keys[1]).locked).toBe(false);
+  });
+
+  it("never evicts a bucket that is still locked out", () => {
+    vi.useFakeTimers();
+    const key = getMemberLoginLimiterKey("locked.one");
+    lock(key); // 10 failures: 15 minute lockout
+    vi.advanceTimersByTime(IDLE_MS - 1_000);
+    for (let i = 1; i < MEMBER_BUCKET_CAP; i++) {
+      recordLoginFailure(getMemberLoginLimiterKey(`filler${i}.x`));
+    }
+    getMemberLoginLimiterKey("unseen.one");
+    expect(checkLoginRateLimit(key)).toMatchObject({ allowed: false, locked: true });
+  });
+});
+
 describe("a failed sign-in is held to a minimum duration (IDN-07)", () => {
   it("waits out the rest of the floor and no longer", async () => {
     vi.useFakeTimers();
