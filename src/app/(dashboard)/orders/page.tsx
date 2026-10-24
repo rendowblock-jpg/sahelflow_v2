@@ -364,7 +364,14 @@ export default async function OrdersPage({
         <Tabs defaultValue={statusFilter ?? "all"} className="min-w-0 flex-1">
           <TabsList className="h-auto w-fit max-w-full min-w-0 flex-wrap justify-start">
             {STATUS_FILTERS.map((filter) => (
-              <TabsTrigger key={filter.value} value={filter.value} asChild>
+              // The tabs are links to a re-rendered page, so no panel with the
+              // generated id exists; without this Radix names one anyway.
+              <TabsTrigger
+                key={filter.value}
+                value={filter.value}
+                aria-controls={undefined}
+                asChild
+              >
                 <Link
                   href={statusTabHref(filter.value)}
                   className="flex max-w-full !flex-none items-center gap-1.5"
