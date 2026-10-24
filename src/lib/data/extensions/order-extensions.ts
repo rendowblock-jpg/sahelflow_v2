@@ -8,6 +8,12 @@ import type { Order, OrderStatus } from "@/types/domain";
 import { orderService } from "../order-service";
 import { logger } from "@/lib/logger";
 import { deriveExistingShopBlindIndex } from "@/lib/crypto/protected-record";
+import {
+  orderListFoldCandidates,
+  phoneQueryForms,
+  type FoldClient,
+  type OrderFoldCandidates,
+} from "@/lib/search/list-search-candidates";
 
 export interface BulkResult {
   succeeded: string[];
@@ -40,16 +46,17 @@ async function searchableIndexes(
 }
 
 async function searchIndexes(ctx: ServiceContext, query: string) {
-  const [phoneIndexes, nameIndexes] = await Promise.all([
-    searchableIndexes(ctx, query, "Order", "phone"),
+  const [phoneLists, nameIndexes, fold] = await Promise.all([
+    Promise.all(phoneQueryForms(query).map((form) => searchableIndexes(ctx, form, "Order", "phone"))),
     searchableIndexes(ctx, query.toLowerCase(), "Customer", "name"),
+    orderListFoldCandidates(ctx.prisma as unknown as FoldClient, query, true),
   ]);
-  return { phoneIndexes, nameIndexes };
+  return { phoneIndexes: phoneLists.flat(), nameIndexes, fold };
 }
 
 function searchWhere(
   q: string,
-  indexes: { phoneIndexes: string[]; nameIndexes: string[] },
+  indexes: { phoneIndexes: string[]; nameIndexes: string[]; fold: OrderFoldCandidates },
   status?: OrderStatus,
 ) {
   const plaintextFallback = process.env.NODE_ENV === "test";
@@ -63,9 +70,12 @@ function searchWhere(
           { phoneBlindIndex: { in: indexes.phoneIndexes } },
           { customer: { nameBlindIndex: { in: indexes.nameIndexes } } },
           { wilaya: { contains: q } },
+          { id: { in: indexes.fold.orderIds } },
+          { customerId: { in: indexes.fold.customerIds } },
+          { wilaya: { in: indexes.fold.wilayaSpellings } },
           ...(plaintextFallback
             ? [
-                { phone: { contains: q } },
+                ...phoneQueryForms(q).map((form) => ({ phone: { contains: form } })),
                 { customer: { name: { contains: q } } },
               ]
             : []),

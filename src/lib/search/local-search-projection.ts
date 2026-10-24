@@ -36,14 +36,14 @@ const ORDER_TOKEN_REFERENCE = {
 } as const;
 
 /**
- * Customer and order tokens are stored as keyed hashes written BEFORE the
- * Arabic letter fold (ة/ه, ى/ي, bidi marks) and the +213 phone fold existed.
- * Until every row is queued for a rebuild, index and query must both keep the
- * old spelling or an existing customer stops matching its own name. The
- * query side may already read +213 as 0: stored phones are national numbers.
+ * Tokens written before the full Arabic fold (ة/ه, ى/ي, bidi marks, +213) used
+ * the old spelling. Until warmLocalSearchProjection has rebuilt every row once
+ * (TOKEN_FOLD_REVISION), a query is also tried in that spelling so a customer
+ * not rebuilt yet still matches its own name. Remove after one release.
  */
-const STORED_TOKEN_FOLD = { foldLetters: false, nationalPhone: false } as const;
-const STORED_TOKEN_QUERY_FOLD = { foldLetters: false } as const;
+const LEGACY_QUERY_FOLD = { foldLetters: false } as const;
+const TOKEN_FOLD_MARKER_ID = "token-fold";
+const TOKEN_FOLD_REVISION = 1;
 
 type BlindIndexClient = Parameters<typeof deriveShopBlindIndexes>[0];
 
@@ -326,7 +326,7 @@ function addPersistentValueTokens(
   rawValue: string,
   primary = false,
 ): void {
-  const normalized = normalizeSearchText(rawValue, STORED_TOKEN_FOLD);
+  const normalized = normalizeSearchText(rawValue);
   if (!normalized) return;
 
   if (primary) target.add(`primary-normalized:${normalized}`);
@@ -339,7 +339,7 @@ function addPersistentValueTokens(
     }
   }
 
-  const compact = compactSearchText(normalized, STORED_TOKEN_FOLD);
+  const compact = compactSearchText(normalized);
   if (compact.length < 2) return;
   if (primary) target.add(`primary-compact:${compact}`);
   target.add(`exact-compact:${compact}`);
@@ -351,13 +351,18 @@ function addPersistentValueTokens(
   }
 }
 
-function persistentQueryKeys(rawQuery: string): {
+interface PersistentQueryKeys {
   exactKeys: string[];
   prefixKeys: string[];
   gramKeys: string[];
-} {
-  const query = normalizeSearchText(rawQuery, STORED_TOKEN_QUERY_FOLD);
-  const compact = compactSearchText(query, STORED_TOKEN_QUERY_FOLD);
+}
+
+function persistentQueryKeys(
+  rawQuery: string,
+  options: { foldLetters?: boolean } = {},
+): PersistentQueryKeys {
+  const query = normalizeSearchText(rawQuery, options);
+  const compact = compactSearchText(query, options);
   return {
     exactKeys: [
       `primary-normalized:${query}`,
@@ -397,17 +402,25 @@ async function queryTokenHashes(
   );
 }
 
-async function idsForTokenHash(
+/** One query for all hashes of a search; each hash keeps at most CANDIDATE_SCAN_BUDGET ids. */
+async function idsForTokenHashes(
   family: string,
-  tokenHash: string,
-): Promise<Set<string>> {
+  hashes: readonly string[],
+): Promise<Map<string, Set<string>>> {
+  const buckets = new Map<string, Set<string>>();
+  if (hashes.length === 0) return buckets;
   const rows = await db.searchProjectionToken.findMany({
-    where: { family, tokenHash },
-    select: { entityId: true },
+    where: { family, tokenHash: { in: [...hashes] } },
+    select: { entityId: true, tokenHash: true },
     orderBy: { entityId: "asc" },
-    take: CANDIDATE_SCAN_BUDGET,
+    take: CANDIDATE_SCAN_BUDGET * hashes.length,
   });
-  return new Set(rows.map((row) => row.entityId));
+  for (const row of rows) {
+    const bucket = buckets.get(row.tokenHash) ?? new Set<string>();
+    if (bucket.size < CANDIDATE_SCAN_BUDGET) bucket.add(row.entityId);
+    buckets.set(row.tokenHash, bucket);
+  }
+  return buckets;
 }
 
 async function persistedIdsForQuery(
@@ -416,54 +429,92 @@ async function persistedIdsForQuery(
   rawQuery: string,
   unavailableMessage: string,
 ): Promise<string[]> {
-  const query = normalizeSearchText(rawQuery, STORED_TOKEN_QUERY_FOLD);
-  if (query.length < 2) return [];
-  const { exactKeys, prefixKeys, gramKeys } = persistentQueryKeys(query);
+  if (normalizeSearchText(rawQuery).length < 2) return [];
+  const full = persistentQueryKeys(rawQuery);
+  const legacy = persistentQueryKeys(rawQuery, LEGACY_QUERY_FOLD);
+  const keySets =
+    JSON.stringify(full) === JSON.stringify(legacy) ? [full] : [full, legacy];
   const hashByKey = await queryTokenHashes(
-    [...exactKeys, ...prefixKeys, ...gramKeys],
+    keySets.flatMap((keys) => [...keys.exactKeys, ...keys.prefixKeys, ...keys.gramKeys]),
     reference,
     unavailableMessage,
   );
+  const bucketByHash = await idsForTokenHashes(family, [...new Set(hashByKey.values())]);
+  const bucketFor = (key: string): Set<string> =>
+    bucketByHash.get(hashByKey.get(key) ?? "") ?? new Set<string>();
   const selected = new Set<string>();
 
-  for (const key of exactKeys) {
-    const hash = hashByKey.get(key);
-    if (!hash) continue;
-    appendBounded(selected, await idsForTokenHash(family, hash));
-    if (selected.size >= CANDIDATE_SCAN_BUDGET) return [...selected];
-  }
-
-  if (prefixKeys.length > 0 && selected.size < CANDIDATE_SCAN_BUDGET) {
-    const buckets: Set<string>[] = [];
-    for (const key of prefixKeys) {
-      const hash = hashByKey.get(key);
-      if (!hash) continue;
-      const bucket = await idsForTokenHash(family, hash);
-      if (bucket.size > 0) buckets.push(bucket);
-    }
-    if (buckets.length > 0) {
+  for (const keys of keySets) {
+    for (const key of keys.exactKeys) appendBounded(selected, bucketFor(key));
+    for (const tier of [keys.prefixKeys, keys.gramKeys]) {
+      if (tier.length === 0 || selected.size >= CANDIDATE_SCAN_BUDGET) continue;
+      const buckets = tier.map(bucketFor).filter((bucket) => bucket.size > 0);
+      if (buckets.length === 0) continue;
       let ids = new Set(buckets[0]);
       for (const bucket of buckets.slice(1)) ids = intersect(ids, bucket);
       appendBounded(selected, ids);
     }
   }
-
-  if (gramKeys.length > 0 && selected.size < CANDIDATE_SCAN_BUDGET) {
-    const buckets: Set<string>[] = [];
-    for (const key of gramKeys) {
-      const hash = hashByKey.get(key);
-      if (!hash) continue;
-      const bucket = await idsForTokenHash(family, hash);
-      if (bucket.size > 0) buckets.push(bucket);
-    }
-    if (buckets.length > 0) {
-      let ids = new Set(buckets[0]);
-      for (const bucket of buckets.slice(1)) ids = intersect(ids, bucket);
-      appendBounded(selected, ids);
-    }
-  }
-
   return [...selected];
+}
+
+/**
+ * Rebuild every customer and order token row once when the stored fold is
+ * older than TOKEN_FOLD_REVISION: queue them in the same dirty table the
+ * triggers use (revision 0, so live edits are refreshed first) and record the
+ * revision in the same transaction. No schema change.
+ */
+async function ensureTokenFoldRebuild(): Promise<void> {
+  const marker = await db.searchProjectionRevision.findUnique({
+    where: { id: TOKEN_FOLD_MARKER_ID },
+    select: { revision: true },
+  });
+  if ((marker?.revision ?? 0) >= TOKEN_FOLD_REVISION) return;
+  await db.$transaction(async (tx) => {
+    await tx.$executeRaw`INSERT OR IGNORE INTO "SearchProjectionDirty" ("family", "entityId", "revision") SELECT 'customer', "id", 0 FROM "Customer"`;
+    await tx.$executeRaw`INSERT OR IGNORE INTO "SearchProjectionDirty" ("family", "entityId", "revision") SELECT 'order', "id", 0 FROM "Order"`;
+    await tx.$executeRaw`INSERT INTO "SearchProjectionRevision" ("id", "revision") VALUES (${TOKEN_FOLD_MARKER_ID}, ${TOKEN_FOLD_REVISION}) ON CONFLICT("id") DO UPDATE SET "revision" = excluded."revision"`;
+  });
+}
+
+let tokenFoldChecked = false;
+
+async function readyForListSearch(refresh: () => Promise<boolean>): Promise<void> {
+  if (!tokenFoldChecked) {
+    await ensureTokenFoldRebuild();
+    tokenFoldChecked = true;
+  }
+  await refresh();
+}
+
+/** Customer ids whose persisted tokens match the text. Empty (never throws) when the search authority is missing. */
+export async function persistedCustomerIdsForQuery(query: string): Promise<string[]> {
+  try {
+    await readyForListSearch(refreshCustomerProjectionBatch);
+    return await persistedIdsForQuery(
+      CUSTOMER_TOKEN_FAMILY,
+      CUSTOMER_TOKEN_REFERENCE,
+      query,
+      "Customer search blind-index authority is unavailable",
+    );
+  } catch {
+    return [];
+  }
+}
+
+/** Order ids whose persisted order-number tokens match the text. Empty (never throws) when the search authority is missing. */
+export async function persistedOrderIdsForQuery(query: string): Promise<string[]> {
+  try {
+    await readyForListSearch(refreshOrderProjectionBatch);
+    return await persistedIdsForQuery(
+      ORDER_TOKEN_FAMILY,
+      ORDER_TOKEN_REFERENCE,
+      query,
+      "Order search blind-index authority is unavailable",
+    );
+  } catch {
+    return [];
+  }
 }
 
 function customerPersistentTokenKeys(row: CustomerProjectionRow): string[] {
@@ -1023,6 +1074,13 @@ export async function warmLocalSearchProjection(
   scope: SearchProjectionWarmScope,
 ): Promise<void> {
   assertBoundShop(shopId);
+  if (scope.customer || scope.order) {
+    try {
+      await ensureTokenFoldRebuild();
+    } catch {
+      // The next warm retries; search keeps serving the rows already indexed.
+    }
+  }
   const work: Promise<unknown>[] = [];
   if (scope.customer) work.push(warmCustomerProjection());
   if (scope.conversation) {

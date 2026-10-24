@@ -22,6 +22,11 @@ import type {
   WorkbenchFieldAccess,
 } from "@/types/workbench";
 import { wilayaStoredSpellings } from "@/lib/wilaya-display";
+import {
+  orderListFoldCandidates,
+  phoneQueryForms,
+  type FoldClient,
+} from "@/lib/search/list-search-candidates";
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -165,11 +170,15 @@ type BlindIndexClient = Parameters<typeof deriveExistingShopBlindIndex>[0];
 
 async function orderSearchIndexes(q: string) {
   const [phoneIndex, nameIndex] = await Promise.all([
-    deriveExistingShopBlindIndex(
-      db as unknown as BlindIndexClient,
-      q,
-      { recordType: "Order", field: "phone" },
-      { shopContext },
+    Promise.all(
+      phoneQueryForms(q).map((form) =>
+        deriveExistingShopBlindIndex(
+          db as unknown as BlindIndexClient,
+          form,
+          { recordType: "Order", field: "phone" },
+          { shopContext },
+        ),
+      ),
     ),
     deriveExistingShopBlindIndex(
       db as unknown as BlindIndexClient,
@@ -179,7 +188,7 @@ async function orderSearchIndexes(q: string) {
     ),
   ]);
   return {
-    phoneIndexes: phoneIndex ? [phoneIndex] : [],
+    phoneIndexes: phoneIndex.filter((value): value is string => Boolean(value)),
     nameIndexes: nameIndex ? [nameIndex] : [],
   };
 }
@@ -230,19 +239,27 @@ export async function buildOrdersWorkbenchWhere(
   const q = filters.q?.trim() ?? "";
   if (q) {
     const { phoneIndexes, nameIndexes } = await orderSearchIndexes(q);
+    const fold = await orderListFoldCandidates(
+      db as unknown as FoldClient,
+      q,
+      access.contact,
+    );
     const plaintextFallback = process.env.NODE_ENV === "test";
     const branches: Prisma.OrderWhereInput[] = [
       { orderNumber: { contains: q } },
+      { id: { in: fold.orderIds } },
     ];
     if (access.contact) {
       branches.push(
         { wilaya: { contains: q } },
+        { wilaya: { in: fold.wilayaSpellings } },
+        { customerId: { in: fold.customerIds } },
         { phoneBlindIndex: { in: phoneIndexes } },
         { customer: { nameBlindIndex: { in: nameIndexes } } },
       );
       if (plaintextFallback) {
         branches.push(
-          { phone: { contains: q } },
+          ...phoneQueryForms(q).map((form) => ({ phone: { contains: form } })),
           { customer: { name: { contains: q } } },
         );
       }
