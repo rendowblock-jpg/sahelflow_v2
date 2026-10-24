@@ -6,7 +6,7 @@
  *   - redactPhonesInText: contiguous/spaced phone formats in prose
  *   - redactToolResult: recursive object/array walking, address truncation,
  *     phone-field-specific redaction
- *   - Documented gaps (NOT redacted): Arabic-Indic digits, emails, names in
+ *   - Documented gaps (NOT redacted): emails, names in
  *     the generic sanitizer — customer names are handled by the tool-aware layer.
  *
  * The redact module imports "server-only" (a Next.js package that throws
@@ -130,9 +130,10 @@ describe("redactPhonesInText", () => {
 
   // ── Documented limitations ──────────────────────────────────────────────
 
-  it("does NOT redact Arabic-Indic digits in free text", () => {
+  it("redacts Arabic-Indic digits in free text (all formats: redact-phone-formats.test.ts)", () => {
     const out = redactPhonesInText("Tel: ٠٥٥٥١٢٣٤٥٦");
-    expect(out).toContain("٠٥٥٥١٢٣٤٥٦");
+    expect(out).not.toContain("٠٥٥٥١٢٣٤٥٦");
+    expect(out).toBe("Tel: 0•••••••56");
   });
 
   it("does NOT redact emails (generic sanitizer limitation)", () => {
