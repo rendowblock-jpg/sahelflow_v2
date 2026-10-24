@@ -9,6 +9,7 @@ import { constantTimeEqual } from "@/lib/auth/constant-time";
 import { requireAuth } from "@/lib/auth/server";
 import { getI18n } from "@/lib/i18n-server";
 import { withDemoPolicyLock } from "@/lib/demo/algerian-demo-policy";
+import { shopDateString } from "@/lib/time/shop-day";
 
 /**
  * Projection of the last confirmed daily-report receipt. The durable WhatsApp
@@ -18,12 +19,7 @@ const DAILY_REPORT_LAST_SENT_KEY = "daily_report_last_sent_at";
 
 /** Format a Date as the Algiers-local calendar date "YYYY-MM-DD". */
 function getAlgiersTodayDate(d: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Africa/Algiers",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
+  return shopDateString(d);
 }
 
 export const dynamic = "force-dynamic";

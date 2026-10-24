@@ -6,6 +6,7 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
 import { logAudit } from "@/lib/audit";
+import { shopMonthRange } from "@/lib/time/shop-day";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +26,8 @@ function parseMonthFilter(
   if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
     return null;
   }
-  const gte = new Date(Date.UTC(year, month - 1, 1));
-  const lt = new Date(Date.UTC(year, month, 1));
-  return { gte, lt };
+  // The month is a shop (Algeria) month, not a UTC month.
+  return shopMonthRange(year, month);
 }
 
 /**

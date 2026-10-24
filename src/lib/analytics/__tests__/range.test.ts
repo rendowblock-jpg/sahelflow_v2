@@ -8,9 +8,10 @@ import {
   resolvePreviousRange,
   toIsoDate,
 } from "@/lib/analytics/range";
+import { addShopDays } from "@/lib/time/shop-day";
 
-/** Fixed local clock: 2026-01-15 12:00 — deterministic windows in any TZ. */
-const NOW = new Date(2026, 0, 15, 12, 0, 0);
+/** Fixed clock: 2026-01-15 12:00 shop time (Algeria, UTC+1) — same in any host TZ. */
+const NOW = new Date("2026-01-15T11:00:00.000Z");
 const TODAY = "2026-01-15";
 
 describe("resolveAnalyticsRange", () => {
@@ -30,12 +31,10 @@ describe("resolveAnalyticsRange", () => {
       expect(range.preset).toBe(preset);
       expect(range.days).toBe(days);
       expect(range.toIso).toBe(TODAY);
-      const expectedFrom = new Date(NOW);
-      expectedFrom.setDate(expectedFrom.getDate() - (days - 1));
-      expect(range.fromIso).toBe(toIsoDate(expectedFrom));
+      expect(range.fromIso).toBe(toIsoDate(addShopDays(NOW, -(days - 1))));
       // toExclusive is the start of the day after `to`.
       expect(range.toExclusive.getTime()).toBeGreaterThan(range.to.getTime());
-      expect(range.toExclusive.getDate()).toBe(16);
+      expect(toIsoDate(range.toExclusive)).toBe("2026-01-16");
     },
   );
 
@@ -170,7 +169,8 @@ describe("buildOrdersDrillDownUrl", () => {
 });
 
 describe("toIsoDate", () => {
-  it("serializes local dates as YYYY-MM-DD", () => {
-    expect(toIsoDate(new Date(2026, 0, 5, 23, 30))).toBe("2026-01-05");
+  it("serializes shop-time dates as YYYY-MM-DD", () => {
+    // 23:30 on 5 Jan in Algeria is 22:30 UTC.
+    expect(toIsoDate(new Date("2026-01-05T22:30:00.000Z"))).toBe("2026-01-05");
   });
 });
