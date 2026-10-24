@@ -5,7 +5,10 @@ process.env.SF_MASTER_KEY =
 import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import { sourceBusinessPrincipal } from "@/lib/business-truth/principal";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { createCanonicalSourceOrder } from "../canonical-source-order";
+import { submitCanonicalSourceDraft } from "../canonical-source-draft";
 import {
   canonicalSourceOrderSourceMetadata,
   trustedManualOrderSourceMetadata,
@@ -596,6 +599,7 @@ describe("editing the lines of a pending order the seller typed in (S03a-03B)", 
         source: "storefront",
         sourceIdentity: "shop-a",
         sourceOrderId: "receipt-1",
+        sourceDetails: { hostedDelegationAuthority: "v1", hostedReleaseId: "release-00000001" },
       }),
     });
 
@@ -744,5 +748,134 @@ describe("editing the lines of a pending order the seller typed in (S03a-03B)", 
         idempotencyKey: "confirm-on-version-before-lines",
       }),
     ).rejects.toThrow(/version conflict/i);
+  });
+});
+
+/**
+ * NEW-ORDER-LINES-OTHER-SOURCES: a pending order from WhatsApp, a CSV/XLSX import, the AI chat (once submitted) or the local
+ * storefront holds no stock either (createCanonicalSourceOrder writes inventoryState "unreserved" and nothing else), so the seller
+ * may correct its lines. These orders are created through the real intake command, not seeded by hand.
+ */
+describe("editing the lines of a pending order that came from another source", () => {
+  const sourceContext = (source: Parameters<typeof sourceBusinessPrincipal>[0]) => ({
+    prisma: db as never,
+    businessPrincipal: sourceBusinessPrincipal(source, "lines-test"),
+  });
+
+  async function intake(
+    source: Parameters<typeof sourceBusinessPrincipal>[0],
+    options: { sourceDetails?: Record<string, unknown>; initialStatus?: "pending" | "draft"; unitPrice?: number } = {},
+  ) {
+    const { product } = await seedProduct(`Source product ${source}`, 2500);
+    const created = await createCanonicalSourceOrder(sourceContext(source), {
+      idempotencyKey: `intake-${source}-${sequence}`,
+      source,
+      sourceIdentity: "lines-test",
+      sourceOrderId: `order-${source}-${sequence}`,
+      ...(options.sourceDetails ? { sourceDetails: options.sourceDetails } : {}),
+      ...(options.initialStatus ? { initialStatus: options.initialStatus } : {}),
+      newCustomer: { name: "Source customer", phone: "05 55 12 34 56", wilaya: "Alger", commune: "Alger Centre", address: "1 Source Street" },
+      items: [{ productId: product.id, quantity: 2, ...(options.unitPrice !== undefined ? { unitPrice: options.unitPrice } : {}) }],
+      wilaya: "Alger",
+      commune: "Alger Centre",
+      address: "1 Source Street",
+      phone: "05 55 12 34 56",
+      deliveryCost: 600,
+    });
+    const order = await db.order.findUniqueOrThrow({ where: { id: created.result.order.id }, include: { items: true } });
+    return { order, item: order.items[0] as (typeof order.items)[number], product };
+  }
+
+  it.each(["whatsapp", "csv", "xlsx", "storefront"] as const)(
+    "edits the lines of a pending %s order, holds no stock, and the confirmation reserves the new quantity",
+    async (source) => {
+      const { order, item, product } = await intake(source);
+      expect(order).toMatchObject({ status: "pending", inventoryState: "unreserved", version: 1 });
+      const commandsBefore = await count("BusinessCommand");
+
+      const edited = await executeManualOrderLinesEdit(context, linesCommand(order.id, `lines-${source}`, [{ id: item.id, quantity: 5 }]));
+
+      expect(edited.result).toMatchObject({ orderId: order.id, version: 2 });
+      expect(await db.orderItem.findUniqueOrThrow({ where: { id: item.id } })).toMatchObject({ quantity: 5, total: 12_500 });
+      expect(await db.order.findUniqueOrThrow({ where: { id: order.id } })).toMatchObject({ totalPrice: 12_500 + 600, version: 2 });
+      expect(await count("BusinessCommand")).toBe(commandsBefore + 1);
+      expect(await count("InventoryReservation")).toBe(0);
+      expect(await count("InventoryMovement")).toBe(0);
+      expect(await db.product.findUniqueOrThrow({ where: { id: product.id } })).toMatchObject({ stock: 20 });
+
+      const confirmed = await executeManualOrderDecision(context, {
+        orderId: order.id,
+        decision: "confirm",
+        expectedVersion: 2,
+        idempotencyKey: `confirm-after-lines-${source}`,
+      });
+      expect(confirmed.result).toMatchObject({ status: "confirmed", version: 3 });
+      const reservations = await db.$queryRawUnsafe<Array<{ quantity: number | bigint }>>('SELECT "quantity" FROM "InventoryReservation"');
+      expect(reservations.map((row) => Number(row.quantity))).toEqual([5]);
+      expect(await db.product.findUniqueOrThrow({ where: { id: product.id } })).toMatchObject({ stock: 15 });
+    },
+  );
+
+  it("edits an AI-chat order only after the draft was submitted: a draft is refused as not pending", async () => {
+    const { order, item } = await intake("ai_chat", { initialStatus: "draft" });
+    await expect(
+      executeManualOrderLinesEdit(context, linesCommand(order.id, "lines-ai-draft", [{ id: item.id, quantity: 5 }])),
+    ).rejects.toThrow(/requires pending status/i);
+
+    const submitted = await submitCanonicalSourceDraft(context, {
+      orderId: order.id,
+      expectedVersion: order.version,
+      idempotencyKey: "submit-ai-draft-for-lines",
+    });
+    expect(submitted.result).toMatchObject({ status: "pending" });
+
+    const edited = await executeManualOrderLinesEdit(
+      context,
+      linesCommand(order.id, "lines-ai-pending", [{ id: item.id, quantity: 5 }], submitted.result.version),
+    );
+    expect(edited.result).toMatchObject({ orderId: order.id, version: submitted.result.version + 1 });
+    expect(await db.orderItem.findUniqueOrThrow({ where: { id: item.id } })).toMatchObject({ quantity: 5 });
+    expect(await count("InventoryReservation")).toBe(0);
+  });
+
+  it.each([
+    ["shopify", { unitPrice: 3000 }],
+    ["woocommerce", { unitPrice: 3000 }],
+    ["youcan", { unitPrice: 3000 }],
+    ["google_sheets", {}],
+    ["storefront", { sourceDetails: { hostedDelegationAuthority: "v1", hostedReleaseId: "release-00000001" } }],
+    ["storefront", { sourceDetails: { hostedDelegationAuthority: "v1", hostedReleaseId: "x" } }],
+  ] as const)("still refuses a pending %s order (%j) with the coded 409 and writes nothing", async (source, options) => {
+    const { order, item } = await intake(source, options);
+    const commandsBefore = await count("BusinessCommand");
+    const failure = await executeManualOrderLinesEdit(context, linesCommand(order.id, `lines-refused-${source}`, [{ id: item.id, quantity: 9 }])).then(
+      () => null,
+      (error: unknown) => error as { code?: string; statusCode?: number },
+    );
+    expect(failure).toMatchObject({ code: "ORDER_LINES_NOT_EDITABLE_FOR_SOURCE", statusCode: 409 });
+    expect(await db.orderItem.findUniqueOrThrow({ where: { id: item.id } })).toMatchObject({ quantity: 2 });
+    expect(await count("BusinessCommand")).toBe(commandsBefore);
+  });
+
+  it.each([["reserved"], [null]] as const)("keeps the stock guard for a WhatsApp order whose inventory state is %s", async (state) => {
+    const { order, item } = await intake("whatsapp");
+    await db.order.update({ where: { id: order.id }, data: { inventoryState: state } });
+    await expect(
+      executeManualOrderLinesEdit(context, linesCommand(order.id, `lines-wa-${state}`, [{ id: item.id, quantity: 9 }])),
+    ).rejects.toThrow(/holds stock or has no inventory state/i);
+    expect(await db.orderItem.findUniqueOrThrow({ where: { id: item.id } })).toMatchObject({ quantity: 2 });
+  });
+
+  it.each([
+    ["no metadata", null],
+    ["the manual authority on another source", trustedManualOrderSourceMetadata()],
+    ["a metadata source that differs from the order source", canonicalSourceOrderSourceMetadata({ source: "csv", sourceIdentity: "x", sourceOrderId: "y" })],
+    ["metadata that is not JSON", "not-json"],
+  ] as const)("refuses a WhatsApp order with %s", async (_label, sourceMetadata) => {
+    const { order, item } = await intake("whatsapp");
+    await db.order.update({ where: { id: order.id }, data: { sourceMetadata } });
+    await expect(
+      executeManualOrderLinesEdit(context, linesCommand(order.id, "lines-wa-meta", [{ id: item.id, quantity: 9 }])),
+    ).rejects.toMatchObject({ code: "ORDER_LINES_NOT_EDITABLE_FOR_SOURCE" });
   });
 });
