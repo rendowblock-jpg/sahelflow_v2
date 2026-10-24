@@ -18,6 +18,8 @@
  * operational context is retained only after that PII is replaced.
  */
 
+import { replacePhoneNumbers } from "./phone-patterns";
+
 const KEY_SEPARATOR_REGEX = /[^a-z0-9]/g;
 
 function normalizeKey(key: string): string {
@@ -134,30 +136,6 @@ function isSafeStringValue(normalizedKey: string, value: string): boolean {
   );
 }
 
-// Phone shapes people really type: 0555123456, 0555 12 34 56, 0555-12-34-56,
-// 0555.12.34.56, 0555 123 456, (0555) 12 34 56, +213 555 12 34 56 (also with
-// "(0)"), 00213555123456, and Arabic-Indic digits. One separator character is
-// used all the way through a number, so "05-10-2026 14" (a date and an hour)
-// is not read as a phone. A number glued to more digits (a 13-digit id) is not
-// a phone either.
-const DIGIT = "[0-9\\u0660-\\u0669\\u06F0-\\u06F9]";
-const ZERO = "[0\\u0660\\u06F0]";
-const SEP = "[\\p{Zs}\\t.-]";
-const NOT_AFTER_WORD = "(?<![A-Za-z0-9_\\u0660-\\u0669\\u06F0-\\u06F9])";
-const NOT_BEFORE_DIGIT = `(?!${DIGIT})`;
-const INTL_REST = `${SEP}?(?:\\(${ZERO}\\)${SEP}?)?${DIGIT}(?:${SEP}?${DIGIT}{2}){4}`;
-const PHONE_REGEX = new RegExp(
-  `${NOT_AFTER_WORD}(?:` +
-    `${ZERO}${DIGIT}${DIGIT}{8}` +
-    `|\\(?${ZERO}${DIGIT}${SEP}?${DIGIT}{2}\\)?(?<twos>${SEP})${DIGIT}{2}\\k<twos>${DIGIT}{2}\\k<twos>${DIGIT}{2}` +
-    `|\\(?${ZERO}${DIGIT}${DIGIT}{2}\\)?(?<threes>${SEP})${DIGIT}{3}\\k<threes>${DIGIT}{3}` +
-    `)${NOT_BEFORE_DIGIT}`,
-  "gu",
-);
-const INT_PHONE_REGEX = new RegExp(
-  `(?:\\+|${NOT_AFTER_WORD}${ZERO}{2})[2\\u0662\\u06F2][1\\u0661\\u06F1][3\\u0663\\u06F3]${INTL_REST}`,
-  "gu",
-);
 const EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
 const ERROR_OWN_FIELDS = new Set(["message", "name", "stack"]);
 
@@ -199,10 +177,7 @@ function redactStoredToolCall(entry: unknown): unknown {
 }
 
 function scrubEmbeddedPii(value: string): string {
-  return value
-    .replace(INT_PHONE_REGEX, "[PHONE]")
-    .replace(PHONE_REGEX, "[PHONE]")
-    .replace(EMAIL_REGEX, "[EMAIL]");
+  return replacePhoneNumbers(value, () => "[PHONE]").replace(EMAIL_REGEX, "[EMAIL]");
 }
 
 function redactUnapprovedString(value: string): string {
