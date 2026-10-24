@@ -35,6 +35,14 @@ import {
 import { withBusinessCommandKeyQueue } from "./same-key-queue";
 import { assertBusinessCommandShopAuthority } from "./shop-authority";
 
+// Prisma ends an interactive transaction after 5 s by default. On a slow disk
+// (old PC, antivirus) a command can pass that mid-way and roll back a
+// half-finished order + stock + audit. Same pair the settings route uses.
+export const BUSINESS_COMMAND_TRANSACTION_OPTIONS = {
+  maxWait: 10_000,
+  timeout: 30_000,
+} as const;
+
 export type BusinessTransaction = Parameters<
   Parameters<DbClient["$transaction"]>[0]
 >[0];
@@ -616,7 +624,7 @@ async function executeBusinessCommandOnce<TPayload, TResult>(
       replayed: false,
       result: sealedResult.normalizedResult,
     };
-  });
+  }, BUSINESS_COMMAND_TRANSACTION_OPTIONS);
 }
 
 export async function executeBusinessCommand<TPayload, TResult>(
