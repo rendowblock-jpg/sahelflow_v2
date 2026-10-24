@@ -1,9 +1,18 @@
+/**
+ * @vitest-environment happy-dom
+ */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  useInboxTransportRuntime,
+  type UseInboxTransportRuntimeParams,
+} from "@/hooks/inbox/use-inbox-transport";
+import {
   LIVE_RECOVERY_POLL_MS,
+  OPEN_SOCKET_POLL_MS,
   RECOVERY_POLL_FULL_RATE_CYCLES,
   RECOVERY_POLL_MAX_MS,
   recoveryPollDelayMs,
@@ -63,7 +72,7 @@ describe("recoveryPollDelayMs", () => {
 
 describe("the fallback poll in use-inbox-transport", () => {
   const transport = source("src/hooks/inbox/use-inbox-transport.ts");
-  const start = transport.indexOf("if (wsOpen || sending) return;");
+  const start = transport.indexOf("if (sending) return;");
   const end = transport.indexOf("const connectWhatsApp");
   const effect = transport.slice(start, end);
 
@@ -93,6 +102,110 @@ describe("the fallback poll in use-inbox-transport", () => {
   it("leaves the WebSocket path alone", () => {
     const socket = source("src/hooks/use-whatsapp-socket.ts");
     expect(socket).not.toContain("recoveryPollDelayMs");
-    expect(transport).toContain("if (wsOpen || sending) return;");
+    // The effect no longer returns early for an open socket; it polls slowly.
+    expect(transport).not.toContain("if (wsOpen || sending) return;");
+    expect(transport).toContain("OPEN_SOCKET_POLL_MS");
+  });
+});
+
+// MSG-16 / S05a-08: while the WebSocket is open the chat list was never
+// polled, so a message the push missed showed only after a reload. An open
+// socket now gets one slow catch-up poll of the chat list.
+describe("the catch-up poll while the WebSocket is open", () => {
+  const OPEN_POLL_MS = 60_000;
+  let visibility = "visible";
+
+  function mount(overrides: Partial<UseInboxTransportRuntimeParams> = {}) {
+    const loadChats = vi.fn(async () => {});
+    const loadMessages = vi.fn(async () => {});
+    const params: UseInboxTransportRuntimeParams = {
+      refs: {
+        activeChatRef: { current: { conversationId: "c1" } as never },
+        sendingRef: { current: false },
+      },
+      status: "connected",
+      user: null,
+      wsOpen: true,
+      reconnect: vi.fn(),
+      sidecarReachable: true,
+      sidecarStatus: "connected",
+      effectiveStatus: "connected",
+      sending: false,
+      loadChats,
+      loadMessages,
+      t: (key) => key,
+      ...overrides,
+    };
+    const view = renderHook((props) => useInboxTransportRuntime(props), {
+      initialProps: params,
+    });
+    return { view, params, loadChats: params.loadChats, loadMessages: params.loadMessages };
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    visibility = "visible";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(
+      () => visibility as DocumentVisibilityState,
+    );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("is about a minute", () => {
+    expect(OPEN_SOCKET_POLL_MS).toBe(OPEN_POLL_MS);
+  });
+
+  it("refreshes the chat list once a minute and does not back off", async () => {
+    const { loadChats, loadMessages } = mount();
+    await vi.advanceTimersByTimeAsync(OPEN_POLL_MS - 1);
+    expect(loadChats).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(loadChats).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(OPEN_POLL_MS * 10);
+    expect(loadChats).toHaveBeenCalledTimes(11);
+    expect(loadMessages).not.toHaveBeenCalled();
+  });
+
+  it("does not start a second refresh while one is still running", async () => {
+    const loadChats = vi.fn(() => new Promise<void>(() => {}));
+    mount({ loadChats });
+    await vi.advanceTimersByTimeAsync(OPEN_POLL_MS * 5);
+    expect(loadChats).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not poll while the tab is hidden, and refreshes when it returns", async () => {
+    const { loadChats } = mount();
+    visibility = "hidden";
+    await vi.advanceTimersByTimeAsync(OPEN_POLL_MS * 3);
+    expect(loadChats).not.toHaveBeenCalled();
+    visibility = "visible";
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(loadChats).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays quiet while a send is running", async () => {
+    const { loadChats } = mount({ sending: true });
+    await vi.advanceTimersByTimeAsync(OPEN_POLL_MS * 3);
+    expect(loadChats).not.toHaveBeenCalled();
+  });
+
+  it("stops on unmount", async () => {
+    const { view, loadChats } = mount();
+    view.unmount();
+    await vi.advanceTimersByTimeAsync(OPEN_POLL_MS * 3);
+    expect(loadChats).not.toHaveBeenCalled();
+  });
+
+  it("moves to the faster recovery cadence when the socket closes", async () => {
+    const { view, params, loadChats, loadMessages } = mount();
+    view.rerender({ ...params, wsOpen: false });
+    await vi.advanceTimersByTimeAsync(LIVE_RECOVERY_POLL_MS);
+    expect(loadChats).toHaveBeenCalledTimes(1);
+    expect(loadMessages).toHaveBeenCalledTimes(1);
   });
 });

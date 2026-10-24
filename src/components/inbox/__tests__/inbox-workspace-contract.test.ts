@@ -78,7 +78,8 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(transport).toContain(
       'sidecarReachable === true && sidecarStatus === "connected"',
     );
-    expect(transport).toContain("if (wsOpen || sending) return;");
+    expect(transport).toContain("if (sending) return;");
+    expect(transport).toContain("OPEN_SOCKET_POLL_MS");
     expect(transport).toContain("loadMessages(chat, { background: true })");
     expect(thread).toContain("const isCurrentConversation");
     expect(thread).toContain("messageLoadGenerationRef");
