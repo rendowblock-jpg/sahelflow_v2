@@ -49,6 +49,9 @@ beforeEach(async () => {
   seed = await createTestPrisma();
 });
 afterEach(async () => {
+  // cleanTestDatabase does not clear canned responses. Rows left here made the demo workspace
+  // tests (hasBusinessData) fail whenever they ran after this file, as in CI's coverage run.
+  await seed.cannedResponse.deleteMany({});
   await disconnectTestPrisma(seed);
 });
 
