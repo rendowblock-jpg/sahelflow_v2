@@ -34,7 +34,13 @@ function stubPrisma(opts: {
     if (opts.updateError) throw opts.updateError;
     return { id: "c1", ...(data as object) };
   });
-  return { customer: { findFirst, create, update }, spies: { findFirst, create, update } };
+  // The service writes inside a transaction; the stub runs it on the same client.
+  const client = {
+    customer: { findFirst, create, update },
+    auditLog: { create: vi.fn(async () => ({})) },
+    $transaction: async <T>(run: (tx: unknown) => Promise<T>) => run(client),
+  };
+  return { ...client, spies: { findFirst, create, update } };
 }
 
 function uniqueViolation() {

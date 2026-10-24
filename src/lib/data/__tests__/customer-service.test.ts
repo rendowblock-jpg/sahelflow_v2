@@ -168,3 +168,107 @@ describe("customerService.incrementStats", () => {
     expect(updated!.totalSpent).toBe(2500);
   });
 });
+
+// S03c-15: create, update and delete are audited with ids and field names only,
+// and the delete (and the others) commit together with their audit row.
+describe("customerService audit", () => {
+  const actor = "person:owner-1";
+  const phone = "0661998877";
+  const address = "88 Rue Tres Secrete";
+  const ctx = () => ({ prisma: db as never });
+  const rowsFor = (entityId: string) =>
+    db.auditLog.findMany({ where: { entity: "customer", entityId } });
+  // The trigger lives in the shared test database file, so always remove it again.
+  const withAuditDown = async (run: () => Promise<void>) => {
+    await db.$executeRawUnsafe(`DROP TRIGGER IF EXISTS audit_down`);
+    await db.$executeRawUnsafe(
+      `CREATE TRIGGER audit_down BEFORE INSERT ON "AuditLog" BEGIN SELECT RAISE(ABORT, 'audit down'); END;`,
+    );
+    try {
+      await run();
+    } finally {
+      await db.$executeRawUnsafe(`DROP TRIGGER IF EXISTS audit_down`);
+    }
+  };
+
+  it("audits a create with the actor and the field names, never the phone or address", async () => {
+    const created = await customerService.create(
+      ctx(),
+      { name: "Nadia Test", phone, wilaya: "Oran", commune: "Centre", address },
+      { auditActor: actor },
+    );
+    const rows = await rowsFor(created.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ action: "customer.created", actor });
+    const detail = JSON.stringify(rows[0]);
+    expect(JSON.parse(rows[0]!.metadata!).fields).toEqual(
+      expect.arrayContaining(["name", "phone", "address"]),
+    );
+    expect(detail).not.toContain(phone);
+    expect(detail).not.toContain("Tres Secrete");
+  });
+
+  it("audits an update with the changed field names only", async () => {
+    const created = await seedCustomer(db);
+    await customerService.update(
+      ctx(),
+      created.id,
+      { phone, address },
+      { auditActor: actor },
+    );
+    const rows = await rowsFor(created.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ action: "customer.updated", actor });
+    expect(JSON.parse(rows[0]!.metadata!).fields).toEqual(["address", "phone"]);
+    const detail = JSON.stringify(rows[0]);
+    expect(detail).not.toContain(phone);
+    expect(detail).not.toContain("Tres Secrete");
+    expect(detail).not.toContain("0555123456");
+    expect(detail).not.toContain("Didouche");
+  });
+
+  it("audits a delete without the phone or address", async () => {
+    const created = await seedCustomer(db);
+    await customerService.delete(ctx(), created.id, { auditActor: actor });
+    const rows = await rowsFor(created.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ action: "customer.deleted", actor });
+    const detail = JSON.stringify(rows[0]);
+    expect(detail).not.toContain("0555123456");
+    expect(detail).not.toContain("Didouche");
+  });
+
+  it("rolls the delete back when its audit row cannot be written", async () => {
+    const created = await seedCustomer(db);
+    await withAuditDown(() =>
+      expect(customerService.delete(ctx(), created.id, { auditActor: actor })).rejects.toThrow(),
+    );
+    const found = await db.customer.findUnique({ where: { id: created.id } });
+    expect(found?.deletedAt).toBeNull();
+  });
+
+  it("rolls the update back when its audit row cannot be written", async () => {
+    const created = await seedCustomer(db);
+    await withAuditDown(() =>
+      expect(
+        customerService.update(ctx(), created.id, { name: "Renamed" }, { auditActor: actor }),
+      ).rejects.toThrow(),
+    );
+    const found = await db.customer.findUnique({ where: { id: created.id } });
+    expect(found?.name).toBe("Ahmed Benali");
+  });
+
+  it("does not create the customer when the audit row cannot be written", async () => {
+    await withAuditDown(() =>
+      expect(
+        customerService.create(ctx(), { name: "Nadia Test", phone }, { auditActor: actor }),
+      ).rejects.toThrow(),
+    );
+    expect(await db.customer.findFirst({ where: { name: "Nadia Test" } })).toBeNull();
+  });
+
+  it("still works without an actor (bulk import has none yet) and writes no audit row", async () => {
+    const created = await customerService.create(ctx(), { name: "Imported", phone });
+    expect(await rowsFor(created.id)).toHaveLength(0);
+  });
+});
