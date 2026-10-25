@@ -7,6 +7,7 @@ import { z } from "zod";
 import { matchCatalog } from "./catalog";
 import { normalizePhone } from "./fields";
 import { canonicalWilaya } from "./geography";
+import { numbersInMessage, priceIsWritten } from "./grounding";
 import type { ExtractedOrder, ExtractionInput } from "./types";
 
 const numeric = (label: string, min = 0) => z.union([
@@ -50,11 +51,18 @@ const TEXT_CAPS = { customerName: 200, commune: 120, address: 500, notes: 2000, 
  * (FD-064): 0XXXXXXXXX phones, official wilaya names, catalog item names.
  * A value that cannot be made canonical is dropped and reported missing
  * rather than passed on to order creation.
+ *
+ * With the message (`input.body`) the answer is also held to it: a price the
+ * message does not contain is dropped. Without it (the screenshot reader,
+ * which has no text) nothing is checked.
  */
 export function canonicalizeOrder(
   order: z.infer<typeof ExtractedOrderSchema>,
-  input: Pick<ExtractionInput, "catalog" | "knownPhone">,
+  input: Pick<ExtractionInput, "catalog" | "knownPhone"> & Partial<Pick<ExtractionInput, "body">>,
 ): ExtractedOrder {
+  const written = typeof input.body === "string" ? numbersInMessage(input.body) : undefined;
+  const stated = (price: number | undefined): price is number =>
+    price !== undefined && (written === undefined || priceIsWritten(price, written));
   const phone = normalizePhone(order.phone) ?? normalizePhone(input.knownPhone);
   const wilaya = canonicalWilaya(order.wilaya);
   const clean = (value: string | undefined, max: number) =>
@@ -72,7 +80,7 @@ export function canonicalizeOrder(
       return {
         productName: match?.name ?? item.productName,
         quantity,
-        ...(item.unitPrice !== undefined ? { unitPrice: Math.round(item.unitPrice) } : {}),
+        ...(stated(item.unitPrice) ? { unitPrice: Math.round(item.unitPrice) } : {}),
         ...(match ? { catalogMatch: match.kind } : {}),
         ...(match && match.name !== item.productName ? { sourceText: item.productName } : {}),
       };
@@ -84,7 +92,7 @@ export function canonicalizeOrder(
     ...(wilaya ? { wilaya } : {}),
     ...(commune ? { commune } : {}),
     ...(address ? { address } : {}),
-    ...(order.totalPrice !== undefined ? { totalPrice: Math.round(order.totalPrice) } : {}),
+    ...(stated(order.totalPrice) ? { totalPrice: Math.round(order.totalPrice) } : {}),
     ...(notes ? { notes } : {}),
   };
 }
