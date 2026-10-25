@@ -84,11 +84,23 @@ test.describe.serial("AI Class-AAA decision workspace evidence", () => {
       if (!response.ok) throw new Error(`AI status returned ${response.status}`);
       return (await response.json()) as Record<string, unknown>;
     });
+    // The projection names presence, consent and the chosen order only. Batch 16 added the per-provider
+    // presence (`providers`), the order-reading readiness (`extractionReady`) and the chosen `order`.
     expect(Object.keys(status).sort()).toEqual(
-      ["consentAccepted", "keyConfigured", "provider", "ready"].sort(),
+      [
+        "consentAccepted",
+        "extractionReady",
+        "keyConfigured",
+        "order",
+        "provider",
+        "providers",
+        "ready",
+      ].sort(),
     );
     expect(status).not.toHaveProperty("apiKey");
     expect(status).not.toHaveProperty("secret");
+    // Nothing nested may look like a key either: no property of that name and no key-shaped value anywhere.
+    expect(JSON.stringify(status)).not.toMatch(/api[-_]?key"|secret|gsk_|AIza|sk-|Bearer /i);
 
     await page
       .locator('[data-ai-work-history="true"]')

@@ -255,7 +255,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     icon: Bot,
     label: "pageAi",
     description: "pageAiDescription",
-    keywords: "ai ia gemini google key clé مفتاح consent consentement موافقة agent model thinking modèle réflexion",
+    keywords: "ai ia gemini google groq chatgpt openai key clé مفتاح consent consentement موافقة agent model thinking modèle réflexion",
     visible: (access) => access.aiKey || access.aiConsent,
     render: ({ access }) => (
       <div className="space-y-6">
