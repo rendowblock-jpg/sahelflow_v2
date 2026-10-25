@@ -25,6 +25,7 @@ import {
 } from "@/lib/i18n/risk-workspace";
 import { requireTrustedAction, trustedActionAllowed } from "@/lib/identity/authorization";
 import { getRiskAnalyticsReport, getRiskConfig, getRiskRules, listBlacklistedCustomers } from "@/lib/risk-engine";
+import { shortDayLabel } from "@/lib/time/shop-day-format";
 import { formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import { displayWilaya } from "@/lib/wilaya-display";
 
@@ -104,7 +105,7 @@ export default async function RiskPage({
   };
   const sourceLabel = (source: string) => (SOURCE_KEYS[source] ? t(SOURCE_KEYS[source]) : source.charAt(0).toUpperCase() + source.slice(1));
 
-  const weekLabel = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dateLocale, { month: "short", day: "numeric" });
+  const weekLabel = (iso: string) => shortDayLabel(iso, dateLocale);
   const trendData = report.insights.weekly.map((row) => ({
     week: weekLabel(row.week),
     orders: row.orders,

@@ -40,6 +40,7 @@ import {
 import { getRiskAnalyticsReport } from "@/lib/risk-engine";
 import { orderStatusStyles } from "@/lib/shared";
 import { statusI18nKey } from "@/lib/shared/status-colors";
+import { greetingPeriod } from "@/lib/time/shop-day-format";
 import { formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 import { displayWilaya } from "@/lib/wilaya-display";
@@ -98,11 +99,11 @@ export default async function DashboardPage() {
     date: point.date,
   }));
 
-  const hour = new Date().getHours();
+  const period = greetingPeriod(new Date());
   const greeting =
-    hour < 12
+    period === "morning"
       ? t("dashboard.greetingMorning")
-      : hour < 18
+      : period === "afternoon"
         ? t("dashboard.greetingAfternoon")
         : t("dashboard.greetingEvening");
   const delivery = analytics.deliveryPerformance;

@@ -62,6 +62,7 @@ import {
   STATUS_CHART_COLORS,
   statusI18nKey,
 } from "@/lib/shared/status-colors";
+import { shortDayLabel } from "@/lib/time/shop-day-format";
 import { cn, formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 
@@ -140,11 +141,7 @@ export default async function AnalyticsPage({
     minimumIntegerDigits: 2,
     useGrouping: false,
   });
-  const fmtShortDate = (iso: string) =>
-    new Date(iso).toLocaleDateString(dateLocale, {
-      month: "short",
-      day: "numeric",
-    });
+  const fmtShortDate = (iso: string) => shortDayLabel(iso, dateLocale);
   const fmtHour = (hour: number) => `${hourFormatter.format(hour)}:00`;
   const fmtPercent = (value: number) => percentFormatter.format(value / 100);
   const fmtSignedPercent = (value: number) =>
