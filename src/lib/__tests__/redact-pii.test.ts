@@ -82,6 +82,43 @@ describe("redactPii", () => {
     expect(input[0]!.args.phone).toBe("0555123456");
   });
 
+  it("does not store the approval details of a waiting AI proposal", () => {
+    // The exact values (full phone, address, free-text notes) are for the approver's screen. The chat
+    // history column is plain text and redactPii only masks the phone inside a string that contains
+    // one ("Appeler Amina au [PHONE] avant 18h" keeps the name), so the stored copy of a pending
+    // proposal never carries them; the card reads them from the live event and the proposals API.
+    const input = [
+      {
+        name: "create_order",
+        args: { phone: "0661234567", notes: "Appeler Amina au 0770 11 22 33 avant 18h" },
+        result: {
+          pending_action_proposal: true,
+          tool: "create_order",
+          proposalDigest: "digest-1",
+          proposal: {
+            id: "p1",
+            status: "pending",
+            summary: { itemCount: 1 },
+            details: [
+              { key: "phone", kind: "phone", value: "0661234567" },
+              { key: "notes", kind: "longText", value: "Appeler Amina au 0770 11 22 33 avant 18h" },
+            ],
+          },
+        },
+      },
+    ];
+    const stored = redactStoredAiToolCalls(input);
+    const text = JSON.stringify(stored);
+    expect(text).not.toContain("Amina");
+    expect(text).not.toContain("0661234567");
+    const proposal = (stored[0]?.result as { proposal?: Record<string, unknown> } | undefined)?.proposal;
+    expect(proposal).toBeDefined();
+    expect(proposal).not.toHaveProperty("details");
+    expect(proposal).toMatchObject({ id: "p1", status: "pending" });
+    // The live object the approver is looking at is not changed by storing a copy of it.
+    expect(JSON.stringify(input)).toContain("Appeler Amina au 0770 11 22 33 avant 18h");
+  });
+
   it("keeps a last4 tail but still redacts the full phone beside it", () => {
     expect(redactPii({ last4: "3456", phone: "0555123456" })).toEqual({
       last4: "3456",

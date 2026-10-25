@@ -168,7 +168,7 @@ function redactStoredToolCall(entry: unknown): unknown {
         ? child
         : key === "thoughtSignature" && typeof child === "string"
           ? child
-          : redactPii(child);
+          : redactPii(key === "result" ? withoutApprovalDetails(child) : child);
     Object.defineProperty(out, key, {
       value: redacted,
       enumerable: true,
@@ -177,6 +177,28 @@ function redactStoredToolCall(entry: unknown): unknown {
     });
   }
   return out;
+}
+
+/**
+ * A waiting AI proposal carries its exact values (full phone, address, notes) for the approver's
+ * screen only. Chat history keeps no copy: redactPii masks a phone inside a string but leaves the
+ * words around it, and the card gets the values again from the live event and the proposals API.
+ */
+function withoutApprovalDetails(result: unknown): unknown {
+  if (!result || typeof result !== "object" || Array.isArray(result)) return result;
+  const record = result as Record<string, unknown>;
+  const proposal = record.proposal;
+  if (
+    record.pending_action_proposal !== true ||
+    !proposal ||
+    typeof proposal !== "object" ||
+    Array.isArray(proposal) ||
+    !("details" in proposal)
+  ) {
+    return result;
+  }
+  const { details: _details, ...rest } = proposal as Record<string, unknown>;
+  return { ...record, proposal: rest };
 }
 
 function scrubEmbeddedPii(value: string): string {
