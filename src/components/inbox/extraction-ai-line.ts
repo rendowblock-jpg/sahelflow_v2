@@ -67,3 +67,12 @@ export function extractionAiLineState(input: {
   if (KEY_PROBLEM.test(aiFailure)) return { kind: "key" };
   return { kind: "failed" };
 }
+
+export type ExtractionMethodLabelKey = "methodGemini" | "methodGroq" | "methodOffline";
+
+/** Which "read with ..." label the card shows: the provider that really read the message. */
+export function extractionMethodLabelKey(method: string): ExtractionMethodLabelKey {
+  if (method === "groq") return "methodGroq";
+  if (method === "gemini") return "methodGemini";
+  return "methodOffline";
+}

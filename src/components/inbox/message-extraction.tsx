@@ -16,7 +16,7 @@ import {
   type OrderSourceMessage,
 } from "@/components/inbox/extraction/order-source-messages";
 import type { CatalogOption } from "@/components/inbox/extraction/extraction-item-row";
-import { extractionAiLineState } from "@/components/inbox/extraction-ai-line";
+import { extractionAiLineState, extractionMethodLabelKey } from "@/components/inbox/extraction-ai-line";
 import { useI18n } from "@/hooks/use-i18n";
 import type { ExtractionResult } from "@/lib/ai/extraction";
 import {
@@ -291,7 +291,7 @@ export function MessageExtraction({
               {read.order ? (
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline">
-                    {isAiMethod(read.method) ? copy("methodGemini") : copy("methodOffline")}
+                    {copy(extractionMethodLabelKey(read.method))}
                   </Badge>
                   {isAiMethod(read.method) ? null : (
                     <Badge variant="outline" className="tabular-nums">
@@ -408,7 +408,7 @@ export function MessageExtraction({
       {result.order ? (
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">
-            {isAiMethod(result.method) ? copy("methodGemini") : copy("methodOffline")}
+            {copy(extractionMethodLabelKey(result.method))}
           </Badge>
           {isAiMethod(result.method) ? null : (
             <Badge variant="outline" className="tabular-nums">
