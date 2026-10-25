@@ -2,7 +2,7 @@ import "server-only";
 
 import { createProtectedPiiCodec } from "@/lib/crypto/protected-pii";
 import { deriveExistingShopBlindIndexes } from "@/lib/crypto/protected-record";
-import { db, shopContext } from "@/lib/db";
+import { db, dbRaw, shopContext } from "@/lib/db";
 import {
   runConversationSearchIndexStep,
   type IndexerClient,
@@ -26,11 +26,19 @@ function ports(): IndexerPorts {
   return {
     client: db as unknown as IndexerClient,
     // null = the shop key row is missing: the indexer then does nothing (the search uses the plain path).
-    derive: (values, reference) =>
-      deriveExistingShopBlindIndexes(db as unknown as BlindIndexClient, values, reference, {
+    // `db` serves the key rows from a cache filled at start, so it never reports a row that was lost afterwards:
+    // the row is looked up on the raw client first.
+    derive: async (values, reference) => {
+      const row = await dbRaw.protectedKeyAuthority.findUnique({
+        where: { purpose: "shop-blind-index" },
+        select: { purpose: true },
+      });
+      if (row === null) return null;
+      return deriveExistingShopBlindIndexes(db as unknown as BlindIndexClient, values, reference, {
         shopContext,
         normalize: (value) => value,
-      }),
+      });
+    },
     openBody: async (message: SealedMessage) => {
       const opened = await messageCodec.decryptFields({ id: message.id, body: message.body }, ["body"], "Message");
       if (typeof opened.body !== "string") throw new TypeError("message body is not text");
