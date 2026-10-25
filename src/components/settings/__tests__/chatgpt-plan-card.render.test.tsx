@@ -99,7 +99,10 @@ beforeEach(() => {
     throw new Error(`unexpected request ${method} ${url}`);
   });
   vi.stubGlobal("fetch", fetchMock);
-  vi.spyOn(window, "open").mockImplementation(openMock);
+  // The sign-in page is opened by clicking a real <a target=_blank> (the desktop shell only catches that), so watch those clicks.
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+    openMock(this.href, this.target, this.rel);
+  });
   Element.prototype.scrollIntoView = vi.fn();
 });
 
@@ -163,7 +166,7 @@ describe("(b) waiting", () => {
     await startSignIn();
     expect(calls("/api/ai/openai/sign-in")[0]).toEqual(["/api/ai/openai/sign-in", expect.objectContaining({ method: "POST" })]);
     expect(openMock).toHaveBeenCalledTimes(1);
-    expect(openMock).toHaveBeenCalledWith(AUTH_URL, "_blank", "noopener,noreferrer");
+    expect(openMock).toHaveBeenCalledWith(AUTH_URL, "_blank", "noopener noreferrer");
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent("Finish in your browser");
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
@@ -177,7 +180,7 @@ describe("(b) waiting", () => {
     await startSignIn();
     fireEvent.click(screen.getByRole("button", { name: "Open the page again" }));
     expect(openMock).toHaveBeenCalledTimes(2);
-    expect(openMock).toHaveBeenLastCalledWith(AUTH_URL, "_blank", "noopener,noreferrer");
+    expect(openMock).toHaveBeenLastCalledWith(AUTH_URL, "_blank", "noopener noreferrer");
   });
 
   it("refuses an address that is not an OpenAI https address and does not wait", async () => {
@@ -334,7 +337,7 @@ describe("(d) plan allowance not granted", () => {
     await flush();
     const init = calls("/api/ai/openai/sign-in")[0]![1] as RequestInit;
     expect(JSON.parse(String(init.body))).toEqual({ accountId: 1 });
-    expect(openMock).toHaveBeenCalledWith(AUTH_URL, "_blank", "noopener,noreferrer");
+    expect(openMock).toHaveBeenCalledWith(AUTH_URL, "_blank", "noopener noreferrer");
   });
 });
 
