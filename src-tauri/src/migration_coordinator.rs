@@ -2604,6 +2604,8 @@ mod tests {
             )
             .expect("template schema");
         assert_eq!(tables, 1, "the rebuilt template has no schema");
+        // Windows refuses to delete a database file that is still open.
+        drop(connection);
         fs::remove_dir_all(root).expect("remove test root");
     }
 
