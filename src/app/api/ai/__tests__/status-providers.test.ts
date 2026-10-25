@@ -30,6 +30,15 @@ describe("GET /api/ai/status", () => {
     });
   });
 
+  it("returns openai-first in order, and an old or junk stored value still gives groq-first", async () => {
+    setup({ consent: true, gemini: true, groq: true, order: "openai-first" });
+    expect(await status()).toMatchObject({ order: "openai-first" });
+    for (const junk of ["chatgpt-first", "openai", "banana"]) {
+      setup({ consent: true, gemini: true, groq: true, order: junk });
+      expect(await status()).toMatchObject({ order: "groq-first" });
+    }
+  });
+
   it("a Groq key alone reads orders but does NOT make the chat assistant ready (it still needs Gemini)", async () => {
     setup({ consent: true, gemini: false, groq: true });
     expect(await status()).toMatchObject({ keyConfigured: false, ready: false, extractionReady: true, order: "groq-first", providers: { groq: { configured: true }, gemini: { configured: false } } });

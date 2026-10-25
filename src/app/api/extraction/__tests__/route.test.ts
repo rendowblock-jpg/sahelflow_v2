@@ -141,6 +141,7 @@ describe("POST /api/extraction: which AI is tried first", () => {
     ["no stored value", null, ["groq", "gemini", "openai"]],
     ["groq-first", "groq-first", ["groq", "gemini", "openai"]],
     ["gemini-first", "gemini-first", ["gemini", "groq", "openai"]],
+    ["openai-first", "openai-first", ["openai", "groq", "gemini"]],
     ["a junk value", "banana", ["groq", "gemini", "openai"]],
   ])("passes the order for %s", async (_label, stored, expected) => {
     h.getSetting.mockResolvedValue(stored);
