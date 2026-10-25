@@ -1,22 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-const PIN = "12345678";
-
-async function login(page: Page): Promise<void> {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  const pinInput = page.locator('input[type="password"]');
-  await pinInput.waitFor({ state: "visible" });
-  await pinInput.fill(PIN);
-  await page.locator('button[type="submit"]').click({ force: true });
-  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
-}
+// Auth: playwright.config.ts loads the owner session saved by phase5-owner-auth.setup.ts
+// (SF_PHASE5_OWNER_STORAGE_STATE) into every test context, so no PIN login here.
 
 test.describe("Automations seller workspace", () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
-  });
-
   test("opens the seller-first When / If / Then builder", async ({ page }) => {
     await page.goto("/automations");
     await page.waitForLoadState("networkidle");

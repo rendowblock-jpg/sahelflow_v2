@@ -6,25 +6,16 @@
  * automation worker to materialize and complete the definition-bound run.
  * No provider mock or fire-and-forget log projection is used as passing truth.
  */
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
-const PIN = "12345678";
-
-async function login(page: Page): Promise<void> {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  const pinInput = page.locator('input[type="password"]');
-  await pinInput.waitFor({ state: "visible" });
-  await pinInput.fill(PIN);
-  await page.locator('button[type="submit"]').click({ force: true });
-  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
-}
+import {
+  confirmOrder,
+  createManualOrder,
+  createProduct,
+  uniquePhone,
+} from "./helpers/core-loop";
 
 test.describe("Automation durable execution", () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
-  });
-
   test("order.confirmed runs a seller-safe database action to terminal completion", async ({
     page,
   }) => {
@@ -68,7 +59,7 @@ test.describe("Automation durable execution", () => {
       const custRes = await page.request.post("/api/customers", {
         data: {
           name: `E2E Auto Customer ${suffix}`,
-          phone: `0555${suffix}`,
+          phone: uniquePhone(),
           wilaya: "Alger",
           commune: "Bab Ezzouar",
           address: "1 Automation Street",
@@ -80,37 +71,25 @@ test.describe("Automation durable execution", () => {
         phone: string;
       };
 
-      const orderRes = await page.request.post("/api/orders", {
-        data: {
-          customerId: customer.id,
-          items: [
-            {
-              productId: null,
-              productName: `E2E Auto Product ${suffix}`,
-              quantity: 1,
-              unitPrice: 2000,
-            },
-          ],
-          wilaya: "Alger",
-          commune: "Bab Ezzouar",
-          address: "1 Automation Street",
-          phone: customer.phone,
-          source: "manual",
-          deliveryCost: 500,
-        },
+      const product = await createProduct(page.request, {
+        name: `E2E Auto Product ${suffix}`,
+        sku: `E2E-AUTO-${suffix}`,
+        price: 2000,
+        stock: 10,
       });
-      expect(orderRes.ok()).toBeTruthy();
-      const order = (await orderRes.json()).order as { id: string };
-
-      const pendingRes = await page.request.patch(`/api/orders/${order.id}/status`, {
-        data: { status: "pending" },
+      const order = await createManualOrder(page.request, {
+        customerId: customer.id,
+        productId: product.id,
+        quantity: 1,
+        unitPrice: 2000,
+        wilaya: "Alger",
+        commune: "Bab Ezzouar",
+        address: "1 Automation Street",
+        phone: customer.phone,
+        deliveryCost: 500,
       });
-      expect(pendingRes.ok()).toBeTruthy();
-
-      const confirmedRes = await page.request.patch(`/api/orders/${order.id}/status`, {
-        data: { status: "confirmed" },
-      });
-      expect(confirmedRes.ok()).toBeTruthy();
+      // The decision route fires the order.confirmed trigger the automation waits for.
+      await confirmOrder(page.request, order.id, order.version);
 
       await expect
         .poll(

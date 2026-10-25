@@ -14,26 +14,9 @@
  * required). The seller-side seeding + /orders verification use page.request
  * (authenticated via the login cookie).
  */
-import { test, expect, type Page } from "@playwright/test";
-
-const PIN = "12345678";
-
-async function login(page: Page): Promise<void> {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  const pinInput = page.locator('input[type="password"]');
-  await pinInput.waitFor({ state: "visible" });
-  await pinInput.fill(PIN);
-  await page.waitForTimeout(300);
-  await page.locator('button[type="submit"]').click({ force: true });
-  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
-}
+import { test, expect } from "@playwright/test";
 
 test.describe("Storefront round-trip", () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
-  });
-
   test("customer submits COD form → seller sees storefront order", async ({ page }) => {
     // ── 1. Fast-seed: product + active storefront config ───────────────────
     const slug = `e2e-storefront-${Date.now().toString().slice(-8)}`;
@@ -83,6 +66,9 @@ test.describe("Storefront round-trip", () => {
     // ── 3. Add the product to cart ─────────────────────────────────────────
     // The "Add to cart" button label is i18n'd; click the first product card's
     // add button. The button is full-width inside the product card.
+    // Every product has a variant; the button stays disabled until one is chosen.
+    const variantSelect = page.locator(`#storefront-variant-${product.id}`);
+    if ((await variantSelect.count()) > 0) await variantSelect.selectOption({ index: 1 });
     const addToCartButton = page
       .getByRole("button", { name: /Add to cart|Ajouter au panier|أضف إلى السلة/i })
       .first();
