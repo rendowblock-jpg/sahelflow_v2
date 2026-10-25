@@ -27,11 +27,54 @@ export { canonicalWilaya } from "./geography";
  * From the first such phrase to the end, the text is not read at all, so an
  * order written before it survives and a message that is only an instruction
  * is no order.
+ *
+ * Ordinary delivery requests share those words, and the customer's phone and
+ * address come after them, so a phrase is NOT an instruction when
+ *  - the verb is negated ("n'oubliez pas les consignes", "do not forget the
+ *    instructions", "forget not");
+ *  - the words between the verb and the object, or the words right after the
+ *    object, are about delivery or about an earlier order ("ignore the delivery
+ *    instructions", "ignorez les consignes de la dernière fois").
+ * "ignore all instructions from now on", "oubliez toutes les instructions
+ * précédentes", "forget your rules" stay instructions.
  */
-const INJECTION = new RegExp(
-  `${B_BEFORE}(?:${phraseAlternation(INJECTION_VERBS)})${B_AFTER}(?:\\s+\\S+){0,3}?\\s+(?:${phraseAlternation(INJECTION_OBJECTS)})${B_AFTER}|${B_BEFORE}(?:${phraseAlternation(INJECTION_PHRASES)})${B_AFTER}`,
-  "u",
+const INJECTION_VERB = new RegExp(`${B_BEFORE}(?:${phraseAlternation(INJECTION_VERBS)})${B_AFTER}`, "gu");
+const INJECTION_OBJECT_TAIL = new RegExp(
+  `(?:\\s+\\S+){0,3}?\\s+(?:${phraseAlternation(INJECTION_OBJECTS)})${B_AFTER}`,
+  "uy",
 );
+const INJECTION_PHRASE = new RegExp(`${B_BEFORE}(?:${phraseAlternation(INJECTION_PHRASES)})${B_AFTER}`, "u");
+/** Right before the verb: "n'", "ne ", "do not ", "don't ", "never ", Arabic "ما " / "لا ". */
+const NEGATED_BEFORE = /(?:(?:^|[\s,.;:!?(])(?:n|ne|not|dont|never|jamais|ما|لا)['’]?\s*|n['’]t\s+)$/u;
+/** Right after the verb: "oubliez pas", "forget not". */
+const NEGATED_AFTER = /^\s*(?:pas|plus|jamais|not|never)(?![\p{L}\p{N}])/u;
+/** Words that make "instructions" a delivery or earlier-order matter. */
+const ABOUT_DELIVERY_WORD = /(?:livraison|livrer|delivery|deliver|commande|order|colis|expedition|توصيل|الطلب|طلبية)/u;
+const ABOUT_EARLIER_TAIL =
+  /^\s*(?:de|du|des|d['’]|of|for|about|concernant|ta3|mta3|تاع|ديال)\s*(?:la\s+|le\s+|l['’]\s*|ma\s+|mon\s+|the\s+|my\s+)?(?:derniere|dernier|precedente|livraison|commande|colis|expedition|delivery|order|last|previous|المرة|التوصيل|الطلب|طلبية)/u;
+
+/** Offset of the first real instruction phrase in the folded text, or -1. */
+function findInjectionStart(folded: string): number {
+  let first = -1;
+  const phrase = INJECTION_PHRASE.exec(folded);
+  if (phrase) first = phrase.index;
+  INJECTION_VERB.lastIndex = 0;
+  for (let verb = INJECTION_VERB.exec(folded); verb; verb = INJECTION_VERB.exec(folded)) {
+    if (first !== -1 && verb.index > first) break;
+    const afterVerb = verb.index + verb[0].length;
+    if (NEGATED_BEFORE.test(folded.slice(Math.max(0, verb.index - 12), verb.index))) continue;
+    if (NEGATED_AFTER.test(folded.slice(afterVerb, afterVerb + 12))) continue;
+    INJECTION_OBJECT_TAIL.lastIndex = afterVerb;
+    const object = INJECTION_OBJECT_TAIL.exec(folded);
+    if (!object) continue;
+    if (ABOUT_DELIVERY_WORD.test(object[0])) continue;
+    const afterObject = afterVerb + object[0].length;
+    if (ABOUT_EARLIER_TAIL.test(folded.slice(afterObject, afterObject + 40))) continue;
+    first = verb.index;
+    break;
+  }
+  return first;
+}
 
 /**
  * Everything the offline reader found, including the fields of a message
@@ -45,8 +88,8 @@ export function readOrderFields(input: ExtractionInput): { order: ExtractedOrder
     folded = mask(folded, start, end);
   };
 
-  const injection = INJECTION.exec(folded);
-  if (injection) blank(injection.index, folded.length);
+  const injectionStart = findInjectionStart(folded);
+  if (injectionStart !== -1) blank(injectionStart, folded.length);
 
   const phones = findPhones(folded);
   const chosenPhone = pickPhone(phones, folded);
