@@ -10,6 +10,21 @@ const fail = (code: string, retryAfterSeconds?: number | null): ExtractionResult
   ...(typeof retryAfterSeconds === "number" ? { raw: { retryAfterSeconds } } : {}),
 });
 
+/**
+ * Groq's JSON mode has no schema, so the model writes null for "not stated" ("unitPrice": null, "commune": null);
+ * Gemini's schema mode never does. A null field means absent. Only nulls are dropped: a required field that
+ * was null is then missing, and the schema still refuses the answer.
+ */
+function dropNulls(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(value as Record<string, unknown>)) {
+    if (field === null) continue;
+    out[key] = key === "items" && Array.isArray(field) ? field.map((item) => dropNulls(item)) : field;
+  }
+  return out;
+}
+
 export interface GroqExtractorOptions { apiKey: string; model?: string; timeoutMs?: number }
 
 /**
@@ -44,7 +59,7 @@ export async function extractWithGroq(
     if (!text) return fail("GROQ_EMPTY_RESPONSE");
     let parsed: unknown;
     try { parsed = JSON.parse(text); } catch { return fail("GROQ_INVALID_EXTRACTION"); }
-    const validated = ExtractedOrderSchema.safeParse(parsed);
+    const validated = ExtractedOrderSchema.safeParse(dropNulls(parsed));
     if (!validated.success) return fail("GROQ_INVALID_EXTRACTION");
     const order = canonicalizeOrder(validated.data, input);
     const missingFields: string[] = [];
