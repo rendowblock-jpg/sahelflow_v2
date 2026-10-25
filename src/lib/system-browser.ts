@@ -1,6 +1,9 @@
 /**
- * Opens an address in the seller's own browser. The desktop shell hands a new unlinked window to the system browser
- * (the same call the delivery pages use), so the sign-in page never loads inside the app window.
+ * Opens an address in the seller's own browser.
+ *
+ * The desktop shell sends a link to the system browser only when a real `<a href target="_blank">` is clicked
+ * (tauri-plugin-shell listens for that click on <body>; it does NOT see `window.open`). So this puts one such
+ * link in the page, clicks it and removes it. In a normal browser the same click opens a new tab.
  * Only https addresses of the listed hosts are opened, never one with a login in it.
  */
 export function openInSystemBrowser(rawUrl: string, allowedHosts: readonly string[]): boolean {
@@ -11,6 +14,16 @@ export function openInSystemBrowser(rawUrl: string, allowedHosts: readonly strin
     return false;
   }
   if (url.protocol !== "https:" || url.username || url.password || !allowedHosts.includes(url.hostname)) return false;
-  window.open(url.href, "_blank", "noopener,noreferrer");
+  const link = document.createElement("a");
+  link.href = url.href;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.hidden = true;
+  document.body.appendChild(link);
+  try {
+    link.click();
+  } finally {
+    link.remove();
+  }
   return true;
 }
