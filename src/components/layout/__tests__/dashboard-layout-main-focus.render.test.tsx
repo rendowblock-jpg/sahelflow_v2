@@ -36,9 +36,29 @@ vi.mock("@/components/layout/topbar", () => ({ Topbar: () => null }));
 
 const size = { scroll: 400, client: 800 };
 
+/**
+ * happy-dom keeps a MutationObserver's listener only through a WeakRef, so after one garbage
+ * collection it stops reporting (checked with node --expose-gc: 1 callback before, 0 after). The
+ * coverage run allocates enough to collect in the middle of the "grows" test, which then never saw
+ * the new paragraph. This stand-in holds its callback and fires it when the test says the DOM changed.
+ */
+const mutationCallbacks: Array<() => void> = [];
+class TestMutationObserver {
+  constructor(callback: MutationCallback) {
+    mutationCallbacks.push(() => callback([], this as unknown as MutationObserver));
+  }
+  observe(): void {}
+  disconnect(): void {}
+  takeRecords(): MutationRecord[] {
+    return [];
+  }
+}
+
 beforeEach(() => {
   size.scroll = 400;
   size.client = 800;
+  mutationCallbacks.length = 0;
+  vi.stubGlobal("MutationObserver", TestMutationObserver);
   const fake = (read: () => number) => ({
     configurable: true,
     get(this: HTMLElement) {
@@ -59,6 +79,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   Reflect.deleteProperty(HTMLElement.prototype, "scrollHeight");
   Reflect.deleteProperty(HTMLElement.prototype, "clientHeight");
 });
@@ -118,6 +139,7 @@ describe("#main-content as a scrollable region", () => {
     size.scroll = 2000;
     await act(async () => {
       main().appendChild(document.createElement("p"));
+      mutationCallbacks.forEach((fire) => fire());
     });
     await waitFor(() => expect(main().getAttribute("tabindex")).toBe("0"));
   });

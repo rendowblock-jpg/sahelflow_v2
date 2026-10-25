@@ -11,6 +11,7 @@ import {
   verifySidecarWebSocketGrant,
 } from "./auth-tokens";
 import { WhatsAppInboundSpool } from "./inbound-spool";
+import { createIngressHealth } from "./ingress-health";
 import { createInboundSubscriber } from "./inbound-subscriber";
 import {
   createDispatchJournal,
@@ -335,7 +336,9 @@ app.get("/", (context) =>
   }),
 );
 
-app.get("/status", (context) => context.json(wa.getStatus()));
+// `ingress` is an extra field: readers that do not know it ignore it, and
+// every field of the manager status stays exactly as it was.
+app.get("/status", (context) => context.json({ ...wa.getStatus(), ingress: ingressHealth.build() }));
 
 app.get("/qr", (context) => {
   const qr = wa.getQr();
@@ -1437,11 +1440,20 @@ function broadcast(event: SidecarEvent): void {
 
 // Opening the spool resolves its storage key (a synchronous PowerShell on
 // Windows) and verifies every queued record: record how long that takes here.
+// Loss counters and last-message times live in one small file, so a restart
+// does not erase the evidence of a message that could not be saved.
+const ingressHealth = createIngressHealth({
+  file: join(process.env.SF_DATA_DIR ?? join(process.cwd(), "data"), "whatsapp-ingress-health.json"),
+  spool: () => inboundSpool,
+});
+
 const spoolStartedAt = performance.now();
 const inboundSpool = new WhatsAppInboundSpool({
   appUrl: APP_URL,
   bearerToken: SIDECAR_REST_TOKEN,
+  onQuarantinePruned: (removed) => ingressHealth.recordLost("quarantinePruned", removed),
   onCommitted(envelope) {
+    if (!envelope.message.key.fromMe) ingressHealth.recordCommitted();
     // Browser publication is explicitly after the app acknowledged the durable
     // ProviderIngressEvent commit. Database readers remain source of truth;
     // WebSocket delivery is a low-latency projection only.
@@ -1453,8 +1465,10 @@ diagnostics.record("spool.ready", {
   ms: Math.round(performance.now() - spoolStartedAt),
 });
 
+wa.onUndecryptable((count) => ingressHealth.recordUndecryptable(count));
 wa.subscribe(
   createInboundSubscriber({
+    health: ingressHealth,
     getStatus: () => wa.getStatus(),
     credentialAccountId: () => wa.credentialAccountId(),
     spool: inboundSpool,

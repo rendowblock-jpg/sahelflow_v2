@@ -83,53 +83,6 @@ export const orderStatusSchema = z.enum([
   "cancelled",
 ]);
 
-export const orderSourceSchema = z.enum([
-  "whatsapp",
-  "tiktok",
-  "manual",
-  "webstore",
-  "storefront",
-  "ai_chat",
-  "shopify",
-  "woocommerce",
-  "youcan",
-]);
-
-export const createOrderItemSchema = z.object({
-  productId: cuid.nullable().optional(),
-  productVariantId: cuid.nullable().optional(),
-  productName: nonEmptyString,
-  productVariantName: nonEmptyString.nullable().optional(),
-  quantity: posInt,
-  unitPrice: nonNegInt,
-});
-
-export const createOrderSchema = z.object({
-  customerId: cuid,
-  items: z.array(createOrderItemSchema).min(1, "At least one item required"),
-  wilaya: nonEmptyString,
-  commune: nonEmptyString,
-  address: nonEmptyString,
-  phone: dzPhone,
-  source: orderSourceSchema.default("manual"),
-  sourceMetadata: z.record(z.string(), z.unknown()).nullable().optional(),
-  notes: z.string().nullable().optional(),
-  deliveryCost: nonNegInt.nullable().optional(),
-  // Phase 1 bug 1.3: optional fields so storefront/import/sync/AI paths can
-  // keep their per-path data.
-  //   - status: import path creates orders with user-specified status
-  //     (default "pending" — historical imports). Service defaults to "draft".
-  //   - sourceOrderId: e-commerce sync dedupes by [source, sourceOrderId]
-  //     (unique constraint in prisma/schema.prisma).
-  status: orderStatusSchema.optional(),
-  sourceOrderId: z.string().nullable().optional(),
-  // Phase 1 bug 1.3: optional order-number prefix (e-commerce sync uses
-  // "SYNC-SHOPIFY" / "SYNC-WOOCOMMERCE" / "SYNC-YOUCAN" so synced orders are
-  // distinguishable from manual/AI/storefront orders in the orders list).
-  // Service defaults to "ORD" (the standard SahelFlow order-number prefix).
-  orderNumberPrefix: z.string().optional(),
-});
-
 export const updateOrderStatusSchema = z.object({
   status: orderStatusSchema,
 });
@@ -277,7 +230,6 @@ export const updateExpenseSchema = createExpenseSchema.partial();
 
 // ─── Type exports ─────────────────────────────────────────────────────────────
 
-export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;

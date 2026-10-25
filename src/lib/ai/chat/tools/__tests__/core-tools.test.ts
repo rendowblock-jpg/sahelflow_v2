@@ -37,6 +37,7 @@ vi.mock("@/lib/integrations/delivery/provider-capability", () => ({
 
 import "@/lib/ai/chat/tools/core-tools"; // side-effect: registers 6 tools
 import { getTool, type ToolContext } from "../registry";
+import { getLegacyTool } from "@/lib/ai/chat/tools/__tests__/support/legacy-tool-bodies";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -223,7 +224,7 @@ describe("create_order", () => {
       categoryId: cat.id,
     });
 
-    const tool = getTool("create_order")!;
+    const tool = getLegacyTool("create_order")!;
     const input = {
       customerId: customer.id,
       items: [{ productId: product.id, quantity: 2 }],
@@ -279,7 +280,7 @@ describe("create_order", () => {
   it("returns error when a product does not exist", async () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
 
-    const tool = getTool("create_order")!;
+    const tool = getLegacyTool("create_order")!;
     const result = await tool.execute(
       {
         customerId: customer.id,
@@ -299,7 +300,7 @@ describe("create_order", () => {
   it("returns error when the persisted AI proposal identity is missing", async () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
     const product = await seedProduct(db, { price: 2500 });
-    const tool = getTool("create_order")!;
+    const tool = getLegacyTool("create_order")!;
 
     const result = await tool.execute(
       {
@@ -321,7 +322,7 @@ describe("create_order", () => {
   it("returns error when items array is empty", async () => {
     const customer = await seedCustomer(db, { phone: uniquePhone() });
 
-    const tool = getTool("create_order")!;
+    const tool = getLegacyTool("create_order")!;
     const result = await tool.execute(
       {
         customerId: customer.id,
@@ -339,7 +340,7 @@ describe("create_order", () => {
   });
 
   it("returns error when required fields are missing", async () => {
-    const tool = getTool("create_order")!;
+    const tool = getLegacyTool("create_order")!;
     const result = await tool.execute({ items: [] }, ctx());
 
     expect(result.success).toBe(false);
@@ -436,7 +437,7 @@ describe("get_stats", () => {
 
 describe("update_order_status", () => {
   it("never falls back to legacy confirmation", async () => {
-    const tool = getTool("update_order_status")!;
+    const tool = getLegacyTool("update_order_status")!;
     const result = await tool.execute(
       { orderId: "any-order", status: "confirmed" },
       ctx(),
@@ -462,7 +463,7 @@ describe("update_order_status", () => {
       },
     });
 
-    const tool = getTool("update_order_status")!;
+    const tool = getLegacyTool("update_order_status")!;
     const result = await tool.execute(
       { orderId: order.id, status: "pending" },
       ctx(),
@@ -490,7 +491,7 @@ describe("update_order_status", () => {
       },
     });
 
-    const tool = getTool("update_order_status")!;
+    const tool = getLegacyTool("update_order_status")!;
     const result = await tool.execute(
       { orderId: order.id, status: "delivered" },
       ctx(),
@@ -501,7 +502,7 @@ describe("update_order_status", () => {
   });
 
   it("returns error for a non-existent order", async () => {
-    const tool = getTool("update_order_status")!;
+    const tool = getLegacyTool("update_order_status")!;
     const result = await tool.execute(
       { orderId: "cnonexistent123456789", status: "pending" },
       ctx(),
@@ -512,7 +513,7 @@ describe("update_order_status", () => {
   });
 
   it("returns error for an invalid status value", async () => {
-    const tool = getTool("update_order_status")!;
+    const tool = getLegacyTool("update_order_status")!;
     const result = await tool.execute(
       { orderId: "any", status: "invalid_status" },
       ctx(),

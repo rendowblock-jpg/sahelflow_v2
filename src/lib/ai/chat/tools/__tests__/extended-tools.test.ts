@@ -24,6 +24,7 @@ vi.mock("@/lib/wilaya-risk/engine", () => ({
 
 import "@/lib/ai/chat/tools/extended-tools"; // side-effect: registers 12 tools
 import { getTool, type ToolContext } from "../registry";
+import { getLegacyTool } from "@/lib/ai/chat/tools/__tests__/support/legacy-tool-bodies";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -484,7 +485,7 @@ describe("update_product_stock", () => {
     const cat = await seedCategory(db);
     const product = await seedProduct(db, { name: "Widget", stock: 50, categoryId: cat.id });
 
-    const tool = getTool("update_product_stock")!;
+    const tool = getLegacyTool("update_product_stock")!;
     const result = await tool.execute({ productId: product.id, newStock: 25, reason: "Damaged" }, ctx());
 
     expect(result.success).toBe(true);
@@ -497,7 +498,7 @@ describe("update_product_stock", () => {
   });
 
   it("returns error for a non-existent product", async () => {
-    const tool = getTool("update_product_stock")!;
+    const tool = getLegacyTool("update_product_stock")!;
     const result = await tool.execute({ productId: "cnonexistent123456789", newStock: 10 }, ctx());
 
     expect(result.success).toBe(false);
@@ -508,7 +509,7 @@ describe("update_product_stock", () => {
     const cat = await seedCategory(db);
     const product = await seedProduct(db, { categoryId: cat.id });
 
-    const tool = getTool("update_product_stock")!;
+    const tool = getLegacyTool("update_product_stock")!;
     const result = await tool.execute({ productId: product.id, newStock: -5 }, ctx());
 
     expect(result.success).toBe(false);
@@ -525,7 +526,7 @@ describe("cancel_order", () => {
       data: { orderNumber: "ORD-0001", status: "draft", customerId: customer.id, totalPrice: 1000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
     });
 
-    const tool = getTool("cancel_order")!;
+    const tool = getLegacyTool("cancel_order")!;
     const result = await tool.execute({ orderNumber: "ORD-0001", reason: "Client absent" }, ctx());
 
     expect(result.success).toBe(true);
@@ -542,7 +543,7 @@ describe("cancel_order", () => {
       data: { orderNumber: "ORD-0001", status: "shipped", customerId: customer.id, totalPrice: 1000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
     });
 
-    const tool = getTool("cancel_order")!;
+    const tool = getLegacyTool("cancel_order")!;
     const result = await tool.execute({ orderNumber: "ORD-0001" }, ctx());
 
     expect(result.success).toBe(false);
@@ -558,7 +559,7 @@ describe("cancel_order", () => {
       data: { orderNumber: "ORD-0001", status: "pending", customerId: customer.id, totalPrice: 1000, wilaya: "Alger", commune: "X", address: "Y", phone: "0551234567", source: "manual" },
     });
 
-    const tool = getTool("cancel_order")!;
+    const tool = getLegacyTool("cancel_order")!;
     const result = await tool.execute({ orderNumber: "ORD-0001", reason: "Client a changé d'avis" }, ctx());
 
     expect(result.success).toBe(true);
@@ -567,7 +568,7 @@ describe("cancel_order", () => {
   });
 
   it("returns error when order is not found", async () => {
-    const tool = getTool("cancel_order")!;
+    const tool = getLegacyTool("cancel_order")!;
     const result = await tool.execute({ orderNumber: "ORD-9999" }, ctx());
 
     expect(result.success).toBe(false);

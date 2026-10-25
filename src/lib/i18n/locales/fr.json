@@ -1261,6 +1261,8 @@
   "integrations.noApiRequired": "Aucune RC ou approbation Meta nécessaire — fonctionne avec toute boutique supportant les webhooks.",
   "integrations.noestDesc": "Créez et validez des expéditions NOEST Express avec les liens fournis par NOEST",
   "integrations.notConnected": "Non connecté",
+  "integrations.notLiveTested": "Pas encore testé sur une boutique réelle",
+  "integrations.notLiveTestedHint": "Cette connexion n’a pas encore été testée sur une boutique réelle. Vérifiez que les commandes arrivent avant de vous y fier.",
   "integrations.ordersReceived": "Commandes reçues",
   "integrations.placeholder.maystroApiToken": "Jeton API Maystro",
   "integrations.placeholder.noestCreateUrl": "Collez le lien de création de commande fourni par NOEST",
