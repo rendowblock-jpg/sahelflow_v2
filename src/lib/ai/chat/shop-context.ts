@@ -15,6 +15,7 @@ import "server-only";
 
 import type { DbClient } from "@/lib/db";
 import type { ShopContext } from "@/lib/shops/context";
+import { startOfShopDay } from "@/lib/time/shop-day";
 
 export interface AiShopBriefing {
   /** Orders sitting in `pending` — the confirmation queue. */
@@ -41,8 +42,8 @@ export async function loadShopBriefing(
   prisma: DbClient,
   shop: ShopContext,
 ): Promise<AiShopBriefing> {
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
+  // "Today" is the shop day, not the day on the computer running the app.
+  const startOfToday = startOfShopDay(new Date());
 
   const [pendingOrders, ordersToday, lowStockProducts, pendingDeliveries, pendingProposals] =
     await Promise.all([

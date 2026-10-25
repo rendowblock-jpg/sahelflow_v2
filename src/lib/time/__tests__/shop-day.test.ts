@@ -4,8 +4,10 @@ import {
   addShopDays,
   parseShopDate,
   shopDateString,
+  shopDayBounds,
   shopHour,
   shopMonthRange,
+  shopRecentMonths,
   startOfShopDay,
 } from "@/lib/time/shop-day";
 import { HOST_TIME_ZONES, useHostTimeZone } from "@/test-utils/host-tz";
@@ -66,5 +68,24 @@ describe.each(HOST_TIME_ZONES)("shop day helper with the host set to %s", (zone)
     expect(october.lt.toISOString()).toBe("2026-10-31T23:00:00.000Z");
     const december = shopMonthRange(2026, 12);
     expect(december.lt.toISOString()).toBe("2026-12-31T23:00:00.000Z");
+  });
+
+  it("gives the shop day around an instant as [start, end)", () => {
+    const bounds = shopDayBounds(new Date("2026-10-24T23:30:00Z")); // 00:30, 25 Oct
+    expect(bounds.start.toISOString()).toBe("2026-10-24T23:00:00.000Z");
+    expect(bounds.end.toISOString()).toBe("2026-10-25T23:00:00.000Z");
+  });
+
+  it("lists the last months ending with the shop month, across a year edge", () => {
+    // 31 Dec 23:30 UTC is already 1 Jan in Algeria.
+    const months = shopRecentMonths(new Date("2026-12-31T23:30:00Z"), 3);
+    expect(months.map((m) => m.key)).toEqual(["2026-11", "2026-12", "2027-01"]);
+    const first = months[0];
+    const last = months[2];
+    expect(first?.gte.toISOString()).toBe("2026-10-31T23:00:00.000Z");
+    expect(last?.gte.toISOString()).toBe("2026-12-31T23:00:00.000Z");
+    expect(last?.lt.toISOString()).toBe("2027-01-31T23:00:00.000Z");
+    const early = shopRecentMonths(new Date("2026-02-10T12:00:00Z"), 3);
+    expect(early.map((m) => m.key)).toEqual(["2025-12", "2026-01", "2026-02"]);
   });
 });

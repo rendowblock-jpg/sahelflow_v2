@@ -32,6 +32,7 @@ import type { DbClient } from "@/lib/db";
 // person (blind-index mismatch → unfindable customer).
 import { normalizePhone } from "@/lib/import/fields";
 import { orderService } from "@/lib/data/order-service";
+import { startOfShopDay } from "@/lib/time/shop-day";
 import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
 import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 
@@ -708,8 +709,7 @@ registerTool({
       let start: Date | undefined;
       switch (input.period) {
         case "today":
-          start = new Date(now);
-          start.setHours(0, 0, 0, 0);
+          start = startOfShopDay(now);
           break;
         case "week":
           start = new Date(now);
@@ -785,8 +785,7 @@ registerTool({
       let start: Date | undefined;
       switch (input.period) {
         case "today":
-          start = new Date(now);
-          start.setHours(0, 0, 0, 0);
+          start = startOfShopDay(now);
           break;
         case "week":
           start = new Date(now);
