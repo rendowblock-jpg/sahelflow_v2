@@ -351,7 +351,7 @@ export function AiKeyPanel({
 
   return (
     <>
-      <Card>
+      <Card id={provider === "groq" ? "ai-key-groq" : "ai-key-gemini"}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             {isGroq ? (
