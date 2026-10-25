@@ -11,6 +11,7 @@
  */
 import { encryptStorefrontCustomer } from "@/lib/storefront/hosted-checkout-crypto";
 
+import { setupCommuneSearch } from "./commune-search";
 import {
   availableModes,
   clampQuantity,
@@ -202,7 +203,11 @@ function boot(): void {
 
   // ---- wilaya -> communes (static files: no Worker request, no database)
   const communeCache = new Map<string, Array<[string, string]>>();
+  // The newest call wins: an older answer that arrives late must not rebuild the list under a newer choice.
+  let communeLoads = 0;
+  let communesLoaded: Promise<void> = Promise.resolve();
   async function loadCommunes(code: string): Promise<void> {
+    const mine = ++communeLoads;
     els.commune.disabled = true;
     els.commune.innerHTML = "";
     els.commune.add(new Option(d.i.loading ?? "…", ""));
@@ -220,12 +225,13 @@ function boot(): void {
       }
       if (list.length > 0) communeCache.set(code, list);
     }
-    if (selectedWilaya() !== code) return;
+    if (mine !== communeLoads || selectedWilaya() !== code) return;
     els.commune.innerHTML = "";
     els.commune.add(new Option(d.i.choose ?? "", ""));
     for (const [latin, arabic] of list) els.commune.add(new Option(d.locale === "ar" ? arabic || latin : latin, latin));
     els.commune.disabled = list.length === 0;
-    if (list.length === 0) setStatus("error", d.i.retry ?? "");
+    // a failed list is not a failed order: the order text ("we could not send your order") is for the order only
+    if (list.length === 0) setStatus("error", d.i.communeFailed ?? "");
   }
 
   els.wilaya.addEventListener("change", () => {
@@ -233,9 +239,28 @@ function boot(): void {
     clearFieldError("commune");
     clearStatus();
     refresh();
-    void loadCommunes(selectedWilaya());
+    communesLoaded = loadCommunes(selectedWilaya());
   });
   els.commune.addEventListener("change", () => clearFieldError("commune"));
+  // The commune search box fills the two selects above; it is registered after the wilaya listener on purpose (a pick fires that same event).
+  const search = {
+    box: form.querySelector<HTMLInputElement>("#f-search"),
+    list: form.querySelector<HTMLElement>("#sf-search-list"),
+    note: form.querySelector<HTMLElement>("#sf-search-note"),
+    count: form.querySelector<HTMLElement>("#sf-search-count"),
+  };
+  if (search.box && search.list && search.note && search.count) {
+    setupCommuneSearch(
+      { box: search.box, list: search.list, note: search.note, count: search.count, wilaya: els.wilaya, commune: els.commune },
+      {
+        url: `${d.cdir}/all.json`,
+        arabic: d.locale === "ar",
+        fees: d.fees,
+        text: { none: d.i.communeNone as string, failed: d.i.communeFailed as string, count: d.i.communeCount as string },
+        communesLoaded: () => communesLoaded,
+      },
+    );
+  }
   for (const id of ["name", "phone", "address"] as const) els[id].addEventListener("input", () => clearFieldError(id));
   // quiet confirmation as the visitor types: a tick when the field is good, the number written the usual way
   const tick = (input: HTMLElement, ok: boolean) => input.closest(".sf-field")?.classList.toggle("is-ok", ok);
