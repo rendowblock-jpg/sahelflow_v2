@@ -19,19 +19,59 @@
  * are NOT disputed (GoldenEntry.disputed: two careful readers read the message
  * differently, so it should not count for or against the extractor).
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { extractWithGemini } from "@/lib/ai/extraction/gemini-extractor";
 import { extractWithRegex, normalizePhone, readOrderFields } from "@/lib/ai/extraction/regex-extractor";
-import type { ExtractedItem, ExtractedOrder } from "@/lib/ai/extraction/types";
+import type { ExtractedItem, ExtractedOrder, ExtractionResult } from "@/lib/ai/extraction/types";
 import { GOLDEN_SET, GOLDEN_SET_VERSION, type GoldenEntry, type GoldenItem } from "../golden-set";
 import { isHoldout } from "../split";
 
 const RUN = process.env.GOLDEN_MEASURE === "1";
 const OUT_DIR = process.env.GOLDEN_OUT_DIR ?? join(tmpdir(), "golden-baseline");
 const SPLIT = process.env.GOLDEN_SPLIT ?? "dev";
+/**
+ * GOLDEN_READER=gemini measures the LIVE Gemini path (extractWithGemini, the code the app runs) instead of the
+ * offline reader. The key is read from the file named by GEMINI_TEST_API_KEY_FILE and is never printed, logged or
+ * written; only the golden set (synthetic messages, no real customer text) is sent. Output files are named live-*.
+ */
+const LIVE_READER = process.env.GOLDEN_READER === "gemini";
+const LIVE_CONCURRENCY = Number(process.env.GOLDEN_LIVE_CONCURRENCY ?? "3");
+const FILE_PREFIX = LIVE_READER ? "live" : "baseline";
+const liveResults = new Map<string, ExtractionResult>();
+const liveErrors: string[] = [];
+/** First-attempt duration and outcome per entry, as the app would see it (same default timeout as smart-router.ts:59). */
+const liveFirst = new Map<string, { ms: number; ok: boolean }>();
+const liveModels: Record<string, number> = {};
+
+async function fetchLive(entries: readonly GoldenEntry[]): Promise<void> {
+  const keyFile = process.env.GEMINI_TEST_API_KEY_FILE;
+  if (!keyFile) throw new Error("GOLDEN_READER=gemini needs GEMINI_TEST_API_KEY_FILE (a path, not the key)");
+  const apiKey = readFileSync(keyFile, "utf8").trim();
+  const queue = [...entries].filter((entry) => !liveResults.has(entry.id));
+  const worker = async () => {
+    for (let entry = queue.shift(); entry; entry = queue.shift()) {
+      let last: ExtractionResult | undefined;
+      // A failed call (rate limit, timeout, invalid answer) is retried with a growing pause; what still fails is
+      // reported as an error and NOT scored, so a network problem is never counted as a wrong answer.
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const startedAt = Date.now();
+        // Same call as smart-router.ts:59: default timeout, no override.
+        last = await extractWithGemini({ body: entry.text }, { apiKey });
+        if (attempt === 0) liveFirst.set(entry.id, { ms: Date.now() - startedAt, ok: last.order !== null });
+        if (last.order !== null) break;
+        // A daily-quota answer cannot be fixed by waiting a few seconds: stop, and leave the entry unscored.
+        if (last.missingFields?.some((code) => /QUOTA/.test(code))) break;
+        await new Promise((resolve) => setTimeout(resolve, 4_000 * 2 ** attempt));
+      }
+      if (last) liveResults.set(entry.id, last);
+    }
+  };
+  await Promise.all(Array.from({ length: LIVE_CONCURRENCY }, worker));
+}
 if (RUN && !["dev", "holdout", "both"].includes(SPLIT)) throw new Error(`GOLDEN_SPLIT must be dev, holdout or both, got ${SPLIT}`);
 
 interface Tally {
@@ -168,8 +208,19 @@ function runSplit(label: "dev" | "holdout", entries: readonly GoldenEntry[]) {
     };
 
     const input = { body: entry.text };
-    const result = extractWithRegex(input);
-    const predictedOrder = result.order !== null;
+    const live = LIVE_READER ? liveResults.get(entry.id) : undefined;
+    if (LIVE_READER && (!live || live.order === null)) {
+      // No answer after the retries: counted as an error, not as a wrong answer.
+      liveErrors.push(entry.id);
+      continue;
+    }
+    if (live) {
+      const model = String((live.raw as { model?: unknown } | null | undefined)?.model ?? "unknown");
+      liveModels[model] = (liveModels[model] ?? 0) + 1;
+    }
+    const result = live ?? extractWithRegex(input);
+    // The live reader always returns an order object; "no order" is an answer with no item.
+    const predictedOrder = live ? (live.order?.items.length ?? 0) > 0 : result.order !== null;
     const wantOrder = entry.expected.isOrder;
     score(
       "isOrder",
@@ -180,7 +231,7 @@ function runSplit(label: "dev" | "holdout", entries: readonly GoldenEntry[]) {
       !wantOrder,
     );
 
-    const got: ExtractedOrder = readOrderFields(input).order;
+    const got: ExtractedOrder = live?.order ?? readOrderFields(input).order;
     perEntry.push({
       id: entry.id,
       disputed: entry.disputed,
@@ -307,13 +358,29 @@ function runSplit(label: "dev" | "holdout", entries: readonly GoldenEntry[]) {
     })
     .sort((a, b) => b.count - a.count);
 
+  const firstAttempts = entries.map((e) => liveFirst.get(e.id)).filter((x): x is { ms: number; ok: boolean } => x !== undefined);
+  const sortedMs = firstAttempts.map((x) => x.ms).sort((a, b) => a - b);
+  const quantile = (p: number) => (sortedMs.length === 0 ? null : (sortedMs[Math.min(sortedMs.length - 1, Math.floor(p * sortedMs.length))] ?? null));
+  const latency = LIVE_READER
+    ? {
+        calls: firstAttempts.length,
+        failedOnFirstAttempt: firstAttempts.filter((x) => !x.ok).length,
+        p50Ms: quantile(0.5),
+        p90Ms: quantile(0.9),
+        maxMs: sortedMs.length === 0 ? null : (sortedMs[sortedMs.length - 1] ?? null),
+        over15s: firstAttempts.filter((x) => x.ms > 15_000).length,
+      }
+    : undefined;
   const ordersN = entries.filter((e) => e.expected.isOrder).length;
   const disputedList = entries.filter((e) => e.disputed !== undefined);
   const keptList = entries.filter((e) => e.disputed === undefined);
   const report = {
     goldenVersion: GOLDEN_SET_VERSION,
     generatedAt: new Date().toISOString(),
-    extractor: "readOrderFields + extractWithRegex (offline reader, no network, no Gemini)",
+    extractor: LIVE_READER
+      ? "extractWithGemini (the LIVE Gemini path the app runs; synthetic messages only)"
+      : "readOrderFields + extractWithRegex (offline reader, no network, no Gemini)",
+    liveRun: LIVE_READER ? { errors: liveErrors.length, answered: entries.length - liveErrors.length, models: liveModels, firstAttempt: latency } : undefined,
     entries: entries.length,
     orders: ordersN,
     notOrders: entries.length - ordersN,
@@ -345,6 +412,7 @@ function runSplit(label: "dev" | "holdout", entries: readonly GoldenEntry[]) {
         goldenVersion: report.goldenVersion,
         generatedAt: report.generatedAt,
         extractor: report.extractor,
+        liveRun: report.liveRun,
         entries: report.entries,
         orders: report.orders,
         notOrders: report.notOrders,
@@ -358,7 +426,7 @@ function runSplit(label: "dev" | "holdout", entries: readonly GoldenEntry[]) {
       }
     : report;
   mkdirSync(OUT_DIR, { recursive: true });
-  writeFileSync(join(OUT_DIR, `baseline-${label}.json`), `${JSON.stringify({ split: label, ...published }, null, 2)}\n`);
+  writeFileSync(join(OUT_DIR, `${FILE_PREFIX}-${label}.json`), `${JSON.stringify({ split: label, ...published }, null, 2)}\n`);
 
   const pct = (a: { accuracy: number | null }) => (a.accuracy === null ? "-" : `${(a.accuracy * 100).toFixed(1)}%`);
   const cells = (a?: { correct: number; total: number; accuracy: number | null; wilsonLower95: number }) =>
@@ -398,19 +466,28 @@ function runSplit(label: "dev" | "holdout", entries: readonly GoldenEntry[]) {
           "",
         ]),
   ];
-  writeFileSync(join(OUT_DIR, `baseline-${label}.md`), `${lines.join("\n")}\n`);
+  writeFileSync(join(OUT_DIR, `${FILE_PREFIX}-${label}.md`), `${lines.join("\n")}\n`);
 
   // The only assertion: every entry was scored. The numbers are the finding.
-  expect(overall.isOrder?.total).toBe(entries.length);
+  expect((overall.isOrder?.total ?? 0) + liveErrors.length).toBe(entries.length);
 }
 
 describe.skipIf(!RUN)("golden set baseline (manual)", () => {
-  it("scores the offline reader on the chosen half and writes the evidence", () => {
+  it("scores the chosen reader on the chosen half and writes the evidence", async () => {
+    const dev = GOLDEN_SET.filter((entry) => !isHoldout(entry));
+    const holdout = GOLDEN_SET.filter(isHoldout);
+    if (LIVE_READER) {
+      await fetchLive([...(SPLIT === "dev" || SPLIT === "both" ? dev : []), ...(SPLIT === "holdout" || SPLIT === "both" ? holdout : [])]);
+    }
     if (SPLIT === "dev" || SPLIT === "both") {
-      runSplit("dev", GOLDEN_SET.filter((entry) => !isHoldout(entry)));
+      liveErrors.length = 0;
+      for (const model of Object.keys(liveModels)) delete liveModels[model];
+      runSplit("dev", dev);
     }
     if (SPLIT === "holdout" || SPLIT === "both") {
-      runSplit("holdout", GOLDEN_SET.filter(isHoldout));
+      liveErrors.length = 0;
+      for (const model of Object.keys(liveModels)) delete liveModels[model];
+      runSplit("holdout", holdout);
     }
-  });
+  }, 3_600_000);
 });
