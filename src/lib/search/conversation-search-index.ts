@@ -117,6 +117,17 @@ async function lockForWrite(tx: SqlClient): Promise<void> {
   );
 }
 
+/**
+ * Is the shop's blind-index key row there? The app's `db` serves key rows from a cache filled at start, so it never
+ * reports a row that was lost afterwards; this plain read is the only way to see it. Reads one table, writes nothing.
+ */
+export async function shopKeyRowPresent(client: Pick<IndexerClient, "$queryRawUnsafe">): Promise<boolean> {
+  const rows = await client.$queryRawUnsafe<unknown[]>(
+    `SELECT 1 AS present FROM "ProtectedKeyAuthority" WHERE "purpose" = 'shop-blind-index' LIMIT 1`,
+  );
+  return rows.length > 0;
+}
+
 async function keyPresent(derive: BlindIndexDeriver): Promise<boolean> {
   return (await hashTokenStrings(["msg-p:probe"], "probe", derive)) !== null;
 }
