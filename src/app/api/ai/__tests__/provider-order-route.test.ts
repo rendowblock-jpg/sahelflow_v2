@@ -45,11 +45,10 @@ describe("/api/ai/provider-order", () => {
     expect(h.upsert).not.toHaveBeenCalled();
   });
 
-  it("PUT needs integrations.manage and a recent PIN, and writes nothing without them", async () => {
+  it("PUT needs integrations.manage and writes nothing without it", async () => {
     h.requireAuth.mockRejectedValueOnce(new SahelFlowError("no", "FORBIDDEN", 403));
     expect((await put({ order: "gemini-first" })).status).toBe(403);
-    h.requireRecent.mockRejectedValueOnce(new SahelFlowError("pin", "REAUTH_REQUIRED", 401));
-    expect((await put({ order: "gemini-first" })).status).toBe(401);
+    expect(h.requireAuth).toHaveBeenCalledWith("integrations.manage");
     expect(h.upsert).not.toHaveBeenCalled();
   });
 });

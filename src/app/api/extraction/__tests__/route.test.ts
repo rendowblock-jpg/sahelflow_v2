@@ -135,7 +135,7 @@ describe("POST /api/extraction: the AI failure reaches the client", () => {
 });
 
 describe("POST /api/extraction: which AI is tried first", () => {
-  const orderPassed = () => (h.extract.mock.calls[0][1] as { providerOrder: string[] }).providerOrder;
+  const orderPassed = () => (h.extract.mock.calls[0]?.[1] as { providerOrder: string[] }).providerOrder;
 
   it.each([
     ["no stored value", null, ["groq", "gemini"]],
@@ -145,7 +145,7 @@ describe("POST /api/extraction: which AI is tried first", () => {
   ])("passes the order for %s", async (_label, stored, expected) => {
     h.getSetting.mockResolvedValue(stored);
     await post();
-    expect(h.getSetting.mock.calls[0][1]).toBe("ai_provider_order");
+    expect(h.getSetting.mock.calls[0]?.[1]).toBe("ai_provider_order");
     expect(orderPassed()).toEqual(expected);
   });
 

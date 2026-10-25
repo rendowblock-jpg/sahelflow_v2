@@ -24,6 +24,7 @@ import {
 import { ProfileEditor } from "@/components/profile/profile-editor";
 import { MemberAccountPanel } from "@/components/settings/member-account-panel";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
+import { AiProviderOrderCard } from "@/components/settings/ai-provider-order-card";
 import { GeminiRuntimePanel } from "@/components/settings/gemini-runtime-panel";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
 import { BackupRestorePanel } from "@/components/settings/backup-restore-panel";
@@ -259,6 +260,8 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     render: ({ access }) => (
       <div className="space-y-6">
         <GeminiRuntimePanel canManage={access.aiConsent || access.aiKey} />
+        <AiProviderOrderCard canManage={access.aiKey} />
+        <AiKeyPanel provider="groq" canManageKey={access.aiKey} canManageConsent={access.aiConsent} />
         <AiKeyPanel canManageKey={access.aiKey} canManageConsent={access.aiConsent} />
       </div>
     ),
