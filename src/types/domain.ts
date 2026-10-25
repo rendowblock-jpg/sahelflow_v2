@@ -182,7 +182,7 @@ export interface Delivery {
 
 export type MessageChannel = "whatsapp" | "tiktok";
 export type MessageDirection = "inbound" | "outbound";
-export type ExtractionMethod = "regex" | "gemini" | "groq" | "none" | null;
+export type ExtractionMethod = "regex" | "gemini" | "groq" | "openai" | "none" | null;
 
 export interface Conversation {
   id: string;

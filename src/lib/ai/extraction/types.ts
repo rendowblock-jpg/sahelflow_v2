@@ -41,7 +41,7 @@ export interface ExtractedOrder {
 }
 
 /** Which method extracted this order */
-export type ExtractionMethod = "regex" | "gemini" | "groq" | "none";
+export type ExtractionMethod = "regex" | "gemini" | "groq" | "openai" | "none";
 
 /** The full extraction result */
 export interface ExtractionResult {
