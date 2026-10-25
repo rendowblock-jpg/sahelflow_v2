@@ -13,7 +13,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/ai/provider-order — which AI is tried first. */
+/** GET /api/ai/provider-order — which AI is tried first (groq-first, gemini-first or openai-first). */
 export const GET = withErrorHandler(async () => {
   await requireAuth("integrations.manage");
   const stored = await getSetting({ prisma: db, shop: shopContext }, AI_PROVIDER_ORDER_SETTING);

@@ -10,6 +10,12 @@ describe("provider order with three providers", () => {
     expect(parseProviderOrderSetting("gemini-first")).toBe("gemini-first");
     expect(parseProviderOrderSetting('["openai"]')).toBe("groq-first");
   });
+  it("openai-first is the list openai, groq, gemini", () => {
+    expect(parseProviderOrder("openai-first")).toEqual(["openai", "groq", "gemini"]);
+    expect(parseProviderOrder(" OpenAI-First ")).toEqual(["openai", "groq", "gemini"]);
+    expect(providerOrderFor("openai-first")).toEqual(["openai", "groq", "gemini"]);
+    expect(parseProviderOrderSetting("openai-first")).toBe("openai-first");
+  });
   it("accepts an ordered list (JSON or comma), completes it, drops junk and repeats", () => {
     expect(parseProviderOrder('["openai","groq","gemini"]')).toEqual(["openai", "groq", "gemini"]);
     expect(parseProviderOrder("openai, gemini")).toEqual(["openai", "gemini", "groq"]);

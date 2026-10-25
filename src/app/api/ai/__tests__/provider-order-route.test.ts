@@ -25,13 +25,14 @@ beforeEach(() => {
 
 describe("/api/ai/provider-order", () => {
   it("GET reads the stored order and falls back to groq-first for junk", async () => {
-    h.getSetting.mockResolvedValueOnce("gemini-first").mockResolvedValueOnce("junk");
+    h.getSetting.mockResolvedValueOnce("gemini-first").mockResolvedValueOnce("junk").mockResolvedValueOnce("openai-first");
     expect(await (await GET()).json()).toEqual({ order: "gemini-first" });
     expect(await (await GET()).json()).toEqual({ order: "groq-first" });
+    expect(await (await GET()).json()).toEqual({ order: "openai-first" });
     expect(h.requireAuth).toHaveBeenCalledWith("integrations.manage");
   });
 
-  it.each(["groq-first", "gemini-first"])("PUT saves %s", async (order) => {
+  it.each(["groq-first", "gemini-first", "openai-first"])("PUT saves %s", async (order) => {
     expect(await (await put({ order })).json()).toEqual({ ok: true, order });
     expect(h.upsert).toHaveBeenCalledWith({
       where: { key: "ai_provider_order" },
@@ -40,8 +41,10 @@ describe("/api/ai/provider-order", () => {
     });
   });
 
-  it("PUT refuses a junk value and writes nothing", async () => {
-    expect((await put({ order: "banana" })).status).toBe(400);
+  it("PUT refuses a junk value or a free list and writes nothing", async () => {
+    for (const order of ["banana", "openai", '["openai","groq","gemini"]', "openai,groq,gemini", ["openai", "groq", "gemini"]]) {
+      expect((await put({ order })).status).toBe(400);
+    }
     expect(h.upsert).not.toHaveBeenCalled();
   });
 
