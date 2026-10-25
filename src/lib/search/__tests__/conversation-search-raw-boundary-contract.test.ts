@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const INDEX_FILE = "src/lib/search/conversation-search-index.ts";
 const RUNTIME_FILE = "src/lib/search/conversation-search-runtime.ts";
+const QUERY_FILE = "src/lib/search/conversation-search-query.ts";
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
 function sourceFiles(directory: string): string[] {
@@ -31,8 +32,8 @@ describe("conversation-search indexer: raw SQL boundary", () => {
   it("is the only non-test file that makes raw calls on an injected index client", () => {
     const users = sourceFiles("src")
       .filter((path) => !path.includes("/__tests__/") && !/\.test\.[cm]?tsx?$/u.test(path))
-      .filter((path) => /\$(?:query|execute)RawUnsafe/u.test(read(path)) && /IndexerClient|SqlClient/u.test(read(path)));
-    expect(users).toEqual([INDEX_FILE]);
+      .filter((path) => /\$(?:query|execute)RawUnsafe/u.test(read(path)) && /IndexerClient|SqlClient|QueryClient/u.test(read(path)));
+    expect(users).toEqual([INDEX_FILE, QUERY_FILE]);
   });
 
   it("is wired to the real database in exactly one place, which the idle gate loads on its first tick", () => {
@@ -93,5 +94,39 @@ describe("conversation-search indexer: raw SQL boundary", () => {
     expect(runtime).toContain('decryptFields({ id: message.id, body: message.body }, ["body"], "Message")');
     expect(runtime).toContain("deriveExistingShopBlindIndexes");
     expect(runtime).not.toMatch(/deriveShopBlindIndexes\(/u); // a read path must never create the key
+  });
+});
+
+describe("conversation-search query path: raw SQL boundary", () => {
+  const query = read(QUERY_FILE);
+
+  it("imports no database, no index writer and no runtime", () => {
+    expect(query).not.toMatch(/from "(?:@\/lib\/db|@prisma\/client|@\/lib\/search\/conversation-search-(?:index|runtime))"/u);
+  });
+
+  it("only reads the three index tables, never Message or Conversation, and writes nothing", () => {
+    const tables = [...query.matchAll(/(?:FROM|JOIN)\s+"(\w+)"/gu)].map((match) => match[1]);
+    expect(tables.length).toBeGreaterThan(0);
+    for (const table of tables) expect(["ConversationSearchDoc", "ConversationSearchToken", "ConversationSearchDirty"]).toContain(table);
+    expect(query).not.toMatch(/\$executeRawUnsafe|INSERT\s|UPDATE\s+"|DELETE\s+FROM|REPLACE\s+INTO|CREATE\s|DROP\s/iu);
+    expect(query).not.toMatch(/"Message"|"Conversation"/u);
+  });
+
+  it("pastes nothing into the SQL text except placeholders: every value is a bound parameter", () => {
+    const interpolations: string[] = [];
+    for (let at = query.indexOf("${"); at >= 0; at = query.indexOf("${", at + 2)) {
+      let depth = 1;
+      let end = at + 2;
+      while (depth > 0 && end < query.length) {
+        depth += (query[end] === "{" ? 1 : 0) - (query[end] === "}" ? 1 : 0);
+        end += 1;
+      }
+      interpolations.push(query.slice(at + 2, end - 1).replace(/\s+/gu, " ").trim());
+    }
+    const sqlInterpolations = interpolations.filter((expression) => /^(?:marks|pairs)\(/u.test(expression));
+    expect(sqlInterpolations.length).toBeGreaterThan(0);
+    const allowed = new Set(["marks(batch.length)", "pairs(rows.length)"]);
+    for (const expression of sqlInterpolations) expect(allowed.has(expression), expression).toBe(true);
+    expect(interpolations.filter((expression) => !/^(?:marks|pairs)\(/u.test(expression))).toEqual([]);
   });
 });
