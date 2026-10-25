@@ -131,14 +131,19 @@ export async function settleMotion(
         document.getAnimations().every((animation) => {
           const timing = animation.effect?.getComputedTiming();
           if (!timing || timing.endTime === Infinity) return true;
-          return animation.playState !== "running" && animation.playState !== "pending";
+          // "pending" is not a playState any more (lib.dom: paused | idle | finished | running); a play that has
+          // been requested but has not started yet is the separate boolean `pending`.
+          return !animation.pending && animation.playState !== "running";
         }),
       undefined,
       { timeout: timeoutMs, polling: 50 },
     );
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    // Only "the motion did not end in time" is expected here. A closed page or a broken browser must stay visible,
+    // not be read as "still animating".
+    if (error instanceof Error && error.name === "TimeoutError") return false;
+    throw error;
   }
 }
 
