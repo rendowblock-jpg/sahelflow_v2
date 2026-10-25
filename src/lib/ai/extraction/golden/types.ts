@@ -21,6 +21,9 @@
  * - A message that only asks, complains, greets, cancels, or tries to give the
  *   assistant instructions is `isOrder: false`.
  * - Every phone is fake (see FAKE_PHONE_PATTERNS in the structure test).
+ * - A commune named inside the address text is also given as `commune`
+ *   (Latin name of data/communes.json, in the expected wilaya).
+ * - Where two readers genuinely differ the entry carries `disputed` (a reason).
  */
 
 export type GoldenLanguage = "ar" | "arabizi" | "fr" | "mixed" | "ar-msa";
@@ -62,26 +65,39 @@ export interface GoldenEntry {
   expected: GoldenExpected;
   /** Shape of the message, used to split the baseline by difficulty. */
   tags?: string[];
+  /**
+   * One line (English): why two careful readers read this message differently.
+   * A disputed entry stays in the set, but a measurement reports the numbers
+   * with and without it, so it counts neither for nor against the extractor.
+   */
+  disputed?: string;
 }
 
 /** Builders for one part file: fixes language and id prefix. */
 export function goldenBuilders(language: GoldenLanguage, prefix: string) {
   const make =
     (source: GoldenSource) =>
-    (n: number, text: string, expected: GoldenExpected, tags: string[] = []): GoldenEntry => ({
+    (
+      n: number,
+      text: string,
+      expected: GoldenExpected,
+      tags: string[] = [],
+      disputed?: string,
+    ): GoldenEntry => ({
       id: `${prefix}-${String(n).padStart(3, "0")}`,
       language,
       source,
       text,
       expected,
       ...(tags.length > 0 ? { tags } : {}),
+      ...(disputed !== undefined ? { disputed } : {}),
     });
   const none = make("not-an-order");
   return {
     wa: make("whatsapp-order"),
     ms: make("messenger-order"),
     /** A message that must produce no order. */
-    no: (n: number, text: string, tags: string[] = []): GoldenEntry =>
-      none(n, text, { isOrder: false }, tags),
+    no: (n: number, text: string, tags: string[] = [], disputed?: string): GoldenEntry =>
+      none(n, text, { isOrder: false }, tags, disputed),
   };
 }
