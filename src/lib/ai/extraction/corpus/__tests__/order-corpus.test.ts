@@ -25,6 +25,7 @@ import {
 import { extractWithRegex } from "@/lib/ai/extraction/regex-extractor";
 import { ExtractedOrderSchema, extractWithGemini } from "@/lib/ai/extraction/gemini-extractor";
 import { extractOrder } from "@/lib/ai/extraction/smart-router";
+import { quotaLedger } from "@/lib/ai/providers/quota-ledger";
 import { EXTRACTION_SYSTEM_PROMPT } from "@/lib/ai/prompts/extraction";
 
 const cases = corpusCases();
@@ -372,6 +373,8 @@ describe("order corpus — smart-router routing rows", () => {
       expect(result.aiFailure).toBeTruthy();
     } finally {
       vi.unstubAllGlobals();
+      // The quota answer paused Gemini in the shared ledger; later cases ask again.
+      quotaLedger.clear("gemini");
     }
   });
 
