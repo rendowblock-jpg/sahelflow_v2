@@ -12,6 +12,7 @@ import {
   ADDRESS_KEYWORDS,
   ARTICLE_WORDS,
   ATTRIBUTE_CUES,
+  CORRECTION_CUES,
   CURRENCIES,
   EDGE_STOPWORDS,
   EXCHANGE_TARGET,
@@ -40,6 +41,8 @@ export interface ClauseReading {
   unitMarker: boolean;
   intent: boolean;
   exchange: boolean;
+  /** The clause opened with "non" / "لا" / "ghalta": its number replaces the one before. */
+  correction: boolean;
   attribute?: string;
   address?: string;
   addressContinuation?: string;
@@ -48,7 +51,7 @@ export interface ClauseReading {
 const alt = phraseAlternation;
 const NUMBER_WORD_ALT = alt(Object.keys(NUMBER_WORDS));
 const LEADING_NOISE = new RegExp(
-  `^[\\s\\-–—*•.]*(?:(?<intent>${alt(ORDER_INTENTS)})|${alt(GREETINGS)}|${alt(FILLERS)})${B_AFTER}`,
+  `^[\\s\\-–—*•.]*(?:(?<intent>${alt(ORDER_INTENTS)})|(?<correction>(?:${alt(CORRECTION_CUES)})(?:\\s+(?:${alt(CORRECTION_CUES)}))*(?=\\s*(?:\\d|$)))|${alt(GREETINGS)}|${alt(FILLERS)})${B_AFTER}`,
   "u",
 );
 const EXCHANGE = new RegExp(`${B_BEFORE}(?:${alt(EXCHANGE_VERBS)})${B_AFTER}`, "u");
@@ -91,6 +94,23 @@ const QTY_REVERSE = new RegExp(`${B_BEFORE}(?:x|×|\\*)\\s*(?<num>\\d{1,3})(?!\\
 const QTY_LABEL = new RegExp(`${B_BEFORE}(?:qte|qty|quantite|quantity|nombre|الكميه|كميه)\\s*[:=]?\\s*(?<num>\\d{1,3})(?!\\d)`, "u");
 const QTY_WORD = new RegExp(`^\\s*(?<word>${NUMBER_WORD_ALT})(?:\\s*(?:${alt(QUANTITY_UNITS)}))?${B_AFTER}`, "u");
 const QTY_LEADING = new RegExp(`^\\s*(?<num>\\d{1,3})\\s+(?=\\p{L})`, "u");
+/** "3tshirts", "2مخدات": the number is glued to the product word (see gluedQuantity). */
+const QTY_GLUED = new RegExp(`^\\s*(?<num>\\d{1,2})(?<word>\\p{L}{3,})`, "u");
+const SPEC_WORDS = new Set(SPEC_UNITS.map((unit) => fold(unit)));
+const LATIN_WORD = /^[a-z]+$/;
+
+/**
+ * Digits 2 3 5 6 7 8 9 are also Arabizi letters ("3afak", "9bel", "7abit"), so
+ * in a Latin word they count as a quantity only when the word ends like a
+ * French plural ("3tshirts", "2sacs"). Arabic words and 1, 4, 10-99 always do.
+ */
+function gluedQuantity(match: RegExpExecArray): number | undefined {
+  const num = Number(match.groups?.num);
+  const word = match.groups?.word ?? "";
+  if (!(num > 0) || SPEC_WORDS.has(word)) return undefined;
+  if (LATIN_WORD.test(word) && /^[235-9]$/.test(match.groups?.num ?? "") && !/[sx]$/.test(word)) return undefined;
+  return num;
+}
 
 const EDGE_WORDS = new Set(
   [...EDGE_STOPWORDS, ...FILLERS, ...CURRENCIES, ...PRICE_CUES, ...GREETINGS].map((word) => fold(word)),
@@ -152,7 +172,7 @@ function isProductName(name: string): boolean {
 }
 
 export function readClause(original: string, folded: string): ClauseReading {
-  const reading: ClauseReading = { quantityStated: false, total: false, unitMarker: false, intent: false, exchange: false };
+  const reading: ClauseReading = { quantityStated: false, total: false, unitMarker: false, intent: false, exchange: false, correction: false };
   const work = new Workspace(original, folded);
 
   // Leading greetings, fillers and order verbs ("salam, bghit nchri …").
@@ -160,6 +180,7 @@ export function readClause(original: string, folded: string): ClauseReading {
     const match = work.take(LEADING_NOISE);
     if (!match) break;
     if (match.groups?.intent) reading.intent = true;
+    if (match.groups?.correction) reading.correction = true;
   }
   if (ADDRESS_CONTINUE.test(work.folded) && !ADDRESS_START.test(work.folded)) {
     reading.addressContinuation = work.rest();
@@ -242,6 +263,15 @@ export function readClause(original: string, folded: string): ClauseReading {
       if (leading?.groups?.num && Number(leading.groups.num) > 0) {
         reading.quantity = Number(leading.groups.num);
         reading.quantityStated = true;
+      } else {
+        const glued = QTY_GLUED.exec(work.folded);
+        const quantity = glued ? gluedQuantity(glued) : undefined;
+        if (glued && quantity !== undefined) {
+          const digitsStart = glued[0].length - glued.groups!.word!.length - glued.groups!.num!.length;
+          work.blank(digitsStart, digitsStart + glued.groups!.num!.length);
+          reading.quantity = quantity;
+          reading.quantityStated = true;
+        }
       }
     }
   }

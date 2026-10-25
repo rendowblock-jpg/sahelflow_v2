@@ -26,6 +26,11 @@ export const ORDER_INTENTS = [
   "بغيت", "بغينا", "نبغي", "نبي", "نحب", "حبيت", "حاب", "حابه", "نريد", "اريد",
   "بدي", "خاصني", "نشري", "نشرى", "نشرو", "نطلب", "اطلب", "شراء", "نكوموندي",
   "طلبيه", "طلب",
+  // "give me" / "send me": how a customer asks for a product without saying "order".
+  "3tini", "3atini", "3ettini", "عطيني", "اعطيني", "ابعتولي", "ابعثولي", "ابعتلي", "ابعثلي",
+  "ابعثوا ليا", "ابعثو ليا", "ابعتو ليا", "ارغب في", "ارغب", "ارجو تزويدي",
+  "donnez-moi", "donnez moi", "envoyez-moi", "envoyez moi", "envoie-moi", "envoie moi",
+  "send me", "give me",
 ];
 
 /** Exchange requests: the item wanted comes after "b / par / with". */
@@ -50,6 +55,9 @@ export const FILLERS = [
   "pour ma fille", "pour mon fils", "pour ma femme", "لابنتي", "لابني", "لبنتي", "كهدية",
   "est", "sont", "est-il", "est-elle", "est-ce que", "c est",
   "disponible", "dispo", "kayen", "kayn", "كاين", "garanti", "garantie", "guaranteed",
+  // "only" and "understood": they confirm a number or a price, they are not a product.
+  "bark", "berk", "برك", "seulement", "uniquement", "juste", "only", "فقط",
+  "mafhoum", "مفهوم", "d'accord", "dac", "dacc", "wakha", "واخا", "tamam", "تمام",
 ];
 
 /** Words that may sit at a product-name edge but never alone. */
@@ -75,6 +83,11 @@ export const NON_PRODUCT_WORDS = [
   "خلاص", "wilaya", "commune", "baladiya", "بلديه", "ولايه", "lyoum", "ghodwa",
   "aujourd'hui", "demain", "today", "tomorrow", "sa3a", "heure", "fiha",
   "ykon", "yji", "tji", "jat", "ma", "pas", "rien", "chi", "شي", "والو",
+  // Placeholders and requests for information: what is asked for is not a product.
+  "photo", "photos", "video", "videos", "info", "infos", "information", "informations",
+  "detail", "details", "détails", "catalogue", "lien", "link", "التفاصيل", "تفاصيل", "معلومات",
+  "صوره", "صور", "7aja", "7ajat", "7ajtin", "حاجه", "حاجات", "حاجتين", "chose", "choses",
+  "article", "articles", "produit", "produits", "items", "things",
 ];
 
 /** Words that introduce the price of a line. */
@@ -199,4 +212,61 @@ export const ATTRIBUTE_CUES = [
   "taille", "pointure", "couleur", "color", "colour", "size", "lon", "loun",
   "لون", "اللون", "مقاس", "المقاس", "القياس", "قياس", "حجم", "modele",
   "modèle", "model", "type", "version",
+];
+
+/**
+ * Words of a message about an order that already exists (cancel, refund,
+ * status). "I want" next to one of them is not an intent to buy.
+ */
+export const NON_ORDER_TOPICS = [
+  "annuler", "annule", "annulation", "cancel", "cancelled", "canceled",
+  "nel8i", "nelghi", "nlghi", "nel3i", "nbattal", "nbatel",
+  "نلغي", "نلغو", "الغاء", "ألغي", "نبطل",
+  "remboursement", "rembourser", "rembourse", "refund",
+  "نسترجع", "استرجاع", "ترجاع", "ترجيع",
+  "suivi", "tracking", "statut", "تتبع", "win wslat", "win wsslat", "وين وصلت", "فين وصلت",
+];
+
+/** "ignore / forget" + (a few words) + "instructions / rules": an attempt to instruct the assistant. */
+export const INJECTION_VERBS = [
+  "ignore", "ignorez", "ignorer", "ignores", "disregard", "forget", "oublie", "oubliez",
+  "override", "tjahal", "tjahel", "tjahl", "تجاهل", "تجاهلي", "انسى", "اهمل",
+];
+export const INJECTION_OBJECTS = [
+  "instructions", "instruction", "rules", "rule", "prompt", "directives", "consignes",
+  "regles", "التعليمات", "تعليمات", "القواعد", "الاوامر", "ta3limat", "9awa3id",
+];
+/** Phrases that are an instruction to the assistant by themselves. */
+export const INJECTION_PHRASES = ["system prompt", "prompt systeme", "jailbreak", "developer mode"];
+
+/** A clause starting with one of these corrects the number just given ("2 … non 3 …"). */
+export const CORRECTION_CUES = [
+  "non", "ah non", "plutot", "pardon", "oups", "en fait", "je veux dire",
+  "ghalta", "ghalet", "ghlat", "n9sed", "لا", "غلطت", "غلط", "اقصد", "نقصد",
+];
+
+/** Between two phone numbers, these mean the second one is the right one. */
+export const PHONE_CORRECTION_CUES = [
+  "غلط", "بالغلط", "غالط", "الصح", "الصحيح", "صحيح", "ghalta", "ghalet", "ghlat", "erreur",
+  "faux", "fausse", "wrong", "mistake", "s7i7", "sa7i7", "sahih", "le bon", "la bonne",
+  "correct", "correction", "plutot", "n9sed", "نقصد", "اقصد",
+];
+
+/**
+ * Delivery instructions and conditions. A clause is a NOTE when it has a
+ * contact request, a photo to send, or a time condition, and no quantity or
+ * price. Stems: matched at the start of a word.
+ */
+export const INSTRUCTION_CONTACT = [
+  "appelez", "appelle", "appeler", "appele", "rappel", "contactez", "contacter", "call me", "tcall",
+  "تتصل", "نتصل", "اتصل", "تكلم", "كلمني", "n3ayet", "3ayet", "3ayt", "ncalli", "ttasl", "ntasl",
+];
+export const INSTRUCTION_SEND = [
+  "envoy", "ba3t", "b3at", "bi3t", "sift", "tsift", "send", "ابعث", "ارسل", "ترسل", "بعث", "ابعت",
+];
+export const INSTRUCTION_PHOTO = ["photo", "pic", "image", "صوره", "صور"];
+export const INSTRUCTION_TIMING = ["avant", "apres", "9bel", "ba3d", "b3d", "before", "after", "قبل", "بعد"];
+export const INSTRUCTION_TIMING_TARGET = [
+  "livr", "deliver", "توصيل", "التوصيل", "توصل", "تجي", "تجيو", "tji", "twas", "tousel", "venir",
+  "passer", "midi", "soir", "matin", "عصر", "ظهر", "مغرب", "مساء", "صباح", "3asr", "dohr", "maghrib",
 ];
