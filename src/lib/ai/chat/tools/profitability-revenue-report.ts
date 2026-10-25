@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { getProfitabilityProjection } from "@/lib/accounting/profitability";
 import type { DbClient } from "@/lib/db";
+import { addShopDays, startOfShopDay } from "@/lib/time/shop-day";
 import type { ToolContext, ToolResult } from "./registry";
 import { registerTool } from "./registry";
 
@@ -30,16 +31,11 @@ function resolvePeriod(
 
   switch (period) {
     case "today": {
-      const from = new Date(now);
-      from.setHours(0, 0, 0, 0);
-      return { from, to, label: "Aujourd'hui" };
+      return { from: startOfShopDay(now), to, label: "Aujourd'hui" };
     }
     case "yesterday": {
-      const end = new Date(now);
-      end.setHours(0, 0, 0, 0);
-      const from = new Date(end);
-      from.setDate(from.getDate() - 1);
-      return { from, to: end, label: "Hier" };
+      const end = startOfShopDay(now);
+      return { from: addShopDays(end, -1), to: end, label: "Hier" };
     }
     case "week": {
       const from = new Date(now);
