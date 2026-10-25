@@ -242,7 +242,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table scrollLabel={t("productStock.historyTitle")}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("common.date")}</TableHead>
@@ -294,7 +294,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 {t("productStock.orderMovementsTitle")}
               </h3>
               <div className="overflow-x-auto">
-                <Table>
+                <Table scrollLabel={t("productStock.orderMovementsTitle")}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("common.date")}</TableHead>
@@ -353,7 +353,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <Table>
+                <Table scrollLabel={t("customers.recentOrders")}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>#</TableHead>

@@ -191,7 +191,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
 
             {preview.preview.length > 0 ? (
               <div className="max-h-64 overflow-auto rounded-control border">
-                <Table>
+                <Table scrollLabel={t("import.previewTableLabel")}>
                   <TableHeader>
                     <TableRow>
                       {Object.keys(preview.preview[0]!).map((key) => (

@@ -975,6 +975,7 @@
   "import.lineN": "السطر {{n}}:",
   "import.missingFile": "ملف مفقود",
   "import.previewFailed": "فشل التحليل",
+  "import.previewTableLabel": "معاينة الصفوف المراد استيرادها",
   "import.rowLimitExceeded": "ملف الاستيراد يتجاوز الحد الأقصى وهو {{count}} صفًا من البيانات",
   "import.success": "تم استيراد {{count}} عنصر بنجاح",
   "import.totalLabel": "المجموع:",
