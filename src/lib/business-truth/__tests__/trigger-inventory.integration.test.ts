@@ -17,7 +17,8 @@ import { afterAll, describe, expect, it } from "vitest";
  *
  * It does not prove what a trigger does (the behaviour tests next to each migration do that); it
  * proves the set did not change by accident. The list is a snapshot taken on 23 Oct 2026 from the
- * migration set at that date.
+ * migration set at that date; the six conversation_search_* triggers were added on 25 Oct 2026 by
+ * migration 20261025030000 (PB-CONV-SEARCH-LOAD slice 2).
  */
 
 const db = new PrismaClient();
@@ -48,6 +49,9 @@ const EXPECTED_TRIGGERS = [
   "CollaborationHandover|CollaborationHandover_no_update",
   "CollaborationMention|CollaborationMention_no_update",
   "CompensationFact|CompensationFact_append_only_update",
+  "Conversation|conversation_search_conversation_contact_update",
+  "Conversation|conversation_search_conversation_delete",
+  "Conversation|conversation_search_conversation_insert",
   "Conversation|search_projection_conversation_delete",
   "Conversation|search_projection_conversation_insert",
   "Conversation|search_projection_conversation_update",
@@ -61,6 +65,9 @@ const EXPECTED_TRIGGERS = [
   "FinancialMovement|FinancialMovement_append_only_update",
   "FinancialMovement|ProfitabilityCostSnapshot_after_cod_receivable",
   "InventoryMovement|InventoryMovement_append_only_update",
+  "Message|conversation_search_message_body_update",
+  "Message|conversation_search_message_delete",
+  "Message|conversation_search_message_insert",
   "Order|Order_canonical_lifecycle_insert_check",
   "Order|Order_canonical_lifecycle_update_check",
   "Order|search_projection_order_delete",
