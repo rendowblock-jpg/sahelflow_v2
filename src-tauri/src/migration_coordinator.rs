@@ -2994,6 +2994,103 @@ mod tests {
         fs::remove_dir_all(root).expect("remove test root");
     }
 
+    // PB-CONV-SEARCH-LOAD slice 2: the conversation-search index arrives by migration, with its
+    // triggers, and the migration neither changes nor copies the rows that already exist. Filling
+    // the index for existing messages is done later by the app, never on the start-up path.
+    #[test]
+    fn conversation_search_migration_adds_the_index_without_touching_or_copying_rows() {
+        let root = test_root("conversation-search-index");
+        let resources = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("repository root")
+            .to_path_buf();
+        let migrations = load_migrations(&resources.join("prisma/migrations"))
+            .expect("load packaged migrations");
+        let position = migrations
+            .iter()
+            .position(|migration| migration.name.ends_with("_conversation_search_index"))
+            .expect("the conversation search migration is packaged");
+        fs::create_dir_all(&root).expect("create test root");
+        let database_path = root.join("shop.db");
+        migrate_database(&database_path, &migrations[..position])
+            .expect("prepare a database without the index");
+        let connection = Connection::open(&database_path).expect("open database");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO "Conversation" ("id", "channel", "contactName", "updatedAt")
+                VALUES ('conversation-1', 'whatsapp', 'sealed-name', CURRENT_TIMESTAMP);
+                INSERT INTO "Message" ("id", "conversationId", "body", "direction", "timestamp")
+                VALUES ('message-1', 'conversation-1', 'sealed-body', 'inbound', CURRENT_TIMESTAMP);
+                "#,
+            )
+            .expect("insert a conversation and a message before the migration");
+        drop(connection);
+
+        migrate_database(&database_path, &migrations).expect("apply the index migration");
+
+        let connection = Connection::open(&database_path).expect("open migrated database");
+        let count = |sql: &str| -> i64 {
+            connection
+                .query_row(sql, [], |row| row.get(0))
+                .expect("count query")
+        };
+        for table in [
+            "ConversationSearchDoc",
+            "ConversationSearchToken",
+            "ConversationSearchDirty",
+            "ConversationSearchState",
+        ] {
+            assert_eq!(
+                count(&format!(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '{table}'"
+                )),
+                1,
+                "{table} was not created"
+            );
+        }
+        assert_eq!(
+            count(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'conversation_search_%'"
+            ),
+            6
+        );
+        // The rows that were there are untouched and nothing was copied into the index.
+        assert_eq!(count(r#"SELECT COUNT(*) FROM "Message""#), 1);
+        assert_eq!(count(r#"SELECT COUNT(*) FROM "Conversation""#), 1);
+        assert_eq!(count(r#"SELECT COUNT(*) FROM "ConversationSearchDoc""#), 0);
+        assert_eq!(
+            count(r#"SELECT COUNT(*) FROM "ConversationSearchToken""#),
+            0
+        );
+        assert_eq!(
+            count(r#"SELECT COUNT(*) FROM "ConversationSearchDirty""#),
+            0
+        );
+        assert_eq!(
+            count(r#"SELECT COUNT(*) FROM "ConversationSearchState""#),
+            1
+        );
+
+        // From now on a new message and a new conversation are queued by the triggers.
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO "Conversation" ("id", "channel", "contactName", "updatedAt")
+                VALUES ('conversation-2', 'whatsapp', 'sealed-name', CURRENT_TIMESTAMP);
+                INSERT INTO "Message" ("id", "conversationId", "body", "direction", "timestamp")
+                VALUES ('message-2', 'conversation-2', 'sealed-body', 'inbound', CURRENT_TIMESTAMP);
+                "#,
+            )
+            .expect("insert after the migration");
+        assert_eq!(
+            count(r#"SELECT COUNT(*) FROM "ConversationSearchDirty""#),
+            2
+        );
+        drop(connection);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
     #[test]
     fn packaged_upgrade_preserves_supported_current_seller_rows() {
         let root = test_root("packaged-current-data");
