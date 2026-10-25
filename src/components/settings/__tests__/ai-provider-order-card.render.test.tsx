@@ -19,7 +19,7 @@ vi.mock("@/hooks/use-i18n", async () => {
     fr: (await import("@/lib/i18n/locales/fr.json")).default,
     en: (await import("@/lib/i18n/locales/en.json")).default,
   };
-  return { useI18n: () => ({ t: (key: string) => tables[harness.locale][key] ?? key, locale: harness.locale, dir: harness.locale === "ar" ? "rtl" : "ltr" }) };
+  return { useI18n: () => ({ t: (key: string) => tables[harness.locale]?.[key] ?? key, locale: harness.locale, dir: harness.locale === "ar" ? "rtl" : "ltr" }) };
 });
 vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -47,7 +47,7 @@ describe("AiProviderOrderCard with the ChatGPT plan", () => {
     render(<AiProviderOrderCard canManage />);
     const radios = await screen.findAllByRole("radio");
     expect(radios.map((r) => (r as HTMLInputElement).value)).toEqual(["groq-first", "gemini-first"]);
-    fireEvent.click(radios[1]);
+    fireEvent.click(radios[1]!);
     const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT")!;
     expect(JSON.parse(String(put[1].body))).toEqual({ order: "gemini-first" });
   });

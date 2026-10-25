@@ -21,7 +21,7 @@ vi.mock("@/hooks/use-i18n", async () => {
     fr: (await import("@/lib/i18n/locales/fr.json")).default,
     en: (await import("@/lib/i18n/locales/en.json")).default,
   };
-  return { useI18n: () => ({ t: (key: string) => tables[harness.locale][key] ?? key, locale: harness.locale, dir: harness.locale === "ar" ? "rtl" : "ltr" }) };
+  return { useI18n: () => ({ t: (key: string) => tables[harness.locale]?.[key] ?? key, locale: harness.locale, dir: harness.locale === "ar" ? "rtl" : "ltr" }) };
 });
 vi.mock("@/components/theme-provider", () => ({ useTheme: () => ({ resolvedTheme: "light" }) }));
 
@@ -65,7 +65,7 @@ describe("OnboardingChatGptOption", () => {
   it.each([["fr", "ltr"], ["ar", "rtl"]] as const)("is readable in %s (%s)", async (locale, dir) => {
     harness.locale = locale;
     const { container } = render(<OnboardingChatGptOption canManage />);
-    const toggle = screen.getAllByRole("button")[0];
+    const toggle = screen.getAllByRole("button")[0]!;
     expect(toggle.textContent).toContain("ChatGPT");
     expect(toggle.textContent).not.toContain("aiKey.");
     fireEvent.click(toggle);
