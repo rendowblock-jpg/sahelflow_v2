@@ -189,6 +189,8 @@
   "aiKey.chatgpt.pinLabel": "الرمز السري",
   "aiKey.chatgpt.pinConfirm": "تأكيد",
   "aiKey.order.chatgptNote": "يُستعمل ChatGPT بعد هذين الخيارين. وإذا كان هو الوحيد الذي أعددته، يستعمله SahelFlow للرسائل التي لا يستطيع القارئ دون إنترنت قراءتها.",
+  "aiKey.order.openaiFirst": "ChatGPT أولًا (من اشتراكك)",
+  "aiKey.order.openaiFirstNote": "يُجرَّب ChatGPT أولًا، ويستعمل ما يسمح به اشتراكك. وإذا بلغ حدّه، ينتقل SahelFlow إلى Groq ثم إلى Gemini.",
   "aiKey.chatgpt.onboardingToggle": "أو استخدم اشتراك ChatGPT (اختياري)",
   "analytics.aovTrend": "اتجاه متوسط قيمة الطلب",
   "analytics.aovTrendDesc": "متوسط قيمة الطلب عبر الزمن",

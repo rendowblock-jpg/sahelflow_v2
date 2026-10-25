@@ -189,6 +189,8 @@
   "aiKey.chatgpt.pinLabel": "Code PIN",
   "aiKey.chatgpt.pinConfirm": "Confirmer",
   "aiKey.order.chatgptNote": "ChatGPT est sollicité après ces deux-là. Si ChatGPT est le seul que vous avez configuré, SahelFlow l'utilise pour les messages que le lecteur hors ligne ne peut pas lire.",
+  "aiKey.order.openaiFirst": "ChatGPT d'abord (avec votre forfait)",
+  "aiKey.order.openaiFirstNote": "ChatGPT est sollicité en premier et utilise ce que votre forfait permet. Quand sa limite est atteinte, SahelFlow passe à Groq, puis à Gemini.",
   "aiKey.chatgpt.onboardingToggle": "Ou utiliser votre forfait ChatGPT (facultatif)",
   "analytics.aovTrend": "Tendance du panier moyen",
   "analytics.aovTrendDesc": "Panier moyen dans le temps",

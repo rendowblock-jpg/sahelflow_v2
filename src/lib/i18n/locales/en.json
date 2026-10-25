@@ -189,6 +189,8 @@
   "aiKey.chatgpt.pinLabel": "PIN",
   "aiKey.chatgpt.pinConfirm": "Confirm",
   "aiKey.order.chatgptNote": "ChatGPT is asked after these two. If ChatGPT is the only one you set up, SahelFlow uses it for the messages the offline reader cannot read.",
+  "aiKey.order.openaiFirst": "ChatGPT first (with your plan)",
+  "aiKey.order.openaiFirstNote": "ChatGPT is asked first and uses what your plan allows. When its limit is reached, SahelFlow goes on to Groq, then Gemini.",
   "aiKey.chatgpt.onboardingToggle": "Or use your ChatGPT plan (optional)",
   "analytics.aovTrend": "Avg Order Value Trend",
   "analytics.aovTrendDesc": "Average order value over time",

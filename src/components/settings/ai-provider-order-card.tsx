@@ -11,6 +11,7 @@ import type { AiProviderOrderSetting } from "@/lib/ai/providers/provider-order";
 const CHOICES: ReadonlyArray<{ value: AiProviderOrderSetting; label: string }> = [
   { value: "groq-first", label: "aiKey.order.groqFirst" },
   { value: "gemini-first", label: "aiKey.order.geminiFirst" },
+  { value: "openai-first", label: "aiKey.order.openaiFirst" },
 ];
 
 /** Which AI the order reader tries first. Saved on change; only integrations.manage may change it. */
@@ -37,7 +38,8 @@ export function AiProviderOrderCard({ canManage }: { canManage: boolean }) {
     };
   }, [canManage]);
 
-  // Only to explain where ChatGPT sits. A failed or refused answer (for example "PIN check needed") shows no note.
+  // Tells whether a ChatGPT plan can be asked: it gives the note and the "ChatGPT first" choice.
+  // A failed or refused answer (for example "PIN check needed") shows neither.
   useEffect(() => {
     if (!canManage) return;
     let cancelled = false;
@@ -53,6 +55,9 @@ export function AiProviderOrderCard({ canManage }: { canManage: boolean }) {
   }, [canManage]);
 
   if (!canManage) return null;
+
+  // "ChatGPT first" is offered only when it can work, or when it is already saved (so the seller can change it).
+  const visibleChoices = CHOICES.filter((choice) => choice.value !== "openai-first" || chatGptReady || order === "openai-first");
 
   async function choose(next: AiProviderOrderSetting) {
     const previous = order;
@@ -86,7 +91,7 @@ export function AiProviderOrderCard({ canManage }: { canManage: boolean }) {
         ) : (
           <fieldset className="space-y-2" disabled={saving} aria-describedby={chatGptReady ? noteId : undefined}>
             <legend className="sr-only">{t("aiKey.order.title")}</legend>
-            {CHOICES.map((choice) => (
+            {visibleChoices.map((choice) => (
               <label key={choice.value} className="flex cursor-pointer items-center gap-2 text-sm">
                 <input
                   type="radio"
@@ -103,7 +108,7 @@ export function AiProviderOrderCard({ canManage }: { canManage: boolean }) {
         )}
         {chatGptReady ? (
           <p id={noteId} className="mt-3 text-xs leading-relaxed text-muted-foreground">
-            {t("aiKey.order.chatgptNote")}
+            {t(order === "openai-first" ? "aiKey.order.openaiFirstNote" : "aiKey.order.chatgptNote")}
           </p>
         ) : null}
       </CardContent>
