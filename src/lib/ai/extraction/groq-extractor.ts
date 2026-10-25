@@ -10,6 +10,34 @@ const fail = (code: string, retryAfterSeconds?: number | null): ExtractionResult
   ...(typeof retryAfterSeconds === "number" ? { raw: { retryAfterSeconds } } : {}),
 });
 
+/**
+ * Groq's JSON mode has no schema, so the model writes null for "not stated" ("unitPrice": null, "commune": null);
+ * Gemini's schema mode never does. A null field means absent. Only nulls are dropped: a required field that
+ * was null is then missing, and the schema still refuses the answer.
+ */
+function dropNulls(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(value as Record<string, unknown>)) {
+    if (field === null) continue;
+    out[key] = key === "items" && Array.isArray(field) ? field.map((item) => dropNulls(item)) : field;
+  }
+  return out;
+}
+
+/**
+ * The shape of a Groq answer, made readable: nulls are dropped (see dropNulls), and an answer object with no "items"
+ * means "the AI found no items" (for a message that is not an order Groq writes {}; Gemini's schema mode always sends
+ * "items": []). Anything that is not an object is left alone, so the schema still refuses it.
+ */
+function readableAnswer(value: unknown): unknown {
+  const cleaned = dropNulls(value);
+  if (cleaned && typeof cleaned === "object" && !Array.isArray(cleaned) && !("items" in cleaned)) {
+    return { ...(cleaned as Record<string, unknown>), items: [] };
+  }
+  return cleaned;
+}
+
 export interface GroqExtractorOptions { apiKey: string; model?: string; timeoutMs?: number }
 
 /**
@@ -44,7 +72,7 @@ export async function extractWithGroq(
     if (!text) return fail("GROQ_EMPTY_RESPONSE");
     let parsed: unknown;
     try { parsed = JSON.parse(text); } catch { return fail("GROQ_INVALID_EXTRACTION"); }
-    const validated = ExtractedOrderSchema.safeParse(parsed);
+    const validated = ExtractedOrderSchema.safeParse(readableAnswer(parsed));
     if (!validated.success) return fail("GROQ_INVALID_EXTRACTION");
     const order = canonicalizeOrder(validated.data, input);
     const missingFields: string[] = [];

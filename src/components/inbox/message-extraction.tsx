@@ -26,9 +26,9 @@ import {
 } from "@/lib/i18n/order-extraction";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 import { toAsciiDigits } from "@/lib/phone-patterns";
+// Every AI reader (Gemini, Groq, ChatGPT) is "an AI read it" for the review card.
+import { isAiExtractionMethod as isAiMethod } from "@/lib/ai/extraction/methods";
 
-/** Gemini and Groq are both "an AI read it" for the review card. */
-const isAiMethod = (method: string) => method === "gemini" || method === "groq";
 
 interface MessageExtractionProps {
   conversationId?: string;
@@ -217,7 +217,7 @@ export function MessageExtraction({
           messageId: readSource?.anchorId ?? messageId,
           // A hand-built order is still anchored to this message; its method
           // records how the draft was produced.
-          extractionMethod: isAiMethod(result.method) ? (result.method as "gemini" | "groq") : "regex",
+          extractionMethod: isAiMethod(result.method) ? result.method : "regex",
           extractionConfidence: result.confidence,
           customer: {
             ...reviewed.customer,
