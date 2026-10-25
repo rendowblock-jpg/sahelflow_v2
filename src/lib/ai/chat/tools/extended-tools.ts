@@ -29,6 +29,7 @@ import { registerTool } from "./registry";
 import { assessOrderRisk } from "@/lib/wilaya-risk/engine";
 import type { DbClient } from "@/lib/db";
 import { productService } from "@/lib/data/product-service";
+import { addShopDays, shopDayBounds, startOfShopDay } from "@/lib/time/shop-day";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -300,18 +301,16 @@ registerTool({
 
       switch (input.period) {
         case "today":
-          start = new Date(now);
-          start.setHours(0, 0, 0, 0);
+          start = startOfShopDay(now);
           label = "Aujourd'hui";
           break;
-        case "yesterday":
-          start = new Date(now);
-          start.setDate(start.getDate() - 1);
-          start.setHours(0, 0, 0, 0);
-          end = new Date(start);
-          end.setHours(23, 59, 59, 999);
+        case "yesterday": {
+          const day = shopDayBounds(addShopDays(now, -1));
+          start = day.start;
+          end = new Date(day.end.getTime() - 1);
           label = "Hier";
           break;
+        }
         case "week":
           start = new Date(now);
           start.setDate(start.getDate() - 7);
@@ -582,8 +581,7 @@ registerTool({
       let start: Date | undefined;
       switch (input.period) {
         case "today":
-          start = new Date(now);
-          start.setHours(0, 0, 0, 0);
+          start = startOfShopDay(now);
           break;
         case "week":
           start = new Date(now);
