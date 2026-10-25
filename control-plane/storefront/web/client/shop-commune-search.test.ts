@@ -391,6 +391,40 @@ describe("commune search: the network", () => {
     expect(c.shipping()).toContain("900");
   });
 
+  it("a slow commune-list load of the SAME wilaya cannot rebuild the list under a newer pick", async () => {
+    const c = await mount();
+    // the first request for 05.json is held back; the second (the newer pick) is answered at once
+    const inner = globalThis.fetch;
+    let first = true;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    vi.stubGlobal("fetch", async (input: unknown) => {
+      const url = typeof input === "string" ? input : (input as { url: string }).url;
+      if (url.endsWith("/05.json") && first) {
+        first = false;
+        await gate;
+      }
+      return inner(input as never);
+    });
+    await search(c, "Batna");
+    const batna = c.rows().find((r) => r.dataset.code === "05" && r.dataset.latin === "Batna");
+    if (!batna) throw new Error("no Batna row");
+    c.click(batna);
+    await settle();
+    expect(c.commune.disabled, "the first 05 list is still on the wire").toBe(true);
+    c.type("Arris");
+    await settle();
+    const arris = c.rows().find((r) => r.dataset.code === "05" && r.dataset.latin === "Arris");
+    if (!arris) throw new Error("no Arris row");
+    c.click(arris);
+    await settle();
+    expect(c.commune.value).toBe("Arris");
+    release();
+    await settle();
+    expect(c.commune.value, "the late first answer did not rebuild the list").toBe("Arris");
+    expect(c.commune.disabled).toBe(false);
+  });
+
   it("a failed commune-LIST load shows the new failed text, not 'We could not send your order'", async () => {
     const c = await mount();
     c.net.breakIt("/_sf/c.test/05.json", "status");
