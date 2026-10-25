@@ -7,6 +7,11 @@
  */
 import { test, expect } from "@playwright/test";
 
+// This file tests the login and setup screens, so it starts WITHOUT the saved owner
+// session. It holds the only real PIN-form login of the suite (the auth setup project
+// makes the other one); the login limiter allows 5 per minute.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe("Login flow", () => {
   test("user can log in with the PIN", async ({ page }) => {
     // Seeded DB: setup is done, PIN is 12345678.

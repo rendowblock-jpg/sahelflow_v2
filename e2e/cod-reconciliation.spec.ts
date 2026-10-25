@@ -13,46 +13,20 @@
  * input, "mark remitted" button. After the bulk action, the page refreshes
  * and the stat cards should show 0 pending remittance.
  *
- * Auth: page.request is authenticated via the login cookie.
+ * Auth: no login in this file. playwright.config.ts loads the owner session saved by
+ * phase5-owner-auth.setup.ts (SF_PHASE5_OWNER_STORAGE_STATE) into every test context, so
+ * page.request and the request fixture are already authenticated.
  */
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
-const PIN = "12345678";
-
-async function login(page: Page): Promise<void> {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  const pinInput = page.locator('input[type="password"]');
-  await pinInput.waitFor({ state: "visible" });
-  await pinInput.fill(PIN);
-  await page.waitForTimeout(300);
-  await page.locator('button[type="submit"]').click({ force: true });
-  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
-}
-
-/** Transition an order through the state machine to "delivered". */
-async function deliverOrder(page: Page, orderId: string): Promise<void> {
-  for (const status of ["pending", "confirmed", "shipped", "delivered"] as const) {
-    const res = await page.request.patch(`/api/orders/${orderId}/status`, {
-      data: { status },
-    });
-    expect(res.ok()).toBeTruthy();
-  }
-}
-
-/** Mark an order's COD as collected. */
-async function markCollected(page: Page, orderId: string): Promise<void> {
-  const res = await page.request.patch(`/api/orders/${orderId}/cod`, {
-    data: { action: "mark_collected" },
-  });
-  expect(res.ok()).toBeTruthy();
-}
+import {
+  collectCod,
+  confirmAndDeliver,
+  createManualOrder,
+  uniquePhone,
+} from "./helpers/core-loop";
 
 test.describe("COD reconciliation", () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
-  });
-
   test("bulk remit 3 collected orders → summary updates", async ({ page }) => {
     // ── 1. Fast-seed: 3 delivered + collected orders via API ───────────────
     const phoneSuffix = Date.now().toString().slice(-6);
@@ -62,7 +36,7 @@ test.describe("COD reconciliation", () => {
       const custRes = await page.request.post("/api/customers", {
         data: {
           name: `E2E COD Customer ${phoneSuffix}-${i}`,
-          phone: `0770${phoneSuffix}${i}`,
+          phone: uniquePhone("077"),
           wilaya: "Constantine",
           commune: "Constantine",
           address: `${i + 1} Rue des Tests`,
@@ -85,30 +59,20 @@ test.describe("COD reconciliation", () => {
       expect(prodRes.ok()).toBeTruthy();
       const product = (await prodRes.json()).product as { id: string; name: string };
 
-      const orderRes = await page.request.post("/api/orders", {
-        data: {
-          customerId: customer.id,
-          items: [
-            {
-              productId: product.id,
-              productName: product.name,
-              quantity: 1,
-              unitPrice: 3000,
-            },
-          ],
-          wilaya: "Constantine",
-          commune: "Constantine",
-          address: `${i + 1} Rue des Tests`,
-          phone: customer.phone,
-          source: "manual",
-          deliveryCost: 500,
-        },
+      const order = await createManualOrder(page.request, {
+        customerId: customer.id,
+        productId: product.id,
+        quantity: 1,
+        unitPrice: 3000,
+        wilaya: "Constantine",
+        commune: "Constantine",
+        address: `${i + 1} Rue des Tests`,
+        phone: customer.phone,
+        deliveryCost: 500,
       });
-      expect(orderRes.ok()).toBeTruthy();
-      const order = (await orderRes.json()).order as { id: string };
 
-      await deliverOrder(page, order.id);
-      await markCollected(page, order.id);
+      const delivered = await confirmAndDeliver(page.request, order.id, order.version);
+      await collectCod(page.request, order.id, delivered, order.totalPrice);
       orderIds.push(order.id);
     }
 

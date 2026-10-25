@@ -10,99 +10,60 @@
  * depend on the seeded DB having a usable product), then the browser drives
  * the UI assertions that matter (order detail rendering, stock decrement on
  * /products, COD controls, /accounting revenue). State transitions go through
- * the API (PATCH /api/orders/[id]/status) because the UI's "create shipment"
+ * the governed order commands (decision, fulfillment,
+ * cod/collection; see helpers/core-loop.ts) because the UI's "create shipment"
  * flow depends on external delivery providers that aren't available in the
  * test environment.
  *
  * Auth: page.request shares the cookie jar with the browser context after
  * login, so all API calls are authenticated.
  */
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
-const PIN = "12345678";
-
-/** Helper: log in via the PIN form + wait for the dashboard redirect. */
-async function login(page: Page): Promise<void> {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  const pinInput = page.locator('input[type="password"]');
-  await pinInput.waitFor({ state: "visible" });
-  await pinInput.fill(PIN);
-  await page.waitForTimeout(300);
-  await page.locator('button[type="submit"]').click({ force: true });
-  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
-}
-
-/** Helper: transition an order through the state machine via the API. */
-async function transitionStatus(
-  page: Page,
-  orderId: string,
-  status: "pending" | "confirmed" | "shipped" | "delivered",
-): Promise<void> {
-  const res = await page.request.patch(`/api/orders/${orderId}/status`, {
-    data: { status },
-  });
-  expect(res.ok()).toBeTruthy();
-}
+import {
+  collectCod,
+  confirmOrder,
+  createCustomer,
+  createManualOrder,
+  createProduct,
+  runFulfillment,
+  uniquePhone,
+} from "./helpers/core-loop";
 
 test.describe("Order lifecycle", () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
-  });
-
   test("create → confirm → ship → deliver → COD collected", async ({ page }) => {
     // ── 1. Fast-seed: product (with stock) + customer via API ──────────────
     const phoneSuffix = Date.now().toString().slice(-6);
-    const productRes = await page.request.post("/api/products", {
-      data: {
-        name: `E2E Lifecycle Product ${phoneSuffix}`,
-        sku: `E2E-LC-${phoneSuffix}`,
-        price: 2500,
-        cost: 1200,
-        stock: 10,
-        lowStockThreshold: 2,
-        isActive: true,
-      },
+    const product = await createProduct(page.request, {
+      name: `E2E Lifecycle Product ${phoneSuffix}`,
+      sku: `E2E-LC-${phoneSuffix}`,
+      price: 2500,
+      cost: 1200,
+      stock: 10,
     });
-    expect(productRes.ok()).toBeTruthy();
-    const product = (await productRes.json()).product as { id: string; name: string };
     expect(product.id).toBeTruthy();
 
-    const customerRes = await page.request.post("/api/customers", {
-      data: {
-        name: `E2E Lifecycle Customer ${phoneSuffix}`,
-        phone: `0555${phoneSuffix}`,
-        wilaya: "Alger",
-        commune: "Bab Ezzouar",
-        address: "123 Rue des Tests",
-      },
+    const customer = await createCustomer(page.request, {
+      name: `E2E Lifecycle Customer ${phoneSuffix}`,
+      phone: uniquePhone(),
+      wilaya: "Alger",
+      commune: "Bab Ezzouar",
+      address: "123 Rue des Tests",
     });
-    expect(customerRes.ok()).toBeTruthy();
-    const customer = (await customerRes.json()).customer as { id: string; phone: string };
     expect(customer.id).toBeTruthy();
 
-    // ── 2. Create the order via API (order-service default status = draft) ─
-    const orderRes = await page.request.post("/api/orders", {
-      data: {
-        customerId: customer.id,
-        items: [
-          {
-            productId: product.id,
-            productName: product.name,
-            quantity: 2,
-            unitPrice: 2500,
-          },
-        ],
-        wilaya: "Alger",
-        commune: "Bab Ezzouar",
-        address: "123 Rue des Tests",
-        phone: customer.phone,
-        source: "manual",
-        deliveryCost: 600,
-      },
+    // ── 2. Create the order (POST /api/orders creates it already "pending") ─
+    const order = await createManualOrder(page.request, {
+      customerId: customer.id,
+      productId: product.id,
+      quantity: 2,
+      unitPrice: 2500,
+      wilaya: "Alger",
+      commune: "Bab Ezzouar",
+      address: "123 Rue des Tests",
+      phone: customer.phone,
+      deliveryCost: 600,
     });
-    expect(orderRes.ok()).toBeTruthy();
-    const order = (await orderRes.json()).order as { id: string; orderNumber: string };
     expect(order.orderNumber).toBeTruthy();
     expect(order.id).toBeTruthy();
 
@@ -123,9 +84,8 @@ test.describe("Order lifecycle", () => {
       timeout: 10_000,
     });
 
-    // ── 5. State machine: draft → pending → confirmed (stock decrements) ──
-    await transitionStatus(page, order.id, "pending");
-    await transitionStatus(page, order.id, "confirmed");
+    // ── 5. Confirm through the governed decision command (holds the stock) ─
+    let version = await confirmOrder(page.request, order.id, order.version);
 
     // ── 6. UI: /products shows the stock decrement (10 − 2 = 8) ────────────
     await page.goto("/products");
@@ -136,9 +96,10 @@ test.describe("Order lifecycle", () => {
     // Stock 8 should be visible somewhere on the products page.
     await expect(page.getByText("8", { exact: true }).first()).toBeVisible({ timeout: 10_000 });
 
-    // ── 7. State machine: confirmed → shipped → delivered ─────────────────
-    await transitionStatus(page, order.id, "shipped");
-    await transitionStatus(page, order.id, "delivered");
+    // ── 7. Governed fulfillment: pack → ship → deliver ─────────────────────
+    version = await runFulfillment(page.request, order.id, "pack", version);
+    version = await runFulfillment(page.request, order.id, "ship", version);
+    version = await runFulfillment(page.request, order.id, "deliver", version);
 
     // ── 8. UI: order detail now shows the COD controls (delivered only) ────
     await page.goto(`/orders/${order.id}`);
@@ -147,10 +108,7 @@ test.describe("Order lifecycle", () => {
     await expect(page.getByText(/COD|Rapprochement/i).first()).toBeVisible({ timeout: 10_000 });
 
     // ── 9. Mark COD collected via API, then verify the badge in the UI ─────
-    const codRes = await page.request.patch(`/api/orders/${order.id}/cod`, {
-      data: { action: "mark_collected" },
-    });
-    expect(codRes.ok()).toBeTruthy();
+    await collectCod(page.request, order.id, version, order.totalPrice);
 
     await page.goto(`/orders/${order.id}`);
     await page.waitForLoadState("networkidle");

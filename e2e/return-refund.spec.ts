@@ -19,38 +19,19 @@
  * Return row (no-op). The /returns + /orders/[id] pages are visited to
  * verify the UI reflects the correct state.
  *
- * Auth: page.request is authenticated via the login cookie.
+ * Auth: no login in this file. playwright.config.ts loads the owner session saved by
+ * phase5-owner-auth.setup.ts (SF_PHASE5_OWNER_STORAGE_STATE) into every test context, so
+ * page.request and the request fixture are already authenticated.
  */
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
-const PIN = "12345678";
-
-async function login(page: Page): Promise<void> {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  const pinInput = page.locator('input[type="password"]');
-  await pinInput.waitFor({ state: "visible" });
-  await pinInput.fill(PIN);
-  await page.waitForTimeout(300);
-  await page.locator('button[type="submit"]').click({ force: true });
-  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
-}
-
-/** Transition an order through the state machine to "delivered". */
-async function deliverOrder(page: Page, orderId: string): Promise<void> {
-  for (const status of ["pending", "confirmed", "shipped", "delivered"] as const) {
-    const res = await page.request.patch(`/api/orders/${orderId}/status`, {
-      data: { status },
-    });
-    expect(res.ok()).toBeTruthy();
-  }
-}
+import {
+  confirmAndDeliver,
+  createManualOrder,
+  uniquePhone,
+} from "./helpers/core-loop";
 
 test.describe("Return + refund — no double-count", () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
-  });
-
   test("deliver → refund → return-completion: stock + stats correct", async ({ page }) => {
     // ── 1. Fast-seed: product (stock=10, price=5000) + customer + order ────
     const phoneSuffix = Date.now().toString().slice(-6);
@@ -76,7 +57,7 @@ test.describe("Return + refund — no double-count", () => {
     const customerRes = await page.request.post("/api/customers", {
       data: {
         name: `E2E Return Customer ${phoneSuffix}`,
-        phone: `0555${phoneSuffix}`,
+        phone: uniquePhone(),
         wilaya: "Alger",
         commune: "Bab Ezzouar",
         address: "1 Rue des Retours",
@@ -90,30 +71,20 @@ test.describe("Return + refund — no double-count", () => {
       orderCount: number;
     };
 
-    const orderRes = await page.request.post("/api/orders", {
-      data: {
-        customerId: customer.id,
-        items: [
-          {
-            productId: product.id,
-            productName: product.name,
-            quantity: 2,
-            unitPrice: 5000,
-          },
-        ],
-        wilaya: "Alger",
-        commune: "Bab Ezzouar",
-        address: "1 Rue des Retours",
-        phone: customer.phone,
-        source: "manual",
-        deliveryCost: 0,
-      },
+    const order = await createManualOrder(page.request, {
+      customerId: customer.id,
+      productId: product.id,
+      quantity: 2,
+      unitPrice: 5000,
+      wilaya: "Alger",
+      commune: "Bab Ezzouar",
+      address: "1 Rue des Retours",
+      phone: customer.phone,
+      deliveryCost: 0,
     });
-    expect(orderRes.ok()).toBeTruthy();
-    const order = (await orderRes.json()).order as { id: string; orderNumber: string };
 
     // ── 2. Transition to delivered (stock: 10−2=8, customer.totalSpent: 10000) ─
-    await deliverOrder(page, order.id);
+    await confirmAndDeliver(page.request, order.id, order.version);
 
     // Snapshot post-delivery state via the API.
     const prodAfterDeliver = (await (await page.request.get(`/api/products`)).json()).products as Array<{

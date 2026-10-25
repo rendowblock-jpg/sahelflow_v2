@@ -1,71 +1,87 @@
 /**
- * E2E: Order lifecycle — create → confirm → ship.
+ * E2E: Orders — view the list, create a manual order, confirm it.
  *
- * Tests the core COD workflow: create an order, transition it through the
- * state machine. This is the golden path that every seller uses daily.
+ * Auth: no login here. playwright.config.ts loads the owner session saved by
+ * phase5-owner-auth.setup.ts (SF_PHASE5_OWNER_STORAGE_STATE) into every test
+ * context, so the request fixture is already authenticated.
+ *
+ * A manual order is created already "pending" and is confirmed through the
+ * governed decision command (PATCH /status refuses these orders).
  */
 import { test, expect } from "@playwright/test";
 
-test.describe("Order lifecycle", () => {
-  test.beforeEach(async ({ page }) => {
-    // Login
-    await page.goto("/login");
-    await page.fill('input[type="password"]', "12345678");
-    await page.click('button[type="submit"]');
-    await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 10_000 });
-  });
+import {
+  confirmOrder,
+  createCustomer,
+  createManualOrder,
+  createProduct,
+  uniquePhone,
+} from "./helpers/core-loop";
 
+test.describe("Orders", () => {
   test("user can view the orders page", async ({ page }) => {
     await page.goto("/orders");
     await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("user can create an order via API", async ({ request }) => {
-    // Create a customer first
-    const customerRes = await request.post("/api/customers", {
-      data: {
-        name: "E2E Test Customer",
-        phone: `0555${Date.now().toString().slice(-6)}`,
-        wilaya: "Alger",
-        commune: "Bab Ezzouar",
-        address: "123 Rue Test",
-      },
+    const suffix = Date.now().toString().slice(-6);
+    const product = await createProduct(request, {
+      name: `E2E Orders Product ${suffix}`,
+      sku: `E2E-ORD-${suffix}`,
+      price: 2500,
+      stock: 10,
     });
-    expect(customerRes.ok()).toBeTruthy();
-    const customer = await customerRes.json();
-
-    // Create an order
-    const orderRes = await request.post("/api/orders", {
-      data: {
-        customerId: customer.customer.id,
-        items: [{ productName: "Test Product", quantity: 1, unitPrice: 2500, total: 2500 }],
-        totalPrice: 2500,
-        wilaya: "Alger",
-        commune: "Bab Ezzouar",
-        address: "123 Rue Test",
-        phone: customer.customer.phone,
-        source: "manual",
-      },
+    const customer = await createCustomer(request, {
+      name: "E2E Test Customer",
+      phone: uniquePhone(),
+      wilaya: "Alger",
+      commune: "Bab Ezzouar",
+      address: "123 Rue Test",
     });
-    expect(orderRes.ok()).toBeTruthy();
-    const order = await orderRes.json();
-    expect(order.order.orderNumber).toBeTruthy();
+    const order = await createManualOrder(request, {
+      customerId: customer.id,
+      productId: product.id,
+      quantity: 1,
+      unitPrice: 2500,
+      wilaya: "Alger",
+      commune: "Bab Ezzouar",
+      address: "123 Rue Test",
+      phone: customer.phone,
+      deliveryCost: 0,
+    });
+    expect(order.orderNumber).toBeTruthy();
   });
 
   test("user can transition order status", async ({ request }) => {
-    // Get recent orders
-    const ordersRes = await request.get("/api/orders?limit=1");
-    expect(ordersRes.ok()).toBeTruthy();
-    const ordersData = await ordersRes.json();
-    
-    if (ordersData.orders && ordersData.orders.length > 0) {
-      const orderId = ordersData.orders[0].id;
-      
-      // Transition to pending
-      const statusRes = await request.patch(`/api/orders/${orderId}/status`, {
-        data: { status: "pending" },
-      });
-      expect(statusRes.ok()).toBeTruthy();
-    }
+    const suffix = Date.now().toString().slice(-6);
+    const product = await createProduct(request, {
+      name: `E2E Transition Product ${suffix}`,
+      sku: `E2E-TRN-${suffix}`,
+      price: 2500,
+      stock: 10,
+    });
+    const customer = await createCustomer(request, {
+      name: "E2E Transition Customer",
+      phone: uniquePhone(),
+      wilaya: "Alger",
+      commune: "Bab Ezzouar",
+      address: "123 Rue Test",
+    });
+    const order = await createManualOrder(request, {
+      customerId: customer.id,
+      productId: product.id,
+      quantity: 1,
+      unitPrice: 2500,
+      wilaya: "Alger",
+      commune: "Bab Ezzouar",
+      address: "123 Rue Test",
+      phone: customer.phone,
+      deliveryCost: 0,
+    });
+
+    // pending -> confirmed through the governed decision command.
+    const version = await confirmOrder(request, order.id, order.version);
+    expect(version).toBe(order.version + 1);
   });
 });
