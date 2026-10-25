@@ -113,3 +113,21 @@ describe("POST /api/extraction: the metric model", () => {
     expect(metricArgs().modelVersion).toBeUndefined();
   });
 });
+
+// The order card says when the AI limit ends, so the retry time must reach the client exactly as the engine gave it.
+describe("POST /api/extraction: the AI failure reaches the client", () => {
+  it("passes aiFailure and aiRetryAt through unchanged", async () => {
+    const aiRetryAt = "2026-10-26T08:00:00.000Z";
+    h.extract.mockResolvedValue({ ...RESULT, method: "regex", aiFailure: "GEMINI_QUOTA_EXHAUSTED", aiRetryAt });
+    const body = (await (await post()).json()) as { result: Record<string, unknown> };
+    expect(body.result.aiFailure).toBe("GEMINI_QUOTA_EXHAUSTED");
+    expect(body.result.aiRetryAt).toBe(aiRetryAt);
+  });
+
+  it("has no aiRetryAt when the engine gave none", async () => {
+    h.extract.mockResolvedValue({ ...RESULT, method: "regex", aiFailure: "GEMINI_KEY_INVALID" });
+    const body = (await (await post()).json()) as { result: Record<string, unknown> };
+    expect(body.result.aiFailure).toBe("GEMINI_KEY_INVALID");
+    expect("aiRetryAt" in body.result).toBe(false);
+  });
+});

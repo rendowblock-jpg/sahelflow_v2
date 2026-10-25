@@ -106,12 +106,57 @@ export async function runAxe(page: Page): Promise<AxeViolation[]> {
   }, AXE_RUN_OPTIONS);
 }
 
+/** Longest wait for the page's finite animations to end before axe runs anyway. */
+export const AXE_SETTLE_TIMEOUT_MS = 5_000;
+
+/**
+ * Waits until every finite CSS animation and transition on the page has ended.
+ *
+ * Why: a card that is still fading in is faint for a moment, and axe measures
+ * the colour it has at that instant. The product's stagger-grid fades each
+ * card in over 0.5 s after 50 ms x its position, so the fourth KPI card of
+ * /analytics failed color-contrast when axe happened to run early (PR #620).
+ * Faint-for-a-moment is not a defect; faint-when-finished is, and that is what
+ * this lets axe see. Animations that never end (spinners, shimmer) are not
+ * waited for. Nothing is excluded from axe: it still runs strict afterwards.
+ * Returns false when the limit passed with motion still running.
+ */
+export async function settleMotion(
+  page: Page,
+  timeoutMs: number = AXE_SETTLE_TIMEOUT_MS,
+): Promise<boolean> {
+  try {
+    await page.waitForFunction(
+      () =>
+        document.getAnimations().every((animation) => {
+          const timing = animation.effect?.getComputedTiming();
+          if (!timing || timing.endTime === Infinity) return true;
+          // "pending" is not a playState any more (lib.dom: paused | idle | finished | running); a play that has
+          // been requested but has not started yet is the separate boolean `pending`.
+          return !animation.pending && animation.playState !== "running";
+        }),
+      undefined,
+      { timeout: timeoutMs, polling: 50 },
+    );
+    return true;
+  } catch (error) {
+    // Only "the motion did not end in time" is expected here. A closed page or a broken browser must stay visible,
+    // not be read as "still animating".
+    if (error instanceof Error && error.name === "TimeoutError") return false;
+    throw error;
+  }
+}
+
 export async function assertNoAxeViolations(
   page: Page,
   label: string,
 ): Promise<void> {
+  const settled = await settleMotion(page);
   const violations = await runAxe(page);
   if (violations.length > 0) {
-    throw new Error(`${label}\n${formatAxeViolations(violations)}`);
+    const note = settled
+      ? ""
+      : `\n(the page was still animating after ${AXE_SETTLE_TIMEOUT_MS} ms; a faint element may only be mid-fade)`;
+    throw new Error(`${label}\n${formatAxeViolations(violations)}${note}`);
   }
 }

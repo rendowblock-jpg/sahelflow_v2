@@ -16,6 +16,7 @@ import {
   type OrderSourceMessage,
 } from "@/components/inbox/extraction/order-source-messages";
 import type { CatalogOption } from "@/components/inbox/extraction/extraction-item-row";
+import { extractionAiLineState, extractionMethodLabelKey } from "@/components/inbox/extraction-ai-line";
 import { useI18n } from "@/hooks/use-i18n";
 import type { ExtractionResult } from "@/lib/ai/extraction";
 import {
@@ -25,6 +26,9 @@ import {
 } from "@/lib/i18n/order-extraction";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 import { toAsciiDigits } from "@/lib/phone-patterns";
+
+/** Gemini and Groq are both "an AI read it" for the review card. */
+const isAiMethod = (method: string) => method === "gemini" || method === "groq";
 
 interface MessageExtractionProps {
   conversationId?: string;
@@ -61,23 +65,50 @@ export function algerianPhoneToWhatsAppJid(phone: string): string {
   return `${international}@s.whatsapp.net`;
 }
 
-function ExtractionAiLine({
+export function ExtractionAiLine({
   method,
   aiFailure,
+  aiRetryAt,
   ai,
+  locale,
   copy,
   onSettings,
 }: {
   method: ExtractionResult["method"];
   aiFailure?: string;
+  aiRetryAt?: string;
   ai: { consent: boolean; available: boolean };
-  copy: (key: OrderExtractionCopyKey) => string;
+  locale: string;
+  copy: (key: OrderExtractionCopyKey, params?: Record<string, string | number>) => string;
   onSettings: () => void;
 }) {
-  if (aiFailure) {
+  const failure = extractionAiLineState({ aiFailure, aiRetryAt, now: new Date(), locale });
+  if (failure?.kind === "quota") {
+    const text =
+      failure.time === null
+        ? copy("aiQuota")
+        : copy(failure.sameDay ? "aiQuotaAt" : "aiQuotaLater", { time: failure.time });
+    return <p className="text-caption text-muted-foreground" role="status">{text}</p>;
+  }
+  if (failure?.kind === "key") {
+    return (
+      <p className="text-caption text-muted-foreground" role="status">
+        {copy("aiKeyRefused")}{" "}
+        <button
+          type="button"
+          onClick={onSettings}
+          className="inline-flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {copy("aiSettings")}
+          <ArrowRight className="size-3 icon-rtl-flip" aria-hidden="true" />
+        </button>
+      </p>
+    );
+  }
+  if (failure) {
     return <p className="text-caption text-muted-foreground" role="status">{copy("aiFailed")}</p>;
   }
-  if (method === "gemini") {
+  if (isAiMethod(method)) {
     return <p className="text-caption text-foreground" role="status">{copy("aiUsed")}</p>;
   }
   if (!ai.consent) {
@@ -186,7 +217,7 @@ export function MessageExtraction({
           messageId: readSource?.anchorId ?? messageId,
           // A hand-built order is still anchored to this message; its method
           // records how the draft was produced.
-          extractionMethod: result.method === "gemini" ? "gemini" : "regex",
+          extractionMethod: isAiMethod(result.method) ? (result.method as "gemini" | "groq") : "regex",
           extractionConfidence: result.confidence,
           customer: {
             ...reviewed.customer,
@@ -260,9 +291,9 @@ export function MessageExtraction({
               {read.order ? (
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline">
-                    {read.method === "gemini" ? copy("methodGemini") : copy("methodOffline")}
+                    {copy(extractionMethodLabelKey(read.method))}
                   </Badge>
-                  {read.method === "gemini" ? null : (
+                  {isAiMethod(read.method) ? null : (
                     <Badge variant="outline" className="tabular-nums">
                       {copy("confidence", { value: Math.round(read.confidence * 100) })}
                     </Badge>
@@ -274,7 +305,9 @@ export function MessageExtraction({
               <ExtractionAiLine
                 method={read.method}
                 aiFailure={read.aiFailure}
+                aiRetryAt={read.aiRetryAt}
                 ai={response?.ai ?? { consent: false, available: false }}
+                locale={locale}
                 copy={copy}
                 onSettings={() => router.push("/settings?group=intelligence")}
               />
@@ -375,9 +408,9 @@ export function MessageExtraction({
       {result.order ? (
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">
-            {result.method === "gemini" ? copy("methodGemini") : copy("methodOffline")}
+            {copy(extractionMethodLabelKey(result.method))}
           </Badge>
-          {result.method === "gemini" ? null : (
+          {isAiMethod(result.method) ? null : (
             <Badge variant="outline" className="tabular-nums">
               {copy("confidence", { value: Math.round(result.confidence * 100) })}
             </Badge>
@@ -390,7 +423,9 @@ export function MessageExtraction({
       <ExtractionAiLine
         method={result.method}
         aiFailure={result.aiFailure}
+        aiRetryAt={result.aiRetryAt}
         ai={ai}
+        locale={locale}
         copy={copy}
         onSettings={() => router.push("/settings?group=intelligence")}
       />
