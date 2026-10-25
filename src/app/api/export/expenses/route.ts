@@ -13,6 +13,7 @@ import {
 } from "@/lib/import/paged-export";
 import { getI18n } from "@/lib/i18n-server";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
+import { expenseCsvDate } from "@/lib/time/shop-day-format";
 import { intlLocale } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +55,7 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
       skip,
     });
     return expenses.map((expense) => ({
-      date: expense.date.toLocaleDateString(localeTag),
+      date: expenseCsvDate(expense.date, localeTag),
       category: t(`accounting.category.${expense.category}`),
       description: expense.notes ?? "",
       amount: expense.amount,
