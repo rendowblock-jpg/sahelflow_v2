@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger";
+import { isBusyError } from "@/lib/search/conversation-search-idle";
 import {
   hashTokenSetsOfConversations,
   hashTokenStrings,
@@ -26,6 +27,8 @@ import { normalizeSearchText } from "@/lib/search/universal-search";
  * The SQL client is a parameter: this file opens no database by itself (the app wiring is in
  * conversation-search-runtime.ts) and a test can give it the plain test client.
  */
+
+export { isBusyError };
 
 export type SqlClient = {
   $queryRawUnsafe<T = unknown>(query: string, ...values: unknown[]): Promise<T>;
@@ -75,13 +78,6 @@ const TOKEN_ROWS_PER_INSERT = 400;
 const WRITE_TRANSACTION = { maxWait: 10_000, timeout: 30_000 } as const;
 
 const progress = { chunks: 0, indexed: 0 };
-
-export function isBusyError(error: unknown): boolean {
-  const code = (error as { code?: unknown } | null)?.code;
-  if (code === "P1008" || code === "P2034") return true;
-  const message = error instanceof Error ? error.message : "";
-  return /SQLITE_BUSY|SQLITE_LOCKED|database is locked|socket timeout/iu.test(message);
-}
 
 async function withBusyRetry<T>(run: () => Promise<T>): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {

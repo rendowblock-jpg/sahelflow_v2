@@ -40,6 +40,7 @@ import { redactError } from "@/lib/redact-pii";
 import { shopContext } from "@/lib/db";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import { requireLicenseEntitlement } from "@/lib/license/license-authority";
+import { noteRequestEnd, noteRequestStart } from "@/lib/search/conversation-search-idle";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteHandler = (...args: any[]) => Promise<NextResponse>;
@@ -72,6 +73,8 @@ export function withErrorHandler<T extends RouteHandler>(
   const wrapped = async (...args: Parameters<T>): Promise<NextResponse> => {
     const req = args[0] as NextRequest | undefined;
     const logPath = label ?? req?.nextUrl?.pathname ?? "unknown";
+    // Feeds the idle gate of the conversation-search indexer (two integer updates, never throws).
+    noteRequestStart(req?.nextUrl?.pathname);
     try {
       if (process.env.NODE_ENV === "production") {
         assertProcessShopAuthority(shopContext);
@@ -145,6 +148,8 @@ export function withErrorHandler<T extends RouteHandler>(
         { error: "Internal server error" },
         { status: 500 },
       );
+    } finally {
+      noteRequestEnd();
     }
   };
   return wrapped as T;
