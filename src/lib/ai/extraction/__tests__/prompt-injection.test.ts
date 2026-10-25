@@ -376,22 +376,23 @@ describe("hostile model output is bounded or dropped", () => {
     }
   });
 
-  // GAP (not fixed here, product decision needed: recompute from items, or drop
-  // the total when it disagrees). The total is passed through unchanged
-  // (gemini-extractor.ts canonicalizeOrder). It is only a draft value: the order
-  // route accepts productName and quantity per item and no total (checked below).
-  // When this stops failing, remove `.fails`.
-  it("KNOWN GAP (pins today): a total of 1 for 2 x 1000 reaches the draft unchanged", async () => {
-    const result = await run({ items: [{ productName: "montre", quantity: 2, unitPrice: 1000 }], totalPrice: 1 });
-    expect(result.order?.totalPrice).toBe(1);
-  });
-
-  it.fails("GAP: a totalPrice that is not the sum of unitPrice x quantity is dropped or recomputed", async () => {
+  // The grounding guard (model-order.ts) drops a total the message does not
+  // contain, so the hostile "1" below no longer reaches the draft. What is left
+  // is a total that IS written in the message but is not the sum of the items
+  // (product decision needed: recompute from items, or drop it when it disagrees).
+  // The total is only a draft value: the order route accepts productName and
+  // quantity per item and no total (checked below).
+  it("a totalPrice the message does not contain is dropped", async () => {
     const result = await run({
       items: [{ productName: "montre", quantity: 2, unitPrice: 1000 }],
       totalPrice: 1,
     });
     expect([undefined, 2000]).toContain(result.order?.totalPrice);
+  });
+
+  it("KNOWN GAP (pins today): a total written in the message that is not the sum of the items still reaches the draft", async () => {
+    const result = await run({ items: [{ productName: "montre", quantity: 2, unitPrice: 1000 }], totalPrice: 85000 });
+    expect(result.order?.totalPrice).toBe(85000);
   });
 
   it("the order route takes no price or total from the draft", () => {
