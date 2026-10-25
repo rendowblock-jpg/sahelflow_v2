@@ -20,35 +20,26 @@
  * localization + click-navigates assertions are still covered; only the
  * specific destination differs.
  *
- * Auth: page.request is authenticated via the login cookie.
+ * Auth: no login in this file. playwright.config.ts loads the owner session saved by
+ * phase5-owner-auth.setup.ts (SF_PHASE5_OWNER_STORAGE_STATE) into every test context, so
+ * page.request and the request fixture are already authenticated.
  */
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
-const PIN = "12345678";
-
-async function login(page: Page): Promise<void> {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  const pinInput = page.locator('input[type="password"]');
-  await pinInput.waitFor({ state: "visible" });
-  await pinInput.fill(PIN);
-  await page.waitForTimeout(300);
-  await page.locator('button[type="submit"]').click({ force: true });
-  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
-}
+import {
+  createManualOrder,
+  createProduct,
+  uniquePhone,
+} from "./helpers/core-loop";
 
 test.describe("Notifications bell", () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
-  });
-
   test("Arabic notification appears + click navigates", async ({ page, baseURL }) => {
     // ── 1. Fast-seed: a customer + a pending order (triggers a notification) ─
     const phoneSuffix = Date.now().toString().slice(-6);
     const customerRes = await page.request.post("/api/customers", {
       data: {
         name: `E2E Notif Customer ${phoneSuffix}`,
-        phone: `0555${phoneSuffix}`,
+        phone: uniquePhone(),
         wilaya: "Oran",
         commune: "Oran",
         address: "1 Rue des Notifications",
@@ -57,27 +48,23 @@ test.describe("Notifications bell", () => {
     expect(customerRes.ok()).toBeTruthy();
     const customer = (await customerRes.json()).customer as { id: string; phone: string };
 
-    const orderRes = await page.request.post("/api/orders", {
-      data: {
-        customerId: customer.id,
-        items: [
-          {
-            productId: null,
-            productName: `E2E Notif Product ${phoneSuffix}`,
-            quantity: 1,
-            unitPrice: 1500,
-          },
-        ],
-        wilaya: "Oran",
-        commune: "Oran",
-        address: "1 Rue des Notifications",
-        phone: customer.phone,
-        source: "manual",
-        deliveryCost: 400,
-      },
+    const product = await createProduct(page.request, {
+      name: `E2E Notif Product ${phoneSuffix}`,
+      sku: `E2E-NOTIF-${phoneSuffix}`,
+      price: 1500,
+      stock: 10,
     });
-    expect(orderRes.ok()).toBeTruthy();
-    const order = (await orderRes.json()).order as { id: string; orderNumber: string };
+    const order = await createManualOrder(page.request, {
+      customerId: customer.id,
+      productId: product.id,
+      quantity: 1,
+      unitPrice: 1500,
+      wilaya: "Oran",
+      commune: "Oran",
+      address: "1 Rue des Notifications",
+      phone: customer.phone,
+      deliveryCost: 400,
+    });
 
     // ── 2. Set locale cookie to "ar" so notifications render in Arabic ──────
     const target = baseURL ?? "http://localhost:3000";

@@ -20,28 +20,13 @@
  * DESTRUCTIVE: this test overwrites the active shop's SQLite file during
  * restore. It MUST run against a dev/test DB, never production.
  *
- * Auth: page.request is authenticated via the login cookie.
+ * Auth: no login in this file. playwright.config.ts loads the owner session saved by
+ * phase5-owner-auth.setup.ts (SF_PHASE5_OWNER_STORAGE_STATE) into every test context, so
+ * page.request and the request fixture are already authenticated.
  */
-import { test, expect, type Page } from "@playwright/test";
-
-const PIN = "12345678";
-
-async function login(page: Page): Promise<void> {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  const pinInput = page.locator('input[type="password"]');
-  await pinInput.waitFor({ state: "visible" });
-  await pinInput.fill(PIN);
-  await page.waitForTimeout(300);
-  await page.locator('button[type="submit"]').click({ force: true });
-  await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15_000 });
-}
+import { test, expect } from "@playwright/test";
 
 test.describe("Backup + restore round-trip", () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
-  });
-
   test("backup → delete sentinel → restore → sentinel back", async ({ page }) => {
     // ── 1. Fast-seed: a sentinel customer that's easy to find later ────────
     const sentinelSuffix = Date.now().toString();

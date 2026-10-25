@@ -7,13 +7,6 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Backup", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("/login");
-    await page.fill('input[type="password"]', "12345678");
-    await page.click('button[type="submit"]');
-    await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 10_000 });
-  });
-
   test("user can create a backup", async ({ request }) => {
     const res = await request.post("/api/backup/create");
     expect(res.ok()).toBeTruthy();
