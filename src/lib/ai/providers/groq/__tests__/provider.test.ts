@@ -58,7 +58,7 @@ describe("requestGroq success", () => {
     }));
     const result = await call();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchSpy.mock.calls[0];
+    const [url, init] = fetchSpy.mock.calls[0] as [string, { headers: Record<string, string>; body: string }];
     expect(url).toBe(URL);
     expect(String(url)).not.toContain(KEY);
     expect(init.headers.Authorization).toBe(`Bearer ${KEY}`);

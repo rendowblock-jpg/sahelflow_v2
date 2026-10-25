@@ -35,7 +35,7 @@ describe("extractWithGroq", () => {
   it("sends the measured request body", async () => {
     fetchSpy.mockResolvedValue(completion('{"items":[]}'));
     await extractWithGroq({ ...INPUT, catalog: [{ name: "iPhone 14" }] }, { apiKey: KEY });
-    const sent = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    const sent = JSON.parse((fetchSpy.mock.calls[0]?.[1] as { body: string }).body);
     expect(sent).toMatchObject({
       model: "qwen/qwen3.8-27b",
       response_format: { type: "json_object" },
