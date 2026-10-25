@@ -66,6 +66,9 @@ test.describe("Storefront round-trip", () => {
     // ── 3. Add the product to cart ─────────────────────────────────────────
     // The "Add to cart" button label is i18n'd; click the first product card's
     // add button. The button is full-width inside the product card.
+    // Every product has a variant; the button stays disabled until one is chosen.
+    const variantSelect = page.locator(`#storefront-variant-${product.id}`);
+    if ((await variantSelect.count()) > 0) await variantSelect.selectOption({ index: 1 });
     const addToCartButton = page
       .getByRole("button", { name: /Add to cart|Ajouter au panier|أضف إلى السلة/i })
       .first();

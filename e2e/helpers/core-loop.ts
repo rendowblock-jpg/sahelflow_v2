@@ -54,6 +54,25 @@ export interface ManualOrder {
   totalPrice: number;
 }
 
+/**
+ * Every product has at least one variant ("Default" when the seller made none), and a manual
+ * order must name one exact active variant (manual-order-catalog-line.ts). Specs create their
+ * products inline, so the variant is read back here when the caller does not pass one.
+ */
+export async function resolveVariantId(
+  api: APIRequestContext,
+  productId: string,
+): Promise<string | null> {
+  const res = await api.get(`/api/products/${productId}`);
+  await expectOk(res, "GET /api/products/:id");
+  const body = (await res.json()) as {
+    product?: { productVariants?: Array<{ id: string; isActive?: boolean }> };
+  };
+  const variants = body.product?.productVariants ?? [];
+  const active = variants.find((variant) => variant.isActive !== false);
+  return active ? active.id : null;
+}
+
 /** Creates a manual order; it starts "pending" at version 1. */
 export async function createManualOrder(
   api: APIRequestContext,
@@ -67,14 +86,16 @@ export async function createManualOrder(
     address: string;
     phone: string;
     deliveryCost: number;
+    productVariantId?: string | null;
   },
 ): Promise<ManualOrder> {
-  const { unitPrice, productId, quantity, ...rest } = opts;
+  const { unitPrice, productId, quantity, productVariantId, ...rest } = opts;
+  const variantId = productVariantId ?? (await resolveVariantId(api, productId));
   const res = await api.post("/api/orders", {
     data: {
       idempotencyKey: randomUUID(),
       ...rest,
-      items: [{ productId, quantity }],
+      items: [{ productId, quantity, ...(variantId ? { productVariantId: variantId } : {}) }],
       source: "manual",
     },
   });

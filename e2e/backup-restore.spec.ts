@@ -53,6 +53,10 @@ test.describe("Backup + restore round-trip", () => {
 
     // ── 3. Create a backup via API (includes the sentinel) ─────────────────
     const backupRes = await page.request.post("/api/backup/create");
+    // Desktop-only (licence/backup authority; 503 on a dev server). The steps below were written for
+    // the old file backup (filename/size, /api/backup/restore) and need a rewrite for the native
+    // container flow before they can run in the installed-app lane.
+    test.skip(backupRes.status() === 503, "backup needs the desktop licence/backup authority (503 on a dev server)");
     expect(backupRes.ok()).toBeTruthy();
     const backup = (await backupRes.json()) as { filename: string; size: number };
     expect(backup.filename).toBeTruthy();
