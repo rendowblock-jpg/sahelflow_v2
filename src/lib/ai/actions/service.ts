@@ -39,6 +39,12 @@ import {
 } from "./contracts";
 import { mintAiActionExecutionAuthority } from "./execution-authority";
 import {
+  canViewProposalRequestedBy,
+  proposalRequesterFilterSql,
+  proposalViewer,
+  type ProposalViewer,
+} from "./proposal-visibility";
+import {
   executeApprovedAiAction,
   type ApprovedAiActionResult,
 } from "./executor";
@@ -247,6 +253,11 @@ function canReadProposal(
     permissions.includes("ai.use") &&
     requiredPermissions.every((action) => permissions.includes(action))
   );
+}
+
+function proposalViewerOf(actor: TrustedActorContext): ProposalViewer {
+  const person = personActor(actor, "AI action proposal history");
+  return proposalViewer(person.personId, effectivePermissions(person));
 }
 
 function parsePermissionArray(value: unknown, label: string): Phase2Action[] {
@@ -1504,12 +1515,14 @@ export async function listAiActionProposals(
   sessionId: string,
 ): Promise<AiActionProposalHandle[]> {
   assertTrustedAction(actor, "ai.use", { shopId: context.shop.shopId });
+  const viewer = proposalViewerOf(actor);
   const rows = await context.prisma.$queryRaw<ProposalRow[]>`
-    SELECT *
-    FROM "AiActionProposal"
-    WHERE "sessionId" = ${sessionId}
-      AND "shopIncarnationId" = ${context.shop.shopIncarnationId}
-    ORDER BY "createdAt" DESC
+    SELECT p.*
+    FROM "AiActionProposal" p
+    WHERE p."sessionId" = ${sessionId}
+      AND p."shopIncarnationId" = ${context.shop.shopIncarnationId}
+      ${proposalRequesterFilterSql(viewer)}
+    ORDER BY p."createdAt" DESC
     LIMIT 100
   `;
   const output: AiActionProposalHandle[] = [];
@@ -1545,6 +1558,7 @@ export async function listPendingAiActionProposalsAcrossSessions(
   limit = 50,
 ): Promise<AiActionProposalInboxHandle[]> {
   assertTrustedAction(actor, "ai.use", { shopId: context.shop.shopId });
+  const viewer = proposalViewerOf(actor);
   const boundedLimit = Math.max(1, Math.min(limit, 100));
   const rows = await context.prisma.$queryRaw<ProposalRowWithSession[]>`
     SELECT p.*, s."title" AS "sessionTitle"
@@ -1552,6 +1566,7 @@ export async function listPendingAiActionProposalsAcrossSessions(
     LEFT JOIN "AiChatSession" s ON s."id" = p."sessionId"
     WHERE p."shopIncarnationId" = ${context.shop.shopIncarnationId}
       AND p."status" = 'pending'
+      ${proposalRequesterFilterSql(viewer)}
     ORDER BY p."createdAt" DESC
     LIMIT ${boundedLimit}
   `;
@@ -1592,6 +1607,7 @@ export async function listRecentAiActionDecisions(
   limit = 12,
 ): Promise<AiActionDecisionEntry[]> {
   assertTrustedAction(actor, "ai.use", { shopId: context.shop.shopId });
+  const viewer = proposalViewerOf(actor);
   const boundedLimit = Math.max(1, Math.min(limit, 50));
   const rows = await context.prisma.$queryRaw<
     Array<{
@@ -1613,6 +1629,7 @@ export async function listRecentAiActionDecisions(
     LEFT JOIN "AiChatSession" s ON s."id" = p."sessionId"
     WHERE p."shopIncarnationId" = ${context.shop.shopIncarnationId}
       AND p."status" IN ('approved', 'rejected', 'succeeded', 'failed', 'expired', 'conflict')
+      ${proposalRequesterFilterSql(viewer)}
     ORDER BY p."updatedAt" DESC
     LIMIT ${boundedLimit}
   `;
@@ -1635,8 +1652,14 @@ export async function getAiActionProposal(
   proposalId: string,
 ): Promise<AiActionProposalHandle> {
   assertTrustedAction(actor, "ai.use", { shopId: context.shop.shopId });
+  const viewer = proposalViewerOf(actor);
   const row = await readProposalById(context.prisma, proposalId);
-  if (!row || !shopMatches(row, context.shop)) {
+  // A proposal someone else requested answers exactly like a missing one.
+  if (
+    !row ||
+    !shopMatches(row, context.shop) ||
+    !canViewProposalRequestedBy(viewer, row.requestActorId)
+  ) {
     throw new SahelFlowError(
       "AI action proposal was not found",
       "AI_ACTION_PROPOSAL_NOT_FOUND",

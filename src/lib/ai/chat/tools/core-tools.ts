@@ -8,8 +8,8 @@
 import "server-only";
 
 import { z } from "zod";
-import type { ToolContext, ToolResult } from "./registry";
-import { registerTool } from "./registry";
+import type { ChatTool, ToolContext, ToolResult } from "./registry";
+import { registerGatedTool, registerTool } from "./registry";
 import {
   getDeliveryAdapter,
   loadDeliveryCredentials,
@@ -203,7 +203,7 @@ export const createOrderSchema = z.object({
   notes: z.string().optional(),
 });
 
-registerTool({
+export const createOrderTool: ChatTool = {
   definition: {
     name: "create_order",
     description:
@@ -322,7 +322,9 @@ registerTool({
       };
     }
   },
-});
+};
+
+registerGatedTool(createOrderTool);
 
 // ── Tool 4: get_stats ───────────────────────────────────────────────────────
 
@@ -397,7 +399,7 @@ const updateOrderStatusSchema = z.object({
   ]),
 });
 
-registerTool({
+export const updateOrderStatusTool: ChatTool = {
   definition: {
     name: "update_order_status",
     description:
@@ -455,7 +457,9 @@ registerTool({
       };
     }
   },
-});
+};
+
+registerGatedTool(updateOrderStatusTool);
 
 // ── Tool 6: estimate_delivery_cost ──────────────────────────────────────────
 
@@ -529,3 +533,12 @@ export const coreTools = [
   "update_order_status",
   "estimate_delivery_cost",
 ] as const;
+
+/**
+ * Bodies kept only so tests can exercise them directly (see
+ * `__tests__/support/legacy-tool-bodies.ts`). The registry never receives them.
+ */
+export const legacyMutatingTools: readonly ChatTool[] = [
+  createOrderTool,
+  updateOrderStatusTool,
+];

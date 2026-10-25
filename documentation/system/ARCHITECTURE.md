@@ -81,7 +81,7 @@ A cloud receipt, queue acknowledgement or projection is not a canonical desktop 
 - Accepts durable public checkout receipts while the desktop may be offline.
 - Relays/imports receipts to the allocated canonical desktop/shop.
 - Distinguishes receipt acceptance from canonical order commitment.
-- Serves each store at `https://shop.sahelflow.com/<slug>` with no separate store domain (FD-074), Arabic first (FD-077), with product photos hosted by SahelFlow (FD-076). The published templates are `sahara`, `atlas` and `oasis`; Prime, Souk and Reel are decided (FD-078).
+- Serves each store at `https://shop.sahelflow.com/<slug>` with no separate store domain (FD-074), Arabic first (FD-077), with product photos hosted by SahelFlow (FD-076). The code defines eleven template ids: `sahara`, `atlas`, `oasis`, `prime`, `souk`, `reel` (Prime, Souk and Reel: FD-078), `noir`, `lumen`, `atelier`, `pulse` and `bloom`. The list is `STOREFRONT_TEMPLATE_IDS` in `src/lib/storefront/presentation-types.ts`; the Worker keeps a copy in `control-plane/storefront/shared.ts` (its bundle cannot import from `src/`), and `control-plane/storefront/schema.sql` and `control-plane/storefront/migrations/0004_template_ids_five_styles.sql` list the same ids. `control-plane/storefront/template-ids.test.ts` keeps all of them equal. `sahara`, `atlas` and `oasis` render from the shared stylesheet alone; each of the other eight adds its own stylesheet and is selected by the page's `data-voice` attribute (`control-plane/storefront/web/styles/`).
 
 ### 2.6 PWA/browser clients
 

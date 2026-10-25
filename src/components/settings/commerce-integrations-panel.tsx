@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { showsNotLiveTestedLabel } from "@/lib/integrations/ecommerce/live-certification";
 import {
   getSettingsWorkspaceCopy,
   type SettingsWorkspaceLocale,
@@ -284,6 +285,10 @@ export function CommerceIntegrationsPanel({
         <div className="grid gap-3 md:grid-cols-3">
           {definitions.map((definition) => {
             const isConnected = connected(definition.id);
+            const notLiveTested = showsNotLiveTestedLabel(
+              definition.id,
+              isConnected,
+            );
             return (
               <div
                 key={definition.id}
@@ -300,10 +305,21 @@ export function CommerceIntegrationsPanel({
                           {t("integrations.connected")}
                         </Badge>
                       ) : null}
+                      {notLiveTested ? (
+                        <Badge variant="outline" className="text-warning">
+                          <span className="sr-only">{definition.name}: </span>
+                          {t("integrations.notLiveTested")}
+                        </Badge>
+                      ) : null}
                     </div>
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       {definition.description}
                     </p>
+                    {notLiveTested ? (
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                        {t("integrations.notLiveTestedHint")}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">

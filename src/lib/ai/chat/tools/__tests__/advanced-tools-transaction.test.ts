@@ -18,7 +18,8 @@ vi.mock("@/lib/integrations/delivery", () => ({
 }));
 
 import "@/lib/ai/chat/tools/advanced-tools";
-import { getTool, type ToolContext } from "../registry";
+import type { ToolContext } from "../registry";
+import { getLegacyTool } from "@/lib/ai/chat/tools/__tests__/support/legacy-tool-bodies";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -68,7 +69,7 @@ describe("assign_order_to_delivery transaction", () => {
     const gate = deferred<{ success: true; trackingId: string; cost: number }>();
     mockAdapter.createShipment.mockReturnValueOnce(gate.promise);
 
-    const tool = getTool("assign_order_to_delivery");
+    const tool = getLegacyTool("assign_order_to_delivery");
     if (!tool) throw new Error("assign_order_to_delivery was not registered");
     const execution = tool.execute(
       { orderNumber: order.orderNumber, provider: "yalidine" },
@@ -110,7 +111,7 @@ describe("assign_order_to_delivery transaction", () => {
       cost: 600,
     });
 
-    const tool = getTool("assign_order_to_delivery");
+    const tool = getLegacyTool("assign_order_to_delivery");
     if (!tool) throw new Error("assign_order_to_delivery was not registered");
     await expect(tool.execute(
       { orderNumber: order.orderNumber, provider: "yalidine" },

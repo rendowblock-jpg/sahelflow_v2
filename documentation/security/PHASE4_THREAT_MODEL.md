@@ -93,6 +93,15 @@ Business reset and privacy erase remove seller/customer/business/credential cont
 - Provider, legal, penetration-test, signed-artifact and Founder-acceptance evidence remain separate from source implementation.
 - Algeria Law 18-07 mapping is an engineering control map, not legal advice or certification.
 
+### Blind indexes: an accepted trade-off
+
+Customer and order phone numbers, customer names and the phone-reputation registry keep a searchable blind index next to the encrypted value, so exact-match search works without decrypting every row. Each index is HMAC-SHA256 of the trimmed, lower-cased value, bound to the shop, record type and field and keyed with the random 256-bit per-shop `shop-blind-index` key (`src/lib/crypto/protected-pii.ts`; the key is created in `src/lib/crypto/protected-key-authority.ts`). That key is separate from the data key and is kept in the shop database only in wrapped form, under the DPAPI-protected installation root. Rows written before the per-shop key may still carry an index keyed with the installation root (also HMAC-SHA256) until the protected-data migration rewrites them.
+
+- **A copy of the database alone shows** which rows hold the same value (equality) and how often a value repeats, for example that one number has many orders. The phone-reputation registry also keeps the last four digits in plain text for display.
+- **It does not show** the value, and it cannot confirm a guessed phone number, because checking a guess needs the key. Whoever can run the app's own search as the seller can confirm a guess; that is the feature.
+- **With the installation root as well**, an attacker can unwrap the data key and read the protected values directly, and can test guesses against the index (phone numbers are a small guessing space). The index adds no exposure beyond that.
+- **Accepted:** SahelFlow keeps equality and frequency visible in exchange for working phone and name search. The index supports exact-match lookup only.
+
 ## Review requirements
 
 The exact final head requires a separated adversarial code review covering crypto/context binding, backup format, parser limits, filesystem attacks, rollback, identity re-enrollment, lifecycle completeness, diagnostics and CI/release authority. No P0/P1 may remain. A reviewer must use `documentation/security/PHASE4_INDEPENDENT_REVIEW.md`; review evidence lives on the exact PR head and must not be fabricated in source.
