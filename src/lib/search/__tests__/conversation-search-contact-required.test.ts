@@ -12,7 +12,6 @@ import { compactSearchText, matchesSearchQuery, normalizeSearchText } from "@/li
  * "cannot be narrowed": the caller uses the old path, so it can never lose a contact.
  */
 
-type Required = NonNullable<ReturnType<typeof contactRequiredTokenStrings>>;
 const requiredOf = (query: string): ReturnType<typeof contactRequiredTokenStrings> =>
   contactRequiredTokenStrings(normalizeSearchText(query), compactSearchText(query));
 const holdsAll = (doc: ReadonlySet<string>, group: readonly string[]): boolean => group.every((entry) => doc.has(entry));
