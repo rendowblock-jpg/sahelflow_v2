@@ -28,6 +28,7 @@ import {
   getOrdersWorkbenchStatusCounts,
   resolveOrdersWorkbenchAccess,
 } from "@/lib/orders/order-list-workbench";
+import { shopDayBounds } from "@/lib/time/shop-day";
 import { formatDZD } from "@/lib/utils";
 import { orderStatusSchema } from "@/lib/validation";
 import type { OrderStatus } from "@/types/domain";
@@ -55,14 +56,6 @@ const STATUS_FILTERS: Array<{ value: "all" | OrderStatus; labelKey: string }> = 
   { value: "returned", labelKey: "orders.status.returned" },
   { value: "cancelled", labelKey: "orders.status.cancelled" },
 ];
-
-function localDayBounds(now = new Date()): { start: Date; end: Date } {
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { start, end };
-}
 
 /**
  * Status tabs are real links so the scope stays shareable: switching a tab
@@ -164,7 +157,7 @@ export default async function OrdersPage({
     can("orders.financials.read") &&
     can("orders.financials.update");
 
-  const { start, end } = localDayBounds();
+  const { start, end } = shopDayBounds(new Date());
   const fieldAccess = resolveOrdersWorkbenchAccess(actorContext);
   const deliveredWhere = {
     deletedAt: null,

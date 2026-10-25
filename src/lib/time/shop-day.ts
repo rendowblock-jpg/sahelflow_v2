@@ -82,3 +82,26 @@ export function shopMonthRange(
     lt: shopMidnightOf(year, month + 1, 1),
   };
 }
+
+/** The shop day that contains `at`, as a half-open range [start, end). */
+export function shopDayBounds(at: Date): { start: Date; end: Date } {
+  const start = startOfShopDay(at);
+  return { start, end: addShopDays(start, 1) };
+}
+
+/**
+ * The last `count` shop-time calendar months, oldest first, ending with the
+ * month that contains `at`. `key` is YYYY-MM; [gte, lt) is the month.
+ */
+export function shopRecentMonths(
+  at: Date,
+  count: number,
+): Array<{ key: string; gte: Date; lt: Date }> {
+  const today = shopDateString(at);
+  const year = Number(today.slice(0, 4));
+  const month = Number(today.slice(5, 7));
+  return Array.from({ length: count }, (_, index) => {
+    const range = shopMonthRange(year, month - (count - 1 - index));
+    return { key: shopDateString(range.gte).slice(0, 7), ...range };
+  });
+}
