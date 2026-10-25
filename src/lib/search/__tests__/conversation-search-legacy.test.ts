@@ -67,10 +67,12 @@ describe("legacyConversationMatch", () => {
   });
 });
 
-describe("the conversation search route", () => {
-  it("decides every match through legacyConversationMatch", () => {
+describe("the conversation search", () => {
+  it("decides every match, indexed or not, through legacyConversationMatch", () => {
+    const query = readFileSync(join(process.cwd(), "src/lib/search/conversation-search-query.ts"), "utf8");
+    expect(query).toContain("legacyConversationMatch(");
+    expect(query).not.toContain("matchesSearchQuery(");
     const route = readFileSync(join(process.cwd(), "src/app/api/conversations/search/route.ts"), "utf8");
-    expect(route).toContain("legacyConversationMatch(");
     expect(route).not.toContain("matchesSearchQuery(");
   });
 });

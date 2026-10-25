@@ -145,11 +145,11 @@ const QUERIES = [
 
 describe("conversation search: indexed path equals the old route (T3)", () => {
   it("has the shop the brief asks for", async () => {
-    const [{ n }] = await seed.$queryRawUnsafe<Array<{ n: bigint | number }>>(`SELECT COUNT(*) AS n FROM "Message"`);
-    const [{ c }] = await seed.$queryRawUnsafe<Array<{ c: bigint | number }>>(`SELECT COUNT(*) AS c FROM "Conversation"`);
-    expect(Number(n)).toBe(facts.messageCount);
-    expect(Number(n)).toBeGreaterThan(1_400);
-    expect(Number(c)).toBe(60 + 520);
+    const [messages] = await seed.$queryRawUnsafe<Array<{ n: bigint | number }>>(`SELECT COUNT(*) AS n FROM "Message"`);
+    const [conversations] = await seed.$queryRawUnsafe<Array<{ c: bigint | number }>>(`SELECT COUNT(*) AS c FROM "Conversation"`);
+    expect(Number(messages?.n)).toBe(facts.messageCount);
+    expect(Number(messages?.n)).toBeGreaterThan(1_400);
+    expect(Number(conversations?.c)).toBe(60 + 520);
     const windowIds = await portsFor(fresh()).listWindowIds();
     expect(windowIds).toHaveLength(WINDOW_SIZE);
     expect(windowIds).not.toContain(facts.outsideWindowId);

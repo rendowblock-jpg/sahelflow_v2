@@ -104,6 +104,16 @@ describe("conversation-search query path: raw SQL boundary", () => {
     expect(query).not.toMatch(/from "(?:@\/lib\/db|@prisma\/client|@\/lib\/search\/conversation-search-(?:index|runtime))"/u);
   });
 
+  it("is imported by the runtime only, and the route reaches it through the runtime", () => {
+    const importers = sourceFiles("src")
+      .filter((path) => !path.includes("/__tests__/"))
+      .filter((path) => /from "@\/lib\/search\/conversation-search-query"/u.test(read(path)));
+    expect(importers).toEqual([RUNTIME_FILE]);
+    const route = read("src/app/api/conversations/search/route.ts");
+    expect(route).toContain('from "@/lib/search/conversation-search-runtime"');
+    expect(route).not.toMatch(/from "@\/lib\/db"/u);
+  });
+
   it("only reads the three index tables, never Message or Conversation, and writes nothing", () => {
     const tables = [...query.matchAll(/(?:FROM|JOIN)\s+"(\w+)"/gu)].map((match) => match[1]);
     expect(tables.length).toBeGreaterThan(0);
