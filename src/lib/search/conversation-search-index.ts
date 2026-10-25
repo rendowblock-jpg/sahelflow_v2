@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger";
 import { isBusyError } from "@/lib/search/conversation-search-idle";
 import {
+  contactTokenStringsOf,
   hashTokenSetsOfConversations,
   hashTokenStrings,
   tokenStringsOf,
@@ -17,8 +18,10 @@ import { normalizeSearchText } from "@/lib/search/universal-search";
  *  - backfill: messages that existed before the migration, newest conversation first, 100 messages per chunk.
  *
  * Rules that keep the index honest (the query side relies on them):
- *  - "C doc present => every message of the conversation has an M doc or a Dirty row". The C doc is written only in
- *    the write transaction of the LAST chunk, after re-checking that.
+ *  - "C doc present => every message of the conversation has an M doc or a Dirty row, and the contact tokens are
+ *    current". The C doc (with the tokens of the contact) is written only in a write transaction that re-checks the
+ *    first part and re-reads the sealed contact: the LAST backfill chunk, or the drain of a 'C' queue row.
+ *    A contact that changed after it was opened writes nothing; the contact-update trigger has queued it again.
  *  - The write transaction first re-reads the sealed body and the conversation of every message and writes only when
  *    both are still what was opened. Otherwise the message's Dirty row stays and the next round indexes the new text.
  *  - A missing shop key means "do nothing" ({ skipped: "no-key" }), never "index nothing".
@@ -43,12 +46,17 @@ export type IndexerClient = SqlClient & {
 
 export type SealedMessage = { id: string; conversationId: string; body: string };
 
+export type SealedContact = { id: string; contactName: string | null; contactPhone: string | null };
+export type OpenedContact = { name: string | null; phone: string | null };
+
 export type IndexerPorts = {
   client: IndexerClient;
   /** Blind-index derivation; it returns null when the shop key row is missing. */
   derive: BlindIndexDeriver;
   /** Opens the sealed body of a message. Throws when it cannot. */
   openBody: (message: SealedMessage) => Promise<string>;
+  /** Opens the sealed name and phone of a conversation (null stays null). Throws when it cannot. */
+  openContact: (contact: SealedContact) => Promise<OpenedContact>;
   /** Test seam: runs after the read and the hashing, right before the write transaction. */
   beforeWrite?: () => Promise<void>;
 };
@@ -61,6 +69,8 @@ export type DrainResult = {
   stale: number;
   failed: number;
   cleared: number;
+  /** C docs written by the drain. */
+  covered: number;
   remaining: number;
 };
 export type BackfillResult = { indexed: number; covered: number; remaining: number };
@@ -227,12 +237,117 @@ async function countOf(client: SqlClient, sql: string): Promise<number> {
   return Number(row?.n ?? 0);
 }
 
+async function readSealedContacts(client: SqlClient, ids: readonly string[]): Promise<Map<string, SealedContact>> {
+  const found = new Map<string, SealedContact>();
+  for (const batch of batches(ids, IN_BATCH)) {
+    const list = await client.$queryRawUnsafe<SealedContact[]>(
+      `SELECT "id", "contactName", "contactPhone" FROM "Conversation" WHERE "id" IN (${marks(batch.length)})`,
+      ...batch,
+    );
+    for (const contact of list) found.set(contact.id, contact);
+  }
+  return found;
+}
+
+type ReadyContact = { status: "ready"; sealed: SealedContact; hashes: number[] };
+type PreparedContact = ReadyContact | { status: "gone" } | { status: "failed" };
+
+/** Opens and hashes the contacts of some conversations. Outside any write lock. null = the key row is missing. */
+async function prepareContacts(
+  ports: IndexerPorts,
+  ids: readonly string[],
+): Promise<Map<string, PreparedContact> | null> {
+  const sealed = await readSealedContacts(ports.client, ids);
+  const result = new Map<string, PreparedContact>();
+  const opened: Array<{ contact: SealedContact; strings: string[] }> = [];
+  for (const id of ids) {
+    const contact = sealed.get(id);
+    if (contact === undefined) {
+      result.set(id, { status: "gone" });
+      continue;
+    }
+    try {
+      const { name, phone } = await ports.openContact(contact);
+      opened.push({ contact, strings: contactTokenStringsOf(name, phone) });
+    } catch {
+      result.set(id, { status: "failed" });
+    }
+  }
+  const hashed = await hashTokenSetsOfConversations(
+    opened.map((entry) => ({ conversationId: entry.contact.id, strings: entry.strings })),
+    ports.derive,
+  );
+  if (hashed === null) return null;
+  opened.forEach((entry, index) => {
+    result.set(entry.contact.id, { status: "ready", sealed: entry.contact, hashes: hashed[index]! });
+  });
+  return result;
+}
+
+/** Is there a message that has neither an M doc nor a Dirty row? Then the conversation cannot be marked covered. */
+async function hasMessageGap(tx: SqlClient, conversationId: string): Promise<boolean> {
+  const gap = await tx.$queryRawUnsafe<Array<{ x: number }>>(
+    `SELECT 1 AS x FROM "Message" m WHERE m."conversationId" = ?
+        AND NOT EXISTS (SELECT 1 FROM "ConversationSearchDoc" d WHERE d."kind" = 'M' AND d."entityId" = m."id")
+        AND NOT EXISTS (SELECT 1 FROM "ConversationSearchDirty" y WHERE y."kind" = 'M' AND y."entityId" = m."id")
+      LIMIT 1`,
+    conversationId,
+  );
+  return gap.length > 0;
+}
+
+/**
+ * Writes the C doc and the contact tokens. false = nothing written: the contact changed since it was opened (the
+ * trigger has queued it again), or a doc exists and `replace` is false (the backfill never overwrites what the drain
+ * wrote in the meantime). The caller has checked hasMessageGap and holds the write lock.
+ */
+async function writeContactDoc(tx: SqlClient, prepared: ReadyContact, replace: boolean): Promise<boolean> {
+  const id = prepared.sealed.id;
+  const current = (await readSealedContacts(tx, [id])).get(id);
+  if (
+    current === undefined ||
+    current.contactName !== prepared.sealed.contactName ||
+    current.contactPhone !== prepared.sealed.contactPhone
+  ) {
+    return false;
+  }
+  const existing = await tx.$queryRawUnsafe<Array<{ docId: number | bigint }>>(
+    `SELECT "docId" FROM "ConversationSearchDoc" WHERE "kind" = 'C' AND "entityId" = ?`,
+    id,
+  );
+  if (existing.length > 0) {
+    if (!replace) return false;
+    await tx.$executeRawUnsafe(`DELETE FROM "ConversationSearchToken" WHERE "docId" = ?`, Number(existing[0]!.docId));
+    await tx.$executeRawUnsafe(`DELETE FROM "ConversationSearchDoc" WHERE "docId" = ?`, Number(existing[0]!.docId));
+  }
+  await tx.$executeRawUnsafe(
+    `INSERT INTO "ConversationSearchDoc" ("kind", "entityId", "conversationId") VALUES ('C', ?, ?)`,
+    id,
+    id,
+  );
+  const [doc] = await tx.$queryRawUnsafe<Array<{ docId: number | bigint }>>(
+    `SELECT "docId" FROM "ConversationSearchDoc" WHERE "kind" = 'C' AND "entityId" = ?`,
+    id,
+  );
+  const tokenRows = [...new Set(prepared.hashes)].flatMap((hash) => [Number(doc!.docId), hash]);
+  for (const batch of batches(tokenRows, TOKEN_ROWS_PER_INSERT * 2)) {
+    await tx.$executeRawUnsafe(
+      `INSERT INTO "ConversationSearchToken" ("docId", "tokenHash") VALUES ${new Array(batch.length / 2)
+        .fill("(?, ?)")
+        .join(",")} ON CONFLICT DO NOTHING`,
+      ...batch,
+    );
+  }
+  return true;
+}
+
 const UNCOVERED_CONVERSATIONS = `FROM "Conversation" c WHERE NOT EXISTS
   (SELECT 1 FROM "ConversationSearchDoc" d WHERE d."kind" = 'C' AND d."entityId" = c."id")`;
 
 /**
  * Drains up to `limit` queue rows: message rows are re-indexed (or their docs removed when the message is gone),
- * conversation rows are cleared (the backfill re-covers a conversation that has no C doc).
+ * conversation rows get their C doc and contact tokens when no message of the conversation is missing from the
+ * index and the queue; otherwise the row is only cleared and the backfill re-covers the conversation.
  */
 export async function drainConversationSearchDirty(
   ports: IndexerPorts,
@@ -249,6 +364,8 @@ export async function drainConversationSearchDirty(
   const read = await readSealed(ports.client, messageIds);
   const prepared = await prepare(ports, [...read.values()]);
   if (prepared === null) return { skipped: "no-key" };
+  const contacts = conversationRows.length > 0 ? await prepareContacts(ports, conversationRows) : new Map();
+  if (contacts === null) return { skipped: "no-key" };
   const goneAtRead = messageIds.filter((id) => !read.has(id));
   if (ports.beforeWrite) await ports.beforeWrite();
 
@@ -282,6 +399,12 @@ export async function drainConversationSearchDirty(
           ...batch.flatMap((message) => [message.id, message.conversationId]),
         );
       }
+      let covered = 0;
+      for (const id of conversationRows) {
+        const contact = contacts.get(id);
+        if (contact?.status !== "ready" || (await hasMessageGap(tx, id))) continue;
+        if (await writeContactDoc(tx, contact, true)) covered += 1;
+      }
       await deleteDirty(tx, "C", conversationRows);
       return {
         indexed: replace.length,
@@ -289,6 +412,7 @@ export async function drainConversationSearchDirty(
         stale,
         failed: failedNow.length,
         cleared: conversationRows.length,
+        covered,
       };
     }, WRITE_TRANSACTION),
   );
@@ -343,6 +467,12 @@ async function backfillOneConversation(
   const chunk = rows.slice(0, BACKFILL_CHUNK_MESSAGES);
   const prepared = await prepare(ports, chunk);
   if (prepared === null) return null;
+  let contact: PreparedContact | undefined;
+  if (isLast) {
+    const contacts = await prepareContacts(ports, [conversationId]);
+    if (contacts === null) return null;
+    contact = contacts.get(conversationId);
+  }
   if (ports.beforeWrite) await ports.beforeWrite();
 
   return withBusyRetry(() =>
@@ -369,22 +499,8 @@ async function backfillOneConversation(
       );
       const written = await insertMessageDocs(tx, keep);
       let covered = 0;
-      if (isLast) {
-        const gap = await tx.$queryRawUnsafe<Array<{ x: number }>>(
-          `SELECT 1 AS x FROM "Message" m WHERE m."conversationId" = ?
-              AND NOT EXISTS (SELECT 1 FROM "ConversationSearchDoc" d WHERE d."kind" = 'M' AND d."entityId" = m."id")
-              AND NOT EXISTS (SELECT 1 FROM "ConversationSearchDirty" y WHERE y."kind" = 'M' AND y."entityId" = m."id")
-            LIMIT 1`,
-          conversationId,
-        );
-        if (gap.length === 0) {
-          covered = await tx.$executeRawUnsafe(
-            `INSERT INTO "ConversationSearchDoc" ("kind", "entityId", "conversationId") VALUES ('C', ?, ?)
-             ON CONFLICT ("kind", "entityId") DO NOTHING`,
-            conversationId,
-            conversationId,
-          );
-        }
+      if (isLast && contact?.status === "ready" && !(await hasMessageGap(tx, conversationId))) {
+        covered = (await writeContactDoc(tx, contact, false)) ? 1 : 0;
       }
       return { indexed: written, covered };
     }, WRITE_TRANSACTION),

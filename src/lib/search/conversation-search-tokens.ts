@@ -1,4 +1,5 @@
 import type { ProtectedRecordReference } from "@/lib/crypto/protected-record";
+import { compactSearchText, normalizeSearchText } from "@/lib/search/universal-search";
 
 /**
  * Tokens of the persisted conversation-search index (pure: no database, no key).
@@ -67,6 +68,34 @@ export function tokenStringsOf(foldedText: string): string[] {
     if (word.length < PREFIX_LENGTH) continue;
     tokens.add(`${PREFIX_TOKEN}${word.slice(0, PREFIX_LENGTH)}`);
     addPieces(tokens, word);
+  }
+  return [...tokens];
+}
+
+const CONTACT_NAME_DOMAIN = "conv-n:";
+const CONTACT_PHONE_DOMAIN = "conv-p:";
+const CONTACT_COMPACT_DOMAIN = "conv-c:";
+
+/**
+ * The token strings of a conversation's contact, for its C doc. Three families, each with its own prefix so a
+ * contact token never equals a message token (and a name token never equals a phone token):
+ *   conv-n:  the folded name         conv-p:  the folded phone
+ *   conv-c:  compactSearchText of the name AND of the phone (what matchesSearchQuery tests across separators:
+ *            "0555 12 34 56" and "+213555123456" are both 0555123456; "amineben" is found in "Amine Ben Ali").
+ * A missing or empty name/phone adds nothing.
+ */
+export function contactTokenStringsOf(name: string | null | undefined, phone: string | null | undefined): string[] {
+  const tokens = new Set<string>();
+  const add = (domain: string, text: string): void => {
+    for (const entry of tokenStringsOf(text)) tokens.add(`${domain}${entry}`);
+  };
+  if (name) {
+    add(CONTACT_NAME_DOMAIN, normalizeSearchText(name));
+    add(CONTACT_COMPACT_DOMAIN, compactSearchText(name));
+  }
+  if (phone) {
+    add(CONTACT_PHONE_DOMAIN, normalizeSearchText(phone));
+    add(CONTACT_COMPACT_DOMAIN, compactSearchText(phone));
   }
   return [...tokens];
 }

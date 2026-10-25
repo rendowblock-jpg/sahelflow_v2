@@ -8,7 +8,7 @@ import { deriveShopBlindIndexes } from "@/lib/crypto/protected-record";
 import { db, dbRaw, shopContext } from "@/lib/db";
 import { runConversationSearchIndexTick } from "@/lib/search/conversation-search-runtime";
 import { hashTokenStrings, tokenStringsOf } from "@/lib/search/conversation-search-tokens";
-import { normalizeSearchText } from "@/lib/search/universal-search";
+import { compactSearchText, normalizeSearchText } from "@/lib/search/universal-search";
 
 /**
  * PB-CONV-SEARCH-LOAD: the app wiring of the indexer on the REAL path. Rows are written through the app's own
@@ -222,5 +222,60 @@ describe("conversation-search wiring on the real sealed path", () => {
     await tickUntilIdle();
     expect(await count("ConversationSearchDoc", `"kind" = 'M'`)).toBe(2);
     expect(await count("ConversationSearchDirty")).toBe(0);
+  });
+});
+
+const contactStrings = (name: string | null, phone: string | null): string[] => [
+  ...tokenStringsOf(normalizeSearchText(name ?? "")).map((entry) => `conv-n:${entry}`),
+  ...tokenStringsOf(normalizeSearchText(phone ?? "")).map((entry) => `conv-p:${entry}`),
+  ...tokenStringsOf(compactSearchText(name ?? "")).map((entry) => `conv-c:${entry}`),
+  ...tokenStringsOf(compactSearchText(phone ?? "")).map((entry) => `conv-c:${entry}`),
+];
+async function hashedSorted(strings: string[], conversationId: string): Promise<string[]> {
+  const numbers = (await hashTokenStrings(strings, conversationId, derive))!;
+  return [...new Set(numbers)].sort((a, b) => a - b).map(String);
+}
+
+describe("contact tokens through the real sealed path", () => {
+  it("indexes the decrypted contact; a rename removes the old name's tokens and adds the new name's", async () => {
+    const OLD = "Zorbaxel Quillon";
+    const NEW = "Mirvanth Delcora";
+    const conversation = await conversationWith(["bonjour"], { name: OLD, phone: "0555 11 22 33" });
+    const sealedContact = await raw<{ contactName: string; contactPhone: string }>(
+      `SELECT "contactName", "contactPhone" FROM "Conversation" WHERE "id" = ?`,
+      conversation.id,
+    );
+    expect(sealedContact[0]!.contactName).not.toContain("Zorbaxel");
+    await tickUntilIdle();
+    expect(await hashesOf("C", conversation.id)).toEqual(await hashedSorted(contactStrings(OLD, "0555 11 22 33"), conversation.id));
+
+    await db.conversation.update({ where: { id: conversation.id }, data: { contactName: NEW } });
+    await tickUntilIdle();
+    const now = await hashesOf("C", conversation.id);
+    expect(now).toEqual(await hashedSorted(contactStrings(NEW, "0555 11 22 33"), conversation.id));
+    const oldOnly = (await hashedSorted(contactStrings(OLD, null), conversation.id)).filter((hash) => !now.includes(hash));
+    expect(oldOnly.length).toBeGreaterThan(20);
+    expect(await count("ConversationSearchDoc", `"kind" = 'C' AND "entityId" = ?`, conversation.id)).toBe(1);
+    expect(await count("ConversationSearchDirty")).toBe(0);
+  });
+
+  it("finds 0555 12 34 56 through the compact tokens of +213555123456, and the other way round", async () => {
+    const national = await conversationWith(["a"], { name: "Client A", phone: "0555 12 34 56" });
+    const international = await conversationWith(["b"], { name: "Client B", phone: "+213555123456" });
+    await tickUntilIdle();
+    for (const conversation of [national, international]) {
+      const compact = (await hashedSorted(tokenStringsOf(compactSearchText("0555 12 34 56")).map((entry) => `conv-c:${entry}`), conversation.id));
+      const stored = await hashesOf("C", conversation.id);
+      expect(compact.length).toBeGreaterThan(5);
+      expect(compact.every((hash) => stored.includes(hash))).toBe(true);
+      const other = await hashedSorted(tokenStringsOf(compactSearchText("+213555123456")).map((entry) => `conv-c:${entry}`), conversation.id);
+      expect(other).toEqual(compact);
+    }
+  });
+
+  it("indexes a contact without a phone", async () => {
+    const conversation = await conversationWith([], { name: "Karim Seul", phone: null });
+    await tickUntilIdle();
+    expect(await hashesOf("C", conversation.id)).toEqual(await hashedSorted(contactStrings("Karim Seul", null), conversation.id));
   });
 });
