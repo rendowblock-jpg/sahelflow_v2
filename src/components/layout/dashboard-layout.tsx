@@ -227,7 +227,7 @@ export function DashboardLayout({
     <ActorAccessProvider permissions={permissions}>
       <div
         dir={dir}
-        className="flex h-[100dvh] min-h-0 overflow-hidden bg-background text-foreground"
+        className="flex h-[100dvh] min-h-0 overflow-hidden relative bg-background text-foreground"
         data-sahelflow-shell="desktop"
         data-shell-mode={storefrontFocusMode ? "storefront-focus" : "standard"}
         data-locale-dir={dir}
