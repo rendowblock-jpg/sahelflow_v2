@@ -550,6 +550,7 @@ describe("an idle tick on a finished index", () => {
       stale: 0,
       failed: 0,
       cleared: 0,
+      covered: 0,
       remaining: 0,
     });
     expect(await runConversationSearchIndexStep(ports({ client: counting }))).toEqual({ changed: false });
