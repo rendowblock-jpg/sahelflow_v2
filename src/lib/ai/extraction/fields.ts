@@ -13,6 +13,7 @@ import {
   NAME_INTROS_STRONG,
   NAME_INTROS_WEAK,
   ORDER_INTENTS,
+  PHONE_CORRECTION_CUES,
   PHONE_LABELS,
 } from "./lexicon";
 import { B_AFTER, B_BEFORE, fold, phraseAlternation, titleCaseLatin } from "./text";
@@ -67,6 +68,21 @@ export function findPhones(folded: string): Located<string>[] {
     if (value) found.push({ value, start, end });
   }
   return found.sort((left, right) => left.start - right.start);
+}
+
+const PHONE_CORRECTION = new RegExp(`${B_BEFORE}(?:${phraseAlternation(PHONE_CORRECTION_CUES)})${B_AFTER}`, "u");
+
+/**
+ * The number to keep. The first one, unless a correction word ("غلط", "ghalta",
+ * "le bon") sits between it and the next number: then the last number wins.
+ */
+export function pickPhone(phones: readonly Located<string>[], folded: string): string | undefined {
+  let chosen = phones[0];
+  for (let index = 1; index < phones.length; index += 1) {
+    const between = folded.slice(phones[index - 1]!.end, phones[index]!.start);
+    if (between.length <= 40 && PHONE_CORRECTION.test(between)) chosen = phones[index];
+  }
+  return chosen?.value;
 }
 
 /** Normalize any phone string (e.g. a model answer) to 0XXXXXXXXX. */
