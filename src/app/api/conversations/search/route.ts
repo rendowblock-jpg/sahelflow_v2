@@ -14,7 +14,8 @@ import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
-import { matchesSearchQuery, normalizeSearchText } from "@/lib/search/universal-search";
+import { legacyConversationMatch } from "@/lib/search/conversation-search-legacy";
+import { normalizeSearchText } from "@/lib/search/universal-search";
 
 export const dynamic = "force-dynamic";
 
@@ -54,34 +55,19 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
   });
 
   const results = conversations
-    .filter((conversation) => {
-      if (
-        canReadContact &&
-        matchesSearchQuery(query, [conversation.contactName])
-      ) {
-        return true;
-      }
-      if (
-        canReadContact &&
-        matchesSearchQuery(query, [conversation.contactPhone])
-      ) {
-        return true;
-      }
-      return conversation.messages.some((message) =>
-        normalizeSearchText(message.body ?? "").includes(query),
-      );
+    .flatMap((conversation) => {
+      const matchType = legacyConversationMatch({
+        query,
+        canReadContact,
+        contactName: conversation.contactName,
+        contactPhone: conversation.contactPhone,
+        messageBodies: conversation.messages.map((message) => message.body),
+      });
+      return matchType === null ? [] : [{ conversation, matchType }];
     })
     .slice(0, 100)
-    .map((conversation) => {
+    .map(({ conversation, matchType }) => {
       const lastMessage = conversation.messages[0];
-      const matchType =
-        canReadContact &&
-        matchesSearchQuery(query, [conversation.contactName])
-          ? "name"
-          : canReadContact &&
-              matchesSearchQuery(query, [conversation.contactPhone])
-            ? "phone"
-            : "message";
 
       return {
         id: conversation.id,

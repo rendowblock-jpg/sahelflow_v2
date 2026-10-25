@@ -187,7 +187,7 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(route).toContain('requireTrustedAction("conversations.read")');
     expect(route).toContain('"customers.contact.read"');
     expect(route).toContain("sourceId: canReadContact ? conversation.sourceId : null");
-    expect(route).toContain("conversation.messages.some");
+    expect(route).toContain("messageBodies: conversation.messages.map");
     expect(route).toContain("take: 500");
   });
 
