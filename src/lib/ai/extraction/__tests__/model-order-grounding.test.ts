@@ -56,3 +56,48 @@ describe("grounding guard: prices must be written in the message", () => {
     expect(order.totalPrice).toBe(6000);
   });
 });
+
+describe("grounding guard: a commune that is only the wilaya repeated", () => {
+  const communeOf = (body: string | undefined, wilaya: string, commune: string) => read(body, { wilaya, commune });
+
+  it("drops the commune when it equals the wilaya and the message names it once", () => {
+    const order = communeOf("bghit robe, Oran 0555 12 34 56", "Oran", "Oran");
+    expect(order.wilaya).toBe("Oran");
+    expect(order).not.toHaveProperty("commune");
+    expect(communeOf("bghit robe, bba 0555 12 34 56", "Bordj Bou Arreridj", "Bordj Bou Arreridj")).not.toHaveProperty("commune");
+  });
+
+  it("drops it in Arabic and when the commune is another spelling of the wilaya", () => {
+    expect(communeOf("اريد فستان وهران", "وهران", "وهران")).not.toHaveProperty("commune");
+    expect(communeOf("اريد فستان وهران", "Oran", "وهران")).not.toHaveProperty("commune");
+    expect(communeOf("robe, wahran", "Oran", "El Oran")).toHaveProperty("commune", "El Oran");
+  });
+
+  it("does not count a wilaya number as a mention of the name", () => {
+    expect(communeOf("robe wilaya 31 Oran", "Oran", "Oran")).not.toHaveProperty("commune");
+  });
+
+  it("keeps it when the message names the wilaya twice", () => {
+    expect(communeOf("robe, Oran centre, ya3ni Oran", "Oran", "Oran")).toHaveProperty("commune", "Oran");
+  });
+
+  it.each([
+    ["commune Oran", "Oran"],
+    ["Oran commune", "Oran"],
+    ["commune d'Oran", "Oran"],
+    ["daira Oran", "Oran"],
+    ["بلدية وهران", "وهران"],
+    ["وهران دائرة", "وهران"],
+  ])("keeps it next to an explicit commune cue (%s)", (text, commune) => {
+    expect(communeOf(`robe, ${text}`, "Oran", commune)).toHaveProperty("commune", commune);
+  });
+
+  it("keeps a commune that differs from the wilaya, even when the message does not show it", () => {
+    expect(communeOf("Alger, commune Bab Ezzouar", "Alger", "Bab Ezzouar")).toHaveProperty("commune", "Bab Ezzouar");
+    expect(communeOf("robe Oran", "Oran", "Es Senia")).toHaveProperty("commune", "Es Senia");
+  });
+
+  it("does nothing without a message body", () => {
+    expect(communeOf(undefined, "Oran", "Oran")).toHaveProperty("commune", "Oran");
+  });
+});
