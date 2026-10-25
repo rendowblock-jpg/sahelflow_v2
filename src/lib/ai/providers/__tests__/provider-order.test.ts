@@ -30,7 +30,7 @@ describe("ai_provider_order setting", () => {
   });
 
   it("turns a setting into the engine's provider order", () => {
-    expect(providerOrderFor("groq-first")).toEqual(["groq", "gemini"]);
-    expect(providerOrderFor("gemini-first")).toEqual(["gemini", "groq"]);
+    expect(providerOrderFor("groq-first")).toEqual(["groq", "gemini", "openai"]);
+    expect(providerOrderFor("gemini-first")).toEqual(["gemini", "groq", "openai"]);
   });
 });

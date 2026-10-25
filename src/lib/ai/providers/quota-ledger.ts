@@ -7,8 +7,8 @@
  * pauses in the settings table so a restart remembers them.
  */
 
-export type AiProviderId = "gemini" | "groq";
-export const AI_PROVIDER_IDS: readonly AiProviderId[] = ["gemini", "groq"];
+export type AiProviderId = "gemini" | "groq" | "openai";
+export const AI_PROVIDER_IDS: readonly AiProviderId[] = ["gemini", "groq", "openai"];
 
 /** Used when the provider did not say how long to wait. */
 export const DEFAULT_PAUSE_SECONDS = 15 * 60;
@@ -18,12 +18,18 @@ export const MAX_PAUSE_SECONDS = 24 * 60 * 60;
 export interface PauseState {
   paused: boolean;
   until?: Date;
+  /** Present and false when the provider named no reset time: `until` is then only our own back-off, never to be shown as a time. */
+  retryAtKnown?: boolean;
+  /** The failure code behind the pause (kept in memory only). */
+  reason?: string;
 }
+
+export interface PauseOptions { retryAtKnown?: boolean; reason?: string }
 
 export interface QuotaLedger {
   recordRequest(provider: AiProviderId, now?: Date): void;
   /** Starts (or extends) a pause and returns when it ends. */
-  recordQuotaHit(provider: AiProviderId, retryAfterSeconds: number | null | undefined, now?: Date): Date;
+  recordQuotaHit(provider: AiProviderId, retryAfterSeconds: number | null | undefined, now?: Date, options?: PauseOptions): Date;
   isPaused(provider: AiProviderId, now?: Date): PauseState;
   clear(provider: AiProviderId): void;
   /** Requests made on the local calendar day of `now`. */
@@ -47,6 +53,7 @@ function pauseSeconds(retryAfterSeconds: number | null | undefined): number {
 export function createQuotaLedger(clock: () => Date = () => new Date()): QuotaLedger {
   const pausedUntil = new Map<AiProviderId, number>();
   const counters = new Map<AiProviderId, { day: string; count: number }>();
+  const meta = new Map<AiProviderId, PauseOptions>();
 
   const startOfPause = (provider: AiProviderId, until: number) => {
     const existing = pausedUntil.get(provider);
@@ -60,21 +67,29 @@ export function createQuotaLedger(clock: () => Date = () => new Date()): QuotaLe
       const current = counters.get(provider);
       counters.set(provider, { day, count: current?.day === day ? current.count + 1 : 1 });
     },
-    recordQuotaHit(provider, retryAfterSeconds, now = clock()) {
+    recordQuotaHit(provider, retryAfterSeconds, now = clock(), options = {}) {
       const candidate = now.getTime() + pauseSeconds(retryAfterSeconds) * 1000;
       const running = pausedUntil.get(provider);
       // A second, shorter answer must not cut a longer running pause short.
       const until = running !== undefined && running > candidate ? running : candidate;
       pausedUntil.set(provider, until);
+      meta.set(provider, options);
       return new Date(until);
     },
     isPaused(provider, now = clock()) {
       const until = pausedUntil.get(provider);
       if (until === undefined || until <= now.getTime()) return { paused: false };
-      return { paused: true, until: new Date(until) };
+      const info = meta.get(provider);
+      return {
+        paused: true,
+        until: new Date(until),
+        ...(info?.retryAtKnown === false ? { retryAtKnown: false } : {}),
+        ...(info?.reason ? { reason: info.reason } : {}),
+      };
     },
     clear(provider) {
       pausedUntil.delete(provider);
+      meta.delete(provider);
     },
     requestsToday(provider, now = clock()) {
       const current = counters.get(provider);

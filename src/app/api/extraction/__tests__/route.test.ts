@@ -138,10 +138,10 @@ describe("POST /api/extraction: which AI is tried first", () => {
   const orderPassed = () => (h.extract.mock.calls[0]?.[1] as { providerOrder: string[] }).providerOrder;
 
   it.each([
-    ["no stored value", null, ["groq", "gemini"]],
-    ["groq-first", "groq-first", ["groq", "gemini"]],
-    ["gemini-first", "gemini-first", ["gemini", "groq"]],
-    ["a junk value", "banana", ["groq", "gemini"]],
+    ["no stored value", null, ["groq", "gemini", "openai"]],
+    ["groq-first", "groq-first", ["groq", "gemini", "openai"]],
+    ["gemini-first", "gemini-first", ["gemini", "groq", "openai"]],
+    ["a junk value", "banana", ["groq", "gemini", "openai"]],
   ])("passes the order for %s", async (_label, stored, expected) => {
     h.getSetting.mockResolvedValue(stored);
     await post();
@@ -152,6 +152,6 @@ describe("POST /api/extraction: which AI is tried first", () => {
   it("falls back to Groq first when the setting cannot be read", async () => {
     h.getSetting.mockRejectedValue(new Error("db down"));
     expect((await post()).status).toBe(200);
-    expect(orderPassed()).toEqual(["groq", "gemini"]);
+    expect(orderPassed()).toEqual(["groq", "gemini", "openai"]);
   });
 });
