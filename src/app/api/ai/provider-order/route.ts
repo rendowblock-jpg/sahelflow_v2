@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
+import { requireAuth } from "@/lib/auth/server";
 import { db, shopContext } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import {
@@ -23,12 +23,11 @@ export const GET = withErrorHandler(async () => {
 const bodySchema = z.object({ order: z.enum(AI_PROVIDER_ORDER_VALUES as [string, ...string[]]) });
 
 /**
- * PUT /api/ai/provider-order — same permission as the keys. The setting is
+ * PUT /api/ai/provider-order — same permission as the keys (no PIN: it is a choice, not a secret). The setting is
  * reserved in the generic settings API, so this is the only way to change it.
  */
 export const PUT = withErrorHandler(async (req: NextRequest) => {
   await requireAuth("integrations.manage");
-  await requireRecentReauthentication();
   const { order } = bodySchema.parse(await req.json());
   await db.setting.upsert({
     where: { key: AI_PROVIDER_ORDER_SETTING },

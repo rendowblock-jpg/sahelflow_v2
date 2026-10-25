@@ -623,6 +623,11 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
                 {/* Reuses the settings AI key flow: typed password key,
                     test-and-save validation, consent checkbox, reauth gate. */}
                 <AiKeyPanel
+                  provider="groq"
+                  canManageKey={access.aiKey}
+                  canManageConsent={access.aiConsent}
+                />
+                <AiKeyPanel
                   canManageKey={access.aiKey}
                   canManageConsent={access.aiConsent}
                 />

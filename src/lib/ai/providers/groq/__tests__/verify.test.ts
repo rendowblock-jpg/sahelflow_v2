@@ -32,7 +32,7 @@ describe("verifyGroqKey: request", () => {
     fetchSpy.mockResolvedValue(json(LISTED));
     await verifyGroqKey(`  ${KEY}\n`);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchSpy.mock.calls[0];
+    const [url, init] = fetchSpy.mock.calls[0] ?? [];
     expect(url).toBe(URL);
     expect(init.method).toBe("GET");
     expect(init.headers.Authorization).toBe(`Bearer ${KEY}`);
@@ -95,7 +95,7 @@ describe("verifyGroqKey: failures use the existing codes, never retry 401/403/42
   it("gives the fetch an abort signal for the 10 s timeout", async () => {
     fetchSpy.mockResolvedValue(json(LISTED));
     await verifyGroqKey(KEY);
-    expect(fetchSpy.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+    expect(fetchSpy.mock.calls[0]?.[1].signal).toBeInstanceOf(AbortSignal);
   });
 
   it("the key is in no result and no log line, even when Groq or the network echoes it", async () => {

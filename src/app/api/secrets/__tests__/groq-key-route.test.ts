@@ -129,7 +129,7 @@ describe("POST: live check", () => {
     expect(h.verify).toHaveBeenCalledWith(KEY);
     expect(h.store.get(SECRET_NAME)).toBe(KEY);
     expect(h.logAudit).toHaveBeenCalledTimes(1);
-    const [, entry] = h.logAudit.mock.calls[0];
+    const [, entry] = h.logAudit.mock.calls[0] ?? [];
     expect(entry).toMatchObject({
       action: "secret.updated", entity: "secret", entityId: "groq_api_key", actor: "person:actor",
       after: { configured: true, verified: true },
@@ -172,7 +172,7 @@ describe("POST: test false", () => {
     expect(await res.json()).toEqual({ ok: true, message: "Clé enregistrée sans test." });
     expect(h.verify).not.toHaveBeenCalled();
     expect(h.store.get(SECRET_NAME)).toBe(KEY);
-    expect(h.logAudit.mock.calls[0][1]).toMatchObject({ after: { configured: true, verified: false } });
+    expect(h.logAudit.mock.calls[0]?.[1]).toMatchObject({ after: { configured: true, verified: false } });
     expect(JSON.stringify(h.logAudit.mock.calls)).not.toContain(KEY);
   });
 });
@@ -184,7 +184,7 @@ describe("DELETE", () => {
     const text = await res.text();
     expect(JSON.parse(text)).toEqual({ ok: true, message: "Clé supprimée." });
     expect(h.store.has(SECRET_NAME)).toBe(false);
-    const [, entry] = h.logAudit.mock.calls[0];
+    const [, entry] = h.logAudit.mock.calls[0] ?? [];
     expect(entry).toMatchObject({
       action: "secret.deleted", entityId: "groq_api_key", before: { configured: true }, metadata: { key: "groq_api_key" },
     });
@@ -193,6 +193,6 @@ describe("DELETE", () => {
 
   it("with no key saved it still answers ok and audits configured: false", async () => {
     expect((await DELETE(del())).status).toBe(200);
-    expect(h.logAudit.mock.calls[0][1]).toMatchObject({ before: { configured: false } });
+    expect(h.logAudit.mock.calls[0]?.[1]).toMatchObject({ before: { configured: false } });
   });
 });
