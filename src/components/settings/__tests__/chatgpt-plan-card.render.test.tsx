@@ -22,7 +22,7 @@ vi.mock("@/hooks/use-i18n", async () => {
   };
   return {
     useI18n: () => ({
-      t: (key: string) => tables[harness.locale][key] ?? key,
+      t: (key: string) => tables[harness.locale]?.[key] ?? key,
       locale: harness.locale,
       dir: harness.locale === "ar" ? "rtl" : "ltr",
     }),
@@ -196,7 +196,7 @@ describe("(b) waiting", () => {
     expect(statusCalls()).toBe(0);
     await advance(2000);
     expect(statusCalls()).toBe(1);
-    expect(String(calls("/api/ai/openai/sign-in/status")[0][0])).toBe(`/api/ai/openai/sign-in/status?attempt=${ATTEMPT}`);
+    expect(String(calls("/api/ai/openai/sign-in/status")[0]![0])).toBe(`/api/ai/openai/sign-in/status?attempt=${ATTEMPT}`);
     await advance(4000);
     expect(statusCalls()).toBe(3);
     accounts = [amina];
@@ -255,27 +255,27 @@ describe("(c) signed in", () => {
     await mount();
     const rows = screen.getAllByRole("listitem");
     expect(rows).toHaveLength(2);
-    expect(within(rows[0]).getByText("amina@example.dz")).toBeInTheDocument();
-    expect(within(rows[0]).getByText("In use")).toBeInTheDocument();
-    expect(within(rows[0]).queryByRole("button", { name: /Use this account/ })).toBeNull();
-    expect(within(rows[1]).queryByText("In use")).toBeNull();
+    expect(within(rows[0]!).getByText("amina@example.dz")).toBeInTheDocument();
+    expect(within(rows[0]!).getByText("In use")).toBeInTheDocument();
+    expect(within(rows[0]!).queryByRole("button", { name: /Use this account/ })).toBeNull();
+    expect(within(rows[1]!).queryByText("In use")).toBeNull();
     expect(screen.queryByRole("button", { name: "Continue with ChatGPT" })).toBeNull();
     const usage = screen.getByRole("link", { name: "Manage usage in ChatGPT" });
     expect(usage).toHaveAttribute("href", USAGE_URL);
     expect(usage).toHaveAttribute("rel", expect.stringContaining("noopener"));
     expect(usage).toHaveAttribute("target", "_blank");
 
-    fireEvent.click(within(rows[1]).getByRole("button", { name: "Use this account (karim@example.dz)" }));
+    fireEvent.click(within(rows[1]!).getByRole("button", { name: "Use this account (karim@example.dz)" }));
     await flush();
-    expect(calls("/api/ai/openai/accounts/2/activate")[0][1]).toEqual(expect.objectContaining({ method: "POST" }));
+    expect(calls("/api/ai/openai/accounts/2/activate")[0]![1]).toEqual(expect.objectContaining({ method: "POST" }));
 
-    fireEvent.click(within(rows[1]).getByRole("button", { name: "Sign out (karim@example.dz)" }));
+    fireEvent.click(within(rows[1]!).getByRole("button", { name: "Sign out (karim@example.dz)" }));
     await flush();
     expect(fetchMock.mock.calls.some(([url, init]) => String(url) === "/api/ai/openai/accounts/2" && init?.method === "DELETE")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Add another account" }));
     await flush();
-    expect(JSON.parse(String((calls("/api/ai/openai/sign-in")[0][1] as RequestInit).body))).toEqual({});
+    expect(JSON.parse(String((calls("/api/ai/openai/sign-in")[0]![1] as RequestInit).body))).toEqual({});
     expect(screen.getByRole("status")).toHaveTextContent("Finish in your browser");
   });
 
@@ -332,7 +332,7 @@ describe("(d) plan allowance not granted", () => {
     expect(screen.getByText(/did not allow SahelFlow to use your plan/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Allow plan usage" }));
     await flush();
-    const init = calls("/api/ai/openai/sign-in")[0][1] as RequestInit;
+    const init = calls("/api/ai/openai/sign-in")[0]![1] as RequestInit;
     expect(JSON.parse(String(init.body))).toEqual({ accountId: 1 });
     expect(openMock).toHaveBeenCalledWith(AUTH_URL, "_blank", "noopener,noreferrer");
   });
@@ -390,7 +390,7 @@ describe("(e) errors in plain words, by stable code", () => {
     harness.locale = locale;
     signIn = () => json({ ok: false, code: "OPENAI_PLAN_NOT_ELIGIBLE", error: "server text" }, 409);
     await mount();
-    fireEvent.click(screen.getAllByRole("button")[0]);
+    fireEvent.click(screen.getAllByRole("button")[0]!);
     await flush();
     const alert = screen.getByRole("alert");
     expect(alert.textContent).toContain("Groq");
@@ -410,7 +410,7 @@ describe("re-authentication and accessibility", () => {
     fireEvent.change(pin, { target: { value: "1234" } });
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await flush();
-    expect(JSON.parse(String((calls("/api/auth/reauthenticate")[0][1] as RequestInit).body))).toEqual({ pin: "1234" });
+    expect(JSON.parse(String((calls("/api/auth/reauthenticate")[0]![1] as RequestInit).body))).toEqual({ pin: "1234" });
     expect(screen.getByText("amina@example.dz")).toBeInTheDocument();
   });
 
