@@ -208,6 +208,65 @@ export async function requestGroq(
   }
 }
 
+const GROQ_MODELS_ENDPOINT = "https://api.groq.com/openai/v1/models";
+const VERIFY_TIMEOUT_MS = 10_000;
+
+export type GroqKeyVerification =
+  | { ok: true; model?: string }
+  | { ok: false; code: GroqProviderErrorCode; retryAfterSeconds?: number | null };
+
+/**
+ * Settings "test my key": lists the models the key can use. Listing does not
+ * spend generation quota. A 401, 403 or 429 is final (retrying only burns the
+ * limit); a 5xx is retried once. The key never reaches a result or a log line.
+ */
+export async function verifyGroqKey(
+  rawKey: string,
+  options: { timeoutMs?: number; retryDelayMs?: number } = {},
+): Promise<GroqKeyVerification> {
+  const apiKey = rawKey.trim();
+  if (!apiKey) return { ok: false, code: "GROQ_KEY_INVALID" };
+  const timeoutMs = options.timeoutMs ?? VERIFY_TIMEOUT_MS;
+  const retryDelayMs = options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS;
+
+  for (let attempt = 0; ; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    let response: Response;
+    try {
+      response = await fetch(GROQ_MODELS_ENDPOINT, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: controller.signal,
+      });
+    } catch (error) {
+      const aborted = error instanceof Error && error.name === "AbortError";
+      logger.warn("ai.groq.verify_failed", { code: aborted ? "GROQ_TIMEOUT" : "GROQ_NETWORK_ERROR" });
+      return { ok: false, code: aborted ? "GROQ_TIMEOUT" : "GROQ_NETWORK_ERROR" };
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { data?: Array<{ id?: unknown }> };
+      const listed = Array.isArray(body.data) && body.data.some((entry) => entry?.id === DEFAULT_GROQ_MODEL);
+      logger.debug("ai.groq.verify_ok", { listedDefault: listed });
+      return listed ? { ok: true, model: DEFAULT_GROQ_MODEL } : { ok: true };
+    }
+
+    const errorBody = (await response.json().catch(() => ({}))) as GroqErrorBody;
+    const error = errorFromResponse(response, errorBody, apiKey);
+    logger.warn("ai.groq.verify_rejected", { status: response.status, code: error.code });
+    if (error.code === "GROQ_PROVIDER_UNAVAILABLE" && attempt === 0) {
+      await sleep(retryDelayMs);
+      continue;
+    }
+    return error.code === "GROQ_QUOTA_EXHAUSTED"
+      ? { ok: false, code: error.code, retryAfterSeconds: error.retryAfterSeconds ?? null }
+      : { ok: false, code: error.code };
+  }
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
