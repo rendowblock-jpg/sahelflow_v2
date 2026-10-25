@@ -71,7 +71,8 @@ function trustChips(ctx: Ctx): string {
     theme.trust.showSupportBadge && ["headset", t("storefront.studio.sellerSupport")],
   ].filter(Boolean) as Array<["check" | "phone" | "truck" | "headset", string]>;
   if (items.length === 0) return "";
-  return `<div class="sf-chips">${items.map(([i, label]) => `<span>${icon(i)}${esc(label)}</span>`).join("")}</div>`;
+  // The row scrolls sideways on a phone: it takes focus so a keyboard can scroll it, and a name so a screen reader says what it is.
+  return `<div class="sf-chips" role="group" tabindex="0" aria-label="${esc(t("storefront.studio.section.trust"))}">${items.map(([i, label]) => `<span>${icon(i)}${esc(label)}</span>`).join("")}</div>`;
 }
 
 /**

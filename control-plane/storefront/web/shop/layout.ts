@@ -180,6 +180,7 @@ export function documentShell(ctx: Ctx, page: PageParts): string {
     page.tabs ? "data-tabs" : "",
   ].filter(Boolean).join(" ");
 
+  // The order bar is position:fixed, so its place in the source does not move it; inside <main> it has a landmark (axe "region").
   return `<!doctype html>
 <html lang="${locale}" dir="${directionOf(locale)}">
 <head>
@@ -191,9 +192,10 @@ ${renderAnnouncement(ctx)}
 ${renderHeader(ctx, page.headExtra ?? "")}
 <main id="main">
 ${page.main}
+${page.bar ?? ""}
 </main>
 ${renderFooter(ctx, page.tagline)}
-${page.bar ?? ""}${page.tabs ?? ""}
+${page.tabs ?? ""}
 ${page.script ? `<script src="${esc(assets.js)}" defer></script>` : ""}${(page.script || page.fx) && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}
 </body>
 </html>`;
