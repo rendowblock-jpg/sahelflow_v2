@@ -1,0 +1,44 @@
+// Derived index for the inbox conversation search (PB-CONV-SEARCH-LOAD, slice 2: tables and triggers only).
+// Message bodies stay sealed. These tables hold only keyed hashes of normalised words (blind index, the same
+// key family as SearchProjectionToken, salted per conversation by the indexer), plus the bookkeeping that says
+// which messages still have to be (re)indexed. Nothing here is exported or shown; the privacy erase wipes it.
+// No foreign keys on purpose (same as SearchProjectionToken): SQLite triggers on Message and Conversation keep
+// the index consistent, including on cascade deletes. Design: audit/reports/conversation-search-index-design-20261025.md.
+
+model ConversationSearchDoc {
+  docId          Int    @id @default(autoincrement())
+  // "M" = one message, "C" = one conversation (contact-name and phone tokens, and the coverage marker)
+  kind           String
+  entityId       String
+  conversationId String
+
+  @@unique([kind, entityId])
+  @@index([conversationId])
+}
+
+// The migration creates this table WITHOUT ROWID (the hashes are 48-bit numbers, one row is about 32 bytes).
+model ConversationSearchToken {
+  docId     Int
+  // first 6 bytes of the keyed HMAC as a number
+  tokenHash BigInt
+
+  @@id([docId, tokenHash])
+  @@index([tokenHash, docId])
+}
+
+model ConversationSearchDirty {
+  kind           String
+  entityId       String
+  conversationId String
+
+  @@id([kind, entityId])
+  @@index([conversationId])
+}
+
+// One row, id "conversation-index". `scheme` names the tokenizer and the salting in use: a different tokenizer
+// or salt bumps it and every conversation falls back to the plain search until it has been indexed again.
+model ConversationSearchState {
+  id          String    @id
+  scheme      Int       @default(1)
+  completedAt DateTime?
+}

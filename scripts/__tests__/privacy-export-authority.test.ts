@@ -27,6 +27,12 @@ const DERIVED_MODELS_NOT_EXPORTED: Readonly<Record<string, string>> = {
     "Derived blind-index material: one keyed HMAC per search token (about 100-150 rows per customer). The hashes are meaningless without the installation-wrapped blind-index key, carry no subject data of their own, and would overrun the all-or-nothing 32 MiB export cap. The records they index are exported through Customer and Order.",
   SearchProjectionDirty:
     "Derived re-index bookkeeping (family, entityId, revision) rebuilt by the projection triggers from the exported Customer and Order records; it holds no data that is not already in those records.",
+  ConversationSearchToken:
+    "Derived blind-index material for the inbox conversation search: one keyed, per-conversation-salted 48-bit hash per word piece of a message or contact. Meaningless without the installation-wrapped blind-index key, carries no subject data of its own, and is rebuilt from the exported Conversation and Message records.",
+  ConversationSearchDoc:
+    "Derived index directory (kind, message or conversation id, conversation id) that numbers the documents the token rows point to; it holds only ids that are already in the exported Conversation and Message records.",
+  ConversationSearchDirty:
+    "Derived re-index queue (kind, entity id, conversation id) filled by database triggers and drained by the indexer; it holds no data that is not already in the exported Conversation and Message records.",
 };
 
 /**
