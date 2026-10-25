@@ -242,6 +242,8 @@ export async function drainConversationSearchDirty(
   const queue = await ports.client.$queryRawUnsafe<Array<{ kind: string; entityId: string }>>(
     `SELECT "kind", "entityId" FROM "ConversationSearchDirty" ORDER BY rowid LIMIT ${Math.max(1, Math.trunc(limit))}`,
   );
+  // An idle tick on a finished index must cost reads only: no write lock, no transaction.
+  if (queue.length === 0) return { indexed: 0, removed: 0, stale: 0, failed: 0, cleared: 0, remaining: 0 };
   const messageIds = queue.filter((row) => row.kind === "M").map((row) => row.entityId);
   const conversationRows = queue.filter((row) => row.kind === "C").map((row) => row.entityId);
   const read = await readSealed(ports.client, messageIds);
