@@ -302,9 +302,6 @@ describe("execution", () => {
   });
 
   it("never executes a sensitive verb directly", async () => {
-    // The tool registry keeps a Vitest-only legacy harness that runs tool
-    // bodies directly; policy tests opt into the production boundary.
-    vi.stubEnv("SF_AI_ACTION_POLICY_TEST", "true");
     const before = await db.customer.count();
     const outcome = await callMcpTool(session(), "create_customer", {
       name: "Agent Created",

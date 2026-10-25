@@ -194,13 +194,11 @@ function parseSse(text: string): Array<{ event: string; data: Record<string, unk
 }
 
 beforeEach(() => {
-  process.env.SF_AI_ACTION_POLICY_TEST = "true";
   harness.messages.length = 0;
   vi.stubGlobal("fetch", vi.fn());
 });
 
 afterEach(() => {
-  delete process.env.SF_AI_ACTION_POLICY_TEST;
   vi.unstubAllGlobals();
 });
 

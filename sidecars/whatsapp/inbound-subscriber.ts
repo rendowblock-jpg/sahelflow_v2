@@ -25,6 +25,7 @@
  * Kept free of the HTTP server and the provider socket so it can be tested.
  */
 import { describeError, type DiagnosticsSink } from "./diagnostics-log";
+import type { IngressJidKind, IngressRecorder } from "./ingress-health";
 import {
   isIndividualInboundJid,
   type IncomingMessage,
@@ -66,6 +67,15 @@ export interface InboundSubscriberDeps {
   spool: { enqueue(accountId: string, message: IncomingMessage): unknown };
   diagnostics: DiagnosticsSink;
   broadcast(event: SidecarEvent): void;
+  /** Counts the losses and the last customer message for /status. Optional: tests and old wiring omit it. */
+  health?: IngressRecorder;
+}
+
+/** Only the kind of chat address leaves this function, never the address. */
+function jidKind(jid: string | null | undefined): IngressJidKind {
+  if (jid?.endsWith("@lid")) return "lid";
+  if (jid?.endsWith("@s.whatsapp.net")) return "phone";
+  return "other";
 }
 
 export function createInboundSubscriber(
@@ -73,6 +83,15 @@ export function createInboundSubscriber(
 ): (event: SidecarEvent) => void {
   const { diagnostics, spool } = deps;
   let earlyLines = 0;
+  // The health report must never be able to break the inbound path.
+  const report = (fn: (health: IngressRecorder) => void): void => {
+    if (!deps.health) return;
+    try {
+      fn(deps.health);
+    } catch {
+      // Counting is best effort.
+    }
+  };
 
   return (event) => {
     if (event.type !== "message" || !event.message) {
@@ -115,6 +134,7 @@ export function createInboundSubscriber(
         reason: "no-paired-account",
         connection: decision.connection,
       });
+      report((health) => health.recordLost("noPairedAccount"));
       return;
     }
     if (decision.beforeOpen && earlyLines < EARLY_LINES_PER_PROCESS) {
@@ -127,12 +147,19 @@ export function createInboundSubscriber(
       // enqueue() performs an atomic synchronous file commit before returning.
       // It schedules app delivery; this callback intentionally does not broadcast.
       spool.enqueue(decision.accountId, event.message);
+      report((health) =>
+        health.recordSpooled({
+          fromMe: event.message?.key.fromMe === true,
+          kind: jidKind(event.message?.key.remoteJid),
+        }),
+      );
     } catch (error) {
       console.error(
         "[sahelflow-whatsapp-sidecar] failed to durably spool inbound message",
         error instanceof Error ? error.message : String(error),
       );
       diagnostics.record("inbound.spool-failed", describeError(error));
+      report((health) => health.recordLost("spoolFailed"));
     }
   };
 }

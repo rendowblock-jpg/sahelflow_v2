@@ -1,9 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runWithAiActionProposalRuntime } from "../proposal-runtime";
 import {
   getAllToolDefinitions,
   getTool,
+  registerGatedTool,
   registerTool,
   type ChatTool,
   type ToolContext,
@@ -26,19 +27,14 @@ const context: ToolContext = {
   shop: TEST_SHOP_CONTEXT,
 };
 
-beforeEach(() => {
-  process.env.SF_AI_ACTION_POLICY_TEST = "true";
-});
-
 afterEach(() => {
-  delete process.env.SF_AI_ACTION_POLICY_TEST;
   vi.restoreAllMocks();
 });
 
 describe("central AI tool execution policy", () => {
   it("requires a persisted proposal runtime for sensitive tools", async () => {
     const legacyMutation = vi.fn();
-    registerTool(tool("create_product", legacyMutation));
+    registerGatedTool(tool("create_product", legacyMutation));
 
     await expect(
       getTool("create_product")!.execute(
@@ -65,7 +61,7 @@ describe("central AI tool execution policy", () => {
       },
       proposalDigest: "1".repeat(64),
     }));
-    registerTool(tool("create_product", legacyMutation));
+    registerGatedTool(tool("create_product", legacyMutation));
 
     const result = await runWithAiActionProposalRuntime(
       { createProposal },
@@ -96,7 +92,7 @@ describe("central AI tool execution policy", () => {
 
   it("hides blocked provider actions and refuses their execution", async () => {
     const legacyProviderCall = vi.fn();
-    registerTool(tool("assign_order_to_delivery", legacyProviderCall));
+    registerGatedTool(tool("assign_order_to_delivery", legacyProviderCall));
 
     expect(
       getAllToolDefinitions().some(
