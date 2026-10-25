@@ -161,6 +161,26 @@ Output: {"phone":"0612345678","wilaya":"Oran","items":[{"productName":"parfum","
 /** Catalog names sent with a message are bounded: at most this many. */
 export const EXTRACTION_PROMPT_CATALOG_LIMIT = 150;
 
+const RIGHT_DOUBLE_QUOTE = "\u201D";
+
+function withoutTrailingBackslashes(text: string): string {
+  let end = text.length;
+  while (end > 0 && text.charCodeAt(end - 1) === 92) end -= 1;
+  return end === text.length ? text : text.slice(0, end);
+}
+
+/**
+ * The customer's text sits between straight double quotes in the user prompt.
+ * A straight quote inside it would close that fence and the rest would read as
+ * the next instruction. Each one becomes U+201D, backslashes in front of it go
+ * (so `\"` cannot pose as an escape), and so do backslashes at the very end
+ * (they would escape the closing quote). Nothing else is changed. Split and
+ * trim, not a regex: 16,000 backslashes must not cost quadratic time.
+ */
+export function fenceCustomerMessage(message: string): string {
+  return message.split('"').map(withoutTrailingBackslashes).join(RIGHT_DOUBLE_QUOTE);
+}
+
 export const EXTRACTION_USER_PROMPT = (message: string, catalogNames: readonly string[] = []) => {
   const catalog = catalogNames
     .slice(0, EXTRACTION_PROMPT_CATALOG_LIMIT)
@@ -169,7 +189,7 @@ export const EXTRACTION_USER_PROMPT = (message: string, catalogNames: readonly s
   const catalogBlock = catalog
     ? `\n\nThe seller's catalog (FD-064). When the customer clearly means one of these products, return its name EXACTLY as written here; when it is unclear, return the customer's own words:\n${catalog}`
     : "";
-  return `Extract the order from this Algerian COD message. Remember: normalize Arabic-Indic digits to Latin, map wilaya numbers to French names, and return ONLY valid JSON.${catalogBlock}\n\nMessage:\n"${message}"\n\nReturn only the JSON.`;
+  return `Extract the order from this Algerian COD message. Remember: normalize Arabic-Indic digits to Latin, map wilaya numbers to French names, and return ONLY valid JSON.${catalogBlock}\n\nMessage:\n"${fenceCustomerMessage(message)}"\n\nReturn only the JSON.`;
 };
 
 /**

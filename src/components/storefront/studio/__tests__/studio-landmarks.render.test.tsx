@@ -99,4 +99,20 @@ describe("Storefront Studio editor page structure", () => {
       previous = level;
     }
   });
+
+  // Two unnamed <aside> landmarks fail axe landmark-unique; each needs its own name.
+  it("gives the panels aside and the inspector aside two different, non-empty names", () => {
+    const { container } = mount();
+    const asides = Array.from(container.querySelectorAll("aside"));
+    expect(asides).toHaveLength(2);
+    const names = asides.map((aside) => (aside.getAttribute("aria-label") ?? "").trim());
+    expect(names.every((name) => name.length > 0)).toBe(true);
+    expect(new Set(names).size).toBe(2);
+    expect(container.querySelector("aside[data-studio-panels]")?.getAttribute("aria-label")).toBe(
+      "storefront.studio.sidePanelLabel",
+    );
+    expect(container.querySelector("aside[data-studio-inspector]")?.getAttribute("aria-label")).toBe(
+      "storefront.studio.inspector",
+    );
+  });
 });

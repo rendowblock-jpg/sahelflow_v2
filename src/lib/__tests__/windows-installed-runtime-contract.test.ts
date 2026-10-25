@@ -69,7 +69,10 @@ describe("installed Windows runtime contract", () => {
     expect(desktop).not.toContain("startup_recovery::show_starting");
     expect(desktop).not.toContain('get_webview_window("startup")');
     expect(desktop).not.toContain('label == "main" || label == "startup"');
-    expect(desktop).toContain("if window.is_visible().unwrap_or(false)");
+    // A second launch is answered by second_launch.rs; a visible workspace is still shown and focused as before.
+    const secondLaunch = read("src-tauri/src/second_launch.rs");
+    expect(desktop).toContain("second_launch::handle(app)");
+    expect(secondLaunch).toContain("window.is_visible().unwrap_or(false)");
     expect(desktop).toContain('"workspace-window-pending"');
     expect(desktop).toContain("std::thread::spawn(move ||");
     expect(desktop).toContain("struct PreparedRuntime");

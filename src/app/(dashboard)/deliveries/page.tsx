@@ -144,11 +144,11 @@ export default async function DeliveriesPage({
         <TabsList className="h-auto flex-wrap">
           {filters.map((filter) => (
             // The tabs are links to a re-rendered page, so no panel with the
-            // generated id exists; without this Radix names one anyway.
+            // generated id exists; see TabsTrigger for why this is a prop.
             <TabsTrigger
               key={filter.value}
               value={filter.value}
-              aria-controls={undefined}
+              linksToPage
               asChild
             >
               <Link

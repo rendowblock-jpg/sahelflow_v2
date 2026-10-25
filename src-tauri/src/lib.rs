@@ -23,6 +23,7 @@ mod packaged_runtime;
 mod process_authority;
 mod runtime_protocol;
 mod runtime_supervisor;
+mod second_launch;
 
 #[cfg(not(debug_assertions))]
 fn compiled_license_configuration() -> [(&'static str, &'static str); 3] {
@@ -103,6 +104,11 @@ impl ShutdownCoordinator {
 
     fn is_finished(&self) -> bool {
         self.phase.load(Ordering::Acquire) == SHUTDOWN_COMPLETE
+    }
+
+    /// True once a normal close or an update owns the shutdown.
+    fn has_begun(&self) -> bool {
+        self.phase.load(Ordering::Acquire) != SHUTDOWN_IDLE
     }
 }
 
@@ -328,15 +334,7 @@ pub fn run() {
         builder
     } else {
         builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            use tauri::Manager;
-            if let Some(window) = app.get_webview_window("main") {
-                if window.is_visible().unwrap_or(false) {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                    return;
-                }
-            }
-            launch_screen::focus(app);
+            second_launch::handle(app);
         }))
     };
     let application = builder

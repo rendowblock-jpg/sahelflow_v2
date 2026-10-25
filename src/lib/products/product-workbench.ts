@@ -1,3 +1,4 @@
+import { foldedRowIds, rowSignature } from "@/lib/search/list-search-candidates";
 import "server-only";
 
 import { db } from "@/lib/db";
@@ -119,6 +120,8 @@ export function productListWhere(opts: {
   activeOnly?: boolean;
   q?: string | null;
   lowStock?: boolean;
+  /** Ids already matched with the Arabic/French fold (see foldedRowIds); null/absent = SQL contains only. */
+  foldedIds?: readonly string[] | null;
 }) {
   const q = opts.q?.trim() ?? "";
   return {
@@ -128,7 +131,13 @@ export function productListWhere(opts: {
       ? { isActive: true, stock: { lte: db.product.fields.lowStockThreshold } }
       : {}),
     ...(q
-      ? { OR: [{ name: { contains: q } }, { sku: { contains: q } }] }
+      ? {
+          OR: [
+            { name: { contains: q } },
+            { sku: { contains: q } },
+            ...(opts.foldedIds ? [{ id: { in: [...opts.foldedIds] } }] : []),
+          ],
+        }
       : {}),
   };
 }
@@ -145,7 +154,31 @@ async function queryProducts(
   },
 ) {
   const access = resolveProductWorkbenchAccess(actorContext);
-  const where = productListWhere(opts);
+  const searchText = opts.q?.trim() ?? "";
+  const foldedIds = searchText
+    ? await foldedRowIds(
+        (take) =>
+          db.product.findMany({
+            where: { deletedAt: null },
+            select: { id: true, name: true, sku: true },
+            take,
+          }),
+        searchText,
+        (row) => [row.name, row.sku],
+        {
+          key: "product:name+sku",
+          signature: async () => {
+            const stats = await db.product.aggregate({
+              where: { deletedAt: null },
+              _count: { _all: true },
+              _max: { updatedAt: true },
+            });
+            return rowSignature(stats._count._all, stats._max.updatedAt);
+          },
+        },
+      )
+    : null;
+  const where = productListWhere({ ...opts, foldedIds });
   const sourceRows = await db.product.findMany({
     where,
     select: {

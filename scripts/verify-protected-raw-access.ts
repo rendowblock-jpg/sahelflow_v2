@@ -35,6 +35,12 @@ const EXPLICIT_RAW_ALLOWLIST: Readonly<
   Record<string, Readonly<Partial<Record<RawAccessKind, number>>>>
 > = {
   "src/app/api/internal/runtime-ready/route.ts": { dynamic: 2 },
+  // List search token lookup (PB-LIST-SEARCH-SPEED). One read of SearchProjectionToken, which holds
+  // a token hash and an entity id and no sealed or personal column. Every value is a bound
+  // Prisma.sql parameter; the index name is a literal. SQLite only uses the (family, tokenHash)
+  // index when it is named, which cuts the lookup from about 200 ms to 6 ms at 10,000 customers.
+  // If the hinted query fails the caller falls back to the model API.
+  "src/lib/search/local-search-projection.ts": { "canonical-raw-method": 1 },
 };
 
 function extension(path: string): string {
