@@ -27,7 +27,9 @@ afterEach(async () => {
   await disconnectTestPrisma(db);
 });
 
-type Step = { kind: "refund"; amount: number } | { kind: "reverse"; pick: number };
+// "edge" asks for what is still refundable plus delta (-1, 0 or +1), worked out when the step runs:
+// random amounts almost never land on the exact boundary, where an off-by-one in the cap would hide.
+type Step = { kind: "refund"; amount: number } | { kind: "edge"; delta: -1 | 0 | 1 } | { kind: "reverse"; pick: number };
 
 function generateOrder(rng: SeededRandom) {
   const quantity = rng.int(1, 5);
@@ -35,6 +37,7 @@ function generateOrder(rng: SeededRandom) {
   const total = quantity * unitPrice;
   const steps: Step[] = Array.from({ length: rng.int(1, 7) }, (): Step => {
     if (rng.chance(0.25)) return { kind: "reverse", pick: rng.int(0, 1_000) };
+    if (rng.chance(0.3)) return { kind: "edge", delta: rng.pick([-1, 0, 1] as const) };
     const roll = rng.int(0, 9);
     // Mostly sane amounts, sometimes the whole order, sometimes more than it is worth.
     const amount = roll < 5 ? rng.int(1, Math.max(1, Math.floor(total / 2))) : roll < 7 ? total : roll < 9 ? rng.int(1, total) : total + rng.int(1, 5_000);
@@ -54,6 +57,7 @@ describe("refunds on a delivered order", () => {
     const product = await seedProduct(db, { stock: 0 });
     let refused = 0;
     let settled = 0;
+    const edgeSeen: Record<string, number> = {};
     const ran = await forAllAsync(
       "refund invariants",
       { seed: 0x2ef001, runs: 60, minRuns: 50 },
@@ -84,14 +88,21 @@ describe("refunds on a delivered order", () => {
           attempt += 1;
           const before = await refundsInForce(order.id);
           const inForce = before.reduce((sum, refund) => sum + refund.amount, 0);
-          if (step.kind === "refund") {
-            const outcome = await createRefund(context, { orderId: order.id, amount: step.amount, method: "cash", idempotencyKey: `prop-${counter}-${attempt}` }).then(
+          if (step.kind === "refund" || step.kind === "edge") {
+            const amount = step.kind === "refund" ? step.amount : total - inForce + step.delta;
+            if (amount < 1) continue;
+            const outcome = await createRefund(context, { orderId: order.id, amount, method: "cash", idempotencyKey: `prop-${counter}-${attempt}` }).then(
               () => "ok",
               () => "refused",
             );
             // Accepted exactly when it fits under what is still refundable.
-            expect(outcome).toBe(inForce + step.amount <= total ? "ok" : "refused");
+            expect(outcome).toBe(inForce + amount <= total ? "ok" : "refused");
             if (outcome === "refused") refused += 1;
+            if (step.kind === "edge") {
+              edgeSeen[String(step.delta)] = (edgeSeen[String(step.delta)] ?? 0) + 1;
+              if (step.delta === 1) expect(outcome).toBe("refused");
+              if (step.delta === 0) expect(outcome).toBe("ok");
+            }
           } else {
             const target = before[step.pick % Math.max(1, before.length)];
             if (target) await reverseRefund(context, target.id).catch(() => undefined);
@@ -118,5 +129,8 @@ describe("refunds on a delivered order", () => {
     // The generator must reach both a refused refund and a fully settled order.
     expect(refused).toBeGreaterThan(5);
     expect(settled).toBeGreaterThan(5);
+    // ...and the boundary itself: exactly the refundable amount (accepted) and one dinar more (refused).
+    expect(edgeSeen["0"] ?? 0).toBeGreaterThan(3);
+    expect(edgeSeen["1"] ?? 0).toBeGreaterThan(3);
   }, 120_000);
 });
