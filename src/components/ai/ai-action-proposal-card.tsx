@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   Ban,
@@ -11,7 +11,10 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import type { AiActionProposalHandle } from "@/components/ai/ai-workspace-types";
+import type {
+  AiActionProposalHandle,
+  AiApprovalDetail,
+} from "@/components/ai/ai-workspace-types";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -123,6 +126,141 @@ function summaryValue(
   return null;
 }
 
+const DETAIL_LABELS: Record<string, AiWorkspaceCopyKey> = {
+  customer: "fieldCustomer",
+  order: "fieldOrder",
+  product: "fieldProduct",
+  variant: "detailVariant",
+  category: "fieldCategory",
+  lines: "detailLines",
+  wilaya: "fieldWilaya",
+  commune: "fieldCommune",
+  address: "detailAddress",
+  phone: "fieldPhone",
+  phone2: "detailPhone2",
+  notes: "detailNotes",
+  reason: "fieldReason",
+  mode: "fieldMode",
+  fromStatus: "fieldFrom",
+  toStatus: "fieldTo",
+  fromStock: "detailStockFrom",
+  toStock: "detailStockTo",
+  fromPrice: "detailPriceFrom",
+  toPrice: "detailPriceTo",
+  price: "fieldPrice",
+  stock: "fieldStock",
+  sku: "detailSku",
+  cost: "detailCost",
+  name: "fieldName",
+};
+
+/**
+ * The exact values the approver is checking. Always open (never behind "more").
+ * Phone and numbers are forced left-to-right and isolated so Arabic text around
+ * them cannot reorder the digits; long notes scroll instead of being cut.
+ */
+function ApprovalDetails({
+  details,
+  locale,
+  translate,
+}: {
+  details: AiApprovalDetail[];
+  locale: AiWorkspaceLocale;
+  translate: Translate;
+}) {
+  const copy = (key: AiWorkspaceCopyKey) => getAiWorkspaceCopy(locale, key);
+  const ltr = { unicodeBidi: "isolate" } as const;
+  const unavailable = (
+    <span className="text-muted-foreground">{copy("detailUnavailable")}</span>
+  );
+  const number = numberFormatter(intlLocale(locale));
+  return (
+    <div data-ai-proposal-details="" className="space-y-2.5">
+      <p className="text-xs font-semibold text-foreground">{copy("detailsTitle")}</p>
+      <dl className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
+        {details.map((detail) => {
+          const labelKey = DETAIL_LABELS[detail.key];
+          if (!labelKey) return null;
+          const wide = detail.kind === "longText" || detail.kind === "list";
+          let content: ReactNode = unavailable;
+          const { value } = detail;
+          if (Array.isArray(value)) {
+            content = (
+              <ul className="space-y-1">
+                {value.map((line, index) => (
+                  <li key={index} className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 break-words" dir="auto">
+                      {line.productName ?? copy("detailUnavailable")}
+                      {line.variantName ? ` · ${line.variantName}` : ""}
+                    </span>
+                    <span dir="ltr" style={ltr} className="shrink-0 tabular-nums">
+                      × {number.format(line.quantity)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            );
+          } else if (value !== null) {
+            if (detail.kind === "phone") {
+              content = (
+                <span dir="ltr" style={ltr} className="tabular-nums">
+                  {String(value)}
+                </span>
+              );
+            } else if (detail.kind === "money" && typeof value === "number") {
+              content = (
+                <span dir="ltr" style={ltr} className="tabular-nums">
+                  {formatDZD(value, locale)}
+                </span>
+              );
+            } else if (detail.kind === "quantity" && typeof value === "number") {
+              content = (
+                <span dir="ltr" style={ltr} className="tabular-nums">
+                  {number.format(value)}
+                </span>
+              );
+            } else if (detail.kind === "longText") {
+              content = (
+                <div
+                  role="region"
+                  tabIndex={0}
+                  aria-label={copy(labelKey)}
+                  dir="auto"
+                  className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words rounded-control bg-muted/30 px-2 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {String(value)}
+                </div>
+              );
+            } else if (detail.key === "order") {
+              content = <TechnicalValue>{String(value)}</TechnicalValue>;
+            } else if (detail.key === "fromStatus" || detail.key === "toStatus") {
+              content = <span dir="auto">{localizeOrderStatus(String(value), translate)}</span>;
+            } else if (detail.key === "mode") {
+              content = (
+                <span dir="auto">
+                  {value === "replace"
+                    ? copy("detailModeReplace")
+                    : value === "append"
+                      ? copy("detailModeAppend")
+                      : String(value)}
+                </span>
+              );
+            } else {
+              content = <span dir="auto">{String(value)}</span>;
+            }
+          }
+          return (
+            <div key={detail.key} className={wide ? "min-w-0 sm:col-span-2" : "min-w-0"}>
+              <dt className="text-xs font-medium text-muted-foreground">{copy(labelKey)}</dt>
+              <dd className="mt-0.5 break-words text-sm font-medium">{content}</dd>
+            </div>
+          );
+        })}
+      </dl>
+    </div>
+  );
+}
+
 export function AiActionProposalCard({
   handle,
   approving,
@@ -202,6 +340,9 @@ export function AiActionProposalCard({
     const formatted = summaryValue(key, value, locale, t);
     return formatted === null ? [] : [{ key, value: formatted }];
   });
+  // With exact details the summary grid would repeat them, so it steps aside.
+  const details = proposal.details ?? [];
+  const hasDetails = details.length > 0;
 
   const createdLabel = (() => {
     try {
@@ -251,7 +392,11 @@ export function AiActionProposalCard({
       </p>
 
       <div className="space-y-3.5 p-4">
-        {summary.length > 0 ? (
+        {hasDetails ? (
+          <ApprovalDetails details={details} locale={locale} translate={t} />
+        ) : null}
+
+        {!hasDetails && summary.length > 0 ? (
           <dl className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
             {(fieldsExpanded ? summary : summary.slice(0, 8)).map((field) => (
               <div key={field.key} className="min-w-0">
@@ -276,7 +421,7 @@ export function AiActionProposalCard({
           with no way to reveal the rest, so the operator could not see the full
           set of values being approved. The hidden fields are now reachable.
         */}
-        {summary.length > 8 ? (
+        {!hasDetails && summary.length > 8 ? (
           <button
             type="button"
             data-ai-proposal-fields-toggle={fieldsExpanded ? "expanded" : "collapsed"}

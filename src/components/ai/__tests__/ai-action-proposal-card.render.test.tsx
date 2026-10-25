@@ -38,8 +38,14 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+const i18n = vi.hoisted(() => ({ locale: "en" }));
+
 vi.mock("@/hooks/use-i18n", () => ({
-  useI18n: () => ({ t: (key: string) => key, locale: "en", dir: "ltr" }),
+  useI18n: () => ({
+    t: (key: string) => key,
+    locale: i18n.locale,
+    dir: i18n.locale === "ar" ? "rtl" : "ltr",
+  }),
 }));
 
 /**
@@ -159,5 +165,91 @@ describe("AI action proposal card", () => {
     expect(
       document.querySelector('[data-ai-proposal-approve="armed"]'),
     ).toBeNull();
+  });
+});
+
+describe("AiActionProposalCard exact details", () => {
+  const NOTE = "ملاحظة ".repeat(285) + "FIN"; // about 2,000 characters
+  const details = [
+    { key: "customer", kind: "text", value: "Karim D." },
+    { key: "phone", kind: "phone", value: "0661234567" },
+    { key: "address", kind: "longText", value: "Cité 5 Juillet, n° 40" },
+    { key: "notes", kind: "longText", value: NOTE },
+    { key: "sku", kind: "text", value: "SAC-01" },
+    { key: "category", kind: "text", value: "Bagages" },
+    { key: "variant", kind: "text", value: "42" },
+    {
+      key: "lines",
+      kind: "list",
+      value: [
+        { productName: "Sneakers", variantName: "noir", quantity: 2 },
+        { productName: null, variantName: null, quantity: 1 },
+      ],
+    },
+  ] as const;
+
+  function handle() {
+    return {
+      proposalDigest: "digest",
+      proposal: {
+        ...makeProposal(),
+        toolName: "create_order",
+        executionState: null,
+        lastErrorCode: null,
+        summary: {
+          customerName: "Karim D.",
+          phoneLast4: "4567",
+          sku: "SAC-01",
+          categoryName: "Bagages",
+          variantName: "42",
+          wilaya: "Alger",
+        },
+        details: details.map((detail) => ({ ...detail })),
+      },
+    } as never;
+  }
+
+  function show() {
+    return render(
+      <AiActionProposalCard handle={handle()} approving={false} onApprove={vi.fn()} />,
+    );
+  }
+
+  it("renders address and phone in full, with each order line", () => {
+    show();
+    expect(screen.getByText("0661234567")).toBeTruthy();
+    expect(screen.getByText("Cité 5 Juillet, n° 40")).toBeTruthy();
+    expect(screen.getByText(/Sneakers/)).toBeTruthy();
+    expect(screen.getByText("Not available")).toBeTruthy();
+  });
+
+  it("keeps the phone left-to-right and isolated inside Arabic", () => {
+    i18n.locale = "ar";
+    try {
+      show();
+      const phone = screen.getByText("0661234567");
+      expect(phone.getAttribute("dir")).toBe("ltr");
+      expect(phone.style.unicodeBidi).toBe("isolate");
+    } finally {
+      i18n.locale = "en";
+    }
+  });
+
+  it("makes a 2,000-character note fully reachable by scrolling, not cut", () => {
+    show();
+    const note = screen.getByText(NOTE);
+    expect(note.textContent).toBe(NOTE);
+    expect(note.getAttribute("tabindex")).toBe("0");
+    expect(note.className).toContain("overflow-y-auto");
+    expect(note.className).not.toMatch(/truncate|line-clamp/);
+  });
+
+  it("shows the formerly dropped fields once, and the masked phone not at all", () => {
+    show();
+    expect(screen.getAllByText("0661234567")).toHaveLength(1);
+    expect(screen.queryByText("4567")).toBeNull();
+    expect(screen.getAllByText("SAC-01")).toHaveLength(1);
+    expect(screen.getAllByText("Bagages")).toHaveLength(1);
+    expect(screen.getAllByText("42")).toHaveLength(1);
   });
 });
