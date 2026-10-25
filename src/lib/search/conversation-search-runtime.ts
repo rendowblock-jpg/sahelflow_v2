@@ -5,6 +5,7 @@ import { deriveExistingShopBlindIndexes } from "@/lib/crypto/protected-record";
 import { db, shopContext } from "@/lib/db";
 import {
   runConversationSearchIndexStep,
+  shopKeyRowPresent,
   type IndexerClient,
   type IndexerPorts,
   type SealedContact,
@@ -31,10 +32,7 @@ function ports(): IndexerPorts {
     // `db` serves the key rows from a cache filled at start, so it never reports a row that was lost afterwards:
     // the row is looked up with plain SQL first.
     derive: async (values, reference) => {
-      const present = await client.$queryRawUnsafe<unknown[]>(
-        `SELECT 1 AS present FROM "ProtectedKeyAuthority" WHERE "purpose" = 'shop-blind-index' LIMIT 1`,
-      );
-      if (present.length === 0) return null;
+      if (!(await shopKeyRowPresent(client))) return null;
       return deriveExistingShopBlindIndexes(db as unknown as BlindIndexClient, values, reference, {
         shopContext,
         normalize: (value) => value,
