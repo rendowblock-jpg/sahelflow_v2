@@ -30,7 +30,9 @@ import type { GoldenEntry } from "./golden-set";
 import { isHoldout } from "./split";
 
 /** Real extraction prompt (about 3,400 tokens) plus the answer. */
-export const MIN_REMAINING_TOKENS = 4_000;
+// A call needs the prompt (3,272 to 3,283 measured) plus the 800 completion tokens the request reserves. 4,000 was too low:
+// the first live slice sent a call with 4,074 left and Groq answered 429.
+export const MIN_REMAINING_TOKENS = 4_200;
 export const DEFAULT_TOKEN_BUDGET = 180_000;
 const DEFAULT_FALLBACK_GAP_MS = 30_000;
 const MAX_WAIT_MS = 120_000;
