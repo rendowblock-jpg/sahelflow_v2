@@ -47,10 +47,16 @@ CREATE TABLE "ConversationSearchState" (
 );
 INSERT INTO "ConversationSearchState" ("id", "scheme") VALUES ('conversation-index', 1);
 
+-- Trigger bodies never say "INSERT OR IGNORE": SQLite lets the OUTER statement's conflict policy override it, and Prisma's
+-- upsert is "INSERT ... ON CONFLICT DO UPDATE", so a row that was already queued made the app's own write fail with a
+-- unique-constraint error (found by the full suite: the WhatsApp inbound processor stored nothing). The queue insert uses
+-- its own "ON CONFLICT (kind, entityId) DO NOTHING", which the outer statement cannot override.
+
 -- A new message is queued for indexing.
 CREATE TRIGGER "conversation_search_message_insert" AFTER INSERT ON "Message" BEGIN
-  INSERT OR IGNORE INTO "ConversationSearchDirty" ("kind", "entityId", "conversationId")
-    VALUES ('M', NEW."id", NEW."conversationId");
+  INSERT INTO "ConversationSearchDirty" ("kind", "entityId", "conversationId")
+    VALUES ('M', NEW."id", NEW."conversationId")
+    ON CONFLICT ("kind", "entityId") DO NOTHING;
 END;
 
 -- A message whose sealed body (or conversation) changed loses its index rows and is queued again.
@@ -59,8 +65,9 @@ CREATE TRIGGER "conversation_search_message_body_update" AFTER UPDATE OF "body",
   DELETE FROM "ConversationSearchToken" WHERE "docId" IN
     (SELECT "docId" FROM "ConversationSearchDoc" WHERE "kind" = 'M' AND "entityId" = OLD."id");
   DELETE FROM "ConversationSearchDoc" WHERE "kind" = 'M' AND "entityId" = OLD."id";
-  INSERT OR IGNORE INTO "ConversationSearchDirty" ("kind", "entityId", "conversationId")
-    VALUES ('M', NEW."id", NEW."conversationId");
+  INSERT INTO "ConversationSearchDirty" ("kind", "entityId", "conversationId")
+    VALUES ('M', NEW."id", NEW."conversationId")
+    ON CONFLICT ("kind", "entityId") DO NOTHING;
 END;
 
 -- A deleted message (also by cascade) leaves nothing behind.
@@ -73,16 +80,18 @@ END;
 
 -- The contact part of a conversation (name and phone) is indexed as its own document.
 CREATE TRIGGER "conversation_search_conversation_insert" AFTER INSERT ON "Conversation" BEGIN
-  INSERT OR IGNORE INTO "ConversationSearchDirty" ("kind", "entityId", "conversationId")
-    VALUES ('C', NEW."id", NEW."id");
+  INSERT INTO "ConversationSearchDirty" ("kind", "entityId", "conversationId")
+    VALUES ('C', NEW."id", NEW."id")
+    ON CONFLICT ("kind", "entityId") DO NOTHING;
 END;
 
 CREATE TRIGGER "conversation_search_conversation_contact_update" AFTER UPDATE OF "contactName", "contactPhone" ON "Conversation" BEGIN
   DELETE FROM "ConversationSearchToken" WHERE "docId" IN
     (SELECT "docId" FROM "ConversationSearchDoc" WHERE "kind" = 'C' AND "entityId" = OLD."id");
   DELETE FROM "ConversationSearchDoc" WHERE "kind" = 'C' AND "entityId" = OLD."id";
-  INSERT OR IGNORE INTO "ConversationSearchDirty" ("kind", "entityId", "conversationId")
-    VALUES ('C', NEW."id", NEW."id");
+  INSERT INTO "ConversationSearchDirty" ("kind", "entityId", "conversationId")
+    VALUES ('C', NEW."id", NEW."id")
+    ON CONFLICT ("kind", "entityId") DO NOTHING;
 END;
 
 CREATE TRIGGER "conversation_search_conversation_delete" AFTER DELETE ON "Conversation" BEGIN

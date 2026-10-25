@@ -202,6 +202,44 @@ describe("conversation search index triggers", () => {
     expect(await docCount("C", kept.id)).toBe(1);
   });
 
+  it("never breaks the app's own write when the queue row is already there (Prisma upsert = INSERT ... ON CONFLICT DO UPDATE)", async () => {
+    // Found by the full Modal suite, not by this file: the WhatsApp inbound processor writes the conversation with
+    // tx.conversation.upsert. SQLite lets the OUTER statement's conflict policy override the "OR IGNORE" written inside a
+    // trigger body, so a queued row that nobody had indexed yet made the second upsert fail with a unique-constraint error
+    // and the customer's message was never stored. The trigger must say ON CONFLICT ... DO NOTHING instead.
+    sequence += 1;
+    const sourceId = `trigger-test-upsert-${sequence}`;
+    const where = { channel_sourceId: { channel: "whatsapp", sourceId } };
+    const create = { channel: "whatsapp", contactName: "Karim", contactPhone: "0555123456", sourceId, unreadCount: 1 };
+
+    const first = await db.conversation.upsert({ where, create, update: {}, select: { id: true } });
+    expect(await dirtyCount("C", first.id)).toBe(1);
+
+    // Nothing has indexed it yet, so the queue row is still there when the contact columns are rewritten.
+    const again = await db.conversation.upsert({
+      where,
+      create,
+      update: { contactName: "Karim B", contactPhone: "0555123457", unreadCount: { increment: 1 } },
+      select: { id: true },
+    });
+    expect(again.id).toBe(first.id);
+    expect(await dirtyCount("C", first.id)).toBe(1);
+
+    sequence += 1;
+    const messageId = `trigger-test-message-${sequence}`;
+    const messageCreate = {
+      id: messageId,
+      conversationId: first.id,
+      body: "bonjour",
+      direction: "inbound",
+      timestamp: new Date("2026-10-25T10:00:00Z"),
+    };
+    await db.message.upsert({ where: { id: messageId }, create: messageCreate, update: {} });
+    expect(await dirtyCount("M", messageId)).toBe(1);
+    await db.message.upsert({ where: { id: messageId }, create: messageCreate, update: { body: "salut" } });
+    expect(await dirtyCount("M", messageId)).toBe(1);
+  });
+
   it("has exactly one state row, scheme 1, and no index document that was not written by the indexer", async () => {
     const states = await rows<{ id: string; scheme: bigint | number; completedAt: unknown }>(
       `SELECT "id","scheme","completedAt" FROM "ConversationSearchState"`,

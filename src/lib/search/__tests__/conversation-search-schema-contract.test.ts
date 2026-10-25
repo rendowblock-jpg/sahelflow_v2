@@ -36,6 +36,19 @@ describe("conversation search migration", () => {
     expect(migration).toContain('ON "ConversationSearchToken"("tokenHash", "docId")');
   });
 
+  it("never lets a trigger body depend on OR IGNORE / OR REPLACE: the app's own upsert would override it and fail the write", () => {
+    const code = migration
+      .split("\n")
+      .filter((line) => !line.trimStart().startsWith("--"))
+      .join("\n");
+    expect(code).not.toMatch(/\bOR\s+(IGNORE|REPLACE|ABORT|FAIL|ROLLBACK)\b/i);
+    // Every queue insert names its own conflict target instead.
+    const queueInserts = code.match(/INSERT INTO "ConversationSearchDirty"/g) ?? [];
+    const nothing = code.match(/ON CONFLICT \("kind", "entityId"\) DO NOTHING;/g) ?? [];
+    expect(queueInserts).toHaveLength(4);
+    expect(nothing).toHaveLength(queueInserts.length);
+  });
+
   it("has the six triggers, each on the column set that matters", () => {
     expect((migration.match(/^CREATE TRIGGER/gm) ?? []).length).toBe(6);
     expect(migration).toContain('AFTER INSERT ON "Message"');
