@@ -188,6 +188,7 @@
   "aiKey.chatgpt.pinHelp": "Enter your PIN to continue.",
   "aiKey.chatgpt.pinLabel": "PIN",
   "aiKey.chatgpt.pinConfirm": "Confirm",
+  "aiKey.order.chatgptNote": "ChatGPT is asked after these two. If ChatGPT is the only one you set up, SahelFlow uses it for the messages the offline reader cannot read.",
   "analytics.aovTrend": "Avg Order Value Trend",
   "analytics.aovTrendDesc": "Average order value over time",
   "analytics.avgOrderValue": "Avg Order Value",

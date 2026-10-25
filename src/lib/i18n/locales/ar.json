@@ -188,6 +188,7 @@
   "aiKey.chatgpt.pinHelp": "أدخل الرمز السري للمتابعة.",
   "aiKey.chatgpt.pinLabel": "الرمز السري",
   "aiKey.chatgpt.pinConfirm": "تأكيد",
+  "aiKey.order.chatgptNote": "يُستعمل ChatGPT بعد هذين الخيارين. وإذا كان هو الوحيد الذي أعددته، يستعمله SahelFlow للرسائل التي لا يستطيع القارئ دون إنترنت قراءتها.",
   "analytics.aovTrend": "اتجاه متوسط قيمة الطلب",
   "analytics.aovTrendDesc": "متوسط قيمة الطلب عبر الزمن",
   "analytics.avgOrderValue": "متوسط قيمة الطلبية",
