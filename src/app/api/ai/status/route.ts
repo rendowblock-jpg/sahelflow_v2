@@ -4,7 +4,9 @@ import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth } from "@/lib/auth/server";
 import { db, shopContext } from "@/lib/db";
 import { hasSecret } from "@/lib/secrets";
-import { getBool, SETTING_KEYS } from "@/lib/settings";
+import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
+import { GROQ_API_KEY_SECRET } from "@/lib/ai/providers/groq/catalog";
+import { AI_PROVIDER_ORDER_SETTING, parseProviderOrderSetting } from "@/lib/ai/providers/provider-order";
 
 export const dynamic = "force-dynamic";
 
@@ -15,15 +17,22 @@ export const dynamic = "force-dynamic";
 export const GET = withErrorHandler(async () => {
   await requireAuth("ai.use");
   const context = { prisma: db, shop: shopContext };
-  const [consentAccepted, keyConfigured] = await Promise.all([
+  const [consentAccepted, keyConfigured, groqConfigured, orderValue] = await Promise.all([
     getBool(context, SETTING_KEYS.geminiConsentAccepted, false),
     hasSecret(context, "gemini_api_key"),
+    hasSecret(context, GROQ_API_KEY_SECRET),
+    getSetting(context, AI_PROVIDER_ORDER_SETTING),
   ]);
 
   return NextResponse.json({
     provider: "gemini",
     consentAccepted,
     keyConfigured,
+    // `ready` means the chat assistant, which still speaks only Gemini: it needs the Gemini key.
     ready: consentAccepted && keyConfigured,
+    // Order reading works with either key.
+    extractionReady: consentAccepted && (keyConfigured || groqConfigured),
+    providers: { groq: { configured: groqConfigured }, gemini: { configured: keyConfigured } },
+    order: parseProviderOrderSetting(orderValue),
   });
 }, "GET /api/ai/status");
