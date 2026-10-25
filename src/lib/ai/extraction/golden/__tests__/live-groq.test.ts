@@ -10,7 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/logger", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import type { GoldenEntry } from "../golden-set";
-import { type LiveRecord, orderEntries, onlyIds, parseIdsFile, readAllLines, runGroqSlice } from "../live-groq";
+import { GROQ_EXTRACTION_TUNING } from "@/lib/ai/providers/groq/catalog";
+import { MIN_REMAINING_TOKENS, type LiveRecord, orderEntries, onlyIds, parseIdsFile, readAllLines, runGroqSlice } from "../live-groq";
 import { buildLiveReport, formatAggregates, formatMarkdown, writeLiveReport } from "../live-report";
 
 const KEY = ["gsk", "_", "FakeFakeFakeFakeFakeFake1234567890"].join("");
@@ -67,6 +68,22 @@ describe("pacer", () => {
     // After call 1 (1,000 left < 4,000): 20 s reset + 250 ms margin. After call 2 (4,400 left): no wait.
     expect(c.slept).toEqual([20_250]);
     expect(c.fetchedAt.slice(1).map((at, i) => at - (c.fetchedAt[i] ?? 0))).toEqual([20_250, 0]);
+  });
+
+  it("does not fire with 4,074 tokens left: the prompt plus the reserved completion needs about 4,100", async () => {
+    // Found by the first live slice (25 Oct): after an answer that left 4,074 tokens in the minute, the next call was
+    // refused with a 429 (91 ms later) and the run ended. The threshold was 4,000. A call needs the prompt (3,272 to
+    // 3,283 measured) plus the completion tokens the request reserves (800); that the reservation counts is an inference.
+    const { c, now, sleep } = clock();
+    next(() => reply({ remaining: 4_074, reset: 30 }), () => reply({ remaining: 6000, reset: 1 }));
+    await runGroqSlice({ entries: [E1, E2], apiKey: KEY, dir, now, sleep });
+    expect(c.slept).toEqual([30_250]);
+  });
+
+  it("keeps the threshold above the measured prompt plus the completion tokens the request reserves", () => {
+    const MEASURED_PROMPT_TOKENS_MAX = 3_300;
+    const reserved = GROQ_EXTRACTION_TUNING["qwen/qwen3.8-27b"].maxCompletionTokens;
+    expect(MIN_REMAINING_TOKENS).toBeGreaterThanOrEqual(MEASURED_PROMPT_TOKENS_MAX + reserved);
   });
 
   it("uses a fixed gap when Groq sent no budget header", async () => {
