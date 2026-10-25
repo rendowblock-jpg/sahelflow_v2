@@ -25,6 +25,19 @@ function dropNulls(value: unknown): unknown {
   return out;
 }
 
+/**
+ * The shape of a Groq answer, made readable: nulls are dropped (see dropNulls), and an answer object with no "items"
+ * means "the AI found no items" (for a message that is not an order Groq writes {}; Gemini's schema mode always sends
+ * "items": []). Anything that is not an object is left alone, so the schema still refuses it.
+ */
+function readableAnswer(value: unknown): unknown {
+  const cleaned = dropNulls(value);
+  if (cleaned && typeof cleaned === "object" && !Array.isArray(cleaned) && !("items" in cleaned)) {
+    return { ...(cleaned as Record<string, unknown>), items: [] };
+  }
+  return cleaned;
+}
+
 export interface GroqExtractorOptions { apiKey: string; model?: string; timeoutMs?: number }
 
 /**
@@ -59,7 +72,7 @@ export async function extractWithGroq(
     if (!text) return fail("GROQ_EMPTY_RESPONSE");
     let parsed: unknown;
     try { parsed = JSON.parse(text); } catch { return fail("GROQ_INVALID_EXTRACTION"); }
-    const validated = ExtractedOrderSchema.safeParse(dropNulls(parsed));
+    const validated = ExtractedOrderSchema.safeParse(readableAnswer(parsed));
     if (!validated.success) return fail("GROQ_INVALID_EXTRACTION");
     const order = canonicalizeOrder(validated.data, input);
     const missingFields: string[] = [];
