@@ -151,10 +151,24 @@ export interface AiActionProposalProjection {
   status: string;
   proposalDigestPrefix: string;
   summary: Record<string, unknown>;
+  /** Exact values the approver checks; absent when the server withheld them. */
+  details?: AiApprovalDetail[];
   expiresAt: string;
   createdAt: string;
   executionState: string | null;
   lastErrorCode: string | null;
+}
+
+export interface AiApprovalDetailLine {
+  productName: string | null;
+  variantName: string | null;
+  quantity: number;
+}
+
+export interface AiApprovalDetail {
+  key: string;
+  kind: "text" | "phone" | "money" | "quantity" | "longText" | "list";
+  value: string | number | AiApprovalDetailLine[] | null;
 }
 
 export interface AiActionProposalHandle {

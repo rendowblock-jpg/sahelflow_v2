@@ -129,6 +129,13 @@ export async function buildAiActionTargetSnapshot(
           itemCount: items.length,
           totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
           wilaya: args.wilaya,
+          // Names the sealed args do not hold, so the approver can read each
+          // line. Same order as args.items; new proposals only.
+          lines: selected.map((line) => ({
+            productName: line.productName,
+            variantName: line.productVariantName,
+            quantity: line.quantity,
+          })),
         },
       };
     }

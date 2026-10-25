@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 
 import { normalizePhone } from "@/lib/import/fields";
+import type { ApprovalDetail } from "./approval-details";
 import type { Phase2Action } from "@/lib/identity/permissions";
 import { SahelFlowError } from "@/types/errors";
 
@@ -339,6 +340,8 @@ export interface AiActionProposalProjection {
   status: string;
   proposalDigestPrefix: string;
   summary: Record<string, unknown>;
+  /** Exact values for the approver; present only for a reader allowed to see the proposal. */
+  details?: ApprovalDetail[];
   expiresAt: string;
   createdAt: string;
   executionState: string | null;

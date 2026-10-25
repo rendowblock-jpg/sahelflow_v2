@@ -48,6 +48,10 @@ import {
   executeApprovedAiAction,
   type ApprovedAiActionResult,
 } from "./executor";
+import {
+  projectApprovalDetails,
+  type ApprovalDetail,
+} from "./approval-details";
 import { buildAiActionTargetSnapshot } from "./targets";
 
 interface ProposalRow {
@@ -612,10 +616,30 @@ async function decryptProposal(
   }
 }
 
+/**
+ * Exact values are returned only to a reader who passes canReadProposal; every
+ * other caller (and any reader without the tool's permissions) gets none.
+ */
+function detailsFor(
+  reader: TrustedActorContext | undefined,
+  proposal: DecryptedProposal,
+): { details: ApprovalDetail[] } | Record<string, never> {
+  if (!reader || reader.actor.kind !== "person") return {};
+  if (!canReadProposal(reader, proposal.permissions.required)) return {};
+  return {
+    details: projectApprovalDetails(
+      proposal.row.toolName,
+      proposal.args,
+      proposal.summary,
+    ),
+  };
+}
+
 async function proposalProjection(
   context: { prisma: DbClient; shop: ShopContext },
   proposal: DecryptedProposal,
   execution?: ExecutionRow | null,
+  reader?: TrustedActorContext,
 ): Promise<AiActionProposalProjection> {
   const currentExecution =
     execution === undefined
@@ -627,6 +651,7 @@ async function proposalProjection(
     status: proposal.row.status,
     proposalDigestPrefix: proposal.row.proposalDigest.slice(0, 12),
     summary: proposal.summary,
+    ...detailsFor(reader, proposal),
     expiresAt: toDate(proposal.row.expiresAt).toISOString(),
     createdAt: toDate(proposal.row.createdAt).toISOString(),
     executionState: currentExecution?.state ?? null,
@@ -1293,7 +1318,12 @@ export async function createAiActionProposal(
   }
   const proposal = await decryptProposal(input.context, row);
   return {
-    proposal: await proposalProjection(input.context, proposal),
+    proposal: await proposalProjection(
+      input.context,
+      proposal,
+      undefined,
+      input.requester,
+    ),
     proposalDigest: row.proposalDigest,
   };
 }
@@ -1339,7 +1369,12 @@ export async function approveAiActionProposal(
   if (execution?.state === "succeeded") {
     const result = await readExecutionResult(input.context, row, execution);
     return {
-      proposal: await proposalProjection(input.context, proposal, execution),
+      proposal: await proposalProjection(
+        input.context,
+        proposal,
+        execution,
+        input.approver,
+      ),
       result,
       businessCommandId: execution.businessCommandId ?? "",
       replayed: true,
@@ -1395,7 +1430,12 @@ export async function approveAiActionProposal(
   if (execution.state === "succeeded") {
     const result = await readExecutionResult(input.context, row, execution);
     return {
-      proposal: await proposalProjection(input.context, proposal, execution),
+      proposal: await proposalProjection(
+        input.context,
+        proposal,
+        execution,
+        input.approver,
+      ),
       result,
       businessCommandId: execution.businessCommandId ?? "",
       replayed: true,
@@ -1464,6 +1504,7 @@ export async function approveAiActionProposal(
       input.context,
       completed,
       completedExecution,
+      input.approver,
     ),
     result: command.result,
     businessCommandId: command.commandId,
@@ -1530,7 +1571,7 @@ export async function listAiActionProposals(
     const proposal = await decryptProposal(context, row);
     if (!canReadProposal(actor, proposal.permissions.required)) continue;
     output.push({
-      proposal: await proposalProjection(context, proposal),
+      proposal: await proposalProjection(context, proposal, undefined, actor),
       proposalDigest: row.proposalDigest,
     });
   }
@@ -1575,7 +1616,7 @@ export async function listPendingAiActionProposalsAcrossSessions(
     const proposal = await decryptProposal(context, row);
     if (!canReadProposal(actor, proposal.permissions.required)) continue;
     output.push({
-      proposal: await proposalProjection(context, proposal),
+      proposal: await proposalProjection(context, proposal, undefined, actor),
       proposalDigest: row.proposalDigest,
       sessionId: row.sessionId,
       sessionTitle: row.sessionTitle,
@@ -1675,7 +1716,7 @@ export async function getAiActionProposal(
     );
   }
   return {
-    proposal: await proposalProjection(context, proposal),
+    proposal: await proposalProjection(context, proposal, undefined, actor),
     proposalDigest: row.proposalDigest,
   };
 }
