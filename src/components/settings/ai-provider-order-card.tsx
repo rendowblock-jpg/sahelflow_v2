@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,8 @@ export function AiProviderOrderCard({ canManage }: { canManage: boolean }) {
   const { t } = useI18n();
   const [order, setOrder] = useState<AiProviderOrderSetting | null>(null);
   const [saving, setSaving] = useState(false);
+  const [chatGptReady, setChatGptReady] = useState(false);
+  const noteId = useId();
 
   useEffect(() => {
     if (!canManage) return;
@@ -30,6 +32,21 @@ export function AiProviderOrderCard({ canManage }: { canManage: boolean }) {
       .catch(() => {
         if (!cancelled) setOrder("groq-first");
       });
+    return () => {
+      cancelled = true;
+    };
+  }, [canManage]);
+
+  // Only to explain where ChatGPT sits. A failed or refused answer (for example "PIN check needed") shows no note.
+  useEffect(() => {
+    if (!canManage) return;
+    let cancelled = false;
+    fetch("/api/ai/openai/accounts")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { accounts?: Array<{ signedIn?: boolean; planUsageEnabled?: boolean }> } | null) => {
+        if (!cancelled) setChatGptReady(Boolean(body?.accounts?.some((a) => a.signedIn && a.planUsageEnabled)));
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -67,7 +84,7 @@ export function AiProviderOrderCard({ canManage }: { canManage: boolean }) {
         {order === null ? (
           <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden="true" />
         ) : (
-          <fieldset className="space-y-2" disabled={saving}>
+          <fieldset className="space-y-2" disabled={saving} aria-describedby={chatGptReady ? noteId : undefined}>
             <legend className="sr-only">{t("aiKey.order.title")}</legend>
             {CHOICES.map((choice) => (
               <label key={choice.value} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -84,6 +101,11 @@ export function AiProviderOrderCard({ canManage }: { canManage: boolean }) {
             ))}
           </fieldset>
         )}
+        {chatGptReady ? (
+          <p id={noteId} className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            {t("aiKey.order.chatgptNote")}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );
