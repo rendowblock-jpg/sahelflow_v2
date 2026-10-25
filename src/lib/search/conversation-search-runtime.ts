@@ -7,6 +7,7 @@ import {
   runConversationSearchIndexStep,
   type IndexerClient,
   type IndexerPorts,
+  type SealedContact,
   type SealedMessage,
 } from "@/lib/search/conversation-search-index";
 
@@ -43,6 +44,19 @@ function ports(): IndexerPorts {
       const opened = await messageCodec.decryptFields({ id: message.id, body: message.body }, ["body"], "Message");
       if (typeof opened.body !== "string") throw new TypeError("message body is not text");
       return opened.body;
+    },
+    openContact: async (contact: SealedContact) => {
+      const opened = await messageCodec.decryptFields(
+        { id: contact.id, contactName: contact.contactName, contactPhone: contact.contactPhone },
+        ["contactName", "contactPhone"],
+        "Conversation",
+      );
+      const text = (value: unknown): string | null => {
+        if (value === null || value === undefined) return null;
+        if (typeof value !== "string") throw new TypeError("contact field is not text");
+        return value;
+      };
+      return { name: text(opened.contactName), phone: text(opened.contactPhone) };
     },
   };
 }

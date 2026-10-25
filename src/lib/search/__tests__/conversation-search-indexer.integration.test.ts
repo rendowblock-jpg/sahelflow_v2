@@ -11,6 +11,7 @@ import {
   runConversationSearchIndexStep,
   type IndexerClient,
   type IndexerPorts,
+  type SealedContact,
   type SealedMessage,
 } from "@/lib/search/conversation-search-index";
 import {
@@ -18,7 +19,7 @@ import {
   tokenStringsOf,
   type BlindIndexDeriver,
 } from "@/lib/search/conversation-search-tokens";
-import { normalizeSearchText } from "@/lib/search/universal-search";
+import { compactSearchText, normalizeSearchText } from "@/lib/search/universal-search";
 
 /**
  * PB-CONV-SEARCH-LOAD, slice 3: the indexer (drain of the Dirty queue, backfill of old conversations, races).
@@ -36,12 +37,16 @@ const openBody = async (message: SealedMessage) => {
   return message.body.slice("sealed:".length);
 };
 
+// The test database holds contacts unsealed, so "opening" them is the identity.
+const openContact = async (contact: SealedContact) => ({ name: contact.contactName, phone: contact.contactPhone });
+
 let db: PrismaClient;
 let sequence = 0;
 const ports = (extra: Partial<IndexerPorts> = {}): IndexerPorts => ({
   client: db as unknown as IndexerClient,
   derive,
   openBody,
+  openContact,
   ...extra,
 });
 
@@ -72,7 +77,7 @@ const SAMPLES = [
 ];
 
 async function shop(
-  spec: Array<{ messages: number; lastMessageAt: string; name?: string }>,
+  spec: Array<{ messages: number; lastMessageAt: string; name?: string; phone?: string | null }>,
 ): Promise<{ conversationIds: string[] }> {
   const conversationIds: string[] = [];
   for (const entry of spec) {
@@ -81,7 +86,7 @@ async function shop(
       data: {
         channel: "whatsapp",
         contactName: entry.name ?? `Client ${sequence}`,
-        contactPhone: `055500${String(sequence).padStart(4, "0")}`,
+        contactPhone: entry.phone === undefined ? `055500${String(sequence).padStart(4, "0")}` : entry.phone,
         sourceId: `indexer-test-${sequence}`,
         lastMessageAt: new Date(entry.lastMessageAt),
       },
@@ -202,7 +207,9 @@ describe("T4: backfill is resumable", () => {
     expect(result).toMatchObject({ indexed: 0, covered: 1, remaining: 0 });
     expect(await docOf("C", conversationIds[0]!)).toHaveLength(1);
     expect(await count("ConversationSearchDoc", `"kind"='M'`)).toBe(0);
-    expect(await count("ConversationSearchToken")).toBe(0);
+    // the only tokens are the contact's, on the C doc
+    expect(await count("ConversationSearchToken")).toBe((await tokensOfDoc("C", conversationIds[0]!)).length);
+    expect(await count("ConversationSearchToken")).toBeGreaterThan(0);
   });
 
   it("messages that are still queued are left to the drain, and the conversation is still marked", async () => {
@@ -350,12 +357,12 @@ describe("drain", () => {
     expect(await count("ConversationSearchDirty", `"entityId"='ghost'`)).toBe(0);
   });
 
-  it("clears the queue row of a conversation without writing a C doc (the backfill covers it)", async () => {
+  it("gives a conversation without messages its C doc at once and clears its queue row", async () => {
     const { conversationIds } = await shop([{ messages: 0, lastMessageAt: "2026-10-20T10:00:00Z" }]);
     expect(await count("ConversationSearchDirty", `"kind"='C'`)).toBe(1);
-    await drainConversationSearchDirty(ports());
+    expect(await drainConversationSearchDirty(ports())).toMatchObject({ covered: 1, cleared: 1 });
     expect(await count("ConversationSearchDirty", `"kind"='C'`)).toBe(0);
-    expect(await docOf("C", conversationIds[0]!)).toHaveLength(0);
+    expect(await docOf("C", conversationIds[0]!)).toHaveLength(1);
   });
 
   it("a message that cannot be opened keeps its Dirty row, moves to the back, and does not block the others", async () => {
@@ -510,9 +517,146 @@ describe("one step", () => {
       if (!result.changed) break;
     }
     expect(steps.at(-1)).toBe(false);
-    expect(steps.filter(Boolean).length).toBeGreaterThanOrEqual(2);
+    // the drain indexes the messages and, in the same write, covers the conversation: nothing is left for the backfill
+    expect(steps.filter(Boolean).length).toBeGreaterThanOrEqual(1);
     expect(await count("ConversationSearchDirty")).toBe(0);
     expect(await count("ConversationSearchDoc", `"kind"='M'`)).toBe(4);
     expect(await count("ConversationSearchDoc", `"kind"='C'`)).toBe(1);
+  });
+});
+
+const contactStrings = (name: string | null, phone: string | null): string[] => [
+  ...tokenStringsOf(normalizeSearchText(name ?? "")).map((entry) => `conv-n:${entry}`),
+  ...tokenStringsOf(normalizeSearchText(phone ?? "")).map((entry) => `conv-p:${entry}`),
+  ...tokenStringsOf(compactSearchText(name ?? "")).map((entry) => `conv-c:${entry}`),
+  ...tokenStringsOf(compactSearchText(phone ?? "")).map((entry) => `conv-c:${entry}`),
+];
+async function hashedSorted(strings: string[], conversationId: string): Promise<string[]> {
+  const numbers = (await hashTokenStrings(strings, conversationId, derive))!;
+  return [...new Set(numbers)].sort((a, b) => a - b).map(String);
+}
+const expectedContact = (name: string | null, phone: string | null, conversationId: string) =>
+  hashedSorted(contactStrings(name, phone), conversationId);
+const renameContact = (id: string, contactName: string) => db.conversation.update({ where: { id }, data: { contactName } });
+const OLD_NAME = "Zorbaxel Quillon";
+const NEW_NAME = "Mirvanth Delcora";
+
+describe("contact tokens on the C doc", () => {
+  it("carries the salted tokens of the folded name, the folded phone and the compact forms, none equal to a message token", async () => {
+    const { conversationIds } = await shop([
+      { messages: 2, lastMessageAt: "2026-10-20T10:00:00Z", name: "Amine Ben Ali", phone: "+213 555 12 34 56" },
+    ]);
+    const id = conversationIds[0]!;
+    await db.message.create({
+      data: { conversationId: id, body: seal("Amine Ben Ali +213 555 12 34 56"), direction: "inbound", timestamp: new Date() },
+    });
+    await forgetQueue();
+    await backfillAll();
+    const tokens = await tokensOfDoc("C", id);
+    expect(tokens.length).toBeGreaterThan(30);
+    expect(tokens).toEqual(await expectedContact("Amine Ben Ali", "+213 555 12 34 56", id));
+    // same words in a message of the same conversation: other numbers (the prefixes differ)
+    const message = (await rows<{ entityId: string }>(`SELECT "entityId" FROM "ConversationSearchDoc" WHERE "kind"='M' LIMIT 1`))[0]!;
+    const shared = (await tokensOfDoc("M", message.entityId)).filter((hash) => tokens.includes(hash));
+    expect(shared).toEqual([]);
+  });
+
+  it("the backfill writes nothing for the C doc when the contact changed after it was read, and covers the new contact next", async () => {
+    const { conversationIds } = await shop([{ messages: 2, lastMessageAt: "2026-10-20T10:00:00Z", name: OLD_NAME, phone: null }]);
+    const id = conversationIds[0]!;
+    await forgetQueue();
+    const first = await backfillConversationSearchChunk(ports({ beforeWrite: async () => void (await renameContact(id, NEW_NAME)) }));
+    expect(first).toMatchObject({ indexed: 2, covered: 0 });
+    expect(await docOf("C", id)).toHaveLength(0);
+    const second = await backfillConversationSearchChunk(ports());
+    expect(second).toMatchObject({ covered: 1 });
+    expect(await tokensOfDoc("C", id)).toEqual(await expectedContact(NEW_NAME, null, id));
+  });
+
+  it("a contact rename drops the old tokens at once and the drain writes the new ones (old name no longer matches, new does)", async () => {
+    const { conversationIds } = await shop([{ messages: 3, lastMessageAt: "2026-10-20T10:00:00Z", name: OLD_NAME, phone: "0555 11 22 33" }]);
+    const id = conversationIds[0]!;
+    for (let guard = 0; guard < 20; guard += 1) {
+      const step = await runConversationSearchIndexStep(ports());
+      if ("skipped" in step || !step.changed) break;
+    }
+    expect(await tokensOfDoc("C", id)).toEqual(await expectedContact(OLD_NAME, "0555 11 22 33", id));
+
+    await renameContact(id, NEW_NAME);
+    expect(await docOf("C", id)).toHaveLength(0);
+    expect(await tokensOfDoc("C", id)).toEqual([]);
+    expect(await count("ConversationSearchDirty", `"kind"='C'`)).toBe(1);
+
+    expect(await drainConversationSearchDirty(ports())).toMatchObject({ covered: 1 });
+    const now = await tokensOfDoc("C", id);
+    expect(now).toEqual(await expectedContact(NEW_NAME, "0555 11 22 33", id));
+    const oldOnly = (await hashedSorted(contactStrings(OLD_NAME, null), id)).filter(
+      (hash) => !now.includes(hash),
+    );
+    expect(oldOnly.length).toBeGreaterThan(20); // the two names share no piece, so every old name token is gone
+    const newNameTokens = await hashedSorted(contactStrings(NEW_NAME, null), id);
+    expect(newNameTokens.every((hash) => now.includes(hash))).toBe(true);
+    expect(await count("ConversationSearchDirty", `"kind"='C'`)).toBe(0);
+  });
+
+  it("the drain leaves a conversation uncovered while a message has neither an M doc nor a Dirty row, and the backfill covers it", async () => {
+    const { conversationIds } = await shop([{ messages: 2, lastMessageAt: "2026-10-20T10:00:00Z", name: OLD_NAME }]);
+    await db.$executeRawUnsafe(`DELETE FROM "ConversationSearchDirty" WHERE "kind" = 'M'`);
+    expect(await drainConversationSearchDirty(ports())).toMatchObject({ covered: 0, cleared: 1 });
+    expect(await docOf("C", conversationIds[0]!)).toHaveLength(0);
+    expect(await count("ConversationSearchDirty")).toBe(0);
+    await backfillAll();
+    expect(await count("ConversationSearchDoc", `"kind"='M'`)).toBe(2);
+    expect((await tokensOfDoc("C", conversationIds[0]!)).length).toBeGreaterThan(10);
+  });
+
+  it("the drain writes nothing for the C doc when the contact changed after it was read", async () => {
+    const { conversationIds } = await shop([{ messages: 0, lastMessageAt: "2026-10-20T10:00:00Z", name: OLD_NAME }]);
+    const id = conversationIds[0]!;
+    const result = await drainConversationSearchDirty(ports({ beforeWrite: async () => void (await renameContact(id, NEW_NAME)) }));
+    expect(result).toMatchObject({ covered: 0 });
+    expect(await docOf("C", id)).toHaveLength(0);
+    await backfillAll();
+    const phone = (await db.conversation.findUniqueOrThrow({ where: { id } })).contactPhone;
+    expect(await tokensOfDoc("C", id)).toEqual(await expectedContact(NEW_NAME, phone, id));
+  });
+
+  it("writes no tokens for a missing name or phone and does not throw", async () => {
+    const { conversationIds } = await shop([
+      { messages: 0, lastMessageAt: "2026-10-20T10:00:00Z" },
+      { messages: 0, lastMessageAt: "2026-10-21T10:00:00Z", name: "Karim", phone: null },
+    ]);
+    const [bare, nameOnly] = conversationIds as [string, string];
+    const noContact = ports({ openContact: async () => ({ name: null, phone: null }) });
+    expect(await drainConversationSearchDirty(noContact)).toMatchObject({ covered: 2, cleared: 2 });
+    expect(await docOf("C", bare)).toHaveLength(1);
+    expect(await tokensOfDoc("C", bare)).toEqual([]);
+
+    await db.$executeRawUnsafe(`DELETE FROM "ConversationSearchToken"`);
+    await db.$executeRawUnsafe(`DELETE FROM "ConversationSearchDoc"`);
+    await db.$executeRawUnsafe(`INSERT INTO "ConversationSearchDirty" ("kind","entityId","conversationId") VALUES ('C', ?, ?)`, nameOnly, nameOnly);
+    expect(await drainConversationSearchDirty(ports({ openContact: async () => ({ name: "Karim", phone: null }) }))).toMatchObject({ covered: 1 });
+    expect(await tokensOfDoc("C", nameOnly)).toEqual(await expectedContact("Karim", null, nameOnly));
+  });
+
+  it("a contact that cannot be opened leaves the conversation uncovered, throws nothing and blocks nobody", async () => {
+    const { conversationIds } = await shop([
+      { messages: 1, lastMessageAt: "2026-10-22T10:00:00Z", name: "Brisé" },
+      { messages: 1, lastMessageAt: "2026-10-21T10:00:00Z", name: "Intact" },
+    ]);
+    const picky = ports({
+      openContact: async (contact) => {
+        if (contact.contactName === "Brisé") throw new Error("not sealed");
+        return openContact(contact);
+      },
+    });
+    for (let guard = 0; guard < 10; guard += 1) {
+      const step = await runConversationSearchIndexStep(picky);
+      if ("skipped" in step || !step.changed) break;
+    }
+    expect(await docOf("C", conversationIds[0]!)).toHaveLength(0);
+    expect(await docOf("C", conversationIds[1]!)).toHaveLength(1);
+    expect(await count("ConversationSearchDirty", `"kind"='C'`)).toBe(0);
+    expect(await docOf("M", (await rows<{ id: string }>(`SELECT "id" FROM "Message" WHERE "conversationId"=?`, conversationIds[0]!))[0]!.id)).toHaveLength(1);
   });
 });

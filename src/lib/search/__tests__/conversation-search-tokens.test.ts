@@ -4,13 +4,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   CONVERSATION_TOKEN_REFERENCE,
+  contactTokenStringsOf,
   hashTokenStrings,
   hashTokenStringsForConversations,
   requiredTokenStringsOf,
   tokenStringsOf,
   type BlindIndexDeriver,
 } from "@/lib/search/conversation-search-tokens";
-import { normalizeSearchText } from "@/lib/search/universal-search";
+import { compactSearchText, normalizeSearchText } from "@/lib/search/universal-search";
 
 /**
  * Raw message bodies as customers and sellers type them. Every test folds them
@@ -414,5 +415,45 @@ describe("hashTokenStrings: the stored 48-bit numbers", () => {
     for (const id of ["c1", "c2", "c3"]) {
       expect(byConversation!.get(id)).toEqual(await hashTokenStrings(strings, id, fakeDeriver().derive));
     }
+  });
+});
+
+describe("contactTokenStringsOf", () => {
+  const compactOf = (strings: string[]) => strings.filter((entry) => entry.startsWith("conv-c:")).sort();
+
+  it("uses three prefixes of its own and never a message prefix", () => {
+    const strings = contactTokenStringsOf("Amine Ben Ali", "+213 555 12 34 56");
+    expect(strings.length).toBeGreaterThan(30);
+    expect(strings.every((entry) => /^conv-[npc]:msg-[pt]:/u.test(entry))).toBe(true);
+    const messageStrings = new Set(tokenStringsOf(normalizeSearchText("Amine Ben Ali +213 555 12 34 56")));
+    expect(strings.filter((entry) => messageStrings.has(entry))).toEqual([]);
+    expect(new Set(strings).size).toBe(strings.length);
+  });
+
+  it("folds the name and the phone as the search does, and adds the compact forms", () => {
+    const strings = new Set(contactTokenStringsOf("Amine Ben Ali", "0555 12 34 56"));
+    expect(strings.has("conv-n:msg-t:ami")).toBe(true);
+    expect(strings.has("conv-n:msg-t:neb")).toBe(false); // across the space: only the compact form has it
+    expect(strings.has("conv-c:msg-t:neb")).toBe(true);
+    expect(strings.has("conv-p:msg-t:555")).toBe(true);
+    expect(strings.has("conv-c:msg-t:512")).toBe(true); // 0555123456 across the spaces of the phone
+    expect(new Set(contactTokenStringsOf("أحمد بن علي", null)).has("conv-n:msg-p:" + normalizeSearchText("أحمد").slice(0, 2))).toBe(true);
+  });
+
+  it("reads +213, 00213 and 213 as the national 0 in the compact tokens", () => {
+    const national = compactOf(contactTokenStringsOf(null, "0555 12 34 56"));
+    expect(national.length).toBeGreaterThan(5);
+    for (const written of ["+213555123456", "+213 555 12 34 56", "00213555123456", "213555123456"]) {
+      expect(compactOf(contactTokenStringsOf(null, written))).toEqual(national);
+    }
+    expect(compactSearchText("+213555123456")).toBe("0555123456");
+  });
+
+  it("gives nothing for a missing or empty name or phone, and never throws", () => {
+    expect(contactTokenStringsOf(null, null)).toEqual([]);
+    expect(contactTokenStringsOf(undefined, "")).toEqual([]);
+    expect(contactTokenStringsOf("", "   ")).toEqual([]);
+    expect(contactTokenStringsOf("Karim", null).some((entry) => entry.startsWith("conv-p:"))).toBe(false);
+    expect(contactTokenStringsOf(null, "0555123456").some((entry) => entry.startsWith("conv-n:"))).toBe(false);
   });
 });
