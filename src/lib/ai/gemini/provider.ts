@@ -404,7 +404,13 @@ export async function requestGemini(
       });
 
       if (error.code === "GEMINI_MODEL_UNAVAILABLE") break;
-      if (TRANSIENT_STATUS.has(response.status) && attempt < attempts - 1) {
+      // A quota answer is not a hiccup: asking the same model again only costs another request.
+      // The quota ledger pauses the provider; the next model is still asked once.
+      if (
+        error.code !== "GEMINI_QUOTA_EXHAUSTED" &&
+        TRANSIENT_STATUS.has(response.status) &&
+        attempt < attempts - 1
+      ) {
         await sleep(750 * 2 ** attempt);
         continue;
       }
