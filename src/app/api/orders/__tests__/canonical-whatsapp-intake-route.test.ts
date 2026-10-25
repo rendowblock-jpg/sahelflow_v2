@@ -214,3 +214,26 @@ describe("canonical WhatsApp source route", () => {
     expect(await rawDb.businessCommand.count()).toBe(0);
   });
 });
+
+describe("canonical WhatsApp source route and the AI that read the message", () => {
+  // The review card records which reader produced the draft. Every AI provider the router can use must be saveable;
+  // "openai" (an order read through the seller's ChatGPT plan) was refused with a 400 before 25 Oct.
+  it.each(["regex", "gemini", "groq", "openai"] as const)("saves an order whose draft was read by %s", async (method) => {
+    await seedProduct({ name: "Phone Case", price: 2400 });
+    const response = await POST(
+      mockPost("http://localhost/api/orders/source/whatsapp", { ...payload(), extractionMethod: method }),
+    );
+    expect(response.status).toBe(201);
+    expect(await rawDb.order.count()).toBe(1);
+  });
+
+  it("still refuses a reader it does not know", async () => {
+    await seedProduct({ name: "Phone Case", price: 2400 });
+    const response = await POST(
+      mockPost("http://localhost/api/orders/source/whatsapp", { ...payload(), extractionMethod: "magic" }),
+    );
+    expect(response.status).toBe(400);
+    expect(await rawDb.order.count()).toBe(0);
+  });
+});
+

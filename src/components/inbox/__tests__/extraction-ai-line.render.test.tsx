@@ -145,3 +145,32 @@ describe("order extraction copy: the new keys exist in all three languages", () 
     }
   });
 });
+
+describe("ExtractionAiLine: which readers count as an AI read", () => {
+  it.each(["gemini", "groq", "openai"] as const)("%s: the card says the AI read it", (method) => {
+    render(
+      <ExtractionAiLine
+        method={method}
+        ai={{ consent: true, available: true }}
+        locale="en"
+        copy={(key, params) => getOrderExtractionCopy("en", key, params)}
+        onSettings={vi.fn()}
+      />,
+    );
+    expect(line()).toHaveTextContent(getOrderExtractionCopy("en", "aiUsed"));
+  });
+
+  it("the offline reader is not an AI read", () => {
+    render(
+      <ExtractionAiLine
+        method="regex"
+        ai={{ consent: true, available: true }}
+        locale="en"
+        copy={(key, params) => getOrderExtractionCopy("en", key, params)}
+        onSettings={vi.fn()}
+      />,
+    );
+    expect(line()).not.toHaveTextContent(getOrderExtractionCopy("en", "aiUsed"));
+  });
+});
+
