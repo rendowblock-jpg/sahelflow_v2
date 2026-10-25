@@ -8,6 +8,7 @@ vi.mock("../openai-extractor", () => ({ extractWithOpenAiPlan: h.openai }));
 
 import { extractOrder } from "../smart-router";
 import { createQuotaLedger } from "../../providers/quota-ledger";
+import { providerOrderFor } from "../../providers/provider-order";
 import { OpenAiProviderError } from "../../providers/openai-chatgpt/errors";
 import type { ExtractionResult } from "../types";
 
@@ -87,5 +88,64 @@ describe("ChatGPT plan as a provider", () => {
     h.openai.mockResolvedValue(fail("OPENAI_QUOTA_EXHAUSTED"));
     const result = await run({ groqApiKey: "g", openai });
     expect(result.aiRetryAt).toBe(new Date(NOW.getTime() + 60_000).toISOString());
+  });
+});
+
+// The seller's "ChatGPT first" choice, end to end through the stored setting's list.
+describe("order openai-first (the seller chose ChatGPT first)", () => {
+  const order = providerOrderFor("openai-first");
+  const keys = { groqApiKey: "g", geminiApiKey: "k" };
+  const calls: string[] = [];
+  const stub = (answers: { groq?: ExtractionResult; gemini?: ExtractionResult; openai?: ExtractionResult }) => {
+    calls.length = 0;
+    h.groq.mockImplementation(async () => { calls.push("groq"); return answers.groq ?? fail("GROQ_PROVIDER_UNAVAILABLE"); });
+    h.gemini.mockImplementation(async () => { calls.push("gemini"); return answers.gemini ?? fail("GEMINI_PROVIDER_UNAVAILABLE"); });
+    h.openai.mockImplementation(async () => { calls.push("openai"); return answers.openai ?? fail("OPENAI_PROVIDER_UNAVAILABLE"); });
+  };
+
+  it("the setting means openai, groq, gemini", () => {
+    expect(order).toEqual(["openai", "groq", "gemini"]);
+  });
+
+  it("a signed-in plan account is asked first and, if it answers, nobody else is asked", async () => {
+    stub({ openai: good("openai") });
+    expect((await run({ ...keys, openai, providerOrder: order })).method).toBe("openai");
+    expect(calls).toEqual(["openai"]);
+  });
+
+  it("quota from ChatGPT: Groq answers next, Gemini is not asked, and ChatGPT stays paused on the next message", async () => {
+    const ledger = createQuotaLedger(() => NOW);
+    stub({ openai: fail("OPENAI_QUOTA_EXHAUSTED"), groq: good("groq") });
+    expect((await run({ ...keys, openai, providerOrder: order }, ledger)).method).toBe("groq");
+    expect(calls).toEqual(["openai", "groq"]);
+    expect(ledger.isPaused("openai", NOW)).toMatchObject({ paused: true, retryAtKnown: false, reason: "OPENAI_QUOTA_EXHAUSTED" });
+    expect((await run({ ...keys, openai, providerOrder: order }, ledger)).method).toBe("groq");
+    expect(calls).toEqual(["openai", "groq", "groq"]);
+  });
+
+  it("plan not eligible: Groq then Gemini are asked, and ChatGPT is not asked again for the rest of the day", async () => {
+    const ledger = createQuotaLedger(() => NOW);
+    stub({ openai: fail("OPENAI_PLAN_NOT_ELIGIBLE"), gemini: good("gemini") });
+    expect((await run({ ...keys, openai, providerOrder: order }, ledger)).method).toBe("gemini");
+    expect(calls).toEqual(["openai", "groq", "gemini"]);
+    const evening = new Date(2026, 9, 25, 22, 0, 0);
+    const later = await extractOrder(input, { forceGemini: true, now: () => evening, ledger, ...keys, openai, providerOrder: order });
+    expect(later.method).toBe("gemini");
+    expect(calls).toEqual(["openai", "groq", "gemini", "groq", "gemini"]);
+    const nextDay = new Date(2026, 9, 26, 0, 0, 1);
+    await extractOrder(input, { forceGemini: true, now: () => nextDay, ledger, ...keys, openai, providerOrder: order });
+    expect(calls.slice(5)).toEqual(["openai", "groq", "gemini"]);
+  });
+
+  it("with NO ChatGPT account it behaves exactly like groq-first", async () => {
+    stub({ groq: fail("GROQ_PROVIDER_UNAVAILABLE"), gemini: good("gemini") });
+    const chosen = await run({ ...keys, providerOrder: order });
+    const chosenCalls = [...calls];
+    stub({ groq: fail("GROQ_PROVIDER_UNAVAILABLE"), gemini: good("gemini") });
+    const standard = await run({ ...keys, providerOrder: providerOrderFor("groq-first") });
+    expect(chosenCalls).toEqual(["groq", "gemini"]);
+    expect(calls).toEqual(chosenCalls);
+    expect(chosen.method).toBe(standard.method);
+    expect(h.openai).not.toHaveBeenCalled();
   });
 });
