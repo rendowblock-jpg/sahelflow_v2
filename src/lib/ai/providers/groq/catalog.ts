@@ -14,7 +14,7 @@ export type GroqModel = (typeof GROQ_MODELS)[number];
 export const DEFAULT_GROQ_MODEL: GroqModel = "qwen/qwen3.8-27b";
 
 /** Name of the seller's Groq key in the secrets store. */
-export const GROQ_API_KEY_SECRET = "groq-api-key";
+export const GROQ_API_KEY_SECRET = "groq_api_key";
 
 /**
  * Per-model request tuning for extraction. Only the qwen row was measured on
