@@ -7,7 +7,7 @@ import { z } from "zod";
 import { matchCatalog } from "./catalog";
 import { normalizePhone } from "./fields";
 import { canonicalWilaya } from "./geography";
-import { numbersInMessage, priceIsWritten } from "./grounding";
+import { communeRepeatsWilaya, numbersInMessage, priceIsWritten } from "./grounding";
 import type { ExtractedOrder, ExtractionInput } from "./types";
 
 const numeric = (label: string, min = 0) => z.union([
@@ -53,7 +53,8 @@ const TEXT_CAPS = { customerName: 200, commune: 120, address: 500, notes: 2000, 
  * rather than passed on to order creation.
  *
  * With the message (`input.body`) the answer is also held to it: a price the
- * message does not contain is dropped. Without it (the screenshot reader,
+ * message does not contain is dropped, and so is a commune that only repeats
+ * the wilaya without being backed by the message. Without it (the screenshot reader,
  * which has no text) nothing is checked.
  */
 export function canonicalizeOrder(
@@ -68,7 +69,12 @@ export function canonicalizeOrder(
   const clean = (value: string | undefined, max: number) =>
     value?.replace(/\s+/g, " ").trim().slice(0, max).trimEnd() || undefined;
   const customerName = clean(order.customerName, TEXT_CAPS.customerName);
-  const commune = clean(order.commune, TEXT_CAPS.commune);
+  const writtenCommune = clean(order.commune, TEXT_CAPS.commune);
+  const commune =
+    writtenCommune && typeof input.body === "string" &&
+    communeRepeatsWilaya(writtenCommune, { canonical: wilaya, written: order.wilaya }, input.body)
+      ? undefined
+      : writtenCommune;
   const address = clean(order.address, TEXT_CAPS.address);
   const notes = clean(order.notes, TEXT_CAPS.notes);
   const items = order.items
