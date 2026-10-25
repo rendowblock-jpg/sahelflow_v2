@@ -2,7 +2,7 @@ import "server-only";
 
 import { createProtectedPiiCodec } from "@/lib/crypto/protected-pii";
 import { deriveExistingShopBlindIndexes } from "@/lib/crypto/protected-record";
-import { db, dbRaw, shopContext } from "@/lib/db";
+import { db, shopContext } from "@/lib/db";
 import {
   runConversationSearchIndexStep,
   type IndexerClient,
@@ -24,17 +24,17 @@ let codec: ReturnType<typeof createProtectedPiiCodec> | undefined;
 function ports(): IndexerPorts {
   codec ??= createProtectedPiiCodec(db as unknown as CodecClient, shopContext);
   const messageCodec = codec;
+  const client = db as unknown as IndexerClient;
   return {
-    client: db as unknown as IndexerClient,
+    client,
     // null = the shop key row is missing: the indexer then does nothing (the search uses the plain path).
     // `db` serves the key rows from a cache filled at start, so it never reports a row that was lost afterwards:
-    // the row is looked up on the raw client first.
+    // the row is looked up with plain SQL first.
     derive: async (values, reference) => {
-      const row = await dbRaw.protectedKeyAuthority.findUnique({
-        where: { purpose: "shop-blind-index" },
-        select: { purpose: true },
-      });
-      if (row === null) return null;
+      const present = await client.$queryRawUnsafe<unknown[]>(
+        `SELECT 1 AS present FROM "ProtectedKeyAuthority" WHERE "purpose" = 'shop-blind-index' LIMIT 1`,
+      );
+      if (present.length === 0) return null;
       return deriveExistingShopBlindIndexes(db as unknown as BlindIndexClient, values, reference, {
         shopContext,
         normalize: (value) => value,
