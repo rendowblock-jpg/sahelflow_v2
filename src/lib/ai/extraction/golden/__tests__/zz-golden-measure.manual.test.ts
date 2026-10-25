@@ -138,9 +138,10 @@ describe.skipIf(!RUN)("golden set baseline (manual)", () => {
         critical = false,
       ) => {
         for (const bucket of [overall, byLanguage[language]]) {
-          bucket[field] ??= { correct: 0, total: 0 };
-          bucket[field].total += 1;
-          if (ok) bucket[field].correct += 1;
+          if (!bucket) continue;
+          const cell = (bucket[field] ??= { correct: 0, total: 0 });
+          cell.total += 1;
+          if (ok) cell.correct += 1;
         }
         if (ok) return;
         clean = false;
@@ -285,7 +286,7 @@ describe.skipIf(!RUN)("golden set baseline (manual)", () => {
           count: list.length,
           topTags: topTags.map(([t, c]) => `${t} (${c})`),
           exampleIds: list.slice(0, 3).map((f) => f.id),
-          example: { id: list[0].id, expected: list[0].expected, got: list[0].got },
+          example: { id: list[0]?.id, expected: list[0]?.expected, got: list[0]?.got },
         };
       })
       .sort((a, b) => b.count - a.count);
@@ -343,6 +344,6 @@ describe.skipIf(!RUN)("golden set baseline (manual)", () => {
     writeFileSync(join(OUT_DIR, "baseline.md"), `${lines.join("\n")}\n`);
 
     // The only assertion: every entry was scored. The numbers are the finding.
-    expect(overall.isOrder.total).toBe(GOLDEN_SET.length);
+    expect(overall.isOrder?.total).toBe(GOLDEN_SET.length);
   });
 });
