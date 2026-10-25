@@ -30,7 +30,7 @@ Then open the app → **Messagerie** → the WhatsApp connect bar appears. Scan 
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/` | Service info |
-| `GET` | `/status` | `{ status, user, hasQr }` — status is `disconnected` \| `connecting` \| `qr` \| `connected` |
+| `GET` | `/status` | `{ status, user, hasQr }` — status is `disconnected` \| `connecting` \| `qr` \| `connected`; plus an optional `ingress` block of counts and times only (spool backlog and oldest age, failed/quarantined files, messages that could not be saved, last customer message). Never a number, chat id or text. Older readers ignore it; a reader must treat it as missing on an older sidecar. |
 | `GET` | `/qr` | `{ qr }` — raw QR string (404 if none) |
 | `GET` | `/qr.png` | QR as a 480px PNG (for `<img src>`) |
 | `GET` | `/chats?limit=50` | Recent chats from the in-memory store |

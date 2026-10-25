@@ -11,7 +11,11 @@ import {
   getDeliveryAdapter,
   loadDeliveryCredentials,
 } from "@/lib/integrations/delivery";
-import { assertLegacyOrderFollowupAllowed } from "@/lib/orders/manual-order-authority";
+import {
+  assertLegacyOrderFollowupAllowed,
+  isCanonicalOrderAuthority,
+} from "@/lib/orders/manual-order-authority";
+import { synchronizeCanonicalCourierTracking } from "@/lib/delivery/canonical-courier";
 import { assertProviderCapability } from "@/lib/integrations/delivery/provider-capability";
 import {
   ConflictError,
@@ -69,6 +73,24 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     where: { id: delivery.orderId, deletedAt: null },
     select: { source: true, sourceMetadata: true },
   });
+  // A canonical order is synced by the canonical function (ordered events,
+  // delivery exception, kernel order status), the same one the order page and
+  // the scheduled run use. The reply keeps the shape the Deliveries callers read.
+  if (
+    authority &&
+    isCanonicalOrderAuthority(authority.source, authority.sourceMetadata)
+  ) {
+    const synced = await synchronizeCanonicalCourierTracking(
+      context,
+      delivery.orderId,
+    );
+    return NextResponse.json({
+      ok: true,
+      status: synced.position.delivery?.status ?? delivery.status,
+      events: synced.events,
+      estimatedDelivery: synced.position.delivery?.estimatedDelivery ?? null,
+    });
+  }
   if (authority) {
     assertLegacyOrderFollowupAllowed(
       authority.source,

@@ -118,7 +118,8 @@ import {
 import { POST as importPost } from "@/app/api/import/orders/route";
 import { POST as storefrontPost } from "@/app/api/storefront/submit/route";
 import "@/lib/ai/chat/tools/core-tools";
-import { getTool, type ToolContext } from "@/lib/ai/chat/tools/registry";
+import type { ToolContext } from "@/lib/ai/chat/tools/registry";
+import { getLegacyTool } from "@/lib/ai/chat/tools/__tests__/support/legacy-tool-bodies";
 import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 import { syncPlatform } from "@/lib/integrations/ecommerce/sync-engine";
 import { executeManualOrderDecision } from "@/lib/orders/manual-confirmation";
@@ -429,7 +430,7 @@ describe("order creation path regression coverage", () => {
         address: "123 Rue Didouche",
       },
     });
-    const tool = getTool("create_order");
+    const tool = getLegacyTool("create_order");
     if (!tool) throw new Error("AI create_order tool is not registered");
     const context: ToolContext = {
       db: rawDb,

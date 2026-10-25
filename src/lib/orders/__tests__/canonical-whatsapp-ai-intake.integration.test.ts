@@ -13,7 +13,8 @@ import "@/lib/ai/chat/tools/core-tools";
 import {
   runWithAiSourceProposal,
 } from "@/lib/ai/chat/source-proposal";
-import { getTool, type ToolContext } from "@/lib/ai/chat/tools/registry";
+import type { ToolContext } from "@/lib/ai/chat/tools/registry";
+import { getLegacyTool } from "@/lib/ai/chat/tools/__tests__/support/legacy-tool-bodies";
 import { TEST_SHOP_CONTEXT } from "@/lib/data/__tests__/helpers";
 import { executeManualOrderDecision } from "@/lib/orders/manual-confirmation";
 import { resolveCanonicalNamedItems } from "@/lib/orders/canonical-named-items";
@@ -114,7 +115,7 @@ describe("canonical AI source draft", () => {
         address: "1 AI Street",
       },
     });
-    const tool = getTool("create_order");
+    const tool = getLegacyTool("create_order");
     if (!tool) throw new Error("create_order is not registered");
     const toolContext: ToolContext = {
       db: rawDb,
@@ -181,7 +182,7 @@ describe("canonical AI source draft", () => {
         address: "2 AI Street",
       },
     });
-    const tool = getTool("create_order");
+    const tool = getLegacyTool("create_order");
     if (!tool) throw new Error("create_order is not registered");
     const created = await runWithAiSourceProposal(
       {

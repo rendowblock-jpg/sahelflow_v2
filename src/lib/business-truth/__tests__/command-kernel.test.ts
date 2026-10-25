@@ -6,7 +6,10 @@ import { PrismaClient } from "@prisma/client";
 import type { ServiceContext } from "@/lib/data/service-base";
 import { ConflictError, ValidationError } from "@/types/errors";
 import type { BusinessCommandEnvelope, BusinessCommandOutcome } from "../contracts";
-import { executeBusinessCommand } from "../command-kernel";
+import {
+  BUSINESS_COMMAND_TRANSACTION_OPTIONS,
+  executeBusinessCommand,
+} from "../command-kernel";
 
 const db = new PrismaClient();
 const context = { prisma: db as never } satisfies ServiceContext;
@@ -114,6 +117,30 @@ function outcome(value: number): BusinessCommandOutcome<ProbeResult> {
       },
     ],
   };
+}
+
+/**
+ * Same real database, but remembers the options each $transaction call got.
+ * A Proxy is used because the Prisma client cannot be spied on in place.
+ */
+function recordingContext(): {
+  context: ServiceContext;
+  transactionOptions: unknown[];
+} {
+  const transactionOptions: unknown[] = [];
+  const prisma = new Proxy(db, {
+    get(target, property) {
+      if (property === "$transaction") {
+        return (run: unknown, options?: unknown) => {
+          transactionOptions.push(options);
+          return (target.$transaction as (...args: unknown[]) => unknown)(run, options);
+        };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  return { context: { prisma: prisma as never } satisfies ServiceContext, transactionOptions };
 }
 
 async function count(table: string): Promise<number> {
@@ -337,5 +364,63 @@ describe("executeBusinessCommand", () => {
     expect(await count("BusinessAggregateVersion")).toBe(0);
     expect(await count("BusinessCommand")).toBe(0);
     expect(await count("FinancialMovement")).toBe(0);
+  });
+});
+
+describe("executeBusinessCommand transaction limits", () => {
+  it("opens its transaction with maxWait >= 10000 and timeout >= 30000", async () => {
+    const recording = recordingContext();
+
+    await executeBusinessCommand(recording.context, command(), async () => outcome(1));
+
+    expect(recording.transactionOptions).toHaveLength(1);
+    const options = recording.transactionOptions[0] as { maxWait?: number; timeout?: number };
+    expect(options?.maxWait).toBeGreaterThanOrEqual(10_000);
+    expect(options?.timeout).toBeGreaterThanOrEqual(30_000);
+    expect(options).toEqual(BUSINESS_COMMAND_TRANSACTION_OPTIONS);
+  });
+
+  // SLOWEST test in this file: the handler really waits 6 s (past Prisma's old 5 s default).
+  it("commits a handler slower than the old 5 s default and replays its result", async () => {
+    const slowHandler = vi.fn(async ({ tx }: Parameters<Parameters<typeof executeBusinessCommand<ProbePayload, ProbeResult>>[2]>[0]) => {
+      await new Promise((resolve) => setTimeout(resolve, 6_000));
+      await tx.setting.create({ data: { key: "session2_probe_slow", value: "1" } });
+      return outcome(1);
+    });
+
+    const first = await executeBusinessCommand(context, command(), slowHandler);
+
+    const retryHandler = vi.fn(async () => outcome(99));
+    const replay = await executeBusinessCommand(context, command(), retryHandler);
+
+    expect(first).toMatchObject({ aggregateVersion: 1, replayed: false, result: { value: 1 } });
+    expect(replay).toEqual({ ...first, replayed: true });
+    expect(slowHandler).toHaveBeenCalledTimes(1);
+    expect(retryHandler).not.toHaveBeenCalled();
+    expect(await db.setting.findUnique({ where: { key: "session2_probe_slow" } })).toMatchObject({ value: "1" });
+    expect(await count("BusinessCommand")).toBe(1);
+    expect(await count("AuditLog")).toBe(1);
+    expect(await count("DomainEvent")).toBe(1);
+  }, 20_000);
+
+  it("still rolls back every write when the handler throws after writing", async () => {
+    const recording = recordingContext();
+
+    await expect(
+      executeBusinessCommand(recording.context, command(), async ({ tx }) => {
+        await tx.setting.create({ data: { key: "session2_probe_limits_rollback", value: "dirty" } });
+        await tx.auditLog.create({
+          data: { action: "probe.partial", entity: "probe", entityId: "aggregate-1" },
+        });
+        throw new Error("simulated failure after writes");
+      }),
+    ).rejects.toThrow("simulated failure after writes");
+
+    expect(recording.transactionOptions).toHaveLength(1);
+    expect(await db.setting.findUnique({ where: { key: "session2_probe_limits_rollback" } })).toBeNull();
+    expect(await count("AuditLog")).toBe(0);
+    expect(await count("BusinessCommand")).toBe(0);
+    expect(await count("BusinessAggregateVersion")).toBe(0);
+    expect(await count("DomainEvent")).toBe(0);
   });
 });

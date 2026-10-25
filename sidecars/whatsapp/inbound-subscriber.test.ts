@@ -219,8 +219,58 @@ describe("inbound gate: what is still refused, and never silently", () => {
   });
 });
 
+describe("inbound gate: losses are reported to the ingress-health recorder", () => {
+  function recorderHarness(opts: { paired: boolean; failEnqueue?: boolean }) {
+    const lines: Array<{ event: string; fields: Record<string, DiagnosticValue> }> = [];
+    const sink: DiagnosticsSink = {
+      record(event, fields) {
+        lines.push({ event, fields: { ...(fields ?? {}) } });
+      },
+    };
+    const health = { recordLost: vi.fn(), recordSpooled: vi.fn() };
+    const subscriber = createInboundSubscriber({
+      getStatus: () => ({ status: "connected", user: opts.paired ? { id: ACCOUNT } : null }),
+      credentialAccountId: () => (opts.paired ? ACCOUNT : null),
+      spool: {
+        enqueue() {
+          if (opts.failEnqueue) throw new Error("EBUSY");
+          return {};
+        },
+      },
+      diagnostics: sink,
+      broadcast: vi.fn(),
+      health,
+    });
+    return { subscriber, health, lines };
+  }
+
+  it("a spool failure is reported to the recorder and still logged", () => {
+    const { subscriber, health, lines } = recorderHarness({ paired: true, failEnqueue: true });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() => subscriber(messageEvent(incoming(1)))).not.toThrow();
+    error.mockRestore();
+    expect(health.recordLost).toHaveBeenCalledWith("spoolFailed");
+    expect(health.recordSpooled).not.toHaveBeenCalled();
+    expect(lines.map((line) => line.event)).toEqual(["inbound.spool-failed"]);
+  });
+
+  it("no-paired-account is reported", () => {
+    const { subscriber, health, lines } = recorderHarness({ paired: false });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    subscriber(messageEvent(incoming(1)));
+    error.mockRestore();
+    expect(health.recordLost).toHaveBeenCalledWith("noPairedAccount");
+    expect(lines.map((line) => line.event)).toEqual(["inbound.dropped"]);
+  });
+});
+
 describe("wiring", () => {
   const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
+
+  it("/status adds the ingress block next to the manager status and changes none of its fields", () => {
+    const index = read("sidecars/whatsapp/index.ts");
+    expect(index).toContain('app.get("/status", (context) => context.json({ ...wa.getStatus(), ingress: ingressHealth.build() }));');
+  });
 
   it("index.ts builds its subscriber from the tested gate and no longer carries the old inline check", () => {
     const index = read("sidecars/whatsapp/index.ts");

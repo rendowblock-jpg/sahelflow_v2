@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import type { BusinessPrincipalContext } from "@/lib/business-truth/principal";
 import type { MappedRow, ValidationFailure } from "@/lib/import/engine";
+import { orderMoneySchema } from "@/lib/orders/money-limits";
 import { normalizePhone } from "@/lib/import/fields";
 
 export const canonicalImportRowSchema = z
@@ -20,8 +21,8 @@ export const canonicalImportRowSchema = z
     variantName: z.string().trim().max(200).optional(),
     variantSku: z.string().trim().max(120).optional(),
     quantity: z.number().int().positive().max(999),
-    unitPrice: z.number().int().nonnegative().optional(),
-    deliveryCost: z.number().int().nonnegative().default(0),
+    unitPrice: orderMoneySchema.optional(),
+    deliveryCost: orderMoneySchema.default(0),
     status: z.string().trim().max(80).optional(),
   })
   .superRefine((row, context) => {
