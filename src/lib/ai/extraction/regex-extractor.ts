@@ -13,13 +13,25 @@
  * enabled it) and for the review sheet.
  */
 import { findCommune, chooseWilaya, findWilayaMentions, wilayaName } from "./geography";
-import { findCustomerName, findLabelledAddress, findPhones, normalizePhone } from "./fields";
+import { findCustomerName, findLabelledAddress, findPhones, normalizePhone, pickPhone } from "./fields";
 import { readItems } from "./items";
-import { fold, mask, normalizeMessage } from "./text";
+import { INJECTION_OBJECTS, INJECTION_PHRASES, INJECTION_VERBS } from "./lexicon";
+import { B_AFTER, B_BEFORE, fold, mask, normalizeMessage, phraseAlternation } from "./text";
 import type { ExtractedOrder, ExtractionInput, ExtractionResult } from "./types";
 
 export { normalizePhone } from "./fields";
 export { canonicalWilaya } from "./geography";
+
+/**
+ * "Ignore the previous instructions …": a customer cannot instruct the reader.
+ * From the first such phrase to the end, the text is not read at all, so an
+ * order written before it survives and a message that is only an instruction
+ * is no order.
+ */
+const INJECTION = new RegExp(
+  `${B_BEFORE}(?:${phraseAlternation(INJECTION_VERBS)})${B_AFTER}(?:\\s+\\S+){0,3}?\\s+(?:${phraseAlternation(INJECTION_OBJECTS)})${B_AFTER}|${B_BEFORE}(?:${phraseAlternation(INJECTION_PHRASES)})${B_AFTER}`,
+  "u",
+);
 
 /**
  * Everything the offline reader found, including the fields of a message
@@ -33,7 +45,11 @@ export function readOrderFields(input: ExtractionInput): { order: ExtractedOrder
     folded = mask(folded, start, end);
   };
 
+  const injection = INJECTION.exec(folded);
+  if (injection) blank(injection.index, folded.length);
+
   const phones = findPhones(folded);
+  const chosenPhone = pickPhone(phones, folded);
   for (const phone of phones) blank(phone.start, phone.end);
 
   let mentions = findWilayaMentions(folded);
@@ -59,7 +75,7 @@ export function readOrderFields(input: ExtractionInput): { order: ExtractedOrder
   const wilaya = wilayaName(wilayaCode);
   // A knownPhone that cannot be normalised is not a phone: counting it would mark
   // the order complete and skip the model for a conversation id (S06b-12).
-  const phone = phones[0]?.value ?? normalizePhone(input.knownPhone);
+  const phone = chosenPhone ?? normalizePhone(input.knownPhone);
   const address = labelledAddress?.value ?? lines.address;
   const customerName = name?.value ?? lines.signatureName;
 
