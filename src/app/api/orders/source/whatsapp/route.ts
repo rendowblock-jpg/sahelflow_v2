@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   conversationId: z.string().trim().min(1).max(200),
   messageId: z.string().trim().min(1).max(240),
-  extractionMethod: z.enum(["regex", "gemini"]),
+  extractionMethod: z.enum(["regex", "gemini", "groq"]),
   extractionConfidence: z.number().min(0).max(1),
   customer: z.object({
     name: z.string().trim().min(1).max(200),

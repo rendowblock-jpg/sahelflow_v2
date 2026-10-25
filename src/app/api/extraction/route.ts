@@ -6,6 +6,8 @@ import { geminiModelVersion } from "@/lib/ai/extraction/model-version";
 // called outside tests → extraction analytics dashboard was permanently empty.
 // Now called fire-and-forget after every extraction.
 import { getSecret } from "@/lib/secrets";
+import { GROQ_API_KEY_SECRET } from "@/lib/ai/providers/groq/catalog";
+import { restoreQuotaLedger, saveQuotaLedger } from "@/lib/ai/providers/quota-ledger-store";
 import { getBool, SETTING_KEYS } from "@/lib/settings";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
@@ -113,6 +115,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const geminiApiKey = consent
     ? (await getSecret({ prisma: db, shop: shopContext }, "gemini_api_key")) ?? undefined
     : undefined;
+  // A seller who made a free Groq key has it here too; none changes nothing.
+  const groqApiKey = consent
+    ? (await getSecret({ prisma: db, shop: shopContext }, GROQ_API_KEY_SECRET)) ?? undefined
+    : undefined;
+  // Pauses from an earlier run (best effort; once per process).
+  await restoreQuotaLedger({ prisma: db, shop: shopContext });
   const catalog = await listExtractionCatalog({ prisma: db });
 
   const start = Date.now();
@@ -123,8 +131,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       knownPhone: input.knownPhone,
       catalog: catalog.map((entry) => ({ name: entry.name })),
     },
-    { geminiApiKey },
+    { geminiApiKey, groqApiKey },
   );
+  await saveQuotaLedger({ prisma: db, shop: shopContext });
 
   // Fire-and-forget — never blocks the response. recordExtractionMetric
   // has its own try/catch that swallows errors (best-effort).
@@ -147,7 +156,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     catalog: mayReadCatalog ? catalog : [],
     ai: {
       consent,
-      available: Boolean(geminiApiKey),
+      available: Boolean(geminiApiKey || groqApiKey),
       ...(consent ? {} : { code: "AI_CONSENT_REQUIRED" }),
     },
   });

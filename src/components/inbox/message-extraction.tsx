@@ -26,6 +26,9 @@ import {
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
 import { toAsciiDigits } from "@/lib/phone-patterns";
 
+/** Gemini and Groq are both "an AI read it" for the review card. */
+const isAiMethod = (method: string) => method === "gemini" || method === "groq";
+
 interface MessageExtractionProps {
   conversationId?: string;
   messageId: string;
@@ -77,7 +80,7 @@ function ExtractionAiLine({
   if (aiFailure) {
     return <p className="text-caption text-muted-foreground" role="status">{copy("aiFailed")}</p>;
   }
-  if (method === "gemini") {
+  if (isAiMethod(method)) {
     return <p className="text-caption text-foreground" role="status">{copy("aiUsed")}</p>;
   }
   if (!ai.consent) {
@@ -186,7 +189,7 @@ export function MessageExtraction({
           messageId: readSource?.anchorId ?? messageId,
           // A hand-built order is still anchored to this message; its method
           // records how the draft was produced.
-          extractionMethod: result.method === "gemini" ? "gemini" : "regex",
+          extractionMethod: isAiMethod(result.method) ? (result.method as "gemini" | "groq") : "regex",
           extractionConfidence: result.confidence,
           customer: {
             ...reviewed.customer,
@@ -260,9 +263,9 @@ export function MessageExtraction({
               {read.order ? (
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline">
-                    {read.method === "gemini" ? copy("methodGemini") : copy("methodOffline")}
+                    {isAiMethod(read.method) ? copy("methodGemini") : copy("methodOffline")}
                   </Badge>
-                  {read.method === "gemini" ? null : (
+                  {isAiMethod(read.method) ? null : (
                     <Badge variant="outline" className="tabular-nums">
                       {copy("confidence", { value: Math.round(read.confidence * 100) })}
                     </Badge>
@@ -375,9 +378,9 @@ export function MessageExtraction({
       {result.order ? (
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">
-            {result.method === "gemini" ? copy("methodGemini") : copy("methodOffline")}
+            {isAiMethod(result.method) ? copy("methodGemini") : copy("methodOffline")}
           </Badge>
-          {result.method === "gemini" ? null : (
+          {isAiMethod(result.method) ? null : (
             <Badge variant="outline" className="tabular-nums">
               {copy("confidence", { value: Math.round(result.confidence * 100) })}
             </Badge>

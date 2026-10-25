@@ -41,7 +41,7 @@ export interface ExtractedOrder {
 }
 
 /** Which method extracted this order */
-export type ExtractionMethod = "regex" | "gemini" | "none";
+export type ExtractionMethod = "regex" | "gemini" | "groq" | "none";
 
 /** The full extraction result */
 export interface ExtractionResult {
@@ -57,8 +57,10 @@ export interface ExtractionResult {
   missingFields?: string[];
   /** No item was found, but these customer/delivery details were (FD-064). */
   partial?: ExtractedOrder;
-  /** Why Gemini could not help this time (the offline reading was kept). */
+  /** Why the AI could not help this time (the offline reading was kept). */
   aiFailure?: string;
+  /** ISO 8601: earliest time a quota-paused AI provider can be asked again. */
+  aiRetryAt?: string;
   /** Raw extraction metadata (for debugging) */
   raw?: unknown;
 }
