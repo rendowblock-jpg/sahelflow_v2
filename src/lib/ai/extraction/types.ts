@@ -59,6 +59,7 @@ export interface ExtractionResult {
   partial?: ExtractedOrder;
   /** Why Gemini could not help this time (the offline reading was kept). */
   aiFailure?: string;
+  aiRetryAt?: string;
   /** Raw extraction metadata (for debugging) */
   raw?: unknown;
 }
