@@ -12,6 +12,7 @@ import {
   type CatalogLine,
 } from "@/lib/orders/manual-order-catalog-line";
 import { assertOrderTotalWithinLimit, orderMoneySchema } from "@/lib/orders/money-limits";
+import { lineTotalOf, orderTotalOf } from "@/lib/orders/order-total";
 import { redactPii } from "@/lib/redact-pii";
 import {
   ConflictError,
@@ -268,12 +269,8 @@ export async function executeManualOrderLinesEdit(
           }),
         ...creates,
       ];
-      const itemsTotal = finalLines.reduce(
-        (sum, line) => sum + line.unitPrice * line.quantity,
-        0,
-      );
       const deliveryCost = order.deliveryCost ?? 0;
-      const totalPrice = itemsTotal + deliveryCost;
+      const { itemsTotal, totalPrice } = orderTotalOf(finalLines, deliveryCost);
       assertOrderTotalWithinLimit(totalPrice, "lines");
       const orderVersion = data.expectedVersion + 1;
 
@@ -303,13 +300,13 @@ export async function executeManualOrderLinesEdit(
           data: {
             quantity: update.quantity,
             unitPrice: update.unitPrice,
-            total: update.quantity * update.unitPrice,
+            total: lineTotalOf(update.unitPrice, update.quantity),
           },
         });
       }
       for (const line of creates) {
         await tx.orderItem.create({
-          data: { ...line, orderId: order.id, total: line.unitPrice * line.quantity },
+          data: { ...line, orderId: order.id, total: lineTotalOf(line.unitPrice, line.quantity) },
         });
       }
 
