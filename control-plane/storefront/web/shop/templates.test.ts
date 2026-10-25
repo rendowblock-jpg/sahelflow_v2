@@ -164,13 +164,13 @@ describe("the renderer is safe against a template id or a manifest it does not e
     store.database.close();
   });
 
-  it.each(["sahara", "atlas", "oasis"] as const)("%s: the page has no tab bar, no skin script and the same end of document as before", async (template) => {
+  it.each(["sahara", "atlas", "oasis"] as const)("%s: the page has no tab bar and no skin script; the order bar ends <main>, then the footer and the one script", async (template) => {
     const store = await publishTestStore({ template });
     const html = page(store, { productId: "product_00000001" });
     expect(html).not.toContain("sf-tabs");
     expect(html).not.toContain("data-tabs");
     expect(scripts(html)).toEqual(["/_sf/shop.test.js"]);
-    expect(html).toMatch(/<\/footer>\n<div id="sf-sticky"[\s\S]*?<\/div>\n<script src="\/_sf\/shop\.test\.js" defer><\/script>\n<\/body>/);
+    expect(html).toMatch(/<div id="sf-sticky"[\s\S]*?<\/div>\n<\/main>\n<footer[\s\S]*?<\/footer>\n\n?<script src="\/_sf\/shop\.test\.js" defer><\/script>\n<\/body>/);
     store.database.close();
   });
 });
