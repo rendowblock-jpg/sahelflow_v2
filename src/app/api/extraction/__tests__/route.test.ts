@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   userKey: vi.fn(),
   allowed: vi.fn(),
   getBool: vi.fn(),
+  getSetting: vi.fn(),
   getSecret: vi.fn(),
   rate: vi.fn(),
   catalog: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock("@/lib/identity/authorization", () => ({ trustedActionAllowed: h.allowed
 vi.mock("@/lib/settings", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/settings")>()),
   getBool: h.getBool,
+  getSetting: h.getSetting,
 }));
 vi.mock("@/lib/secrets", () => ({ getSecret: h.getSecret }));
 vi.mock("@/lib/ai/rate-limit", () => ({ checkRateLimit: h.rate }));
@@ -129,5 +131,27 @@ describe("POST /api/extraction: the AI failure reaches the client", () => {
     const body = (await (await post()).json()) as { result: Record<string, unknown> };
     expect(body.result.aiFailure).toBe("GEMINI_KEY_INVALID");
     expect("aiRetryAt" in body.result).toBe(false);
+  });
+});
+
+describe("POST /api/extraction: which AI is tried first", () => {
+  const orderPassed = () => (h.extract.mock.calls[0][1] as { providerOrder: string[] }).providerOrder;
+
+  it.each([
+    ["no stored value", null, ["groq", "gemini"]],
+    ["groq-first", "groq-first", ["groq", "gemini"]],
+    ["gemini-first", "gemini-first", ["gemini", "groq"]],
+    ["a junk value", "banana", ["groq", "gemini"]],
+  ])("passes the order for %s", async (_label, stored, expected) => {
+    h.getSetting.mockResolvedValue(stored);
+    await post();
+    expect(h.getSetting.mock.calls[0][1]).toBe("ai_provider_order");
+    expect(orderPassed()).toEqual(expected);
+  });
+
+  it("falls back to Groq first when the setting cannot be read", async () => {
+    h.getSetting.mockRejectedValue(new Error("db down"));
+    expect((await post()).status).toBe(200);
+    expect(orderPassed()).toEqual(["groq", "gemini"]);
   });
 });

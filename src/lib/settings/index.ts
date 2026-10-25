@@ -42,6 +42,8 @@ const RESERVED_SETTING_KEY_PREFIXES = [
 const RESERVED_SETTING_KEYS = new Set([
   "demo_seed_version",
   "demo_seed_created_at",
+  // Decides where customer messages go first; changed only by /api/ai/provider-order (integrations.manage).
+  "ai_provider_order",
 ]);
 
 function isReservedSettingKey(key: string): boolean {
