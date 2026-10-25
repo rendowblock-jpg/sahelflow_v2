@@ -12,6 +12,7 @@ import {
   type IndexerClient,
   type IndexerPorts,
   type SealedMessage,
+  type SqlClient,
 } from "@/lib/search/conversation-search-index";
 import {
   hashTokenStrings,
@@ -514,5 +515,36 @@ describe("one step", () => {
     expect(await count("ConversationSearchDirty")).toBe(0);
     expect(await count("ConversationSearchDoc", `"kind"='M'`)).toBe(4);
     expect(await count("ConversationSearchDoc", `"kind"='C'`)).toBe(1);
+  });
+});
+
+describe("an idle tick on a finished index", () => {
+  it("opens no write transaction when nothing is queued and nothing is left to cover", async () => {
+    await shop([{ messages: 3, lastMessageAt: "2026-10-20T10:00:00Z" }]);
+    await forgetQueue();
+    for (let round = 0; round < 10; round += 1) {
+      const step = await runConversationSearchIndexStep(ports());
+      if ("skipped" in step || !step.changed) break;
+    }
+    let transactions = 0;
+    const counting: IndexerClient = {
+      $queryRawUnsafe: (query, ...values) => db.$queryRawUnsafe(query, ...values),
+      $executeRawUnsafe: (query, ...values) => db.$executeRawUnsafe(query, ...values),
+      $transaction: (run, options) => {
+        transactions += 1;
+        return db.$transaction((tx) => run(tx as unknown as SqlClient), options);
+      },
+    };
+
+    expect(await drainConversationSearchDirty(ports({ client: counting }))).toEqual({
+      indexed: 0,
+      removed: 0,
+      stale: 0,
+      failed: 0,
+      cleared: 0,
+      remaining: 0,
+    });
+    expect(await runConversationSearchIndexStep(ports({ client: counting }))).toEqual({ changed: false });
+    expect(transactions).toBe(0);
   });
 });
