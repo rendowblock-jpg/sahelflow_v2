@@ -17,7 +17,7 @@ const DEFAULT_QUIET_START = 1320;
 const DEFAULT_QUIET_END = 480;
 const PAUSE_MS = 60 * 60_000;
 
-/** Local 24h clock label for a minute-of-day preference (PII-free). */
+/** 24h label for a minute-of-day preference; the minute is on the shop clock (PII-free). */
 function formatMinute(minute: number): string {
   const hours = Math.floor(minute / 60) % 24;
   const minutes = minute % 60;
