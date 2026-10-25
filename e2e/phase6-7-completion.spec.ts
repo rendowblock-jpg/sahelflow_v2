@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { assertNoAxeViolations } from "./support/axe";
 
 const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
@@ -262,6 +263,7 @@ async function assertRenderedRoute(
   route: string,
   locale: Locale,
   dir: "ltr" | "rtl",
+  options: { axe?: boolean } = {},
 ) {
   const response = await page.goto(route, { waitUntil: "domcontentloaded" });
   expect(response, `${route} should return a document response`).not.toBeNull();
@@ -277,17 +279,32 @@ async function assertRenderedRoute(
   await assertContained(page, route);
   await assertNoLeakedTranslationKeys(page, route);
   await assertSemanticBasics(page, route);
+  if (options.axe) {
+    // axe-core runs on the page the checks above already settled: no extra
+    // visit. Nothing is excluded; a violation fails this route with the rule,
+    // the element and its selector. The duration is kept as a test annotation.
+    const started = Date.now();
+    try {
+      await assertNoAxeViolations(page, `axe-core (${locale}, desktop)`);
+    } finally {
+      test.info().annotations.push({
+        type: "axe-ms",
+        description: `${route} ${Date.now() - started}`,
+      });
+    }
+  }
 }
 
 async function assertRouteSweep(
   page: Page,
   locale: Locale,
   dir: "ltr" | "rtl",
+  options: { axe?: boolean } = {},
 ) {
   const failures: string[] = [];
   for (const route of REQUIRED_ROUTES) {
     try {
-      await assertRenderedRoute(page, route, locale, dir);
+      await assertRenderedRoute(page, route, locale, dir, options);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       failures.push(`${route}: ${message}`);
@@ -434,7 +451,7 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
       await setLocale(context, locale);
       await ensureOwnerSession(page);
 
-      await assertRouteSweep(page, locale, dir);
+      await assertRouteSweep(page, locale, dir, { axe: true });
 
       await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
       await waitForHydration(page);
@@ -456,6 +473,24 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
       await assertRouteSweep(page, locale, dir);
     });
   }
+
+  test("axe gate reports an injected violation and passes the repaired page", async ({
+    page,
+  }) => {
+    // Self-test of the check itself, on a blank document (no app visit): if axe
+    // stops loading or stops reporting, the route sweeps above would pass
+    // without checking anything.
+    const document = (button: string) =>
+      `<!doctype html><html lang="en"><head><title>axe self-test</title></head><body><main><h1>Self-test</h1>${button}</main></body></html>`;
+    await page.setContent(document('<button type="button"></button>'));
+    await expect(assertNoAxeViolations(page, "axe self-test broken")).rejects.toThrow(
+      /axe self-test broken[\s\S]*button-name \(critical\)/,
+    );
+    await page.setContent(
+      document('<button type="button" aria-label="Save"></button>'),
+    );
+    await assertNoAxeViolations(page, "axe self-test repaired");
+  });
 
   test("keyboard focus, dialog, reduced motion and target-size contracts", async ({
     page,
