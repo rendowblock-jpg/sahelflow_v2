@@ -12,6 +12,7 @@ import { normalizePhone } from "@/lib/import/fields";
 import { trustedManualOrderSourceMetadata } from "@/lib/orders/manual-order-authority";
 import { resolveCatalogLine } from "@/lib/orders/manual-order-catalog-line";
 import { assertOrderTotalWithinLimit, orderMoneySchema } from "@/lib/orders/money-limits";
+import { lineTotalOf, orderTotalOf } from "@/lib/orders/order-total";
 import type { Order } from "@/types/domain";
 import { NotFoundError, ValidationError } from "@/types/errors";
 
@@ -180,11 +181,7 @@ export async function createTrustedManualOrder(
         return resolveCatalogLine(product, item);
       });
 
-      const itemsTotal = canonicalItems.reduce(
-        (sum, item) => sum + item.unitPrice * item.quantity,
-        0,
-      );
-      const totalPrice = itemsTotal + data.deliveryCost;
+      const { totalPrice } = orderTotalOf(canonicalItems, data.deliveryCost);
       assertOrderTotalWithinLimit(totalPrice, "items");
       const orderNumber = await nextOrderNumber(
         tx as unknown as BusinessPrincipalContext["prisma"],
@@ -213,7 +210,7 @@ export async function createTrustedManualOrder(
           items: {
             create: canonicalItems.map((item) => ({
               ...item,
-              total: item.unitPrice * item.quantity,
+              total: lineTotalOf(item.unitPrice, item.quantity),
             })),
           },
         },

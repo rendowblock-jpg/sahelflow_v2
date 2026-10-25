@@ -76,11 +76,13 @@ describe("courier COD amount == order total (S03c-05)", () => {
   });
 
   it("the order total includes the delivery cost when the order is created and when it is re-priced", () => {
+    // The sum (items + delivery cost) lives in orders/order-total.ts; both
+    // creators must pass their delivery cost to it.
     expect(manualOrder).toMatch(
-      /const totalPrice = itemsTotal \+ data\.deliveryCost;/,
+      /orderTotalOf\(canonicalItems, data\.deliveryCost\)/,
     );
     expect(canonicalSourceOrder).toMatch(
-      /const totalPrice = itemsTotal \+ data\.deliveryCost;/,
+      /orderTotalOf\(canonicalItems, data\.deliveryCost\)/,
     );
     expect(orderService).toContain("effectiveDeliveryCost");
     expect(orderService).toContain("recomputedTotalPrice");
