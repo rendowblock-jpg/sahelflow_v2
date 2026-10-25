@@ -8,7 +8,8 @@ import { geminiModelVersion } from "@/lib/ai/extraction/model-version";
 import { getSecret } from "@/lib/secrets";
 import { GROQ_API_KEY_SECRET } from "@/lib/ai/providers/groq/catalog";
 import { restoreQuotaLedger, saveQuotaLedger } from "@/lib/ai/providers/quota-ledger-store";
-import { getBool, SETTING_KEYS } from "@/lib/settings";
+import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
+import { AI_PROVIDER_ORDER_SETTING, parseProviderOrderSetting, providerOrderFor } from "@/lib/ai/providers/provider-order";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth, getCurrentUserKey } from "@/lib/auth/server";
@@ -119,6 +120,14 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const groqApiKey = consent
     ? (await getSecret({ prisma: db, shop: shopContext }, GROQ_API_KEY_SECRET)) ?? undefined
     : undefined;
+  // The seller's "try this AI first" choice; a missing or unreadable value means Groq first.
+  let storedOrder: string | null = null;
+  try {
+    storedOrder = await getSetting({ prisma: db, shop: shopContext }, AI_PROVIDER_ORDER_SETTING);
+  } catch {
+    // A failed read must never block order reading; the default order applies.
+  }
+  const providerOrder = providerOrderFor(parseProviderOrderSetting(storedOrder));
   // Pauses from an earlier run (best effort; once per process).
   await restoreQuotaLedger({ prisma: db, shop: shopContext });
   const catalog = await listExtractionCatalog({ prisma: db });
@@ -131,7 +140,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       knownPhone: input.knownPhone,
       catalog: catalog.map((entry) => ({ name: entry.name })),
     },
-    { geminiApiKey, groqApiKey },
+    { geminiApiKey, groqApiKey, providerOrder },
   );
   await saveQuotaLedger({ prisma: db, shop: shopContext });
 
