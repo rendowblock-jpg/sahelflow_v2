@@ -49,7 +49,7 @@ async function wipe(): Promise<void> {
 let sequence = 0;
 async function conversationWith(
   bodies: string[],
-  contact: { name?: string | null; phone?: string | null } = {},
+  contact: { name?: string; phone?: string | null } = {},
 ): Promise<{ id: string; messageIds: string[] }> {
   sequence += 1;
   const conversation = await db.conversation.create({
