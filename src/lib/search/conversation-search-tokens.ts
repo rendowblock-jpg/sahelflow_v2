@@ -100,6 +100,44 @@ export function contactTokenStringsOf(name: string | null | undefined, phone: st
   return [...tokens];
 }
 
+export type ContactRequiredTokens = {
+  /** Tokens (family conv-n:) a C doc must ALL hold when the query matches the contact's folded name. */
+  name: string[];
+  /** Same for the folded phone (family conv-p:). */
+  phone: string[];
+  /** Same for the compact forms (family conv-c:); [] only when the query has no letter or digit. */
+  compact: string[];
+};
+
+/**
+ * What a C doc must hold for a query, so that the index returns a SUPERSET of the contacts for which
+ * matchesSearchQuery(query, [name]) or (query, [phone]) is true (the three rules of that function):
+ *  1. the folded field contains the folded query: the query lies inside ONE word when it has no space, so its
+ *     3-character pieces are pieces of that word;
+ *  2. the compact field contains the compact query (separators and country codes ignored): the compact form is
+ *     one word, so the 3-character pieces of the compact query are pieces of it;
+ *  3. with several words, every word is somewhere in the field (rule 1 for the whole query implies this one, so
+ *     asking for the pieces of each word is enough for both).
+ * A contact is a candidate when its C doc holds every token of the name group, or of the phone group, or of the
+ * compact group. Unlike message bodies, a 2-character query is NOT narrowed to word starts here: it can sit
+ * anywhere in a name, and the old contact search finds it. null = some rule can match with no token to ask for
+ * (query under 3 characters, or a compact form of 1-2 characters): the caller must use the old path.
+ */
+export function contactRequiredTokenStrings(foldedQuery: string, compactQuery: string): ContactRequiredTokens | null {
+  const pieces = new Set<string>();
+  for (const word of foldedQuery.split(" ")) addPieces(pieces, word);
+  if (pieces.size === 0) return null;
+  const compactPieces = new Set<string>();
+  addPieces(compactPieces, compactQuery);
+  if (compactQuery.length > 0 && compactPieces.size === 0) return null;
+  const family = (domain: string, set: ReadonlySet<string>): string[] => [...set].map((entry) => `${domain}${entry}`);
+  return {
+    name: family(CONTACT_NAME_DOMAIN, pieces),
+    phone: family(CONTACT_PHONE_DOMAIN, pieces),
+    compact: family(CONTACT_COMPACT_DOMAIN, compactPieces),
+  };
+}
+
 /**
  * The token strings that EVERY message containing `foldedQuery` must have
  * stored (see the derivation above). [] = no narrowing possible: old path.
