@@ -179,3 +179,30 @@ export async function hashTokenStringsForConversations(
   });
   return result;
 }
+
+/**
+ * The stored numbers of SEVERAL token lists, each salted with its own
+ * conversation, in ONE derivation call (the indexer hashes a whole chunk of
+ * messages and reads the key once). Result[i] belongs to sets[i], in order.
+ * `null` = the shop key is missing.
+ */
+export async function hashTokenSetsOfConversations(
+  sets: ReadonlyArray<{ conversationId: string; strings: readonly string[] }>,
+  derive: BlindIndexDeriver,
+): Promise<number[][] | null> {
+  sets.forEach((set) => assertConversationId(set.conversationId));
+  const total = sets.reduce((sum, set) => sum + set.strings.length, 0);
+  if (total === 0) return sets.map(() => []);
+  const digests = await derive(
+    sets.flatMap((set) => set.strings.map((entry) => saltedInput(set.conversationId, entry))),
+    CONVERSATION_TOKEN_REFERENCE,
+  );
+  if (digests === null) return null;
+  const numbers = numbersOf(digests, total);
+  let offset = 0;
+  return sets.map((set) => {
+    const slice = numbers.slice(offset, offset + set.strings.length);
+    offset += set.strings.length;
+    return slice;
+  });
+}
