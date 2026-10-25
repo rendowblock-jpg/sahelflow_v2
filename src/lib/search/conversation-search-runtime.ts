@@ -4,6 +4,7 @@ import { createProtectedPiiCodec } from "@/lib/crypto/protected-pii";
 import { deriveExistingShopBlindIndexes } from "@/lib/crypto/protected-record";
 import { db, shopContext } from "@/lib/db";
 import {
+  drainConversationSearchDirty,
   runConversationSearchIndexStep,
   shopKeyRowPresent,
   type IndexerClient,
@@ -11,6 +12,7 @@ import {
   type SealedContact,
   type SealedMessage,
 } from "@/lib/search/conversation-search-index";
+import { searchConversationIndex, type SearchRow } from "@/lib/search/conversation-search-query";
 
 /**
  * The app wiring of the conversation-search indexer: the real client, the real shop key and the real message codec.
@@ -63,4 +65,38 @@ function ports(): IndexerPorts {
 export async function runConversationSearchIndexTick(): Promise<{ changed: boolean }> {
   const result = await runConversationSearchIndexStep(ports());
   return "skipped" in result ? { changed: false } : result;
+}
+
+/** Queued changes one search may index itself; the rest of a backlog belongs to the idle ticks. */
+const SEARCH_DRAIN_ROWS = 8;
+
+/**
+ * The inbox search: the newest 500 conversations and their 50 newest messages, as the route always read them, but
+ * only the candidates the index names are loaded. Contacts and bodies come through `db`, which opens them.
+ */
+export async function searchConversationsIndexed(args: { query: string; canReadContact: boolean }): Promise<SearchRow[]> {
+  const indexer = ports();
+  return searchConversationIndex(
+    {
+      client: indexer.client,
+      derive: indexer.derive,
+      listWindowIds: async () =>
+        (
+          await db.conversation.findMany({
+            select: { id: true },
+            orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
+            take: 500,
+          })
+        ).map((row) => row.id),
+      loadConversations: (ids) =>
+        db.conversation.findMany({
+          where: { id: { in: [...ids] } },
+          include: { messages: { orderBy: { timestamp: "desc" }, take: 50 } },
+        }),
+      drain: async () => {
+        await drainConversationSearchDirty(indexer, SEARCH_DRAIN_ROWS);
+      },
+    },
+    args,
+  );
 }

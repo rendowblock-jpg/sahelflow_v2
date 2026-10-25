@@ -186,9 +186,13 @@ describe("Inbox Class-AAA operations desk contract", () => {
     const route = read("src/app/api/conversations/search/route.ts");
     expect(route).toContain('requireTrustedAction("conversations.read")');
     expect(route).toContain('"customers.contact.read"');
-    expect(route).toContain("sourceId: canReadContact ? conversation.sourceId : null");
-    expect(route).toContain("messageBodies: conversation.messages.map");
-    expect(route).toContain("take: 500");
+    expect(route).toContain("searchConversationsIndexed");
+    const query = read("src/lib/search/conversation-search-query.ts");
+    expect(query).toContain("sourceId: canReadContact ? conversation.sourceId : null");
+    expect(query).toContain("messageBodies: conversation.messages.map");
+    const runtime = read("src/lib/search/conversation-search-runtime.ts");
+    expect(runtime).toContain("take: 500");
+    expect(runtime).toContain("take: 50");
   });
 
   it("represents persisted non-text message types honestly until durable media bytes exist", () => {
