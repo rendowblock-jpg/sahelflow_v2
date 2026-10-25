@@ -243,3 +243,53 @@ describe("golden set: wilayas and communes exist in the project tables", () => {
     }
   });
 });
+
+// Entries where the two blind readers read the message differently. They are
+// kept in the set but must not count for or against the extractor, so the list
+// is pinned: adding one needs a reason here and in the data.
+const DISPUTED_IDS = [
+  "G-AR-007",
+  "G-AR-040",
+  "G-AR-048",
+  "G-AR-050",
+  "G-AR-069",
+  "G-AZ-007",
+  "G-AZ-034",
+  "G-AZ-045",
+  "G-AZ-061",
+  "G-MSA-004",
+  "G-MX-007",
+];
+const MAX_DISPUTED = 15;
+// "Rouiba" is written in the address text; the three readers agree it is the commune.
+const ROUIBA_IDS = ["G-AR-038", "G-AZ-032", "G-FR-030"];
+
+describe("golden set: disputed entries and reconciled labels", () => {
+  const disputed = GOLDEN_SET.filter((e) => e.disputed !== undefined);
+
+  it("every disputed entry carries a non-empty one-line reason", () => {
+    for (const entry of disputed) {
+      const reason = entry.disputed ?? "";
+      expect(reason.trim().length, `${entry.id} reason is empty`).toBeGreaterThan(0);
+      expect(reason.includes("\n"), `${entry.id} reason is not one line`).toBe(false);
+    }
+  });
+
+  it("the disputed ids are exactly the pinned list", () => {
+    expect(disputed.map((e) => e.id).sort()).toEqual([...DISPUTED_IDS].sort());
+  });
+
+  it(`at most ${MAX_DISPUTED} entries are disputed`, () => {
+    expect(disputed.length).toBeLessThanOrEqual(MAX_DISPUTED);
+  });
+
+  it("the three Rouiba entries carry the commune and keep the address", () => {
+    for (const id of ROUIBA_IDS) {
+      const entry = GOLDEN_SET.find((e) => e.id === id);
+      expect(entry, id).toBeDefined();
+      expect(entry?.expected.commune, `${id} commune`).toBe("Rouiba");
+      expect(entry?.expected.address, `${id} address`).toBeDefined();
+      expect(entry?.disputed, `${id} is not disputed`).toBeUndefined();
+    }
+  });
+});

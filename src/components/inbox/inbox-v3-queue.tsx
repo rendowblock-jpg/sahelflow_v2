@@ -1098,7 +1098,11 @@ export function InboxV3Queue({
       >
         <ScrollArea className="min-h-0 flex-1">
         {loadingChats ? (
-          <div className="space-y-1 p-2" aria-label={t("common.loading")}>
+          <div
+            className="space-y-1 p-2"
+            role="status"
+            aria-label={t("common.loading")}
+          >
             {[0, 1, 2, 3, 4].map((item) => (
               <div
                 key={item}

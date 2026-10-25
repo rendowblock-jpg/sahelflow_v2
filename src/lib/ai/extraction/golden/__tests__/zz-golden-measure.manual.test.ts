@@ -8,6 +8,10 @@
  * network, no Gemini key, no database. It scores every golden entry against
  * the label written by meaning and writes baseline.json and baseline.md to
  * GOLDEN_OUT_DIR. It never asserts accuracy: the numbers are the finding.
+ *
+ * Every field is reported twice: over all entries, and over the entries that
+ * are NOT disputed (GoldenEntry.disputed: two careful readers read the message
+ * differently, so it should not count for or against the extractor).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -33,6 +37,7 @@ interface Failure {
   expected: unknown;
   got: unknown;
   tags: string[];
+  disputed: boolean;
 }
 
 function asciiDigits(text: string): string {
@@ -116,6 +121,7 @@ function matchItems(wanted: GoldenItem[], got: ExtractedItem[]) {
 describe.skipIf(!RUN)("golden set baseline (manual)", () => {
   it("scores the offline reader against every golden entry and writes the evidence", () => {
     const overall: Record<string, Tally> = {};
+    const overallNotDisputed: Record<string, Tally> = {};
     const byLanguage: Record<string, Record<string, Tally>> = {};
     const failures: Failure[] = [];
     const criticalKinds: Record<string, number> = {};
@@ -137,7 +143,8 @@ describe.skipIf(!RUN)("golden set baseline (manual)", () => {
         got: unknown,
         critical = false,
       ) => {
-        for (const bucket of [overall, byLanguage[language]]) {
+        const buckets = [overall, byLanguage[language], entry.disputed === undefined ? overallNotDisputed : undefined];
+        for (const bucket of buckets) {
           if (!bucket) continue;
           const cell = (bucket[field] ??= { correct: 0, total: 0 });
           cell.total += 1;
@@ -145,7 +152,7 @@ describe.skipIf(!RUN)("golden set baseline (manual)", () => {
         }
         if (ok) return;
         clean = false;
-        failures.push({ id: entry.id, language, field, kind, expected, got, tags });
+        failures.push({ id: entry.id, language, field, kind, expected, got, tags, disputed: entry.disputed !== undefined });
         if (critical) {
           criticalEntries.add(entry.id);
           criticalKinds[`${field}:${kind}`] = (criticalKinds[`${field}:${kind}`] ?? 0) + 1;
@@ -168,6 +175,7 @@ describe.skipIf(!RUN)("golden set baseline (manual)", () => {
       const got: ExtractedOrder = readOrderFields(input).order;
       perEntry.push({
         id: entry.id,
+        disputed: entry.disputed,
         order: predictedOrder,
         items: got.items.map((i) => `${i.quantity} x ${i.productName}${i.unitPrice ? ` @${i.unitPrice}` : ""}`),
         customerName: got.customerName,
@@ -292,6 +300,8 @@ describe.skipIf(!RUN)("golden set baseline (manual)", () => {
       .sort((a, b) => b.count - a.count);
 
     const ordersN = GOLDEN_SET.filter((e) => e.expected.isOrder).length;
+    const disputedList = GOLDEN_SET.filter((e) => e.disputed !== undefined);
+    const keptList = GOLDEN_SET.filter((e) => e.disputed === undefined);
     const report = {
       goldenVersion: GOLDEN_SET_VERSION,
       generatedAt: new Date().toISOString(),
@@ -300,6 +310,17 @@ describe.skipIf(!RUN)("golden set baseline (manual)", () => {
       orders: ordersN,
       notOrders: GOLDEN_SET.length - ordersN,
       overall: table(overall),
+      overallNotDisputed: table(overallNotDisputed),
+      disputedEntries: {
+        count: disputedList.length,
+        reasons: Object.fromEntries(disputedList.map((e) => [e.id, e.disputed])),
+      },
+      notDisputed: {
+        entries: keptList.length,
+        orders: keptList.filter((e) => e.expected.isOrder).length,
+        criticalEntries: keptList.filter((e) => criticalEntries.has(e.id)).length,
+        fullyCorrectEntries: keptList.filter((e) => entryClean.get(e.id) === true).length,
+      },
       byLanguage: Object.fromEntries(Object.entries(byLanguage).map(([l, t]) => [l, table(t)])),
       criticalEntries: { count: criticalEntries.size, of: GOLDEN_SET.length, kinds: criticalKinds },
       fullyCorrectEntries: { count: [...entryClean.values()].filter(Boolean).length, of: GOLDEN_SET.length },
@@ -313,17 +334,22 @@ describe.skipIf(!RUN)("golden set baseline (manual)", () => {
     writeFileSync(join(OUT_DIR, "baseline.json"), `${JSON.stringify(report, null, 2)}\n`);
 
     const pct = (a: { accuracy: number | null }) => (a.accuracy === null ? "-" : `${(a.accuracy * 100).toFixed(1)}%`);
+    const cells = (a?: { correct: number; total: number; accuracy: number | null; wilsonLower95: number }) =>
+      a ? `${a.correct}/${a.total} | ${pct(a)} | ${(a.wilsonLower95 * 100).toFixed(1)}%` : "- | - | -";
     const lines: string[] = [
       `# Golden set baseline (${GOLDEN_SET_VERSION})`,
       "",
       `Offline reader only (no network, no key). ${report.entries} entries (${report.orders} orders, ${report.notOrders} not-an-order). Generated ${report.generatedAt}.`,
       "",
-      "| field | correct/total | accuracy | Wilson 95% lower |",
-      "|---|---|---|---|",
-      ...Object.entries(report.overall).map(([f, a]) => `| ${f} | ${a.correct}/${a.total} | ${pct(a)} | ${(a.wilsonLower95 * 100).toFixed(1)}% |`),
+      `${report.disputedEntries.count} entries are disputed (${disputedList.map((e) => e.id).join(", ")}). Each field is shown over ALL entries and over the ${report.notDisputed.entries} entries that are NOT disputed.`,
+      "",
+      "| field | all: correct/total | accuracy | Wilson 95% lower | not disputed: correct/total | accuracy | Wilson 95% lower |",
+      "|---|---|---|---|---|---|---|",
+      ...Object.entries(report.overall).map(([f, a]) => `| ${f} | ${cells(a)} | ${cells(report.overallNotDisputed[f])} |`),
       "",
       `Entries with a critical error (wrong phone/wilaya/quantity/price, invented price/phone/wilaya, extra item, order from a non-order): ${report.criticalEntries.count} of ${report.entries}.`,
       `Entries with every check right: ${report.fullyCorrectEntries.count} of ${report.entries}.`,
+      `Not disputed only: critical error ${report.notDisputed.criticalEntries} of ${report.notDisputed.entries}; every check right ${report.notDisputed.fullyCorrectEntries} of ${report.notDisputed.entries}.`,
       "",
       "## By language",
       "",
