@@ -70,6 +70,7 @@ body[data-voice=pulse] .px-order .sf-chips span{border-radius:0;border:2px solid
 body[data-voice=pulse] .sf-pill span{border-radius:0;border:2px solid var(--ink)}
 body[data-voice=pulse] .sf-form{border:3px solid var(--ink);border-radius:0;background:#fff;box-shadow:var(--hard) var(--hard) 0 var(--ink)}
 body[data-voice=pulse] :is(.sf-field input,.sf-field select,.sf-field textarea){border-radius:0;border:2px solid var(--ink);background:#fff}
+body[data-voice=pulse] .sf-search-list{border-radius:0;border:2px solid var(--ink);background:#fff}
 body[data-voice=pulse] .sf-cta{border-radius:0;border:3px solid var(--ink);background:var(--ink);color:var(--background);font-weight:900;text-transform:uppercase;box-shadow:4px 4px 0 var(--sf-accent,var(--ink))}
 body[data-voice=pulse] .sf-sticky{border-block-start:3px solid var(--ink);box-shadow:none;background:var(--background)}
 

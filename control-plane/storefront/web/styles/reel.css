@@ -97,6 +97,7 @@ body[data-voice=reel] :is(.sf-form,.sf-thanks){
 body[data-voice=reel] .sf-form{padding:30px 22px 26px;gap:20px}
 body[data-voice=reel] .sf-form .sf-h3{font-size:30px}
 body[data-voice=reel] .sf-field :is(input,select,textarea){background:transparent;border-radius:0}
+body[data-voice=reel] .sf-search-list{background:transparent;border-radius:0}
 body[data-voice=reel] :is(.sf-stepper,.sf-mode-in){border-radius:0;background:transparent}
 body[data-voice=reel] .sf-mode input:checked+.sf-mode-in{background:var(--accent)}
 body[data-voice=reel] .sf-sum{background:none;border-block-start:2px dashed var(--rl-ink);border-radius:0;padding-inline:0}

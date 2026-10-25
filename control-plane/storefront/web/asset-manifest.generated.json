@@ -1,5 +1,5 @@
 {
-  "css": "/_sf/shop.b1971160bf.css",
+  "css": "/_sf/shop.946885fad8.css",
   "js": "/_sf/shop.306fb85473.js",
   "communes": "/_sf/c.a0b9de23ec",
   "fonts": {
@@ -30,13 +30,13 @@
   },
   "skins": {
     "prime": {
-      "css": "/_sf/prime.dad4b5e045.css"
+      "css": "/_sf/prime.7d15a06afb.css"
     },
     "souk": {
       "css": "/_sf/souk.b81383f5c6.css"
     },
     "reel": {
-      "css": "/_sf/reel.2bd34aa715.css",
+      "css": "/_sf/reel.1f059e3b52.css",
       "js": "/_sf/reel.bbd844599f.js"
     },
     "noir": {
@@ -50,10 +50,10 @@
       "css": "/_sf/atelier.fbc157e967.css"
     },
     "pulse": {
-      "css": "/_sf/pulse.cd8be7f115.css"
+      "css": "/_sf/pulse.9a6bb99762.css"
     },
     "bloom": {
-      "css": "/_sf/bloom.e9831be1da.css"
+      "css": "/_sf/bloom.1515b1812e.css"
     }
   }
 }

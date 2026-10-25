@@ -304,6 +304,17 @@ html[lang=ar] .sf-pname{font-size:clamp(30px,8.4vw,38px)}
 .sf-field.is-ok.sf-field--area::after{display:none}
 [dir=rtl] .sf-field input[dir=ltr]{text-align:right}
 .sf-err{margin:0;font-size:13px;font-weight:700;color:var(--sf-danger);animation:sf-rise .25s var(--e-out) both}
+/* Commune search: the box is a normal .sf-field input; the list opens inline under it (never a popup) and scrolls inside itself. */
+.sf-vh,.sf-search-note:empty{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sf-search-note{margin:0;font-size:14px;font-weight:700}
+.sf-search-list{margin:0;padding:0;list-style:none;max-height:50vh;overflow-y:auto;border:1.5px solid var(--input);border-radius:var(--rc);background:var(--background);color:var(--foreground)}
+.sf-search-list[hidden]{display:none}
+.sf-opt{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px 12px;min-height:48px;padding:8px 14px;border-inline-start:4px solid transparent;cursor:pointer}
+.sf-opt+.sf-opt{border-block-start:1px solid var(--input)}
+.sf-opt-name{font-weight:700;overflow-wrap:anywhere}
+.sf-opt-where{font-size:14px;color:var(--muted-foreground)}
+.sf-opt.is-active{border-inline-start-color:var(--ring);outline:2px solid var(--ring);outline-offset:-2px}
+@supports (background:color-mix(in srgb,red,blue)){.sf-opt:hover,.sf-opt.is-active{background:color-mix(in srgb,var(--foreground) 8%,var(--background))}}
 .sf-modes{border:0;margin:0;padding:0}
 .sf-modes-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .sf-mode{position:relative;display:block}
@@ -399,6 +410,8 @@ body[data-voice] .sf-sticky .sf-cta--bar{min-width:max-content;padding-inline:14
 :focus-visible,.sf-field input:focus,.sf-field select:focus,.sf-field textarea:focus,.sf-pill input:focus-visible+span,.sf-mode input:focus-visible+.sf-mode-in{outline:2px solid Highlight;outline-offset:2px}
 .sf-btn,.sf-cta,.sf-stepper button,.sf-chips span,.sf-chip{border:1px solid ButtonText}
 .sf-field input,.sf-field select,.sf-field textarea,.sf-stepper,.sf-pill span,.sf-mode-in{border:1.5px solid ButtonText}
+.sf-search-list{border:1.5px solid ButtonText}
+.sf-opt.is-active{outline:3px solid Highlight;outline-offset:-3px;border-inline-start-color:Highlight}
 body .sf-pill input:checked+span{border:3px solid Highlight;padding-inline:18.5px}
 body .sf-mode input:checked+.sf-mode-in{border:3px solid Highlight;padding:10.5px 12.5px}
 .sf-cta::after{display:none}
