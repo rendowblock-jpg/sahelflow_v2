@@ -19,15 +19,14 @@ import {
   resolvePreviousRange,
   type ResolvedAnalyticsRange,
 } from "@/lib/analytics/range";
+import { addShopDays } from "@/lib/time/shop-day";
 
 /**
  * Deterministic bucket end for the pure time-series builders: from + (days-1)
  * produces exactly `days` day buckets regardless of the wall clock.
  */
 function seriesBucketEnd(range: ResolvedAnalyticsRange): Date {
-  const end = new Date(range.from);
-  end.setDate(end.getDate() + (range.days - 1));
-  return end;
+  return addShopDays(range.from, range.days - 1);
 }
 
 /** Full analytics report for an arbitrary resolved range (presets + custom). */
