@@ -74,9 +74,22 @@ export type QueryPorts = {
   drain: () => Promise<void>;
   /** Required tokens asked of the index per group (default DEFAULT_LOOKUP_MAX): any subset is a valid filter, see conversation-search-lookup.ts. */
   lookupMax?: number;
+  /** Told each time the index path fails and the search falls back (the runtime counts these for its circuit breaker). A throw in it is ignored. */
+  onIndexFailure?: (error: unknown) => void;
+  /** Told each time the index path answered. A throw in it is ignored. */
+  onIndexSuccess?: () => void;
   /** Optional stage timer for profiling (the bench). Undefined in production: one branch per stage, nothing else. */
   trace?: (stage: string, ms: number) => void;
 };
+
+/** Calls a callback of the ports; a broken counter must never break a search. */
+function tell(call: () => void): void {
+  try {
+    call();
+  } catch {
+    // ignored on purpose
+  }
+}
 
 /** Runs one stage and reports its time to ports.trace when there is one. */
 async function staged<T>(ports: QueryPorts, stage: string, run: () => Promise<T>): Promise<T> {
@@ -491,9 +504,28 @@ export async function searchConversationIndex(
   }
   try {
     const answer = await indexedAnswer(ports, windowIds, query, canReadContact);
-    if (answer !== null) return answer;
-  } catch {
+    if (answer !== null) {
+      tell(() => ports.onIndexSuccess?.());
+      return answer;
+    }
+  } catch (error) {
     // Any failure of the index or of a port: the old way, over the whole window.
+    tell(() => ports.onIndexFailure?.(error));
   }
+  return judgeInFull(ports, windowIds, query, canReadContact);
+}
+
+/**
+ * The old route and nothing else: the newest 500 conversations with their 50 newest messages, judged one by one.
+ * It drains nothing and asks the index nothing: this is what runs when the index is switched off or its breaker is open.
+ */
+export async function searchConversationWindow(
+  ports: QueryPorts,
+  input: { query: string; canReadContact: boolean },
+): Promise<SearchRow[]> {
+  const { query, canReadContact } = input;
+  if (!query) return [];
+  const windowIds = await staged(ports, "listWindowIds", () => ports.listWindowIds());
+  if (windowIds.length === 0) return [];
   return judgeInFull(ports, windowIds, query, canReadContact);
 }

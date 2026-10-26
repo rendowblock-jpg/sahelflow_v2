@@ -12,7 +12,7 @@ import {
   type SealedContact,
   type SealedMessage,
 } from "@/lib/search/conversation-search-index";
-import { searchConversationIndex, type SearchRow } from "@/lib/search/conversation-search-query";
+import { searchConversationIndex, searchConversationWindow, type QueryPorts, type SearchRow } from "@/lib/search/conversation-search-query";
 
 /**
  * The app wiring of the conversation-search indexer: the real client, the real shop key and the real message codec.
@@ -70,39 +70,58 @@ export async function runConversationSearchIndexTick(): Promise<{ changed: boole
 /** Queued changes one search may index itself; the rest of a backlog belongs to the idle ticks. */
 const SEARCH_DRAIN_ROWS = 8;
 
+/** Index failures in a row after which this process stops asking the index (until restart). */
+const BREAKER_LIMIT = 3;
+let consecutiveFailures = 0;
+
+/**
+ * Two valves back to the old search: the env switch SF_CONVERSATION_SEARCH_INDEX=off (read on every call, so it works
+ * without a restart of the module) and a breaker that opens after BREAKER_LIMIT index failures in a row; one success resets the count.
+ */
+function indexSwitchedOff(): boolean {
+  return process.env.SF_CONVERSATION_SEARCH_INDEX?.trim().toLowerCase() === "off" || consecutiveFailures >= BREAKER_LIMIT;
+}
+
 /**
  * The inbox search: the newest 500 conversations and their 50 newest messages, as the route always read them, but
  * only the candidates the index names are loaded. Contacts and bodies come through `db`, which opens them.
  */
 export async function searchConversationsIndexed(args: { query: string; canReadContact: boolean }): Promise<SearchRow[]> {
   const indexer = ports();
-  return searchConversationIndex(
-    {
-      client: indexer.client,
-      derive: indexer.derive,
-      listWindowIds: async () =>
-        (
-          await db.conversation.findMany({
-            select: { id: true },
-            orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
-            take: 500,
-          })
-        ).map((row) => row.id),
-      loadConversations: (ids) =>
-        db.conversation.findMany({
-          where: { id: { in: [...ids] } },
-          include: { messages: { orderBy: { timestamp: "desc" }, take: 50 } },
-        }),
-      loadConversationRows: (ids) => db.conversation.findMany({ where: { id: { in: [...ids] } } }),
-      openMessages: (ids) =>
-        db.message.findMany({
-          where: { id: { in: [...ids] } },
-          select: { id: true, conversationId: true, body: true, direction: true, timestamp: true },
-        }),
-      drain: async () => {
-        await drainConversationSearchDirty(indexer, SEARCH_DRAIN_ROWS);
-      },
+  const queryPorts: QueryPorts = {
+    client: indexer.client,
+    derive: indexer.derive,
+    listWindowIds: async () =>
+      (
+        await db.conversation.findMany({
+          select: { id: true },
+          orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
+          take: 500,
+        })
+      ).map((row) => row.id),
+    loadConversations: (ids) =>
+      db.conversation.findMany({
+        where: { id: { in: [...ids] } },
+        include: { messages: { orderBy: { timestamp: "desc" }, take: 50 } },
+      }),
+    loadConversationRows: (ids) => db.conversation.findMany({ where: { id: { in: [...ids] } } }),
+    openMessages: (ids) =>
+      db.message.findMany({
+        where: { id: { in: [...ids] } },
+        select: { id: true, conversationId: true, body: true, direction: true, timestamp: true },
+      }),
+    drain: async () => {
+      await drainConversationSearchDirty(indexer, SEARCH_DRAIN_ROWS);
     },
-    args,
-  );
+    onIndexFailure: () => {
+      consecutiveFailures += 1;
+      if (consecutiveFailures === BREAKER_LIMIT) {
+        console.warn(`[conversation-search] ${BREAKER_LIMIT} index failures in a row: searching the old way until restart`);
+      }
+    },
+    onIndexSuccess: () => {
+      consecutiveFailures = 0;
+    },
+  };
+  return indexSwitchedOff() ? searchConversationWindow(queryPorts, args) : searchConversationIndex(queryPorts, args);
 }
