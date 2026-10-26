@@ -276,3 +276,30 @@ describe("conversation search: safety (T7)", () => {
     }
   });
 });
+
+describe("conversation search: plan contract of the index queries", () => {
+  it("answers every token lookup from the (tokenHash, docId) index and never scans the document or token table", async () => {
+    const recorded: Array<{ sql: string; values: unknown[] }> = [];
+    const client = {
+      $queryRawUnsafe: async (sql: string, ...values: unknown[]) => {
+        recorded.push({ sql, values });
+        return seed.$queryRawUnsafe(sql, ...values);
+      },
+    };
+    for (const [query, right] of [["livraison", true], ["livraison", false], ["paiement à la livraison", true], ["0555", true], ["benali", true], ["zxqvw", true]] as const) {
+      await searchConversationIndex(portsFor(fresh(), { client: client as never }), { query: normalizeSearchText(query), canReadContact: right });
+    }
+    const lookups = recorded.filter(({ sql }) => sql.includes('"ConversationSearchToken"'));
+    expect(lookups.length).toBeGreaterThan(0);
+    for (const { sql, values } of lookups) {
+      const plan = (await seed.$queryRawUnsafe(`EXPLAIN QUERY PLAN ${sql}`, ...values)) as Array<{ detail: string }>;
+      const lines = plan.map((row) => row.detail);
+      const text = lines.join(" // ");
+      expect(text, `plan: ${text}`).toContain("ConversationSearchToken_tokenHash_docId_idx");
+      expect(
+        lines.filter((line) => /^SCAN (?:d|t|ConversationSearchDoc|ConversationSearchToken)\b/u.test(line)),
+        `plan: ${text}`,
+      ).toEqual([]);
+    }
+  });
+});
