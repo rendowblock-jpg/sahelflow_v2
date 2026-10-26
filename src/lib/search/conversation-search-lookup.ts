@@ -7,8 +7,8 @@
  * hash and one index probe per (conversation, token): fewer tokens is the cheapest speed-up there is.
  */
 
-/** Tokens asked per group (messages, and each of the contact groups). Chosen by measurement, see the w57 report. */
-export const DEFAULT_LOOKUP_MAX = 3;
+/** Tokens asked per group (messages, and each of the contact groups). Measured at 25k messages: median of the query medians 68.6 ms at 2, 74.4 at 3, 81.5 at 4, with the same bodies opened. */
+export const DEFAULT_LOOKUP_MAX = 2;
 
 /**
  * At most `max` of `strings`, in their order, spread over the list (first, middle, last, ...). A list that is not
