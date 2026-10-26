@@ -151,3 +151,19 @@ describe("searchConversationIndex with stand-in ports", () => {
     expect(hidden).toMatchObject({ matchType: "message", contactName: null, contactPhone: null, sourceId: null, fieldAccess: { contact: false } });
   });
 });
+
+describe("conversation search query path: stage timing (optional trace port)", () => {
+  it("reports the time of every stage through ports.trace, and works the same without it", async () => {
+    const plain = fakePorts(shop(), { covered: ["a", "b", "c"], candidates: ["a"] });
+    const expected = await ask(plain.ports, "livraison");
+    const traced = fakePorts(shop(), { covered: ["a", "b", "c"], candidates: ["a"] });
+    const seen: Array<[string, number]> = [];
+    traced.ports.trace = (stage, ms) => seen.push([stage, ms]);
+    expect(await ask(traced.ports, "livraison")).toEqual(expected);
+    const stages = new Set(seen.map(([stage]) => stage));
+    for (const stage of ["listWindowIds", "drain", "fullyIndexed", "hashing", "sqlM", "sqlC", "loadConversations", "legacy"]) {
+      expect(stages.has(stage), `stage ${stage} is reported`).toBe(true);
+    }
+    for (const [, ms] of seen) expect(ms).toBeGreaterThanOrEqual(0);
+  });
+});
