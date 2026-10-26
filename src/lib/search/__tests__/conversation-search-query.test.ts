@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { legacyConversationMatch } from "@/lib/search/conversation-search-legacy";
+import { DEFAULT_LOOKUP_MAX } from "@/lib/search/conversation-search-lookup";
 import {
   searchConversationIndex,
   type QueryPorts,
@@ -50,7 +51,7 @@ type Script = {
 
 // Message ids in the stand-in are "<conversation>:<position, newest first>".
 function fakePorts(data: SearchConversation[], script: Script = {}) {
-  const calls = { sql: 0, loaded: [] as string[][], rows: [] as string[][], opened: [] as string[][], covered: [] as string[][], drained: 0, derived: 0 };
+  const calls = { sql: 0, loaded: [] as string[][], rows: [] as string[][], opened: [] as string[][], covered: [] as string[][], drained: 0, derived: 0, hashed: [] as number[] };
   const byId = new Map(data.map((entry) => [entry.id, entry] as const));
   const parse = (id: string) => ({ conversationId: id.slice(0, id.lastIndexOf(":")), index: Number(id.slice(id.lastIndexOf(":") + 1)) });
   const ports: QueryPorts = {
@@ -82,6 +83,7 @@ function fakePorts(data: SearchConversation[], script: Script = {}) {
     },
     derive: async (values) => {
       calls.derived += 1;
+      calls.hashed.push(values.length);
       return script.deriveNull ? null : values.map((_, at) => (at + 1).toString(16).padStart(12, "0")); // one distinct number per token
     },
     listWindowIds: async () => data.map((entry) => entry.id),
@@ -248,5 +250,36 @@ describe("conversation search query path: stage timing (optional trace port)", (
       expect(stages.has(stage), `stage ${stage} is reported`).toBe(true);
     }
     for (const [, ms] of seen) expect(ms).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("the lookup asks the index for a few tokens, not for all of them", () => {
+  const long = () => [
+    conversation("a", "Amine Benali", "0555123456", ["salam", "ma commande est arrivee"]),
+    conversation("b", "Karim Bensalem", "0661000000", ["merci", "colis arrive"]),
+    conversation("c", "Sofiane Boudiaf", null, ["bghit 2 coques samsung"]),
+  ];
+  // "arrivee" gives 5 pieces for the message group and 5 for each of the 3 contact groups: 20 strings per conversation.
+  it("hashes at most lookupMax strings per group and conversation, and answers like the old way", async () => {
+    const everything = fakePorts(long(), { covered: ["a", "b", "c"], candidates: ["a"] });
+    everything.ports.lookupMax = 99;
+    const rowsAll = summary(await ask(everything.ports, "arrivee"));
+    const few = fakePorts(long(), { covered: ["a", "b", "c"], candidates: ["a"] });
+    few.ports.lookupMax = 2;
+    const rowsFew = summary(await ask(few.ports, "arrivee"));
+    expect(rowsFew).toEqual(rowsAll);
+    expect(rowsFew).toEqual(oldWay(long(), "arrivee"));
+    expect(everything.calls.hashed).toEqual([3 * 20]);
+    expect(few.calls.hashed).toEqual([3 * 8]); // 2 message pieces + 2 per contact group, for 3 conversations
+  });
+
+  it("uses DEFAULT_LOOKUP_MAX when the ports say nothing, and never fewer than one token", async () => {
+    const plain = fakePorts(long(), { covered: ["a", "b", "c"], candidates: ["a"] });
+    await ask(plain.ports, "arrivee");
+    expect(plain.calls.hashed).toEqual([3 * 4 * Math.min(5, DEFAULT_LOOKUP_MAX)]);
+    const zero = fakePorts(long(), { covered: ["a", "b", "c"], candidates: ["a"] });
+    zero.ports.lookupMax = 0;
+    expect(summary(await ask(zero.ports, "arrivee"))).toEqual(oldWay(long(), "arrivee"));
+    expect(zero.calls.hashed).toEqual([3 * 4]);
   });
 });
