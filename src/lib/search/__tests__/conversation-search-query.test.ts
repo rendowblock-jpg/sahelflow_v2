@@ -54,7 +54,7 @@ type Script = {
 
 // Message ids in the stand-in are "<conversation>:<position, newest first>".
 function fakePorts(data: SearchConversation[], script: Script = {}) {
-  const calls = { sql: 0, loaded: [] as string[][], rows: [] as string[][], opened: [] as string[][], covered: [] as string[][], drained: 0, derived: 0, hashed: [] as number[], canary: 0 };
+  const calls = { sql: 0, loaded: [] as string[][], rows: [] as string[][], opened: [] as string[][], covered: [] as string[][], drained: 0, derived: 0, hashed: [] as number[], strings: [] as string[], canary: 0 };
   const byId = new Map(data.map((entry) => [entry.id, entry] as const));
   const parse = (id: string) => ({ conversationId: id.slice(0, id.lastIndexOf(":")), index: Number(id.slice(id.lastIndexOf(":") + 1)) });
   const ports: QueryPorts = {
@@ -75,9 +75,13 @@ function fakePorts(data: SearchConversation[], script: Script = {}) {
         if (sql.includes('"ConversationSearchToken"')) {
           const kind = values[values.length - 1];
           const named = kind === "M" ? (script.candidates ?? []) : (script.contactCandidates ?? script.candidates ?? []);
-          return named.flatMap((id) =>
-            kind === "M" ? (byId.get(id)?.messages ?? []).map((_, at) => ({ id: `${id}:${at}`, conversationId: id })) : [{ id, conversationId: id }],
-          ) as T;
+          // One SELECT ... GROUP BY per group: every group the statement asks for gets the same named conversations.
+          const groups = sql.split("GROUP BY").length - 1;
+          return Array.from({ length: groups }, (_, g) =>
+            named.flatMap((id) =>
+              kind === "M" ? (byId.get(id)?.messages ?? []).map((_message, at) => ({ id: `${id}:${at}`, conversationId: id, g })) : [{ id, conversationId: id, g }],
+            ),
+          ).flat() as T;
         }
         if (sql.includes('FROM "Message" m')) {
           return (values as string[]).map((id) => {
@@ -93,6 +97,7 @@ function fakePorts(data: SearchConversation[], script: Script = {}) {
     derive: async (values) => {
       if (values.length === 1 && values[0]!.includes("key-canary")) return script.deriveNull ? null : ["0000000000ff"]; // the canary hash
       calls.derived += 1;
+      calls.strings.push(...values);
       calls.hashed.push(values.length);
       return script.deriveNull ? null : values.map((_, at) => (at + 1).toString(16).padStart(12, "0")); // one distinct number per token
     },
@@ -311,6 +316,20 @@ describe("the index outcome callbacks and the window search (safety valves)", ()
     expect(seen.successes).toBe(1);
     await ask(wire(fakePorts(shop(), { covered: all }).ports), "a", false); // 1 character: the old way, no verdict on the index
     expect([seen.failures.length, seen.successes]).toEqual([1, 1]);
+  });
+
+  it("contact strings are hashed only when a contact group will be looked up: not without the right, not for a slice with no covered conversation", async () => {
+    const withoutRight = fakePorts(shop(), { covered: all, candidates: ["b"] });
+    await ask(withoutRight.ports, "colis", false);
+    expect(withoutRight.calls.strings.length).toBeGreaterThan(0);
+    expect(withoutRight.calls.strings.filter((value) => value.includes("\u0000conv-"))).toEqual([]);
+    const nothingCovered = fakePorts(shop(), { covered: [], candidates: [] });
+    await ask(nothingCovered.ports, "colis", true);
+    expect(nothingCovered.calls.derived).toBe(0);
+    expect(nothingCovered.calls.strings).toEqual([]);
+    const withRight = fakePorts(shop(), { covered: all, candidates: ["b"] });
+    await ask(withRight.ports, "colis", true);
+    expect(withRight.calls.strings.filter((value) => value.includes("\u0000conv-")).length).toBeGreaterThan(0);
   });
 
   it("a missing or different key canary means the whole old path, and it is not an index failure either", async () => {

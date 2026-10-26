@@ -197,6 +197,8 @@ async function fullyIndexed(client: QueryClient, windowIds: readonly string[]): 
 }
 
 type Candidate = { id: string; conversationId: string };
+type Wanted = ReadonlyMap<string, readonly number[]>;
+type Found = { docs: Candidate[]; unsure: Set<string> };
 
 /**
  * Documents of `kind` that hold all of their conversation's wanted numbers, found hash first: the numbers are salted
@@ -204,44 +206,57 @@ type Candidate = { id: string; conversationId: string };
  * only add a false candidate, never remove a true one, and the owner check below drops foreign documents). The
  * (tokenHash, docId) index gives one short range per number; no join on the conversation is needed. A conversation
  * whose own numbers collide (fewer distinct numbers than tokens) cannot be counted: it is returned in `unsure`.
+ *
+ * Several groups (the name, phone and compact tokens of a contact) go in ONE statement: each group is its own
+ * SELECT ... GROUP BY docId HAVING COUNT(*) >= its own token count, tagged with its position, and the SELECTs are
+ * joined with UNION ALL. A group never counts another group's hashes, so each group's answer is exactly what its own
+ * statement gave; the answer is [{ docs, unsure }] in the order of `groups`. One round trip instead of one per group.
  */
-async function candidateDocs(
-  client: QueryClient,
-  kind: "M" | "C",
-  wanted: ReadonlyMap<string, readonly number[]>,
-): Promise<{ docs: Candidate[]; unsure: Set<string> }> {
-  const docs: Candidate[] = [];
-  const unsure = new Set<string>();
-  const entries = [...wanted].filter(([, hashes]) => hashes.length > 0);
-  if (entries.length === 0) return { docs, unsure };
-  const need = entries[0]![1].length;
-  const perQuery = Math.max(1, Math.floor(HASHES_PER_QUERY / need));
-  for (let start = 0; start < entries.length; start += perQuery) {
-    const owners = new Set<string>();
-    const batch: number[] = [];
-    for (const [id, hashes] of entries.slice(start, start + perQuery)) {
-      if (new Set(hashes).size === need) {
-        owners.add(id);
-        batch.push(...hashes);
-      } else {
-        unsure.add(id);
+export async function candidateDocs(client: QueryClient, kind: "M" | "C", groups: readonly Wanted[]): Promise<Found[]> {
+  const found: Found[] = groups.map(() => ({ docs: [], unsure: new Set<string>() }));
+  const entries = groups.map((wanted) => [...wanted].filter(([, hashes]) => hashes.length > 0));
+  const needs = entries.map((list) => list[0]?.[1].length ?? 0);
+  const total = needs.reduce((sum, need) => sum + need, 0);
+  if (total === 0) return found;
+  const perQuery = Math.max(1, Math.floor(HASHES_PER_QUERY / total));
+  const longest = Math.max(...entries.map((list) => list.length));
+  for (let start = 0; start < longest; start += perQuery) {
+    const owners: Array<Set<string>> = groups.map(() => new Set<string>());
+    const selects: string[] = [];
+    const values: unknown[] = [];
+    entries.forEach((list, at) => {
+      const batch: number[] = [];
+      for (const [id, hashes] of list.slice(start, start + perQuery)) {
+        if (new Set(hashes).size === needs[at]) {
+          owners[at]!.add(id);
+          batch.push(...hashes);
+        } else {
+          found[at]!.unsure.add(id);
+        }
       }
-    }
-    if (batch.length === 0) continue;
+      if (batch.length === 0) return;
+      selects.push(
+        `SELECT t."docId" AS "docId", ? AS "g" FROM "ConversationSearchToken" t
+         WHERE t."tokenHash" IN (${marks(batch.length)}) GROUP BY t."docId" HAVING COUNT(*) >= ?`,
+      );
+      values.push(at, ...batch, needs[at]);
+    });
+    if (selects.length === 0) continue;
     // CROSS JOIN pins the order: token hits first, then each Doc row by its rowid. Without it SQLite (no statistics) starts
     // from every Doc of this kind and builds an automatic index on the hits: ~24 ms per statement at 250,000 messages.
-    const answer = await client.$queryRawUnsafe<Candidate[]>(
-      `SELECT d."entityId" AS "id", d."conversationId" AS "conversationId"
-       FROM (SELECT t."docId" AS "docId" FROM "ConversationSearchToken" t
-             WHERE t."tokenHash" IN (${marks(batch.length)}) GROUP BY t."docId" HAVING COUNT(*) >= ?) c
+    const answer = await client.$queryRawUnsafe<Array<Candidate & { g: number | bigint }>>(
+      `SELECT d."entityId" AS "id", d."conversationId" AS "conversationId", c."g" AS "g"
+       FROM (${selects.join(" UNION ALL ")}) c
        CROSS JOIN "ConversationSearchDoc" d ON d."docId" = c."docId" AND d."kind" = ?`,
-      ...batch,
-      need,
+      ...values,
       kind,
     );
-    for (const row of answer) if (owners.has(row.conversationId)) docs.push(row);
+    for (const row of answer) {
+      const at = Number(row.g);
+      if (owners[at]?.has(row.conversationId)) found[at]!.docs.push({ id: row.id, conversationId: row.conversationId });
+    }
   }
-  return { docs, unsure };
+  return found;
 }
 
 type Rank = { id: string; conversationId: string; newer: number | bigint; atLeast: number | bigint };
@@ -377,15 +392,20 @@ async function judgeSlice(
     const hashed = await staged(ports, "hashing", () => hashTokenStringsForConversations(everything, coveredIds, ports.derive));
     if (hashed === null) throw new IndexUnavailable("shop key row missing");
     const position = new Map(everything.map((entry, at) => [entry, at] as const));
+    const wantedOf = (strings: readonly string[]): Wanted =>
+      new Map([...hashed].map(([id, hashes]) => [id, strings.map((entry) => hashes[position.get(entry)!]!)] as const));
     const contactIds = new Set<string>();
-    let messageDocs: Candidate[] = [];
-    for (const group of groups) {
-      const wanted = new Map<string, number[]>();
-      for (const [id, hashes] of hashed) wanted.set(id, group.strings.map((entry) => hashes[position.get(entry)!]!));
-      const found = await staged(ports, "sql" + group.kind, () => candidateDocs(ports.client, group.kind, wanted));
-      for (const id of found.unsure) full.add(id);
-      if (group.kind === "M") messageDocs = found.docs;
-      else for (const doc of found.docs) contactIds.add(doc.conversationId);
+    const [messageFound] = await staged(ports, "sqlM", () => candidateDocs(ports.client, "M", [wantedOf(messageTokens)]));
+    for (const id of messageFound!.unsure) full.add(id);
+    const messageDocs = messageFound!.docs;
+    const contactGroups = groups.filter((group) => group.kind === "C");
+    if (contactGroups.length > 0) {
+      // The name, phone and compact lookups in one statement.
+      const foundContacts = await staged(ports, "sqlC", () => candidateDocs(ports.client, "C", contactGroups.map((group) => wantedOf(group.strings))));
+      for (const found of foundContacts) {
+        for (const id of found.unsure) full.add(id);
+        for (const doc of found.docs) contactIds.add(doc.conversationId);
+      }
     }
 
     // Messages: only candidates among the 50 newest of a conversation that is not judged in full are opened.

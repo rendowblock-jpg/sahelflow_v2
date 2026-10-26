@@ -143,7 +143,10 @@ describe("conversation-search query path: raw SQL boundary", () => {
     expect(sqlInterpolations.length).toBeGreaterThan(0);
     const allowed = new Set(["marks(batch.length)", "singles(batch.length)"]);
     for (const expression of sqlInterpolations) expect(allowed.has(expression), expression).toBe(true);
-    expect(interpolations.filter((expression) => !/^(?:marks|singles)\(/u.test(expression))).toEqual([]);
+    // The one other interpolation: the contact lookup joins its per-group SELECTs (each built from the same static text
+    // plus marks(batch.length), checked above) with a fixed UNION ALL. No value, no name and no number is pasted.
+    expect(interpolations.filter((expression) => !/^(?:marks|singles)\(/u.test(expression))).toEqual(['selects.join(" UNION ALL ")']);
+    expect(query.match(/selects\.push\(/gu)).toHaveLength(1);
   });
 });
 

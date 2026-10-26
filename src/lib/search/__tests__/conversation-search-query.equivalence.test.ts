@@ -5,9 +5,16 @@ import { createProtectedPiiCodec } from "@/lib/crypto/protected-pii";
 import { deriveExistingShopBlindIndexes, deriveShopBlindIndexes } from "@/lib/crypto/protected-record";
 import { TEST_SHOP_CONTEXT, createTestPrisma, disconnectTestPrisma } from "@/lib/data/__tests__/helpers";
 import { shopKeyRowPresent } from "@/lib/search/conversation-search-index";
-import { searchConversationIndex, type QueryPorts, type SearchConversation } from "@/lib/search/conversation-search-query";
-import { CONVERSATION_TOKEN_REFERENCE, type BlindIndexDeriver } from "@/lib/search/conversation-search-tokens";
-import { matchesSearchQuery, normalizeSearchText } from "@/lib/search/universal-search";
+import { DEFAULT_LOOKUP_MAX, pickLookupTokens } from "@/lib/search/conversation-search-lookup";
+import { candidateDocs, searchConversationIndex, type QueryPorts, type SearchConversation } from "@/lib/search/conversation-search-query";
+import {
+  CONVERSATION_TOKEN_REFERENCE,
+  contactRequiredTokenStrings,
+  hashTokenStringsForConversations,
+  requiredTokenStringsOf,
+  type BlindIndexDeriver,
+} from "@/lib/search/conversation-search-tokens";
+import { compactSearchText, matchesSearchQuery, normalizeSearchText } from "@/lib/search/universal-search";
 import { WINDOW_SIZE, insertSyntheticShop, type ShopFacts } from "./conversation-search-synthetic-shop";
 
 /**
@@ -315,6 +322,61 @@ describe("conversation search: plan contract of the index queries", () => {
       expect(lines.filter((line) => /^SEARCH d USING (?:COVERING )?INDEX|AUTOMATIC/u.test(line)), `plan: ${text}`).toEqual([]);
       expect(text, `plan: ${text}`).toContain("SEARCH d USING INTEGER PRIMARY KEY (rowid=?)");
     }
+  });
+});
+
+describe("conversation search: statements per slice", () => {
+  it("looks the three contact groups up in ONE statement per slice: 2 token statements per slice with the contact right, 1 without", async () => {
+    for (const [query, right, perSlice] of [["benali", true, 2], ["karim ben", true, 2], ["benali", false, 1]] as const) {
+      const recorded: string[] = [];
+      const client = {
+        $queryRawUnsafe: async (sql: string, ...values: unknown[]) => {
+          recorded.push(sql);
+          return seed.$queryRawUnsafe(sql, ...values);
+        },
+      };
+      await searchConversationIndex(portsFor(fresh(), { client: client as never }), { query: normalizeSearchText(query), canReadContact: right });
+      const slices = recorded.filter((sql) => sql.includes("NOT EXISTS")).length;
+      const lookups = recorded.filter((sql) => sql.includes('"ConversationSearchToken"') && !sql.includes("'K'")).length;
+      expect(slices, `${query} slices`).toBeGreaterThan(0);
+      expect(lookups, `${query} right=${right}: ${slices} slices, ${lookups} token statements`).toBe(slices * perSlice);
+    }
+  });
+
+  it("the merged contact statement returns exactly the candidates and the unsure conversations of three separate statements", async () => {
+    const window = await portsFor(fresh()).listWindowIds();
+    const ids = window.slice(0, 200);
+    const sorted = (docs: Array<{ id: string; conversationId: string }>) => docs.map((doc) => `${doc.id}|${doc.conversationId}`).sort();
+    let candidates = 0;
+    let groupsSeen = 0;
+    for (const query of ["benali", "amine", "karim ben", "محمد", "0555", "555 12", "zxqvw", "boud", "samira khelifi"]) {
+      const folded = normalizeSearchText(query);
+      const required = contactRequiredTokenStrings(folded, compactSearchText(query));
+      if (!required) continue;
+      const strings = [required.name, required.phone, required.compact].map((list) => pickLookupTokens(list, DEFAULT_LOOKUP_MAX)).filter((list) => list.length > 0);
+      const everything = [...new Set(strings.flat())];
+      const hashed = await hashTokenStringsForConversations(everything, ids, readDerive);
+      const wanted = strings.map((list) => new Map([...hashed!].map(([id, hashes]) => [id, list.map((entry) => hashes[everything.indexOf(entry)]!)] as const)));
+      const merged = await candidateDocs(seed as never, "C", wanted);
+      expect(merged).toHaveLength(wanted.length);
+      for (const [at, one] of wanted.entries()) {
+        const [alone] = await candidateDocs(seed as never, "C", [one]);
+        expect(sorted(merged[at]!.docs), `${query} group ${at}`).toEqual(sorted(alone!.docs));
+        expect([...merged[at]!.unsure].sort()).toEqual([...alone!.unsure].sort());
+        candidates += alone!.docs.length;
+        groupsSeen += 1;
+      }
+    }
+    // A conversation whose own numbers collide in ONE group is unsure in that group only.
+    const [first, second] = ids as [string, string];
+    const collide = new Map([[first, [7, 7]], [second, [8, 9]]]);
+    const fine = new Map([[first, [10, 11]], [second, [12, 13]]]);
+    const both = await candidateDocs(seed as never, "C", [collide, fine]);
+    expect([...both[0]!.unsure]).toEqual([first]);
+    expect([...both[1]!.unsure]).toEqual([]);
+    expect(groupsSeen).toBeGreaterThan(10);
+    expect(candidates, "the comparison must not be about empty answers").toBeGreaterThan(5);
+    expect(requiredTokenStringsOf("livraison").length).toBeGreaterThan(0);
   });
 });
 
