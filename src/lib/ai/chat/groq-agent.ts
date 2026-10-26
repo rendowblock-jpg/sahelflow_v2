@@ -21,7 +21,7 @@ import { buildChatCompletionsBody, parseChatCompletion } from "./neutral/openai-
 import { aiChatSystemPromptSlim } from "./neutral/slim-prompt";
 import { selectToolsForQuestion } from "./neutral/tool-router";
 import type { NeutralMessage, NeutralUsage } from "./neutral/types";
-import { getAllToolDefinitions, getTool, type ToolContext, type ToolDefinition } from "./tools/registry";
+import { getAllToolDefinitions, type ToolContext, type ToolDefinition } from "./tools/registry";
 
 /**
  * The Groq turn loop (phase A: a whole answer, no streaming, wired to nothing).
@@ -158,11 +158,13 @@ export async function runGroqAgent(input: GroqAgentInput): Promise<GroqAgentResu
   }
 
   // The router chooses what is OFFERED; the loop below refuses anything else.
-  const route = selectToolsForQuestion(
-    { question: userMessage, locale, history },
-    (deps.definitions ?? getAllToolDefinitions)(),
-  );
+  const definitions = (deps.definitions ?? getAllToolDefinitions)();
+  const route = selectToolsForQuestion({ question: userMessage, locale, history }, definitions);
   const offered = new Set(route.tools.map((tool) => tool.name));
+  // Names the registry offers to the assistant at all (the router offers a subset). This loop never resolves a
+  // tool from the registry itself: the proposal-bound source contract allows only the central agent and the MCP
+  // surface to do that, and execution here always goes through agent.ts `execute`.
+  const registered = new Set(definitions.map((definition) => definition.name));
 
   const slim = aiChatSystemPromptSlim(locale);
   const messages: NeutralMessage[] = [
@@ -236,7 +238,7 @@ export async function runGroqAgent(input: GroqAgentInput): Promise<GroqAgentResu
       let result: unknown;
       if (!offered.has(call.name)) {
         // Not in THIS request's tool list: it never reaches `execute`, even when the registry knows the name.
-        const known = getTool(call.name) !== undefined;
+        const known = registered.has(call.name);
         rejectedCalls.push({ name: call.name, reason: known ? "not_offered" : "unknown_tool" });
         result = known
           ? { error: `Tool '${call.name}' is not available in this request. Use only the tools provided.` }

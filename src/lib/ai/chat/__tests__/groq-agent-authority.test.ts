@@ -189,7 +189,8 @@ describe("Groq loop and Gemini path share one execution authority", () => {
     const groq = await viaGroq("Livre la commande SF-1042 avec Yalidine", "assign_order_to_delivery", args);
     expect(body).not.toHaveBeenCalled();
     expect(groq.out.toolCalls).toEqual([]);
-    expect(groq.out.rejectedCalls).toEqual([{ name: "assign_order_to_delivery", reason: "not_offered" }]);
+    // A policy-blocked tool is not in the assistant's tool list at all, so the loop counts it as unknown.
+    expect(groq.out.rejectedCalls).toEqual([{ name: "assign_order_to_delivery", reason: "unknown_tool" }]);
     expect(String((groq.modelSaw as { error: string }).error)).toContain("assign_order_to_delivery");
     expect(groq.out.actionProposals).toEqual([]);
   });
