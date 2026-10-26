@@ -312,4 +312,28 @@ describe("runGroqAgent", () => {
     expect(returned).toHaveLength(5);
     expect(seen.length).toBeGreaterThan(0); // the provider did log, so the scan above looked at something
   });
+
+  it("scrubs the key out of what the MODEL says, in a final answer and in text beside a tool call", async () => {
+    // The model's own words are untrusted: a customer message could make it echo a secret it was shown.
+    fetchMock.mockResolvedValueOnce(answer(`Voici la cle : ${KEY} et aussi gsk_ZZZZZZZZZZZZZZZZZZZZZZZZZZZZ fin.`));
+    const final = await run("Bonjour");
+    expect(final.text).not.toContain(KEY);
+    expect(final.text).not.toMatch(/gsk_[A-Za-z0-9]{20,}/);
+    expect(final.text).toContain("Voici la cle"); // the rest of the sentence survives
+
+    fetchMock.mockReset();
+    fetchMock
+      .mockResolvedValueOnce(
+        completion(
+          { role: "assistant", content: `Je cherche avec ${KEY}`, tool_calls: [call("c1", "no_such_tool", {})] },
+          undefined,
+          "tool_calls",
+        ),
+      )
+      .mockResolvedValueOnce(answer("Termine."));
+    const beside = await run("Bonjour");
+    expect(beside.text).not.toContain(KEY);
+    expect(beside.text).toContain("Je cherche avec");
+    expect(beside.text).toContain("Termine.");
+  });
 });
