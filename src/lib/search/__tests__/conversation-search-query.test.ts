@@ -304,6 +304,17 @@ describe("the index outcome callbacks and the window search (safety valves)", ()
     expect([seen.failures.length, seen.successes]).toEqual([1, 1]);
   });
 
+  it("a missing shop key is not an index failure: the breaker must not open for a shop whose key row appears later", async () => {
+    const seen = { failures: 0, successes: 0 };
+    const missing = fakePorts(shop(), { covered: all, candidates: ["b"], deriveNull: true });
+    missing.ports.onIndexFailure = () => void (seen.failures += 1);
+    missing.ports.onIndexSuccess = () => void (seen.successes += 1);
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      expect(summary(await ask(missing.ports, "colis"))).toEqual(oldWay(shop(), "colis")); // the old answer, every time
+    }
+    expect(seen).toEqual({ failures: 0, successes: 0 });
+  });
+
   it("a callback that throws never breaks the search", async () => {
     const failing = fakePorts(shop(), { covered: all, throwOnQuery: true });
     failing.ports.onIndexFailure = () => {
