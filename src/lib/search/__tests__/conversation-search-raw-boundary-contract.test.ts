@@ -135,7 +135,7 @@ describe("conversation-search query path: raw SQL boundary", () => {
     }
     const sqlInterpolations = interpolations.filter((expression) => /^(?:marks|pairs)\(/u.test(expression));
     expect(sqlInterpolations.length).toBeGreaterThan(0);
-    const allowed = new Set(["marks(batch.length)", "pairs(rows.length)"]);
+    const allowed = new Set(["marks(batch.length)"]);
     for (const expression of sqlInterpolations) expect(allowed.has(expression), expression).toBe(true);
     expect(interpolations.filter((expression) => !/^(?:marks|pairs)\(/u.test(expression))).toEqual([]);
   });

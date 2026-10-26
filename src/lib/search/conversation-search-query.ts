@@ -77,13 +77,11 @@ async function staged<T>(ports: QueryPorts, stage: string, run: () => Promise<T>
 
 const RESULT_LIMIT = 100;
 const IN_BATCH = 400;
-const TOKEN_ROWS_PER_QUERY = 400;
+/** Bound parameters one token lookup may carry (SQLite allows 32766 per statement). */
+const HASHES_PER_QUERY = 4000;
 
 function marks(count: number): string {
   return new Array(count).fill("?").join(",");
-}
-function pairs(count: number): string {
-  return new Array(count).fill("(?, ?)").join(",");
 }
 
 function parseLabels(value: string | null): string[] {
@@ -142,38 +140,60 @@ async function fullyIndexed(client: QueryClient, windowIds: readonly string[]): 
   return covered;
 }
 
+type Candidate = { id: string; conversationId: string };
+
 /**
- * Conversations that own ONE document of `kind` holding all of that conversation's wanted numbers. The numbers differ
- * per conversation (salted), so they travel as (conversationId, tokenHash) pairs; a conversation's pairs never split
- * across two queries.
+ * Documents of `kind` that hold all of their conversation's wanted numbers, found hash first: the numbers are salted
+ * per conversation, so a number computed for conversation C only occurs in documents of C (a 48-bit collision can
+ * only add a false candidate, never remove a true one, and the owner check below drops foreign documents). The
+ * (tokenHash, docId) index gives one short range per number; no join on the conversation is needed. A conversation
+ * whose own numbers collide (fewer distinct numbers than tokens) cannot be counted: it is returned in `unsure`.
  */
+async function candidateDocs(
+  client: QueryClient,
+  kind: "M" | "C",
+  wanted: ReadonlyMap<string, readonly number[]>,
+): Promise<{ docs: Candidate[]; unsure: Set<string> }> {
+  const docs: Candidate[] = [];
+  const unsure = new Set<string>();
+  const entries = [...wanted].filter(([, hashes]) => hashes.length > 0);
+  if (entries.length === 0) return { docs, unsure };
+  const need = entries[0]![1].length;
+  const perQuery = Math.max(1, Math.floor(HASHES_PER_QUERY / need));
+  for (let start = 0; start < entries.length; start += perQuery) {
+    const owners = new Set<string>();
+    const batch: number[] = [];
+    for (const [id, hashes] of entries.slice(start, start + perQuery)) {
+      if (new Set(hashes).size === need) {
+        owners.add(id);
+        batch.push(...hashes);
+      } else {
+        unsure.add(id);
+      }
+    }
+    if (batch.length === 0) continue;
+    const answer = await client.$queryRawUnsafe<Candidate[]>(
+      `SELECT d."entityId" AS "id", d."conversationId" AS "conversationId"
+       FROM (SELECT t."docId" AS "docId" FROM "ConversationSearchToken" t
+             WHERE t."tokenHash" IN (${marks(batch.length)}) GROUP BY t."docId" HAVING COUNT(*) >= ?) c
+       JOIN "ConversationSearchDoc" d ON d."docId" = c."docId" AND d."kind" = ?`,
+      ...batch,
+      need,
+      kind,
+    );
+    for (const row of answer) if (owners.has(row.conversationId)) docs.push(row);
+  }
+  return { docs, unsure };
+}
+
+/** Conversations that own ONE document of `kind` holding all of that conversation's wanted numbers (or cannot be counted). */
 async function conversationsWithAll(
   client: QueryClient,
   kind: "M" | "C",
   wanted: ReadonlyMap<string, readonly number[]>,
 ): Promise<Set<string>> {
-  const found = new Set<string>();
-  const entries = [...wanted].filter(([, hashes]) => hashes.length > 0);
-  if (entries.length === 0) return found;
-  const perQuery = Math.max(1, Math.floor(TOKEN_ROWS_PER_QUERY / entries[0]![1].length));
-  for (let start = 0; start < entries.length; start += perQuery) {
-    const rows = entries.slice(start, start + perQuery).flatMap(([id, hashes]) => hashes.map((hash) => [id, hash] as const));
-    const answer = await client.$queryRawUnsafe<Array<{ id: string }>>(
-      `WITH wanted ("conversationId", "tokenHash") AS (VALUES ${pairs(rows.length)})
-       SELECT d."conversationId" AS id
-       FROM "ConversationSearchDoc" d
-       JOIN wanted w ON w."conversationId" = d."conversationId"
-       JOIN "ConversationSearchToken" t ON t."docId" = d."docId" AND t."tokenHash" = w."tokenHash"
-       WHERE d."kind" = ?
-       GROUP BY d."docId", d."conversationId"
-       HAVING COUNT(DISTINCT t."tokenHash") =
-         (SELECT COUNT(DISTINCT x."tokenHash") FROM wanted x WHERE x."conversationId" = d."conversationId")`,
-      ...rows.flat(),
-      kind,
-    );
-    for (const row of answer) found.add(row.id);
-  }
-  return found;
+  const { docs, unsure } = await candidateDocs(client, kind, wanted);
+  return new Set([...unsure, ...docs.map((doc) => doc.conversationId)]);
 }
 
 /**
@@ -211,7 +231,7 @@ async function idsToLoad(
   for (const group of groups) {
     const wanted = new Map<string, number[]>();
     for (const [id, hashes] of hashed) wanted.set(id, group.strings.map((entry) => hashes[position.get(entry)!]!));
-    for (const id of await staged(ports, `sql${group.kind}`, () => conversationsWithAll(ports.client, group.kind, wanted))) load.add(id);
+    for (const id of await staged(ports, "sql" + group.kind, () => conversationsWithAll(ports.client, group.kind, wanted))) load.add(id);
   }
   return load;
 }

@@ -51,13 +51,14 @@ function fakePorts(data: SearchConversation[], script: Script = {}) {
       $queryRawUnsafe: async <T,>(sql: string, ...values: unknown[]): Promise<T> => {
         calls.sql += 1;
         if (script.throwOnQuery) throw new Error("index is busy");
-        const answer = sql.includes("NOT EXISTS") ? (script.covered ?? []) : (script.candidates ?? []);
-        return answer.filter((id) => values.includes(id)).map((id) => ({ id })) as T;
+        if (sql.includes("NOT EXISTS")) return (script.covered ?? []).filter((id) => values.includes(id)).map((id) => ({ id })) as T;
+        // a token lookup: the documents the script names (hashes are not ids, so nothing is filtered by value)
+        return (script.candidates ?? []).map((id) => ({ id: `${id}:0`, conversationId: id })) as T;
       },
     },
     derive: async (values) => {
       calls.derived += 1;
-      return script.deriveNull ? null : values.map(() => "0123456789ab");
+      return script.deriveNull ? null : values.map((_, at) => (at + 1).toString(16).padStart(12, "0")); // one distinct number per token
     },
     listWindowIds: async () => data.map((entry) => entry.id),
     loadConversations: async (ids) => {
