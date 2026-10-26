@@ -142,7 +142,14 @@ async function fetchOnce(apiKey: string, body: unknown, timeoutMs: number): Prom
 }
 
 export interface GroqChatCompletion {
-  choices?: Array<{ message?: { content?: string | null }; finish_reason?: string }>;
+  choices?: Array<{
+    message?: {
+      content?: string | null;
+      /** Present when the model asks for tools (chat agent); extraction never sends tools. */
+      tool_calls?: Array<{ id?: string; type?: string; function?: { name?: string; arguments?: string } }>;
+    };
+    finish_reason?: string;
+  }>;
   usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
 }
 
