@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { legacyConversationMatch } from "@/lib/search/conversation-search-legacy";
+import { legacyConversationMatch, messageBodyMatches } from "@/lib/search/conversation-search-legacy";
 import { normalizeSearchText } from "@/lib/search/universal-search";
 
 /**
@@ -74,5 +74,30 @@ describe("the conversation search", () => {
     expect(query).not.toContain("matchesSearchQuery(");
     const route = readFileSync(join(process.cwd(), "src/app/api/conversations/search/route.ts"), "utf8");
     expect(route).not.toContain("matchesSearchQuery(");
+  });
+});
+
+describe("messageBodyMatches: the one message rule of the old path and the index path", () => {
+  it("3 or more characters: the folded query anywhere in the folded body", () => {
+    expect(messageBodyMatches("liv", "la livraison")).toBe(true);
+    expect(messageBodyMatches("ais", "la livraison")).toBe(true);
+    expect(messageBodyMatches("a l", "la livraison")).toBe(true);
+    expect(messageBodyMatches("xyz", "la livraison")).toBe(false);
+  });
+  it("1 or 2 characters: the start of a word, never the middle of one", () => {
+    expect(messageBodyMatches("li", "la livraison")).toBe(true);
+    expect(messageBodyMatches("la", "la livraison")).toBe(true);
+    expect(messageBodyMatches("l", "la livraison")).toBe(true);
+    expect(messageBodyMatches("ra", "la livraison")).toBe(false);
+    expect(messageBodyMatches("on", "la livraison")).toBe(false);
+    expect(messageBodyMatches("a", "la livraison")).toBe(false);
+    expect(messageBodyMatches("ال", "هذا التوصيل")).toBe(true);
+    expect(messageBodyMatches("وص", "هذا التوصيل")).toBe(false);
+    expect(messageBodyMatches("li", null)).toBe(false);
+  });
+  it("legacyConversationMatch uses it: a 2-character query no longer finds a message mid-word", () => {
+    const base = { canReadContact: true, contactName: "Amine", contactPhone: null, messageBodies: ["la livraison"] };
+    expect(legacyConversationMatch({ ...base, query: "ra" })).toBeNull();
+    expect(legacyConversationMatch({ ...base, query: "li" })).toBe("message");
   });
 });
