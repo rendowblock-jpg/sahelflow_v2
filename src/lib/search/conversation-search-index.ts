@@ -1,7 +1,9 @@
 import { logger } from "@/lib/logger";
 import { isBusyError } from "@/lib/search/conversation-search-idle";
 import {
+  KEY_CANARY_ID,
   contactTokenStringsOf,
+  hashKeyCanary,
   hashTokenSetsOfConversations,
   hashTokenStrings,
   tokenStringsOf,
@@ -352,6 +354,59 @@ async function writeContactDoc(tx: SqlClient, prepared: ReadyContact, replace: b
   return true;
 }
 
+/** Documents an old key left behind that one step removes (their tokens go with them). */
+const CANARY_PURGE_DOCS = 2000;
+
+/**
+ * The key canary (ADDED). One document of kind 'K' holds one token: a constant hashed under the CURRENT key. The query
+ * path trusts the index only while it finds that token (conversation-search-query.ts). Here, at the start of every step:
+ *  - the stored token is the current one: nothing to do (reads only);
+ *  - it is absent or different (a restored database opened under a new key, an index from before the canary): every
+ *    other document was hashed under a key we cannot vouch for, so they are removed (2,000 per step, the backfill then
+ *    rebuilds them under the current key) and only when none is left the canary is written. Writing the canary alone
+ *    would make a stale index look valid and hide results.
+ * While the canary is missing or different the search takes the old path, so a half-purged index is never read.
+ */
+export async function ensureKeyCanary(ports: IndexerPorts): Promise<StepResult | NoKey> {
+  const expected = await hashKeyCanary(ports.derive);
+  if (expected === null) return { skipped: "no-key" };
+  const stored = await ports.client.$queryRawUnsafe<Array<{ tokenHash: number | bigint }>>(
+    `SELECT t."tokenHash" AS "tokenHash" FROM "ConversationSearchDoc" d CROSS JOIN "ConversationSearchToken" t ON t."docId" = d."docId"
+      WHERE d."kind" = 'K' AND d."entityId" = ?`,
+    KEY_CANARY_ID,
+  );
+  if (stored.length === 1 && Number(stored[0]!.tokenHash) === expected) return { changed: false };
+
+  await withBusyRetry(() =>
+    ports.client.$transaction(async (tx) => {
+      await lockForWrite(tx);
+      const old = await tx.$queryRawUnsafe<Array<{ docId: number | bigint }>>(
+        `SELECT "docId" FROM "ConversationSearchDoc" WHERE "kind" <> 'K' ORDER BY "docId" LIMIT ?`,
+        CANARY_PURGE_DOCS,
+      );
+      const docIds = old.map((row) => Number(row.docId));
+      for (const batch of batches(docIds, IN_BATCH)) {
+        await tx.$executeRawUnsafe(`DELETE FROM "ConversationSearchToken" WHERE "docId" IN (${marks(batch.length)})`, ...batch);
+        await tx.$executeRawUnsafe(`DELETE FROM "ConversationSearchDoc" WHERE "docId" IN (${marks(batch.length)})`, ...batch);
+      }
+      if (docIds.length > 0) return docIds.length;
+      // Nothing from another key is left: replace the canary (inside the write lock) with the current one.
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "ConversationSearchToken" WHERE "docId" IN (SELECT "docId" FROM "ConversationSearchDoc" WHERE "kind" = 'K')`,
+      );
+      await tx.$executeRawUnsafe(`DELETE FROM "ConversationSearchDoc" WHERE "kind" = 'K'`);
+      await tx.$executeRawUnsafe(`INSERT INTO "ConversationSearchDoc" ("kind", "entityId", "conversationId") VALUES ('K', ?, ?)`, KEY_CANARY_ID, KEY_CANARY_ID);
+      const [doc] = await tx.$queryRawUnsafe<Array<{ docId: number | bigint }>>(
+        `SELECT "docId" FROM "ConversationSearchDoc" WHERE "kind" = 'K' AND "entityId" = ?`,
+        KEY_CANARY_ID,
+      );
+      await tx.$executeRawUnsafe(`INSERT INTO "ConversationSearchToken" ("docId", "tokenHash") VALUES (?, ?)`, Number(doc!.docId), expected);
+      return 0;
+    }, WRITE_TRANSACTION),
+  );
+  return { changed: true };
+}
+
 const UNCOVERED_CONVERSATIONS = `FROM "Conversation" c WHERE NOT EXISTS
   (SELECT 1 FROM "ConversationSearchDoc" d WHERE d."kind" = 'C' AND d."entityId" = c."id")`;
 
@@ -520,6 +575,9 @@ async function backfillOneConversation(
 
 /** One unit of idle work: drain the queue if it holds anything, else one backfill chunk. */
 export async function runConversationSearchIndexStep(ports: IndexerPorts): Promise<StepResult | NoKey> {
+  const canary = await ensureKeyCanary(ports);
+  if ("skipped" in canary) return canary;
+  if (canary.changed) return { changed: true };
   const drained = await drainConversationSearchDirty(ports);
   if ("skipped" in drained) return drained;
   if (drained.indexed + drained.removed + drained.cleared > 0) return { changed: true };

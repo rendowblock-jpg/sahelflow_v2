@@ -46,18 +46,26 @@ type Script = {
   /** Conversations whose candidate messages tie at the 50th place. */
   tied?: string[];
   deriveNull?: boolean;
+  /** The key canary is absent or different: the index was built under another key. */
+  canaryMissing?: boolean;
   throwOnQuery?: boolean;
   throwOnDrain?: boolean;
 };
 
 // Message ids in the stand-in are "<conversation>:<position, newest first>".
 function fakePorts(data: SearchConversation[], script: Script = {}) {
-  const calls = { sql: 0, loaded: [] as string[][], rows: [] as string[][], opened: [] as string[][], covered: [] as string[][], drained: 0, derived: 0, hashed: [] as number[] };
+  const calls = { sql: 0, loaded: [] as string[][], rows: [] as string[][], opened: [] as string[][], covered: [] as string[][], drained: 0, derived: 0, hashed: [] as number[], canary: 0 };
   const byId = new Map(data.map((entry) => [entry.id, entry] as const));
   const parse = (id: string) => ({ conversationId: id.slice(0, id.lastIndexOf(":")), index: Number(id.slice(id.lastIndexOf(":") + 1)) });
   const ports: QueryPorts = {
     client: {
       $queryRawUnsafe: async <T,>(sql: string, ...values: unknown[]): Promise<T> => {
+        if (sql.includes("'K'")) {
+          // the key-canary probe: kept out of the other counters so they still describe the lookups of the query
+          calls.canary += 1;
+          if (script.throwOnQuery) throw new Error("index is busy");
+          return (script.canaryMissing ? [] : [{ present: 1 }]) as T;
+        }
         calls.sql += 1;
         if (script.throwOnQuery) throw new Error("index is busy");
         if (sql.includes("NOT EXISTS")) {
@@ -83,6 +91,7 @@ function fakePorts(data: SearchConversation[], script: Script = {}) {
       },
     },
     derive: async (values) => {
+      if (values.length === 1 && values[0]!.includes("key-canary")) return script.deriveNull ? null : ["0000000000ff"]; // the canary hash
       calls.derived += 1;
       calls.hashed.push(values.length);
       return script.deriveNull ? null : values.map((_, at) => (at + 1).toString(16).padStart(12, "0")); // one distinct number per token
@@ -302,6 +311,20 @@ describe("the index outcome callbacks and the window search (safety valves)", ()
     expect(seen.successes).toBe(1);
     await ask(wire(fakePorts(shop(), { covered: all }).ports), "a", false); // 1 character: the old way, no verdict on the index
     expect([seen.failures.length, seen.successes]).toEqual([1, 1]);
+  });
+
+  it("a missing or different key canary means the whole old path, and it is not an index failure either", async () => {
+    const seen = { failures: 0, successes: 0 };
+    const stale = fakePorts(shop(), { covered: all, candidates: ["b"], canaryMissing: true });
+    stale.ports.onIndexFailure = () => void (seen.failures += 1);
+    stale.ports.onIndexSuccess = () => void (seen.successes += 1);
+    expect(summary(await ask(stale.ports, "colis"))).toEqual(oldWay(shop(), "colis"));
+    expect(stale.calls.canary).toBe(1); // asked first, once
+    expect(stale.calls.covered).toEqual([]); // nothing else was asked of the index
+    expect(stale.calls.sql).toBe(0);
+    expect(stale.calls.opened).toEqual([]);
+    expect(stale.calls.loaded).toEqual([all]);
+    expect(seen).toEqual({ failures: 0, successes: 0 });
   });
 
   it("a missing shop key is not an index failure: the breaker must not open for a shop whose key row appears later", async () => {

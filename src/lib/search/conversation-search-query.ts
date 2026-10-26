@@ -5,7 +5,9 @@ import {
 } from "@/lib/search/conversation-search-legacy";
 import { DEFAULT_LOOKUP_MAX, pickLookupTokens } from "@/lib/search/conversation-search-lookup";
 import {
+  KEY_CANARY_ID,
   contactRequiredTokenStrings,
+  hashKeyCanary,
   hashTokenStringsForConversations,
   requiredTokenStringsOf,
   type BlindIndexDeriver,
@@ -160,6 +162,23 @@ export function buildSearchRow(conversation: SearchConversation, matchType: Conv
   };
 }
 export type SearchRow = ReturnType<typeof buildSearchRow>;
+
+/**
+ * The key canary (ADDED): the index is trusted only while the document of kind 'K' holds the constant hashed under the
+ * CURRENT key (written by the indexer, see ensureKeyCanary). One statement: the K document by (kind, entityId), then its
+ * token by (docId, tokenHash). Absent or different = the stored hashes belong to another key.
+ */
+async function keyCanaryHolds(ports: QueryPorts): Promise<boolean> {
+  const hash = await hashKeyCanary(ports.derive);
+  if (hash === null) throw new IndexUnavailable("shop key row missing");
+  const found = await ports.client.$queryRawUnsafe<Array<{ present: number | bigint }>>(
+    `SELECT 1 AS "present" FROM "ConversationSearchDoc" d CROSS JOIN "ConversationSearchToken" t ON t."docId" = d."docId"
+      WHERE d."kind" = 'K' AND d."entityId" = ? AND t."tokenHash" = ?`,
+    KEY_CANARY_ID,
+    hash,
+  );
+  return found.length > 0;
+}
 
 /** Window conversations that are fully indexed: a C doc and no queued change of any of their rows. */
 async function fullyIndexed(client: QueryClient, windowIds: readonly string[]): Promise<Set<string>> {
@@ -451,6 +470,7 @@ async function indexedAnswer(ports: QueryPorts, windowIds: readonly string[], qu
     compact: pickLookupTokens(allContactTokens.compact, max),
   };
   if (messageTokens.length === 0) return null;
+  if (!(await staged(ports, "canary", () => keyCanaryHolds(ports)))) throw new IndexUnavailable("the index was built under another key");
   const plan: Plan = { query, canReadContact, allContacts: canReadContact && contactTokens === null, messageTokens, contactTokens };
 
   const rows = new Map<string, ConversationRow>();

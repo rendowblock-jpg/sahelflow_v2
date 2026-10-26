@@ -2,6 +2,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { KEY_CANARY_STRING, contactTokenStringsOf, tokenStringsOf } from "@/lib/search/conversation-search-tokens";
+
 /**
  * PB-CONV-SEARCH-LOAD, slice 3: the reviewed raw-SQL boundary of the conversation-search indexer.
  *
@@ -142,5 +144,43 @@ describe("conversation-search query path: raw SQL boundary", () => {
     const allowed = new Set(["marks(batch.length)", "singles(batch.length)"]);
     for (const expression of sqlInterpolations) expect(allowed.has(expression), expression).toBe(true);
     expect(interpolations.filter((expression) => !/^(?:marks|singles)\(/u.test(expression))).toEqual([]);
+  });
+});
+
+describe("conversation-search key canary: raw SQL boundary", () => {
+  const index = read(INDEX_FILE);
+  const query = read(QUERY_FILE);
+
+  it("the index has exactly one document kind besides M and C: K, the key canary", () => {
+    const kinds = [...new Set([...index.matchAll(/'([A-Z])'/gu)].map((match) => match[1]))].sort();
+    expect(kinds).toEqual(["C", "K", "M"]);
+  });
+
+  it("the indexer writes the canary only in the one function that also purges what an old key left behind", () => {
+    const start = index.indexOf("export async function ensureKeyCanary");
+    expect(start).toBeGreaterThan(0);
+    const body = index.slice(start, index.indexOf("\n}\n", start));
+    expect(body).toMatch(/'K'/u);
+    // outside that function nothing writes a K document
+    expect(index.replace(body, "")).not.toMatch(/INSERT\s+INTO\s+"ConversationSearchDoc"[^;]*'K'/iu);
+  });
+
+  it("the query path reads the canary with ONE statement over the two index tables, the id and the hash bound, nothing pasted", () => {
+    const statements = [...query.matchAll(/`([^`]*'K'[^`]*)`/gu)].map((match) => match[1]!.replace(/\s+/gu, " "));
+    expect(statements).toHaveLength(1);
+    const sql = statements[0]!;
+    expect(sql).not.toContain("${");
+    expect(sql).toMatch(/\bd\."entityId" = \?/u);
+    expect(sql).toMatch(/\bt\."tokenHash" = \?/u);
+    expect([...sql.matchAll(/(?:FROM|JOIN)\s+"(\w+)"/gu)].map((match) => match[1]).sort()).toEqual(["ConversationSearchDoc", "ConversationSearchToken"]);
+    expect(query).toContain("hashKeyCanary");
+  });
+
+  it("the canary string is in no token family a message or a contact can produce", () => {
+    for (const prefix of ["msg-p:", "msg-t:", "conv-n:", "conv-p:", "conv-c:"]) expect(KEY_CANARY_STRING.startsWith(prefix), prefix).toBe(false);
+    // Whatever text a message or a contact holds, its tokens carry one of those prefixes, so none can equal the canary.
+    const produced = new Set([...tokenStringsOf("key-canary:v1 key canary v1"), ...contactTokenStringsOf("Key Canary", "0555000000")]);
+    expect(produced.has(KEY_CANARY_STRING)).toBe(false);
+    for (const entry of produced) expect(/^(?:msg-[pt]|conv-[npc]):/u.test(entry), entry).toBe(true);
   });
 });

@@ -1,5 +1,3 @@
-import { appendFileSync } from "node:fs";
-
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -27,14 +25,9 @@ vi.mock("@/lib/db", async () => {
 import { runConversationSearchIndexTick } from "@/lib/search/conversation-search-runtime";
 
 let seed: PrismaClient;
-/** Numbers for the report: printed, and appended to a scratch file when the sandbox lets the test write there. */
+/** Numbers for the report: printed only (a test must not write outside the repository). */
 function note(line: string): void {
   console.log(line);
-  try {
-    appendFileSync("/opt/agent-sandbox/workspace/audit/tmp/w54_numbers.txt", `${line}\n`);
-  } catch {
-    // the sandbox may not allow the write
-  }
 }
 let facts: ShopFacts;
 type Counters = { bodies: number; contacts: number; conversations: number };
@@ -305,7 +298,7 @@ describe("conversation search: plan contract of the index queries", () => {
     for (const [query, right] of [["livraison", true], ["livraison", false], ["paiement à la livraison", true], ["0555", true], ["benali", true], ["zxqvw", true]] as const) {
       await searchConversationIndex(portsFor(fresh(), { client: client as never }), { query: normalizeSearchText(query), canReadContact: right });
     }
-    const lookups = recorded.filter(({ sql }) => sql.includes('"ConversationSearchToken"'));
+    const lookups = recorded.filter(({ sql }) => sql.includes('"ConversationSearchToken"') && !sql.includes("'K'"));
     expect(lookups.length).toBeGreaterThan(0);
     for (const { sql, values } of lookups) {
       const plan = (await seed.$queryRawUnsafe(`EXPLAIN QUERY PLAN ${sql}`, ...values)) as Array<{ detail: string }>;
@@ -322,6 +315,29 @@ describe("conversation search: plan contract of the index queries", () => {
       expect(lines.filter((line) => /^SEARCH d USING (?:COVERING )?INDEX|AUTOMATIC/u.test(line)), `plan: ${text}`).toEqual([]);
       expect(text, `plan: ${text}`).toContain("SEARCH d USING INTEGER PRIMARY KEY (rowid=?)");
     }
+  });
+});
+
+describe("conversation search: plan contract of the key canary probe", () => {
+  it("is one point lookup by (kind, entityId) and then by (docId, tokenHash), asked before anything else, never a scan", async () => {
+    const recorded: Array<{ sql: string; values: unknown[] }> = [];
+    const client = {
+      $queryRawUnsafe: async (sql: string, ...values: unknown[]) => {
+        recorded.push({ sql, values });
+        return seed.$queryRawUnsafe(sql, ...values);
+      },
+    };
+    await searchConversationIndex(portsFor(fresh(), { client: client as never }), { query: normalizeSearchText("livraison"), canReadContact: true });
+    const probes = recorded.filter(({ sql }) => sql.includes("'K'"));
+    expect(probes).toHaveLength(1);
+    expect(recorded[0]!.sql, "the canary is the first statement of the index path").toContain("'K'");
+    const { sql, values } = probes[0]!;
+    expect(values).toHaveLength(2); // the id and the hash, both bound
+    const plan = (await seed.$queryRawUnsafe(`EXPLAIN QUERY PLAN ${sql}`, ...values)) as Array<{ detail: string }>;
+    const text = plan.map((row) => row.detail).join(" // ");
+    expect(text, `plan: ${text}`).toMatch(/SEARCH d USING (?:COVERING )?INDEX ConversationSearchDoc_kind_entityId_key \(kind=\? AND entityId=\?\)/u);
+    expect(text, `plan: ${text}`).toMatch(/SEARCH t USING (?:COVERING )?(?:INDEX ConversationSearchToken_tokenHash_docId_idx|PRIMARY KEY) \((?:tokenHash=\? AND docId=\?|docId=\? AND tokenHash=\?)\)/u);
+    expect(plan.filter((row) => /^SCAN\b/u.test(row.detail)), `plan: ${text}`).toEqual([]);
   });
 });
 

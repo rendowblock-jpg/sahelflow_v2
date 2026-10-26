@@ -40,11 +40,19 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
+vi.mock("@/lib/crypto/protected-record", async (original) => ({
+  ...(await original<typeof import("@/lib/crypto/protected-record")>()),
+  deriveExistingShopBlindIndexes: async (_client: unknown, values: string[]) => values.map(() => "0000000000ab"),
+}));
+
 const SWITCH = "SF_CONVERSATION_SEARCH_INDEX";
 let search: typeof import("@/lib/search/conversation-search-runtime").searchConversationsIndexed;
 const ask = async () => (await search({ query: "livraison", canReadContact: false })).map((row) => row.id);
 const failing = () => h.raw.mockRejectedValue(new Error("index is busy"));
-const working = () => h.raw.mockResolvedValue([]);
+// A working index has its key row and its key canary (the search hashes the canary first, so it needs the key) and
+// answers every other statement with no rows.
+const working = () =>
+  h.raw.mockImplementation(async (sql: string) => (sql.includes("'K'") || sql.includes('"ProtectedKeyAuthority"') ? [{ present: 1 }] : []));
 
 beforeEach(async () => {
   delete process.env[SWITCH];

@@ -273,3 +273,20 @@ export async function hashTokenSetsOfConversations(
     return slice;
   });
 }
+
+/**
+ * The key canary (ADDED, nothing above changed). The index stores hashes made under the shop's blind-index key. If the
+ * key row is ever re-created while the index stays (a restored backup, a re-created data folder) every stored hash is
+ * stale and the index would silently miss results. The indexer keeps ONE document (kind 'K', id KEY_CANARY_ID) whose
+ * only token is this constant hashed under the current key; the query trusts the index only while it finds that token.
+ * The string has none of the prefixes of the message or contact families, so no text can produce it, and its salt is
+ * not a conversation id the search asks about (a search only reads documents of kind 'M' and 'C').
+ */
+export const KEY_CANARY_ID = "canary";
+export const KEY_CANARY_STRING = "key-canary:v1";
+
+/** The stored number of the canary under the current key. `null` = the shop key is missing. */
+export async function hashKeyCanary(derive: BlindIndexDeriver): Promise<number | null> {
+  const hashed = await hashTokenStrings([KEY_CANARY_STRING], KEY_CANARY_ID, derive);
+  return hashed === null ? null : hashed[0]!;
+}
