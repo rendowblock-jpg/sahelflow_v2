@@ -38,22 +38,46 @@ function conversation(id: string, name: string, phone: string | null, bodies: st
 
 type Script = {
   covered?: string[];
+  /** Conversations the index names: all their messages as M documents and their contact as a C document. */
   candidates?: string[];
+  contactCandidates?: string[];
+  /** Conversations whose candidate messages tie at the 50th place. */
+  tied?: string[];
   deriveNull?: boolean;
   throwOnQuery?: boolean;
   throwOnDrain?: boolean;
 };
 
+// Message ids in the stand-in are "<conversation>:<position, newest first>".
 function fakePorts(data: SearchConversation[], script: Script = {}) {
-  const calls = { sql: 0, loaded: [] as string[][], drained: 0, derived: 0 };
+  const calls = { sql: 0, loaded: [] as string[][], rows: [] as string[][], opened: [] as string[][], covered: [] as string[][], drained: 0, derived: 0 };
+  const byId = new Map(data.map((entry) => [entry.id, entry] as const));
+  const parse = (id: string) => ({ conversationId: id.slice(0, id.lastIndexOf(":")), index: Number(id.slice(id.lastIndexOf(":") + 1)) });
   const ports: QueryPorts = {
     client: {
       $queryRawUnsafe: async <T,>(sql: string, ...values: unknown[]): Promise<T> => {
         calls.sql += 1;
         if (script.throwOnQuery) throw new Error("index is busy");
-        if (sql.includes("NOT EXISTS")) return (script.covered ?? []).filter((id) => values.includes(id)).map((id) => ({ id })) as T;
-        // a token lookup: the documents the script names (hashes are not ids, so nothing is filtered by value)
-        return (script.candidates ?? []).map((id) => ({ id: `${id}:0`, conversationId: id })) as T;
+        if (sql.includes("NOT EXISTS")) {
+          calls.covered.push(values as string[]);
+          return (script.covered ?? []).filter((id) => values.includes(id)).map((id) => ({ id })) as T;
+        }
+        if (sql.includes('"ConversationSearchToken"')) {
+          const kind = values[values.length - 1];
+          const named = kind === "M" ? (script.candidates ?? []) : (script.contactCandidates ?? script.candidates ?? []);
+          return named.flatMap((id) =>
+            kind === "M" ? (byId.get(id)?.messages ?? []).map((_, at) => ({ id: `${id}:${at}`, conversationId: id })) : [{ id, conversationId: id }],
+          ) as T;
+        }
+        if (sql.includes('FROM "Message" m')) {
+          return (values as string[]).map((id) => {
+            const { conversationId, index } = parse(id);
+            const tie = script.tied?.includes(conversationId) ?? false;
+            return { id, conversationId, newer: tie ? 49 : index, atLeast: tie ? 51 : index + 1 };
+          }) as T;
+        }
+        if (sql.includes("WITH wanted")) return (values as string[]).map((id) => ({ id: `${id}:0` })) as T;
+        throw new Error(`unexpected sql: ${sql.slice(0, 60)}`);
       },
     },
     derive: async (values) => {
@@ -63,7 +87,22 @@ function fakePorts(data: SearchConversation[], script: Script = {}) {
     listWindowIds: async () => data.map((entry) => entry.id),
     loadConversations: async (ids) => {
       calls.loaded.push([...ids]);
-      return data.filter((entry) => ids.includes(entry.id)).reverse(); // the loader may answer in any order
+      // like the route: 50 newest messages; the loader may answer in any order
+      return data.filter((entry) => ids.includes(entry.id)).map((entry) => ({ ...entry, messages: entry.messages.slice(0, 50) })).reverse();
+    },
+    loadConversationRows: async (ids) => {
+      calls.rows.push([...ids]);
+      return data.filter((entry) => ids.includes(entry.id)).map(({ messages: _messages, ...row }) => row).reverse();
+    },
+    openMessages: async (ids) => {
+      calls.opened.push([...ids]);
+      return ids
+        .flatMap((id) => {
+          const { conversationId, index } = parse(id);
+          const message = byId.get(conversationId)?.messages[index];
+          return message ? [{ id, conversationId, ...message }] : [];
+        })
+        .reverse();
     },
     drain: async () => {
       calls.drained += 1;
@@ -100,15 +139,17 @@ describe("searchConversationIndex with stand-in ports", () => {
     expect(calls.drained).toBe(1);
   });
 
-  it("an index candidate is only a candidate: the legacy predicate decides, uncovered conversations are read the old way", async () => {
+  it("an index candidate is only a candidate: the message rule decides, uncovered conversations are read the old way", async () => {
     const { ports, calls } = fakePorts(shop(), { covered: ["a", "b"], candidates: ["b"] });
     // "colis": the index names b (true) and says nothing about a; c is not covered so it is read in full.
     expect(summary(await ask(ports, "colis"))).toEqual(["b:message"]);
-    expect(calls.loaded).toEqual([["b", "c"]]);
+    expect(calls.loaded).toEqual([["c"]]);
+    expect(calls.opened.flat().filter((id) => id.startsWith("a"))).toEqual([]); // a is not named: no body of a is opened
     // A false candidate (the index says a, the text says no) never shows.
     const wrong = fakePorts(shop(), { covered: ["a", "b", "c"], candidates: ["a"] });
     expect(summary(await ask(wrong.ports, "colis"))).toEqual([]);
-    expect(wrong.calls.loaded).toEqual([["a"]]);
+    expect(wrong.calls.loaded).toEqual([]);
+    expect(wrong.calls.opened).toEqual([["a:0"], ["a:1"]]); // one body first, then the rest
   });
 
   it("falls back to the old path, never to an empty answer: a failing index query, a missing key row", async () => {
@@ -153,16 +194,55 @@ describe("searchConversationIndex with stand-in ports", () => {
   });
 });
 
+describe("searchConversationIndex checks candidates, not conversations", () => {
+  it("walks the window in growing slices, stops once 100 conversations match and opens one body per conversation", async () => {
+    const many = Array.from({ length: 300 }, (_, at) => conversation(`m${String(at).padStart(3, "0")}`, "Client", "0555000000", ["merci", "ok"]));
+    const ids = many.map((entry) => entry.id);
+    const { ports, calls } = fakePorts(many, { covered: ids, candidates: ids, contactCandidates: [] });
+    const rows = await ask(ports, "merci");
+    expect(rows.map((row) => row.id)).toEqual(ids.slice(0, 100));
+    expect(calls.covered.map((batch) => batch.length)).toEqual([25, 50, 100]); // the last 125 conversations were never looked at
+    expect(calls.opened.map((batch) => batch.length)).toEqual([25, 50, 100, 100]); // first body of each slice's conversations, then the newest message of the 100 answers
+    expect(calls.loaded).toEqual([]);
+    expect(rows[0]).toMatchObject({ matchType: "message", lastMessage: { body: "merci" } });
+  });
+
+  it("ignores a candidate message that is not among the 50 newest of its conversation, as the old route never read it", async () => {
+    const bodies = (at: number) => Array.from({ length: 60 }, (_, index) => (index === at ? "zorglub ici" : `message ${index}`));
+    const deep = conversation("z", "Client", null, bodies(55));
+    const inside = conversation("y", "Client", null, bodies(49));
+    const oldRoute = (entry: SearchConversation) => ({ ...entry, messages: entry.messages.slice(0, 50) });
+    const data = [deep, inside];
+    const { ports, calls } = fakePorts(data, { covered: ["z", "y"], candidates: ["z", "y"], contactCandidates: [] });
+    expect(summary(await ask(ports, "zorglub"))).toEqual(oldWay(data.map(oldRoute), "zorglub"));
+    expect(summary(await ask(fakePorts(data, { covered: ["z", "y"], candidates: ["z", "y"], contactCandidates: [] }).ports, "zorglub"))).toEqual(["y:message"]);
+    expect(calls.opened.flat()).not.toContain("z:55");
+  });
+
+  it("a candidate tied at the 50th place cannot be ranked from the index: that conversation is judged in full", async () => {
+    const { ports, calls } = fakePorts(shop(), { covered: ["a", "b", "c"], candidates: ["b"], tied: ["b"], contactCandidates: [] });
+    expect(summary(await ask(ports, "colis"))).toEqual(["b:message"]);
+    expect(calls.loaded).toEqual([["b"]]);
+  });
+
+  it("judges the contact of the conversations the contact tokens name, and a contact hit keeps its type", async () => {
+    const { ports, calls } = fakePorts(shop(), { covered: ["a", "b", "c"], candidates: ["a"], contactCandidates: ["a"] });
+    expect(summary(await ask(ports, "benali"))).toEqual(["a:name"]);
+    expect(calls.rows[0]).toEqual(["a"]);
+    expect(calls.loaded).toEqual([]);
+  });
+});
+
 describe("conversation search query path: stage timing (optional trace port)", () => {
   it("reports the time of every stage through ports.trace, and works the same without it", async () => {
-    const plain = fakePorts(shop(), { covered: ["a", "b", "c"], candidates: ["a"] });
-    const expected = await ask(plain.ports, "livraison");
-    const traced = fakePorts(shop(), { covered: ["a", "b", "c"], candidates: ["a"] });
+    const script = { covered: ["a", "b", "c"], candidates: ["a"] };
+    const expected = await ask(fakePorts(shop(), script).ports, "livraison");
+    const traced = fakePorts(shop(), script);
     const seen: Array<[string, number]> = [];
     traced.ports.trace = (stage, ms) => seen.push([stage, ms]);
     expect(await ask(traced.ports, "livraison")).toEqual(expected);
     const stages = new Set(seen.map(([stage]) => stage));
-    for (const stage of ["listWindowIds", "drain", "fullyIndexed", "hashing", "sqlM", "sqlC", "loadConversations", "legacy"]) {
+    for (const stage of ["listWindowIds", "drain", "fullyIndexed", "hashing", "sqlM", "sqlC", "ranks", "openBodies", "contacts", "newestIds", "newest"]) {
       expect(stages.has(stage), `stage ${stage} is reported`).toBe(true);
     }
     for (const [, ms] of seen) expect(ms).toBeGreaterThanOrEqual(0);

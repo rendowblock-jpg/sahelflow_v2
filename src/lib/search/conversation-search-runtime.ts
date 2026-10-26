@@ -93,6 +93,12 @@ export async function searchConversationsIndexed(args: { query: string; canReadC
           where: { id: { in: [...ids] } },
           include: { messages: { orderBy: { timestamp: "desc" }, take: 50 } },
         }),
+      loadConversationRows: (ids) => db.conversation.findMany({ where: { id: { in: [...ids] } } }),
+      openMessages: (ids) =>
+        db.message.findMany({
+          where: { id: { in: [...ids] } },
+          select: { id: true, conversationId: true, body: true, direction: true, timestamp: true },
+        }),
       drain: async () => {
         await drainConversationSearchDirty(indexer, SEARCH_DRAIN_ROWS);
       },

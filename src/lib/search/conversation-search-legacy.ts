@@ -20,11 +20,16 @@ export type LegacyMatchInput = {
   messageBodies: ReadonlyArray<string | null | undefined>;
 };
 
+/** Does one message body hold the folded query? The one message rule of the old path and of the index path. */
+export function messageBodyMatches(query: string, body: string | null | undefined): boolean {
+  return normalizeSearchText(body ?? "").includes(query);
+}
+
 /** name, else phone, else message; null when none of them matches. */
 export function legacyConversationMatch(input: LegacyMatchInput): ConversationMatchType | null {
   const { query, canReadContact } = input;
   if (!query) return null;
   if (canReadContact && matchesSearchQuery(query, [input.contactName])) return "name";
   if (canReadContact && matchesSearchQuery(query, [input.contactPhone])) return "phone";
-  return input.messageBodies.some((body) => normalizeSearchText(body ?? "").includes(query)) ? "message" : null;
+  return input.messageBodies.some((body) => messageBodyMatches(query, body)) ? "message" : null;
 }

@@ -100,6 +100,28 @@ function portsFor(counters: Counters, overrides: Partial<QueryPorts> = {}): Quer
       const rows = await seed.conversation.findMany({ where: { id: { in: [...ids] } }, include: { messages: FIFTY } });
       return Promise.all(rows.map((row) => open(row, counters)));
     },
+    loadConversationRows: async (ids) => {
+      const rows = await seed.conversation.findMany({ where: { id: { in: [...ids] } } });
+      const codec = createProtectedPiiCodec(seed as never, TEST_SHOP_CONTEXT);
+      return Promise.all(
+        rows.map(async (row) => {
+          const contact = await codec.decryptFields({ id: row.id, contactName: row.contactName, contactPhone: row.contactPhone }, ["contactName", "contactPhone"], "Conversation");
+          counters.contacts += 1;
+          return { ...row, contactName: String(contact.contactName), contactPhone: (contact.contactPhone ?? null) as string | null };
+        }),
+      );
+    },
+    openMessages: async (ids) => {
+      const rows = await seed.message.findMany({ where: { id: { in: [...ids] } } });
+      const codec = createProtectedPiiCodec(seed as never, TEST_SHOP_CONTEXT);
+      return Promise.all(
+        rows.map(async (message) => {
+          const opened = await codec.decryptFields({ id: message.id, body: message.body }, ["body"], "Message");
+          counters.bodies += 1;
+          return { id: message.id, conversationId: message.conversationId, body: (opened.body ?? null) as string | null, direction: message.direction, timestamp: message.timestamp };
+        }),
+      );
+    },
     drain: async () => undefined,
     ...overrides,
   };
@@ -300,6 +322,28 @@ describe("conversation search: plan contract of the index queries", () => {
         lines.filter((line) => /^SCAN (?:d|t|ConversationSearchDoc|ConversationSearchToken)\b/u.test(line)),
         `plan: ${text}`,
       ).toEqual([]);
+    }
+  });
+});
+
+describe("conversation search: plan contract of the message reads", () => {
+  it("reads Message only through its primary key and its (conversationId, timestamp) index, never by scanning it", async () => {
+    const recorded: Array<{ sql: string; values: unknown[] }> = [];
+    const client = {
+      $queryRawUnsafe: async (sql: string, ...values: unknown[]) => {
+        recorded.push({ sql, values });
+        return seed.$queryRawUnsafe(sql, ...values);
+      },
+    };
+    for (const [query, right] of [["livraison", true], ["zorglub", false], ["tikjda", true]] as const) {
+      await searchConversationIndex(portsFor(fresh(), { client: client as never }), { query: normalizeSearchText(query), canReadContact: right });
+    }
+    const reads = recorded.filter(({ sql }) => sql.includes('FROM "Message"'));
+    expect(reads.length).toBeGreaterThan(0);
+    for (const { sql, values } of reads) {
+      const plan = (await seed.$queryRawUnsafe(`EXPLAIN QUERY PLAN ${sql}`, ...values)) as Array<{ detail: string }>;
+      const lines = plan.map((row) => row.detail);
+      expect(lines.filter((line) => /^SCAN (?:m|x|Message)\b/u.test(line)), `plan: ${lines.join(" // ")}`).toEqual([]);
     }
   });
 });
