@@ -46,8 +46,11 @@ const answer = (text: string, usage?: Record<string, number>) => completion({ ro
 const errorResponse = (status: number, message: string, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify({ error: { message } }), { status, headers: { "content-type": "application/json", ...headers } });
 
-function requestBody(index: number): { messages: Array<Record<string, any>>; tools?: Array<{ function: { name: string } }> } {
-  return JSON.parse(fetchMock.mock.calls[index][1].body as string);
+// `content` is null on an assistant message that only carries tool calls; the tests only parse tool messages.
+type WireMessage = { role: string; content: string; tool_call_id?: string; tool_calls?: Array<{ id: string }> };
+
+function requestBody(index: number): { messages: WireMessage[]; tools?: Array<{ function: { name: string } }> } {
+  return JSON.parse(fetchMock.mock.calls[index]?.[1]?.body as string);
 }
 const offeredNames = (index: number) => (requestBody(index).tools ?? []).map((t) => t.function.name);
 
@@ -108,14 +111,14 @@ describe("runGroqAgent", () => {
     expect(result.toolCalls).toEqual([]);
     expect(result.usage).toEqual({ promptTokens: 1500, completionTokens: 20, totalTokens: 1520 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0];
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(String(url)).toContain("api.groq.com");
     expect(init.headers.Authorization).toBe(`Bearer ${KEY}`);
     expect(init.body).not.toContain(KEY);
     const body = requestBody(0);
-    expect(body.messages[0].role).toBe("system");
-    expect(body.messages[0].content).toContain(aiChatSystemPromptSlim("fr"));
-    expect(body.messages[0].content).toContain("Orders awaiting confirmation: 12.");
+    expect(body.messages[0]?.role).toBe("system");
+    expect(body.messages[0]?.content).toContain(aiChatSystemPromptSlim("fr"));
+    expect(body.messages[0]?.content).toContain("Orders awaiting confirmation: 12.");
     // history goes as text only; the earlier tool result bytes are not re-sent
     expect(body.messages.slice(1).map((m) => [m.role, m.content])).toEqual([
       ["user", "salut"],
@@ -143,13 +146,13 @@ describe("runGroqAgent", () => {
     expect(search).toHaveBeenCalledWith({ status: "pending" }, CONTEXT);
     expect(stats).toHaveBeenCalledTimes(1);
     expect(result.toolCalls.map((c) => c.name)).toEqual(["search_orders", "get_stats"]);
-    expect(result.toolCalls[0].result).toEqual([{ orderNumber: "A1", status: "pending", totalPrice: 4500 }]);
+    expect(result.toolCalls[0]?.result).toEqual([{ orderNumber: "A1", status: "pending", totalPrice: 4500 }]);
     const second = requestBody(1).messages;
     const assistant = second.find((m) => m.role === "assistant")!;
-    expect(assistant.tool_calls.map((c: any) => c.id)).toEqual(["c1", "c2"]);
+    expect((assistant.tool_calls ?? []).map((c) => c.id)).toEqual(["c1", "c2"]);
     const toolMessages = second.filter((m) => m.role === "tool");
     expect(toolMessages.map((m) => m.tool_call_id)).toEqual(["c1", "c2"]);
-    expect(JSON.parse(toolMessages[0].content)[0]).toMatchObject({ orderNumber: "A1", status: "pending" });
+    expect(JSON.parse(toolMessages[0]?.content ?? "undefined")[0]).toMatchObject({ orderNumber: "A1", status: "pending" });
     expect(ledger.requestsToday("groq", NOW)).toBe(2);
   });
 
@@ -167,7 +170,7 @@ describe("runGroqAgent", () => {
     expect(result.text).toBe("Accès restreint pour votre rôle.");
     const toolMessage = requestBody(1).messages.find((m) => m.role === "tool")!;
     expect(JSON.parse(toolMessage.content)).toEqual(aiToolRefusalResult({ code: "AI_TOOL_NOT_PERMITTED" }));
-    expect(result.toolCalls[0].result).toEqual(aiToolRefusalResult({ code: "AI_TOOL_NOT_PERMITTED" }));
+    expect(result.toolCalls[0]?.result).toEqual(aiToolRefusalResult({ code: "AI_TOOL_NOT_PERMITTED" }));
   });
 
   it("ends the turn on an action proposal, without a second model request", async () => {
@@ -181,7 +184,7 @@ describe("runGroqAgent", () => {
     expect(result.stopReason).toBe("proposal");
     expect(result.steps).toBe(1);
     expect(result.actionProposals).toHaveLength(1);
-    expect(result.actionProposals[0].proposal.id).toBe("aip_test");
+    expect(result.actionProposals[0]?.proposal.id).toBe("aip_test");
     expect(result.text).toBe(aiProposalRecordedMessage("fr", "update_product_price"));
   });
 
@@ -216,8 +219,8 @@ describe("runGroqAgent", () => {
     expect(result.rejectedCalls.map((c) => c.name)).toEqual(["update_product_price", "no_such_tool"]);
     const tools = requestBody(1).messages.filter((m) => m.role === "tool");
     expect(tools.map((m) => m.tool_call_id)).toEqual(["c1", "c2", "c3"]);
-    expect(JSON.parse(tools[0].content).error).toContain("update_product_price");
-    expect(JSON.parse(tools[1].content)).toEqual({ error: aiUnknownToolMessage("fr", "no_such_tool") });
+    expect(JSON.parse(tools[0]?.content ?? "undefined").error).toContain("update_product_price");
+    expect(JSON.parse(tools[1]?.content ?? "undefined")).toEqual({ error: aiUnknownToolMessage("fr", "no_such_tool") });
   });
 
   it("counts a step made only of refused calls", async () => {
