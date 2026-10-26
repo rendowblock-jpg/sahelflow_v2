@@ -4,6 +4,7 @@ import { legacyConversationMatch } from "@/lib/search/conversation-search-legacy
 import { DEFAULT_LOOKUP_MAX } from "@/lib/search/conversation-search-lookup";
 import {
   searchConversationIndex,
+  searchConversationWindow,
   type QueryPorts,
   type SearchConversation,
 } from "@/lib/search/conversation-search-query";
@@ -281,5 +282,46 @@ describe("the lookup asks the index for a few tokens, not for all of them", () =
     zero.ports.lookupMax = 0;
     expect(summary(await ask(zero.ports, "arrivee"))).toEqual(oldWay(long(), "arrivee"));
     expect(zero.calls.hashed).toEqual([3 * 4]);
+  });
+});
+
+describe("the index outcome callbacks and the window search (safety valves)", () => {
+  const all = ["a", "b", "c"];
+  it("reports each failure and each success once, never for a query the index cannot narrow", async () => {
+    const seen = { failures: [] as unknown[], successes: 0 };
+    const wire = (ports: QueryPorts) => {
+      ports.onIndexFailure = (error) => void seen.failures.push(error);
+      ports.onIndexSuccess = () => void (seen.successes += 1);
+      return ports;
+    };
+    expect(summary(await ask(wire(fakePorts(shop(), { covered: all, throwOnQuery: true }).ports), "colis"))).toEqual(oldWay(shop(), "colis"));
+    expect(seen.failures.map((error) => (error as Error).message)).toEqual(["index is busy"]);
+    expect(seen.successes).toBe(0);
+    expect(summary(await ask(wire(fakePorts(shop(), { covered: all, candidates: ["b"] }).ports), "colis"))).toEqual(["b:message"]);
+    expect(seen.failures.length).toBe(1);
+    expect(seen.successes).toBe(1);
+    await ask(wire(fakePorts(shop(), { covered: all }).ports), "a", false); // 1 character: the old way, no verdict on the index
+    expect([seen.failures.length, seen.successes]).toEqual([1, 1]);
+  });
+
+  it("a callback that throws never breaks the search", async () => {
+    const failing = fakePorts(shop(), { covered: all, throwOnQuery: true });
+    failing.ports.onIndexFailure = () => {
+      throw new Error("the counter broke");
+    };
+    expect(summary(await ask(failing.ports, "colis"))).toEqual(oldWay(shop(), "colis"));
+    const working = fakePorts(shop(), { covered: all, candidates: ["b"] });
+    working.ports.onIndexSuccess = () => {
+      throw new Error("the counter broke");
+    };
+    expect(summary(await ask(working.ports, "colis"))).toEqual(["b:message"]);
+  });
+
+  it("searchConversationWindow reads the window the old way and asks the index nothing", async () => {
+    const { ports, calls } = fakePorts(shop(), { covered: all, candidates: ["a"] });
+    const rows = await searchConversationWindow(ports, { query: normalizeSearchText("colis"), canReadContact: true });
+    expect(summary(rows)).toEqual(oldWay(shop(), "colis"));
+    expect([calls.sql, calls.drained, calls.derived]).toEqual([0, 0, 0]);
+    expect(calls.loaded).toEqual([all]);
   });
 });
