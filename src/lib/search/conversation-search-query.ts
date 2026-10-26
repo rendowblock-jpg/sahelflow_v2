@@ -3,6 +3,7 @@ import {
   messageBodyMatches,
   type ConversationMatchType,
 } from "@/lib/search/conversation-search-legacy";
+import { DEFAULT_LOOKUP_MAX, pickLookupTokens } from "@/lib/search/conversation-search-lookup";
 import {
   contactRequiredTokenStrings,
   hashTokenStringsForConversations,
@@ -71,6 +72,8 @@ export type QueryPorts = {
   openMessages: (ids: readonly string[]) => Promise<OpenedMessage[]>;
   /** Indexes a few queued changes before the search (the caller decides how many). */
   drain: () => Promise<void>;
+  /** Required tokens asked of the index per group (default DEFAULT_LOOKUP_MAX): any subset is a valid filter, see conversation-search-lookup.ts. */
+  lookupMax?: number;
   /** Optional stage timer for profiling (the bench). Undefined in production: one branch per stage, nothing else. */
   trace?: (stage: string, ms: number) => void;
 };
@@ -421,8 +424,16 @@ async function judgeInFull(ports: QueryPorts, ids: readonly string[], query: str
 
 /** null = the index cannot narrow this query: the caller judges the whole window the old way. */
 async function indexedAnswer(ports: QueryPorts, windowIds: readonly string[], query: string, canReadContact: boolean): Promise<SearchRow[] | null> {
-  const messageTokens = requiredTokenStringsOf(query);
-  const contactTokens = canReadContact ? contactRequiredTokenStrings(query, compactSearchText(query)) : null;
+  // Only some of the required tokens are looked up, in the message group and in each contact group: the others are
+  // implied by the check of the opened text (a smaller subset adds false candidates, never loses a true one).
+  const max = ports.lookupMax ?? DEFAULT_LOOKUP_MAX;
+  const messageTokens = pickLookupTokens(requiredTokenStringsOf(query), max);
+  const allContactTokens = canReadContact ? contactRequiredTokenStrings(query, compactSearchText(query)) : null;
+  const contactTokens = allContactTokens && {
+    name: pickLookupTokens(allContactTokens.name, max),
+    phone: pickLookupTokens(allContactTokens.phone, max),
+    compact: pickLookupTokens(allContactTokens.compact, max),
+  };
   if (messageTokens.length === 0) return null;
   const plan: Plan = { query, canReadContact, allContacts: canReadContact && contactTokens === null, messageTokens, contactTokens };
 
