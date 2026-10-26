@@ -59,7 +59,21 @@ export type QueryPorts = {
   loadConversations: (ids: readonly string[]) => Promise<SearchConversation[]>;
   /** Indexes a few queued changes before the search (the caller decides how many). */
   drain: () => Promise<void>;
+  /** Optional stage timer for profiling (the bench). Undefined in production: one branch per stage, nothing else. */
+  trace?: (stage: string, ms: number) => void;
 };
+
+/** Runs one stage and reports its time to ports.trace when there is one. */
+async function staged<T>(ports: QueryPorts, stage: string, run: () => Promise<T>): Promise<T> {
+  const trace = ports.trace;
+  if (!trace) return run();
+  const started = performance.now();
+  try {
+    return await run();
+  } finally {
+    trace(stage, performance.now() - started);
+  }
+}
 
 const RESULT_LIMIT = 100;
 const IN_BATCH = 400;
@@ -177,7 +191,7 @@ async function idsToLoad(
   const contactTokens = canReadContact ? contactRequiredTokenStrings(query, compactSearchText(query)) : null;
   if (messageTokens.length === 0 || (canReadContact && contactTokens === null)) return new Set(windowIds);
 
-  const covered = await fullyIndexed(ports.client, windowIds);
+  const covered = await staged(ports, "fullyIndexed", () => fullyIndexed(ports.client, windowIds));
   const load = new Set(windowIds.filter((id) => !covered.has(id)));
   const coveredIds = windowIds.filter((id) => covered.has(id));
   if (coveredIds.length === 0) return load;
@@ -191,13 +205,13 @@ async function idsToLoad(
     }
   }
   const everything = [...new Set(groups.flatMap((group) => group.strings))];
-  const hashed = await hashTokenStringsForConversations(everything, coveredIds, ports.derive);
+  const hashed = await staged(ports, "hashing", () => hashTokenStringsForConversations(everything, coveredIds, ports.derive));
   if (hashed === null) return null;
   const position = new Map(everything.map((entry, at) => [entry, at] as const));
   for (const group of groups) {
     const wanted = new Map<string, number[]>();
     for (const [id, hashes] of hashed) wanted.set(id, group.strings.map((entry) => hashes[position.get(entry)!]!));
-    for (const id of await conversationsWithAll(ports.client, group.kind, wanted)) load.add(id);
+    for (const id of await staged(ports, `sql${group.kind}`, () => conversationsWithAll(ports.client, group.kind, wanted))) load.add(id);
   }
   return load;
 }
@@ -213,11 +227,11 @@ export async function searchConversationIndex(
 ): Promise<SearchRow[]> {
   const { query, canReadContact } = input;
   if (!query) return [];
-  const windowIds = await ports.listWindowIds();
+  const windowIds = await staged(ports, "listWindowIds", () => ports.listWindowIds());
   if (windowIds.length === 0) return [];
 
   try {
-    await ports.drain();
+    await staged(ports, "drain", () => ports.drain());
   } catch {
     // The queue stays; conversations with a queued change are read in full below.
   }
@@ -228,8 +242,11 @@ export async function searchConversationIndex(
     load = null;
   }
   const ids = load === null ? windowIds : windowIds.filter((id) => load.has(id));
-  const loaded = new Map((await ports.loadConversations(ids)).map((conversation) => [conversation.id, conversation] as const));
+  const loaded = new Map(
+    (await staged(ports, "loadConversations", () => ports.loadConversations(ids))).map((conversation) => [conversation.id, conversation] as const),
+  );
 
+  const judgeStarted = ports.trace ? performance.now() : 0;
   const rows: SearchRow[] = [];
   for (const id of ids) {
     const conversation = loaded.get(id);
@@ -245,5 +262,6 @@ export async function searchConversationIndex(
     rows.push(buildSearchRow(conversation, matchType, canReadContact));
     if (rows.length >= RESULT_LIMIT) break;
   }
+  ports.trace?.("legacy", performance.now() - judgeStarted);
   return rows;
 }
