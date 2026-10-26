@@ -2,7 +2,7 @@ process.env.SF_MASTER_KEY =
   process.env.SF_MASTER_KEY ??
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
-import { appendFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -259,13 +259,10 @@ describe("conversation-search index versus erase and delete (T5)", () => {
     const started = performance.now();
     await executeShopErase("privacy-erase");
     const elapsedMs = Math.round(performance.now() - started);
-    appendFileSync(
-      resolve(process.env.SF_REPO_DIR ?? process.cwd(), "../audit/tmp/w55_erase_timing.txt"),
-      `erase of ${messages} indexed messages (${tokensBefore} tokens, ${turns} ticks to index): ${elapsedMs} ms\n`,
-    );
-
+    // A test must not write outside the repository (CI checks the repository out alone: the old note file under
+    // ../audit/tmp made this test fail with ENOENT on Modal). The number travels in the assertion message instead.
     // generous: the privacy-erase transaction itself is allowed 60 s
-    expect(elapsedMs).toBeLessThan(30_000);
+    expect(elapsedMs, `erase of ${messages} indexed messages (${tokensBefore} tokens, ${turns} ticks to index)`).toBeLessThan(30_000);
     for (const table of INDEX_TABLES) expect(await count(table)).toBe(0);
     expect(await count("Message")).toBe(0);
     expect(await count("Conversation")).toBe(0);
