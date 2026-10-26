@@ -76,7 +76,7 @@ async function oldRoute(rawQuery: string, canReadContact: boolean, counters: Cou
     .filter((conversation) => {
       if (canReadContact && matchesSearchQuery(query, [conversation.contactName])) return true;
       if (canReadContact && matchesSearchQuery(query, [conversation.contactPhone])) return true;
-      return conversation.messages.some((message) => normalizeSearchText(message.body ?? "").includes(query));
+      return conversation.messages.some((message) => ((folded) => (query.length < 3 ? folded.split(" ").some((word) => word.startsWith(query)) : folded.includes(query)))(normalizeSearchText(message.body ?? "")));
     })
     .slice(0, 100)
     .map((conversation) => ({
@@ -224,24 +224,18 @@ describe("conversation search: indexed path equals the old route (T3)", () => {
     expect(newCounters.bodies * 10).toBeLessThan(oldCounters.bodies);
   });
 
-  it("a 2-character query with the right to read contacts keeps the old per-conversation contact check (decrypt count recorded)", async () => {
-    const oldCounters = fresh();
-    const newCounters = fresh();
-    expect(await indexed("sa", true, newCounters)).toEqual(await oldRoute("sa", true, oldCounters));
-    note(`W54_FALLBACK2 contactsOpenedNew=${newCounters.contacts} contactFieldDecryptsNew=${newCounters.contacts * 2} bodiesNew=${newCounters.bodies} contactsOpenedOld=${oldCounters.contacts}`);
-    expect(newCounters.contacts).toBe(WINDOW_SIZE);
-  });
-
-  it("documented difference: without the right to read contacts, a 2-character message query is a word start", async () => {
-    const query = normalizeSearchText("ra");
-    const loose = await oldRoute(query, false, fresh());
-    const strict = await indexed(query, false, fresh());
-    const wordStart = (body: string) => normalizeSearchText(body).split(/\s+/u).some((word) => word.startsWith(query));
-    const rows = await seed.conversation.findMany({ where: { id: { in: loose.map((row) => row.id) } }, include: { messages: FIFTY } });
-    const opened = new Map((await Promise.all(rows.map((row) => open(row, fresh())))).map((c) => [c.id, c] as const));
-    const expected = loose.filter((row) => opened.get(row.id)!.messages.some((m) => normalizeSearchText(m.body ?? "").includes(query) && wordStart(m.body ?? "")));
-    expect(strict).toEqual(expected);
-    expect(strict.length).toBeLessThan(loose.length); // "livraison" holds "ra" mid-word, so the old route finds more
+  it("a 1-2 character message query matches the START of a word, for every user, and the index gives the old route's answer", async () => {
+    for (const query of ["sa", "ra", "bo", "li", "ال"]) {
+      for (const right of [true, false]) {
+        const oldCounters = fresh();
+        const newCounters = fresh();
+        expect(await indexed(query, right, newCounters), `${query} right=${right}`).toEqual(await oldRoute(query, right, oldCounters));
+        if (query === "sa" && right) {
+          note(`W56_SHORT sa contactsOpenedNew=${newCounters.contacts} bodiesNew=${newCounters.bodies} contactsOpenedOld=${oldCounters.contacts} bodiesOld=${oldCounters.bodies}`);
+          expect(newCounters.bodies).toBeLessThan(oldCounters.bodies); // candidate bodies only, never a whole window
+        }
+      }
+    }
   });
 });
 

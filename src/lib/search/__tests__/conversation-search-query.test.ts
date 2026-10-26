@@ -164,12 +164,14 @@ describe("searchConversationIndex with stand-in ports", () => {
     expect(oldWay(shop(), "colis")).toEqual(["b:message"]);
   });
 
-  it("a query the index cannot narrow runs the old path for every conversation and asks the index nothing", async () => {
-    // 2 characters with the right to read contacts: the contact check has no tokens to ask for.
-    const short = fakePorts(shop(), { covered: ["a", "b", "c"], candidates: [] });
+  it("a 2-character query is judged on contacts alone plus the index; a 1-character query is not narrowable and asks the index nothing", async () => {
+    // 2 characters with the right to read contacts: no contact token exists, so the contacts of the covered conversations
+    // are judged with the contact rule (no body of theirs is opened for that) and the index serves the messages.
+    const short = fakePorts(shop(), { covered: ["a", "b", "c"], candidates: ["a", "c"], contactCandidates: [] });
     expect(summary(await ask(short.ports, "sa"))).toEqual(oldWay(shop(), "sa"));
-    expect(short.calls.sql).toBe(0);
-    expect(short.calls.loaded).toEqual([["a", "b", "c"]]);
+    expect(oldWay(shop(), "sa")).toEqual(["a:message", "b:name", "c:message"]);
+    expect(short.calls.loaded).toEqual([]);
+    expect(short.calls.rows[0]).toEqual(["a", "b", "c"]);
     // 1 character: not narrowable at all.
     const one = fakePorts(shop(), { covered: ["a", "b", "c"], candidates: [] });
     expect(summary(await ask(one.ports, "a", false))).toEqual(oldWay(shop(), "a", false));

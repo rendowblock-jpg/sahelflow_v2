@@ -304,6 +304,8 @@ async function openCandidateBodies(ports: QueryPorts, candidates: ReadonlyMap<st
 type Plan = {
   query: string;
   canReadContact: boolean;
+  /** The contact has no token to ask for (query under 3 characters): judge the contacts of every covered conversation. */
+  allContacts: boolean;
   messageTokens: string[];
   contactTokens: ReturnType<typeof contactRequiredTokenStrings>;
 };
@@ -361,7 +363,7 @@ async function judgeSlice(
     }
 
     // Contacts: the old predicate, on the conversations the contact tokens name.
-    const toJudge = [...contactIds].filter((id) => !full.has(id));
+    const toJudge = (plan.allContacts ? coveredIds : [...contactIds]).filter((id) => !full.has(id));
     if (canReadContact && toJudge.length > 0) {
       for (const row of await staged(ports, "contacts", () => ports.loadConversationRows(toJudge))) {
         rows.set(row.id, row);
@@ -421,8 +423,8 @@ async function judgeInFull(ports: QueryPorts, ids: readonly string[], query: str
 async function indexedAnswer(ports: QueryPorts, windowIds: readonly string[], query: string, canReadContact: boolean): Promise<SearchRow[] | null> {
   const messageTokens = requiredTokenStringsOf(query);
   const contactTokens = canReadContact ? contactRequiredTokenStrings(query, compactSearchText(query)) : null;
-  if (messageTokens.length === 0 || (canReadContact && contactTokens === null)) return null;
-  const plan: Plan = { query, canReadContact, messageTokens, contactTokens };
+  if (messageTokens.length === 0) return null;
+  const plan: Plan = { query, canReadContact, allContacts: canReadContact && contactTokens === null, messageTokens, contactTokens };
 
   const rows = new Map<string, ConversationRow>();
   const verdicts: Verdict[] = [];

@@ -20,9 +20,16 @@ export type LegacyMatchInput = {
   messageBodies: ReadonlyArray<string | null | undefined>;
 };
 
-/** Does one message body hold the folded query? The one message rule of the old path and of the index path. */
+/**
+ * Does one message body hold the folded query? The one message rule of the old path and of the index path.
+ * 3 or more characters: the folded query anywhere in the folded body. 1 or 2 characters: the start of a word (the
+ * founder-decided design: the index keeps the first 2 letters of each word and every 3-letter piece, so `ra` no
+ * longer finds `livraison`). Contacts are not touched by this: they keep the exact rule of matchesSearchQuery.
+ */
 export function messageBodyMatches(query: string, body: string | null | undefined): boolean {
-  return normalizeSearchText(body ?? "").includes(query);
+  const folded = normalizeSearchText(body ?? "");
+  if (query.length >= 3) return folded.includes(query);
+  return folded.split(" ").some((word) => word.startsWith(query));
 }
 
 /** name, else phone, else message; null when none of them matches. */
