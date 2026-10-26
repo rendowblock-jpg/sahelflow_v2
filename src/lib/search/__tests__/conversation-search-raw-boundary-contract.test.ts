@@ -114,12 +114,16 @@ describe("conversation-search query path: raw SQL boundary", () => {
     expect(route).not.toMatch(/from "@\/lib\/db"/u);
   });
 
-  it("only reads the three index tables, never Message or Conversation, and writes nothing", () => {
+  it("reads the index tables and, from Message, only ids, the conversation and timestamps (never a body, never Conversation), and writes nothing", () => {
     const tables = [...query.matchAll(/(?:FROM|JOIN)\s+"(\w+)"/gu)].map((match) => match[1]);
     expect(tables.length).toBeGreaterThan(0);
-    for (const table of tables) expect(["ConversationSearchDoc", "ConversationSearchToken", "ConversationSearchDirty"]).toContain(table);
+    for (const table of tables) expect(["ConversationSearchDoc", "ConversationSearchToken", "ConversationSearchDirty", "Message"]).toContain(table);
+    expect(tables).toContain("Message");
+    const columns = [...query.matchAll(/\b[mx]\."(\w+)"/gu)].map((match) => match[1]);
+    expect(columns.length).toBeGreaterThan(0);
+    for (const column of columns) expect(["id", "conversationId", "timestamp"]).toContain(column);
     expect(query).not.toMatch(/\$executeRawUnsafe|INSERT\s|UPDATE\s+"|DELETE\s+FROM|REPLACE\s+INTO|CREATE\s|DROP\s/iu);
-    expect(query).not.toMatch(/"Message"|"Conversation"/u);
+    expect(query).not.toMatch(/"Conversation"|"body"/u);
   });
 
   it("pastes nothing into the SQL text except placeholders: every value is a bound parameter", () => {
@@ -133,10 +137,10 @@ describe("conversation-search query path: raw SQL boundary", () => {
       }
       interpolations.push(query.slice(at + 2, end - 1).replace(/\s+/gu, " ").trim());
     }
-    const sqlInterpolations = interpolations.filter((expression) => /^(?:marks|pairs)\(/u.test(expression));
+    const sqlInterpolations = interpolations.filter((expression) => /^(?:marks|singles)\(/u.test(expression));
     expect(sqlInterpolations.length).toBeGreaterThan(0);
-    const allowed = new Set(["marks(batch.length)"]);
+    const allowed = new Set(["marks(batch.length)", "singles(batch.length)"]);
     for (const expression of sqlInterpolations) expect(allowed.has(expression), expression).toBe(true);
-    expect(interpolations.filter((expression) => !/^(?:marks|pairs)\(/u.test(expression))).toEqual([]);
+    expect(interpolations.filter((expression) => !/^(?:marks|singles)\(/u.test(expression))).toEqual([]);
   });
 });
