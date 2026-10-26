@@ -316,6 +316,11 @@ describe("conversation search: plan contract of the index queries", () => {
         lines.filter((line) => /^SCAN (?:d|t|ConversationSearchDoc|ConversationSearchToken)\b/u.test(line)),
         `plan: ${text}`,
       ).toEqual([]);
+      // The join must start from the token hits and fetch each Doc row by its rowid. When SQLite starts from the Doc
+      // table instead ("SEARCH d USING INDEX ..._kind_entityId_key (kind=?)" + an automatic index on the hits) it reads
+      // every document of that kind for every statement: 250,000 rows, ~24 ms each, 5 statements per query (w58).
+      expect(lines.filter((line) => /^SEARCH d USING (?:COVERING )?INDEX|AUTOMATIC/u.test(line)), `plan: ${text}`).toEqual([]);
+      expect(text, `plan: ${text}`).toContain("SEARCH d USING INTEGER PRIMARY KEY (rowid=?)");
     }
   });
 });

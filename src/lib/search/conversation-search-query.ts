@@ -209,11 +209,13 @@ async function candidateDocs(
       }
     }
     if (batch.length === 0) continue;
+    // CROSS JOIN pins the order: token hits first, then each Doc row by its rowid. Without it SQLite (no statistics) starts
+    // from every Doc of this kind and builds an automatic index on the hits: ~24 ms per statement at 250,000 messages.
     const answer = await client.$queryRawUnsafe<Candidate[]>(
       `SELECT d."entityId" AS "id", d."conversationId" AS "conversationId"
        FROM (SELECT t."docId" AS "docId" FROM "ConversationSearchToken" t
              WHERE t."tokenHash" IN (${marks(batch.length)}) GROUP BY t."docId" HAVING COUNT(*) >= ?) c
-       JOIN "ConversationSearchDoc" d ON d."docId" = c."docId" AND d."kind" = ?`,
+       CROSS JOIN "ConversationSearchDoc" d ON d."docId" = c."docId" AND d."kind" = ?`,
       ...batch,
       need,
       kind,
