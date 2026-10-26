@@ -281,7 +281,7 @@ async function newestMessageIds(client: QueryClient, conversationIds: readonly s
  */
 async function openCandidateBodies(ports: QueryPorts, candidates: ReadonlyMap<string, string[]>, query: string): Promise<Map<string, string[]>> {
   const hits = new Map<string, string[]>();
-  const waiting = new Map([...candidates].map(([id, ids]) => [id, [...ids]] as const));
+  const waiting = new Map<string, string[]>([...candidates].map(([id, ids]) => [id, [...ids]] as [string, string[]]));
   for (let round = 0; waiting.size > 0; round += 1) {
     const take = BODY_ROUNDS[round] ?? Number.POSITIVE_INFINITY;
     const owner = new Map<string, string>();
