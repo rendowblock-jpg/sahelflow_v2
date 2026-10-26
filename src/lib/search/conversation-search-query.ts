@@ -327,6 +327,7 @@ type Plan = {
 };
 type Verdict = { id: string; matchType: ConversationMatchType; full: SearchConversation | null };
 
+/** The index cannot answer right now for a reason that is not a fault of the index (no shop key yet, a conversation deleted mid-search): the old way answers and the circuit breaker is not told. */
 class IndexUnavailable extends Error {}
 
 /** The conversations of one slice of the window that match, in window order, each with its match type. */
@@ -509,8 +510,9 @@ export async function searchConversationIndex(
       return answer;
     }
   } catch (error) {
-    // Any failure of the index or of a port: the old way, over the whole window.
-    tell(() => ports.onIndexFailure?.(error));
+    // Any failure of the index or of a port: the old way, over the whole window. Only a real fault is reported to the
+    // breaker: a shop whose key row does not exist yet must not switch the index off until the next restart.
+    if (!(error instanceof IndexUnavailable)) tell(() => ports.onIndexFailure?.(error));
   }
   return judgeInFull(ports, windowIds, query, canReadContact);
 }
