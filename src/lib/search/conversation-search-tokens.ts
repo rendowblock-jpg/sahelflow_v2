@@ -1,4 +1,5 @@
 import type { ProtectedRecordReference } from "@/lib/crypto/protected-record";
+import { compactSearchText, normalizeSearchText } from "@/lib/search/universal-search";
 
 /**
  * Tokens of the persisted conversation-search index (pure: no database, no key).
@@ -69,6 +70,72 @@ export function tokenStringsOf(foldedText: string): string[] {
     addPieces(tokens, word);
   }
   return [...tokens];
+}
+
+const CONTACT_NAME_DOMAIN = "conv-n:";
+const CONTACT_PHONE_DOMAIN = "conv-p:";
+const CONTACT_COMPACT_DOMAIN = "conv-c:";
+
+/**
+ * The token strings of a conversation's contact, for its C doc. Three families, each with its own prefix so a
+ * contact token never equals a message token (and a name token never equals a phone token):
+ *   conv-n:  the folded name         conv-p:  the folded phone
+ *   conv-c:  compactSearchText of the name AND of the phone (what matchesSearchQuery tests across separators:
+ *            "0555 12 34 56" and "+213555123456" are both 0555123456; "amineben" is found in "Amine Ben Ali").
+ * A missing or empty name/phone adds nothing.
+ */
+export function contactTokenStringsOf(name: string | null | undefined, phone: string | null | undefined): string[] {
+  const tokens = new Set<string>();
+  const add = (domain: string, text: string): void => {
+    for (const entry of tokenStringsOf(text)) tokens.add(`${domain}${entry}`);
+  };
+  if (name) {
+    add(CONTACT_NAME_DOMAIN, normalizeSearchText(name));
+    add(CONTACT_COMPACT_DOMAIN, compactSearchText(name));
+  }
+  if (phone) {
+    add(CONTACT_PHONE_DOMAIN, normalizeSearchText(phone));
+    add(CONTACT_COMPACT_DOMAIN, compactSearchText(phone));
+  }
+  return [...tokens];
+}
+
+export type ContactRequiredTokens = {
+  /** Tokens (family conv-n:) a C doc must ALL hold when the query matches the contact's folded name. */
+  name: string[];
+  /** Same for the folded phone (family conv-p:). */
+  phone: string[];
+  /** Same for the compact forms (family conv-c:); [] only when the query has no letter or digit. */
+  compact: string[];
+};
+
+/**
+ * What a C doc must hold for a query, so that the index returns a SUPERSET of the contacts for which
+ * matchesSearchQuery(query, [name]) or (query, [phone]) is true (the three rules of that function):
+ *  1. the folded field contains the folded query: the query lies inside ONE word when it has no space, so its
+ *     3-character pieces are pieces of that word;
+ *  2. the compact field contains the compact query (separators and country codes ignored): the compact form is
+ *     one word, so the 3-character pieces of the compact query are pieces of it;
+ *  3. with several words, every word is somewhere in the field (rule 1 for the whole query implies this one, so
+ *     asking for the pieces of each word is enough for both).
+ * A contact is a candidate when its C doc holds every token of the name group, or of the phone group, or of the
+ * compact group. Unlike message bodies, a 2-character query is NOT narrowed to word starts here: it can sit
+ * anywhere in a name, and the old contact search finds it. null = some rule can match with no token to ask for
+ * (query under 3 characters, or a compact form of 1-2 characters): the caller must use the old path.
+ */
+export function contactRequiredTokenStrings(foldedQuery: string, compactQuery: string): ContactRequiredTokens | null {
+  const pieces = new Set<string>();
+  for (const word of foldedQuery.split(" ")) addPieces(pieces, word);
+  if (pieces.size === 0) return null;
+  const compactPieces = new Set<string>();
+  addPieces(compactPieces, compactQuery);
+  if (compactQuery.length > 0 && compactPieces.size === 0) return null;
+  const family = (domain: string, set: ReadonlySet<string>): string[] => [...set].map((entry) => `${domain}${entry}`);
+  return {
+    name: family(CONTACT_NAME_DOMAIN, pieces),
+    phone: family(CONTACT_PHONE_DOMAIN, pieces),
+    compact: family(CONTACT_COMPACT_DOMAIN, compactPieces),
+  };
 }
 
 /**
@@ -178,4 +245,31 @@ export async function hashTokenStringsForConversations(
     result.set(id, numbers.slice(index * strings.length, (index + 1) * strings.length));
   });
   return result;
+}
+
+/**
+ * The stored numbers of SEVERAL token lists, each salted with its own
+ * conversation, in ONE derivation call (the indexer hashes a whole chunk of
+ * messages and reads the key once). Result[i] belongs to sets[i], in order.
+ * `null` = the shop key is missing.
+ */
+export async function hashTokenSetsOfConversations(
+  sets: ReadonlyArray<{ conversationId: string; strings: readonly string[] }>,
+  derive: BlindIndexDeriver,
+): Promise<number[][] | null> {
+  sets.forEach((set) => assertConversationId(set.conversationId));
+  const total = sets.reduce((sum, set) => sum + set.strings.length, 0);
+  if (total === 0) return sets.map(() => []);
+  const digests = await derive(
+    sets.flatMap((set) => set.strings.map((entry) => saltedInput(set.conversationId, entry))),
+    CONVERSATION_TOKEN_REFERENCE,
+  );
+  if (digests === null) return null;
+  const numbers = numbersOf(digests, total);
+  let offset = 0;
+  return sets.map((set) => {
+    const slice = numbers.slice(offset, offset + set.strings.length);
+    offset += set.strings.length;
+    return slice;
+  });
 }

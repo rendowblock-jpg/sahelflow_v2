@@ -29,6 +29,19 @@ const PINNED_RAW_WRITE_FILES = [
   "src/lib/search/local-search-projection.ts",
 ];
 
+/**
+ * Rule 1 has two reviewed exceptions: the conversation-search indexer and its query path
+ * (PB-CONV-SEARCH-LOAD). They are the only production files that talk to the index tables through an injected client.
+ * Every value they send is a bound parameter; the text they build is a list of "?" placeholders. That is pinned by
+ * src/lib/search/__tests__/conversation-search-raw-boundary-contract.test.ts (allowed interpolations, allowed tables,
+ * allowed Message columns, the index module is imported by one file only). A third file needs its own review: add it
+ * here only together with the same contract.
+ */
+const UNSAFE_API_EXCEPTIONS = [
+  "src/lib/search/conversation-search-index.ts",
+  "src/lib/search/conversation-search-query.ts",
+];
+
 function productionSources(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.name === "node_modules" || entry.name === "__tests__") continue;
@@ -70,11 +83,25 @@ describe("raw SQL write sites (S01a-08)", () => {
     expect(sources.length).toBeGreaterThan(500);
   });
 
-  it("never uses the *Unsafe raw-SQL APIs in production code", () => {
+  it("never uses the *Unsafe raw-SQL APIs in production code, except the two named conversation-search files", () => {
     const offenders = sources.filter((path) =>
       codeLines(path).some((line) => /\$(?:execute|query)RawUnsafe\b/.test(line)),
     );
-    expect(offenders.map(relativePath)).toEqual([]);
+    expect(offenders.map(relativePath).filter((path) => !UNSAFE_API_EXCEPTIONS.includes(path))).toEqual([]);
+  });
+
+  it("keeps the exceptions honest: each still uses the API, and the conversation-search contract pins it", () => {
+    // The two files take their SQL client as a parameter (so their tests can run on a plain client) and ask for the
+    // positional-parameter form: values are always bound, the only text built is a run of "?" placeholders. The
+    // contract test pins both facts file by file; an exception that no longer needs the API must be removed here.
+    const contract = readFileSync(join(ROOT, "src/lib/search/__tests__/conversation-search-raw-boundary-contract.test.ts"), "utf8");
+    for (const path of UNSAFE_API_EXCEPTIONS) {
+      expect(
+        codeLines(join(ROOT, path)).some((line) => /\$(?:execute|query)RawUnsafe\b/.test(line)),
+        `${path} no longer uses the Unsafe API: remove it from UNSAFE_API_EXCEPTIONS`,
+      ).toBe(true);
+      expect(contract, `${path} is not pinned by the raw-boundary contract`).toContain(`"${path}"`);
+    }
   });
 
   it("pins the files that contain $executeRaw writes", () => {
