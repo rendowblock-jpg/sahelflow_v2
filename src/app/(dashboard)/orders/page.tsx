@@ -355,7 +355,7 @@ export default async function OrdersPage({
 
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 lg:flex-nowrap">
         <Tabs defaultValue={statusFilter ?? "all"} className="min-w-0 flex-1">
-          <TabsList className="h-auto w-fit max-w-full min-w-0 flex-wrap justify-start">
+          <TabsList wrap className="w-fit max-w-full min-w-0 justify-start">
             {STATUS_FILTERS.map((filter) => (
               // The tabs are links to a re-rendered page, so no panel with the
               // generated id exists; see TabsTrigger for why this is a prop.
