@@ -846,7 +846,7 @@ export function TeamAccessAuthorityPanel() {
             <AlertDialogFooter>
               <AlertDialogCancel>{c("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                variant="destructive"
                 onClick={() => {
                   const member = dialog.member;
                   void ownerRequest(
