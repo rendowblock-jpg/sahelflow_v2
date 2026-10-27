@@ -37,11 +37,21 @@ vi.mock("@/lib/license/license-server", () => ({
 
 vi.mock("@/lib/settings", () => ({
   getBool: vi.fn(async () => true),
+  getSetting: vi.fn(async () => null),
   SETTING_KEYS: { geminiConsentAccepted: "gemini_consent_accepted" },
 }));
 
+// Gemini only: the routes now also ask whether a Gemini key exists and look for a Groq key.
 vi.mock("@/lib/secrets", () => ({
-  getSecret: vi.fn(async () => "test-key"),
+  hasSecret: vi.fn(async (_context: unknown, name: string) => name === "gemini_api_key"),
+  getSecret: vi.fn(async (_context: unknown, name: string) =>
+    name === "gemini_api_key" ? "test-key" : null,
+  ),
+}));
+
+vi.mock("@/lib/ai/providers/quota-ledger-store", () => ({
+  restoreQuotaLedger: vi.fn(async () => undefined),
+  saveQuotaLedger: vi.fn(async () => undefined),
 }));
 
 vi.mock("@/lib/ai/gemini/runtime-preferences", () => ({
