@@ -440,6 +440,19 @@ export function AiReviewEvidence({
                     : workspace.copy("unknown")}
                 </dd>
               </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="flex items-center gap-2 text-muted-foreground">
+                  <KeyRound className="size-3.5" aria-hidden="true" />
+                  {workspace.copy("groq")}
+                </dt>
+                <dd className="font-medium">
+                  {setup?.providers
+                    ? setup.providers.groq.configured
+                      ? workspace.copy("configured")
+                      : workspace.copy("notConfigured")
+                    : workspace.copy("unknown")}
+                </dd>
+              </div>
             </dl>
 
             {setupError || !setupReady ? (
