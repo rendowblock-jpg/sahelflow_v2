@@ -96,7 +96,7 @@ export function OrderDeleteButton({ orderId, orderStatus }: OrderDeleteButtonPro
               void handleDelete();
             }}
             disabled={pending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant="destructive"
           >
             {pending ? <Loader2 className="h-4 w-4 me-1 animate-spin" /> : null}
             {t("orders.delete")}

@@ -288,7 +288,7 @@ export function AutomationActions({
                 event.preventDefault();
                 void remove();
               }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
             >
               {c("workspace.delete")}
             </AlertDialogAction>
