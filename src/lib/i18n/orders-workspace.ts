@@ -9,7 +9,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.bulk.cancelTitle":
       "Cancel the selected orders?",
     "orders.workspace.bulk.cancelBody":
-      "Selected: {{count}}. A cancelled order cannot be reopened. Stock already taken for confirmed orders goes back to your inventory.",
+      "Selected: {{count}}. A cancelled order cannot be reopened. Stock already taken for confirmed orders goes back into stock.",
     "orders.workspace.bulk.cancelConfirm":
       "Cancel orders",
     "orders.workspace.bulk.shipTitle":
@@ -188,7 +188,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.bulk.cancelTitle":
       "Annuler les commandes sélectionnées ?",
     "orders.workspace.bulk.cancelBody":
-      "Sélection : {{count}}. Une commande annulée ne peut pas être rouverte. Le stock déjà prélevé pour les commandes confirmées retourne dans votre inventaire.",
+      "Sélection : {{count}}. Une commande annulée ne peut pas être rouverte. Le stock déjà prélevé pour les commandes confirmées retourne en stock.",
     "orders.workspace.bulk.cancelConfirm":
       "Annuler les commandes",
     "orders.workspace.bulk.shipTitle":
