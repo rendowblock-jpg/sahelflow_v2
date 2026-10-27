@@ -17,17 +17,27 @@ import {
 } from "@/lib/ai/chat/session-title";
 import { createAiActionProposal } from "@/lib/ai/actions/service";
 import {
-  runAgentStream,
   type AgentMessage,
   type AgentResult,
   type AgentStreamEvent,
 } from "@/lib/ai/chat/agent";
+import { runChatTurnStream } from "@/lib/ai/chat/chat-provider";
 import { aiShopContextNote } from "@/lib/ai/chat/shop-context";
 import { loadRecentAiChatMessages } from "@/lib/ai/chat/session-history";
 import {
   GeminiProviderError,
   geminiErrorMessage,
 } from "@/lib/ai/gemini/provider";
+import { GROQ_API_KEY_SECRET } from "@/lib/ai/providers/groq/catalog";
+import {
+  AI_PROVIDER_ORDER_SETTING,
+  parseProviderOrderSetting,
+  providerOrderFor,
+} from "@/lib/ai/providers/provider-order";
+import {
+  restoreQuotaLedger,
+  saveQuotaLedger,
+} from "@/lib/ai/providers/quota-ledger-store";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getCurrentUserKey, requireAuth } from "@/lib/auth/server";
@@ -40,7 +50,8 @@ import {
   toolArgsValidationMessage,
 } from "@/lib/ai/chat/tool-args-error";
 import { redactStoredAiToolCalls } from "@/lib/redact-pii";
-import { getBool, SETTING_KEYS } from "@/lib/settings";
+import { getSecret, hasSecret } from "@/lib/secrets";
+import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -236,6 +247,9 @@ export const POST = withErrorHandler(
           }
         };
         request.signal.addEventListener("abort", onAbort);
+        // Stop pressed before the turn began: the listener above never fires
+        // for an abort that already happened, so start nothing.
+        if (request.signal.aborted) onAbort();
         let assistantResponse = "";
         let assistantToolCalls: AgentResult["toolCalls"] = [];
         let shouldPersistAssistant = false;
@@ -274,50 +288,75 @@ export const POST = withErrorHandler(
         }
 
         try {
-          await runWithAiActionProposalRuntime(
-            {
-              createProposal: (toolName, args) =>
-                createAiActionProposal({
-                  context,
-                  requester,
-                  sessionId: id,
-                  requestMessageId: userMessage.id,
-                  toolName,
-                  rawArgs: args,
-                }),
-            },
-            async () => {
-              // F-06: presentation-only shop snapshot for the model. The
-              // helper never throws (empty string on failure), so a context
-              // problem can never break the turn itself.
-              const shopContextNote = await aiShopContextNote();
-              for await (const event of runAgentStream(
-                history,
-                input.message,
-                agentAbort.signal,
-                {
-                  db,
-                  shop: shopContext,
-                  sourceIdentity: `ai-session:${id}`,
-                  actor: requester,
-                },
-                input.locale,
-                shopContextNote,
-                images,
-              )) {
-                send(event);
-                if (event.type === "text_delta") {
-                  assistantResponse += event.text;
-                } else if (event.type === "done") {
-                  assistantResponse = event.response;
-                  assistantToolCalls = event.toolCalls;
-                  shouldPersistAssistant = Boolean(event.response);
-                } else if (event.type === "error") {
-                  shouldPersistAssistant = false;
+          // Keys are read only here, after consent. The Gemini path resolves
+          // its own key; only its presence is needed. The Groq key goes to
+          // the Groq loop and nowhere else.
+          const geminiConfigured = await hasSecret(context, "gemini_api_key");
+          const groqApiKey =
+            (await getSecret(context, GROQ_API_KEY_SECRET)) ?? undefined;
+          // The seller's "try this AI first" choice; an unreadable value means the default order.
+          let storedOrder: string | null = null;
+          try {
+            storedOrder = await getSetting(context, AI_PROVIDER_ORDER_SETTING);
+          } catch {
+            // A failed read must never block the chat.
+          }
+          const order = providerOrderFor(parseProviderOrderSetting(storedOrder));
+          // Pauses from an earlier run (best effort; once per process).
+          await restoreQuotaLedger(context);
+          try {
+            await runWithAiActionProposalRuntime(
+              {
+                createProposal: (toolName, args) =>
+                  createAiActionProposal({
+                    context,
+                    requester,
+                    sessionId: id,
+                    requestMessageId: userMessage.id,
+                    toolName,
+                    rawArgs: args,
+                  }),
+              },
+              async () => {
+                // F-06: presentation-only shop snapshot for the model. The
+                // helper never throws (empty string on failure), so a context
+                // problem can never break the turn itself.
+                const shopContextNote = await aiShopContextNote();
+                for await (const event of runChatTurnStream({
+                  history,
+                  message: input.message,
+                  // The seller's Stop: it reaches the Groq loop too.
+                  signal: agentAbort.signal,
+                  toolContext: {
+                    db,
+                    shop: shopContext,
+                    sourceIdentity: `ai-session:${id}`,
+                    actor: requester,
+                  },
+                  locale: input.locale,
+                  shopContextNote,
+                  order,
+                  geminiConfigured,
+                  groqApiKey,
+                  images,
+                })) {
+                  send(event);
+                  if (event.type === "text_delta") {
+                    assistantResponse += event.text;
+                  } else if (event.type === "done") {
+                    assistantResponse = event.response;
+                    assistantToolCalls = event.toolCalls;
+                    shouldPersistAssistant = Boolean(event.response);
+                  } else if (event.type === "error") {
+                    shouldPersistAssistant = false;
+                  }
                 }
-              }
-            },
-          );
+              },
+            );
+          } finally {
+            // Quota pauses learned during the turn survive a restart, also on error.
+            await saveQuotaLedger(context);
+          }
         } catch (error) {
           if (request.signal.aborted) {
             // Stop requested by the seller (ledger AI-04): keep the partial
