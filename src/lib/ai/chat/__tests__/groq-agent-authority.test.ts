@@ -171,19 +171,19 @@ describe("Groq loop and Gemini path share one execution authority", () => {
     expect(groq.out.rejectedCalls).toEqual([{ name: "no_such_tool", reason: "unknown_tool" }]);
   });
 
-  it("the policy-blocked assign_order_to_delivery is never offered, never runs its body, and is refused on both paths", async () => {
+  it("the policy-blocked assign_order_to_delivery is never offered, never runs its body, and gets the same not-available answer on both paths", async () => {
     expect(getAllToolDefinitions().map((t) => t.name)).not.toContain("assign_order_to_delivery");
     const tool = getTool("assign_order_to_delivery");
     expect(tool).toBeDefined();
     const body = vi.spyOn(tool!, "execute"); // calls through to the real blocked gate
     const args = { orderNumber: "SF-1042", provider: "yalidine" };
 
-    // Gemini path: `execute` reaches the registry gate, which refuses by throwing the coded error.
-    await expect(execute({ name: "assign_order_to_delivery", args }, CONTEXT, "fr")).rejects.toMatchObject({
-      code: "AI_PROVIDER_ACTION_NOT_CONVERGED",
-    });
-    expect(body).toHaveBeenCalledTimes(1);
-    body.mockClear();
+    // Gemini path: a model that invents the name gets the "not available" result (PB-GEMINI-BLOCKED-TOOL-THROW;
+    // it used to throw the coded error out of the whole turn) and the registry entry is never even entered.
+    const direct = await execute({ name: "assign_order_to_delivery", args }, CONTEXT, "fr");
+    expect(direct.result).toEqual({ error: aiUnknownToolMessage("fr", "assign_order_to_delivery") });
+    expect(direct.actionProposal).toBeUndefined();
+    expect(body).not.toHaveBeenCalled();
 
     // Groq loop: the name is not offered, so it never reaches `execute`; the model gets an error result.
     const groq = await viaGroq("Livre la commande SF-1042 avec Yalidine", "assign_order_to_delivery", args);
@@ -192,6 +192,7 @@ describe("Groq loop and Gemini path share one execution authority", () => {
     // A policy-blocked tool is not in the assistant's tool list at all, so the loop counts it as unknown.
     expect(groq.out.rejectedCalls).toEqual([{ name: "assign_order_to_delivery", reason: "unknown_tool" }]);
     expect(String((groq.modelSaw as { error: string }).error)).toContain("assign_order_to_delivery");
+    expect(groq.modelSaw).toEqual(direct.result); // the same words on both paths
     expect(groq.out.actionProposals).toEqual([]);
   });
 });
