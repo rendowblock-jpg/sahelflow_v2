@@ -31,6 +31,11 @@ import {
   type ToolContext,
 } from "./tools/registry";
 import { aiToolRefusalResult, isAiToolRefusalResult } from "./tools/tool-refusal";
+import {
+  aiWithheldEnvelope,
+  aiWithheldForModel,
+  parseAiWithheldEnvelope,
+} from "./tools/withheld-notice";
 import "./tools/core-tools";
 import "./tools/extended-tools";
 import "./tools/advanced-tools";
@@ -157,6 +162,18 @@ type ToolExecutionResult = {
 type Content = { role: string; parts: Array<Record<string, unknown>> };
 
 export function historySafeToolResult(toolName: string, value: unknown): unknown {
+  // A read whose fields the member's role may not see is stored as an envelope
+  // (names of the withheld fields + the data). The data still goes through the
+  // normal redaction; the model additionally learns that a null there is hidden,
+  // not empty. See tools/withheld-notice.ts.
+  const withheld = parseAiWithheldEnvelope(value);
+  if (withheld) {
+    return aiWithheldForModel(withheld.paths, redactedForModel(toolName, withheld.data));
+  }
+  return redactedForModel(toolName, value);
+}
+
+function redactedForModel(toolName: string, value: unknown): unknown {
   // Built only from constants (fixed sentence, vocabulary names, a coded
   // reason) and validated exactly, so it carries no record content and cannot
   // be forged by a tool body. It must reach the model as written: the generic
@@ -294,7 +311,7 @@ export async function execute(
   const result = toolResult.refusal
     ? aiToolRefusalResult(toolResult.refusal)
     : toolResult.success
-      ? toolResult.data
+      ? aiWithheldEnvelope(toolResult.data, toolResult.withheld ?? [])
       : { error: toolResult.error };
   if (isAiActionProposalToolResult(result)) {
     return {
