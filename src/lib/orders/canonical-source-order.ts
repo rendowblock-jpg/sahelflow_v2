@@ -14,6 +14,8 @@ import {
   canonicalSourceOrderSourceMetadata,
   type CanonicalOrderSource,
 } from "@/lib/orders/manual-order-authority";
+import { assertOrderTotalWithinLimit, orderMoneySchema } from "@/lib/orders/money-limits";
+import { lineTotalOf, orderTotalOf } from "@/lib/orders/order-total";
 import type { Order } from "@/types/domain";
 import { NotFoundError, ValidationError } from "@/types/errors";
 
@@ -23,7 +25,7 @@ const sourceOrderItemSchema = z.object({
   productId: z.string().min(1),
   productVariantId: z.string().min(1).nullable().optional(),
   quantity: z.number().int().positive().max(999),
-  unitPrice: z.number().int().nonnegative().safe().optional(),
+  unitPrice: orderMoneySchema.optional(),
 });
 
 const newCustomerSchema = z.object({
@@ -51,7 +53,7 @@ export const canonicalSourceOrderSchema = z
     commune: z.string().trim().min(1).max(120),
     address: z.string().trim().min(1).max(500),
     phone: z.string().trim().min(1).max(40),
-    deliveryCost: z.number().int().nonnegative().default(0),
+    deliveryCost: orderMoneySchema.default(0),
     notes: z.string().trim().max(2000).nullable().optional(),
   })
   .superRefine((value, context) => {
@@ -285,11 +287,8 @@ export async function createCanonicalSourceOrder(
         };
       });
 
-      const itemsTotal = canonicalItems.reduce(
-        (sum, item) => sum + item.unitPrice * item.quantity,
-        0,
-      );
-      const totalPrice = itemsTotal + data.deliveryCost;
+      const { totalPrice } = orderTotalOf(canonicalItems, data.deliveryCost);
+      assertOrderTotalWithinLimit(totalPrice, "items");
       const orderNumber = await nextOrderNumber(
         tx as unknown as BusinessPrincipalContext["prisma"],
         "ORD",
@@ -325,7 +324,7 @@ export async function createCanonicalSourceOrder(
           items: {
             create: canonicalItems.map((item) => ({
               ...item,
-              total: item.unitPrice * item.quantity,
+              total: lineTotalOf(item.unitPrice, item.quantity),
             })),
           },
         },

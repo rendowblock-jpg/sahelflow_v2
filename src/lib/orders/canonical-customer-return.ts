@@ -30,6 +30,8 @@ import {
   type CanonicalReturnOrder,
   type CanonicalReturnOrderItem,
 } from "@/lib/orders/canonical-return-authority";
+import { orderMoneySchema } from "@/lib/orders/money-limits";
+import { lineTotalOf, orderTotalOf } from "@/lib/orders/order-total";
 import { TRUSTED_MANUAL_ORDER_AUTHORITY } from "@/lib/orders/manual-order-authority";
 import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
 
@@ -70,7 +72,7 @@ export const canonicalCustomerReturnRequestSchema = z
     reasonCode: reasonCodeSchema,
     items: z.array(requestedItemSchema).min(1).max(500),
     exchangeItems: z.array(exchangeItemSchema).min(1).max(500).optional(),
-    exchangeDeliveryCost: z.number().int().nonnegative().safe().default(0),
+    exchangeDeliveryCost: orderMoneySchema.default(0),
     occurredAt: occurredAtSchema,
     idempotencyKey: idempotencyKeySchema,
     correlationId: correlationIdSchema,
@@ -684,9 +686,7 @@ async function createReplacementOrder(
     tx as unknown as BusinessPrincipalContext["prisma"],
     "EXC",
   );
-  const totalPrice =
-    items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0) +
-    agreement.deliveryCost;
+  const { totalPrice } = orderTotalOf(items, agreement.deliveryCost);
   const replacement = await tx.order.create({
     data: {
       orderNumber,
@@ -718,7 +718,7 @@ async function createReplacementOrder(
           productVariantName: item.productVariantName,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          total: item.unitPrice * item.quantity,
+          total: lineTotalOf(item.unitPrice, item.quantity),
         })),
       },
     },

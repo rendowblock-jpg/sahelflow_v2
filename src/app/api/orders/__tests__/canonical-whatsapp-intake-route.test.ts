@@ -165,4 +165,75 @@ describe("canonical WhatsApp source route", () => {
     expect(await rawDb.order.count()).toBe(0);
     expect(await rawDb.businessCommand.count()).toBe(0);
   });
+  it("refuses a delivery cost of one billion dinars with a 400 and creates nothing", async () => {
+    await seedProduct({ name: "Phone Case", price: 0 });
+
+    const response = await POST(
+      mockPost("http://localhost/api/orders/source/whatsapp", {
+        ...payload(),
+        deliveryCost: 1_000_000_000,
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await getJson(response)).toMatchObject({ code: "REQUEST_VALIDATION_FAILED" });
+    expect(await rawDb.order.count()).toBe(0);
+    expect(await rawDb.businessCommand.count()).toBe(0);
+  });
+
+  it("accepts a delivery cost of 999,999,999 when the whole order stays within the limit", async () => {
+    await seedProduct({ name: "Phone Case", price: 0 });
+
+    const response = await POST(
+      mockPost("http://localhost/api/orders/source/whatsapp", {
+        ...payload(),
+        deliveryCost: 999_999_999,
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(await rawDb.order.findFirst()).toMatchObject({ totalPrice: 999_999_999 });
+  });
+
+  it("refuses items plus delivery that add up past the limit with a coded error", async () => {
+    await seedProduct({ name: "Phone Case", price: 2400 });
+
+    const response = await POST(
+      mockPost("http://localhost/api/orders/source/whatsapp", {
+        ...payload(),
+        deliveryCost: 999_999_999,
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await getJson(response)).toMatchObject({
+      code: "VALIDATION_ERROR",
+      error: "The order total is too large",
+    });
+    expect(await rawDb.order.count()).toBe(0);
+    expect(await rawDb.businessCommand.count()).toBe(0);
+  });
 });
+
+describe("canonical WhatsApp source route and the AI that read the message", () => {
+  // The review card records which reader produced the draft. Every AI provider the router can use must be saveable;
+  // "openai" (an order read through the seller's ChatGPT plan) was refused with a 400 before 25 Oct.
+  it.each(["regex", "gemini", "groq", "openai"] as const)("saves an order whose draft was read by %s", async (method) => {
+    await seedProduct({ name: "Phone Case", price: 2400 });
+    const response = await POST(
+      mockPost("http://localhost/api/orders/source/whatsapp", { ...payload(), extractionMethod: method }),
+    );
+    expect(response.status).toBe(201);
+    expect(await rawDb.order.count()).toBe(1);
+  });
+
+  it("still refuses a reader it does not know", async () => {
+    await seedProduct({ name: "Phone Case", price: 2400 });
+    const response = await POST(
+      mockPost("http://localhost/api/orders/source/whatsapp", { ...payload(), extractionMethod: "magic" }),
+    );
+    expect(response.status).toBe(400);
+    expect(await rawDb.order.count()).toBe(0);
+  });
+});
+

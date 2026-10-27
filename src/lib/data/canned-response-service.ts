@@ -1,5 +1,6 @@
 import "server-only";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { foldedRowIds, rowSignature } from "@/lib/search/list-search-candidates";
 
 export async function listCannedResponses(context: ServiceContext) {
   // Audit S3-14: bounded list — only the search path was capped before.
@@ -40,12 +41,34 @@ export async function deleteCannedResponse(context: ServiceContext, id: string) 
  */
 export async function searchCannedResponses(context: ServiceContext, query: string, limit = 5) {
   const q = query.toLowerCase();
+  // Folded in memory (Arabic letters, accents, digits) over at most
+  // LIST_SEARCH_ROW_CAP rows; a larger table keeps the SQL contains only.
+  const foldedIds = await foldedRowIds(
+    (take) =>
+      context.prisma.cannedResponse.findMany({
+        select: { id: true, shortCode: true, content: true, description: true },
+        take,
+      }),
+    query,
+    (row) => [row.shortCode, row.content, row.description],
+    {
+      key: "canned",
+      signature: async () => {
+        const stats = await context.prisma.cannedResponse.aggregate({
+          _count: { _all: true },
+          _max: { updatedAt: true },
+        });
+        return rowSignature(stats._count._all, stats._max.updatedAt);
+      },
+    },
+  );
   return context.prisma.cannedResponse.findMany({
     where: {
       OR: [
         { shortCode: { contains: q } },
         { content: { contains: q } },
         { description: { contains: q } },
+        ...(foldedIds ? [{ id: { in: foldedIds } }] : []),
       ],
     },
     orderBy: { shortCode: "asc" },

@@ -393,3 +393,13 @@ body[data-voice] .sf-sticky .sf-cta--bar{min-width:max-content;padding-inline:14
 .sf-notice p{margin:.5rem 0 0;color:#57534e}
 
 @media (prefers-reduced-motion:reduce){*,::before,::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.sf-blob{display:none}}
+
+/* Windows High Contrast (forced-colors): the system drops background colours and shadows, which is how the selected size/colour chip, the buttons' edges and the field focus are drawn above. Here they come back as borders and outlines in system colours. Nothing outside this block changes. The selected rules start with `body` so a style's own `.sf-pill span` border cannot outrank them. */
+@media (forced-colors:active){
+:focus-visible,.sf-field input:focus,.sf-field select:focus,.sf-field textarea:focus,.sf-pill input:focus-visible+span,.sf-mode input:focus-visible+.sf-mode-in{outline:2px solid Highlight;outline-offset:2px}
+.sf-btn,.sf-cta,.sf-stepper button,.sf-chips span,.sf-chip{border:1px solid ButtonText}
+.sf-field input,.sf-field select,.sf-field textarea,.sf-stepper,.sf-pill span,.sf-mode-in{border:1.5px solid ButtonText}
+body .sf-pill input:checked+span{border:3px solid Highlight;padding-inline:18.5px}
+body .sf-mode input:checked+.sf-mode-in{border:3px solid Highlight;padding:10.5px 12.5px}
+.sf-cta::after{display:none}
+}

@@ -9,7 +9,15 @@
  */
 import { findCatalogSpans, matchCatalog, productTokens, sameProduct, type ExtractionCatalogEntry } from "./catalog";
 import { readClause } from "./clause";
-import { B_AFTER, B_BEFORE, fold } from "./text";
+import {
+  INSTRUCTION_CONTACT,
+  INSTRUCTION_PHOTO,
+  INSTRUCTION_SEND,
+  INSTRUCTION_TIMING,
+  INSTRUCTION_TIMING_TARGET,
+  NON_ORDER_TOPICS,
+} from "./lexicon";
+import { B_AFTER, B_BEFORE, escapeRegExp, fold, phraseAlternation as alt } from "./text";
 import type { ExtractedItem } from "./types";
 
 export interface ItemsReading {
@@ -31,7 +39,7 @@ interface Clause {
 }
 
 const SEPARATOR = new RegExp(
-  `\\n|[,،;؛](?!\\d)|:(?!\\d)|(?<question>[?؟]+)|!+|\\.(?=\\s|$)|(?<list>\\s[+&]\\s)|${B_BEFORE}(?<conjunction>w|و|et|and)${B_AFTER}(?!\\s*(?:nos|nass|nes|نص|نصف|demi))`,
+  `\\n|[,،;؛](?!\\d)|:(?!\\d)|(?<question>[?؟]+)|!+|\\.+(?=\\s|$)|(?<list>\\s[+&]\\s)|${B_BEFORE}(?<conjunction>w|و|et|and)${B_AFTER}(?!\\s*(?:nos|nass|nes|نص|نصف|demi))`,
   "gu",
 );
 
@@ -51,6 +59,30 @@ function splitClauses(folded: string, protectedSpans: ReadonlyArray<{ start: num
   clauses.push({ start, end: folded.length, conjunction, list, question: false });
   return clauses.filter((clause) => folded.slice(clause.start, clause.end).trim());
 }
+
+/** A message about an order that already exists: cancel, refund, status. */
+const TOPIC = new RegExp(`${B_BEFORE}(?:${alt(NON_ORDER_TOPICS)})${B_AFTER}`, "u");
+/** Word starts: "appel" also matches "appelez". */
+const stems = (words: readonly string[]) => `(?:${words.map((word) => escapeRegExp(fold(word))).join("|")})`;
+const INSTRUCTION_CONTACT_RE = new RegExp(`${B_BEFORE}${stems(INSTRUCTION_CONTACT)}`, "u");
+const INSTRUCTION_SEND_RE = new RegExp(`${B_BEFORE}${stems(INSTRUCTION_SEND)}`, "u");
+const INSTRUCTION_PHOTO_RE = new RegExp(`${B_BEFORE}${stems(INSTRUCTION_PHOTO)}`, "u");
+const INSTRUCTION_TIMING_RE = new RegExp(
+  `${B_BEFORE}(?:${alt(INSTRUCTION_TIMING)})${B_AFTER}\\s*(?:\\S+\\s+){0,2}?(?:\\d{1,2}\\s*(?:h|:|pm|am|سا)${B_AFTER}|${stems(INSTRUCTION_TIMING_TARGET)})`,
+  "u",
+);
+
+/** "call me before delivery", "send a photo first", "after 5 pm": a note for the seller. */
+function isInstruction(clauseFolded: string): boolean {
+  return (
+    INSTRUCTION_CONTACT_RE.test(clauseFolded) ||
+    (INSTRUCTION_SEND_RE.test(clauseFolded) && INSTRUCTION_PHOTO_RE.test(clauseFolded)) ||
+    INSTRUCTION_TIMING_RE.test(clauseFolded)
+  );
+}
+
+/** A clause that is only a clothing size: s, m, l, xl, xxl, 2xl... */
+const SIZE_ONLY = /^(?:xs|s|m|l|xl|xxl|xxxl|[2-5]xl)$/u;
 
 const SIGNATURE_WORD = /^(?:\p{Lu}[\p{Ll}'-]+|\p{Script=Arabic}{2,})$/u;
 const DELIVERY_LINE = /(?:livraison|livrer|توصيل|التوصيل|tawsil|twsil|twsl|delivery)/u;
@@ -92,6 +124,8 @@ export function readItems(
   const notes: string[] = [];
   let previousWasItem = false;
   let previousWasAddress = false;
+  // "2 sacs, non, 3 sacs": a clause that is only "non" corrects the next one.
+  let carryCorrection = false;
   // "Sac à Main Femme + Parfum Oud": the first entry of a list is an item
   // once the entry joined to it is one.
   let pendingListItem: ExtractedItem | undefined;
@@ -103,9 +137,20 @@ export function readItems(
     const clauseFolded = folded.slice(clause.start, clause.end);
     return { clause, text, clauseFolded, line: readClause(text, clauseFolded) };
   });
+  // "je veux annuler ma commande": the intent word does not mean a new order.
+  if (TOPIC.test(folded)) for (const row of parsed) row.line.intent = false;
+  const stated = new WeakMap<ExtractedItem, { stated: boolean; correction: boolean }>();
   const messageOrders = parsed.some((row) => row.line.intent || DELIVERY_LINE.test(row.clauseFolded));
 
   for (const { clause, text, clauseFolded, line } of parsed) {
+    if (carryCorrection) {
+      line.correction = true;
+      carryCorrection = false;
+    }
+    if (line.correction && !line.name && !line.quantityStated && line.price === undefined && !line.intent) {
+      carryCorrection = true;
+      continue;
+    }
     if (line.address || (line.addressContinuation && previousWasAddress)) {
       addressParts.push((line.address ?? line.addressContinuation)!);
       previousWasAddress = true;
@@ -125,6 +170,11 @@ export function readItems(
       continue;
     }
 
+    if (isInstruction(clauseFolded) && !line.quantityStated && line.price === undefined && !line.exchange) {
+      notes.push(text.replace(/\s+/g, " ").trim());
+      previousWasItem = false;
+      continue;
+    }
     const deliveryOrPayment =
       (DELIVERY_LINE.test(clauseFolded) || PAYMENT_LINE.test(clauseFolded)) &&
       !line.quantityStated &&
@@ -135,6 +185,12 @@ export function readItems(
     }
 
     if (line.name) {
+      // "taille L w XL": the second size is an option of the item before it.
+      if (!line.intent && !line.quantityStated && line.price === undefined && items.length > 0 && previousWasItem && SIZE_ONLY.test(fold(line.name))) {
+        const last = items[items.length - 1]!;
+        last.productName = `${last.productName} ${line.name}`.replace(/\s+/g, " ").trim();
+        continue;
+      }
       const onlyColor = !line.intent && !line.quantityStated && line.price === undefined ? colorPhrase(line.name) : undefined;
       if (onlyColor) {
         notes.push(onlyColor);
@@ -190,11 +246,13 @@ export function readItems(
         }
       }
       if (line.exchange) notes.push(text.replace(/\s+/g, " ").trim());
-      items.push({
+      const pushed: ExtractedItem = {
         productName: line.name,
         quantity: clampQty(line.quantity),
         ...(line.price !== undefined && !line.total ? { unitPrice: line.price } : {}),
-      });
+      };
+      stated.set(pushed, { stated: line.quantityStated, correction: line.correction });
+      items.push(pushed);
       if (line.total && line.price !== undefined) reading.totalPrice = line.price;
       previousWasItem = true;
       mention = undefined;
@@ -210,6 +268,7 @@ export function readItems(
     // "شفت imprimante. نحب زوج" — the quantity is in the next clause.
     if (line.quantityStated && !line.name && items.length === 1) {
       items[0]!.quantity = clampQty(line.quantity);
+      stated.set(items[0]!, { stated: true, correction: true });
       previousWasItem = true;
       continue;
     }
@@ -234,8 +293,21 @@ export function readItems(
     const twin = merged.find(
       (candidate) => candidate.productName.toLowerCase() === item.productName.toLowerCase() && candidate.unitPrice === item.unitPrice,
     );
-    if (twin) twin.quantity = Math.min(twin.quantity + item.quantity, 999);
-    else merged.push(item);
+    if (twin) {
+      // The same product again: a restated number is the same line, and a
+      // correction ("… non 3 …") replaces the first number. Only two different
+      // numbers with no correction word are added up.
+      const later = stated.get(item);
+      const earlier = stated.get(twin);
+      if (later?.stated && (later.correction || !earlier?.stated || item.quantity === twin.quantity)) {
+        twin.quantity = item.quantity;
+      } else if (!later?.stated && earlier?.stated) {
+        // the number the customer wrote stays
+      } else {
+        twin.quantity = Math.min(twin.quantity + item.quantity, 999);
+      }
+      if (later?.stated) stated.set(twin, later);
+    } else merged.push(item);
   }
   reading.items = merged.map((item) => {
     const colors = productTokens(item.productName).filter((token) => COLOR_WORDS.has(token));

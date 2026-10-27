@@ -31,6 +31,7 @@ type GeminiErrorBody = {
     code?: number;
     message?: string;
     status?: string;
+    details?: Array<{ "@type"?: string; retryDelay?: string }>;
   };
 };
 
@@ -41,6 +42,8 @@ export class GeminiProviderError extends Error {
     public readonly status?: number,
     public readonly providerStatus?: string | null,
     public readonly transport?: GeminiTransportCause | null,
+    /** Seconds Google said to wait (429 RetryInfo), rounded up. */
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = "GeminiProviderError";
@@ -124,6 +127,17 @@ export function describeTransportCause(
   return null;
 }
 
+/** Seconds from a Google 429: RetryInfo.retryDelay ("57173s"), else "Please retry in 12.3s". */
+function quotaRetryAfterSeconds(body: GeminiErrorBody, message: string): number | undefined {
+  for (const detail of body.error?.details ?? []) {
+    if (!detail?.["@type"]?.endsWith("RetryInfo")) continue;
+    const delay = /^(\d+(?:\.\d+)?)s$/.exec(detail.retryDelay?.trim() ?? "");
+    if (delay) return Math.ceil(Number(delay[1]));
+  }
+  const text = /retry in (\d+(?:\.\d+)?)\s*s/i.exec(message);
+  return text ? Math.ceil(Number(text[1])) : undefined;
+}
+
 function providerError(
   status: number,
   body: GeminiErrorBody,
@@ -153,7 +167,14 @@ function providerError(
     );
   }
   if (status === 429 || providerStatus === "RESOURCE_EXHAUSTED") {
-    return withStatus("GEMINI_QUOTA_EXHAUSTED");
+    return new GeminiProviderError(
+      "GEMINI_QUOTA_EXHAUSTED",
+      message,
+      status,
+      providerStatus ?? null,
+      undefined,
+      quotaRetryAfterSeconds(body, message),
+    );
   }
   // Google refuses Gemini API use from countries/regions outside its
   // availability list (e.g. Algeria) with FAILED_PRECONDITION "User location
@@ -383,7 +404,13 @@ export async function requestGemini(
       });
 
       if (error.code === "GEMINI_MODEL_UNAVAILABLE") break;
-      if (TRANSIENT_STATUS.has(response.status) && attempt < attempts - 1) {
+      // A quota answer is not a hiccup: asking the same model again only costs another request.
+      // The quota ledger pauses the provider; the next model is still asked once.
+      if (
+        error.code !== "GEMINI_QUOTA_EXHAUSTED" &&
+        TRANSIENT_STATUS.has(response.status) &&
+        attempt < attempts - 1
+      ) {
         await sleep(750 * 2 ** attempt);
         continue;
       }

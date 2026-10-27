@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { WhatsAppUnofficialNotice } from "@/components/inbox/whatsapp-unofficial-notice";
 import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { getWhatsAppPairingCopy } from "@/lib/i18n/whatsapp-pairing";
 import type { WhatsAppStatus } from "@/lib/whatsapp/types";
@@ -206,7 +207,7 @@ export function WhatsAppPairingDialog({
       ) : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="overflow-hidden p-0 sm:max-w-[34rem]">
+        <DialogContent className="overflow-y-auto p-0 sm:max-w-[34rem]">
           <DialogHeader className="border-b px-6 pb-5 pt-6 text-start">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
               {pairingCopy("eyebrow")}
@@ -218,6 +219,10 @@ export function WhatsAppPairingDialog({
               {pairingCopy("description")}
             </DialogDescription>
           </DialogHeader>
+
+          <div className="px-6 pt-5">
+            <WhatsAppUnofficialNotice />
+          </div>
 
           <div className="px-6 py-6">
             {phase === "starting" || phase === "waiting-qr" ? (

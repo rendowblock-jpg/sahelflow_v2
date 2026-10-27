@@ -18,6 +18,7 @@ import {
 } from "./inbox-workspace-shared";
 import type { InboxSharedRefs } from "./use-inbox-shared-refs";
 import { displayContactName } from "@/lib/validation/phone";
+import { matchesSearchQuery } from "@/lib/search/universal-search";
 
 /**
  * INB-27 — chat queue concern of the Inbox workspace.
@@ -349,9 +350,7 @@ export function useInboxChatQueue({
         (queueFilter === "resolved" && statusValue === "resolved");
       if (!queueMatches) return false;
       if (!query) return true;
-      return [chat.name, chat.phone, chat.lastMessageText]
-        .filter(Boolean)
-        .some((value) => value!.toLocaleLowerCase().includes(query));
+      return matchesSearchQuery(query, [chat.name, chat.phone, chat.lastMessageText]);
       })
       // Pinned conversations float first (INB-12); the stable sort keeps the
       // server's recency order inside each group.

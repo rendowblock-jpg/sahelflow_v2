@@ -33,6 +33,7 @@ import {
   type OnboardingProgress,
 } from "@/components/onboarding/onboarding-progress";
 import { OnboardingPairingPanel } from "@/components/onboarding/onboarding-pairing-panel";
+import { OnboardingChatGptOption } from "@/components/onboarding/chatgpt-onboarding-option";
 import { AiKeyPanel } from "@/components/settings/ai-key-panel";
 import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
 import { WilayaCommuneSelect } from "@/components/shared/wilaya-commune-select";
@@ -623,9 +624,15 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
                 {/* Reuses the settings AI key flow: typed password key,
                     test-and-save validation, consent checkbox, reauth gate. */}
                 <AiKeyPanel
+                  provider="groq"
                   canManageKey={access.aiKey}
                   canManageConsent={access.aiConsent}
                 />
+                <AiKeyPanel
+                  canManageKey={access.aiKey}
+                  canManageConsent={access.aiConsent}
+                />
+                <OnboardingChatGptOption canManage={access.aiKey} />
               </div>
             )}
 

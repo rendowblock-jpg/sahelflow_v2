@@ -14,6 +14,12 @@ import type { ServiceContext } from "./service-base";
 import type { OrderStatus } from "@/types/domain";
 import { REVENUE_EXCLUDED_STATUSES } from "./metrics";
 import {
+  addShopDays,
+  shopDateString,
+  shopHour,
+  startOfShopDay,
+} from "@/lib/time/shop-day";
+import {
   getProfitabilitySeries,
   type ProfitabilityProjection,
 } from "@/lib/accounting/profitability";
@@ -100,22 +106,10 @@ const EXCLUDED_FROM_REVENUE: OrderStatus[] = [
   ...REVENUE_EXCLUDED_STATUSES,
 ] as OrderStatus[];
 
-function localDateString(d: Date): string {
-  const offset = d.getTimezoneOffset() * 60000;
-  return new Date(d.getTime() - offset).toISOString().slice(0, 10);
-}
-
-function startOfDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function addDays(d: Date, n: number): Date {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-}
+// Day and hour edges are shop (Algeria) time, not the host's.
+const localDateString = shopDateString;
+const startOfDay = startOfShopDay;
+const addDays = addShopDays;
 
 function pct(curr: number, prev: number): number | null {
   // Growth from nothing has no meaningful percentage ("+100 %" would be false).
@@ -407,7 +401,7 @@ export const analyticsService = {
       revenue: 0,
     }));
     for (const order of orders) {
-      const bucket = buckets[order.createdAt.getHours()]!;
+      const bucket = buckets[shopHour(order.createdAt)]!;
       bucket.orders += 1;
       if (!EXCLUDED_FROM_REVENUE.includes(order.status as OrderStatus)) {
         bucket.revenue += order.totalPrice;

@@ -30,6 +30,7 @@ import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
+import { SHOP_TIME_ZONE, shopRecentMonths } from "@/lib/time/shop-day";
 import { formatDate, formatDZD, intlLocale } from "@/lib/utils";
 import type { ExpenseCategory } from "@/lib/validation";
 
@@ -53,9 +54,8 @@ export default async function AccountingPage() {
   const now = new Date();
   const periodStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const period = { from: periodStart, to: now };
-  const last6Months = Array.from({ length: 6 }, (_, index) =>
-    new Date(now.getFullYear(), now.getMonth() - (5 - index), 1),
-  );
+  // Calendar months are shop months (Africa/Algiers), not the computer's.
+  const last6Months = shopRecentMonths(now, 6);
 
   const aggregates = await Promise.all([
     db.expense.findMany({
@@ -68,12 +68,9 @@ export default async function AccountingPage() {
     canReadProfitability
       ? getProfitabilitySeries(
           db,
-          last6Months.map((date) => ({
-            key: `${date.getFullYear()}-${date.getMonth() + 1}`,
-            period: {
-              from: date,
-              to: new Date(date.getFullYear(), date.getMonth() + 1, 1),
-            },
+          last6Months.map((entry) => ({
+            key: entry.key,
+            period: { from: entry.gte, to: entry.lt },
           })),
         )
       : Promise.resolve([]),
@@ -112,10 +109,13 @@ export default async function AccountingPage() {
   const monthlyByKey = new Map(
     monthlySeries.map((entry) => [entry.key, entry.projection]),
   );
-  const monthlyData = last6Months.map((date) => {
-    const month = monthlyByKey.get(`${date.getFullYear()}-${date.getMonth() + 1}`);
+  const monthlyData = last6Months.map((entry) => {
+    const month = monthlyByKey.get(entry.key);
     return {
-      month: date.toLocaleDateString(dateLocale, { month: "short" }),
+      month: entry.gte.toLocaleDateString(dateLocale, {
+        month: "short",
+        timeZone: SHOP_TIME_ZONE,
+      }),
       revenue: month?.netRevenue ?? 0,
       expenses: totalExpensesOf(month),
     };
@@ -129,7 +129,7 @@ export default async function AccountingPage() {
     <div className="app-content page-sections">
       <PageHeader
         title={t("nav.accounting")}
-        description={`${t("accounting.subtitle")} — ${periodStart.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })} – ${now.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })}`}
+        description={`${t("accounting.subtitle")} — ${periodStart.toLocaleDateString(dateLocale, { day: "numeric", month: "short", timeZone: SHOP_TIME_ZONE })} – ${now.toLocaleDateString(dateLocale, { day: "numeric", month: "short", timeZone: SHOP_TIME_ZONE })}`}
         actions={canExport || canUpdate ? (
           <div className="flex flex-wrap items-center gap-2">
             {canExport ? <ImportExportButtons exportRoute="/api/export/expenses" /> : null}
@@ -216,7 +216,7 @@ export default async function AccountingPage() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table scrollLabel={t("accounting.recentExpenses")}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("accounting.expenseDate")}</TableHead>

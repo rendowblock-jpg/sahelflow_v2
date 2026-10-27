@@ -36,7 +36,7 @@ export function AiMessageImages({
               onClick={() => setOpenIndex(index)}
               aria-label={`${copy("imageOpen")} — ${copy("imageAlt", { index: index + 1 })}`}
               className={cn(
-                "block overflow-hidden rounded-surface border border-border bg-muted outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring",
+                "block overflow-hidden rounded-surface border border-border bg-muted outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring",
                 single ? "max-h-72 max-w-72" : "size-28",
               )}
             >
@@ -64,7 +64,7 @@ export function AiMessageImages({
         >
           <DialogClose
             aria-label={copy("close")}
-            className="absolute -top-11 end-0 flex size-9 items-center justify-center rounded-full bg-background/85 text-foreground shadow-(--elevation-2) outline-none transition hover:bg-background focus-visible:ring-2 focus-visible:ring-ring"
+            className="absolute -top-11 end-0 flex size-9 items-center justify-center rounded-full bg-background/85 text-foreground shadow-(--elevation-2) outline-none transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring"
           >
             <X className="size-4" aria-hidden="true" />
           </DialogClose>

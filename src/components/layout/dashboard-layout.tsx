@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 
 import {
   matchPhysicalLetter,
@@ -68,6 +68,44 @@ const CheatsheetModal = dynamic(() =>
   ),
 );
 
+const FOCUSABLE_CONTENT =
+  'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),summary,[tabindex]:not([tabindex="-1"])';
+
+/**
+ * A scrolling region must be reachable by keyboard (axe
+ * scrollable-region-focusable). #main-content stays tabindex -1, so the skip
+ * link can focus it without a permanent tab stop, and joins the tab order only
+ * while it overflows and holds nothing else focusable.
+ */
+function useScrollableMainTabStop(main: RefObject<HTMLElement | null>) {
+  const [tabStop, setTabStop] = useState(false);
+  useEffect(() => {
+    const element = main.current;
+    if (!element) return;
+    let frame = 0;
+    const measure = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() =>
+        setTabStop(
+          element.scrollHeight > element.clientHeight &&
+            !element.querySelector(FOCUSABLE_CONTENT),
+        ),
+      );
+    };
+    measure();
+    const resize = new ResizeObserver(measure);
+    resize.observe(element);
+    const mutation = new MutationObserver(measure);
+    mutation.observe(element, { childList: true, subtree: true });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      resize.disconnect();
+      mutation.disconnect();
+    };
+  }, [main]);
+  return tabStop;
+}
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
   /** Resolved on the server; decides which destinations the shell offers. */
@@ -104,6 +142,8 @@ export function DashboardLayout({
   const { density } = useUiDensity();
   const pathname = usePathname();
   const previousPath = useRef<string | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const mainIsTabStop = useScrollableMainTabStop(mainRef);
   const storefrontFocusMode = /^\/storefronts\/[^/]+(?:\/studio)?\/?$/.test(
     pathname,
   );
@@ -187,7 +227,7 @@ export function DashboardLayout({
     <ActorAccessProvider permissions={permissions}>
       <div
         dir={dir}
-        className="flex h-[100dvh] min-h-0 overflow-hidden bg-background text-foreground"
+        className="flex h-[100dvh] min-h-0 overflow-hidden relative bg-background text-foreground"
         data-sahelflow-shell="desktop"
         data-shell-mode={storefrontFocusMode ? "storefront-focus" : "standard"}
         data-locale-dir={dir}
@@ -228,10 +268,13 @@ export function DashboardLayout({
             />
           ) : null}
           <main
+            ref={mainRef}
             id="main-content"
-            tabIndex={-1}
+            tabIndex={mainIsTabStop ? 0 : -1}
             dir={dir}
-            className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scroll-pt-14 outline-none"
+            className={`min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scroll-pt-14 outline-none${
+              mainIsTabStop ? " focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" : ""
+            }`}
           >
             {storefrontFocusTitle ? (
               <h1 className="sr-only">{storefrontFocusTitle}</h1>

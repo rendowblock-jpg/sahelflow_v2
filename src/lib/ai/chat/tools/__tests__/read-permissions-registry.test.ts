@@ -6,10 +6,9 @@
  * These tests go through the real registry wrapper (`registerTool`) with the
  * real permission presets and the real `trustedActionAllowed`. Only the
  * server-minted-actor brand check is stubbed, the same way the identity
- * projection tests do it. `SF_AI_ACTION_POLICY_TEST` switches the Vitest-only
- * legacy bypass off so the production wrapper runs.
+ * projection tests do it.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/identity/trusted-actor", () => ({
   isTrustedActorContext: vi.fn(() => true),
@@ -23,7 +22,9 @@ import {
 } from "@/lib/ai/actions/contracts";
 import {
   getTool,
+  registerGatedTool,
   registerTool,
+  type ChatTool,
   type ToolContext,
   type ToolResult,
 } from "@/lib/ai/chat/tools/registry";
@@ -282,13 +283,8 @@ function registerReadFixtures(): void {
 }
 
 beforeEach(() => {
-  process.env.SF_AI_ACTION_POLICY_TEST = "true";
   vi.mocked(isTrustedActorContext).mockReturnValue(true);
   registerReadFixtures();
-});
-
-afterEach(() => {
-  delete process.env.SF_AI_ACTION_POLICY_TEST;
 });
 
 async function run(
@@ -492,14 +488,15 @@ describe("proposal creation (S06a-03)", () => {
 
   function registerCreateProduct(): ReturnType<typeof vi.fn> {
     const legacy = vi.fn();
-    registerTool({
+    const fixture: ChatTool = {
       definition: {
         name: "create_product",
         description: "create_product fixture",
         parameters: { type: "object", properties: {} },
       },
       execute: legacy,
-    });
+    };
+    registerGatedTool(fixture);
     return legacy;
   }
 
@@ -631,14 +628,15 @@ describe("proposal creation (S06a-03)", () => {
   });
 
   it("the governed order-confirmation refusal is unchanged for every actor", async () => {
-    registerTool({
+    const fixture: ChatTool = {
       definition: {
         name: "update_order_status",
         description: "update_order_status fixture",
         parameters: { type: "object", properties: {} },
       },
       execute: vi.fn(),
-    });
+    };
+    registerGatedTool(fixture);
 
     const result = await run("update_order_status", actor("operator"), {
       orderId: "o1",

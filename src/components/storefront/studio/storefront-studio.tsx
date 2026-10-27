@@ -348,7 +348,11 @@ export function StorefrontStudio({
       ) : null}
 
       <div data-studio-body="true" className="relative flex min-h-0 flex-1">
-        <aside className="flex min-h-0 shrink-0" data-studio-panels="true">
+        <aside
+          aria-label={t("storefront.studio.sidePanelLabel")}
+          className="flex min-h-0 shrink-0"
+          data-studio-panels="true"
+        >
           <StudioRail
             panel={panel}
             collapsed={panelCollapsed}
@@ -413,7 +417,8 @@ export function StorefrontStudio({
           )}
         </aside>
 
-        <main className="relative min-h-0 min-w-0 flex-1">
+        {/* A div, not a main: the dashboard shell already owns the page's one <main>. */}
+        <div data-studio-preview="true" className="relative min-h-0 min-w-0 flex-1">
           <StudioCanvas
             draft={draft}
             products={products}
@@ -448,9 +453,10 @@ export function StorefrontStudio({
               </button>
             </div>
           ) : null}
-        </main>
+        </div>
 
         <aside
+          aria-label={t("storefront.studio.inspector")}
           data-studio-inspector="true"
           className={cn(
             "min-h-0 w-[300px] shrink-0 overflow-y-auto border-s bg-background p-4",

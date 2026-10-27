@@ -102,6 +102,8 @@ export interface AiSetupState {
   consentAccepted: boolean;
   keyConfigured: boolean;
   ready: boolean;
+  /** Per-provider key presence (the status route sends it; never a key). */
+  providers?: { groq: { configured: boolean }; gemini: { configured: boolean } };
 }
 
 /**

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { RUNTIME_UI_READY_PATH } from "@/lib/runtime-auth";
-import { buildUiTiming } from "@/lib/runtime/ui-timing";
+import { buildUiTiming, readLargestContentfulPaint } from "@/lib/runtime/ui-timing";
 
 const RETRY_WINDOW_MS = 75_000;
 const REQUEST_TIMEOUT_MS = 5_000;
@@ -25,9 +25,9 @@ function delay(milliseconds: number, signal: AbortSignal): Promise<void> {
 }
 
 /** The timing body, or undefined: the ready signal never depends on it. */
-function timingBody(): string | undefined {
+function timingBody(largestContentfulPaintMs?: number): string | undefined {
   try {
-    const timing = buildUiTiming(window.performance);
+    const timing = buildUiTiming(window.performance, { largestContentfulPaintMs });
     return Object.keys(timing).length > 0 ? JSON.stringify({ timing }) : undefined;
   } catch {
     return undefined;
@@ -51,8 +51,9 @@ export function RuntimeUiReadyBeacon() {
 
     void (async () => {
       const deadline = Date.now() + RETRY_WINDOW_MS;
-      // Built once; a retry resends the same numbers.
-      const body = timingBody();
+      // Built once; a retry resends the same numbers. Reading the paint value
+      // takes one timer tick and never fails.
+      const body = timingBody(await readLargestContentfulPaint(window));
       const headers: Record<string, string> = { "X-SahelFlow-UI-Ready": "1" };
       if (body !== undefined) headers["Content-Type"] = "application/json";
       while (!controller.signal.aborted && Date.now() < deadline) {

@@ -317,9 +317,12 @@ where
     let mut pending = Vec::new();
     let mut compatibility_shops = Vec::new();
     let mut compatibility_failure = None;
+    // The report of the previous start is the only record of which shops already held data.
+    let previous_report: Option<MigrationCompatibilityReport> = read_json(&compatibility_path).ok();
     for shop in registry.shops.iter().cloned() {
         let path = app_data_dir.join("shops").join(&shop.database_file);
-        match database_compatibility(&path, &migrations) {
+        let previously_applied = previously_applied_migrations(previous_report.as_ref(), &shop);
+        match database_compatibility(&path, &migrations, previously_applied) {
             Ok(database) => {
                 if database.pending_migration_count > 0 {
                     pending.push((shop.clone(), path));
@@ -349,7 +352,8 @@ where
                     shop_id: shop.id,
                     database_file: shop.database_file,
                     state: "blocked".to_string(),
-                    applied_migration_count: 0,
+                    // Kept, so the next start still knows this shop held data.
+                    applied_migration_count: previously_applied,
                     pending_migration_count: 0,
                     legacy_baseline_inferred: false,
                     sqlite_version: None,
@@ -799,10 +803,40 @@ fn migration_set_hash(migrations: &[Migration]) -> String {
     hex_digest(hasher.finalize().as_slice())
 }
 
+/// Migrations this shop had applied when the app last started it. A shop that is not in the
+/// previous report never finished a start, so an empty database file may be its first.
+fn previously_applied_migrations(
+    report: Option<&MigrationCompatibilityReport>,
+    shop: &ShopRecord,
+) -> usize {
+    report
+        .and_then(|report| {
+            report
+                .shops
+                .iter()
+                .find(|entry| entry.shop_id == shop.id && entry.database_file == shop.database_file)
+        })
+        .map_or(0, |entry| entry.applied_migration_count)
+}
+
 fn database_compatibility(
     database_path: &Path,
     migrations: &[Migration],
+    previously_applied: usize,
 ) -> Result<DatabaseCompatibility, Box<dyn std::error::Error>> {
+    // SQLite reads a zero-byte file as a new empty database (and deletes a -wal next to it), so
+    // look at the size first. Without a record of earlier data this is a fresh install: the app
+    // creates that empty file itself before the first migration.
+    if previously_applied > 0 && fs::metadata(database_path).is_ok_and(|meta| meta.len() == 0) {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            format!(
+                "shop database {} is empty (0 bytes) but held data at the last start; refusing to migrate it into a blank shop, restore it from a backup",
+                database_path.display()
+            ),
+        )
+        .into());
+    }
     preflight_database(database_path)?;
     let connection = Connection::open(database_path)?;
     let (sqlite_version, journal_mode) = sqlite_runtime_facts(&connection)?;
@@ -823,6 +857,16 @@ fn database_compatibility(
             sqlite_version,
             journal_mode,
         });
+    }
+    if previously_applied > 0 && applied.is_empty() {
+        return Err(IoError::new(
+            ErrorKind::InvalidData,
+            format!(
+                "shop database {} has no migration history but held data at the last start; refusing to migrate it into a blank shop, restore it from a backup",
+                database_path.display()
+            ),
+        )
+        .into());
     }
     verify_applied_checksums(&applied, migrations)?;
     Ok(DatabaseCompatibility {
@@ -1377,7 +1421,10 @@ fn create_shop_template(
     fs::create_dir_all(&system_dir)?;
     let target = system_dir.join("shop-template.db");
     let marker = system_dir.join("shop-template.sha256");
+    // A zero-byte file passes preflight (SQLite reads it as a new empty database), so it
+    // must fall through to the rebuild below instead of being trusted as the template.
     if target.exists()
+        && fs::metadata(&target)?.len() > 0
         && marker.exists()
         && fs::read_to_string(&marker)?.trim() == migration_set_sha256
     {
@@ -2525,6 +2572,43 @@ mod tests {
             .expect("count applied migrations")
     }
 
+    // The template is the source for every new shop. A zero-byte file passes SQLite's own
+    // integrity check (it reads as a new empty database), so a failed copy that left 0 bytes
+    // behind a matching marker must be rebuilt, never trusted.
+    #[test]
+    fn zero_byte_shop_template_is_rebuilt_not_trusted() {
+        let root = test_root("zero-template");
+        let migrations = vec![Migration {
+            name: "20260101000000_init".to_owned(),
+            checksum: "a".repeat(64),
+            sql: "CREATE TABLE \"Customer\" (id TEXT PRIMARY KEY, name TEXT NOT NULL);".to_owned(),
+        }];
+        let migration_set = "b".repeat(64);
+        create_shop_template(&root, &migrations, &migration_set).expect("first template");
+        let template = root.join("system/shop-template.db");
+        assert!(fs::metadata(&template).expect("template").len() > 0);
+
+        fs::write(&template, b"").expect("simulate a failed copy that left 0 bytes");
+        create_shop_template(&root, &migrations, &migration_set).expect("second template call");
+
+        assert!(
+            fs::metadata(&template).expect("template after").len() > 0,
+            "a zero-byte template was trusted: new shops would be blank files"
+        );
+        let connection = Connection::open(&template).expect("open rebuilt template");
+        let tables: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'Customer'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("template schema");
+        assert_eq!(tables, 1, "the rebuilt template has no schema");
+        // Windows refuses to delete a database file that is still open.
+        drop(connection);
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
     #[test]
     fn installation_footprint_ignores_transient_root_lock_but_detects_authority() {
         let root = test_root("root-footprint");
@@ -2907,6 +2991,103 @@ mod tests {
             .shops
             .iter()
             .all(|shop| shop.state == "migrated-verified"));
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    // PB-CONV-SEARCH-LOAD slice 2: the conversation-search index arrives by migration, with its
+    // triggers, and the migration neither changes nor copies the rows that already exist. Filling
+    // the index for existing messages is done later by the app, never on the start-up path.
+    #[test]
+    fn conversation_search_migration_adds_the_index_without_touching_or_copying_rows() {
+        let root = test_root("conversation-search-index");
+        let resources = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("repository root")
+            .to_path_buf();
+        let migrations = load_migrations(&resources.join("prisma/migrations"))
+            .expect("load packaged migrations");
+        let position = migrations
+            .iter()
+            .position(|migration| migration.name.ends_with("_conversation_search_index"))
+            .expect("the conversation search migration is packaged");
+        fs::create_dir_all(&root).expect("create test root");
+        let database_path = root.join("shop.db");
+        migrate_database(&database_path, &migrations[..position])
+            .expect("prepare a database without the index");
+        let connection = Connection::open(&database_path).expect("open database");
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO "Conversation" ("id", "channel", "contactName", "updatedAt")
+                VALUES ('conversation-1', 'whatsapp', 'sealed-name', CURRENT_TIMESTAMP);
+                INSERT INTO "Message" ("id", "conversationId", "body", "direction", "timestamp")
+                VALUES ('message-1', 'conversation-1', 'sealed-body', 'inbound', CURRENT_TIMESTAMP);
+                "#,
+            )
+            .expect("insert a conversation and a message before the migration");
+        drop(connection);
+
+        migrate_database(&database_path, &migrations).expect("apply the index migration");
+
+        let connection = Connection::open(&database_path).expect("open migrated database");
+        let count = |sql: &str| -> i64 {
+            connection
+                .query_row(sql, [], |row| row.get(0))
+                .expect("count query")
+        };
+        for table in [
+            "ConversationSearchDoc",
+            "ConversationSearchToken",
+            "ConversationSearchDirty",
+            "ConversationSearchState",
+        ] {
+            assert_eq!(
+                count(&format!(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '{table}'"
+                )),
+                1,
+                "{table} was not created"
+            );
+        }
+        assert_eq!(
+            count(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'conversation_search_%'"
+            ),
+            6
+        );
+        // The rows that were there are untouched and nothing was copied into the index.
+        assert_eq!(count(r#"SELECT COUNT(*) FROM "Message""#), 1);
+        assert_eq!(count(r#"SELECT COUNT(*) FROM "Conversation""#), 1);
+        assert_eq!(count(r#"SELECT COUNT(*) FROM "ConversationSearchDoc""#), 0);
+        assert_eq!(
+            count(r#"SELECT COUNT(*) FROM "ConversationSearchToken""#),
+            0
+        );
+        assert_eq!(
+            count(r#"SELECT COUNT(*) FROM "ConversationSearchDirty""#),
+            0
+        );
+        assert_eq!(
+            count(r#"SELECT COUNT(*) FROM "ConversationSearchState""#),
+            1
+        );
+
+        // From now on a new message and a new conversation are queued by the triggers.
+        connection
+            .execute_batch(
+                r#"
+                INSERT INTO "Conversation" ("id", "channel", "contactName", "updatedAt")
+                VALUES ('conversation-2', 'whatsapp', 'sealed-name', CURRENT_TIMESTAMP);
+                INSERT INTO "Message" ("id", "conversationId", "body", "direction", "timestamp")
+                VALUES ('message-2', 'conversation-2', 'sealed-body', 'inbound', CURRENT_TIMESTAMP);
+                "#,
+            )
+            .expect("insert after the migration");
+        assert_eq!(
+            count(r#"SELECT COUNT(*) FROM "ConversationSearchDirty""#),
+            2
+        );
+        drop(connection);
         fs::remove_dir_all(root).expect("remove test root");
     }
 
@@ -3470,6 +3651,244 @@ mod tests {
         assert_eq!(fs::read(&target).expect("read target"), b"old generation");
         assert_eq!(fs::read(&staged).expect("read staged"), b"new generation");
         assert!(!previous.exists());
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    // A shop that completed a start before, with the files we keep next to it.
+    struct StartedShop {
+        root: PathBuf,
+        app_data: PathBuf,
+        resources: PathBuf,
+        database_path: PathBuf,
+    }
+
+    fn started_shop_with_orders(name: &str) -> StartedShop {
+        let root = test_root(name);
+        let app_data = root.join("data");
+        let resources = root.join("resources");
+        write_migration(
+            &resources,
+            "001_init",
+            "CREATE TABLE Business (id TEXT PRIMARY KEY, value TEXT NOT NULL);",
+        );
+        let authority = prepare_installation(&app_data, &resources).expect("first start");
+        let connection = Connection::open(&authority.database_path).expect("open shop");
+        // About 80 KB, so a cut in half still leaves several whole pages behind.
+        connection
+            .execute_batch(
+                "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 400)
+                 INSERT INTO Business (id, value) SELECT 'order-' || i, hex(randomblob(100)) FROM n;",
+            )
+            .expect("insert orders");
+        drop(connection);
+        StartedShop {
+            root,
+            app_data,
+            resources,
+            database_path: authority.database_path,
+        }
+    }
+
+    fn garbage_bytes(length: usize) -> Vec<u8> {
+        let mut state = 0x9E37_79B9_7F4A_7C15_u64;
+        (0..length)
+            .map(|_| {
+                state = state
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1_442_695_040_888_963_407);
+                (state >> 56) as u8
+            })
+            .collect()
+    }
+
+    fn snapshot_file_count(app_data: &Path) -> usize {
+        fs::read_dir(app_data.join("migration-snapshots"))
+            .expect("read snapshots")
+            .count()
+    }
+
+    // Starts the app again over a database file that was damaged after a good start. The
+    // coordinator must block the shop with a report, must not touch the file (or its -wal)
+    // so a restore stays possible, and must start the shop again once the bytes are back.
+    // Returns the failure text of the blocked shop.
+    fn assert_damaged_shop_is_blocked(
+        name: &str,
+        wal_sidecar: bool,
+        damage: impl FnOnce(&Path),
+    ) -> String {
+        let shop = started_shop_with_orders(name);
+        let original = fs::read(&shop.database_path).expect("read healthy database");
+        assert!(original.len() > 16 * 1024, "fixture database is too small");
+        let journal_path = shop.app_data.join("migration-journal/current.json");
+        let journal_before = sha256_file(&journal_path).expect("hash journal of the first start");
+        let snapshots_before = snapshot_file_count(&shop.app_data);
+        damage(&shop.database_path);
+        let wal_path = PathBuf::from(format!("{}-wal", shop.database_path.display()));
+        let wal_bytes = garbage_bytes(96);
+        if wal_sidecar {
+            fs::write(&wal_path, &wal_bytes).expect("write wal sidecar");
+        }
+        let damaged = fs::read(&shop.database_path).expect("read damaged database");
+        assert_ne!(damaged, original, "{name}: the damage changed nothing");
+
+        let mut failure = String::new();
+        for start in 1..=2 {
+            let error = prepare_installation(&shop.app_data, &shop.resources)
+                .err()
+                .unwrap_or_else(|| panic!("{name}: start {start} accepted a damaged shop"))
+                .to_string();
+            assert!(
+                error.contains("compatibility report"),
+                "{name}: start {start}: {error}"
+            );
+            let report = compatibility_report(&shop.app_data);
+            assert_eq!(report.state, "blocked", "{name}: start {start}");
+            assert_eq!(report.shops[0].state, "blocked", "{name}: start {start}");
+            failure = report.shops[0]
+                .failure
+                .clone()
+                .unwrap_or_else(|| panic!("{name}: start {start}: blocked without a reason"));
+            assert_eq!(
+                fs::read(&shop.database_path).expect("read database after start"),
+                damaged,
+                "{name}: start {start} changed the database file"
+            );
+            if wal_sidecar {
+                assert_eq!(
+                    fs::read(&wal_path).expect("wal sidecar must still exist"),
+                    wal_bytes,
+                    "{name}: start {start} changed the wal sidecar"
+                );
+            }
+            assert_eq!(
+                snapshot_file_count(&shop.app_data),
+                snapshots_before,
+                "{name}: start {start} took a migration snapshot"
+            );
+            assert_eq!(
+                sha256_file(&journal_path).expect("hash journal"),
+                journal_before,
+                "{name}: start {start} began a migration"
+            );
+        }
+
+        // The seller restores the file from a backup: the shop starts again with its rows.
+        if wal_sidecar {
+            fs::remove_file(&wal_path).expect("remove wal sidecar");
+        }
+        fs::write(&shop.database_path, &original).expect("put the original bytes back");
+        prepare_installation(&shop.app_data, &shop.resources).expect("restored shop starts");
+        let rows: i64 = Connection::open(&shop.database_path)
+            .expect("open restored shop")
+            .query_row("SELECT COUNT(*) FROM Business", [], |row| row.get(0))
+            .expect("count restored orders");
+        assert_eq!(rows, 400, "{name}: restored shop lost rows");
+        fs::remove_dir_all(shop.root).expect("remove test root");
+        failure
+    }
+
+    #[test]
+    fn zero_byte_shop_database_is_blocked_not_migrated_into_a_blank_shop() {
+        let failure = assert_damaged_shop_is_blocked("zero-byte", true, |path| {
+            fs::write(path, b"").expect("empty the database")
+        });
+        assert!(failure.contains("empty"), "unclear reason: {failure}");
+    }
+
+    #[test]
+    fn shop_database_cut_to_its_first_100_bytes_is_blocked() {
+        assert_damaged_shop_is_blocked("first-100-bytes", false, |path| {
+            let bytes = fs::read(path).expect("read database");
+            fs::write(path, &bytes[..100]).expect("cut the database");
+        });
+    }
+
+    #[test]
+    fn shop_database_replaced_by_4096_garbage_bytes_is_blocked() {
+        assert_damaged_shop_is_blocked("garbage", false, |path| {
+            fs::write(path, garbage_bytes(4096)).expect("overwrite with garbage");
+        });
+    }
+
+    #[test]
+    fn shop_database_cut_in_half_at_a_page_boundary_is_blocked() {
+        assert_damaged_shop_is_blocked("half-page-boundary", false, |path| {
+            let bytes = fs::read(path).expect("read database");
+            let cut = bytes.len() / 2 / 4096 * 4096;
+            fs::write(path, &bytes[..cut]).expect("cut the database");
+        });
+    }
+
+    #[test]
+    fn shop_database_cut_in_half_in_the_middle_of_a_page_is_blocked() {
+        assert_damaged_shop_is_blocked("half-mid-page", false, |path| {
+            let bytes = fs::read(path).expect("read database");
+            let cut = bytes.len() / 2 / 4096 * 4096 + 1777;
+            fs::write(path, &bytes[..cut]).expect("cut the database");
+        });
+    }
+
+    #[test]
+    fn shop_database_reduced_to_an_empty_sqlite_file_is_blocked() {
+        let failure = assert_damaged_shop_is_blocked("empty-sqlite", false, |path| {
+            fs::remove_file(path).expect("remove the database");
+            let connection = Connection::open(path).expect("create empty sqlite file");
+            connection
+                .execute_batch("PRAGMA user_version = 1;")
+                .expect("write the sqlite header");
+            drop(connection);
+            assert!(fs::metadata(path).expect("stat").len() > 0);
+        });
+        assert!(
+            failure.contains("no migration"),
+            "unclear reason: {failure}"
+        );
+    }
+
+    #[test]
+    fn fresh_install_still_migrates_the_empty_file_the_app_creates() {
+        let root = test_root("fresh-control");
+        let app_data = root.join("data");
+        let resources = root.join("resources");
+        write_migration(
+            &resources,
+            "001_init",
+            "CREATE TABLE Business (id TEXT PRIMARY KEY);",
+        );
+        assert!(!app_data.join("shops/dev.db").exists());
+
+        let authority = prepare_installation(&app_data, &resources).expect("fresh install");
+
+        assert_eq!(applied_migration_count(&authority.database_path), 1);
+        assert_eq!(compatibility_report(&app_data).state, "complete");
+        fs::remove_dir_all(root).expect("remove test root");
+    }
+
+    #[test]
+    fn first_start_stopped_by_low_disk_leaves_an_empty_file_that_the_next_start_migrates() {
+        let root = test_root("low-disk-then-ok");
+        let app_data = root.join("data");
+        let resources = root.join("resources");
+        write_migration(
+            &resources,
+            "001_init",
+            "CREATE TABLE Business (id TEXT PRIMARY KEY);",
+        );
+        prepare_installation_with_available_space(&app_data, &resources, |_| Ok(0))
+            .expect_err("low disk blocks the first start");
+        // The app created this 0-byte file itself and nothing was ever stored in it.
+        assert_eq!(
+            fs::metadata(app_data.join("shops/dev.db"))
+                .expect("stat")
+                .len(),
+            0
+        );
+
+        let authority =
+            prepare_installation(&app_data, &resources).expect("second start has disk space");
+
+        assert_eq!(applied_migration_count(&authority.database_path), 1);
+        assert_eq!(compatibility_report(&app_data).state, "complete");
         fs::remove_dir_all(root).expect("remove test root");
     }
 

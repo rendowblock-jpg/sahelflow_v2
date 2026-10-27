@@ -17,6 +17,7 @@ import type {
   NotificationQuery,
 } from "./contracts";
 import { sanitizeNativePreview } from "./preview-safety";
+import { isInQuietHours } from "./quiet-hours";
 
 const PROJECTION_BATCH = 500;
 const NATIVE_LEASE_MS = 2 * 60_000;
@@ -382,19 +383,7 @@ function quietReason(
 ): "disabled" | "muted" | "quiet-hours" | null {
   if (!preference.nativeEnabled) return "disabled";
   if (preference.mutedUntil && preference.mutedUntil > now) return "muted";
-  if (
-    preference.quietStartMinute === null ||
-    preference.quietEndMinute === null ||
-    preference.quietStartMinute === preference.quietEndMinute
-  ) {
-    return null;
-  }
-  const minute = now.getHours() * 60 + now.getMinutes();
-  const quiet =
-    preference.quietStartMinute < preference.quietEndMinute
-      ? minute >= preference.quietStartMinute && minute < preference.quietEndMinute
-      : minute >= preference.quietStartMinute || minute < preference.quietEndMinute;
-  return quiet ? "quiet-hours" : null;
+  return isInQuietHours(preference, now) ? "quiet-hours" : null;
 }
 
 export async function claimNativeDelivery(

@@ -1,43 +1,13 @@
-import { z } from "zod";
 import { GeminiProviderError, requestGemini } from "@/lib/ai/gemini/provider";
 import { loadGeminiRuntimePreferences } from "@/lib/ai/gemini/runtime-preferences";
 import { db, shopContext } from "@/lib/db";
 import { EXTRACTION_SYSTEM_PROMPT, EXTRACTION_USER_PROMPT } from "../prompts/extraction";
-import { matchCatalog } from "./catalog";
-import { normalizePhone } from "./fields";
-import { canonicalWilaya } from "./geography";
-import type { ExtractedOrder, ExtractionInput, ExtractionResult } from "./types";
+import { ExtractedOrderSchema, canonicalizeOrder } from "./model-order";
+import type { ExtractionInput, ExtractionResult } from "./types";
 
 export { verifyGeminiKey } from "@/lib/ai/gemini/provider";
-
-const numeric = (label: string, min = 0) => z.union([
-  z.number().min(min),
-  z.string().transform((value, ctx) => {
-    const number = Number(value);
-    if (!Number.isFinite(number) || number < min) {
-      ctx.addIssue({ code: "custom", message: `Invalid ${label}` });
-      return z.NEVER;
-    }
-    return number;
-  }),
-]);
-
-export const ExtractedOrderSchema = z.object({
-  customerName: z.string().optional(),
-  phone: z.string().optional(),
-  wilaya: z.string().optional(),
-  commune: z.string().optional(),
-  address: z.string().optional(),
-  // Audit S3-18: a misbehaving model response must not inject an unbounded
-  // item list into the proposal path.
-  items: z.array(z.object({
-    productName: z.string(),
-    quantity: numeric("quantity", 1).transform((value) => Math.trunc(value)),
-    unitPrice: numeric("unitPrice").optional(),
-  })).max(200),
-  totalPrice: numeric("totalPrice").optional(),
-  notes: z.string().optional(),
-});
+// Kept exported from here: the visual extractor and tests import them from this module.
+export { ExtractedOrderSchema, canonicalizeOrder };
 
 // Exported for the visual extractor (ledger AI-21): both paths validate the
 // model output with the exact same bounded schema — one extraction truth.
@@ -67,50 +37,13 @@ export function visibleGeminiText(parts: GeminiPart[] | undefined): string {
     .join("")
     .trim();
 }
-const fail = (code: string): ExtractionResult => ({
+const fail = (code: string, retryAfterSeconds?: number): ExtractionResult => ({
   order: null, method: "none", confidence: 0, isComplete: false, missingFields: [code],
+  // Only a quota answer that named a delay carries it (the router pauses on it).
+  ...(retryAfterSeconds !== undefined ? { raw: { retryAfterSeconds } } : {}),
 });
 
 export interface GeminiExtractorOptions { apiKey: string; timeoutMs?: number }
-
-/**
- * A model answer is held to the same canonical forms as the offline reader
- * (FD-064): 0XXXXXXXXX phones, official wilaya names, catalog item names.
- * A value that cannot be made canonical is dropped and reported missing
- * rather than passed on to order creation.
- */
-export function canonicalizeOrder(
-  order: z.infer<typeof ExtractedOrderSchema>,
-  input: Pick<ExtractionInput, "catalog" | "knownPhone">,
-): ExtractedOrder {
-  const phone = normalizePhone(order.phone) ?? normalizePhone(input.knownPhone);
-  const wilaya = canonicalWilaya(order.wilaya);
-  const clean = (value: string | undefined) => value?.replace(/\s+/g, " ").trim() || undefined;
-  const items = order.items
-    .map((item) => ({ ...item, productName: item.productName.replace(/\s+/g, " ").trim() }))
-    .filter((item) => item.productName)
-    .map((item) => {
-      const quantity = Math.min(Math.max(item.quantity, 1), 999);
-      const match = matchCatalog(item.productName, input.catalog);
-      return {
-        productName: match?.name ?? item.productName,
-        quantity,
-        ...(item.unitPrice !== undefined ? { unitPrice: Math.round(item.unitPrice) } : {}),
-        ...(match ? { catalogMatch: match.kind } : {}),
-        ...(match && match.name !== item.productName ? { sourceText: item.productName } : {}),
-      };
-    });
-  return {
-    items,
-    ...(clean(order.customerName) ? { customerName: clean(order.customerName) } : {}),
-    ...(phone ? { phone } : {}),
-    ...(wilaya ? { wilaya } : {}),
-    ...(clean(order.commune) ? { commune: clean(order.commune) } : {}),
-    ...(clean(order.address) ? { address: clean(order.address) } : {}),
-    ...(order.totalPrice !== undefined ? { totalPrice: Math.round(order.totalPrice) } : {}),
-    ...(clean(order.notes) ? { notes: clean(order.notes) } : {}),
-  };
-}
 
 export async function extractWithGemini(
   input: ExtractionInput,
@@ -160,6 +93,8 @@ export async function extractWithGemini(
       raw: { model },
     };
   } catch (error) {
-    return fail(error instanceof GeminiProviderError ? error.code : "GEMINI_PROVIDER_UNAVAILABLE");
+    return error instanceof GeminiProviderError
+      ? fail(error.code, error.retryAfterSeconds)
+      : fail("GEMINI_PROVIDER_UNAVAILABLE");
   }
 }

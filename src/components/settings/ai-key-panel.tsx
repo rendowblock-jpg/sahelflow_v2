@@ -37,6 +37,12 @@ import {
 } from "@/lib/i18n/settings-workspace";
 import { toast } from "@/lib/toast";
 
+export type AiKeyProvider = "gemini" | "groq";
+const KEY_ENDPOINTS: Record<AiKeyProvider, string> = {
+  gemini: "/api/secrets/gemini-key",
+  groq: "/api/secrets/groq-key",
+};
+
 const GEMINI_CONSENT_KEY = "gemini_consent_accepted";
 
 type AuthorityState =
@@ -103,10 +109,14 @@ function rejectionCopy(data: SaveResult, t: (key: string) => string): string {
 export function AiKeyPanel({
   canManageKey,
   canManageConsent,
+  provider = "gemini",
 }: {
   canManageKey: boolean;
   canManageConsent: boolean;
+  /** Which AI this card connects. Groq has no consent box: the notice below it replaces it. */
+  provider?: AiKeyProvider;
 }) {
+  const isGroq = provider === "groq";
   const { t, locale: rawLocale } = useI18n();
   const locale = rawLocale as SettingsWorkspaceLocale;
   const copy = (key: Parameters<typeof getSettingsWorkspaceCopy>[1]) =>
@@ -135,7 +145,7 @@ export function AiKeyPanel({
     setAuthorityState("loading");
     setReauthError(null);
     try {
-      const response = await fetch("/api/secrets/gemini-key", {
+      const response = await fetch(KEY_ENDPOINTS[provider], {
         method: "GET",
         cache: "no-store",
       });
@@ -155,7 +165,7 @@ export function AiKeyPanel({
     } catch {
       setAuthorityState("unavailable");
     }
-  }, [canManageKey, t]);
+  }, [canManageKey, provider, t]);
 
   const loadConsent = useCallback(async () => {
     setConsentState("loading");
@@ -267,7 +277,7 @@ export function AiKeyPanel({
     setTesting(true);
     setResult(null);
     try {
-      const response = await fetch("/api/secrets/gemini-key", {
+      const response = await fetch(KEY_ENDPOINTS[provider], {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: trimmed, test: true }),
@@ -306,7 +316,7 @@ export function AiKeyPanel({
     if (!canManageKey) return;
     setDeleting(true);
     try {
-      const response = await fetch("/api/secrets/gemini-key", {
+      const response = await fetch(KEY_ENDPOINTS[provider], {
         method: "DELETE",
       });
       const data = (await response.json().catch(() => ({}))) as SaveResult;
@@ -341,13 +351,19 @@ export function AiKeyPanel({
 
   return (
     <>
-      <Card>
+      <Card id={provider === "groq" ? "ai-key-groq" : "ai-key-gemini"}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <BrandLogo id="gemini" size="sm" />
-            {t("aiKey.title")}
+            {isGroq ? (
+              <Sparkles className="size-4" aria-hidden="true" />
+            ) : (
+              <BrandLogo id="gemini" size="sm" />
+            )}
+            {t(isGroq ? "aiKey.groq.title" : "aiKey.title")}
           </CardTitle>
-          <CardDescription>{t("aiKey.description")}</CardDescription>
+          <CardDescription>
+            {t(isGroq ? "aiKey.groq.description" : "aiKey.description")}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {canManageKey ? (
@@ -359,7 +375,7 @@ export function AiKeyPanel({
                     aria-hidden="true"
                   />
                   <span className="text-sm font-medium">
-                    {t("aiKey.geminiKeyLabel")}
+                    {t(isGroq ? "aiKey.groq.keyLabel" : "aiKey.geminiKeyLabel")}
                   </span>
                 </div>
                 {authorityState === "loading" ? (
@@ -496,11 +512,13 @@ export function AiKeyPanel({
               {showEditor ? (
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="gemini-key">{t("aiKey.apiKeyLabel")}</Label>
+                    <Label htmlFor={`${provider}-key`}>
+                      {t(isGroq ? "aiKey.groq.keyLabel" : "aiKey.apiKeyLabel")}
+                    </Label>
                     <Input
-                      id="gemini-key"
+                      id={`${provider}-key`}
                       type="password"
-                      placeholder="AIza..."
+                      placeholder={isGroq ? "gsk_..." : "AIza..."}
                       value={keyInput}
                       onChange={(event) => setKeyInput(event.target.value)}
                       autoComplete="off"
@@ -508,7 +526,7 @@ export function AiKeyPanel({
                       disabled={testing}
                     />
                     <p className="text-xs text-muted-foreground">
-                      {t("aiKey.encryptionHelp")}
+                      {t(isGroq ? "aiKey.groq.encryptionHelp" : "aiKey.encryptionHelp")}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -528,12 +546,12 @@ export function AiKeyPanel({
                       {testing ? t("aiKey.testing") : t("aiKey.testAndSave")}
                     </Button>
                     <a
-                      href="https://aistudio.google.com/apikey"
+                      href={isGroq ? "https://console.groq.com/keys" : "https://aistudio.google.com/apikey"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                     >
-                      {t("aiKey.getFreeKey")}
+                      {t(isGroq ? "aiKey.groq.getFreeKey" : "aiKey.getFreeKey")}
                       <ExternalLink className="size-3" aria-hidden="true" />
                     </a>
                   </div>
@@ -626,7 +644,30 @@ export function AiKeyPanel({
             </>
           ) : null}
 
-          <Alert>
+          {isGroq ? (
+            <>
+              {canManageKey ? (
+                <div className="space-y-2 rounded-surface border p-3">
+                  <p className="text-sm font-medium">{t("aiKey.groq.guide.title")}</p>
+                  <ol className="list-decimal space-y-1 ps-5 text-xs text-muted-foreground">
+                    <li>{t("aiKey.groq.guide.step1")}</li>
+                    <li>{t("aiKey.groq.guide.step2")}</li>
+                    <li>{t("aiKey.groq.guide.step3")}</li>
+                  </ol>
+                </div>
+              ) : null}
+              <Alert>
+                <ShieldAlert className="size-4" />
+                <AlertTitle>{t("aiKey.groq.privacyTitle")}</AlertTitle>
+                <AlertDescription className="space-y-2">
+                  <p className="text-xs leading-relaxed text-muted-foreground">{t("aiKey.groq.disclosure")}</p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{t("aiKey.groq.limits")}</p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{t("aiKey.groq.assistantNote")}</p>
+                </AlertDescription>
+              </Alert>
+            </>
+          ) : (
+            <Alert>
             <ShieldAlert className="size-4" />
             <AlertTitle>{t("aiKey.consent.title")}</AlertTitle>
             <AlertDescription className="space-y-3">
@@ -681,6 +722,7 @@ export function AiKeyPanel({
               )}
             </AlertDescription>
           </Alert>
+          )}
         </CardContent>
       </Card>
 

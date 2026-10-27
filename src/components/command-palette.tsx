@@ -95,6 +95,26 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     });
   }, []);
 
+  // cmdk renders its input as aria-expanded="true" with aria-controls pointing
+  // at the results list, but that list only mounts while the palette is open,
+  // and cmdk writes these two attributes after our props so a prop cannot
+  // override them. Keep the combobox truthful: collapsed and controlling
+  // nothing while closed (a dangling aria-controls id fails axe
+  // aria-valid-attr-value on every screen that shows the top bar).
+  const listIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    listIdRef.current = input.getAttribute("aria-controls") ?? listIdRef.current;
+    if (open) {
+      input.setAttribute("aria-expanded", "true");
+      if (listIdRef.current) input.setAttribute("aria-controls", listIdRef.current);
+    } else {
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-controls");
+    }
+  }, [open]);
+
   const createActionItems = React.useMemo<SearchRow[]>(
     () =>
       CREATE_ACTIONS.map((action) => ({

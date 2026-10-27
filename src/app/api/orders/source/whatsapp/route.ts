@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { SAVED_EXTRACTION_METHODS } from "@/lib/ai/extraction/methods";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { dispatchTrigger, type TriggerEvent } from "@/lib/automations/engine";
@@ -14,6 +15,7 @@ import {
 import { projectOrderForTrustedActor } from "@/lib/identity/order-projection";
 import { resolveCanonicalNamedItems } from "@/lib/orders/canonical-named-items";
 import { createCanonicalSourceOrder } from "@/lib/orders/canonical-source-order";
+import { orderMoneySchema } from "@/lib/orders/money-limits";
 import { sidecar } from "@/lib/whatsapp/sidecar-client";
 import { messageText } from "@/lib/whatsapp/types";
 import { NotFoundError, ValidationError } from "@/types/errors";
@@ -23,7 +25,7 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   conversationId: z.string().trim().min(1).max(200),
   messageId: z.string().trim().min(1).max(240),
-  extractionMethod: z.enum(["regex", "gemini"]),
+  extractionMethod: z.enum(SAVED_EXTRACTION_METHODS),
   extractionConfidence: z.number().min(0).max(1),
   customer: z.object({
     name: z.string().trim().min(1).max(200),
@@ -41,7 +43,7 @@ const schema = z.object({
     )
     .min(1)
     .max(200),
-  deliveryCost: z.number().int().nonnegative().default(600),
+  deliveryCost: orderMoneySchema.default(600),
   notes: z.string().trim().max(2000).optional(),
 });
 

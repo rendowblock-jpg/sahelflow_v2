@@ -9,25 +9,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { db } from "@/lib/db";
 import {
   requireTrustedAction,
   trustedActionAllowed,
 } from "@/lib/identity/authorization";
+import { searchConversationsIndexed } from "@/lib/search/conversation-search-runtime";
+import { normalizeSearchText } from "@/lib/search/universal-search";
 
 export const dynamic = "force-dynamic";
-
-function parseLabels(value: string | null): string[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed)
-      ? parsed.filter((entry): entry is string => typeof entry === "string")
-      : [];
-  } catch {
-    return [];
-  }
-}
 
 export const GET = withErrorHandler(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("conversations.read");
@@ -36,81 +25,13 @@ export const GET = withErrorHandler(async (req: NextRequest) => {
     "customers.contact.read",
     { shopId: actorContext.shop.shopId },
   );
-  const query = req.nextUrl.searchParams.get("q")?.trim().toLocaleLowerCase();
+  const query = normalizeSearchText(req.nextUrl.searchParams.get("q") ?? "");
   if (!query) return NextResponse.json({ results: [] });
 
-  // Local-first shops can search deeper than the 100-row live queue without
-  // moving plaintext message search into a remote index.
-  const conversations = await db.conversation.findMany({
-    include: {
-      messages: {
-        orderBy: { timestamp: "desc" },
-        take: 50,
-      },
-    },
-    orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
-    take: 500,
-  });
-
-  const results = conversations
-    .filter((conversation) => {
-      if (
-        canReadContact &&
-        conversation.contactName?.toLocaleLowerCase().includes(query)
-      ) {
-        return true;
-      }
-      if (
-        canReadContact &&
-        conversation.contactPhone?.toLocaleLowerCase().includes(query)
-      ) {
-        return true;
-      }
-      return conversation.messages.some((message) =>
-        message.body?.toLocaleLowerCase().includes(query),
-      );
-    })
-    .slice(0, 100)
-    .map((conversation) => {
-      const lastMessage = conversation.messages[0];
-      const matchType =
-        canReadContact &&
-        conversation.contactName?.toLocaleLowerCase().includes(query)
-          ? "name"
-          : canReadContact &&
-              conversation.contactPhone?.toLocaleLowerCase().includes(query)
-            ? "phone"
-            : "message";
-
-      return {
-        id: conversation.id,
-        conversationId: conversation.id,
-        contactName: canReadContact ? conversation.contactName : null,
-        contactPhone: canReadContact ? conversation.contactPhone : null,
-        sourceId: canReadContact ? conversation.sourceId : null,
-        channel: conversation.channel,
-        lastMessageAt: conversation.lastMessageAt,
-        unreadCount: conversation.unreadCount,
-        lastMessage: lastMessage
-          ? {
-              body: lastMessage.body,
-              direction: lastMessage.direction,
-              timestamp: lastMessage.timestamp,
-            }
-          : null,
-        workflow: {
-          status: conversation.status,
-          assigneeId: conversation.assigneeId,
-          priority: conversation.priority,
-          labels: parseLabels(conversation.labels),
-          snoozedUntil: conversation.snoozedUntil,
-          waitingSince: conversation.waitingSince,
-          firstReplyAt: conversation.firstReplyAt,
-        },
-        matchType,
-        fieldAccess: { contact: canReadContact },
-      };
-    });
+  // Local-first shops search deeper than the 100-row live queue without moving plaintext message search into a
+  // remote index: the newest 500 conversations, each with its 50 newest messages. The persisted index only narrows
+  // which of them are opened; the answer is the one the full scan gives.
+  const results = await searchConversationsIndexed({ query, canReadContact });
 
   return NextResponse.json({ results });
 }, "GET /api/conversations/search");

@@ -24,11 +24,12 @@ import "server-only";
 
 
 import { z } from "zod";
-import type { ToolContext, ToolResult } from "./registry";
-import { registerTool } from "./registry";
+import type { ChatTool, ToolContext, ToolResult } from "./registry";
+import { registerGatedTool, registerTool } from "./registry";
 import { assessOrderRisk } from "@/lib/wilaya-risk/engine";
 import type { DbClient } from "@/lib/db";
 import { productService } from "@/lib/data/product-service";
+import { addShopDays, shopDayBounds, startOfShopDay } from "@/lib/time/shop-day";
 
 function getDb(ctx: ToolContext): DbClient {
   return ctx.db as DbClient;
@@ -300,18 +301,16 @@ registerTool({
 
       switch (input.period) {
         case "today":
-          start = new Date(now);
-          start.setHours(0, 0, 0, 0);
+          start = startOfShopDay(now);
           label = "Aujourd'hui";
           break;
-        case "yesterday":
-          start = new Date(now);
-          start.setDate(start.getDate() - 1);
-          start.setHours(0, 0, 0, 0);
-          end = new Date(start);
-          end.setHours(23, 59, 59, 999);
+        case "yesterday": {
+          const day = shopDayBounds(addShopDays(now, -1));
+          start = day.start;
+          end = new Date(day.end.getTime() - 1);
           label = "Hier";
           break;
+        }
         case "week":
           start = new Date(now);
           start.setDate(start.getDate() - 7);
@@ -582,8 +581,7 @@ registerTool({
       let start: Date | undefined;
       switch (input.period) {
         case "today":
-          start = new Date(now);
-          start.setHours(0, 0, 0, 0);
+          start = startOfShopDay(now);
           break;
         case "week":
           start = new Date(now);
@@ -637,7 +635,7 @@ export const updateProductStockSchema = z.object({
   reason: z.string().optional().describe("Optional reason for the adjustment"),
 });
 
-registerTool({
+export const updateProductStockTool: ChatTool = {
   definition: {
     name: "update_product_stock",
     description:
@@ -701,7 +699,9 @@ registerTool({
       return { success: false, error: err instanceof Error ? err.message : "Erreur" };
     }
   },
-});
+};
+
+registerGatedTool(updateProductStockTool);
 
 // ── Tool 17: cancel_order ───────────────────────────────────────────────────
 
@@ -712,7 +712,7 @@ export const cancelOrderSchema = z.object({
   reason: z.string().optional().describe("Reason for cancellation"),
 });
 
-registerTool({
+export const cancelOrderTool: ChatTool = {
   definition: {
     name: "cancel_order",
     description:
@@ -783,7 +783,9 @@ registerTool({
       return { success: false, error: err instanceof Error ? err.message : "Erreur" };
     }
   },
-});
+};
+
+registerGatedTool(cancelOrderTool);
 
 // ── Tool 18: get_wilaya_risk ────────────────────────────────────────────────
 
@@ -836,3 +838,12 @@ registerTool({
     }
   },
 });
+
+/**
+ * Bodies kept only so tests can exercise them directly (see
+ * `__tests__/support/legacy-tool-bodies.ts`). The registry never receives them.
+ */
+export const legacyMutatingTools: readonly ChatTool[] = [
+  updateProductStockTool,
+  cancelOrderTool,
+];

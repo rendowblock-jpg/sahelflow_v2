@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractOrder, recordExtractionMetric } from "@/lib/ai/extraction";
+import { geminiModelVersion } from "@/lib/ai/extraction/model-version";
 
 // Session 29 fix (AUDIT-7 AI1): recordExtractionMetric was defined but never
 // called outside tests → extraction analytics dashboard was permanently empty.
 // Now called fire-and-forget after every extraction.
 import { getSecret } from "@/lib/secrets";
-import { getBool, SETTING_KEYS } from "@/lib/settings";
+import { GROQ_API_KEY_SECRET } from "@/lib/ai/providers/groq/catalog";
+import { restoreQuotaLedger, saveQuotaLedger } from "@/lib/ai/providers/quota-ledger-store";
+import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
+import { AI_PROVIDER_ORDER_SETTING, parseProviderOrderSetting, providerOrderFor } from "@/lib/ai/providers/provider-order";
 import { z } from "zod";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth, getCurrentUserKey } from "@/lib/auth/server";
@@ -112,6 +116,20 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const geminiApiKey = consent
     ? (await getSecret({ prisma: db, shop: shopContext }, "gemini_api_key")) ?? undefined
     : undefined;
+  // A seller who made a free Groq key has it here too; none changes nothing.
+  const groqApiKey = consent
+    ? (await getSecret({ prisma: db, shop: shopContext }, GROQ_API_KEY_SECRET)) ?? undefined
+    : undefined;
+  // The seller's "try this AI first" choice; a missing or unreadable value means Groq first.
+  let storedOrder: string | null = null;
+  try {
+    storedOrder = await getSetting({ prisma: db, shop: shopContext }, AI_PROVIDER_ORDER_SETTING);
+  } catch {
+    // A failed read must never block order reading; the default order applies.
+  }
+  const providerOrder = providerOrderFor(parseProviderOrderSetting(storedOrder));
+  // Pauses from an earlier run (best effort; once per process).
+  await restoreQuotaLedger({ prisma: db, shop: shopContext });
   const catalog = await listExtractionCatalog({ prisma: db });
 
   const start = Date.now();
@@ -122,8 +140,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       knownPhone: input.knownPhone,
       catalog: catalog.map((entry) => ({ name: entry.name })),
     },
-    { geminiApiKey },
+    { geminiApiKey, groqApiKey, providerOrder },
   );
+  await saveQuotaLedger({ prisma: db, shop: shopContext });
 
   // Fire-and-forget — never blocks the response. recordExtractionMetric
   // has its own try/catch that swallows errors (best-effort).
@@ -138,7 +157,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     isComplete: result.isComplete,
     missingFields: result.missingFields,
     latencyMs: Date.now() - start,
-    modelVersion: result.method === "gemini" ? "gemini" : undefined,
+    modelVersion: geminiModelVersion(result, "gemini"),
   }).catch(() => { /* best-effort */ });
 
   return NextResponse.json({
@@ -146,7 +165,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     catalog: mayReadCatalog ? catalog : [],
     ai: {
       consent,
-      available: Boolean(geminiApiKey),
+      available: Boolean(geminiApiKey || groqApiKey),
       ...(consent ? {} : { code: "AI_CONSENT_REQUIRED" }),
     },
   });

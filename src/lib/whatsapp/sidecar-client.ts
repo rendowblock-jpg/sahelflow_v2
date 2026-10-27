@@ -155,21 +155,26 @@ async function requireSuccessfulResponse(response: Response): Promise<Response> 
   );
 }
 
-async function sidecarRequest(
+async function sidecarRequest<T>(
   path: string,
-  init?: RequestInit,
-  timeoutMs = 8000,
-): Promise<Response> {
+  init: RequestInit | undefined,
+  timeoutMs: number,
+  readBody: (response: Response) => Promise<T>,
+): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await requireSuccessfulResponse(
+    const response = await requireSuccessfulResponse(
       await fetch(`${SIDECAR_URL}${path}`, {
         ...init,
         headers: authorizedHeaders(init),
         signal: controller.signal,
       }),
     );
+    // The body is read before the timer is cleared: a sidecar that sends
+    // headers and then stalls must still abort after timeoutMs, through the
+    // same transport-error path as a header timeout.
+    return await readBody(response);
   } catch (error) {
     if (error instanceof SidecarRequestError && error.status === 401) {
       // Audit S1-4: the memoized token was rejected — drop it so the next
@@ -260,13 +265,19 @@ async function sidecarFetch<T>(
   init?: RequestInit,
   timeoutMs = 8000,
 ): Promise<T> {
-  return (await sidecarRequest(path, init, timeoutMs).then((response) =>
-    response.json(),
-  )) as T;
+  return sidecarRequest(
+    path,
+    init,
+    timeoutMs,
+    async (response) => (await response.json()) as T,
+  );
 }
 
 export const sidecar = {
-  status: () => sidecarFetch<SidecarStatus>("/status"),
+  // A caller that only wants a quick health note may pass a shorter timeout;
+  // without one the 8 s default of sidecarFetch applies.
+  status: (timeoutMs?: number) =>
+    sidecarFetch<SidecarStatus>("/status", undefined, timeoutMs),
 
   qr: () =>
     sidecarFetch<{ qr: string | null }>("/qr").catch((error) => {

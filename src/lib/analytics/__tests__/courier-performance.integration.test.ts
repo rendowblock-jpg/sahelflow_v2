@@ -10,6 +10,7 @@ import { PrismaClient } from "@prisma/client";
 import { resolveAnalyticsRange } from "@/lib/analytics/range";
 import { getAnalyticsReportForRange } from "@/lib/analytics/report";
 import { getCourierPerformance } from "@/lib/analytics/courier-performance";
+import { addShopDays, shopDateString, startOfShopDay } from "@/lib/time/shop-day";
 import {
   createTestPrisma,
   disconnectTestPrisma,
@@ -156,9 +157,11 @@ describe("getCourierPerformance", () => {
 
 describe("getAnalyticsReportForRange", () => {
   it("computes the report for a custom window with day-aligned buckets", async () => {
-    const from = new Date();
-    from.setDate(from.getDate() - 3);
-    from.setHours(0, 0, 0, 0);
+    // The range is cut on the shop day (Africa/Algiers). Building the dates from the runner's
+    // own clock made this test fail every day between 23:00 and 24:00 UTC, when the shop day
+    // has already moved on.
+    const now = new Date();
+    const from = startOfShopDay(addShopDays(now, -3));
 
     await seedShipment({
       provider: "yalidine",
@@ -176,8 +179,8 @@ describe("getAnalyticsReportForRange", () => {
 
     const range = resolveAnalyticsRange({
       range: "custom",
-      from: `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, "0")}-${String(from.getDate()).padStart(2, "0")}`,
-      to: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`,
+      from: shopDateString(from),
+      to: shopDateString(now),
     });
 
     const report = await getAnalyticsReportForRange(range);

@@ -4,11 +4,25 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  scrollLabel,
+  ...props
+}: React.ComponentProps<"table"> & {
+  /**
+   * Names the scrolling wrapper. When given, the wrapper becomes a focusable
+   * region so a keyboard user can scroll a wide table (WCAG 2.1.1). Pass the
+   * heading text of the table.
+   */
+  scrollLabel?: string
+}) {
   return (
     <div
       data-slot="table-container"
       className="table-scroll-container relative w-full min-w-0 overflow-x-auto overscroll-x-contain"
+      {...(scrollLabel
+        ? { role: "region", tabIndex: 0, "aria-label": scrollLabel }
+        : {})}
     >
       <table
         data-slot="table"

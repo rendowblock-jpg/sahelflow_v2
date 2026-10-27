@@ -23,6 +23,7 @@ mod packaged_runtime;
 mod process_authority;
 mod runtime_protocol;
 mod runtime_supervisor;
+mod second_launch;
 
 #[cfg(not(debug_assertions))]
 fn compiled_license_configuration() -> [(&'static str, &'static str); 3] {
@@ -103,6 +104,11 @@ impl ShutdownCoordinator {
 
     fn is_finished(&self) -> bool {
         self.phase.load(Ordering::Acquire) == SHUTDOWN_COMPLETE
+    }
+
+    /// True once a normal close or an update owns the shutdown.
+    fn has_begun(&self) -> bool {
+        self.phase.load(Ordering::Acquire) != SHUTDOWN_IDLE
     }
 }
 
@@ -186,6 +192,18 @@ impl SidecarRespawnState {
         }
         self.attempts = self.attempts.saturating_add(1);
         Some((alive, self.attempts))
+    }
+}
+
+/// Seconds to wait before respawning the WhatsApp sidecar after crash number
+/// `attempt`: 5 s, 15 s, 60 s, then every 5 minutes without end. The inbox must
+/// come back on its own, so there is no attempt after which we stop trying.
+fn sidecar_respawn_delay_seconds(attempt: u8) -> u64 {
+    match attempt {
+        0 | 1 => 5,
+        2 => 15,
+        3 => 60,
+        _ => 300,
     }
 }
 
@@ -316,15 +334,7 @@ pub fn run() {
         builder
     } else {
         builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            use tauri::Manager;
-            if let Some(window) = app.get_webview_window("main") {
-                if window.is_visible().unwrap_or(false) {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                    return;
-                }
-            }
-            launch_screen::focus(app);
+            second_launch::handle(app);
         }))
     };
     let application = builder
@@ -2012,7 +2022,6 @@ fn schedule_sidecar_respawn(
 ) {
     use tauri::Manager;
 
-    const MAX_ATTEMPTS: u8 = 3;
     let runtime_allows_respawn = app_handle
         .try_state::<std::sync::Mutex<SpawnedChildren>>()
         .and_then(|state| {
@@ -2043,20 +2052,9 @@ fn schedule_sidecar_respawn(
         return;
     };
 
-    if next_attempt > MAX_ATTEMPTS {
-        eprintln!(
-            "[sahelflow] CRITICAL: WhatsApp sidecar exceeded its restart budget; inbox remains offline until restart"
-        );
-        return;
-    }
-
-    let delay_seconds = match next_attempt {
-        1 => 5,
-        2 => 15,
-        _ => 60,
-    };
+    let delay_seconds = sidecar_respawn_delay_seconds(next_attempt);
     eprintln!(
-        "[sahelflow] WhatsApp sidecar crashed after {alive_seconds}s; respawning in {delay_seconds}s (attempt {next_attempt}/{MAX_ATTEMPTS})"
+        "[sahelflow] WhatsApp sidecar crashed after {alive_seconds}s; respawning in {delay_seconds}s (attempt {next_attempt})"
     );
 
     std::thread::spawn(move || {
@@ -2260,10 +2258,55 @@ impl RuntimeShutdownAuthority {
 mod child_environment_tests {
     use super::{
         is_windows_safe_parent_environment_key, node_entrypoint_environment_value,
-        summarize_runtime_stderr, ShutdownCoordinator,
+        sidecar_respawn_delay_seconds, summarize_runtime_stderr, ShutdownCoordinator,
+        SidecarRespawnState,
     };
     use std::ffi::OsStr;
     use std::path::Path;
+
+    // sidecar-respawn-tests:begin
+    #[test]
+    fn respawn_delay_backs_off_through_the_first_three_attempts() {
+        assert_eq!(sidecar_respawn_delay_seconds(1), 5);
+        assert_eq!(sidecar_respawn_delay_seconds(2), 15);
+        assert_eq!(sidecar_respawn_delay_seconds(3), 60);
+    }
+
+    #[test]
+    fn respawn_delay_settles_at_five_minutes_and_never_gives_up() {
+        for attempt in [4u8, 5, 10, 100, u8::MAX] {
+            assert_eq!(sidecar_respawn_delay_seconds(attempt), 300);
+        }
+    }
+
+    #[test]
+    fn respawn_delay_treats_attempt_zero_like_the_first() {
+        assert_eq!(
+            sidecar_respawn_delay_seconds(0),
+            sidecar_respawn_delay_seconds(1)
+        );
+    }
+
+    #[test]
+    fn respawn_delay_is_never_zero() {
+        for attempt in 0..=u8::MAX {
+            assert!(sidecar_respawn_delay_seconds(attempt) > 0);
+        }
+    }
+
+    #[test]
+    fn respawn_state_keeps_offering_attempts_after_many_quick_crashes() {
+        let mut state = SidecarRespawnState::default();
+        state.register_spawn(1);
+        for _ in 0..300 {
+            assert!(state.next_attempt(1).is_some());
+        }
+        let (_, attempt) = state.next_attempt(1).expect("still retrying");
+        assert_eq!(attempt, u8::MAX);
+        assert_eq!(sidecar_respawn_delay_seconds(attempt), 300);
+        assert!(state.next_attempt(2).is_none());
+    }
+    // sidecar-respawn-tests:end
 
     #[cfg(windows)]
     #[test]

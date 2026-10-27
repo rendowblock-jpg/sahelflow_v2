@@ -26,6 +26,8 @@ import { useState, useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 
+import { MOTION_EASE, MOTION_MS, toSeconds } from "@/lib/motion/tokens";
+
 function contentPath(pathname: string): string | null {
   const path =
     pathname.length > 1 && pathname.endsWith("/")
@@ -68,7 +70,7 @@ export default function DashboardTemplate({
           : { opacity: 0, y: 4 }
       }
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
+      transition={{ duration: toSeconds(MOTION_MS.fast), ease: [...MOTION_EASE.out] }}
       className="h-full"
     >
       {children}

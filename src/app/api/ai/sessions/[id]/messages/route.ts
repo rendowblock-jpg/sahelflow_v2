@@ -8,13 +8,24 @@ import {
   isDerivableAiSessionTitle,
 } from "@/lib/ai/chat/session-title";
 import { runWithAiActionProposalRuntime } from "@/lib/ai/actions/proposal-runtime";
-import { runAgent, type AgentMessage } from "@/lib/ai/chat/agent";
+import type { AgentMessage } from "@/lib/ai/chat/agent";
+import { runChatTurn } from "@/lib/ai/chat/chat-provider";
 import { aiShopContextNote } from "@/lib/ai/chat/shop-context";
 import {
   AI_CHAT_HISTORY_LIMIT,
   loadAiChatMessagesBefore,
   loadRecentAiChatMessages,
 } from "@/lib/ai/chat/session-history";
+import { GROQ_API_KEY_SECRET } from "@/lib/ai/providers/groq/catalog";
+import {
+  AI_PROVIDER_ORDER_SETTING,
+  parseProviderOrderSetting,
+  providerOrderFor,
+} from "@/lib/ai/providers/provider-order";
+import {
+  restoreQuotaLedger,
+  saveQuotaLedger,
+} from "@/lib/ai/providers/quota-ledger-store";
 import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getCurrentUserKey, requireAuth } from "@/lib/auth/server";
@@ -26,7 +37,8 @@ import {
   toolArgsValidationMessage,
 } from "@/lib/ai/chat/tool-args-error";
 import { redactStoredAiToolCalls } from "@/lib/redact-pii";
-import { getBool, SETTING_KEYS } from "@/lib/settings";
+import { getSecret, hasSecret } from "@/lib/secrets";
+import { getBool, getSetting, SETTING_KEYS } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -190,7 +202,21 @@ export const POST = withErrorHandler(
       data: { sessionId: id, role: "user", content: input.message },
     });
     const history = historyFrom(recentMessages);
-    let result: Awaited<ReturnType<typeof runAgent>>;
+    // Keys are read only here, after consent. The Gemini path resolves its own
+    // key; only its presence is needed. The Groq key is passed to the loop.
+    const geminiConfigured = await hasSecret(context, "gemini_api_key");
+    const groqApiKey = (await getSecret(context, GROQ_API_KEY_SECRET)) ?? undefined;
+    // The seller's "try this AI first" choice; an unreadable value means the default order.
+    let storedOrder: string | null = null;
+    try {
+      storedOrder = await getSetting(context, AI_PROVIDER_ORDER_SETTING);
+    } catch {
+      // A failed read must never block the chat.
+    }
+    const order = providerOrderFor(parseProviderOrderSetting(storedOrder));
+    // Pauses from an earlier run (best effort; once per process).
+    await restoreQuotaLedger(context);
+    let result: Awaited<ReturnType<typeof runChatTurn>>;
     try {
       result = await runWithAiActionProposalRuntime(
         {
@@ -208,18 +234,23 @@ export const POST = withErrorHandler(
           // F-06: presentation-only shop snapshot; empty on failure, never a
           // turn-breaking dependency.
           const shopContextNote = await aiShopContextNote();
-          return runAgent(
+          return runChatTurn({
             history,
-            input.message,
-            {
+            message: input.message,
+            toolContext: {
               db,
               shop: shopContext,
               sourceIdentity: `ai-session:${id}`,
               actor: requester,
             },
-            input.locale,
+            locale: input.locale,
             shopContextNote,
-          );
+            order,
+            geminiConfigured,
+            groqApiKey,
+            // The non-stream route has never sent images.
+            images: [],
+          });
         },
       );
     } catch (error) {
@@ -233,6 +264,9 @@ export const POST = withErrorHandler(
         );
       }
       throw error;
+    } finally {
+      // Quota pauses learned during the turn survive a restart, also on error.
+      await saveQuotaLedger(context);
     }
 
     if (result.response) {
@@ -260,6 +294,8 @@ export const POST = withErrorHandler(
       toolCalls: result.toolCalls,
       error: result.error ?? null,
       actionProposal: result.actionProposal,
+      // Set only for "no AI set up" and a Groq error; absent for Gemini.
+      code: result.errorCode,
       persisted: Boolean(result.response),
     });
   },

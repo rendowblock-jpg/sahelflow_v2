@@ -60,6 +60,13 @@ export function deliveryCredentialBadge(input: {
   if (input.connectionStatus === "certified") return "connection_checked";
   return null;
 }
+
+/** Booking that rests on a source review only was never tried with the courier. */
+export function deliveryIsExperimental(input: {
+  bookingStatus: string | undefined;
+}): boolean {
+  return input.bookingStatus === "source_reviewed";
+}
 type ProviderConfig = {
   id: ProviderId;
   credentialRouteId: ProviderId;
@@ -308,6 +315,9 @@ export function DeliveryCredentialsPanel() {
               connectionStatus: capabilities?.connection?.status,
               bookingStatus: capabilities?.booking?.status,
             });
+            const experimental = deliveryIsExperimental({
+              bookingStatus: capabilities?.booking?.status,
+            });
             const isEditing = editing === provider.id;
             return (
               <section key={provider.id} className="space-y-3 rounded-surface border p-4">
@@ -319,11 +329,13 @@ export function DeliveryCredentialsPanel() {
                   <div className="flex gap-2">
                     {certificationBadge === "certified" ? <Badge><ShieldCheck className="me-1 size-3" aria-hidden="true" />{t("delivery.certified")}</Badge> : null}
                     {certificationBadge === "connection_checked" ? <Badge variant="outline"><ShieldCheck className="me-1 size-3" aria-hidden="true" />{t("delivery.connectionChecked")}</Badge> : null}
+                    {experimental ? <Badge variant="outline">{t("integrations.experimental")}</Badge> : null}
                     <Badge variant={configured ? "default" : "outline"}>
                       {configured ? t("delivery.configured") : t("delivery.notConfigured")}
                     </Badge>
                   </div>
                 </div>
+                {experimental ? <p className="text-xs text-muted-foreground">{t("integrations.experimentalHint")}</p> : null}
 
                 {isEditing ? (
                   <div className="grid gap-3 md:grid-cols-2">

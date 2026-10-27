@@ -163,6 +163,20 @@ export function canonicalWilaya(value: string | undefined | null): string | unde
   return wilayaName(chooseWilaya(findWilayaMentions(fold(value))));
 }
 
+/** The wilaya whose name `value` is, in any spelling (not a text that merely contains one). */
+export function wilayaOfName(value: string | undefined | null): number | undefined {
+  if (!value) return undefined;
+  const key = foldKey(value);
+  return ALIAS_BY_KEY.get(key) ?? ALIAS_BY_KEY.get(key.replace(/^ال/u, ""));
+}
+
+/** Where a folded message names wilaya `code` by name; "wilaya 16" does not count. */
+export function wilayaNameMentions(folded: string, code: number): GeoMention[] {
+  return findWilayaMentions(folded).filter(
+    (mention) => mention.code === code && !/\d/.test(folded.slice(mention.start, mention.end)),
+  );
+}
+
 // ─── Communes ────────────────────────────────────────────────────────────────
 
 interface CommuneAlias {

@@ -64,7 +64,7 @@ import { CanonicalCustomerReturnActions } from "@/components/orders/canonical-cu
 import { CanonicalOrderRecoveryActions } from "@/components/orders/canonical-order-recovery-actions";
 import {
   isImportPendingOrderAuthority,
-  isSellerTypedOrderAuthority,
+  isSellerEditableLinesAuthority,
   isTrustedManualOrderAuthority,
 } from "@/lib/orders/manual-order-authority";
 import {
@@ -360,7 +360,7 @@ export default async function OrderDetailPage({
             }
             linesEditable={
               order.status === "pending" &&
-              isSellerTypedOrderAuthority(order.source, order.sourceMetadata)
+              isSellerEditableLinesAuthority(order.source, order.sourceMetadata)
             }
             initialItems={order.items.map((i) => ({
               id: i.id,

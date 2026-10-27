@@ -6,10 +6,10 @@
  *
  * Usage:
  *   try {
- *     await orderService.update(id, data);
+ *     await orderService.updateStatus(ctx, id, "shipped");
  *   } catch (err) {
  *     if (err instanceof NotFoundError) { ... }
- *     if (err instanceof ValidationError) { ... }
+ *     if (err instanceof InvalidTransitionError) { ... }
  *   }
  */
 

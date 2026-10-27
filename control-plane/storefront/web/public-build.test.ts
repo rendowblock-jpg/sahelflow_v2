@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
@@ -60,7 +61,8 @@ describe("generated page files", () => {
   it("make a small stylesheet that keeps the fallbacks, the focus ring and reduced motion", () => {
     const css = readFileSync(join(PUBLIC, manifest.css), "utf8");
     console.warn(`[weight] css ${css.length} bytes, ${gzipSync(css).length} gzip`);
-    expect(gzipSync(css).length).toBeLessThan(8_000);
+    // Was 8,000 (7,950 used). The forced-colors block in shop.css costs about 150 bytes gzip, so the ceiling moved to 8,300.
+    expect(gzipSync(css).length).toBeLessThan(8_300);
     for (const needle of [".sf-cta", ".sf-sticky", ".sf-gal-track", "scroll-snap-type", "prefers-reduced-motion", "@supports", ":focus-visible", "env(safe-area-inset-bottom", ".sf-notice", "inset-inline"]) {
       expect(css, needle).toContain(needle);
     }
@@ -86,6 +88,50 @@ describe("generated page files", () => {
     expect(js).not.toMatch(/https?:\/\/(?!wa\.me)/);
     expect(js).toContain("/v1/storefront/");
     expect(js).toContain("RSA-OAEP");
+  });
+});
+
+describe("the commune index (all.json) next to the per-wilaya lists", () => {
+  const dir = join(PUBLIC, manifest.communes);
+  const perWilaya = () => readdirSync(dir).filter((file) => /^\d\d\.json$/.test(file)).sort();
+  const loadIndex = () => JSON.parse(readFileSync(join(dir, "all.json"), "utf8")) as Array<[string, string, string]>;
+
+  it("holds one row per commune: as many as the 69 per-wilaya files together, each under the code of its own file", () => {
+    const index = loadIndex();
+    expect(perWilaya()).toHaveLength(69);
+    const fromFiles: string[] = [];
+    for (const file of perWilaya()) {
+      const rows = JSON.parse(readFileSync(join(dir, file), "utf8")) as Array<[string, string]>;
+      for (const [latin, arabic] of rows) fromFiles.push(JSON.stringify([latin, arabic, file.slice(0, 2)]));
+    }
+    expect(index).toHaveLength(fromFiles.length);
+    expect(index.map((row) => JSON.stringify(row)).sort()).toEqual(fromFiles.sort());
+    for (const row of index) expect(row[2]).toMatch(/^(0[1-9]|[1-5][0-9]|6[0-9])$/);
+  });
+
+  it("is in a fixed order: French alphabetical by Latin name, then wilaya code", () => {
+    const index = loadIndex();
+    const expected = [...index].sort((a, b) => a[0].localeCompare(b[0], "fr") || (a[2] < b[2] ? -1 : a[2] > b[2] ? 1 : 0));
+    expect(index).toEqual(expected);
+  });
+
+  it("is part of the folder name: the name is the hash of the 69 lists and the index together", async () => {
+    const parts = [...perWilaya().map((file) => [file.slice(0, 2), readFileSync(join(dir, file), "utf8")]), ["all", readFileSync(join(dir, "all.json"), "utf8")]];
+    const hash = (list: string[][]) => createHash("sha256").update(list.map(([name, json]) => `${name}${json}`).join("\n")).digest("hex").slice(0, 10);
+    expect(manifest.communes).toBe(`/_sf/c.${hash(parts)}`);
+    expect(hash(parts.slice(0, -1))).not.toBe(hash(parts));
+    const changed = new Map(await buildStorefrontPublic());
+    const path = `control-plane/storefront/public${manifest.communes}/all.json`;
+    expect(changed.has(path)).toBe(true);
+    changed.set(path, "[]");
+    expect(storefrontPublicDrift(changed)).toContain(`stale: ${path}`);
+  }, 60_000);
+
+  it("stays under its download budget (gzip, fetched on first focus of the commune search)", () => {
+    const raw = readFileSync(join(dir, "all.json"));
+    const gzip = gzipSync(raw).length;
+    console.warn(`[weight] communes/all.json ${raw.length} bytes, ${gzip} gzip, ${loadIndex().length} rows`);
+    expect(gzip).toBeLessThan(24_000);
   });
 });
 

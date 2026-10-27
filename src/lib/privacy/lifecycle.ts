@@ -26,6 +26,13 @@ const PRIVACY_EXPORT_EXCLUDED_MODELS = [
   "SearchProjectionDirty",
   "SearchProjectionRevision",
   "SearchProjectionToken",
+  // Derived conversation-search index (keyed word hashes, per-conversation
+  // salt, and the re-index queue): rebuilt from the exported conversations,
+  // meaningless without the installation-wrapped blind-index key.
+  "ConversationSearchDirty",
+  "ConversationSearchDoc",
+  "ConversationSearchState",
+  "ConversationSearchToken",
 ] as const;
 
 /**
@@ -411,6 +418,15 @@ export async function executeShopErase(
       await tx.orderItem.deleteMany({});
       await tx.order.deleteMany({});
       await tx.whatsAppOutboundEffect.deleteMany({});
+      // The conversation-search index is wiped BEFORE the messages and
+      // conversations: every deleted message would otherwise fire its delete
+      // trigger and remove its index rows one by one (about 0.85 ms per
+      // message, minutes for a large shop). With the index already empty the
+      // triggers find nothing to do. The single ConversationSearchState row is
+      // kept, like the search revision watermark.
+      await tx.conversationSearchToken.deleteMany({});
+      await tx.conversationSearchDoc.deleteMany({});
+      await tx.conversationSearchDirty.deleteMany({});
       await tx.message.deleteMany({});
       await tx.conversation.deleteMany({});
       await tx.cannedResponse.deleteMany({});

@@ -100,6 +100,22 @@
 }
 
 @theme {
+  /* ── Motion — tokens live in motion-system.css (--sf-dur-*, --sf-ease-*).
+     Tailwind keys: duration-micro|fast|base|page|panel, ease-out|in|standard|expo.
+     Plain `transition-*` classes pick up the two defaults. */
+  --default-transition-duration: var(--sf-dur-fast);
+  --default-transition-timing-function: var(--sf-ease-standard);
+  --transition-duration-micro: var(--sf-dur-micro);
+  --transition-duration-fast: var(--sf-dur-fast);
+  --transition-duration-base: var(--sf-dur-base);
+  --transition-duration-page: var(--sf-dur-page);
+  --transition-duration-panel: var(--sf-dur-panel);
+  --ease-out: var(--sf-ease-out);
+  --ease-in: var(--sf-ease-in);
+  --ease-in-out: var(--sf-ease-standard);
+  --ease-standard: var(--sf-ease-standard);
+  --ease-expo: var(--sf-ease-expo);
+
   /* ── Type ramp — INTERFACE_SYSTEM.md §2 ──────────────────────────────────
      The authoritative scale. Before this ramp existed, 1,200 of 1,291 type-size
      usages in src/components were text-xs/text-sm/text-2xs and only 34 exceeded
@@ -581,7 +597,9 @@
 
 @layer utilities {
   .card-hover {
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-property: transform, box-shadow, border-color;
+    transition-duration: var(--sf-dur-page);
+    transition-timing-function: var(--sf-ease-expo);
   }
   .card-hover:hover {
     transform: translateY(-2px);
@@ -971,12 +989,6 @@ html[dir="rtl"] body {
 
 /* Consistent stat number formatting */
 .tabular-nums { font-variant-numeric: tabular-nums; }
-
-/* Smooth transitions for all interactive elements */
-button, a, [role="button"], input, select, textarea {
-  transition: background-color 0.15s ease, border-color 0.15s ease,
-              color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-}
 
 /* Disable transition on theme toggle (prevents flash) */
 .theme-transition * {

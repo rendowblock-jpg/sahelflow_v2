@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import type { ChartConfig } from "@/components/ui/chart";
 import {
   buildOrdersDrillDownUrl,
@@ -61,6 +62,7 @@ import {
   STATUS_CHART_COLORS,
   statusI18nKey,
 } from "@/lib/shared/status-colors";
+import { shortDayLabel } from "@/lib/time/shop-day-format";
 import { cn, formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 import type { OrderStatus } from "@/types/domain";
 
@@ -139,11 +141,7 @@ export default async function AnalyticsPage({
     minimumIntegerDigits: 2,
     useGrouping: false,
   });
-  const fmtShortDate = (iso: string) =>
-    new Date(iso).toLocaleDateString(dateLocale, {
-      month: "short",
-      day: "numeric",
-    });
+  const fmtShortDate = (iso: string) => shortDayLabel(iso, dateLocale);
   const fmtHour = (hour: number) => `${hourFormatter.format(hour)}:00`;
   const fmtPercent = (value: number) => percentFormatter.format(value / 100);
   const fmtSignedPercent = (value: number) =>
@@ -669,14 +667,14 @@ export default async function AnalyticsPage({
         <CardContent>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {comparisonStats.map((stat) => {
+              const change = stat.change;
               const isPositive =
-                stat.key === "returnRate"
-                  ? stat.change < 0
-                  : stat.change > 0;
+                change !== null &&
+                (stat.key === "returnRate" ? change < 0 : change > 0);
               const Icon =
-                stat.change > 0
+                change !== null && change > 0
                   ? ArrowUp
-                  : stat.change < 0
+                  : change !== null && change < 0
                     ? ArrowDown
                     : Minus;
               return (
@@ -690,11 +688,14 @@ export default async function AnalyticsPage({
                       isPositive
                         ? "border-emerald-500/20 text-success"
                         : "border-red-500/20 text-destructive",
-                      stat.change === 0 && "text-muted-foreground",
+                      (change === null || change === 0) &&
+                        "text-muted-foreground",
                     )}
                   >
                     <Icon className="size-3" aria-hidden="true" />
-                    {percentFormatter.format(Math.abs(stat.change) / 100)}
+                    {change === null
+                      ? "—"
+                      : percentFormatter.format(Math.abs(change) / 100)}
                   </Badge>
                 </div>
               );
@@ -712,7 +713,7 @@ export default async function AnalyticsPage({
         </CardHeader>
         <CardContent className="p-0">
           {skuProjection.rows.length > 0 ? (
-            <div className="overflow-x-auto">
+            <ScrollRegion label={t("analytics.skuPnl")}>
               <table className="w-full">
                 <thead className="sticky top-0 z-10 border-b bg-muted">
                   <tr className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -785,7 +786,7 @@ export default async function AnalyticsPage({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           ) : (
             <p className="p-8 text-center text-sm text-muted-foreground">
               {t("analytics.noSkuData")}

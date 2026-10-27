@@ -47,9 +47,12 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(route).toContain("sidecarReachable");
     expect(route).toContain("SidecarUnavailableError");
     expect(route).toContain("SidecarRequestError");
-    expect(route.indexOf("const conversations = await db.conversation.findMany")).toBeLessThan(
-      route.indexOf("await sidecar.status()"),
+    // The sidecar status is asked in parallel with the database work and its
+    // failure never throws into the list (S05a-09).
+    expect(route.indexOf("const sidecarProbe = probeSidecar()")).toBeLessThan(
+      route.indexOf("const conversations = await db.conversation.findMany"),
     );
+    expect(route).toContain("SIDECAR_PROBE_TIMEOUT_MS");
   });
 
   it("preserves assignment versions and coalesced live refresh at the authority boundary", () => {
@@ -78,7 +81,8 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(transport).toContain(
       'sidecarReachable === true && sidecarStatus === "connected"',
     );
-    expect(transport).toContain("if (wsOpen || sending) return;");
+    expect(transport).toContain("if (sending) return;");
+    expect(transport).toContain("OPEN_SOCKET_POLL_MS");
     expect(transport).toContain("loadMessages(chat, { background: true })");
     expect(thread).toContain("const isCurrentConversation");
     expect(thread).toContain("messageLoadGenerationRef");
@@ -182,9 +186,13 @@ describe("Inbox Class-AAA operations desk contract", () => {
     const route = read("src/app/api/conversations/search/route.ts");
     expect(route).toContain('requireTrustedAction("conversations.read")');
     expect(route).toContain('"customers.contact.read"');
-    expect(route).toContain("sourceId: canReadContact ? conversation.sourceId : null");
-    expect(route).toContain("conversation.messages.some");
-    expect(route).toContain("take: 500");
+    expect(route).toContain("searchConversationsIndexed");
+    const query = read("src/lib/search/conversation-search-query.ts");
+    expect(query).toContain("sourceId: canReadContact ? conversation.sourceId : null");
+    expect(query).toContain("messageBodies: conversation.messages.map");
+    const runtime = read("src/lib/search/conversation-search-runtime.ts");
+    expect(runtime).toContain("take: 500");
+    expect(runtime).toContain("take: 50");
   });
 
   it("represents persisted non-text message types honestly until durable media bytes exist", () => {

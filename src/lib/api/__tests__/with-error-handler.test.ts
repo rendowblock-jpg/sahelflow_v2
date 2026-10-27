@@ -169,3 +169,24 @@ describe("withErrorHandler", () => {
     expect(res.status).toBe(500);
   });
 });
+
+describe("withErrorHandler feeds the conversation-search idle gate", () => {
+  it("counts the request while it runs and releases it when the handler returns or throws", async () => {
+    const { conversationSearchIdleState } = await import("@/lib/search/conversation-search-idle");
+    const start = conversationSearchIdleState().inFlight;
+    let during = -1;
+    const ok = wrap(async () => {
+      during = conversationSearchIdleState().inFlight;
+      return NextResponse.json({ ok: true });
+    });
+    await ok();
+    expect(during).toBe(start + 1);
+    expect(conversationSearchIdleState().inFlight).toBe(start);
+
+    const failing = wrap(async () => {
+      throw new Error("boom");
+    });
+    expect((await failing()).status).toBe(500);
+    expect(conversationSearchIdleState().inFlight).toBe(start);
+  });
+});

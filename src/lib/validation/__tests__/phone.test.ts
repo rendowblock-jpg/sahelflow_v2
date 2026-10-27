@@ -113,3 +113,100 @@ describe("displayContactName", () => {
     expect(displayContactName("Nadia Belkacem")).toBe("Nadia Belkacem");
   });
 });
+
+// A seller or buyer on an Arabic keyboard types Arabic-Indic (U+0660-0669) or
+// Eastern/Persian (U+06F0-06F9) digits. JavaScript's /\D/ (no unicode flag)
+// treats those as non-digits, so the number used to vanish into "".
+const toArabicIndic = (ascii: string) =>
+  ascii.replace(/\d/g, (d) => String.fromCharCode(0x0660 + Number(d)));
+const toEasternArabicIndic = (ascii: string) =>
+  ascii.replace(/\d/g, (d) => String.fromCharCode(0x06f0 + Number(d)));
+
+describe("Arabic-Indic and Eastern Arabic-Indic digits (PB-PHONE-ARABIC-DIGITS)", () => {
+  const spellings: Array<[string, string, string]> = [
+    ["Arabic-Indic literal", "٠٦٥٥١٢٣٤٥٦", "0655123456"],
+    ["Eastern Arabic-Indic literal", "۰۶۵۵۱۲۳۴۵۶", "0655123456"],
+    ["+213 with spaces", "+٢١٣ ٦٥٥ ١٢ ٣٤ ٥٦", "0655123456"],
+    ["00213 prefix", "٠٠٢١٣٦٥٥١٢٣٤٥٦", "0655123456"],
+    ["Eastern +213 with spaces", "+۲۱۳ ۶۵۵ ۱۲ ۳۴ ۵۶", "0655123456"],
+    ["Arabic and ASCII digits mixed", "0655١٢٣٤٥٦", "0655123456"],
+    ["Eastern and ASCII digits mixed", "0655۱۲۳۴۵۶", "0655123456"],
+    ["Arabic comma between groups", "٠٦٥٥،١٢،٣٤،٥٦", "0655123456"],
+    ["Arabic decimal and thousands marks", "٠٦٥٥٫١٢٬٣٤٫٥٦", "0655123456"],
+  ];
+
+  for (const [label, input, expected] of spellings) {
+    it(`normalizes ${label} to ${expected}`, () => {
+      expect(normalizeDZPhone(input)).toBe(expected);
+      expect(isValidDZMobilePhone(input)).toBe(true);
+      expect(formatDZPhone(input)).toBe("06 55 12 34 56");
+    });
+  }
+
+  it("gives the same result as the ASCII number for every digit", () => {
+    for (const ascii of ["0555123456", "0770987654", "+213 555 12 34 56", "00213 660 12 34 56"]) {
+      const expected = normalizeDZPhone(ascii);
+      expect(expected).not.toBe("");
+      expect(normalizeDZPhone(toArabicIndic(ascii))).toBe(expected);
+      expect(normalizeDZPhone(toEasternArabicIndic(ascii))).toBe(expected);
+    }
+  });
+
+  it("ignores bidi marks and no-break spaces inside the number", () => {
+    const separators = [
+      "\u200e", "\u200f", "\u202a", "\u202b", "\u202c", "\u202d", "\u202e",
+      "\u2066", "\u2067", "\u2068", "\u2069", "\u00a0", "\u202f", "\u060c",
+    ];
+    for (const sep of separators) {
+      const ascii = `0655${sep}12${sep}34${sep}56`;
+      const arabic = toArabicIndic(ascii);
+      const label = `U+${sep.charCodeAt(0).toString(16).padStart(4, "0")}`;
+      expect(normalizeDZPhone(ascii), `ascii ${label}`).toBe("0655123456");
+      expect(normalizeDZPhone(arabic), `arabic ${label}`).toBe("0655123456");
+    }
+  });
+
+  it("keeps ASCII behaviour unchanged, including the existing '(0)' result", () => {
+    expect(normalizeDZPhone("0655 12 34 56")).toBe("0655123456");
+    expect(normalizeDZPhone("")).toBe("");
+    expect(normalizeDZPhone("abc")).toBe("");
+  });
+
+  it("returns '' for text with no digits in any script", () => {
+    expect(normalizeDZPhone("رقم الهاتف")).toBe("");
+    expect(isValidDZMobilePhone("رقم الهاتف")).toBe(false);
+  });
+});
+
+describe("'(0)' trunk digit after the 213 country code (PB-PHONE-FOLLOWUPS)", () => {
+  // Sellers write "+213 (0) 655 12 34 56": the 0 in brackets is the national
+  // trunk digit and must be dropped, like the AI extraction already does.
+  const spellings: Array<[string, string]> = [
+    ["+213 (0) 655 12 34 56", "0655123456"],
+    ["+213(0)655123456", "0655123456"],
+    ["+213 (0)655 12 34 56", "0655123456"],
+    ["00213 (0) 655 12 34 56", "0655123456"],
+    ["213 (0) 655 12 34 56", "0655123456"],
+    ["+213 ( 0 ) 655 12 34 56", "0655123456"],
+    ["\u200e+213 (0) 655 12 34 56", "0655123456"],
+    ["+٢١٣ (٠) ٦٥٥ ١٢ ٣٤ ٥٦", "0655123456"],
+    ["+۲۱۳(۰)۶۵۵۱۲۳۴۵۶", "0655123456"],
+  ];
+
+  for (const [input, expected] of spellings) {
+    it(`reads ${JSON.stringify(input)} as ${expected}`, () => {
+      expect(normalizeDZPhone(input)).toBe(expected);
+      expect(isValidDZMobilePhone(input)).toBe(true);
+    });
+  }
+
+  it("leaves every other input exactly as before", () => {
+    // Only a "(0)" right after the 213 country code is a trunk digit.
+    expect(normalizeDZPhone("(0) 655 12 34 56")).toBe("0655123456");
+    expect(normalizeDZPhone("0 (0) 655 12 34 56")).toBe("00655123456");
+    expect(normalizeDZPhone("+213 655 (0) 12 34 56")).toBe("06550123456");
+    expect(normalizeDZPhone("+213 655 12 34 56")).toBe("0655123456");
+    // Not endorsed, only pinned: a kept trunk zero without brackets.
+    expect(normalizeDZPhone("+213 0655 12 34 56")).toBe("00655123456");
+  });
+});

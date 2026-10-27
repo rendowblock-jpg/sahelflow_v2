@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useI18n } from "@/hooks/use-i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -111,7 +112,11 @@ function alignClass(align: MarkdownTableAlign): string | undefined {
   return "text-start";
 }
 
-function blockNode(block: MarkdownBlock, key: string): ReactNode {
+function blockNode(
+  block: MarkdownBlock,
+  key: string,
+  tableLabel: string,
+): ReactNode {
   switch (block.kind) {
     case "heading": {
       const Tag = HEADING_TAG[block.level];
@@ -197,7 +202,7 @@ function blockNode(block: MarkdownBlock, key: string): ReactNode {
           key={key}
           className="w-full overflow-x-auto overscroll-x-contain rounded-surface border"
         >
-          <Table className="text-xs">
+          <Table className="text-xs" scrollLabel={tableLabel}>
             <TableHeader>
               <TableRow>
                 {block.header.map((cell, cellIndex) => (
@@ -263,14 +268,16 @@ export const AiMarkdown = memo(function AiMarkdown({
 }: {
   content: string;
 }) {
+  const { t } = useI18n();
   const blocks = useMemo(() => parseMarkdown(content), [content]);
+  const tableLabel = t("ai.markdownTableLabel");
   return (
     <div
       data-ai-markdown="true"
       dir="auto"
       className="space-y-2.5 text-sm leading-6"
     >
-      {blocks.map((block, index) => blockNode(block, `b.${index}`))}
+      {blocks.map((block, index) => blockNode(block, `b.${index}`, tableLabel))}
     </div>
   );
 });

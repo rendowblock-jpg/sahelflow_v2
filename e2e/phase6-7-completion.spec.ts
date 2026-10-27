@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { assertNoAxeViolations, runAxe } from "./support/axe";
 
 const OWNER_PIN = "12345678";
 const DESKTOP = { width: 1366, height: 768 };
@@ -262,6 +263,7 @@ async function assertRenderedRoute(
   route: string,
   locale: Locale,
   dir: "ltr" | "rtl",
+  options: { axe?: boolean } = {},
 ) {
   const response = await page.goto(route, { waitUntil: "domcontentloaded" });
   expect(response, `${route} should return a document response`).not.toBeNull();
@@ -277,17 +279,32 @@ async function assertRenderedRoute(
   await assertContained(page, route);
   await assertNoLeakedTranslationKeys(page, route);
   await assertSemanticBasics(page, route);
+  if (options.axe) {
+    // axe-core runs on the page the checks above already settled: no extra
+    // visit. Nothing is excluded; a violation fails this route with the rule,
+    // the element and its selector. The duration is kept as a test annotation.
+    const started = Date.now();
+    try {
+      await assertNoAxeViolations(page, `axe-core (${locale}, desktop)`);
+    } finally {
+      test.info().annotations.push({
+        type: "axe-ms",
+        description: `${route} ${Date.now() - started}`,
+      });
+    }
+  }
 }
 
 async function assertRouteSweep(
   page: Page,
   locale: Locale,
   dir: "ltr" | "rtl",
+  options: { axe?: boolean } = {},
 ) {
   const failures: string[] = [];
   for (const route of REQUIRED_ROUTES) {
     try {
-      await assertRenderedRoute(page, route, locale, dir);
+      await assertRenderedRoute(page, route, locale, dir, options);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       failures.push(`${route}: ${message}`);
@@ -434,7 +451,7 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
       await setLocale(context, locale);
       await ensureOwnerSession(page);
 
-      await assertRouteSweep(page, locale, dir);
+      await assertRouteSweep(page, locale, dir, { axe: true });
 
       await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
       await waitForHydration(page);
@@ -456,6 +473,52 @@ test.describe("Phase 6 and 7 integrated completion evidence", () => {
       await assertRouteSweep(page, locale, dir);
     });
   }
+
+  test("axe gate reports an injected violation and passes the repaired page", async ({
+    page,
+  }) => {
+    // Self-test of the check itself, on a blank document (no app visit): if axe
+    // stops loading or stops reporting, the route sweeps above would pass
+    // without checking anything.
+    const document = (button: string) =>
+      `<!doctype html><html lang="en"><head><title>axe self-test</title></head><body><main><h1>Self-test</h1>${button}</main></body></html>`;
+    await page.setContent(document('<button type="button"></button>'));
+    await expect(assertNoAxeViolations(page, "axe self-test broken")).rejects.toThrow(
+      /axe self-test broken[\s\S]*button-name \(critical\)/,
+    );
+    await page.setContent(
+      document('<button type="button" aria-label="Save"></button>'),
+    );
+    await assertNoAxeViolations(page, "axe self-test repaired");
+  });
+
+  test("axe checks a settled page: finite entrance animations finish first, endless ones do not hold it up", async ({
+    page,
+  }) => {
+    // Found on PR #620: /analytics (ar) failed color-contrast on the fourth KPI card. The page fades each card
+    // in over 0.5 s after 50 ms x its position (stagger-grid), and axe measured the card while it was still
+    // faint. Text that is only faint for a moment is not a defect, so axe must run on a page whose finite
+    // animations are done. No rule and no element is excluded to get there.
+    // This page keeps its text at 15% opacity for 1.6 s, then fades it in; the spinner never stops.
+    const animated = `<!doctype html><html lang="en"><head><title>axe motion self-test</title><style>
+      @keyframes arrive { 0%, 80% { opacity: .15 } 100% { opacity: 1 } }
+      @keyframes spin { to { transform: rotate(360deg) } }
+      p { color: #111; background: #fff; animation: arrive 2s linear both }
+      .busy { display: inline-block; animation: spin 1s linear infinite }
+    </style></head><body><main><h1>Motion self-test</h1><p>Delivery rate 38%</p><span class="busy" aria-hidden="true">.</span></main></body></html>`;
+
+    // The page really is faint at the start: raw axe, run at once, reports the contrast problem. Without this
+    // line a page that never animated would make the check below pass for nothing.
+    await page.setContent(animated);
+    expect((await runAxe(page)).map((violation) => violation.id)).toContain("color-contrast");
+
+    // The helper waits for the fade to end and then finds nothing, and the endless spinner does not make it
+    // wait for its 5 s limit (the fade ends after 2 s).
+    await page.setContent(animated);
+    const started = Date.now();
+    await assertNoAxeViolations(page, "axe motion self-test");
+    expect(Date.now() - started).toBeLessThan(4_500);
+  });
 
   test("keyboard focus, dialog, reduced motion and target-size contracts", async ({
     page,

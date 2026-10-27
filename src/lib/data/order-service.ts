@@ -15,6 +15,7 @@ import {
   SahelFlowError,
   ValidationError,
 } from "@/types/errors";
+import { lineTotalOf, orderTotalOf } from "@/lib/orders/order-total";
 import { updateOrderSchema } from "@/lib/validation";
 import {
   assertCanTransition,
@@ -44,6 +45,7 @@ import {
   isImportPendingOrderAuthority,
   isTrustedManualOrderAuthority,
 } from "@/lib/orders/manual-order-authority";
+import { startOfShopDay } from "@/lib/time/shop-day";
 
 function toDomain(row: Record<string, unknown>): Order {
   return row as unknown as Order;
@@ -400,7 +402,7 @@ export const orderService = {
               tx.orderItem.delete({ where: { id: itemId } }),
             ),
             ...data.items.map((item) => {
-              const total = item.unitPrice * item.quantity;
+              const total = lineTotalOf(item.unitPrice, item.quantity);
               if (item.total !== total) {
                 throw new ValidationError(
                   `Item total mismatch for '${item.productName}': expected ${total}`,
@@ -429,18 +431,16 @@ export const orderService = {
             data.deliveryCost !== undefined
               ? (data.deliveryCost ?? 0)
               : (authority.deliveryCost ?? 0);
-          recomputedTotalPrice =
-            data.items.reduce(
-              (sum, item) => sum + item.unitPrice * item.quantity,
-              0,
-            ) + effectiveDeliveryCost;
+          recomputedTotalPrice = orderTotalOf(
+            data.items,
+            effectiveDeliveryCost,
+          ).totalPrice;
         } else if (data.deliveryCost !== undefined) {
           const existing = await tx.orderItem.findMany({ where: { orderId: id } });
-          recomputedTotalPrice =
-            existing.reduce(
-              (sum, item) => sum + item.unitPrice * item.quantity,
-              0,
-            ) + (data.deliveryCost ?? 0);
+          recomputedTotalPrice = orderTotalOf(
+            existing,
+            data.deliveryCost,
+          ).totalPrice;
         }
 
         const row = await tx.order.update({
@@ -490,8 +490,7 @@ export const orderService = {
 
   /** Get orders created today (for dashboard). */
   async listToday(ctx: ServiceContext): Promise<Order[]> {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    const startOfDay = startOfShopDay(new Date());
     const rows = await ctx.prisma.order.findMany({
       where: { createdAt: { gte: startOfDay }, deletedAt: null },
       include: { items: true },

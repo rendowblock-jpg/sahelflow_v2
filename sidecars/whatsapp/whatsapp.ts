@@ -434,6 +434,13 @@ export class WhatsAppManager {
     return () => this.subscribers.delete(fn);
   }
 
+  private undecryptableListener: ((count: number) => void) | null = null;
+
+  /** Told how many decrypt stubs an upsert held (a count; the real message arrives again). */
+  onUndecryptable(listener: (count: number) => void): void {
+    this.undecryptableListener = listener;
+  }
+
   private emit(event: SidecarEvent): void {
     for (const fn of this.subscribers) {
       try {
@@ -772,6 +779,11 @@ export class WhatsAppManager {
     // the real message re-arrives under the same id and is then a normal first
     // event, so nothing about the stub has to be remembered.
     if (decryptStubs > 0) {
+      try {
+        this.undecryptableListener?.(decryptStubs);
+      } catch {
+        // Counting must never break the receive path.
+      }
       diagnostics.record("inbound.dropped", {
         reason: "decrypt-stub",
         upsertType: type ?? "none",

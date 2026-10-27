@@ -12,7 +12,6 @@ export type AiActionExecutionAuthority = Readonly<{
   toolName: string;
   argsHash: string;
   executionKey: string;
-  testOnly: boolean;
   readonly [AI_ACTION_EXECUTION_AUTHORITY_BRAND]: true;
 }>;
 
@@ -22,7 +21,6 @@ function createAuthority(input: {
   toolName: string;
   argsHash: string;
   executionKey: string;
-  testOnly: boolean;
 }): AiActionExecutionAuthority {
   const authority = Object.freeze({ ...input });
   authorities.add(authority);
@@ -36,25 +34,7 @@ export function mintAiActionExecutionAuthority(input: {
   argsHash: string;
   executionKey: string;
 }): AiActionExecutionAuthority {
-  return createAuthority({ ...input, testOnly: false });
-}
-
-export function testAiActionExecutionAuthority(): AiActionExecutionAuthority {
-  if (process.env.NODE_ENV !== "test" && process.env.VITEST !== "true") {
-    throw new SahelFlowError(
-      "AI action test authority is unavailable outside tests",
-      "AI_ACTION_TEST_AUTHORITY_FORBIDDEN",
-      500,
-    );
-  }
-  return createAuthority({
-    proposalId: "test-proposal",
-    proposalDigest: "0".repeat(64),
-    toolName: "*",
-    argsHash: "*",
-    executionKey: "test-execution",
-    testOnly: true,
-  });
+  return createAuthority(input);
 }
 
 export function assertAiActionExecutionAuthority(
@@ -64,18 +44,11 @@ export function assertAiActionExecutionAuthority(
     argsHash: string;
   },
 ): asserts value is AiActionExecutionAuthority {
-  const validTestAuthority = Boolean(
-    value?.testOnly &&
-      (process.env.NODE_ENV === "test" || process.env.VITEST === "true") &&
-      value.toolName === "*" &&
-      value.argsHash === "*",
-  );
   if (
     !value ||
     !authorities.has(value) ||
-    (!validTestAuthority &&
-      (value.toolName !== expected.toolName ||
-        value.argsHash !== expected.argsHash))
+    value.toolName !== expected.toolName ||
+    value.argsHash !== expected.argsHash
   ) {
     throw new SahelFlowError(
       "Sensitive AI action execution requires the exact sealed proposal authority",

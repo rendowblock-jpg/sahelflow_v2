@@ -8,6 +8,7 @@ import type { BusinessCommandResult } from "@/lib/business-truth/contracts";
 import type { BusinessPrincipalContext } from "@/lib/business-truth/principal";
 import { normalizePhone } from "@/lib/import/fields";
 import { isTrustedManualOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { assertOrderTotalWithinLimit, orderMoneySchema } from "@/lib/orders/money-limits";
 import { redactPii } from "@/lib/redact-pii";
 import { ConflictError, NotFoundError, ValidationError } from "@/types/errors";
 
@@ -42,7 +43,7 @@ export const manualOrderEditSchema = z
     commune: z.string().trim().min(1).max(120).optional(),
     address: z.string().trim().min(1).max(500).optional(),
     phone: z.string().trim().min(1).max(40).optional(),
-    deliveryCost: z.number().int().nonnegative().optional(),
+    deliveryCost: orderMoneySchema.optional(),
     notes: z.string().trim().max(2000).nullable().optional(),
   })
   .strict()
@@ -180,6 +181,7 @@ export async function executeManualOrderEdit(
       const totalPrice = changed.includes("deliveryCost")
         ? order.totalPrice - previousFee + (requested.deliveryCost ?? 0)
         : order.totalPrice;
+      assertOrderTotalWithinLimit(totalPrice, "deliveryCost");
       const orderVersion = data.expectedVersion + 1;
 
       const updated = await tx.order.updateMany({

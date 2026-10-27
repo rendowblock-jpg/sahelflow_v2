@@ -5,6 +5,7 @@ import {
   canonicalSourceOrderSourceMetadata,
   importPendingOrderSourceMetadata,
   isImportPendingOrderAuthority,
+  isSellerEditableLinesAuthority,
   isSellerTypedOrderAuthority,
   isTrustedManualOrderAuthority,
   trustedManualOrderSourceMetadata,
@@ -65,5 +66,38 @@ describe("trusted manual order authority", () => {
     expect(isSellerTypedOrderAuthority("manual", null)).toBe(false);
     expect(isSellerTypedOrderAuthority("manual", "not json")).toBe(false);
     expect(isSellerTypedOrderAuthority("whatsapp", trustedManualOrderSourceMetadata())).toBe(false);
+  });
+});
+
+describe("orders whose lines the seller may edit while pending (NEW-ORDER-LINES-OTHER-SOURCES)", () => {
+  const canonical = (source: Parameters<typeof canonicalSourceOrderSourceMetadata>[0]["source"], sourceDetails?: Record<string, unknown>) =>
+    canonicalSourceOrderSourceMetadata({ source, sourceIdentity: "id", sourceOrderId: "o-1", sourceDetails });
+
+  it("allows the seller's own order and the sources that hold no stock while pending", () => {
+    expect(isSellerEditableLinesAuthority("manual", trustedManualOrderSourceMetadata())).toBe(true);
+    for (const source of ["whatsapp", "ai_chat", "csv", "xlsx", "storefront"] as const) {
+      expect(isSellerEditableLinesAuthority(source, canonical(source))).toBe(true);
+    }
+    expect(isSellerEditableLinesAuthority("storefront", canonical("storefront", { deliveryMode: "home" }))).toBe(true);
+  });
+
+  it("refuses the platform and sheet sources, which wait for a product decision", () => {
+    for (const source of ["shopify", "woocommerce", "youcan", "google_sheets"] as const) {
+      expect(isSellerEditableLinesAuthority(source, canonical(source))).toBe(false);
+    }
+  });
+
+  it("refuses a hosted-storefront order, also when its hosted marker is incomplete", () => {
+    expect(isSellerEditableLinesAuthority("storefront", canonical("storefront", { hostedDelegationAuthority: "v1", hostedReleaseId: "release-00000001" }))).toBe(false);
+    expect(isSellerEditableLinesAuthority("storefront", canonical("storefront", { hostedDelegationAuthority: "v1" }))).toBe(false);
+    expect(isSellerEditableLinesAuthority("storefront", canonical("storefront", { hostedReleaseId: "release-00000001" }))).toBe(false);
+  });
+
+  it("refuses legacy, import-pending and mismatched metadata", () => {
+    expect(isSellerEditableLinesAuthority("whatsapp", null)).toBe(false);
+    expect(isSellerEditableLinesAuthority("whatsapp", "not-json")).toBe(false);
+    expect(isSellerEditableLinesAuthority("whatsapp", trustedManualOrderSourceMetadata())).toBe(false);
+    expect(isSellerEditableLinesAuthority("whatsapp", canonical("csv"))).toBe(false);
+    expect(isSellerEditableLinesAuthority("manual", importPendingOrderSourceMetadata())).toBe(false);
   });
 });

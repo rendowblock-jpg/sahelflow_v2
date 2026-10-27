@@ -3,7 +3,6 @@ import { db, shopContext } from "@/lib/db";
 import { customerService } from "@/lib/data";
 import { updateCustomerSchema } from "@/lib/validation";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import { logAudit } from "@/lib/audit";
 import {
   assertTrustedAction,
   requireTrustedAction,
@@ -40,7 +39,9 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
   const data = updateCustomerSchema.parse(body);
   assertCustomerUpdateFieldAuthority(actorContext, data);
 
-  const customer = await customerService.update({ prisma: db, shop: shopContext }, id, data);
+  const customer = await customerService.update({ prisma: db, shop: shopContext }, id, data, {
+    auditActor: trustedActorAuditIdentity(actorContext.actor),
+  });
 
   return NextResponse.json({
     customer: projectCustomerForTrustedActor(actorContext, customer),
@@ -51,14 +52,9 @@ export const PATCH = withErrorHandler(async (req: NextRequest, { params }: Route
 export const DELETE = withErrorHandler(async (_req: NextRequest, { params }: RouteContext) => {
   const actorContext = await requireTrustedAction("customers.manage");
   const { id } = await params;
-  const existing = await db.customer.findUnique({ where: { id } });
-  await customerService.delete({ prisma: db, shop: shopContext }, id);
-  await logAudit({ prisma: db, shop: shopContext }, {
-    action: "customer.deleted",
-    entity: "customer",
-    entityId: id,
-    actor: trustedActorAuditIdentity(actorContext.actor),
-    before: existing as Record<string, unknown> | null,
+  // The service writes the audit row in the same transaction as the delete.
+  await customerService.delete({ prisma: db, shop: shopContext }, id, {
+    auditActor: trustedActorAuditIdentity(actorContext.actor),
   });
   return NextResponse.json({ success: true });
 }, "DELETE /api/customers/[id]");

@@ -40,9 +40,15 @@ function reportWithBody(body: string, headers: Record<string, string> = {}): Nex
   });
 }
 
+const SLOW_RESOURCES = [
+  { name: "/_next/static/chunks/main-app.js", ms: 12_001 },
+  { name: "/_next/static/css/site.css", ms: 300 },
+];
 const TIMING = {
   responseStartMs: 812,
   responseEndMs: 9034,
+  domInteractiveMs: 6100,
+  largestContentfulPaintMs: 20_000,
   domContentLoadedEventEndMs: 15_101,
   loadEventEndMs: 26_001,
   firstContentfulPaintMs: 14_000,
@@ -51,6 +57,8 @@ const TIMING = {
   scriptTransferBytes: 1_530_000,
   scriptDecodedBytes: 6_500_000,
   resourceCount: 120,
+  resourceTransferBytes: 9_000_000,
+  slowResources: SLOW_RESOURCES,
 };
 
 function diagnostic(): Record<string, unknown> {
@@ -181,6 +189,46 @@ describe("runtime UI-ready report", () => {
       );
       expect(response.status).toBe(200);
       expect(diagnostic().uiTiming).toEqual({ responseStartMs: 600_000, beaconMs: 501, scriptCount: 0 });
+    });
+
+    it("stores at most the 3 slowest resources as a plain path and a number; a bad one is dropped, never stored", async () => {
+      const response = await POST(
+        reportWithBody(
+          JSON.stringify({
+            timing: {
+              beaconMs: 10,
+              slowResources: [
+                { name: "/_next/static/chunks/a.js", ms: 5000.4 },
+                { name: "http://127.0.0.1:3101/_next/b.js?token=abc", ms: 4 },
+                { name: "/_next/static/chunks/c.js", ms: 3, url: "x" },
+                { name: "/_next/static/chunks/d.js", ms: 2 },
+              ],
+            },
+          }),
+        ),
+      );
+      expect(response.status).toBe(200);
+      // Four entries is more than the contract allows, so none are kept.
+      expect(diagnostic().uiTiming).toEqual({ beaconMs: 10 });
+
+      rmSync(join(dataDir, "runtime-ui-ready.json"), { force: true });
+      rmSync(join(dataDir, "runtime-ui-diagnostic.json"), { force: true });
+      const second = await POST(
+        reportWithBody(
+          JSON.stringify({
+            timing: {
+              slowResources: [
+                { name: "/_next/static/chunks/a.js", ms: 5000.4 },
+                { name: "http://127.0.0.1:3101/_next/b.js?token=abc", ms: 4 },
+                { name: "/_next/static/chunks/c.js", ms: 3, url: "x" },
+              ],
+            },
+          }),
+        ),
+      );
+      expect(second.status).toBe(200);
+      expect(diagnostic().uiTiming).toEqual({ slowResources: [{ name: "/_next/static/chunks/a.js", ms: 5000 }] });
+      expect(JSON.stringify(diagnostic())).not.toMatch(/http|token|abc/);
     });
 
     it.each([

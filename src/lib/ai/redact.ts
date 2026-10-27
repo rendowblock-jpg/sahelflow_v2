@@ -22,10 +22,9 @@
  */
 import "server-only";
 
+import { replacePhoneNumbers, toAsciiDigits } from "../phone-patterns";
 import { safeCommune, safeWilaya } from "./location-authority";
 
-const FLEXIBLE_LOCAL_PHONE = /(?<!\d)0[5-7](?:[\p{Zs}\t.-]?\d){8}(?!\d)/gu;
-const FLEXIBLE_INTL_PHONE = /(?<!\d)(?:\+213|00213)[\p{Zs}\t.-]?[5-7](?:[\p{Zs}\t.-]?\d){8}(?!\d)/gu;
 const ORDER_REFERENCE_HINT = /\b(?:ORD|CMD|SYNC-(?:SHOPIFY|WOOCOMMERCE|YOUCAN))-[A-Z0-9-]{1,32}\b/iu;
 const ORDER_REFERENCE_EXACT = /^(?:ORD|CMD|SYNC-(?:SHOPIFY|WOOCOMMERCE|YOUCAN))-[A-Z0-9-]{1,32}$/iu;
 const PHONE_KEYS = new Set(["phone", "phone2", "customerPhone", "contactPhone"]);
@@ -316,16 +315,17 @@ function conversationContextProjection(value: unknown): JsonRecord | null {
 
 /** Redact a phone number, keeping only the last 2 digits. */
 export function redactPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
+  // "+213 (0)555 ..." carries the national 0 in brackets: it is not a digit of the number.
+  const digits = phone.replace(/\(0\)/g, "").replace(/\D/g, "");
   if (digits.length < 4) return "••••";
   return "0" + "•".repeat(digits.length - 3) + digits.slice(-2);
 }
 
 /** Redact Algerian local/international phone numbers in free text. */
 export function redactPhonesInText(text: string): string {
-  return text
-    .replace(FLEXIBLE_INTL_PHONE, (match) => redactPhone(match))
-    .replace(FLEXIBLE_LOCAL_PHONE, (match) => redactPhone(match));
+  // Same patterns as the audit masker; Arabic-Indic digits are turned into
+  // 0-9 first so the mask keeps the same shape for every way of typing a number.
+  return replacePhoneNumbers(text, (match) => redactPhone(toAsciiDigits(match)));
 }
 
 /**
@@ -347,9 +347,7 @@ export function redactCustomerName(name: string): string {
   const normalized = name.normalize("NFKC").trim();
   if (!normalized || normalized.length > 200) return "••••";
 
-  const withoutPhoneLikeContent = normalized
-    .replace(FLEXIBLE_INTL_PHONE, " ")
-    .replace(FLEXIBLE_LOCAL_PHONE, " ")
+  const withoutPhoneLikeContent = replacePhoneNumbers(normalized, () => " ")
     .replace(/\s+/gu, " ")
     .trim();
   if (!withoutPhoneLikeContent) return "••••";

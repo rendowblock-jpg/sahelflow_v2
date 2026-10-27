@@ -6,11 +6,13 @@ import { z } from "zod";
 import { executeBusinessCommand } from "@/lib/business-truth/command-kernel";
 import type { BusinessCommandResult } from "@/lib/business-truth/contracts";
 import type { BusinessPrincipalContext } from "@/lib/business-truth/principal";
-import { isSellerTypedOrderAuthority } from "@/lib/orders/manual-order-authority";
+import { isSellerEditableLinesAuthority } from "@/lib/orders/manual-order-authority";
 import {
   resolveCatalogLine,
   type CatalogLine,
 } from "@/lib/orders/manual-order-catalog-line";
+import { assertOrderTotalWithinLimit, orderMoneySchema } from "@/lib/orders/money-limits";
+import { lineTotalOf, orderTotalOf } from "@/lib/orders/order-total";
 import { redactPii } from "@/lib/redact-pii";
 import {
   ConflictError,
@@ -21,15 +23,19 @@ import {
 
 /**
  * order.manual.editLines.v1 (S03a-03B): correct the LINES of a pending order the
- * seller typed in himself. Before this command a wrong product, quantity or price on
- * such an order could only be fixed by rejecting it and typing it again.
+ * seller typed in himself, or one received from WhatsApp, a CSV/XLSX import, the AI
+ * chat (once submitted) or the local storefront. Before this command a wrong product,
+ * quantity or price on such an order could only be fixed by rejecting it and typing it
+ * again.
  *
- * Why it is safe for this kind of order and no other: a pending manual order holds no
- * stock (inventoryState "unreserved", no reservation, no inventory movement); the
- * confirmation that follows reads the lines as they are then and reserves exactly
- * those. A hosted-storefront order is different: its stock is delegated at the
- * storefront and the receipt is bound to its lines, so it answers a coded 409.
- * Imported and legacy orders answer the same 409 until their own paths are read.
+ * Why it is safe for these orders: a pending order holds no stock (inventoryState
+ * "unreserved", no reservation, no inventory movement); the confirmation that follows
+ * reads the lines as they are then and reserves exactly those. The inventoryState check
+ * below still refuses any order that holds stock. A hosted-storefront order is
+ * different: its stock is delegated at the storefront and the receipt is bound to its
+ * lines. Shopify, WooCommerce, YouCan and Google Sheets orders (the platform owns the
+ * price, a re-sync may rewrite them), legacy and import-pending orders answer the same
+ * coded 409 (see isSellerEditableLinesAuthority).
  *
  * The new list REPLACES the old one:
  *  - a line with `id` is an existing line; only its quantity and, if given, its unit
@@ -46,8 +52,6 @@ import {
  * version conflict. The kernel claims one aggregate per (order, version).
  */
 
-const MAX_ORDER_TOTAL = 2_147_483_647; // Order.totalPrice is a 32-bit Int
-
 export const manualOrderLinesEditSchema = z
   .object({
     orderId: z.string().min(1),
@@ -62,7 +66,7 @@ export const manualOrderLinesEditSchema = z
             productId: z.string().min(1).optional(),
             productVariantId: z.string().min(1).nullable().optional(),
             quantity: z.number().int().min(1).max(100_000),
-            unitPrice: z.number().int().nonnegative().optional(),
+            unitPrice: orderMoneySchema.optional(),
           })
           .strict(),
       )
@@ -150,9 +154,9 @@ export async function executeManualOrderLinesEdit(
         include: { items: true },
       });
       if (!order) throw new NotFoundError("Order", data.orderId);
-      if (!isSellerTypedOrderAuthority(order.source, order.sourceMetadata)) {
+      if (!isSellerEditableLinesAuthority(order.source, order.sourceMetadata)) {
         throw new SahelFlowError(
-          "The lines of this order cannot be edited here: only an order typed in by the seller can",
+          "The lines of this order cannot be edited here: only an order typed in by the seller, or received from WhatsApp, an import, the AI chat or the local storefront, can be",
           "ORDER_LINES_NOT_EDITABLE_FOR_SOURCE",
           409,
         );
@@ -265,15 +269,9 @@ export async function executeManualOrderLinesEdit(
           }),
         ...creates,
       ];
-      const itemsTotal = finalLines.reduce(
-        (sum, line) => sum + line.unitPrice * line.quantity,
-        0,
-      );
       const deliveryCost = order.deliveryCost ?? 0;
-      const totalPrice = itemsTotal + deliveryCost;
-      if (!Number.isSafeInteger(totalPrice) || totalPrice > MAX_ORDER_TOTAL) {
-        throw new ValidationError("The order total is too large", "lines");
-      }
+      const { itemsTotal, totalPrice } = orderTotalOf(finalLines, deliveryCost);
+      assertOrderTotalWithinLimit(totalPrice, "lines");
       const orderVersion = data.expectedVersion + 1;
 
       const claimed = await tx.order.updateMany({
@@ -302,13 +300,13 @@ export async function executeManualOrderLinesEdit(
           data: {
             quantity: update.quantity,
             unitPrice: update.unitPrice,
-            total: update.quantity * update.unitPrice,
+            total: lineTotalOf(update.unitPrice, update.quantity),
           },
         });
       }
       for (const line of creates) {
         await tx.orderItem.create({
-          data: { ...line, orderId: order.id, total: line.unitPrice * line.quantity },
+          data: { ...line, orderId: order.id, total: lineTotalOf(line.unitPrice, line.quantity) },
         });
       }
 
