@@ -34,6 +34,16 @@ function field(id: string, label: string, control: string, area = false): string
   return `<div class="sf-field${area ? " sf-field--area" : ""}"><label for="f-${id}">${esc(label)}</label>${control}<p class="sf-err" id="e-${id}" hidden></p></div>`;
 }
 
+/**
+ * The commune search above the two selects (STORE-WILAYA69). The listbox and both status lines are always in the markup, hidden or empty,
+ * so aria-controls never points at nothing and a live region exists before its first message. client/commune-search.ts fills them.
+ * The listbox is not a tab stop (tabindex -1): the input keeps focus and names the highlighted row with aria-activedescendant.
+ */
+function communeSearch(ctx: Ctx): string {
+  const { t } = ctx;
+  return `<div class="sf-field sf-search"><label id="l-search" for="f-search">${esc(t("storefront.shop.communeSearch"))}</label><input id="f-search" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sf-search-list" aria-describedby="sf-search-note" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" dir="auto" maxlength="60" placeholder="${esc(t("storefront.shop.communePlaceholder"))}"><ul id="sf-search-list" class="sf-search-list" role="listbox" aria-labelledby="l-search" tabindex="-1" hidden></ul><p id="sf-search-note" class="sf-search-note" role="status" aria-live="polite"></p><p id="sf-search-count" class="sf-vh" role="status" aria-live="polite"></p></div>`;
+}
+
 function gallery(ctx: Ctx, product: ShopProduct): string {
   const { t } = ctx;
   const vt = transitionName(ctx, product.id);
@@ -127,6 +137,9 @@ export function renderProduct(ctx: Ctx, product: ShopProduct): ProductPage {
     choose: t("storefront.shop.choose"),
     wa: t("storefront.shop.whatsappMessage", { product: "{{product}}", count: "{{count}}", ref: "{{ref}}" }),
     loading: t("storefront.shop.loading"),
+    communeNone: t("storefront.shop.communeNone"),
+    communeFailed: t("storefront.shop.communeFailed"),
+    communeCount: t("storefront.shop.communeCount", { count: "{{count}}" }),
   };
   const data = {
     v: 1,
@@ -167,6 +180,7 @@ ${field("name", t("storefront.view.fullName"), '<input id="f-name" name="name" t
 ${field("phone", t("storefront.view.phone"), '<input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" dir="ltr" maxlength="20" placeholder="05 55 12 34 56" required aria-describedby="e-phone">')}
 </fieldset>
 <fieldset class="sf-grp"><legend>${esc(t("storefront.shop.stepDelivery"))}</legend>
+${communeSearch(ctx)}
 ${field("wilaya", t("storefront.view.wilaya"), `<select id="f-wilaya" name="wilaya" autocomplete="address-level1" required aria-describedby="e-wilaya"><option value="">${esc(t("storefront.shop.choose"))}</option>${list.map(([code, label]) => `<option value="${code}">${esc(label)}</option>`).join("")}</select>`)}
 ${field("commune", t("storefront.view.commune"), `<select id="f-commune" name="commune" autocomplete="address-level2" required disabled aria-describedby="e-commune"><option value="">${esc(t("storefront.shop.choose"))}</option></select>`)}
 ${field("address", t("storefront.view.address"), '<textarea id="f-address" name="address" rows="2" autocomplete="street-address" maxlength="300" required aria-describedby="e-address"></textarea>', true)}

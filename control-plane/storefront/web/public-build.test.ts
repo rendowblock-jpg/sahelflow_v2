@@ -83,7 +83,8 @@ describe("generated page files", () => {
   it("make a small script with no eval and no network call except the page's own", () => {
     const js = readFileSync(join(PUBLIC, manifest.js), "utf8");
     console.warn(`[weight] js ${js.length} bytes, ${gzipSync(js).length} gzip`);
-    expect(gzipSync(js).length).toBeLessThan(7_000);
+    // Was 7,000 (about 5,100 used). The commune search box (client/commune-search.ts) costs about 2,000 bytes gzip, so the ceiling moved to 7,300.
+    expect(gzipSync(js).length).toBeLessThan(7_300);
     expect(js).not.toMatch(/\beval\(|new Function\(|document\.write|innerHTML\s*=\s*[^"'`]/);
     expect(js).not.toMatch(/https?:\/\/(?!wa\.me)/);
     expect(js).toContain("/v1/storefront/");
