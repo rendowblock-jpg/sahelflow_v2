@@ -69,6 +69,8 @@ let bulkAnswer: () => { status: number; body: unknown };
 let bulkCalls: Array<{ ids: string[]; status: string }>;
 const firstCall = () => bulkCalls[0] as { ids: string[]; status: string };
 let bulkGate: Promise<void>;
+/** Holds back every answer for the LIST (not the bulk POST): the reload after a batch, which is slow on a slow PC. */
+let listGate: Promise<void>;
 
 beforeEach(() => {
   Object.values(h.toast).forEach((fn) => fn.mockClear());
@@ -76,6 +78,7 @@ beforeEach(() => {
   h.refresh.mockClear();
   bulkCalls = [];
   bulkGate = Promise.resolve();
+  listGate = Promise.resolve();
   bulkAnswer = () => ({ status: 200, body: { succeeded: ["a", "b"], failed: [] } });
   vi.stubGlobal(
     "fetch",
@@ -86,6 +89,7 @@ beforeEach(() => {
         const { status, body } = bulkAnswer();
         return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
       }
+      await listGate;
       return new Response(JSON.stringify(fallback(THREE)), { status: 200, headers: { "content-type": "application/json" } });
     }),
   );
@@ -178,6 +182,45 @@ describe("bulk ship and bulk cancel ask first", () => {
       await new Promise((resolve) => setTimeout(resolve, 30));
     });
     expect(bulkCalls).toHaveLength(1);
+  });
+});
+
+describe("while the list reloads after a batch", () => {
+  it("the question closes as soon as the answer is read; it does not wait for the list to come back", async () => {
+    let releaseList: () => void = () => undefined;
+    listGate = new Promise<void>((resolve) => {
+      releaseList = resolve;
+    });
+    mount();
+    pick("ORD-0001");
+    fireEvent.click(screen.getByRole("button", { name: "orders.cancelSelectedShort" }));
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getAllByRole("button")[1] as HTMLElement);
+    await waitFor(() => expect(bulkCalls).toHaveLength(1));
+    // the list request is still pending; the seller must already have the result and no dialog in the way
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(h.toast.success).toHaveBeenCalledTimes(1);
+    releaseList();
+  });
+
+  it("dims the table, not the bulk bar: a dimmed toolbar is still clickable and its text falls below 4.5:1", async () => {
+    let releaseList: () => void = () => undefined;
+    listGate = new Promise<void>((resolve) => {
+      releaseList = resolve;
+    });
+    bulkAnswer = () => ({ status: 200, body: { succeeded: ["a"], failed: [{ id: "b", code: "NOT_FOUND" }] } });
+    mount();
+    pick("ORD-0001");
+    pick("ORD-0002");
+    fireEvent.click(screen.getByRole("button", { name: "orders.confirmSelected" }));
+    await screen.findByTestId("orders-bulk-failure-notice");
+    // wait until the reload is really in flight: the table carries the dim and its wrapper says it is busy
+    await waitFor(() => expect(screen.getByRole("table").closest(".opacity-60")).not.toBeNull());
+    expect(bar()).not.toBeNull();
+    expect((bar() as HTMLElement).closest(".opacity-60")).toBeNull();
+    expect(screen.getByTestId("orders-bulk-failure-notice").closest(".opacity-60")).toBeNull();
+    expect(screen.getByRole("table").closest("[aria-busy='true']")).not.toBeNull();
+    releaseList();
   });
 });
 

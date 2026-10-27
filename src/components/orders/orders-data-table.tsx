@@ -200,11 +200,10 @@ export function OrdersDataTable({
           // Keep only what still needs attention selected: the next move is "fix and retry", not "find them again".
           controls.select(outcome.failedIds);
         }
-        await Promise.all([
-          mutate(),
-          mutatePrefix("/api/orders"),
-          router.refresh(),
-        ]);
+        // Reload the list in the background. Waiting for it here would keep the question open (the dialog closes when
+        // this function returns) for as long as the reload takes, which is seconds on a slow PC, while the result
+        // the seller is waiting for is already known and shown. A failed reload shows through the list's own error state.
+        void Promise.all([mutate(), mutatePrefix("/api/orders"), router.refresh()]).catch(() => undefined);
       } finally {
         bulkInFlight.current = false;
       }
@@ -310,10 +309,7 @@ export function OrdersDataTable({
           onDismiss={() => setBulkFailures(null)}
         />
       ) : null}
-      <div
-        aria-busy={isRefreshing}
-        className={`transition-opacity duration-150 ${isRefreshing ? "opacity-60" : ""}`}
-      >
+      <div aria-busy={isRefreshing}>
         <DataTable
           columns={columns}
           data={data?.orders ?? []}
@@ -322,6 +318,7 @@ export function OrdersDataTable({
           onRowClick={canOpenDetail ? (row) => router.push(`/orders/${row.id}`) : undefined}
           bulkActions={fieldAccess.update ? bulkActions : undefined}
           getRowId={(row) => row.id}
+          refreshing={isRefreshing}
           getRowLabel={(row) => t("orders.workspace.selectOrder", { number: row.orderNumber })}
           emptyState={emptyState}
         />

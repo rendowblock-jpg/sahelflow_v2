@@ -103,6 +103,11 @@ interface DataTableProps<TData> {
   getRowId?: (row: TData) => string;
   /** Names a row's selection checkbox, e.g. "Select order ORD-0012". Without it the generic label is used. */
   getRowLabel?: (row: TData) => string;
+  /**
+   * The rows are being reloaded: the TABLE dims, the bulk bar above it does not. A dimmed toolbar is still clickable
+   * and its text drops below 4.5:1 (axe measured 2.39:1 on the bar's buttons during a reload).
+   */
+  refreshing?: boolean;
   showDensityToggle?: boolean;
   skeletonRows?: number;
   className?: string;
@@ -130,6 +135,7 @@ export function DataTable<TData>({
   emptyState,
   getRowId = (row) => (row as { id?: string }).id ?? "",
   getRowLabel,
+  refreshing = false,
   showDensityToggle = true,
   skeletonRows = 8,
   className,
@@ -266,7 +272,12 @@ export function DataTable<TData>({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-control border bg-background">
+      <div
+        className={cn(
+          "overflow-hidden rounded-control border bg-background transition-opacity duration-150",
+          refreshing && "opacity-60",
+        )}
+      >
         <div className="relative overflow-x-auto">
           <table className="w-full" aria-busy={isLoading}>
             <thead className="sticky top-0 z-10 border-b bg-muted/80 backdrop-blur-sm">
