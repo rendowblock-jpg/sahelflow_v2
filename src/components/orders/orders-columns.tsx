@@ -101,7 +101,15 @@ export function useOrdersColumns(
             header: () => t("orders.customer"),
             cell: ({ row }: { row: { original: OrderListItem } }) => (
               <div className="max-w-[170px] text-sm">
-                <div className="truncate font-medium">{row.original.customer?.name ?? "—"}</div>
+                <div className="truncate font-medium">
+                  {row.original.customer?.name ? (
+                    <bdi dir="auto" title={row.original.customer.name}>
+                      {row.original.customer.name}
+                    </bdi>
+                  ) : (
+                    "—"
+                  )}
+                </div>
                 <TechnicalValue className="block truncate text-xs text-muted-foreground">
                   {row.original.customer?.phone ?? row.original.phone ?? "—"}
                 </TechnicalValue>

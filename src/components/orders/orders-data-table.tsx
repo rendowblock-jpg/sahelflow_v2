@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Printer, XCircle } from "lucide-react";
 
-import { DataTable, type BulkAction } from "@/components/data-table/data-table";
+import { DataTable, type BulkAction, type BulkControls } from "@/components/data-table/data-table";
 import { OrdersEmptyState } from "@/components/shared/empty-states";
 import { StateSurface } from "@/components/shared/state-surface";
 import { useApiMutation } from "@/hooks/use-api-mutation";
@@ -14,6 +14,12 @@ import { useOrdersFilterParams } from "@/hooks/use-orders-filter-params";
 import { useI18n } from "@/hooks/use-i18n";
 import type { Locale } from "@/lib/i18n";
 import { translateServerError } from "@/lib/i18n/translate-server-error";
+import {
+  bulkNeedsConfirmation,
+  ordersEmptyKind,
+  readBulkOutcome,
+  type BulkFailure,
+} from "@/lib/orders/bulk-result";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { toast } from "@/lib/toast";
 import type { OrderStatus } from "@/types/domain";
@@ -22,6 +28,7 @@ import {
   loadDeliverySlipsForOrders,
   useDeliverySlipPrinting,
 } from "./delivery-slip";
+import { BulkConfirmDialog, BulkFailureNotice } from "./orders-bulk-ui";
 import { OrdersFilterBar } from "./orders-filter-bar";
 import { OrderFormDialog } from "./order-form-dialog";
 import { useOrdersColumns } from "./orders-columns";
@@ -143,31 +150,69 @@ export function OrdersDataTable({
     onPrintSlip: (order) => handlePrintSlips([order.id]),
   });
 
-  const bulkMutation = useApiMutation({
-    onSuccess: async (result) => {
-      const payload = result as { succeeded?: string[]; failed?: string[] };
-      const succeeded = payload.succeeded?.length ?? 0;
-      const failed = payload.failed?.length ?? 0;
-      if (failed === 0) {
-        toast.success(t("orders.bulkSuccess", { count: succeeded }));
-      } else {
-        toast.warning(
-          t("orders.bulkPartial", {
-            ok: String(succeeded),
-            fail: String(failed),
-          }),
-        );
+  const bulkMutation = useApiMutation();
+  const orderNumberById = useMemo(
+    () => new Map((data?.orders ?? []).map((order) => [order.id, order.orderNumber])),
+    [data],
+  );
+  // The question before a bulk ship or cancel. The pending batch stays in state while the dialog closes, so its
+  // wording does not change under the closing animation.
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingBulk, setPendingBulk] = useState<{
+    status: OrderStatus;
+    ids: string[];
+    controls: BulkControls;
+  } | null>(null);
+  // Which orders the last batch could not change. Cleared when the seller dismisses it or runs another batch.
+  const [bulkFailures, setBulkFailures] = useState<{ failures: BulkFailure[]; total: number } | null>(null);
+  const bulkInFlight = useRef(false);
+
+  const runBulk = useCallback(
+    async (status: OrderStatus, selectedIds: string[], controls: BulkControls) => {
+      if (bulkInFlight.current) return;
+      bulkInFlight.current = true;
+      setBulkFailures(null);
+      try {
+        let result: unknown;
+        try {
+          result = await bulkMutation.submit("/api/orders/bulk", {
+            method: "POST",
+            body: JSON.stringify({ ids: selectedIds, status }),
+          });
+        } catch {
+          // The mutation hook has already told the seller why; the selection stays so they can try again.
+          return;
+        }
+        const outcome = readBulkOutcome(result, orderNumberById);
+        if (!outcome) {
+          toast.error(t("orders.workspace.bulk.unreadable"));
+        } else if (outcome.failed.length === 0) {
+          toast.success(t("orders.bulkSuccess", { count: outcome.succeeded }));
+          controls.clear();
+        } else {
+          toast.warning(
+            t("orders.bulkPartial", {
+              ok: String(outcome.succeeded),
+              fail: String(outcome.failed.length),
+            }),
+          );
+          setBulkFailures({ failures: outcome.failed, total: selectedIds.length });
+          // Keep only what still needs attention selected: the next move is "fix and retry", not "find them again".
+          controls.select(outcome.failedIds);
+        }
+        // Reload the list in the background. Waiting for it here would keep the question open (the dialog closes when
+        // this function returns) for as long as the reload takes, which is seconds on a slow PC, while the result
+        // the seller is waiting for is already known and shown. A failed reload shows through the list's own error state.
+        void Promise.all([mutate(), mutatePrefix("/api/orders"), router.refresh()]).catch(() => undefined);
+      } finally {
+        bulkInFlight.current = false;
       }
-      await Promise.all([
-        mutate(),
-        mutatePrefix("/api/orders"),
-        router.refresh(),
-      ]);
     },
-  });
+    [bulkMutation, mutate, orderNumberById, router, t],
+  );
 
   const handleBulk = useCallback(
-    (status: OrderStatus, selectedIds: string[]) => {
+    (status: OrderStatus, selectedIds: string[], controls: BulkControls) => {
       if (selectedIds.length === 0 || bulkMutation.isSubmitting || !data) return;
       const governedSelected = data.orders.some(
         (order) =>
@@ -179,32 +224,32 @@ export function OrdersDataTable({
         toast.error(t("orders.workspace.bulkGovernedBlocked"));
         return;
       }
-
-      void bulkMutation
-        .submit("/api/orders/bulk", {
-          method: "POST",
-          body: JSON.stringify({ ids: selectedIds, status }),
-        })
-        .catch(() => undefined);
+      // Ship and cancel cannot be walked back (see lib/orders/bulk-result.ts), so they ask first; confirm does not.
+      if (bulkNeedsConfirmation(status)) {
+        setPendingBulk({ status, ids: selectedIds, controls });
+        setConfirmOpen(true);
+        return;
+      }
+      void runBulk(status, selectedIds, controls);
     },
-    [bulkMutation, data, t],
+    [bulkMutation, data, runBulk, t],
   );
 
   const bulkActions: BulkAction[] = [
     {
       label: t("orders.confirmSelected"),
-      onClick: (ids) => handleBulk("confirmed", ids),
+      onClick: (ids, controls) => handleBulk("confirmed", ids, controls),
       icon: CheckCircle2,
       disabled: bulkMutation.isSubmitting,
     },
     {
       label: t("orders.shipSelected"),
-      onClick: (ids) => handleBulk("shipped", ids),
+      onClick: (ids, controls) => handleBulk("shipped", ids, controls),
       disabled: bulkMutation.isSubmitting,
     },
     {
       label: t("orders.cancelSelectedShort"),
-      onClick: (ids) => handleBulk("cancelled", ids),
+      onClick: (ids, controls) => handleBulk("cancelled", ids, controls),
       variant: "destructive",
       icon: XCircle,
       disabled: bulkMutation.isSubmitting,
@@ -238,25 +283,33 @@ export function OrdersDataTable({
 
   // Filtered-empty (nothing matched the active scope) stays distinct from the
   // first-use empty state: it offers to clear the filters instead of teaching.
-  const emptyState = hasActiveFilters ? (
-    <OrdersEmptyState filtered onClearFilters={clearFilters} />
-  ) : canCreateOrder && customers && products ? (
-    <OrdersEmptyState
-      createAction={
-        <OrderFormDialog customers={customers} products={products} />
-      }
-    />
-  ) : (
-    <OrdersEmptyState />
-  );
+  const emptyKind = ordersEmptyKind({ hasActiveFilters, statusFilter });
+  const emptyState =
+    emptyKind === "filtered" ? (
+      <OrdersEmptyState filtered onClearFilters={clearFilters} />
+    ) : emptyKind === "status" ? (
+      <OrdersEmptyState statusView onShowAll={() => router.push("/orders")} />
+    ) : canCreateOrder && customers && products ? (
+      <OrdersEmptyState
+        createAction={
+          <OrderFormDialog customers={customers} products={products} />
+        }
+      />
+    ) : (
+      <OrdersEmptyState />
+    );
 
   return (
     <div className="space-y-3">
       <OrdersFilterBar />
-      <div
-        aria-busy={isRefreshing}
-        className={`transition-opacity duration-150 ${isRefreshing ? "opacity-60" : ""}`}
-      >
+      {bulkFailures ? (
+        <BulkFailureNotice
+          failures={bulkFailures.failures}
+          total={bulkFailures.total}
+          onDismiss={() => setBulkFailures(null)}
+        />
+      ) : null}
+      <div aria-busy={isRefreshing}>
         <DataTable
           columns={columns}
           data={data?.orders ?? []}
@@ -265,9 +318,20 @@ export function OrdersDataTable({
           onRowClick={canOpenDetail ? (row) => router.push(`/orders/${row.id}`) : undefined}
           bulkActions={fieldAccess.update ? bulkActions : undefined}
           getRowId={(row) => row.id}
+          refreshing={isRefreshing}
+          getRowLabel={(row) => t("orders.workspace.selectOrder", { number: row.orderNumber })}
           emptyState={emptyState}
         />
       </div>
+      {pendingBulk ? (
+        <BulkConfirmDialog
+          status={pendingBulk.status}
+          count={pendingBulk.ids.length}
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          onConfirm={() => runBulk(pendingBulk.status, pendingBulk.ids, pendingBulk.controls)}
+        />
+      ) : null}
       {slipPrintRoot}
     </div>
   );

@@ -11,6 +11,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useI18n } from "@/hooks/use-i18n";
 
@@ -68,7 +70,10 @@ export function ConfirmDialog({
               void handleConfirm();
             }}
             disabled={loading}
-            className={destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            // The tested destructive pair (white text; the dark mode dims the red, see contrast-contract.test.ts). The theme
+            // defines no `destructive-foreground` token, so the old class left the text in the page ink: 2.53:1 in dark mode.
+            // `active:bg-destructive` stops the default look's pressed state from turning the button primary-coloured.
+            className={destructive ? cn(buttonVariants({ variant: "destructive" }), "active:bg-destructive") : ""}
           >
             {loading ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}
             {confirmLabel ?? t("common.confirm")}

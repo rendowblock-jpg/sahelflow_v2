@@ -23,7 +23,7 @@ import { EmptyState } from "./empty-state";
 import { useI18n } from "@/hooks/use-i18n";
 import {
   Package, Users, ShoppingCart, Truck, RotateCcw, MessageCircle,
-  Zap, BarChart3, ShieldAlert, Store, Upload, SearchX,
+  Zap, BarChart3, ShieldAlert, Store, Upload, SearchX, Inbox,
 } from "lucide-react";
 
 interface EmptyStateProps {
@@ -37,6 +37,12 @@ interface EmptyStateProps {
   /** Clears the active filters; rendered as the filtered-empty CTA. */
   onClearFilters?: () => void;
   /**
+   * Orders only: a status tab (Shipped, Cancelled...) with no orders and no search or filter. Not first use, since the
+   * shop may hold hundreds of orders in other tabs; the action shows them all.
+   */
+  statusView?: boolean;
+  onShowAll?: () => void;
+  /**
    * Explicit create-action node for the first-use state (e.g. a form dialog
    * trigger), overriding the plain actionLabel button.
    */
@@ -48,8 +54,21 @@ export function OrdersEmptyState({
   filtered,
   onClearFilters,
   createAction,
+  statusView,
+  onShowAll,
 }: EmptyStateProps) {
   const { t } = useI18n();
+  if (statusView) {
+    return (
+      <EmptyState
+        icon={Inbox}
+        title={t("orders.workspace.emptyStatus.title")}
+        description={t("orders.workspace.emptyStatus.description")}
+        actionLabel={onShowAll ? t("orders.workspace.emptyStatus.action") : undefined}
+        onAction={onShowAll}
+      />
+    );
+  }
   if (filtered) {
     return (
       <EmptyState
