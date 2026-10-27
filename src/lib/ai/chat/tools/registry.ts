@@ -72,6 +72,13 @@ export interface ToolResult {
    * not be created. The agent turns it into a model-readable tool result.
    */
   refusal?: AiToolRefusal;
+  /**
+   * Set only by the registry gate, on a successful read: the dot paths it
+   * removed from `data` because the signed-in member's role may not see them
+   * (names from the read-access table, never values). The agent turns it into
+   * a notice for the model, so a hidden field is not mistaken for an empty one.
+   */
+  withheld?: readonly string[];
 }
 
 export interface ChatTool {
@@ -168,7 +175,11 @@ export function registerTool(tool: ChatTool): void {
       }
       const result = await body(rawParams, context);
       return result.success && access.withheldPaths.length > 0
-        ? { ...result, data: withholdPaths(result.data, access.withheldPaths) }
+        ? {
+            ...result,
+            data: withholdPaths(result.data, access.withheldPaths),
+            withheld: access.withheldPaths,
+          }
         : result;
     },
   });
