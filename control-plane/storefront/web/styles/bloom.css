@@ -57,6 +57,7 @@ body[data-voice=bloom] .bx-detail .sf-desc{font-size:17px;line-height:1.95;white
 body[data-voice=bloom] .bx-order{padding-block:34px var(--sec)}
 body[data-voice=bloom] .sf-form{border-radius:28px;border:0;box-shadow:0 28px 50px -30px var(--primary);background:#fff}
 body[data-voice=bloom] :is(.sf-field input,.sf-field select,.sf-field textarea){border-radius:16px}
+body[data-voice=bloom] .sf-search-list{border-radius:16px}
 body[data-voice=bloom] .sf-cta{border-radius:999px;box-shadow:0 14px 26px -14px var(--primary)}
 body[data-voice=bloom] .sf-pill span{border-radius:999px}
 
