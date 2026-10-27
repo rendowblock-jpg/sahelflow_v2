@@ -260,6 +260,15 @@ export const EXPECTED_AI_TOOL_NAMES = Object.freeze(
   ].sort(),
 );
 
+/**
+ * True only for a tool whose central policy is "blocked". Unlike
+ * getAiToolPolicy it never throws for a name it does not know: it is for code
+ * that handles a name the MODEL chose, which may not exist at all.
+ */
+export function isAiToolBlocked(toolName: string): boolean {
+  return policies.get(toolName)?.executionClass === "blocked";
+}
+
 export function getAiToolPolicy(toolName: string): AiToolPolicy {
   const policy = policies.get(toolName);
   if (!policy) {

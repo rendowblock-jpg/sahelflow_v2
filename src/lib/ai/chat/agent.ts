@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isAiToolBlocked } from "@/lib/ai/actions/contracts";
 import {
   isAiActionProposalToolResult,
   type AiActionProposalToolResult,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/ai/gemini/provider";
 import type { GeminiThinkingLevel } from "@/lib/ai/gemini/catalog";
 import { loadGeminiRuntimePreferences } from "@/lib/ai/gemini/runtime-preferences";
+import { quotaLedger } from "@/lib/ai/providers/quota-ledger";
 import { serializeToolResultForRemoteModel } from "@/lib/ai/redact";
 import { db, shopContext } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -276,7 +278,11 @@ export async function execute(
   locale: AiChatLocale | undefined,
 ): Promise<ToolExecutionResult> {
   const tool = getTool(call.name);
-  if (!tool) {
+  // A policy-blocked tool is never offered to the model, but a model can still
+  // invent its name (PB-GEMINI-BLOCKED-TOOL-THROW). Same answer as for an
+  // unknown name, the words the Groq loop uses too. The registry gate would
+  // throw for it, which used to end the whole turn; it is not entered at all.
+  if (!tool || isAiToolBlocked(call.name)) {
     return {
       result: { error: aiUnknownToolMessage(locale ?? "fr", call.name) },
     };
@@ -418,6 +424,18 @@ function streamStalledEvent(locale: AiChatLocale | undefined): AgentStreamEvent 
   };
 }
 
+/**
+ * PB-GEMINI-QUOTA: a Gemini quota answer pauses Gemini in the shared ledger,
+ * as the order reader and the Groq loop already do for theirs, so the next
+ * chat message goes to the next AI instead of paying the failed call again.
+ * The chat routes save the ledger after every turn, also on error.
+ */
+function noteGeminiQuotaHit(error: unknown): void {
+  if (error instanceof GeminiProviderError && error.code === "GEMINI_QUOTA_EXHAUSTED") {
+    quotaLedger.recordQuotaHit("gemini", error.retryAfterSeconds ?? null);
+  }
+}
+
 export async function runAgent(
   conversationHistory: AgentMessage[],
   userMessage: string,
@@ -458,6 +476,7 @@ export async function runAgent(
       });
       response = (await result.response.json()) as GeminiResponse;
     } catch (error) {
+      noteGeminiQuotaHit(error);
       return {
         response: "",
         toolCalls: allToolCalls,
@@ -824,6 +843,7 @@ export async function* runAgentStream(
       stream = result.response.body;
       servedModel = result.model;
     } catch (error) {
+      noteGeminiQuotaHit(error);
       if (externalSignal?.aborted) return;
       yield { type: "error", message: geminiErrorMessage(error, locale ?? "fr") };
       return;
@@ -847,6 +867,7 @@ export async function* runAgentStream(
       parsed.value;
     if (cancelled) return;
     if (providerError) {
+      noteGeminiQuotaHit(providerError);
       yield isStreamStall(providerError)
         ? streamStalledEvent(locale)
         : {
