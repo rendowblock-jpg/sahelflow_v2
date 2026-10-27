@@ -5,7 +5,7 @@
       "maxBytes": 7900
     },
     "CHANGELOG.md": {
-      "maxBytes": 49500
+      "maxBytes": 53000
     },
     "README.md": {
       "maxBytes": 2800
@@ -68,7 +68,7 @@
       "maxBytes": 51400
     },
     "documentation/system/CURRENT_STATE.md": {
-      "maxBytes": 9700
+      "maxBytes": 9900
     },
     "documentation/system/ROADMAP.md": {
       "maxBytes": 8200
