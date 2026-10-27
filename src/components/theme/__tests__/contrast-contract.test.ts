@@ -656,9 +656,7 @@ describe("design-token contrast contract (WCAG AA)", () => {
     // above). Measured in real Chromium on 27 Oct 2026, before the sahel and oasis primaries were lowered by 0.013: #008528 on #f0f5ef = 4.39:1.
     const alpha = primarySubtleAlpha();
     const failures: string[] = [];
-    const rows: string[] = [];
     const check = (label: string, ratio: number) => {
-      rows.push(`${label} ${ratio.toFixed(2)}`);
       if (ratio < AA_NORMAL_TEXT) failures.push(`${label}: ${ratio.toFixed(2)}:1`);
     };
     for (const preset of PRESETS) {
@@ -679,7 +677,6 @@ describe("design-token contrast contract (WCAG AA)", () => {
         }
       }
     }
-    if (process.env.SF_CONTRAST_TABLE) console.log(`alpha ${alpha}\n${rows.join("\n")}`);
     expect(failures).toEqual([]);
   });
 });
