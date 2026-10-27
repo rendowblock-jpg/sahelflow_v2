@@ -25,7 +25,7 @@ const text = new Map(files.map((f) => [f, readFileSync(f, "utf8")]));
 
 const defined = new Set<string>();
 for (const body of text.values()) {
-  for (const m of body.matchAll(/--color-([a-z0-9-]+)\s*:/g)) defined.add(m[1]);
+  for (const m of body.matchAll(/--color-([a-z0-9-]+)\s*:/g)) if (m[1]) defined.add(m[1]);
 }
 
 // text-NAME-foreground, bg-NAME-foreground, border-NAME-foreground ... with any variant prefix and an optional /opacity.
