@@ -6,6 +6,42 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.entityNumber": "Order {{number}}",
     "orders.workspace.bulkGovernedBlocked":
       "This selection includes orders that require an individual review before their status can change.",
+    "orders.workspace.bulk.cancelTitle":
+      "Cancel the selected orders?",
+    "orders.workspace.bulk.cancelBody":
+      "Selected: {{count}}. A cancelled order cannot be reopened. Stock already taken for confirmed orders goes back to your inventory.",
+    "orders.workspace.bulk.cancelConfirm":
+      "Cancel orders",
+    "orders.workspace.bulk.shipTitle":
+      "Mark the selected orders as shipped?",
+    "orders.workspace.bulk.shipBody":
+      "Selected: {{count}}. A shipped order can no longer be cancelled; it can only end as delivered, returned or refused.",
+    "orders.workspace.bulk.shipConfirm":
+      "Mark as shipped",
+    "orders.workspace.bulk.goBack":
+      "Go back",
+    "orders.workspace.bulk.failedTitle":
+      "Orders not changed: {{failed}} of {{total}}",
+    "orders.workspace.bulk.failedHint":
+      "They stay selected so you can retry or choose another action.",
+    "orders.workspace.bulk.reason.invalid_transition":
+      "Its status does not allow this change",
+    "orders.workspace.bulk.reason.not_found":
+      "It no longer exists",
+    "orders.workspace.bulk.reason.other":
+      "It could not be updated",
+    "orders.workspace.bulk.more":
+      "and {{count}} more",
+    "orders.workspace.bulk.unreadable":
+      "The result could not be read. Reload the list to see what changed.",
+    "orders.workspace.selectOrder":
+      "Select order {{number}}",
+    "orders.workspace.emptyStatus.title":
+      "Nothing in this status",
+    "orders.workspace.emptyStatus.description":
+      "Orders appear here when their status changes to this one.",
+    "orders.workspace.emptyStatus.action":
+      "Show all orders",
     "orders.workspace.confirmation.review": "Review",
     "orders.workspace.confirmation.title": "Confirmation review",
     "orders.workspace.confirmation.description":
@@ -149,6 +185,42 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.entityNumber": "Commande {{number}}",
     "orders.workspace.bulkGovernedBlocked":
       "Cette sélection contient des commandes qui exigent une vérification individuelle avant tout changement d’état.",
+    "orders.workspace.bulk.cancelTitle":
+      "Annuler les commandes sélectionnées ?",
+    "orders.workspace.bulk.cancelBody":
+      "Sélection : {{count}}. Une commande annulée ne peut pas être rouverte. Le stock déjà prélevé pour les commandes confirmées retourne dans votre inventaire.",
+    "orders.workspace.bulk.cancelConfirm":
+      "Annuler les commandes",
+    "orders.workspace.bulk.shipTitle":
+      "Marquer les commandes sélectionnées comme expédiées ?",
+    "orders.workspace.bulk.shipBody":
+      "Sélection : {{count}}. Une commande expédiée ne peut plus être annulée ; elle ne peut finir que livrée, retournée ou refusée.",
+    "orders.workspace.bulk.shipConfirm":
+      "Marquer comme expédiées",
+    "orders.workspace.bulk.goBack":
+      "Retour",
+    "orders.workspace.bulk.failedTitle":
+      "Commandes non modifiées : {{failed}} sur {{total}}",
+    "orders.workspace.bulk.failedHint":
+      "Elles restent sélectionnées pour que vous puissiez réessayer ou choisir une autre action.",
+    "orders.workspace.bulk.reason.invalid_transition":
+      "Son statut ne permet pas ce changement",
+    "orders.workspace.bulk.reason.not_found":
+      "Elle n’existe plus",
+    "orders.workspace.bulk.reason.other":
+      "Elle n’a pas pu être mise à jour",
+    "orders.workspace.bulk.more":
+      "et {{count}} autres",
+    "orders.workspace.bulk.unreadable":
+      "Le résultat n’a pas pu être lu. Rechargez la liste pour voir ce qui a changé.",
+    "orders.workspace.selectOrder":
+      "Sélectionner la commande {{number}}",
+    "orders.workspace.emptyStatus.title":
+      "Aucune commande dans ce statut",
+    "orders.workspace.emptyStatus.description":
+      "Les commandes apparaissent ici quand leur statut passe à celui-ci.",
+    "orders.workspace.emptyStatus.action":
+      "Afficher toutes les commandes",
     "orders.workspace.confirmation.review": "Vérifier",
     "orders.workspace.confirmation.title": "Vérification de confirmation",
     "orders.workspace.confirmation.description":
@@ -298,6 +370,42 @@ const translations: Record<Locale, Record<string, string>> = {
     "orders.workspace.entityNumber": "الطلبية {{number}}",
     "orders.workspace.bulkGovernedBlocked":
       "يتضمن هذا التحديد طلبيات تتطلب مراجعة فردية قبل تغيير حالتها.",
+    "orders.workspace.bulk.cancelTitle":
+      "إلغاء الطلبات المحددة؟",
+    "orders.workspace.bulk.cancelBody":
+      "المحدد: {{count}}. لا يمكن إعادة فتح الطلب الملغى. يعود إلى مخزونك ما سبق خصمه للطلبات المؤكدة.",
+    "orders.workspace.bulk.cancelConfirm":
+      "إلغاء الطلبات",
+    "orders.workspace.bulk.shipTitle":
+      "تحديد الطلبات المحددة كمشحونة؟",
+    "orders.workspace.bulk.shipBody":
+      "المحدد: {{count}}. لا يمكن إلغاء الطلب بعد شحنه؛ يمكن أن ينتهي فقط بالتسليم أو الإرجاع أو الرفض.",
+    "orders.workspace.bulk.shipConfirm":
+      "تحديد كمشحونة",
+    "orders.workspace.bulk.goBack":
+      "رجوع",
+    "orders.workspace.bulk.failedTitle":
+      "طلبات لم تتغير: {{failed}} من {{total}}",
+    "orders.workspace.bulk.failedHint":
+      "تبقى محددة لتتمكن من إعادة المحاولة أو اختيار إجراء آخر.",
+    "orders.workspace.bulk.reason.invalid_transition":
+      "حالة الطلب لا تسمح بهذا التغيير",
+    "orders.workspace.bulk.reason.not_found":
+      "الطلب لم يعد موجودًا",
+    "orders.workspace.bulk.reason.other":
+      "تعذّر تحديث الطلب",
+    "orders.workspace.bulk.more":
+      "و{{count}} أخرى",
+    "orders.workspace.bulk.unreadable":
+      "تعذّرت قراءة النتيجة. أعد تحميل القائمة لمعرفة ما تغيّر.",
+    "orders.workspace.selectOrder":
+      "تحديد الطلب {{number}}",
+    "orders.workspace.emptyStatus.title":
+      "لا توجد طلبات بهذه الحالة",
+    "orders.workspace.emptyStatus.description":
+      "تظهر الطلبات هنا عندما تتغير حالتها إلى هذه الحالة.",
+    "orders.workspace.emptyStatus.action":
+      "عرض كل الطلبات",
     "orders.workspace.confirmation.review": "مراجعة",
     "orders.workspace.confirmation.title": "مراجعة التأكيد",
     "orders.workspace.confirmation.description":

@@ -60,9 +60,18 @@ export interface DataTablePagination {
   sort?: string;
 }
 
+/**
+ * What a bulk action may do to the selection once it has run: keep only the rows that need another look (for example
+ * the ones a batch could not change), or empty it. Ids that are not on the current page are ignored.
+ */
+export interface BulkControls {
+  select: (ids: readonly string[]) => void;
+  clear: () => void;
+}
+
 export interface BulkAction {
   label: string;
-  onClick: (selectedIds: string[]) => void;
+  onClick: (selectedIds: string[], controls: BulkControls) => void;
   variant?: "default" | "destructive";
   icon?: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
@@ -77,6 +86,10 @@ declare module "@tanstack/react-table" {
     /** Long-text columns: wrap instead of the global whitespace-nowrap. */
     wrap?: boolean;
   }
+  interface TableMeta<TData> {
+    /** The accessible name of a row's selection checkbox (the table keeps no copy of its own for it). */
+    getRowLabel?: (row: TData) => string;
+  }
 }
 
 interface DataTableProps<TData> {
@@ -88,6 +101,13 @@ interface DataTableProps<TData> {
   bulkActions?: BulkAction[];
   emptyState?: React.ReactNode;
   getRowId?: (row: TData) => string;
+  /** Names a row's selection checkbox, e.g. "Select order ORD-0012". Without it the generic label is used. */
+  getRowLabel?: (row: TData) => string;
+  /**
+   * The rows are being reloaded: the TABLE dims, the bulk bar above it does not. A dimmed toolbar is still clickable
+   * and its text drops below 4.5:1 (axe measured 2.39:1 on the bar's buttons during a reload).
+   */
+  refreshing?: boolean;
   showDensityToggle?: boolean;
   skeletonRows?: number;
   className?: string;
@@ -114,6 +134,8 @@ export function DataTable<TData>({
   bulkActions,
   emptyState,
   getRowId = (row) => (row as { id?: string }).id ?? "",
+  getRowLabel,
+  refreshing = false,
   showDensityToggle = true,
   skeletonRows = 8,
   className,
@@ -142,6 +164,7 @@ export function DataTable<TData>({
     columns,
     state: { sorting, rowSelection },
     enableRowSelection: true,
+    meta: { getRowLabel },
     enableSorting: sortingEnabled,
     enableSortingRemoval: !pagination?.serverSort,
     onRowSelectionChange: setRowSelection,
@@ -172,6 +195,16 @@ export function DataTable<TData>({
         (key) => rowSelection[key] && visibleIds.has(key),
       ),
     [rowSelection, visibleIds],
+  );
+  const bulkControls = React.useMemo<BulkControls>(
+    () => ({
+      select: (ids) =>
+        setRowSelection(
+          Object.fromEntries(ids.filter((id) => visibleIds.has(id)).map((id) => [id, true])),
+        ),
+      clear: () => setRowSelection({}),
+    }),
+    [visibleIds],
   );
   const dens = DENSITY_CLASSES[density];
   const currentPage = pagination?.page ?? 1;
@@ -219,7 +252,7 @@ export function DataTable<TData>({
                 key={action.label}
                 size="sm"
                 variant={action.variant ?? "default"}
-                onClick={() => action.onClick(selectedIds)}
+                onClick={() => action.onClick(selectedIds, bulkControls)}
                 disabled={action.disabled}
               >
                 {action.icon ? (
@@ -239,7 +272,12 @@ export function DataTable<TData>({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-control border bg-background">
+      <div
+        className={cn(
+          "overflow-hidden rounded-control border bg-background transition-opacity duration-150",
+          refreshing && "opacity-60",
+        )}
+      >
         <div className="relative overflow-x-auto">
           <table className="w-full" aria-busy={isLoading}>
             <thead className="sticky top-0 z-10 border-b bg-muted/80 backdrop-blur-sm">
@@ -520,6 +558,21 @@ export function DataTable<TData>({
           </nav>
         ) : null}
       </div>
+      {/*
+        The bulk bar above appears and disappears, which a screen reader does not announce. This one region stays in
+        the page and says how many rows are selected. It is last, so it adds no gap to the spacing between blocks.
+      */}
+      {bulkActions ? (
+        <div
+          className="sr-only"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          data-testid="data-table-selection-status"
+        >
+          {selectedIds.length > 0 ? t("dataTable.selected", { count: selectedIds.length }) : ""}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -541,13 +594,13 @@ function SelectAllHeader<T>({ table }: { table: Table<T> }) {
   );
 }
 
-function SelectRowCell<T>({ row }: { row: Row<T> }) {
+function SelectRowCell<T>({ row, table }: { row: Row<T>; table: Table<T> }) {
   const { t } = useI18n();
   return (
     <Checkbox
       checked={row.getIsSelected()}
       onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
-      aria-label={t("dataTable.selectRow")}
+      aria-label={table.options.meta?.getRowLabel?.(row.original) || t("dataTable.selectRow")}
     />
   );
 }
@@ -556,7 +609,7 @@ export function selectColumn<T>(): ColumnDef<T, unknown> {
   return {
     id: "select",
     header: ({ table }) => <SelectAllHeader table={table} />,
-    cell: ({ row }) => <SelectRowCell row={row} />,
+    cell: ({ row, table }) => <SelectRowCell row={row} table={table} />,
     meta: { width: "w-10", align: "center" },
     enableSorting: false,
   };
