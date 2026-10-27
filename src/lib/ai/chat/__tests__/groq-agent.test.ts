@@ -336,4 +336,62 @@ describe("runGroqAgent", () => {
     expect(beside.text).toContain("Je cherche avec");
     expect(beside.text).toContain("Termine.");
   });
+
+  describe("Stop (an abort signal)", () => {
+    it("a turn that was already stopped calls nothing: no model request, no tool", async () => {
+      const search = vi.spyOn(getTool("search_orders")!, "execute").mockResolvedValue({ success: true, data: [] });
+      const controller = new AbortController();
+      controller.abort();
+      const result = await run("Combien de commandes en attente ?", { signal: controller.signal });
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(search).not.toHaveBeenCalled();
+      expect(result.stopReason).toBe("aborted");
+      expect(result.steps).toBe(0);
+      expect(result.toolCalls).toEqual([]);
+      expect(result.error).toBeUndefined();
+    });
+
+    it("Stop pressed while the model is answering: its tool calls are not run and no second request is made", async () => {
+      const search = vi.spyOn(getTool("search_orders")!, "execute").mockResolvedValue({ success: true, data: [] });
+      const controller = new AbortController();
+      fetchMock.mockImplementationOnce(async () => {
+        controller.abort(); // the seller pressed Stop while this request was in flight
+        return toolStep(call("c1", "search_orders", { status: "pending" }));
+      });
+      fetchMock.mockResolvedValueOnce(answer("never asked"));
+      const result = await run("Combien de commandes en attente ?", { signal: controller.signal });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(search).not.toHaveBeenCalled();
+      expect(result.stopReason).toBe("aborted");
+      expect(result.toolCalls).toEqual([]);
+      expect(result.actionProposals).toEqual([]);
+    });
+
+    it("Stop pressed between two tool calls of one step: the second tool is not run and nothing more is asked", async () => {
+      const controller = new AbortController();
+      const search = vi.spyOn(getTool("search_orders")!, "execute").mockImplementation(async () => {
+        controller.abort();
+        return { success: true, data: [] };
+      });
+      const stats = vi.spyOn(getTool("get_stats")!, "execute").mockResolvedValue({ success: true, data: {} });
+      fetchMock.mockResolvedValueOnce(
+        toolStep(call("c1", "search_orders", { status: "pending" }), call("c2", "get_stats", {})),
+      );
+      fetchMock.mockResolvedValueOnce(answer("never asked"));
+      const result = await run("Combien de commandes en attente ?", { signal: controller.signal });
+      expect(search).toHaveBeenCalledTimes(1);
+      expect(stats).not.toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(result.stopReason).toBe("aborted");
+      expect(result.toolCalls.map((c) => c.name)).toEqual(["search_orders"]);
+    });
+
+    it("a signal that is never fired changes nothing", async () => {
+      fetchMock.mockResolvedValueOnce(answer("Bonjour !"));
+      const result = await run("Bonjour", { signal: new AbortController().signal });
+      expect(result.stopReason).toBe("answered");
+      expect(result.text).toBe("Bonjour !");
+      expect(result.steps).toBe(1);
+    });
+  });
 });

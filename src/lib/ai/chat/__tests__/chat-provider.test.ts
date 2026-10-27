@@ -294,6 +294,7 @@ describe("runChatTurn", () => {
     const out = await runChatTurn(turn(), fakes({ groq }));
     expect(groq).toHaveBeenCalledTimes(1);
     expect(groq).toHaveBeenCalledWith({ apiKey: KEY, history: HISTORY, userMessage: "Combien de commandes ?", locale: "fr", context: CONTEXT, shopContextNote: "note" });
+    expect((groq.mock.calls[0]?.[0] as { signal?: unknown }).signal).toBeUndefined(); // the non-stream form passes no Stop signal
     expect(out).toEqual({ response: "Groq dit bonjour", toolCalls: [], provider: "groq" });
   });
 
@@ -402,7 +403,7 @@ describe("runChatTurnStream", () => {
     const groq = resolves(groqResult({ text: "fin", toolCalls: [CALL_A] }));
     const out = await drain(runChatTurnStream(turn(), fakes({ groq })));
     expect(groq).toHaveBeenCalledTimes(1);
-    expect(groq).toHaveBeenCalledWith({ apiKey: KEY, history: HISTORY, userMessage: "Combien de commandes ?", locale: "fr", context: CONTEXT, shopContextNote: "note" });
+    expect(groq).toHaveBeenCalledWith({ apiKey: KEY, history: HISTORY, userMessage: "Combien de commandes ?", locale: "fr", context: CONTEXT, shopContextNote: "note", signal: SIGNAL });
     expect(out.events).toStrictEqual(groqToStreamEvents(groqResult({ text: "fin", toolCalls: [CALL_A] })));
     expect(out.provider).toBe("groq");
   });

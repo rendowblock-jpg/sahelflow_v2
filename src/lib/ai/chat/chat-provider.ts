@@ -182,8 +182,10 @@ function failedCleanly(result: { toolCalls: unknown[]; actionProposal?: unknown 
   return result.toolCalls.length === 0 && !result.actionProposal;
 }
 
-function groqInput(input: ChatTurnInput) {
+// `signal` is passed by the stream form only: it is the seller's Stop.
+function groqInput(input: ChatTurnInput, signal?: AbortSignal) {
   return {
+    ...(signal ? { signal } : {}),
     apiKey: input.groqApiKey ?? "",
     history: input.history,
     userMessage: input.message,
@@ -275,7 +277,7 @@ export async function* runChatTurnStream(
       }
       if (!dropped) return { provider: "gemini" };
     } else {
-      const result = await runGroq(groqInput(input));
+      const result = await runGroq(groqInput(input, input.signal));
       const events = groqToStreamEvents(result);
       if (result.stopReason === "error" && hasNext && failedCleanly(result)) {
         held = events.at(-1) ?? null;

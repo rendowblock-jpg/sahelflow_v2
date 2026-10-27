@@ -40,7 +40,7 @@ const MAX_OUTPUT_TOKENS = 1024;
 // Low on purpose: tool arguments should follow the question, not vary.
 const TEMPERATURE = 0.2;
 
-export type GroqAgentStopReason = "answered" | "proposal" | "step_cap" | "token_budget" | "empty" | "error";
+export type GroqAgentStopReason = "answered" | "proposal" | "step_cap" | "token_budget" | "empty" | "error" | "aborted";
 
 export interface GroqAgentError {
   code: string;
@@ -84,6 +84,11 @@ export interface GroqAgentDeps {
 }
 
 export interface GroqAgentInput {
+  /**
+   * The seller pressed Stop. Checked before every model request and before every tool call, so nothing new
+   * starts after Stop. A request already in flight finishes by itself (it has its own timeout).
+   */
+  signal?: AbortSignal | undefined;
   apiKey: string;
   history: AgentMessage[];
   userMessage: string;
@@ -116,7 +121,7 @@ function joinText(buffered: string, text: string): string {
 }
 
 export async function runGroqAgent(input: GroqAgentInput): Promise<GroqAgentResult> {
-  const { apiKey, history, userMessage, context, shopContextNote } = input;
+  const { apiKey, history, userMessage, context, shopContextNote, signal } = input;
   const locale: AiChatLocale = input.locale ?? "fr";
   const deps = input.deps ?? {};
   const request = deps.request ?? requestGroq;
@@ -181,6 +186,7 @@ export async function runGroqAgent(input: GroqAgentInput): Promise<GroqAgentResu
   ];
 
   for (let step = 1; step <= GROQ_MAX_STEPS; step += 1) {
+    if (signal?.aborted) return finish("aborted", buffered);
     const body = buildChatCompletionsBody({
       messages,
       tools: route.tools,
@@ -235,6 +241,8 @@ export async function runGroqAgent(input: GroqAgentInput): Promise<GroqAgentResu
     messages.push({ role: "assistant", text, toolCalls: reply.toolCalls });
 
     for (const call of reply.toolCalls) {
+      // Stop: run no further tool, even one the model already asked for.
+      if (signal?.aborted) return finish("aborted", buffered);
       let result: unknown;
       if (!offered.has(call.name)) {
         // Not in THIS request's tool list: it never reaches `execute`, even when the registry knows the name.
