@@ -2,7 +2,7 @@
 
 > **Status:** Authoritative register of approved Founder product and execution decisions. FD-001–FD-033 were consolidated from earlier addenda on 2026-07-29; later decisions are appended in numeric order as dated entries. FD-034–FD-044, FD-046 and FD-047 are version-bound release authority recorded in the protected release requests, not entries here (the table below FD-033 lists them). Entries that only authorized a signed release are stubs: the decision (date, quote, scope) is kept, the package list lives in the release request, the GitHub release and `CHANGELOG.md`
 > **Consolidated:** 2026-07-29
-> **Last amended:** 2026-10-23 (FD-081 adopted; its publication record added. No decision changed)
+> **Last amended:** 2026-10-24 (FD-082 adopted under delegation. No earlier decision changed)
 > **Supersedes:** scattered Excellence Reset addenda, conflicting provisional product policies and obsolete execution overlays
 
 This register records approved product and execution decisions. Entries FD-001–FD-029 are consolidated policy statements; FD-030 onward are dated Founder directives. Detailed mechanisms remain subject to architecture, research, security review, provider certification and evidence gates, but engineering may not contradict these policies without a new numbered Founder decision. A later entry supersedes an earlier one only for the choice it names.
@@ -19,6 +19,7 @@ Entries are ordered by number, not by date, and the newest numbers are at the en
 
 ## Index (newest first)
 
+- FD-082 — Small product choices made under the Founder's delegation (2026-10-24, ADOPTED under delegation)
 - FD-081 — One signed successor Internal.46 under the FD-066 customer launch (2026-10-23, ADOPTED)
 - FD-080 — No repository licence or notice file (2026-10-21, ADOPTED)
 - FD-079 — Per-machine Windows install (2026-10-18, ADOPTED under delegation)
@@ -1331,3 +1332,17 @@ merged:
   no ledger row and does not turn source or CI evidence into installed or
   live-provider evidence. #306 logout stays LAST.
 - **Publication record (2026-10-23):** published 2026-10-23T21:11:39Z by signed run `40019008290` (second attempt: the first failed at the installed reopen-after-key-rotation check, which had failed once before and is not explained; it was re-run once) from the `main` tip `db68bfe2…` (release PR #601); tag `sahelflow-v1.0.0-internal.46-db68bfe2420c2e3079fbfd433de740b966336ebc`. Digests are in `CHANGELOG.md`. No decision changed.
+
+## FD-082 — Small product choices made under the Founder's delegation (2026-10-24, ADOPTED under delegation)
+
+Decided by the agent under the Founder's order of 2026-10-20 to merge what is ready and finish the open work (the Founder may reverse any item with a new numbered decision). Each is small and reversible:
+
+- A WhatsApp order's delivery cost is an editable field, prefilled with 600 DZD; it is not read from the shop's shipping rules.
+- In the seller app, Arabic numbers group thousands with the same narrow no-break space the French locale prints. Storefront and website are unchanged.
+- A WhatsApp message with no provider time takes the time it first arrived.
+- Connecting a commerce platform stores only the secret fields that platform declares.
+- The daily report's Test send has its own marker and never suppresses the scheduled report.
+- "Today", "this month" and period edges are cut at Algeria time (UTC+1, no daylight saving), whatever the PC's time zone. There is no time-zone setting.
+- The risk settings that only label orders (auto-confirm, auto-hold, auto-blacklist rate) and the unused behaviour weight say so on screen. Wiring them to act on orders needs a new decision.
+- A customer create, update or delete and its audit row commit together; if the audit row cannot be written, the change is rolled back.
+- The WhatsApp helper process restarts after a crash for as long as the app runs: after 5, 15 and 60 seconds, then every 5 minutes.
