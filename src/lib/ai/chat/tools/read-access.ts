@@ -212,3 +212,14 @@ export function withholdPaths(
   }
   return result;
 }
+
+/**
+ * Every dot path a field gate can remove from a tool result. A withheld notice
+ * may carry only these names (see withheld-notice.ts), so it can never be used
+ * to smuggle free text to the remote model.
+ */
+export const CHAT_WITHHOLDABLE_PATHS: ReadonlySet<string> = new Set(
+  Object.values(CHAT_READ_ACCESS).flatMap((rule) =>
+    (rule.fieldGates ?? []).flatMap((gate) => [...gate.paths]),
+  ),
+);
