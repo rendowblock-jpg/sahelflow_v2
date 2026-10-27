@@ -277,7 +277,7 @@ const fn tokens(theme: Theme, preset: Preset) -> Tokens {
             bottom: 0xFAFAF7,
             ink: 0x0D0E08,
             muted: 0x505146,
-            primary: 0x008528,
+            primary: 0x008124,
             border: (0xDDDFD6, 100),
         },
         (Theme::Dark, Preset::Sahel) => Tokens {
@@ -309,7 +309,7 @@ const fn tokens(theme: Theme, preset: Preset) -> Tokens {
             bottom: 0xF4FBFB,
             ink: 0x0D0E08,
             muted: 0x505146,
-            primary: 0x007E8F,
+            primary: 0x007A8B,
             border: (0xCFDEE0, 100),
         },
         (Theme::Dark, Preset::Oasis) => Tokens {

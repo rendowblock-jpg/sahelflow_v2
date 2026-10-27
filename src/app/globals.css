@@ -200,15 +200,19 @@
      never reduces contrast against white. */
   --primary-hover: color-mix(in oklch, var(--primary) 88%, black);
 
-  --destructive: oklch(0.577 0.245 27.325);
+  /* 27 Oct 2026: destructive 0.577 -> 0.553, success 0.52 -> 0.51, warning 0.55 -> 0.543 (hue and chroma unchanged).
+     A 4% primary tint, the selected table row, darkens its surface enough to take these three texts under 4.5:1
+     (destructive 4.26, success 4.42, warning 4.45, worst preset); at these values each stays at 4.55:1 or better
+     there. Real Chromium had measured the risk score in a selected row at 4.48:1. */
+  --destructive: oklch(0.553 0.245 27.325);
   /* Feedback semantics are calibrated for their RENDERED role — colored text
      on canvas/card tints (bg-success-soft chips, text-success, ...) — at WCAG AA
      (>= 4.5:1). Solid -foreground pairs are gated too where they pass; the
      light warning solid pair never renders (warning surfaces carry dark text
      on tinted fills only) — see contrast-contract.test.ts. */
-  --success: oklch(0.52 0.2 145);
+  --success: oklch(0.51 0.2 145);
   --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.55 0.16 72);
+  --warning: oklch(0.543 0.16 72);
   --warning-foreground: oklch(0.18 0 0);  /* deep amber stays light enough to need dark text */
   --info: oklch(0.52 0.18 240);
   --info-foreground: oklch(0.985 0 0);  /* Was 150 (emerald) — moved to blue for distinction */
@@ -993,4 +997,17 @@ html[dir="rtl"] body {
 /* Disable transition on theme toggle (prevents flash) */
 .theme-transition * {
   transition: none !important;
+}
+
+/* Rich toasts (sonner richColors) in LIGHT mode. The library's own text colours miss WCAG AA on their tinted
+   backgrounds: success 4.26, info 4.35, warning 3.08, error 4.35 (measured in real Chromium, 27 Oct 2026). These four
+   keep each colour's hue and saturation and only lower the lightness until the pair clears 4.6:1. Dark mode needs no
+   change (6.5:1 and above). The "html " prefix gives the rule more weight than sonner's own selector, because sonner
+   adds its stylesheet when it first renders, which can be after this file. Held by
+   components/ui/__tests__/toast-contrast-contract.test.ts. */
+html [data-sonner-toaster][data-sonner-theme='light'] {
+  --success-text: hsl(140, 100%, 25%);
+  --info-text: hsl(210, 92%, 43%);
+  --warning-text: hsl(31, 92%, 35%);
+  --error-text: hsl(360, 100%, 43%);
 }
