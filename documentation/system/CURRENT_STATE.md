@@ -50,7 +50,7 @@ Unverified integrations stay hidden, disabled or explicitly conditional. A provi
 ## 4. Provider and AI boundaries
 
 - **WhatsApp** is implemented through an unofficial WhatsApp Web library. Passing FRC-1 proves the named installed journey; it cannot warrant that Meta will never change or block the protocol. Windows packaging never uses plaintext multi-file auth (`../../sidecars/whatsapp/README.md`).
-- **Gemini** is seller-owned-key and privacy-safe: free-tier testing uses synthetic or redacted inputs, and consent gates what leaves the device. Core operation and manual fallbacks stay independent of AI. Order creation stays review-first (FD-064). The local MCP agent surface (FD-063) is proposal-gated; no installed observation of it is recorded.
+- **Gemini** is seller-owned-key and privacy-safe: free-tier testing uses synthetic or redacted inputs, and consent gates what leaves the device. Core operation and manual fallbacks stay independent of AI. Order creation stays review-first (FD-064). The local MCP agent surface (FD-063) is proposal-gated; no installed observation of it is recorded. A free Groq key and a ChatGPT-plan sign-in are readers beside Gemini: source and tests only, with no installed observation and no ChatGPT-account run recorded.
 - **Couriers and commerce** stay conditional until each action has current provider evidence. `../research/CODFLOW_EXTRACTION.md` supplies upstream contract research, not certification.
 
 ## 5. Current non-claims
