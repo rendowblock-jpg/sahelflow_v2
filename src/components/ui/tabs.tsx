@@ -33,9 +33,27 @@ const tabsListVariants = cva(
         default: "bg-muted",
         line: "gap-1 bg-transparent",
       },
+      /**
+       * The tabs may wrap onto several lines (a phone, a long Arabic label). The base class
+       * fixes the height at 36 px under a group-data modifier, and a page's own `h-auto`
+       * does NOT remove it: tailwind-merge only drops a class with the same modifiers, and
+       * the group-data selector is the more specific one. So the list stayed 36 px while its
+       * tabs ran past it onto the search box below (360 px: /orders 83 px, /risk 29 px,
+       * /deliveries 25 px). `wrap` swaps the height under the SAME modifier, so the list
+       * grows with its lines. A page asks for it with the prop, never with classes.
+       *
+       * Two things keep the one-line look exactly as it was: `min-h-9` is the old floor,
+       * and the tabs keep their old height (see TabsTrigger). Without them the tabs take
+       * the height of their content, and Arabic's taller line box makes the list 39 px.
+       */
+      wrap: {
+        true: "min-h-9 flex-wrap gap-y-0.5 group-data-[orientation=horizontal]/tabs:h-auto",
+        false: "",
+      },
     },
     defaultVariants: {
       variant: "default",
+      wrap: false,
     },
   }
 )
@@ -43,6 +61,7 @@ const tabsListVariants = cva(
 function TabsList({
   className,
   variant = "default",
+  wrap = false,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> &
   VariantProps<typeof tabsListVariants>) {
@@ -50,7 +69,8 @@ function TabsList({
     <TabsPrimitive.List
       data-slot="tabs-list"
       data-variant={variant}
-      className={cn(tabsListVariants({ variant }), className)}
+      data-wrap={wrap ? "true" : undefined}
+      className={cn(tabsListVariants({ variant, wrap }), className)}
       {...props}
     />
   )
@@ -74,6 +94,9 @@ function TabsTrigger({
       data-slot="tabs-trigger"
       className={cn(
         "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-control border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-foreground/60 transition-colors group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 group-data-[variant=default]/tabs-list:data-[state=active]:shadow-sm group-data-[variant=line]/tabs-list:data-[state=active]:shadow-none dark:text-muted-foreground dark:hover:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        // A wrapping list has no fixed height, so 100% above would turn into the content height.
+        // 2.25rem (the old list) minus its 6 px padding and 1 px = the 29 px a tab always had.
+        "group-data-[wrap=true]/tabs-list:h-[calc(2.25rem-7px)]",
         "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-[state=active]:bg-transparent dark:group-data-[variant=line]/tabs-list:data-[state=active]:border-transparent dark:group-data-[variant=line]/tabs-list:data-[state=active]:bg-transparent",
         "data-[state=active]:bg-background data-[state=active]:text-foreground dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 dark:data-[state=active]:text-foreground",
         "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-end-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-[state=active]:after:opacity-100",

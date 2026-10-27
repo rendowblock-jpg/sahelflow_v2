@@ -192,7 +192,7 @@ export default async function RiskPage({
 
       <Tabs defaultValue={activeTab} className="w-full space-y-5">
         <div data-risk-workspace-toolbar="true" className="flex flex-wrap items-center gap-3 border-b border-border/70 pb-4">
-          <TabsList className="h-auto w-full flex-wrap justify-start gap-1 lg:w-auto">
+          <TabsList wrap className="w-full justify-start gap-1 lg:w-auto">
             <TabsTrigger value="overview" asChild>
               <Link href={`/risk?days=${days}&tab=overview`}>{t("risk.overview")}</Link>
             </TabsTrigger>

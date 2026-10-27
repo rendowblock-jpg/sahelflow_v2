@@ -141,7 +141,7 @@ export default async function DeliveriesPage({
       </div>
 
       <Tabs defaultValue={status}>
-        <TabsList className="h-auto flex-wrap">
+        <TabsList wrap>
           {filters.map((filter) => (
             // The tabs are links to a re-rendered page, so no panel with the
             // generated id exists; see TabsTrigger for why this is a prop.
