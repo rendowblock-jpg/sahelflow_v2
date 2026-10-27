@@ -293,16 +293,45 @@ function primaryHoverMix(primary: Oklch): Oklch {
   return { l: primary.l * 0.88, c: primary.c * 0.88, h: primary.h };
 }
 
+/**
+ * A text colour on a surface that is `tint` painted at `alpha` over `base`: what a browser renders for
+ * `background-color: color-mix(in oklch, <tint> <alpha>%, transparent)` on top of an opaque parent. Composited in
+ * sRGB 8-bit like a browser, and (as in contrast()) the worse of the naive and the gamut-mapped conversions.
+ */
+function contrastOnTint(text: Oklch, tint: Oklch, alpha: number, base: Oklch): number {
+  const ratioWith = (toChannels: (color: Oklch) => [number, number, number]): number => {
+    const tinted = toChannels(tint);
+    const parent = toChannels(base);
+    const surface = tinted.map((channel, index) =>
+      Math.round(channel * alpha + (parent[index] ?? 0) * (1 - alpha)),
+    );
+    return ratioBetweenLuminances(relativeLuminance(toChannels(text)), relativeLuminance(surface));
+  };
+  return Math.min(ratioWith(naiveSrgbChannels), ratioWith(gamutMappedSrgbChannels));
+}
+
+/** The authored strength of `--color-primary-subtle` (the selected-row tint), read from globals.css. */
+function primarySubtleAlpha(): number {
+  for (const block of globalsBlocks) {
+    const value = block.declarations.get("--color-primary-subtle");
+    if (value === undefined) continue;
+    const match = value.match(/var\(--primary\)\s+(\d+(?:\.\d+)?)%/);
+    if (!match?.[1]) throw new Error(`--color-primary-subtle is not a primary color-mix: ${value}`);
+    return Number(match[1]) / 100;
+  }
+  throw new Error("--color-primary-subtle is not defined in globals.css.");
+}
+
 describe("design-token contrast contract (WCAG AA)", () => {
   it("parses the live token authority and pins the R5-b calibrated primaries", () => {
     // Sync-check: the contract reads the CSS directly, and the recalibrated
     // values are pinned so any future primary change fails here until the AA
     // math is consciously re-verified (hue identity + ratio tests below).
     expect(resolveToken(lightCascade("sahel"), "--primary")).toBe(
-      "oklch(0.528 0.18 150)",
+      "oklch(0.515 0.18 150)",
     );
     expect(resolveToken(lightCascade("oasis"), "--primary")).toBe(
-      "oklch(0.525 0.135 205)",
+      "oklch(0.511 0.135 205)",
     );
     expect(resolveToken(lightCascade("atlas"), "--primary")).toBe(
       "oklch(0.54 0.2 286)",
@@ -484,10 +513,10 @@ describe("design-token contrast contract (WCAG AA)", () => {
     // consumers: operational-state, notification-taxonomy, status badges,
     // attention-center, command palette). Calibrated in the Wave 6 preflight.
     expect(resolveToken([globalsLightRoot], "--success")).toBe(
-      "oklch(0.52 0.2 145)",
+      "oklch(0.51 0.2 145)",
     );
     expect(resolveToken([globalsLightRoot], "--warning")).toBe(
-      "oklch(0.55 0.16 72)",
+      "oklch(0.543 0.16 72)",
     );
     expect(resolveToken([globalsLightRoot], "--info")).toBe(
       "oklch(0.52 0.18 240)",
@@ -619,5 +648,38 @@ describe("design-token contrast contract (WCAG AA)", () => {
         "hover:bg-primary/90",
       );
     }
+  });
+
+  it("keeps text readable on a selected table row (the primary tint over the card) in every preset and mode", () => {
+    // data-table.tsx paints a selected row with bg-primary-subtle. The order number in it is a primary-coloured link,
+    // so the link has to pass on the TINTED surface, not only on the plain card (the plain-card pairs are asserted
+    // above). Measured in real Chromium on 27 Oct 2026, before the sahel and oasis primaries were lowered by 0.013: #008528 on #f0f5ef = 4.39:1.
+    const alpha = primarySubtleAlpha();
+    const failures: string[] = [];
+    const rows: string[] = [];
+    const check = (label: string, ratio: number) => {
+      rows.push(`${label} ${ratio.toFixed(2)}`);
+      if (ratio < AA_NORMAL_TEXT) failures.push(`${label}: ${ratio.toFixed(2)}:1`);
+    };
+    for (const preset of PRESETS) {
+      for (const [mode, cascade] of [
+        ["light", lightCascade(preset)],
+        ["dark", darkCascade(preset)],
+      ] as const) {
+        const primary = colorToken(cascade, "--primary");
+        for (const surfaceToken of ["--card", "--background"] as const) {
+          const base = colorToken(cascade, surfaceToken);
+          check(`${preset} ${mode}: --primary link on selected row over ${surfaceToken}`, contrastOnTint(primary, primary, alpha, base));
+          // Status text a table cell can hold (risk score, stock level, payment state): text-success / -warning / -info / -destructive.
+          for (const status of ["--success", "--warning", "--info", "--destructive"] as const) {
+            check(`${preset} ${mode}: ${status} text on selected row over ${surfaceToken}`, contrastOnTint(colorToken([mode === "light" ? globalsLightRoot : globalsDark], status), primary, alpha, base));
+          }
+          check(`${preset} ${mode}: --foreground on selected row over ${surfaceToken}`, contrastOnTint(colorToken(cascade, "--foreground"), primary, alpha, base));
+          check(`${preset} ${mode}: --muted-foreground on selected row over ${surfaceToken}`, contrastOnTint(colorToken(cascade, "--muted-foreground"), primary, alpha, base));
+        }
+      }
+    }
+    if (process.env.SF_CONTRAST_TABLE) console.log(`alpha ${alpha}\n${rows.join("\n")}`);
+    expect(failures).toEqual([]);
   });
 });
