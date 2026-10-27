@@ -28,8 +28,9 @@ export const GET = withErrorHandler(async () => {
     provider: "gemini",
     consentAccepted,
     keyConfigured,
-    // `ready` means the chat assistant, which still speaks only Gemini: it needs the Gemini key.
-    ready: consentAccepted && keyConfigured,
+    // `ready` means the chat assistant: it runs on a Gemini key or a free Groq key.
+    // `keyConfigured` still means only "the Gemini key exists".
+    ready: consentAccepted && (keyConfigured || groqConfigured),
     // Order reading works with either key.
     extractionReady: consentAccepted && (keyConfigured || groqConfigured),
     providers: { groq: { configured: groqConfigured }, gemini: { configured: keyConfigured } },

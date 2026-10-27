@@ -39,15 +39,22 @@ describe("GET /api/ai/status", () => {
     }
   });
 
-  it("a Groq key alone reads orders but does NOT make the chat assistant ready (it still needs Gemini)", async () => {
+  it("a Groq key alone makes the chat assistant ready (chat runs on Groq), and keyConfigured still means the Gemini key", async () => {
     setup({ consent: true, gemini: false, groq: true });
-    expect(await status()).toMatchObject({ keyConfigured: false, ready: false, extractionReady: true, order: "groq-first", providers: { groq: { configured: true }, gemini: { configured: false } } });
+    expect(await status()).toMatchObject({ keyConfigured: false, ready: true, extractionReady: true, order: "groq-first", providers: { groq: { configured: true }, gemini: { configured: false } } });
+  });
+
+  it("a Gemini key alone is ready exactly as before", async () => {
+    setup({ consent: true, gemini: true, groq: false });
+    expect(await status()).toMatchObject({ keyConfigured: true, ready: true, extractionReady: true });
   });
 
   it("no consent means nothing is ready, and no key means no extraction", async () => {
     setup({ consent: false, gemini: true, groq: true });
     expect(await status()).toMatchObject({ ready: false, extractionReady: false });
     setup({ consent: true, gemini: false, groq: false });
+    expect(await status()).toMatchObject({ ready: false, extractionReady: false });
+    setup({ consent: false, gemini: false, groq: true });
     expect(await status()).toMatchObject({ ready: false, extractionReady: false });
   });
 });

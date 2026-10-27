@@ -154,7 +154,7 @@ type ToolExecutionResult = {
 };
 type Content = { role: string; parts: Array<Record<string, unknown>> };
 
-function historySafeToolResult(toolName: string, value: unknown): unknown {
+export function historySafeToolResult(toolName: string, value: unknown): unknown {
   // Built only from constants (fixed sentence, vocabulary names, a coded
   // reason) and validated exactly, so it carries no record content and cannot
   // be forged by a tool body. It must reach the model as written: the generic
@@ -270,7 +270,7 @@ function userTurn(userMessage: string, images: AgentUserImage[] = []): Content {
   };
 }
 
-async function execute(
+export async function execute(
   call: GeminiFunctionCall,
   context: ToolContext,
   locale: AiChatLocale | undefined,
@@ -299,7 +299,7 @@ async function execute(
   return { result };
 }
 
-function proposalResponse(
+export function proposalResponse(
   text: string,
   proposal: AiActionProposalToolResult,
   locale: AiChatLocale | undefined,

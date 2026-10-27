@@ -44,7 +44,19 @@ vi.mock("@/lib/license/license-server", () => ({
 
 vi.mock("@/lib/settings", () => ({
   getBool: vi.fn(async () => true),
+  getSetting: vi.fn(async () => null),
   SETTING_KEYS: { geminiConsentAccepted: "gemini_consent_accepted" },
+}));
+
+// The route now reads key presence and the ledger before the turn (Gemini only here).
+vi.mock("@/lib/secrets", () => ({
+  hasSecret: vi.fn(async () => true),
+  getSecret: vi.fn(async () => null),
+}));
+
+vi.mock("@/lib/ai/providers/quota-ledger-store", () => ({
+  restoreQuotaLedger: vi.fn(async () => undefined),
+  saveQuotaLedger: vi.fn(async () => undefined),
 }));
 
 vi.mock("@/lib/db", () => {
