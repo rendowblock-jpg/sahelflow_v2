@@ -166,7 +166,7 @@ export default async function StorefrontsPage({
       ) : null}
 
       <Tabs defaultValue={tab} className="gap-5">
-        <TabsList variant="line" className="w-full justify-start gap-1 overflow-x-auto border-b [&>[data-slot=tabs-trigger]]:flex-none [&>[data-slot=tabs-trigger]]:px-3">
+        <TabsList variant="line" scroll className="w-full justify-start gap-1 border-b [&>[data-slot=tabs-trigger]]:px-3">
           <TabsTrigger value="stores">
             {t("storefronts.tabs.stores")}
             <span className="ms-1 tabular-nums text-muted-foreground">{configs.length}</span>

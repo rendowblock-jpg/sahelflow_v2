@@ -50,10 +50,29 @@ const tabsListVariants = cva(
         true: "min-h-9 flex-wrap gap-y-0.5 group-data-[orientation=horizontal]/tabs:h-auto",
         false: "",
       },
+      /**
+       * The tabs may not fit and are reached by swiping (a phone, a long French or Arabic label).
+       * Two things went wrong without this, both measured in Chromium:
+       *  - /automations: the line list let its tabs run out of the page, where the page clips them
+       *    (the Activity tab 67 percent visible in English at 360 px, 5 percent in French at 320).
+       *  - /storefronts: the list scrolled, but its own scroll box clipped the active-tab underline
+       *    (drawn 5 px under the tab). A scroll box clips at its padding edge, 1 px above the list
+       *    border, so with a mouse 1 of the 2 pixel rows was lost; with a finger a tab is a button and
+       *    globals.css makes buttons at least 44 px tall on a coarse pointer, so the tab stuck out of
+       *    the 36 px list and the whole underline was outside the box.
+       * `scroll` swaps the fixed height for auto under the SAME modifier (the list grows to its tabs,
+       * 36 px stays the floor), clips only sideways, and leaves 4 px under the tabs for the underline.
+       * A page asks with the prop, never with classes.
+       */
+      scroll: {
+        true: "min-h-9 overflow-x-auto overflow-y-hidden pb-1 group-data-[orientation=horizontal]/tabs:h-auto",
+        false: "",
+      },
     },
     defaultVariants: {
       variant: "default",
       wrap: false,
+      scroll: false,
     },
   }
 )
@@ -62,6 +81,7 @@ function TabsList({
   className,
   variant = "default",
   wrap = false,
+  scroll = false,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> &
   VariantProps<typeof tabsListVariants>) {
@@ -70,7 +90,8 @@ function TabsList({
       data-slot="tabs-list"
       data-variant={variant}
       data-wrap={wrap ? "true" : undefined}
-      className={cn(tabsListVariants({ variant, wrap }), className)}
+      data-scroll={scroll ? "true" : undefined}
+      className={cn(tabsListVariants({ variant, wrap, scroll }), className)}
       {...props}
     />
   )
@@ -97,6 +118,10 @@ function TabsTrigger({
         // A wrapping list has no fixed height, so 100% above would turn into the content height.
         // 2.25rem (the old list) minus its 6 px padding and 1 px = the 29 px a tab always had.
         "group-data-[wrap=true]/tabs-list:h-[calc(2.25rem-7px)]",
+        // A scrolling list has no fixed height either. 28 px = what a tab had in the fixed line list; a finger
+        // still gets 44 px because globals.css sets a min-height on buttons, and the list grows to hold it.
+        // The tabs must not shrink: a scroll box only helps when the tabs keep their width.
+        "group-data-[scroll=true]/tabs-list:h-7 group-data-[scroll=true]/tabs-list:flex-none",
         "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-[state=active]:bg-transparent dark:group-data-[variant=line]/tabs-list:data-[state=active]:border-transparent dark:group-data-[variant=line]/tabs-list:data-[state=active]:bg-transparent",
         "data-[state=active]:bg-background data-[state=active]:text-foreground dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 dark:data-[state=active]:text-foreground",
         "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-end-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-[state=active]:after:opacity-100",

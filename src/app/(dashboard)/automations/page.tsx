@@ -245,7 +245,7 @@ export default async function AutomationsPage({
       </div>
 
       <Tabs value={activeTab} className="w-full space-y-5">
-        <TabsList variant="line" className="w-full justify-start border-b [&>[data-slot=tabs-trigger]]:flex-none">
+        <TabsList variant="line" scroll className="w-full justify-start border-b">
           <TabsTrigger value="my" asChild>
             <Link href="/automations?tab=my">
               <Bot className="me-1.5 size-4" />
