@@ -1,0 +1,186 @@
+{
+  "notice": "TEST-ONLY keys and messages for the web protocol port. Frozen: never regenerate to make a test pass.",
+  "formatVersion": 1,
+  "desktop": {
+    "signingPublicKey": "0ZKkPyC3vqhTIStOATkPQNDXXAzxvSu1dr0atgBQLKM=",
+    "signingPrivateJwk": {
+      "crv": "Ed25519",
+      "d": "qa2QoiBacKt_TN6UZbHLXHi93VrOQtTyMQmiNLAfyAg",
+      "x": "0ZKkPyC3vqhTIStOATkPQNDXXAzxvSu1dr0atgBQLKM",
+      "kty": "OKP"
+    },
+    "encryptionPublicKeyJwk": "{\"kty\":\"RSA\",\"n\":\"uRVmijiHptDjyZ5f-A3yI4MvI_PpNwmfOBdDDaiu23pRV7Lzmq2dBph5w8eaha6nQp10Orv5MoZsOeXT_Mr--pnB6ti8cfJ6jPbcuXfT4YU5458wa_cHYzGcA93Rk-ODLyqDL5WleTW3KobSnfbxRb1BTGaMfWmGptPmGS2fK85b-7A45pMIRTUiZ_glUOeNNavLaeXvYyCe3owuwQw6hsNH7QWv66uypY5dPjN8hZyzyQL8PAftvTvUGCBYPwaE7HrN_Vyf90vpxpFZCnvoXQS4S8djJQJZHHLUbTPWWeF14m-H2sBrCZYczqKn9XtbLwuw1IMgEzxjXdy2TEr4uCu17Hawo-xZO-kfRXtkPsiExQciVjXJ8Nc7Mtytpkxyr25pAFmVd2bbgt_onKa0cCUi-ebYjNsrzidWSb3yMGXjApIYmuCQ68zo_uqfmH7dyxm4-3lW9hK4E6cQNWZAEl373bL_wjJG8x6u58ce5XnFMtAb9QdIfJdGsL3XixJ1\",\"e\":\"AQAB\"}",
+    "encryptionPrivateJwk": {
+      "kty": "RSA",
+      "n": "uRVmijiHptDjyZ5f-A3yI4MvI_PpNwmfOBdDDaiu23pRV7Lzmq2dBph5w8eaha6nQp10Orv5MoZsOeXT_Mr--pnB6ti8cfJ6jPbcuXfT4YU5458wa_cHYzGcA93Rk-ODLyqDL5WleTW3KobSnfbxRb1BTGaMfWmGptPmGS2fK85b-7A45pMIRTUiZ_glUOeNNavLaeXvYyCe3owuwQw6hsNH7QWv66uypY5dPjN8hZyzyQL8PAftvTvUGCBYPwaE7HrN_Vyf90vpxpFZCnvoXQS4S8djJQJZHHLUbTPWWeF14m-H2sBrCZYczqKn9XtbLwuw1IMgEzxjXdy2TEr4uCu17Hawo-xZO-kfRXtkPsiExQciVjXJ8Nc7Mtytpkxyr25pAFmVd2bbgt_onKa0cCUi-ebYjNsrzidWSb3yMGXjApIYmuCQ68zo_uqfmH7dyxm4-3lW9hK4E6cQNWZAEl373bL_wjJG8x6u58ce5XnFMtAb9QdIfJdGsL3XixJ1",
+      "e": "AQAB",
+      "d": "NtmOv9us59T0DKYwzrRjU_7mk4MPVE43r0nFh2C8ITMItDLGWsqkxHWfcFPRCVkPHIDJFzbpzP1lSWtA_aOzGNVEULLWdfZkNy5Zj2Vhl24CD-D3WqekutLS55pvJ6K_F9VDd3Cjz14J4EKAXGv4aLCDj368l9YUH5CgmkmY6ESJofdBhaOBSfFLNwClHmrgwE0fRUztOrVKH63vlSpoldN9l1KeJfuGP-YG4A4mEvqzlRibY7b9z5zRaCz9uf_WFu08dcx5I0Po7wuQrV0s4yiu5Ypd2tGHu2tJh_TgE9LbYluhA__dJOY5UBdbiepUwPWVKJm0Seak2Kv0sle0QMEn0pjX7ngIykvr0o0rQLZkYjFRIbHNvRfTbYWUrSevppWzvs2Qk1R72ft_28758u7QMX_nlfQihHWfH3o0tBxRjCcUcTIObAqMMBMFa9SP8003-hBb3vMQncZbH3tcVzAp2FSF7cg79jsoTdSHFqNS8u3B69w3LH6n6d35l7vp",
+      "p": "8szw-dqL3n4jwlyZUtZuW0DWMHTNOSaFY7gfqIqsVecAJdO55d5Wh62lan_2nxceQX61E2PsfmwfxFHWLdRu8oCXzcoyX4ECq9sFSE76do4tUhORy6Sh0YetOuxKti6KnRG9EMnxxpSZv9l15r8rXkcdSIAKnhliKwfPzqock39_vtFQtuOitdZFr2BNzPQojgwVVrvDtmZo30dYRyO0S1rpoMDomesek856rGqk0LxWzW0YM_-fUVK5rEMAI8hn",
+      "q": "wyU2J-bLeTH_qD_TFMInrKX8921uEqvk2COj4VZO8HVRDSg3Ta9EBx90VDsA0_stW4BoQeNf7VnItbZ1vrYkOGBtSalFJnJBNIsv3PI8NDyzILuUuC_jkdUYzHR7rppS6ar2RQJLmpxU0LcuGYqPc1fnlWdsPMqxFiNacSXdEbIkn2erfsc8h9SgzFJH5e4l1O9VJbmELcmTp783NTg9qPPtCPSJ6A7uZX5bSYGwDgMjLq02S3RIzpur4V4I97TD",
+      "dp": "Mwp0KgIQXzBjMgunS6u6PUKvBDa5oacAaYseVJ76RYCvHkSZEsKfrBwL5wyJer4wZRJO3ImoAJeYQfv2K2I6BI6V2vQDjOIg_qGnRaEcs-mFi3iDsKymO9bqyrU7q3qzNvuwpCPfyKAahiMfzucnJcWLWV9ZXAz3_xXAULCgGz21TBbSge_ul404zvpOwKQfFmVh4v7L0L9Mkot7-lB-KU0uSdXjz9-GaQoB7dbpWNwO31ZsvRmik0TxtU3MbLlH",
+      "dq": "Vv6fxen9i2nerwLE9twXE8BrpWIDUA-RVUmOJUZ0qn2iRFtJTDh1-zbqhSJInDe9YK09zSGwAf-kml1c4EgSnY9fKRds3FbS-rmR_M2ASUlGEbGN-w5eRQTaqUrEWHIzxDeS0fDUA3jt1p3Sz1AV4zWs583TUsaJa3UXPJnEk7721JlCuqHXOjZv-KY1pysjcmm_a7HoWwEh8gYsdm08D7WuVe-uCuWdIWHTEFHgSl7bsFNHgRu12WVMmotxM_xB",
+      "qi": "Gvgvrbsl39jp7Yupqb4MJwrQGfiWnRZvrnzrYCoOg-kSPUDuHsyrEEGG4HIu3PFAmKQBHwELLPWFDVEzaUQwwhdU3ia_tqeWbRguQpdoHJV4IaJKPz6cj7x8i30Pk0lQh4qiHNDgPaEZSOA4W3WiTR3bb2p5jI7-RN4DuO38r8jNuwixAA8TfjRG9ifuf3Rg6G7e8MQO9o6Pi0OrD5sSdQBdobvZSjlKIbb-Ma3xkbNp_WdQOvKFUIMPyrpCUmA6"
+    }
+  },
+  "phone": {
+    "signingPublicKey": "+aWWVkwvrf3YNFNkidTX1H7+L/MgsKuij2JmwUCYVow=",
+    "signingPrivateJwk": {
+      "crv": "Ed25519",
+      "d": "Xdxl0QbTL1yDljklFKHs9phaUEHM9hNNrfI97gaT8qI",
+      "x": "-aWWVkwvrf3YNFNkidTX1H7-L_MgsKuij2JmwUCYVow",
+      "kty": "OKP"
+    },
+    "encryptionPublicKeyJwk": "{\"kty\":\"RSA\",\"n\":\"yyrwOZ-W1leoJgLvM7HYWVBjRP_sB4BBMl7iHT28WdCvkohs7jwuMXd6k-zayZ_RRe-soBhJgjkG5KfktuF7hB3-EDI77_AFV_9LiZjuHzfyOUstU81HmRcn3LQgMME1CoVvORvj4DvpCs1BiK5TpSj9Hls-zF-NkVPrxaI6gwknhBMFOREJ7-D-Y_oY-3RjeWMNNR9Bpme9h7Mdqg6YurXLTTMwP6HFNQKW7RMgy97ntp9T6KhU6vhxoEsxRN3TaR_cJsSiAehkfryBliiHH-MXymxrEzmjVs_MoAzOvUg2ZZ-OZ8OmloKfO3BXBWtiTpIZPP7W1s4WRqKO5BDg3tZ9UjZ2IoUb7GaCCos7pKKk90oycXN5uD-TvSKQYPzB1JqPuNNl24SDptAdppcwnCw9w2zhUQrLRgp2PndF-2M3OQH6MoZLQtk-xCBHoF1RfD6pDXtPdYfAFfdez3a8yAo6wKkIMenjlxra_nzPWGEf2650-TdH78HtNjh_d3k7\",\"e\":\"AQAB\"}",
+    "encryptionPrivateJwk": {
+      "kty": "RSA",
+      "n": "yyrwOZ-W1leoJgLvM7HYWVBjRP_sB4BBMl7iHT28WdCvkohs7jwuMXd6k-zayZ_RRe-soBhJgjkG5KfktuF7hB3-EDI77_AFV_9LiZjuHzfyOUstU81HmRcn3LQgMME1CoVvORvj4DvpCs1BiK5TpSj9Hls-zF-NkVPrxaI6gwknhBMFOREJ7-D-Y_oY-3RjeWMNNR9Bpme9h7Mdqg6YurXLTTMwP6HFNQKW7RMgy97ntp9T6KhU6vhxoEsxRN3TaR_cJsSiAehkfryBliiHH-MXymxrEzmjVs_MoAzOvUg2ZZ-OZ8OmloKfO3BXBWtiTpIZPP7W1s4WRqKO5BDg3tZ9UjZ2IoUb7GaCCos7pKKk90oycXN5uD-TvSKQYPzB1JqPuNNl24SDptAdppcwnCw9w2zhUQrLRgp2PndF-2M3OQH6MoZLQtk-xCBHoF1RfD6pDXtPdYfAFfdez3a8yAo6wKkIMenjlxra_nzPWGEf2650-TdH78HtNjh_d3k7",
+      "e": "AQAB",
+      "d": "IqyMXTlIdAJ31yzvCCKVKwEWQCNxdAJGnkMlUhpEOAvuuxJ_jNVGiPi8OdzVpk2ZWNdD3frnKMt0yreAyFmJTA4WW0tHgXa0YsVWbgBku30_4Nlcvg2t54nVKsyvJcMDu2z0g4moBZAUANzxD1O5QNnTAUhPWnAAaEorVgqO8-gvD1JztL6ctIzwvb1kYB4IECKAkY1pFe5koXFHYcul80-th9pxpJqGXrq3aXS3RzQe1cMxfeakv4lxUwsiOH-nFAPNHr8Wqs5d4w508aLjM682z4Tm7C5rIaPwBtbCF8vEA-c873fJ0VnI4LnSxUYRF6WpV9J8qV1M1uFdipXmmsBh7L7a_2k3lMVW5fdJQE81v4MPVDqS5TgpusHluBh31oIcqAptfhYyUi1Ev7jQaX_eudB_cGueqc3BUnMb2jqUSHnd929hBiXPESZt3-TVvRFjEjZLeL1rtlUZkddc8NmVRWxxz5TTLR5w8BQRI790KCFV7xwgFESokfkrROcp",
+      "p": "-Yd4lMnrl5vPI9XKzEoqC9wE5U3NzDraeG5018S1gHKOyWDfsQOmo8MH2D5L_Oj-itdaWOnLGBIEtWmSFqJQE6Qzg7h7zO3fQSoAEbaU9zno2hwwQnOXckUfjJ8qO8adNIALBtWNnTN1CuNQl1U6mvNfAzWqDNsFwlG5bAYZniRLmknNcI2w5zUG3VEYjEzg3ez8pTB6kWY6IPKIZGuGSRpTdGVT6UPGuawe9BUoc3qwuzd3v52RWhNiEaplezT9",
+      "q": "0G-w_LNLDQ2x3RRCvst2Q705-Hdi0eqXJ7Ay8Cg3qmyyE9-iFicUc9g8fQUOpbTZUqWBimOKOfaiQoG8-DL2ID9u7Xy5lCNhD44tznvo_hnW2nF8Qq9uMPFv7yd-XF3mk77NnL_xoxlFKkAu1iPE1akD4c9ShxA68S8zslIVspWhap-VTV9tZPAQSKSuQiq5OILhCR3RjHkgnZeBOyoAf6hUofxbjBWsZUfHOIvskZ7pct9bJXUz7qE5_bhwOZiX",
+      "dp": "c_ayYito0p91Z4j-42wAGFza5Zn_707WoytqH7BqTVRv6USdEI3KzsZfie6Br_qz-OBWO4YDfZ86EvkKDHzITCh-TFPbLQTLQWR8fb7lgfOmtF5vSyKfGlrna5m4rekCvBhZh4aNdqYoWbQEix_vyX0bBcnVyn2rMoB6dKptE2J4xC5STGF8-iZZl1cN2n4L7vco_rgF7jadAxzTqB-UW7rhV_GTSo_V9gn4pKSElQ5KvebsPt_CYiMp613OJbEd",
+      "dq": "A-SSIaYXmL7Qu5hNRtL1-n3mP0W7isAe4pbf3KxjncM58DUVCeTg9Ojs-EjH5UBjbq-4o6UIR9zbWvKhXOFWx3Nn1velX6bpgSjeoiSeTWCeKqZD89ri6_cWaBkMuxzl2YyOuoa7NJicOhXIyicQ3gyyDd2ZZPxgnXCMPqBZ12QEB8HDQBawLFpvc2vf9Uxm-S84lLsB1uXMPiU-PKSkLb4vFndoHk2pUprslZnHaVDWe1bAlQqDVcmdE6gGMI0x",
+      "qi": "3zQB-msyKS2J4w2BHkhLLljxk1ThzIs-ErUYDxFpkOdz3Fl7bejx9FeeHH4j-0kb0Fl21o9LxQmj0CgGB1p829CXgmTIMO8P0wfpOmga82aU4G1hxTF1IiS66-ldApu2w_hD8yaS89_o0eRPk6oOQedrrCtdd5x-vsE3QtSECbMvEKW4mGffaPeTdtD4KWUfpNrOqHbHbaH5jjTrZuf9r_iEFpyUA8xo5sxBzpbfQcqssEqtJSvfDo1DpopYxJHW"
+    }
+  },
+  "canonical": [
+    {
+      "name": "ascii",
+      "envelope": {
+        "protocolVersion": 1,
+        "envelopeId": "env_12345678",
+        "idempotencyKey": "idem_12345678",
+        "workspaceId": "0123456789abcdef0123456789abcdef",
+        "shopId": "shop_12345678",
+        "memberId": "member_12345678",
+        "deviceId": "device_12345678",
+        "installationId": "fedcba9876543210fedcba9876543210",
+        "senderKind": "desktop",
+        "senderId": "fedcba9876543210fedcba9876543210",
+        "recipientKind": "device",
+        "recipientId": "device_12345678",
+        "messageType": "projection.dashboard",
+        "sequence": 4,
+        "issuedAt": "2026-08-13T18:00:00.000Z",
+        "expiresAt": "2026-08-13T19:00:00.000Z",
+        "revocationEpoch": 2,
+        "cipherAlgorithm": "rsa-oaep-256+aes-256-gcm-v1",
+        "encryptionKeyId": "enc_key_12345678",
+        "signatureAlgorithm": "ed25519-v1",
+        "signingKeyId": "sign_key_12345678",
+        "aadDigest": "abababababababababababababababababababababababababababababababab",
+        "ciphertext": "QUJD"
+      },
+      "canonicalUtf8": "[1,\"env_12345678\",\"idem_12345678\",\"0123456789abcdef0123456789abcdef\",\"shop_12345678\",\"member_12345678\",\"device_12345678\",\"fedcba9876543210fedcba9876543210\",\"desktop\",\"fedcba9876543210fedcba9876543210\",\"device\",\"device_12345678\",\"projection.dashboard\",4,\"2026-08-13T18:00:00.000Z\",\"2026-08-13T19:00:00.000Z\",2,\"rsa-oaep-256+aes-256-gcm-v1\",\"enc_key_12345678\",\"abababababababababababababababababababababababababababababababab\",\"QUJD\",\"ed25519-v1\",\"sign_key_12345678\"]",
+      "aadUtf8": "[1,\"env_12345678\",\"idem_12345678\",\"0123456789abcdef0123456789abcdef\",\"shop_12345678\",\"member_12345678\",\"device_12345678\",\"fedcba9876543210fedcba9876543210\",\"desktop\",\"fedcba9876543210fedcba9876543210\",\"device\",\"device_12345678\",\"projection.dashboard\",4,\"2026-08-13T18:00:00.000Z\",\"2026-08-13T19:00:00.000Z\",2,\"rsa-oaep-256+aes-256-gcm-v1\",\"enc_key_12345678\",\"ed25519-v1\",\"sign_key_12345678\"]",
+      "aadDigest": "b1eb9c821184eade99e9dac562309aa6c987a8ca881c2818a5ccad5b42939a4d",
+      "signature": "kcexWEX58yql7cZVQkSpxkM7L3aR2VBeGtEGkKWoG31QFVAL08Pzbr+7/ljREhhrCxjHlbfX3u3WNnwn3IJvCQ=="
+    },
+    {
+      "name": "unicode and a large sequence",
+      "envelope": {
+        "protocolVersion": 1,
+        "envelopeId": "env_12345678",
+        "idempotencyKey": "idem_12345678",
+        "workspaceId": "0123456789abcdef0123456789abcdef",
+        "shopId": "متجر_12345678",
+        "memberId": "member_12345678",
+        "deviceId": "device_12345678",
+        "installationId": "fedcba9876543210fedcba9876543210",
+        "senderKind": "desktop",
+        "senderId": "fedcba9876543210fedcba9876543210",
+        "recipientKind": "device",
+        "recipientId": "device_12345678",
+        "messageType": "projection.é🙂",
+        "sequence": 9007199254740991,
+        "issuedAt": "2026-08-13T18:00:00.000Z",
+        "expiresAt": "2026-08-13T19:00:00.000Z",
+        "revocationEpoch": 2,
+        "cipherAlgorithm": "rsa-oaep-256+aes-256-gcm-v1",
+        "encryptionKeyId": "enc_key_12345678",
+        "signatureAlgorithm": "ed25519-v1",
+        "signingKeyId": "sign_key_12345678",
+        "aadDigest": "0101010101010101010101010101010101010101010101010101010101010101",
+        "ciphertext": "QUJDREVG"
+      },
+      "canonicalUtf8": "[1,\"env_12345678\",\"idem_12345678\",\"0123456789abcdef0123456789abcdef\",\"متجر_12345678\",\"member_12345678\",\"device_12345678\",\"fedcba9876543210fedcba9876543210\",\"desktop\",\"fedcba9876543210fedcba9876543210\",\"device\",\"device_12345678\",\"projection.é🙂\",9007199254740991,\"2026-08-13T18:00:00.000Z\",\"2026-08-13T19:00:00.000Z\",2,\"rsa-oaep-256+aes-256-gcm-v1\",\"enc_key_12345678\",\"0101010101010101010101010101010101010101010101010101010101010101\",\"QUJDREVG\",\"ed25519-v1\",\"sign_key_12345678\"]",
+      "aadUtf8": "[1,\"env_12345678\",\"idem_12345678\",\"0123456789abcdef0123456789abcdef\",\"متجر_12345678\",\"member_12345678\",\"device_12345678\",\"fedcba9876543210fedcba9876543210\",\"desktop\",\"fedcba9876543210fedcba9876543210\",\"device\",\"device_12345678\",\"projection.é🙂\",9007199254740991,\"2026-08-13T18:00:00.000Z\",\"2026-08-13T19:00:00.000Z\",2,\"rsa-oaep-256+aes-256-gcm-v1\",\"enc_key_12345678\",\"ed25519-v1\",\"sign_key_12345678\"]",
+      "aadDigest": "9ca393731a82029c4725a4eef78ee2cd0dba56e8936a58b22bb88c69b6a0b450",
+      "signature": "UFN3NEv8XJ5RaqDruidvJN5PyN5e6FP9uHPwcQ+6J3MEPkIQCTluLii+n5SxsXWn5fnbtYpeS6Ux8cUggszPBw=="
+    }
+  ],
+  "projection": {
+    "now": "2026-08-13T18:30:00.000Z",
+    "payload": {
+      "orders": 12,
+      "revenueDzd": 1523000,
+      "label": "ملخص اليوم",
+      "items": [
+        {
+          "id": 1,
+          "name": "قميص"
+        }
+      ]
+    },
+    "envelope": {
+      "protocolVersion": 1,
+      "envelopeId": "env_12345678",
+      "idempotencyKey": "idem_12345678",
+      "workspaceId": "0123456789abcdef0123456789abcdef",
+      "shopId": "shop_12345678",
+      "memberId": "member_12345678",
+      "deviceId": "device_12345678",
+      "installationId": "fedcba9876543210fedcba9876543210",
+      "senderKind": "desktop",
+      "senderId": "fedcba9876543210fedcba9876543210",
+      "recipientKind": "device",
+      "recipientId": "device_12345678",
+      "messageType": "projection.dashboard",
+      "sequence": 41,
+      "issuedAt": "2026-08-13T18:00:00.000Z",
+      "expiresAt": "2026-08-13T19:00:00.000Z",
+      "revocationEpoch": 2,
+      "cipherAlgorithm": "rsa-oaep-256+aes-256-gcm-v1",
+      "encryptionKeyId": "enc_key_12345678",
+      "signatureAlgorithm": "ed25519-v1",
+      "signingKeyId": "sign_key_12345678",
+      "aadDigest": "db041397143243d75a2dd3f48a1fa2cb67287545321eb4a3520e15f4e1521708",
+      "ciphertext": "eyJ2IjoxLCJ3cmFwcGVkS2V5IjoiQlZua2ZPZklPaE1sanI3enRCQVZnbGRMUWlLVU5pVkc4QlhPNTFkYlhlNzZLbXo0Z2lEVDVyZlAyc3I1M3RJR1VRNTYvaXRWVmozV1lXUXJQTWZtQmtNSzY0L2VnVUlEa1NFVVM3WjMvakxzcXVVOEJ1dXZ0RFFkVGtXUm5iekxzSWpXMGlRZnBKRk5yWndZbDU3b1REUXNDNG5ULy9QbVRLZ1pGbkpJbzFLd1lUVzN3MndqbitHWG0xL2hIeEdWdXN2bXJMZlFwN2QreWl1QWU2NGRmQ0RUd012cFVkSnhiem5TUFN3VDNBSHRXQzJqOGlqN2hJQ2FKOGpLZVc3eU44SkJOcnJQU0hRcWVGTXBqazkxTlBIWThtMDdLbUtJcWtRQVpPNU91NHBoeEpQTDFGVWU1MDNEYkJnVVVNUTFybUMvZzlwdWtUMmRFcGEzRW1Yd0F3bWpBcHJzc3V6T3BXNzRTd3FFRG9FVDVzS1RKcUpJY0YzKzNDNjgxdEZjbzNyMW9DTlQ0cFRzTFJFbDh1SkFFTU5UVEhhZnBZZG41RUpySGNmZzBzTHhUaEFmVGN3anpvRXZVZXUrb0hkVytYWTA5aHljZldlZDNZbFhJUm96YzZqamRRbmFFbE55TkVoVC9KN2NZR0lrOEhYM1RPZFYyL2E4UW5KSXlMd0siLCJpdiI6IndHdmVnWUwxMm1vbXA1NnMiLCJjaXBoZXJ0ZXh0IjoidjNqUUx6V09QUEZONlpuRkFSZVZmcFpxc0NabC9IeEJtbUc2TDBIVzZRUUpUSnllR2JSU3dFMVpJYVdJSlM4OE1HN3Z0Q2VTQ1NzckxGd0NsWVo1R1lsU1UxNm9LQ0lOMEE0Y2kxTEM1Tmd1SXc4OFl6LzRST29aaThuSDNoRlVKQmZkb2VnPSIsInRhZyI6IitqVDRFQURZOXJlVEl4VDQ1cVQ1M1E9PSJ9",
+      "signature": "nTLrzQsC3q7ASUV6U4I+Y8ZfME0F2b6OBlyxUKohhZqK+74Kg4lL2PhOn0coF5R9m9l3suWqtyeXr2HRXXm8Cw=="
+    }
+  },
+  "command": {
+    "now": "2026-08-13T18:30:00.000Z",
+    "payload": {
+      "action": "comments.write",
+      "text": "تم التأكيد ✓",
+      "orderId": "ord_12345678"
+    },
+    "envelope": {
+      "protocolVersion": 1,
+      "envelopeId": "env_cmd_12345678",
+      "idempotencyKey": "idem_cmd_12345678",
+      "workspaceId": "0123456789abcdef0123456789abcdef",
+      "shopId": "shop_12345678",
+      "memberId": "member_12345678",
+      "deviceId": "device_12345678",
+      "installationId": "fedcba9876543210fedcba9876543210",
+      "senderKind": "device",
+      "senderId": "device_12345678",
+      "recipientKind": "desktop",
+      "recipientId": "fedcba9876543210fedcba9876543210",
+      "messageType": "command.comments.write",
+      "sequence": 17,
+      "issuedAt": "2026-08-13T18:00:00.000Z",
+      "expiresAt": "2026-08-13T19:00:00.000Z",
+      "revocationEpoch": 2,
+      "cipherAlgorithm": "rsa-oaep-256+aes-256-gcm-v1",
+      "encryptionKeyId": "enc_key_12345678",
+      "signatureAlgorithm": "ed25519-v1",
+      "signingKeyId": "sign_key_12345678",
+      "aadDigest": "438f97af51dc31021e19446146c7dac734844a611ac8acc65cd5e556407bbabc",
+      "ciphertext": "eyJ2IjoxLCJ3cmFwcGVkS2V5IjoiTXQ0MXdqdkpIVnlsc2Nvb0VGK2kxL2FIOVlRU2FLMDMwU3RpSGpjSTJxcG5UV3JpNXkvVTVWQTFsK2ZiRFhwVytwL2Fib1FWVlJBNWtwdHY1SEU5U3Q5UlN4V2M1Y21wVnhIc3p6Y0NzN24xSVd5TDBnd2ZGT2NwSmwwcGZTQXY2R1M4UWYzUktYSW1BUXpHZ0FVNW5OaEEyQithWng1T3o1TW8vRU1lRDNyRzJWUy92YjNoaE1rZ1FnLzlzOXJNbVZBRFVHRW53ZTdaTE9pWjFST3BITFQzYS9OQkk4YmVnZWQ2WGhGb2l1cHpOMXpZTTh3c2hUVXVqSTNKS0liS0FSZ1pjTzE2bzFFWEdIRysyQ2hVTVNjeGpJMzFnRDBhMkFOR2xzaEdhcEF5M2RCMVZqc0lJVjJVTy9oNHFCb0lyUm50eXR6UWk5SUh4ZHVncFRkdG91VGJmRG4rZm9pN0E0WjFCWVoxczlycVpETXhvK3gvRGxwd3dmSlRMckFQWkdsWm5nMWdjWkN2YS9Qbm1sT3NQR2FIcEhLUlJvQitQWlFKNjFCRnVuZHRKc0t0Z2VMNmw2NksybytJRTYzNGRSZU0rdDhaa0dUYWF0aWZ0MzQwSWFLYzJvbUMzTFFEblp6U24vVWcwNjRLMzVnMnhkMmc1VFVjS2UzYnBZbzYiLCJpdiI6IjUzTE4xaTBNYVJKdy9QelgiLCJjaXBoZXJ0ZXh0IjoiUHFnMlF0bWMxdXBnRmxlVG1xNldzRHpzNUNrLzIwMFRkRCtMM044SXpIZWZiYW5ES2dscFpEQmJMdmdoanhzVHdxeXhIU2dqNEhNMktYZkladlpHQ1h1blhHTDJXUERZOHdFOXFGNFlCL2VWdzBXY25BPT0iLCJ0YWciOiI4RFdyL0xJMTFvTjBYNWdTa3hMMHVnPT0ifQ==",
+      "signature": "Us8/lcRm1fauxs5bLQDQPulRnLKUdZJ92DCabL2GFJBApyWezhIAM7M+eqHCvFoPg5fUZz/FyrPOXMfT1zcuDQ=="
+    }
+  }
+}
