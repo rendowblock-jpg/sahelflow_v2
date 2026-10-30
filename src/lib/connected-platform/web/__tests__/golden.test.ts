@@ -12,7 +12,7 @@ import {
   type ConnectedKeyPair,
 } from "../../payload-crypto";
 import { canonicalConnectedEnvelopeBytes, type ConnectedEnvelope } from "../../protocol";
-import { base64Decode, base64Encode, utf8Decode } from "../bytes";
+import { base64Decode, base64Encode, toArrayBuffer, utf8Decode } from "../bytes";
 import { aadDigestHex, canonicalAadBytes, canonicalEnvelopeBytes } from "../canonical";
 import { openEnvelopeWeb, sealEnvelopeWeb } from "../envelope-web";
 import { importSigningPublicKey } from "../keys";
@@ -147,9 +147,9 @@ describe("golden vectors (frozen, both directions)", () => {
       const bytes = canonicalEnvelopeBytes(item.envelope);
       expect(verifyConnectedBytes(vectors.desktop.signingPublicKey, item.signature, bytes)).toBe(true);
       const signature = base64Decode(item.signature) ?? new Uint8Array();
-      expect(await crypto.subtle.verify({ name: "Ed25519" }, verifyKey as CryptoKey, signature, bytes)).toBe(true);
+      expect(await crypto.subtle.verify({ name: "Ed25519" }, verifyKey as CryptoKey, toArrayBuffer(signature), toArrayBuffer(bytes))).toBe(true);
       // Ed25519 is deterministic, so both implementations must sign to the same bytes.
-      expect(base64Encode(new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, privateKey, bytes)))).toBe(item.signature);
+      expect(base64Encode(new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, privateKey, toArrayBuffer(bytes))))).toBe(item.signature);
       expect(signConnectedBytes(pkcs8Of(vectors.desktop.signingPrivateJwk), bytes)).toBe(item.signature);
     }
   });

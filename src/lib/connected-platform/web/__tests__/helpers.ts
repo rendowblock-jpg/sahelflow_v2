@@ -7,6 +7,7 @@ import {
   canonicalConnectedEnvelopeBytes,
   type ConnectedEnvelope,
 } from "../../protocol";
+import { toArrayBuffer } from "../bytes";
 import type { EnvelopeMetadata } from "../canonical";
 
 export const WORKSPACE_ID = "0123456789abcdef0123456789abcdef";
@@ -55,8 +56,9 @@ export function commandMetadata(over: Partial<EnvelopeMetadata> = {}): EnvelopeM
   });
 }
 
-function plainBytes(base64: string): Uint8Array {
-  return new Uint8Array(Buffer.from(base64, "base64"));
+// BufferSource wants a plain ArrayBuffer under TypeScript 5.9.
+function plainBytes(base64: string): ArrayBuffer {
+  return toArrayBuffer(new Uint8Array(Buffer.from(base64, "base64")));
 }
 
 export async function importPkcs8Signing(pkcs8Base64: string): Promise<CryptoKey> {

@@ -4,10 +4,11 @@ import { createPublicKey } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { encryptConnectedPayload, verifyConnectedBytes } from "../../payload-crypto";
-import { base64Decode, base64UrlDecode, utf8Encode } from "../bytes";
+import { base64Decode, base64Encode, base64UrlDecode, toArrayBuffer, utf8Encode } from "../bytes";
 import {
   buildPairingExchangeBody,
   generateDeviceKeys,
+  importSigningPublicKey,
   supportsEd25519,
   type GenerateDeviceKeysResult,
 } from "../keys";
@@ -69,7 +70,7 @@ describe("generateDeviceKeys", () => {
     expect(() => createPublicKey({ key: jwk as never, format: "jwk" })).not.toThrow();
     expect(() => encryptConnectedPayload({ a: 1 }, made.publicKeys.encryptionPublicKey, utf8Encode("aad"))).not.toThrow();
     const message = utf8Encode("hello phone");
-    const signature = new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, made.keys.signing.privateKey, message));
+    const signature = new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, made.keys.signing.privateKey, toArrayBuffer(message)));
     expect(signature.byteLength).toBe(64);
     expect(verifyConnectedBytes(made.publicKeys.signingPublicKey, Buffer.from(signature).toString("base64"), message)).toBe(true);
   });
@@ -110,6 +111,30 @@ describe("supportsEd25519", () => {
     for (const subtle of broken) {
       expect(await supportsEd25519(subtle as SubtleCrypto | null)).toBe(false);
     }
+  });
+});
+
+describe("importSigningPublicKey", () => {
+  it("never hands a key that is not exactly 32 bytes to WebCrypto", async () => {
+    const lengths: number[] = [];
+    const accepting = {
+      importKey: async (_format: string, data: ArrayBuffer) => {
+        lengths.push(data.byteLength);
+        return {} as CryptoKey;
+      },
+    } as unknown as SubtleCrypto;
+    for (const length of [0, 1, 31, 33, 64]) {
+      expect(await importSigningPublicKey(base64Encode(new Uint8Array(length)), { subtle: accepting })).toBeNull();
+    }
+    expect(lengths).toEqual([]);
+    expect(await importSigningPublicKey(base64Encode(new Uint8Array(32)), { subtle: accepting })).not.toBeNull();
+    expect(lengths).toEqual([32]);
+  });
+
+  it("imports the real key and refuses bad text or missing WebCrypto", async () => {
+    expect(await importSigningPublicKey(made.publicKeys.signingPublicKey)).not.toBeNull();
+    expect(await importSigningPublicKey("not base64!!")).toBeNull();
+    expect(await importSigningPublicKey(made.publicKeys.signingPublicKey, { subtle: null })).toBeNull();
   });
 });
 
