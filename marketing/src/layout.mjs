@@ -7,6 +7,7 @@ import { BRAND_NAMES, MODULES, PACKAGE, SOLUTIONS } from "./model.mjs";
 import { integrationStatus } from "./claims.mjs";
 import { esc, href, icon, phoneDisplay, shotUrl, statusBadge, whatsappHref } from "./ui.mjs";
 
+const FONT_PRELOAD = { ar: ["plex-ar-400", "naskh-ar"], fr: ["plex-lat-400"], en: ["plex-lat-400"] };
 const OG_LOCALE = { ar: "ar_DZ", fr: "fr_DZ", en: "en_US" };
 
 function head({ locale, path, title, description, preload, jsonLd = [] }) {
@@ -38,8 +39,7 @@ function head({ locale, path, title, description, preload, jsonLd = [] }) {
     email: SITE.email,
     contactPoint: { "@type": "ContactPoint", contactType: "customer support", telephone: phoneDisplay().replace(/ /g, ""), availableLanguage: ["Arabic", "French", "English"] },
   };
-  const font = locale === "ar" ? "arabic" : "latin";
-  return `<!doctype html>
+    return `<!doctype html>
 <html lang="${t.lang}" dir="${t.dir}" class="no-js">
 <head>
 <meta charset="utf-8">
@@ -61,7 +61,7 @@ ${alternates}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/img/mark.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/img/icon-180.png">
-<link rel="preload" href="/fonts/readex-${font}.woff2" as="font" type="font/woff2" crossorigin>
+${FONT_PRELOAD[locale].map((f) => `<link rel="preload" href="/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>`).join("\n")}
 ${preload ? `<link rel="preload" as="image" href="${preload}" fetchpriority="high">` : ""}
 <link rel="stylesheet" href="/assets/site.css?v=${SITE.asset}">
 <script>document.documentElement.classList.replace("no-js","js")</script>
