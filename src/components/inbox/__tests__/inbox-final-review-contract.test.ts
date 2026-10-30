@@ -83,6 +83,7 @@ describe("Inbox final review invariants", () => {
     const pairing = source("src/components/inbox/whatsapp-pairing-dialog.tsx");
 
     expect(pairing).toContain('fetch("/api/whatsapp/status"');
+    expect(pairing).toContain("parseWhatsAppStatusResponse(response.ok, data)");
     expect(pairing).toContain('phase === "qr-ready" ? (');
     expect(pairing).toContain('key={`${qrKey}:${qrRevision}`}');
     expect(pairing).toContain('phase === "connected" ? (');

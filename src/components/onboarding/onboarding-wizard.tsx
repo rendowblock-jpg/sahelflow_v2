@@ -1,5 +1,6 @@
 "use client";
 
+import { isWhatsAppReportedConnected } from "@/components/inbox/whatsapp-pairing-state";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -234,10 +235,8 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
       }
     }
     if (whatsappResult.status === "fulfilled" && whatsappResult.value.ok) {
-      const data = (await whatsappResult.value.json().catch(() => ({}))) as {
-        status?: unknown;
-      };
-      whatsappConnected = data.status === "connected";
+      const data: unknown = await whatsappResult.value.json().catch(() => null);
+      whatsappConnected = isWhatsAppReportedConnected(data);
     }
     if (deliveryResult.status === "fulfilled" && deliveryResult.value.ok) {
       const data = (await deliveryResult.value.json().catch(() => ({}))) as {
