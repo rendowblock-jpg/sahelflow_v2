@@ -3,6 +3,7 @@ import { SITE } from "./config.mjs";
 import { ICONS } from "./icons.mjs";
 import { PACKAGE } from "./model.mjs";
 import { COPY } from "./i18n/index.mjs";
+import { statusLabel } from "./claims.mjs";
 
 export const esc = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -104,4 +105,10 @@ export function faqJsonLd(items) {
     "@type": "FAQPage",
     mainEntity: items.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
   };
+}
+
+/** The honest status of an integration or promise: Available, In testing or Planned (see claims.mjs). */
+const STATUS_BADGE_CLASS = { live: "badge badge-new", testing: "badge badge-offer", planned: "badge" };
+export function statusBadge(status, locale) {
+  return `<span class="${STATUS_BADGE_CLASS[status]}">${esc(statusLabel(status, locale))}</span>`;
 }

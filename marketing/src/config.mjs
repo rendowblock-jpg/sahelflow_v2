@@ -7,7 +7,7 @@ export const SITE = {
   whatsapp: "213791999157",
   email: "contact@sahelflow.com",
   // Where the "Download" buttons point: the edge Worker (worker.js) resolves
-  // the newest signed installer from the updater manifest.
+  // the newest installer from the updater manifest.
   downloadUrl: "/get/windows",
   trialDays: 7,
   // Licence pricing in DZD (Founder, 2026-10-01): 35 000 DA, with a launch
