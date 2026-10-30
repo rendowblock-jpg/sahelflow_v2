@@ -41,7 +41,7 @@ describe("application RTL direction authority", () => {
     const dropdown = source("../../ui/dropdown-menu.tsx");
 
     expect(sidebar).toContain("border-e border-sidebar-border");
-    expect(sidebar).toContain("absolute inset-y-2 start-0");
+    expect(sidebar).toContain("absolute inset-y-1 start-0");
     expect(sidebar).toContain("ms-4 border-s border-sidebar-border ps-2");
     // The notifications popup anchors to the LOGICAL end edge so the direction
     // provider mirrors it in Arabic; its width is presentation, not authority.

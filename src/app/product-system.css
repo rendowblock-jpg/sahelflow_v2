@@ -202,6 +202,7 @@ html[data-theme-preset="carnet"] {
   --carnet-line: oklch(0.794 0.029 86.7); /* #C4BBA7 */
   --carnet-edge: oklch(0.571 0.028 86.9); /* #7F7765 */
   --carnet-rule: oklch(0.875 0.023 84.6); /* #DDD5C5 */
+  --carnet-margin: oklch(0.7408 0.0747 31.6); /* #D69A8E */
   --carnet-red: oklch(0.532 0.166 30.1); /* #B93A2B */
   --carnet-red-bg: oklch(0.932 0.021 39.4); /* #F6E4DE */
   --carnet-red-ink: oklch(0.466 0.147 30.6); /* #9B2E20 */

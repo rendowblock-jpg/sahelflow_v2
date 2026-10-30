@@ -123,6 +123,7 @@ html.dark[data-theme-preset="carnet"] {
   --carnet-line: oklch(0.316 0.012 258.4); /* #2E3238 */
   --carnet-edge: oklch(0.563 0.018 257.2); /* #6F7680 */
   --carnet-rule: oklch(0.316 0.012 258.4); /* #2E3238 */
+  --carnet-margin: oklch(0.4333 0.0911 29.5); /* #7B3B32 */
   --carnet-red: oklch(0.707 0.128 31.2); /* #E5806E */
   --carnet-red-bg: oklch(0.287 0.035 30.7); /* #3A2420 */
   --carnet-red-ink: oklch(0.789 0.097 31.2); /* #F2A394 */
