@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Circle, Loader2, ShieldCheck } from "lucide-react";
 
 import { useEntryBrand } from "@/components/auth/entry-brand";
+import { FORM_ERROR_ID, describedByFor, isInvalid, useFocusOnFailure, type FormFailure } from "@/components/auth/form-focus";
 import { PinInput } from "@/components/auth/pin-input";
 import { RuntimeUiReadyBeacon } from "@/components/runtime/runtime-ui-ready-beacon";
 import { EntryShell } from "@/components/system";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { cn } from "@/lib/utils";
 
 function Rule({ met, label }: { met: boolean; label: string }) {
@@ -29,7 +31,8 @@ export default function SetupPage() {
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [failure, setFailure] = useState<FormFailure | null>(null);
+  useFocusOnFailure(failure, loading);
 
   useEffect(() => {
     fetch("/api/auth/status")
@@ -45,13 +48,13 @@ export default function SetupPage() {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setError("");
+    setFailure(null);
     if (pin.length < 8) {
-      setError(t("auth.pinMinLength"));
+      setFailure({ field: "pin", message: t("auth.pinMinLength") });
       return;
     }
     if (pin !== confirmPin) {
-      setError(t("auth.pinMismatch"));
+      setFailure({ field: "confirmPin", message: t("auth.pinMismatch") });
       return;
     }
 
@@ -64,13 +67,13 @@ export default function SetupPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error ?? t("error.setupFailed"));
+        setFailure({ field: "pin", message: translateServerError(data.error, t, t("error.setupFailed")) });
         return;
       }
       router.replace("/");
       router.refresh();
     } catch {
-      setError(t("error.networkFailure"));
+      setFailure({ field: "pin", message: t("error.networkFailure") });
     } finally {
       setLoading(false);
     }
@@ -87,7 +90,7 @@ export default function SetupPage() {
         <div className="space-y-2">
           <Label htmlFor="pin">{t("auth.createPin")}</Label>
           <PinInput
-            id="pin"
+            id="pin" aria-invalid={isInvalid(failure, "pin")} aria-describedby={describedByFor(failure, "pin")}
             value={pin}
             onChange={(event) => setPin(event.target.value)}
             placeholder="••••••••"
@@ -102,7 +105,7 @@ export default function SetupPage() {
         <div className="space-y-2">
           <Label htmlFor="confirmPin">{t("auth.confirmPin")}</Label>
           <PinInput
-            id="confirmPin"
+            id="confirmPin" aria-invalid={isInvalid(failure, "confirmPin")} aria-describedby={describedByFor(failure, "confirmPin")}
             value={confirmPin}
             onChange={(event) => setConfirmPin(event.target.value)}
             placeholder="••••••••"
@@ -118,9 +121,9 @@ export default function SetupPage() {
           <Rule met={matches} label={t("auth.rule.match")} />
         </ul>
 
-        {error ? (
-          <p className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive" role="alert">
-            {error}
+        {failure ? (
+          <p id={FORM_ERROR_ID} className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive" role="alert">
+            {failure.message}
           </p>
         ) : null}
 

@@ -254,7 +254,7 @@ export function NotificationCenterWorkspace() {
               tone="danger"
               size={items.length === 0 ? "panel" : "inline"}
               title={t("notifications.loadFailed")}
-              description={feed.error.message || t("common.error")}
+              description={t("firstRun.notifications.loadFailedBody")}
               live="polite"
               testId="notifications-error"
               actions={
