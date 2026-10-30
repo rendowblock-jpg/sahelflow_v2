@@ -14,6 +14,7 @@ import {
 import { askAiHref } from "@/lib/ai/ask-ai-link";
 
 import { BlacklistToggle } from "@/components/customers/blacklist-toggle";
+import { CustomerOrderHistory } from "@/components/customers/customer-order-history";
 import { CustomerRiskCard } from "@/components/customers/customer-risk-card";
 import { OrderWhatsAppButton } from "@/components/orders/order-whatsapp-button";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
@@ -23,14 +24,6 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { getCustomerDetailWorkbench } from "@/lib/customers/customer-detail-workbench";
 import { riskActionCopyKey } from "@/lib/orders/order-risk-presentation";
 import {
@@ -50,10 +43,7 @@ import {
   type RiskAction,
   type RiskLevel,
 } from "@/lib/risk-engine";
-import { orderStatusStyles } from "@/lib/shared";
-import { statusI18nKey } from "@/lib/shared/status-colors";
 import { formatDZD, formatDate } from "@/lib/utils";
-import type { OrderStatus } from "@/types/domain";
 import { displayWilaya } from "@/lib/wilaya-display";
 
 export const dynamic = "force-dynamic";
@@ -336,59 +326,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             <CardTitle className="text-base">{t("customers.orderHistory")}</CardTitle>
           </CardHeader>
           <CardContent>
-            {orders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <ShoppingBag className="mb-2 size-8 text-muted-foreground" aria-hidden="true" />
-                <p className="text-sm text-muted-foreground">{t("customers.noOrders")}</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table scrollLabel={t("customers.orderHistory")}>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>{t("orders.status")}</TableHead>
-                      <TableHead className="text-end">{t("orders.total")}</TableHead>
-                      <TableHead>{t("orders.date")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map((order) => {
-                      const status = order.status as OrderStatus;
-                      const style = orderStatusStyles[status];
-                      return (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-mono text-sm">
-                            <Link
-                              href={`/orders/${order.id}`}
-                              className="font-medium text-primary hover:underline"
-                            >
-                              {order.orderNumber}
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            {style ? (
-                              <span className={`inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text} ${style.border}`}>
-                                <span className={`size-1.5 rounded-full ${style.dot}`} />
-                                {t(style.i18nKey)}
-                              </span>
-                            ) : (
-                              <Badge variant="outline">{t(statusI18nKey(status))}</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-end tabular-nums">
-                            {order.totalPrice === null ? "—" : formatDZD(order.totalPrice, locale)}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {formatDate(order.createdAt, locale)}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <CustomerOrderHistory orders={orders} locale={locale} t={t} />
           </CardContent>
         </Card>
       ) : null}

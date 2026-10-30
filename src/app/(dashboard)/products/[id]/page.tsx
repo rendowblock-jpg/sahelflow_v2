@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { ProductDetailActions } from "@/components/products/product-detail-actions";
+import { ProductStockEventCards } from "@/components/products/product-stock-event-cards";
 import { ProductVariantPicker, type VariantOption } from "@/components/products/product-variant-picker";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RecentRecordTracker } from "@/components/shared/recent-record-tracker";
@@ -241,7 +242,24 @@ export default async function ProductDetailPage({ params }: PageProps) {
               {t("productStock.noHistory")}
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              <ProductStockEventCards
+                rows={stockHistory.map((event) => ({
+                  id: event.id,
+                  date: formatDate(event.createdAt, locale),
+                  delta: event.delta,
+                  toStock: event.toStock,
+                  sourceLabel: t(`productStock.source.${STOCK_SOURCE_KEY[event.source]}`),
+                  reason: event.reason,
+                  actorLabel: t(stockActorKey(event.actor)),
+                }))}
+                labels={{
+                  list: t("productStock.historyTitle"),
+                  newStock: t("productStock.newStock"),
+                  by: t("productStock.by"),
+                }}
+              />
+              <div className="hidden overflow-x-auto md:block">
               <Table scrollLabel={t("productStock.historyTitle")}>
                 <TableHeader>
                   <TableRow>
@@ -286,7 +304,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+              </div>
+            </>
           )}
           {orderMovements.length > 0 ? (
             <div className="mt-6 space-y-2" data-product-stock-history="order-movements">

@@ -10,6 +10,7 @@ import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
 import { getDataTableRuntimeTranslation } from "@/lib/i18n/data-table-runtime";
+import { getCustomersProductsStatesRuntimeTranslation } from "@/lib/i18n/customers-products-states-runtime";
 import { getDeliveriesRuntimeTranslation } from "@/lib/i18n/deliveries-runtime";
 import { getOrdersStatesRuntimeTranslation } from "@/lib/i18n/orders-states-runtime";
 import { getDeliveryReconcileRuntimeTranslation } from "@/lib/i18n/delivery-reconcile-runtime";
@@ -162,6 +163,7 @@ export function getRuntimeTranslation(
     getCommerceRuntimeTranslation(locale, key) ??
     getConfirmationQueueRuntimeTranslation(locale, key) ??
     getDataTableRuntimeTranslation(locale, key) ??
+    getCustomersProductsStatesRuntimeTranslation(locale, key) ??
     getDeliveriesRuntimeTranslation(locale, key) ??
     getDeliveryReconcileRuntimeTranslation(locale, key) ??
     getEntityDetailRuntimeTranslation(locale, key) ??

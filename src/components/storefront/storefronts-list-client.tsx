@@ -183,7 +183,7 @@ export function StorefrontsListClient({
             className="ps-9"
           />
         </div>
-        <div role="group" aria-label={t("storefront.list.search")} className="inline-flex rounded-control border bg-muted/40 p-0.5">
+        <div role="group" aria-label={t("storefront.list.search")} className="inline-flex max-w-full flex-wrap rounded-control border bg-muted/40 p-0.5">
           {(["all", "live", "offline"] as const).map((value) => (
             <button
               key={value}
@@ -191,7 +191,7 @@ export function StorefrontsListClient({
               aria-pressed={filter === value}
               onClick={() => setFilter(value)}
               className={cn(
-                "min-h-8 rounded-control px-3 text-body-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                "min-h-11 rounded-control px-3 sm:min-h-8 text-body-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                 filter === value ? "bg-background text-foreground shadow-(--elevation-1)" : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -207,9 +207,24 @@ export function StorefrontsListClient({
       </div>
 
       {visible.length === 0 ? (
-        <p className="rounded-surface border border-dashed p-10 text-center text-body-sm text-muted-foreground">
-          {t("storefront.list.noMatch")}
-        </p>
+        <div
+          role="status"
+          className="flex flex-col items-center gap-3 rounded-surface border border-dashed p-10 text-center"
+        >
+          <p className="text-body-sm text-muted-foreground">{t("storefront.list.noMatch")}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-h-11 sm:min-h-8"
+            onClick={() => {
+              setSearch("");
+              setFilter("all");
+            }}
+          >
+            {t("storefront.list.clearFilters")}
+          </Button>
+        </div>
       ) : (
         <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3" data-storefront-list="true">
           {visible.map((config) => (
