@@ -1,15 +1,19 @@
 "use client";
 
 /**
- * FullPageSkeleton — matches the loaded dashboard page chrome (Phase 10).
- *
- * Top-tier apps show a skeleton that MIRRORS the eventual layout, not a bare
- * spinner. This renders: header skeleton + stat card grid skeleton + table
- * skeleton — so the transition to real content is seamless.
+ * FullPageSkeleton: matches the loaded dashboard page chrome. A header with
+ * its action, a stat-card grid and a table, as ONE polite busy status built on
+ * the state kit, so the transition to real content moves nothing.
  *
  * Usage: place in loading.tsx files.
  */
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  CardGridSkeletonBody,
+  ListSkeletonBody,
+  PageHeaderSkeleton,
+  SkeletonBar,
+  SkeletonShell,
+} from "@/components/shared/state-skeletons";
 
 interface FullPageSkeletonProps {
   showStats?: boolean;
@@ -25,55 +29,13 @@ export function FullPageSkeleton({
   rowCount = 8,
 }: FullPageSkeletonProps) {
   return (
-    <div className="app-content page-sections">
-      {/* Header skeleton */}
+    <SkeletonShell className="app-content page-sections">
       <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-64" />
-        </div>
-        <Skeleton className="h-9 w-32 rounded-surface" />
+        <PageHeaderSkeleton />
+        <SkeletonBar className="h-9 w-32 rounded-surface" />
       </div>
-
-      {/* Stat cards skeleton */}
-      {showStats && (
-        <div className="card-grid-4 stagger-grid">
-          {Array.from({ length: statCount }).map((_, i) => (
-            <div key={i} className="rounded-surface border p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-8 w-8 rounded-surface" />
-              </div>
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-3 w-16" />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Table skeleton */}
-      {showTable && (
-        <div className="rounded-surface border">
-          {/* Table header */}
-          <div className="border-b p-4 flex items-center justify-between">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-8 w-24 rounded-surface" />
-          </div>
-          {/* Table rows */}
-          <div className="p-4 space-y-3">
-            {Array.from({ length: rowCount }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-4 w-4 rounded-control" />
-                <Skeleton className="h-4 flex-1 max-w-[120px]" />
-                <Skeleton className="h-4 flex-1 max-w-[100px]" />
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-6 w-16 rounded-full" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+      {showStats ? <CardGridSkeletonBody cards={statCount} columns={4} /> : null}
+      {showTable ? <ListSkeletonBody rows={rowCount} columns={5} /> : null}
+    </SkeletonShell>
   );
 }

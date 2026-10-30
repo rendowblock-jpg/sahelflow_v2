@@ -18,6 +18,8 @@ import {
   AttentionCenter,
   type AttentionItem,
 } from "@/components/dashboard/attention-center";
+import { FirstRunPanel } from "@/components/dashboard/first-run-panel";
+import { resolveFirstRun } from "@/components/dashboard/first-run-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { StateSurface } from "@/components/shared/state-surface";
 import { StatCard } from "@/components/shared/stat-card";
@@ -25,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getDashboardAnalytics } from "@/lib/data/analytics-data";
 import { getDashboardStats, getRecentOrders } from "@/lib/data/dashboard";
+import { getFirstRunCounts } from "@/lib/data/first-run-counts";
 import { getStaleOrderCount } from "@/lib/data/confirmation-queue";
 import { db, shopContext } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
@@ -56,6 +59,7 @@ export default async function DashboardPage() {
     rawAnalytics,
     staleConfirmations,
     riskReport,
+    firstRunCounts,
   ] = await Promise.all([
     getDashboardStats(fieldAccess),
     fieldAccess.orders
@@ -66,6 +70,19 @@ export default async function DashboardPage() {
     fieldAccess.risk
       ? getRiskAnalyticsReport({ prisma: db, shop: shopContext }, 30)
       : Promise.resolve(null),
+    // Brand-new shop check: three live counts, skipped for tables the role cannot read.
+    getFirstRunCounts(
+      {
+        order: { count: (args) => db.order.count(args) },
+        product: { count: (args) => db.product.count(args) },
+        customer: { count: (args) => db.customer.count(args) },
+      },
+      {
+        orders: fieldAccess.orders,
+        products: fieldAccess.products,
+        customers: fieldAccess.customers,
+      },
+    ),
   ]);
 
   const { stats, recentOrders, analytics } = projectDashboardForTrustedActor(
@@ -170,6 +187,19 @@ export default async function DashboardPage() {
     fieldAccess.deliveries ||
     fieldAccess.conversations ||
     fieldAccess.products;
+
+  // A shop with no orders, products or customers gets "Start here" instead of empty charts.
+  if (resolveFirstRun(firstRunCounts).show) {
+    return (
+      <div className="app-content page-sections">
+        <PageHeader
+          title={<span suppressHydrationWarning>{greeting}</span>}
+          description={t("dashboard.activityOverview")}
+        />
+        <FirstRunPanel counts={firstRunCounts} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-content page-sections">
