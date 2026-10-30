@@ -226,7 +226,7 @@ describe("the pages call the shop-day helpers", () => {
   const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
   it("dashboard greeting does not read the host hour", () => {
-    const source = read("src/app/(dashboard)/dashboard/page.tsx");
+    const source = (read("src/app/(dashboard)/dashboard/page.tsx") + read("src/components/dashboard/dashboard-view.tsx"));
     expect(source).toContain("greetingPeriod(");
     expect(source).not.toContain(".getHours(");
   });
@@ -237,7 +237,7 @@ describe("the pages call the shop-day helpers", () => {
     expect(source).not.toContain(".toLocaleDateString(");
   });
 
-  it.each(["src/app/(dashboard)/analytics/page.tsx", "src/app/(dashboard)/risk/page.tsx"])(
+  it.each(["src/components/analytics/analytics-view.tsx", "src/components/risk/risk-view.tsx"])(
     "%s labels days with shortDayLabel",
     (path) => {
       const source = read(path);

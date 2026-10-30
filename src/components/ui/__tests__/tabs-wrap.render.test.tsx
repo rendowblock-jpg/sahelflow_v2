@@ -146,7 +146,7 @@ describe("no page overrides the list height by class", () => {
     expect(bad.map((t) => `${t.file}: ${t.tag.replace(/\s+/g, " ").slice(0, 110)}`)).toEqual([]);
   });
 
-  it.each(["app/(dashboard)/orders/page.tsx", "app/(dashboard)/deliveries/page.tsx", "app/(dashboard)/risk/page.tsx"])(
+  it.each(["app/(dashboard)/orders/page.tsx", "app/(dashboard)/deliveries/page.tsx", "components/risk/risk-view.tsx"])(
     "%s asks for wrap",
     (rel) => {
       const mine = tags.filter((t) => t.file === rel);

@@ -7,8 +7,9 @@ import type { Locale } from "@/lib/i18n";
  */
 const translations: Record<Locale, Record<string, string>> = {
   ar: {
+    "dashboard.deliveredToday": "المُسلَّم اليوم",
     "dashboard.revenueDefinition":
-      "إيرادات اليوم = قيمة الطلبيات المسجلة اليوم، دون الملغاة والمسودات، أما الطلبيات المرتجعة أو المرفوضة فتبقى محسوبة. المُحصَّل اليوم = قيمة الطلبيات المسلَّمة اليوم، وتُحتسب عند التسليم. هذه قيم طلبيات وليست نقداً في اليد: النقد القادم من شركات التوصيل تجده في المحاسبة.",
+      "إيرادات اليوم = قيمة الطلبيات المسجلة اليوم، دون الملغاة والمسودات، أما الطلبيات المرتجعة أو المرفوضة فتبقى محسوبة. المُسلَّم اليوم = قيمة الطلبيات المسلَّمة اليوم، وتُحتسب عند التسليم. هذه قيم طلبيات وليست نقداً في اليد: النقد القادم من شركات التوصيل تجده في المحاسبة.",
     "analytics.revenueDefinition":
       "الإيرادات = قيمة الطلبيات المسجلة في الفترة المحددة، دون الملغاة والمسودات، أما المرتجعة أو المرفوضة فتبقى محسوبة. ليست نقداً في اليد ولا صافية من المرتجعات. جدول المقارنة يستخدم الإيراد المحتسب عند التسليم.",
     "accounting.netRevenueDefinition":
@@ -18,6 +19,13 @@ const translations: Record<Locale, Record<string, string>> = {
     "charts.tableOf": "جدول: {{title}}",
     "charts.colDate": "التاريخ",
     "charts.colMonth": "الشهر",
+    "charts.colStatus": "الحالة",
+    "charts.colProduct": "المنتج",
+    "charts.colWilaya": "الولاية",
+    "charts.colHour": "الساعة",
+    "charts.colReturnRate": "نسبة الإرجاع",
+    "charts.colDetail": "التفاصيل",
+    "charts.colWeek": "الأسبوع",
     "automations.failure.line": "الخطوة {{step}} «{{action}}» لم تكتمل: {{reason}}",
     "automations.failure.lineNoStep": "لم يكتمل هذا التشغيل: {{reason}}",
     "automations.failure.whatsappUnavailable": "واتساب غير متصل أو أن الإرسال متوقف. أعد الاتصال ثم أعد المحاولة.",
@@ -31,8 +39,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "automations.failure.other": "حدثت مشكلة غير متوقعة. الرمز التقني تجده ضمن التفاصيل.",
   },
   fr: {
+    "dashboard.deliveredToday": "Livré aujourd'hui",
     "dashboard.revenueDefinition":
-      "Revenu du jour = valeur des commandes passées aujourd'hui. Les commandes annulées et les brouillons ne sont pas comptés ; les commandes retournées ou refusées le sont encore. Encaissé aujourd'hui = valeur des commandes livrées aujourd'hui, comptée à la livraison. Ce sont des valeurs de commandes, pas de l'argent en main : l'argent des transporteurs se voit dans Comptabilité.",
+      "Revenu du jour = valeur des commandes passées aujourd'hui. Les commandes annulées et les brouillons ne sont pas comptés ; les commandes retournées ou refusées le sont encore. Livré aujourd'hui = valeur des commandes livrées aujourd'hui, comptée à la livraison. Ce sont des valeurs de commandes, pas de l'argent en main : l'argent des transporteurs se voit dans Comptabilité.",
     "analytics.revenueDefinition":
       "Chiffre d'affaires = valeur des commandes passées sur la période choisie. Les commandes annulées et les brouillons ne sont pas comptés ; les commandes retournées ou refusées le sont encore. Ce n'est ni de l'argent en main ni un montant net des retours. Le tableau de comparaison utilise le revenu compté à la livraison.",
     "accounting.netRevenueDefinition":
@@ -42,6 +51,13 @@ const translations: Record<Locale, Record<string, string>> = {
     "charts.tableOf": "Tableau : {{title}}",
     "charts.colDate": "Date",
     "charts.colMonth": "Mois",
+    "charts.colStatus": "Statut",
+    "charts.colProduct": "Produit",
+    "charts.colWilaya": "Wilaya",
+    "charts.colHour": "Heure",
+    "charts.colReturnRate": "Taux de retour",
+    "charts.colDetail": "Détails",
+    "charts.colWeek": "Semaine",
     "automations.failure.line": "Étape {{step}} « {{action}} » non terminée : {{reason}}",
     "automations.failure.lineNoStep": "Cette exécution n'est pas terminée : {{reason}}",
     "automations.failure.whatsappUnavailable": "WhatsApp n'est pas connecté ou l'envoi est en pause. Reconnectez-le, puis réessayez.",
@@ -55,8 +71,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "automations.failure.other": "Un problème inattendu. Le code technique est dans les Détails.",
   },
   en: {
+    "dashboard.deliveredToday": "Delivered today",
     "dashboard.revenueDefinition":
-      "Revenue today = value of orders placed today. Cancelled orders and drafts are not counted; returned or refused orders still are. Collected today = value of orders delivered today, counted when delivered. These are order values, not cash in hand: the cash from couriers is in Accounting.",
+      "Revenue today = value of orders placed today. Cancelled orders and drafts are not counted; returned or refused orders still are. Delivered today = value of orders delivered today, counted when delivered. These are order values, not cash in hand: the cash from couriers is in Accounting.",
     "analytics.revenueDefinition":
       "Revenue = value of orders placed in the selected period. Cancelled orders and drafts are not counted; returned or refused orders still are. It is not cash in hand and not net of returns. The comparison table uses revenue counted at delivery.",
     "accounting.netRevenueDefinition":
@@ -66,6 +83,13 @@ const translations: Record<Locale, Record<string, string>> = {
     "charts.tableOf": "Table: {{title}}",
     "charts.colDate": "Date",
     "charts.colMonth": "Month",
+    "charts.colStatus": "Status",
+    "charts.colProduct": "Product",
+    "charts.colWilaya": "Wilaya",
+    "charts.colHour": "Hour",
+    "charts.colReturnRate": "Return rate",
+    "charts.colDetail": "Details",
+    "charts.colWeek": "Week",
     "automations.failure.line": "Step {{step}} “{{action}}” did not finish: {{reason}}",
     "automations.failure.lineNoStep": "This run did not finish: {{reason}}",
     "automations.failure.whatsappUnavailable": "WhatsApp is not connected or sending is paused. Reconnect it, then retry.",

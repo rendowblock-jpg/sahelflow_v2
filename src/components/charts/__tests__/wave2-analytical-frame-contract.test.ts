@@ -88,7 +88,7 @@ describe("Class-AAA analytical frame contract", () => {
     const runtime = source("../echarts-runtime.tsx");
     const sparkline = source("../sparkline.tsx");
     const statCard = source("../../shared/stat-card.tsx");
-    const dashboard = source("../../../app/(dashboard)/dashboard/page.tsx");
+    const dashboard = (source("../../../app/(dashboard)/dashboard/page.tsx") + source("../../../components/dashboard/dashboard-view.tsx"));
 
     expect(runtime).toContain("useChartMotion");
     expect(runtime).toContain("animation: !reducedMotion");
