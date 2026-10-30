@@ -192,6 +192,21 @@ export class ConnectedPlatformClient {
     });
   }
 
+  /** Revokes one paired phone. The relay needs the new (higher) revocation epoch. */
+  async revokeDevice(deviceId: string, input: { workspaceId: string; revocationEpoch: number }) {
+    if (!Number.isSafeInteger(input.revocationEpoch) || input.revocationEpoch < 1) {
+      throw new RangeError("Connected device revocation epoch is invalid");
+    }
+    return this.requestJson<{ deviceId: string; status: "revoked"; revocationEpoch: number }>(
+      "control",
+      `/v1/desktop/devices/${encodeURIComponent(deviceId)}/revoke`,
+      {
+        method: "POST",
+        body: { workspaceId: input.workspaceId, revocationEpoch: input.revocationEpoch },
+      },
+    );
+  }
+
   putProjection(envelope: ConnectedEnvelope) {
     return this.requestJson<{ status: "stored"; sequence: number }>(
       "control",
