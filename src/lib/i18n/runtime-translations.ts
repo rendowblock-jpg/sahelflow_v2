@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n";
+import { getAppearanceCarnetRuntimeTranslation } from "@/lib/i18n/appearance-carnet-runtime";
 import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
 import { getWhatsAppSendGuardRuntimeTranslation } from "@/lib/i18n/whatsapp-send-guard-runtime";
 import { getAnalyticsRuntimeTranslation } from "@/lib/i18n/analytics-runtime";
@@ -145,6 +146,7 @@ export function getRuntimeTranslation(
 ): string | undefined {
   return (
     (SHARED_RUNTIME_COPY[locale] as Readonly<Record<string, string>>)[key] ??
+    getAppearanceCarnetRuntimeTranslation(locale, key) ??
     getAiCanvasRuntimeTranslation(locale, key) ??
     getWhatsAppSendGuardRuntimeTranslation(locale, key) ??
     getAnalyticsRuntimeTranslation(locale, key) ??

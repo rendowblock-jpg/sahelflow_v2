@@ -54,6 +54,9 @@ const AA_PRIMARY_FLOOR = 4.55;
 
 const PRESETS = ["sahel", "atlas", "oasis", "dune"] as const;
 type PresetName = (typeof PRESETS)[number];
+/** The fifth look. Its primary is graphite/cream ink, so the hue-identity contract below does not apply to it (see the carnet block at the end). */
+const LOOKS = [...PRESETS, "carnet"] as const;
+type LookName = (typeof LOOKS)[number];
 
 /** Founding hue angles of the audited pre-R5-b authority (identity contract: ±8°). */
 const LIGHT_HUE_REFERENCE: Record<PresetName, number> = {
@@ -147,7 +150,7 @@ const darkNeutralBase = mergedDeclarations(presetBlocks, "html.dark");
 const globalsLightRoot = mergedDeclarations(globalsBlocks, ":root");
 const globalsDark = mergedDeclarations(globalsBlocks, ".dark");
 
-function lightCascade(preset: PresetName): Declarations[] {
+function lightCascade(preset: LookName): Declarations[] {
   if (preset === "sahel") return [productLightRoot];
   return [
     mergedDeclarations(productBlocks, `html[data-theme-preset="${preset}"]`),
@@ -155,7 +158,7 @@ function lightCascade(preset: PresetName): Declarations[] {
   ];
 }
 
-function darkCascade(preset: PresetName | "fallback"): Declarations[] {
+function darkCascade(preset: LookName | "fallback"): Declarations[] {
   if (preset === "fallback") {
     return [mergedDeclarations(productBlocks, ".dark"), darkNeutralBase];
   }
@@ -342,7 +345,7 @@ describe("design-token contrast contract (WCAG AA)", () => {
   });
 
   it("keeps white-on-primary buttons and primary-as-text links AA in every light preset", () => {
-    for (const preset of PRESETS) {
+    for (const preset of LOOKS) {
       const cascade = lightCascade(preset);
       const primary = colorToken(cascade, "--primary");
       const primaryForeground = colorToken(cascade, "--primary-foreground");
@@ -376,7 +379,7 @@ describe("design-token contrast contract (WCAG AA)", () => {
 
   it("keeps dark-mode primary pairs AA in every preset and the no-preset fallback", () => {
     const cascades: Array<[string, Declarations[]]> = [
-      ...PRESETS.map(
+      ...LOOKS.map(
         (preset) => [preset, darkCascade(preset)] as [string, Declarations[]],
       ),
       ["fallback (no data-theme-preset)", darkCascade("fallback")] as [
@@ -422,7 +425,7 @@ describe("design-token contrast contract (WCAG AA)", () => {
   });
 
   it("keeps neutral and tinted text pairs AA in both modes for every preset", () => {
-    for (const preset of PRESETS) {
+    for (const preset of LOOKS) {
       const light = lightCascade(preset);
       const background = colorToken(light, "--background");
       const card = colorToken(light, "--card");
@@ -601,7 +604,7 @@ describe("design-token contrast contract (WCAG AA)", () => {
       "color-mix(in oklch, var(--primary) 88%, black)",
     );
 
-    for (const preset of PRESETS) {
+    for (const preset of LOOKS) {
       const light = lightCascade(preset);
       expect(
         contrast(
@@ -678,5 +681,209 @@ describe("design-token contrast contract (WCAG AA)", () => {
       }
     }
     expect(failures).toEqual([]);
+  });
+});
+
+const CARNET_LIGHT = 'html[data-theme-preset="carnet"]';
+const CARNET_DARK = 'html.dark[data-theme-preset="carnet"]';
+const SURFACES = [
+  ["desk", "--sidebar"],
+  ["sunk", "--muted"],
+  ["paper", "--background"],
+  ["sheet", "--card"],
+] as const;
+const NON_COLOUR = new Set(["--radius", "--radius-control", "--radius-surface", "--sf-font-mono"]);
+const CARNET_MODES = ["light", "dark"] as const;
+
+function carnetCascade(mode: "light" | "dark"): Declarations[] {
+  return mode === "light"
+    ? [mergedDeclarations(productBlocks, CARNET_LIGHT), productLightRoot, globalsLightRoot]
+    : [mergedDeclarations(presetBlocks, CARNET_DARK), darkNeutralBase, globalsDark];
+}
+
+function carnetOwn(mode: "light" | "dark"): Declarations {
+  return mode === "light" ? mergedDeclarations(productBlocks, CARNET_LIGHT) : mergedDeclarations(presetBlocks, CARNET_DARK);
+}
+
+function hexOf(color: Oklch): string {
+  return naiveSrgbChannels(color).map((channel) => channel.toString(16).padStart(2, "0")).join("").toUpperCase();
+}
+
+describe("carnet (the fifth look): the paper ledger, light and night", () => {
+  it("defines a light block and a dark block, and the dark block overrides every colour token of the light one", () => {
+    const light = carnetOwn("light");
+    const dark = carnetOwn("dark");
+    for (const name of ["--background", "--foreground", "--card", "--popover", "--primary", "--primary-foreground", "--muted", "--muted-foreground", "--secondary", "--border", "--input", "--ring", "--sidebar", "--chart-1", "--chart-5", "--destructive", "--success", "--warning", "--info", "--success-foreground", "--warning-foreground", "--info-foreground", "--carnet-ink-3", "--radius"]) {
+      expect(light.has(name), `light block defines ${name}`).toBe(true);
+    }
+    for (const name of light.keys()) {
+      if (NON_COLOUR.has(name)) continue;
+      expect(dark.has(name), `dark block overrides ${name}`).toBe(true);
+    }
+  });
+
+  it("keeps four surface steps (desk, sunk, paper, sheet) at least 0.02 OKLab L apart in both modes", () => {
+    for (const mode of CARNET_MODES) {
+      const cascade = carnetCascade(mode);
+      const lightness = SURFACES.map(([, token]) => colorToken(cascade, token).l);
+      for (let index = 1; index < lightness.length; index += 1) {
+        const step = (lightness[index] ?? 0) - (lightness[index - 1] ?? 0);
+        expect(step, `${mode}: ${SURFACES[index - 1]?.[0]} -> ${SURFACES[index]?.[0]} step`).toBeGreaterThanOrEqual(0.02);
+      }
+      expect(resolveToken(cascade, "--popover")).toBe(resolveToken(cascade, "--card"));
+      expect(resolveToken(cascade, "--secondary")).toBe(resolveToken(cascade, "--muted"));
+    }
+  });
+
+  it("reads body text >= 7:1, secondary >= 4.5:1, meta ink >= 4.5:1 and control edges >= 3:1 on all four surfaces", () => {
+    for (const mode of CARNET_MODES) {
+      const cascade = carnetCascade(mode);
+      for (const [surface, token] of SURFACES) {
+        const ground = colorToken(cascade, token);
+        expect(contrast(colorToken(cascade, "--foreground"), ground), `${mode}: ink on ${surface}`).toBeGreaterThanOrEqual(7);
+        expect(contrast(colorToken(cascade, "--muted-foreground"), ground), `${mode}: ink2 on ${surface}`).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(colorToken(cascade, "--carnet-ink-3"), ground), `${mode}: ink3 on ${surface}`).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(colorToken(cascade, "--input"), ground), `${mode}: control edge on ${surface}`).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it("makes the primary action ink (no brand hue) with AA pairs, an ink focus ring and the shared hover token", () => {
+    for (const mode of CARNET_MODES) {
+      const cascade = carnetCascade(mode);
+      const primary = colorToken(cascade, "--primary");
+      expect(primary.c, `${mode}: primary is near-neutral ink`).toBeLessThanOrEqual(0.02);
+      expect(resolveToken(cascade, "--primary")).toBe(resolveToken(cascade, "--foreground"));
+      expect(resolveToken(cascade, "--ring")).toBe(resolveToken(cascade, "--primary"));
+      expect(resolveToken(cascade, "--sidebar-primary")).toBe(resolveToken(cascade, "--primary"));
+      const floor = mode === "light" ? AA_PRIMARY_FLOOR : AA_NORMAL_TEXT;
+      expect(contrast(colorToken(cascade, "--primary-foreground"), primary), `${mode}: label on primary`).toBeGreaterThanOrEqual(floor);
+      expect(contrast(colorToken(cascade, "--primary-foreground"), primaryHoverMix(primary)), `${mode}: label on hover`).toBeGreaterThanOrEqual(floor);
+      for (const token of ["--background", "--card"] as const) {
+        expect(contrast(primary, colorToken(cascade, token)), `${mode}: primary as text on ${token}`).toBeGreaterThanOrEqual(floor);
+      }
+    }
+  });
+
+  it("owns the feedback colours and keeps them AA as text on paper, sheet and sunk, on their tints, and as solid pairs", () => {
+    for (const mode of CARNET_MODES) {
+      const cascade = carnetCascade(mode);
+      const own = carnetOwn(mode);
+      for (const name of ["--destructive", "--success", "--warning", "--info", "--success-foreground", "--warning-foreground", "--info-foreground"]) {
+        expect(own.has(name), `${mode}: carnet sets ${name}`).toBe(true);
+      }
+      for (const status of ["--destructive", "--success", "--warning", "--info"] as const) {
+        for (const [surface, token] of SURFACES.filter(([name]) => name !== "desk")) {
+          expect(contrast(colorToken(cascade, status), colorToken(cascade, token)), `${mode}: ${status} text on ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+        }
+      }
+      for (const [text, tint] of [
+        ["--carnet-red-ink", "--carnet-red-bg"],
+        ["--carnet-green-ink", "--carnet-green-bg"],
+        ["--carnet-brass-fg", "--carnet-brass-bg"],
+        ["--carnet-blue-ink", "--carnet-blue-bg"],
+        ["--foreground", "--carnet-slip-out"],
+        ["--foreground", "--carnet-slip-in"],
+      ] as const) {
+        expect(contrast(colorToken(cascade, text), colorToken(cascade, tint)), `${mode}: ${text} on ${tint}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      }
+      for (const status of ["--success", "--warning", "--info"] as const) {
+        expect(contrast(colorToken(cascade, `${status}-foreground`), colorToken(cascade, status)), `${mode}: ${status}-foreground on ${status}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      }
+      for (const name of ["--carnet-red-ink", "--carnet-green-ink", "--carnet-brass-fg", "--carnet-blue-ink"]) {
+        for (const [surface, token] of SURFACES) {
+          expect(contrast(colorToken(cascade, name), colorToken(cascade, token)), `${mode}: ${name} on ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+        }
+      }
+    }
+    // Light solid destructive buttons render literal white text; dark ones use bg-destructive/60 (see the note at the top).
+    expect(contrast(BUTTON_WHITE, colorToken(carnetCascade("light"), "--destructive")), "light: white on --destructive").toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+  });
+
+  it("derives five distinct analytic colours that reach 3:1 on the card and the page in both modes", () => {
+    for (const mode of CARNET_MODES) {
+      const cascade = carnetCascade(mode);
+      const seen = new Set<string>();
+      for (const name of ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5"]) {
+        seen.add(resolveToken(cascade, name));
+        for (const token of ["--card", "--background"] as const) {
+          expect(contrast(colorToken(cascade, name), colorToken(cascade, token)), `${mode}: ${name} on ${token}`).toBeGreaterThanOrEqual(3);
+        }
+      }
+      expect(seen.size, `${mode}: five different chart colours`).toBe(5);
+    }
+  });
+
+  it("keeps text readable on a selected table row in both modes", () => {
+    const alpha = primarySubtleAlpha();
+    const failures: string[] = [];
+    for (const mode of CARNET_MODES) {
+      const cascade = carnetCascade(mode);
+      const primary = colorToken(cascade, "--primary");
+      for (const token of ["--card", "--background"] as const) {
+        const base = colorToken(cascade, token);
+        for (const name of ["--primary", "--foreground", "--muted-foreground", "--success", "--warning", "--info", "--destructive"] as const) {
+          const ratio = contrastOnTint(colorToken(cascade, name), primary, alpha, base);
+          if (ratio < AA_NORMAL_TEXT) failures.push(`${mode}: ${name} on selected row over ${token}: ${ratio.toFixed(2)}:1`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  it("reads as ruled paper: controls 4px, cards 6px, nothing past 10px, light block only", () => {
+    const light = carnetOwn("light");
+    expect(light.get("--radius-control")).toBe("0.25rem");
+    expect(light.get("--radius-surface")).toBe("0.375rem");
+    expect(light.get("--radius")).toBe("0.375rem");
+    expect(carnetOwn("dark").has("--radius")).toBe(false);
+    // The older presets leave the radii to globals.css; carnet is the only look that sets them.
+    expect(productLightRoot.has("--radius")).toBe(false);
+    for (const preset of ["atlas", "oasis", "dune"] as const) {
+      const block = mergedDeclarations(productBlocks, `html[data-theme-preset="${preset}"]`);
+      expect(block.has("--radius"), `${preset} keeps its own radii`).toBe(false);
+      expect(block.has("--radius-surface"), `${preset} keeps its own card radius`).toBe(false);
+    }
+  });
+
+  it("keeps the hex of every literal in a comment and the oklch literal round-trips to it", () => {
+    const check = (css: string, selector: string, label: string) => {
+      const start = css.indexOf(selector + " {");
+      expect(start, `${label} block exists`).toBeGreaterThanOrEqual(0);
+      const body = css.slice(start, css.indexOf("}", start));
+      const lines = body.split("\n").filter((line) => /oklch\(/.test(line) && !/\/\s*[\d.]+\)/.test(line));
+      expect(lines.length, `${label} has literal colours`).toBeGreaterThan(20);
+      for (const line of lines) {
+        const match = line.match(/(--[\w-]+):\s*(oklch\([^)]*\));\s*\/\*\s*#([0-9A-F]{6})/);
+        expect(match, `${label}: ${line.trim()} needs a trailing /* #HEX */ comment`).not.toBeNull();
+        expect(hexOf(parseOklch(match?.[2] ?? "")), `${label}: ${match?.[1]} round-trips`).toBe(match?.[3]);
+      }
+    };
+    check(source("../../../app/product-system.css"), CARNET_LIGHT, "light");
+    check(source("../../../app/theme-preset-system.css"), CARNET_DARK, "dark");
+  });
+
+  it("maps the mono token to Plex Mono under carnet only and loads the font like the other local fonts", () => {
+    expect(carnetOwn("light").get("--sf-font-mono")).toMatch(/^var\(--font-plex-mono\)/);
+    expect(source("../../../app/globals.css")).toContain("var(--sf-font-mono, ui-monospace");
+    const layout = source("../../../app/layout.tsx");
+    expect(layout).toContain('variable: "--font-plex-mono"');
+    expect(layout).toContain("plexMono.variable");
+    for (const file of ["ibmplexmono-400-latin.woff2", "ibmplexmono-500-latin.woff2"]) {
+      expect(layout).toContain(file);
+      expect(readFileSync(new URL(`../../../app/fonts/${file}`, import.meta.url)).byteLength).toBeGreaterThan(10_000);
+    }
+    expect(readFileSync(new URL("../../../../src-tauri/licenses/IBMPlexMono-OFL.txt", import.meta.url), "utf8")).toContain("SIL OPEN FONT LICENSE");
+  });
+
+  it("keeps the settings preview swatch in step with the dark carnet tokens", () => {
+    const panel = source("../../settings/appearance-panel.tsx");
+    const start = panel.indexOf("carnet: {");
+    expect(start).toBeGreaterThanOrEqual(0);
+    const entry = panel.slice(start, panel.indexOf("},", start));
+    const dark = carnetCascade("dark");
+    expect(entry).toContain(resolveToken(dark, "--card")) ;
+    expect(entry).toContain(resolveToken(dark, "--sidebar"));
+    expect(entry).toContain(resolveToken(dark, "--primary"));
   });
 });
