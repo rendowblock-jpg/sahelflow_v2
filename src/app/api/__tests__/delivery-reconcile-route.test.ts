@@ -1,7 +1,7 @@
 /**
  * S03c-08 — POST /api/delivery/[id]/reconcile (route level, fake Prisma).
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
 
 import { ConflictError } from "@/types/errors";
@@ -239,5 +239,101 @@ describe("canonical orders", () => {
     h.assertFollowup.mockImplementation(() => { throw new ConflictError("canonical"); });
     await expect(post(HAS_IT)).rejects.toBeInstanceOf(ConflictError);
     expect(h.transaction).not.toHaveBeenCalled();
+  });
+});
+
+// B6 — a booking stuck in `creating` for 15 minutes or more gets the same two exits.
+describe("a booking stuck in creating", () => {
+  const NOW = Date.parse("2026-10-30T12:00:00.000Z");
+  const MIN = 60_000;
+  const cutoff = new Date(NOW - 15 * MIN);
+  function creating(ageMs: number, trackingNumber: string | null = null) {
+    h.getById.mockResolvedValue({
+      id: "d1", orderId: "o1", provider: "yalidine", status: "creating", trackingNumber,
+      updatedAt: new Date(NOW - ageMs),
+    });
+  }
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("courier-has-it: the claim re-checks status AND updatedAt inside the transaction, then the b3 effects", async () => {
+    creating(20 * MIN);
+    const res = await post(HAS_IT);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, noop: false });
+    const claim = h.tx.delivery.updateMany.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
+    expect(claim.where).toMatchObject({ id: "d1", deletedAt: null, status: "creating", updatedAt: { lte: cutoff } });
+    expect(claim.where.OR).toEqual([{ trackingNumber: null }, { trackingNumber: "YAL-123" }]);
+    expect(claim.data).toEqual({ trackingNumber: "YAL-123", status: "created" });
+    expect(audit()).toMatchObject({ action: "delivery.reconciled.courier_has_it", actor: "person:p1", entityId: "d1" });
+    expect(h.steps).toEqual(["tx:begin", "claim", "order:shipped", "audit", "tx:commit", "dispatch"]);
+  });
+  it("book-again: the release re-checks status AND updatedAt, writes the same audit row", async () => {
+    creating(15 * MIN);
+    const res = await post(AGAIN);
+    expect(await res.json()).toEqual({ ok: true, noop: false, released: true, orderId: "o1", provider: "yalidine" });
+    const del = h.tx.delivery.deleteMany.mock.calls[0]?.[0] as { where: Record<string, unknown> };
+    expect(del.where).toEqual({ id: "d1", deletedAt: null, status: "creating", updatedAt: { lte: cutoff }, trackingNumber: null });
+    expect(audit()).toMatchObject({ action: "delivery.reconciled.book_again", actor: "person:p1", entityId: "d1" });
+    expect(h.steps).toEqual(["tx:begin", "release", "audit", "tx:commit"]);
+  });
+  it.each([[HAS_IT], [AGAIN]])("a row 14:59 old is refused (%j) and nothing is written", async (body) => {
+    creating(15 * MIN - 1_000);
+    await expect(post(body)).rejects.toMatchObject({ code: "DELIVERY_NOT_AWAITING_DECISION", statusCode: 409 });
+    expect(h.transaction).not.toHaveBeenCalled();
+  });
+  it.each([[HAS_IT], [AGAIN]])("a row dated in the future is refused (%j)", async (body) => {
+    creating(-5 * MIN);
+    await expect(post(body)).rejects.toMatchObject({ code: "DELIVERY_NOT_AWAITING_DECISION", statusCode: 409 });
+    expect(h.transaction).not.toHaveBeenCalled();
+  });
+  it("a row with no readable updatedAt is refused", async () => {
+    h.getById.mockResolvedValue({ id: "d1", orderId: "o1", provider: "yalidine", status: "creating", trackingNumber: null });
+    await expect(post(AGAIN)).rejects.toMatchObject({ code: "DELIVERY_NOT_AWAITING_DECISION", statusCode: 409 });
+    expect(h.transaction).not.toHaveBeenCalled();
+  });
+  it("a booking that finishes at minute 14:59 is not reconciled underneath itself: the claim loses, no audit row", async () => {
+    creating(20 * MIN);
+    h.tx.delivery.updateMany.mockResolvedValue({ count: 0 });
+    h.getById.mockResolvedValueOnce({ id: "d1", orderId: "o1", provider: "yalidine", status: "creating", trackingNumber: null, updatedAt: new Date(NOW - 20 * MIN) });
+    h.getById.mockResolvedValueOnce({ id: "d1", orderId: "o1", provider: "yalidine", status: "creating", trackingNumber: null, updatedAt: new Date(NOW - 1_000) });
+    await expect(post(HAS_IT)).rejects.toMatchObject({ code: "DELIVERY_NOT_AWAITING_DECISION", statusCode: 409 });
+    expect(h.tx.auditLog.create).not.toHaveBeenCalled();
+    expect(h.updateStatusInTx).not.toHaveBeenCalled();
+    expect(h.steps).toContain("tx:rollback");
+  });
+  it("a lost book-again race (the row got released or moved) is the typed 409 and no audit row", async () => {
+    creating(20 * MIN);
+    h.tx.delivery.deleteMany.mockResolvedValue({ count: 0 });
+    h.getById.mockResolvedValueOnce({ id: "d1", orderId: "o1", provider: "yalidine", status: "creating", trackingNumber: null, updatedAt: new Date(NOW - 20 * MIN) });
+    h.getById.mockResolvedValueOnce({ id: "d1", orderId: "o1", provider: "yalidine", status: "created", trackingNumber: "YAL-9", updatedAt: new Date(NOW) });
+    await expect(post(AGAIN)).rejects.toMatchObject({ code: "DELIVERY_NOT_AWAITING_DECISION", statusCode: 409 });
+    expect(h.tx.auditLog.create).not.toHaveBeenCalled();
+  });
+  it("same tracking twice: the second press finds a created row and is a no-op, never a second release", async () => {
+    current("created", "YAL-123");
+    const res = await post(HAS_IT);
+    expect(await res.json()).toMatchObject({ ok: true, noop: true });
+    expect(h.transaction).not.toHaveBeenCalled();
+  });
+  it("a different tracking number on a stuck row that already has one is the typed mismatch", async () => {
+    creating(20 * MIN, "OTHER-1");
+    await expect(post(HAS_IT)).rejects.toMatchObject({ code: "DELIVERY_TRACKING_MISMATCH", statusCode: 409 });
+    expect(h.transaction).not.toHaveBeenCalled();
+  });
+  it("a stuck row that holds a tracking number can never be released", async () => {
+    creating(20 * MIN, "YAL-9");
+    await expect(post(AGAIN)).rejects.toMatchObject({ code: "DELIVERY_NOT_AWAITING_DECISION" });
+    expect(h.tx.delivery.deleteMany).not.toHaveBeenCalled();
+  });
+  it("book-again without the consent flag is still rejected before anything is read", async () => {
+    creating(20 * MIN);
+    await expect(post({ action: "book-again" })).rejects.toThrow();
+    expect(h.getById).not.toHaveBeenCalled();
   });
 });

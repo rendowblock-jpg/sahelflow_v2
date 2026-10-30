@@ -28,6 +28,8 @@ export interface DeliveryWorkbenchItem {
   status: string;
   estimatedDelivery: Date | string | null;
   createdAt: Date | string;
+  /** Lets the list tell a booking stuck in `creating` from a live one. */
+  updatedAt: Date | string;
   order: {
     id: string;
     orderNumber: string;
@@ -127,6 +129,7 @@ export async function getDeliveryWorkbenchPage(
         status: true,
         estimatedDelivery: true,
         createdAt: true,
+        updatedAt: true,
         order: {
           select: {
             id: true,
@@ -153,6 +156,7 @@ export async function getDeliveryWorkbenchPage(
     status: string;
     estimatedDelivery: Date | null;
     createdAt: Date;
+    updatedAt: Date;
     order: {
       id: string;
       orderNumber: string;
@@ -171,6 +175,7 @@ export async function getDeliveryWorkbenchPage(
       status: row.status,
       estimatedDelivery: row.estimatedDelivery,
       createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
       order: row.order
         ? {
             id: row.order.id,

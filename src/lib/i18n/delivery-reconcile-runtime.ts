@@ -34,6 +34,8 @@ const translations: Record<Locale, Record<string, string>> = {
       "هذا الطلب يستخدم مسار شركة التوصيل الجديد. اتخذ القرار من صفحة الطلب.",
     "deliveries.reconcile.openOrder": "فتح الطلب",
     "deliveries.reconcile.decide": "اتخاذ قرار",
+    "deliveries.reconcile.stuckCreating":
+      "بدأ هذا الحجز منذ أكثر من 15 دقيقة ولم يكتمل أبداً.",
   },
   fr: {
     "deliveries.reconcile.needsDecision": "À vous de décider",
@@ -67,6 +69,8 @@ const translations: Record<Locale, Record<string, string>> = {
       "Cette commande utilise le nouveau circuit transporteur. Décidez depuis la page de la commande.",
     "deliveries.reconcile.openOrder": "Ouvrir la commande",
     "deliveries.reconcile.decide": "Décider",
+    "deliveries.reconcile.stuckCreating":
+      "Cette réservation a démarré il y a plus de 15 minutes et ne s’est jamais terminée.",
   },
   en: {
     "deliveries.reconcile.needsDecision": "Needs your decision",
@@ -98,6 +102,8 @@ const translations: Record<Locale, Record<string, string>> = {
       "This order uses the newer courier flow. Decide on the order page.",
     "deliveries.reconcile.openOrder": "Open the order",
     "deliveries.reconcile.decide": "Decide",
+    "deliveries.reconcile.stuckCreating":
+      "This booking started more than 15 minutes ago and never finished.",
   },
 };
 
