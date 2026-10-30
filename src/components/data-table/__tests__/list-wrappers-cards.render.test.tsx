@@ -130,6 +130,7 @@ describe("the other four tables work on cards with the default mapping, wrapper 
       status: "created",
       estimatedDelivery: null,
       createdAt: "2026-10-26T10:00:00.000Z",
+      updatedAt: "2026-10-26T10:00:00.000Z",
       order: { id: `o-${id}`, orderNumber: `ORD-${id}`, wilaya: "16", customer: { name: "Amine B.", phone: "0555000000" } },
     });
     const response: DeliveryWorkbenchResponse = {
