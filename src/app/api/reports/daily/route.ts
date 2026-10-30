@@ -95,7 +95,7 @@ async function executeReport(
     trigger,
   });
   const state = delivery.effect.state;
-  const accepted = ["queued", "processing", "retrying"].includes(state);
+  const accepted = ["queued", "processing", "retrying", "held"].includes(state);
   const succeeded = state === "succeeded";
 
   let markerPersisted = false;

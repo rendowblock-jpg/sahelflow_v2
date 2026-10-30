@@ -28,6 +28,12 @@ import {
   writeWhatsAppMediaObject,
 } from "./media-object-store";
 import { normalizeWhatsAppJid } from "./types";
+import {
+  SEND_GUARD_HOLD_ERROR_CODE,
+  assessWhatsAppSend,
+  type SendGuardAssessment,
+  type SendGuardNotice,
+} from "./send-guard-store";
 
 export const WHATSAPP_TEXT_EFFECT_TYPE = "whatsapp.text.send.v1";
 export const WHATSAPP_IMAGE_EFFECT_TYPE = "whatsapp.image.send.v1";
@@ -277,7 +283,8 @@ export type WhatsAppEffectState =
   | "retrying"
   | "succeeded"
   | "ambiguous"
-  | "dead_letter";
+  | "dead_letter"
+  | "held";
 
 export interface WhatsAppEffectStatus {
   effectKey: string;
@@ -380,8 +387,10 @@ function publicState(row: OutboxRow, messageId: string | null): WhatsAppEffectSt
         ? "dead_letter"
         : row.status === "succeeded"
           ? "succeeded"
-          : row.status === "processing"
-            ? "processing"
+          : row.status === "failed" && row.lastErrorCode === SEND_GUARD_HOLD_ERROR_CODE
+            ? "held"
+            : row.status === "processing"
+              ? "processing"
             : row.status === "retrying"
               ? "retrying"
               : "queued";
@@ -715,23 +724,69 @@ async function resolveQuotedReplyContext(
 
 const INBOUND_PROVENANCE_DIRECTIONS = ["inbound", "incoming"] as const;
 
+export interface QueuedWhatsAppSend {
+  effectKey: string;
+  messageId: string;
+  replayed: boolean;
+  /** Set when the send guard warned, delayed or held this send. */
+  guard?: SendGuardNotice;
+}
+
+function withGuardNotice(
+  result: { effectKey: string; messageId: string },
+  replayed: boolean,
+  assessment: SendGuardAssessment,
+): QueuedWhatsAppSend {
+  return {
+    effectKey: result.effectKey,
+    messageId: result.messageId,
+    replayed,
+    ...(assessment.notice ? { guard: assessment.notice } : {}),
+  };
+}
+
+/**
+ * One recipient + conversation lookup for every sender. An explicit
+ * conversation id wins (its stored JID is the transport); otherwise the chat is
+ * found by JID. `conversationId` is null for a number never written to before.
+ */
+async function resolveSendTarget(
+  context: ServiceContext,
+  to: string,
+  conversationId?: string | null,
+): Promise<{ jid: string; conversationId: string | null }> {
+  const jid = normalizeRecipient(to);
+  const requested = conversationId?.trim() || null;
+  if (requested) {
+    const owned = await context.prisma.conversation.findFirst({
+      where: { id: requested, channel: "whatsapp" },
+      select: { id: true, sourceId: true },
+    });
+    if (owned?.sourceId) {
+      return { jid: normalizeRecipient(owned.sourceId), conversationId: owned.id };
+    }
+  }
+  const byJid = await context.prisma.conversation.findUnique({
+    where: { channel_sourceId: { channel: "whatsapp", sourceId: jid } },
+    select: { id: true },
+  });
+  return { jid, conversationId: byJid?.id ?? null };
+}
+
+
 export async function queueWhatsAppText(
   context: TrustedWhatsAppCommandContext,
   input: QueueWhatsAppTextInput,
-): Promise<{ effectKey: string; messageId: string; replayed: boolean }> {
+): Promise<QueuedWhatsAppSend> {
   const clientMessageId = z.string().uuid().parse(input.clientMessageId);
   const text = z.string().trim().min(1).max(4000).parse(input.text);
-  let jid = normalizeRecipient(input.to);
-  const conversationId = input.conversationId?.trim() || null;
-  if (conversationId) {
-    const owned = await context.prisma.conversation.findFirst({
-      where: { id: conversationId, channel: "whatsapp" },
-      select: { sourceId: true },
-    });
-    if (owned?.sourceId) {
-      jid = normalizeRecipient(owned.sourceId);
-    }
-  }
+  const target = await resolveSendTarget(context, input.to, input.conversationId);
+  const jid = target.jid;
+  const assessment = await assessWhatsAppSend(context, {
+    clientMessageId,
+    conversationId: target.conversationId,
+    text,
+  });
   const quoted = await resolveQuotedReplyContext(context, jid, input.quotedMessageId);
 
   // The quote target is part of the request identity: two sends that differ
@@ -844,6 +899,7 @@ export async function queueWhatsAppText(
           {
             effectKey,
             effectType: WHATSAPP_TEXT_EFFECT_TYPE,
+            ...assessment.outbox,
             payload,
           },
         ],
@@ -852,7 +908,7 @@ export async function queueWhatsAppText(
     },
   );
 
-  return { ...execution.result, replayed: execution.replayed };
+  return withGuardNotice(execution.result, execution.replayed, assessment);
 }
 
 /**
@@ -892,7 +948,7 @@ function stagedMediaGuard(
 export async function queueWhatsAppImage(
   context: TrustedWhatsAppCommandContext,
   input: QueueWhatsAppImageInput,
-): Promise<{ effectKey: string; messageId: string; replayed: boolean }> {
+): Promise<QueuedWhatsAppSend> {
   const clientMessageId = z.string().uuid().parse(input.clientMessageId);
   const caption = z.string().max(4000).parse(input.caption?.trim() ?? "");
   const declaredSize = z.number().int().positive().max(20 * 1024 * 1024).parse(input.declaredSize);
@@ -900,7 +956,13 @@ export async function queueWhatsAppImage(
     .enum(["image/jpeg", "image/png", "image/webp"])
     .parse(input.declaredMime?.split(";", 1)[0]?.trim().toLowerCase());
   const fileName = safeOutboundFileName(input.fileName);
-  const jid = normalizeRecipient(input.to);
+  const target = await resolveSendTarget(context, input.to);
+  const jid = target.jid;
+  const assessment = await assessWhatsAppSend(context, {
+    clientMessageId,
+    conversationId: target.conversationId,
+    text: caption,
+  });
   // Resolved before staging: an invalid quote must never leave staged media.
   const quoted = await resolveQuotedReplyContext(context, jid, input.quotedMessageId);
 
@@ -1081,6 +1143,7 @@ export async function queueWhatsAppImage(
           {
             effectKey,
             effectType: WHATSAPP_IMAGE_EFFECT_TYPE,
+            ...assessment.outbox,
             payload,
           },
         ],
@@ -1089,7 +1152,7 @@ export async function queueWhatsAppImage(
     },
   ).catch(stagedMediaGuard(context, clientMessageId));
 
-  return { ...execution.result, replayed: execution.replayed };
+  return withGuardNotice(execution.result, execution.replayed, assessment);
 }
 
 async function inspectOutboundVideoDuration(
@@ -1138,7 +1201,7 @@ async function inspectOutboundVideoDuration(
 export async function queueWhatsAppVideo(
   context: TrustedWhatsAppCommandContext,
   input: QueueWhatsAppVideoInput,
-): Promise<{ effectKey: string; messageId: string; replayed: boolean }> {
+): Promise<QueuedWhatsAppSend> {
   const clientMessageId = z.string().uuid().parse(input.clientMessageId);
   const caption = z.string().max(4000).parse(input.caption?.trim() ?? "");
   const declaredSize = z.number().int().positive().max(64 * 1024 * 1024).parse(input.declaredSize);
@@ -1146,7 +1209,13 @@ export async function queueWhatsAppVideo(
     input.declaredMime?.split(";", 1)[0]?.trim().toLowerCase(),
   );
   const fileName = safeOutboundFileName(input.fileName);
-  const jid = normalizeRecipient(input.to);
+  const target = await resolveSendTarget(context, input.to);
+  const jid = target.jid;
+  const assessment = await assessWhatsAppSend(context, {
+    clientMessageId,
+    conversationId: target.conversationId,
+    text: caption,
+  });
   // Resolved before staging: an invalid quote must never leave staged media.
   const quoted = await resolveQuotedReplyContext(context, jid, input.quotedMessageId);
 
@@ -1346,6 +1415,7 @@ export async function queueWhatsAppVideo(
           {
             effectKey,
             effectType: WHATSAPP_VIDEO_EFFECT_TYPE,
+            ...assessment.outbox,
             payload,
           },
         ],
@@ -1354,7 +1424,7 @@ export async function queueWhatsAppVideo(
     },
   ).catch(stagedMediaGuard(context, clientMessageId));
 
-  return { ...execution.result, replayed: execution.replayed };
+  return withGuardNotice(execution.result, execution.replayed, assessment);
 }
 
 function documentFallbackName(mediaType: string): string {
@@ -1400,7 +1470,7 @@ function outboundAttachmentMimeType(
 export async function queueWhatsAppDocument(
   context: TrustedWhatsAppCommandContext,
   input: QueueWhatsAppDocumentInput,
-): Promise<{ effectKey: string; messageId: string; replayed: boolean }> {
+): Promise<QueuedWhatsAppSend> {
   const clientMessageId = z.string().uuid().parse(input.clientMessageId);
   const caption = z.string().max(4000).parse(input.caption?.trim() ?? "");
   const declaredSize = z.number().int().positive().max(64 * 1024 * 1024).parse(input.declaredSize);
@@ -1416,7 +1486,13 @@ export async function queueWhatsAppDocument(
     ])
     .parse(input.declaredMime?.split(";", 1)[0]?.trim().toLowerCase());
   const fileName = safeOutboundFileName(input.fileName);
-  const jid = normalizeRecipient(input.to);
+  const target = await resolveSendTarget(context, input.to);
+  const jid = target.jid;
+  const assessment = await assessWhatsAppSend(context, {
+    clientMessageId,
+    conversationId: target.conversationId,
+    text: caption,
+  });
   // Resolved before staging: an invalid quote must never leave staged media.
   const quoted = await resolveQuotedReplyContext(context, jid, input.quotedMessageId);
 
@@ -1607,6 +1683,7 @@ export async function queueWhatsAppDocument(
           {
             effectKey,
             effectType: WHATSAPP_DOCUMENT_EFFECT_TYPE,
+            ...assessment.outbox,
             payload,
           },
         ],
@@ -1615,7 +1692,7 @@ export async function queueWhatsAppDocument(
     },
   ).catch(stagedMediaGuard(context, clientMessageId));
 
-  return { ...execution.result, replayed: execution.replayed };
+  return withGuardNotice(execution.result, execution.replayed, assessment);
 }
 
 interface OutboundVoiceMetadata {
@@ -1694,7 +1771,7 @@ async function inspectOutboundVoiceMetadata(
 export async function queueWhatsAppVoice(
   context: TrustedWhatsAppCommandContext,
   input: QueueWhatsAppVoiceInput,
-): Promise<{ effectKey: string; messageId: string; replayed: boolean }> {
+): Promise<QueuedWhatsAppSend> {
   const clientMessageId = z.string().uuid().parse(input.clientMessageId);
   const declaredSize = z
     .number()
@@ -1713,7 +1790,13 @@ export async function queueWhatsAppVoice(
       "audio/x-wav",
     ])
     .parse(input.declaredMime?.split(";", 1)[0]?.trim().toLowerCase() ?? null);
-  const jid = normalizeRecipient(input.to);
+  const target = await resolveSendTarget(context, input.to);
+  const jid = target.jid;
+  const assessment = await assessWhatsAppSend(context, {
+    clientMessageId,
+    conversationId: target.conversationId,
+    text: "",
+  });
   // Resolved before staging: an invalid quote must never leave staged media.
   const quoted = await resolveQuotedReplyContext(context, jid, input.quotedMessageId);
 
@@ -1914,6 +1997,7 @@ export async function queueWhatsAppVoice(
           {
             effectKey,
             effectType: WHATSAPP_VOICE_EFFECT_TYPE,
+            ...assessment.outbox,
             payload,
           },
         ],
@@ -1922,7 +2006,7 @@ export async function queueWhatsAppVoice(
     },
   ).catch(stagedMediaGuard(context, clientMessageId));
 
-  return { ...execution.result, replayed: execution.replayed };
+  return withGuardNotice(execution.result, execution.replayed, assessment);
 }
 
 async function recoverPreEffectLease(
@@ -2169,7 +2253,10 @@ async function claimIntent(
       },
       ...(effectKey ? { effectKey } : {}),
       OR: [
-        { status: "queued" },
+        {
+          status: "queued",
+          OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }],
+        },
         { status: "retrying", nextAttemptAt: { lte: now } },
       ],
     },
@@ -2779,4 +2866,50 @@ export async function retryWhatsAppEffect(
     documentSender,
     voiceSender,
   );
+}
+
+/**
+ * A person releases a send the guard held as a bulk pattern. The row goes back
+ * to the normal queue and is attempted at once; only a signed-in person may do
+ * this, never an automation.
+ */
+export async function approveHeldWhatsAppEffect(
+  context: TrustedWhatsAppCommandContext,
+  effectKey: string,
+): Promise<WhatsAppEffectStatus> {
+  if (context.businessPrincipal.kind !== "authenticated-owner") {
+    throw new SahelFlowError("Only a signed-in person can approve a held send", "FORBIDDEN", 403);
+  }
+  const row = await readRow(context, effectKey);
+  const isHeld =
+    row.status === "failed" &&
+    row.outcomeState === "none" &&
+    row.lastErrorCode === SEND_GUARD_HOLD_ERROR_CODE;
+  if (!isHeld) {
+    throw new ConflictError("This WhatsApp send is not on hold");
+  }
+  await context.prisma.$transaction(async (tx) => {
+    const released = await tx.outboxIntent.updateMany({
+      where: {
+        id: row.id,
+        status: "failed",
+        outcomeState: "none",
+        lastErrorCode: SEND_GUARD_HOLD_ERROR_CODE,
+      },
+      data: { status: "queued", lastErrorCode: null, nextAttemptAt: null },
+    });
+    if (released.count !== 1) {
+      throw new ConflictError("WhatsApp send state changed; refresh and try again");
+    }
+    await tx.auditLog.create({
+      data: {
+        action: "whatsapp.message.hold_approved",
+        entity: "outbox-intent",
+        entityId: row.id,
+        actor: context.businessPrincipal.auditActor,
+        metadata: JSON.stringify({ effectKey, effectType: row.effectType }),
+      },
+    });
+  });
+  return processWhatsAppEffect(context, effectKey);
 }

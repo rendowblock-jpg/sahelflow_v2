@@ -1,3 +1,4 @@
+import { withSendGuardRefusal } from "@/lib/whatsapp/send-guard-http";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -34,7 +35,7 @@ const sendSchema = z.object({
  * not that WhatsApp accepted it. Ambiguous results fail closed for operator
  * reconciliation instead of being repeated automatically.
  */
-export const POST = withErrorHandler(async (req: NextRequest) => {
+export const POST = withErrorHandler(withSendGuardRefusal(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("conversations.reply");
   assertTrustedAction(actorContext, "customers.contact.read", {
     shopId: actorContext.shop.shopId,
@@ -67,7 +68,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       nextAttemptAt: null,
       errorCode: null,
       requiresDuplicateConfirmation: false,
+      ...(queued.guard ? { guard: queued.guard } : {}),
     },
     { status: 202 },
   );
-}, "POST /api/whatsapp/send");
+}), "POST /api/whatsapp/send");

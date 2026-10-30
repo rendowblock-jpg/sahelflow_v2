@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n";
 import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
+import { getWhatsAppSendGuardRuntimeTranslation } from "@/lib/i18n/whatsapp-send-guard-runtime";
 import { getAnalyticsRuntimeTranslation } from "@/lib/i18n/analytics-runtime";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
@@ -143,6 +144,7 @@ export function getRuntimeTranslation(
   return (
     (SHARED_RUNTIME_COPY[locale] as Readonly<Record<string, string>>)[key] ??
     getAiCanvasRuntimeTranslation(locale, key) ??
+    getWhatsAppSendGuardRuntimeTranslation(locale, key) ??
     getAnalyticsRuntimeTranslation(locale, key) ??
     getAutomationRuntimeTranslation(locale, key) ??
     getCodRuntimeTranslation(locale, key) ??

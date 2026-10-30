@@ -1,3 +1,4 @@
+import { withSendGuardRefusal } from "@/lib/whatsapp/send-guard-http";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -105,7 +106,7 @@ async function readBoundedVideoForm(req: NextRequest): Promise<FormData> {
  * commit its canonical Message/outbox identity, then dispatch only the staged
  * bytes. Browser files, paths and object identifiers never become authority.
  */
-export const POST = withErrorHandler(async (req: NextRequest) => {
+export const POST = withErrorHandler(withSendGuardRefusal(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("conversations.reply");
   assertTrustedAction(actorContext, "customers.contact.read", {
     shopId: actorContext.shop.shopId,
@@ -227,4 +228,4 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     },
     { status: succeeded ? 200 : accepted ? 202 : 409 },
   );
-}, "POST /api/whatsapp/send-video");
+}), "POST /api/whatsapp/send-video");

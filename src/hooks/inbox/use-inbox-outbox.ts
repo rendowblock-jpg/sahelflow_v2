@@ -1,5 +1,6 @@
 "use client";
 
+import { sendGuardWarnCopy } from "@/lib/i18n/whatsapp-send-guard-runtime";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import type {
@@ -455,6 +456,14 @@ export function useInboxOutbox({
       }
       if (response.status === 202 && data.accepted && data.effectKey) {
         clearAcceptedDraft();
+        // A warned send is accepted; tell the person to slow down.
+        const guardNotice = sendGuardWarnCopy(t, data.guard);
+        if (
+          guardNotice &&
+          activeChatRef.current?.conversationId === chat.conversationId
+        ) {
+          setSendError(guardNotice);
+        }
         mutateMessages(chat.conversationId, (current) =>
           current.map((message) =>
             message.id === tempId
