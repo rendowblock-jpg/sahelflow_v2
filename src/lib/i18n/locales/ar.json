@@ -3399,7 +3399,7 @@
   "dashboard.firstRun.order.hint": "اربط واتساب لتصلك الطلبات في صندوق الوارد، أو أدخل طلبًا بنفسك.",
   "dashboard.firstRun.order.whatsappCta": "ربط واتساب",
   "dashboard.firstRun.order.manualCta": "إضافة طلب",
-  "dashboard.firstRun.delivery.title": "حدّد أسعار التوصيل",
+  "dashboard.firstRun.delivery.title": "اربط شركة التوصيل",
   "dashboard.firstRun.delivery.hint": "بيانات شركة التوصيل موجودة في الإعدادات، قسم التوصيل.",
   "dashboard.firstRun.delivery.cta": "فتح إعدادات التوصيل"
 }

@@ -3399,7 +3399,7 @@
   "dashboard.firstRun.order.hint": "Link your WhatsApp to receive orders in the inbox, or enter one yourself.",
   "dashboard.firstRun.order.whatsappCta": "Connect WhatsApp",
   "dashboard.firstRun.order.manualCta": "Add an order",
-  "dashboard.firstRun.delivery.title": "Set your delivery prices",
+  "dashboard.firstRun.delivery.title": "Connect your courier",
   "dashboard.firstRun.delivery.hint": "Courier details live in Settings, under Delivery.",
   "dashboard.firstRun.delivery.cta": "Open delivery settings"
 }

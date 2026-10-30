@@ -62,7 +62,7 @@ const ROW_HEIGHT: Record<SkeletonRowHeight, string> = {
 const CELL_WIDTHS = ["w-3/4", "w-1/2", "w-2/3", "w-1/3", "w-1/2"] as const;
 
 function cellWidth(index: number): string {
-  return CELL_WIDTHS[index % CELL_WIDTHS.length];
+  return CELL_WIDTHS[index % CELL_WIDTHS.length] ?? "w-1/2";
 }
 
 interface ClassName {

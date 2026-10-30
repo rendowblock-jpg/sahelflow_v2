@@ -33,6 +33,12 @@ const CATALOGS: Record<TestLocale, Record<string, string>> = {
 function interpolate(raw: string, params?: Record<string, string | number>) {
   return raw.replace(/\{\{(\w+)\}\}/g, (_m, key: string) => String(params?.[key] ?? ""));
 }
+function req(catalog: Record<string, string>, key: string): string {
+  const value = catalog[key];
+  if (value === undefined) throw new Error(`missing catalog key ${key}`);
+  return value;
+}
+
 vi.mock("@/hooks/use-i18n", () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, string | number>) =>
@@ -98,7 +104,7 @@ describe("resolveFirstRun (pure)", () => {
     expect(r.steps.map((s) => s.done)).toEqual([true, true, true]);
     expect(r.doneCount).toBe(3);
     expect(resolveFirstRun(ZERO, { deliveryPricesSet: true }).doneCount).toBe(1);
-    expect(resolveFirstRun({ orders: 0, products: 5, customers: 0 }).steps[0].done).toBe(true);
+    expect(resolveFirstRun({ orders: 0, products: 5, customers: 0 }).steps[0]?.done).toBe(true);
   });
 
   it("points every step at a real existing route", () => {
@@ -142,7 +148,7 @@ describe.each(["en", "ar"] as const)("FirstRunPanel in %s", (locale) => {
   it("counts 0 -> shows the panel with the Start here heading and three steps", () => {
     render(<FirstRunPanel counts={ZERO} now={NOW} />);
     const panel = screen.getByTestId("dashboard-first-run");
-    expect(within(panel).getByRole("heading", { name: cat["dashboard.firstRun.title"] })).toBeInTheDocument();
+    expect(within(panel).getByRole("heading", { name: req(cat, "dashboard.firstRun.title") })).toBeInTheDocument();
     const steps = within(panel).getAllByRole("listitem");
     expect(steps).toHaveLength(3);
     expect(steps.map((s) => s.getAttribute("data-step"))).toEqual(["product", "order", "delivery"]);
@@ -153,10 +159,10 @@ describe.each(["en", "ar"] as const)("FirstRunPanel in %s", (locale) => {
     render(<FirstRunPanel counts={ZERO} now={NOW} />);
     const hrefOf = (name: string) =>
       screen.getByRole("link", { name }).getAttribute("href");
-    expect(hrefOf(cat["dashboard.firstRun.product.cta"])).toBe("/products?create=1");
-    expect(hrefOf(cat["dashboard.firstRun.order.whatsappCta"])).toBe("/inbox");
-    expect(hrefOf(cat["dashboard.firstRun.order.manualCta"])).toBe("/orders?create=1");
-    expect(hrefOf(cat["dashboard.firstRun.delivery.cta"])).toBe("/settings?group=delivery");
+    expect(hrefOf(req(cat, "dashboard.firstRun.product.cta"))).toBe("/products?create=1");
+    expect(hrefOf(req(cat, "dashboard.firstRun.order.whatsappCta"))).toBe("/inbox");
+    expect(hrefOf(req(cat, "dashboard.firstRun.order.manualCta"))).toBe("/orders?create=1");
+    expect(hrefOf(req(cat, "dashboard.firstRun.delivery.cta"))).toBe("/settings?group=delivery");
   });
 
   it.each([
@@ -170,12 +176,12 @@ describe.each(["en", "ar"] as const)("FirstRunPanel in %s", (locale) => {
 
   it("ticks a step from the delivery flag and says how many are done", () => {
     render(<FirstRunPanel counts={ZERO} deliveryPricesSet now={NOW} />);
-    const steps = screen.getAllByRole("listitem");
+    const steps = screen.getAllByRole("listitem") as [HTMLElement, HTMLElement, HTMLElement];
     expect(steps[2]).toHaveAttribute("data-done", "true");
-    expect(within(steps[2]).getByText(cat["dashboard.firstRun.done"])).toBeInTheDocument();
-    expect(within(steps[0]).getByText(cat["dashboard.firstRun.todo"])).toBeInTheDocument();
+    expect(within(steps[2]).getByText(req(cat, "dashboard.firstRun.done"))).toBeInTheDocument();
+    expect(within(steps[0]).getByText(req(cat, "dashboard.firstRun.todo"))).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-first-run")).toHaveTextContent(
-      interpolate(cat["dashboard.firstRun.progress"], { done: 1, total: 3 }),
+      interpolate(req(cat, "dashboard.firstRun.progress"), { done: 1, total: 3 }),
     );
   });
 
@@ -185,7 +191,7 @@ describe.each(["en", "ar"] as const)("FirstRunPanel in %s", (locale) => {
     useLicenseStore.setState({ projection: trial() });
     rerender(<FirstRunPanel counts={ZERO} now={NOW} />);
     expect(screen.getByTestId("dashboard-first-run-trial")).toHaveTextContent(
-      interpolate(cat["dashboard.firstRun.trial"], { days: 5 }),
+      interpolate(req(cat, "dashboard.firstRun.trial"), { days: 5 }),
     );
     useLicenseStore.setState({ projection: trial({ type: "permanent" }) });
     rerender(<FirstRunPanel counts={ZERO} now={NOW} />);
@@ -223,9 +229,9 @@ describe("first-run copy exists in all three locales", () => {
     "dashboard.firstRun.delivery.cta",
   ];
   it.each(KEYS)("%s", (key) => {
-    for (const l of ["ar", "fr", "en"] as const) expect(CATALOGS[l][key], `${l} ${key}`).toBeTruthy();
-    expect(CATALOGS.ar[key]).toMatch(/[\u0600-\u06FF]/);
-    const params = (l: TestLocale) => (CATALOGS[l][key].match(/\{\{(\w+)\}\}/g) ?? []).sort();
+    for (const l of ["ar", "fr", "en"] as const) expect(req(CATALOGS[l], key), `${l} ${key}`).toBeTruthy();
+    expect(req(CATALOGS.ar, key)).toMatch(/[\u0600-\u06FF]/);
+    const params = (l: TestLocale) => (req(CATALOGS[l], key).match(/\{\{(\w+)\}\}/g) ?? []).sort();
     expect(params("ar")).toEqual(params("en"));
     expect(params("fr")).toEqual(params("en"));
   });

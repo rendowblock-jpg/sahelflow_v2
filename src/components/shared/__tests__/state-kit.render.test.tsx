@@ -40,6 +40,12 @@ function interpolate(raw: string, params?: Record<string, string | number>) {
   return raw.replace(/\{\{(\w+)\}\}/g, (_m, key: string) => String(params?.[key] ?? ""));
 }
 
+function req(catalog: Record<string, string>, key: string): string {
+  const value = catalog[key];
+  if (value === undefined) throw new Error(`missing catalog key ${key}`);
+  return value;
+}
+
 vi.mock("@/hooks/use-i18n", () => ({
   useI18n: () => ({
     t: (key: string, params?: Record<string, string | number>) =>
@@ -54,7 +60,7 @@ const AT = new Date("2026-10-30T10:05:00Z"); // 11:05 in Algiers (UTC+1)
 describe.each(["en", "ar"] as const)("state kit in %s", (locale) => {
   const cat = CATALOGS[locale];
   const say = (key: string, params?: Record<string, string | number>) =>
-    interpolate(cat[key], params);
+    interpolate(req(cat, key), params);
   beforeEach(() => {
     harness.locale = locale;
   });
@@ -103,7 +109,7 @@ describe.each(["en", "ar"] as const)("state kit in %s", (locale) => {
     expect(heading).toHaveTextContent(say("state.error.title"));
     expect(document.activeElement).toBe(heading);
     expect(screen.queryByTestId("state-error-code")).toBeNull();
-    const retry = screen.getByRole("button", { name: cat["error.retry"] });
+    const retry = screen.getByRole("button", { name: req(cat, "error.retry") });
     expect(retry.className).toContain("min-h-(--sf-touch-target)");
     await user.click(retry);
     expect(onRetry).toHaveBeenCalledTimes(1);
@@ -271,7 +277,7 @@ describe("skeleton shape contract", () => {
     const el = screen.getByRole("status");
     expect(el).toHaveAttribute("aria-busy", "true");
     expect(el).toHaveAttribute("aria-live", "polite");
-    expect(within(el).getByText(CATALOGS.en["state.loading.label"])).toHaveClass("sr-only");
+    expect(within(el).getByText(req(CATALOGS.en, "state.loading.label"))).toHaveClass("sr-only");
   });
 
   it.each(PRESETS)("%s: every bar carries motion-reduce:animate-none (no shimmer)", (_n, ui) => {
@@ -352,12 +358,12 @@ describe("state kit copy exists in all three locales", () => {
   ];
   it.each(KEYS)("%s is present, non-empty, and Arabic is Arabic", (key) => {
     for (const l of ["ar", "fr", "en"] as const) {
-      expect(CATALOGS[l][key], `${l} ${key}`).toBeTruthy();
+      expect(req(CATALOGS[l], key), `${l} ${key}`).toBeTruthy();
     }
-    expect(CATALOGS.ar[key]).toMatch(/[\u0600-\u06FF]/);
+    expect(req(CATALOGS.ar, key)).toMatch(/[\u0600-\u06FF]/);
     for (const l of ["ar", "fr", "en"] as const) {
-      const params = (CATALOGS[l][key].match(/\{\{(\w+)\}\}/g) ?? []).sort();
-      expect(params).toEqual((CATALOGS.en[key].match(/\{\{(\w+)\}\}/g) ?? []).sort());
+      const params = (req(CATALOGS[l], key).match(/\{\{(\w+)\}\}/g) ?? []).sort();
+      expect(params).toEqual((req(CATALOGS.en, key).match(/\{\{(\w+)\}\}/g) ?? []).sort());
     }
   });
 });
