@@ -22,6 +22,10 @@ import {
   type ThemeMode,
   type ThemePreset,
 } from "@/components/theme-provider";
+import {
+  appearanceBootstrapScript,
+  resolveLook,
+} from "@/lib/appearance/look";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { UpdateChecker } from "@/components/updater/update-checker";
 import { getDirection } from "@/lib/i18n";
@@ -39,6 +43,17 @@ const inter = localFont({
   display: "swap",
 });
 
+// IBM Plex Mono carries the figures of the Carnet look (SIL OFL 1.1, src-tauri/licenses/IBMPlexMono-OFL.txt).
+// The variable sits on <html> as well as the body so the preset token on <html> can resolve it.
+const plexMono = localFont({
+  src: [
+    { path: "./fonts/ibmplexmono-400-latin.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/ibmplexmono-500-latin.woff2", weight: "500", style: "normal" },
+  ],
+  variable: "--font-plex-mono",
+  display: "swap",
+});
+
 // Noto Sans Arabic was the original UI convergence authority before Internal.17
 // replaced it with IBM Plex Sans Arabic. Restore the neutral, highly legible
 // application face and keep the Arabic stack sans-serif all the way through
@@ -52,15 +67,6 @@ const arabicSans = localFont({
 
 function validTheme(value: string | undefined): value is ThemeMode {
   return value === "light" || value === "dark" || value === "system";
-}
-
-function validPreset(value: string | undefined): value is ThemePreset {
-  return (
-    value === "sahel" ||
-    value === "atlas" ||
-    value === "oasis" ||
-    value === "dune"
-  );
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -116,15 +122,21 @@ export default async function RootLayout({
   const themeCookie = cookieStore.get("sahelflow-theme")?.value;
   const presetCookie = cookieStore.get("sahelflow-theme-preset")?.value;
   const hasThemeCookie = validTheme(themeCookie);
-  const hasPresetCookie = validPreset(presetCookie);
+  const lookCookie = cookieStore.get("sahelflow-look")?.value;
   const initialTheme: ThemeMode = hasThemeCookie ? themeCookie : "dark";
-  const initialPreset: ThemePreset = hasPresetCookie ? presetCookie : "sahel";
-  const appearanceBootstrap = `(function(){var t=${JSON.stringify(initialTheme)},p=${JSON.stringify(initialPreset)},ht=${hasThemeCookie ? "true" : "false"},hp=${hasPresetCookie ? "true" : "false"};try{if(!ht){var st=localStorage.getItem('theme');if(st==='light'||st==='dark'||st==='system')t=st;}if(!hp){var sp=localStorage.getItem('sahelflow-theme-preset');if(sp==='sahel'||sp==='atlas'||sp==='oasis'||sp==='dune')p=sp;}}catch(e){}try{var d=window.matchMedia('(prefers-color-scheme: dark)').matches;var r=t==='system'?(d?'dark':'light'):t;var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.dataset.colorMode=r;e.dataset.themePreset=p;e.style.colorScheme=r;}catch(e){}})();`;
+  const initialPreset: ThemePreset = resolveLook({ presetCookie, lookCookie }).preset;
+  const appearanceBootstrap = appearanceBootstrapScript({
+    theme: initialTheme,
+    hasThemeCookie,
+    presetCookie,
+    lookCookie,
+  });
 
   return (
     <html
       lang={locale}
       dir={dir}
+      className={plexMono.variable}
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >

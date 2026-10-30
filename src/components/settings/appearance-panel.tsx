@@ -24,6 +24,13 @@ const PRESET_PREVIEW: Record<
   ThemePreset,
   { accent: string; secondary: string; canvas: string; rail: string }
 > = {
+  carnet: {
+    // Night ledger values (dark --card, --sidebar, --primary, chart-2), like the other previews.
+    accent: "oklch(0.929 0.019 86.1)",
+    secondary: "oklch(0.7535 0.1185 85.4)",
+    canvas: "oklch(0.23 0.011 260.7)",
+    rail: "oklch(0.155 0.007 271)",
+  },
   sahel: {
     accent: "oklch(0.70 0.16 150)",
     secondary: "oklch(0.78 0.15 55)",
@@ -146,7 +153,7 @@ export function AppearancePanel() {
               {t("settings.appearance.colorStyleHint")}
             </p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
             {presets.map((candidate) => {
               const selected = preset === candidate;
               return (
@@ -178,6 +185,11 @@ export function AppearancePanel() {
                       <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
                     ) : null}
                   </span>
+                  {candidate === "carnet" ? (
+                    <span className="mt-0.5 block px-1 pb-0.5 text-xs font-normal leading-snug text-muted-foreground">
+                      {t("settings.appearance.presetCarnetDescription")}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}

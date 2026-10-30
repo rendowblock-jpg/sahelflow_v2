@@ -28,7 +28,9 @@ export const LAUNCH_APPEARANCE_FILE = "launch-appearance.json";
 
 const LOCALES = ["ar", "fr", "en"] as const;
 const THEMES = ["light", "dark", "system"] as const;
-const PRESETS = ["sahel", "atlas", "oasis", "dune"] as const;
+// Carnet is recorded too. The native card (src-tauri/src/launch_screen.rs) reads an unknown tag as "not chosen"
+// and wears its Sahel default until it learns the Carnet colours.
+const PRESETS = ["carnet", "sahel", "atlas", "oasis", "dune"] as const;
 
 export type LaunchAppearance = {
   locale: (typeof LOCALES)[number] | null;
