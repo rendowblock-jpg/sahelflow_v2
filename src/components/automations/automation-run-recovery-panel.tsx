@@ -29,6 +29,8 @@ import { toast } from "@/lib/toast";
 import { IconTile } from "@/components/system";
 import { DZ_CLOCK, intlLocale } from "@/lib/utils";
 
+import { findRunFailure } from "./run-failure";
+
 interface AttemptHistory {
   id: string;
   attemptNumber: number;
@@ -181,6 +183,12 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
           "ambiguous",
           "partially_completed",
         ].includes(run.status);
+        const failure = needsAttention ? findRunFailure(run) : null;
+        const failureSpec = failure?.action ? getSellerActionSpec(failure.action) : null;
+        const failureAction = failureSpec
+          ? c(failureSpec.copyKey as AutomationWorkspaceCopyKey)
+          : (failure?.action ?? "");
+        const failureReason = failure ? t(`automations.failure.${failure.kind}`) : "";
 
         return (
           <Card key={run.id} className="overflow-hidden border-border/70">
@@ -217,6 +225,17 @@ export function AutomationRunRecoveryPanel({ initialRuns }: Props) {
                         </span>
                       ) : null}
                     </div>
+                    {failure ? (
+                      <p data-testid="run-failure" className="text-xs leading-5 text-destructive">
+                        {failure.step === null
+                          ? t("automations.failure.lineNoStep", { reason: failureReason })
+                          : t("automations.failure.line", {
+                              step: failure.step,
+                              action: failureAction,
+                              reason: failureReason,
+                            })}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 
