@@ -71,7 +71,7 @@ export function decideBackup(input: BackupDecisionInput): BackupDecision {
     // A failure stamped in the future is as unreliable as a future success:
     // ignore its wait, but the daily cap below still applies.
     if (isTime(input.lastAttemptAt) && input.lastAttemptAt <= now) {
-      const wait = RETRY_WAIT_MS[Math.min(attempts, RETRY_WAIT_MS.length) - 1];
+      const wait = RETRY_WAIT_MS[Math.min(attempts, RETRY_WAIT_MS.length) - 1] ?? 0;
       if (now - input.lastAttemptAt < wait) return { run: false, reason: "backoff" };
     }
     if (attempts >= MAX_ATTEMPTS_PER_DAY) return { run: false, reason: "attempt-limit" };
