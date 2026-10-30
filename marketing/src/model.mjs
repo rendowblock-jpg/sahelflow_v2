@@ -4,6 +4,7 @@
 // (src/lib/license/packages.ts, PRODUCT.md §4–§5). A test pins the two
 // together, so the website can never promise more — or less — than a paying
 // seller actually receives.
+import { integrationStatus } from "./claims.mjs";
 import { SITE } from "./config.mjs";
 
 export const PACKAGE = Object.freeze({
@@ -64,6 +65,10 @@ export const INTEGRATIONS = Object.freeze([
   { group: "growth", items: ["meta", "gemini"] },
   { group: "data", items: ["excel"] },
 ]);
+
+// A brand listed here without a claims.mjs entry fails the build, so nothing
+// can be shown on the site without an honest status.
+for (const group of INTEGRATIONS) for (const key of group.items) integrationStatus(key);
 
 export const BRAND_NAMES = Object.freeze({
   whatsapp: "WhatsApp",

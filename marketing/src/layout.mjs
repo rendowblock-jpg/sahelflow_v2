@@ -4,7 +4,8 @@
 import { SITE } from "./config.mjs";
 import { COPY } from "./i18n/index.mjs";
 import { BRAND_NAMES, MODULES, PACKAGE, SOLUTIONS } from "./model.mjs";
-import { esc, href, icon, phoneDisplay, shotUrl, whatsappHref } from "./ui.mjs";
+import { integrationStatus } from "./claims.mjs";
+import { esc, href, icon, phoneDisplay, shotUrl, statusBadge, whatsappHref } from "./ui.mjs";
 
 const OG_LOCALE = { ar: "ar_DZ", fr: "fr_DZ", en: "en_US" };
 
@@ -25,7 +26,7 @@ function head({ locale, path, title, description, preload, jsonLd = [] }) {
     inLanguage: SITE.locales,
     offers: [
       { "@type": "Offer", price: "0", priceCurrency: "DZD", description: `${SITE.trialDays}-day free trial` },
-      ...(PACKAGE.priceDzd ? [{ "@type": "Offer", price: String(PACKAGE.launchOfferDzd ?? PACKAGE.priceDzd), priceCurrency: "DZD", description: "Permanent licence" }] : []),
+      ...(PACKAGE.priceDzd ? [{ "@type": "Offer", price: String(PACKAGE.priceDzd), priceCurrency: "DZD", description: PACKAGE.launchOfferDzd ? `Permanent licence. Launch offer: ${PACKAGE.launchOfferDzd} DZD for the first ${PACKAGE.launchOfferSeats} sellers.` : "Permanent licence" }] : []),
     ],
   };
   const org = {
@@ -123,7 +124,7 @@ function megaSolutions(locale, current) {
     </div>
     <aside class="mega-side">
       <a class="mega-feature" href="${href(locale, "integrations")}#sheets">
-        <span class="badge badge-new">${esc(t.nav.featured)}</span>
+        ${statusBadge(integrationStatus("sheets"), locale)}
         <span class="mega-feature-art" aria-hidden="true">${sheetArt()}</span>
         <strong>${esc(t.nav.featuredTitle)}</strong>
         <small>${esc(t.nav.featuredText)}</small>
