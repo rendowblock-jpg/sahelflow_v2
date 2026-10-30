@@ -31,7 +31,7 @@ describe("Founder operational polish contracts", () => {
   it("keeps product stock values centered under one restrained stock-state contract", () => {
     const table = read("src/components/products/products-data-table.tsx");
 
-    expect(table).toContain('meta: { align: "center", width: "w-28" }');
+    expect(table).toContain('meta: { align: "center", width: "w-28", mobile: { slot: "field" } }');
     expect(table).toContain("min-w-16 items-center justify-center");
     expect(table).toContain('<span className="sr-only">{t("products.low")}</span>');
     expect(table).not.toContain('<Badge variant="destructive" className="gap-0.5 py-0">');
