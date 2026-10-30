@@ -27,6 +27,7 @@ export default defineConfig({
       "sidecars/whatsapp/*.test.ts",
       "control-plane/licensing/worker.test.ts",
       "control-plane/backup/**/*.test.ts",
+      "control-plane/connected/**/*.test.ts",
       "control-plane/storefront/**/*.test.ts",
       "tools/license-desk/*.test.ts",
       "scripts/__tests__/classify-pr-risk*.test.ts",
