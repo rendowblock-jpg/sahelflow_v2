@@ -110,3 +110,14 @@ html[dir=rtl] .page h2::after,html[dir=rtl] .end h2::after{transform-origin:100%
 .incl li::before{content:"";flex:none;width:8px;height:8px;margin-block-start:.7em;border-inline-start:3px double var(--red)}
 .incl{margin-block-end:24px}
 .warn{margin-block-start:24px;padding:4px 14px;border-inline-start:3px double var(--red);font-size:16px!important;color:var(--ink2)}
+
+/* Phone density: the home must stay under about eight screens. */
+@media (max-width:759px){
+.sec{padding-block:32px}
+.shot:nth-child(3){display:none}
+.int-strip ul{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}
+.int-strip li{flex-wrap:wrap;gap:2px 8px;padding-block:8px}
+.int-strip .brand-tile{display:none}
+.int-strip .bn{flex:1 1 100%}
+}
+html:not([lang=ar]) .sec p{line-height:1.65}

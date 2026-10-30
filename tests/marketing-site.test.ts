@@ -1,5 +1,6 @@
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -398,7 +399,7 @@ describe("sahelflow.com claims on the built pages", () => {
       for (const page of ["home", "integrations"]) {
         const html = pages.get(`${locale}/${page}`) ?? "";
         const tiles = [...html.matchAll(/<li data-status="([^"]*)"[^>]*>([\s\S]*?)<\/li>/g)];
-        expect(tiles.length, `${locale} ${page} marquee tiles`).toBe(brands.length * 2);
+        expect(tiles.length, `${locale} ${page} marquee tiles`).toBe(brands.length);
         for (const tile of tiles) {
           expect(claims.STATUSES, `${locale} ${page}`).toContain(tile[1]);
           expect(builtText(tile[2] ?? ""), `${locale} ${page}`).toContain(claims.statusLabel(tile[1] ?? "", locale));
@@ -415,15 +416,13 @@ describe("sahelflow.com claims on the built pages", () => {
     }
   });
 
-  it("labels the Google Sheets teasers with the Sheets status, not 'new'", () => {
+  it("labels the Google Sheets tile on the home page with the Sheets status", () => {
     for (const locale of SITE.locales) {
       const label = claims.integrationLabel("sheets", locale);
       const home = pages.get(`${locale}/home`) ?? "";
-      expect(/<a class="announce[^>]*>\s*<span class="badge[^"]*">([^<]*)</.exec(home)?.[1], `${locale} announce`).toBe(label);
-      for (const [key, html] of pages) {
-        if (!key.startsWith(`${locale}/`)) continue;
-        expect(/<a class="mega-feature"[^>]*>\s*<span class="badge[^"]*">([^<]*)</.exec(html)?.[1], key).toBe(label);
-      }
+      const tile = [...home.matchAll(/<li data-status="([^"]*)"[^>]*>([\s\S]*?)<\/li>/g)].find((m) => /Sheets/i.test(m[2] ?? ""));
+      expect(tile?.[1], `${locale} sheets tile`).toBe(claims.integrationStatus("sheets"));
+      expect(builtText(tile?.[2] ?? ""), `${locale} sheets tile`).toContain(label);
     }
   });
 
@@ -463,5 +462,138 @@ describe("sahelflow.com claims on the built pages", () => {
       expect(offer.description ?? "").toMatch(/17[\s\u00a0\u202f,.]?000/);
     }
     expect(JSON.stringify(offers)).not.toContain(`"price":"${SITE.launchOfferPrice}"`);
+  });
+});
+
+// ───────────────────────── Carnet look: tokens, CSS rules, budgets ─────────────────────────
+
+const MK = join(process.cwd(), "marketing");
+const STYLES = join(MK, "src", "styles");
+const readCss = () => readdirSync(STYLES).filter((f) => f.endsWith(".css")).sort().map((f) => readFileSync(join(STYLES, f), "utf8")).join("\n").replace(/\/\*[\s\S]*?\*\//g, "");
+/** Text between the braces of the first block that starts with `head`. */
+function blockAfter(css: string, head: string): string {
+  const start = css.indexOf(head);
+  if (start < 0) return "";
+  const open = css.indexOf("{", start);
+  let depth = 0;
+  for (let i = open; i < css.length; i++) {
+    if (css[i] === "{") depth++;
+    else if (css[i] === "}" && --depth === 0) return css.slice(open + 1, i);
+  }
+  return "";
+}
+const props = (body: string) => Object.fromEntries([...body.matchAll(/(--[\w-]+)\s*:\s*([^;}]+)/g)].map((m) => [m[1] as string, (m[2] as string).trim()]));
+
+describe("sahelflow.com Carnet look", () => {
+  let out = "";
+  const htmlFiles: string[] = [];
+  beforeAll(() => {
+    out = mkdtempSync(join(tmpdir(), "sahelflow-carnet-"));
+    build(out);
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) walk(path);
+        else if (name.endsWith(".html")) htmlFiles.push(path);
+      }
+    };
+    walk(out);
+  });
+  afterAll(() => rmSync(out, { recursive: true, force: true }));
+
+  it("builds all 24 pages in 3 languages, each with one h1, a skip link, alt on every image, canonical and hreflang", () => {
+    const pages = htmlFiles.filter((f) => /\/(ar|fr|en)\//.test(f));
+    expect(pages.length).toBe(72);
+    for (const file of pages) {
+      const html = readFileSync(file, "utf8");
+      expect((html.match(/<h1[\s>]/g) ?? []).length, file).toBe(1);
+      expect(html, file).toContain('class="skip-link" href="#main"');
+      for (const img of html.matchAll(/<img\b[^>]*>/g)) expect(img[0], file).toMatch(/\salt="/);
+      expect(html, file).toMatch(/<link rel="canonical"/);
+      expect((html.match(/hreflang="/g) ?? []).length, file).toBeGreaterThanOrEqual(4);
+      expect(html, file).toContain("data-theme-toggle");
+    }
+  });
+
+  it("uses no physical left/right property and no left/right text-align in the marketing CSS", () => {
+    const css = readCss();
+    const physical = /(?:^|[;{\s])(?:left|right|margin-left|margin-right|padding-left|padding-right|border-left|border-right)\s*:/g;
+    expect(css.match(physical) ?? []).toEqual([]);
+    expect(css.match(/text-align\s*:\s*(?:left|right)/g) ?? []).toEqual([]);
+    expect(css.match(/transform-origin\s*:[^;}]*\b(?:left|right)\b/g) ?? []).toEqual([]);
+  });
+
+  it("puts no letter-spacing on Arabic", () => {
+    const css = readCss();
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*letter-spacing\s*:\s*([^;}]+)[^{}]*)\}/g)) {
+      const selector = m[1] ?? "";
+      if (/:lang\(ar\)|\[lang=["']?ar/.test(selector)) expect((m[3] ?? "").trim(), selector).toMatch(/^(0|normal)\b/);
+    }
+    expect(css).toContain("html[lang=ar] *{letter-spacing:0}");
+  });
+
+  it("references only fonts that exist, and no deleted file anywhere in source or output", () => {
+    const css = readCss();
+    const urls = [...css.matchAll(/url\("?(\/fonts\/[^")]+)"?\)/g)].map((m) => m[1] as string);
+    expect(urls.length).toBeGreaterThanOrEqual(5);
+    for (const url of urls) expect(existsSync(join(MK, "static", url)), url).toBe(true);
+    const hits: string[] = [];
+    const scan = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) scan(path);
+        else if (/\.(css|js|mjs|html)$/.test(name) && /gl\.js|readex/i.test(readFileSync(path, "utf8"))) hits.push(path);
+      }
+    };
+    [join(MK, "src"), join(MK, "static"), out].forEach(scan);
+    expect(hits).toEqual([]);
+    expect(existsSync(join(MK, "src", "gl.js"))).toBe(false);
+  });
+
+  it("stays inside the size budgets", () => {
+    const css = readFileSync(join(out, "assets", "site.css"));
+    const js = readFileSync(join(out, "assets", "site.js"));
+    expect(gzipSync(css).length, "css gz").toBeLessThanOrEqual(40 * 1024);
+    expect(gzipSync(js).length, "first-load js gz").toBeLessThanOrEqual(25 * 1024);
+    const fonts = readdirSync(join(out, "fonts")).filter((f) => f.endsWith(".woff2")).reduce((sum, f) => sum + statSync(join(out, "fonts", f)).size, 0);
+    expect(fonts, "fonts").toBeLessThanOrEqual(250 * 1024);
+    for (const locale of SITE.locales) {
+      const home = statSync(join(out, locale, "index.html")).size;
+      expect(home + css.length + js.length + fonts, `${locale} home html+css+js+fonts`).toBeLessThanOrEqual(350 * 1024);
+    }
+  });
+
+  it("has a prefers-reduced-motion block that stops every animation the CSS starts", () => {
+    const css = readCss();
+    const reduced = [...css.matchAll(/@media\s*\(prefers-reduced-motion:\s*reduce\)/g)].map((m) => blockAfter(css.slice(m.index), "@media")).join("\n");
+    expect(reduced).not.toBe("");
+    const keyframes = new Set([...css.matchAll(/@keyframes\s+([\w-]+)/g)].map((m) => m[1] as string));
+    const started = [...css.matchAll(/animation(?:-name)?\s*:\s*([\w-]+)/g)].filter((m) => m[1] !== "none");
+    expect(started.length).toBeGreaterThan(0);
+    for (const m of started) {
+      expect(keyframes.has(m[1] as string), `keyframes ${m[1]}`).toBe(true);
+      const before = css.slice(0, m.index);
+      const open = before.lastIndexOf("{");
+      const selector = before.slice(Math.max(before.lastIndexOf("}"), before.lastIndexOf("{", open - 1)) + 1, open).trim();
+      for (const part of selector.split(",")) expect(reduced, `reduced motion covers ${part.trim()}`).toContain(part.trim());
+    }
+  });
+
+  it("defines the same custom properties in both themes, and the media query and [data-theme] agree on dark", () => {
+    const css = readCss();
+    const light = props(blockAfter(css, ":root{color-scheme:light"));
+    const media = props(blockAfter(blockAfter(css, "@media (prefers-color-scheme:dark)"), ":root:not([data-theme=light])"));
+    const explicit = props(blockAfter(css, ":root[data-theme=dark]"));
+    expect(Object.keys(light).length).toBeGreaterThan(15);
+    expect(Object.keys(media).sort()).toEqual(Object.keys(light).sort());
+    expect(Object.keys(explicit).sort()).toEqual(Object.keys(light).sort());
+    expect(media).toEqual(explicit);
+    expect(explicit["--ink"]).not.toBe(light["--ink"]);
+  });
+
+  it("keeps the Carnet home copy the same shape in Arabic, French and English", async () => {
+    const { HOME } = (await import("../marketing/src/i18n/home.mjs")) as { HOME: Record<string, unknown> };
+    expect(shape(HOME.fr)).toEqual(shape(HOME.ar));
+    expect(shape(HOME.en)).toEqual(shape(HOME.ar));
   });
 });

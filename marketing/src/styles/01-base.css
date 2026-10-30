@@ -8,8 +8,8 @@
 @font-face{font-family:"Carnet Plex";src:url("/fonts/plex-lat-400.woff2") format("woff2");font-weight:400;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 @font-face{font-family:"Carnet Mono";src:url("/fonts/mono-500.woff2") format("woff2");font-weight:400 600;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 /* Metric-matched stand-ins so the swap to the web fonts moves nothing. */
-@font-face{font-family:"Carnet Fallback";src:local("Arial"),local("Helvetica");size-adjust:101%;ascent-override:95%;descent-override:25%;line-gap-override:0%}
-@font-face{font-family:"Carnet Fallback Serif";src:local("Times New Roman"),local("Georgia");size-adjust:104%;ascent-override:92%;descent-override:26%;line-gap-override:0%}
+@font-face{font-family:"Carnet Fallback";src:local("Arial"),local("Helvetica"),local("Liberation Sans"),local("Arimo");size-adjust:101%;ascent-override:95%;descent-override:25%;line-gap-override:0%}
+@font-face{font-family:"Carnet Fallback Serif";src:local("Times New Roman"),local("Georgia"),local("Liberation Serif"),local("Tinos");size-adjust:104%;ascent-override:92%;descent-override:26%;line-gap-override:0%}
 
 @view-transition{navigation:auto}
 
@@ -154,5 +154,6 @@ html[lang=ar] *{letter-spacing:0}
 /* Old night-sky decoration: gone. */
 .stars,.dunes,.gl-canvas{display:none}
 
+input[type=range]{min-block-size:44px;cursor:pointer}
 @media (pointer:coarse){a.btn,button,summary{min-block-size:var(--hit)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
