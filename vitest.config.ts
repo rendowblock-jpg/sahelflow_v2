@@ -28,6 +28,7 @@ export default defineConfig({
       "control-plane/licensing/worker.test.ts",
       "control-plane/backup/**/*.test.ts",
       "control-plane/storefront/**/*.test.ts",
+      "control-plane/pwa/**/*.test.ts",
       "tools/license-desk/*.test.ts",
       "scripts/__tests__/classify-pr-risk*.test.ts",
       "scripts/__tests__/desktop-build-context.test.ts",
