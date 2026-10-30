@@ -27,7 +27,7 @@ import type { Locale } from "@/lib/i18n";
 import type { resolveAnalyticsRange } from "@/lib/analytics/range";
 import type { getAnalyticsReportForRange } from "@/lib/analytics/report";
 import type { getReturnRateByWilaya, getSkuPnl, getPeriodComparison } from "@/lib/data/analytics-v2";
-import type { projectSkuPnlForTrustedActor } from "@/lib/identity/sku-pnl-projection";
+import type { ProjectedSkuPnl } from "@/lib/identity/sku-pnl-projection";
 import type { getCourierPerformance } from "@/lib/analytics/courier-performance";
 
 
@@ -38,8 +38,7 @@ export interface AnalyticsViewProps {
   range: ReturnType<typeof resolveAnalyticsRange>;
   report: Awaited<ReturnType<typeof getAnalyticsReportForRange>>;
   returnRateByWilaya: Awaited<ReturnType<typeof getReturnRateByWilaya>>;
-  skuPnl: Awaited<ReturnType<typeof getSkuPnl>>;
-  skuProjection: ReturnType<typeof projectSkuPnlForTrustedActor>;
+  skuProjection: ProjectedSkuPnl<Awaited<ReturnType<typeof getSkuPnl>>[number]>;
   showSkuCost: boolean;
   comparison: Awaited<ReturnType<typeof getPeriodComparison>>;
   courier: Awaited<ReturnType<typeof getCourierPerformance>>;
@@ -52,7 +51,6 @@ export function AnalyticsView({
   range,
   report,
   returnRateByWilaya,
-  skuPnl,
   skuProjection,
   showSkuCost,
   comparison,

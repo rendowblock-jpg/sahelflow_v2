@@ -73,7 +73,6 @@ export default async function AnalyticsPage({
       range={range}
       report={report}
       returnRateByWilaya={returnRateByWilaya}
-      skuPnl={skuPnl}
       skuProjection={skuProjection}
       showSkuCost={showSkuCost}
       comparison={comparison}
