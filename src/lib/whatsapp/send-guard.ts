@@ -9,6 +9,9 @@
  */
 import { SahelFlowError } from "@/types/errors";
 
+/** lastErrorCode of an outbox intent the guard held (pure module so the inbox can read it too). */
+export const SEND_GUARD_HOLD_ERROR_CODE = "SEND_GUARD_BULK_SAME_TEXT";
+
 /** Every tunable number of the policy lives here and nowhere else. */
 export const WHATSAPP_SEND_GUARD = {
   /** Rolling window of the per-conversation and per-shop counts. */

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { CannedResponsePicker } from "@/components/inbox/canned-response-picker";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { HeldSendApproveDialog } from "@/components/inbox/held-send-notice";
 import { EmojiPicker } from "@/components/inbox/inbox-emoji-picker";
 import { InboxCustomerWorkPanel } from "@/components/inbox/inbox-customer-work-panel";
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
@@ -118,8 +119,11 @@ export function InboxV3Thread({
   selectedCandidate,
   onBackToQueue,
   onSelectCandidate,
+  viewerIsOwner = false,
 }: {
   workspace: ReturnType<typeof useInboxWorkspace>;
+  /** Only the shop owner may release a held send. */
+  viewerIsOwner?: boolean;
   selectedCandidate: InboxMessage | null;
   onBackToQueue: () => void;
   onSelectCandidate: (messageId: string) => void;
@@ -166,6 +170,9 @@ export function InboxV3Thread({
     loadOlderMessages,
     ambiguousRetryMessage,
     resolveAmbiguousRetry,
+    heldApproveMessage,
+    resolveHeldApprove,
+    approveHeldMessage,
   } = workspace;
 
   const [replySelection, setReplySelection] = useState<{
@@ -737,6 +744,8 @@ export function InboxV3Thread({
                     candidate={selectedCandidate?.id === message.id}
                     onChooseCandidate={onSelectCandidate}
                     onRetry={retryFailedMessage}
+                    onApproveHeld={approveHeldMessage}
+                    canApproveHeld={viewerIsOwner}
                     onReply={replyToMessage}
                     canInteract={canSend}
                     upload={uploads[message.id]}
@@ -1292,6 +1301,12 @@ export function InboxV3Thread({
         onConfirm={() => {
           resolveAmbiguousRetry(true);
         }}
+      />
+
+      <HeldSendApproveDialog
+        open={heldApproveMessage !== null}
+        onResolve={resolveHeldApprove}
+        t={t}
       />
     </section>
   );

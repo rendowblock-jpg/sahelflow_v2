@@ -354,6 +354,7 @@ export function InboxV3Workspace({
             <InboxV3Thread
               workspace={workspace}
               selectedCandidate={selectedCandidate}
+              viewerIsOwner={authority?.role === "owner"}
               onBackToQueue={handleBackToQueue}
               onSelectCandidate={(messageId) => {
                 if (!activeChat) return;

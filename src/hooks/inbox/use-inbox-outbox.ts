@@ -17,6 +17,7 @@ import {
   postFormWithUploadProgress,
   whatsappSendFailureCopy,
 } from "./inbox-workspace-shared";
+import { postHeldApproval } from "./held-send-client";
 import type { InboxSharedRefs } from "./use-inbox-shared-refs";
 
 export function quoteRejectionMayRetry(
@@ -47,6 +48,7 @@ export function abortedSendShouldFailBubble(
     effect.state !== "queued" &&
     effect.state !== "processing" &&
     effect.state !== "retrying" &&
+    effect.state !== "held" &&
     effect.state !== "succeeded"
   );
 }
@@ -141,6 +143,9 @@ export function useInboxOutbox({
     null,
   );
   const uploadCancelRef = useRef(new Map<string, () => void>());
+  // The owner's "Send anyway" on a held send is a deliberate decision too.
+  const [heldApproveMessage, setHeldApproveMessage] = useState<InboxMessage | null>(null);
+  const heldApproveResolveRef = useRef<((confirmed: boolean) => void) | null>(null);
 
   const markUploadProgress = useCallback(
     (messageId: string, progress: number) => {
@@ -211,6 +216,22 @@ export function useInboxOutbox({
           }
           return true;
         }
+        if (state === "held") {
+          // The guard parked it; nothing more will happen until the owner decides.
+          mutateMessages(conversationId, (current) =>
+            reconcileInboxProviderMessage(
+              current,
+              localMessageId,
+              data.effect.providerMessageId,
+              {
+                outboxEffectKey: effectKey,
+                outboxState: "held",
+                outboxErrorCode: data.effect.errorCode ?? null,
+              },
+            ),
+          );
+          return true;
+        }
         if (state === "ambiguous" || state === "dead_letter") {
           mutateMessages(conversationId, (current) =>
             reconcileInboxProviderMessage(
@@ -272,6 +293,62 @@ export function useInboxOutbox({
     ambiguousRetryResolveRef.current?.(confirmed);
     ambiguousRetryResolveRef.current = null;
   }, []);
+
+  const resolveHeldApprove = useCallback((confirmed: boolean) => {
+    setHeldApproveMessage(null);
+    heldApproveResolveRef.current?.(confirmed);
+    heldApproveResolveRef.current = null;
+  }, []);
+
+  const approveHeldMessage = useCallback(
+    async (message: InboxMessage) => {
+      const conversationId = activeChatRef.current?.conversationId;
+      if (!message.outboxEffectKey || !conversationId) return;
+      if (heldApproveResolveRef.current) return;
+      const confirmed = await new Promise<boolean>((resolve) => {
+        heldApproveResolveRef.current = resolve;
+        setHeldApproveMessage(message);
+      });
+      if (!confirmed) return;
+      setSendError(null);
+      const result = await postHeldApproval(message.outboxEffectKey);
+      const active = activeChatRef.current;
+      if (!result.ok) {
+        // 409: someone released or changed it first; show the real state.
+        if (result.status === 409 && active?.conversationId === conversationId) {
+          void loadMessages(active, { background: true });
+        }
+        if (active?.conversationId === conversationId) {
+          setSendError(
+            result.code === "HELD_SEND_OWNER_ONLY"
+              ? t("whatsapp.heldSend.ownerOnly")
+              : t("whatsapp.heldSend.approveFailed"),
+          );
+        }
+        return;
+      }
+      mutateMessages(conversationId, (current) =>
+        current.map((entry) =>
+          entry.id === message.id
+            ? {
+                ...entry,
+                deliveryStatus: "sending",
+                outboxState: result.state as NonNullable<InboxMessage["outboxState"]>,
+                outboxErrorCode: null,
+              }
+            : entry,
+        ),
+      );
+      if (result.state === "succeeded") {
+        if (active?.conversationId === conversationId) {
+          void loadMessages(active, { background: true });
+        }
+        return;
+      }
+      void monitorWhatsAppEffect(conversationId, message.outboxEffectKey, message.id);
+    },
+    [activeChatRef, loadMessages, monitorWhatsAppEffect, mutateMessages, setSendError, t],
+  );
 
   const retryFailedMessage = useCallback(
     async (message: InboxMessage) => {
@@ -839,6 +916,9 @@ export function useInboxOutbox({
     cancelUpload,
     ambiguousRetryMessage,
     resolveAmbiguousRetry,
+    heldApproveMessage,
+    resolveHeldApprove,
+    approveHeldMessage,
     retryFailedMessage,
     sendReply,
     sendImage,

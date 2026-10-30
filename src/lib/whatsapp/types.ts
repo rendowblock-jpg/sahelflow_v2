@@ -47,7 +47,7 @@ export interface IncomingMessage {
   deliveryStatus?: "sending" | "sent" | "delivered" | "read" | "failed";
   /** Local durable effect identity/state; never supplied by the provider. */
   effectKey?: string;
-  effectState?: "queued" | "processing" | "retrying" | "succeeded" | "ambiguous" | "dead_letter";
+  effectState?: "queued" | "processing" | "retrying" | "succeeded" | "ambiguous" | "dead_letter" | "held";
   /** Coded outbox rejection (OutboxIntent.lastErrorCode); never provider prose. */
   effectErrorCode?: string | null;
   /** Protected canonical attachment projection supplied by the app, never raw provider paths. */

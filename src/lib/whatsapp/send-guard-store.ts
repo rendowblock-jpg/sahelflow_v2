@@ -17,6 +17,7 @@ import {
   type SendGuardDecision,
   type SendGuardReason,
   type SendOrigin,
+  SEND_GUARD_HOLD_ERROR_CODE,
 } from "./send-guard";
 
 /** Outbox effect types of durable-send (a test pins them to the real constants). */
@@ -38,7 +39,7 @@ const QUEUE_COMMAND_TYPES = [
 const PACING_LOOKBACK_SECONDS = 30;
 /** Bound of the same-text scan; the hourly limits keep real volume far below it. */
 const SAME_TEXT_SCAN_LIMIT = 600;
-export const SEND_GUARD_HOLD_ERROR_CODE = "SEND_GUARD_BULK_SAME_TEXT";
+export { SEND_GUARD_HOLD_ERROR_CODE };
 
 export interface SendGuardNotice {
   action: "warn" | "delay" | "hold";
