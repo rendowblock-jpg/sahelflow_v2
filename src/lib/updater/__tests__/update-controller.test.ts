@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// These tests are about the download and install steps; the backup has its own file.
+vi.mock("../pre-update-backup", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../pre-update-backup")>()),
+  runPreUpdateBackup: vi.fn(async () => ({ kind: "done", backupId: "backup-1", durationMs: 1 })),
+}));
+
 import {
   downloadUpdate,
   installUpdate,

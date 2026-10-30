@@ -23,6 +23,8 @@ export interface ScheduledBackupState {
   version: 1;
   /** Ids of the backups the scheduler created, oldest first. */
   automaticIds: string[];
+  /** Ids of the backups made right before an update, oldest first (also in automaticIds). */
+  preUpdateIds: string[];
   lastSuccessAtMs: number | null;
   /** Time of the last FAILED attempt. */
   lastAttemptAtMs: number | null;
@@ -35,11 +37,18 @@ export function emptyScheduledBackupState(): ScheduledBackupState {
   return {
     version: 1,
     automaticIds: [],
+    preUpdateIds: [],
     lastSuccessAtMs: null,
     lastAttemptAtMs: null,
     failureTimesMs: [],
     lastFailureCode: null,
   };
+}
+
+function idList(raw: unknown): string[] {
+  return Array.isArray(raw)
+    ? raw.filter((id): id is string => typeof id === "string" && id.length > 0).slice(-MAX_TRACKED_IDS)
+    : [];
 }
 
 function finiteOrNull(value: unknown): number | null {
@@ -58,6 +67,7 @@ export function parseScheduledBackupState(raw: unknown): ScheduledBackupState {
     automaticIds: value.automaticIds
       .filter((id): id is string => typeof id === "string" && id.length > 0)
       .slice(-MAX_TRACKED_IDS),
+    preUpdateIds: idList(value.preUpdateIds),
     lastSuccessAtMs: finiteOrNull(value.lastSuccessAtMs),
     lastAttemptAtMs: finiteOrNull(value.lastAttemptAtMs),
     failureTimesMs: failures
@@ -88,6 +98,19 @@ export function recordBackupSuccess(
   };
 }
 
+/** A backup made right before an update: a success, and remembered for retention. */
+export function recordPreUpdateBackup(
+  state: ScheduledBackupState,
+  backupId: string,
+  now: number,
+): ScheduledBackupState {
+  const next = recordBackupSuccess(state, backupId, now);
+  const ids = state.preUpdateIds.includes(backupId)
+    ? state.preUpdateIds
+    : [...state.preUpdateIds, backupId];
+  return { ...next, preUpdateIds: ids.slice(-MAX_TRACKED_IDS) };
+}
+
 export function recordBackupFailure(
   state: ScheduledBackupState,
   now: number,
@@ -113,7 +136,11 @@ export function forgetMissingBackups(
   state: ScheduledBackupState,
   present: ReadonlySet<string>,
 ): ScheduledBackupState {
-  return { ...state, automaticIds: state.automaticIds.filter((id) => present.has(id)) };
+  return {
+    ...state,
+    automaticIds: state.automaticIds.filter((id) => present.has(id)),
+    preUpdateIds: state.preUpdateIds.filter((id) => present.has(id)),
+  };
 }
 
 export function scheduledBackupStatePath(): string {
