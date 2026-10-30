@@ -1,5 +1,7 @@
 import "server-only";
 
+import { logger } from "@/lib/logger";
+import { WhatsAppSendGuardError } from "@/lib/whatsapp/send-guard";
 import { createHash, randomUUID } from "node:crypto";
 
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
@@ -704,7 +706,7 @@ async function reconcileWhatsAppStep(
     );
   }
   const effect = await getWhatsAppEffectStatus(context, step.effectKey);
-  if (["queued", "processing", "retrying"].includes(effect.state)) {
+  if (["queued", "processing", "retrying", "held"].includes(effect.state)) {
     const nextAttemptAt = new Date(Date.now() + EFFECT_POLL_MS);
     await context.prisma.automationStepRun.updateMany({
       where: {
@@ -1434,17 +1436,36 @@ async function executeWhatsAppStep(
       "WhatsApp step rendered an empty message",
     );
   }
-  const queued = await queueWhatsAppText(
-    {
-      ...context,
-      businessPrincipal: systemBusinessPrincipal("automation-worker"),
-    },
-    {
-      clientMessageId: deterministicUuid(step.stepKey),
-      to: customerPhone,
-      text,
-    },
-  );
+  let queued: Awaited<ReturnType<typeof queueWhatsAppText>>;
+  try {
+    queued = await queueWhatsAppText(
+      {
+        ...context,
+        businessPrincipal: systemBusinessPrincipal("automation-worker"),
+      },
+      {
+        clientMessageId: deterministicUuid(step.stepKey),
+        to: customerPhone,
+        text,
+      },
+    );
+  } catch (error) {
+    // The guard paused automatic sending to protect the number. There is no
+    // screen to show it on, so log the reason (never the text) and let the
+    // step retry later instead of failing the run.
+    if (error instanceof WhatsAppSendGuardError) {
+      logger.warn("automation.whatsapp.send_guard_paused", {
+        reason: error.reason,
+        retryAfterSeconds: error.retryAfterSeconds,
+      });
+      throw new AutomationActionError(
+        "AUTOMATION_WHATSAPP_SEND_GUARD_PAUSED",
+        true,
+        error.message,
+      );
+    }
+    throw error;
+  }
   const now = new Date();
   const nextAttemptAt = new Date(now.getTime() + EFFECT_POLL_MS);
   await context.prisma.$transaction(async (tx) => {

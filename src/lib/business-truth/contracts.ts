@@ -135,6 +135,9 @@ export interface OutboxIntentFact {
   effectType: string;
   payload: Readonly<Record<string, unknown>>;
   nextAttemptAt?: Date;
+  /** Default "queued". "failed" plus a lastErrorCode parks an intent a person must release (the status CHECK allows no new value). */
+  status?: "queued" | "failed";
+  lastErrorCode?: string;
 }
 
 export interface OpenReservationFact {

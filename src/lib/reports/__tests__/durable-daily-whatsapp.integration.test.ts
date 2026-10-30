@@ -58,6 +58,15 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
+// Two automatic sends of one shop must be 3 s apart (the send guard paces
+// them). These tests are about report identity, not pacing: age the earlier
+// send instead of sleeping.
+async function agePriorAutomaticSends(): Promise<void> {
+  await db.businessCommand.updateMany({
+    data: { createdAt: new Date(Date.now() - 60_000) },
+  });
+}
+
 describe("durable daily WhatsApp report", () => {
   it("replays the confirmed receipt after marker loss without sending twice", async () => {
     const input = {
@@ -112,6 +121,7 @@ describe("durable daily WhatsApp report", () => {
       id: "WA-DAILY-RECEIPT-3",
       status: "sent",
     });
+    await agePriorAutomaticSends();
     const scheduled = await queueDailyWhatsAppReport(context, input);
 
     expect(scheduled.effectKey).not.toBe(test.effectKey);
@@ -140,6 +150,7 @@ describe("durable daily WhatsApp report", () => {
       id: "WA-DAILY-RECEIPT-2",
       status: "sent",
     });
+    await agePriorAutomaticSends();
     const second = await queueDailyWhatsAppReport(context, {
       reportDate: "2026-08-02",
       phone: "0555000111",
