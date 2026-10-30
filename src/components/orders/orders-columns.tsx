@@ -92,6 +92,7 @@ export function useOrdersColumns(
             {row.original.orderNumber}
           </TechnicalValue>
         ),
+      meta: { mobile: { slot: "title" } },
     },
     ...(fieldAccess.contact
       ? [
@@ -115,6 +116,7 @@ export function useOrdersColumns(
                 </TechnicalValue>
               </div>
             ),
+            meta: { mobile: { slot: "subtitle" as const } },
             enableSorting: false,
           } satisfies ColumnDef<OrderListItem, unknown>,
         ]
@@ -134,7 +136,7 @@ export function useOrdersColumns(
       },
       // The item count is the least decisive column; it yields its width
       // first so Actions stays on screen on 1366px laptops.
-      meta: { hideOn: "2xl" },
+      meta: { hideOn: "2xl", mobile: { slot: "field" } },
       enableSorting: false,
     },
     ...(fieldAccess.contact
@@ -145,7 +147,7 @@ export function useOrdersColumns(
             cell: ({ row }: { row: { original: OrderListItem } }) => (
               <span className="text-sm">{displayWilaya(row.original.wilaya, locale) || "—"}</span>
             ),
-            meta: { hideOn: "sm" as const },
+            meta: { hideOn: "sm" as const, mobile: { slot: "field" as const } },
             enableSorting: false,
           } satisfies ColumnDef<OrderListItem, unknown>,
         ]
@@ -165,7 +167,7 @@ export function useOrdersColumns(
                 {row.original.totalPrice == null ? "—" : formatDZD(row.original.totalPrice, locale)}
               </span>
             ),
-            meta: { align: "end" as const },
+            meta: { align: "end" as const, mobile: { slot: "amount" as const } },
           } satisfies ColumnDef<OrderListItem, unknown>,
         ]
       : []),
@@ -184,6 +186,7 @@ export function useOrdersColumns(
           }
         />
       ),
+      meta: { mobile: { slot: "status" } },
       enableSorting: false,
     },
     ...(fieldAccess.risk
@@ -203,7 +206,7 @@ export function useOrdersColumns(
                 <span className="text-xs text-muted-foreground">—</span>
               );
             },
-            meta: { hideOn: "md" as const },
+            meta: { hideOn: "md" as const, mobile: { slot: "field" as const } },
             enableSorting: false,
           } satisfies ColumnDef<OrderListItem, unknown>,
         ]
@@ -221,7 +224,7 @@ export function useOrdersColumns(
           {formatDate(row.original.createdAt, locale)}
         </span>
       ),
-      meta: { hideOn: "lg" },
+      meta: { hideOn: "lg", mobile: { slot: "time" } },
     },
     {
       id: "actions",
@@ -340,7 +343,7 @@ export function useOrdersColumns(
           </div>
         );
       },
-      meta: { align: "end", width: "w-12" },
+      meta: { align: "end", width: "w-12", mobile: { slot: "actions" } },
       enableSorting: false,
     },
   ];
