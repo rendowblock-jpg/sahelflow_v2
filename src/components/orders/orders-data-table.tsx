@@ -2,18 +2,17 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Printer, XCircle } from "lucide-react";
+import { CheckCircle2, Printer, XCircle } from "lucide-react";
 
 import { DataTable, type BulkAction, type BulkControls } from "@/components/data-table/data-table";
 import { OrdersEmptyState } from "@/components/shared/empty-states";
-import { StateSurface } from "@/components/shared/state-surface";
 import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 import { useOrders } from "@/hooks/swr/use-orders";
 import { useOrdersFilterParams } from "@/hooks/use-orders-filter-params";
 import { useI18n } from "@/hooks/use-i18n";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import type { Locale } from "@/lib/i18n";
-import { translateServerError } from "@/lib/i18n/translate-server-error";
 import {
   bulkNeedsConfirmation,
   ordersEmptyKind,
@@ -28,6 +27,7 @@ import {
   loadDeliverySlipsForOrders,
   useDeliverySlipPrinting,
 } from "./delivery-slip";
+import { ListErrorState, ListStatusBanner } from "./list-status-banner";
 import { BulkConfirmDialog, BulkFailureNotice } from "./orders-bulk-ui";
 import { OrdersFilterBar } from "./orders-filter-bar";
 import { OrderFormDialog } from "./order-form-dialog";
@@ -104,6 +104,7 @@ export function OrdersDataTable({
     status: statusFilter,
     fallback,
   });
+  const online = useOnlineStatus();
   const fieldAccess = data?.fieldAccess ?? fallback.fieldAccess;
   const canOpenDetail = fieldAccess.contact && fieldAccess.financials;
 
@@ -213,7 +214,7 @@ export function OrdersDataTable({
 
   const handleBulk = useCallback(
     (status: OrderStatus, selectedIds: string[], controls: BulkControls) => {
-      if (selectedIds.length === 0 || bulkMutation.isSubmitting || !data) return;
+      if (selectedIds.length === 0 || bulkMutation.isSubmitting || !data || !online) return;
       const governedSelected = data.orders.some(
         (order) =>
           selectedIds.includes(order.id) &&
@@ -232,27 +233,29 @@ export function OrdersDataTable({
       }
       void runBulk(status, selectedIds, controls);
     },
-    [bulkMutation, data, runBulk, t],
+    [bulkMutation, data, online, runBulk, t],
   );
 
+  // Offline, every bulk action is off; the banner above the list says why.
+  const bulkBlocked = bulkMutation.isSubmitting || !online;
   const bulkActions: BulkAction[] = [
     {
       label: t("orders.confirmSelected"),
       onClick: (ids, controls) => handleBulk("confirmed", ids, controls),
       icon: CheckCircle2,
-      disabled: bulkMutation.isSubmitting,
+      disabled: bulkBlocked,
     },
     {
       label: t("orders.shipSelected"),
       onClick: (ids, controls) => handleBulk("shipped", ids, controls),
-      disabled: bulkMutation.isSubmitting,
+      disabled: bulkBlocked,
     },
     {
       label: t("orders.cancelSelectedShort"),
       onClick: (ids, controls) => handleBulk("cancelled", ids, controls),
       variant: "destructive",
       icon: XCircle,
-      disabled: bulkMutation.isSubmitting,
+      disabled: bulkBlocked,
     },
     // R3-b: print one bon de livraison per selected order (contact-gated —
     // a slip without the delivery address is not worth paper).
@@ -262,22 +265,22 @@ export function OrdersDataTable({
             label: t("orders.slip.printSelected"),
             onClick: (ids: string[]) => handlePrintSlips(ids),
             icon: Printer,
-            disabled: isPreparingSlips,
+            disabled: isPreparingSlips || !online,
           },
         ]
       : []),
   ];
 
+  const refetch = () => {
+    void Promise.resolve(mutate()).catch(() => undefined);
+  };
+
   if (error && !data) {
     return (
-      <StateSurface
-        icon={AlertTriangle}
-        title={t("error.requestFailed")}
-        description={translateServerError(error.message, t, t("error.requestFailed"))}
-        tone="danger"
-        size="inline"
-        role="alert"
-      />
+      <div className="space-y-3">
+        <ListStatusBanner offline={!online} error={error} rows={undefined} onRefresh={refetch} />
+        <ListErrorState error={error} onRetry={refetch} />
+      </div>
     );
   }
 
@@ -302,6 +305,13 @@ export function OrdersDataTable({
   return (
     <div className="space-y-3">
       <OrdersFilterBar />
+      <ListStatusBanner
+        offline={!online}
+        error={error}
+        rows={data?.orders}
+       
+        onRefresh={refetch}
+      />
       {bulkFailures ? (
         <BulkFailureNotice
           failures={bulkFailures.failures}

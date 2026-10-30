@@ -11,6 +11,7 @@ import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
 import { getDataTableRuntimeTranslation } from "@/lib/i18n/data-table-runtime";
 import { getDeliveriesRuntimeTranslation } from "@/lib/i18n/deliveries-runtime";
+import { getOrdersStatesRuntimeTranslation } from "@/lib/i18n/orders-states-runtime";
 import { getDeliveryReconcileRuntimeTranslation } from "@/lib/i18n/delivery-reconcile-runtime";
 import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
 import { getInboxCarnetRuntimeTranslation } from "@/lib/i18n/inbox-carnet-runtime";
@@ -174,6 +175,7 @@ export function getRuntimeTranslation(
     getOrderActionsRuntimeTranslation(locale, key) ??
     getOrderFormRuntimeTranslation(locale, key) ??
     getOrderLifecycleRuntimeTranslation(locale, key) ??
+    getOrdersStatesRuntimeTranslation(locale, key) ??
     getOrdersWorkspaceTranslation(locale, key) ??
     getPhase5RuntimeTranslation(locale, key) ??
     getSecurityRuntimeTranslation(locale, key) ??

@@ -25,6 +25,7 @@ import {
 } from "@/components/deliveries/bulk-delivery-sync";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/use-i18n";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import type { Locale } from "@/lib/i18n";
 import { fetcher } from "@/lib/swr/fetcher";
 import { mutatePrefix } from "@/lib/swr/mutate";
@@ -71,6 +72,7 @@ export function DeliveriesBulkSyncToolbar({
   locale,
 }: DeliveriesBulkSyncToolbarProps) {
   const { t } = useI18n();
+  const online = useOnlineStatus();
   const router = useRouter();
   const [progress, setProgress] = useState<{
     done: number;
@@ -85,7 +87,7 @@ export function DeliveriesBulkSyncToolbar({
   );
 
   const handleSyncAll = useCallback(async () => {
-    if (!canManage || progress) return;
+    if (!canManage || progress || !online) return;
     setProgress({ done: 0, total: 0 });
     try {
       const rows = await collectInTransitDeliveries((url) => fetcher(url));
@@ -166,7 +168,7 @@ export function DeliveriesBulkSyncToolbar({
     } finally {
       setProgress(null);
     }
-  }, [canManage, progress, router, t]);
+  }, [canManage, online, progress, router, t]);
 
   if (!canManage) return null;
 
@@ -177,7 +179,8 @@ export function DeliveriesBulkSyncToolbar({
         variant="outline"
         size="sm"
         onClick={() => void handleSyncAll()}
-        disabled={isRunning}
+        disabled={isRunning || !online}
+        aria-describedby={online ? undefined : "deliveries-bulk-sync-offline"}
       >
         {isRunning ? (
           <Loader2 className="size-4 me-1.5 animate-spin" aria-hidden="true" />
@@ -193,6 +196,11 @@ export function DeliveriesBulkSyncToolbar({
             : t("deliveries.bulkSync.preparing")
           : t("deliveries.bulkSync.action")}
       </Button>
+      {!online ? (
+        <p id="deliveries-bulk-sync-offline" className="text-xs text-muted-foreground">
+          {t("ordersStates.offline.syncNeedsConnection")}
+        </p>
+      ) : null}
       {lastSyncAt && !isRunning ? (
         <p className="text-xs text-muted-foreground">
           {t("deliveries.bulkSync.lastSync", {

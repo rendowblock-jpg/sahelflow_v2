@@ -28,6 +28,7 @@ import {
   useDeliverySlipPrinting,
 } from "@/components/orders/delivery-slip";
 import { StateSurface } from "@/components/shared/state-surface";
+import { ListErrorState, ListStatusBanner } from "@/components/orders/list-status-banner";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -43,6 +44,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useConfirmationQueue } from "@/hooks/swr/use-confirmation-queue";
 import { useI18n } from "@/hooks/use-i18n";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import {
   dispatchQueueDecision,
   isQueueDecisionActionable,
@@ -57,7 +59,6 @@ import {
 } from "@/lib/orders/rejection-reasons";
 import { mutatePrefix } from "@/lib/swr/mutate";
 import { toast } from "@/lib/toast";
-import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { cn, formatDZD, formatOperationalAge } from "@/lib/utils";
 import type {
   ConfirmationQueueItem,
@@ -283,6 +284,7 @@ export function ConfirmationQueueTable({
 }: ConfirmationQueueTableProps) {
   const { t } = useI18n();
   const router = useRouter();
+  const online = useOnlineStatus();
   const { data, error, isLoading, mutate, pagination } = useConfirmationQueue({
     fallback,
   });
@@ -450,21 +452,21 @@ export function ConfirmationQueueTable({
         void runBulkDecision(targets, "confirm");
       },
       icon: CheckCircle2,
-      disabled: bulkBusyWithRow,
+      disabled: bulkBusyWithRow || !online,
     },
     {
       label: t("confirmationQueue.bulk.rejectSelected"),
       onClick: (ids) => setBulkRejectIds(ids),
       variant: "destructive",
       icon: XCircle,
-      disabled: bulkBusyWithRow,
+      disabled: bulkBusyWithRow || !online,
     },
     // R3-b: print one bon de livraison per selected order for the courier run.
     {
       label: t("orders.slip.printSelected"),
       onClick: (ids) => handlePrintSlips(ids),
       icon: Printer,
-      disabled: bulkBusyWithRow || isPreparingSlips,
+      disabled: bulkBusyWithRow || isPreparingSlips || !online,
     },
   ];
 
@@ -488,6 +490,7 @@ export function ConfirmationQueueTable({
             {row.original.orderNumber}
           </TechnicalValue>
         ),
+      meta: { mobile: { slot: "title" as const } },
       enableSorting: false,
     },
     ...(access.contact
@@ -500,6 +503,7 @@ export function ConfirmationQueueTable({
                 {row.original.customerName ?? "—"}
               </span>
             ),
+            meta: { mobile: { slot: "subtitle" as const } },
             enableSorting: false,
           } satisfies ColumnDef<ConfirmationQueueItem, unknown>,
           {
@@ -518,7 +522,7 @@ export function ConfirmationQueueTable({
               ) : (
                 "—"
               ),
-            meta: { hideOn: "sm" as const },
+            meta: { mobile: { slot: "field" as const }, hideOn: "sm" as const },
             enableSorting: false,
           } satisfies ColumnDef<ConfirmationQueueItem, unknown>,
           {
@@ -527,7 +531,7 @@ export function ConfirmationQueueTable({
             cell: ({ row }: { row: { original: ConfirmationQueueItem } }) => (
               <span className="text-sm">{displayWilaya(row.original.wilaya, locale) || "—"}</span>
             ),
-            meta: { hideOn: "md" as const },
+            meta: { mobile: { slot: "field" as const }, hideOn: "md" as const },
             enableSorting: false,
           } satisfies ColumnDef<ConfirmationQueueItem, unknown>,
         ]
@@ -544,7 +548,7 @@ export function ConfirmationQueueTable({
                   : formatDZD(row.original.totalPrice, locale)}
               </span>
             ),
-            meta: { align: "end" as const },
+            meta: { mobile: { slot: "amount" as const }, align: "end" as const },
             enableSorting: false,
           } satisfies ColumnDef<ConfirmationQueueItem, unknown>,
         ]
@@ -577,6 +581,7 @@ export function ConfirmationQueueTable({
           </span>
         );
       },
+      meta: { mobile: { slot: "time" as const } },
       enableSorting: false,
     },
     {
@@ -590,6 +595,7 @@ export function ConfirmationQueueTable({
           disabled
         />
       ),
+      meta: { mobile: { slot: "status" as const } },
       enableSorting: false,
     },
     {
@@ -603,7 +609,7 @@ export function ConfirmationQueueTable({
           return (
             <QueueRowActions
               order={order}
-              busy={actingOrderId === order.id || bulkBusy}
+              busy={actingOrderId === order.id || bulkBusy || !online}
               rejectOpen={rejectOrderId === order.id}
               onRejectOpenChange={(open) =>
                 setRejectOrderId(open ? order.id : null)
@@ -629,21 +635,21 @@ export function ConfirmationQueueTable({
         }
         return null;
       },
-      meta: { align: "end", width: "w-28" },
+      meta: { mobile: { slot: "actions" as const }, align: "end", width: "w-28" },
       enableSorting: false,
     },
   ];
 
+  const refetch = () => {
+    void Promise.resolve(mutate()).catch(() => undefined);
+  };
+
   if (error && !data) {
     return (
-      <StateSurface
-        icon={AlertTriangle}
-        title={t("error.requestFailed")}
-        description={translateServerError(error.message, t, t("error.requestFailed"))}
-        tone="danger"
-        size="inline"
-        role="alert"
-      />
+      <div className="space-y-3">
+        <ListStatusBanner offline={!online} error={error} rows={undefined} onRefresh={refetch} />
+        <ListErrorState error={error} onRetry={refetch} />
+      </div>
     );
   }
 
@@ -686,6 +692,8 @@ export function ConfirmationQueueTable({
 
       {slipPrintRoot}
 
+      <div className="space-y-3">
+      <ListStatusBanner offline={!online} error={error} rows={data?.queue} onRefresh={refetch} />
       <DataTable
         columns={columns}
         data={queue}
@@ -713,6 +721,7 @@ export function ConfirmationQueueTable({
           />
         }
       />
+      </div>
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { getBrandIcon } from "@/components/brand/brand-icons";
@@ -11,13 +10,14 @@ import { DeliveryRowActions } from "@/components/deliveries/delivery-row-actions
 import { DeliveryStatusCell } from "@/components/deliveries/delivery-status-cell";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { DeliveriesEmptyState } from "@/components/shared/empty-states";
-import { StateSurface } from "@/components/shared/state-surface";
+import { ListErrorState, ListStatusBanner } from "@/components/orders/list-status-banner";
 import {
   useDeliveries,
   type DeliveryListItem,
   type DeliveriesResponse,
 } from "@/hooks/swr/use-deliveries";
 import { useI18n } from "@/hooks/use-i18n";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import type { Locale } from "@/lib/i18n";
 import { deliveryProviderConfig, deliveryProviderLabel } from "@/lib/shared";
 import { formatDZD, formatDate } from "@/lib/utils";
@@ -36,7 +36,8 @@ export function DeliveriesDataTable({
 }: DeliveriesDataTableProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const { data, error, isLoading, pagination } = useDeliveries({ fallback, status });
+  const { data, error, isLoading, mutate, pagination } = useDeliveries({ fallback, status });
+  const online = useOnlineStatus();
   const access = data?.fieldAccess ?? fallback.fieldAccess;
   const canViewDetail = access.contact && access.financials;
 
@@ -65,6 +66,7 @@ export function DeliveriesDataTable({
             <span className="text-xs text-muted-foreground">{t("deliveries.noTracking")}</span>
           )
         ),
+      meta: { mobile: { slot: "title" } },
     },
     {
       id: "order",
@@ -89,6 +91,7 @@ export function DeliveriesDataTable({
         ) : (
           "—"
         ),
+      meta: { mobile: { slot: "subtitle" } },
       enableSorting: false,
     },
     ...(access.contact
@@ -106,6 +109,7 @@ export function DeliveriesDataTable({
                 </div>
               </div>
             ),
+            meta: { mobile: { slot: "field" as const } },
             enableSorting: false,
           } satisfies ColumnDef<DeliveryListItem, unknown>,
         ]
@@ -129,7 +133,7 @@ export function DeliveriesDataTable({
           <span className="text-sm">{deliveryProviderLabel(row.original.provider, t)}</span>
         );
       },
-      meta: { hideOn: "sm" },
+      meta: { hideOn: "sm", mobile: { slot: "field" } },
       enableSorting: false,
     },
     ...(access.financials
@@ -142,7 +146,7 @@ export function DeliveriesDataTable({
                 {row.original.cost != null ? formatDZD(row.original.cost, locale) : "—"}
               </span>
             ),
-            meta: { align: "end" as const, hideOn: "md" as const },
+            meta: { align: "end" as const, hideOn: "md" as const, mobile: { slot: "amount" as const } },
             enableSorting: false,
           } satisfies ColumnDef<DeliveryListItem, unknown>,
         ]
@@ -151,7 +155,7 @@ export function DeliveriesDataTable({
       accessorKey: "status",
       header: () => t("deliveries.table.status"),
       cell: ({ row }) => <DeliveryStatusCell delivery={row.original} canManage={access.manage} />,
-      meta: { align: "center" },
+      meta: { align: "center", mobile: { slot: "status" } },
       enableSorting: false,
     },
     {
@@ -162,7 +166,7 @@ export function DeliveriesDataTable({
           {formatDate(row.original.createdAt, locale)}
         </span>
       ),
-      meta: { hideOn: "2xl" },
+      meta: { hideOn: "2xl", mobile: { slot: "time" } },
       enableSorting: false,
     },
     {
@@ -177,33 +181,42 @@ export function DeliveriesDataTable({
           canViewDetail={canViewDetail}
         />
       ),
-      meta: { align: "end", width: "w-20" },
+      meta: { align: "end", width: "w-20", mobile: { slot: "actions" } },
       enableSorting: false,
     },
   ];
 
+  const refetch = () => {
+    void Promise.resolve(mutate()).catch(() => undefined);
+  };
+
   if (error && !data) {
     return (
-      <StateSurface
-        icon={AlertTriangle}
-        title={t("error.requestFailed")}
-        description={error.message}
-        tone="danger"
-        size="inline"
-        role="alert"
-      />
+      <div className="space-y-3">
+        <ListStatusBanner offline={!online} error={error} rows={undefined} onRefresh={refetch} />
+        <ListErrorState error={error} onRetry={refetch} />
+      </div>
     );
   }
 
   return (
-    <DataTable
-      columns={columns}
-      data={data?.deliveries ?? []}
-      isLoading={isLoading}
-      pagination={pagination}
-      onRowClick={canViewDetail ? (row) => router.push(`/deliveries/${row.id}`) : undefined}
-      getRowId={(row) => row.id}
-      emptyState={<DeliveriesEmptyState />}
-    />
+    <div className="space-y-3">
+      <ListStatusBanner
+        offline={!online}
+        error={error}
+        rows={data?.deliveries}
+       
+        onRefresh={refetch}
+      />
+      <DataTable
+        columns={columns}
+        data={data?.deliveries ?? []}
+        isLoading={isLoading}
+        pagination={pagination}
+        onRowClick={canViewDetail ? (row) => router.push(`/deliveries/${row.id}`) : undefined}
+        getRowId={(row) => row.id}
+        emptyState={<DeliveriesEmptyState />}
+      />
+    </div>
   );
 }
