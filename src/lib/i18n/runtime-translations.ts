@@ -17,6 +17,7 @@ import { getInboxVoiceNoteRuntimeTranslation } from "@/lib/i18n/inbox-voice-note
 import { getLicenseLockoutRuntimeTranslation } from "@/lib/i18n/license-lockout-runtime";
 import { getNotificationsRuntimeTranslation } from "@/lib/i18n/notifications-runtime";
 import { getOnboardingRuntimeTranslation } from "@/lib/i18n/onboarding-runtime";
+import { getFirstRunStatesRuntimeTranslation } from "@/lib/i18n/first-run-states-runtime";
 import { getOrderActionsRuntimeTranslation } from "@/lib/i18n/order-actions-runtime";
 import { getOrderFormRuntimeTranslation } from "@/lib/i18n/order-form-runtime";
 import { getOrderLifecycleRuntimeTranslation } from "@/lib/i18n/order-lifecycle-runtime";
@@ -169,6 +170,7 @@ export function getRuntimeTranslation(
     getOrderFormRuntimeTranslation(locale, key) ??
     getOrderLifecycleRuntimeTranslation(locale, key) ??
     getOrdersWorkspaceTranslation(locale, key) ??
+    getFirstRunStatesRuntimeTranslation(locale, key) ??
     getPhase5RuntimeTranslation(locale, key) ??
     getSecurityRuntimeTranslation(locale, key) ??
     getStorefrontRuntimeTranslation(locale, key) ??
