@@ -37,7 +37,25 @@ beforeEach(async () => {
   };
 });
 
+/**
+ * This file books canonical orders, so it leaves BusinessCommand, InventoryReservation, InventoryMovement and
+ * CanonicalDeliveryEvent rows behind. The WhatsApp integration tests (inbound-worker, durable-daily-whatsapp) wipe
+ * BusinessCommand in their own clean(); on a shared test database that failed with a foreign-key error whenever this
+ * file ran first. Delete what we wrote, children before parents, so file order does not matter.
+ */
+async function removeBookingLeftovers(): Promise<void> {
+  await db.canonicalDeliveryEvent.deleteMany();
+  await db.inventoryMovement.deleteMany();
+  await db.inventoryReservation.deleteMany();
+  await db.projectionInvalidation.deleteMany();
+  await db.outboxIntent.deleteMany();
+  await db.domainEvent.deleteMany();
+  await db.businessCommand.deleteMany();
+  await db.businessAggregateVersion.deleteMany();
+}
+
 afterEach(async () => {
+  await removeBookingLeftovers();
   await disconnectTestPrisma(db);
 });
 
