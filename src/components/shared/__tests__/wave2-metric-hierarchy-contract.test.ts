@@ -38,7 +38,7 @@ describe("Wave 2 metric hierarchy contract", () => {
   // (orders to check before shipping, whether the score can be trusted), then
   // the full-width return-rate trend.
   it("orders the Risk overview as KPIs, seller actions, then the full-width return trend", () => {
-    const risk = read("src/app/(dashboard)/risk/page.tsx");
+    const risk = (read("src/app/(dashboard)/risk/page.tsx") + read("src/components/risk/risk-view.tsx"));
     const kpisMarker = 'data-risk-overview-kpis="true"';
     const trendMarker = 'data-risk-primary-trend="true"';
     const signalsMarker = 'data-risk-seller-signals="true"';
@@ -62,7 +62,7 @@ describe("Wave 2 metric hierarchy contract", () => {
   });
 
   it("keeps blacklist navigation explicit without turning a KPI into tab state", () => {
-    const risk = read("src/app/(dashboard)/risk/page.tsx");
+    const risk = (read("src/app/(dashboard)/risk/page.tsx") + read("src/components/risk/risk-view.tsx"));
 
     expect(risk).toContain('<TabsTrigger value="blacklist" asChild>');
     expect(risk).toContain('href={`/risk?days=${days}&tab=blacklist`}');

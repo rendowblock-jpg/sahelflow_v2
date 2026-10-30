@@ -27,9 +27,9 @@ describe("dashboard sub-line says Delivered today (ar/fr/en)", () => {
     });
   }
 
-  it("the dashboard page no longer reads the old 'collected' key", () => {
+  it("the dashboard view no longer reads the old 'collected' key", () => {
     const source = readFileSync(
-      join(process.cwd(), "src/app/(dashboard)/dashboard/page.tsx"),
+      join(process.cwd(), "src/components/dashboard/dashboard-view.tsx"),
       "utf8",
     );
     expect(source).toContain("dashboard.deliveredToday");

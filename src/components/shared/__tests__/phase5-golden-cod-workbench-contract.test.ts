@@ -103,8 +103,8 @@ describe("Phase 5 Golden COD workbench source contract", () => {
 
   it("distinguishes legacy direction sentinels from calculated one-percent trends", () => {
     const metric = read("src/components/shared/stat-card.tsx");
-    const dashboard = read("src/app/(dashboard)/dashboard/page.tsx");
-    const analytics = read("src/app/(dashboard)/analytics/page.tsx");
+    const dashboard = (read("src/app/(dashboard)/dashboard/page.tsx") + read("src/components/dashboard/dashboard-view.tsx"));
+    const analytics = (read("src/app/(dashboard)/analytics/page.tsx") + read("src/components/analytics/analytics-view.tsx"));
     expect(metric).toContain("trendDirectionOnly?: boolean");
     expect(metric).toContain("trendDirectionOnly ??");
     expect(metric).toContain("Math.abs(trend) === 1");
@@ -122,7 +122,7 @@ describe("Phase 5 Golden COD workbench source contract", () => {
   });
 
   it("makes Home attention-first, permission-aware and permission-before-read", () => {
-    const dashboard = read("src/app/(dashboard)/dashboard/page.tsx");
+    const dashboard = (read("src/app/(dashboard)/dashboard/page.tsx") + read("src/components/dashboard/dashboard-view.tsx"));
     const stats = read("src/lib/data/stats-service.ts");
     const deliveryWorkbench = read("src/lib/deliveries/delivery-workbench.ts");
     const deliveryApi = read("src/app/api/delivery/route.ts");

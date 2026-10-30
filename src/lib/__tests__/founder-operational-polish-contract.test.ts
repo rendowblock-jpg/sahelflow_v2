@@ -38,7 +38,7 @@ describe("Founder operational polish contracts", () => {
   });
 
   it("loads Risk Watch only behind the full risk-data authority boundary", () => {
-    const page = read("src/app/(dashboard)/dashboard/page.tsx");
+    const page = (read("src/app/(dashboard)/dashboard/page.tsx") + read("src/components/dashboard/dashboard-view.tsx"));
     const projection = read("src/lib/identity/dashboard-projection.ts");
 
     expect(page).toContain('data-dashboard-risk-watch="true"');

@@ -77,7 +77,7 @@ describe("Phase 5 whole-product completion contract", () => {
 
   it("uses bounded risk analytics instead of per-order database fan-out", () => {
     const analytics = read("src/lib/risk-engine/analytics.ts");
-    const riskPage = read("src/app/(dashboard)/risk/page.tsx");
+    const riskPage = (read("src/app/(dashboard)/risk/page.tsx") + read("src/components/risk/risk-view.tsx"));
     expect(analytics).not.toContain("buildAssessmentInputFromOrder");
     expect(analytics).toContain("historyRows");
     expect(analytics).toContain("wilayaProfiles");

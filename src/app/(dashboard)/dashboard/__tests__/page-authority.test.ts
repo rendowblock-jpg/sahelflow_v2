@@ -8,7 +8,7 @@ const read = (path: string) =>
 
 describe("dashboard page authority", () => {
   it("resolves trusted field access before permission-aware dashboard queries", () => {
-    const page = read("src/app/(dashboard)/dashboard/page.tsx");
+    const page = (read("src/app/(dashboard)/dashboard/page.tsx") + read("src/components/dashboard/dashboard-view.tsx"));
     const pageGuard = page.indexOf('requireTrustedAction("shops.read")');
     const fieldAccess = page.indexOf("resolveDashboardFieldAccess(actorContext)");
     const statsQuery = page.indexOf("getDashboardStats(fieldAccess)");

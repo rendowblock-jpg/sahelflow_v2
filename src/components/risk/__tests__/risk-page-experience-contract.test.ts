@@ -17,7 +17,7 @@ function signed(locale: string, points: number): string {
 
 describe("Risk Engine seller workspace contract", () => {
   it("keeps the overview calm and decision-first", () => {
-    const page = source("../../../app/(dashboard)/risk/page.tsx");
+    const page = (source("../../../app/(dashboard)/risk/page.tsx") + source("../../../components/risk/risk-view.tsx"));
 
     expect(page).toContain('data-risk-seller-workspace="v4"');
     expect(page).toContain('data-risk-overview-kpis="true"');
@@ -32,7 +32,7 @@ describe("Risk Engine seller workspace contract", () => {
   });
 
   it("gives the orders-and-returns trend the full overview width", () => {
-    const page = source("../../../app/(dashboard)/risk/page.tsx");
+    const page = (source("../../../app/(dashboard)/risk/page.tsx") + source("../../../components/risk/risk-view.tsx"));
 
     expect(page).toContain('data-risk-primary-trend="true"');
     expect(page).toContain('className="w-full"');
@@ -44,7 +44,7 @@ describe("Risk Engine seller workspace contract", () => {
   });
 
   it("leads with what the seller acts on and measures money from real costs", () => {
-    const page = source("../../../app/(dashboard)/risk/page.tsx");
+    const page = (source("../../../app/(dashboard)/risk/page.tsx") + source("../../../components/risk/risk-view.tsx"));
     const sections = source("../risk-seller-sections.tsx");
     const analytics = source("../../../lib/risk-engine/analytics.ts");
 
@@ -58,7 +58,7 @@ describe("Risk Engine seller workspace contract", () => {
   });
 
   it("keeps the exact positive risk impact in the score details", () => {
-    const page = source("../../../app/(dashboard)/risk/page.tsx");
+    const page = (source("../../../app/(dashboard)/risk/page.tsx") + source("../../../components/risk/risk-view.tsx"));
     const analytics = source("../../../lib/risk-engine/analytics.ts");
 
     expect(page).toContain("report.attentionFactors[0]");
@@ -79,7 +79,7 @@ describe("Risk Engine seller workspace contract", () => {
   });
 
   it("separates seller signals from deeper analytical tables", () => {
-    const page = source("../../../app/(dashboard)/risk/page.tsx");
+    const page = (source("../../../app/(dashboard)/risk/page.tsx") + source("../../../components/risk/risk-view.tsx"));
 
     expect(page).toContain('data-risk-seller-signals="true"');
     expect(page).toContain('data-risk-confirmation-table="true"');
@@ -90,7 +90,7 @@ describe("Risk Engine seller workspace contract", () => {
   });
 
   it("uses dedicated seller-facing AR/FR/EN copy", () => {
-    const page = source("../../../app/(dashboard)/risk/page.tsx");
+    const page = (source("../../../app/(dashboard)/risk/page.tsx") + source("../../../components/risk/risk-view.tsx"));
     const copy = source("../../../lib/i18n/risk-workspace.ts");
 
     expect(page).toContain("getRiskWorkspaceCopy");

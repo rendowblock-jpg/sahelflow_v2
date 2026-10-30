@@ -81,10 +81,9 @@ describe("SKU P&L cost projection (MNY-20)", () => {
 });
 
 describe("Analytics page applies the SKU projection (MNY-20)", () => {
-  const page = readFileSync(
-    join(process.cwd(), "src/app/(dashboard)/analytics/page.tsx"),
-    "utf8",
-  );
+  const page =
+    readFileSync(join(process.cwd(), "src/app/(dashboard)/analytics/page.tsx"), "utf8") +
+    readFileSync(join(process.cwd(), "src/components/analytics/analytics-view.tsx"), "utf8");
 
   it("projects the SKU rows through the actor-aware helper", () => {
     expect(page).toContain("projectSkuPnlForTrustedActor(actorContext, skuPnl)");
