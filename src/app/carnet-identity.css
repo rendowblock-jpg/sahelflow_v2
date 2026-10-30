@@ -1,0 +1,208 @@
+/*
+ * Carnet identity layer. Everything here is scoped to html[data-theme-preset="carnet"]; the other looks
+ * keep their fonts and have none of these classes. Imported last in layout.tsx so ties go to this file.
+ *
+ * TYPE
+ *   UI text: IBM Plex Sans Arabic leads (Arabic subset, then its Latin subset), then the old Noto Sans Arabic
+ *   chain. The chain ends in sans-serif on purpose: a font that fails to load must never turn the app serif.
+ *   There is no 600 Latin file, so Latin words at 600 are a synthetic bold of the 400 face (font-synthesis: weight).
+ *   Amiri 700 is for a few written words only: main h1, .carnet-display, the sidebar group header, the stamp and
+ *   the index letter.
+ * FIGURES
+ *   The shared hooks (.numeric-value, .technical-value, .font-mono, code, kbd, .tabular-nums, .nums) use Plex Mono
+ *   with tabular figures. Digits stay Latin: no digit-script switch.
+ * PRIMITIVES (wave 2 applies them to pages; nothing uses them yet except the app shell)
+ *   .carnet-ruled        ruled paper: a 1px --carnet-rule line every 32px on --background, no image.
+ *   .carnet-margin       red double rule on the inline-start edge: two 1px --carnet-margin lines, centres 3px apart,
+ *                        drawn by a pseudo-element, so it takes no layout space and does not shift content.
+ *   .carnet-stamp        label rotated -3deg with a double --carnet-red border; --carnet-red-ink on --carnet-red-bg.
+ *                        Scales in over 180ms (transform and opacity only); no animation under reduced motion.
+ *   .carnet-total        double rule above a total.
+ *   .carnet-index-letter one Amiri letter in a round avatar.
+ * Logical properties only (inset-inline-start, border-inline, padding-inline): the same CSS serves RTL and LTR.
+ */
+
+html[data-theme-preset="carnet"] body,
+html[data-theme-preset="carnet"][dir="rtl"] body {
+  font-family:
+    var(--font-plex-arabic),
+    var(--font-plex-latin),
+    var(--font-arabic),
+    "Noto Sans Arabic",
+    "Segoe UI",
+    Tahoma,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  font-synthesis: weight;
+}
+
+html[data-theme-preset="carnet"] h2,
+html[data-theme-preset="carnet"] h3,
+html[data-theme-preset="carnet"] h4 {
+  font-family:
+    var(--font-plex-arabic),
+    var(--font-plex-latin),
+    var(--font-arabic),
+    "Noto Sans Arabic",
+    "Segoe UI",
+    Tahoma,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+
+/* The page title is the one written word of every page. */
+html[data-theme-preset="carnet"] main h1 {
+  font-family:
+    var(--font-amiri),
+    var(--font-plex-arabic),
+    var(--font-plex-latin),
+    var(--font-arabic),
+    "Noto Sans Arabic",
+    "Segoe UI",
+    Tahoma,
+    sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+html[data-theme-preset="carnet"] .carnet-display {
+  font-family:
+    var(--font-amiri),
+    var(--font-plex-arabic),
+    var(--font-plex-latin),
+    var(--font-arabic),
+    "Noto Sans Arabic",
+    "Segoe UI",
+    Tahoma,
+    sans-serif;
+  font-weight: 700;
+}
+
+/* Sidebar group header: a ledger section title with a 1px rule under it. */
+html[data-theme-preset="carnet"] [data-nav-group-header] {
+  font-family:
+    var(--font-amiri),
+    var(--font-plex-arabic),
+    var(--font-plex-latin),
+    var(--font-arabic),
+    "Noto Sans Arabic",
+    "Segoe UI",
+    Tahoma,
+    sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  border-block-end: 1px solid var(--carnet-line);
+}
+
+/* Figures: map the hooks the app already uses. Specificity beats the rtl rule that sets them to Inter. */
+html[data-theme-preset="carnet"] .numeric-value,
+html[data-theme-preset="carnet"] .technical-value,
+html[data-theme-preset="carnet"] .font-mono,
+html[data-theme-preset="carnet"] code,
+html[data-theme-preset="carnet"] kbd,
+html[data-theme-preset="carnet"] .tabular-nums,
+html[data-theme-preset="carnet"] .nums {
+  font-family:
+    var(--sf-font-mono),
+    var(--font-plex-arabic),
+    var(--font-arabic),
+    "Noto Sans Arabic",
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-theme-preset="carnet"] .carnet-ruled {
+  background-color: var(--background);
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 31px,
+    var(--carnet-rule) 31px,
+    var(--carnet-rule) 32px
+  );
+}
+
+html[data-theme-preset="carnet"] .carnet-margin {
+  position: relative;
+}
+
+html[data-theme-preset="carnet"] .carnet-margin::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 4px;
+  border-inline: 1px solid var(--carnet-margin);
+  pointer-events: none;
+}
+
+html[data-theme-preset="carnet"] .carnet-stamp {
+  --stamp-ink: var(--carnet-red-ink);
+  --stamp-tint: var(--carnet-red-bg);
+  display: inline-block;
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
+  border: 3px double var(--carnet-red);
+  border-radius: 2px;
+  background: var(--stamp-tint);
+  color: var(--stamp-ink);
+  font-family:
+    var(--font-amiri),
+    var(--font-plex-arabic),
+    var(--font-plex-latin),
+    var(--font-arabic),
+    "Noto Sans Arabic",
+    "Segoe UI",
+    Tahoma,
+    sans-serif;
+  font-weight: 700;
+  line-height: 1.4;
+  transform: rotate(-3deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-theme-preset="carnet"] .carnet-stamp {
+    animation: carnet-stamp-in 180ms ease-out both;
+  }
+
+  @keyframes carnet-stamp-in {
+    from {
+      opacity: 0;
+      transform: rotate(-3deg) scale(1.2);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(-3deg) scale(1);
+    }
+  }
+}
+
+html[data-theme-preset="carnet"] .carnet-total {
+  border-block-start: 3px double var(--carnet-ink);
+  padding-block-start: 0.25rem;
+}
+
+html[data-theme-preset="carnet"] .carnet-index-letter {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border: 1px solid var(--carnet-line);
+  border-radius: 50%;
+  background: var(--carnet-sunk);
+  color: var(--carnet-ink);
+  font-family:
+    var(--font-amiri),
+    var(--font-plex-arabic),
+    var(--font-plex-latin),
+    var(--font-arabic),
+    "Noto Sans Arabic",
+    "Segoe UI",
+    Tahoma,
+    sans-serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+}

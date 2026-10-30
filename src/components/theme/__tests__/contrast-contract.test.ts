@@ -887,3 +887,19 @@ describe("carnet (the fifth look): the paper ledger, light and night", () => {
     expect(entry).toContain(resolveToken(dark, "--primary"));
   });
 });
+
+describe("carnet identity layer: margin colour and stamp contrast", () => {
+  const identityBlocks = parseBlocks(source("../../../app/carnet-identity.css"));
+  const stamp = mergedDeclarations(identityBlocks, 'html[data-theme-preset="carnet"] .carnet-stamp');
+
+  it("defines --carnet-margin in both modes, equal to the design hex", () => {
+    expect(hexOf(colorToken([carnetOwn("light")], "--carnet-margin"))).toBe("D69A8E");
+    expect(hexOf(colorToken([carnetOwn("dark")], "--carnet-margin"))).toBe("7B3B32");
+  });
+
+  it.each(CARNET_MODES)("keeps the stamp's red text on its tint above the AA floor (%s)", (mode) => {
+    const layers = [stamp, ...carnetCascade(mode)];
+    const ratio = contrast(colorToken(layers, "--stamp-ink"), colorToken(layers, "--stamp-tint"));
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+});

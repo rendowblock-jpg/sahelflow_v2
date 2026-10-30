@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { SahelFlowMark } from "@/components/brand/sahelflow-mark";
 import { useActorPermissions } from "@/components/layout/actor-access";
@@ -23,11 +23,17 @@ import {
 import type { Locale } from "@/lib/i18n";
 import {
   navigationItemForPathname,
-  navigationItemAllowed,
-  sellerSidebarNavigationItems,
-  utilityNavigationItems,
+  visibleSidebarNavigationGroups,
   type NavigationItem,
+  type SidebarGroupId,
 } from "./navigation";
+import {
+  getCollapsedSnapshot,
+  parseCollapsedGroups,
+  saveCollapsedGroups,
+  subscribeCollapsedGroups,
+  toggleCollapsedGroup,
+} from "./sidebar-group-state";
 
 interface SidebarProps {
   serverLocale: Locale;
@@ -96,14 +102,16 @@ function SidebarLink({
             : "gap-3 px-3 py-2.5",
         selected
           ? nested
-            ? "bg-sidebar-accent/75 font-medium text-sidebar-accent-foreground"
-            : "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+            ? "bg-sidebar-accent/75 font-semibold text-sidebar-accent-foreground"
+            : "bg-sidebar-accent font-semibold text-sidebar-accent-foreground"
           : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
       )}
     >
-      {!nested && selected && (
+      {selected && (
+        // The selection mark is never colour alone: this 5px bar on the inline-start edge, weight 600 and aria-current.
         <span
-          className="absolute inset-y-2 start-0 w-0.5 rounded-full bg-primary"
+          data-active-bar="true"
+          className="absolute inset-y-1 start-0 w-[5px] rounded-e-sm bg-primary"
           aria-hidden="true"
         />
       )}
@@ -154,6 +162,13 @@ export function Sidebar({
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
   const activeHref = navigationItemForPathname(pathname)?.href ?? null;
   const navRef = useRef<HTMLElement>(null);
+  // Collapsed groups are remembered per browser (localStorage, with an in-memory fallback when storage is blocked).
+  // The server snapshot is "nothing saved", so the first paint is always open; the saved choice applies after hydration.
+  const savedCollapsed = useSyncExternalStore(subscribeCollapsedGroups, getCollapsedSnapshot, () => null);
+  const collapsedGroups = useMemo(() => parseCollapsedGroups(savedCollapsed), [savedCollapsed]);
+  const toggleGroup = (id: SidebarGroupId) => {
+    saveCollapsedGroups(toggleCollapsedGroup(collapsedGroups, id));
+  };
   // On a short window the list scrolls: keep the current destination in view
   // so the seller always sees where they are. Only the sidebar's own viewport
   // moves; scrollIntoView would also move the keyboard's Tab starting point
@@ -183,6 +198,35 @@ export function Sidebar({
   const inboxUnreadLabel = t("inbox.liveness.unreadChats", {
     count: inboxUnreadChats,
   });
+
+  // The page enforces access; the sidebar only stops offering destinations this member could not open, and a
+  // group with nothing left disappears with its header.
+  const visibleGroups = visibleSidebarNavigationGroups(permissions);
+  const headedGroups = visibleGroups.filter((group) => group.id !== "footer");
+  const footerGroup = visibleGroups.find((group) => group.id === "footer");
+  const renderLink = (item: NavigationItem) => {
+    const selected = activeHref === item.href;
+    return (
+      <div
+        key={item.href}
+        className={cn(
+          item.sidebarNested && !collapsed && "ms-4 border-s border-sidebar-border ps-2",
+        )}
+      >
+        <SidebarLink
+          item={item}
+          label={t(item.labelKey)}
+          selected={selected}
+          current={selected}
+          collapsed={collapsed}
+          isRtl={isRtl}
+          nested={item.sidebarNested}
+          unreadCount={item.unreadBadge ? inboxUnreadChats : undefined}
+          unreadLabel={item.unreadBadge ? inboxUnreadLabel : undefined}
+        />
+      </div>
+    );
+  };
 
   return (
     <aside
@@ -224,33 +268,52 @@ export function Sidebar({
             aria-label={t("nav.sidebarLabel")}
             data-seller-navigation="fixed-priority"
           >
-            {sellerSidebarNavigationItems.map((item) => {
-              // The page enforces access; the sidebar only stops offering
-              // destinations this member could not open.
-              if (!navigationItemAllowed(item, permissions)) return null;
-              const selected = activeHref === item.href;
+            {headedGroups.map((group) => {
+              // The rail has no room for headers, so it shows every group; a collapsed group still shows the
+              // current page so the seller always sees where they are.
+              const open = collapsed || !group.collapsible || !collapsedGroups.has(group.id);
+              const items = open ? group.items : group.items.filter((item) => item.href === activeHref);
+              const label = group.labelKey ? t(group.labelKey) : undefined;
+              const listId = `nav-group-items-${group.id}`;
               return (
                 <div
-                  key={item.href}
+                  key={group.id}
+                  data-nav-group={group.id}
+                  role="group"
+                  aria-label={label}
                   className={cn(
-                    item.sidebarNested &&
-                      !collapsed &&
-                      "ms-4 border-s border-sidebar-border ps-2",
+                    "flex flex-col gap-1",
+                    collapsed && "border-t border-sidebar-border pt-2 first:border-t-0 first:pt-0",
                   )}
                 >
-                  <SidebarLink
-                    item={item}
-                    label={t(item.labelKey)}
-                    selected={selected}
-                    current={selected}
-                    collapsed={collapsed}
-                    isRtl={isRtl}
-                    nested={item.sidebarNested}
-                    unreadCount={item.unreadBadge ? inboxUnreadChats : undefined}
-                    unreadLabel={
-                      item.unreadBadge ? inboxUnreadLabel : undefined
-                    }
-                  />
+                  {!collapsed && label ? (
+                    group.collapsible ? (
+                      <button
+                        type="button"
+                        data-nav-group-header={group.id}
+                        aria-expanded={open}
+                        aria-controls={listId}
+                        onClick={() => toggleGroup(group.id)}
+                        className="flex min-h-(--control-height) w-full items-center justify-between gap-2 px-3 pt-2 text-start text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <span className="min-w-0 truncate">{label}</span>
+                        <ChevronDown
+                          className={cn("size-3.5 shrink-0", !open && "-rotate-90 rtl:rotate-90")}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ) : (
+                      <div
+                        data-nav-group-header={group.id}
+                        className="px-3 pt-2 pb-1 text-sm text-muted-foreground"
+                      >
+                        {label}
+                      </div>
+                    )
+                  ) : null}
+                  <div id={listId} className="flex flex-col gap-1">
+                    {items.map((item) => renderLink(item))}
+                  </div>
                 </div>
               );
             })}
@@ -260,25 +323,8 @@ export function Sidebar({
 
       <div className="shrink-0 border-t border-sidebar-border p-2.5">
         <TooltipProvider delayDuration={0}>
-          <div className="space-y-1">
-            {utilityNavigationItems.map((item) => {
-              const selected = activeHref === item.href;
-              return (
-                <SidebarLink
-                  key={item.href}
-                  item={item}
-                  label={t(item.labelKey)}
-                  selected={selected}
-                  current={selected}
-                  collapsed={collapsed}
-                  isRtl={isRtl}
-                  unreadCount={item.unreadBadge ? inboxUnreadChats : undefined}
-                  unreadLabel={
-                    item.unreadBadge ? inboxUnreadLabel : undefined
-                  }
-                />
-              );
-            })}
+          <div data-nav-group="footer" role="group" className="space-y-1">
+            {footerGroup?.items.map((item) => renderLink(item))}
           </div>
         </TooltipProvider>
 
