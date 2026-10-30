@@ -164,7 +164,9 @@ describe("runScheduledBackupTick", () => {
   it("prunes only automatic backups, never a manual one, and forgets deleted ids", async () => {
     const h = harness();
     let state = emptyScheduledBackupState();
-    for (let d = 2; d <= 13; d += 1) {
+    // Six weeks of daily backups: the 90-day-old pinned one falls outside the four weekly slots,
+    // so only its pin keeps it.
+    for (let d = 2; d <= 45; d += 1) {
       const id = `old-auto-${d}`;
       h.listed.push({ backupId: id, createdAtUnixMs: NOW - d * DAY, pinned: false, status: "verified" });
       state = recordBackupSuccess(state, id, NOW - d * DAY);
