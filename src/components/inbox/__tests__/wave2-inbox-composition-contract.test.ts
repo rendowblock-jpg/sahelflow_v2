@@ -116,7 +116,6 @@ describe("Class-AAA Inbox composition contract", () => {
   it("closes adversarial Inbox review gaps at their authority boundaries", () => {
     const queue = read("src/components/inbox/inbox-v3-queue.tsx");
     const deskTypes = read("src/components/inbox/inbox-desk-types.ts");
-    const header = read("src/components/inbox/inbox-v3-header.tsx");
     const panel = read("src/components/inbox/inbox-customer-work-panel.tsx");
     const collaboration = read(
       "src/components/inbox/conversation-collaboration-inline.tsx",
