@@ -1,4 +1,7 @@
 // Every page of sahelflow.com, rendered from the copy files and the model.
+import { SHEETS } from "./i18n/sheets.mjs";
+import { claimById as claimOf, installerIsSigned } from "./claims.mjs";
+import { screenImg as shotImg, statusBadge as factStamp } from "./ui.mjs";
 import { SITE } from "./config.mjs";
 import { integrationStatus, statusLabel, statusesOf } from "./claims.mjs";
 import { COPY } from "./i18n/index.mjs";
@@ -32,15 +35,15 @@ const meta = (locale, key) => COPY[locale].meta[key];
 /* ───────────────────────────── shared blocks ───────────────────────────── */
 
 function pageHero({ locale, eyebrow, eyebrowIcon, title, lead, actions = "", art = "", cls = "" }) {
-  return `<section class="page-hero ${cls}">
-  <div class="container page-hero-inner">
-    <div class="page-hero-copy reveal">
+  return `<section class="sheet-head ${cls}${art ? " has-art" : ""}">
+  <div class="container sheet-in">
+    <div class="sheet-copy">
       ${eyebrow ? `<p class="eyebrow">${eyebrowIcon ? icon(eyebrowIcon) : ""}${esc(eyebrow)}</p>` : ""}
       <h1 class="page-title">${esc(title)}</h1>
       ${lead ? `<p class="page-lead">${esc(lead)}</p>` : ""}
       ${actions}
     </div>
-    ${art ? `<div class="page-hero-art reveal">${art}</div>` : ""}
+    ${art ? `<div class="sheet-art">${art}</div>` : ""}
   </div>
 </section>`;
 }
@@ -168,7 +171,7 @@ function shotsSection(locale) {
   const figs = ["inbox", "orders", "delivery"]
     .map((key, i) => {
       const m = t.modules[key];
-      return `<figure class="shot"><img src="${shotUrl(key, locale)}" width="1600" height="1000" alt="${esc(`${m.name}: ${m.short}`)}"${i === 0 ? "" : ' loading="lazy"'} decoding="async"><figcaption>${esc(m.name)}</figcaption></figure>`;
+      return `<figure class="shot">${shotImg(key, locale, { alt: `${m.name}: ${m.short}`, lazy: i !== 0 })}<figcaption>${esc(m.name)}</figcaption></figure>`;
     })
     .join("");
   return `<section class="sec" id="screens" aria-labelledby="h-screens">
@@ -410,70 +413,41 @@ export function pricingPage(locale) {
   const p = t.pricingPage;
   const lp = licencePricing(locale);
   const [title, description] = meta(locale, "pricing");
-  const card = ({ name, price, per, points, cta, url, external, featured, badge, offer, sub }) => `<article class="plan${featured ? " is-featured" : ""} reveal" data-spotlight>
-  ${badge ? `<span class="plan-badge">${esc(badge)}</span>` : ""}
-  <h2 class="plan-name">${esc(name)}</h2>
-  ${offer ? `<p class="plan-offer"><span class="badge badge-offer">${esc(offer.label)}</span><span class="badge badge-save">${esc(offer.save)}</span></p>` : ""}
-  <p class="plan-price">${offer ? `<s>${esc(offer.regular)}</s>` : ""}<b>${esc(price)}</b><span>${esc(per)}</span></p>
-  ${sub ? `<p class="plan-sub">${esc(sub)}</p>` : ""}
-  <ul class="check-list">${points.map((x) => `<li>${icon("check")}<span>${esc(x)}</span></li>`).join("")}</ul>
-  ${button(url, cta, { kind: featured ? "primary" : "ghost", external, size: "lg", iconName: featured ? "key" : external ? "whatsapp" : "download" })}
-</article>`;
-  const base = lp.amount ?? PACKAGE.priceDzd;
-  const calc = base
-    ? `<section class="section">
+  const amount = lp.amount ?? PACKAGE.priceDzd;
+  const plate = `<div class="plate" id="licence">
+${lp.offer ? `<span class="pc">${esc(lp.offer.label)}</span>` : ""}
+<div class="pn2"><span class="num">${num(amount)}</span><span class="pu">${unitOf(locale)}</span></div>
+<span class="pc">${esc(p.licence.per)}${lp.offer ? ` · ${esc(lp.offer.then)}` : ""}</span>
+</div>`;
+  const body = `${pageHero({ locale, eyebrow: p.eyebrow, eyebrowIcon: "key", title: p.title, lead: p.lead })}
+<section class="sheet-sec" id="price" aria-label="${esc(p.licence.name)}">
   <div class="container">
-    <form class="calc-card pricing-calc reveal" data-calc="licence" data-base="${base}" data-extra="${PACKAGE.extraShopPriceDzd}" data-included="${PACKAGE.includedShops}" data-months="${PACKAGE.updateYears * 12}" data-currency="${locale === "ar" ? "دج" : "DA"}">
-      <h2 class="calc-title">${icon("calculator")}<span>${esc(p.calc.title)}</span></h2>
-      <label class="calc-field"><span class="calc-label">${esc(p.calc.shops)}</span>
-        <span class="calc-control"><input type="range" name="shops" min="${PACKAGE.includedShops}" max="${PACKAGE.maximumShops}" step="1" value="${PACKAGE.includedShops}" data-calc-input><output data-calc-out="shops">${PACKAGE.includedShops}</output></span>
-      </label>
-      <div class="shop-dots" aria-hidden="true">${Array.from({ length: PACKAGE.maximumShops }, (_, i) => `<i class="${i < PACKAGE.includedShops ? "is-in" : ""}" data-shop-dot="${i}">${icon("storefront")}</i>`).join("")}</div>
-      <p class="calc-split" data-calc-split data-included-label="${esc(p.calc.included(PACKAGE.includedShops))}" data-extra-label="${esc(p.calc.extra("{n}"))}">${esc(p.calc.included(PACKAGE.includedShops))}</p>
-      <div class="calc-result">
-        <div><span>${esc(p.calc.total)}</span><b data-calc-result="total">${money(base, locale)}</b></div>
-        <div><span data-calc-monthly-label="${esc(p.calc.monthly("{amount}", PACKAGE.updateYears))}">${esc(p.calc.monthly(money(monthlyOverUpdateYears(base), locale), PACKAGE.updateYears))}</span></div>
+    <div class="pgrid">
+      ${plate}
+      <div>
+        <ul class="incl">${p.licence.points(PACKAGE).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+        <p class="cta">${button(whatsappHref(t.whatsappMessage), p.licence.cta, { iconName: "whatsapp", external: true })}</p>
       </div>
-      ${lp.offer ? `<p class="calc-note">${icon("sparkle")}<span>${esc(p.calc.offerNote)}</span></p>` : ""}
-    </form>
-  </div>
-</section>`
-    : "";
-  const included = p.included(PACKAGE);
-  const body = `${pageHero({ locale, eyebrow: p.eyebrow, eyebrowIcon: "key", title: p.title, lead: p.lead, cls: "is-center" })}
-<section class="section tight">
-  <div class="container plans reveal-stagger">
-    ${card({ name: p.trial.name, price: p.trial.price, per: p.trial.per(SITE.trialDays), points: p.trial.points, cta: p.trial.cta, url: href(locale, "download") })}
-    ${card({ name: p.licence.name, price: lp.price, per: p.licence.per, points: p.licence.points(PACKAGE), cta: p.licence.cta, url: whatsappHref(t.whatsappMessage), external: true, featured: true, badge: p.licence.badge, offer: lp.offer, sub: lp.amount ? t.home.pricing.perMonth(money(monthlyOverUpdateYears(lp.amount), locale)) : null })}
-    ${card({ name: p.extra.name, price: `+${money(PACKAGE.extraShopPriceDzd, locale)}`, per: p.extra.per, points: p.extra.points(PACKAGE), cta: p.extra.cta, url: whatsappHref(t.whatsappMessage), external: true })}
-  </div>
-</section>
-${calc}
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: p.includedTitle, lead: p.includedLead, center: true })}
-    <dl class="included reveal">${included.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
-  </div>
-</section>
-<section class="section">
-  <div class="container narrow">
-    ${sectionHead({ title: p.compareTitle, lead: p.compareLead(PACKAGE.updateYears), center: true })}
-    <div class="vs-table reveal" role="table">
-      <div class="vs-row vs-head" role="row"><span role="columnheader"></span><span role="columnheader" class="vs-us">${esc(p.compareSahelName)}</span><span role="columnheader">${esc(p.compareSaasName)}</span></div>
-      ${p.compareRows.map((row, i) => `<div class="vs-row" role="row"><span role="rowheader">${esc(row)}</span><span role="cell" class="vs-us">${statusIcon("yes")}${esc(p.compareSahel[i])}</span><span role="cell">${statusIcon("no")}${esc(p.compareSaas[i])}</span></div>`).join("")}
     </div>
-    <p class="center-cta">${button(href(locale, "why"), t.home.why.cta, { kind: "ghost", iconName: "scale" })}</p>
+    <ul class="ruled">
+      <li><h3>${esc(p.trial.name)}</h3><p>${esc(p.trial.per(SITE.trialDays))}</p>${button(href(locale, "download"), p.trial.cta, { kind: "ghost", iconName: "download" })}</li>
+      <li><h3>${esc(p.extra.name)}</h3><p>+${money(PACKAGE.extraShopPriceDzd, locale)} · ${esc(p.extra.per)}</p></li>
+    </ul>
   </div>
 </section>
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: p.howTitle, center: true })}
-    <ol class="steps reveal-stagger">${p.how.map(([k, v], i) => `<li class="step reveal"><span class="step-num">${i + 1}</span><h3>${esc(k)}</h3><p>${esc(v)}</p></li>`).join("")}</ol>
-  </div>
-</section>
-<section class="section">
+<section class="sheet-sec">
   <div class="container narrow">
-    ${sectionHead({ eyebrow: t.common.questions, title: t.nav.pricing, center: true })}
+    <h2>${esc(p.compareTitle)}</h2>
+    <p class="lead">${esc(p.compareLead(PACKAGE.updateYears))}</p>
+    <div class="cmp">
+      <div class="cmp-h"><span>${esc(p.compareSahelName)}</span><span>${esc(p.compareSaasName)}</span></div>
+      ${p.compareRows.map((row, i) => `<div class="cmp-r"><h3>${esc(row)}</h3><p>${statusIcon("yes")}<span>${esc(p.compareSahel[i])}</span></p><p>${statusIcon("no")}<span>${esc(p.compareSaas[i])}</span></p></div>`).join("")}
+    </div>
+  </div>
+</section>
+<section class="sheet-sec">
+  <div class="container narrow">
+    <h2>${esc(t.common.questions)}</h2>
     ${faqList(p.faq, { name: "pricing-faq" })}
   </div>
 </section>
@@ -541,23 +515,37 @@ ${finalCta(locale, { title: w.cta })}`;
 export function securityPage(locale) {
   const t = COPY[locale];
   const s = t.securityPage;
+  const S = SHEETS[locale];
   const [title, description] = meta(locale, "security");
-  const icons = ["lock", "shield", "key", "backup", "sparkle", "check"];
-  const body = `${pageHero({ locale, eyebrow: s.eyebrow, eyebrowIcon: "shield", title: s.title, lead: s.lead, cls: "is-center" })}
-<section class="section tight">
-  <div class="container">
-    <div class="reasons reveal-stagger">${s.items.map(([k, v], i) => `<article class="reason reveal" data-spotlight><span class="reason-icon">${icon(icons[i])}</span><h2>${esc(k)}</h2><p>${esc(v)}</p></article>`).join("")}</div>
+  // Each stamped fact is tied to its entry in claims.mjs: the stamp always says that entry's status.
+  const fact = (id, [k, v]) => {
+    const status = claimOf(id).status;
+    return `<li class="fact" data-claim="${id}" data-claim-status="${status}">${factStamp(status, locale)}<div><h3>${esc(k)}</h3><p>${esc(v)}</p></div></li>`;
+  };
+  const plain = (items) => items.map(([k, v]) => `<li><div><h3>${esc(k)}</h3><p>${esc(v)}</p></div></li>`).join("");
+  const body = `${pageHero({ locale, eyebrow: s.eyebrow, eyebrowIcon: "shield", title: s.title, lead: s.lead })}
+<section class="sheet-sec">
+  <div class="container two">
+    <div><h2>${esc(S.secProven)}</h2><ul class="ruled facts">${fact("data-encrypted", s.items[1] ?? ["", ""])}${fact("updates-verified", s.items[5] ?? ["", ""])}</ul></div>
+    <div><h2>${esc(S.secPending)}</h2><ul class="ruled facts">${fact("backup-restore-new-pc", s.items[3] ?? ["", ""])}</ul></div>
   </div>
 </section>
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: s.flowsTitle, lead: s.flowsLead, center: true })}
-    <div class="reveal">${flowDiagram(locale)}</div>
-  </div>
-</section>
-<section class="section">
+<section class="sheet-sec">
   <div class="container narrow">
-    ${sectionHead({ eyebrow: t.common.questions, title: s.eyebrow, center: true })}
+    <h2>${esc(S.secBuilt)}</h2>
+    <ul class="ruled">${plain([s.items[0], s.items[2], s.items[4]].filter((x) => x !== undefined))}</ul>
+  </div>
+</section>
+<section class="sheet-sec">
+  <div class="container narrow">
+    <h2>${esc(s.flowsTitle)}</h2>
+    <p class="lead">${esc(s.flowsLead)}</p>
+    <ul class="ruled">${plain(s.flows)}</ul>
+  </div>
+</section>
+<section class="sheet-sec">
+  <div class="container narrow">
+    <h2>${esc(t.common.questions)}</h2>
     ${faqList(s.faq, { name: "security-faq" })}
   </div>
 </section>
@@ -570,34 +558,38 @@ ${finalCta(locale)}`;
 export function downloadPage(locale) {
   const t = COPY[locale];
   const d = t.downloadPage;
+  const S = SHEETS[locale];
   const [title, description] = meta(locale, "download");
-  const body = `<section class="page-hero download-hero" data-gl-host>
-  <canvas class="gl-canvas" data-gl data-gl-seed="1.2" data-gl-horizon="0.3" data-gl-offset="90" aria-hidden="true"></canvas>
-  <div class="container download-inner reveal">
-    <span class="download-mark">${icon("windows")}</span>
-    <p class="eyebrow">${esc(d.eyebrow)}</p>
-    <h1 class="page-title">${esc(d.title)}</h1>
-    <p class="page-lead">${esc(d.lead)}</p>
-    <p>${button(SITE.downloadUrl, d.button, { iconName: "download", size: "xl" })}</p>
-    <p class="hero-note">${esc(d.meta)} · ${esc(t.home.hero.note(SITE.trialDays))}</p>
+  // The honest sentence about the missing publisher certificate. Delete the comment line and the paragraph under it
+  // when the installer is signed (claims.mjs installerIsSigned() then also returns true).
+  const unsigned = installerIsSigned()
+    ? ""
+    : `<!-- founder: remove this sentence when the installer is signed -->
+<p class="notice">${icon("shield")}<span>${esc(d.unsigned)}</span></p>`;
+  const actions = `<p class="cta">${button(SITE.downloadUrl, d.button, { iconName: "download", size: "lg" })}<span class="fine">${esc(d.meta)} · ${esc(t.home.hero.note(SITE.trialDays))}</span></p>`;
+  const body = `${pageHero({ locale, eyebrow: d.eyebrow, eyebrowIcon: "windows", title: d.title, lead: d.lead, actions })}
+<section class="sheet-sec">
+  <div class="container two">
+    <div>
+      <h2>${esc(d.stepsTitle)}</h2>
+      <ol class="ruled nn-list">${d.steps.map(([k, v], i) => `<li><span class="nn">${i + 1}</span><div><h3>${esc(k)}</h3><p>${esc(v)}</p></div></li>`).join("")}</ol>
+    </div>
+    <div>
+      <h2>${esc(S.dlSmartTitle)}</h2>
+      <p>${esc(d.smartscreen)}</p>
+      ${unsigned}
+    </div>
   </div>
 </section>
-<section class="section">
-  <div class="container">
-    ${sectionHead({ title: d.stepsTitle, center: true })}
-    <ol class="steps reveal-stagger">${d.steps.map(([k, v], i) => `<li class="step reveal"><span class="step-num">${i + 1}</span><h3>${esc(k)}</h3><p>${esc(v)}</p></li>`).join("")}</ol>
-    <p class="notice reveal">${icon("shield")}<span>${esc(d.smartscreen)}</span></p>
-  </div>
-</section>
-<section class="section">
-  <div class="container narrow">
-    <div class="req-card reveal">
-      <h2>${icon("windows")}<span>${esc(d.requirementsTitle)}</span></h2>
+<section class="sheet-sec">
+  <div class="container two">
+    <div class="panel req-card">
+      <h2>${esc(d.requirementsTitle)}</h2>
       <ul class="check-list">${d.requirements.map((r) => `<li>${icon("check")}<span>${esc(r)}</span></li>`).join("")}</ul>
     </div>
-    <div class="help-band reveal">
+    <div>
       <p>${esc(d.help)}</p>
-      ${button(whatsappHref(t.whatsappMessage), d.helpCta, { kind: "glass", iconName: "whatsapp", external: true })}
+      <p class="cta">${button(whatsappHref(t.whatsappMessage), d.helpCta, { kind: "ghost", iconName: "whatsapp", external: true })}</p>
     </div>
   </div>
 </section>`;

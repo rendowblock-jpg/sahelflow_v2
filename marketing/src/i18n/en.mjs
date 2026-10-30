@@ -560,7 +560,7 @@ export default {
     compareSahel: ["None after purchase", "A permanent licence", "Keeps working", "On your PC"],
     compareSaas: ["Every month, every year", "Nothing", "Stops", "On their servers"],
     compareSahelName: "SahelFlow",
-    compareSaasName: "A typical online subscription",
+    compareSaasName: "A monthly online subscription",
     howTitle: "Buying takes five minutes.",
     how: [
       ["Pay", "BaridiMob or CCP — we confirm on WhatsApp."],
@@ -617,7 +617,8 @@ export default {
     steps: [["Open the installer", "Follow the steps — it takes about two minutes."], ["Create your PIN", "Then start your free trial."], ["Connect your tools", "Link WhatsApp and your courier — and start selling."]],
     help: "Need a hand installing?",
     helpCta: "We'll guide you on WhatsApp",
-    smartscreen: "If Windows shows a blue “protected your PC” screen, choose “More info” then “Run anyway”. It appears because SahelFlow is a new publisher: the installer does not carry a publisher certificate yet.",
+    smartscreen: "If Windows shows a blue “protected your PC” screen, choose “More info” then “Run anyway”.",
+    unsigned: "It appears because SahelFlow is a new publisher: the installer does not carry a publisher certificate yet.",
   },
 
   helpPage: {

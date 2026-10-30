@@ -560,7 +560,7 @@ export default {
     compareSahel: ["Aucun après l'achat", "Une licence permanente", "Ça continue", "Sur votre PC"],
     compareSaas: ["Chaque mois, chaque année", "Rien", "Ça s'arrête", "Sur leurs serveurs"],
     compareSahelName: "SahelFlow",
-    compareSaasName: "Un abonnement en ligne typique",
+    compareSaasName: "Un abonnement en ligne mensuel",
     howTitle: "Acheter prend cinq minutes.",
     how: [
       ["Payez", "BaridiMob ou CCP — nous confirmons sur WhatsApp."],
@@ -617,7 +617,8 @@ export default {
     steps: [["Ouvrez l'installateur", "Suivez les étapes — environ deux minutes."], ["Créez votre PIN", "Puis lancez votre essai gratuit."], ["Connectez vos outils", "Reliez WhatsApp et votre livreur — et vendez."]],
     help: "Besoin d'aide pour installer ?",
     helpCta: "On vous guide sur WhatsApp",
-    smartscreen: "Si Windows affiche un écran bleu « Windows a protégé votre ordinateur », choisissez « Informations complémentaires » puis « Exécuter quand même ». Cet écran apparaît parce que SahelFlow est un nouvel éditeur : l'installateur n'a pas encore de certificat d'éditeur.",
+    smartscreen: "Si Windows affiche un écran bleu « Windows a protégé votre ordinateur », choisissez « Informations complémentaires » puis « Exécuter quand même ».",
+    unsigned: "Cet écran apparaît parce que SahelFlow est un nouvel éditeur : l'installateur n'a pas encore de certificat d'éditeur.",
   },
 
   helpPage: {

@@ -560,7 +560,7 @@ export default {
     compareSahel: ["لا شيء بعد الشراء", "ترخيص دائم", "يواصل العمل", "على حاسوبك"],
     compareSaas: ["كل شهر، كل سنة", "لا شيء", "يتوقف", "على خوادمهم"],
     compareSahelName: "SahelFlow",
-    compareSaasName: "اشتراك معتاد على الإنترنت",
+    compareSaasName: "اشتراك شهري عبر الإنترنت",
     howTitle: "الشراء يستغرق خمس دقائق.",
     how: [
       ["ادفع", "عبر BaridiMob أو CCP — ونؤكد لك على واتساب."],
@@ -617,7 +617,8 @@ export default {
     steps: [["افتح المثبّت", "اتبع الخطوات — حوالي دقيقتين."], ["أنشئ رمزك السري", "ثم ابدأ تجربتك المجانية."], ["اربط أدواتك", "اربط واتساب وشركة التوصيل — وابدأ البيع."]],
     help: "تحتاج مساعدة في التثبيت؟",
     helpCta: "نرشدك على واتساب",
-    smartscreen: "إذا ظهرت شاشة Windows زرقاء «Windows protected your PC»، اختر «More info» ثم «Run anyway». تظهر هذه الشاشة لأن SahelFlow ناشر جديد: المثبّت ليست له شهادة ناشر بعد.",
+    smartscreen: "إذا ظهرت شاشة Windows زرقاء «Windows protected your PC»، اختر «More info» ثم «Run anyway».",
+    unsigned: "تظهر هذه الشاشة لأن SahelFlow ناشر جديد: المثبّت ليست له شهادة ناشر بعد.",
   },
 
   helpPage: {

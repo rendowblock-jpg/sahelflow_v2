@@ -131,3 +131,8 @@ export function statusesOf(keys) {
 export function allowedPhrases(locale) {
   return CLAIMS.filter((claim) => claim.status === "live").flatMap((claim) => claim.allow[locale] ?? []);
 }
+
+/** True once the Windows installer carries a publisher (Authenticode) signature. The download page shows the SmartScreen note only while this is false. */
+export function installerIsSigned() {
+  return claimById("installer-publisher-signature").status === "live";
+}
