@@ -241,7 +241,7 @@ export default async function DashboardPage() {
           subtitle={
             stats.realizedRevenueToday === null
               ? undefined
-              : `${t("dashboard.realizedRevenue")}: ${formatDZD(
+              : `${t("dashboard.deliveredToday")}: ${formatDZD(
                   stats.realizedRevenueToday,
                   locale,
                 )}`

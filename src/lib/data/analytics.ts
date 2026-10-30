@@ -117,6 +117,29 @@ function pct(curr: number, prev: number): number | null {
   return Math.round(((curr - prev) / prev) * 100);
 }
 
+/**
+ * Revenue, the number of orders that make it up, and their average, from ONE
+ * list of orders. Cancelled and draft orders are in neither the sum nor the
+ * count, so the average divides by the same orders it adds up. The analytics
+ * card and the daily chart both use this.
+ */
+export function revenueOrderStats(
+  rows: ReadonlyArray<{ totalPrice: number; status: string }>,
+): { revenue: number; countedOrders: number; aov: number } {
+  let revenue = 0;
+  let countedOrders = 0;
+  for (const row of rows) {
+    if (EXCLUDED_FROM_REVENUE.includes(row.status as OrderStatus)) continue;
+    revenue += row.totalPrice;
+    countedOrders += 1;
+  }
+  return {
+    revenue,
+    countedOrders,
+    aov: countedOrders > 0 ? Math.round(revenue / countedOrders) : 0,
+  };
+}
+
 export const analyticsService = {
   async getReport(ctx: ServiceContext, days = 30): Promise<AnalyticsReport> {
     const now = new Date();
@@ -210,22 +233,14 @@ export const analyticsService = {
       previous: ProfitabilityProjection;
     },
   ): AnalyticsSummary {
-    const rev = (rows: Array<{ totalPrice: number; status: string }>) =>
-      rows
-        .filter(
-          (order) =>
-            !EXCLUDED_FROM_REVENUE.includes(order.status as OrderStatus),
-        )
-        .reduce((sum, order) => sum + order.totalPrice, 0);
-
-    const totalRevenue = rev(period);
-    const prevRevenue = rev(prev);
+    const current = revenueOrderStats(period);
+    const previous = revenueOrderStats(prev);
+    const totalRevenue = current.revenue;
+    const prevRevenue = previous.revenue;
     const totalOrders = period.length;
     const prevOrders = prev.length;
-    const avgOrderValue =
-      totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
-    const prevAov =
-      prevOrders > 0 ? Math.round(prevRevenue / prevOrders) : 0;
+    const avgOrderValue = current.aov;
+    const prevAov = previous.aov;
     const delivered = period.filter(
       (order) => order.status === "delivered",
     ).length;
@@ -301,20 +316,21 @@ export const analyticsService = {
       buckets.map((bucket, index) => [bucket.date, index]),
     );
 
+    const rowsByBucket: Array<Array<{ totalPrice: number; status: string }>> =
+      buckets.map(() => []);
     for (const order of orders) {
       const iso = localDateString(order.createdAt);
       const index = indexByDate.get(iso);
       if (index === undefined) continue;
       const bucket = buckets[index]!;
       bucket.orders += 1;
-      if (!EXCLUDED_FROM_REVENUE.includes(order.status as OrderStatus)) {
-        bucket.revenue += order.totalPrice;
-      }
+      rowsByBucket[index]?.push(order);
     }
-    for (const bucket of buckets) {
-      bucket.aov =
-        bucket.orders > 0 ? Math.round(bucket.revenue / bucket.orders) : 0;
-    }
+    buckets.forEach((bucket, index) => {
+      const stats = revenueOrderStats(rowsByBucket[index] ?? []);
+      bucket.revenue = stats.revenue;
+      bucket.aov = stats.aov;
+    });
     return buckets;
   },
 

@@ -1,0 +1,8 @@
+# W2-g4b (w108): finish the dashboard / analytics / risk states
+Branch wave2/g4b-states from wave2/g4-dashboard-analytics (aba0dc51). Notes at call 15 (first commit).
+
+## Item 1: "Collected today" -> "Delivered today": DONE
+The sub-line counts orders delivered today (R2 in W2-g4.md), not courier cash. New key `dashboard.deliveredToday` in src/lib/i18n/dashboard-states-runtime.ts (ar المُسلَّم اليوم, fr Livré aujourd'hui, en Delivered today); dashboard/page.tsx uses it; the tooltip `dashboard.revenueDefinition` uses the same words in all three. The old JSON key `dashboard.realizedRevenue` is now unused (locales/*.json may not be edited; the lead can delete the 3 lines later). Test: src/lib/i18n/__tests__/dashboard-delivered-label.test.ts (3 catalogs + page source).
+
+## Item 2: average order value: NUMBER CHANGE, said plainly
+Before: AOV = revenue (cancelled and draft excluded) / ALL orders of the period (cancelled and draft included), so every cancelled order pulled the average down. Same bug in the daily chart buckets. After: one helper `revenueOrderStats` in src/lib/data/analytics.ts (sum, counted orders, rounded average over the SAME orders) used by buildSummary (card + previous period + delta) and buildTimeSeries (chart bucket revenue and aov). Example: 1,000 + 3,000 delivered/confirmed + 2,000 cancelled: card showed 1,333 DZD, now 2,000 DZD. The "orders" count (placed) and the Revenue number do not change. Sellers with cancelled orders see a HIGHER average order value and a changed "vs previous" percentage. The UI never names the old formula. Test: src/lib/__tests__/analytics-aov.test.ts.

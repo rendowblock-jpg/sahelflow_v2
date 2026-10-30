@@ -7,8 +7,9 @@ import type { Locale } from "@/lib/i18n";
  */
 const translations: Record<Locale, Record<string, string>> = {
   ar: {
+    "dashboard.deliveredToday": "المُسلَّم اليوم",
     "dashboard.revenueDefinition":
-      "إيرادات اليوم = قيمة الطلبيات المسجلة اليوم، دون الملغاة والمسودات، أما الطلبيات المرتجعة أو المرفوضة فتبقى محسوبة. المُحصَّل اليوم = قيمة الطلبيات المسلَّمة اليوم، وتُحتسب عند التسليم. هذه قيم طلبيات وليست نقداً في اليد: النقد القادم من شركات التوصيل تجده في المحاسبة.",
+      "إيرادات اليوم = قيمة الطلبيات المسجلة اليوم، دون الملغاة والمسودات، أما الطلبيات المرتجعة أو المرفوضة فتبقى محسوبة. المُسلَّم اليوم = قيمة الطلبيات المسلَّمة اليوم، وتُحتسب عند التسليم. هذه قيم طلبيات وليست نقداً في اليد: النقد القادم من شركات التوصيل تجده في المحاسبة.",
     "analytics.revenueDefinition":
       "الإيرادات = قيمة الطلبيات المسجلة في الفترة المحددة، دون الملغاة والمسودات، أما المرتجعة أو المرفوضة فتبقى محسوبة. ليست نقداً في اليد ولا صافية من المرتجعات. جدول المقارنة يستخدم الإيراد المحتسب عند التسليم.",
     "accounting.netRevenueDefinition":
@@ -31,8 +32,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "automations.failure.other": "حدثت مشكلة غير متوقعة. الرمز التقني تجده ضمن التفاصيل.",
   },
   fr: {
+    "dashboard.deliveredToday": "Livré aujourd'hui",
     "dashboard.revenueDefinition":
-      "Revenu du jour = valeur des commandes passées aujourd'hui. Les commandes annulées et les brouillons ne sont pas comptés ; les commandes retournées ou refusées le sont encore. Encaissé aujourd'hui = valeur des commandes livrées aujourd'hui, comptée à la livraison. Ce sont des valeurs de commandes, pas de l'argent en main : l'argent des transporteurs se voit dans Comptabilité.",
+      "Revenu du jour = valeur des commandes passées aujourd'hui. Les commandes annulées et les brouillons ne sont pas comptés ; les commandes retournées ou refusées le sont encore. Livré aujourd'hui = valeur des commandes livrées aujourd'hui, comptée à la livraison. Ce sont des valeurs de commandes, pas de l'argent en main : l'argent des transporteurs se voit dans Comptabilité.",
     "analytics.revenueDefinition":
       "Chiffre d'affaires = valeur des commandes passées sur la période choisie. Les commandes annulées et les brouillons ne sont pas comptés ; les commandes retournées ou refusées le sont encore. Ce n'est ni de l'argent en main ni un montant net des retours. Le tableau de comparaison utilise le revenu compté à la livraison.",
     "accounting.netRevenueDefinition":
@@ -55,8 +57,9 @@ const translations: Record<Locale, Record<string, string>> = {
     "automations.failure.other": "Un problème inattendu. Le code technique est dans les Détails.",
   },
   en: {
+    "dashboard.deliveredToday": "Delivered today",
     "dashboard.revenueDefinition":
-      "Revenue today = value of orders placed today. Cancelled orders and drafts are not counted; returned or refused orders still are. Collected today = value of orders delivered today, counted when delivered. These are order values, not cash in hand: the cash from couriers is in Accounting.",
+      "Revenue today = value of orders placed today. Cancelled orders and drafts are not counted; returned or refused orders still are. Delivered today = value of orders delivered today, counted when delivered. These are order values, not cash in hand: the cash from couriers is in Accounting.",
     "analytics.revenueDefinition":
       "Revenue = value of orders placed in the selected period. Cancelled orders and drafts are not counted; returned or refused orders still are. It is not cash in hand and not net of returns. The comparison table uses revenue counted at delivery.",
     "accounting.netRevenueDefinition":
