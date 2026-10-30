@@ -25,9 +25,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/hooks/use-i18n";
+import { useMobile } from "@/hooks/use-mobile";
 import { useUiDensity } from "@/hooks/use-ui-density";
 import { cn } from "@/lib/utils";
 import type { UiDensity } from "@/stores/ui-store";
+
+import { mapColumnsToCard, type CardColumnMeta } from "./card-layout";
+import { DataTableCards } from "./data-table-cards";
 
 const DENSITY_CLASSES: Record<UiDensity, { cell: string; head: string }> = {
   compact: { cell: "px-3 py-1.5", head: "px-3 py-2" },
@@ -85,6 +89,8 @@ declare module "@tanstack/react-table" {
     width?: string;
     /** Long-text columns: wrap instead of the global whitespace-nowrap. */
     wrap?: boolean;
+    /** Where this column goes on a phone card. Absent: a field (the first column is the title). */
+    mobile?: CardColumnMeta;
   }
   interface TableMeta<TData> {
     /** The accessible name of a row's selection checkbox (the table keeps no copy of its own for it). */
@@ -111,6 +117,13 @@ interface DataTableProps<TData> {
   showDensityToggle?: boolean;
   skeletonRows?: number;
   className?: string;
+  /**
+   * "auto" (default) renders the table from the md breakpoint up and one card per row below it; "table" and "cards"
+   * force one. Exactly one layout is in the DOM at a time.
+   */
+  layout?: "auto" | "table" | "cards";
+  /** The accessible name of the card list (the table has none today). */
+  label?: string;
 }
 
 /**
@@ -139,8 +152,12 @@ export function DataTable<TData>({
   showDensityToggle = true,
   skeletonRows = 8,
   className,
+  layout = "auto",
+  label,
 }: DataTableProps<TData>) {
   const { t } = useI18n();
+  const isPhone = useMobile();
+  const cardLayout = layout === "cards" || (layout === "auto" && isPhone);
   const { density, setDensity } = useUiDensity();
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [sortUrl, setSortUrl] = useQueryStates(
@@ -207,6 +224,7 @@ export function DataTable<TData>({
     [visibleIds],
   );
   const dens = DENSITY_CLASSES[density];
+  const cardPlan = React.useMemo(() => (cardLayout ? mapColumnsToCard(columns) : null), [cardLayout, columns]);
   const currentPage = pagination?.page ?? 1;
   const totalPages =
     pagination?.total != null
@@ -235,10 +253,14 @@ export function DataTable<TData>({
     : undefined;
 
   return (
-    <div className={cn("space-y-3", className)} data-table-density={density}>
+    <div className={cn("space-y-3", className)} data-table-density={density} data-layout={cardLayout ? "cards" : undefined}>
       {bulkActions && selectedIds.length > 0 ? (
         <div
-          className="flex flex-wrap items-center justify-between gap-2 rounded-control border bg-muted/35 px-3 py-2"
+          className={cn(
+            "flex flex-wrap items-center justify-between gap-2 rounded-control border bg-muted/35 px-3 py-2",
+            // On a phone the list is long: keep the bar (and its actions) in reach while the cards scroll.
+            cardLayout && "sticky top-2 z-20 bg-card",
+          )}
           data-testid="data-table-bulk-bar"
           role="toolbar"
           aria-label={t("dataTable.selected", { count: selectedIds.length })}
@@ -251,6 +273,7 @@ export function DataTable<TData>({
               <Button
                 key={action.label}
                 size="sm"
+                className={cardLayout ? "min-h-11" : undefined}
                 variant={action.variant ?? "default"}
                 onClick={() => action.onClick(selectedIds, bulkControls)}
                 disabled={action.disabled}
@@ -263,6 +286,7 @@ export function DataTable<TData>({
             ))}
             <Button
               size="sm"
+              className={cardLayout ? "min-h-11" : undefined}
               variant="ghost"
               onClick={() => setRowSelection({})}
             >
@@ -272,139 +296,33 @@ export function DataTable<TData>({
         </div>
       ) : null}
 
-      <div
-        className={cn(
-          "overflow-hidden rounded-control border bg-background transition-opacity duration-150",
-          refreshing && "opacity-60",
-        )}
-      >
-        <div className="relative overflow-x-auto">
-          <table className="w-full" aria-busy={isLoading}>
-            <thead className="sticky top-0 z-10 border-b bg-muted/80 backdrop-blur-sm">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id} className="text-start">
-                  {headerGroup.headers.map((header) => {
-                    const meta = header.column.columnDef.meta;
-                    const hideClass =
-                      meta?.hideOn === "sm"
-                        ? "hidden sm:table-cell"
-                        : meta?.hideOn === "md"
-                          ? "hidden md:table-cell"
-                          : meta?.hideOn === "lg"
-                            ? "hidden lg:table-cell"
-                            : meta?.hideOn === "xl"
-                              ? "hidden xl:table-cell"
-                              : meta?.hideOn === "2xl"
-                                ? "hidden 2xl:table-cell"
-                                : "";
-                    const alignClass =
-                      meta?.align === "end"
-                        ? "text-end"
-                        : meta?.align === "center"
-                          ? "text-center"
-                          : "text-start";
-                    const canSort = header.column.getCanSort();
-                    const sortDirection = header.column.getIsSorted();
-                    const content = header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        );
-
-                    return (
-                      <th
-                        key={header.id}
-                        scope="col"
-                        className={cn(
-                          "whitespace-nowrap text-xs font-medium uppercase tracking-wide text-muted-foreground",
-                          dens.head,
-                          alignClass,
-                          hideClass,
-                          meta?.width,
-                        )}
-                        aria-sort={
-                          canSort
-                            ? sortDirection === "asc"
-                              ? "ascending"
-                              : sortDirection === "desc"
-                                ? "descending"
-                                : "none"
-                            : undefined
-                        }
-                      >
-                        {canSort ? (
-                          <button
-                            type="button"
-                            className={cn(
-                              "inline-flex min-h-7 max-w-full items-center rounded-control px-1 text-inherit outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                              meta?.align === "end" && "ms-auto",
-                              meta?.align === "center" && "mx-auto",
-                            )}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {content}
-                          </button>
-                        ) : (
-                          content
-                        )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="divide-y">
-              {isLoading ? (
-                Array.from({ length: skeletonRows }).map((_, rowIndex) => (
-                  <tr key={`skeleton-${rowIndex}`}>
-                    {columns.map((_, columnIndex) => (
-                      <td key={columnIndex} className={dens.cell}>
-                        <Skeleton className="h-4 w-full max-w-[120px]" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : data.length === 0 ? (
-                <tr>
-                  <td colSpan={columns.length} className="h-32 text-center">
-                    {emptyState ?? (
-                      <span className="text-sm text-muted-foreground">
-                        {t("dataTable.noData")}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className={cn(
-                      "transition-colors hover:bg-muted/40",
-                      onRowClick && "cursor-pointer",
-                      row.getIsSelected() && "bg-primary-subtle",
-                    )}
-                    onClick={
-                      onRowClick
-                        ? (event) => {
-                            const target = event.target as HTMLElement;
-                            if (
-                              target.closest("button") ||
-                              target.closest("a") ||
-                              target.closest("input") ||
-                              target.closest("select") ||
-                              target.closest('[role="checkbox"]') ||
-                              target.closest("[data-no-row-click]")
-                            ) {
-                              return;
-                            }
-                            onRowClick(row.original);
-                          }
-                        : undefined
-                    }
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const meta = cell.column.columnDef.meta;
+      {cardLayout && cardPlan ? (
+        <div className={cn("transition-opacity duration-150", refreshing && "opacity-60")}>
+          <DataTableCards
+            table={table}
+            plan={cardPlan}
+            isLoading={isLoading}
+            skeletonRows={skeletonRows}
+            emptyState={emptyState}
+            onRowClick={onRowClick}
+            label={label}
+            selectAll={cardPlan.select ? <SelectAllHeader table={table} /> : null}
+          />
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "overflow-hidden rounded-control border bg-background transition-opacity duration-150",
+            refreshing && "opacity-60",
+          )}
+        >
+          <div className="relative overflow-x-auto">
+            <table className="w-full" aria-busy={isLoading}>
+              <thead className="sticky top-0 z-10 border-b bg-muted/80 backdrop-blur-sm">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id} className="text-start">
+                    {headerGroup.headers.map((header) => {
+                      const meta = header.column.columnDef.meta;
                       const hideClass =
                         meta?.hideOn === "sm"
                           ? "hidden sm:table-cell"
@@ -423,44 +341,165 @@ export function DataTable<TData>({
                           : meta?.align === "center"
                             ? "text-center"
                             : "text-start";
+                      const canSort = header.column.getCanSort();
+                      const sortDirection = header.column.getIsSorted();
+                      const content = header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          );
+
                       return (
-                        <td
-                          key={cell.id}
+                        <th
+                          key={header.id}
+                          scope="col"
                           className={cn(
-                            "text-sm align-middle",
-                            // Long-text columns opt into wrapping via column
-                            // meta; every other cell stays on one line.
-                            meta?.wrap
-                              ? "whitespace-normal break-words"
-                              : "whitespace-nowrap",
-                            dens.cell,
+                            "whitespace-nowrap text-xs font-medium uppercase tracking-wide text-muted-foreground",
+                            dens.head,
                             alignClass,
                             hideClass,
                             meta?.width,
                           )}
-                          onClick={(event) => {
-                            if (cell.column.id === "select") {
-                              event.stopPropagation();
-                            }
-                          }}
+                          aria-sort={
+                            canSort
+                              ? sortDirection === "asc"
+                                ? "ascending"
+                                : sortDirection === "desc"
+                                  ? "descending"
+                                  : "none"
+                              : undefined
+                          }
                         >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
+                          {canSort ? (
+                            <button
+                              type="button"
+                              className={cn(
+                                "inline-flex min-h-7 max-w-full items-center rounded-control px-1 text-inherit outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                                meta?.align === "end" && "ms-auto",
+                                meta?.align === "center" && "mx-auto",
+                              )}
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              {content}
+                            </button>
+                          ) : (
+                            content
                           )}
-                        </td>
+                        </th>
                       );
                     })}
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </thead>
+              <tbody className="divide-y">
+                {isLoading ? (
+                  Array.from({ length: skeletonRows }).map((_, rowIndex) => (
+                    <tr key={`skeleton-${rowIndex}`}>
+                      {columns.map((_, columnIndex) => (
+                        <td key={columnIndex} className={dens.cell}>
+                          <Skeleton className="h-4 w-full max-w-[120px]" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : data.length === 0 ? (
+                  <tr>
+                    <td colSpan={columns.length} className="h-32 text-center">
+                      {emptyState ?? (
+                        <span className="text-sm text-muted-foreground">
+                          {t("dataTable.noData")}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className={cn(
+                        "transition-colors hover:bg-muted/40",
+                        onRowClick && "cursor-pointer",
+                        row.getIsSelected() && "bg-primary-subtle",
+                      )}
+                      onClick={
+                        onRowClick
+                          ? (event) => {
+                              const target = event.target as HTMLElement;
+                              if (
+                                target.closest("button") ||
+                                target.closest("a") ||
+                                target.closest("input") ||
+                                target.closest("select") ||
+                                target.closest('[role="checkbox"]') ||
+                                target.closest("[data-no-row-click]")
+                              ) {
+                                return;
+                              }
+                              onRowClick(row.original);
+                            }
+                          : undefined
+                      }
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const meta = cell.column.columnDef.meta;
+                        const hideClass =
+                          meta?.hideOn === "sm"
+                            ? "hidden sm:table-cell"
+                            : meta?.hideOn === "md"
+                              ? "hidden md:table-cell"
+                              : meta?.hideOn === "lg"
+                                ? "hidden lg:table-cell"
+                                : meta?.hideOn === "xl"
+                                  ? "hidden xl:table-cell"
+                                  : meta?.hideOn === "2xl"
+                                    ? "hidden 2xl:table-cell"
+                                    : "";
+                        const alignClass =
+                          meta?.align === "end"
+                            ? "text-end"
+                            : meta?.align === "center"
+                              ? "text-center"
+                              : "text-start";
+                        return (
+                          <td
+                            key={cell.id}
+                            className={cn(
+                              "text-sm align-middle",
+                              // Long-text columns opt into wrapping via column
+                              // meta; every other cell stays on one line.
+                              meta?.wrap
+                                ? "whitespace-normal break-words"
+                                : "whitespace-nowrap",
+                              dens.cell,
+                              alignClass,
+                              hideClass,
+                              meta?.width,
+                            )}
+                            onClick={(event) => {
+                              if (cell.column.id === "select") {
+                                event.stopPropagation();
+                              }
+                            }}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {showDensityToggle ? (
+        {showDensityToggle && !cardLayout ? (
           <div
             className="flex items-center gap-1 rounded-control border p-0.5"
             role="group"
@@ -501,6 +540,7 @@ export function DataTable<TData>({
               {totalPages !== undefined ? (
                 <Button
                   size="icon-sm"
+                  className={cardLayout ? "size-11" : undefined}
                   variant="outline"
                   disabled={!hasPrev || pagination.isLoading}
                   onClick={() => changePage(1)}
@@ -514,6 +554,7 @@ export function DataTable<TData>({
               ) : null}
               <Button
                 size="icon-sm"
+                className={cardLayout ? "size-11" : undefined}
                 variant="outline"
                 disabled={!hasPrev || pagination.isLoading}
                 onClick={() => changePage(currentPage - 1)}
@@ -526,6 +567,7 @@ export function DataTable<TData>({
               </Button>
               <Button
                 size="icon-sm"
+                className={cardLayout ? "size-11" : undefined}
                 variant="outline"
                 disabled={!hasNext || pagination.isLoading}
                 onClick={() => changePage(currentPage + 1)}
@@ -543,6 +585,7 @@ export function DataTable<TData>({
               {totalPages !== undefined ? (
                 <Button
                   size="icon-sm"
+                  className={cardLayout ? "size-11" : undefined}
                   variant="outline"
                   disabled={!hasNext || pagination.isLoading}
                   onClick={() => changePage(totalPages)}

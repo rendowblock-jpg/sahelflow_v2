@@ -6,6 +6,7 @@ import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
+import { getDataTableRuntimeTranslation } from "@/lib/i18n/data-table-runtime";
 import { getDeliveriesRuntimeTranslation } from "@/lib/i18n/deliveries-runtime";
 import { getDeliveryReconcileRuntimeTranslation } from "@/lib/i18n/delivery-reconcile-runtime";
 import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
@@ -152,6 +153,7 @@ export function getRuntimeTranslation(
     getCodRuntimeTranslation(locale, key) ??
     getCommerceRuntimeTranslation(locale, key) ??
     getConfirmationQueueRuntimeTranslation(locale, key) ??
+    getDataTableRuntimeTranslation(locale, key) ??
     getDeliveriesRuntimeTranslation(locale, key) ??
     getDeliveryReconcileRuntimeTranslation(locale, key) ??
     getEntityDetailRuntimeTranslation(locale, key) ??
