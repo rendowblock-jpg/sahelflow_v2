@@ -243,3 +243,28 @@ button.linkTag:focus-visible,
 :global(html[data-theme-preset="carnet"]) .banner[data-inbox-link-kind="unofficial-only"] {
   border-inline-start: 4px solid var(--primary);
 }
+
+/* Thread (wave 1 track I2): the order draft slip, the stamp and the seller slip wash. */
+.draftSlip {
+  scroll-margin-block-start: 4rem;
+}
+
+.stampOnly {
+  display: none;
+}
+
+.plainBadge {
+  display: inline-flex;
+}
+
+:global(html[data-theme-preset="carnet"]) .stampOnly {
+  display: inline-block;
+}
+
+:global(html[data-theme-preset="carnet"]) .plainBadge {
+  display: none;
+}
+
+:global(html[data-theme-preset="carnet"]) .slipOut {
+  background: var(--carnet-slip-out, var(--primary-soft));
+}

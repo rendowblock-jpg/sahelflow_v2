@@ -30,7 +30,19 @@ import { InboxCustomerWorkPanel } from "@/components/inbox/inbox-customer-work-p
 import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { InboxThreadHeader } from "@/components/inbox/inbox-thread-header";
 import { MessageBubble } from "@/components/inbox/inbox-thread-message";
-import { WhatsAppPairingDialog } from "@/components/inbox/whatsapp-pairing-dialog";
+import {
+  pendingDraft,
+  threadOpenTarget,
+} from "@/components/inbox/inbox-order-draft-model";
+import { useOrderDrafts } from "@/components/inbox/inbox-order-draft-store";
+import { InboxThreadEmpty, InboxThreadLoading } from "@/components/inbox/inbox-thread-states";
+import {
+  ThreadPausedHint,
+  threadSendGate,
+  useThreadLinkState,
+} from "@/components/inbox/inbox-thread-link";
+import { ConnectedOrderDraftCard } from "@/components/inbox/order-draft-card-connected";
+import { OrderDraftDock } from "@/components/inbox/order-draft-dock";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -162,7 +174,6 @@ export function InboxV3Thread({
     retryFailedMessage,
     canReply,
     canUpdateConversation,
-    transport,
     refreshChats,
     markUnread,
     historyHasMore,
@@ -174,6 +185,8 @@ export function InboxV3Thread({
     resolveHeldApprove,
     approveHeldMessage,
   } = workspace;
+  // The same pure function the header notice uses: the composer and the notice cannot disagree.
+  const link = useThreadLinkState(workspace);
 
   const [replySelection, setReplySelection] = useState<{
     key: string | null;
@@ -195,6 +208,29 @@ export function InboxV3Thread({
   const setDragActive = (active: boolean) =>
     setDragSession({ key: activeConversationKey, active });
 
+  // The AI order draft of this conversation (client state). A pending one decides where the thread opens.
+  const orderDrafts = useOrderDrafts();
+  const conversationDraft =
+    orderDrafts.find((entry) => entry.conversationId === activeConversationKey) ?? null;
+  const pending = pendingDraft(orderDrafts, activeConversationKey);
+  const openTarget = threadOpenTarget(pending);
+  const draftDomIdToOpen = openTarget.kind === "draft" ? openTarget.domId : null;
+  const openedKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeConversationKey || loadingMessages || messages.length === 0) return;
+    if (openedKeyRef.current === activeConversationKey) return;
+    openedKeyRef.current = activeConversationKey;
+    if (!draftDomIdToOpen) return;
+    // After the workspace hook has placed the thread at the bottom.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        document.getElementById(draftDomIdToOpen)?.scrollIntoView({ block: "center" }),
+      ),
+    );
+  }, [activeConversationKey, loadingMessages, messages.length, draftDomIdToOpen]);
+  const scrollToDraft = (domId: string) =>
+    document.getElementById(domId)?.scrollIntoView({ block: "center" });
+
   /**
    * In-composer voice recording (founder-installed Internal.28 campaign):
    * the mic button starts a bounded MediaRecorder take and hands the OGG/Opus
@@ -204,7 +240,7 @@ export function InboxV3Thread({
     enabled:
       activeChat?.channel === "whatsapp" &&
       canReply &&
-      transport.status === "connected" &&
+      !link.blocksSending &&
       !sending,
     onComplete: (file) => {
       const quotedId = replyTarget?.id ?? null;
@@ -440,7 +476,7 @@ export function InboxV3Thread({
 
   const isWhatsAppConversation = activeChat.channel === "whatsapp";
   const canCompose = isWhatsAppConversation && canReply;
-  const canSend = canCompose && transport.status === "connected";
+  const { canSend, showPausedHint } = threadSendGate({ canCompose, link });
 
   /**
    * Paste/drop ingestion (#317): route one dropped or pasted file into the
@@ -619,19 +655,9 @@ export function InboxV3Thread({
           aria-label={copy("messages")}
         >
           {loadingMessages ? (
-            <div
-              className="flex min-h-40 items-center justify-center"
-              role="status"
-            >
-              <Loader2
-                className="size-5 animate-spin text-muted-foreground"
-                aria-hidden="true"
-              />
-            </div>
+            <InboxThreadLoading />
           ) : messages.length === 0 ? (
-            <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">
-              {t("inbox.noMessages")}
-            </div>
+            <InboxThreadEmpty />
           ) : (
             <>
               {historyHasMore && !loadingMessages ? (
@@ -763,11 +789,18 @@ export function InboxV3Thread({
                       threadSearchOpen ? threadSearchQuery : ""
                     }
                   />
+                {conversationDraft && conversationDraft.anchorMessageId === message.id ? (
+                  <ConnectedOrderDraftCard draft={conversationDraft} />
+                ) : null}
                 </Fragment>
               );
               })}
             </>
           )}
+          {conversationDraft &&
+          !visibleMessages.some((entry) => entry.id === conversationDraft.anchorMessageId) ? (
+            <ConnectedOrderDraftCard draft={conversationDraft} />
+          ) : null}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
@@ -777,10 +810,13 @@ export function InboxV3Thread({
           <button
             type="button"
             onClick={scrollToLatestMessages}
-            aria-label={copy("scrollToLatest")}
-            className="pointer-events-auto relative inline-flex size-9 items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-lg outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={openTarget.kind === "draft" ? undefined : copy("scrollToLatest")}
+            className={cn("pointer-events-auto relative inline-flex items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-lg outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring", openTarget.kind === "draft" ? "min-h-11 gap-2 px-4" : "size-9")}
           >
             <ArrowDown className="size-4" aria-hidden="true" />
+            {openTarget.kind === "draft" ? (
+              <span className="text-body-sm font-medium">{t("inbox.thread.jump")}</span>
+            ) : null}
             {missedMessageCount > 0 ? (
               <span className="absolute -end-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-caption font-bold leading-4 tabular-nums text-primary-foreground">
                 {missedMessageCount > 99 ? "99+" : missedMessageCount}
@@ -791,21 +827,13 @@ export function InboxV3Thread({
       ) : null}
       </div>
 
-      <footer className="border-t border-border/60 bg-background/98 py-2">
+      <footer className="border-t border-border/60 bg-background/98 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="sf-thread-column empty:hidden">
+          <OrderDraftDock draft={pending} onReview={scrollToDraft} />
+        </div>
         {canCompose ? (
           <div className="sf-thread-column">
-            {!canSend ? (
-              <div className="mb-2 flex flex-wrap items-center gap-2 rounded-surface border border-warning/15 bg-warning-subtle px-3 py-2 text-xs text-muted-foreground">
-                <WifiOff
-                  className="size-3.5 shrink-0 text-warning"
-                  aria-hidden="true"
-                />
-                {/* The reason Send is unavailable sits beside the way to fix
-                    it: offline compose keeps its Connect action in the thread. */}
-                <span className="min-w-0 flex-1">{copy("replyLiveOnly")}</span>
-                <WhatsAppPairingDialog workspace={workspace} />
-              </div>
-            ) : null}
+            <ThreadPausedHint show={showPausedHint} />
 
             <div
               className={cn(
