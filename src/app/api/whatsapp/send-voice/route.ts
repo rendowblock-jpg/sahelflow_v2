@@ -1,3 +1,4 @@
+import { guardNoticeField, withSendGuardRefusal } from "@/lib/whatsapp/send-guard-http";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -118,7 +119,7 @@ async function readBoundedVoiceForm(req: NextRequest): Promise<FormData> {
  * authenticated from the bytes themselves; browser declarations never become
  * authority. WhatsApp audio carries no caption and no file name.
  */
-export const POST = withErrorHandler(async (req: NextRequest) => {
+export const POST = withErrorHandler(withSendGuardRefusal(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("conversations.reply");
   assertTrustedAction(actorContext, "customers.contact.read", {
     shopId: actorContext.shop.shopId,
@@ -235,7 +236,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       nextAttemptAt: effect.nextAttemptAt,
       errorCode: effect.errorCode,
       requiresDuplicateConfirmation: effect.requiresDuplicateConfirmation,
+      ...guardNoticeField(queued),
     },
     { status: succeeded ? 200 : accepted ? 202 : 409 },
   );
-}, "POST /api/whatsapp/send-voice");
+}), "POST /api/whatsapp/send-voice");

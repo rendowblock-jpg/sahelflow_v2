@@ -40,30 +40,25 @@ import { redactError } from "@/lib/redact-pii";
 import { shopContext } from "@/lib/db";
 import { assertProcessShopAuthority } from "@/lib/shops/authority";
 import { requireLicenseEntitlement } from "@/lib/license/license-authority";
+import { isLockoutAllowed } from "@/lib/license/lockout-allowlist";
 import { noteRequestEnd, noteRequestStart } from "@/lib/search/conversation-search-idle";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteHandler = (...args: any[]) => Promise<NextResponse>;
 
-// Audit 7-a F9: the dead /api/payment and /api/support entries were removed —
-// no such routes exist, so the allowlist no longer admits their path prefix.
-// The FD-052 option A coexist decision removed the former demo mutation
-// allowlist alongside the DEMO_MUTATION_BLOCKED gate it served.
-const LICENSE_LOCKOUT_ALLOWLIST = [
-  /^\/api\/auth\/(?:login|logout|reauthenticate|setup|status)$/,
-  /^\/api\/health(?:\/|$)/,
-  /^\/api\/internal\/runtime-ready(?:\/|$)/,
-  /^\/api\/license(?:\/|$)/,
-] as const;
-
+// Which calls still pass while the licence gate is closed lives in one pure,
+// table-tested file (IDN-03): sign-in, health, licence, the entity exports, the
+// backup list and a local backup. Everything else stays locked.
 function resolveRequestPath(req: NextRequest | undefined, label?: string): string {
   const pathname = req?.nextUrl?.pathname;
   if (pathname) return pathname;
   return label?.match(/(\/api\/[^\s?]+)/)?.[1] ?? "";
 }
 
-function isAllowedDuringLicenseLockout(pathname: string): boolean {
-  return LICENSE_LOCKOUT_ALLOWLIST.some((pattern) => pattern.test(pathname));
+// Without a request (unit tests wrap handlers with a label only) the method is the
+// label's first word; an unknown method only matches the method-free rules.
+function resolveRequestMethod(req: NextRequest | undefined, label?: string): string {
+  return req?.method ?? label?.match(/^([A-Za-z]+)\s+\//)?.[1] ?? "";
 }
 
 export function withErrorHandler<T extends RouteHandler>(
@@ -84,7 +79,7 @@ export function withErrorHandler<T extends RouteHandler>(
       if (
         process.env.NODE_ENV === "production" &&
         pathname.startsWith("/api/") &&
-        !isAllowedDuringLicenseLockout(pathname)
+        !isLockoutAllowed(resolveRequestMethod(req, label), pathname)
       ) {
         await requireLicenseEntitlement();
       }

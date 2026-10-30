@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { projectOutboxEffectState } from "@/lib/whatsapp/held-send";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { getBusinessEnvelopeKey } from "@/lib/business-truth/envelope-key";
 import { db, shopContext } from "@/lib/db";
@@ -250,11 +251,7 @@ export const GET = withErrorHandler(
         const fromMe = isOutboundDirection(message.direction);
         const effect = fromMe ? effectByMessage.get(message.id) : undefined;
         const intent = effect ? intentByKey.get(effect.effectKey) : undefined;
-        const effectState = intent
-          ? intent.status === "failed" && intent.outcomeState === "ambiguous"
-            ? "ambiguous"
-            : intent.status
-          : undefined;
+        const effectState = intent ? projectOutboxEffectState(intent) : undefined;
         const effectErrorCode = intent?.lastErrorCode ?? null;
         const openedAttachment =
           attachmentKey && message.attachments

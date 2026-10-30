@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Banknote, Calendar, Clock, Hash, Package, Truck, User } from "lucide-react";
 
+import { DeliveryReconcileCard } from "@/components/deliveries/delivery-reconcile-card";
 import { EntityLink, EntityTimeline } from "@/components/entities/entity-context";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
@@ -12,7 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
-import { assertTrustedAction, requireTrustedAction } from "@/lib/identity/authorization";
+import { RECONCILIATION_STATUS, isStuckCreatingNow } from "@/lib/delivery/delivery-reconcile";
+import { assertTrustedAction, requireTrustedAction, trustedActionAllowed } from "@/lib/identity/authorization";
+import { isCanonicalOrderAuthority } from "@/lib/orders/manual-order-authority";
 import { deliveryProviderConfig, orderStatusStyles } from "@/lib/shared";
 import { deliveryStatusI18nKey, statusI18nKey } from "@/lib/shared/status-colors";
 import { formatDZD, formatDate } from "@/lib/utils";
@@ -51,6 +54,8 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
   const orderStyle = orderStatusStyles[orderStatus as keyof typeof orderStatusStyles];
   const statusOrder = ["created", "pending", "picked_up", "in_transit", "at_hub", "out_for_delivery", "delivered", "returned", "refused", "failed"];
   const currentIdx = statusOrder.indexOf(delivery.status);
+  const stuckCreating = isStuckCreatingNow(delivery.status, delivery.updatedAt);
+  const needsDecision = delivery.status === RECONCILIATION_STATUS || stuckCreating;
   const terminalFailure = ["returned", "refused", "failed"].includes(delivery.status);
   const timelineItems = statusOrder.map((status, index) => ({
     id: status,
@@ -102,10 +107,22 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
         }
         actions={
           <Badge variant={delivery.status === "delivered" ? "default" : terminalFailure ? "destructive" : "secondary"}>
-            {t(deliveryStatusI18nKey(delivery.status))}
+            {needsDecision
+              ? t("deliveries.reconcile.needsDecision")
+              : t(deliveryStatusI18nKey(delivery.status))}
           </Badge>
         }
       />
+
+      {needsDecision ? (
+        <DeliveryReconcileCard
+          deliveryId={delivery.id}
+          orderId={delivery.order.id}
+          canManage={trustedActionAllowed(actorContext, "deliveries.manage")}
+          canonical={isCanonicalOrderAuthority(delivery.order.source, delivery.order.sourceMetadata)}
+          stuckCreating={stuckCreating}
+        />
+      ) : null}
 
       <div className="card-grid-4">
         <StatCard label={t("deliveries.table.status")} value={t(deliveryStatusI18nKey(delivery.status))} icon={<Package />} />

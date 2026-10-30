@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { AlertTriangle, LayoutDashboard, Lock, RefreshCw, RotateCw } from "lucide-react";
+import { LayoutDashboard, Lock, RotateCw } from "lucide-react";
 
 import { StateSurface } from "@/components/shared/state-surface";
+import { StateView } from "@/components/shared/state-view";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/use-i18n";
 import { forbiddenActionFromDigest } from "@/lib/identity/access-denied";
@@ -109,40 +110,28 @@ function PageFailure({ error, reset, title, hideReload }: PageErrorProps) {
 
   return (
     <div className="app-content">
-      <StateSurface
-        icon={AlertTriangle}
+      <StateView
+        kind="error"
+        size="page"
         title={resolvedTitle}
         description={description}
-        tone="danger"
-        size="page"
-        role="alert"
-        live="polite"
+        digest={error.digest}
+        onRetry={reset}
         testId="page-error"
-        actions={
-          <>
+        retryTestId="page-error-retry"
+        extraActions={
+          !hideReload ? (
             <Button
               type="button"
-              onClick={reset}
-              variant="outline"
+              onClick={() => window.location.reload()}
+              variant="ghost"
               size="sm"
-              data-testid="page-error-retry"
+              data-testid="page-error-reload"
             >
-              <RefreshCw className="me-2 size-4" aria-hidden="true" />
-              {t("error.retry")}
+              <RotateCw className="me-2 size-4" aria-hidden="true" />
+              {t("error.reload")}
             </Button>
-            {!hideReload ? (
-              <Button
-                type="button"
-                onClick={() => window.location.reload()}
-                variant="ghost"
-                size="sm"
-                data-testid="page-error-reload"
-              >
-                <RotateCw className="me-2 size-4" aria-hidden="true" />
-                {t("error.reload")}
-              </Button>
-            ) : null}
-          </>
+          ) : null
         }
       />
     </div>

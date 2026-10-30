@@ -23,7 +23,7 @@ help centre, contact and the two legal pages.
 - Build: `node marketing/build.mjs` writes `marketing/dist`.
 - Hosting: Cloudflare Workers static assets (`wrangler.toml`, `worker.js`).
   GitHub Actions "Deploy sahelflow.com" builds and deploys it. `/get/windows`
-  always redirects to the newest signed installer from the updater manifest.
+  always redirects to the newest installer from the updater manifest.
 
 No framework and no runtime dependencies. Every page works without
 JavaScript; scripts only add motion and interaction. Animations respect

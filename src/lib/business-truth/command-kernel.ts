@@ -475,7 +475,8 @@ async function persistOutcome<TResult>(
     await tx.$executeRaw`
       INSERT INTO "OutboxIntent" (
         "id", "effectKey", "commandId", "effectType", "payloadJson",
-        "status", "attemptCount", "nextAttemptAt", "createdAt", "updatedAt"
+        "status", "attemptCount", "nextAttemptAt", "createdAt", "updatedAt",
+        "lastErrorCode"
       ) VALUES (
         ${randomUUID()}, ${intent.effectKey}, ${commandId}, ${intent.effectType},
         ${sealBusinessPayloadWithKey(
@@ -487,8 +488,9 @@ async function persistOutcome<TResult>(
             commandId,
           },
           envelopeKey,
-        )}, 'queued', 0,
-        ${intent.nextAttemptAt ?? null}, ${now}, ${now}
+        )}, ${intent.status ?? "queued"}, 0,
+        ${intent.nextAttemptAt ?? null}, ${now}, ${now},
+        ${intent.lastErrorCode ?? null}
       )
     `;
   }

@@ -12,6 +12,7 @@
  * return shape so no component consumer changes.
  */
 
+import { sendGuardPausedCopy } from "@/lib/i18n/whatsapp-send-guard-runtime";
 import type {
   InboxChat,
   InboxMessage,
@@ -80,13 +81,24 @@ export type MediaSendResponse = {
   state?: InboxMessage["outboxState"];
   errorCode?: string | null;
   requiresDuplicateConfirmation?: boolean;
+  /** 429 from the send guard: how long the chat stays paused. */
+  retryAfterSeconds?: number;
+  /** Set when the guard warned about, delayed or held an accepted send. */
+  guard?: { action?: string; reason?: string; conversationCountLastHour?: number };
 };
 
 export function whatsappSendFailureCopy(
-  t: (key: string) => string,
-  data: Pick<MediaSendResponse, "errorCode" | "requiresDuplicateConfirmation">,
+  t: (key: string, params?: Record<string, string | number>) => string,
+  data: Pick<
+    MediaSendResponse,
+    "errorCode" | "requiresDuplicateConfirmation" | "retryAfterSeconds"
+  >,
 ): string {
   if (data.requiresDuplicateConfirmation) return t("inbox.whatsappAmbiguous");
+  if (data.errorCode === "SEND_GUARD_REFUSED") {
+    return sendGuardPausedCopy(t, data.retryAfterSeconds);
+  }
+  if (data.errorCode === "SEND_GUARD_BULK_SAME_TEXT") return t("whatsapp.sendGuard.held");
   if (data.errorCode === "WHATSAPP_NOT_CONNECTED") {
     return t("inbox.sendError.notConnected");
   }

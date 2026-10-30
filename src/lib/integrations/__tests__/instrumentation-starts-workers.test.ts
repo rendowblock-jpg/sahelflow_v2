@@ -48,6 +48,9 @@ vi.mock("@/lib/integrations/google-sheets/bridge-worker", () => ({
 vi.mock("@/lib/integrations/reconcile-worker", () => ({
   startScheduledReconcileWorker: () => started.names.push("scheduled-reconcile"),
 }));
+vi.mock("@/lib/backup/scheduled-backup-worker", () => ({
+  startScheduledBackupWorker: () => started.names.push("scheduled-backup"),
+}));
 vi.mock("@/lib/mcp/endpoint", () => ({ publishMcpEndpoint: async () => undefined }));
 
 const ALL_WORKERS = [
@@ -64,6 +67,7 @@ const ALL_WORKERS = [
   "abandoned-cart",
   "google-sheets-bridge",
   "scheduled-reconcile",
+  "scheduled-backup",
 ];
 
 const previousRuntime = process.env.NEXT_RUNTIME;

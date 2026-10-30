@@ -5,6 +5,7 @@ import { Check, Copy, Gift, Key, Loader2, MessageCircle, Wifi } from "lucide-rea
 
 import { useEntryBrand } from "@/components/auth/entry-brand";
 import { LicenseRequestCode } from "@/components/license/license-request-code";
+import { LockoutDataRescue } from "@/components/license/lockout-data-rescue";
 import { licenseStatusKeys, LicenseKeyDialog, useLicenseActions } from "@/components/settings/license-panel";
 import { EntryShell, IconTile } from "@/components/system";
 import { Button } from "@/components/ui/button";
@@ -141,6 +142,8 @@ export function LicenseLockout() {
           <SupportNumber />
           <LicenseRequestCode />
         </section>
+
+        <LockoutDataRescue />
 
         {actions.error ? (
           <p className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive" role="alert">

@@ -1,5 +1,6 @@
 // Every page of sahelflow.com, rendered from the copy files and the model.
 import { SITE } from "./config.mjs";
+import { integrationStatus, statusLabel, statusesOf } from "./claims.mjs";
 import { COPY } from "./i18n/index.mjs";
 import { shell } from "./layout.mjs";
 import { LEGAL_UPDATED, PRIVACY, TERMS } from "./legal.mjs";
@@ -34,6 +35,7 @@ import {
   sectionHead,
   shotUrl,
   whatsappHref,
+  statusBadge,
 } from "./ui.mjs";
 
 const moduleByKey = Object.fromEntries(MODULES.map((m) => [m.key, m]));
@@ -84,10 +86,26 @@ function brandTile(key) {
 
 function marquee(locale) {
   const t = COPY[locale];
-  const names = Object.keys(BRAND_NAMES).map((key) => `<li>${brandTile(key)}<span>${esc(BRAND_NAMES[key])}</span></li>`).join("");
-  return `<section class="marquee-band" aria-label="${esc(t.home.marquee)}">
-  <p class="marquee-label">${esc(t.home.marquee)}</p>
+  const keys = Object.keys(BRAND_NAMES);
+  const names = keys
+    .map((key) => {
+      const status = integrationStatus(key);
+      return `<li data-status="${status}">${brandTile(key)}<span>${esc(BRAND_NAMES[key])}</span><span class="sr-only">, ${esc(statusLabel(status, locale))}</span></li>`;
+    })
+    .join("");
+  const label = `${t.home.marquee} · ${statusesOf(keys).map((status) => statusLabel(status, locale)).join(" / ")}`;
+  return `<section class="marquee-band" aria-label="${esc(label)}">
+  <p class="marquee-label">${esc(label)}</p>
   <div class="marquee"><ul class="marquee-track">${names}</ul><ul class="marquee-track" aria-hidden="true">${names}</ul></div>
+</section>`;
+}
+
+/** The calm number-safety sentence, shown wherever the WhatsApp inbox is sold. */
+function whatsappNote(locale) {
+  return `<section class="section tight">
+  <div class="container">
+    <p class="notice reveal">${icon("whatsapp")}<span>${esc(COPY[locale].common.whatsappNote)}</span></p>
+  </div>
 </section>`;
 }
 
@@ -117,7 +135,7 @@ function homeHero(locale) {
   <canvas class="gl-canvas" data-gl data-gl-seed="0.35" aria-hidden="true"></canvas>
   <div class="hero-aurora" aria-hidden="true"></div>
   <div class="container hero-inner">
-    <a class="announce reveal" href="${href(locale, "integrations")}#sheets"><span class="badge badge-new">${esc(t.common.new)}</span><span>${esc(t.home.announcement)}</span>${arrow()}</a>
+    <a class="announce reveal" href="${href(locale, "integrations")}#sheets">${statusBadge(integrationStatus("sheets"), locale)}<span>${esc(t.home.announcement)}</span>${arrow()}</a>
     <p class="eyebrow reveal">${esc(h.eyebrow)}</p>
     <h1 class="hero-title reveal"><span>${esc(h.title[0])}</span> <span class="grad">${esc(h.title[1])}</span></h1>
     <p class="hero-lead reveal">${esc(h.lead)}</p>
@@ -345,6 +363,7 @@ export function homePage(locale) {
     marquee(locale),
     whyTeaser(locale),
     flowSection(locale),
+    whatsappNote(locale),
     tourSection(locale),
     compareSection(locale),
     bentoSection(locale),
@@ -380,6 +399,7 @@ export function productPage(locale) {
     <div class="module-grid reveal-stagger">${MODULES.map((m) => moduleCard(locale, m.key)).join("")}</div>
   </div>
 </section>
+${whatsappNote(locale)}
 ${tourSection(locale)}
 <section class="section">
   <div class="container">
@@ -441,6 +461,7 @@ export function modulePage(locale, key) {
   </div>
 </section>
 <div class="container features">${sections}</div>
+${key === "inbox" ? whatsappNote(locale) : ""}
 <section class="section">
   <div class="container narrow">
     ${sectionHead({ eyebrow: t.common.questions, title: c.name, center: true })}
@@ -492,6 +513,7 @@ export function solutionPage(locale, key) {
     <div class="module-grid is-four reveal-stagger">${s.modules.map((k) => moduleCard(locale, k, { compact: true })).join("")}</div>
   </div>
 </section>
+${s.modules.includes("inbox") ? whatsappNote(locale) : ""}
 ${whyTeaser(locale)}
 ${finalCta(locale)}`;
   return shell({ locale, pageId: `solution:${key}`, path: `solutions/${key}`, title: `${s.name} — SahelFlow`, description: s.lead }, body);
@@ -509,9 +531,9 @@ export function integrationsPage(locale) {
   <h2 class="int-group-title">${esc(p.groups[g.group])}</h2>
   <div class="int-grid">${g.items
     .map(
-      (key) => `<article class="int-card reveal" id="${key}" data-spotlight>
-  <header>${brandTile(key)}<h3>${esc(BRAND_NAMES[key])}</h3>${key === "sheets" ? `<span class="badge badge-new">${esc(t.common.new)}</span>` : ""}</header>
-  <p>${esc(p.items[key])}</p>
+      (key) => `<article class="int-card reveal" id="${key}" data-status="${integrationStatus(key)}" data-spotlight>
+  <header>${brandTile(key)}<h3>${esc(BRAND_NAMES[key])}</h3>${statusBadge(integrationStatus(key), locale)}</header>
+  <p>${esc(p.items[key])}</p>${key === "whatsapp" ? `\n  <p class="int-note">${esc(t.common.whatsappNote)}</p>` : ""}
 </article>`,
     )
     .join("")}</div>
@@ -757,6 +779,7 @@ export function helpPage(locale) {
     }).join("")}</div>
   </div>
 </section>
+${whatsappNote(locale)}
 <section class="section">
   <div class="container narrow" data-help-list>
     ${HELP_TOPICS.map((topic) => {

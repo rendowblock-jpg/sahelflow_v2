@@ -1,15 +1,20 @@
 import type { Locale } from "@/lib/i18n";
 import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
+import { getWhatsAppSendGuardRuntimeTranslation } from "@/lib/i18n/whatsapp-send-guard-runtime";
+import { getHeldSendRuntimeTranslation } from "@/lib/i18n/held-send-runtime";
 import { getAnalyticsRuntimeTranslation } from "@/lib/i18n/analytics-runtime";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
+import { getDataTableRuntimeTranslation } from "@/lib/i18n/data-table-runtime";
 import { getDeliveriesRuntimeTranslation } from "@/lib/i18n/deliveries-runtime";
+import { getDeliveryReconcileRuntimeTranslation } from "@/lib/i18n/delivery-reconcile-runtime";
 import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
 import { getInboxLivenessRuntimeTranslation } from "@/lib/i18n/inbox-liveness-runtime";
 import { getInboxOrderStatusRuntimeTranslation } from "@/lib/i18n/inbox-order-status-runtime";
 import { getInboxVoiceNoteRuntimeTranslation } from "@/lib/i18n/inbox-voice-note-runtime";
+import { getLicenseLockoutRuntimeTranslation } from "@/lib/i18n/license-lockout-runtime";
 import { getNotificationsRuntimeTranslation } from "@/lib/i18n/notifications-runtime";
 import { getOnboardingRuntimeTranslation } from "@/lib/i18n/onboarding-runtime";
 import { getOrderActionsRuntimeTranslation } from "@/lib/i18n/order-actions-runtime";
@@ -143,16 +148,21 @@ export function getRuntimeTranslation(
   return (
     (SHARED_RUNTIME_COPY[locale] as Readonly<Record<string, string>>)[key] ??
     getAiCanvasRuntimeTranslation(locale, key) ??
+    getWhatsAppSendGuardRuntimeTranslation(locale, key) ??
+    getHeldSendRuntimeTranslation(locale, key) ??
     getAnalyticsRuntimeTranslation(locale, key) ??
     getAutomationRuntimeTranslation(locale, key) ??
     getCodRuntimeTranslation(locale, key) ??
     getCommerceRuntimeTranslation(locale, key) ??
     getConfirmationQueueRuntimeTranslation(locale, key) ??
+    getDataTableRuntimeTranslation(locale, key) ??
     getDeliveriesRuntimeTranslation(locale, key) ??
+    getDeliveryReconcileRuntimeTranslation(locale, key) ??
     getEntityDetailRuntimeTranslation(locale, key) ??
     getInboxLivenessRuntimeTranslation(locale, key) ??
     getInboxOrderStatusRuntimeTranslation(locale, key) ??
     getInboxVoiceNoteRuntimeTranslation(locale, key) ??
+    getLicenseLockoutRuntimeTranslation(locale, key) ??
     getNotificationsRuntimeTranslation(locale, key) ??
     getOnboardingRuntimeTranslation(locale, key) ??
     getOrderActionsRuntimeTranslation(locale, key) ??

@@ -1,3 +1,4 @@
+import { guardNoticeField, withSendGuardRefusal } from "@/lib/whatsapp/send-guard-http";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -116,7 +117,7 @@ async function readBoundedImageForm(req: NextRequest): Promise<FormData> {
  * browser never supplies an object ID/path and the provider dispatch never
  * depends on a browser File after this request returns.
  */
-export const POST = withErrorHandler(async (req: NextRequest) => {
+export const POST = withErrorHandler(withSendGuardRefusal(async (req: NextRequest) => {
   const actorContext = await requireTrustedAction("conversations.reply");
   assertTrustedAction(actorContext, "customers.contact.read", {
     shopId: actorContext.shop.shopId,
@@ -257,7 +258,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       nextAttemptAt: effect.nextAttemptAt,
       errorCode: effect.errorCode,
       requiresDuplicateConfirmation: effect.requiresDuplicateConfirmation,
+      ...guardNoticeField(queued),
     },
     { status: succeeded ? 200 : accepted ? 202 : 409 },
   );
-}, "POST /api/whatsapp/send-image");
+}), "POST /api/whatsapp/send-image");

@@ -686,7 +686,11 @@ export function ConfirmationQueueTable({
 
       {slipPrintRoot}
 
+      {/* Wave 1: no phone cards here yet. This table's action column (id "action") is not a card slot, so on a phone
+          Confirm / Reject / Review would fall off the card. The slot map comes in wave 2; until then the table scrolls
+          sideways exactly as it did before DataTable v2. Pinned by confirmation-queue-layout.render.test.tsx. */}
       <DataTable
+        layout="table"
         columns={columns}
         data={queue}
         isLoading={isLoading}

@@ -5,6 +5,7 @@ import { logAudit } from "@/lib/audit";
 import { withErrorHandler } from "@/lib/api/with-error-handler";
 import { requireAuth, requireRecentReauthentication } from "@/lib/auth/server";
 import { restoreBackup } from "@/lib/backup";
+import { holdScheduledBackups } from "@/lib/backup/scheduled-backup-busy";
 import { stageCloudBackupForNativeRestoreIfNeeded } from "@/lib/connected-platform/cloud-backup";
 import { db, shopContext } from "@/lib/db";
 import { trustedActorAuditIdentity } from "@/lib/identity/authorization";
@@ -31,6 +32,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     input.backupId,
   );
   const result = await restoreBackup(input.backupId, input.recoveryCode);
+  // The restore replaces the data on the next launch: no automatic backup of
+  // the data that is about to be replaced until then.
+  holdScheduledBackups("restore-staged");
 
   // Recovery codes and filesystem paths are deliberately excluded from audit.
   await logAudit(
