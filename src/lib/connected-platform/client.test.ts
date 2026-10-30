@@ -87,3 +87,59 @@ describe("ConnectedPlatformClient", () => {
     expect(seen[1]!.url).toContain("/chunks/3");
   });
 });
+
+describe("ConnectedPlatformClient.revokeDevice", () => {
+  const input = { workspaceId: "workspace_12345678", revocationEpoch: 2 };
+
+  it("posts the revocation with the desktop bearer and returns the relay answer", async () => {
+    const fetchMock = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.method).toBe("POST");
+      expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${"c".repeat(40)}`);
+      expect(JSON.parse(String(init?.body))).toEqual(input);
+      return Response.json({ deviceId: "device_12345678", status: "revoked", revocationEpoch: 2 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(client().revokeDevice("device_12345678", input)).resolves.toEqual({
+      deviceId: "device_12345678",
+      status: "revoked",
+      revocationEpoch: 2,
+    });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      "https://control.sahelflow.example/v1/desktop/devices/device_12345678/revoke",
+    );
+  });
+
+  it("refuses a device id that would change the route, before any request", async () => {
+    const fetchMock = vi.fn(async () => Response.json({}));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(client().revokeDevice("device/../revoke", input)).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [409, "revocation_epoch_conflict"],
+    [404, "device_not_found"],
+    [401, "unauthorized"],
+  ])("turns relay status %i into a typed error", async (status, code) => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: code }, { status })));
+    await expect(client().revokeDevice("device_12345678", input)).rejects.toMatchObject({
+      name: "ConnectedPlatformHttpError",
+      status,
+      code,
+    });
+  });
+
+  it("reports an unreachable relay as remote_unavailable", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("network down"); }));
+    const error = await client().revokeDevice("device_12345678", input).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ConnectedPlatformHttpError);
+    expect(error).toMatchObject({ status: 503, code: "remote_unavailable" });
+  });
+
+  it.each([0, -1, 1.5, Number.NaN])("refuses epoch %s before any request", async (revocationEpoch) => {
+    const fetchMock = vi.fn(async () => Response.json({}));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(client().revokeDevice("device_12345678", { ...input, revocationEpoch })).rejects.toThrow(RangeError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

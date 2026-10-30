@@ -11,6 +11,8 @@ import {
   isConnectedEnvelope,
   type ConnectedEnvelope,
 } from "../../src/lib/connected-platform/protocol";
+import { allowedOrigin, corsHeaders, parseAllowedOrigins } from "./cors";
+import { RATE_PRUNE_BATCH, RATE_RULES, decideRate, pruneBeforeMs, windowStartMs, type RateBucket } from "./rate-limit";
 
 type D1RunResult = {
   success: boolean;
@@ -33,6 +35,8 @@ export interface ConnectedWorkerEnvironment {
   PRODUCT_MAJOR: string;
   SF_LICENSE_TRIAL_PUBLIC_KEYS: string;
   SF_LICENSE_PERMANENT_PUBLIC_KEYS: string;
+  /** Comma list of exact phone-app origins allowed to call the relay from a browser. */
+  PWA_ORIGINS?: string;
 }
 
 type WorkspaceRow = {
@@ -102,6 +106,8 @@ const COMPLETE_FEATURE = "sahelflow.complete";
 const CONNECTED_FEATURE = "sahelflow.connected";
 const STOREFRONT_FEATURE = "sahelflow.storefront";
 const COMMAND_POLICY_MAX_TTL_MS = 20 * 60 * 1000;
+// Presence needs two-minute accuracy, so one write per 30 s per device is plenty.
+const LAST_SEEN_THROTTLE_SECONDS = 30;
 
 function json(value: unknown, status = 200): Response {
   return Response.json(value, {
@@ -305,10 +311,99 @@ async function authenticateDevice(
   if (device && !hasWorkspaceFeature(device, CONNECTED_FEATURE)) return null;
   if (device) {
     await environment.DB.prepare(
-      "UPDATE connected_device SET last_seen_at = CURRENT_TIMESTAMP WHERE workspace_id = ?1 AND device_id = ?2",
-    ).bind(workspaceId, deviceId).run();
+      `UPDATE connected_device SET last_seen_at = CURRENT_TIMESTAMP
+       WHERE workspace_id = ?1 AND device_id = ?2
+        AND (last_seen_at IS NULL OR last_seen_at <= datetime('now', ?3))`,
+    ).bind(workspaceId, deviceId, `-${LAST_SEEN_THROTTLE_SECONDS} seconds`).run();
   }
   return device;
+}
+
+function rateLimited(bucket: RateBucket, retryAfterSeconds: number): Response {
+  const response = json({ error: "rate_limited", scope: bucket, retryAfterSeconds }, 429);
+  response.headers.set("Retry-After", String(retryAfterSeconds));
+  return response;
+}
+
+async function subjectHash(value: string): Promise<string> {
+  return (await sha256Hex(value)).slice(0, 32);
+}
+
+/** One atomic upsert; returns the count of the current window including this event. */
+async function bumpCounter(
+  environment: ConnectedWorkerEnvironment,
+  bucket: RateBucket,
+  subject: string,
+  nowMs: number,
+): Promise<number> {
+  const row = await environment.DB.prepare(
+    `INSERT INTO connected_rate_limit (bucket, subject, window_start, count)
+     VALUES (?1, ?2, ?3, 1)
+     ON CONFLICT(bucket, subject, window_start) DO UPDATE SET count = count + 1
+     RETURNING count`,
+  ).bind(bucket, subject, windowStartMs(nowMs, RATE_RULES[bucket].windowMs)).first<{ count: number }>();
+  return Number(row?.count ?? 0);
+}
+
+/**
+ * Counts one event and answers 429 when the window is over its limit. It fails
+ * OPEN: if the counter cannot be written (migration 0002 not applied yet) the
+ * request goes through, and /healthz reports the missing table.
+ */
+async function hitRate(
+  environment: ConnectedWorkerEnvironment,
+  bucket: RateBucket,
+  subject: string,
+): Promise<Response | null> {
+  const rule = RATE_RULES[bucket];
+  const nowMs = Date.now();
+  try {
+    const count = await bumpCounter(environment, bucket, subject, nowMs);
+    if (count < 1) return null;
+    if (count === 1) {
+      await environment.DB.prepare(
+        `DELETE FROM connected_rate_limit
+         WHERE rowid IN (SELECT rowid FROM connected_rate_limit WHERE window_start < ?1 LIMIT ?2)`,
+      ).bind(pruneBeforeMs(nowMs), RATE_PRUNE_BATCH).run();
+    }
+    const decision = decideRate({ count, limit: rule.limit, nowMs, windowMs: rule.windowMs });
+    return decision.allowed ? null : rateLimited(bucket, decision.retryAfterSeconds);
+  } catch {
+    return null;
+  }
+}
+
+/** A pairing that already failed its limit this minute is locked, even for the right token. */
+async function pairingLocked(environment: ConnectedWorkerEnvironment, pairingId: string): Promise<Response | null> {
+  const rule = RATE_RULES.exchange_pairing_failure;
+  const nowMs = Date.now();
+  try {
+    const row = await environment.DB.prepare(
+      "SELECT count FROM connected_rate_limit WHERE bucket = ?1 AND subject = ?2 AND window_start = ?3",
+    ).bind("exchange_pairing_failure", await subjectHash(pairingId), windowStartMs(nowMs, rule.windowMs))
+      .first<{ count: number }>();
+    const decision = decideRate({ count: Number(row?.count ?? 0) + 1, limit: rule.limit, nowMs, windowMs: rule.windowMs });
+    return decision.allowed ? null : rateLimited("exchange_pairing_failure", decision.retryAfterSeconds);
+  } catch {
+    return null;
+  }
+}
+
+async function recordPairingFailure(environment: ConnectedWorkerEnvironment, pairingId: string): Promise<void> {
+  try {
+    await bumpCounter(environment, "exchange_pairing_failure", await subjectHash(pairingId), Date.now());
+  } catch {
+    // fail open, see hitRate
+  }
+}
+
+function etagMatches(header: string | null, etag: string): boolean {
+  if (!header) return false;
+  const weak = (value: string) => value.replace(/^W\//, "");
+  return header.split(",").some((part) => {
+    const candidate = part.trim();
+    return candidate === "*" || weak(candidate) === weak(etag);
+  });
 }
 
 async function verifyEnvelopeSignature(
@@ -630,6 +725,9 @@ async function createPairing(request: Request, environment: ConnectedWorkerEnvir
 }
 
 async function exchangePairing(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
+  const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  const ipLimited = await hitRate(environment, "exchange_ip", await subjectHash(ip));
+  if (ipLimited) return ipLimited;
   let body: unknown;
   try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
   const input = body as {
@@ -648,6 +746,8 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
   ) {
     return json({ error: "invalid_request" }, 400);
   }
+  const locked = await pairingLocked(environment, input.pairingId);
+  if (locked) return locked;
   const tokenHash = await sha256Hex(input.pairingToken);
   const pairing = await environment.DB.prepare(
     `SELECT pairing_id, workspace_id, member_id, device_id, token_hash, expires_at, consumed_at
@@ -655,6 +755,7 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
       WHERE pairing_id = ?1 AND token_hash = ?2`,
   ).bind(input.pairingId, tokenHash).first<PairingRow>();
   if (!pairing || pairing.consumed_at || Date.parse(pairing.expires_at) <= Date.now()) {
+    await recordPairingFailure(environment, input.pairingId);
     return json({ error: "pairing_rejected" }, 403);
   }
   const workspace = await environment.DB.prepare(
@@ -883,17 +984,25 @@ async function getProjection(request: Request, environment: ConnectedWorkerEnvir
   if (!validIdentity(workspaceId) || !validIdentity(deviceId) || !validIdentity(shopId) || !type || !/^[a-z0-9._-]{2,95}$/.test(type)) {
     return json({ error: "invalid_request" }, 400);
   }
+  const sinceRaw = url.searchParams.get("sinceSequence");
+  const since = sinceRaw === null ? null : /^\d{1,15}$/.test(sinceRaw) ? Number(sinceRaw) : Number.NaN;
+  if (since !== null && !Number.isSafeInteger(since)) return json({ error: "invalid_request" }, 400);
   const device = await authenticateDevice(request, environment, workspaceId, deviceId);
   if (!device) return json({ error: "unauthorized" }, 401);
+  const limited = await hitRate(environment, "projection_get", `${workspaceId}:${deviceId}`);
+  if (limited) return limited;
   const row = await environment.DB.prepare(
-    `SELECT envelope_json, expires_at FROM connected_projection
+    `SELECT envelope_json, expires_at, sequence FROM connected_projection
       WHERE workspace_id = ?1 AND shop_id = ?2 AND device_id = ?3 AND member_id = ?4 AND projection_type = ?5`,
-  ).bind(workspaceId, shopId, deviceId, device.member_id, type).first<{ envelope_json: string; expires_at: string }>();
+  ).bind(workspaceId, shopId, deviceId, device.member_id, type).first<{ envelope_json: string; expires_at: string; sequence: number }>();
   if (!row || Date.parse(row.expires_at) <= Date.now()) return json({ error: "projection_unavailable" }, 404);
-  return new Response(row.envelope_json, {
-    status: 200,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
-  });
+  // Weak ETag from (device, kind, sequence): a newer sequence is the only way the body changes.
+  const etag = `W/"${deviceId}.${type}.${row.sequence}"`;
+  const headers = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", ETag: etag };
+  if ((since !== null && since >= row.sequence) || etagMatches(request.headers.get("If-None-Match"), etag)) {
+    return new Response(null, { status: 304, headers });
+  }
+  return new Response(row.envelope_json, { status: 200, headers: { "Content-Type": "application/json", ...headers } });
 }
 
 async function submitCommand(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
@@ -914,6 +1023,8 @@ async function submitCommand(request: Request, environment: ConnectedWorkerEnvir
   if (!device || device.member_id !== envelope.memberId) {
     return json({ error: "unauthorized" }, 401);
   }
+  const limited = await hitRate(environment, "command_submit", `${envelope.workspaceId}:${envelope.deviceId}`);
+  if (limited) return limited;
   const workspace = await environment.DB.prepare(
     "SELECT installation_id, revoked_at FROM connected_workspace WHERE workspace_id = ?1",
   ).bind(envelope.workspaceId).first<{ installation_id: string; revoked_at: string | null }>();
@@ -972,7 +1083,11 @@ async function submitCommand(request: Request, environment: ConnectedWorkerEnvir
     `INSERT INTO connected_command
       (workspace_id, command_id, idempotency_key, envelope_digest, shop_id, member_id, device_id,
        envelope_json, state, expires_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'queued', ?9)`,
+     SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'queued', ?9
+     WHERE EXISTS (
+      SELECT 1 FROM connected_device
+      WHERE workspace_id = ?1 AND device_id = ?7 AND revoked_at IS NULL
+     )`,
   ).bind(
     envelope.workspaceId,
     envelope.envelopeId,
@@ -985,6 +1100,8 @@ async function submitCommand(request: Request, environment: ConnectedWorkerEnvir
     envelope.expiresAt,
   ).run();
   if (!result.success) return json({ error: "command_unavailable" }, 503);
+  // The device was revoked between authentication and now: nothing may stay queued for it.
+  if (result.meta?.changes === 0) return json({ error: "unauthorized" }, 401);
   return json({ commandId: envelope.envelopeId, state: "queued", relaySequence: result.meta?.last_row_id ?? null }, 202);
 }
 
@@ -1156,6 +1273,7 @@ async function health(environment: ConnectedWorkerEnvironment): Promise<Response
     await environment.DB.prepare("SELECT workspace_id FROM connected_workspace LIMIT 1").first<{ workspace_id: string }>();
     await environment.DB.prepare("SELECT device_id FROM connected_device LIMIT 1").first<{ device_id: string }>();
     await environment.DB.prepare("SELECT command_id FROM connected_command LIMIT 1").first<{ command_id: string }>();
+    await environment.DB.prepare("SELECT bucket FROM connected_rate_limit LIMIT 1").first<{ bucket: string }>();
     parsedKeyring(environment.SF_LICENSE_TRIAL_PUBLIC_KEYS);
     parsedKeyring(environment.SF_LICENSE_PERMANENT_PUBLIC_KEYS);
     const productMajor = Number(environment.PRODUCT_MAJOR);
@@ -1166,7 +1284,28 @@ async function health(environment: ConnectedWorkerEnvironment): Promise<Response
   }
 }
 
+function withCors(response: Response, origin: string | null, preflight: boolean): Response {
+  const headers = new Headers(response.headers);
+  headers.append("Vary", "Origin");
+  if (origin) for (const [name, value] of Object.entries(corsHeaders(origin, preflight))) headers.set(name, value);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 export async function handleConnectedRequest(
+  request: Request,
+  environment: ConnectedWorkerEnvironment,
+): Promise<Response> {
+  const requestOrigin = request.headers.get("Origin");
+  const origin = allowedOrigin(requestOrigin, parseAllowedOrigins(environment.PWA_ORIGINS));
+  if (request.method === "OPTIONS" && requestOrigin !== null) {
+    // A preflight is answered here and never reaches a route: allowed origins get 204, others get nothing.
+    const status = origin ? 204 : 403;
+    return withCors(new Response(null, { status, headers: { "Cache-Control": "no-store" } }), origin, true);
+  }
+  return withCors(await routeRequest(request, environment), origin, false);
+}
+
+async function routeRequest(
   request: Request,
   environment: ConnectedWorkerEnvironment,
 ): Promise<Response> {

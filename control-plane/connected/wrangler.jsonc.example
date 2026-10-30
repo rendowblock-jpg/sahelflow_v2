@@ -14,6 +14,9 @@
   ],
   "vars": {
     "PRODUCT_MAJOR": "1",
+    // Comma list of the exact origins (scheme+host+port, no wildcard, no trailing slash)
+    // of the phone app. Empty = no browser origin is allowed. http is accepted only for localhost.
+    "PWA_ORIGINS": "",
     "SF_LICENSE_TRIAL_PUBLIC_KEYS": "{\"trial-2026-01\":\"replace-with-base64-raw-ed25519-public-key\"}",
     "SF_LICENSE_PERMANENT_PUBLIC_KEYS": "{\"permanent-2026-01\":\"replace-with-base64-raw-ed25519-public-key\"}"
   },
