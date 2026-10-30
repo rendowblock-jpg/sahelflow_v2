@@ -7,6 +7,8 @@ import type { Locale } from "@/lib/i18n";
  */
 const COPY = {
   en: {
+    "firstRun.onboarding.nameRequired": "Enter your shop name to continue.",
+    "firstRun.error.unmapped": "Something went wrong on our side. Please try again in a moment.",
     "firstRun.join.invalidTitle": "This invitation can’t be used",
     "firstRun.join.invalidBody": "It may have expired, been used already, or been cancelled by the owner.",
     "firstRun.join.invalidNext": "Ask the workspace owner for a new invitation link, then paste it here.",
@@ -17,6 +19,8 @@ const COPY = {
     "firstRun.notifications.loadFailedBody": "We could not load your notifications. Your data is safe; try again.",
   },
   fr: {
+    "firstRun.onboarding.nameRequired": "Saisissez le nom de votre boutique pour continuer.",
+    "firstRun.error.unmapped": "Un problème est survenu de notre côté. Réessayez dans un instant.",
     "firstRun.join.invalidTitle": "Cette invitation n’est plus utilisable",
     "firstRun.join.invalidBody": "Elle a peut-être expiré, déjà été utilisée ou annulée par le propriétaire.",
     "firstRun.join.invalidNext": "Demandez au propriétaire un nouveau lien d’invitation, puis collez-le ici.",
@@ -27,6 +31,8 @@ const COPY = {
     "firstRun.notifications.loadFailedBody": "Impossible de charger les notifications. Vos données sont intactes, réessayez.",
   },
   ar: {
+    "firstRun.onboarding.nameRequired": "أدخل اسم متجرك للمتابعة.",
+    "firstRun.error.unmapped": "حدث خطأ من جانبنا. حاول مرة أخرى بعد قليل.",
     "firstRun.join.invalidTitle": "لا يمكن استعمال هذه الدعوة",
     "firstRun.join.invalidBody": "ربما انتهت صلاحيتها، أو استُعملت من قبل، أو ألغاها المالك.",
     "firstRun.join.invalidNext": "اطلب من مالك مساحة العمل رابط دعوة جديدًا ثم الصقه هنا.",
