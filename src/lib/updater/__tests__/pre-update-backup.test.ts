@@ -124,9 +124,11 @@ describe("runPreUpdateBackup clocks", () => {
     expect(signal?.aborted).toBe(true);
   });
 
-  it("a limit that is not a positive number falls back to 60 s", async () => {
-    const box = track(runPreUpdateBackup({ request: slow(61_000, OK), timeoutMs: Number.NaN }));
-    await vi.advanceTimersByTimeAsync(60_000);
+  it.each([Number.NaN, 0, -5])("a limit of %s falls back to 60 s (not at once)", async (timeoutMs) => {
+    const box = track(runPreUpdateBackup({ request: slow(61_000, OK), timeoutMs }));
+    await vi.advanceTimersByTimeAsync(59_900);
+    expect(box.settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(100);
     expect(box.outcome).toEqual({ kind: "timed-out" });
   });
 });
@@ -183,7 +185,7 @@ describe("runPreUpdateBackup answers", () => {
     expect(w.phases).toEqual(["running", "skipped"]);
   });
 
-  it.each([null, undefined, "ok", 7, [], {}, { ok: true }, { skipped: "stale", ageMinutes: 1 }])(
+  it.each([null, undefined, "ok", 7, [], {}, { ok: true }, { ok: true, backupId: "" }, { skipped: "stale", ageMinutes: 1 }, { skipped: "fresh" }])(
     "an answer that makes no sense (%j) is a failure, never a pass",
     async (reply) => {
       const outcome = await runPreUpdateBackup({ request: async () => reply, timeoutMs: 60_000 });
