@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Ban, ExternalLink, Eye, RefreshCw } from "lucide-react";
 
+import { useOfflineWrites } from "@/components/orders/offline-write-gate";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/use-i18n";
 import { toast } from "@/lib/toast";
@@ -41,9 +42,10 @@ export function DeliveryRowActions({
   const { t } = useI18n();
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
+  const { offline, reason } = useOfflineWrites();
 
   async function handleSync() {
-    if (!canManage) return;
+    if (!canManage || offline) return;
     setSyncing(true);
     try {
       const response = await fetch("/api/delivery/sync", {
@@ -68,7 +70,7 @@ export function DeliveryRowActions({
 
   const dashboardUrl = PROVIDER_DASHBOARD_URLS[provider];
   function handleCancel() {
-    if (!canManage || !dashboardUrl) return;
+    if (!canManage || !dashboardUrl || offline) return;
     toast.warning(t("deliveries.cancelTitle"), {
       description: t("deliveries.cancelZrExpressMessage"),
       duration: 20_000,
@@ -90,8 +92,8 @@ export function DeliveryRowActions({
           variant="ghost"
           size="icon-sm"
           onClick={handleSync}
-          disabled={syncing || !trackingNumber}
-          title={t("deliveries.sync")}
+          disabled={syncing || !trackingNumber || offline}
+          title={offline ? reason : t("deliveries.sync")}
           aria-label={t("deliveries.sync")}
         >
           <RefreshCw className={`size-4 ${syncing ? "animate-spin" : ""}`} aria-hidden="true" />
@@ -109,7 +111,8 @@ export function DeliveryRowActions({
           variant="ghost"
           size="icon-sm"
           onClick={handleCancel}
-          title={t("deliveries.cancel")}
+          disabled={offline}
+          title={offline ? reason : t("deliveries.cancel")}
           aria-label={t("deliveries.cancel")}
         >
           <Ban className="size-4" aria-hidden="true" />

@@ -1,5 +1,6 @@
 "use client";
 
+import { OfflineWriteGate } from "@/components/orders/offline-write-gate";
 import { DeliveryNeedsDecision } from "@/components/deliveries/delivery-needs-decision";
 import { DeliveryStatusBadge } from "@/components/deliveries/delivery-status-badge";
 import type { DeliveryListItem } from "@/hooks/swr/use-deliveries";
@@ -22,12 +23,14 @@ export function DeliveryStatusCell({ delivery, canManage }: DeliveryStatusCellPr
   const stuckCreating = isStuckCreatingNow(delivery.status, delivery.updatedAt);
   if (delivery.status === RECONCILIATION_STATUS || stuckCreating) {
     return (
+      <OfflineWriteGate>
       <DeliveryNeedsDecision
         deliveryId={delivery.id}
         orderId={delivery.order?.id ?? null}
         canManage={canManage}
         stuckCreating={stuckCreating}
       />
+      </OfflineWriteGate>
     );
   }
   return (

@@ -5,6 +5,7 @@ import { Banknote, Calendar, Clock, Hash, Package, Truck, User } from "lucide-re
 
 import { DeliveryReconcileCard } from "@/components/deliveries/delivery-reconcile-card";
 import { EntityLink, EntityTimeline } from "@/components/entities/entity-context";
+import { DetailOfflineBanner, OfflineWriteGate } from "@/components/orders/offline-write-gate";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -76,6 +77,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
 
   return (
     <div className="app-content page-sections">
+      <DetailOfflineBanner />
       <Breadcrumbs
         items={[
           { label: t("nav.delivery"), href: "/deliveries" },
@@ -115,6 +117,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
       />
 
       {needsDecision ? (
+        <OfflineWriteGate className="m-0 min-w-0 border-0 p-0">
         <DeliveryReconcileCard
           deliveryId={delivery.id}
           orderId={delivery.order.id}
@@ -122,6 +125,7 @@ export default async function DeliveryDetailPage({ params }: PageProps) {
           canonical={isCanonicalOrderAuthority(delivery.order.source, delivery.order.sourceMetadata)}
           stuckCreating={stuckCreating}
         />
+        </OfflineWriteGate>
       ) : null}
 
       <div className="card-grid-4">
