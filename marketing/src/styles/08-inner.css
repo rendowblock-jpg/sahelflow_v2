@@ -1,0 +1,23 @@
+/* Inner pages as ruled sheets: product, modules, solutions, integrations, help, contact, legal. */
+.top{view-transition-name:site-head}
+.rows>li{grid-template-columns:minmax(0,1fr);padding-block:0}
+.rowlink{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:0 14px;align-items:start;min-block-size:var(--hit);padding-block:14px;color:inherit;text-decoration:none}
+.rowlink:hover h3,.rowlink:focus-visible h3{text-decoration:underline}
+.rowlink>svg{inline-size:20px;block-size:20px;margin-block-start:8px;color:var(--ink3)}
+.rowlink .stamps{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:8px}
+.nn svg{inline-size:20px;block-size:20px}
+.day-sec .dayline{max-inline-size:36ch;margin:0;font-size:clamp(22px,5.6vw,34px);font-weight:500;line-height:1.5;color:var(--ink)}
+.nope{display:grid;margin:0;padding:0;list-style:none;border-block-start:1px solid var(--ink)}
+.nope>li{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-block-size:var(--hit);padding-block:8px;border-block-end:1px solid var(--rule)}
+.ints>li{grid-template-columns:minmax(0,1fr)}
+.int-card>header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.int-card p{margin-block-start:6px}
+.ints .int-aside{margin-block-start:6px;color:var(--ink3)}
+.hsearch{display:flex;align-items:center;gap:10px;max-inline-size:520px;margin-block-start:20px;padding-inline:14px;border:2px solid var(--ink);background:var(--sheet)}
+.hsearch svg{inline-size:20px;block-size:20px;flex:none}
+.hsearch input{flex:1;min-inline-size:0;min-block-size:48px;border:0;background:transparent;color:var(--ink);font:inherit}
+.more{display:flex;align-items:center;gap:10px}
+.more a{display:inline-flex;align-items:center;min-block-size:var(--hit)}
+.legal-text h2{margin-block:24px 8px;font-size:22px}
+.legal-text p{max-inline-size:66ch;color:var(--ink2)}
+.htopic{scroll-margin-block-start:calc(var(--header-h) + 8px)}

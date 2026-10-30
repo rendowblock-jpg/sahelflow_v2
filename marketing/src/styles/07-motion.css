@@ -1,0 +1,14 @@
+/* All motion of the inner pages. Nothing here runs unless the visitor has not asked for less motion. */
+@media (prefers-reduced-motion:no-preference){
+  /* The stamp thunk on buttons: 180 ms, transform only, only where a mouse can hover. */
+  @keyframes btn-thunk{from{transform:scale(1.04)}to{transform:scale(1)}}
+  @keyframes ink-in{from{color:var(--ink3)}to{color:var(--ink)}}
+  @media (hover:hover){
+    .btn:hover,.btn:active{animation:btn-thunk 180ms var(--ease) both}
+  }
+  /* Pencil becomes ink: the day-in-the-shop line darkens as it scrolls into view. Without support it is simply ink. */
+  @supports (animation-timeline:view()){
+    .dayline{animation:ink-in linear both;animation-timeline:view();animation-range:entry 10% cover 40%}
+  }
+}
+@media (prefers-reduced-motion:reduce){.btn:hover,.btn:active,.dayline{animation:none}}
