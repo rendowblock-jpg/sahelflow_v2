@@ -42,10 +42,13 @@ describe("global production license lockout", () => {
       join(process.cwd(), "src", "lib", "api", "with-error-handler.ts"),
       "utf8",
     );
-    const licenseAllowlist = boundary.match(
-      /const LICENSE_LOCKOUT_ALLOWLIST = \[[\s\S]*?\] as const;/,
-    )?.[0];
+    // The allow-list itself moved to one pure, table-tested file (IDN-03).
+    const licenseAllowlist = readFileSync(
+      join(process.cwd(), "src", "lib", "license", "lockout-allowlist.ts"),
+      "utf8",
+    );
     expect(boundary).toContain("requireLicenseEntitlement");
+    expect(boundary).toContain("isLockoutAllowed(");
     expect(licenseAllowlist).toContain("(?:login|logout|reauthenticate|setup|status)");
     expect(licenseAllowlist).not.toContain("/^\\/api\\/auth(?:\\/|$)/");
     expect(boundary).not.toContain("active_license_status");

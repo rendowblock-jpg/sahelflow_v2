@@ -10,6 +10,7 @@ import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runt
 import { getInboxLivenessRuntimeTranslation } from "@/lib/i18n/inbox-liveness-runtime";
 import { getInboxOrderStatusRuntimeTranslation } from "@/lib/i18n/inbox-order-status-runtime";
 import { getInboxVoiceNoteRuntimeTranslation } from "@/lib/i18n/inbox-voice-note-runtime";
+import { getLicenseLockoutRuntimeTranslation } from "@/lib/i18n/license-lockout-runtime";
 import { getNotificationsRuntimeTranslation } from "@/lib/i18n/notifications-runtime";
 import { getOnboardingRuntimeTranslation } from "@/lib/i18n/onboarding-runtime";
 import { getOrderActionsRuntimeTranslation } from "@/lib/i18n/order-actions-runtime";
@@ -153,6 +154,7 @@ export function getRuntimeTranslation(
     getInboxLivenessRuntimeTranslation(locale, key) ??
     getInboxOrderStatusRuntimeTranslation(locale, key) ??
     getInboxVoiceNoteRuntimeTranslation(locale, key) ??
+    getLicenseLockoutRuntimeTranslation(locale, key) ??
     getNotificationsRuntimeTranslation(locale, key) ??
     getOnboardingRuntimeTranslation(locale, key) ??
     getOrderActionsRuntimeTranslation(locale, key) ??
