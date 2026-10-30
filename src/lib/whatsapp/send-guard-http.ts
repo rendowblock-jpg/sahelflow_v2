@@ -34,6 +34,6 @@ export function withSendGuardRefusal<A extends unknown[]>(
 }
 
 /** The `guard` field of a 202 body: the warn/delay/hold notice of a queued send, or nothing. */
-export function guardNoticeField(queued: { guard?: SendGuardNotice }): { guard?: SendGuardNotice } {
+export function guardNoticeField(queued: { guard?: SendGuardNotice | undefined }): { guard?: SendGuardNotice } {
   return queued.guard ? { guard: queued.guard } : {};
 }

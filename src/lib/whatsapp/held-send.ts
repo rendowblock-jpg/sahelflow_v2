@@ -56,8 +56,8 @@ export type HeldSendView = "none" | "owner_can_release" | "ask_owner";
 export function heldSendView(
   message: {
     direction: "inbound" | "outbound" | "system";
-    outboxState?: string;
-    outboxEffectKey?: string;
+    outboxState?: string | undefined;
+    outboxEffectKey?: string | undefined;
   },
   canApprove: boolean,
 ): HeldSendView {
