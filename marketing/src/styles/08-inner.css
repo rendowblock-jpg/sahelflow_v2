@@ -21,3 +21,12 @@
 .legal-text h2{margin-block:24px 8px;font-size:22px}
 .legal-text p{max-inline-size:66ch;color:var(--ink2)}
 .htopic{scroll-margin-block-start:calc(var(--header-h) + 8px)}
+/* Phone: tighter sheets; module bullet lists and integration blurbs stay in the HTML but are not shown (the WhatsApp aside stays). */
+@media (max-width:759px){
+.sheet-head{padding-block:20px 16px}
+.sheet-sec{padding-block:20px}
+.ruled>li{padding-block:10px}
+.day-sec .dayline{font-size:20px}
+.nn-list .check-list{display:none}
+.int-card p:not(.int-aside){display:none}
+}

@@ -103,6 +103,7 @@
           if (terms.length && hit && shown === 1) item.open = true;
         }
         topic.hidden = shown === 0;
+        if (terms.length && shown > 0) topic.open = true;
         any ||= shown > 0;
       }
       emptyMsg.hidden = any;

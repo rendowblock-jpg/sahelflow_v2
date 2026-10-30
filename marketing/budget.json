@@ -2,11 +2,111 @@
   "homePhoneHeightPx": {
     "max": 6500,
     "viewport": "360x732",
-    "measured": { "ar": 5504, "fr": 6319, "en": 5785 },
+    "measured": {
+      "ar": 5504,
+      "fr": 6319,
+      "en": 5785
+    },
     "measuredWith": "node marketing/scripts/measure.mjs (document scrollHeight, light and dark identical)",
     "measuredOn": "2026-10-30"
   },
-  "homeWithoutScreenshotsKb": { "max": 350, "measured": { "ar": 299.5, "fr": 163.7, "en": 162.8 } },
-  "firstLoadJsGzKb": { "max": 25, "measured": 2.9 },
-  "cssGzKb": { "max": 40, "measured": 12.4 }
+  "homeWithoutScreenshotsKb": {
+    "max": 350,
+    "measured": {
+      "ar": 299.5,
+      "fr": 163.7,
+      "en": 162.8
+    }
+  },
+  "firstLoadJsGzKb": {
+    "max": 25,
+    "measured": 2.9
+  },
+  "cssGzKb": {
+    "max": 40,
+    "measured": 12.4
+  },
+  "pageHeightPx": {
+    "viewport": "360x732",
+    "measuredWith": "node marketing/scripts/heights.mjs (document scrollHeight, reduced motion; worst page of the class)",
+    "measuredOn": "2026-10-30",
+    "product": {
+      "max": 5500,
+      "measured": {
+        "ar": 4712,
+        "fr": 5639,
+        "en": 5103
+      },
+      "worstPage": {
+        "ar": "product/",
+        "fr": "product/",
+        "en": "product/"
+      }
+    },
+    "module": {
+      "max": 4500,
+      "measured": {
+        "ar": 3894,
+        "fr": 4533,
+        "en": 4158
+      },
+      "worstPage": {
+        "ar": "product/inbox/",
+        "fr": "product/inbox/",
+        "en": "product/inbox/"
+      }
+    },
+    "solution": {
+      "max": 4500,
+      "measured": {
+        "ar": 3536,
+        "fr": 4134,
+        "en": 3798
+      },
+      "worstPage": {
+        "ar": "solutions/starting/",
+        "fr": "solutions/starting/",
+        "en": "solutions/starting/"
+      }
+    },
+    "integrations": {
+      "max": 4000,
+      "measured": {
+        "ar": 3366,
+        "fr": 3751,
+        "en": 3454
+      },
+      "worstPage": {
+        "ar": "integrations/",
+        "fr": "integrations/",
+        "en": "integrations/"
+      }
+    },
+    "help": {
+      "max": 4000,
+      "measured": {
+        "ar": 2186,
+        "fr": 2575,
+        "en": 2281
+      },
+      "worstPage": {
+        "ar": "help/",
+        "fr": "help/",
+        "en": "help/"
+      }
+    },
+    "contact": {
+      "max": 4000,
+      "measured": {
+        "ar": 1827,
+        "fr": 2149,
+        "en": 1964
+      },
+      "worstPage": {
+        "ar": "contact/",
+        "fr": "contact/",
+        "en": "contact/"
+      }
+    }
+  }
 }

@@ -18,7 +18,6 @@ const TEXT = {
     dayTitle: "يوم في المتجر",
     nopeTitle: "ما لا يفعله بعد",
     productDays: "تسعة أجزاء من يوم واحد",
-    jump: "المواضيع",
     day: {
       inbox: "في الثامنة والنصف يكتب زبون على واتساب. المحادثة والطلب جنباً إلى جنب، فتؤكّد دون أن تنسخ شيئاً.",
       orders: "عند العاشرة تجد الطلبات الجديدة في صف واحد: تؤكّد أو تصحّح العنوان أو ترفض، ويُكتب كل تغيير في سجل الطلب.",
@@ -36,7 +35,6 @@ const TEXT = {
     dayTitle: "Une journée à la boutique",
     nopeTitle: "Ce qu'il ne fait pas encore",
     productDays: "Les neuf parties d'une journée",
-    jump: "Sujets",
     day: {
       inbox: "À 8 h 40 un client écrit sur WhatsApp. La conversation et la commande sont côte à côte : vous confirmez sans rien recopier.",
       orders: "À 10 h, les nouvelles commandes sont dans une seule file : vous confirmez, corrigez l'adresse ou refusez, et chaque changement est écrit dans l'historique.",
@@ -54,7 +52,6 @@ const TEXT = {
     dayTitle: "A day in the shop",
     nopeTitle: "What it does not do yet",
     productDays: "Nine parts of one day",
-    jump: "Topics",
     day: {
       inbox: "At 8:40 a customer writes on WhatsApp. The chat and the order sit side by side, so you confirm without copying anything.",
       orders: "By 10 the new orders are in one queue: you confirm, correct the address or reject, and each change is written in the order's history.",
@@ -195,10 +192,9 @@ export function helpPage(locale) {
   const all = HELP_TOPICS.flatMap((topic) => h.topics[topic.key][2]);
   const search = `<label class="hsearch">${icon("search")}<input type="search" placeholder="${esc(h.search)}" aria-label="${esc(h.search)}" data-help-search></label>`;
   const body = `${pageHero({ locale, eyebrow: h.eyebrow, eyebrowIcon: "help", title: h.title, lead: h.lead, actions: search })}
-${sec(`<h2>${esc(TEXT[locale].jump)}</h2><ul class="ruled nn-list rows">${HELP_TOPICS.map((topic, i) => rowLink(`#${topic.key}`, i, h.topics[topic.key][0], h.topics[topic.key][1])).join("")}</ul>`)}
 ${whatsappNote(locale)}
 <div data-help-list>
-${HELP_TOPICS.map((topic) => `<section class="sheet-sec htopic" id="${topic.key}" data-help-topic><div class="container narrow"><h2>${esc(h.topics[topic.key][0])}</h2>${faqList(h.topics[topic.key][2], { name: `help-${topic.key}` })}</div></section>`).join("\n")}
+<div class="sheet-sec"><div class="container narrow faq">${HELP_TOPICS.map((topic) => `<details class="faq-item htopic" id="${topic.key}" data-help-topic><summary><span>${esc(h.topics[topic.key][0])} · ${h.topics[topic.key][2].length}</span>${icon("plus", "faq-icon")}</summary><div class="faq-answer">${faqList(h.topics[topic.key][2], { name: `help-${topic.key}` })}</div></details>`).join("")}</div></div>
 <p class="hnone container narrow" data-help-empty hidden>${esc(h.noResult)}</p>
 </div>
 ${sec(`<h2>${esc(t.contactPage.title)}</h2><div class="cta">${button(whatsappHref(t.whatsappMessage), t.nav.talk, { kind: "glass", iconName: "whatsapp", external: true })}</div>`)}`;
