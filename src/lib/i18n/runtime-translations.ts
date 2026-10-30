@@ -10,6 +10,7 @@ import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-
 import { getDeliveriesRuntimeTranslation } from "@/lib/i18n/deliveries-runtime";
 import { getDeliveryReconcileRuntimeTranslation } from "@/lib/i18n/delivery-reconcile-runtime";
 import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
+import { getInboxCarnetRuntimeTranslation } from "@/lib/i18n/inbox-carnet-runtime";
 import { getInboxLivenessRuntimeTranslation } from "@/lib/i18n/inbox-liveness-runtime";
 import { getInboxOrderStatusRuntimeTranslation } from "@/lib/i18n/inbox-order-status-runtime";
 import { getInboxVoiceNoteRuntimeTranslation } from "@/lib/i18n/inbox-voice-note-runtime";
@@ -157,6 +158,7 @@ export function getRuntimeTranslation(
     getDeliveriesRuntimeTranslation(locale, key) ??
     getDeliveryReconcileRuntimeTranslation(locale, key) ??
     getEntityDetailRuntimeTranslation(locale, key) ??
+    getInboxCarnetRuntimeTranslation(locale, key) ??
     getInboxLivenessRuntimeTranslation(locale, key) ??
     getInboxOrderStatusRuntimeTranslation(locale, key) ??
     getInboxVoiceNoteRuntimeTranslation(locale, key) ??

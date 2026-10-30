@@ -1,21 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Circle,
-  EllipsisVertical,
-  Loader2,
-  PlugZap,
-  QrCode,
-  RefreshCw,
-  WifiOff,
-} from "lucide-react";
+import { EllipsisVertical, PlugZap, RefreshCw } from "lucide-react";
 
-import { WhatsAppIngressRecoveryDock } from "@/components/inbox/whatsapp-ingress-recovery-dock";
+import { InboxLinkSurface } from "@/components/inbox/inbox-link-surface";
 import { WhatsAppPairingDialog } from "@/components/inbox/whatsapp-pairing-dialog";
-import type { InboxTransportState } from "@/components/inbox/inbox-workspace-types";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,102 +20,6 @@ import {
   writeNewMessageSoundEnabled,
   writeNewMessageToastEnabled,
 } from "@/hooks/use-new-message-alerts";
-import { cn } from "@/lib/utils";
-
-function ConnectionState({
-  transport,
-  copy,
-  onRetry,
-}: {
-  transport: InboxTransportState;
-  copy: ReturnType<typeof useInboxWorkspace>["copy"];
-  onRetry: () => void;
-}) {
-  const base =
-    "inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium";
-
-  if (transport.reachable === false) {
-    return (
-      <span
-        className={cn(
-          base,
-          "border-destructive/20 bg-destructive-subtle text-destructive",
-        )}
-      >
-        <WifiOff className="size-3.5" aria-hidden="true" />
-        {copy("transportUnavailable")}
-      </span>
-    );
-  }
-
-  if (transport.status === "connected" && transport.wsOpen) {
-    return (
-      <span
-        className={cn(
-          base,
-          "border-success/20 bg-success-soft text-success",
-        )}
-      >
-        <CheckCircle2 className="size-3.5" aria-hidden="true" />
-        {copy("transportConnected")}
-      </span>
-    );
-  }
-
-  if (
-    transport.status === "connecting" ||
-    (transport.status === "connected" && !transport.wsOpen)
-  ) {
-    return (
-      <button
-        type="button"
-        onClick={onRetry}
-        className={cn(
-          base,
-          "border-warning/20 bg-warning-soft text-warning transition-colors hover:bg-warning-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        )}
-      >
-        <RefreshCw className="size-3.5 animate-spin" aria-hidden="true" />
-        {copy("transportReconnecting")}
-      </button>
-    );
-  }
-
-  if (transport.status === "qr") {
-    return (
-      <span className={cn(base, "border-primary/20 bg-primary-soft text-primary")}>
-        <QrCode className="size-3.5" aria-hidden="true" />
-        {copy("pair")}
-      </span>
-    );
-  }
-
-  if (transport.status === "disconnected") {
-    return (
-      <span
-        className={cn(
-          base,
-          "border-border/70 bg-muted/35 text-muted-foreground",
-        )}
-      >
-        <Circle className="size-3.5" aria-hidden="true" />
-        {copy("transportDisconnected")}
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className={cn(
-        base,
-        "border-border/70 bg-muted/25 text-muted-foreground",
-      )}
-    >
-      <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-      {copy("transportChecking")}
-    </span>
-  );
-}
 
 /**
  * Global new-message alert preferences (R4-a liveness).
@@ -209,17 +102,20 @@ export function InboxV3Header({
     t,
     copy,
     transport,
-    dataDegraded,
     refreshChats,
     refreshQr,
     reconnect,
     canManageWhatsApp,
     setLogoutConfirmOpen,
   } = workspace;
+  // While the account is waiting to be linked, the link surface's banner owns
+  // the pairing button; showing a second one here would be a second notice.
+  const bannerOwnsPairing =
+    transport.status === "qr" && canManageWhatsApp && transport.reachable !== false;
 
   return (
     <div className="shrink-0 border-b bg-background/95 backdrop-blur-sm">
-      <header className="flex min-h-14 items-center justify-between gap-3 px-3.5 py-2 sm:px-4">
+      <header className="flex min-h-14 flex-wrap items-center gap-x-3 px-3.5 py-2 sm:px-4">
         <div className="flex min-w-0 items-center gap-2">
           {/* The unread count lives on the queue's Unread tab (and the
               sidebar badge, which counts the same chats); repeating it beside
@@ -229,18 +125,13 @@ export function InboxV3Header({
           </h2>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
-          {/* When the Connect/Pair button is offered it already names the
-              state; the chip would only say the same thing a second time. */}
-          {canManageWhatsApp &&
-          (transport.status === "disconnected" || transport.status === "qr") &&
-          transport.reachable !== false ? null : (
-            <ConnectionState
-              transport={transport}
-              copy={copy}
-              onRetry={reconnect}
-            />
-          )}
+        <InboxLinkSurface
+          workspace={workspace}
+          canViewIngress={canViewIngress}
+          canRetryIngress={canRetryIngress}
+        />
+
+        <div className="ms-auto flex shrink-0 items-center gap-1.5">
           <Button
             type="button"
             variant="ghost"
@@ -254,7 +145,7 @@ export function InboxV3Header({
           >
             <RefreshCw className="size-3.5" aria-hidden="true" />
           </Button>
-          <WhatsAppPairingDialog workspace={workspace} />
+          {bannerOwnsPairing ? null : <WhatsAppPairingDialog workspace={workspace} />}
           {transport.status === "connected" && canManageWhatsApp ? (
             <Button
               type="button"
@@ -269,22 +160,6 @@ export function InboxV3Header({
           <AlertPreferencesMenu t={t} />
         </div>
       </header>
-
-      {dataDegraded ? (
-        <div
-          className="flex items-center gap-2 border-t bg-warning-subtle px-4 py-2 text-xs text-warning"
-          role="status"
-        >
-          <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
-          <span>{copy("dataDegraded")}</span>
-        </div>
-      ) : null}
-
-      {canViewIngress ? (
-        <div className="border-t px-3.5 py-1.5 empty:hidden sm:px-4">
-          <WhatsAppIngressRecoveryDock canRetry={canRetryIngress} />
-        </div>
-      ) : null}
     </div>
   );
 }

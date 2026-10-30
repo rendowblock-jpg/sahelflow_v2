@@ -145,7 +145,10 @@ describe("Class-AAA Inbox composition contract", () => {
     );
     expect(deskTypes).toContain("id: transportId ?? result.id");
     expect(deskTypes).toContain("...(transportId ? { transportId } : {})");
-    expect(header).toContain('if (transport.status === "connected" && transport.wsOpen)');
-    expect(header).toContain('copy("transportConnected")');
+    // The status chip moved into the single link surface (wave 1 track I1).
+    const linkState = read("src/components/inbox/inbox-link-state.ts");
+    expect(linkState).toContain('inputs.status === "connected"');
+    expect(linkState).toContain("inputs.wsOpen");
+    expect(read("src/components/inbox/inbox-link-surface.tsx")).toContain('copy("transportConnected")');
   });
 });
