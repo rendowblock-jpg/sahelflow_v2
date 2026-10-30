@@ -152,6 +152,7 @@ export default async function AccountingPage() {
             <StatCard
               label={t("accounting.netRevenue")}
               value={formatDZD(profitability.netRevenue, locale)}
+              tooltip={t("accounting.netRevenueDefinition")}
               icon={<TrendingUp />}
               href="/analytics"
               hrefLabel={t("nav.analytics")}
@@ -192,6 +193,18 @@ export default async function AccountingPage() {
             summary={`${t("accounting.netRevenue")}: ${formatDZD(chartTotals.revenue, locale)} · ${t("accounting.expenses")}: ${formatDZD(chartTotals.expenses, locale)}`}
             icon={<TrendingUp className="size-4" />}
             config={{}}
+            dataTable={{
+              label: `${t("accounting.netRevenue")}: ${formatDZD(chartTotals.revenue, locale)} · ${t("accounting.expenses")}: ${formatDZD(chartTotals.expenses, locale)}`,
+              caption: t("charts.tableOf", { title: t("accounting.revenueVsExpenses") }),
+              columns: [t("charts.colMonth"), t("accounting.revenue"), t("accounting.expenses")],
+              rows: monthlyData.map((entry) => [
+                entry.month,
+                formatDZD(entry.revenue, locale),
+                formatDZD(entry.expenses, locale),
+              ]),
+              showLabel: t("charts.showAsTable"),
+              hideLabel: t("charts.showAsChart"),
+            }}
           >
             <DualBarChart
               data={monthlyData}

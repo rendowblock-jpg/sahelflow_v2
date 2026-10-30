@@ -246,7 +246,7 @@ export default async function DashboardPage() {
                   locale,
                 )}`
           }
-          tooltip={t("dashboard.grossRevenueTooltip")}
+          tooltip={t("dashboard.revenueDefinition")}
           spark={revenueSpark}
           sparkFormat="currency"
           href="/analytics"
