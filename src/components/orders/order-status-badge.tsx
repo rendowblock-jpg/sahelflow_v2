@@ -17,6 +17,7 @@
  * and `allowAll={true}` — all statuses become selectable.
  */
 
+import { useOfflineWrites } from "@/components/orders/offline-write-gate";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -71,11 +72,16 @@ export function OrderStatusBadge({
   onStatusChange,
   allowAll = false,
   size = "default",
-  disabled = false,
+  disabled: disabledProp = false,
   showChevron = true,
 }: OrderStatusBadgeProps) {
   const router = useRouter();
   const { t } = useI18n();
+  const { offline, reason } = useOfflineWrites();
+  // Only a badge that saves is a write; the create-form picker (no orderId) makes no request of its own.
+  const writesOff = Boolean(orderId) && offline;
+  const disabled = disabledProp || writesOff;
+  const offlineTitle = writesOff ? reason : undefined;
   const [isPending, startTransition] = useTransition();
   // The optimistic pick is tied to the status it was made from: once the
   // server-rendered `status` moves on (refresh after this or any other
@@ -147,6 +153,7 @@ export function OrderStatusBadge({
           <button
             type="button"
             disabled={disabled || isPending}
+            title={offlineTitle}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-control border border-dashed px-2 py-0.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 transition-colors",
               size === "sm" && "text-xs px-1.5 py-0",
@@ -185,6 +192,7 @@ export function OrderStatusBadge({
         <button
           type="button"
           disabled={disabled || isPending}
+          title={offlineTitle}
           className={cn(
             "inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-xs font-medium transition-colors hover:bg-muted/50",
             style?.bg,

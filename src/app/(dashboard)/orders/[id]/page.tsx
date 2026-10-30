@@ -57,6 +57,7 @@ import {
   getTotalRefunded,
 } from "@/lib/data/refund-service";
 import { OrderTimeline } from "@/components/orders/order-timeline";
+import { DetailOfflineBanner, OfflineWriteGate } from "@/components/orders/offline-write-gate";
 import { RefundDialog } from "@/components/orders/refund-dialog";
 import { CanonicalCodActions } from "@/components/orders/canonical-cod-actions";
 import { CanonicalCourierActions } from "@/components/orders/canonical-courier-actions";
@@ -224,6 +225,7 @@ export default async function OrderDetailPage({
 
   return (
     <div className="app-content page-sections">
+      <DetailOfflineBanner />
       {/* R4-f: journal this visit for the command palette's Recent section. */}
       <RecentRecordTracker
         kind="order"
@@ -279,7 +281,9 @@ export default async function OrderDetailPage({
               </Button>
             ) : null}
             {!canonicalManual && (
-              <OrderDeleteButton orderId={order.id} orderStatus={order.status} />
+              <OfflineWriteGate>
+                <OrderDeleteButton orderId={order.id} orderStatus={order.status} />
+              </OfflineWriteGate>
             )}
           </div>
         </div>
@@ -332,7 +336,8 @@ export default async function OrderDetailPage({
                   {t("orderLifecycle.aux.heading")}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-5">
+              <CardContent>
+                <OfflineWriteGate className="m-0 min-w-0 space-y-5 border-0 p-0">
                 <CanonicalCourierActions orderId={order.id} />
                 {showCodAuthority ? (
                   <div className="border-t pt-5">
@@ -341,6 +346,7 @@ export default async function OrderDetailPage({
                 ) : null}
                 <CanonicalOrderRecoveryActions orderId={order.id} />
                 <CanonicalCustomerReturnActions orderId={order.id} />
+                </OfflineWriteGate>
               </CardContent>
             </Card>
           )}
@@ -348,6 +354,7 @@ export default async function OrderDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
+          <OfflineWriteGate className="m-0 min-w-0 border-0 p-0">
           <OrderEditPanel
             // A new version remounts the panel, so what it shows after a save is what is stored.
             key={`${order.id}:${order.version}`}
@@ -440,6 +447,7 @@ export default async function OrderDetailPage({
             </Card>
 
             {!canonicalManual && (
+              <OfflineWriteGate>
               <CreateShipment
                 orderId={order.id}
                 orderStatus={order.status}
@@ -456,6 +464,7 @@ export default async function OrderDetailPage({
                     : null
                 }
               />
+              </OfflineWriteGate>
             )}
 
             {order.notes && (
@@ -471,6 +480,7 @@ export default async function OrderDetailPage({
               </Card>
             )}
           </OrderEditPanel>
+          </OfflineWriteGate>
         </div>
 
         <div className="space-y-6">
@@ -636,6 +646,7 @@ export default async function OrderDetailPage({
                 </p>
               )}
               <div className="grid grid-cols-2 gap-2">
+                <OfflineWriteGate>
                 <OrderWhatsAppButton
                   phone={order.phone ?? customer?.phone ?? null}
                   customerName={customer?.name ?? null}
@@ -643,6 +654,7 @@ export default async function OrderDetailPage({
                   total={order.totalPrice}
                   className="w-full"
                 />
+                </OfflineWriteGate>
                 <DeliverySlipPrintButton slips={[slipData]} className="w-full" />
               </div>
             </CardContent>
@@ -776,12 +788,14 @@ export default async function OrderDetailPage({
                     </div>
                   )}
                   {totalRefunded < order.totalPrice && (
+                    <OfflineWriteGate>
                     <RefundDialog
                       orderId={order.id}
                       orderNumber={order.orderNumber}
                       maxAmount={order.totalPrice}
                       alreadyRefunded={totalRefunded}
                     />
+                    </OfflineWriteGate>
                   )}
                 </CardContent>
               </Card>

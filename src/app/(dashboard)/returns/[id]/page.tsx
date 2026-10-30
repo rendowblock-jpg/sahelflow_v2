@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Clock, FileText, Package, RotateCcw, Tag, User } from "lucide-react";
 
+import { DetailOfflineBanner } from "@/components/orders/offline-write-gate";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -62,6 +63,7 @@ export default async function ReturnDetailPage({ params }: PageProps) {
 
   return (
     <div className="app-content page-sections">
+      <DetailOfflineBanner />
       <Breadcrumbs
         items={[
           { label: t("nav.returns"), href: "/returns" },
