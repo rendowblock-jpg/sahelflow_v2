@@ -345,6 +345,7 @@ export default async function AnalyticsPage({
         <StatCard
           label={t("analytics.totalRevenue")}
           value={formatDZD(summary.totalRevenue, locale)}
+          tooltip={t("analytics.revenueDefinition")}
           icon={<TrendingUp />}
           trend={summary.revenueDelta ?? undefined}
           trendDirectionOnly={false}
@@ -413,6 +414,14 @@ export default async function AnalyticsPage({
           icon={<Activity />}
           accent="bg-emerald-500/10 dark:bg-emerald-500/15"
           config={revenueConfig}
+          dataTable={{
+            label: `${t("analytics.revenueTrend")}: ${formatDZD(summary.totalRevenue, locale)}`,
+            caption: t("charts.tableOf", { title: t("analytics.revenueTrend") }),
+            columns: [t("charts.colDate"), t("analytics.revenueLabel")],
+            rows: revenueData.map((point) => [point.label, formatDZD(point.revenue, locale)]),
+            showLabel: t("charts.showAsTable"),
+            hideLabel: t("charts.showAsChart"),
+          }}
         >
           <AreaTrendChart
             data={revenueData}

@@ -3,6 +3,7 @@ import { AlertTriangle, Package, Receipt, TrendingUp, Wallet } from "lucide-reac
 
 import { ExpenseFormDialog } from "@/components/accounting/expense-form-dialog";
 import { ExpenseRowActions } from "@/components/accounting/expense-row-actions";
+import { ExpensesDataTable } from "@/components/accounting/expenses-data-table";
 import { DualBarChart } from "@/components/charts/dual-bar-chart";
 import { ChartCard } from "@/components/charts/chart-primitives";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
@@ -152,6 +153,7 @@ export default async function AccountingPage() {
             <StatCard
               label={t("accounting.netRevenue")}
               value={formatDZD(profitability.netRevenue, locale)}
+              tooltip={t("accounting.netRevenueDefinition")}
               icon={<TrendingUp />}
               href="/analytics"
               hrefLabel={t("nav.analytics")}
@@ -192,6 +194,18 @@ export default async function AccountingPage() {
             summary={`${t("accounting.netRevenue")}: ${formatDZD(chartTotals.revenue, locale)} · ${t("accounting.expenses")}: ${formatDZD(chartTotals.expenses, locale)}`}
             icon={<TrendingUp className="size-4" />}
             config={{}}
+            dataTable={{
+              label: `${t("accounting.netRevenue")}: ${formatDZD(chartTotals.revenue, locale)} · ${t("accounting.expenses")}: ${formatDZD(chartTotals.expenses, locale)}`,
+              caption: t("charts.tableOf", { title: t("accounting.revenueVsExpenses") }),
+              columns: [t("charts.colMonth"), t("accounting.revenue"), t("accounting.expenses")],
+              rows: monthlyData.map((entry) => [
+                entry.month,
+                formatDZD(entry.revenue, locale),
+                formatDZD(entry.expenses, locale),
+              ]),
+              showLabel: t("charts.showAsTable"),
+              hideLabel: t("charts.showAsChart"),
+            }}
           >
             <DualBarChart
               data={monthlyData}
@@ -215,7 +229,21 @@ export default async function AccountingPage() {
               size="inline"
             />
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="md:hidden">
+              <ExpensesDataTable
+                layout="cards"
+                canUpdate={canUpdate}
+                rows={expenses.map((expense) => ({
+                  id: expense.id,
+                  category: expense.category as ExpenseCategory,
+                  amount: expense.amount,
+                  date: expense.date.toISOString(),
+                  notes: expense.notes,
+                }))}
+              />
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <Table scrollLabel={t("accounting.recentExpenses")}>
                 <TableHeader>
                   <TableRow>
@@ -255,6 +283,7 @@ export default async function AccountingPage() {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>

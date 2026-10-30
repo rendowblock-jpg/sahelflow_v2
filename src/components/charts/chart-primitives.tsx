@@ -8,6 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn, formatDZD, formatDZDShort, intlLocale, type SupportedLocale, numberFormatter } from "@/lib/utils";
 import type { ChartConfig } from "./chart-types";
 
@@ -102,6 +111,21 @@ export function buildChartConfig(
   return config;
 }
 
+/**
+ * Text alternative of a chart: `label` is one sentence with the headline
+ * number (the accessible name of the plot); the same numbers are available as
+ * a real table behind a toggle. Texts are passed in, so the card stays free of
+ * any i18n hook.
+ */
+export interface ChartDataTable {
+  label: string;
+  caption: string;
+  columns: readonly string[];
+  rows: ReadonlyArray<ReadonlyArray<string | number>>;
+  showLabel: string;
+  hideLabel: string;
+}
+
 interface ChartCardProps {
   title: React.ReactNode;
   description?: React.ReactNode;
@@ -115,6 +139,8 @@ interface ChartCardProps {
   /** Analytical-series metadata used for color/label authority. */
   config: ChartConfig;
   height?: ChartHeight;
+  /** Optional text alternative: role="img" label plus a "show as table" toggle. */
+  dataTable?: ChartDataTable;
   children: React.ReactNode;
 }
 
@@ -137,8 +163,11 @@ export function ChartCard({
   className,
   config,
   height = DEFAULT_CHART_HEIGHT,
+  dataTable,
   children,
 }: ChartCardProps) {
+  const plotId = React.useId();
+  const [asTable, setAsTable] = React.useState(false);
   const titleId = React.useId();
   const descriptionId = React.useId();
   const summaryId = React.useId();
@@ -204,6 +233,7 @@ export function ChartCard({
           role="group"
           aria-labelledby={titleId}
           aria-describedby={summaryId}
+          id={plotId}
           data-chart-plot="true"
           className="min-w-0"
           style={plotStyle}
@@ -211,8 +241,54 @@ export function ChartCard({
           <div id={summaryId} className="sr-only">
             {accessibleSummary}
           </div>
-          {children}
+          {dataTable ? (
+            asTable ? (
+              <Table scrollLabel={dataTable.caption} data-chart-table="true">
+                <TableCaption className="sr-only">{dataTable.caption}</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    {dataTable.columns.map((column) => (
+                      <TableHead key={column}>{column}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dataTable.rows.map((row, rowIndex) => (
+                    <TableRow key={rowIndex}>
+                      {row.map((cell, cellIndex) => (
+                        <TableCell
+                          key={cellIndex}
+                          className={cellIndex === 0 ? "font-medium" : "text-end tabular-nums"}
+                        >
+                          {cell}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div role="img" aria-label={dataTable.label}>
+                {children}
+              </div>
+            )
+          ) : (
+            children
+          )}
         </div>
+        {dataTable ? (
+          <div className="mt-2 flex justify-end">
+            <button
+              type="button"
+              aria-pressed={asTable}
+              aria-controls={plotId}
+              onClick={() => setAsTable((value) => !value)}
+              className="inline-flex min-h-8 items-center rounded-control px-2 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(pointer:coarse)]:min-h-11"
+            >
+              {asTable ? dataTable.hideLabel : dataTable.showLabel}
+            </button>
+          </div>
+        ) : null}
         {footer ? (
           <div className="mt-3 border-t border-border/70 pt-3 text-sm leading-5 text-muted-foreground">
             {footer}

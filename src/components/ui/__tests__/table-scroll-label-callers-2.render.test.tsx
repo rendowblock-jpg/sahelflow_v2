@@ -9,6 +9,7 @@
  */
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
+import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import AccountingPage from "@/app/(dashboard)/accounting/page";
@@ -145,7 +146,8 @@ describe("shared Table callers (second batch) name their scroll region", () => {
 
   it("accounting page: the recent expenses table", async () => {
     const ui = (await AccountingPage()) as ReactElement;
-    render(ui);
+    // The phone card list (DataTable) reads URL state, so it needs the adapter.
+    render(<NuqsTestingAdapter>{ui}</NuqsTestingAdapter>);
     expectNamedRegions(["accounting.recentExpenses"]);
   });
 
