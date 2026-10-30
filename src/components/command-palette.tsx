@@ -7,7 +7,7 @@ import { AlertTriangle, ListFilter, Loader2, Plus, Search, SearchX, X } from "lu
 
 import { useActorPermissions } from "@/components/layout/actor-access";
 import {
-  flattenNavigationItems,
+  flattenNavigationItemsInVisibleOrder,
   navigationItemAllowed,
 } from "@/components/layout/navigation";
 import {
@@ -160,7 +160,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const permissions = useActorPermissions();
   const navigation = React.useMemo(
     () =>
-      flattenNavigationItems()
+      flattenNavigationItemsInVisibleOrder()
         .filter((item) => navigationItemAllowed(item, permissions))
         .map((item) => ({
         ...item,

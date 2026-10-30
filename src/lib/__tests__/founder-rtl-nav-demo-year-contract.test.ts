@@ -51,7 +51,7 @@ describe("Founder RTL, navigation and annual demo contracts", () => {
 
     expect(navigation).toContain("sellerSidebarNavigationItems");
     expect(sidebar).toContain('data-seller-navigation="fixed-priority"');
-    expect(sidebar).toContain("sellerSidebarNavigationItems.map");
+    expect(sidebar).toContain("visibleSidebarNavigationGroups(permissions)");
     expect(sidebar).toContain("const selected = activeHref === item.href");
     expect(appearance).not.toContain("data-navigation-preferences");
     expect(appearance).not.toContain("navigationMoveUp");
