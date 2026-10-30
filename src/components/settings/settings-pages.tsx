@@ -40,6 +40,7 @@ import { DangerZonePanel } from "@/components/settings/danger-zone-panel";
 import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credentials-panel";
 import { DemoDataPanel } from "@/components/settings/demo-data-panel";
 import { LicensePanel } from "@/components/settings/license-panel";
+import { PhonePairingCard } from "@/components/settings/phone-pairing-card";
 import { MetaPixelPanel } from "@/components/settings/meta-pixel-panel";
 import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
 import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
@@ -199,7 +200,12 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     description: "pageLicenseDescription",
     keywords: "license licence ترخيص plan offre خطة activation",
     visible: (access) => access.license,
-    render: () => <LicensePanel />,
+    render: () => (
+      <>
+        <LicensePanel />
+        <PhonePairingCard />
+      </>
+    ),
   },
   {
     id: "commerce",

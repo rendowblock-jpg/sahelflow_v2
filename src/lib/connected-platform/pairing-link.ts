@@ -92,7 +92,8 @@ export function pairingCountdown(expiresAtMs: number, nowMs: number, ttlMs: numb
   if (!Number.isFinite(expiresAtMs) || !Number.isFinite(nowMs)) {
     return { remainingMs: 0, label: "00:00", expired: true, progress: 0 };
   }
-  const remainingMs = Math.max(0, expiresAtMs - nowMs);
+  // Never more than the ttl, even if the relay's clock runs ahead of ours.
+  const remainingMs = Math.min(ttlMs, Math.max(0, expiresAtMs - nowMs));
   const seconds = Math.ceil(remainingMs / 1000);
   const label = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
   return {

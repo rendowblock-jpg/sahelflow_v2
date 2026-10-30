@@ -107,6 +107,7 @@ describe("pairingCountdown with a fake clock", () => {
   it.each([
     [expires - PAIRING_TTL_MS, "10:00", false],
     [expires - PAIRING_TTL_MS + 1, "10:00", false],
+    [expires - 5 * PAIRING_TTL_MS, "10:00", false],
     [expires - 599_000, "09:59", false],
     [expires - 61_000, "01:01", false],
     [expires - 60_000, "01:00", false],
