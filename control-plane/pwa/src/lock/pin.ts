@@ -1,4 +1,5 @@
 import { base64Decode, base64Encode, timingSafeEqualBytes, utf8Encode } from "../../../../src/lib/connected-platform/web";
+import { toArrayBuffer } from "../../../../src/lib/connected-platform/web/bytes";
 import { isValidPin } from "./state";
 
 // The pin is a screen lock, not a vault: only a salted hash is stored, and the
@@ -8,8 +9,8 @@ export const DEFAULT_ITERATIONS = 210_000;
 type Options = Readonly<{ iterations?: number }>;
 
 async function derive(pin: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey("raw", utf8Encode(pin), "PBKDF2", false, ["deriveBits"]);
-  return new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, 256));
+  const key = await crypto.subtle.importKey("raw", toArrayBuffer(utf8Encode(pin)), "PBKDF2", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: toArrayBuffer(salt), iterations }, key, 256));
 }
 export async function createPinRecord(pin: string, options: Options = {}): Promise<PinRecord> {
   if (!isValidPin(pin)) throw new Error("invalid_pin");
