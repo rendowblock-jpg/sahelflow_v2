@@ -17,7 +17,8 @@ describe("Inbox Class-AAA operations desk contract", () => {
     expect(workspace).toContain('data-inbox-workspace="v2"');
     expect(workspace).toContain('data-inbox-version="v3"');
     expect(workspace).toContain('data-inbox-operations-desk="true"');
-    expect(header).toContain("WhatsAppIngressRecoveryDock");
+    // The recovery dock is a part of the single link surface (wave 1 track I1).
+    expect(read("src/components/inbox/inbox-link-surface.tsx")).toContain("WhatsAppIngressRecoveryDock");
     expect(header).toContain("canRetryIngress");
   });
 
@@ -228,8 +229,10 @@ describe("Inbox Class-AAA operations desk contract", () => {
 
   it("makes a degraded live transport retryable while the durable projection recovers", () => {
     const header = read("src/components/inbox/inbox-v3-header.tsx");
-    expect(header).toContain("onClick={onRetry}");
-    expect(header).toContain("onRetry={reconnect}");
+    // The retry click moved from the header chip to the link surface (wave 1 track I1).
+    const surface = read("src/components/inbox/inbox-link-surface.tsx");
+    expect(surface).toContain("onClick={() => reconnect()}");
+    expect(surface).toContain('link.kind === "connecting" && link.action === "reconnect"');
     expect(header).toContain("reconnect();\n              refreshQr();");
   });
 

@@ -132,8 +132,10 @@ describe("Inbox liveness (R4-a) contract", () => {
     expect(header).toContain("inbox.liveness.toastToggle");
     expect(header).toContain("inbox.liveness.soundToggle");
     // The existing header affordances stay intact.
-    expect(header).toContain("WhatsAppIngressRecoveryDock");
-    expect(header).toContain("ConnectionState");
+    // The recovery dock is a part of the single link surface (wave 1 track I1).
+    expect(read("src/components/inbox/inbox-link-surface.tsx")).toContain("WhatsAppIngressRecoveryDock");
+    // The old ConnectionState chip is now the single InboxLinkSurface (wave 1 track I1).
+    expect(header).toContain("InboxLinkSurface");
   });
 
   it("falls back to a last-active hint in the thread header (no sidecar presence)", () => {

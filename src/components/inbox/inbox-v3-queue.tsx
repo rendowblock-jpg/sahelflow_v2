@@ -52,7 +52,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -65,6 +64,18 @@ import { useInboxWorkspace } from "@/hooks/use-inbox-workspace";
 import { toast } from "@/lib/toast";
 import { formatInboxAge } from "@/lib/inbox-age";
 import { cn } from "@/lib/utils";
+import { SignalShape } from "@/components/inbox/inbox-signal-shape";
+import {
+  InboxQueueEmpty,
+  InboxQueueError,
+  InboxQueueLoading,
+} from "@/components/inbox/inbox-queue-states";
+import {
+  deriveListFooter,
+  rowChipFor,
+  tabCounts,
+} from "@/components/inbox/inbox-queue-model";
+import styles from "@/components/inbox/inbox-v3-workspace.module.css";
 import { matchesSearchQuery } from "@/lib/search/universal-search";
 
 const PRIMARY_QUEUES: DeskQueueFilter[] = ["all", "mine", "unread", "archived"];
@@ -150,16 +161,6 @@ function matchesDeskFilters(
   return workflowFilter === "all" || status === workflowFilter;
 }
 
-function statusLabel(
-  status: string,
-  t: ReturnType<typeof useInboxWorkspace>["t"],
-): string {
-  if (status === "pending") return t("inbox.status.pending");
-  if (status === "resolved") return t("inbox.status.resolved");
-  if (status === "snoozed") return t("inbox.status.snooze");
-  return t("inbox.status.open");
-}
-
 /** Media-family glyph for the list preview (📷/🎤/📎 convention). */
 function PreviewGlyph({ type }: { type?: string | null }) {
   switch (type) {
@@ -216,6 +217,7 @@ const ConversationRow = memo(function ConversationRow({
   onToggle,
   cursorActive = false,
   draftPreview,
+  mine,
 }: {
   chat: InboxChat;
   active: boolean;
@@ -236,9 +238,12 @@ const ConversationRow = memo(function ConversationRow({
   cursorActive?: boolean;
   /** Session draft preview text for this conversation, when present. */
   draftPreview?: string;
+  /** The conversation is assigned to the signed-in member. */
+  mine: boolean;
 }) {
   const status = chat.workflow.status ?? "open";
   const priority = chat.workflow.priority;
+  const chip = rowChipFor({ status, hasDraft: Boolean(draftPreview) });
 
   return (
     <button
@@ -253,53 +258,44 @@ const ConversationRow = memo(function ConversationRow({
       aria-current={!selectMode && active ? "true" : undefined}
       aria-pressed={selectMode ? checked : undefined}
       className={cn(
-        "group relative flex min-h-14 w-full items-start gap-2.5 overflow-hidden border-b border-border/55 px-3 py-2 text-start outline-none transition-colors last:border-b-0 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        selectMode && checked
-          ? "bg-primary-soft"
-          : active
-            ? "bg-primary-subtle"
-            : "bg-background hover:bg-muted/35",
-        cursorActive && !active && "bg-muted/45 ring-1 ring-inset ring-primary/40",
+        styles.row,
+        "group outline-none",
+        selectMode && checked && "bg-primary-soft",
+        cursorActive && !active && "ring-1 ring-inset ring-primary/40",
       )}
     >
-      {active && !selectMode ? (
-        <span className="absolute inset-block-2 start-0 w-0.5 rounded-full bg-primary" />
-      ) : null}
-
       {/* Select mode morphs the avatar slot in place (same size/position) into
-          a check target — WhatsApp-style. The row content never shifts. */}
+          a check target. The row content never shifts. */}
       {selectMode ? (
         <span
-          aria-hidden="true"
           className={cn(
-            "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+            "flex size-9 shrink-0 items-center justify-center rounded-full border",
             checked
               ? "border-primary bg-primary text-primary-foreground"
-              : "border-border/70 bg-background text-transparent group-hover:border-primary/60",
+              : "border-border bg-background text-transparent group-hover:border-primary/60",
           )}
         >
           <Check className="size-4" />
         </span>
       ) : (
-        <Avatar className="mt-0.5 size-9 shrink-0 border border-border/70 bg-background">
-          <AvatarFallback className="bg-primary-soft text-[13px] font-semibold text-primary">
-            {chat.name.charAt(0).toUpperCase() || (
-              <MessageSquareText className="size-4" />
-            )}
-          </AvatarFallback>
-        </Avatar>
+        <span className={styles.rowAvatar} aria-hidden="true">
+          {chat.name.charAt(0).toUpperCase() || (
+            <MessageSquareText className="size-4" />
+          )}
+        </span>
       )}
 
-      <span className="min-w-0 flex-1 overflow-hidden">
+      <span className="min-w-0 overflow-hidden">
         <span className="flex min-w-0 items-center gap-2 overflow-hidden">
           {/* Direction isolation without the seller-label rule: its physical
-              text-align clips the start of a long Latin name. The slot stays
-              on the avatar side; the name ellipsizes at its own end. */}
+              text-align clips the start of a long Latin name. The name
+              ellipsizes at its own end. */}
           <span className="flex min-w-0 flex-1 justify-start overflow-hidden">
             <bdi
               dir="auto"
               className={cn(
-                "block min-w-0 max-w-full truncate text-start text-[13px]",
+                styles.rowName,
+                "block min-w-0 max-w-full truncate text-start text-base leading-6",
                 chat.unread > 0 ? "font-semibold text-foreground" : "font-medium",
               )}
             >
@@ -320,26 +316,26 @@ const ConversationRow = memo(function ConversationRow({
           ) : null}
           <span
             className={cn(
-              "shrink-0 text-caption tabular-nums",
-              chat.unread > 0 ? "font-medium text-primary" : "text-muted-foreground",
+              "shrink-0 font-mono text-xs tabular-nums",
+              chat.unread > 0 ? "font-medium text-foreground" : "text-muted-foreground",
             )}
           >
             {relativeTime(chat.lastMessageAt, locale, relativeNow)}
           </span>
         </span>
 
-        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden">
+        <span className="flex min-w-0 items-center gap-1.5 overflow-hidden">
           {draftPreview ? (
             <span
               data-inbox-preview="true"
-              className="min-w-0 flex-1 truncate text-start text-xs font-medium leading-5 text-warning"
+              className="min-w-0 flex-1 truncate text-start text-sm font-medium leading-5 text-warning"
             >
               {copy("draftIndicator", { preview: draftPreview })}
             </span>
           ) : (
             <>
               {chat.lastMessageFromMe ? (
-                <span className="shrink-0 text-xs font-medium leading-5 text-foreground/80">
+                <span className="shrink-0 text-sm font-medium leading-5 text-foreground/80">
                   {copy("youPrefix")}:
                 </span>
               ) : null}
@@ -348,7 +344,7 @@ const ConversationRow = memo(function ConversationRow({
                 data-inbox-preview="true"
                 data-sf-seller-label="true"
                 className={cn(
-                  "block min-w-0 max-w-full flex-1 truncate text-xs leading-5",
+                  "block min-w-0 max-w-full flex-1 truncate text-sm leading-5",
                   chat.unread > 0
                     ? "font-medium text-foreground/90"
                     : "text-muted-foreground",
@@ -359,11 +355,25 @@ const ConversationRow = memo(function ConversationRow({
             </>
           )}
 
-          {status !== "open" ? (
-            <span className="shrink-0 text-caption leading-4 text-muted-foreground">
-              {statusLabel(status, t)}
+          {chat.unread > 0 ? (
+            <span className={cn(styles.unreadBadge, "shrink-0 font-mono")}>
+              <span aria-hidden="true">{chat.unread > 99 ? "99+" : chat.unread}</span>
+              <span className="sr-only">
+                {t("inbox.carnet.row.unreadCount", { count: chat.unread })}
+              </span>
             </span>
           ) : null}
+        </span>
+
+        <span className="flex min-w-0 items-center gap-2 overflow-hidden">
+          <span
+            data-inbox-row-chip=""
+            data-shape={chip.shape}
+            className={styles.chip}
+          >
+            <SignalShape shape={chip.shape} />
+            <span className="truncate">{t(chip.labelKey)}</span>
+          </span>
 
           {priority ? (
             <Flag
@@ -381,9 +391,12 @@ const ConversationRow = memo(function ConversationRow({
             />
           ) : null}
 
-          {chat.unread > 0 ? (
-            <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-caption font-bold leading-5 tabular-nums text-primary-foreground">
-              {chat.unread > 99 ? "99+" : chat.unread}
+          {chat.workflow.assigneeId ? (
+            <span
+              data-inbox-assignee={mine ? "mine" : "other"}
+              className="ms-auto shrink-0 text-xs leading-5 text-muted-foreground"
+            >
+              {t(mine ? "inbox.carnet.assignee.mine" : "inbox.carnet.assignee.other")}
             </span>
           ) : null}
         </span>
@@ -423,6 +436,7 @@ export function InboxV3Queue({
     markUnread,
     setConversationState,
     refreshChats,
+    dataDegraded,
     canUpdateConversation,
     localDrafts,
   } = workspace;
@@ -473,20 +487,10 @@ export function InboxV3Queue({
     return [...set].sort((a, b) => a.localeCompare(b)).slice(0, 30);
   }, [chats]);
 
-  const queueCounts = useMemo(() => {
-    // Ledger INB-12: archive-aware counts — the active queues never count
-    // archived rows; the archive pill counts only archived rows.
-    const active = chats.filter((chat) => !chat.archived);
-    return {
-      mine: currentMemberId
-        ? active.filter((chat) => chat.workflow.assigneeId === currentMemberId).length
-        : 0,
-      unassigned: active.filter((chat) => !chat.workflow.assigneeId).length,
-      unread: active.filter((chat) => chat.unread > 0).length,
-      all: active.length,
-      archived: chats.length - active.length,
-    };
-  }, [chats, currentMemberId]);
+  const queueCounts = useMemo(
+    () => tabCounts(chats, currentMemberId),
+    [chats, currentMemberId],
+  );
 
   const baseRows = useMemo(
     () =>
@@ -757,12 +761,26 @@ export function InboxV3Queue({
   const unreadEmpty =
     queueFilter === "unread" && queueCounts.unread === 0 && !normalizedQuery;
 
+  // The list request returns no total, so the footer only says what is loaded.
+  const footer = deriveListFooter({ loaded: chats.length, total: null });
+  const footerText =
+    footer.kind === "of-total"
+      ? t("inbox.carnet.footer.loadedOf", { count: footer.loaded, total: footer.total })
+      : footer.kind === "capped"
+        ? t("inbox.carnet.footer.capped", { count: footer.loaded })
+        : footer.kind === "loaded-only"
+          ? t("inbox.carnet.footer.loaded", { count: footer.loaded })
+          : "";
+
   return (
     <section
       id="inbox-conversation-queue"
       data-inbox-queue="true"
       aria-label={copy("workQueue")}
-      className="flex min-h-0 w-full flex-1 flex-col bg-background md:flex-none"
+      className={cn(
+        "flex min-h-0 w-full flex-1 flex-col md:flex-none",
+        styles.list,
+      )}
     >
       <div className="border-b border-border/60 px-3 py-2.5">
         {/* F-07 (Internal.33 installed campaign): the search field and the
@@ -1063,6 +1081,7 @@ export function InboxV3Queue({
                   aria-pressed={selected}
                   onClick={() => onQueueFilterChange(filter)}
                   className={cn(
+                    styles.tab,
                     "inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full px-2.5 text-caption font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
                     selected
                       ? "bg-background text-foreground shadow-sm"
@@ -1098,18 +1117,13 @@ export function InboxV3Queue({
       >
         <ScrollArea className="min-h-0 flex-1">
         {loadingChats ? (
-          <div
-            className="space-y-1 p-2"
-            role="status"
-            aria-label={t("common.loading")}
-          >
-            {[0, 1, 2, 3, 4].map((item) => (
-              <div
-                key={item}
-                className="h-14 animate-pulse rounded-surface bg-muted/45"
-              />
-            ))}
+          <div role="status" aria-label={t("common.loading")}>
+            <InboxQueueLoading />
           </div>
+        ) : chats.length === 0 && dataDegraded ? (
+          <InboxQueueError onRetry={() => void refreshChats()} />
+        ) : chats.length === 0 && !normalizedQuery ? (
+          <InboxQueueEmpty />
         ) : rows.length === 0 ? (
           <div className="flex min-h-56 items-center justify-center p-6 text-center">
             <div className="max-w-56">
@@ -1177,6 +1191,10 @@ export function InboxV3Queue({
                   onSelect={openChat}
                   onToggle={toggleSelected}
                   cursorActive={cursorConversationId === chat.conversationId}
+                  mine={
+                    Boolean(currentMemberId) &&
+                    chat.workflow.assigneeId === currentMemberId
+                  }
                   draftPreview={
                     localDrafts[chat.conversationId]
                       ? localDrafts[chat.conversationId]!.slice(0, 42)
@@ -1249,6 +1267,11 @@ export function InboxV3Queue({
           </div>
         )}
       </ScrollArea>
+        {!loadingChats && chats.length > 0 ? (
+          <p data-inbox-list-footer="" className={styles.footer}>
+            {footerText}
+          </p>
+        ) : null}
       </div>
 
       <AlertDialog
