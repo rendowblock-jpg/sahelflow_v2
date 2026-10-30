@@ -82,7 +82,7 @@ describe("sahelflow.com build", () => {
     for (const locale of SITE.locales) {
       for (const entry of model.MODULES) {
         for (const shot of [entry.shot, ...entry.gallery].filter((value): value is string => Boolean(value))) {
-          expect(existsSync(join(out, "img", "screens", `${shot}-${locale}.webp`)), `${shot}-${locale}`).toBe(true);
+          expect(existsSync(join(out, "img", "screens", `${shot}-${locale}-800.webp`)), `${shot}-${locale}`).toBe(true);
         }
       }
     }

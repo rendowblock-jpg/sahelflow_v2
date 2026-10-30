@@ -65,7 +65,7 @@ ${alternates}
 <link rel="icon" href="/img/mark.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/img/icon-180.png">
 ${FONT_PRELOAD[locale].map((f) => `<link rel="preload" href="/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>`).join("\n")}
-${preload ? `<link rel="preload" as="image" href="${preload}" fetchpriority="high">` : ""}
+${preload ? `<link rel="preload" as="image" href="${preload}" imagesrcset="${[480, 800, 1200].map((w) => `${preload.replace("-800.webp", `-${w}.webp`)} ${w}w`).join(", ")}" imagesizes="(min-width: 1180px) 560px, (min-width: 760px) 50vw, 92vw" fetchpriority="high">` : ""}
 <link rel="stylesheet" href="/assets/site.css?v=${SITE.asset}">
 <script>${HEAD_SCRIPT}</script>
 <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/${locale}/*"},"eagerness":"moderate"}]}</script>

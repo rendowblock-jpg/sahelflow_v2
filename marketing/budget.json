@@ -1,0 +1,12 @@
+{
+  "homePhoneHeightPx": {
+    "max": 6500,
+    "viewport": "360x732",
+    "measured": { "ar": 5504, "fr": 6319, "en": 5785 },
+    "measuredWith": "node marketing/scripts/measure.mjs (document scrollHeight, light and dark identical)",
+    "measuredOn": "2026-10-30"
+  },
+  "homeWithoutScreenshotsKb": { "max": 350, "measured": { "ar": 299.5, "fr": 163.7, "en": 162.8 } },
+  "firstLoadJsGzKb": { "max": 25, "measured": 2.9 },
+  "cssGzKb": { "max": 40, "measured": 12.4 }
+}

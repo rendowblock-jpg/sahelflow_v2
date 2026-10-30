@@ -121,3 +121,14 @@ html[dir=rtl] .page h2::after,html[dir=rtl] .end h2::after{transform-origin:100%
 .int-strip .bn{flex:1 1 100%}
 }
 html:not([lang=ar]) .sec p{line-height:1.65}
+
+/* Phone: trim the home to six and a half thousand pixels (budget.json). Text stays in the HTML; only the phone hides it. */
+@media (max-width:759px){
+.sec{padding-block:24px}
+.day p{display:none}
+.day li{padding-block:12px}
+.shot:nth-child(2){display:none}
+.int-strip li:nth-child(n+7){display:none}
+.incl li{padding-block:6px;font-size:16px;line-height:1.55}
+}
+html:not([lang=ar]) .sec p{line-height:1.55}

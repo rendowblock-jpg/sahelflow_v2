@@ -1,3 +1,4 @@
+import { screenImg } from "./ui.mjs";
 // Live, animated product UI drawn in HTML/CSS (no video, no canvas): the hero
 // stage, the five-step flow story, the assistant chat and the small bento
 // scenes. Every scene is decorative (aria-hidden) with its meaning carried by
@@ -171,7 +172,7 @@ export function screenStack(locale) {
     ${layers
       .map(
         ([shot, key], i) => `<figure class="stack-layer" style="--i:${i}">
-      <img src="/img/screens/${shot}-${locale}.webp" width="1600" height="1000" alt="" ${i === layers.length - 1 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">
+      ${screenImg(shot, locale, { alt: key ? t.modules[key].name : t.nav.platformOverview, lazy: i !== layers.length - 1, high: i === layers.length - 1 })}
       <figcaption class="stack-label">${esc(key ? t.modules[key].name : t.nav.platformOverview)}</figcaption>
     </figure>`,
       )
