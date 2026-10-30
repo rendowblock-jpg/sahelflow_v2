@@ -55,6 +55,7 @@ export function EmptyState({
 
   return (
     <StateSurface
+      kind="empty"
       icon={icon}
       title={title}
       description={description}
