@@ -17,7 +17,9 @@
  * Same transaction pattern as PATCH /api/delivery/[id]: the write is a claim
  * on the status that was checked (a concurrent change gives 409/no-op), and
  * one audit row (who, which action) is the last write in the same transaction.
- * Permission is the one POST /api/delivery/create requires. Canonical orders
+ * A row stuck in `creating` for 15 minutes (the process died mid-booking) takes
+ * the same two actions; the claim repeats the age test (updatedAt <= cutoff)
+ * inside the transaction. Permission is the one POST /api/delivery/create requires. Canonical orders
  * keep their own governed reconciliation on the order page.
  */
 import { NextRequest, NextResponse } from "next/server";
@@ -29,7 +31,7 @@ import { deliveryService } from "@/lib/data/delivery-service";
 import { orderService } from "@/lib/data/order-service";
 import { db, shopContext } from "@/lib/db";
 import {
-  RECONCILIATION_STATUS,
+  claimStatusFilter,
   normalizeCourierTracking,
   planReconcile,
   type ReconcileRequest,
@@ -108,7 +110,9 @@ export const POST = withErrorHandler(
       );
     }
 
-    const plan = planReconcile(existing, request);
+    // One reading of the clock per request: the plan and the claim agree.
+    const nowMs = Date.now();
+    const plan = planReconcile(existing, request, nowMs);
     if (plan.kind === "noop") {
       return NextResponse.json({ ok: true, noop: true, delivery: existing });
     }
@@ -121,7 +125,7 @@ export const POST = withErrorHandler(
             where: {
               id,
               deletedAt: null,
-              status: RECONCILIATION_STATUS,
+              ...claimStatusFilter(existing.status, nowMs),
               OR: [{ trackingNumber: null }, { trackingNumber: tracking }],
             },
             data: { trackingNumber: tracking, status: plan.next },
@@ -176,7 +180,7 @@ export const POST = withErrorHandler(
           where: {
             id,
             deletedAt: null,
-            status: RECONCILIATION_STATUS,
+            ...claimStatusFilter(existing.status, nowMs),
             trackingNumber: null,
           },
         });
@@ -209,7 +213,7 @@ export const POST = withErrorHandler(
       // Someone else (a second tab, the provider sync) got there first. If the
       // outcome is already the one asked for, say so instead of failing.
       const current = await deliveryService.getById(context, id);
-      if (planReconcile(current, request).kind === "noop") {
+      if (planReconcile(current, request, nowMs).kind === "noop") {
         return NextResponse.json({ ok: true, noop: true, delivery: current });
       }
       throw error;

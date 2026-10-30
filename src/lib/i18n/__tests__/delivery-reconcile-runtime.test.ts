@@ -25,6 +25,7 @@ const KEYS = [
   "deliveries.reconcile.canonicalHint",
   "deliveries.reconcile.openOrder",
   "deliveries.reconcile.decide",
+  "deliveries.reconcile.stuckCreating",
 ];
 
 describe("delivery reconcile copy", () => {
@@ -39,5 +40,13 @@ describe("delivery reconcile copy", () => {
     expect(getDeliveryReconcileRuntimeTranslation("en", "deliveries.reconcile.confirmBody")).toMatch(/second parcel and a second fee/);
     expect(getDeliveryReconcileRuntimeTranslation("fr", "deliveries.reconcile.confirmBody")).toMatch(/deuxième colis/);
     expect(getDeliveryReconcileRuntimeTranslation("ar", "deliveries.reconcile.confirmBody")).toMatch(/طرد ثان/);
+  });
+  it("the stuck-creating sentence names the 15 minutes in every language", () => {
+    for (const locale of ["ar", "fr", "en"] as const) {
+      expect(getDeliveryReconcileRuntimeTranslation(locale, "deliveries.reconcile.stuckCreating"), locale).toMatch(/15/);
+    }
+    expect(getDeliveryReconcileRuntimeTranslation("en", "deliveries.reconcile.stuckCreating")).toBe(
+      "This booking started more than 15 minutes ago and never finished.",
+    );
   });
 });

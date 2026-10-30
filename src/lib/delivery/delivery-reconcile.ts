@@ -19,6 +19,80 @@ import { SahelFlowError } from "@/types/errors";
 export const RECONCILIATION_STATUS = "reconciliation_required" as const;
 export const CREATING_STATUS = "creating" as const;
 
+/**
+ * A courier call has a 30 s timeout, so a row still in `creating` after 15
+ * minutes was left behind by a process that died mid-booking.
+ */
+export const STUCK_CREATING_AFTER_MINUTES = 15;
+export const STUCK_CREATING_AFTER_MS = STUCK_CREATING_AFTER_MINUTES * 60_000;
+
+/** What a date column looks like on the server (Date), in JSON (string) or as epoch ms. */
+export type ClockValue = number | string | Date | null | undefined;
+
+function readClock(value: ClockValue): number | null {
+  const ms =
+    value instanceof Date
+      ? value.getTime()
+      : typeof value === "string"
+        ? Date.parse(value)
+        : value;
+  return typeof ms === "number" && Number.isFinite(ms) && ms > 0 ? ms : null;
+}
+
+/**
+ * True only for a `creating` row last touched at least 15 minutes ago. A date
+ * that cannot be read, or lies in the future, is NOT stuck: never guess.
+ */
+export function isStuckCreating(
+  status: string,
+  updatedAt: ClockValue,
+  nowMs: number,
+): boolean {
+  if (status !== CREATING_STATUS) return false;
+  const touched = readClock(updatedAt);
+  if (touched === null || !Number.isFinite(nowMs)) return false;
+  const age = nowMs - touched;
+  return age >= 0 && age >= STUCK_CREATING_AFTER_MS;
+}
+
+/** isStuckCreating against the wall clock, for components that render a row. */
+export function isStuckCreatingNow(
+  status: string,
+  updatedAt: ClockValue,
+  clock: () => number = Date.now,
+): boolean {
+  return isStuckCreating(status, updatedAt, clock());
+}
+
+/** Does this row wait for the seller (timed out, or stuck in creating)? */
+export function needsSellerDecision(
+  status: string,
+  updatedAt: ClockValue,
+  nowMs: number,
+): boolean {
+  return (
+    status === RECONCILIATION_STATUS || isStuckCreating(status, updatedAt, nowMs)
+  );
+}
+
+export function stuckCreatingCutoff(nowMs: number): Date {
+  return new Date(nowMs - STUCK_CREATING_AFTER_MS);
+}
+
+/**
+ * The status part of a claim. The transaction repeats the stuck test in SQL
+ * (updatedAt <= cutoff) so a booking that finishes or is touched meanwhile is
+ * never reconciled underneath itself.
+ */
+export function claimStatusFilter(
+  status: string,
+  nowMs: number,
+): { status: string } | { status: string; updatedAt: { lte: Date } } {
+  return status === CREATING_STATUS
+    ? { status, updatedAt: { lte: stuckCreatingCutoff(nowMs) } }
+    : { status };
+}
+
 /** The ten real statuses plus the two legacy booking-limbo values. */
 export const DELIVERY_STATUS_SET: readonly string[] = [
   ...DELIVERY_STATUSES,
@@ -69,13 +143,18 @@ function isReconcileAction(value: string): value is ReconcileAction {
 
 /**
  * Where a stuck delivery goes for each seller decision. Only
- * `reconciliation_required` may use these; every other status is refused.
+ * `reconciliation_required` (and `creating` once it is stuck, which the caller
+ * proves with isStuckCreating) may use these; every other status is refused.
  */
 export function nextDeliveryStatus(
   current: string,
   action: ReconcileAction,
+  stuckCreating = false,
 ): ReconcileNext {
-  if (current !== RECONCILIATION_STATUS || !isReconcileAction(action)) {
+  const awaiting =
+    current === RECONCILIATION_STATUS ||
+    (current === CREATING_STATUS && stuckCreating);
+  if (!awaiting || !isReconcileAction(action)) {
     throw new DeliveryReconcileRefusedError(current, String(action));
   }
   return action === "courier-has-it" ? "created" : "released";
@@ -95,20 +174,31 @@ export function normalizeCourierTracking(raw: string): string | null {
  * has a tracking number can never be released (that would orphan a parcel).
  */
 export function planReconcile(
-  current: { status: string; trackingNumber: string | null },
+  current: {
+    status: string;
+    trackingNumber: string | null;
+    updatedAt?: ClockValue;
+  },
   request: ReconcileRequest,
+  nowMs?: number,
 ): ReconcilePlan {
   const saved = current.trackingNumber ? current.trackingNumber : null;
+  const stuck =
+    nowMs !== undefined && isStuckCreating(current.status, current.updatedAt, nowMs);
   if (request.action === "courier-has-it") {
     if (saved !== null && saved !== request.tracking) {
       throw new DeliveryTrackingMismatchError(current.status);
     }
-    if (current.status !== RECONCILIATION_STATUS && saved !== null) {
+    if (
+      current.status !== RECONCILIATION_STATUS &&
+      current.status !== CREATING_STATUS &&
+      saved !== null
+    ) {
       return { kind: "noop" };
     }
     return {
       kind: "apply",
-      next: nextDeliveryStatus(current.status, request.action),
+      next: nextDeliveryStatus(current.status, request.action, stuck),
     };
   }
   if (saved !== null) {
@@ -116,6 +206,6 @@ export function planReconcile(
   }
   return {
     kind: "apply",
-    next: nextDeliveryStatus(current.status, request.action),
+    next: nextDeliveryStatus(current.status, request.action, stuck),
   };
 }

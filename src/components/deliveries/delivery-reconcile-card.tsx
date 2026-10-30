@@ -11,6 +11,8 @@ interface DeliveryReconcileCardProps {
   orderId: string;
   canManage: boolean;
   canonical: boolean;
+  /** Stuck in `creating` (not timed out): say that the booking never finished. */
+  stuckCreating?: boolean;
 }
 
 /** The "Needs your decision" card on the delivery page. */
@@ -19,6 +21,7 @@ export function DeliveryReconcileCard({
   orderId,
   canManage,
   canonical,
+  stuckCreating = false,
 }: DeliveryReconcileCardProps) {
   const { t } = useI18n();
   return (
@@ -30,6 +33,9 @@ export function DeliveryReconcileCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {stuckCreating ? (
+          <p className="text-sm font-medium">{t("deliveries.reconcile.stuckCreating")}</p>
+        ) : null}
         <p className="text-sm text-muted-foreground">{t("deliveries.reconcile.description")}</p>
         {canManage ? (
           <DeliveryReconcileActions deliveryId={deliveryId} orderId={orderId} canonical={canonical} />

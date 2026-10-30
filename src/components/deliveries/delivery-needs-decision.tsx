@@ -16,13 +16,15 @@ interface DeliveryNeedsDecisionProps {
   deliveryId: string;
   orderId: string | null;
   canManage: boolean;
+  /** Stuck in `creating` (not timed out): the dialog says the booking never finished. */
+  stuckCreating?: boolean;
 }
 
 const BADGE =
   "inline-flex items-center gap-1.5 rounded-control border border-warning/25 bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning";
 
 /** The status cell of a delivery list row whose courier booking is stuck. */
-export function DeliveryNeedsDecision({ deliveryId, orderId, canManage }: DeliveryNeedsDecisionProps) {
+export function DeliveryNeedsDecision({ deliveryId, orderId, canManage, stuckCreating = false }: DeliveryNeedsDecisionProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const label = t("deliveries.reconcile.needsDecision");
@@ -52,6 +54,9 @@ export function DeliveryNeedsDecision({ deliveryId, orderId, canManage }: Delive
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("deliveries.reconcile.title")}</DialogTitle>
+            {stuckCreating ? (
+              <p className="text-sm font-medium">{t("deliveries.reconcile.stuckCreating")}</p>
+            ) : null}
             <DialogDescription>{t("deliveries.reconcile.description")}</DialogDescription>
           </DialogHeader>
           <DeliveryReconcileActions deliveryId={deliveryId} orderId={orderId} />
