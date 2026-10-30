@@ -1,4 +1,4 @@
-import { withSendGuardRefusal } from "@/lib/whatsapp/send-guard-http";
+import { guardNoticeField, withSendGuardRefusal } from "@/lib/whatsapp/send-guard-http";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -68,7 +68,7 @@ export const POST = withErrorHandler(withSendGuardRefusal(async (req: NextReques
       nextAttemptAt: null,
       errorCode: null,
       requiresDuplicateConfirmation: false,
-      ...(queued.guard ? { guard: queued.guard } : {}),
+      ...guardNoticeField(queued),
     },
     { status: 202 },
   );

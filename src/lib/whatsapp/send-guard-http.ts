@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { SEND_GUARD_REFUSED_CODE, WhatsAppSendGuardError } from "./send-guard";
+import type { SendGuardNotice } from "./send-guard-store";
 
 /** 429 body the inbox composer reads: code, reason and how long the chat is paused. */
 export function sendGuardRefusalResponse(error: WhatsAppSendGuardError): NextResponse {
@@ -30,4 +31,9 @@ export function withSendGuardRefusal<A extends unknown[]>(
       throw error;
     }
   };
+}
+
+/** The `guard` field of a 202 body: the warn/delay/hold notice of a queued send, or nothing. */
+export function guardNoticeField(queued: { guard?: SendGuardNotice }): { guard?: SendGuardNotice } {
+  return queued.guard ? { guard: queued.guard } : {};
 }

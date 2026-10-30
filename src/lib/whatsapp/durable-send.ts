@@ -28,6 +28,7 @@ import {
   writeWhatsAppMediaObject,
 } from "./media-object-store";
 import { normalizeWhatsAppJid } from "./types";
+import { decideHeldApproval, isHeldOutboxIntent } from "./held-send";
 import {
   SEND_GUARD_HOLD_ERROR_CODE,
   assessWhatsAppSend,
@@ -2868,26 +2869,28 @@ export async function retryWhatsAppEffect(
   );
 }
 
-/**
- * A person releases a send the guard held as a bulk pattern. The row goes back
- * to the normal queue and is attempted at once; only a signed-in person may do
- * this, never an automation.
- */
-export async function approveHeldWhatsAppEffect(
-  context: TrustedWhatsAppCommandContext,
-  effectKey: string,
-): Promise<WhatsAppEffectStatus> {
+const HOLD_APPROVED_AUDIT_ACTION = "whatsapp.message.hold_approved";
+
+function assertSignedInPerson(context: TrustedWhatsAppCommandContext): void {
   if (context.businessPrincipal.kind !== "authenticated-owner") {
     throw new SahelFlowError("Only a signed-in person can approve a held send", "FORBIDDEN", 403);
   }
-  const row = await readRow(context, effectKey);
-  const isHeld =
-    row.status === "failed" &&
-    row.outcomeState === "none" &&
-    row.lastErrorCode === SEND_GUARD_HOLD_ERROR_CODE;
-  if (!isHeld) {
-    throw new ConflictError("This WhatsApp send is not on hold");
-  }
+}
+
+/** The approval audit row is also the proof that a held send was released before. */
+async function hasHoldApproval(context: ServiceContext, intentId: string): Promise<boolean> {
+  const found = await context.prisma.auditLog.findFirst({
+    where: { action: HOLD_APPROVED_AUDIT_ACTION, entity: "outbox-intent", entityId: intentId },
+    select: { id: true },
+  });
+  return found !== null;
+}
+
+/** Held -> queued plus the audit row, in one transaction that claims by status. */
+async function releaseHeldRow(
+  context: TrustedWhatsAppCommandContext,
+  row: OutboxRow,
+): Promise<void> {
   await context.prisma.$transaction(async (tx) => {
     const released = await tx.outboxIntent.updateMany({
       where: {
@@ -2903,13 +2906,64 @@ export async function approveHeldWhatsAppEffect(
     }
     await tx.auditLog.create({
       data: {
-        action: "whatsapp.message.hold_approved",
+        action: HOLD_APPROVED_AUDIT_ACTION,
         entity: "outbox-intent",
         entityId: row.id,
         actor: context.businessPrincipal.auditActor,
-        metadata: JSON.stringify({ effectKey, effectType: row.effectType }),
+        metadata: JSON.stringify({ effectKey: row.effectKey, effectType: row.effectType }),
       },
     });
   });
+}
+
+/**
+ * A person releases a send the guard held as a bulk pattern. The row goes back
+ * to the normal queue and is attempted at once; only a signed-in person may do
+ * this, never an automation.
+ */
+export async function approveHeldWhatsAppEffect(
+  context: TrustedWhatsAppCommandContext,
+  effectKey: string,
+): Promise<WhatsAppEffectStatus> {
+  assertSignedInPerson(context);
+  const row = await readRow(context, effectKey);
+  if (!isHeldOutboxIntent(row)) {
+    throw new ConflictError("This WhatsApp send is not on hold");
+  }
+  await releaseHeldRow(context, row);
   return processWhatsAppEffect(context, effectKey);
+}
+
+export interface HeldApprovalResult {
+  effect: WhatsAppEffectStatus;
+  /** True when this press changed nothing because the send was released before. */
+  alreadyApproved: boolean;
+}
+
+/**
+ * The approve route's core: release a held send ONCE. It only queues the row
+ * (the route starts the attempt); a repeat or a parallel press is a no-op that
+ * reports the current state, so the message can never be sent twice.
+ */
+export async function approveHeldWhatsAppSend(
+  context: TrustedWhatsAppCommandContext,
+  effectKey: string,
+): Promise<HeldApprovalResult> {
+  assertSignedInPerson(context);
+  const row = await readRow(context, effectKey);
+  const approvedBefore = isHeldOutboxIntent(row) ? false : await hasHoldApproval(context, row.id);
+  const decision = decideHeldApproval(row, approvedBefore);
+  if (decision === "not_held") {
+    throw new ConflictError("This WhatsApp send is not on hold");
+  }
+  if (decision === "release") {
+    try {
+      await releaseHeldRow(context, row);
+      return { effect: await getWhatsAppEffectStatus(context, effectKey), alreadyApproved: false };
+    } catch (error) {
+      // Lost a race with a parallel press: only then is this a no-op.
+      if (!(error instanceof ConflictError) || !(await hasHoldApproval(context, row.id))) throw error;
+    }
+  }
+  return { effect: await getWhatsAppEffectStatus(context, effectKey), alreadyApproved: true };
 }

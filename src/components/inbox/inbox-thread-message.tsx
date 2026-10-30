@@ -28,6 +28,8 @@ import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { InboxLinkPreview, firstHttpUrlInText } from "@/components/inbox/link-preview-card";
 import { ActivityMessage } from "@/components/inbox/conversation-controls";
 import { MessageStatus } from "@/components/inbox/message-status";
+import { HeldSendNotice } from "@/components/inbox/held-send-notice";
+import { heldSendView } from "@/lib/whatsapp/held-send";
 
 /** A succeeded outbox already reached WhatsApp. A late error receipt must not offer a resend. */
 export function outboxAllowsResend(
@@ -47,6 +49,8 @@ export function bubbleDeliveryStatus(
   if (message.outboxState === "succeeded" && message.deliveryStatus === "failed") {
     return "sent";
   }
+  // A held send has NOT gone out: never show the sending clock or a sent tick.
+  if (message.outboxState === "held") return "failed";
   return message.deliveryStatus ?? "sent";
 }
 import { Button } from "@/components/ui/button";
@@ -247,6 +251,8 @@ export const MessageBubble = memo(function MessageBubble({
   candidate,
   onChooseCandidate,
   onRetry,
+  onApproveHeld,
+  canApproveHeld = false,
   onReply,
   canInteract,
   upload,
@@ -265,6 +271,9 @@ export const MessageBubble = memo(function MessageBubble({
   candidate: boolean;
   onChooseCandidate: (messageId: string) => void;
   onRetry: (message: InboxMessage) => void;
+  /** Owner-only release of a send the guard held. */
+  onApproveHeld?: (message: InboxMessage) => void;
+  canApproveHeld?: boolean;
   onReply: (message: InboxMessage) => void;
   canInteract: boolean;
   upload?: { progress: number; cancellable: boolean };
@@ -561,6 +570,14 @@ export const MessageBubble = memo(function MessageBubble({
             </button>
           ) : null}
         </div>
+      ) : null}
+
+      {heldSendView(message, canApproveHeld && Boolean(onApproveHeld)) !== "none" ? (
+        <HeldSendNotice
+          canApprove={heldSendView(message, canApproveHeld && Boolean(onApproveHeld)) === "owner_can_release"}
+          onApprove={() => onApproveHeld?.(message)}
+          t={t}
+        />
       ) : null}
 
       {outboxAllowsResend(message) ? (
