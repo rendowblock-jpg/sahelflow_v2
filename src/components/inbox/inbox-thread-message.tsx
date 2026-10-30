@@ -28,6 +28,9 @@ import type { InboxMessage } from "@/components/inbox/inbox-workspace-types";
 import { InboxLinkPreview, firstHttpUrlInText } from "@/components/inbox/link-preview-card";
 import { ActivityMessage } from "@/components/inbox/conversation-controls";
 import { MessageStatus } from "@/components/inbox/message-status";
+import { BUBBLE_FLOW, bubbleSide, messageVisual } from "@/components/inbox/inbox-message-visual";
+import { SignalShape } from "@/components/inbox/inbox-signal-shape";
+import styles from "@/components/inbox/inbox-v3-workspace.module.css";
 
 /** A succeeded outbox already reached WhatsApp. A late error receipt must not offer a resend. */
 export function outboxAllowsResend(
@@ -252,7 +255,7 @@ export const MessageBubble = memo(function MessageBubble({
   upload,
   onCancelUpload,
   groupStart = true,
-  groupEnd = true,
+  groupEnd: _groupEnd = true,
   highlighted = false,
   quotedJumpable = false,
   onJumpToQuoted,
@@ -295,6 +298,12 @@ export const MessageBubble = memo(function MessageBubble({
   );
   const canExtract = inbound && message.body.trim().length > 10;
   const hasActions = Boolean(message.body.trim() || message.attachment?.fileName);
+  // Which side each party sits on is one constant (inbox-message-visual.ts).
+  const side = bubbleSide(BUBBLE_FLOW, inbound);
+  const visual = messageVisual({
+    status: inbound ? undefined : bubbleDeliveryStatus(message),
+    canResend: outboxAllowsResend(message),
+  });
 
   // Chat geometry is direction-independent on purpose: inbound bubbles sit on
   // the physical left and outbound on the physical right in every locale —
@@ -328,18 +337,20 @@ export const MessageBubble = memo(function MessageBubble({
           "rounded-surface ring-2 ring-primary/60 ring-offset-2 ring-offset-background transition-shadow",
       )}
       dir="ltr"
+      data-bubble-flow={BUBBLE_FLOW}
     >
-      <div className={cn("flex", inbound ? "justify-start" : "justify-end")}>
+      <div className={cn("flex", side === "left" ? "justify-start" : "justify-end")}>
         <div
           className={cn(
             "max-w-[min(46rem,75%)] rounded-[1.15rem] border px-3.5 py-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
             inbound
-              ? "border-border/70 bg-background text-foreground"
-              : "border-primary/20 bg-primary-soft text-foreground",
+              ? "border-border/70 bg-card text-foreground"
+              : cn("border-primary/20 bg-primary-soft text-foreground", styles.slipOut),
+            visual.edge === "destructive" && "border-destructive",
             // Tail corner sits on the group's last bubble; continuation
             // bubbles soften their connecting corners (WhatsApp grouping).
-            inbound && groupEnd && "rounded-es-control",
-            !inbound && groupEnd && "rounded-ee-control",
+            // One squared corner on the outer side of every slip.
+            side === "left" ? "rounded-es-[2px]" : "rounded-ee-[2px]",
             inbound && !groupStart && "rounded-ss-control",
             !inbound && !groupStart && "rounded-se-control",
           )}
@@ -563,7 +574,37 @@ export const MessageBubble = memo(function MessageBubble({
         </div>
       ) : null}
 
-      {outboxAllowsResend(message) ? (
+      {visual.showNotSent ? (
+        <div
+          data-failed-send=""
+          className={cn(
+            "flex flex-wrap items-center gap-2 px-1 text-body-sm text-destructive",
+            side === "left" ? "justify-start" : "justify-end",
+          )}
+        >
+          <SignalShape shape="triangle" />
+          <span className="font-medium">{t("inbox.thread.failed.label")}</span>
+          {message.outboxErrorCode ? (
+            <span className="text-caption text-muted-foreground" title={message.outboxErrorCode}>
+              {whatsappSendFailureCopy(t, { errorCode: message.outboxErrorCode })}
+            </span>
+          ) : null}
+          {visual.showRetry ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onRetry(message)}
+              className="min-h-9 border-destructive/60 [@media(pointer:coarse)]:min-h-11"
+            >
+              <RefreshCw className="size-3.5" aria-hidden="true" />
+              {t("inbox.retry")}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {outboxAllowsResend(message) && !visual.showNotSent ? (
         <div className="flex flex-col items-end gap-1">
           <Button
             type="button"

@@ -13,6 +13,7 @@ import { getDeliveryReconcileRuntimeTranslation } from "@/lib/i18n/delivery-reco
 import { getEntityDetailRuntimeTranslation } from "@/lib/i18n/entity-detail-runtime";
 import { getInboxCarnetRuntimeTranslation } from "@/lib/i18n/inbox-carnet-runtime";
 import { getInboxLivenessRuntimeTranslation } from "@/lib/i18n/inbox-liveness-runtime";
+import { getInboxThreadCarnetRuntimeTranslation } from "@/lib/i18n/inbox-thread-carnet-runtime";
 import { getInboxOrderStatusRuntimeTranslation } from "@/lib/i18n/inbox-order-status-runtime";
 import { getInboxVoiceNoteRuntimeTranslation } from "@/lib/i18n/inbox-voice-note-runtime";
 import { getLicenseLockoutRuntimeTranslation } from "@/lib/i18n/license-lockout-runtime";
@@ -162,6 +163,7 @@ export function getRuntimeTranslation(
     getEntityDetailRuntimeTranslation(locale, key) ??
     getInboxCarnetRuntimeTranslation(locale, key) ??
     getInboxLivenessRuntimeTranslation(locale, key) ??
+    getInboxThreadCarnetRuntimeTranslation(locale, key) ??
     getInboxOrderStatusRuntimeTranslation(locale, key) ??
     getInboxVoiceNoteRuntimeTranslation(locale, key) ??
     getLicenseLockoutRuntimeTranslation(locale, key) ??
