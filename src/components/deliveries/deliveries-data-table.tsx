@@ -7,6 +7,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import { getBrandIcon } from "@/components/brand/brand-icons";
 import { DataTable } from "@/components/data-table/data-table";
+import { DeliveryNeedsDecision } from "@/components/deliveries/delivery-needs-decision";
 import { DeliveryRowActions } from "@/components/deliveries/delivery-row-actions";
 import { DeliveryStatusBadge } from "@/components/deliveries/delivery-status-badge";
 import { TechnicalValue } from "@/components/i18n/technical-value";
@@ -150,14 +151,21 @@ export function DeliveriesDataTable({
     {
       accessorKey: "status",
       header: () => t("deliveries.table.status"),
-      cell: ({ row }) => (
-        <DeliveryStatusBadge
-          deliveryId={row.original.id}
-          status={row.original.status}
-          size="sm"
-          disabled={!access.manage}
-        />
-      ),
+      cell: ({ row }) =>
+        row.original.status === "reconciliation_required" ? (
+          <DeliveryNeedsDecision
+            deliveryId={row.original.id}
+            orderId={row.original.order?.id ?? null}
+            canManage={access.manage}
+          />
+        ) : (
+          <DeliveryStatusBadge
+            deliveryId={row.original.id}
+            status={row.original.status}
+            size="sm"
+            disabled={!access.manage}
+          />
+        ),
       meta: { align: "center" },
       enableSorting: false,
     },
