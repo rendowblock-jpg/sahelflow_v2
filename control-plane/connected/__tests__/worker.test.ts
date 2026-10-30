@@ -9,7 +9,7 @@ import { createTestD1 } from "./d1-sqlite";
 const MINUTE = 60_000;
 const JWK = JSON.stringify({ kty: "RSA", n: "x".repeat(64), e: "AQAB" });
 const KEY_B64 = Buffer.alloc(32, 7).toString("base64");
-const PAIRING = (world: World, created: { body: Record<string, string> }) => ({
+const PAIRING = (_world: World, created: { body: Record<string, string> }) => ({
   pairingId: created.body.pairingId ?? "",
   pairingToken: created.body.pairingToken ?? "",
 });
