@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  AlertTriangle,
   DatabaseBackup,
   KeyRound,
   Loader2,
@@ -40,7 +41,9 @@ import { toast } from "@/lib/toast";
 import {
   COPY,
   errorMessage,
+  formatBackupAge,
   formatSize,
+  STALE_BACKUP_AFTER_MS,
   type SupportedLocale,
 } from "./backup-restore-copy";
 import { IconTile } from "@/components/system";
@@ -125,6 +128,8 @@ export function BackupRestorePanel({
   const [creatingKit, setCreatingKit] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [automaticAt, setAutomaticAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const [restoreTarget, setRestoreTarget] = useState<BackupEntry | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BackupEntry | null>(null);
   const [recoveryCode, setRecoveryCode] = useState("");
@@ -138,6 +143,12 @@ export function BackupRestorePanel({
 
   useEffect(() => {
     if (!desktop || !canRead) return;
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, [desktop, canRead]);
+
+  useEffect(() => {
+    if (!desktop || !canRead) return;
     let cancelled = false;
     async function load() {
       setLoading(true);
@@ -146,10 +157,16 @@ export function BackupRestorePanel({
         const response = await fetch("/api/backup/list", { cache: "no-store" });
         const payload = (await response.json().catch(() => ({}))) as {
           backups?: BackupEntry[];
+          automatic?: { lastBackupAtUnixMs?: number | null };
           error?: string;
         };
         if (!response.ok) throw new Error(payload.error ?? copy.loadFailed);
-        if (!cancelled) setBackups(payload.backups ?? []);
+        if (!cancelled) {
+          setBackups(payload.backups ?? []);
+          const automatic = payload.automatic?.lastBackupAtUnixMs;
+          setAutomaticAt(typeof automatic === "number" ? automatic : null);
+          setNow(Date.now());
+        }
       } catch (error) {
         if (!cancelled) {
           const message = errorMessage(error, copy.loadFailed);
@@ -298,6 +315,20 @@ export function BackupRestorePanel({
   }
 
   const dateLocale = intlLocale(resolvedLocale);
+  const newestBackupAt = backups.reduce<number | null>(
+    (newest, entry) =>
+      newest === null || entry.createdAtUnixMs > newest ? entry.createdAtUnixMs : newest,
+    null,
+  );
+  const backupIsStale =
+    newestBackupAt !== null && now - newestBackupAt > STALE_BACKUP_AFTER_MS;
+  const automaticLine =
+    automaticAt === null
+      ? copy.lastAutomaticNone
+      : copy.lastAutomatic.replace(
+          "{age}",
+          formatBackupAge(now - automaticAt, dateLocale, copy.ageJustNow),
+        );
 
   return (
     <div dir={resolvedLocale === "ar" ? "rtl" : "ltr"}>
@@ -346,6 +377,32 @@ export function BackupRestorePanel({
                       )}
                       {creatingKit ? copy.creatingKit : copy.createKit}
                     </Button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {canRead && !loading && !loadError ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">{automaticLine}</p>
+                  {backupIsStale && newestBackupAt !== null ? (
+                    <div
+                      role="alert"
+                      className="flex items-start gap-3 rounded-surface border border-warning/40 bg-warning-subtle p-3 text-sm"
+                    >
+                      <AlertTriangle
+                        className="mt-0.5 size-4 shrink-0 text-warning"
+                        aria-hidden="true"
+                      />
+                      <div className="space-y-1">
+                        <p className="font-medium">{copy.staleTitle}</p>
+                        <p className="text-muted-foreground">
+                          {copy.staleBody.replace(
+                            "{age}",
+                            formatBackupAge(now - newestBackupAt, dateLocale, copy.ageJustNow),
+                          )}
+                        </p>
+                      </div>
+                    </div>
                   ) : null}
                 </div>
               ) : null}

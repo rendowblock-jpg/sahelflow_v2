@@ -153,7 +153,7 @@ describe("GET /api/backup/list: merging the two sources", () => {
     const response = await GET();
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(await response.json()).toEqual({ backups: [], cloudState: "available" });
+    expect(await response.json()).toEqual({ backups: [], cloudState: "available", automatic: { lastBackupAtUnixMs: null } });
   });
 
   it("asks the cloud source about this shop, with the route's own database handle and shop context", async () => {
@@ -167,13 +167,13 @@ describe("GET /api/backup/list: merging the two sources", () => {
   it("lists the local backups as they are when the shop is not enrolled (the cloud source answers an empty list)", async () => {
     h.listBackups.mockResolvedValue([LOCAL_NEW, LOCAL_OLD]);
     const body = await (await GET()).json();
-    expect(body).toEqual({ backups: [LOCAL_NEW, LOCAL_OLD], cloudState: "available" });
+    expect(body).toEqual({ backups: [LOCAL_NEW, LOCAL_OLD], cloudState: "available", automatic: { lastBackupAtUnixMs: null } });
   });
 
   it("lists the cloud backups when there are no local ones", async () => {
     h.listCloud.mockResolvedValue([CLOUD_MID]);
     const body = await (await GET()).json();
-    expect(body).toEqual({ backups: [CLOUD_MID], cloudState: "available" });
+    expect(body).toEqual({ backups: [CLOUD_MID], cloudState: "available", automatic: { lastBackupAtUnixMs: null } });
   });
 
   it("puts the newest backup first whichever source it came from", async () => {
@@ -254,14 +254,14 @@ describe("GET /api/backup/list: when a source fails", () => {
     const response = await GET();
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    expect(await response.json()).toEqual({ backups: [LOCAL_NEW, LOCAL_OLD], cloudState: "unavailable" });
+    expect(await response.json()).toEqual({ backups: [LOCAL_NEW, LOCAL_OLD], cloudState: "unavailable", automatic: { lastBackupAtUnixMs: null } });
   });
 
   it("answers an empty list and `unavailable` when the cloud fails and there is nothing local", async () => {
     h.listCloud.mockRejectedValue(new Error("connected platform is down"));
     const response = await GET();
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ backups: [], cloudState: "unavailable" });
+    expect(await response.json()).toEqual({ backups: [], cloudState: "unavailable", automatic: { lastBackupAtUnixMs: null } });
   });
 
   it("treats a refusal from the cloud (a SahelFlowError) like any other cloud failure, not as the caller's refusal", async () => {
@@ -269,7 +269,7 @@ describe("GET /api/backup/list: when a source fails", () => {
     h.listCloud.mockRejectedValue(new SahelFlowError("Not entitled", "LICENSE_REQUIRED", 402));
     const response = await GET();
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ backups: [LOCAL_OLD], cloudState: "unavailable" });
+    expect(await response.json()).toEqual({ backups: [LOCAL_OLD], cloudState: "unavailable", automatic: { lastBackupAtUnixMs: null } });
   });
 
   it("never shows the text of the cloud failure to the browser", async () => {

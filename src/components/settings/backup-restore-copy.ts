@@ -2,6 +2,12 @@ export type SupportedLocale = "ar" | "fr" | "en";
 
 export const COPY = {
   en: {
+    lastAutomatic: "Last automatic backup: {age}",
+    lastAutomaticNone: "Last automatic backup: none yet",
+    ageJustNow: "just now",
+    staleTitle: "Your last backup is more than 3 days old",
+    staleBody:
+      "The newest backup was made {age}. If this computer's disk fails, everything since then could be lost.",
     title: "Protected backup and recovery",
     description:
       "Create one verified encrypted snapshot of every registered shop and keep an independent recovery kit for replacement-install recovery.",
@@ -55,6 +61,12 @@ export const COPY = {
     actionFailed: "The protected operation failed safely.",
   },
   fr: {
+    lastAutomatic: "Dernière sauvegarde automatique : {age}",
+    lastAutomaticNone: "Dernière sauvegarde automatique : aucune pour l'instant",
+    ageJustNow: "à l'instant",
+    staleTitle: "Votre dernière sauvegarde date de plus de 3 jours",
+    staleBody:
+      "La sauvegarde la plus récente a été faite {age}. Si le disque de cet ordinateur tombe en panne, tout ce qui a suivi pourrait être perdu.",
     title: "Sauvegarde et récupération protégées",
     description:
       "Créez un instantané chiffré et vérifié de toutes les boutiques, avec un kit indépendant pour une réinstallation de remplacement.",
@@ -108,6 +120,12 @@ export const COPY = {
     actionFailed: "L’opération protégée a échoué sans modifier les données.",
   },
   ar: {
+    lastAutomatic: "آخر نسخة احتياطية تلقائية: {age}",
+    lastAutomaticNone: "آخر نسخة احتياطية تلقائية: لا توجد بعد",
+    ageJustNow: "الآن",
+    staleTitle: "آخر نسخة احتياطية مضى عليها أكثر من 3 أيام",
+    staleBody:
+      "أُنشئت أحدث نسخة احتياطية {age}. إذا تعطّل قرص هذا الحاسوب فقد يضيع كل ما سُجّل بعدها.",
     title: "النسخ الاحتياطي والاسترجاع المحمي",
     description:
       "أنشئ نسخة مشفرة ومتحققًا منها لكل المتاجر، مع حزمة استرجاع مستقلة لاستخدامها عند تثبيت بديل.",
@@ -184,4 +202,21 @@ export function errorMessage(error: unknown, fallback: string): string {
     if (typeof message === "string" && message.trim()) return message;
   }
   return fallback;
+}
+
+const STALE_MINUTE_MS = 60_000;
+const STALE_HOUR_MS = 60 * STALE_MINUTE_MS;
+const STALE_DAY_MS = 24 * STALE_HOUR_MS;
+
+/** A backup older than this makes the panel show its warning. */
+export const STALE_BACKUP_AFTER_MS = 72 * STALE_HOUR_MS;
+
+/** "3 hours ago" in the seller's language: minutes, then hours up to 47, then days. */
+export function formatBackupAge(deltaMs: number, locale: string, justNow: string): string {
+  const delta = Number.isFinite(deltaMs) ? Math.max(0, deltaMs) : 0;
+  if (delta < STALE_MINUTE_MS) return justNow;
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "always", style: "long" });
+  if (delta < STALE_HOUR_MS) return formatter.format(-Math.floor(delta / STALE_MINUTE_MS), "minute");
+  if (delta < 48 * STALE_HOUR_MS) return formatter.format(-Math.floor(delta / STALE_HOUR_MS), "hour");
+  return formatter.format(-Math.floor(delta / STALE_DAY_MS), "day");
 }
