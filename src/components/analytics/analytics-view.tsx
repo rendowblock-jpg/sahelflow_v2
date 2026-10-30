@@ -6,6 +6,7 @@ import { CourierPerformanceSection } from "@/components/analytics/courier-perfor
 import { KpiDrillDownLink } from "@/components/analytics/kpi-drill-down-link";
 import { AreaTrendChart } from "@/components/charts/area-trend-chart";
 import { ChartCard, ChartEmpty } from "@/components/charts/chart-primitives";
+import { buildChartTable } from "@/components/charts/chart-table";
 import { ComposedTrendChart } from "@/components/charts/composed-trend-chart";
 import { OutcomeProgress, RankedMetricList, SegmentedBreakdown, type BreakdownDatum, type RankedMetricDatum } from "@/components/charts/decision-visualizations";
 import { LineTrendChart } from "@/components/charts/line-trend-chart";
@@ -382,6 +383,13 @@ export function AnalyticsView({
           icon={<BarChart3 />}
           accent="bg-teal-500/10 dark:bg-teal-500/15"
           config={{}}
+          dataTable={buildChartTable(
+            t,
+            t("analytics.ordersByStatus"),
+            `${integerFormatter.format(totalOrders)} ${t("analytics.ordersLabel")}`,
+            [t("charts.colStatus"), t("analytics.ordersLabel")],
+            statusBreakdownData.map((datum) => [String(datum.label), integerFormatter.format(datum.value)]),
+          )}
         >
           {totalOrders > 0 ? (
             <SegmentedBreakdown
@@ -458,6 +466,13 @@ export function AnalyticsView({
           icon={<BarChart3 />}
           accent="bg-teal-500/10 dark:bg-teal-500/15"
           config={{}}
+          dataTable={buildChartTable(
+            t,
+            t("analytics.topProductsByRevenue"),
+            topProductsData[0] ? `${String(topProductsData[0].label)} · ${String(topProductsData[0].displayValue)}` : "",
+            [t("charts.colProduct"), t("analytics.revenueLabel")],
+            topProductsData.map((datum) => [String(datum.label), String(datum.displayValue)]),
+          )}
         >
           {topProductsData.length > 0 ? (
             <RankedMetricList data={topProductsData} />
@@ -476,6 +491,13 @@ export function AnalyticsView({
           icon={<MapPin />}
           accent="bg-amber-500/10 dark:bg-amber-500/15"
           config={{}}
+          dataTable={buildChartTable(
+            t,
+            t("analytics.topWilayas"),
+            topWilayasData[0] ? `${String(topWilayasData[0].label)} · ${String(topWilayasData[0].displayValue)}` : "",
+            [t("charts.colWilaya"), t("analytics.ordersLabel")],
+            topWilayasData.map((datum) => [String(datum.label), String(datum.displayValue)]),
+          )}
         >
           {topWilayasData.length > 0 ? (
             <RankedMetricList data={topWilayasData} />
@@ -492,6 +514,13 @@ export function AnalyticsView({
           icon={<Clock />}
           accent="bg-violet-500/10 dark:bg-violet-500/15"
           config={hourConfig}
+          dataTable={buildChartTable(
+            t,
+            t("analytics.salesByHour"),
+            `${integerFormatter.format(hourData.reduce((sum, bucket) => sum + bucket.orders, 0))} ${t("analytics.ordersLabel")}`,
+            [t("charts.colHour"), t("analytics.ordersLabel"), t("analytics.revenueLabel")],
+            hourData.map((bucket) => [bucket.hour, integerFormatter.format(bucket.orders), formatDZD(bucket.revenue, locale)]),
+          )}
         >
           <ComposedTrendChart
             data={hourData}
@@ -526,6 +555,13 @@ export function AnalyticsView({
           icon={<TrendingUp />}
           accent="bg-violet-500/10 dark:bg-violet-500/15"
           config={aovConfig}
+          dataTable={buildChartTable(
+            t,
+            t("analytics.aovTrend"),
+            formatDZD(summary.avgOrderValue, locale),
+            [t("charts.colDate"), t("analytics.avgOrderValue")],
+            aovData.map((point) => [point.label, formatDZD(point.aov, locale)]),
+          )}
         >
           <LineTrendChart
             data={aovData}
@@ -553,6 +589,13 @@ export function AnalyticsView({
           icon={<Users />}
           accent="bg-teal-500/10 dark:bg-teal-500/15"
           config={growthConfig}
+          dataTable={buildChartTable(
+            t,
+            t("analytics.customerGrowth"),
+            growthData.at(-1) ? integerFormatter.format(growthData.at(-1)!.cumulative) : "",
+            [t("charts.colDate"), t("analytics.cumulative"), t("analytics.newCustomers")],
+            growthData.map((point) => [point.label, integerFormatter.format(point.cumulative), integerFormatter.format(point.newCustomers)]),
+          )}
         >
           <AreaTrendChart
             data={growthData}
@@ -588,6 +631,13 @@ export function AnalyticsView({
               label={t("analytics.courier.viewReturns")}
             />
           }
+          dataTable={buildChartTable(
+            t,
+            t("analytics.returnRateByWilaya"),
+            returnRateByWilaya[0] ? `${returnRateByWilaya[0].wilaya} · ${fmtPercent(returnRateByWilaya[0].returnRate)}` : "",
+            [t("charts.colWilaya"), t("charts.colReturnRate"), t("charts.colDetail")],
+            returnRateData.map((datum) => [String(datum.label), String(datum.displayValue), String(datum.detail ?? "")]),
+          )}
         >
           {returnRateData.length > 0 ? (
             <RankedMetricList data={returnRateData} maxValue={100} />

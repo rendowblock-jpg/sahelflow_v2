@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Banknote, PhoneCall, TrendingDown, TrendingUp, Truck } from "lucide-react";
+import { buildChartTable } from "@/components/charts/chart-table";
 import { AreaTrendChart } from "@/components/charts/area-trend-chart";
 import { ChartCard, ChartEmpty } from "@/components/charts/chart-primitives";
 import type { ChartConfig } from "@/components/charts/chart-types";
@@ -211,6 +212,13 @@ export function RiskView({
               summary={`${riskCopy("kpiReturnRate")}: ${outcomes.completed ? pct(outcomes.returnRate) : "—"}`}
               icon={<TrendingUp className="size-4" />}
               config={trendConfig}
+              dataTable={buildChartTable(
+                t,
+                riskCopy("trendTitle"),
+                `${riskCopy("kpiReturnRate")}: ${outcomes.completed ? pct(outcomes.returnRate) : "—"}`,
+                [t("charts.colWeek"), String(trendConfig.orders?.label ?? "orders"), String(trendConfig.cameBack?.label ?? "cameBack")],
+                trendData.map((row) => [row.week, integerFormatter.format(row.orders), integerFormatter.format(row.cameBack)]),
+              )}
               className="w-full"
               height="clamp(18rem, 26vw, 22rem)"
             >
@@ -238,6 +246,13 @@ export function RiskView({
             description={riskCopy("wilayaActivityHint")}
             summary={`${riskCopy("colPlace")}: ${integerFormatter.format(wilayaRanked.length)}`}
             icon={<TrendingDown className="size-4" />}
+            dataTable={buildChartTable(
+              t,
+              riskCopy("wilayaActivityTitle"),
+              `${riskCopy("colPlace")}: ${integerFormatter.format(wilayaRanked.length)}`,
+              [t("charts.colWilaya"), t("charts.colDetail")],
+              wilayaRanked.map((row) => [String(row.label), [row.displayValue, row.detail].filter(Boolean).map(String).join(" · ")]),
+            )}
             config={{}}
           >
             {wilayaRanked.length > 0 ? <RankedMetricList data={wilayaRanked} /> : <ChartEmpty message={riskCopy("lossEmpty")} />}
