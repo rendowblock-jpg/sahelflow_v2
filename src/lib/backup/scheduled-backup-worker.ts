@@ -108,7 +108,7 @@ async function prune(
 
   const present = new Set(listed.map((entry) => entry.backupId));
   let removed = 0;
-  for (const backupId of planRetention(candidates, now).remove) {
+  for (const backupId of planRetention(candidates, now, state.preUpdateIds).remove) {
     try {
       await deps.deleteBackup(backupId);
       present.delete(backupId);

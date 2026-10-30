@@ -1,3 +1,9 @@
+import {
+  PRE_UPDATE_BACKUP_TIMEOUT_MS,
+  requestPreUpdateBackup,
+  runPreUpdateBackup,
+  type PreUpdateBackupOutcome,
+} from "./pre-update-backup";
 import { dispatchUpdate, getUpdateSnapshot, resetUpdateStoreForTests } from "./update-store";
 
 /**
@@ -21,6 +27,9 @@ export interface UpdateHandle {
 
 let handle: UpdateHandle | null = null;
 let busy = false;
+
+/** How long a failed or timed-out backup stays on screen before the installer starts. */
+const BACKUP_NOTICE_MS = 2_500;
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -93,6 +102,42 @@ export async function downloadUpdate(): Promise<void> {
 }
 
 /**
+ * A fresh local backup before the installer runs. It can delay the update by at
+ * most a minute and can never stop it: the seller may be updating to fix a bug,
+ * and the update does not touch the shop's data. A failure is said plainly in
+ * the chip and written to the log for support.
+ */
+async function backUpBeforeInstall(): Promise<void> {
+  let outcome: PreUpdateBackupOutcome;
+  try {
+    outcome = await runPreUpdateBackup({
+      request: requestPreUpdateBackup,
+      timeoutMs: PRE_UPDATE_BACKUP_TIMEOUT_MS,
+      onPhase: (phase, ended) => {
+        dispatchUpdate({
+          type: "backup-phase",
+          phase,
+          ageMinutes: ended?.kind === "skipped" ? ended.ageMinutes : undefined,
+        });
+      },
+    });
+  } catch {
+    dispatchUpdate({ type: "backup-phase", phase: "running" });
+    dispatchUpdate({ type: "backup-phase", phase: "failed" });
+    outcome = { kind: "failed", code: "UNEXPECTED" };
+  }
+  if (outcome.kind !== "failed" && outcome.kind !== "timed-out") return;
+  if (outcome.kind === "failed") {
+    console.warn("[updater] pre-update backup failed", { code: outcome.code });
+  } else {
+    console.warn("[updater] pre-update backup timed-out");
+  }
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, BACKUP_NOTICE_MS);
+  });
+}
+
+/**
  * Install the downloaded update (the seller clicked Restart). On Windows the
  * updater plugin runs the desktop shell's shutdown hook, starts the installer
  * and ends this process, so this promise normally never settles. A rejection
@@ -107,8 +152,10 @@ export async function installUpdate(): Promise<void> {
 
   busy = true;
   dispatchUpdate({ type: "install-started" });
+  const update = handle;
   try {
-    await handle.install();
+    await backUpBeforeInstall();
+    await update.install();
   } catch (error) {
     dispatchUpdate({ type: "failed", stage: "install", message: messageOf(error) });
   } finally {

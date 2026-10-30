@@ -22,6 +22,8 @@ export type UpdatePhase =
   | "installing"
   | "error";
 
+import type { PreUpdateBackupPhase } from "./pre-update-backup";
+
 export type UpdateFailureStage = "download" | "install";
 
 export interface UpdateSnapshot {
@@ -33,6 +35,10 @@ export interface UpdateSnapshot {
   readonly percent: number;
   readonly failedDuring: UpdateFailureStage | null;
   readonly error: string | null;
+  /** The backup made before the installer starts. Only set while installing. */
+  readonly backup: PreUpdateBackupPhase | null;
+  /** Age of the backup that made a new one unnecessary (backup === "skipped"). */
+  readonly backupAgeMinutes: number | null;
 }
 
 export const IDLE_SNAPSHOT: UpdateSnapshot = Object.freeze({
@@ -43,6 +49,8 @@ export const IDLE_SNAPSHOT: UpdateSnapshot = Object.freeze({
   percent: 0,
   failedDuring: null,
   error: null,
+  backup: null,
+  backupAgeMinutes: null,
 });
 
 export type UpdateAction =
@@ -52,6 +60,7 @@ export type UpdateAction =
   | { type: "progress"; percent: number }
   | { type: "download-finished" }
   | { type: "install-started" }
+  | { type: "backup-phase"; phase: PreUpdateBackupPhase; ageMinutes?: number }
   | { type: "failed"; stage: UpdateFailureStage; message: string };
 
 const MAX_ERROR_CHARS = 300;
@@ -82,6 +91,8 @@ export function reduceUpdate(state: UpdateSnapshot, action: UpdateAction): Updat
         percent: 0,
         failedDuring: null,
         error: null,
+        backup: null,
+        backupAgeMinutes: null,
       };
     }
     case "withdrawn":
@@ -110,7 +121,15 @@ export function reduceUpdate(state: UpdateSnapshot, action: UpdateAction): Updat
         state.phase === "ready" ||
         (state.phase === "error" && state.failedDuring === "install");
       return canInstall
-        ? { ...state, phase: "installing", percent: 100, failedDuring: null, error: null }
+        ? {
+            ...state,
+            phase: "installing",
+            percent: 100,
+            failedDuring: null,
+            error: null,
+            backup: null,
+            backupAgeMinutes: null,
+          }
         : state;
     }
     case "failed": {
@@ -121,7 +140,20 @@ export function reduceUpdate(state: UpdateSnapshot, action: UpdateAction): Updat
         failedDuring: action.stage,
         error: clipMessage(action.message),
         percent: action.stage === "install" ? 100 : 0,
+        backup: null,
+        backupAgeMinutes: null,
       };
+    }
+    case "backup-phase": {
+      if (state.phase !== "installing") return state;
+      if (action.phase === "running") {
+        return state.backup === null ? { ...state, backup: "running", backupAgeMinutes: null } : state;
+      }
+      if (state.backup !== "running") return state;
+      const age = action.ageMinutes;
+      const minutes =
+        action.phase === "skipped" ? (typeof age === "number" && Number.isFinite(age) ? Math.max(0, Math.floor(age)) : 0) : null;
+      return { ...state, backup: action.phase, backupAgeMinutes: minutes };
     }
   }
 }
