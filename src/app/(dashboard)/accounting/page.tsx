@@ -3,6 +3,7 @@ import { AlertTriangle, Package, Receipt, TrendingUp, Wallet } from "lucide-reac
 
 import { ExpenseFormDialog } from "@/components/accounting/expense-form-dialog";
 import { ExpenseRowActions } from "@/components/accounting/expense-row-actions";
+import { ExpensesDataTable } from "@/components/accounting/expenses-data-table";
 import { DualBarChart } from "@/components/charts/dual-bar-chart";
 import { ChartCard } from "@/components/charts/chart-primitives";
 import { ImportExportButtons } from "@/components/shared/import-export-buttons";
@@ -228,7 +229,21 @@ export default async function AccountingPage() {
               size="inline"
             />
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="md:hidden">
+              <ExpensesDataTable
+                layout="cards"
+                canUpdate={canUpdate}
+                rows={expenses.map((expense) => ({
+                  id: expense.id,
+                  category: expense.category as ExpenseCategory,
+                  amount: expense.amount,
+                  date: expense.date.toISOString(),
+                  notes: expense.notes,
+                }))}
+              />
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <Table scrollLabel={t("accounting.recentExpenses")}>
                 <TableHeader>
                   <TableRow>
@@ -268,6 +283,7 @@ export default async function AccountingPage() {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>
