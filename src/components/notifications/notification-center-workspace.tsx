@@ -42,6 +42,33 @@ function revalidateNotifications(): Promise<void> {
   return mutatePrefix("/api/notifications");
 }
 
+/** Row-shaped placeholder: an icon block and two text lines per notification. Shared by the feed and the route's loading screen. */
+export function NotificationRowsSkeleton({ label, rows = 6 }: { label: string; rows?: number }) {
+  return (
+    <div className="rounded-surface border border-border bg-card" role="status" aria-busy="true" aria-label={label}>
+      {Array.from({ length: rows }).map((_, index) => (
+        <div key={index} className="flex items-start gap-3 border-b border-border/60 px-4 py-3.5 last:border-b-0">
+          <Skeleton className="mt-0.5 size-9 rounded-surface" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-4 w-2/5" />
+            <Skeleton className="h-3 w-3/5" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** What the route shows while the page loads: the real header, then the row skeleton (not the generic page skeleton). */
+export function NotificationsRouteLoading() {
+  const { t } = useI18n();
+  return (
+    <PageShell title={t("notifications.title")} description={t("notifications.description")} icon={Bell}>
+      <NotificationRowsSkeleton label={t("notifications.loading")} />
+    </PageShell>
+  );
+}
+
 export function NotificationCenterWorkspace() {
   const { t, locale } = useI18n();
   const [filter, setFilter] = useState<NotificationFeedState>("active");
@@ -267,22 +294,7 @@ export function NotificationCenterWorkspace() {
           ) : null}
 
           {showSkeleton ? (
-            <div
-              className="rounded-surface border border-border bg-card"
-              role="status"
-              aria-busy="true"
-              aria-label={t("notifications.loading")}
-            >
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="flex items-start gap-3 border-b border-border/60 px-4 py-3.5 last:border-b-0">
-                  <Skeleton className="mt-0.5 size-9 rounded-surface" />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Skeleton className="h-4 w-2/5" />
-                    <Skeleton className="h-3 w-3/5" />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <NotificationRowsSkeleton label={t("notifications.loading")} />
           ) : showEmpty ? (
             <StateSurface
               icon={caughtUp ? CheckCheck : Inbox}

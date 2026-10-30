@@ -149,11 +149,11 @@ export function translateServerError(
       return params ? t(rule.key, params) : t(rule.key);
     }
   }
-  // No rule matched — if it's a generic "Request failed (NNN)" fallback, prefer
-  // the translated generic. Otherwise return the raw string (a one-off server
-  // message the user can still act on is better than a vague generic).
+  // No rule matched. A generic "Request failed (NNN)" has its own translation.
+  // Anything else is developer text (database, framework, English) that a seller
+  // must not read as it came: show one calm sentence in his language instead.
   if (/^request failed \(\d+\)$/i.test(raw)) {
     return t("error.requestFailed");
   }
-  return raw;
+  return t("firstRun.error.unmapped");
 }

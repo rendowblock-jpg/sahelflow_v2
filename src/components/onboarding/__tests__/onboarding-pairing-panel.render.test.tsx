@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 /**
- * Onboarding step "WhatsApp" when the WhatsApp helper is OFF (the status route answers 503). The seller must see a
+ * Onboarding step "WhatsApp" when the WhatsApp helper is OFF (the status route answers 200 with sidecarReachable:false). The seller must see a
  * calm "not connected yet, you can do this later" card, no red alert, no error toast, no console error, and the
  * page must not hammer the helper once per second.
  */
@@ -38,7 +38,7 @@ const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefin
 /** A plain object, not `new Response`: a real body stream needs real timers and would stall under fake ones. */
 function helperOff(): Response {
   const body = { status: "disconnected", user: null, hasQr: false, sidecarReachable: false };
-  return { ok: false, status: 503, json: async () => body } as unknown as Response;
+  return { ok: true, status: 200, json: async () => body } as unknown as Response;
 }
 
 async function settle(ms: number) {
@@ -71,6 +71,19 @@ describe("OnboardingPairingPanel with the WhatsApp helper off", () => {
     expect(harness.toastError).not.toHaveBeenCalled();
     expect(consoleError).not.toHaveBeenCalled();
     expect(card.querySelector(".text-destructive")).toBeNull();
+  });
+
+  it("never shows 'connected' for a 200 that says sidecarReachable:false, even if the body also says connected", async () => {
+    const onConnectedChange = vi.fn();
+    fetchMock.mockImplementation(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "connected", hasQr: false, sidecarReachable: false }),
+    }) as unknown as Response);
+    render(<OnboardingPairingPanel onConnectedChange={onConnectedChange} />);
+    await settle(50);
+    expect(screen.getByRole("status")).toHaveTextContent("WhatsApp is not connected yet");
+    expect(onConnectedChange).not.toHaveBeenCalledWith(true);
   });
 
   it("says it in Arabic too", async () => {

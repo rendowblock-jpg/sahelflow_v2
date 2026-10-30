@@ -1,5 +1,7 @@
 "use client";
 
+import { FORM_ERROR_ID, describedByFor, isInvalid, useFocusOnFailure, type FormFailure } from "@/components/auth/form-focus";
+import { isWhatsAppReportedConnected } from "@/components/inbox/whatsapp-pairing-state";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -122,6 +124,9 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
   // Step 1: Shop basics
   const [businessName, setBusinessName] = useState("");
   const [businessPhone, setBusinessPhone] = useState("");
+  // What is wrong on the shop step: the field gets the cursor, aria-invalid and a linked sentence.
+  const [shopFailure, setShopFailure] = useState<FormFailure | null>(null);
+  useFocusOnFailure(shopFailure, loading);
   const [businessWilaya, setBusinessWilaya] = useState("");
   const [businessCommune, setBusinessCommune] = useState("");
 
@@ -234,10 +239,8 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
       }
     }
     if (whatsappResult.status === "fulfilled" && whatsappResult.value.ok) {
-      const data = (await whatsappResult.value.json().catch(() => ({}))) as {
-        status?: unknown;
-      };
-      whatsappConnected = data.status === "connected";
+      const data: unknown = await whatsappResult.value.json().catch(() => null);
+      whatsappConnected = isWhatsAppReportedConnected(data);
     }
     if (deliveryResult.status === "fulfilled" && deliveryResult.value.ok) {
       const data = (await deliveryResult.value.json().catch(() => ({}))) as {
@@ -355,9 +358,20 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
 
   async function nextStep() {
     if (step === 0) {
-      if (!businessName.trim() || phoneInvalid) return;
+      if (!businessName.trim()) {
+        setShopFailure({ field: "biz-name", message: t("firstRun.onboarding.nameRequired") });
+        return;
+      }
+      if (phoneInvalid) {
+        setShopFailure({ field: "biz-phone", message: t("onboarding.phone.invalid") });
+        return;
+      }
+      setShopFailure(null);
       const saved = await saveShopBasics();
-      if (!saved) return;
+      if (!saved) {
+        setShopFailure({ field: "biz-name", message: t("onboarding.saveFailed") });
+        return;
+      }
       await refreshStatus();
       goToStep(1);
       return;
@@ -519,10 +533,20 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
                     <Input
                       id="biz-name"
                       value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
+                      onChange={(e) => {
+                        setBusinessName(e.target.value);
+                        if (shopFailure?.field === "biz-name") setShopFailure(null);
+                      }}
                       placeholder={t("onboarding.storeNamePlaceholder")}
                       autoComplete="organization"
+                      aria-invalid={isInvalid(shopFailure, "biz-name")}
+                      aria-describedby={describedByFor(shopFailure, "biz-name")}
                     />
+                    {shopFailure?.field === "biz-name" ? (
+                      <p id={FORM_ERROR_ID} role="alert" className="text-caption text-destructive">
+                        {shopFailure.message}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="biz-phone">{t("onboarding.business.phone")}</Label>
@@ -537,7 +561,10 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
                       autoComplete="tel-national"
                       className="text-start"
                       value={businessPhone}
-                      onChange={(e) => setBusinessPhone(formatDZPhone(e.target.value))}
+                      onChange={(e) => {
+                        setBusinessPhone(formatDZPhone(e.target.value));
+                        if (shopFailure?.field === "biz-phone") setShopFailure(null);
+                      }}
                       placeholder={DZ_PHONE_PLACEHOLDER}
                       aria-invalid={phoneInvalid || undefined}
                       aria-describedby={phoneInvalid ? "biz-phone-error" : undefined}
@@ -731,10 +758,7 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
               ) : (
                 <Button
                   onClick={() => void nextStep()}
-                  disabled={
-                    loading ||
-                    (step === 0 && (!businessName.trim() || phoneInvalid))
-                  }
+                  disabled={loading}
                 >
                   {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
                   {step === ONBOARDING_FINISH_STEP - 1

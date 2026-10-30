@@ -1,5 +1,6 @@
 "use client";
 
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Check, Loader2 } from "lucide-react";
 
@@ -25,6 +26,9 @@ interface Profile {
   bio?: string;
 }
 
+/** A message already translated for the seller; any other thrown error (network, parsing) is replaced by a generic sentence. */
+class ProfileRequestError extends Error {}
+
 export function ProfileEditor({ canManage }: { canManage: boolean }) {
   const { t } = useI18n();
   const [profile, setProfile] = useState<Profile>({});
@@ -37,7 +41,7 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
   const requestProfile = useCallback(async (): Promise<Profile> => {
     const response = await fetch("/api/profile", { cache: "no-store" });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error ?? t("error.requestFailed"));
+    if (!response.ok) throw new ProfileRequestError(translateServerError(data.error, t, t("error.requestFailed")));
     const stored = data as Profile;
     // The phone is persisted canonically ("0555123456") and displayed masked
     // ("05 55 12 34 56"), exactly as every other DZ phone field in the app.
@@ -58,7 +62,7 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
       })
       .catch((error) => {
         if (!controller.signal.aborted) {
-          setLoadError(error instanceof Error ? error.message : t("error.requestFailed"));
+          setLoadError(error instanceof ProfileRequestError ? error.message : t("error.requestFailed"));
         }
       })
       .finally(() => {
@@ -75,7 +79,7 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
       setProfile(data);
       setSavedProfile(data);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : t("error.requestFailed"));
+      setLoadError(error instanceof ProfileRequestError ? error.message : t("error.requestFailed"));
     } finally {
       setLoading(false);
     }
@@ -97,11 +101,11 @@ export function ProfileEditor({ canManage }: { canManage: boolean }) {
         ),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error ?? t("profile.saveFailed"));
+      if (!response.ok) throw new ProfileRequestError(translateServerError(data.error, t, t("profile.saveFailed")));
       setSavedProfile(profile);
       toast.success(t("profile.saved"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("profile.saveFailed"));
+      toast.error(error instanceof ProfileRequestError ? error.message : t("profile.saveFailed"));
     } finally {
       setSaving(false);
     }

@@ -13,6 +13,7 @@ import {
 
 import {
   deriveWhatsAppPairingPhase,
+  parseWhatsAppStatusResponse,
   type WhatsAppPairingSnapshot,
 } from "@/components/inbox/whatsapp-pairing-state";
 import { WhatsAppUnofficialNotice } from "@/components/inbox/whatsapp-unofficial-notice";
@@ -21,7 +22,6 @@ import { useI18n } from "@/hooks/use-i18n";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import { getWhatsAppPairingCopy } from "@/lib/i18n/whatsapp-pairing";
 import { toast } from "@/lib/toast";
-import type { WhatsAppStatus } from "@/lib/whatsapp/types";
 import { IconTile } from "@/components/system";
 
 /**
@@ -36,15 +36,6 @@ import { IconTile } from "@/components/system";
  * 2.5k-line inbox hook into onboarding, so this variant reproduces the
  * self-contained pairing lifecycle instead of editing it.
  */
-function isWhatsAppStatus(value: unknown): value is WhatsAppStatus {
-  return (
-    value === "disconnected" ||
-    value === "connecting" ||
-    value === "qr" ||
-    value === "connected"
-  );
-}
-
 const STATUS_POLL_MS = 1_000;
 /** While the helper is off every poll is a failed request; ask rarely and let "Check again" do the rest. */
 const UNREACHABLE_POLL_MS = 15_000;
@@ -86,24 +77,8 @@ export function OnboardingPairingPanel({
         cache: "no-store",
         signal,
       });
-      const data = (await response.json().catch(() => ({}))) as {
-        status?: unknown;
-        hasQr?: unknown;
-        sidecarReachable?: unknown;
-      };
-      if (!response.ok) {
-        setSnapshot({
-          status: isWhatsAppStatus(data.status) ? data.status : "disconnected",
-          hasQr: false,
-          sidecarReachable: false,
-        });
-        return;
-      }
-      setSnapshot({
-        status: isWhatsAppStatus(data.status) ? data.status : null,
-        hasQr: data.hasQr === true,
-        sidecarReachable: data.sidecarReachable === false ? false : true,
-      });
+      const data: unknown = await response.json().catch(() => null);
+      setSnapshot(parseWhatsAppStatusResponse(response.ok, data));
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setSnapshot({

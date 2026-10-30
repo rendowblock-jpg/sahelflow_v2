@@ -25,9 +25,13 @@ vi.mock("@/hooks/use-i18n", async () => {
     en: (await import("@/lib/i18n/locales/en.json")).default,
   };
   const { getRuntimeTranslation } = await import("@/lib/i18n/runtime-translations");
+  // One stable t per locale, like the real hook: the editor's load effect depends on it. An unstable t made the effect
+  // fetch again after every render, and after the test ended the fetch was the real one (ECONNREFUSED ::1:3000).
+  const cache: Record<string, (key: string) => string> = {};
+  const stable = (locale: "en" | "fr" | "ar") => (cache[locale] ??= (key: string) => tables[locale]?.[key] ?? getRuntimeTranslation(locale, key) ?? key);
   return {
     useI18n: () => ({
-      t: (key: string) => tables[harness.locale]?.[key] ?? getRuntimeTranslation(harness.locale, key) ?? key,
+      t: stable(harness.locale),
       locale: harness.locale,
       dir: harness.locale === "ar" ? "rtl" : "ltr",
     }),

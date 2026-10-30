@@ -77,4 +77,62 @@ describe("ImportPanel", () => {
     expect(alert.textContent?.trim().length ?? 0).toBeGreaterThan(3);
     await waitFor(() => expect(screen.getByRole("button", { name: T("import.analyze") })).toBeEnabled());
   });
+
+  it("preview success: shows the rows that will be imported, the count in the button, and no alert", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        totalRows: 3,
+        mapping: { "الاسم": "name", "الهاتف": "phone" },
+        validCount: 2,
+        invalidCount: 1,
+        invalid: [{ rowIndex: 3, errors: ["Invalid phone"] }],
+        preview: [
+          { name: "أمينة بن علي", phone: "0555123456" },
+          { name: "يوسف مرابط", phone: "0661234567" },
+        ],
+      }),
+    } as unknown as Response);
+    const { container } = render(<ImportPanel entity="customers" title="الزبائن" description="d" />);
+    chooseFile(container);
+    fireEvent.click(await screen.findByRole("button", { name: T("import.analyze") }));
+    expect(await screen.findByText("أمينة بن علي")).toBeInTheDocument();
+    expect(screen.getByText("0661234567")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: T("import.importRows") })).toBeEnabled();
+    expect(screen.queryByRole("alert")).toBeNull();
+    const first = fetchMock.mock.calls[0]?.[1] as { body: FormData };
+    expect(first.body.get("commit")).toBe("false");
+  });
+
+  it("commit success: sends the confirmed mapping, shows the inserted count, and the preview is gone", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        totalRows: 2,
+        mapping: { "الاسم": "name", "الهاتف": "phone" },
+        validCount: 2,
+        invalidCount: 0,
+        invalid: [],
+        preview: [{ name: "أمينة بن علي", phone: "0555123456" }],
+      }),
+    } as unknown as Response);
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, inserted: 2, errors: [], totalRows: 2 }),
+    } as unknown as Response);
+    const { container } = render(<ImportPanel entity="customers" title="الزبائن" description="d" />);
+    chooseFile(container);
+    fireEvent.click(await screen.findByRole("button", { name: T("import.analyze") }));
+    fireEvent.click(await screen.findByRole("button", { name: T("import.importRows") }));
+    await waitFor(() => expect(container).toHaveTextContent(T("import.insertedCount")));
+    expect(screen.queryByText("أمينة بن علي")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    const second = fetchMock.mock.calls[1]?.[1] as { body: FormData };
+    expect(second.body.get("commit")).toBe("true");
+    expect(JSON.parse(String(second.body.get("mapping")))).toEqual({ "الاسم": "name", "الهاتف": "phone" });
+  });
 });
+
