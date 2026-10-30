@@ -422,6 +422,7 @@ ${lp.offer ? `<span class="pc">${esc(lp.offer.label)}</span>` : ""}
   const body = `${pageHero({ locale, eyebrow: p.eyebrow, eyebrowIcon: "key", title: p.title, lead: p.lead })}
 <section class="sheet-sec" id="price" aria-label="${esc(p.licence.name)}">
   <div class="container">
+    <h2>${esc(p.licence.name)}</h2>
     <div class="pgrid">
       ${plate}
       <div>

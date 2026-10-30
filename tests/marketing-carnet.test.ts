@@ -173,3 +173,17 @@ describe("security page", () => {
     for (const [, id, status] of facts) expect(claims.claimById(id as string).status).toBe(status);
   });
 });
+
+describe("heading order", () => {
+  it.each(["pricing", "download", "security"])("%s never jumps down a level (h1 to h3) in any language", (slug) => {
+    for (const l of LOCALES) {
+      const html = pages[`${l}/${slug}/index.html`] ?? "";
+      let prev = 0;
+      for (const m of html.matchAll(/<h([1-6])[\s>]/g)) {
+        const level = Number(m[1]);
+        expect(level - prev, `${l}/${slug}: h${prev} then h${level}`).toBeLessThanOrEqual(1);
+        prev = level;
+      }
+    }
+  });
+});
