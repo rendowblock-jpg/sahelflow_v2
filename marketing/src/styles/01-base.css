@@ -1,5 +1,5 @@
 /* sahelflow.com: CARNET. The shop ledger that grew up: cream page, 1 px ruled
-   lines, a red double margin on the inline-start side (right in Arabic), ink UI.
+   lines, a red double margin on the inline-start side (the reading-start side), ink UI.
    Logical properties only, so Arabic RTL and fr/en LTR share every rule. */
 
 @font-face{font-family:"Carnet Naskh";src:url("/fonts/naskh-ar.woff2") format("woff2");font-weight:400 700;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+0870-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
@@ -111,6 +111,10 @@ html[dir=rtl] .flip{transform:scaleX(-1)}
 .st-planned,.badge{color:var(--ink2);border-style:dotted}
 .sp-toCall,.badge-save{color:var(--red-ink);border-style:double;border-width:4px;padding-block:0;background:var(--red-bg)}
 .badge-save{border-style:solid;border-width:2px}
+.sp-new{color:var(--ink2);border-style:dotted}
+.sp-shipped{color:var(--blue-ink);border-style:dashed;background:var(--blue-bg)}
+.sp-delivered{color:var(--ink);border-style:solid;box-shadow:inset 0 0 0 2px var(--sheet),inset 0 0 0 3px currentColor}
+html[lang=ar] *{letter-spacing:0}
 
 /* MarginRow: one ruled line, its note in the margin on the inline-start side. */
 .mrow{display:grid;grid-template-columns:minmax(72px,auto) 1fr;gap:0 16px;padding-block:12px;border-block-end:1px solid var(--rule)}

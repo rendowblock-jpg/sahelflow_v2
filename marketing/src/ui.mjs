@@ -108,7 +108,7 @@ export function faqJsonLd(items) {
 }
 
 /** The honest status of an integration or promise: Available, In testing or Planned (see claims.mjs). */
-const STATUS_BADGE_CLASS = { live: "badge badge-new", testing: "badge badge-offer", planned: "badge" };
+const STATUS_BADGE_CLASS = { live: "stamp st-live", testing: "stamp st-testing", planned: "stamp st-planned" };
 export function statusBadge(status, locale) {
   return `<span class="${STATUS_BADGE_CLASS[status]}">${esc(statusLabel(status, locale))}</span>`;
 }

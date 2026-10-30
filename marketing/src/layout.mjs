@@ -4,8 +4,10 @@
 import { SITE } from "./config.mjs";
 import { COPY } from "./i18n/index.mjs";
 import { BRAND_NAMES, MODULES, PACKAGE, SOLUTIONS } from "./model.mjs";
-import { integrationStatus } from "./claims.mjs";
-import { esc, href, icon, phoneDisplay, shotUrl, statusBadge, whatsappHref } from "./ui.mjs";
+
+/** The one inline script: no-js flag + the saved theme before first paint (its CSP hash is in static/_headers). */
+export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classList.replace("no-js","js");try{var t=localStorage.getItem("sf-theme");if(t==="dark"||t==="light")d.dataset.theme=t}catch(e){}})()`;
+import { esc, href, phoneDisplay, whatsappHref } from "./ui.mjs";
 
 const FONT_PRELOAD = { ar: ["plex-ar-400", "naskh-ar"], fr: ["plex-lat-400"], en: ["plex-lat-400"] };
 const OG_LOCALE = { ar: "ar_DZ", fr: "fr_DZ", en: "en_US" };
@@ -46,8 +48,9 @@ function head({ locale, path, title, description, preload, jsonLd = [] }) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
-<meta name="theme-color" content="#05070c">
-<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#F3EEE4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14161A" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
 <link rel="canonical" href="${canonical}">
 ${alternates}
 <link rel="alternate" hreflang="x-default" href="${SITE.origin}${href(SITE.defaultLocale, path)}">
@@ -64,193 +67,83 @@ ${alternates}
 ${FONT_PRELOAD[locale].map((f) => `<link rel="preload" href="/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>`).join("\n")}
 ${preload ? `<link rel="preload" as="image" href="${preload}" fetchpriority="high">` : ""}
 <link rel="stylesheet" href="/assets/site.css?v=${SITE.asset}">
-<script>document.documentElement.classList.replace("no-js","js")</script>
+<script>${HEAD_SCRIPT}</script>
 <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/${locale}/*"},"eagerness":"moderate"}]}</script>
 ${[app, org, ...jsonLd].map((ld) => `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`).join("\n")}
 <script defer src="/assets/site.js?v=${SITE.asset}"></script>
 </head>`;
 }
 
-/* ───────────────────────────── header ───────────────────────────── */
+/* ───────────────────────────── chrome ───────────────────────────── */
 
-function moduleLink(locale, module, current) {
-  const m = COPY[locale].modules[module.key];
-  const here = current === `module:${module.key}` ? ' aria-current="page"' : "";
-  return `<li><a class="mega-link" href="${href(locale, `product/${module.key}`)}" data-preview="${module.shot ? shotUrl(module.shot, locale) : ""}" data-preview-title="${esc(m.name)}" data-preview-text="${esc(m.short)}" style="--hue:${module.hue}"${here}>
-  <span class="mega-icon">${icon(module.icon)}</span>
-  <span class="mega-text"><strong>${esc(m.name)}</strong><small>${esc(m.short)}</small></span>
-</a></li>`;
-}
+const THEME = {
+  ar: ["المظهر", "تلقائي", "فاتح", "ليلي"],
+  fr: ["Thème", "auto", "clair", "nuit"],
+  en: ["Theme", "auto", "light", "night"],
+};
 
-function megaProduct(locale, current) {
+const MARK = `<svg class="mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><rect x="2.5" y="2.5" width="27" height="27" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 3v26M25 3v26" stroke="var(--red)" stroke-width="1.2" fill="none"/><path d="M5.5 20c2.5-5.4 5-5.4 7.5 0s5 5.4 7.6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+
+function header({ locale, pageId, path }) {
   const t = COPY[locale];
-  return `<div class="mega mega-wide" id="mega-product" data-mega-panel>
-  <div class="mega-body">
-    <div class="mega-main">
-      <p class="mega-title">${esc(t.nav.platformTitle)}</p>
-      <ul class="mega-grid">${MODULES.map((m) => moduleLink(locale, m, current)).join("")}</ul>
-    </div>
-    <aside class="mega-side">
-      <a class="mega-preview" href="${href(locale, "product")}" data-preview-card>
-        <span class="mega-preview-media"><img src="${shotUrl("dashboard", locale)}" width="1600" height="1000" alt="" loading="lazy" decoding="async" data-preview-img></span>
-        <strong data-preview-name>${esc(t.nav.platformOverview)}</strong>
-        <small data-preview-desc>${esc(t.nav.platformOverviewText)}</small>
-      </a>
-    </aside>
-  </div>
-  <div class="mega-foot">
-    <a href="${href(locale, "product")}">${icon("layers")}<span>${esc(t.nav.platformOverview)}</span></a>
-    <a href="${href(locale, "integrations")}">${icon("sheet")}<span>${esc(t.nav.integrations)}</span></a>
-    <a href="${href(locale, "why")}">${icon("scale")}<span>${esc(t.nav.why)}</span></a>
-  </div>
-</div>`;
-}
-
-function megaSolutions(locale, current) {
-  const t = COPY[locale];
-  const items = SOLUTIONS.map((s) => {
-    const c = t.solutions[s.key];
-    const here = current === `solution:${s.key}` ? ' aria-current="page"' : "";
-    return `<li><a class="mega-link" href="${href(locale, `solutions/${s.key}`)}"${here}>
-  <span class="mega-icon">${icon(s.icon)}</span>
-  <span class="mega-text"><strong>${esc(c.name)}</strong><small>${esc(c.short)}</small></span>
-</a></li>`;
-  }).join("");
-  return `<div class="mega" id="mega-solutions" data-mega-panel>
-  <div class="mega-body">
-    <div class="mega-main">
-      <p class="mega-title">${esc(t.nav.solutionsTitle)}</p>
-      <ul class="mega-grid mega-grid-2">${items}</ul>
-    </div>
-    <aside class="mega-side">
-      <a class="mega-feature" href="${href(locale, "integrations")}#sheets">
-        ${statusBadge(integrationStatus("sheets"), locale)}
-        <span class="mega-feature-art" aria-hidden="true">${sheetArt()}</span>
-        <strong>${esc(t.nav.featuredTitle)}</strong>
-        <small>${esc(t.nav.featuredText)}</small>
-      </a>
-    </aside>
-  </div>
-</div>`;
-}
-
-function sheetArt() {
-  const rows = [["ORD-0128", "ok"], ["ORD-0129", "ok"], ["ORD-0130", "wait"], ["ORD-0131", "new"]];
-  return `<span class="sheet-art">${rows
-    .map(([id, s], i) => `<span class="sheet-row" style="--i:${i}"><b>${id}</b><i class="sheet-cell"></i><i class="sheet-cell"></i><em class="sheet-status is-${s}"></em></span>`)
-    .join("")}</span>`;
-}
-
-function megaResources(locale, current) {
-  const t = COPY[locale];
-  const entries = [
-    ["help", "help"],
-    ["security", "shield"],
-    ["download", "download"],
-    ["contact", "message"],
-  ];
-  const items = entries
-    .map(([key, ic]) => {
-      const [name, text] = t.nav.resourceLinks[key];
-      const here = current === key ? ' aria-current="page"' : "";
-      return `<li><a class="mega-link" href="${href(locale, key)}"${here}><span class="mega-icon">${icon(ic)}</span><span class="mega-text"><strong>${esc(name)}</strong><small>${esc(text)}</small></span></a></li>`;
-    })
-    .join("");
-  return `<div class="mega mega-narrow" id="mega-resources" data-mega-panel>
-  <div class="mega-body">
-    <div class="mega-main">
-      <p class="mega-title">${esc(t.nav.resourcesTitle)}</p>
-      <ul class="mega-grid mega-grid-1">${items}</ul>
-    </div>
-    <aside class="mega-side">
-      <a class="mega-feature mega-why" href="${href(locale, "why")}">
-        <span class="mega-icon">${icon("scale")}</span>
-        <strong>${esc(t.nav.why)}</strong>
-        <small>${esc(t.nav.whyText)}</small>
-      </a>
-    </aside>
-  </div>
-</div>`;
-}
-
-function header(ctx) {
-  const { locale, pageId, path } = ctx;
-  const t = COPY[locale];
-  const isCurrent = (...ids) => ids.some((id) => pageId === id || pageId.startsWith(`${id}:`));
-  const trigger = (id, label, active) =>
-    `<button class="nav-trigger" type="button" aria-expanded="false" aria-controls="mega-${id}" data-mega-trigger="${id}"${active ? ' data-active="true"' : ""}><span>${esc(label)}</span>${icon("chevron", "nav-chevron")}</button>`;
-  const link = (id, label) =>
-    `<a class="nav-link" href="${href(locale, id)}"${pageId === id ? ' aria-current="page"' : ""}>${esc(label)}</a>`;
+  const th = THEME[locale];
+  const on = (id) => pageId === id || (id === "product" && pageId.startsWith("module:"));
+  const link = (id, label) => `<li><a href="${href(locale, id)}"${on(id) ? ' aria-current="page"' : ""}>${esc(label)}</a></li>`;
   const langs = SITE.locales
-    .map(
-      (l) =>
-        `<a href="${href(l, path)}" hreflang="${l}" lang="${l}" data-set-lang="${l}"${l === locale ? ' aria-current="true"' : ""}><span>${esc(COPY[l].name)}</span>${l === locale ? icon("check") : ""}</a>`,
-    )
+    .map((l) => `<a href="${href(l, path)}" hreflang="${l}" lang="${l}" data-set-lang="${l}"${l === locale ? ' aria-current="true"' : ""}>${esc(COPY[l].name)}</a>`)
     .join("");
   return `<a class="skip-link" href="#main">${esc(t.common.skip)}</a>
-<header class="site-header" data-header>
-  <div class="header-bar">
-    <a class="brand" href="${href(locale)}" aria-label="SahelFlow">
-      <img src="/img/mark.svg" alt="" width="28" height="28"><span>SahelFlow</span>
-    </a>
-    <nav class="main-nav" aria-label="${esc(t.nav.menu)}" id="main-nav" data-nav>
-      <ul class="nav-list">
-        <li class="nav-item" data-mega="product">${trigger("product", t.nav.product, isCurrent("product", "module"))}${megaProduct(locale, pageId)}</li>
-        <li class="nav-item" data-mega="solutions">${trigger("solutions", t.nav.solutions, isCurrent("solution"))}${megaSolutions(locale, pageId)}</li>
-        <li class="nav-item">${link("integrations", t.nav.integrations)}</li>
-        <li class="nav-item">${link("pricing", t.nav.pricing)}</li>
-        <li class="nav-item" data-mega="resources">${trigger("resources", t.nav.resources, isCurrent("help", "security", "download", "contact", "why"))}${megaResources(locale, pageId)}</li>
-      </ul>
-      <div class="nav-sheet-cta">
-        <a class="btn btn-primary btn-lg" href="${href(locale, "download")}">${icon("download")}<span>${esc(t.nav.start)}</span></a>
-        <a class="btn btn-glass btn-lg" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${icon("whatsapp")}<span>${esc(t.nav.talk)}</span></a>
-      </div>
-    </nav>
-    <div class="header-actions">
-      <details class="lang-menu" data-lang-menu>
-        <summary aria-label="${esc(t.nav.language)}">${icon("globe")}<span>${esc(locale.toUpperCase())}</span></summary>
-        <div class="lang-list">${langs}</div>
-      </details>
-      <a class="btn btn-primary btn-sm header-cta" href="${href(locale, "download")}"><span>${esc(t.nav.start)}</span>${icon("arrow", "flip")}</a>
-      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="${esc(t.nav.menu)}" data-nav-toggle><span></span><span></span></button>
-    </div>
-  </div>
-  <div class="mega-scrim" aria-hidden="true" data-mega-scrim></div>
+<header class="top" data-header>
+<div class="top-in">
+<a class="brand" href="${href(locale)}" aria-label="SahelFlow">${MARK}<span class="wm">SahelFlow</span></a>
+<details class="menu" data-menu>
+<summary class="menu-btn"><span>${esc(t.nav.menu)}</span></summary>
+<div class="menu-panel">
+<nav aria-label="${esc(t.nav.menu)}"><ul class="nav-links">
+${link("product", t.nav.product)}${link("integrations", t.nav.integrations)}${link("pricing", t.nav.pricing)}${link("security", t.nav.resourceLinks.security[0])}${link("help", t.nav.resourceLinks.help[0])}
+</ul></nav>
+<div class="nav-tools">
+<p class="langs">${langs}</p>
+<button class="theme-btn" type="button" data-theme-toggle data-group="${esc(th[0])}" data-names='${JSON.stringify(th.slice(1))}' aria-label="${esc(th[0])}: ${esc(th[1])}"><span class="theme-k" aria-hidden="true">${esc(th[0])}</span><span class="theme-v" data-theme-state>${esc(th[1])}</span></button>
+<a class="btn btn-primary" href="${href(locale, "download")}">${esc(t.nav.resourceLinks.download[0])}</a>
+</div>
+</div>
+</details>
+</div>
 </header>`;
 }
-
-/* ───────────────────────────── footer ───────────────────────────── */
 
 function footer(locale) {
   const t = COPY[locale];
   const year = new Date().getFullYear();
   const col = (title, links) =>
-    `<div class="footer-col"><h2>${esc(title)}</h2><ul>${links.map(([url, label]) => `<li><a href="${url}">${esc(label)}</a></li>`).join("")}</ul></div>`;
+    `<div class="foot-col"><h2>${esc(title)}</h2><ul>${links.map(([url, label]) => `<li><a href="${url}">${esc(label)}</a></li>`).join("")}</ul></div>`;
   return `<footer class="site-footer">
-  <div class="container footer-grid">
-    <div class="footer-brand">
-      <a class="brand" href="${href(locale)}"><img src="/img/mark.svg" alt="" width="30" height="30"><span>SahelFlow</span></a>
-      <p>${esc(t.footer.tagline)}</p>
-      <a class="footer-wa" href="${whatsappHref(t.whatsappMessage)}" rel="noopener">${icon("whatsapp")}<span dir="ltr">${esc(phoneDisplay())}</span></a>
-      <a class="footer-mail" href="mailto:${SITE.email}">${icon("mail")}<span dir="ltr">${esc(SITE.email)}</span></a>
-    </div>
-    ${col(t.footer.product, [[href(locale, "product"), t.nav.platformOverview], ...MODULES.map((m) => [href(locale, `product/${m.key}`), t.modules[m.key].name])])}
-    ${col(t.footer.solutions, [...SOLUTIONS.map((s) => [href(locale, `solutions/${s.key}`), t.solutions[s.key].name]), [href(locale, "why"), t.nav.why]])}
-    ${col(t.footer.company, [
-      [href(locale, "integrations"), t.nav.integrations],
-      [href(locale, "pricing"), t.nav.pricing],
-      [href(locale, "security"), t.nav.resourceLinks.security[0]],
-      [href(locale, "download"), t.nav.resourceLinks.download[0]],
-      [href(locale, "help"), t.nav.resourceLinks.help[0]],
-      [href(locale, "contact"), t.nav.resourceLinks.contact[0]],
-    ])}
-    ${col(t.footer.legal, [[href(locale, "privacy"), t.footer.privacy], [href(locale, "terms"), t.footer.terms]])}
-  </div>
-  <div class="container footer-bottom">
-    <p>© ${year} SahelFlow. ${esc(t.footer.rights)} <span class="footer-made">${esc(t.footer.made)}</span></p>
-    <p class="footer-langs">${SITE.locales.map((l) => `<a href="${href(l)}" hreflang="${l}" lang="${l}" data-set-lang="${l}"${l === locale ? ' aria-current="true"' : ""}>${esc(COPY[l].name)}</a>`).join("")}</p>
-  </div>
-  <div class="footer-wordmark" aria-hidden="true">SahelFlow</div>
+<div class="foot-in">
+<div class="foot-brand">
+<a class="brand" href="${href(locale)}">${MARK}<span class="wm">SahelFlow</span></a>
+<p>${esc(t.footer.tagline)}</p>
+<p class="foot-note">${esc(t.common.whatsappNote)}</p>
+<p class="foot-contact"><a href="${whatsappHref(t.whatsappMessage)}" rel="noopener"><span dir="ltr">${esc(phoneDisplay())}</span></a> <a href="mailto:${SITE.email}"><span dir="ltr">${esc(SITE.email)}</span></a></p>
+</div>
+<div class="foot-cols">
+${col(t.footer.product, [[href(locale, "product"), t.nav.platformOverview], ...MODULES.map((m) => [href(locale, `product/${m.key}`), t.modules[m.key].name])])}
+${col(t.footer.solutions, [...SOLUTIONS.map((s) => [href(locale, `solutions/${s.key}`), t.solutions[s.key].name]), [href(locale, "why"), t.nav.why]])}
+${col(t.footer.company, [
+    [href(locale, "integrations"), t.nav.integrations],
+    [href(locale, "pricing"), t.nav.pricing],
+    [href(locale, "security"), t.nav.resourceLinks.security[0]],
+    [href(locale, "download"), t.nav.resourceLinks.download[0]],
+    [href(locale, "help"), t.nav.resourceLinks.help[0]],
+    [href(locale, "contact"), t.nav.resourceLinks.contact[0]],
+  ])}
+${col(t.footer.legal, [[href(locale, "privacy"), t.footer.privacy], [href(locale, "terms"), t.footer.terms]])}
+</div>
+</div>
+<div class="foot-in foot-bottom">
+<p>© ${year} SahelFlow. ${esc(t.footer.rights)} ${esc(t.footer.made)}</p>
+<p class="langs">${SITE.locales.map((l) => `<a href="${href(l)}" hreflang="${l}" lang="${l}" data-set-lang="${l}"${l === locale ? ' aria-current="true"' : ""}>${esc(COPY[l].name)}</a>`).join("")}</p>
+</div>
 </footer>`;
 }
 
