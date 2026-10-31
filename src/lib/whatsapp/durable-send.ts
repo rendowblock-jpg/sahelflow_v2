@@ -29,6 +29,7 @@ import {
 } from "./media-object-store";
 import { normalizeWhatsAppJid } from "./types";
 import { decideHeldApproval, decideHeldDiscard, isHeldOutboxIntent } from "./held-send";
+import { emitHeldSendNotice } from "./held-notice";
 import {
   SEND_GUARD_HOLD_ERROR_CODE,
   assessWhatsAppSend,
@@ -881,6 +882,7 @@ export async function queueWhatsAppText(
       await tx.whatsAppOutboundEffect.create({
         data: { effectKey, messageId: clientMessageId },
       });
+      await emitHeldSendNotice(tx, assessment, clientMessageId, context.shop?.shopId);
       return {
         result: { effectKey, messageId: clientMessageId },
         audit: {
@@ -1119,6 +1121,7 @@ export async function queueWhatsAppImage(
       await tx.whatsAppOutboundEffect.create({
         data: { effectKey, messageId: clientMessageId },
       });
+      await emitHeldSendNotice(tx, assessment, clientMessageId, context.shop?.shopId);
       return {
         result: { effectKey, messageId: clientMessageId },
         audit: {
@@ -1390,6 +1393,7 @@ export async function queueWhatsAppVideo(
       await tx.whatsAppOutboundEffect.create({
         data: { effectKey, messageId: clientMessageId },
       });
+      await emitHeldSendNotice(tx, assessment, clientMessageId, context.shop?.shopId);
       return {
         result: { effectKey, messageId: clientMessageId },
         audit: {
@@ -1658,6 +1662,7 @@ export async function queueWhatsAppDocument(
       await tx.whatsAppOutboundEffect.create({
         data: { effectKey, messageId: clientMessageId },
       });
+      await emitHeldSendNotice(tx, assessment, clientMessageId, context.shop?.shopId);
       return {
         result: { effectKey, messageId: clientMessageId },
         audit: {
@@ -1972,6 +1977,7 @@ export async function queueWhatsAppVoice(
       await tx.whatsAppOutboundEffect.create({
         data: { effectKey, messageId: clientMessageId },
       });
+      await emitHeldSendNotice(tx, assessment, clientMessageId, context.shop?.shopId);
       return {
         result: { effectKey, messageId: clientMessageId },
         audit: {
