@@ -318,6 +318,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       data-universal-search="v2"
       data-command-trigger="true"
       data-search-open={open ? "true" : "false"}
+      // Focus moving to a control outside the field and its results (Tab, Shift+Tab) closes them, as a combobox
+      // does; otherwise they stay over the page and Escape, which is handled here, no longer reaches them. A focus
+      // change with no target is a press on a result or a switch of window: the results stay, so the click that
+      // follows the press still lands.
+      onBlur={(event) => {
+        const next = event.relatedTarget;
+        if (open && next instanceof Node && !event.currentTarget.contains(next)) handleOpenChange(false);
+      }}
       dir={locale === "ar" ? "rtl" : "ltr"}
       className={cn(
         "relative mx-auto min-w-0 max-w-xl flex-1",
@@ -338,7 +346,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           className={cn(
             "flex h-8 min-h-(--sf-touch-target) items-center gap-2 rounded-surface border px-2.5 transition-[background-color,border-color,box-shadow]",
             open
-              ? "border-primary/40 bg-popover shadow-(--elevation-1) ring-3 ring-primary/10"
+              ? "border-ring bg-popover shadow-(--elevation-1) ring-3 ring-ring/50"
               : "border-border/80 bg-muted/30 hover:border-border hover:bg-muted/55",
           )}
         >

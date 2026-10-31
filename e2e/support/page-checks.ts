@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { runAxe, settleMotion } from "./axe";
+import { runAxe, settleMotion, type AxeViolation } from "./axe";
 import {
   cellVerdict,
   summarizeViolations,
@@ -70,7 +70,19 @@ export type TabStop = {
   /** How the element looks without focus; null when it could not be measured (the indicator is then not judged). */
   before: FocusStyle | null;
   after: FocusStyle;
+  /**
+   * A text field that sits in a bordered frame and draws no outline of its own hands its focus cue to that frame
+   * (the AI composer, the top-bar search). These are the frame's look without and with focus; null when the field has
+   * a border of its own or no bordered frame sits within three parents.
+   */
+  beforeFrame?: FocusStyle | null;
+  afterFrame?: FocusStyle | null;
 };
+
+/** True when the frame around a field changed visibly on focus (see TabStop.beforeFrame). */
+export function frameIndicatorVisible(stop: Pick<TabStop, "beforeFrame" | "afterFrame">): boolean {
+  return Boolean(stop.beforeFrame && stop.afterFrame && focusIndicatorVisible(stop.beforeFrame, stop.afterFrame));
+}
 
 export type DialogFacts = {
   opened: boolean;
@@ -96,7 +108,7 @@ export function judgeKeyboardTour(facts: TourFacts): string[] {
   for (const stop of facts.stops) {
     if (!stop.visible || stop.width <= 0 || stop.height <= 0) {
       failures.push(`Tab stop ${stop.key} is not visible`);
-    } else if (stop.before !== null && !focusIndicatorVisible(stop.before, stop.after)) {
+    } else if (stop.before !== null && !focusIndicatorVisible(stop.before, stop.after) && !frameIndicatorVisible(stop)) {
       failures.push(`Tab stop ${stop.key} has no visible focus indicator`);
     }
   }
@@ -200,13 +212,25 @@ export type GateResult = {
   settled: boolean;
 };
 
+/**
+ * In forced colours (Windows high contrast) the browser repaints every text and background with the user's own palette,
+ * so the colours a page declares are not the colours anyone sees, and the contrast belongs to the user's palette. axe's
+ * colour-contrast rule reads the declared colours: measured on the notification count pill, the browser's computed pair
+ * was black on white while axe judged the declared #faf7f0 on #ffffff (1.06:1). In this mode that rule only produces
+ * false findings (108 of 141 failing forced cells in the first run), so it is not applied there. Every other rule still
+ * is, and in every other mode all rules are. The product sets forced-color-adjust nowhere, so nothing keeps its own colours.
+ */
+export function violationsForMode(violations: readonly AxeViolation[], mode: Mode): AxeViolation[] {
+  return mode === "forced" ? violations.filter((violation) => violation.id !== "color-contrast") : [...violations];
+}
+
 export async function gateCell(
   page: Page,
   cell: Cell,
   options: { reportOnly: boolean; failures: readonly string[] },
 ): Promise<GateResult> {
   const settled = await settleMotion(page);
-  const violations = await runAxe(page);
+  const violations = violationsForMode(await runAxe(page), cell.mode);
   const verdict = cellVerdict({
     cell,
     violations,
@@ -326,7 +350,17 @@ export async function collectPageFacts(page: Page, mode: Mode): Promise<PageFact
           (el.textContent ?? "").trim() !== "" ||
           (el instanceof HTMLInputElement && el.value.trim() !== "") ||
           el.querySelector("svg, img") !== null;
-        if (border === 0 && !outline && !content && forcedInvisible.length < 8) {
+        // Not a defect: a control made invisible on purpose (a file input kept behind its own button is 1 px wide), and
+        // a control with no border of its own inside a bordered frame (a text field in its bordered box): in forced
+        // colours the frame keeps its border, and the frame is the control's boundary.
+        const box = el.getBoundingClientRect();
+        const hiddenOnPurpose = box.width <= 2 || box.height <= 2;
+        let framed = false;
+        for (let up = el.parentElement, hops = 0; up && hops < 3 && !framed; hops += 1, up = up.parentElement) {
+          const frameStyle = getComputedStyle(up);
+          framed = frameStyle.borderTopStyle !== "none" && px(frameStyle.borderTopWidth) > 0;
+        }
+        if (border === 0 && !outline && !content && !hiddenOnPurpose && !framed && forcedInvisible.length < 8) {
           forcedInvisible.push(`${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}`);
         }
       }
@@ -352,7 +386,13 @@ export async function collectPageFacts(page: Page, mode: Mode): Promise<PageFact
   }, mode);
 }
 
-type StopSnapshot = { key: string; visible: boolean; width: number; height: number; style: FocusStyle } | null;
+type StopSnapshot =
+  | { overlay: true }
+  | { overlay: false; key: string; visible: boolean; width: number; height: number; style: FocusStyle; frame: FocusStyle | null }
+  | null;
+
+/** Next.js draws its development error overlay as this element. It does not exist in a production build and is not part of the page. */
+const DEV_OVERLAY_TAG = "nextjs-portal";
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [role="button"]:not([aria-disabled="true"])';
@@ -367,81 +407,146 @@ export async function runKeyboardTour(page: Page, maxTabs = 60): Promise<TourFac
     }).length;
   }, FOCUSABLE_SELECTOR);
 
+  // Transitions off while the tour measures: a frame or ring that closes with a 150 ms transition would still show its
+  // old look when it is read in the same frame, and the stop would be judged as having no indicator. Only the timing
+  // changes; every final value stays as the product draws it.
+  await page.addStyleTag({ content: "*,*::before,*::after{transition:none !important}" });
+
   await page.evaluate(() => {
     (document.activeElement as HTMLElement | null)?.blur();
     window.scrollTo(0, 0);
   });
 
+  // The two in-page readers below look at an element the same way: its own focus-relevant style, and, when the element
+  // has no border of its own, the style of the bordered frame within three parents (a field whose frame draws the cue).
+  // The helper is written out in both on purpose: page.evaluate serialises a function, and eval() inside the page would
+  // be blocked by a strict Content-Security-Policy.
   const snapshot = (): Promise<StopSnapshot> =>
-    page.evaluate(() => {
-      const holder = window as unknown as { __a11yIds?: WeakMap<Element, number>; __a11yCount?: number; __a11yLast?: Element };
-      const el = document.activeElement;
-      if (!el || el === document.body || el === document.documentElement) return null;
-      const ids = (holder.__a11yIds ??= new WeakMap<Element, number>());
-      if (!ids.has(el)) {
-        holder.__a11yCount = (holder.__a11yCount ?? 0) + 1;
-        ids.set(el, holder.__a11yCount);
-      }
-      holder.__a11yLast = el;
-      el.scrollIntoView({ block: "nearest", inline: "nearest" });
-      const rect = el.getBoundingClientRect();
-      const cs = getComputedStyle(el);
-      return {
-        key: `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}@${ids.get(el) ?? 0}`,
-        visible: cs.visibility !== "hidden" && cs.display !== "none",
-        width: rect.width,
-        height: rect.height,
-        style: {
+    page.evaluate((overlayTag: string): StopSnapshot => {
+      const px = (value: string) => Number.parseFloat(value) || 0;
+      const styleOf = (node: Element): FocusStyle => {
+        const cs = getComputedStyle(node);
+        return {
           outlineStyle: cs.outlineStyle,
           outlineWidth: cs.outlineWidth,
           outlineColor: cs.outlineColor,
           boxShadow: cs.boxShadow,
           borderColor: cs.borderTopColor,
           backgroundColor: cs.backgroundColor,
-        },
+        };
       };
-    });
-
-  const lastStyle = (): Promise<FocusStyle | null> =>
-    page.evaluate(() => {
-      const el = (window as unknown as { __a11yLast?: Element }).__a11yLast;
-      if (!el) return null;
+      const frameOf = (node: Element): Element | null => {
+        if (px(getComputedStyle(node).borderTopWidth) > 0) return null;
+        let up = node.parentElement;
+        for (let hops = 0; up && hops < 3; hops += 1, up = up.parentElement) {
+          const cs = getComputedStyle(up);
+          if (cs.borderTopStyle !== "none" && px(cs.borderTopWidth) > 0) return up;
+        }
+        return null;
+      };
+      const holder = window as unknown as {
+        __a11yIds?: WeakMap<Element, number>;
+        __a11yCount?: number;
+        __a11yLast?: Element;
+        __a11yLastFrame?: Element | null;
+      };
+      const el = document.activeElement;
+      if (!el || el === document.body || el === document.documentElement) return null;
+      if (el.tagName.toLowerCase() === overlayTag) return { overlay: true };
+      const ids = (holder.__a11yIds ??= new WeakMap<Element, number>());
+      if (!ids.has(el)) {
+        holder.__a11yCount = (holder.__a11yCount ?? 0) + 1;
+        ids.set(el, holder.__a11yCount);
+      }
+      holder.__a11yLast = el;
+      const frame = frameOf(el);
+      holder.__a11yLastFrame = frame;
+      el.scrollIntoView({ block: "nearest", inline: "nearest" });
+      const rect = el.getBoundingClientRect();
       const cs = getComputedStyle(el);
       return {
-        outlineStyle: cs.outlineStyle,
-        outlineWidth: cs.outlineWidth,
-        outlineColor: cs.outlineColor,
-        boxShadow: cs.boxShadow,
-        borderColor: cs.borderTopColor,
-        backgroundColor: cs.backgroundColor,
+        overlay: false,
+        key: `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}@${ids.get(el) ?? 0}`,
+        visible: cs.visibility !== "hidden" && cs.display !== "none",
+        width: rect.width,
+        height: rect.height,
+        style: styleOf(el),
+        frame: frame ? styleOf(frame) : null,
       };
+    }, DEV_OVERLAY_TAG);
+
+  const lastStyle = (): Promise<{ style: FocusStyle; frame: FocusStyle | null } | null> =>
+    page.evaluate(() => {
+      const styleOf = (node: Element): FocusStyle => {
+        const cs = getComputedStyle(node);
+        return {
+          outlineStyle: cs.outlineStyle,
+          outlineWidth: cs.outlineWidth,
+          outlineColor: cs.outlineColor,
+          boxShadow: cs.boxShadow,
+          borderColor: cs.borderTopColor,
+          backgroundColor: cs.backgroundColor,
+        };
+      };
+      const holder = window as unknown as { __a11yLast?: Element; __a11yLastFrame?: Element | null };
+      const el = holder.__a11yLast;
+      if (!el) return null;
+      return { style: styleOf(el), frame: holder.__a11yLastFrame ? styleOf(holder.__a11yLastFrame) : null };
     });
 
   const stops: TabStop[] = [];
   let firstStopInPage = false;
+  let endedOnOverlay = false;
   for (let press = 0; press < maxTabs; press += 1) {
     await page.keyboard.press("Tab");
     // The previous stop is unfocused now: how it looks without focus is the "before" of that stop.
     const unfocused = await lastStyle();
     const now = await snapshot();
-    if (press === 0) firstStopInPage = now !== null;
-    if (now === null) break;
+    if (press === 0) firstStopInPage = now !== null && !now.overlay;
     const previous = stops[stops.length - 1];
-    if (previous && unfocused && previous.key !== now.key) previous.before = unfocused;
-    stops.push({ key: now.key, visible: now.visible, width: now.width, height: now.height, before: null, after: now.style });
+    if (now !== null && now.overlay) {
+      // The Tab order has reached the development overlay: the page itself is finished. Not a stop, and the
+      // overlay's own shadow-DOM controls must not be walked.
+      if (previous && unfocused) {
+        previous.before = unfocused.style;
+        previous.beforeFrame = unfocused.frame;
+      }
+      endedOnOverlay = true;
+      break;
+    }
+    if (now === null) break;
+    if (previous && unfocused && previous.key !== now.key) {
+      previous.before = unfocused.style;
+      previous.beforeFrame = unfocused.frame;
+    }
+    stops.push({
+      key: now.key,
+      visible: now.visible,
+      width: now.width,
+      height: now.height,
+      before: null,
+      after: now.style,
+      beforeFrame: null,
+      afterFrame: now.frame,
+    });
   }
 
-  // Shift+Tab must walk back to the stop before the last one. It also unfocuses the last stop, which gives that
-  // stop its "before" look. A single-stop page cannot be measured that way and its indicator is not judged.
+  // Shift+Tab must walk back. From the last page stop it goes to the stop before it; from the development overlay it
+  // goes to the last page stop. It also unfocuses the last stop, which gives that stop its "before" look. A single-stop
+  // page cannot be measured that way and its indicator is not judged.
   let shiftTabBackOk = true;
   if (stops.length >= 1) {
     await page.keyboard.press("Shift+Tab");
     const unfocusedLast = await lastStyle();
     const back = await snapshot();
     const last = stops[stops.length - 1];
-    if (last && back && unfocusedLast && back.key !== last.key) last.before = unfocusedLast;
-    const expected = stops[stops.length - 2];
-    if (stops.length >= 2) shiftTabBackOk = back !== null && expected !== undefined && back.key === expected.key;
+    const backKey = back !== null && !back.overlay ? back.key : null;
+    if (last && backKey !== null && unfocusedLast && backKey !== last.key) {
+      last.before = unfocusedLast.style;
+      last.beforeFrame = unfocusedLast.frame;
+    }
+    const expected = endedOnOverlay ? last : stops[stops.length - 2];
+    if (endedOnOverlay || stops.length >= 2) shiftTabBackOk = backKey !== null && expected !== undefined && backKey === expected.key;
   }
 
   const dialog = await runDialogStep(page);
