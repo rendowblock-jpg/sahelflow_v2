@@ -435,11 +435,11 @@ describe("rate limits", () => {
     expect(w.count("SELECT COUNT(*) AS n FROM connected_rate_limit")).toBe(before);
   });
 
-  it("fails open (and says so on /healthz) when the counter table is missing", async () => {
+  it("fails open (and says so on /healthz) on every route but the pairing exchange when the counter table is missing", async () => {
     const w = await createWorld();
-    w.d1.sqlite.exec("DROP TABLE connected_rate_limit");
-    expect((await probeExchange(w, 1, "198.51.100.1")).status).toBe(403);
     const device = await w.pair();
+    w.d1.sqlite.exec("DROP TABLE connected_rate_limit");
+    expect((await probeExchange(w, 1, "198.51.100.1")).status).toBe(503);
     expect((await w.getProjection(device)).status).toBe(404);
     expect((await w.call("/healthz")).status).toBe(503);
   });
