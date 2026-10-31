@@ -8,12 +8,25 @@ import { createKeygen } from "../pair/keygen";
 import { readResume, savePairingRecord } from "../pair/resume";
 import { createFetchTransport } from "../pair/transport";
 import { openDb, saveDeviceKeys, type Db } from "../storage/idb";
+import { isOpen } from "../outbox/state";
+import type { EnqueueInput } from "../outbox/outbox";
+import { createVault, purgeOld } from "../storage/sealed";
 import { wipeAll } from "../storage/wipe";
+import { createSync } from "../sync/engine";
+import { reactToPoll, type PollReaction } from "../sync/revoke";
+import type { Budget } from "../sync/schedule";
 import type { UpdateController } from "../sw/update";
 import { createRelayClient } from "../today/relay-source";
 import { freshness, type Projection, type ProjectionSource } from "../today/projection";
 import { renderApp, type ScreenId, type Theme, type View } from "../views/view";
+import { createInboxHost } from "../views/inbox/host";
+import { createCommandStack, type CommandStack } from "./commands";
+import { createInboxMount } from "./inbox-mount";
+import { createOrdersHost, ORDERS_VAULT_KEY, type OrdersHostHandle } from "./orders-host";
 import { applyPreview } from "./preview";
+import { GROUP_OF } from "./registry";
+import { withShellStrip } from "./shell-strip";
+import { createVaultWiring } from "./vault-wiring";
 
 declare const __APP_VERSION__: string;
 declare const __RELAY_URL__: string;
@@ -53,6 +66,18 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   let lockState: LockState = { phase: "unset" }; let lockRow: LockRow | null = null; let pendingPin = ""; let returnTo: ScreenId = "welcome";
   let link: ReturnType<typeof takePairingLink> = { kind: "none" };
   let watcher: Readonly<{ stop(): void }> | null = null;
+  // The command stack (outbox on the real transport) exists once the phone is paired; decrypted orders live only in the vault.
+  let stack: Awaited<ReturnType<typeof createCommandStack>> = null; let ordersHost: OrdersHostHandle | null = null;
+  let inboxMount: ReturnType<typeof createInboxMount> | null = null; // the chats: loaded on the first visit, fed ONLY from the vault
+  const vault = createVault();
+  // Lock / hidden >= 5 min / unlock / wipe on the vault: one tested module. `wake`: the orders screen redraws from what is left and reloads if it was emptied.
+  const vaultWiring = createVaultWiring({
+    vault, key: ORDERS_VAULT_KEY,
+    wake: (emptied) => {
+      // An unlock revisits the inbox (the sealed copy opens without the network); never while locked. On the lock screen the screen to return to counts.
+      if (lockState.phase !== "locked" && GROUP_OF[view.screen === "lock" ? returnTo : view.screen] === "inbox") void inboxMount?.visit("inbox").catch(() => undefined);
+      const h = ordersHost; if (!h) return; h.notify(); if (emptied && lockState.phase !== "locked") void h.reload().catch(() => undefined); },
+  });
 
   const derive = (v: View): View => {
     if (v.screen !== "today") return v;
@@ -60,13 +85,14 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     if (v.state === "error" || v.state === "loading") return v;
     if (!p) return { ...v, state: "empty" };
     const f = freshness(p.generatedAt, v.now);
-    return { ...v, state: f === "expired" ? "expired" : !v.online ? "offline" : f === "fresh" ? "ready" : "stale" };
+    return { ...v, state: f === "expired" ? "expired" : !v.online ? "offline" : v.pcoff ? "pcoff" : f === "fresh" ? "ready" : "stale" };
   };
   const paint = (): void => {
     const v = previewOn ? applyPreview(view, location.search) : derive(view);
     document.documentElement.lang = v.locale; document.documentElement.dir = dirOf(v.locale);
     document.documentElement.dataset.theme = v.theme === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : v.theme;
-    root.innerHTML = renderApp(v);
+    // "Your PC is off" on every screen that shows shop data (Today and Orders draw their own strip; this one is added once, only when none is there).
+    root.innerHTML = withShellStrip(renderApp(v), { screen: v.screen, pcoff: v.pcoff === true, asOf: v.projection?.generatedAt ?? null, locale: v.locale });
     if (v.screen === "lock") root.querySelector<HTMLInputElement>("#pin")?.focus();
   };
   const set = (patch: Partial<View>, focusMain = false): void => {
@@ -77,10 +103,23 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     previewOn = false;
     history.pushState(null, "", `/?screen=${screen}`);
     set({ screen, state: screen === "today" ? "empty" : "empty", confirmRemove: false, removed: false, removeError: null, ...patch }, true);
-    if (screen === "today") void loadToday();
+    if (GROUP_OF[screen] === "orders") void attachOrders().catch(() => undefined);
+    if (screen === "inbox" || screen === "conversation") void attachInbox(screen).catch(() => undefined);
+    if (screen === "today") void loadToday(); else sync.onScreen();
   };
+  function showRevoked(reaction: Extract<PollReaction, { kind: "revoked" }>): void {
+    sync.stop();
+    set({ screen: "settings", state: "empty", revoked: true, removed: false, hasLock: false, projection: null, pcoff: false, removeError: reaction.wiped ? null : reaction.failed.join(", ") });
+  }
   async function loadToday(): Promise<void> {
-    if (!options.source) await relay.poll().catch(() => null);
+    if (!options.source) {
+      // ALARM 1: the poll answer is acted on. A phone the PC removed wipes itself before anything is read or drawn.
+      const poll = await relay.poll().catch(() => null);
+      const reaction = poll ? await reactToPoll(poll, wipe) : null;
+      if (reaction?.kind === "revoked") return showRevoked(reaction);
+      set({ pcoff: reaction?.kind === "pcoff" });
+      if (poll && poll.kind !== "not_paired") sync.start(false);
+    }
     const r = await source.load().catch(() => null);
     if (!r) return set({ projection: null, state: "error" });
     set(r.ok ? { projection: r.projection as Projection, state: "ready" } : { projection: null, state: r.reason === "unreadable" ? "error" : "empty" });
@@ -129,7 +168,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set({ lockNotice: { kind: "checking" } });
     const ok = isValidPin(pin) && (await verifyPin(pin, lockRow.pin));
     lockState = afterAttempt(lockState, ok, Date.now());
-    if (lockState.phase === "unlocked") return set({ screen: returnTo, lockNotice: null }, true);
+    if (lockState.phase === "unlocked") { vaultWiring.unlocked(); return set({ screen: returnTo, lockNotice: null }, true); }
     if (lockState.phase !== "locked") return;
     lockRow = { pin: lockRow.pin, failures: lockState.failures, waitUntil: lockState.waitUntil };
     await (await getDb()).put("settings", "lock", lockRow);
@@ -154,7 +193,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     });
   }
   async function wipe(): ReturnType<typeof wipeAll> {
-    watcher?.stop(); watcher = null;
+    watcher?.stop(); watcher = null; vaultWiring.wipe(); stack = null; ordersHost = null; inboxMount = null;
     const db = await getDb().catch(() => null); dbPromise = null;
     return wipeAll({
       db, factory: indexedDB, caches: typeof caches === "undefined" ? null : caches,
@@ -167,6 +206,56 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set(result.ok ? { removed: true, confirmRemove: false, hasLock: false, projection: null } : { removeError: result.failed.join(", "), confirmRemove: false });
   }
 
+  async function getStack(): ReturnType<typeof createCommandStack> {
+    if (stack) return stack;
+    stack = await createCommandStack({ db: await getDb(), relayBase: __RELAY_URL__, fetch: (input, init) => fetch(input, init), now: Date.now });
+    return stack;
+  }
+  // ONE flush wrapper for both hosts: an accepted command goes to the relay at once; the outbox keeps it when that fails.
+  const flushingOutbox = (s: CommandStack) => ({ list: s.outbox.list, enqueue: async (i: EnqueueInput) => { const r = await s.outbox.enqueue(i); if (r.ok) void s.outbox.flush().catch(() => undefined); return r; } });
+  // Mounts the orders screen on a real host (own file, own tests).
+  async function attachOrders(): Promise<void> {
+    if (ordersHost) return;
+    const s = await getStack(); if (!s || ordersHost) return;
+    const mod = await import("../views/orders/screen");
+    const outbox = flushingOutbox(s);
+    const h = createOrdersHost({
+      now: Date.now, locale: () => view.locale, online: () => navigator.onLine, pcOff: () => view.pcoff === true,
+      fetchOrders: async () => { await relay.poll("orders"); await s.refresh(); }, openOrders: s.openOrders,
+      vault, outbox, drafts: s.drafts, authorityExpiresAt: s.authorityExpiresAt, go: (x) => go(x),
+    });
+    ordersHost = h; mod.attachOrdersHost(h); await h.reload();
+  }
+  // Mounts the inbox (own file inbox-mount.ts, own tests): the screen chunk loads once, the host reads ONLY the vault, a reply goes through the real outbox.
+  async function attachInbox(screen: "inbox" | "conversation"): Promise<void> {
+    const s = await getStack(); if (!s) return;
+    inboxMount ??= createInboxMount({
+      vault, loadScreen: () => import("../views/inbox/screen"),
+      makeHost: (p) => createInboxHost({
+        now: Date.now, locale: () => view.locale, online: () => navigator.onLine, pcOff: () => view.pcoff === true,
+        readConversations: p.read, reload: p.reload, subscribeAll: p.subscribe,
+        outbox: flushingOutbox(s), drafts: s.drafts, authorityExpiresAt: s.authorityExpiresAt, go: (x) => go(x),
+      }),
+      openConversations: s.openConversations,
+      poll: async () => { await relay.poll("conversations"); await s.refresh(); },
+      subscribeAll: () => () => undefined,
+    });
+    await inboxMount.visit(screen);
+  }
+  // Polling budget: fetch on open/visible/online/Refresh, 30 s on Orders and Inbox, 60 s elsewhere, nothing while hidden, 600 a day.
+  const sync = createSync({
+    now: Date.now, visible: () => !document.hidden, online: () => navigator.onLine, screen: () => view.screen,
+    fetchKind: (kind) => relay.poll(kind),
+    pollCommands: async () => {
+      const s = await getStack().catch(() => null); if (!s) return false;
+      await s.outbox.flush(); await s.outbox.refresh();
+      return (await s.outbox.list()).some((r) => isOpen(r.state));
+    },
+    loadBudget: async () => (await (await getDb()).get<Budget>("settings", "pollBudget")) ?? null,
+    saveBudget: async (b) => { await (await getDb()).put("settings", "pollBudget", b); },
+    onPoll: (poll) => { if (poll.kind === "updated") void stack?.refresh().catch(() => undefined); if (poll.kind === "revoked") void reactToPoll(poll, wipe).then((r) => { if (r.kind === "revoked") showRevoked(r); }); },
+    timers: { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>) },
+  });
   root.addEventListener("click", (event) => {
     const el = (event.target as Element).closest<HTMLElement>("[data-act],[data-nav],[data-lang],[data-theme]");
     if (!el) return;
@@ -193,19 +282,22 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   });
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e as InstallEvent; set({ canInstall: true }); });
   window.addEventListener("appinstalled", () => set({ installed: true, canInstall: false }));
-  window.addEventListener("online", () => set({ online: true }));
+  window.addEventListener("online", () => { set({ online: true }); sync.onOnline(); });
   window.addEventListener("offline", () => set({ online: false }));
   window.addEventListener("popstate", () => { const s = SCREENS.find((x) => x === new URLSearchParams(location.search).get("screen")); set({ screen: s ?? "welcome" }); });
   document.addEventListener("visibilitychange", () => {
     lockState = document.hidden ? onHidden(lockState, Date.now()) : onVisible(lockState, Date.now());
+    vaultWiring.visibility({ hidden: document.hidden, phase: lockState.phase, now: Date.now() }); // hidden for 5 minutes or more, or locked: the decrypted copies are dropped
+    if (document.hidden) sync.onHidden(); else sync.onVisible();
     if (!document.hidden && lockState.phase === "locked" && view.screen !== "lock") { returnTo = view.screen; set({ screen: "lock", lockMode: "enter", lockNotice: null }); }
   });
 
+  void getDb().then((db) => purgeOld(db, Date.now())).catch(() => undefined);
   link = takePairingLink(location.hash, location.pathname + location.search, (u) => history.replaceState(null, "", u));
   paint();
   void getDb().then((db) => db.get<LockRow>("settings", "lock")).then((row) => {
     if (!row) return;
-    lockRow = row; lockState = initialState(true, row); returnTo = view.screen === "lock" ? "welcome" : view.screen;
+    lockRow = row; lockState = initialState(true, row); vaultWiring.locked(); returnTo = view.screen === "lock" ? "welcome" : view.screen;
     set({ hasLock: true, screen: "lock", lockMode: "enter", lockNotice: null });
   }).catch(() => undefined);
   // A reload while the PC has not approved yet: back to the waiting screen, polling from the start of the backoff.

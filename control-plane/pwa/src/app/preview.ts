@@ -6,7 +6,7 @@ import type { ScreenId, Theme, View, ViewState } from "../views/view";
 // ?screen=today&state=stale&lang=fr&theme=dark lets every state be looked at
 // without a backend. Fixtures only; they never reach the network or storage.
 const SCREENS: readonly ScreenId[] = ["welcome", "pair", "today", "settings", "lock"];
-const STATES: readonly ViewState[] = ["loading", "empty", "error", "stale", "offline", "ready", "expired", "keygen", "waiting"];
+const STATES: readonly ViewState[] = ["loading", "empty", "error", "stale", "offline", "ready", "expired", "keygen", "waiting", "pcoff"];
 const HOUR = 3_600_000;
 // ?failure=bad_signature (with state=error) shows one refusal or error screen; ?waited=7 (state=waiting) the minutes already waited;
 // ?floor=1 (screen=today) the "at least" count. Unknown values fall back to the defaults.
@@ -46,5 +46,7 @@ export function applyPreview(base: View, search: string): View {
       const notice = state === "error" ? { kind: "wrong", left: 3 } as const : state === "stale" ? { kind: "wait", seconds: 24 } as const : state === "loading" ? { kind: "checking" } as const : null;
       return { ...v, lockMode: state === "empty" ? "set" : "enter", lockNotice: notice };
     }
+    // The lazy screens (orders, inbox, ...) have no preview fixtures yet.
+    default: return v;
   }
 }

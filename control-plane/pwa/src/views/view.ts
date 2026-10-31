@@ -2,8 +2,8 @@ import { dirOf, formatDzd, formatNumber, formatTime, formatWeekday, t, type Loca
 import type { PairFailure, PairStep } from "../pair/flow";
 import type { Projection } from "../today/projection";
 
-export type ScreenId = "welcome" | "pair" | "today" | "settings" | "lock";
-export type ViewState = "loading" | "empty" | "error" | "stale" | "offline" | "ready" | "expired" | "keygen" | "waiting";
+export type ScreenId = "welcome" | "pair" | "today" | "settings" | "lock" | "orders" | "order" | "inbox" | "conversation" | "install" | "devices";
+export type ViewState = "loading" | "empty" | "error" | "stale" | "offline" | "ready" | "expired" | "keygen" | "waiting" | "pcoff";
 export type Theme = "light" | "dark" | "system";
 export type LockNotice = null | Readonly<{ kind: "wrong"; left: number }> | Readonly<{ kind: "wait"; seconds: number }> | Readonly<{ kind: "mismatch" | "invalid" | "checking" }>;
 export type View = Readonly<{
@@ -14,6 +14,10 @@ export type View = Readonly<{
   version: string; confirmRemove: boolean; removeError: string | null; removed: boolean;
   // When pairing finished (waiting screen): the minutes already waited are shown from it.
   pairedAt?: number | null;
+  // The PC stopped answering (404 for a known shop): the last copy is shown with its time. Not an error.
+  pcoff?: boolean;
+  // The PC removed this phone: everything local was deleted.
+  revoked?: boolean;
 }>;
 type Params = Readonly<Record<string, string | number>>;
 type Tr = (key: string, params?: Params) => string;
@@ -83,7 +87,7 @@ function today(v: View, tr: Tr): string {
   if (v.state === "error") return head + note("alert", "alert", tr("common.error.title"), tr("today.error"), button("retry", tr("common.retry"), "ghost"));
   if (!p) return head + note("", "status", "", tr("today.notpaired"), button("go-pair", tr("welcome.pair")));
   if (v.state === "expired") return head + note("alert", "status", "", tr("today.expired"));
-  const strip = v.state === "stale" || v.state === "offline"
+  const strip = v.state === "pcoff" ? `<div class="strip pcoff-strip" role="status"><strong>${tr("state.pcoff", { time: formatTime(p.generatedAt, v.locale) })}</strong></div>` : v.state === "stale" || v.state === "offline"
     ? `<div class="strip" role="status"><strong>${tr("today.stale", { time: formatTime(p.generatedAt, v.locale) })}</strong><span>${tr("today.stale.hint")}</span></div>` : "";
   const waiting = p.toConfirmIsFloor ? tr("today.atLeast", { count: formatNumber(p.toConfirm) }) : formatNumber(p.toConfirm);
   const call = p.toConfirm > 0 ? `<div class="note margin" role="status"><h2>${tr("today.call.title")}</h2><p>${tr("today.call.body", { count: waiting })}</p></div>` : "";
@@ -93,6 +97,7 @@ function today(v: View, tr: Tr): string {
 }
 
 function settings(v: View, tr: Tr): string {
+  if (v.revoked) return `<h1>${tr("settings.title")}</h1>${note("alert", "alert", "", tr("settings.revoked"))}`;
   if (v.state === "loading") return `<h1>${tr("settings.title")}</h1>${skeleton(tr("common.loading"))}`;
   const seg = (attr: string, id: string, label: string, on: boolean, lang = ""): string => `<button type="button" class="seg" data-${attr}="${id}" aria-pressed="${on}"${lang}>${label}</button>`;
   const langs = (["ar", "fr", "en"] as const).map((l) => seg("lang", l, l === "ar" ? "العربية" : l === "fr" ? "Français" : "English", v.locale === l, ` lang="${l}"`)).join("");

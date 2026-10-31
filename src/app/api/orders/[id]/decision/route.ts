@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { withErrorHandler } from "@/lib/api/with-error-handler";
-import {
-  dispatchTrigger,
-  type TriggerEvent,
-} from "@/lib/automations/engine";
 import { db, shopContext } from "@/lib/db";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { executeManualOrderDecision } from "@/lib/orders/manual-confirmation";
-import { fireCapiStageForOrder } from "@/lib/meta/capi-triggers";
+import { runManualDecisionEffects } from "@/lib/orders/decide-order-for-actor";
 
 export const dynamic = "force-dynamic";
 
@@ -24,41 +20,8 @@ export const POST = withErrorHandler(
       orderId: id,
     });
 
-    if (!command.replayed) {
-      const trigger = command.result.automation.trigger as TriggerEvent;
-      await dispatchTrigger(
-        context,
-        trigger,
-        command.result.automation.order,
-        {
-          triggerKey: `${trigger}:${command.result.orderId}:v${command.result.version}`,
-        },
-      );
-      for (const product of command.result.automation.lowStock) {
-        await dispatchTrigger(
-          context,
-          "stock.low" as TriggerEvent,
-          {
-            productId: product.id,
-            productName: product.name,
-            stockLevel: product.stock,
-            lowStockThreshold: product.lowStockThreshold,
-          },
-          {
-            triggerKey: `stock.low:${product.id}:order:${command.result.orderId}:v${command.result.version}`,
-          },
-        );
-      }
-      // FD-061 EX-3: CAPI confirmed-stage trigger. fireCapiStageForOrder
-      // only claims the durable ledger (no network call — the drain does)
-      // and swallows its own failures, so a CAPI failure can never block
-      // the confirmation decision; awaiting it keeps the side-channel
-      // deterministic so the buyer's next action never races this write
-      // for SQLite's write lock.
-      if (command.result.status === "confirmed") {
-        await fireCapiStageForOrder(command.result.orderId, "confirmed");
-      }
-    }
+    // The trigger, stock.low and CAPI effects are shared with the phone.
+    await runManualDecisionEffects(context, command);
 
     return NextResponse.json({
       order: {

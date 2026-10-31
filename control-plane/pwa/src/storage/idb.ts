@@ -1,7 +1,9 @@
 import type { DeviceKeys } from "../../../../src/lib/connected-platform/web";
 
 export const DB_NAME = "sfapp";
-export const STORES = ["keys", "settings", "projections"] as const;
+// v2 (W3-F3): `sealed` = projection envelopes as received, `outbox` = commands waiting for the PC.
+export const DB_VERSION = 2;
+export const STORES = ["keys", "settings", "projections", "sealed", "outbox"] as const;
 export type StoreName = (typeof STORES)[number];
 export type Db = Readonly<{
   get<T>(store: StoreName, key: string): Promise<T | undefined>;
@@ -23,7 +25,7 @@ const finish = (tx: IDBTransaction): Promise<void> =>
 
 export function openDb(factory: IDBFactory, name: string = DB_NAME): Promise<Db> {
   return new Promise((resolve, reject) => {
-    const request = factory.open(name, 1);
+    const request = factory.open(name, DB_VERSION);
     request.onupgradeneeded = () => {
       for (const store of STORES) if (!request.result.objectStoreNames.contains(store)) request.result.createObjectStore(store);
     };
