@@ -104,12 +104,51 @@ const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const MAX_JWK_CHARS = 4096;
 const PAIRING_TTL_MS = 10 * 60 * 1000;
 const MAX_POLL_LIMIT = 100;
+// Body limits for the two routes a phone (or a stranger) can reach. Read BEFORE parsing and before the token is
+// checked, so nobody can make the worker buffer megabytes. 512 KiB is the ciphertext cap in protocol.ts, plus 16 KiB of fields.
+const MAX_COMMAND_BODY_BYTES = 512 * 1024 + 16 * 1024;
+const MAX_PAIRING_BODY_BYTES = 16 * 1024;
 const COMPLETE_FEATURE = "sahelflow.complete";
 const CONNECTED_FEATURE = "sahelflow.connected";
 const STOREFRONT_FEATURE = "sahelflow.storefront";
 const COMMAND_POLICY_MAX_TTL_MS = 20 * 60 * 1000;
 // Presence needs two-minute accuracy, so one write per 30 s per device is plenty.
 const LAST_SEEN_THROTTLE_SECONDS = 30;
+
+type BoundedJson = { ok: true; value: unknown } | { ok: false; response: Response };
+
+/** Reads the body in chunks and stops at `maxBytes` (413). Not JSON is 400 invalid_json, as before. */
+async function readBoundedJson(request: Request, maxBytes: number): Promise<BoundedJson> {
+  const tooLarge = (): BoundedJson => ({ ok: false, response: json({ error: "payload_too_large" }, 413) });
+  const declared = Number(request.headers.get("Content-Length") ?? "0");
+  if (Number.isFinite(declared) && declared > maxBytes) return tooLarge();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  if (request.body) {
+    const reader = request.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        return tooLarge();
+      }
+      chunks.push(value);
+    }
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return { ok: true, value: JSON.parse(new TextDecoder().decode(bytes)) as unknown };
+  } catch {
+    return { ok: false, response: json({ error: "invalid_json" }, 400) };
+  }
+}
 
 function json(value: unknown, status = 200): Response {
   return Response.json(value, {
@@ -733,9 +772,9 @@ async function exchangePairing(request: Request, environment: ConnectedWorkerEnv
   const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
   const ipLimited = await hitRate(environment, "exchange_ip", await subjectHash(ip));
   if (ipLimited) return ipLimited;
-  let body: unknown;
-  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
-  const input = body as {
+  const parsed = await readBoundedJson(request, MAX_PAIRING_BODY_BYTES);
+  if (!parsed.ok) return parsed.response;
+  const input = parsed.value as {
     pairingId?: unknown;
     pairingToken?: unknown;
     signingPublicKey?: unknown;
@@ -1034,8 +1073,9 @@ async function getProjection(request: Request, environment: ConnectedWorkerEnvir
 }
 
 async function submitCommand(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
-  let body: unknown;
-  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
+  const parsed = await readBoundedJson(request, MAX_COMMAND_BODY_BYTES);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.value;
   if (!isConnectedEnvelope(body)) return json({ error: "invalid_envelope" }, 400);
   const envelope = body;
   if (
