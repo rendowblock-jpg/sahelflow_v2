@@ -70,9 +70,16 @@ describe("a command the relay offers twice is run once", () => {
     const send = { kind: "command.messages.reply" as const, target: { type: "conversation" as const, id: c.id, lastSeenMessageId: inbound.id }, labelForUi: "Samira", draftText: "On the way" };
     await phone.outbox.enqueue(send); await phone.outbox.flush(); await rig.runDesktop();
     await vi.waitFor(() => expect(hoisted.send).toHaveBeenCalledTimes(1));
-    clock.t += 1000;
-    await phone.outbox.enqueue(send); await phone.outbox.flush(); await rig.runDesktop(); await phone.outbox.refresh(); await sleep(250);
-    expect((await phone.outbox.list())[1]).toMatchObject({ state: "failed", resultCode: "ALREADY_ANSWERED" });
+    // The first command must be CLOSED on the phone before a second reply to the same chat is accepted (one open command per target and group).
+    await phone.outbox.refresh(); await sleep(250); clock.t += 1000;
+    expect(await phone.only()).toMatchObject({ state: "committed" });
+    // A second, DIFFERENT reply carrying the same "last seen" message: the first reply is newer than it, so the guard must still refuse it.
+    const second = await phone.outbox.enqueue({ ...send, draftText: "Another one" });
+    expect(second.ok, JSON.stringify(second)).toBe(true);
+    await phone.outbox.flush(); await rig.runDesktop(); await phone.outbox.refresh(); await sleep(250);
+    const records = await phone.outbox.list();
+    expect(records).toHaveLength(2);
+    expect(records.find((r) => r.state === "failed")).toMatchObject({ state: "failed", resultCode: "ALREADY_ANSWERED" });
     expect(hoisted.send).toHaveBeenCalledTimes(1); expect(await outbound()).toBe(1);
   });
 

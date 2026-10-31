@@ -100,6 +100,8 @@ describe("relay body size, the seven desktop routes", () => {
       expect(await over.json()).toEqual({ error: "payload_too_large" });
       const lied = await send(w, route, "{}", { "Content-Length": String(route.limit + 1) });
       expect(lied.status).toBe(413);
+      // A declared length equal to the limit is read, not refused (kills `declared >= maxBytes`).
+      expect((await send(w, route, "{}", { "Content-Length": String(route.limit) })).status).not.toBe(413);
       // Not JSON and small: still the old answer, so only the size changed.
       expect((await send(w, route, "{not json")).status).toBe(400);
       expect(rows(w)).toBe(0);
