@@ -195,7 +195,7 @@ export function PhoneReputationPanel({ canManage }: { canManage: boolean }) {
                 className="flex items-center justify-between rounded-surface border p-2.5"
               >
                 <div>
-                  <p className="font-mono text-sm" dir="ltr">
+                  <p className="min-w-0 font-mono [overflow-wrap:anywhere] text-sm" dir="ltr">
                     {entry.phone}
                   </p>
                   <p className="text-xs text-muted-foreground">
