@@ -19,6 +19,7 @@ import {
   countByMode,
   discoverPageFiles,
   formatSummary,
+  isReportOnly,
   modeSetup,
   pageFileToRoute,
   parseResultLines,
@@ -485,5 +486,14 @@ describe("classifyBuild", () => {
     expect(classifyBuild({}, ["/_next/static/development/_buildManifest.js"])).toBe("dev");
     expect(classifyBuild({}, ["/_next/static/chunks/webpack.js?v=1730"])).toBe("dev");
     expect(classifyBuild({}, ["/_next/static/chunks/main-abc123.js"])).toBe("unknown");
+  });
+});
+
+describe("isReportOnly", () => {
+  it("is on only for A11Y_REPORT_ONLY=1", () => {
+    expect(isReportOnly({ A11Y_REPORT_ONLY: "1" })).toBe(true);
+    expect(isReportOnly({ A11Y_REPORT_ONLY: "0" })).toBe(false);
+    expect(isReportOnly({ A11Y_REPORT_ONLY: "true" })).toBe(false);
+    expect(isReportOnly({})).toBe(false);
   });
 });

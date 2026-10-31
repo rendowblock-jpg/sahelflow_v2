@@ -220,13 +220,25 @@ export async function gateCell(
 // ---------------------------------------------------------------------------------------------------------------
 // Thin browser parts: they only collect facts, the judging above decides
 
-/** The page has hydrated and its level-one heading (the work surface) is in the document. */
-export async function waitForWorkSurface(page: Page): Promise<void> {
-  await page.locator('html[data-sf-hydrated="true"]').waitFor({ state: "attached", timeout: 40_000 });
-  await page
-    .locator('#main-content h1, #main-content [role="heading"][aria-level="1"], main h1')
-    .first()
-    .waitFor({ state: "attached", timeout: 40_000 });
+/**
+ * Waits for hydration and for the level-one heading (the work surface). Returns the failures instead of throwing, so
+ * the cell is still measured and reported: a page that never hydrates or shows no heading is itself a finding.
+ */
+export async function waitForWorkSurface(page: Page): Promise<string[]> {
+  try {
+    await page.locator('html[data-sf-hydrated="true"]').waitFor({ state: "attached", timeout: 40_000 });
+  } catch {
+    return ["the page did not hydrate within 40 s (html[data-sf-hydrated] never appeared)"];
+  }
+  try {
+    await page
+      .locator('#main-content h1, #main-content [role="heading"][aria-level="1"], main h1, h1')
+      .first()
+      .waitFor({ state: "attached", timeout: 15_000 });
+  } catch {
+    return ["no level-one heading appeared within 15 s"];
+  }
+  return [];
 }
 
 export async function collectPageFacts(page: Page, mode: Mode): Promise<PageFacts> {
@@ -332,18 +344,17 @@ export async function runKeyboardTour(page: Page, maxTabs = 60): Promise<TourFac
       const holder = window as unknown as { __a11yIds?: WeakMap<Element, number>; __a11yCount?: number; __a11yLast?: Element };
       const el = document.activeElement;
       if (!el || el === document.body || el === document.documentElement) return null;
-      holder.__a11yIds ??= new WeakMap();
-      holder.__a11yCount ??= 0;
-      if (!holder.__a11yIds.has(el)) {
-        holder.__a11yCount += 1;
-        holder.__a11yIds.set(el, holder.__a11yCount);
+      const ids = (holder.__a11yIds ??= new WeakMap<Element, number>());
+      if (!ids.has(el)) {
+        holder.__a11yCount = (holder.__a11yCount ?? 0) + 1;
+        ids.set(el, holder.__a11yCount);
       }
       holder.__a11yLast = el;
       el.scrollIntoView({ block: "nearest", inline: "nearest" });
       const rect = el.getBoundingClientRect();
       const cs = getComputedStyle(el);
       return {
-        key: `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}@${holder.__a11yIds.get(el) ?? 0}`,
+        key: `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}@${ids.get(el) ?? 0}`,
         visible: cs.visibility !== "hidden" && cs.display !== "none",
         width: rect.width,
         height: rect.height,
