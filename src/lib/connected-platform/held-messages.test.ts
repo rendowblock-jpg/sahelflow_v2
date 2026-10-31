@@ -10,7 +10,7 @@ vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
 });
 
 import type { PrismaClient } from "@prisma/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cleanDb, seedCustomer, seedProduct } from "@/lib/data/__tests__/helpers";
 import { db } from "@/lib/db";
@@ -47,6 +47,10 @@ async function clean(): Promise<void> {
   await raw.outboxIntent.deleteMany();
   await raw.businessCommand.deleteMany();
 }
+
+// The rows this file seeds must not outlive it: the API helpers' cleanDb in other files (src/app/api/__tests__/helpers.ts) does not clear
+// WhatsAppOutboundEffect / OutboxIntent / BusinessCommand and fails on the left-over foreign keys (the Golden COD journey did, when it ran after this file).
+afterAll(async () => { await clean(); });
 
 beforeEach(async () => {
   await clean();
