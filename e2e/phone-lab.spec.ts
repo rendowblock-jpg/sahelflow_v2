@@ -243,3 +243,31 @@ test.describe("phone lab 9b", () => {
     });
   });
 });
+
+// 9c: a phone that is locked WITHOUT any clock trick. Set a PIN, reload the page (the app opens on its lock screen), the PC removes the phone.
+// It must find out by itself: the lock screen polls the dashboard once a minute (sync/schedule.ts), so the wipe has to come within about two minutes.
+test.describe("phone lab 9c", () => {
+  test.use({ locale: "en-GB" });
+  test("9c revoke while cold-locked", async ({ page }) => {
+    test.setTimeout(480_000); const results: Result[] = [];
+    await page.addInitScript(() => { try { if (!localStorage.getItem("sf.locale")) localStorage.setItem("sf.locale", "en"); } catch { /* private mode */ } });
+    await ctl("/reseed"); const { pairingUrl } = await ctl<{ pairingUrl: string }>("/newpair");
+    await page.goto(pairingUrl); await expect(tabs(page, "orders")).toBeVisible({ timeout: 90_000 });
+    await tabs(page, "settings").click(); await expect(page.locator('[data-screen="settings"]')).toBeVisible();
+    await step(page, "en", "9c-revoke-cold-locked", results, async () => {
+      await setPin(page, "en");
+      await page.reload(); await expect(page.locator("#pin")).toBeVisible({ timeout: 30_000 });
+      const dom = await page.evaluate(() => document.documentElement.outerHTML);
+      for (const n of ["Maximilian", "Karim", "Yasmine", "Unread Ulla", "Held Hana", "Plain Pat", "ORD-000"]) expect(dom, `cold-locked DOM has ${n}`).not.toContain(n);
+      const r = await ctl<{ status: number }>("/revoke"); expect(r.status).toBeLessThan(300);
+      const gone = () => page.evaluate(async () => (await indexedDB.databases()).length === 0 && localStorage.length === 0).catch(() => false);
+      const t0 = Date.now(); let wiped: number | null = null;
+      while (Date.now() - t0 < 150_000) { if (await gone()) { wiped = Date.now() - t0; break; } await page.waitForTimeout(2000); }
+      record("en-9c-number", { wipedWhileColdLockedAfterMs: wiped, notWipedIn150s: wiped === null });
+      expect(wiped, "a phone on the lock screen must notice that the PC removed it").not.toBeNull();
+      return `wiped while cold-locked after ${wiped} ms`;
+    });
+    record("en-9c-summary", results);
+    expect(results.filter((x) => x.status === "fail").map((x) => x.id)).toEqual([]);
+  });
+});
