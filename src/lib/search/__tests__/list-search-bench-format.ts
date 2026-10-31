@@ -42,14 +42,14 @@ export function medianOf(samples: readonly number[]): number {
   if (samples.length === 0) return 0;
   const sorted = [...samples].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted.length % 2 === 1 ? (sorted[mid] ?? 0) : ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
 }
 
 /** Nearest rank: the smallest sample that at least 95 % of the samples do not exceed. */
 export function p95Of(samples: readonly number[]): number {
   if (samples.length === 0) return 0;
   const sorted = [...samples].sort((a, b) => a - b);
-  return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)];
+  return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)] ?? 0;
 }
 
 /** 31.4 -> "31", 4.46 -> "4.5": whole milliseconds from 10 up, one decimal below. */
@@ -80,9 +80,9 @@ export function formatBenchTable(lines: readonly BenchLine[]): string {
       if (ofSuite.length === 0) continue;
       rows.push([suite, ...labels.map((label) => cell(ofSuite.find((l) => l.query === label)))]);
     }
-    const widths = rows[0].map((_, col) => Math.max(...rows.map((row) => row[col].length)));
+    const widths = (rows[0] ?? []).map((_, col) => Math.max(...rows.map((row) => (row[col] ?? "").length)));
     for (const row of rows) {
-      out.push(row.map((text, col) => text.padEnd(widths[col])).join("  ").trimEnd());
+      out.push(row.map((text, col) => text.padEnd(widths[col] ?? 0)).join("  ").trimEnd());
     }
     out.push("");
   }

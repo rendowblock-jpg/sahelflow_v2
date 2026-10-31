@@ -81,6 +81,9 @@ const FR_LAST = ["Benali", "Boudiaf", "Mezouar", "Belkacem", "Haddad", "Benamar"
 const WILAYAS = ["Alger", "16", "وهران", "Constantine", "31", "Blida", "Sétif", "19"];
 const STATUSES = ["draft", "confirmed", "shipped", "delivered"];
 
+/** Cycle through a list; the `?? ""` only satisfies unchecked indexed access (the lists are never empty). */
+const pick = (list: readonly string[], i: number): string => list[i % list.length] ?? "";
+
 function customerName(i: number): string {
   const first = i % 10;
   const last = Math.floor(i / 10) % 8;
@@ -124,22 +127,20 @@ describe.skipIf(!process.env.SF_BENCH)("list search bench", () => {
   beforeAll(async () => {
     await sweep();
     const now = Date.now();
-    const phones: string[] = [];
     const customers = Array.from({ length: CUSTOMERS }, (_, i) => {
-      phones.push(customerPhone(i));
-      return { id: `bench-c-${i}`, name: customerName(i), phone: phones[i], wilaya: WILAYAS[i % 8] };
+      return { id: `bench-c-${i}`, name: customerName(i), phone: customerPhone(i), wilaya: pick(WILAYAS, i) };
     });
     await inBatches(customers, (data) => countedDb.customer.createMany({ data }));
     const orders = Array.from({ length: ORDERS }, (_, i) => ({
       id: `bench-o-${i}`,
       orderNumber: `ORD-2026-${String(i + 1).padStart(4, "0")}`,
-      status: STATUSES[i % 4],
+      status: pick(STATUSES, i),
       customerId: `bench-c-${i % CUSTOMERS}`,
       totalPrice: 1000 + (i % 50) * 100,
-      wilaya: WILAYAS[i % 8],
+      wilaya: pick(WILAYAS, i),
       commune: "Centre",
       address: `Rue ${i} Cité ${i % 40}`,
-      phone: phones[i % CUSTOMERS],
+      phone: customerPhone(i % CUSTOMERS),
       createdAt: new Date(now - i * 60_000),
     }));
     await inBatches(orders, (data) => countedDb.order.createMany({ data }));
