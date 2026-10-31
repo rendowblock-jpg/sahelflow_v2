@@ -32,7 +32,7 @@ export function payloadOf(r: Pick<OutboxRecord, "kind" | "target" | "draftText">
     case "command.orders.reject": return { orderId: r.target.id, expectedVersion: version, reasonKey: r.draftText };
     case "command.messages.reply": return { conversationId: r.target.id, text: r.draftText, ...(lastSeen === undefined ? {} : { lastSeenMessageId: lastSeen }), ...(extra.force === true ? { force: true } : {}) };
     // The desktop's strict note schema. No version seen means 0: a thread the phone has not seen yet.
-    case "command.comments.write": return { entityType: r.target.type, entityId: r.target.id, body: r.draftText, mentionMemberIds: [], expectedVersion: extra.expectedVersion ?? 0 };
+    case "command.comments.write": return { entityType: r.target.type, entityId: r.target.id, body: r.draftText, mentionMemberIds: [], expectedVersion: version ?? 0 };
   }
 }
 export type CmdGroup = "decision" | "note" | "reply";
