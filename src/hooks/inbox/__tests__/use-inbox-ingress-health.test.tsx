@@ -54,6 +54,16 @@ describe("describeIngressHealth", () => {
     expect(describeIngressHealth(bad, false).notices).toEqual([]);
   });
 
+  it("a negative count never cancels a real one (the sum above hides it)", () => {
+    const mixed = status({ lost: { spoolFailed: -3, noPairedAccount: 5 } });
+    expect(describeIngressHealth(mixed, false).notices).toEqual([{ kind: "lost", count: 5, minutes: null }]);
+  });
+
+  it("a fractional count alone is not a count", () => {
+    const fractional = status({ lost: { noPairedAccount: 1.5 } });
+    expect(describeIngressHealth(fractional, false).notices).toEqual([]);
+  });
+
   it("calls a backlog 'waiting' only at 60 s or when stuck, with whole minutes", () => {
     const at = (oldestPendingSec: number, stuck = 0) =>
       describeIngressHealth(status({ spool: { pending: 2, oldestPendingSec, stuck } }), false).notices;
