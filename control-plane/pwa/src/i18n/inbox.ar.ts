@@ -41,10 +41,8 @@ export const inboxAr: Catalog = {
   "inbox.reply.readonly": "هذه النسخة قديمة جدًا للردّ منها. افتح التطبيق عندما يكون حاسوبك شغّالًا.",
   "inbox.reply.expired": "لم يلتقطه حاسوبك في الوقت المناسب، لذلك لم يُرسل شيء.",
   "inbox.reply.guarded": "سُلّمت إلى واتساب على حاسوبك. قد يؤخّرها فحص الأمان فيه.",
-  "inbox.outcome.answered": "سبق أن ردّيت من حاسوبك في {{time}}.",
   "inbox.outcome.answered.notime": "تمّ الردّ بالفعل (من حاسوبك أو من إرسال سابق).",
   "inbox.outcome.guard": "بلغتَ حدّ أمان واتساب على حاسوبك. انتظر ثم حاول لاحقًا.",
   "inbox.outcome.expired": "فات الأوان: لم تُرسل الرسالة. أعد إرسالها إن كنت ما زلت تريدها.",
   "inbox.outcome.denied": "دورك لا يسمح بالردّ من الهاتف.",
-  "inbox.discard": "تجاهل",
 };

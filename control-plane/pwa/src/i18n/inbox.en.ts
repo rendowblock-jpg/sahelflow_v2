@@ -41,10 +41,8 @@ export const inboxEn: Catalog = {
   "inbox.reply.readonly": "This copy is too old to reply from. Open the app when your PC is on.",
   "inbox.reply.expired": "Your PC did not pick this up in time, so nothing was sent.",
   "inbox.reply.guarded": "Handed to WhatsApp on your PC. Its safety check may delay it.",
-  "inbox.outcome.answered": "You already replied from your PC at {{time}}.",
   "inbox.outcome.answered.notime": "Already answered (from your PC or an earlier send).",
   "inbox.outcome.guard": "WhatsApp safety limit reached on your PC. Wait and try later.",
   "inbox.outcome.expired": "Too late: this was not sent. Send it again if you still want it.",
   "inbox.outcome.denied": "Your role cannot reply from the phone.",
-  "inbox.discard": "Discard",
 };

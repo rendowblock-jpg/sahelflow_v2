@@ -8,8 +8,8 @@ import { renderInboxList } from "./list";
 import { REPLY_MAX, canReply, lastSeenIdOf, openReplyFor, repliesFor, type InboxModel, type ReadStatus } from "./model";
 import { renderThread } from "./thread";
 
-// The reply as the PC's strict schema wants it: NEVER a `to`, never a phone number. force is only ever `true`, only after "Send anyway".
-export type ReplyInput = Readonly<{ conversationId: string; text: string; lastSeenMessageId: string; force?: true }>;
+// The reply as the PC's strict schema wants it: NEVER a `to`, never a phone number, never a force flag (there is no "Send anyway").
+export type ReplyInput = Readonly<{ conversationId: string; text: string; lastSeenMessageId: string }>;
 export type InboxHost = Readonly<{
   now(): number; locale(): Locale; online(): boolean; pcOff(): boolean; timeZone?: string;
   read(): Readonly<{ status: ReadStatus; data: ConversationsProjection | null; asOf: number | null }>;
@@ -27,7 +27,7 @@ export const replyDraftKey = (conversationId: string): string => `draft.reply.${
 
 export function createInboxController(host: InboxHost) {
   let openId: string | null = null; let seen: ConversationRow | null = null; let draft = ""; let noteDraft = "";
-  let noteError: NotesError | null = null; let notice: "busy" | "failed" | null = null; let dismissed: readonly string[] = []; let commands: readonly OutboxRecord[] = [];
+  let noteError: NotesError | null = null; let notice: "busy" | "failed" | null = null; let dismissed: readonly string[] = []; /* dismissed = hidden by Try again only */ let commands: readonly OutboxRecord[] = [];
 
   function model(): InboxModel {
     const r = host.read(); const authority = host.authorityExpiresAt();
@@ -66,21 +66,11 @@ export function createInboxController(host: InboxHost) {
         if (!canReply(m) || openReplyFor(m, id) !== undefined || text === "" || text.length > REPLY_MAX || lastSeen === undefined) return;
         await afterEnqueue(await host.enqueueReply({ conversationId: id, text, lastSeenMessageId: lastSeen }), id, text); return;
       }
-      case "send-anyway": {
-        const id = openId; if (!id) return;
-        const m = model(); const r = repliesFor(m, id).find((x) => x.commandId === d.id); const lastSeen = lastSeenIdOf(latest(), seen);
-        if (!r || r.resultCode !== "ALREADY_ANSWERED" || r.draftText.trim() === "" || openReplyFor(m, id) !== undefined || !canReply(m) || lastSeen === undefined) return;
-        await afterEnqueue(await host.enqueueReply({ conversationId: id, text: r.draftText, lastSeenMessageId: lastSeen, force: true }), id, r.draftText); return;
-      }
-      case "discard": {
-        const id = openId; if (!id) return;
-        const r = repliesFor(model(), id).find((x) => x.commandId === d.id); if (r) dismissed = [...dismissed, r.commandId];
-        draft = ""; await host.drafts.clear(replyDraftKey(id)); return;
-      }
       case "cmd-retry": {
         // Re-sync, then put the text back in the composer. Nothing is sent until he taps Send again.
         const id = openId; if (!id) return;
         const list = repliesFor(model(), id); const last = list[list.length - 1];
+        if (last?.resultCode === "ALREADY_ANSWERED") return; // the PC already answered: there is nothing to try again
         await host.reload(); await refreshCommands();
         if (last) { dismissed = [...dismissed, last.commandId]; if (draft === "" && last.draftText !== "") { draft = last.draftText; await host.drafts.set(replyDraftKey(id), draft); } }
         return;
