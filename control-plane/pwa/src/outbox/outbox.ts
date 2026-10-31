@@ -32,7 +32,7 @@ export function payloadOf(r: Pick<OutboxRecord, "kind" | "target" | "draftText">
     case "command.orders.reject": return { orderId: r.target.id, expectedVersion: version, reasonKey: r.draftText };
     case "command.messages.reply": return { conversationId: r.target.id, text: r.draftText, ...(lastSeen === undefined ? {} : { lastSeenMessageId: lastSeen }), ...(extra.force === true ? { force: true } : {}) };
     // The desktop's strict note schema. No version seen means 0: a thread the phone has not seen yet.
-    case "command.comments.write": return { entityType: r.target.type, entityId: r.target.id, body: r.draftText, mentionMemberIds: [], expectedVersion: extra.expectedVersion ?? 0 };
+    case "command.comments.write": return { entityType: r.target.type, entityId: r.target.id, body: r.draftText, mentionMemberIds: [], expectedVersion: version ?? 0 };
   }
 }
 export type CmdGroup = "decision" | "note" | "reply";
@@ -61,10 +61,11 @@ export function createOutbox(d: OutboxDeps) {
     await save(record); return { ok: true, record };
   }
   // Ask the relay what it stored. committed needs the relay AND a result that opens, verifies and names THIS device and THIS command.
-  async function check(r: OutboxRecord): Promise<OutboxRecord> {
-    let reply: Reply; try { reply = await d.status(r.commandId); } catch { return r; }
-    if (reply.status === 404) return apply(r, { type: "relay_missing", at: d.now() });
-    if (reply.status !== 200) return r;
+  // seen: silent = the relay could not be asked, queued = it holds the command unexecuted, answered = anything else.
+  async function look(r: OutboxRecord): Promise<{ record: OutboxRecord; seen: "silent" | "queued" | "answered" }> {
+    let reply: Reply; try { reply = await d.status(r.commandId); } catch { return { record: r, seen: "silent" }; }
+    if (reply.status === 404) return { record: await apply(r, { type: "relay_missing", at: d.now() }), seen: "answered" };
+    if (reply.status !== 200) return { record: r, seen: "silent" };
     const body = obj(reply.body); const state = body?.state; const at = d.now(); let next = r;
     if (typeof state === "string" && RELAY_STATES.includes(state)) next = await apply(next, { type: "relay_state", at, state: state as RelayCommandState });
     if (body?.result && (state === "committed" || state === "rejected" || state === "conflict") && (next.state === "sent" || next.state === "unknown")) {
@@ -72,7 +73,16 @@ export function createOutbox(d: OutboxDeps) {
       if (!parsed.ok) next = await apply(next, { type: "result_unreadable", at, reason: parsed.reason });
       else if (parsed.deviceId === d.deviceId && parsed.commandId === r.commandId) next = await apply(next, { type: "result", at, outcome: parsed.outcome, ...(parsed.code === undefined ? {} : { code: parsed.code }), ...(parsed.guarded === true ? { guarded: true } : {}) });
     }
-    return next;
+    return { record: next, seen: state === "queued" ? "queued" : "answered" };
+  }
+  const check = async (r: OutboxRecord): Promise<OutboxRecord> => (await look(r)).record;
+  // Past its deadline a SENT command is never expired by the clock alone: the PC may have confirmed it in time and the relay holds the
+  // sealed result. Ask once. Committed if the result opens; expired only if the relay still holds it unexecuted; else unknown.
+  async function tick(r: OutboxRecord): Promise<OutboxRecord> {
+    if (r.state !== "sent" || d.now() < r.expiresAt) return apply(r, { type: "tick", at: d.now() });
+    const { record, seen } = await look(r);
+    if (record.state !== "sent") return record;
+    return apply(record, { type: seen === "queued" ? "late_queued" : "late_unsure", at: d.now() });
   }
   async function send(r: OutboxRecord, resealed: boolean): Promise<OutboxRecord> {
     let reply: Reply;
@@ -98,13 +108,14 @@ export function createOutbox(d: OutboxDeps) {
     list, enqueue,
     async flush(): Promise<void> {
       for (const first of await list()) {
-        const r = await apply(first, { type: "tick", at: d.now() });
+        const r = await tick(first);
         if (r.state === "queued" && r.nextTryAt <= d.now()) await send(r, false);
       }
     },
     async refresh(): Promise<void> {
       for (const first of await list()) {
-        const r = await apply(first, { type: "tick", at: d.now() });
+        if (first.state === "sent" && d.now() >= first.expiresAt) { await tick(first); continue; } // the late look already asked
+        const r = await tick(first);
         if (r.state === "sent" || r.state === "unknown") await check(r);
       }
     },
