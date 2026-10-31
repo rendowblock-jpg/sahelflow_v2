@@ -17,6 +17,7 @@ import type { CommuneIndexRow } from "./communes";
 const ALL = Array.from({ length: 69 }, (_, i) => String(i + 1).padStart(2, "0"));
 const INDEX = JSON.parse(readFileSync(join(process.cwd(), "control-plane/storefront/public", manifest.communes, "all.json"), "utf8")) as CommuneIndexRow[];
 const ALL_URL = "/_sf/c.test/all.json";
+const REFORM = JSON.parse(readFileSync(join(process.cwd(), "control-plane/storefront/public", manifest.communes, "reform.json"), "utf8")) as unknown;
 
 type Break = "status" | "throw" | "shape";
 function installNet() {
@@ -29,7 +30,7 @@ function installNet() {
     if (how === "status") return { ok: false, status: 503, json: async () => null };
     if (how === "shape") return { ok: true, status: 200, json: async () => [["Batna", "باتنة"]] };
     const name = url.slice(url.lastIndexOf("/") + 1, -".json".length);
-    const body = name === "all" ? INDEX : INDEX.filter((row) => row[2] === name).map((row) => [row[0], row[1]]);
+    const body = name === "all" ? INDEX : name === "reform" ? REFORM : INDEX.filter((row) => row[2] === name).map((row) => [row[0], row[1]]);
     return { ok: true, status: 200, json: async () => body };
   };
   vi.stubGlobal("fetch", async (input: unknown) => {
@@ -152,15 +153,20 @@ describe("commune search: finding a commune", () => {
     expect(c.names()).toContain("Barika");
   });
 
-  it("offers only the wilayas the shop prices", async () => {
+  it("offers (selectably) only the wilayas the shop prices; the others are shown greyed (see the reform block below)", async () => {
     const c = await mount({ priced: ["05", "16"] });
     await search(c, "Barika");
-    expect(c.rows()).toHaveLength(0);
-    expect(c.note()).toBe("No commune found. Choose the wilaya below.");
+    expect(c.codes()).toEqual(["60"]);
+    expect(c.rows()[0]?.getAttribute("aria-disabled")).toBe("true");
     c.type("Batna");
     await settle();
     expect(c.codes().length).toBeGreaterThan(0);
-    expect(new Set(c.codes())).toEqual(new Set(["05"]));
+    const usable = c.rows().filter((row) => row.getAttribute("aria-disabled") !== "true");
+    expect(new Set(usable.map((row) => row.dataset.code))).toEqual(new Set(["05"]));
+    c.type("qqqqzz");
+    await settle();
+    expect(c.rows()).toHaveLength(0);
+    expect(c.note()).toBe("No commune found. Choose the wilaya below.");
   });
 
   it("finds an Arabic query: باتنة under 05, بريكة under 60", async () => {
@@ -453,5 +459,118 @@ describe("the picker rows are 44 px touch targets", () => {
     const rule = /\.sf-opt\{([^}]*)\}/.exec(css);
     const min = /min-height:(\d+)px/.exec(rule?.[1] ?? "");
     expect(Number(min?.[1] ?? 0)).toBeGreaterThanOrEqual(44);
+  });
+});
+
+describe("commune search: the 2025 reform (old wilaya hint, greyed rows, aliases)", () => {
+  const hint = (row: HTMLElement | undefined) => row?.querySelector(".sf-opt-from")?.textContent ?? null;
+  const off = (row: HTMLElement | undefined) => row?.querySelector(".sf-opt-off")?.textContent ?? null;
+
+  it("shows 'formerly Batna' on Barika and nothing on Batna itself, in each language", async () => {
+    const c = await mount();
+    await search(c, "Barika");
+    expect(hint(c.rows()[0])).toBe("formerly Batna");
+    expect(off(c.rows()[0])).toBeNull();
+    c.type("Batna");
+    await settle();
+    const batna = c.rows().find((row) => row.dataset.latin === "Batna");
+    expect(batna?.dataset.code).toBe("05");
+    expect(hint(batna)).toBeNull();
+    c.type("Charouine");
+    await settle();
+    expect(hint(c.rows()[0])).toBeNull();
+  });
+
+  it("writes the hint in French and in Arabic with the old wilaya's name", async () => {
+    const fr = await mount({ locale: "fr" });
+    await search(fr, "Barika");
+    expect(hint(fr.rows()[0])).toBe("anciennement Batna");
+    const ar = await mount({ locale: "ar" });
+    await search(ar, "بريكة");
+    // the page wraps an interpolated name in bidi isolates (U+2066-2069): they are invisible, so the test compares the words
+    expect((hint(ar.rows()[0]) ?? "").replace(/[\u2066-\u2069]/g, "")).toBe("كانت ضمن باتنة");
+  });
+
+  it("shows a commune of an unpriced wilaya greyed, says why, and cannot pick it", async () => {
+    const c = await mount({ priced: ["05"] });
+    await search(c, "Barika");
+    const row = c.rows()[0] as HTMLElement;
+    expect(row.classList.contains("is-off")).toBe(true);
+    expect(row.getAttribute("aria-disabled")).toBe("true");
+    expect(off(row)).toBe("This store does not deliver to wilaya 60");
+    expect(hint(row)).toBe("formerly Batna");
+    c.click(row);
+    c.key("ArrowDown");
+    expect(c.box.hasAttribute("aria-activedescendant")).toBe(false);
+    const enter = c.key("Enter");
+    await settle();
+    expect(enter.defaultPrevented).toBe(true);
+    expect(c.wilaya.value).toBe("");
+    expect(c.commune.value).toBe("");
+    expect(c.rows()).toHaveLength(1);
+  });
+
+  it("the arrow keys skip greyed rows and Enter picks the first pickable one", async () => {
+    const c = await mount({ priced: ["05"] });
+    await search(c, "ba");
+    const rows = c.rows();
+    const pickable = rows.filter((row) => row.getAttribute("aria-disabled") !== "true");
+    expect(pickable.length).toBeGreaterThan(0);
+    expect(pickable.length).toBeLessThan(rows.length);
+    c.key("ArrowDown");
+    expect(c.box.getAttribute("aria-activedescendant")).toBe(pickable[0]?.id);
+    for (let i = 0; i < pickable.length * 2 + 1; i++) {
+      c.key("ArrowDown");
+      expect(rows.find((row) => row.id === c.box.getAttribute("aria-activedescendant"))?.getAttribute("aria-disabled")).not.toBe("true");
+    }
+    c.key("ArrowUp");
+    const at = rows.find((row) => row.id === c.box.getAttribute("aria-activedescendant"));
+    expect(at?.dataset.code).toBe("05");
+  });
+
+  it("finds Barika from the spelling Berika, and picking it fills wilaya 60", async () => {
+    const c = await mount();
+    await search(c, "Berika");
+    expect(c.names()[0]).toBe("Barika");
+    expect(c.codes()[0]).toBe("60");
+    c.click(c.rows()[0] as HTMLElement);
+    await settle();
+    expect(c.wilaya.value).toBe("60");
+    expect(c.commune.value).toBe("Barika");
+  });
+});
+
+describe("commune search: reform.json (the spellings and the old wilaya names) is data fetched with the index", () => {
+  const RFORM_URL = "/_sf/c.test/reform.json";
+  it("is fetched once, together with the index, on the first focus", async () => {
+    const c = await mount();
+    c.focus();
+    await settle();
+    expect(c.net.count(RFORM_URL)).toBe(1);
+    expect(c.net.count(ALL_URL)).toBe(1);
+    c.type("Berika");
+    await settle();
+    c.type("Batna");
+    await settle();
+    expect(c.net.count(RFORM_URL)).toBe(1);
+  });
+
+  it("when it cannot load, the search still works by the real names, with no 'formerly' line and no alias", async () => {
+    const c = await mount();
+    c.net.breakIt(RFORM_URL, "status");
+    await search(c, "Barika");
+    expect(c.names()[0]).toBe("Barika");
+    expect(c.rows()[0]?.querySelector(".sf-opt-from")).toBeNull();
+    c.type("Berika");
+    await settle();
+    expect(c.rows()).toHaveLength(0);
+  });
+
+  it("a reform.json of the wrong shape counts as missing", async () => {
+    const c = await mount();
+    c.net.breakIt(RFORM_URL, "shape");
+    await search(c, "Barika");
+    expect(c.names()[0]).toBe("Barika");
+    expect(c.rows()[0]?.querySelector(".sf-opt-from")).toBeNull();
   });
 });
