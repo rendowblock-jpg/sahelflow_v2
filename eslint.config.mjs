@@ -59,6 +59,10 @@ const eslintConfig = [
       // Storefront public files: minified build output of scripts/storefront-public-build.ts (page, Noir and Reel scripts, hashed styles, fonts).
       // The source they are built from stays linted; web/public-build.test.ts pins both halves.
       "control-plane/storefront/public/**",
+      // CommonJS files: the rule block above names react-hooks/exhaustive-deps for every file, but eslint-config-next
+      // defines the react-hooks plugin only for js/jsx/mjs/ts/tsx/mts/cts, so ONE .cjs file makes `eslint .` stop with
+      // "could not find plugin react-hooks" for the whole repository. tests/eslint-cjs-contract.test.ts pins this.
+      "**/*.cjs",
       // Static marketing site (sahelflow.com): plain build script + assets
       "marketing/**",
       // Agent tooling (standalone bun scripts, not app code)
