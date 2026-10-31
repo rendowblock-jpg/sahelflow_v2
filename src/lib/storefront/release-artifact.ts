@@ -1,4 +1,5 @@
 import type { StorefrontStudioDraft } from "./studio-draft";
+import { isLegalReviewed, LEGAL_REVIEW_REQUIRED_MESSAGE, publicLegalOf } from "./studio-legal";
 import { storefrontStudioDraftSchema } from "./studio-schema";
 
 export interface StorefrontReleaseProduct {
@@ -64,8 +65,11 @@ export function createStorefrontReleaseInput(input: Readonly<{
    * in control-plane/storefront/release-input.ts.
    */
   freshByItemKey?: ReadonlyMap<string, number>;
+  /** The publish path sets this: a release then needs legal texts the seller has read (studio-legal.ts). */
+  requireLegalReview?: boolean;
 }>): Record<string, unknown> {
   const draft = storefrontStudioDraftSchema.parse(input.draft);
+  if (input.requireLegalReview && !isLegalReviewed(draft.legal)) throw new Error(LEGAL_REVIEW_REQUIRED_MESSAGE);
   if (draft.theme.builder.shippingRules.length < 1) {
     throw new Error("Published storefront requires at least one delivery rule");
   }
@@ -129,6 +133,7 @@ export function createStorefrontReleaseInput(input: Readonly<{
       ...(draft.description ? { description: draft.description } : {}),
       theme: { ...draft.theme, builder: publicBuilder },
       products: publicProducts,
+      ...(draft.legal ? { legal: publicLegalOf(draft.legal) } : {}),
     },
     allocations,
     shippingRules,

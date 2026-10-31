@@ -42,6 +42,7 @@ import { getSettingsPanelsStatesRuntimeTranslation } from "@/lib/i18n/settings-p
 import { getStorefrontRuntimeTranslation } from "@/lib/i18n/storefront-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
 import { getWorkspacesRuntimeTranslation } from "@/lib/i18n/workspaces-runtime";
+import { getStorefrontLegalRuntimeTranslation } from "@/lib/i18n/storefront-legal-runtime";
 
 const SHARED_RUNTIME_COPY = {
   en: {
@@ -204,6 +205,7 @@ export function getRuntimeTranslation(
     getStorefrontRuntimeTranslation(locale, key) ??
     getWhatsAppRecoveryTranslation(locale, key) ??
     getWorkspacesRuntimeTranslation(locale, key) ??
+    getStorefrontLegalRuntimeTranslation(locale, key) ??
     // R5-a plural-agreement dictionary — last in the chain so every existing
     // dictionary keeps precedence for its own keys; only plural-suffixed
     // `${key}_${rule}` lookups (which no other dictionary defines) resolve here.

@@ -1,3 +1,4 @@
+import type { StorefrontLegal } from "./studio-schema";
 import type { StorefrontConfig } from "./service";
 import type {
   StorefrontBlock,
@@ -18,6 +19,8 @@ export interface StorefrontStudioDraft {
   theme: StorefrontTheme;
   selectedProductIds: string[];
   isActive: boolean;
+  /** Hosted legal pages; absent on drafts saved before they existed. */
+  legal?: StorefrontLegal;
 }
 
 export function createStorefrontStudioDraft(
