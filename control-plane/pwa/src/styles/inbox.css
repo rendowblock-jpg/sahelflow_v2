@@ -1,0 +1,35 @@
+/* W3-F5 inbox + conversation. Logical properties only; every text >= 16px; every target >= 44px. Light theme only (CARNET). */
+.inbox .rows{list-style:none;margin:0;padding:0}
+.inbox .row{border-block-end:1px solid var(--rule)}
+.inbox .row-main{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;inline-size:100%;min-block-size:56px;padding:10px 4px;font:inherit;font-size:16px;text-align:start;background:transparent;color:var(--ink);border:0;cursor:pointer}
+.inbox .row-main:focus-visible,.inbox .btn:focus-visible,.inbox .composer textarea:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.inbox .num{font-family:var(--f-num);unicode-bidi:isolate}
+.inbox .who{font-weight:700;overflow-wrap:anywhere}
+.inbox .when,.inbox .phone{color:var(--ink2);font-size:16px}
+.inbox .snip{grid-column:1 / -1;color:var(--ink2);overflow-wrap:anywhere}
+.inbox .unread{display:inline-block;min-inline-size:28px;padding-inline:8px;text-align:center;font-weight:700;color:var(--paper);background:var(--ink);border-radius:14px}
+.inbox .held-badge{display:inline-block;margin-block:4px;padding-block:2px;padding-inline:8px;font-size:16px;font-weight:600;border-radius:2px;border:1px solid var(--edge);background:#EADBB3;color:#5F4507}
+.inbox .hint{margin-block:8px;font-size:16px;color:var(--ink2)}
+.inbox .back{margin-block-end:8px}
+/* ONE property flips the bubble side (the Founder's call is still open): set --bubble-flow to ltr or rtl on .thread. Unset = our messages at the end of the line. */
+.inbox .thread{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:8px;direction:var(--bubble-flow,inherit)}
+.inbox .bubble{max-inline-size:85%;padding:8px 12px;font-size:16px;border:1px solid var(--edge);border-radius:2px;background:var(--sheet);overflow-wrap:anywhere}
+.inbox .bubble.in{align-self:flex-start}
+.inbox .bubble.out{align-self:flex-end;background:var(--paper);border-inline-end:4px solid var(--ink)}
+.inbox .bubble p{margin:0 0 4px;white-space:pre-wrap}
+.inbox .bubble .media,.inbox .bubble .trunc{font-style:italic;color:var(--ink2)}
+.inbox .meta{display:flex;gap:8px;font-size:16px;color:var(--ink2)}
+.inbox .tick{font-weight:600}
+.inbox .arrived{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.inbox .btn{min-block-size:44px;min-inline-size:44px;font-size:16px}
+.inbox .btn[disabled]{opacity:.55;cursor:not-allowed}
+.inbox .reply{margin-block:12px}
+.inbox .reply .chip{margin-block:4px 8px}
+.inbox .chip-neutral{border-inline-start-color:#625E52}
+.inbox .composer textarea{inline-size:100%;max-inline-size:100%;min-block-size:88px;font:inherit;font-size:16px;overflow-wrap:anywhere}
+.inbox .composer textarea[disabled]{opacity:.7}
+.inbox .notes{margin-block-start:20px;padding-block-start:12px;border-block-start:2px solid var(--ink)}
+.inbox .note-list{list-style:none;margin:0;padding:0}
+.inbox .note-item{padding-block:8px;border-block-end:1px solid var(--rule)}
+.inbox .note-text{margin:0 0 4px;white-space:pre-wrap;overflow-wrap:anywhere}
+.inbox .count{margin-block:4px 8px;font-size:16px;color:var(--ink2)}
