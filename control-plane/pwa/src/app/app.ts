@@ -8,7 +8,9 @@ import { createKeygen } from "../pair/keygen";
 import { readResume, savePairingRecord } from "../pair/resume";
 import { createFetchTransport } from "../pair/transport";
 import { openDb, saveDeviceKeys, type Db } from "../storage/idb";
-import { purgeOld } from "../storage/sealed";
+import { isOpen } from "../outbox/state";
+import type { EnqueueInput } from "../outbox/outbox";
+import { createVault, purgeOld } from "../storage/sealed";
 import { wipeAll } from "../storage/wipe";
 import { createSync } from "../sync/engine";
 import { reactToPoll, type PollReaction } from "../sync/revoke";
@@ -17,7 +19,10 @@ import type { UpdateController } from "../sw/update";
 import { createRelayClient } from "../today/relay-source";
 import { freshness, type Projection, type ProjectionSource } from "../today/projection";
 import { renderApp, type ScreenId, type Theme, type View } from "../views/view";
+import { createCommandStack } from "./commands";
+import { createOrdersHost, ORDERS_VAULT_KEY, type OrdersHostHandle } from "./orders-host";
 import { applyPreview } from "./preview";
+import { GROUP_OF } from "./registry";
 
 declare const __APP_VERSION__: string;
 declare const __RELAY_URL__: string;
@@ -57,6 +62,9 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   let lockState: LockState = { phase: "unset" }; let lockRow: LockRow | null = null; let pendingPin = ""; let returnTo: ScreenId = "welcome";
   let link: ReturnType<typeof takePairingLink> = { kind: "none" };
   let watcher: Readonly<{ stop(): void }> | null = null;
+  // The command stack (outbox on the real transport) exists once the phone is paired; decrypted orders live only in the vault.
+  let stack: Awaited<ReturnType<typeof createCommandStack>> = null; let ordersHost: OrdersHostHandle | null = null;
+  const vault = createVault();
 
   const derive = (v: View): View => {
     if (v.screen !== "today") return v;
@@ -81,6 +89,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     previewOn = false;
     history.pushState(null, "", `/?screen=${screen}`);
     set({ screen, state: screen === "today" ? "empty" : "empty", confirmRemove: false, removed: false, removeError: null, ...patch }, true);
+    if (GROUP_OF[screen] === "orders") void attachOrders().catch(() => undefined);
     if (screen === "today") void loadToday(); else sync.onScreen();
   };
   function showRevoked(reaction: Extract<PollReaction, { kind: "revoked" }>): void {
@@ -144,7 +153,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set({ lockNotice: { kind: "checking" } });
     const ok = isValidPin(pin) && (await verifyPin(pin, lockRow.pin));
     lockState = afterAttempt(lockState, ok, Date.now());
-    if (lockState.phase === "unlocked") return set({ screen: returnTo, lockNotice: null }, true);
+    if (lockState.phase === "unlocked") { wakeOrders(); return set({ screen: returnTo, lockNotice: null }, true); }
     if (lockState.phase !== "locked") return;
     lockRow = { pin: lockRow.pin, failures: lockState.failures, waitUntil: lockState.waitUntil };
     await (await getDb()).put("settings", "lock", lockRow);
@@ -169,7 +178,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     });
   }
   async function wipe(): ReturnType<typeof wipeAll> {
-    watcher?.stop(); watcher = null;
+    watcher?.stop(); watcher = null; vault.lock(); stack = null; ordersHost = null;
     const db = await getDb().catch(() => null); dbPromise = null;
     return wipeAll({
       db, factory: indexedDB, caches: typeof caches === "undefined" ? null : caches,
@@ -182,14 +191,41 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set(result.ok ? { removed: true, confirmRemove: false, hasLock: false, projection: null } : { removeError: result.failed.join(", "), confirmRemove: false });
   }
 
+  async function getStack(): ReturnType<typeof createCommandStack> {
+    if (stack) return stack;
+    stack = await createCommandStack({ db: await getDb(), relayBase: __RELAY_URL__, fetch: (input, init) => fetch(input, init), now: Date.now });
+    return stack;
+  }
+  // Mounts the orders screen on a real host (own file, own tests). The inbox is mounted by its own track.
+  async function attachOrders(): Promise<void> {
+    if (ordersHost) return;
+    const s = await getStack(); if (!s || ordersHost) return;
+    const mod = await import("../views/orders/screen");
+    const outbox = { list: s.outbox.list, enqueue: async (i: EnqueueInput) => { const r = await s.outbox.enqueue(i); if (r.ok) void s.outbox.flush().catch(() => undefined); return r; } };
+    const h = createOrdersHost({
+      now: Date.now, locale: () => view.locale, online: () => navigator.onLine, pcOff: () => view.pcoff === true,
+      fetchOrders: async () => { await relay.poll("orders"); await s.refresh(); }, openOrders: s.openOrders,
+      vault, outbox, drafts: s.drafts, authorityExpiresAt: () => undefined, go: (x) => go(x),
+    });
+    ordersHost = h; mod.attachOrdersHost(h); await h.reload();
+  }
+  // After a lock, an unlock or coming back from the background: the screen redraws from the (maybe emptied) vault and reloads if it is empty.
+  function wakeOrders(): void {
+    const h = ordersHost; if (!h) return;
+    h.notify(); if (lockState.phase !== "locked" && vault.get(ORDERS_VAULT_KEY) === null) void h.reload().catch(() => undefined);
+  }
   // Polling budget: fetch on open/visible/online/Refresh, 30 s on Orders and Inbox, 60 s elsewhere, nothing while hidden, 600 a day.
   const sync = createSync({
     now: Date.now, visible: () => !document.hidden, online: () => navigator.onLine, screen: () => view.screen,
     fetchKind: (kind) => relay.poll(kind),
-    pollCommands: async () => false, // the outbox status poll is connected by the order and chat screens
+    pollCommands: async () => {
+      const s = await getStack().catch(() => null); if (!s) return false;
+      await s.outbox.flush(); await s.outbox.refresh();
+      return (await s.outbox.list()).some((r) => isOpen(r.state));
+    },
     loadBudget: async () => (await (await getDb()).get<Budget>("settings", "pollBudget")) ?? null,
     saveBudget: async (b) => { await (await getDb()).put("settings", "pollBudget", b); },
-    onPoll: (poll) => { if (poll.kind === "revoked") void reactToPoll(poll, wipe).then((r) => { if (r.kind === "revoked") showRevoked(r); }); },
+    onPoll: (poll) => { if (poll.kind === "updated") void stack?.refresh().catch(() => undefined); if (poll.kind === "revoked") void reactToPoll(poll, wipe).then((r) => { if (r.kind === "revoked") showRevoked(r); }); },
     timers: { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>) },
   });
   root.addEventListener("click", (event) => {
@@ -223,6 +259,9 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   window.addEventListener("popstate", () => { const s = SCREENS.find((x) => x === new URLSearchParams(location.search).get("screen")); set({ screen: s ?? "welcome" }); });
   document.addEventListener("visibilitychange", () => {
     lockState = document.hidden ? onHidden(lockState, Date.now()) : onVisible(lockState, Date.now());
+    if (document.hidden) vault.hide(Date.now()); else vault.show(Date.now()); // hidden for 5 minutes or more: the decrypted copies are dropped
+    if (lockState.phase === "locked") vault.lock();
+    wakeOrders();
     if (document.hidden) sync.onHidden(); else sync.onVisible();
     if (!document.hidden && lockState.phase === "locked" && view.screen !== "lock") { returnTo = view.screen; set({ screen: "lock", lockMode: "enter", lockNotice: null }); }
   });
