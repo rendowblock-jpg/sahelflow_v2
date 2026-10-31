@@ -53,9 +53,9 @@ export const ACTION_ICONS: Record<string, LucideIcon> = {
 
 /** Tone classes per action family (message, change, note, alert, timing). */
 export const ACTION_TONES: Record<string, string> = {
-  send_whatsapp: "bg-success-soft text-success",
-  update_status: "bg-warning-soft text-warning",
-  tag_customer: "bg-info-soft text-info",
+  send_whatsapp: "bg-success-soft text-success-ink",
+  update_status: "bg-warning-soft text-warning-ink",
+  tag_customer: "bg-info-soft text-info-ink",
   send_notification: "bg-primary-soft text-primary",
   wait: "bg-muted text-muted-foreground",
   recheck_order_status: "bg-muted text-muted-foreground",

@@ -1160,7 +1160,7 @@ export function InboxV3Queue({
             {normalizedQuery &&
             searchState.query === normalizedQuery &&
             searchState.error ? (
-              <div className="flex items-center justify-between gap-2 border-b border-border/55 bg-destructive-soft px-3 py-2 text-caption text-destructive">
+              <div className="flex items-center justify-between gap-2 border-b border-border/55 bg-destructive-soft px-3 py-2 text-caption text-destructive-ink">
                 <span>{copy("searchFailed")}</span>
                 <button
                   type="button"

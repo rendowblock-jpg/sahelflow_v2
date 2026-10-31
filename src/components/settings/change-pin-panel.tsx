@@ -108,7 +108,7 @@ export function ChangePinPanel() {
         </p>
       </div>
 
-      <div className="flex items-start gap-2 rounded-surface border border-warning/30 bg-warning-soft p-3 text-sm text-warning">
+      <div className="flex items-start gap-2 rounded-surface border border-warning/30 bg-warning-soft p-3 text-sm text-warning-ink">
         <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <p>{t("settings.changePin.irrecoverable")}</p>
       </div>

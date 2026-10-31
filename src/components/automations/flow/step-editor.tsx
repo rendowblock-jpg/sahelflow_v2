@@ -364,7 +364,7 @@ function WhatsAppPreview({ text }: { text: string }) {
             if (!name) return <span key={position}>{part}</span>;
             const sample = SAMPLE_VALUES[name]?.[lang] ?? name;
             return (
-              <span key={position} className="rounded-[4px] bg-success/15 px-0.5 font-semibold text-success">
+              <span key={position} className="rounded-[4px] bg-success/15 px-0.5 font-semibold text-success-ink">
                 {sample}
               </span>
             );

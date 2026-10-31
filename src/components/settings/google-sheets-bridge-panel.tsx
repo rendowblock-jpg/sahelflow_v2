@@ -752,7 +752,7 @@ function SetupStep({
           className={cn(
             "flex size-7 shrink-0 items-center justify-center rounded-full border text-caption font-semibold",
             done
-              ? "border-success/40 bg-success-soft text-success"
+              ? "border-success/40 bg-success-soft text-success-ink"
               : "border-border bg-surface-1 text-muted-foreground",
           )}
         >
