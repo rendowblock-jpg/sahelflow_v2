@@ -1,3 +1,4 @@
+import { releaseExpiredForShop } from "./abuse";
 import { ID, MAX_POLL_LIMIT, authorizeDesktop, json } from "./shared";
 import type {
   ReceiptRow,
@@ -67,6 +68,7 @@ export async function pollReceipts(
   if (!(await authorizeDesktop(request, environment, workspaceId))) {
     return json({ error: "unauthorized" }, 401);
   }
+  await releaseExpiredForShop(environment, workspaceId, shopId);
   const rows = await environment.DB.prepare(
     `WITH selected AS (
        SELECT r.relay_sequence, r.receipt_id, r.storefront_id, r.release_id,

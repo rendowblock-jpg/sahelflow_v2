@@ -82,6 +82,11 @@ export function useWhatsAppSocket(
     let renewalTimer: ReturnType<typeof setTimeout> | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let closed = false;
+    // S09b-04: a renewal that fell due while the tab was hidden. The grant is
+    // 30 s and the sidecar closes the socket when it ends, so a hidden tab
+    // lets it end (no token request, no new socket) and the visibility handler
+    // renews at once if the old socket still lives, or reconnects if not.
+    let renewalDeferred = false;
     let lastAttemptAt = Number.NEGATIVE_INFINITY;
     const maxReconnectAttempts = 20;
 
@@ -173,7 +178,10 @@ export function useWhatsAppSocket(
 
     const open = async (renewing: boolean) => {
       if (closed) return;
-      if (!renewing && tabHidden()) return;
+      if (tabHidden()) {
+        if (renewing) renewalDeferred = true;
+        return;
+      }
       lastAttemptAt = Date.now();
       const connection = await getWhatsAppWsConnection();
       if (closed) return;
@@ -219,6 +227,7 @@ export function useWhatsAppSocket(
       candidate.onclose = () => {
         if (activeSocket === candidate) {
           activeSocket = null;
+          renewalDeferred = false;
           clearRenewal();
           setWsOpen(false);
           scheduleReconnect();
@@ -245,6 +254,16 @@ export function useWhatsAppSocket(
     const recoverOnVisibility = () => {
       if (closed) return;
       if (document.visibilityState !== "visible") return;
+      if (
+        renewalDeferred &&
+        activeSocket &&
+        activeSocket.readyState === WebSocket.OPEN
+      ) {
+        renewalDeferred = false;
+        clearRenewal();
+        void open(true);
+        return;
+      }
       if (
         activeSocket &&
         (activeSocket.readyState === WebSocket.OPEN ||

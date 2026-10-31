@@ -1,6 +1,16 @@
 import { parseCheckoutInput } from "./checkout-input";
 import { storefrontReceiptAadValue } from "./receipt-protocol";
 import { resolveCheckoutPricing } from "./checkout-pricing";
+import {
+  MAX_OPEN_RECEIPTS_PER_SHOP,
+  clientAddress,
+  countOpenReceipts,
+  fakeReceiptId,
+  looksLikeBot,
+  releaseExpiredReservations,
+  verifyTurnstileWithCloudflare,
+  type CheckoutDeps,
+} from "./abuse";
 import { authorizePublicCheckout, canonicalJson, json, sha256Hex } from "./shared";
 import type {
   D1Statement,
@@ -13,12 +23,19 @@ export async function checkout(
   request: Request,
   environment: StorefrontWorkerEnvironment,
   slug: string,
+  deps: CheckoutDeps = {},
 ): Promise<Response> {
-  const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
-  const limited = await environment.CHECKOUT_RATE_LIMITER.limit({
-    key: `checkout:${slug}:${ip}`,
-  });
-  if (!limited.success) return json({ error: "rate_limited" }, 429);
+  const ip = clientAddress(request);
+  const limiters = [
+    environment.CHECKOUT_RATE_LIMITER.limit({ key: `checkout:${slug}:${ip}` }),
+  ];
+  if (ip !== "unknown") limiters.push(environment.CHECKOUT_RATE_LIMITER.limit({ key: `checkout-ip:${ip}` }));
+  if (environment.CHECKOUT_SHOP_RATE_LIMITER) {
+    limiters.push(environment.CHECKOUT_SHOP_RATE_LIMITER.limit({ key: `checkout-shop:${slug}` }));
+  }
+  if ((await Promise.all(limiters)).some((outcome) => !outcome.success)) {
+    return json({ error: "rate_limited" }, 429);
+  }
 
   let body: unknown;
   try {
@@ -50,6 +67,8 @@ export async function checkout(
     return json({ error: "customer_binding_mismatch" }, 400);
   }
 
+  await releaseExpiredReservations(environment, storefront.storefront_id);
+
   const requestDigest = await sha256Hex(
     canonicalJson({
       storefrontId: storefront.storefront_id,
@@ -80,8 +99,28 @@ export async function checkout(
       totalDzd: existing.total_dzd,
     });
   }
+  if ((await countOpenReceipts(environment, storefront.storefront_id)) >= MAX_OPEN_RECEIPTS_PER_SHOP) {
+    return json({ error: "shop_busy" }, 429);
+  }
   if (!(await authorizePublicCheckout(environment, storefront.workspace_id))) {
     return json({ error: "storefront_unavailable" }, 503);
+  }
+  if (environment.TURNSTILE_SECRET) {
+    const token = (body as { turnstileToken?: unknown }).turnstileToken;
+    if (typeof token !== "string" || token.length < 1 || token.length > 2048) {
+      return json({ error: "challenge_failed" }, 403);
+    }
+    let passed: boolean;
+    try {
+      passed = await (deps.verifyTurnstile ?? verifyTurnstileWithCloudflare)({
+        secret: environment.TURNSTILE_SECRET,
+        token,
+        ip,
+      });
+    } catch {
+      return json({ error: "challenge_unavailable" }, 503);
+    }
+    if (!passed) return json({ error: "challenge_failed" }, 403);
   }
 
   const pricingResult = await resolveCheckoutPricing(
@@ -101,6 +140,18 @@ export async function checkout(
     );
   }
   const pricing = pricingResult.pricing;
+  if (looksLikeBot(body, (deps.now ?? Date.now)())) {
+    // Same status and body shape as a success, nothing stored: a script learns nothing from the answer.
+    return json(
+      {
+        receiptId: fakeReceiptId(),
+        status: "received",
+        totalDzd: pricing.totalDzd,
+        semantic: "received_queued_for_desktop_import",
+      },
+      202,
+    );
+  }
   const receiptId = `rcpt_${crypto.randomUUID().replace(/-/g, "")}`;
   const statements: D1Statement[] = [
     environment.DB.prepare(

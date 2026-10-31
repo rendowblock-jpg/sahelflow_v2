@@ -30,6 +30,7 @@ import {
 import { ListErrorState, ListStatusBanner } from "./list-status-banner";
 import { BulkConfirmDialog, BulkFailureNotice } from "./orders-bulk-ui";
 import { OrdersFilterBar } from "./orders-filter-bar";
+import { useOrdersShippingList } from "./shipping-list-print";
 import { OrderFormDialog } from "./order-form-dialog";
 import { useOrdersColumns } from "./orders-columns";
 
@@ -142,6 +143,8 @@ export function OrdersDataTable({
     },
     [data, printSlips, t],
   );
+
+  const shippingList = useOrdersShippingList(data?.orders ?? [], online);
 
   const columns = useOrdersColumns({
     locale,
@@ -269,6 +272,7 @@ export function OrdersDataTable({
           },
         ]
       : []),
+    ...(fieldAccess.contact ? [shippingList.bulkAction] : []),
   ];
 
   const refetch = () => {
@@ -305,6 +309,7 @@ export function OrdersDataTable({
   return (
     <div className="space-y-3">
       <OrdersFilterBar />
+      {fieldAccess.contact ? shippingList.button : null}
       <ListStatusBanner
         offline={!online}
         error={error}
@@ -343,6 +348,7 @@ export function OrdersDataTable({
         />
       ) : null}
       {slipPrintRoot}
+      {shippingList.printRoot}
     </div>
   );
 }

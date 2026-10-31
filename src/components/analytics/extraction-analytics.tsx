@@ -24,6 +24,25 @@ import {
 import { useI18n } from "@/hooks/use-i18n";
 import { intlLocale, numberFormatter } from "@/lib/utils";
 import { localizeServerMessage } from "@/lib/i18n/localize-server-message";
+import { confidenceDisplay } from "@/lib/ai/extraction/confidence-display";
+
+/** A confidence number is shown only when it was measured; a model's own claim is labelled. */
+function ConfidenceText({ value, basis, format, notMeasured, selfReported }: {
+  value: number | null | undefined;
+  basis?: string;
+  format: (n: number) => string;
+  notMeasured: string;
+  selfReported: string;
+}) {
+  const shown = confidenceDisplay(value, basis);
+  if (shown.kind === "none") return <span className="text-muted-foreground">{notMeasured}</span>;
+  return (
+    <span>
+      {format(shown.value)}
+      {shown.selfReported ? <span className="ms-1 text-xs text-muted-foreground">({selfReported})</span> : null}
+    </span>
+  );
+}
 
 interface ExtractionData {
   total: number;
@@ -31,13 +50,14 @@ interface ExtractionData {
   byMethod: Array<{
     method: string;
     count: number;
-    avgConfidence: number;
+    avgConfidence: number | null;
+    confidenceBasis?: string;
     avgLatencyMs: number;
   }>;
   trend: Array<{
     date: string;
     count: number;
-    avgConfidence: number;
+    avgConfidence: number | null;
     completeRate: number;
   }>;
 }
@@ -168,7 +188,7 @@ export function ExtractionAnalytics() {
                   <TableCell className="font-medium">{method.method}</TableCell>
                   <TableCell className="text-end tabular-nums">{method.count}</TableCell>
                   <TableCell className="text-end tabular-nums">
-                    {percentCompactFormatter.format(method.avgConfidence)}
+                    <ConfidenceText value={method.avgConfidence} basis={method.confidenceBasis} format={(n) => percentCompactFormatter.format(n)} notMeasured={t("analytics.extraction.notMeasured")} selfReported={t("analytics.extraction.selfReported")} />
                   </TableCell>
                   <TableCell className="text-end tabular-nums">
                     {integerFormatter.format(method.avgLatencyMs)}
@@ -200,7 +220,7 @@ export function ExtractionAnalytics() {
                   <TableCell className="font-mono text-muted-foreground">{day.date}</TableCell>
                   <TableCell className="text-end tabular-nums">{day.count}</TableCell>
                   <TableCell className="text-end tabular-nums">
-                    {percentCompactFormatter.format(day.avgConfidence)}
+                    <ConfidenceText value={day.avgConfidence} format={(n) => percentCompactFormatter.format(n)} notMeasured={t("analytics.extraction.notMeasured")} selfReported={t("analytics.extraction.selfReported")} />
                   </TableCell>
                   <TableCell className="text-end tabular-nums">
                     {percentCompactFormatter.format(day.completeRate)}
