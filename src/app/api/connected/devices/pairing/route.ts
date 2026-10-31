@@ -31,7 +31,13 @@ export const POST = withErrorHandler(async () => {
   const deviceId = `phone_${crypto.randomUUID().replaceAll("-", "")}`;
   let pairing: Awaited<ReturnType<typeof runtime.client.createPairing>>;
   try {
-    pairing = await runtime.client.createPairing({ workspaceId, memberId, deviceId });
+    // One string "<signature>.<context>": the relay stores it and the phone reads it back after the exchange.
+    pairing = await runtime.client.createPairing({
+      workspaceId,
+      memberId,
+      deviceId,
+      desktopKeyProof: `${proof.signature}.${proof.context}`,
+    });
   } catch (error) {
     throw relayFailure(error);
   }
@@ -61,7 +67,7 @@ export const POST = withErrorHandler(async () => {
       expiresAt: pairing.expiresAt,
       desktopFingerprint: built.pin,
       deviceId,
-      // The signed RSA key. The relay has no field for it yet (see the notes on S1b).
+      // The same signed RSA key, as the seller's screen shows it (the relay carries it too).
       desktopKeyProof: { rsaPublicJwk: proof.rsaPublicJwk, signature: proof.signature, context: proof.context },
     },
     { status: 201, headers: { "Cache-Control": "no-store" } },

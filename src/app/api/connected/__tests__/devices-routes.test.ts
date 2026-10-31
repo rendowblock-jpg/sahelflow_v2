@@ -17,6 +17,8 @@ import { SahelFlowError } from "@/types/errors";
 const WS = "ws_test_0001";
 const A = "phone_aaaaaaaa";
 const B = "phone_bbbbbbbb";
+import { parseDesktopKeyProofField } from "../../../../../control-plane/connected/key-proof";
+
 // 43 base64url characters whose last one carries zero trailing bits (a real 32-byte token).
 const TOKEN = `${"T".repeat(42)}A`;
 
@@ -163,9 +165,18 @@ describe("POST /api/connected/devices/pairing", () => {
     expect(await verifyDesktopEncryptionKey({ ...proof, desktopSigningPublicKey: h.desktopKeys.signingPublicKey, pinnedFingerprint: String(body.desktopFingerprint) }))
       .toMatchObject({ ok: true });
   });
+  it("hands the relay the same signed key it shows, in the shape the relay accepts", async () => {
+    const { body } = await callPairing();
+    const sent = (h.createPairing.mock.calls[0]?.[0] ?? {}) as { desktopKeyProof?: string };
+    const proof = body.desktopKeyProof as { signature: string; context: string };
+    expect(sent.desktopKeyProof).toBe(`${proof.signature}.${proof.context}`);
+    expect(parseDesktopKeyProofField(sent.desktopKeyProof)).toEqual({ ok: true, proof: sent.desktopKeyProof });
+  });
   it("creates the pairing for the owner's member id with a fresh phone id, records it and writes an audit row without the token", async () => {
     const { body } = await callPairing();
-    expect(h.createPairing).toHaveBeenCalledWith({ workspaceId: WS, memberId: "member_owner_1", deviceId: body.deviceId });
+    expect(h.createPairing).toHaveBeenCalledWith({
+      workspaceId: WS, memberId: "member_owner_1", deviceId: body.deviceId, desktopKeyProof: expect.any(String),
+    });
     expect(String(body.deviceId)).toMatch(/^phone_[0-9a-f]{32}$/);
     expect((await readDeviceApprovals(WS)).created[String(body.deviceId)]).toBeTypeOf("number");
     expect(h.audit).toHaveLength(1);

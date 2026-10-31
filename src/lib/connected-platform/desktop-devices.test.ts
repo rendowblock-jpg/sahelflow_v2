@@ -62,3 +62,23 @@ describe("pairingRefusalFromRelay", () => {
     expect(pairingRefusalFromRelay(403, "other")).toBeNull();
   });
 });
+
+describe("mergeDevices: the relay's real dates (S1b)", () => {
+  const key = Buffer.alloc(32, 7).toString("base64");
+  const row = (over: Record<string, unknown>) => ({
+    device_id: "phone_aaaaaaaa", member_id: "member_aaaaaaaa", signing_public_key: key, encryption_public_key: "j",
+    revocation_epoch: 0, last_seen_at: null, created_at: "2026-10-29 08:30:00", revoked_at: null, ...over,
+  });
+  const local = { approved: {}, created: { phone_aaaaaaaa: Date.parse("2026-10-01T00:00:00.000Z") } };
+
+  it("uses the relay's created_at over the local record and reports revoked_at as revokedAt", async () => {
+    const { mergeDevices } = await import("./desktop-devices");
+    const [view] = await mergeDevices([row({ revoked_at: "2026-10-30 10:00:00" })], local);
+    expect(view).toMatchObject({ createdAt: "2026-10-29T08:30:00.000Z", revokedAt: "2026-10-30T10:00:00.000Z", status: "revoked" });
+  });
+  it("a live device has revokedAt null", async () => {
+    const { mergeDevices } = await import("./desktop-devices");
+    const [view] = await mergeDevices([row({})], local);
+    expect(view).toMatchObject({ createdAt: "2026-10-29T08:30:00.000Z", revokedAt: null, status: "pending" });
+  });
+});

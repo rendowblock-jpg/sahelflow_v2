@@ -12,6 +12,8 @@ export type DeviceView = Readonly<{
   fingerprint: string | null;
   createdAt: string | null;
   lastSeenAt: string | null;
+  /** When the relay recorded the revocation, if it did. */
+  revokedAt: string | null;
   status: DeviceStatus;
   revocationEpoch: number;
 }>;
@@ -51,6 +53,7 @@ export async function mergeDevices(rows: readonly unknown[], local: LocalDeviceS
       fingerprint: typeof row.signing_public_key === "string" ? await deviceFingerprint(row.signing_public_key) : null,
       createdAt: isoOrNull(row.created_at) ?? (createdMs === undefined ? null : new Date(createdMs).toISOString()),
       lastSeenAt: isoOrNull(row.last_seen_at),
+      revokedAt: isoOrNull(row.revoked_at),
       status: relayRevoked ? "revoked" : local.approved[deviceId] === undefined ? "pending" : "approved",
       revocationEpoch: epoch,
     });
