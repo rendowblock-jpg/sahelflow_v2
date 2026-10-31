@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { base64UrlEncode, buildPairingExchangeBody } from "../../../src/lib/connected-platform/web";
+import { base64UrlEncode, buildPairingExchangeBody, deviceFingerprint, pairingCode } from "../../../src/lib/connected-platform/web";
 import { runPairing, takePairingLink, type ExchangeResult, type KeygenRunner, type PairStep, type PairStore, type PairingTransport } from "../src/pair/flow";
 import { createFetchTransport } from "../src/pair/transport";
 
@@ -72,6 +72,18 @@ describe("runPairing", () => {
     expect(out.ok === false && out.reason).toBe(reason);
     expect(out.ok === false && out.fingerprint).toMatch(/^[0-9A-F]{4}-/);
     expect(h.order).toEqual(["keygen", "exchange"]);
+  });
+  it("the code the phone shows covers its signing key AND its RSA key, never the signing key alone (W4SEC-01)", async () => {
+    const h = harness({ exchange: async () => ({ ok: false, reason: "rejected" }) });
+    const keygen = await realishKeygen(h.order);
+    const made = await keygen.run(() => undefined);
+    if (!made.ok) throw new Error("the test keygen must succeed");
+    const both = await pairingCode(made.publicKeys.signingPublicKey, made.publicKeys.encryptionPublicKey);
+    const signingOnly = await deviceFingerprint(made.publicKeys.signingPublicKey);
+    expect(both).not.toBeNull();
+    expect(both).not.toBe(signingOnly);
+    const out = await runPairing({ link, online: true, keygen, transport: h.transport, store: h.store, onStep: h.onStep });
+    expect(out.ok === false && out.fingerprint).toBe(both);
   });
   it("a throwing transport is a network failure", async () => {
     const a = harness({ exchange: async () => { throw new Error("x"); } });
