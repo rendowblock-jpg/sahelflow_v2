@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { translateServerError } from "@/lib/i18n/translate-server-error";
 import { showsNotLiveTestedLabel } from "@/lib/integrations/ecommerce/live-certification";
 import {
   getSettingsWorkspaceCopy,
@@ -190,7 +191,7 @@ export function CommerceIntegrationsPanel({
       router.refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("integrations.connectFailed"),
+        translateServerError(error instanceof Error ? error.message : "", t, t("integrations.connectFailed")),
       );
     } finally {
       setSaving(false);
@@ -250,7 +251,7 @@ export function CommerceIntegrationsPanel({
       router.refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("integrations.syncFailed"),
+        translateServerError(error instanceof Error ? error.message : "", t, t("integrations.syncFailed")),
       );
     } finally {
       setSyncing(false);
