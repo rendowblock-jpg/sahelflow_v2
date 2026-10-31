@@ -31,7 +31,7 @@ This specification is the target; this table says where each plane's code is, so
 | 2.3 Relay and projections | `control-plane/connected` | |
 | 2.4 Zero-knowledge backup | `control-plane/backup`, `src-tauri/src/backup_recovery` | |
 | 2.5 Hosted storefront | `control-plane/storefront` | Which public pages, hosted photos and templates are built is read from that folder, not from this document |
-| 2.6 PWA and browser clients | `src/app/manifest.ts`, `src/components/pwa` | |
+| 2.6 PWA and browser clients | `src/app/manifest.ts`, `src/components/pwa`, `control-plane/pwa` (the phone app), `src/lib/connected-platform` (the desktop side of pairing and remote commands) | The relay it talks to is `control-plane/connected` (2.3). Whether the phone app is deployed or can be paired is read from `PHONE_PAIRING_AVAILABLE` in `src/lib/connected-platform/pairing-link.ts`, not from this table. |
 | 2.7 Providers | `src/lib/integrations`, `src/lib/ai`, `sidecars/whatsapp`, `sidecars/mcp` | |
 | 2.8 Founder administration | `tools/license-desk` (the Founder's offline licence desk) | No code referring to a separate online "Founder Console" was found |
 
@@ -89,6 +89,7 @@ A cloud receipt, queue acknowledgement or projection is not a canonical desktop 
 - Read permitted encrypted projections and submit limited signed commands.
 - Never become a second authoritative database.
 - Exclude licensing, key recovery, backup restore, secrets, destructive shop administration and other high-risk desktop-only administration unless separately certified.
+- In the repository the phone app is its own build (`control-plane/pwa/build.mjs`), separate from the desktop web app's manifest and service-worker registration. Its commands pass through the relay (`control-plane/connected`) and the desktop runs them in `src/lib/connected-platform/remote-command-executor.ts`, which stays the authority for the result. Deployment and pairing are not stated here: read the places named in the table above.
 
 ### 2.7 Provider workers
 
