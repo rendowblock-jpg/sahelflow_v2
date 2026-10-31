@@ -101,10 +101,17 @@ export function SearchStartPanel({
         </CommandGroup>
       ) : null}
 
+      {/* cmdk draws every group as role="presentation"; an ARIA attribute on it (aria-description was here) cancels
+          that role and the results list then holds a child that is not an option or a group. The hint is read as
+          part of the group's label instead: the heading names the group (aria-labelledby), even though it is hidden. */}
       <CommandGroup
-        heading={copy("quickAccess")}
+        heading={
+          <>
+            {copy("quickAccess")}
+            <span className="sr-only">{`. ${copy("quickHint")}`}</span>
+          </>
+        }
         className={GROUP_HEADING}
-        aria-description={copy("quickHint")}
       >
         <div className="grid grid-cols-2 gap-1">
           {quickNavigation.map((item) => (
