@@ -121,3 +121,19 @@ describe("the desktop poll does not hand over expired receipts", () => {
     expect(database.prepare("SELECT state FROM storefront_receipt WHERE receipt_id = 'rcpt_old_000000'").get()).toEqual({ state: "rejected" });
   });
 });
+
+describe("expiry touches only receipts nobody collected", () => {
+  it("leaves an imported and an already rejected old receipt exactly as they are", async () => {
+    const { database, env } = await seedShop(10);
+    insertOpenReceipts(database, 2, 5000, "done");
+    database.exec(`UPDATE storefront_receipt SET state = 'imported', canonical_order_ref = 'order_12345678',
+      result_digest = '${"ab".repeat(32)}', completed_at = CURRENT_TIMESTAMP WHERE receipt_id = 'rcpt_done_000000'`);
+    database.exec(`UPDATE storefront_receipt SET state = 'rejected', result_digest = '${"cd".repeat(32)}',
+      completed_at = CURRENT_TIMESTAMP WHERE receipt_id = 'rcpt_done_000001'`);
+    expect((await checkout(checkoutRequest(await honestBody("idem_touch_001")), env, SLUG)).status).toBe(202);
+    expect(database.prepare("SELECT receipt_id AS id, state, result_digest AS d FROM storefront_receipt WHERE receipt_id LIKE 'rcpt_done_%' ORDER BY id").all()).toEqual([
+      { id: "rcpt_done_000000", state: "imported", d: "ab".repeat(32) },
+      { id: "rcpt_done_000001", state: "rejected", d: "cd".repeat(32) },
+    ]);
+  });
+});
