@@ -66,14 +66,18 @@ describe("language switch and photos", () => {
     for (const style of STOREFRONT_TEMPLATE_IDS) {
       for (const index of [null, 0] as const) {
         const html = await page(style, "ar", index);
-        const images = html.match(/<img\b[^>]*>/g) ?? [];
+        const images: string[] = html.match(/<img\b[^>]*>/g) ?? [];
         for (const image of images) {
           expect(image, `${style} ${index}`).toMatch(/\balt="/);
           expect(image, `${style} ${index}`).toMatch(/\bwidth="\d+"/);
           expect(image, `${style} ${index}`).toMatch(/\bheight="\d+"/);
         }
         // Above the fold (the hero, the first row of a two-column grid, the thumbnail strip) loads eagerly; everything after the fourth picture is lazy.
-        expect(images.findLastIndex((image) => !image.includes('loading="lazy"')), `${style} ${index}`).toBeLessThan(4);
+        let lastEager = -1;
+        images.forEach((image: string, position: number) => {
+          if (!image.includes('loading="lazy"')) lastEager = position;
+        });
+        expect(lastEager, `${style} ${index}`).toBeLessThan(4);
         expect(images.filter((image) => image.includes('fetchpriority="high"')).length, `${style} ${index}`).toBeLessThanOrEqual(1);
       }
     }

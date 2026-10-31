@@ -6,6 +6,7 @@ import { getWhatsAppSendGuardRuntimeTranslation } from "@/lib/i18n/whatsapp-send
 import { getHeldSendRuntimeTranslation } from "@/lib/i18n/held-send-runtime";
 import { getPreUpdateBackupRuntimeTranslation } from "@/lib/i18n/pre-update-backup-runtime";
 import { getStorefrontStudioStatesRuntimeTranslation } from "@/lib/i18n/storefront-studio-states-runtime";
+import { getStorefrontPublicStatesRuntimeTranslation } from "@/lib/i18n/storefront-public-states-runtime";
 import { getAnalyticsRuntimeTranslation } from "@/lib/i18n/analytics-runtime";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
@@ -167,6 +168,7 @@ export function getRuntimeTranslation(
     getHeldSendRuntimeTranslation(locale, key) ??
     getPreUpdateBackupRuntimeTranslation(locale, key) ??
     getStorefrontStudioStatesRuntimeTranslation(locale, key) ??
+    getStorefrontPublicStatesRuntimeTranslation(locale, key) ??
     getAnalyticsRuntimeTranslation(locale, key) ??
     getAutomationRuntimeTranslation(locale, key) ??
     getCodRuntimeTranslation(locale, key) ??

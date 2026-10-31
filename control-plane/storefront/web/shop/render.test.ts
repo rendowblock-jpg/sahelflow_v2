@@ -194,7 +194,7 @@ describe("product page", () => {
     expect(form).toContain('autocomplete="name"');
     expect(form).toContain('autocomplete="street-address"');
     expect(form).toContain('<form id="order" class="sf-form" novalidate');
-    expect(form).toMatch(/<button id="sf-submit" class="sf-cta" type="submit">/);
+    expect(form).toMatch(/<button id="sf-submit" class="sf-cta" type="submit" aria-describedby="sf-status">/);
     expect(count(form, /aria-label="[^"]+"/g)).toBeGreaterThanOrEqual(2); // the two quantity buttons
     expect(count(form, /<noscript>/g)).toBe(1);
     expect(form).not.toMatch(/\bonclick=|\bonsubmit=|javascript:/i);

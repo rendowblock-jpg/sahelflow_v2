@@ -62,7 +62,8 @@ describe("generated page files", () => {
     const css = readFileSync(join(PUBLIC, manifest.css), "utf8");
     console.warn(`[weight] css ${css.length} bytes, ${gzipSync(css).length} gzip`);
     // Was 8,000 (7,950 used). The forced-colors block in shop.css costs about 150 bytes gzip, so the ceiling moved to 8,300.
-    expect(gzipSync(css).length).toBeLessThan(8_300);
+    // The notice pages' exit link and the missing-photo slot cost about 70 bytes more: 8,400.
+    expect(gzipSync(css).length).toBeLessThan(8_400);
     for (const needle of [".sf-cta", ".sf-sticky", ".sf-gal-track", "scroll-snap-type", "prefers-reduced-motion", "@supports", ":focus-visible", "env(safe-area-inset-bottom", ".sf-notice", "inset-inline"]) {
       expect(css, needle).toContain(needle);
     }
@@ -84,7 +85,8 @@ describe("generated page files", () => {
     const js = readFileSync(join(PUBLIC, manifest.js), "utf8");
     console.warn(`[weight] js ${js.length} bytes, ${gzipSync(js).length} gzip`);
     // Was 7,000 (about 5,100 used). The commune search box (client/commune-search.ts) costs about 2,000 bytes gzip, so the ceiling moved to 7,300.
-    expect(gzipSync(js).length).toBeLessThan(7_300);
+    // The failed-order alert with focus and the missing-photo slot cost about 300 bytes gzip more: 7,600.
+    expect(gzipSync(js).length).toBeLessThan(7_600);
     expect(js).not.toMatch(/\beval\(|new Function\(|document\.write|innerHTML\s*=\s*[^"'`]/);
     expect(js).not.toMatch(/https?:\/\/(?!wa\.me)/);
     expect(js).toContain("/v1/storefront/");

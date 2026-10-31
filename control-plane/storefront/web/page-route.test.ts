@@ -264,7 +264,9 @@ describe("GET /<slug> (page route)", () => {
     const none: RenderStorePage = () => null;
     const response = await servePublicStorePage(get("/sahel-store/p/product_99999999?lang=en"), store.env, "sahel-store", undefined, deps(cache, { render: none }), "product_99999999");
     expect(response.status).toBe(404);
-    expect(await response.text()).toContain("Store not found");
+    const text = await response.text();
+    expect(text).toContain("This product is not available");
+    expect(text).toContain('<a class="sf-notice-link" href="/sahel-store?lang=en">See the whole shop</a>');
     store.database.close();
   });
 });
