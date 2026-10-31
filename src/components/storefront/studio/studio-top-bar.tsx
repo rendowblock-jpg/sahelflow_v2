@@ -38,6 +38,8 @@ import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
 
 import type { StorefrontStudioDevice } from "./studio-types";
 
+const TOGGLE_HINT_ID = "studio-toggle-hint";
+
 export type StudioSaveState = "saved" | "pending" | "saving" | "error" | "conflict";
 
 const DEVICES: ReadonlyArray<{ id: StorefrontStudioDevice; icon: typeof Monitor }> = [
@@ -71,6 +73,7 @@ export function StudioTopBar({
   publishDisabled,
   publishing,
   publishLine,
+  activeWaitsForPublish = false,
 }: {
   storefrontId: string;
   draft: StorefrontStudioDraft;
@@ -92,6 +95,8 @@ export function StudioTopBar({
   publishDisabled: boolean;
   publishing: boolean;
   publishLine: { text: string; role: "status" | "alert" } | null;
+  /** The active/paused switch differs from what is online (or that is unknown). */
+  activeWaitsForPublish?: boolean;
 }) {
   const { t } = useI18n();
   const storeHref = `/storefront/${encodeURIComponent(liveSlug)}`;
@@ -126,6 +131,11 @@ export function StudioTopBar({
           <span className="shrink-0">
             {draft.isActive ? t("storefront.studioStates.toggle.on") : t("storefront.studioStates.toggle.off")}
           </span>
+          {activeWaitsForPublish ? (
+            <span id={TOGGLE_HINT_ID} data-testid="studio-toggle-hint" className="min-w-0 truncate">
+              {t("storefront.studioStates.toggle.appliesOnPublish")}
+            </span>
+          ) : null}
           <span className="truncate max-sm:hidden" dir="ltr">
             /storefront/{draft.slug}
           </span>
@@ -178,6 +188,7 @@ export function StudioTopBar({
             checked={draft.isActive}
             onCheckedChange={onActiveChange}
             aria-label={t("storefront.studio.visibleToBuyers")}
+            aria-describedby={activeWaitsForPublish ? TOGGLE_HINT_ID : undefined}
           />
           <span>{t("storefront.studio.visibleToBuyers")}</span>
         </label>

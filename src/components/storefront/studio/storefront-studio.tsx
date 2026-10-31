@@ -2,6 +2,8 @@
 
 import {
   publishStatusView,
+  activeWaitsForPublish,
+  publishedActiveBaseline,
   saveThenPublish,
   type PublishPhase,
   type SaveOutcome,
@@ -188,6 +190,10 @@ export function StorefrontStudio({
     [config.id, setMessage, t, version],
   );
 
+  // What the online store shows (null = unknown): the switch changes it only at Publish.
+  const [publishedActive, setPublishedActive] = useState<boolean | null>(() =>
+    publishedActiveBaseline({ hasSavedDraft: config.draftUpdatedAt !== null, isActive: config.isActive }),
+  );
   const [publishPhase, setPublishPhase] = useState<PublishPhase>({ phase: "idle" });
   const publishBusy = publishPhase.phase === "saving" || publishPhase.phase === "publishing";
   const publishingRef = useRef(false);
@@ -259,6 +265,7 @@ export function StorefrontStudio({
       // "Published" only when the hosted service answered with a published release.
       const hostedStatus = plan.value.hostedRelease?.status;
       const published = hostedStatus ? hostedStatus === "published" : draft.isActive;
+      setPublishedActive(published);
       setPublishPhase({
         phase: "published",
         text: published
@@ -399,6 +406,7 @@ export function StorefrontStudio({
         publishDisabled={publishBusy || (!dirty && !version) || saveState === "saving" || saveState === "conflict"}
         publishing={publishBusy}
         publishLine={publishStatusView(publishPhase, t)}
+        activeWaitsForPublish={activeWaitsForPublish({ published: publishedActive, current: draft.isActive })}
       />
 
       {conflict ? (

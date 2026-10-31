@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { publishStatusView, saveThenPublish } from "@/components/storefront/studio/publish-flow";
+import {
+  activeWaitsForPublish,
+  publishStatusView,
+  publishedActiveBaseline,
+  saveThenPublish,
+} from "@/components/storefront/studio/publish-flow";
 
 const t = (key: string, params?: Record<string, unknown>) => (params ? `${key}|${JSON.stringify(params)}` : key);
 
@@ -77,5 +82,29 @@ describe("publishStatusView: the line beside the Publish button", () => {
     [{ phase: "failed", text: "Not published: no connection" }, { text: "Not published: no connection", role: "alert" }],
   ] as const)("%j", (phase, expected) => {
     expect(publishStatusView(phase, t)).toEqual(expected);
+  });
+});
+
+describe("publishedActiveBaseline", () => {
+  it("no saved draft: the config is the live store, so its switch is what is online", () => {
+    expect(publishedActiveBaseline({ hasSavedDraft: false, isActive: true })).toBe(true);
+    expect(publishedActiveBaseline({ hasSavedDraft: false, isActive: false })).toBe(false);
+  });
+  it("a saved draft may differ from the live store: unknown, never guessed", () => {
+    expect(publishedActiveBaseline({ hasSavedDraft: true, isActive: true })).toBeNull();
+    expect(publishedActiveBaseline({ hasSavedDraft: true, isActive: false })).toBeNull();
+  });
+});
+
+describe("activeWaitsForPublish", () => {
+  it.each([
+    ["same as online (active)", true, true, false],
+    ["same as online (paused)", false, false, false],
+    ["paused in the draft, active online", true, false, true],
+    ["active in the draft, paused online", false, true, true],
+    ["online state unknown, active", null, true, true],
+    ["online state unknown, paused", null, false, true],
+  ] as const)("%s", (_name, published, current, expected) => {
+    expect(activeWaitsForPublish({ published, current })).toBe(expected);
   });
 });

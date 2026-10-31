@@ -10,6 +10,7 @@
 import { cleanup, fireEvent } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { StudioRail } from "@/components/storefront/studio/studio-rail";
 import { StorefrontStudio } from "@/components/storefront/studio/storefront-studio";
 import { topSheetToClose } from "@/components/storefront/studio/studio-feedback";
 import type { StorefrontStudioConfig } from "@/lib/storefront/service";
@@ -157,5 +158,83 @@ describe("Studio on a phone", () => {
     const status = container.querySelector("[data-studio-save-status]");
     expect(status?.textContent).toContain("storefront.studio.saved");
     expect(status?.querySelector(".sr-only, .max-sm\\:sr-only")).toBeNull();
+  });
+});
+
+const tokens = (el: Element | null | undefined) => (el?.getAttribute("class") ?? "").split(/\s+/).filter(Boolean);
+const PHYSICAL =
+  /^(?:-?(?:left|right)-|-?[mp][lr]-|text-(?:left|right)$|border-[lr](?:-|$)|rounded-(?:l|r|tl|tr|bl|br)(?:-|$)|float-(?:left|right)$|clear-(?:left|right)$|inset-[lr]-|origin-(?:left|right))/;
+const physical = (token: string) => PHYSICAL.test(token.slice(token.lastIndexOf(":") + 1));
+
+describe("phone class contract", () => {
+  it("the physical-direction detector flags what it should and nothing else", () => {
+    for (const bad of ["ml-2", "max-md:pr-3", "text-left", "left-0", "-right-1", "border-r", "rounded-l-md", "md:mr-auto", "float-right"]) {
+      expect(physical(bad)).toBe(true);
+    }
+    for (const good of ["border-e", "ms-2", "pe-3", "end-2.5", "text-start", "inset-x-0", "max-md:border-e-0", "bg-primary", "flex-1", "rounded-control", "size-[18px]"]) {
+      expect(physical(good)).toBe(false);
+    }
+  });
+
+  it("no element of the rail, badges included, uses a physical-direction class", () => {
+    const badges = { sections: true, theme: true, products: true, checkout: true, contact: true, seo: true };
+    const { container } = render(<StudioRail panel="sections" collapsed={false} onSelect={() => undefined} badges={badges} />);
+    const all = [container.querySelector("[data-studio-rail]"), ...Array.from(container.querySelectorAll("[data-studio-rail] *"))];
+    expect(container.querySelectorAll("[data-studio-rail] .ring-background").length).toBe(6);
+    const offenders = all.flatMap((el) => tokens(el).filter(physical));
+    expect(offenders).toEqual([]);
+  });
+
+  it("the bottom bar: full width, 56 px high, items spread in a row, the border moves to the top", () => {
+    viewport(true);
+    const { container } = mount();
+    expect(tokens(container.querySelector("[data-studio-rail]"))).toEqual(
+      expect.arrayContaining([
+        "max-md:h-14", "max-md:w-full", "max-md:flex-row", "max-md:justify-around",
+        "max-md:gap-0", "max-md:border-e-0", "max-md:border-t", "max-md:py-0",
+      ]),
+    );
+  });
+
+  it("every rail item is a 44 px target that shares the bar", () => {
+    viewport(true);
+    const { container } = mount();
+    const items = Array.from(container.querySelectorAll("[data-studio-rail-item]"));
+    expect(items.length).toBe(6);
+    for (const item of items) {
+      expect(tokens(item)).toEqual(expect.arrayContaining(["max-md:min-h-11", "max-md:w-auto", "max-md:flex-1"]));
+    }
+  });
+
+  it("the panel sheet floats above the bar, capped at 60% of the screen, with its border on top", () => {
+    viewport(true);
+    const { container } = mount();
+    fireEvent.click(rail(container, "theme") as HTMLElement);
+    expect(tokens(container.querySelector("[data-studio-panel='theme']"))).toEqual(
+      expect.arrayContaining([
+        "max-md:absolute", "max-md:inset-x-0", "max-md:bottom-full", "max-md:z-30",
+        "max-md:max-h-[60vh]", "max-md:w-full", "max-md:border-e-0", "max-md:border-t",
+      ]),
+    );
+    expect(tokens(container.querySelector("[data-studio-panels]"))).toEqual(
+      expect.arrayContaining(["max-md:relative", "max-md:order-2", "max-md:w-full"]),
+    );
+  });
+
+  it("the inspector sheet is pinned to the bottom edge and full width", () => {
+    viewport(true);
+    const { container } = mount();
+    expect(tokens(container.querySelector("[data-studio-inspector]"))).toEqual(
+      expect.arrayContaining(["max-md:inset-x-0", "max-md:bottom-0", "max-md:w-full"]),
+    );
+  });
+
+  it("the canvas comes first and clips sideways overflow; the body stacks", () => {
+    viewport(true);
+    const { container } = mount();
+    expect(tokens(container.querySelector("[data-studio-preview]"))).toEqual(
+      expect.arrayContaining(["min-w-0", "flex-1", "overflow-x-hidden", "max-md:order-1"]),
+    );
+    expect(tokens(container.querySelector("[data-studio-body]"))).toEqual(expect.arrayContaining(["flex", "max-md:flex-col"]));
   });
 });
