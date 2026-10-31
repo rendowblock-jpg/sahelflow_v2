@@ -9,7 +9,7 @@ This document distinguishes protected source, automated evidence, signed publica
 
 - Signed builds are published on the internal channel. None is Beta or Stable, and SahelFlow is not yet a commercially certified Stable release.
 - Early internal packages were Founder-offline. Customer-online licensing against the owned host `sahelflow.com` began with the FD-066 launch decision (Internal.40) and carries no Beta or Stable authority. The customer-online licence hosts are `license.sahelflow.com` and `activate.sahelflow.com`; a ready `/healthz` does not close #230.
-- Long-running issues: #164 (Phase 0–9 execution epic), #230 (Algerian-network installed trial), #306 (real-phone WhatsApp installed/provider certification; logout is the LAST row), #316 and #317 (notification and WhatsApp parity; source complete, installed and real-phone evidence still owed). #221 was closed on the Founder's acceptance of the installed Internal.24 (2026-08-25). #226 was closed; its budgets stay as regression criteria. #499 is a superseded agent note. Read each issue's state from the tracker.
+- Long-running issues: #164 (Phase 0–9 execution epic), #230 (Algerian-network installed trial), #306 (real-phone WhatsApp installed/provider certification; logout is the LAST row), #316 and #317 (notification and WhatsApp parity; source complete, installed and real-phone evidence still owed). #221 was closed on the Founder's acceptance of the installed Internal.24 (2026-08-25). #226 was closed; its budgets stay as regression criteria. #499 is a superseded agent note.
 
 ## 2. Founder-installed record
 
@@ -45,13 +45,13 @@ The commercial goal is fast, honest first revenue without lowering correctness, 
 | FRC-5 courier live certification | Blocked on provider-issued contracts and sandbox, demo or authorized real-account evidence per provider and action |
 | FRC-6 first paid assisted deployment | Not authorized by FD-045 alone. FD-066 (2026-10-01) is the launch authority for customer-online licensing on `sahelflow.com`; marketing may advertise built integrations, none of which is live-certified, and customers must be told what they rely on |
 
-Unverified integrations stay hidden, disabled or explicitly conditional. A provider can be certified for tracking while create, edit and cancel remain unsupported.
+A provider can be certified for tracking while create, edit and cancel remain unsupported.
 
 ## 4. Provider and AI boundaries
 
 - **WhatsApp** is implemented through an unofficial WhatsApp Web library. Passing FRC-1 proves the named installed journey; it cannot warrant that Meta will never change or block the protocol. Windows packaging never uses plaintext multi-file auth (`../../sidecars/whatsapp/README.md`).
 - **Gemini** is seller-owned-key and privacy-safe: free-tier testing uses synthetic or redacted inputs, and consent gates what leaves the device. Core operation and manual fallbacks stay independent of AI. Order creation stays review-first (FD-064). The local MCP agent surface (FD-063) is proposal-gated; no installed observation of it is recorded. A free Groq key and a ChatGPT-plan sign-in are readers beside Gemini: source and tests only, with no installed observation and no ChatGPT-account run recorded.
-- **Couriers and commerce** stay conditional until each action has current provider evidence. `../research/CODFLOW_EXTRACTION.md` supplies upstream contract research, not certification.
+- **Couriers and commerce** stay hidden, disabled or explicitly conditional until each action has current provider evidence. `../research/CODFLOW_EXTRACTION.md` supplies upstream contract research, not certification.
 
 ## 5. Current non-claims
 
