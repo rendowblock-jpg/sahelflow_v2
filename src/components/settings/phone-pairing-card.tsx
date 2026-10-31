@@ -144,24 +144,24 @@ export function PhonePairingCard() {
         ) : null}
       </CardHeader>
       <CardContent className="space-y-3">
-        {load.kind === "loading" ? <StateView kind="loading" size="sm" testId="phones-loading" /> : null}
+        {load.kind === "loading" ? <StateView kind="loading" size="inline" testId="phones-loading" /> : null}
         {load.kind === "unavailable" ? (
           <p className="text-sm text-muted-foreground" data-testid="phones-unavailable">
             {t(`phones.unavailable.${load.reason}`)}
           </p>
         ) : null}
         {load.kind === "offline" ? (
-          <StateView kind="offline" size="sm" description={t("phones.offline")}
+          <StateView kind="offline" size="inline" description={t("phones.offline")}
             extraActions={<Button type="button" variant="outline" className={TARGET} onClick={() => void refresh()}>{t("phones.retry")}</Button>} />
         ) : null}
         {load.kind === "error" ? (
-          <StateView kind="error" size="sm" description={t("phones.loadFailed")} digest={load.code} onRetry={() => void refresh()} />
+          <StateView kind="error" size="inline" description={t("phones.loadFailed")} digest={load.code} onRetry={() => void refresh()} />
         ) : null}
         {load.kind === "ready" && load.stale ? (
-          <StateView kind="partial" size="sm" lastUpdated={load.at} onRefresh={() => void refresh()} />
+          <StateView kind="partial" size="inline" lastUpdated={load.at} onRefresh={() => void refresh()} />
         ) : null}
         {load.kind === "ready" && devices.length === 0 ? (
-          <StateView kind="empty" size="sm" title={t("phones.empty.title")} description={t("phones.empty.description")} />
+          <StateView kind="empty" size="panel" title={t("phones.empty.title")} description={t("phones.empty.description")} />
         ) : null}
         {actionError ? <p role="alert" className="text-sm text-destructive">{errorText(actionError)}</p> : null}
         {devices.length > 0 ? (
