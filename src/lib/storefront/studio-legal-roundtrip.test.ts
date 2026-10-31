@@ -17,6 +17,7 @@ import { storefrontService } from "@/lib/storefront/service";
 import { createStorefrontStudioDraft, studioThemeForWire } from "@/lib/storefront/studio-draft";
 import { isLegalReviewed, LEGAL_REVIEW_REQUIRED_MESSAGE, markLegalReviewed, publicLegalOf } from "@/lib/storefront/studio-legal";
 import { createDefaultStorefrontTheme } from "@/lib/storefront/theme-default";
+import { oldDraftWithoutLegal, releaseFromDraft } from "./legal-test-fixtures";
 
 const REGISTER = "RC-16/00-1234567B99";
 const legal = markLegalReviewed({ sellerName: "Amine Boutique", registerNumber: REGISTER, returnsDays: 7, returnShipping: "seller", extraReturns: "Keep the box.", extraTerms: "" });
@@ -184,5 +185,17 @@ describe("old rows (no builder.legal)", () => {
     await save({ isActive: true });
     const h = hosted();
     await expect(publishHostedStorefront(h.input(await prepared()))).rejects.toThrow(LEGAL_REVIEW_REQUIRED_MESSAGE);
+  });
+});
+
+describe("release artifact: the public builder never carries the legal block", () => {
+  it("even a draft that still has the block in theme.builder ships only publicLegalOf at artifact.legal", () => {
+    const old = oldDraftWithoutLegal();
+    const draft = { ...old, theme: { ...old.theme, builder: { ...old.theme.builder, legal } }, legal };
+    const artifact = releaseFromDraft(draft, { requireLegalReview: true }).publicArtifact as { legal?: unknown; theme: { builder: Record<string, unknown> } };
+    expect("legal" in artifact.theme.builder).toBe(false);
+    expect(artifact.legal).toEqual(publicLegalOf(legal));
+    expect(JSON.stringify(artifact)).not.toContain("reviewedFingerprint");
+    expect(JSON.stringify(artifact).split(REGISTER)).toHaveLength(2);
   });
 });
