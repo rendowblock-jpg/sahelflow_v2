@@ -14,6 +14,7 @@ import {
 } from "@/lib/ai/gemini/provider";
 import type { GeminiThinkingLevel } from "@/lib/ai/gemini/catalog";
 import { loadGeminiRuntimePreferences } from "@/lib/ai/gemini/runtime-preferences";
+import { readGeminiFreeKeyEvidence } from "@/lib/ai/providers/quota-evidence";
 import { quotaLedger } from "@/lib/ai/providers/quota-ledger";
 import { serializeToolResultForRemoteModel } from "@/lib/ai/redact";
 import { db, shopContext } from "@/lib/db";
@@ -41,6 +42,15 @@ import "./tools/extended-tools";
 import "./tools/advanced-tools";
 
 const MAX_ITERATIONS = 5;
+/**
+ * A free Gemini key allows about 20 requests a day and one loop step is one
+ * request: 5 steps per question left 4 to 10 questions a day. A key with a
+ * recent quota stop on record gets 2 (one tool step, then the answer).
+ */
+export const ITERATIONS_FREE = 2;
+function iterationCap(freeKey: boolean): number {
+  return freeKey ? ITERATIONS_FREE : MAX_ITERATIONS;
+}
 /**
  * S06a-08: no bytes from the provider for this long ends the turn. Generous on
  * purpose: thinking models can be silent for a long time before the first
@@ -449,7 +459,11 @@ function streamStalledEvent(locale: AiChatLocale | undefined): AgentStreamEvent 
  */
 function noteGeminiQuotaHit(error: unknown): void {
   if (error instanceof GeminiProviderError && error.code === "GEMINI_QUOTA_EXHAUSTED") {
-    quotaLedger.recordQuotaHit("gemini", error.retryAfterSeconds ?? null);
+    // Without a time from Google the pause is only our own back-off: say so, so no notice shows it as a reset time.
+    quotaLedger.recordQuotaHit("gemini", error.retryAfterSeconds ?? null, undefined, {
+      retryAtKnown: error.retryAfterSeconds != null,
+      reason: error.code,
+    });
   }
 }
 
@@ -471,6 +485,7 @@ export async function runAgent(
     prisma: db,
     shop: shopContext,
   });
+  const iterationLimit = iterationCap(await readGeminiFreeKeyEvidence({ prisma: db, shop: shopContext }));
   const allToolCalls: AgentResult["toolCalls"] = [];
   let buffered = "";
   const contents: Content[] = [
@@ -478,9 +493,10 @@ export async function runAgent(
     { role: "user", parts: [{ text: userMessage }] },
   ];
 
-  for (let iteration = 0; iteration < MAX_ITERATIONS; iteration += 1) {
+  for (let iteration = 0; iteration < iterationLimit; iteration += 1) {
     let response: GeminiResponse;
     try {
+      quotaLedger.recordRequest("gemini");
       const result = await requestGemini(apiKey, {
         preferredModel: runtime.model,
         body: requestBody(
@@ -827,6 +843,7 @@ export async function* runAgentStream(
     prisma: db,
     shop: shopContext,
   });
+  const iterationLimit = iterationCap(await readGeminiFreeKeyEvidence({ prisma: db, shop: shopContext }));
   const allToolCalls: AgentResult["toolCalls"] = [];
   const contents: Content[] = [
     ...renderHistory(conversationHistory),
@@ -838,7 +855,7 @@ export async function* runAgentStream(
 
   const deadlineAt = Date.now() + AGENT_TURN_DEADLINE_MS;
 
-  for (let iteration = 0; iteration < MAX_ITERATIONS; iteration += 1) {
+  for (let iteration = 0; iteration < iterationLimit; iteration += 1) {
     if (externalSignal?.aborted) return;
     if (Date.now() >= deadlineAt) {
       yield streamStalledEvent(locale);
@@ -846,6 +863,7 @@ export async function* runAgentStream(
     }
     let stream: ReadableStream<Uint8Array> | null;
     try {
+      quotaLedger.recordRequest("gemini");
       const result = await requestGemini(apiKey, {
         stream: true,
         preferredModel: runtime.model,

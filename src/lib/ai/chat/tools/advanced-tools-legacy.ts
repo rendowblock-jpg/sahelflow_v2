@@ -761,7 +761,7 @@ registerTool({
 
 const getSalesByWilayaSchema = z.object({
   period: z.enum(["today", "week", "month", "all"]).optional().default("month"),
-  limit: z.number().int().min(1).max(58).optional().default(10),
+  limit: z.number().int().min(1).max(69).optional().default(10),
 });
 
 registerTool({
