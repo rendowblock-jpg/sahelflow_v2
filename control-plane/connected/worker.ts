@@ -108,6 +108,21 @@ const MAX_POLL_LIMIT = 100;
 // checked, so nobody can make the worker buffer megabytes. 512 KiB is the ciphertext cap in protocol.ts, plus 16 KiB of fields.
 const MAX_COMMAND_BODY_BYTES = 512 * 1024 + 16 * 1024;
 const MAX_PAIRING_BODY_BYTES = 16 * 1024;
+// The other seven routes carry a desktop's own data; each limit is read from what that body really holds and is checked before the parse.
+// Bootstrap: a signed entitlement, two public keys of at most MAX_JWK_CHARS each and one boolean.
+const MAX_BOOTSTRAP_BODY_BYTES = 64 * 1024;
+// A command policy: four ids, three counters and at most 32 command names.
+const MAX_POLICY_BODY_BYTES = 16 * 1024;
+// Creating a pairing: three ids and a key proof of at most 512 characters (key-proof.ts).
+const MAX_PAIRING_CREATE_BODY_BYTES = 16 * 1024;
+// A projection is one envelope: ciphertext cap 512 KiB (protocol.ts) plus 16 KiB of fields. The real largest is about 458 KB (250 KiB sealed, base64 twice).
+const MAX_PROJECTION_BODY_BYTES = 512 * 1024 + 16 * 1024;
+// Dropping the policies of one member: two ids.
+const MAX_POLICY_INVALIDATE_BODY_BYTES = 4 * 1024;
+// A command result is a state plus one small sealed envelope (a code, an order id and a version): far under 64 KiB.
+const MAX_COMPLETE_BODY_BYTES = 64 * 1024;
+// Revoking a device: a workspace id and an epoch number.
+const MAX_REVOKE_BODY_BYTES = 4 * 1024;
 const COMPLETE_FEATURE = "sahelflow.complete";
 const CONNECTED_FEATURE = "sahelflow.connected";
 const STOREFRONT_FEATURE = "sahelflow.storefront";
@@ -459,8 +474,9 @@ async function verifyEnvelopeSignature(
 }
 
 async function bootstrap(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
-  let body: unknown;
-  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
+  const bounded = await readBoundedJson(request, MAX_BOOTSTRAP_BODY_BYTES);
+  if (!bounded.ok) return bounded.response;
+  const body = bounded.value;
   if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "invalid_request" }, 400);
   const input = body as {
     entitlement?: unknown;
@@ -625,8 +641,9 @@ async function putCommandPolicy(
   request: Request,
   environment: ConnectedWorkerEnvironment,
 ): Promise<Response> {
-  let body: unknown;
-  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
+  const bounded = await readBoundedJson(request, MAX_POLICY_BODY_BYTES);
+  if (!bounded.ok) return bounded.response;
+  const body = bounded.value;
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return json({ error: "invalid_request" }, 400);
   }
@@ -697,8 +714,9 @@ async function putCommandPolicy(
 }
 
 async function createPairing(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
-  let body: unknown;
-  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
+  const bounded = await readBoundedJson(request, MAX_PAIRING_CREATE_BODY_BYTES);
+  if (!bounded.ok) return bounded.response;
+  const body = bounded.value;
   const input = body as { workspaceId?: unknown; memberId?: unknown; deviceId?: unknown; desktopKeyProof?: unknown };
   if (!validIdentity(input.workspaceId) || !validIdentity(input.memberId) || !validIdentity(input.deviceId)) {
     return json({ error: "invalid_request" }, 400);
@@ -941,8 +959,9 @@ async function publicStorefrontAuthority(
 }
 
 async function putProjection(request: Request, environment: ConnectedWorkerEnvironment): Promise<Response> {
-  let body: unknown;
-  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
+  const bounded = await readBoundedJson(request, MAX_PROJECTION_BODY_BYTES);
+  if (!bounded.ok) return bounded.response;
+  const body = bounded.value;
   if (!isConnectedEnvelope(body)) return json({ error: "invalid_envelope" }, 400);
   const envelope = body;
   if (
@@ -1000,8 +1019,9 @@ async function invalidateCommandPolicies(
   request: Request,
   environment: ConnectedWorkerEnvironment,
 ): Promise<Response> {
-  let body: unknown;
-  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
+  const bounded = await readBoundedJson(request, MAX_POLICY_INVALIDATE_BODY_BYTES);
+  if (!bounded.ok) return bounded.response;
+  const body = bounded.value;
   const input = body as { workspaceId?: unknown; memberId?: unknown };
   if (!validIdentity(input.workspaceId) || !validIdentity(input.memberId)) {
     return json({ error: "invalid_request" }, 400);
@@ -1224,8 +1244,9 @@ async function completeCommand(
   environment: ConnectedWorkerEnvironment,
   commandId: string,
 ): Promise<Response> {
-  let body: unknown;
-  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
+  const bounded = await readBoundedJson(request, MAX_COMPLETE_BODY_BYTES);
+  if (!bounded.ok) return bounded.response;
+  const body = bounded.value;
   const input = body as { state?: unknown; envelope?: unknown };
   if (!(["committed", "rejected", "conflict"] as const).includes(input.state as "committed") || !isConnectedEnvelope(input.envelope)) {
     return json({ error: "invalid_request" }, 400);
@@ -1306,8 +1327,9 @@ async function revokeDevice(
   environment: ConnectedWorkerEnvironment,
   deviceId: string,
 ): Promise<Response> {
-  let body: unknown;
-  try { body = await request.json(); } catch { return json({ error: "invalid_json" }, 400); }
+  const bounded = await readBoundedJson(request, MAX_REVOKE_BODY_BYTES);
+  if (!bounded.ok) return bounded.response;
+  const body = bounded.value;
   const input = body as { workspaceId?: unknown; revocationEpoch?: unknown };
   if (!validIdentity(input.workspaceId) || !Number.isSafeInteger(input.revocationEpoch) || (input.revocationEpoch as number) < 1) {
     return json({ error: "invalid_request" }, 400);

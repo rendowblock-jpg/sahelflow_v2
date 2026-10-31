@@ -61,3 +61,55 @@ describe("relay body size", () => {
     expect((await worker.fetch(new Request("https://relay.test/v1/pairings/exchange", { method: "POST", headers: pairing, body: "{}" }), w.env)).status).toBe(413);
   });
 });
+
+// W200 part 1: the seven routes that used to call request.json() without a bound. Limits are literal on purpose.
+const OTHER_ROUTES = [
+  { name: "bootstrap", method: "POST", path: "/v1/bootstrap", limit: 65_536 },
+  { name: "putCommandPolicy", method: "PUT", path: "/v1/desktop/command-policies", limit: 16_384 },
+  { name: "createPairing", method: "POST", path: "/v1/desktop/pairings", limit: 16_384 },
+  { name: "putProjection", method: "PUT", path: "/v1/desktop/projections", limit: 540_672 },
+  { name: "invalidateCommandPolicies", method: "DELETE", path: "/v1/desktop/command-policies", limit: 4_096 },
+  { name: "completeCommand", method: "POST", path: "/v1/desktop/commands/cmd_probe_0001/result", limit: 65_536 },
+  { name: "revokeDevice", method: "POST", path: "/v1/desktop/devices/device_probe_01/revoke", limit: 4_096 },
+] as const;
+
+/** A JSON object of exactly `limit + delta` bytes (ASCII only, so characters are bytes). */
+const sized = (limit: number, delta: number): string => {
+  const text = JSON.stringify({ pad: "x".repeat(limit - JSON.stringify({ pad: "" }).length + delta) });
+  expect(text.length).toBe(limit + delta);
+  return text;
+};
+const send = (w: W, route: (typeof OTHER_ROUTES)[number], body: string, extra: Record<string, string> = {}) =>
+  worker.fetch(
+    new Request(`https://relay.test${route.path}`, {
+      method: route.method,
+      headers: { "Content-Type": "application/json", "CF-Connecting-IP": "198.51.100.7", ...extra },
+      body,
+    }),
+    w.env,
+  );
+
+describe("relay body size, the seven desktop routes", () => {
+  for (const route of OTHER_ROUTES) {
+    it(`${route.name}: exactly ${route.limit} bytes is read, one more is 413, a declared length over it is 413`, async () => {
+      const { w } = await setup();
+      const atLimit = await send(w, route, sized(route.limit, 0));
+      expect(atLimit.status, `${route.name} at the limit`).not.toBe(413);
+      const over = await send(w, route, sized(route.limit, 1));
+      expect(over.status).toBe(413);
+      expect(await over.json()).toEqual({ error: "payload_too_large" });
+      const lied = await send(w, route, "{}", { "Content-Length": String(route.limit + 1) });
+      expect(lied.status).toBe(413);
+      // Not JSON and small: still the old answer, so only the size changed.
+      expect((await send(w, route, "{not json")).status).toBe(400);
+      expect(rows(w)).toBe(0);
+    });
+  }
+
+  it("a 3 MB body is 413 on every route even when it is not JSON and carries no token", async () => {
+    const { w } = await setup();
+    for (const route of OTHER_ROUTES) {
+      expect((await send(w, route, "{".repeat(3_000_000))).status, route.name).toBe(413);
+    }
+  });
+});
