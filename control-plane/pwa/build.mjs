@@ -12,7 +12,7 @@ const sha = (buf) => createHash("sha256").update(buf).digest("hex");
 const COMMON = { bundle: true, minify: true, write: false, legalComments: "none", logLevel: "silent", target: ["es2020", "chrome90", "safari15"] };
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://connect.sahelflow.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'";
 
-export async function buildPwa({ outDir = join(HERE, "dist"), relayUrl = "https://connect.sahelflow.com" } = {}) {
+export async function buildPwa({ outDir = join(HERE, "dist"), relayUrl = "https://connect.sahelflow.com", entry = "src/main.ts" } = {}) {
   await rm(outDir, { recursive: true, force: true });
   await mkdir(join(outDir, "assets"), { recursive: true });
   await mkdir(join(outDir, "icons"), { recursive: true });
@@ -45,7 +45,7 @@ export async function buildPwa({ outDir = join(HERE, "dist"), relayUrl = "https:
   // Lazy screens: every dynamic import() is a chunk. esbuild names chunks by its own hash, so each file is renamed to
   // name.<sha8>.js (dependencies first, the imports inside are rewritten) and every chunk is precached for offline use.
   const bundle = await build({
-    entryPoints: { app: join(HERE, "src/main.ts") }, ...COMMON, format: "esm", splitting: true, outdir: join(outDir, "assets"), entryNames: "[name]", chunkNames: "chunk-[hash]",
+    entryPoints: { app: resolve(HERE, entry) }, ...COMMON, format: "esm", splitting: true, outdir: join(outDir, "assets"), entryNames: "[name]", chunkNames: "chunk-[hash]",
     define: { __KEYGEN_WORKER_URL__: JSON.stringify(assets.worker), __RELAY_URL__: JSON.stringify(relayUrl), __APP_VERSION__: JSON.stringify(APP_VERSION) },
   });
   const parts = new Map(bundle.outputFiles.map((f) => [f.path.split(/[\\/]/).pop(), Buffer.from(f.contents).toString("utf8")]));
@@ -58,7 +58,11 @@ export async function buildPwa({ outDir = join(HERE, "dist"), relayUrl = "https:
     const file = (await emit(base.replace(/\.js$/, ""), "js", Buffer.from(text))).split("/").pop();
     named.set(base, file); return file;
   };
-  for (const base of parts.keys()) assets[base === "app.js" ? "app" : base.replace(/\.js$/, "")] = `/assets/${await nameOf(base)}`;
+  // Only chunks the entry can reach are shipped and precached: esbuild also writes a file for an import() that tree-shaking removed
+  // from the entry (a screen nobody mounts yet). Add the import() to the entry and that screen's chunk appears by itself.
+  const reach = new Set(["app.js"]);
+  for (const base of reach) for (const dep of parts.keys()) if (!reach.has(dep) && parts.get(base).includes(dep)) reach.add(dep);
+  for (const base of reach) assets[base === "app.js" ? "app" : base.replace(/\.js$/, "")] = `/assets/${await nameOf(base)}`;
 
   const head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light dark"><meta name="theme-color" content="#F3EEE4" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#14161A" media="(prefers-color-scheme: dark)"><meta name="referrer" content="no-referrer"><title>SahelFlow</title><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/icon-192.png"><link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"><link rel="stylesheet" href="${assets.css}">`;
   await writeFile(join(outDir, "index.html"), `<!doctype html><html lang="ar" dir="rtl"><head>${head}<script src="${assets.boot}"></script></head><body><div id="app"></div><script type="module" src="${assets.app}"></script></body></html>`);
