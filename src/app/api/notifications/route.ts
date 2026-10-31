@@ -78,7 +78,13 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       ...result.notifications.map((notification) => ({
         ...notification,
         title: t(notification.titleKey),
-        body: t(notification.bodyKey),
+        body: notification.count === null ? t(notification.bodyKey) : t(notification.bodyKey, { count: notification.count }),
+        ...(notification.digestCount
+          ? {
+              nativeTitle: t("notifications.events.digest.title"),
+              nativeBody: t("notifications.events.digest.body", { count: notification.digestCount }),
+            }
+          : {}),
         time: relativeTime(notification.createdAt, t),
       })),
       ...compatibleLegacy,

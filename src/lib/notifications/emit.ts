@@ -14,7 +14,7 @@ export type NotificationEmitClient = Pick<Prisma.TransactionClient, "notificatio
 
 export interface EmitInput {
   kind: NotificationKind;
-  shopId: string;
+  shopId?: string;
   at?: Date;
   subject?: string;
   variant?: string;
@@ -34,8 +34,13 @@ export function buildNotificationMarker(input: EmitInput) {
     category: "inbox",
     severity: asSeverity(input.severity ?? spec.severity),
     requiredAction: spec.requiredAction,
-    targetType: input.kind === "whatsapp.received" ? "conversation" : "shop",
-    targetId: input.kind === "whatsapp.received" && subject !== "none" ? subject : safeToken(input.shopId),
+    targetType: input.kind === "whatsapp.received" ? "conversation" : input.kind === "licence.ending" ? "licence" : "shop",
+    targetId:
+      input.kind === "whatsapp.received" && subject !== "none"
+        ? subject
+        : input.kind === "licence.ending"
+          ? safeToken(input.variant)
+          : safeToken(input.shopId),
     sourceRecordId: eventKey,
     link: linkFor(input.kind, input.subject),
     occurredAt: at,
@@ -66,7 +71,6 @@ export async function emitNotificationEvent(
       ? String((error as { code: string }).code).slice(0, 32)
       : "unknown";
     try {
-      // eslint-disable-next-line no-console
       console.warn("notification.emit_failed", { kind: input.kind, code });
     } catch {
       // A broken logger must not break the caller either.

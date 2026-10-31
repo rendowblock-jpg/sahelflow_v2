@@ -1,3 +1,4 @@
+import { emitNotificationEvent } from "@/lib/notifications/emit";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -330,6 +331,7 @@ export async function createCanonicalSourceOrder(
         },
         include: { items: true },
       });
+      await emitNotificationEvent(tx, { kind: "order.new" });
 
       await recordOrderChangeInTx(tx, {
         orderId: order.id,

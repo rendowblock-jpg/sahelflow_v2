@@ -42,6 +42,7 @@ import { getSettingsPanelsStatesRuntimeTranslation } from "@/lib/i18n/settings-p
 import { getStorefrontRuntimeTranslation } from "@/lib/i18n/storefront-runtime";
 import { getWhatsAppRecoveryTranslation } from "@/lib/i18n/whatsapp-recovery";
 import { getWorkspacesRuntimeTranslation } from "@/lib/i18n/workspaces-runtime";
+import { getNotificationEventsRuntimeTranslation } from "@/lib/i18n/notification-events-runtime";
 
 const SHARED_RUNTIME_COPY = {
   en: {
@@ -188,6 +189,7 @@ export function getRuntimeTranslation(
     getInboxVoiceNoteRuntimeTranslation(locale, key) ??
     getLicenseLockoutRuntimeTranslation(locale, key) ??
     getNotificationsRuntimeTranslation(locale, key) ??
+    getNotificationEventsRuntimeTranslation(locale, key) ??
     getOnboardingRuntimeTranslation(locale, key) ??
     getOrderActionsRuntimeTranslation(locale, key) ??
     getOrderFormRuntimeTranslation(locale, key) ??

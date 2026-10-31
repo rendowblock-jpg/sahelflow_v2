@@ -10,6 +10,12 @@ export function createBurstGate(windowMs: number = BURST_WINDOW_MS) {
       const at = last.get(kind);
       return at === undefined || nowMs - at >= windowMs;
     },
+    /** Check and claim in one step: parallel rows of one poll cannot all pass. */
+    take(kind: string, nowMs: number): boolean {
+      if (!this.allow(kind, nowMs)) return false;
+      last.set(kind, nowMs);
+      return true;
+    },
     /** Call only when a toast was really shown. */
     record(kind: string, nowMs: number): void {
       last.set(kind, nowMs);

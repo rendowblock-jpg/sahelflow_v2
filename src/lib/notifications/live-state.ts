@@ -77,6 +77,11 @@ export async function resolveLiveEventState(
       });
       return { kind, count, severity: base, stillTrue: count > 0 };
     }
+    case "licence.ending": {
+      // targetId holds the threshold told ("7", "3", "1" or "expired").
+      const days = /^\d{1,2}$/.test(event.targetId) ? Number(event.targetId) : null;
+      return { kind, count: days, severity: base, stillTrue: true };
+    }
     default:
       return { kind, count: null, severity: base, stillTrue: true };
   }

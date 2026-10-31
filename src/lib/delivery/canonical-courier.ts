@@ -1,3 +1,4 @@
+import { emitNotificationEvent } from "@/lib/notifications/emit";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -407,6 +408,7 @@ export async function reconcileCanonicalCourierBooking(
             "Delivery changed during courier reconciliation",
           );
         }
+        await emitNotificationEvent(tx, { kind: "delivery.failed", subject: delivery.id, variant: "booking_failed" });
         const outboxUpdated = await tx.outboxIntent.updateMany({
           where: {
             id: outbox.id,

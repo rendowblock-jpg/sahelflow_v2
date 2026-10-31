@@ -91,8 +91,8 @@ export const KIND_SPECS: Record<NotificationKind, KindSpec> = {
   }),
   "licence.ending": mk("licence.ending", {
     requiredAction: "settings.read", link: "/settings?section=license", severity: "warning",
-    bucketMinutes: null, counted: false, groupable: false, expiresDays: 90,
-    sentence: "Your trial ends in {count} days.",
+    bucketMinutes: null, counted: true, groupable: false, expiresDays: 90,
+    sentence: "Your access to SahelFlow ends in {count} days.",
   }),
   "update.available": mk("update.available", {
     requiredAction: "settings.read", link: "/settings?section=license", severity: "info",
