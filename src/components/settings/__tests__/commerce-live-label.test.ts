@@ -14,7 +14,9 @@ const locale = (code: "ar" | "fr" | "en") =>
     readFileSync(join(root, `src/lib/i18n/locales/${code}.json`), "utf8"),
   ) as Record<string, string>;
 
-const KEYS = ["integrations.notLiveTested", "integrations.notLiveTestedHint"];
+// The older chip (integrations.notLiveTested) is gone: the registry chip says the same thing once. Its one-line hint stays
+// because it gives the advice the chip cannot: check that orders arrive before relying on the link.
+const KEYS = ["integrations.notLiveTestedHint"];
 const MODULE = "@/lib/integrations/ecommerce/live-certification";
 
 describe("commerce live-store label: certification map", () => {
@@ -52,13 +54,15 @@ describe("commerce live-store label: certification map", () => {
 });
 
 describe("commerce live-store label: panel and strings", () => {
-  it("the panel decides with the certification helper and renders both strings", () => {
+  it("the panel decides with the certification helper and renders the hint", () => {
     expect(panel).toContain("showsNotLiveTestedLabel(");
     for (const key of KEYS) expect(panel).toContain(`t("${key}")`);
   });
 
-  it("the label names the platform for screen readers", () => {
-    expect(panel).toMatch(/sr-only[^\n]*\{definition\.name\}/);
+  it("a connected card carries ONE in-testing chip, the registry chip, not a second warning badge", () => {
+    expect(panel).not.toContain('t("integrations.notLiveTested")');
+    expect(panel).not.toMatch(/<Badge[^>]*text-warning/);
+    expect(panel.match(/<TestingBadge\b/g) ?? []).toHaveLength(1);
   });
 
   it("does not touch the connect request: no probe is added by the label", () => {
@@ -75,8 +79,5 @@ describe("commerce live-store label: panel and strings", () => {
       expect(ar[key]).not.toBe(en[key]);
       expect(ar[key]).toMatch(/[\u0600-\u06FF]/);
     }
-    expect(en["integrations.notLiveTested"]).toBe(
-      "Not tested against a live store yet",
-    );
   });
 });
