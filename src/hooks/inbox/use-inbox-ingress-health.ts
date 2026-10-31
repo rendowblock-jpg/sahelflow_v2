@@ -21,8 +21,6 @@ export const INGRESS_HEALTH_POLL_MS = 15_000;
 /** A message waiting in the spool is only news after this many seconds, or when stuck. */
 export const WAITING_MIN_AGE_SEC = 60;
 
-const ORDER: IngressNoticeKind[] = ["lost", "waiting", "unreachable", "unsupported"];
-
 function whole(value: unknown): number {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : 0;
 }
@@ -69,22 +67,21 @@ export function describeIngressHealth(
   return { notices, reachable: true };
 }
 
-/** Keep only the notices that have stood still for NOTICE_SETTLE_MS. */
+/**
+ * Keep only the notices that have stood still for NOTICE_SETTLE_MS. A notice
+ * appears one second after it is first seen and goes one second after it is
+ * gone; the number on a shown notice is always the latest one.
+ */
 export function useSettledNotices(raw: IngressNotice[]): IngressNotice[] {
-  const latest = useRef(new Map<IngressNoticeKind, IngressNotice>());
-  for (const notice of raw) latest.current.set(notice.kind, notice);
-  const signature = ORDER.filter((kind) => raw.some((notice) => notice.kind === kind)).join(",");
-  const [shown, setShown] = useState("");
+  const [shown, setShown] = useState<IngressNotice[]>([]);
+  const signature = raw.map((notice) => notice.kind).join(",");
+  const shownSignature = shown.map((notice) => notice.kind).join(",");
   useEffect(() => {
-    if (signature === shown) return;
-    const id = window.setTimeout(() => setShown(signature), NOTICE_SETTLE_MS);
+    if (signature === shownSignature) return;
+    const id = window.setTimeout(() => setShown(raw), NOTICE_SETTLE_MS);
     return () => window.clearTimeout(id);
-  }, [signature, shown]);
-  return shown
-    .split(",")
-    .filter((kind): kind is IngressNoticeKind => ORDER.includes(kind as IngressNoticeKind))
-    .map((kind) => latest.current.get(kind))
-    .filter((notice): notice is IngressNotice => notice !== undefined);
+  }, [raw, signature, shownSignature]);
+  return shown.map((notice) => raw.find((fresh) => fresh.kind === notice.kind) ?? notice);
 }
 
 export function useInboxIngressHealth(): IngressNotice[] {

@@ -94,7 +94,7 @@ describe("useWhatsAppSocket grant renewal", () => {
     renderHook(() => useWhatsAppSocket());
     await advance(5 * 60_000);
     expect(tokenRequests.length).toBe(13);
-    expect(tokenRequests[1]! - tokenRequests[0]!).toBe(25_000);
+    expect((tokenRequests[1] ?? 0) - (tokenRequests[0] ?? 0)).toBe(25_000);
     expect(openSockets()).toBe(1);
   });
 
