@@ -148,7 +148,8 @@ html[lang=ar] h1{font-kerning:normal;line-height:1.4}
 .app-window-bar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-block-end:1px solid var(--line);color:var(--ink3);font-size:13px}
 .app-window-bar i{inline-size:8px;block-size:8px;border:1px solid var(--edge);border-radius:50%}
 .app-window-bar span{margin-inline-start:auto}
-.app-window img{inline-size:100%}
+.app-window img{inline-size:100%;display:block}
+.app-window-note{margin:0;padding:6px 12px;border-block-start:1px solid var(--line);color:var(--ink3);font-size:12px;line-height:1.4;text-align:start}
 .scene-window{border:1px solid var(--line);border-radius:var(--r);background:var(--sheet)}
 .scene-label{color:var(--ink3);font-size:13px}
 /* Old night-sky decoration: gone. */
