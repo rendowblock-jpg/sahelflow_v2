@@ -15,6 +15,36 @@ import {
 import { useI18n } from "@/hooks/use-i18n";
 import { cn, formatDZD, intlLocale, numberFormatter } from "@/lib/utils";
 
+export interface StatCardTableAlt {
+  caption: string;
+  columns: readonly string[];
+  rows: ReadonlyArray<ReadonlyArray<string | number>>;
+}
+
+function SparkTableAlt({ table }: { table: StatCardTableAlt }) {
+  return (
+    <table className="sr-only" data-stat-sparkline-table="true">
+      <caption>{table.caption}</caption>
+      <thead>
+        <tr>
+          {table.columns.map((column, index) => (
+            <th key={index} scope="col">{column}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {table.rows.map((row, rowIndex) => (
+          <tr key={rowIndex}>
+            {row.map((cell, cellIndex) => (
+              <td key={cellIndex}>{cell}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export type StatCardEmphasis = "standard" | "primary" | "supporting";
 export type StatCardTone =
   | "neutral"
@@ -56,6 +86,12 @@ interface StatCardProps {
   sparkContext?: React.ReactNode;
   /** Opt in when zero is the honest floor for this metric's mini-trend. */
   sparkZeroBaseline?: boolean;
+  /**
+   * Optional text alternative of the mini-trend: the same numbers as a
+   * visually hidden table (already formatted by the caller). Leaving it out
+   * changes nothing in the output. Only shown together with `spark`.
+   */
+  tableAlt?: StatCardTableAlt;
   className?: string;
   style?: React.CSSProperties;
   tooltip?: string;
@@ -122,6 +158,7 @@ export function StatCard({
   sparkColor = "var(--color-chart-1)",
   sparkContext,
   sparkZeroBaseline = false,
+  tableAlt,
   className,
   style,
   tooltip,
@@ -307,6 +344,7 @@ export function StatCard({
 
       {spark && spark.length > 1 ? (
         <div className="relative z-10 mt-2.5" data-stat-sparkline="true">
+          {tableAlt ? <SparkTableAlt table={tableAlt} /> : null}
           {sparkDated ? (
             <Sparkline
               data={spark}
