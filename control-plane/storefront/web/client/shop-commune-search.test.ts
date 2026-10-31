@@ -499,7 +499,10 @@ describe("commune search: the 2025 reform (old wilaya hint, greyed rows, aliases
     expect(row.getAttribute("aria-disabled")).toBe("true");
     expect(off(row)).toBe("This store does not deliver to wilaya 60");
     expect(hint(row)).toBe("formerly Batna");
+    expect(c.box.getAttribute("aria-expanded")).toBe("true");
     c.click(row);
+    // a click on a greyed row does nothing at all: the list stays open (it is not closed as after a real pick)
+    expect(c.box.getAttribute("aria-expanded")).toBe("true");
     c.key("ArrowDown");
     expect(c.box.hasAttribute("aria-activedescendant")).toBe(false);
     const enter = c.key("Enter");
