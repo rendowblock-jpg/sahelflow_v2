@@ -36,7 +36,7 @@ struct RawEntry {
 /// Relative POSIX path with no `..`, `.`, empty part, drive letter, stream name or backslash.
 pub fn is_safe_relative_path(path: &str) -> bool {
     !path.is_empty()
-        && !path.contains(|c: char| matches!(c, '\\' | ':' | '\0'))
+        && !path.contains(['\\', ':', '\0'])
         && path
             .split('/')
             .all(|part| !part.is_empty() && part != "." && part != "..")
