@@ -163,7 +163,7 @@ export const EXCLUDED: readonly ExcludedPage[] = [
 
 /** Problems in the two tables themselves: empty reasons, duplicates, a page both routed and excluded. */
 export function assertPlanTables(
-  routes: ReadonlyArray<Pick<RouteDef, "pattern">>,
+  routes: ReadonlyArray<RouteDef>,
   excluded: ReadonlyArray<ExcludedPage>,
 ): string[] {
   const problems: string[] = [];
