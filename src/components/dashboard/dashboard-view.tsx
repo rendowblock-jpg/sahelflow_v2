@@ -71,10 +71,12 @@ export function DashboardView({
   // Text alternative of a card's mini-trend: the same points as a hidden table.
   const sparkTable = (
     title: string,
-    points: ReadonlyArray<{ value: number; date: string }>,
+    rawPoints: ReadonlyArray<{ value: number; date?: string | undefined }>,
     money: boolean,
-  ) =>
-    points.length > 1
+  ) => {
+    // A point without a date cannot be a table row (the date is the row label).
+    const points = rawPoints.flatMap((point) => (point.date === undefined ? [] : [{ value: point.value, date: point.date }]));
+    return points.length > 1
       ? {
           caption: t("charts.tableOf", { title }),
           columns: [t("charts.colDate"), title],
@@ -84,6 +86,7 @@ export function DashboardView({
           ]),
         }
       : undefined;
+  };
 
   const period = greetingPeriod(new Date());
   const greeting =

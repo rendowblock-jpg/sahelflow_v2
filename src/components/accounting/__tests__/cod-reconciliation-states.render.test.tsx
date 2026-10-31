@@ -32,8 +32,8 @@ function makeT(locale: Locale) {
   };
 }
 const flagged = [{ orderId: "o1", orderNumber: "SF-1042" }, { orderId: "o2", orderNumber: "SF-1047" }];
-function view(locale: Locale, state: Parameters<typeof resolveCodState>[0] & object, over: Partial<React.ComponentProps<typeof CodReconciliationView>> = {}) {
-  const input = state as { s: React.ComponentProps<typeof CodReconciliationView>["state"] };
+function view(locale: Locale, state: { s: React.ComponentProps<typeof CodReconciliationView>["state"] }, over: Partial<React.ComponentProps<typeof CodReconciliationView>> = {}) {
+  const input = state;
   return render(
     <CodReconciliationView
       t={makeT(locale)}

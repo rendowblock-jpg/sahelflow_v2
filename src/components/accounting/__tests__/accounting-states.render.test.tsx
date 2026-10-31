@@ -54,7 +54,7 @@ const Providers = ({ children }: { children: ReactNode }) => (
 );
 
 const expenses = [
-  { id: "e1", category: "delivery" as const, amount: 12500, date: "2026-10-28T10:00:00.000Z", notes: "Remise Yalidine, 14 colis" },
+  { id: "e1", category: "delivery_fees" as const, amount: 12500, date: "2026-10-28T10:00:00.000Z", notes: "Remise Yalidine, 14 colis" },
   { id: "e2", category: "ads" as const, amount: 40000, date: "2026-10-27T09:30:00.000Z", notes: null },
 ];
 const monthly = [
