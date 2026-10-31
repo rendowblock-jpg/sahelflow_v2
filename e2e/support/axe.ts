@@ -147,6 +147,58 @@ export async function settleMotion(
   }
 }
 
+/** Longest wait for loading placeholders to be replaced by their content before axe runs anyway. */
+export const AXE_LOAD_TIMEOUT_MS = 10_000;
+
+/**
+ * True when no loading placeholder is drawn on the page. A placeholder is the Skeleton primitive, anything that says it
+ * is busy (`aria-busy="true"`), or a pulsing bar inside a `role="status"` region (what the profile editor shows while
+ * /api/profile loads). One that sits under `display: none`, `hidden` or `inert` is not drawn and is not waited for, and
+ * neither is a pulsing dot with no status region around it (a "live" indicator is not a placeholder).
+ *
+ * Self-contained on purpose: waitForFunction serialises it into the page, so it may not use anything outside itself.
+ */
+export function noLoadingPlaceholders(): boolean {
+  const placeholders = document.querySelectorAll(
+    '[data-slot="skeleton"], [aria-busy="true"], [role="status"] .animate-pulse',
+  );
+  for (const element of Array.from(placeholders)) {
+    if (element.closest("[hidden], [inert]")) continue;
+    let drawn = getComputedStyle(element).visibility !== "hidden";
+    for (let node: Element | null = element; drawn && node; node = node.parentElement) {
+      if (getComputedStyle(node).display === "none") drawn = false;
+    }
+    if (drawn) return false;
+  }
+  return true;
+}
+
+/**
+ * Waits until no loading placeholder is drawn.
+ *
+ * Why: the Settings detail panel is a scroller. While its form is a placeholder it holds nothing a keyboard can reach,
+ * and at large text it already overflows, so `scrollable-region-focusable` fires on it. Measured on 31 Oct 2026
+ * (Chromium 149, 32 px browser font): that stage lasted 287 to 1022 ms in 11 loads and 5587 ms in a cold one, axe run
+ * inside it flagged the panel in 12 of 12 loads, and once the form was drawn it flagged it in none. The 200% text runs
+ * flagged it on a different few cells each time, whichever cell axe reached in that stage. A placeholder is not the page;
+ * a page that is loaded is what must pass. Nothing is excluded from axe: it still runs strict afterwards, and a page that
+ * is still loading after the limit is judged as it is, with a note in the message.
+ * Returns false when the limit passed with a placeholder still drawn.
+ */
+export async function settleLoading(
+  page: Page,
+  timeoutMs: number = AXE_LOAD_TIMEOUT_MS,
+): Promise<boolean> {
+  try {
+    await page.waitForFunction(noLoadingPlaceholders, undefined, { timeout: timeoutMs, polling: 50 });
+    return true;
+  } catch (error) {
+    // Only "the placeholder did not go in time" is expected here. A closed page or a broken browser must stay visible.
+    if (error instanceof Error && error.name === "TimeoutError") return false;
+    throw error;
+  }
+}
+
 export async function assertNoAxeViolations(
   page: Page,
   label: string,

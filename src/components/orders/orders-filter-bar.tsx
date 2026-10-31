@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useI18n } from "@/hooks/use-i18n";
+import { useMobile } from "@/hooks/use-mobile";
 import { useOrdersFilterParams } from "@/hooks/use-orders-filter-params";
 import wilayasData from "../../../data/wilayas.json";
 
@@ -62,6 +63,11 @@ function presetRange(
 
 export function OrdersFilterBar() {
   const { t, locale } = useI18n();
+  // The phone hint is chosen by the media-query hook (server snapshot = desktop), never by a width read at render.
+  const isPhone = useMobile();
+  const searchPlaceholder = isPhone
+    ? t("orders.searchHintPhone")
+    : t("orders.filters.searchPlaceholder");
   const {
     q,
     wilaya,
@@ -107,7 +113,7 @@ export function OrdersFilterBar() {
       <div className="flex flex-wrap items-center gap-2">
         <ListSearchInput
           className="min-w-0 flex-1 basis-52"
-          placeholder={t("orders.filters.searchPlaceholder")}
+          placeholder={searchPlaceholder}
         />
         <Select
           value={wilaya ?? "all"}
