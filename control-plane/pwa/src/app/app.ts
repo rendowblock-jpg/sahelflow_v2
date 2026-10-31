@@ -82,7 +82,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set({ screen: "pair", state: "keygen", step: "signing", failure: null, fingerprint: null }, true);
     const out = await runPairing({
       link: link.link, online: navigator.onLine, keygen: createKeygen(), transport,
-      store: { saveKeys: async (k) => saveDeviceKeys(await getDb(), k), saveCredentials: async (c) => (await getDb()).put("keys", "credentials", c) },
+      store: { saveKeys: async (k) => saveDeviceKeys(await getDb(), k), saveTrust: async (t) => (await getDb()).put("keys", "desktop", t), saveCredentials: async (c) => (await getDb()).put("keys", "credentials", c), discard: async () => { await wipe(); } },
       onStep: (step) => set({ step }),
     });
     if (out.ok) return set({ state: "waiting", fingerprint: out.fingerprint });
@@ -113,13 +113,16 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set({ lockNotice: next.allowed ? { kind: "wrong", left: next.triesLeft } : { kind: "wait", seconds: next.waitSeconds } });
     if (!next.allowed) setTimeout(() => set({ lockNotice: null }), next.waitSeconds * 1000);
   }
-  async function removePhone(): Promise<void> {
+  async function wipe(): ReturnType<typeof wipeAll> {
     const db = await getDb().catch(() => null); dbPromise = null;
-    const result = await wipeAll({
+    return wipeAll({
       db, factory: indexedDB, caches: typeof caches === "undefined" ? null : caches,
       unregister: async () => { const regs = (await navigator.serviceWorker?.getRegistrations()) ?? []; await Promise.all(regs.map((r) => r.unregister())); },
       storage: { keys: () => { try { return Object.keys(localStorage); } catch { return []; } }, remove: (k) => { try { localStorage.removeItem(k); } catch { /* ignore */ } } },
     });
+  }
+  async function removePhone(): Promise<void> {
+    const result = await wipe();
     set(result.ok ? { removed: true, confirmRemove: false, hasLock: false, projection: null } : { removeError: result.failed.join(", "), confirmRemove: false });
   }
 

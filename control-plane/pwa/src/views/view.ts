@@ -21,6 +21,8 @@ const STEPS: readonly PairStep[] = ["signing", "encryption", "send"];
 const FAILURE_KEY: Readonly<Record<PairFailure, string>> = {
   invalid_link: "pair.error.invalid", unsupported: "pair.error.unsupported", keygen_failed: "pair.error.keygen", storage_failed: "pair.error.storage",
   offline: "pair.offline", expired: "pair.expired", rejected: "pair.error.rejected", network: "pair.error.network",
+  proof_missing: "pair.trust.proof_missing", bad_signature: "pair.trust.bad_signature", key_mismatch_with_pin: "pair.trust.key_mismatch_with_pin",
+  wrong_context: "pair.trust.wrong_context", malformed: "pair.trust.malformed", unavailable: "pair.trust.unavailable",
 };
 
 const note = (cls: string, role: string, title: string, body: string, action = ""): string =>
@@ -50,7 +52,12 @@ function pair(v: View, tr: Tr): string {
       const fp = v.fingerprint ? `<div class="sheet"><h2>${tr("pair.fingerprint.title")}</h2><p class="fp num" dir="ltr">${esc(v.fingerprint)}</p><p class="hint">${tr("pair.fingerprint.hint")}</p></div>` : "";
       return `${head}${fp}<div class="note margin" role="status"><h2>${tr("pair.waiting")}</h2><p>${tr("pair.waiting.hint")}</p></div>`;
     }
-    case "error": return head + note("alert", "alert", tr("common.error.title"), tr(FAILURE_KEY[v.failure ?? "network"]), button("retry", tr("common.retry"), "ghost"));
+    case "error": {
+      const key = FAILURE_KEY[v.failure ?? "network"];
+      // A refused desktop is not retried with the same link: one honest instruction, no retry button.
+      if (key.startsWith("pair.trust.")) return `${head}<div class="note alert" role="alert"><h2>${tr("pair.trust.title")}</h2><p>${tr(key)}</p><p><strong>${tr("pair.trust.instruction")}</strong></p></div>`;
+      return head + note("alert", "alert", tr("common.error.title"), tr(key), button("retry", tr("common.retry"), "ghost"));
+    }
     case "stale": return head + note("alert", "alert", "", tr("pair.expired"));
     case "offline": return head + note("", "status", "", tr("pair.offline"), button("retry", tr("common.retry"), "ghost"));
     default: return `${head}<div class="sheet"><p>${tr("pair.empty")}</p></div>`;
