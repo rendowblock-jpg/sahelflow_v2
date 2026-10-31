@@ -1,3 +1,18 @@
+import { shellAr } from "./shell.ar";
+import { shellFr } from "./shell.fr";
+import { shellEn } from "./shell.en";
+import { ordersAr } from "./orders.ar";
+import { ordersFr } from "./orders.fr";
+import { ordersEn } from "./orders.en";
+import { inboxAr } from "./inbox.ar";
+import { inboxFr } from "./inbox.fr";
+import { inboxEn } from "./inbox.en";
+import { settingsAr } from "./settings.ar";
+import { settingsFr } from "./settings.fr";
+import { settingsEn } from "./settings.en";
+import { pushAr } from "./push.ar";
+import { pushFr } from "./push.fr";
+import { pushEn } from "./push.en";
 import { ar } from "./ar";
 import { en } from "./en";
 import { fr } from "./fr";
@@ -7,7 +22,13 @@ export type { Catalog } from "./types";
 export const LOCALES = ["ar", "fr", "en"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "ar";
-export const catalogs: Readonly<Record<Locale, Catalog>> = { ar, fr, en };
+const merge = (...parts: readonly Catalog[]): Catalog => parts.reduce<Catalog>((all, part) => ({ ...all, ...part }), {});
+// The base catalogs plus the shell keys and the per-screen catalogs (empty until their tracks fill them). The parity test runs over the merge.
+export const catalogs: Readonly<Record<Locale, Catalog>> = {
+  ar: merge(ar, shellAr, ordersAr, inboxAr, settingsAr, pushAr),
+  fr: merge(fr, shellFr, ordersFr, inboxFr, settingsFr, pushFr),
+  en: merge(en, shellEn, ordersEn, inboxEn, settingsEn, pushEn),
+};
 
 const NBSP = "\u00A0";
 

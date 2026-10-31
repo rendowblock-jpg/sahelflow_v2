@@ -9,6 +9,9 @@ export type RelayPoll =
   | Readonly<{ kind: "unchanged" }>
   | Readonly<{ kind: "pending" }>
   | Readonly<{ kind: "revoked" }>
+  | Readonly<{ kind: "pcoff" }>
+  | Readonly<{ kind: "rate_limited"; retryAfterMs: number }>
+  | Readonly<{ kind: "server" }>
   | Readonly<{ kind: "refused"; reason: string }>
   | Readonly<{ kind: "network" }>
   | Readonly<{ kind: "not_paired" }>;
@@ -35,10 +38,14 @@ export function parseDashboard(payload: unknown, generatedAt: number): Projectio
     if (Number.isFinite(at) && orders !== null) week.push({ at, orders });
   }
   // Cash to collect is whole DZD; absent or unusable = NaN, which the view prints as a dash.
-  return { generatedAt, newOrders, toConfirm, toConfirmIsFloor: exact === null, inDelivery: count(stats.pendingDeliveries) ?? 0, codToCollectDzd: count(stats.codToCollectDzd) ?? Number.NaN, week, whatsappHeld: count(stats.whatsappHeld) };
+  // The command authority the desktop published with it: which policy version a command must be sealed with, and until when it holds.
+  const auth = obj(root.connectedCommandAuthority); const policyVersion = count(auth?.policyVersion); const authUntil = typeof auth?.expiresAt === "string" ? Date.parse(auth.expiresAt) : Number.NaN;
+  const authority = policyVersion !== null && Number.isFinite(authUntil) ? { authority: { policyVersion, expiresAt: authUntil } } : {};
+  return { ...authority, generatedAt, newOrders, toConfirm, toConfirmIsFloor: exact === null, inDelivery: count(stats.pendingDeliveries) ?? 0, codToCollectDzd: count(stats.codToCollectDzd) ?? Number.NaN, week, whatsappHeld: count(stats.whatsappHeld) };
 }
 
-const FORGET_AFTER = 3;
+// 429 Retry-After is seconds; absent or unusable = one minute. Never more than an hour.
+const retryAfter = (res: Response): number => { const s = Number(res.headers.get("retry-after")); return Number.isFinite(s) && s > 0 ? Math.min(Math.ceil(s) * 1000, 3_600_000) : 60_000; };
 const validShopId = (v: unknown): v is string => typeof v === "string" && /^[^\s\u0000-\u001f]{1,128}$/.test(v);
 // The relay's 409 shop_required body: { error, shops: [ids sorted] }. Only the first id is used.
 async function firstListedShop(res: Response): Promise<string | null> {
@@ -54,7 +61,7 @@ const isSnapshot = (v: unknown): v is Snapshot => {
 };
 
 export function createRelayClient(options: Readonly<{ baseUrl: string; getDb: () => Promise<Db>; fetchImpl?: typeof fetch; now?: () => number }>): Readonly<{ poll(): Promise<RelayPoll>; source: ProjectionSource }> {
-  const base = options.baseUrl.replace(/\/+$/, ""); const clock = options.now ?? Date.now; let missing = 0;
+  const base = options.baseUrl.replace(/\/+$/, ""); const clock = options.now ?? Date.now;
   async function poll(): Promise<RelayPoll> {
     let db: Db;
     try { db = await options.getDb(); } catch { return { kind: "not_paired" }; }
@@ -88,13 +95,12 @@ export function createRelayClient(options: Readonly<{ baseUrl: string; getDb: ()
     if (!res) return { kind: "network" };
     if (res.status === 404) {
       if (!stored) return { kind: "pending" };
-      // A stored shop that stops answering is forgotten after three polls in a row, then found again.
-      missing += 1;
-      if (missing >= FORGET_AFTER) { missing = 0; await db.put("keys", "credentials", { ...me, shopId: null }).catch(() => undefined); }
-      return { kind: "pending" };
+      // The PC is off for more than 15 minutes: the relay has no fresh copy. The shop is NOT forgotten (with two shops it could flip silently).
+      return { kind: "pcoff" };
     }
-    missing = 0;
     if (res.status === 401 || res.status === 403) return { kind: "revoked" };
+    if (res.status === 429) return { kind: "rate_limited", retryAfterMs: retryAfter(res) };
+    if (res.status >= 500) return { kind: "server" };
     if (res.status === 304) return stored ? { kind: "unchanged" } : { kind: "network" };
     if (!res.ok) return { kind: "network" };
     const body: unknown = await res.json().catch(() => null);

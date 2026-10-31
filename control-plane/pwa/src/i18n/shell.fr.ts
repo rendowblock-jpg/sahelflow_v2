@@ -1,0 +1,32 @@
+import type { Catalog } from "./types";
+
+// W3-F3 common keys (state.*, cmd.*, settings.revoked). Arabic is a DRAFT until the Founder's native read.
+export const shellFr: Catalog = {
+  "settings.revoked": "Ce téléphone a été retiré de votre PC. Tout ce qui était enregistré ici a été supprimé.",
+  "state.asof": "Situation à {{time}}",
+  "state.stale": "Copie ancienne de {{time}}. Ouvrez l'application quand votre PC est allumé.",
+  "state.pcoff": "Votre PC est éteint ou non connecté. Vous voyez ce qu'il a envoyé en dernier, à {{time}}.",
+  "cmd.queued": "Enregistré sur ce téléphone. Envoyé quand vous ouvrez l'application et que votre PC est allumé.",
+  "cmd.sent": "Envoyé. Votre PC n'a pas encore confirmé.",
+  "cmd.committed": "Fait sur votre PC.",
+  "cmd.replied": "Remis à WhatsApp sur votre PC.",
+  "cmd.failed": "Non fait. Votre PC l'a refusé.",
+  "cmd.expired": "Trop tard : ce n'a pas été fait. Renvoyez-le si vous le voulez encore.",
+  "cmd.unknown": "Vérification auprès de votre PC…",
+  "cmd.review": "Cette commande a changé sur votre PC. Regardez-la de nouveau, puis décidez.",
+  "cmd.waitpc": "En attente de votre PC. Vu pour la dernière fois à {{time}}.",
+  "cmd.sendAnyway": "Envoyer quand même",
+  "cmd.retry": "Réessayer",
+  "cmd.confirm": "Confirmer",
+  "cmd.reject": "Refuser",
+  "cmd.send": "Envoyer",
+  "cmd.cancel": "Annuler",
+  "cmd.confirm.title": "Confirmer la commande {{number}} ?",
+  "cmd.reject.title": "Refuser la commande {{number}} ? Choisissez un motif.",
+  "cmd.reason.customerCancelled": "Le client a annulé",
+  "cmd.reason.fakeOrder": "Fausse commande",
+  "cmd.reason.unreachable": "Client injoignable",
+  "cmd.reason.postponed": "Reporté",
+  "cmd.composer.reply": "Votre réponse",
+  "cmd.composer.note": "Votre note",
+};

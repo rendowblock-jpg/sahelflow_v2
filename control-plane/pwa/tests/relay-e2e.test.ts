@@ -206,19 +206,13 @@ describe("shop discovery against the real relay (no hand-added shopId)", () => {
     expect(p.projectionCalls().map((u) => queryOf(u).get("shopId"))).toEqual([null, first]);
     expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: first });
   });
-  it("a stored shop that answers 404 three polls in a row is forgotten and the phone rediscovers (another shop, lower sequence)", async () => {
+  it("a stored shop that answers 404 (PC off for more than 15 min) is NEVER forgotten: 'pcoff' every time", async () => {
     const p = await pairedPhone("phone_pwa_0013");
     await publish(p.client, "phone_pwa_0013", 9, dashboard(8));
     expect(await p.relay.poll()).toMatchObject({ kind: "updated", snapshot: { sequence: 9 } });
     p.world.d1.sqlite.exec("UPDATE connected_projection SET expires_at = '2020-01-01T00:00:00.000Z'");
-    expect(await p.relay.poll()).toEqual({ kind: "pending" });
-    expect(await p.relay.poll()).toEqual({ kind: "pending" });
+    for (let i = 0; i < 4; i += 1) expect(await p.relay.poll()).toEqual({ kind: "pcoff" });
     expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: SHOP_ID });
-    expect(await p.relay.poll()).toEqual({ kind: "pending" });
-    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: null });
-    await publish(p.client, "phone_pwa_0013", 1, dashboard(2), OTHER_SHOP);
-    expect(await p.relay.poll()).toMatchObject({ kind: "updated", snapshot: { sequence: 1, projection: { newOrders: 2 } } });
-    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: OTHER_SHOP });
   });
   it("two 404s then a good answer do not forget the shop (the count is consecutive)", async () => {
     const p = await pairedPhone("phone_pwa_0014");
@@ -287,14 +281,16 @@ describe("projection source edges", () => {
     expect(await p.mem.db.get("projections", "last")).toBeUndefined();
   });
 
-  it("a forgotten shop that is found again: an OLDER sequence is refused, the SAME sequence is unchanged", async () => {
+  it("a phone with no stored shop that finds it again: an OLDER sequence is refused, the SAME sequence is unchanged", async () => {
     const p = await pairedPhone("phone_pwa_0021");
     const old = await publish(p.client, "phone_pwa_0021", 1, dashboard(1));
     await publish(p.client, "phone_pwa_0021", 9, dashboard(8));
     expect(await p.relay.poll()).toMatchObject({ kind: "updated", snapshot: { sequence: 9 } });
     p.world.d1.sqlite.exec(`UPDATE connected_projection SET expires_at = '${PAST}'`);
-    for (let i = 0; i < 3; i += 1) expect(await p.relay.poll()).toEqual({ kind: "pending" });
-    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: null });
+    for (let i = 0; i < 3; i += 1) expect(await p.relay.poll()).toEqual({ kind: "pcoff" });
+    expect(await p.mem.db.get("keys", "credentials")).toMatchObject({ shopId: SHOP_ID });
+    // a phone with NO stored shop (the PC no longer makes it forget one): same replay rule
+    await p.mem.db.put("keys", "credentials", { ...(await p.mem.db.get<Record<string, unknown>>("keys", "credentials")), shopId: null });
     // the relay replays the old envelope to a phone that no longer has a stored shop
     const replay = createRelayClient({ baseUrl: RELAY, getDb: async () => p.mem.db, fetchImpl: serving(old) });
     expect(await replay.poll()).toEqual({ kind: "refused", reason: "stale_sequence" });

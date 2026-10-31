@@ -1,0 +1,32 @@
+import type { Catalog } from "./types";
+
+// W3-F3 common keys (state.*, cmd.*, settings.revoked). Arabic is a DRAFT until the Founder's native read.
+export const shellEn: Catalog = {
+  "settings.revoked": "This phone was removed from your PC. Everything saved here was deleted.",
+  "state.asof": "As of {{time}}",
+  "state.stale": "Old copy from {{time}}. Open the app when your PC is on.",
+  "state.pcoff": "Your PC is off or not connected. You see what it last sent, at {{time}}.",
+  "cmd.queued": "Saved on this phone. It is sent when you open the app and your PC is on.",
+  "cmd.sent": "Sent. Your PC has not confirmed yet.",
+  "cmd.committed": "Done on your PC.",
+  "cmd.replied": "Handed to WhatsApp on your PC.",
+  "cmd.failed": "Not done. Your PC refused it.",
+  "cmd.expired": "Too late: this was not done. Send it again if you still want it.",
+  "cmd.unknown": "Checking with your PC…",
+  "cmd.review": "This order changed on your PC. Look at it again, then decide.",
+  "cmd.waitpc": "Waiting for your PC. Last seen {{time}}.",
+  "cmd.sendAnyway": "Send anyway",
+  "cmd.retry": "Try again",
+  "cmd.confirm": "Confirm",
+  "cmd.reject": "Reject",
+  "cmd.send": "Send",
+  "cmd.cancel": "Cancel",
+  "cmd.confirm.title": "Confirm order {{number}}?",
+  "cmd.reject.title": "Reject order {{number}}? Pick a reason.",
+  "cmd.reason.customerCancelled": "Customer cancelled",
+  "cmd.reason.fakeOrder": "Fake order",
+  "cmd.reason.unreachable": "Customer unreachable",
+  "cmd.reason.postponed": "Postponed",
+  "cmd.composer.reply": "Your reply",
+  "cmd.composer.note": "Your note",
+};
