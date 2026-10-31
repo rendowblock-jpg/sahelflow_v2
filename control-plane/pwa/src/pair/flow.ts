@@ -7,7 +7,7 @@ import type { PairingIdentity, TrustedDesktop } from "./pinned";
 export type TrustRefusal = VerifyDesktopKeyProofReason;
 export const TRUST_REFUSALS: readonly TrustRefusal[] = ["proof_missing", "bad_signature", "key_mismatch_with_pin", "wrong_context", "malformed", "unavailable"];
 export type PairStep = "signing" | "encryption" | "send";
-export type PairFailure = "invalid_link" | "unsupported" | "keygen_failed" | "storage_failed" | "offline" | "expired" | "rejected" | "network" | TrustRefusal;
+export type PairFailure = "invalid_link" | "unsupported" | "keygen_failed" | "storage_failed" | "offline" | "expired" | "rejected" | "network" | "approval_timeout" | TrustRefusal;
 export type PairingLink = DesktopPairingFragment;
 export type ExchangeBody = ReturnType<typeof buildPairingExchangeBody>;
 export type ExchangeResult =

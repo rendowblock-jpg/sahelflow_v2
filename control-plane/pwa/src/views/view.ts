@@ -22,7 +22,7 @@ const FAILURE_KEY: Readonly<Record<PairFailure, string>> = {
   invalid_link: "pair.error.invalid", unsupported: "pair.error.unsupported", keygen_failed: "pair.error.keygen", storage_failed: "pair.error.storage",
   offline: "pair.offline", expired: "pair.expired", rejected: "pair.error.rejected", network: "pair.error.network",
   proof_missing: "pair.trust.proof_missing", bad_signature: "pair.trust.bad_signature", key_mismatch_with_pin: "pair.trust.key_mismatch_with_pin",
-  wrong_context: "pair.trust.wrong_context", malformed: "pair.trust.malformed", unavailable: "pair.trust.unavailable",
+  wrong_context: "pair.trust.wrong_context", malformed: "pair.trust.malformed", unavailable: "pair.trust.unavailable", approval_timeout: "pair.timeout",
 };
 
 const note = (cls: string, role: string, title: string, body: string, action = ""): string =>
@@ -54,6 +54,7 @@ function pair(v: View, tr: Tr): string {
     }
     case "error": {
       const key = FAILURE_KEY[v.failure ?? "network"];
+      if (v.failure === "approval_timeout") return head + note("", "status", tr("pair.timeout.title"), tr(key), button("restart-pair", tr("pair.startAgain")));
       // A refused desktop is not retried with the same link: one honest instruction, no retry button.
       if (key.startsWith("pair.trust.")) return `${head}<div class="note alert" role="alert"><h2>${tr("pair.trust.title")}</h2><p>${tr(key)}</p><p><strong>${tr("pair.trust.instruction")}</strong></p></div>`;
       return head + note("alert", "alert", tr("common.error.title"), tr(key), button("retry", tr("common.retry"), "ghost"));
@@ -83,7 +84,7 @@ function today(v: View, tr: Tr): string {
   const call = p.toConfirm > 0 ? `<div class="note margin" role="status"><h2>${tr("today.call.title")}</h2><p>${tr("today.call.body", { count: formatNumber(p.toConfirm) })}</p></div>` : "";
   if (v.state === "empty") return `${head}<p class="stamp">${tr("common.readonly")}</p>${strip}${note("", "status", "", tr("today.empty"))}`;
   const fig = (label: string, value: string, wide = ""): string => `<div class="fig${wide}"><dt>${label}</dt><dd class="num">${value}</dd></div>`;
-  return `${head}<p class="stamp">${tr("common.readonly")}</p>${strip}${call}<dl class="figs">${fig(tr("today.newOrders"), formatNumber(p.newOrders))}${fig(tr("today.toConfirm"), formatNumber(p.toConfirm))}${fig(tr("today.inDelivery"), formatNumber(p.inDelivery))}${fig(tr("today.cod"), esc(formatDzd(p.codToCollectDzd, v.locale)), " wide")}</dl>${bars(p, v, tr)}`;
+  return `${head}<p class="stamp">${tr("common.readonly")}</p>${strip}${call}<dl class="figs">${fig(tr("today.newOrders"), formatNumber(p.newOrders))}${fig(tr("today.toConfirm"), formatNumber(p.toConfirm))}${fig(tr("today.inDelivery"), formatNumber(p.inDelivery))}${p.whatsappHeld == null ? "" : fig(tr("today.whatsappHeld"), formatNumber(p.whatsappHeld))}${fig(tr("today.cod"), esc(formatDzd(p.codToCollectDzd, v.locale)), " wide")}</dl>${bars(p, v, tr)}`;
 }
 
 function settings(v: View, tr: Tr): string {
