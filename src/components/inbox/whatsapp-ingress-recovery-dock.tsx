@@ -22,6 +22,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useInboxIngressHealth } from "@/hooks/inbox/use-inbox-ingress-health";
 import { useI18n } from "@/hooks/use-i18n";
 import { getInboxWorkspaceCopy } from "@/lib/i18n/inbox-workspace";
 import {
@@ -29,6 +30,7 @@ import {
   type WhatsAppIngressRecoveryKey,
 } from "@/lib/i18n/whatsapp-ingress-recovery";
 import { toast } from "@/lib/toast";
+import { WhatsAppIngressHealthNotices } from "./whatsapp-ingress-health-notices";
 import { cn } from "@/lib/utils";
 
 interface IngressAttempt {
@@ -82,6 +84,7 @@ export function WhatsAppIngressRecoveryDock({
   const [open, setOpen] = useState(false);
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const healthNotices = useInboxIngressHealth();
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -161,10 +164,16 @@ export function WhatsAppIngressRecoveryDock({
     }
   };
 
-  if (!authorized || (loading && events.length === 0)) return null;
-  if (recoveryEvents.length === 0) return null;
+  if (!authorized) return null;
+  const noticeBlock = (
+    <WhatsAppIngressHealthNotices notices={healthNotices} locale={locale} embedded={embedded} />
+  );
+  if (loading && events.length === 0) return noticeBlock;
+  if (recoveryEvents.length === 0) return noticeBlock;
 
   return (
+    <>
+    {noticeBlock}
     <Sheet open={open} onOpenChange={setOpen}>
       <div
         role="status"
@@ -306,5 +315,6 @@ export function WhatsAppIngressRecoveryDock({
         </div>
       </SheetContent>
     </Sheet>
+    </>
   );
 }

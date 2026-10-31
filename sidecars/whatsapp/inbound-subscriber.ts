@@ -114,6 +114,7 @@ export function createInboundSubscriber(
           reason: "non-individual-jid",
           jidKind: (event.message.key.remoteJid ?? "").split("@")[1] ?? "none",
         });
+        report((health) => health.recordLost("unsupportedChat"));
       }
       return;
     }

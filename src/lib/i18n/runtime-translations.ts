@@ -5,6 +5,7 @@ import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
 import { getWhatsAppSendGuardRuntimeTranslation } from "@/lib/i18n/whatsapp-send-guard-runtime";
 import { getHeldSendRuntimeTranslation } from "@/lib/i18n/held-send-runtime";
 import { getShippingListRuntimeTranslation } from "@/lib/i18n/shipping-list-runtime";
+import { getInboxHealthRuntimeTranslation } from "@/lib/i18n/inbox-health-runtime";
 import { getHeldSendDiscardRuntimeTranslation } from "@/lib/i18n/held-send-discard-runtime";
 import { getPreUpdateBackupRuntimeTranslation } from "@/lib/i18n/pre-update-backup-runtime";
 import { getStorefrontStudioStatesRuntimeTranslation } from "@/lib/i18n/storefront-studio-states-runtime";
@@ -175,6 +176,7 @@ export function getRuntimeTranslation(
     getHeldSendRuntimeTranslation(locale, key) ??
     getShippingListRuntimeTranslation(locale, key) ??
     getHeldSendDiscardRuntimeTranslation(locale, key) ??
+    getInboxHealthRuntimeTranslation(locale, key) ??
     getPreUpdateBackupRuntimeTranslation(locale, key) ??
     getStorefrontStudioStatesRuntimeTranslation(locale, key) ??
     getStorefrontPublicStatesRuntimeTranslation(locale, key) ??
