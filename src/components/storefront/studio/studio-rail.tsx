@@ -5,6 +5,7 @@ import {
   Package,
   Palette,
   Phone,
+  Scale,
   Search,
   Truck,
   type LucideIcon,
@@ -19,6 +20,7 @@ export type StudioPanel =
   | "products"
   | "checkout"
   | "contact"
+  | "legal"
   | "seo";
 
 export const STUDIO_PANELS: ReadonlyArray<{
@@ -31,6 +33,7 @@ export const STUDIO_PANELS: ReadonlyArray<{
   { id: "products", labelKey: "storefront.studio.panels.products", icon: Package },
   { id: "checkout", labelKey: "storefront.studio.panels.checkout", icon: Truck },
   { id: "contact", labelKey: "storefront.studio.panels.contact", icon: Phone },
+  { id: "legal", labelKey: "storefront.legalPanel.nav", icon: Scale },
   { id: "seo", labelKey: "storefront.studio.panels.seo", icon: Search },
 ];
 

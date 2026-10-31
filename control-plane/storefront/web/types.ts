@@ -22,6 +22,8 @@ export type RenderStorePageInput = {
   shipping: readonly ShippingRow[];
   /** Null for the store home. */
   productId: string | null;
+  /** The legal page asked for (/<slug>/legal/<kind>), already checked against the known kinds; absent or null for every other page. */
+  legalKind?: "terms" | "returns" | "privacy" | null;
 };
 
 /** The page, or null when it asks for a product the release does not contain. */

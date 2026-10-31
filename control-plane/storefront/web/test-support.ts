@@ -70,6 +70,8 @@ export async function publishTestStore(
     products?: readonly StorefrontReleaseProduct[];
     shapeTheme?: (theme: StorefrontTheme) => void;
     paused?: boolean;
+    /** The seller's legal block (a draft saved with the legal panel filled in). */
+    legal?: import("../../../src/lib/storefront/studio-schema").StorefrontLegal;
     /** Only to hold several stores in one database; the defaults suit single-store tests. */
     ids?: { storefrontId: string; shopId: string; releaseId: string };
   } = {},
@@ -101,6 +103,7 @@ export async function publishTestStore(
       theme,
       selectedProductIds: products.map((product) => product.id),
       isActive: true,
+      ...(options.legal ? { legal: options.legal } : {}),
     },
     products,
   });

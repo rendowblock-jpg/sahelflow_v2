@@ -123,12 +123,22 @@ export interface PublicProduct {
   imageUrls?: string[];
 }
 
+export interface PublicLegal {
+  sellerName: string;
+  registerNumber?: string;
+  returnsDays: number;
+  returnShipping: "seller" | "buyer" | "none";
+  extraReturns?: string;
+  extraTerms?: string;
+}
+
 export interface PublicArtifact {
   schemaVersion: 2;
   storeName: string;
   description?: string;
   theme: Record<string, unknown>;
   products: PublicProduct[];
+  legal?: PublicLegal;
 }
 
 type PlainRecord = Record<string, unknown>;
@@ -301,12 +311,31 @@ function validPublicTheme(value: unknown): value is PlainRecord {
   );
 }
 
+const LEGAL_KEYS = ["sellerName", "registerNumber", "returnsDays", "returnShipping", "extraReturns", "extraTerms"];
+const LEGAL_RETURN_SHIPPING = ["seller", "buyer", "none"];
+
+/** The seller's legal texts as the buyer's page may carry them. Limits equal STOREFRONT_LEGAL_LIMITS in src/lib/storefront/studio-schema.ts. */
+function validPublicLegal(value: unknown): value is PublicLegal {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const legal = value as Record<string, unknown>;
+  if (!Object.keys(legal).every((key) => LEGAL_KEYS.includes(key))) return false;
+  const optionalText = (field: unknown, max: number) =>
+    field === undefined || (typeof field === "string" && field.trim().length >= 1 && field.length <= max);
+  return (
+    typeof legal.sellerName === "string" && legal.sellerName.trim().length >= 1 && legal.sellerName.length <= 120 &&
+    optionalText(legal.registerNumber, 60) &&
+    typeof legal.returnsDays === "number" && Number.isInteger(legal.returnsDays) && legal.returnsDays >= 0 && legal.returnsDays <= 30 &&
+    typeof legal.returnShipping === "string" && LEGAL_RETURN_SHIPPING.includes(legal.returnShipping) &&
+    optionalText(legal.extraReturns, 600) && optionalText(legal.extraTerms, 1500)
+  );
+}
+
 export function validPublicArtifact(value: unknown): value is PublicArtifact {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const artifact = value as Partial<PublicArtifact>;
   if (!Object.keys(artifact).every((key) =>
     key === "schemaVersion" || key === "storeName" || key === "description" ||
-    key === "theme" || key === "products")) return false;
+    key === "theme" || key === "products" || key === "legal")) return false;
   if (
     artifact.schemaVersion !== 2 ||
     typeof artifact.storeName !== "string" ||
@@ -318,6 +347,7 @@ export function validPublicArtifact(value: unknown): value is PublicArtifact {
     artifact.description !== undefined &&
     (typeof artifact.description !== "string" || artifact.description.length > 500)
   ) return false;
+  if (artifact.legal !== undefined && !validPublicLegal(artifact.legal)) return false;
   if (!Array.isArray(artifact.products) || artifact.products.length < 1 || artifact.products.length > 500) {
     return false;
   }
