@@ -92,6 +92,21 @@ describe("app.ts mounts the inbox", () => {
     expect(count(/sync\.onScreen\(\)/g)).toBe(5); // go() and the four above, nowhere else
     expect(count(/set\(\{ screen: returnTo/g)).toBe(1);
   });
+  it("W198b the watch starts on EVERY screen: one watchRelay function (the pairing watch keeps its own startWatch), called by loadToday and by the startup (not for Today, not with a pairing link, not with a test source); sync.start(false) exactly once", () => {
+    const fn = /async function watchRelay\(\): Promise<boolean> \{[\s\S]*?\n  \}\n/.exec(app)?.[0] ?? "";
+    expect(count(/async function watchRelay\(/g)).toBe(1);
+    expect(fn).toContain("const poll = await relay.poll().catch(() => null);");
+    expect(fn).toContain("const reaction = poll ? await reactToPoll(poll, wipe) : null;");
+    expect(fn).toContain('if (reaction?.kind === "revoked") { showRevoked(reaction); return true; }');
+    expect(fn).toContain('if (poll && poll.kind !== "not_paired") sync.start(false);');
+    // the lock screen is never repainted by the watch: pcoff is set only when it changes
+    expect(fn).toContain('const pcoff = reaction?.kind === "pcoff"; if ((view.pcoff === true) !== pcoff) set({ pcoff });');
+    expect(count(/sync\.start\(false\)/g)).toBe(1);
+    expect(count(/relay\.poll\(\)/g)).toBe(2); // watchRelay and the pairing resume poll; loadToday no longer polls by hand
+    expect(app).toContain("if (!options.source && (await watchRelay())) return;");
+    expect(app).toContain('else if (view.screen === "today") void loadToday();\n  else if (link.kind === "none" && !options.source) void watchRelay();');
+    expect(count(/watchRelay\(\)/g)).toBe(3); // the definition, loadToday, the startup
+  });
   it("W198 a poll answer while locked draws nothing: onPoll only refreshes the sealed stack or wipes (no set, no go, no paint)", () => {
     const line = /onPoll: \(poll\) => \{[^\n]*\n/.exec(app)?.[0] ?? "";
     expect(line).toContain('if (poll.kind === "updated") void stack?.refresh().catch(() => undefined);');

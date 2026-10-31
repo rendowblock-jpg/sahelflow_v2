@@ -125,6 +125,20 @@ describe("sync engine", () => {
     await w.advance(29_000); expect(w.calls).toHaveLength(0);
     await w.advance(1_000); expect(times(w)).toEqual([60]); // the timer armed at 0 still fires at 60, not 30 s after the Refresh
   });
+  it("W198b start(false) on a screen with no interval arms the 60 s re-check (a phone that starts on welcome / pair / lock polls once the screen is a polling one); on Orders it still arms 30 s", async () => {
+    const w = world({ screen: "welcome" }, [stored(1), stored(2)]);
+    w.sync.start(false); await w.advance(60_000); expect(w.calls).toHaveLength(0); // the first tick sees welcome: no request, chain alive
+    w.st.screen = "settings"; await w.advance(59_000); expect(w.calls).toHaveLength(0);
+    await w.advance(1_000); expect(times(w)).toEqual([120]); expect(w.calls[0]?.kind).toBe("dashboard");
+    const o = world({ screen: "orders" }, [stored(1)]);
+    o.sync.start(false); await o.advance(29_000); expect(o.calls).toHaveLength(0);
+    await o.advance(1_000); expect(times(o)).toEqual([30]); // the interval of the screen, not the plain re-check
+  });
+  it("W198b start(false) after stop() or before start(): nothing is armed on a stopped engine", async () => {
+    const w = world({ screen: "welcome" }, [stored(1)]);
+    await w.advance(300_000); expect(w.calls).toHaveLength(0); // never started: no timer at all
+    w.sync.start(false); w.sync.stop(); w.st.screen = "settings"; await w.advance(300_000); expect(w.calls).toHaveLength(0);
+  });
   it("W198 B a locked phone checks too: one 'dashboard' fetch per cycle every 60 s, counted against the daily cap, nothing while hidden", async () => {
     const w = world({ screen: "lock" }, [stored(1), stored(2), stored(3), stored(4)]);
     w.sync.start(); await settle(); await w.advance(125_000);
