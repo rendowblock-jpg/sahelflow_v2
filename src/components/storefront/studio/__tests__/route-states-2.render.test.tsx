@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 /** Route-level states of the new-store and store pages, and the mini preview's loading / failure. */
-import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render as renderRaw, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import NewError from "@/app/(dashboard)/storefronts/new/error";
@@ -77,5 +77,33 @@ describe("mini preview", () => {
     render(<StorefrontMiniPreview config={{} as never} products={[]} />);
     expect(screen.getByTestId("mini-preview-loading")).toBeTruthy();
     expect(screen.queryByTestId("renderer-ok")).toBeNull();
+  });
+
+  // These two mount with the plain testing-library render on purpose: the shared
+  // test-utils render re-installs a no-op ResizeObserver AFTER stubObserver(), so
+  // the measuring callback would never fire there (the cause of the two tests that
+  // used to fail here, not a component bug).
+  it("once the card is measured the page is drawn at desktop width and scaled to the card", () => {
+    stubObserver(640);
+    renderRaw(<StorefrontMiniPreview config={{} as never} products={[]} />);
+    expect(screen.queryByTestId("mini-preview-loading")).toBeNull();
+    const layer = screen.getByTestId("renderer-ok").parentElement as HTMLElement;
+    expect(layer.style.width).toBe("1280px");
+    expect(layer.style.transform).toBe("scale(0.5)");
+    expect(layer.style.transformOrigin).toBe("top left");
+  });
+
+  it("a page that cannot be drawn shows the designed slot instead of a blank card", () => {
+    renderer.throws = true;
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      stubObserver(640);
+      renderRaw(<StorefrontMiniPreview config={{} as never} products={[]} />);
+      expect(screen.getByTestId("mini-preview-unavailable")).toBeTruthy();
+      expect(screen.queryByTestId("renderer-ok")).toBeNull();
+      expect(screen.queryByTestId("mini-preview-loading")).toBeNull();
+    } finally {
+      errors.mockRestore();
+    }
   });
 });
