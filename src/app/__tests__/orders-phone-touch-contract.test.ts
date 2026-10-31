@@ -1,6 +1,6 @@
 /**
  * 31 Oct 2026 (w204): link tabs (a[role="tab"]) get the 44 px touch floor ONLY under (pointer: coarse),
- * so a mouse keeps the 28 px tab; a placeholder longer than its field ends in an ellipsis.
+ * so a mouse keeps the 28 px tab; a placeholder longer than its field ends in an ellipsis (on the input, see the last block).
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -54,10 +54,17 @@ describe("link tabs on a finger", () => {
 });
 
 describe("placeholder ellipsis", () => {
-  it("ends a too-long placeholder in an ellipsis, for every viewport", () => {
-    const rule = /input::placeholder\s*\{[^}]*text-overflow:\s*ellipsis\s*;/.exec(css);
+  // 31 Oct 2026, measured in Chromium 149 (probe of the Orders page): `text-overflow` written inside ::placeholder is ignored
+  // (the computed value stays "clip" and the pixels do not change); it only works on the input itself. :placeholder-shown keeps
+  // a typed value untouched.
+  it("puts the ellipsis on the input while its placeholder is shown, for every viewport", () => {
+    const rule = /input:placeholder-shown\s*\{[^}]*text-overflow:\s*ellipsis\s*;/.exec(css);
     expect(rule).not.toBeNull();
     const blocks = enclosing(css, rule?.index ?? 0);
     expect(blocks.some((h) => h.startsWith("@media"))).toBe(false);
+  });
+
+  it("does not rely on text-overflow inside ::placeholder, which Chromium ignores", () => {
+    expect(/::placeholder\s*\{[^}]*text-overflow/.test(css)).toBe(false);
   });
 });

@@ -347,8 +347,9 @@
     }
   }
 
-  /* A placeholder longer than its field ends in an ellipsis, not a cut letter. */
-  input::placeholder {
+  /* A placeholder longer than its field ends in an ellipsis, not a cut letter. The property must sit on the input itself:
+     Chromium ignores text-overflow written inside ::placeholder. :placeholder-shown leaves a typed value alone. */
+  input:placeholder-shown {
     text-overflow: ellipsis;
   }
 
