@@ -63,6 +63,7 @@ async function run(context = actor("owner")) {
     client: rig.client as never, desktopKeys: rig.desktop, actorContext: context, deviceId: DEVICE_ID, now: NOW,
   });
   const envelope = rig.sent[0];
+  if (!envelope) throw new Error("the publisher sent nothing");
   return { rig, envelope, payload: rig.open<ConversationsProjection>(envelope) };
 }
 

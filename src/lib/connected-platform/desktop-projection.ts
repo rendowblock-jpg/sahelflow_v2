@@ -160,6 +160,9 @@ export async function publishRemoteDashboardProjection(input: Readonly<{
   now?: Date;
 }>): Promise<Readonly<{ sequence: number }>> {
   const device = await resolveRemoteDevice(input.client, input.actorContext, input.deviceId);
+  // resolveRemoteDevice proved this is a person; the type system cannot see across the call, so narrow again here.
+  const actor = input.actorContext.actor;
+  if (actor.kind !== "person") throw new Error("Connected platform requires durable person authority");
 
   const fieldAccess = resolveDashboardFieldAccess(input.actorContext);
   const [stats, recentOrders, analytics, todayCounts] = await Promise.all([
@@ -182,28 +185,27 @@ export async function publishRemoteDashboardProjection(input: Readonly<{
   const sequence = await nextProjectionSequence("dashboard", device.deviceId);
   const issuedAt = input.now ?? new Date();
   const expiresAt = new Date(issuedAt.getTime() + PROJECTION_TTL_MS);
-  const actorPermissions = input.actorContext.actor.permissions ??
-    getPhase2PresetPermissions(input.actorContext.actor.role);
+  const actorPermissions = actor.permissions ?? getPhase2PresetPermissions(actor.role);
   const allowedCommands = remoteCommandTypesForPermissions(actorPermissions);
   const policy = await input.client.putCommandPolicy({
     workspaceId: input.actorContext.shop.workspaceId,
     shopId: input.actorContext.shop.shopId,
     memberId: device.memberId,
     deviceId: device.deviceId,
-    policyVersion: input.actorContext.actor.policyVersion,
-    memberRevocationEpoch: input.actorContext.actor.revocationEpoch,
+    policyVersion: actor.policyVersion,
+    memberRevocationEpoch: actor.revocationEpoch,
     deviceRevocationEpoch: device.revocationEpoch,
     allowedCommands: [...allowedCommands],
     expiresAt: expiresAt.toISOString(),
   });
-  if (policy.status !== "stored" || policy.policyVersion !== input.actorContext.actor.policyVersion) {
+  if (policy.status !== "stored" || policy.policyVersion !== actor.policyVersion) {
     throw new Error("Connected command authorization was not acknowledged");
   }
   const projectionPayload = {
     ...projection,
     connectedCommandAuthority: {
-      policyVersion: input.actorContext.actor.policyVersion,
-      memberRevocationEpoch: input.actorContext.actor.revocationEpoch,
+      policyVersion: actor.policyVersion,
+      memberRevocationEpoch: actor.revocationEpoch,
       allowedCommands,
       expiresAt: expiresAt.toISOString(),
     },

@@ -30,7 +30,7 @@ const readText = (rel: string): string =>
 function constMs(text: string, name: string): number {
   const m = new RegExp(`const ${name} = ([0-9_ *]+);`).exec(text);
   if (!m) throw new Error(`${name} not found`);
-  return m[1]
+  return (m[1] ?? "")
     .split("*")
     .map((part) => Number(part.trim().replace(/_/g, "")))
     .reduce((a, b) => a * b, 1);

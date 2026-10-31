@@ -81,6 +81,7 @@ async function run(context = actor("owner"), rig = makeRig()) {
     client: rig.client as never, desktopKeys: rig.desktop, actorContext: context, deviceId: DEVICE_ID, now: NOW,
   });
   const envelope = rig.sent[rig.sent.length - 1];
+  if (!envelope) throw new Error("the publisher sent nothing");
   return { rig, result, envelope, payload: rig.open<OrdersProjection>(envelope) };
 }
 const selects = () => h.orderFindMany.mock.calls.map((call) => call[0].select as Record<string, unknown>);
