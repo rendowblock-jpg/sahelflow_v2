@@ -4,6 +4,7 @@ import { getNavigationGroupsRuntimeTranslation } from "@/lib/i18n/navigation-gro
 import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
 import { getWhatsAppSendGuardRuntimeTranslation } from "@/lib/i18n/whatsapp-send-guard-runtime";
 import { getHeldSendRuntimeTranslation } from "@/lib/i18n/held-send-runtime";
+import { getOrdersPhoneHintRuntimeTranslation } from "@/lib/i18n/orders-phone-hint-runtime";
 import { getShippingListRuntimeTranslation } from "@/lib/i18n/shipping-list-runtime";
 import { getInboxHealthRuntimeTranslation } from "@/lib/i18n/inbox-health-runtime";
 import { getInboxHealthViewRuntimeTranslation } from "@/lib/i18n/inbox-health-view-runtime";
@@ -179,6 +180,7 @@ export function getRuntimeTranslation(
     getAiCanvasRuntimeTranslation(locale, key) ??
     getWhatsAppSendGuardRuntimeTranslation(locale, key) ??
     getHeldSendRuntimeTranslation(locale, key) ??
+    getOrdersPhoneHintRuntimeTranslation(locale, key) ??
     getShippingListRuntimeTranslation(locale, key) ??
     getAiApprovalArgsRuntimeTranslation(locale, key) ??
     getHeldSendDiscardRuntimeTranslation(locale, key) ??

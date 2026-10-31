@@ -146,7 +146,8 @@ describe("no page overrides the list height by class", () => {
     expect(bad.map((t) => `${t.file}: ${t.tag.replace(/\s+/g, " ").slice(0, 110)}`)).toEqual([]);
   });
 
-  it.each(["app/(dashboard)/orders/page.tsx", "app/(dashboard)/deliveries/page.tsx", "components/risk/risk-view.tsx"])(
+  // 31 Oct 2026 (w204): the Orders page asks through components/orders/orders-status-tabs-list.tsx (wrap off a phone, scroll on a phone), not with a TabsList of its own.
+  it.each(["components/orders/orders-status-tabs-list.tsx", "app/(dashboard)/deliveries/page.tsx", "components/risk/risk-view.tsx"])(
     "%s asks for wrap",
     (rel) => {
       const mine = tags.filter((t) => t.file === rel);
