@@ -162,13 +162,21 @@ function boot(): void {
   }
 
   // ---- messages
-  function setStatus(kind: "info" | "error", text: string): void {
+  // A failed order is announced as an alert and takes focus, so a keyboard or screen-reader buyer lands on the one sentence (the button points at it with aria-describedby).
+  function setStatus(kind: "info" | "error", text: string, focus = false): void {
     els.status.hidden = false;
     els.status.dataset.kind = kind;
+    els.status.setAttribute("role", kind === "error" && focus ? "alert" : "status");
     els.status.textContent = text;
+    if (focus) {
+      els.status.tabIndex = -1;
+      els.status.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+      els.status.focus({ preventScroll: true });
+    }
   }
   function clearStatus(): void {
     els.status.hidden = true;
+    els.status.setAttribute("role", "status");
     els.status.textContent = "";
   }
   const fieldFor: Record<string, HTMLElement | null> = { name: els.name, phone: els.phone, wilaya: els.wilaya, commune: els.commune, address: els.address, mode: modeInputs[0] ?? null };
@@ -445,7 +453,7 @@ function boot(): void {
         // the seller published again while this page was open: take the new release and try once more
         clearPending();
         if (!(await refreshRelease())) {
-          setStatus("error", d.i.soldNow ?? "");
+          setStatus("error", d.i.soldNow ?? "", true);
           return;
         }
         signature = signatureOf(values);
@@ -457,10 +465,10 @@ function boot(): void {
         showThanks(sent);
       } else {
         if (sent.code === "conflict" || sent.code === "sold" || sent.code === "nodelivery") clearPending();
-        setStatus("error", failure(sent.code));
+        setStatus("error", failure(sent.code), true);
       }
     } catch {
-      setStatus("error", d.i.retry ?? "");
+      setStatus("error", d.i.retry ?? "", true);
     } finally {
       setBusy(false);
     }
@@ -478,6 +486,26 @@ function boot(): void {
     refresh();
     form.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   });
+
+  // A photo that fails to load is replaced by a placeholder element with the alt text: a DOM probe cannot see the img::before fallback. The sticky bar's thumbnail keeps that one.
+  const photoMissing = (img: HTMLImageElement): void => {
+    const frame = img.parentElement;
+    if (img.dataset.broken || !frame || img.classList.contains("sf-sticky-thumb")) return;
+    img.dataset.broken = "1";
+    img.style.display = "none";
+    if (!["relative", "absolute", "fixed", "sticky"].includes(getComputedStyle(frame).position)) frame.style.position = "relative";
+    const slot = document.createElement("span");
+    slot.className = "sf-ph";
+    slot.dataset.sf = "photo-missing";
+    if (img.alt) {
+      slot.setAttribute("role", "img");
+      slot.setAttribute("aria-label", img.alt);
+      slot.textContent = Array.from(img.alt.trim())[0] ?? "";
+    } else slot.setAttribute("aria-hidden", "true");
+    img.after(slot);
+  };
+  document.addEventListener("error", (event) => { if (event.target instanceof HTMLImageElement) photoMissing(event.target); }, true);
+  for (const img of Array.from(document.querySelectorAll<HTMLImageElement>("img"))) if (img.complete && img.naturalWidth === 0 && img.getAttribute("src")) photoMissing(img);
 
   refresh();
   requestAnimationFrame(() => { animate = true; });

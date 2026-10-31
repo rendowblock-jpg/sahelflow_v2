@@ -189,7 +189,7 @@ ${theme.checkout.showOrderNotes ? field("notes", t("storefront.view.notes"), '<t
 </fieldset>
 <dl class="sf-sum" aria-label="${esc(t("storefront.shop.summary"))}"><div><dt>${esc(t("storefront.shop.subtotal"))}</dt><dd data-sf="subtotal">${esc(price)}</dd></div><div><dt>${esc(t("storefront.view.shipping"))}</dt><dd data-sf="shipping">${esc(t("storefront.shop.pickFirst"))}</dd></div><div class="sf-sum-total"><dt>${esc(t("storefront.view.total"))}</dt><dd data-sf="total">${esc(price)}</dd></div></dl>
 <div id="sf-status" class="sf-status" role="status" aria-live="polite" hidden></div>
-<button id="sf-submit" class="sf-cta" type="submit">${esc(t("storefront.studio.orderNow"))}</button>
+<button id="sf-submit" class="sf-cta" type="submit" aria-describedby="sf-status">${esc(t("storefront.studio.orderNow"))}</button>
 <noscript><p class="sf-err">${esc(t("storefront.shop.needJs"))}</p></noscript>
 </form>
 <section id="sf-thanks" class="sf-thanks" tabindex="-1" hidden aria-labelledby="thanks-title"><div class="sf-thanks-icon">${icon("check")}</div><h2 id="thanks-title" class="sf-h3">${esc(t("storefront.view.orderConfirmed"))}</h2><p>${esc(t("storefront.shop.thanksNext"))}</p><dl class="sf-sum"><div><dt>${esc(t("storefront.view.orderNumber"))}</dt><dd data-sf="ref" dir="ltr"></dd></div><div class="sf-sum-total"><dt>${esc(t("storefront.view.total"))}</dt><dd data-sf="thanks-total"></dd></div></dl>${wa ? `<a id="sf-wa" class="sf-btn sf-btn--wa" href="https://wa.me/${wa}" target="_blank" rel="noopener noreferrer">${icon("chat")}${esc(t("storefront.shop.confirmWhatsapp"))}</a>` : ""}<button type="button" class="sf-link" data-sf="again">${esc(t("storefront.view.anotherOrder"))}</button></section>`;
