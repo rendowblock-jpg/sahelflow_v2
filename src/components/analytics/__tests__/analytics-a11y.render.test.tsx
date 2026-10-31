@@ -133,6 +133,37 @@ describe("analytics scroll regions are keyboard reachable and named", () => {
     ]);
   });
 
+  it("the wilaya matrix is real table data: no image role wraps it and none holds a focusable region (axe nested-interactive)", async () => {
+    const element = await CourierPerformanceSection({
+      providers,
+      matrix,
+      totalShipments: 50,
+      feesIncluded: true,
+      range: { from: new Date("2026-10-01"), to: new Date("2026-10-24") },
+    });
+    const { container } = render(element);
+    const table = container.querySelector("[data-courier-matrix]");
+    expect(table).not.toBeNull();
+    expect(table?.closest('[role="img"]')).toBeNull();
+    const focusable = "[tabindex], a[href], button, input, select, textarea";
+    for (const image of Array.from(container.querySelectorAll('[role="img"]'))) {
+      expect(image.querySelector(focusable), `role=img "${image.getAttribute("aria-label")}" holds a focusable`).toBeNull();
+    }
+  });
+
+  it("the empty matrix card is a message, not an image", async () => {
+    const element = await CourierPerformanceSection({
+      providers,
+      matrix: { wilayas: [], providers: [], cells: [] },
+      totalShipments: 7,
+      feesIncluded: true,
+      range: { from: new Date("2026-10-01"), to: new Date("2026-10-24") },
+    });
+    const { container } = render(element);
+    expect(container.textContent).toContain("analytics.courier.empty");
+    expect(container.querySelector('[role="img"]')).toBeNull();
+  });
+
   it("extraction tables", async () => {
     vi.stubGlobal(
       "fetch",

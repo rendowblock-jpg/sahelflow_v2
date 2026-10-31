@@ -14,12 +14,14 @@ describe("chart text alternatives (buildChartTable) are wired", () => {
     for (const key of ["analytics.delivered", "analytics.inTransit", "dashboard.pending", "analytics.returned"]) expect(card).toContain(`t("${key}")`);
     for (const field of ["delivery.delivered", "delivery.inTransit", "delivery.pending", "delivery.returned"]) expect(card).toContain(field);
   });
-  it("courier section: both ChartCards carry a dataTable", () => {
+  it("courier section: the wilaya matrix is already a real table, so its two ChartCards carry NO dataTable", () => {
+    // A dataTable wraps the plot in role="img". The matrix sits in a focusable, named scroll region, so axe fails it
+    // (nested-interactive, serious) and a screen reader would hear an image label instead of the table. The matrix IS the text alternative.
     expect((courier.match(/<ChartCard/g) ?? []).length).toBe(2);
-    expect((courier.match(/dataTable=\{buildChartTable\(/g) ?? []).length).toBe(2);
-    // The table cell is the same text as the visible cell: rate as a percent, then delivered/shipments.
-    expect(courier).toContain("`${percentFormatter.format(cell.successRate / 100)} (${integerFormatter.format(cell.delivered)}/${integerFormatter.format(cell.shipments)})`");
-    expect(courier).toContain('[t("orders.wilaya"), ...matrix.providers]');
+    expect(courier).not.toContain("dataTable=");
+    expect(courier).not.toContain("buildChartTable");
+    expect(courier).toContain('data-courier-matrix="true"');
+    expect(courier).toContain('<ScrollRegion label={t("analytics.courier.matrix.title")}>');
   });
   it("dashboard: the three sparkline cards pass tableAlt built from their own series", () => {
     for (const [series, money] of [["ordersSpark", "false"], ["revenueSpark", "true"], ["customersSpark", "false"]]) {
