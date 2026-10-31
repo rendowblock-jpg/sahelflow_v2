@@ -1,6 +1,5 @@
 import "server-only";
 
-import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { resolveDashboardFieldAccess } from "@/lib/identity/dashboard-projection";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
@@ -52,10 +51,10 @@ export async function readNoteVersions(
   const versions = new Map<string, number>();
   if (ids.length === 0) return versions;
   const keys = ids.map((id) => `${entityType}:${id}`);
-  const rows = await db.$queryRaw<Array<{ aggregateId: string; version: number | bigint }>>(
-    Prisma.sql`SELECT "aggregateId", "version" FROM "BusinessAggregateVersion"
-      WHERE "aggregateType" = 'collaboration-comments' AND "aggregateId" IN (${Prisma.join(keys)})`,
-  );
+  const rows = await db.businessAggregateVersion.findMany({
+    where: { aggregateType: "collaboration-comments", aggregateId: { in: keys } },
+    select: { aggregateId: true, version: true },
+  });
   for (const row of rows) versions.set(row.aggregateId.slice(entityType.length + 1), Number(row.version));
   return versions;
 }

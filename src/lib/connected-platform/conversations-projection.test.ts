@@ -26,7 +26,7 @@ vi.mock("@/lib/db", async (importOriginal) => {
       $transaction: async (run: (tx: unknown) => Promise<unknown>) => run(kit.settingTx(h.settings)),
       conversation: { findMany: h.findMany },
       collaborationComment: { groupBy: vi.fn(async () => []) },
-      $queryRaw: h.queryRaw,
+      businessAggregateVersion: { findMany: h.queryRaw }, // the note-version rows; there is no $queryRaw here, so a raw query on the canonical client would throw
     },
   };
 });
