@@ -69,4 +69,31 @@ describe("average order value counts the same orders top and bottom", () => {
     expect(bucket?.aov).toBe(card.avgOrderValue);
     expect(card.avgOrderValue).toBe(2000);
   });
+
+  // The average is shown in whole dinars. Every earlier case divides evenly, so
+  // a mutation to floor or ceil survived (w130 mutant run, s09 and s10). These
+  // three cases pin "round to the nearest dinar, a half goes up" on BOTH the
+  // card and the chart.
+  describe("a fractional average is rounded to the nearest dinar", () => {
+    const cases: ReadonlyArray<[string, number[], number]> = [
+      ["1000.67 goes up to 1001 (a floor would say 1000)", [1000, 1000, 1002], 1001],
+      ["1000.33 goes down to 1000 (a ceil would say 1001)", [1000, 1000, 1001], 1000],
+      ["1000.5 goes up to 1001 (a half rounds up)", [1000, 1001], 1001],
+    ];
+    for (const [name, prices, expected] of cases) {
+      it(`${name}, on the card and on the chart`, () => {
+        const card = analyticsService.buildSummary(
+          prices.map((p) => row(p, "delivered")),
+          [],
+        );
+        const [bucket] = analyticsService.buildTimeSeries(
+          prices.map((p) => at(p, "delivered")),
+          day,
+          day,
+        );
+        expect(card.avgOrderValue).toBe(expected);
+        expect(bucket?.aov).toBe(expected);
+      });
+    }
+  });
 });

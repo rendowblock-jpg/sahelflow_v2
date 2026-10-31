@@ -37,6 +37,12 @@ const translations: Record<Locale, Record<string, string>> = {
     "automations.failure.interrupted": "أُغلق التطبيق أو أُعيد تشغيله أثناء هذه الخطوة. يمكنك إعادة المحاولة بأمان.",
     "automations.failure.exhausted": "فشلت عدة مرات متتالية فتوقفت.",
     "automations.failure.other": "حدثت مشكلة غير متوقعة. الرمز التقني تجده ضمن التفاصيل.",
+    "automations.hold": "إيقاف هذه الأتمتة مؤقتاً",
+    "automations.holdHint": "توقف التشغيلات الجديدة حتى تعيد تفعيلها. يبقى هذا التشغيل الفاشل كما هو.",
+    "automations.holdFailed": "تعذّر إيقاف الأتمتة. حاول مرة أخرى.",
+    "automations.notFound.title": "لم نعثر على هذه الأتمتة",
+    "automations.notFound.message": "ربما حُذفت أو أن الرابط قديم. باقي أتمتتك لم تتأثر.",
+    "automations.notFound.back": "العودة إلى الأتمتة",
   },
   fr: {
     "dashboard.deliveredToday": "Livré aujourd'hui",
@@ -69,6 +75,12 @@ const translations: Record<Locale, Record<string, string>> = {
     "automations.failure.interrupted": "L'application a été fermée ou redémarrée pendant cette étape. Vous pouvez réessayer sans risque.",
     "automations.failure.exhausted": "Elle a échoué plusieurs fois de suite et a été arrêtée.",
     "automations.failure.other": "Un problème inattendu. Le code technique est dans les Détails.",
+    "automations.hold": "Mettre cette automatisation en pause",
+    "automations.holdHint": "Les nouvelles exécutions s’arrêtent jusqu’à sa réactivation. Cette exécution échouée reste telle quelle.",
+    "automations.holdFailed": "Impossible de la mettre en pause. Réessayez.",
+    "automations.notFound.title": "Cette automatisation est introuvable",
+    "automations.notFound.message": "Elle a peut-être été supprimée, ou le lien est ancien. Vos autres automatisations ne sont pas touchées.",
+    "automations.notFound.back": "Retour aux automatisations",
   },
   en: {
     "dashboard.deliveredToday": "Delivered today",
@@ -101,6 +113,12 @@ const translations: Record<Locale, Record<string, string>> = {
     "automations.failure.interrupted": "The app was closed or restarted during this step. It is safe to retry.",
     "automations.failure.exhausted": "It failed several times in a row and was stopped.",
     "automations.failure.other": "An unexpected problem. The technical code is under Details.",
+    "automations.hold": "Pause this automation",
+    "automations.holdHint": "New runs stop until you turn it back on. This failed run stays as it is.",
+    "automations.holdFailed": "Could not pause it. Try again.",
+    "automations.notFound.title": "This automation was not found",
+    "automations.notFound.message": "It may have been deleted, or the link is old. Your other automations are untouched.",
+    "automations.notFound.back": "Back to automations",
   },
 };
 
