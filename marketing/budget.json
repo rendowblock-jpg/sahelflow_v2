@@ -29,13 +29,13 @@
   "pageHeightPx": {
     "viewport": "360x732",
     "measuredWith": "node marketing/scripts/heights.mjs (document scrollHeight, reduced motion; worst page of the class)",
-    "measuredOn": "2026-10-30",
+    "measuredOn": "2026-10-31",
     "product": {
       "max": 5500,
       "measured": {
-        "ar": 4712,
-        "fr": 5639,
-        "en": 5103
+        "ar": 4532,
+        "fr": 5459,
+        "en": 4923
       },
       "worstPage": {
         "ar": "product/",
@@ -46,9 +46,9 @@
     "module": {
       "max": 4500,
       "measured": {
-        "ar": 3894,
-        "fr": 4533,
-        "en": 4158
+        "ar": 3834,
+        "fr": 4473,
+        "en": 4098
       },
       "worstPage": {
         "ar": "product/inbox/",
@@ -59,9 +59,9 @@
     "solution": {
       "max": 4500,
       "measured": {
-        "ar": 3536,
-        "fr": 4134,
-        "en": 3798
+        "ar": 3456,
+        "fr": 4054,
+        "en": 3718
       },
       "worstPage": {
         "ar": "solutions/starting/",

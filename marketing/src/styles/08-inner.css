@@ -26,6 +26,7 @@
 .sheet-head{padding-block:20px 16px}
 .sheet-sec{padding-block:20px}
 .ruled>li{padding-block:10px}
+.rows>li{padding-block:0}
 .day-sec .dayline{font-size:20px}
 .nn-list .check-list{display:none}
 .int-card p:not(.int-aside){display:none}
