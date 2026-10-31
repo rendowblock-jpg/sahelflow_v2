@@ -1,5 +1,6 @@
 // W3-F5 step 3: the reply composer and the honest command states. Written BEFORE the code.
 import { describe, expect, it } from "vitest";
+import { transition } from "../src/outbox/state";
 import { createInboxController } from "../src/views/inbox/controller";
 import { renderReplyArea } from "../src/views/inbox/reply";
 import { createDraftStore } from "../src/views/notes";
@@ -32,15 +33,12 @@ describe("what is sent", () => {
     const f = fakeHost({ data: proj([conv({ messages: [] })]) }); const c = createInboxController(f.host); await c.refresh(); await c.act("open-chat", { id: "c1" });
     await c.act("reply-send", { text: "x" }); expect(f.log.replies).toHaveLength(0);
   });
-  it("Send anyway = a NEW command with force true and the SAME text", async () => {
-    const failed = reply({ state: "failed", resultCode: "ALREADY_ANSWERED", draftText: "Oui, taille M disponible" });
-    const { c, log } = await opened({ commands: [failed] }); await c.act("send-anyway", { id: "r1" });
-    expect(log.replies).toEqual([{ conversationId: "c1", text: "Oui, taille M disponible", lastSeenMessageId: "m3", force: true }]);
-  });
-  it("force is only ever sent through Send anyway, and only on an ALREADY_ANSWERED command", async () => {
-    const other = reply({ state: "failed", resultCode: "SEND_GUARD_REFUSED" });
-    const { c, log } = await opened({ commands: [other] }); await c.act("send-anyway", { id: "r1" }); expect(log.replies).toHaveLength(0);
-    await c.act("reply-send", { text: "ok" }); expect(log.replies[0]).not.toHaveProperty("force");
+  it("there is NO Send anyway (L25 decision): a forced resend can double-send, so no action sends anything on ALREADY_ANSWERED", async () => {
+    for (const resultCode of ["ALREADY_ANSWERED", "SEND_GUARD_REFUSED"]) {
+      const { c, log } = await opened({ commands: [reply({ state: "failed", resultCode, draftText: "Oui, taille M disponible" })] });
+      await c.act("send-anyway", { id: "r1" }); expect(log.replies).toHaveLength(0);
+      await c.act("reply-send", { text: "ok" }); expect(log.replies).toHaveLength(1); expect(log.replies[0]).not.toHaveProperty("force");
+    }
   });
 });
 
@@ -81,15 +79,24 @@ describe("what the chip says", () => {
     const chip = chipOf(html({ state: "committed" }));
     expect(chip).toContain("Handed to WhatsApp on your PC."); expect(chip).not.toMatch(/deliver|sent to the customer/i);
   });
-  it("committed after the send guard warned or delayed it (guarded) says so, still not delivered", () => {
-    const chip = chipOf(html({ state: "committed", guarded: true } as never));
+  it("committed after the send guard warned or delayed it says so: the record is made by the REAL outbox reducer (field resultGuarded)", () => {
+    const real = transition(reply({ state: "sent" }), { type: "result", at: NOW, outcome: "committed", guarded: true });
+    expect(real.resultGuarded).toBe(true);
+    const chip = chipOf(html(real));
     expect(chip).toContain("Handed to WhatsApp on your PC."); expect(chip).toContain("safety check"); expect(chip).not.toMatch(/deliver/i);
   });
-  it("ALREADY_ANSWERED (failed or finished) is not a failure: says when, offers Send anyway and Discard", () => {
-    for (const state of ["failed", "committed"] as const) {
-      const a = html({ state, resultCode: "ALREADY_ANSWERED" });
-      expect(a).toContain("You already replied from your PC at 09:30."); expect(a).toContain('data-act="send-anyway"'); expect(a).toContain('data-act="discard"');
-      expect(a).not.toContain("chip-failed"); expect(a).not.toContain("Handed to WhatsApp");
+  it("a committed reply the guard did not flag does not mention the safety check", () => {
+    const real = transition(reply({ state: "sent" }), { type: "result", at: NOW, outcome: "committed" });
+    expect(real.resultGuarded).toBeUndefined(); expect(chipOf(html(real))).not.toContain("safety check");
+  });
+  it("ALREADY_ANSWERED (failed AND committed, from the real reducer): one neutral sentence, NO button, no time, not a failure", () => {
+    for (const outcome of ["failed", "committed"] as const) {
+      const real = transition(reply({ state: "sent" }), { type: "result", at: NOW, outcome, code: "ALREADY_ANSWERED" });
+      expect(real.state).toBe(outcome);
+      const a = html(real); const chip = chipOf(a);
+      expect(chip).toContain("Already answered (from your PC or an earlier send).");
+      expect(chip).not.toMatch(/<button|<a |<form|data-act/i); expect(a).not.toMatch(/data-act|send-anyway|Send anyway|Discard|Try again/);
+      expect(a).not.toContain("chip-failed"); expect(a).not.toContain("Handed to WhatsApp"); expect(a).not.toContain("09:30"); expect(a).not.toContain("You already replied");
     }
   });
   it("ALREADY_ANSWERED without any message of ours to date it still says it, without a time", () => {
@@ -110,10 +117,12 @@ describe("what the chip says", () => {
 });
 
 describe("acting on the chip", () => {
-  it("Discard hides the chip and the draft; the composer is free again", async () => {
+  it("ALREADY_ANSWERED has no Discard and no retry: neither action changes the chip or the composer; the composer stays free", async () => {
     const { c, log } = await opened({ commands: [reply({ state: "failed", resultCode: "ALREADY_ANSWERED" })] });
-    expect(c.html()).toContain('data-act="discard"'); await c.act("discard", { id: "r1" });
-    expect(c.html()).not.toContain("You already replied"); expect(log.replies).toHaveLength(0); expect(c.html()).not.toMatch(/<textarea[^>]*disabled/);
+    expect(c.html()).toContain("Already answered (from your PC or an earlier send).");
+    await c.act("discard", { id: "r1" }); await c.act("cmd-retry", {});
+    expect(c.html()).toContain("Already answered (from your PC or an earlier send)."); expect(c.model().draft).toBe(""); expect(c.model().dismissed).toEqual([]);
+    expect(log.replies).toHaveLength(0); expect(c.html()).not.toMatch(/<textarea[^>]*disabled/);
   });
   it("REMOTE_POLICY_STALE: Try again re-syncs and puts the text back in the composer, but sends nothing by itself", async () => {
     const { c, log } = await opened({ commands: [reply({ state: "failed", resultCode: "REMOTE_POLICY_STALE" })] });
