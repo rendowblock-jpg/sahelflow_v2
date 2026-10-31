@@ -31,6 +31,8 @@ export function createInboxController(host: InboxHost) {
 
   function model(): InboxModel {
     const r = host.read(); const authority = host.authorityExpiresAt();
+    // The chat he looked at is a decrypted copy: when the vault has no data (lock, hidden 5 min, wipe) the controller drops it too.
+    if (r.data === null) seen = null;
     return {
       locale: host.locale(), now: host.now(), online: host.online(), pcOff: host.pcOff(), ...(host.timeZone ? { timeZone: host.timeZone } : {}),
       read: r.status, data: r.data, asOf: r.asOf, commands, openId, seen, draft, noteDraft, noteError, notice, dismissed, ...(authority === undefined ? {} : { authorityExpiresAt: authority }),

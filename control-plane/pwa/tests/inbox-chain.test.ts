@@ -13,7 +13,7 @@ import { db } from "@/lib/db";
 import { SEND_GUARD_HOLD_ERROR_CODE } from "@/lib/whatsapp/send-guard";
 import type { PrismaClient } from "@prisma/client";
 import { DEVICE_ID, NOW as DNOW, actor, makeRig } from "../../../src/lib/connected-platform/__tests__/projection-kit";
-import type { ConnectedEnvelope } from "../../../src/lib/connected-platform/envelope";
+import type { ConnectedEnvelope } from "../../../src/lib/connected-platform/protocol";
 import type { ConversationsProjection } from "../../../src/lib/connected-platform/contracts";
 import { publishRemoteConversationsProjection } from "../../../src/lib/connected-platform/conversations-projection";
 import { phoneReplyPayload } from "../../../src/lib/whatsapp/queue-phone-reply";
