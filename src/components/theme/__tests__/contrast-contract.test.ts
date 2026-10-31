@@ -903,3 +903,124 @@ describe("carnet identity layer: margin colour and stamp contrast", () => {
     expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+/*
+ * Wave 3 accessibility matrix (look carnet, 3 locales x light/dark x phone/desktop): 25 cells failed, all the rule
+ * color-contrast, from four causes. Each test below reads the class that renders the pair from the SOURCE file, so
+ * it fails while that class is wrong and passes once it is fixed. Thresholds are the WCAG AA ones (4.5:1, 14 px text).
+ */
+
+/** The class names of the first string literal that starts with `anchor`. */
+function literalClasses(src: string, anchor: string): string[] {
+  const start = src.indexOf(anchor);
+  if (start < 0) throw new Error(`"${anchor}" not found in the source under test`);
+  const end = src.indexOf('"', start + anchor.length);
+  return src.slice(start, end).split(/\s+/);
+}
+
+/** A colour of Tailwind's own palette (red-300), read from the installed theme.css. */
+function tailwindPalette(name: string): Oklch {
+  const css = source("../../../../node_modules/tailwindcss/theme.css");
+  const match = css.match(new RegExp(`--color-${name}:\\s*oklch\\(([\\d.]+)(%?)\\s+([\\d.]+)\\s+([\\d.]+)`));
+  if (!match) throw new Error(`--color-${name} is not in tailwindcss/theme.css`);
+  return { l: Number(match[1]) / (match[2] === "%" ? 100 : 1), c: Number(match[3]), h: Number(match[4]) };
+}
+
+/** Text drawn at `alpha` over `ground` (text-foreground/60), composited in 8-bit sRGB; the worse of the two conversions. */
+function contrastOfAlphaText(text: Oklch, alpha: number, ground: Oklch): number {
+  const ratioWith = (toChannels: (color: Oklch) => [number, number, number]): number => {
+    const ink = toChannels(text);
+    const behind = toChannels(ground);
+    const shown = ink.map((channel, index) => Math.round(channel * alpha + (behind[index] ?? 0) * (1 - alpha)));
+    return ratioBetweenLuminances(relativeLuminance(shown), relativeLuminance(behind));
+  };
+  return Math.min(ratioWith(naiveSrgbChannels), ratioWith(gamutMappedSrgbChannels));
+}
+
+/** The authored strength of `--color-destructive-soft` / `-subtle` (a color-mix of --destructive), read from globals.css. */
+function destructiveTintAlpha(kind: string): number {
+  for (const block of globalsBlocks) {
+    const value = block.declarations.get(`--color-destructive-${kind}`);
+    if (value === undefined) continue;
+    const match = value.match(/var\(--destructive\)\s+(\d+(?:\.\d+)?)%/);
+    if (!match?.[1]) throw new Error(`--color-destructive-${kind} is not a destructive color-mix: ${value}`);
+    return Number(match[1]) / 100;
+  }
+  throw new Error(`--color-destructive-${kind} is not defined in globals.css.`);
+}
+
+describe("accessibility matrix: the four color-contrast causes (carnet, light and dark)", () => {
+  it("cause 1: an inactive tab label reaches 4.5:1 on the tab list, the page and a card", () => {
+    const tabs = source("../../ui/tabs.tsx");
+    const classes = literalClasses(tabs, "relative inline-flex h-[calc(100%-1px)]");
+    const plain = classes.find((name) => /^text-(foreground|muted-foreground)(\/\d+)?$/.test(name));
+    expect(plain, "tabs.tsx sets one plain light text colour on the tab").toBeDefined();
+    expect(classes, "tabs.tsx sets the dark text colour on the tab").toContain("dark:text-muted-foreground");
+    const parts = (plain ?? "").match(/^text-(foreground|muted-foreground)(?:\/(\d+))?$/);
+    const lightToken = `--${parts?.[1] ?? "foreground"}`;
+    const lightAlpha = parts?.[2] ? Number(parts[2]) / 100 : 1;
+    for (const mode of CARNET_MODES) {
+      const cascade = carnetCascade(mode);
+      const token = mode === "light" ? lightToken : "--muted-foreground";
+      const alpha = mode === "light" ? lightAlpha : 1;
+      for (const [surface, ground] of [["the tab list (bg-muted)", "--muted"], ["the page", "--background"], ["a card", "--card"]] as const) {
+        const ratio = contrastOfAlphaText(colorToken(cascade, token), alpha, colorToken(cascade, ground));
+        expect(ratio, `${mode}: inactive tab label (${plain}) on ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      }
+    }
+  });
+
+  it("cause 2: the blacklist button's red label reaches 4.5:1 on its dark outline fill, at rest and on hover", () => {
+    const outline = source("../../ui/button.tsx").match(/\boutline:\s*"([^"]*)"/)?.[1]?.split(/\s+/) ?? [];
+    const restFill = outline.find((name) => /^dark:bg-input\/\d+$/.test(name))?.match(/\/(\d+)$/)?.[1];
+    const hoverFill = outline.find((name) => /^dark:hover:bg-input\/\d+$/.test(name))?.match(/\/(\d+)$/)?.[1];
+    expect(restFill, "button.tsx: the outline variant fills with dark:bg-input/N").toBeDefined();
+    expect(hoverFill, "button.tsx: the outline variant hovers with dark:hover:bg-input/N").toBeDefined();
+    const toggle = source("../../customers/blacklist-toggle.tsx");
+    const used = toggle.match(/variant="outline"\s+size="sm"\s+onClick=\{\(\) => setAddOpen\(true\)\}\s+className="([^"]*)"/)?.[1]?.split(/\s+/) ?? [];
+    expect(used.length, "blacklist-toggle.tsx: the outline Add button is found").toBeGreaterThan(0);
+    const dark = carnetCascade("dark");
+    const colourOf = (name: string | undefined, fallback: string): Oklch => {
+      const palette = name?.match(/^dark:(?:hover:)?text-(red-\d+)$/)?.[1];
+      return palette ? tailwindPalette(palette) : colorToken(dark, fallback);
+    };
+    const restText = colourOf(used.find((name) => /^dark:text-/.test(name)), "--destructive");
+    const hoverText = colourOf(used.find((name) => /^dark:hover:text-/.test(name)), "--destructive");
+    for (const [surface, token] of [["the page", "--background"], ["a card", "--card"]] as const) {
+      const base = colorToken(dark, token);
+      const input = colorToken(dark, "--input");
+      expect(contrastOnTint(restText, input, Number(restFill) / 100, base), `dark: label at rest on ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      expect(contrastOnTint(hoverText, input, Number(hoverFill) / 100, base), `dark: label on hover on ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    }
+  });
+
+  it("cause 3: the issues chip in the automation builder header reaches 4.5:1 on its red tint, on the page and a card", () => {
+    const builder = source("../../automations/automation-builder.tsx");
+    const chip = literalClasses(builder, "flex shrink-0 items-center gap-1 rounded-full bg-destructive-");
+    expect(chip, "the chip text is the destructive token").toContain("text-destructive");
+    const kind = chip.find((name) => /^bg-destructive-(soft|subtle)$/.test(name))?.replace("bg-destructive-", "");
+    expect(kind, "the chip is filled with a destructive tint").toBeDefined();
+    const alpha = destructiveTintAlpha(kind ?? "soft");
+    for (const mode of CARNET_MODES) {
+      const cascade = carnetCascade(mode);
+      const red = colorToken(cascade, "--destructive");
+      for (const [surface, token] of [["the page", "--background"], ["a card", "--card"]] as const) {
+        const ratio = contrastOnTint(red, red, alpha, colorToken(cascade, token));
+        expect(ratio, `${mode}: red label on bg-destructive-${kind} over ${surface}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      }
+    }
+  });
+
+  it("cause 4: the select placeholder is muted-foreground (no opacity) and that token reaches 4.5:1 on the page, a card and the sunk step in every look", () => {
+    const select = source("../../ui/select.tsx");
+    expect(select, "select.tsx colours the placeholder with muted-foreground").toContain("data-[placeholder]:text-muted-foreground");
+    expect(select, "select.tsx does not fade the placeholder").not.toMatch(/data-\[placeholder\]:text-muted-foreground\/\d+/);
+    for (const look of LOOKS) {
+      for (const [mode, cascade] of [["light", lightCascade(look)], ["dark", darkCascade(look)]] as const) {
+        for (const ground of ["--background", "--card", "--muted"]) {
+          expect(contrast(colorToken(cascade, "--muted-foreground"), colorToken(cascade, ground)), `${look} ${mode}: placeholder on ${ground}`).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+        }
+      }
+    }
+  });
+});

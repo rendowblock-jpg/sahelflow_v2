@@ -555,7 +555,7 @@ function IssuesStatus({
         <button
           type="button"
           data-automation-issues={issues.length}
-          className="flex shrink-0 items-center gap-1 rounded-full bg-destructive-soft px-2 py-1 text-caption font-medium text-destructive outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex shrink-0 items-center gap-1 rounded-full bg-destructive-subtle px-2 py-1 text-caption font-medium text-destructive outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <AlertCircle className="size-3.5" aria-hidden="true" />
           {c("flow.issues", { count: issues.length + (legacyInvalid ? 1 : 0) })}
