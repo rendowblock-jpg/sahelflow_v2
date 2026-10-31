@@ -49,7 +49,8 @@ import { StudioCanvas } from "./studio-canvas";
 import { PanelHeader } from "./studio-controls";
 import { ProductsPanel, ThemePanel } from "./studio-design-panels";
 import { StudioRail, type StudioPanel } from "./studio-rail";
-import { CheckoutPanel, ContactPanel, SeoPanel } from "./studio-settings-panels";
+import { legalPublishBlock } from "@/lib/storefront/studio-legal";
+import { CheckoutPanel, ContactPanel, LegalPanel, SeoPanel } from "./studio-settings-panels";
 import { StudioTopBar, type StudioSaveState } from "./studio-top-bar";
 import type { StorefrontStudioDevice, StorefrontStudioProduct } from "./studio-types";
 
@@ -201,6 +202,14 @@ export function StorefrontStudio({
   // One click: unsaved edits are saved first, then the saved version is released.
   const publish = useCallback(async () => {
     if (publishingRef.current) return;
+    // A store going live needs legal texts the seller has read; the panel opens with the reason.
+    const legalBlock = draft.isActive ? legalPublishBlock(draft.legal) : null;
+    if (legalBlock) {
+      setPanel("legal");
+      setPanelCollapsed(false);
+      setMessage(t(legalBlock.messageKey), "warning");
+      return;
+    }
     if (draft.isActive && draft.theme.builder.shippingRules.length === 0) {
       setPanel("checkout");
       setPanelCollapsed(false);
@@ -498,6 +507,7 @@ export function StorefrontStudio({
               ) : null}
               {panel === "checkout" ? <CheckoutPanel draft={draft} commit={commitDraft} /> : null}
               {panel === "contact" ? <ContactPanel draft={draft} commit={commitDraft} /> : null}
+              {panel === "legal" ? <LegalPanel draft={draft} commit={commitDraft} /> : null}
               {panel === "seo" ? <SeoPanel draft={draft} commit={commitDraft} /> : null}
             </div>
           )}
