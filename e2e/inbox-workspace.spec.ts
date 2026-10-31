@@ -265,8 +265,15 @@ test.describe.serial("Inbox operational workspace evidence", () => {
     });
     if (transport.sidecarReachable === false) {
       await expect(thread.locator("textarea")).toBeVisible();
+      // The carnet inbox keeps the way back in the ONE link banner (retry, or connect when WhatsApp is not linked),
+      // not inside every thread.
       await expect(
-        thread.getByRole("button", { name: /ربط واتساب|Connecter WhatsApp|Connect WhatsApp/ }).first(),
+        page
+          .locator("[data-inbox-link-banner]")
+          .getByRole("button", {
+            name: /ربط واتساب|Connecter WhatsApp|Connect WhatsApp|أعد المحاولة|Réessayer|Try again/,
+          })
+          .first(),
       ).toBeVisible();
     }
 
