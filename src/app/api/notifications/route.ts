@@ -5,6 +5,7 @@ import { getI18n } from "@/lib/i18n-server";
 import { requireTrustedAction } from "@/lib/identity/authorization";
 import { notificationQuerySchema } from "@/lib/notifications/contracts";
 import { listLegacyOperationalNotifications } from "@/lib/notifications/legacy-operational-feed";
+import { bodyKeyForCount } from "@/lib/notifications/event-kinds";
 import { listNotifications } from "@/lib/notifications/notification-center";
 import {
   filterDismissedAlerts,
@@ -78,7 +79,13 @@ export const GET = withErrorHandler(async (request?: NextRequest) => {
       ...result.notifications.map((notification) => ({
         ...notification,
         title: t(notification.titleKey),
-        body: t(notification.bodyKey),
+        body: notification.count === null ? t(notification.bodyKey) : t(bodyKeyForCount(notification.kind, notification.bodyKey, notification.count), { count: notification.count }),
+        ...(notification.digestCount
+          ? {
+              nativeTitle: t("notifications.events.digest.title"),
+              nativeBody: t("notifications.events.digest.body", { count: notification.digestCount }),
+            }
+          : {}),
         time: relativeTime(notification.createdAt, t),
       })),
       ...compatibleLegacy,

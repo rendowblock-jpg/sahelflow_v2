@@ -1,3 +1,4 @@
+import { buildEventKey } from "@/lib/notifications/event-kinds";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -561,7 +562,7 @@ async function applyClaim(
       // This PII-free marker is committed atomically with the canonical
       // message. Per-actor projection is idempotent and may safely recover on
       // the next Bell/API read after a process interruption.
-      const notificationEventKey = `whatsapp-message-received:${claim.ingressKey}`;
+      const notificationEventKey = buildEventKey({ kind: "whatsapp.received", at: storedAt, subject: conversation.id });
       await tx.notificationEvent.upsert({
         where: { eventKey: notificationEventKey },
         create: {

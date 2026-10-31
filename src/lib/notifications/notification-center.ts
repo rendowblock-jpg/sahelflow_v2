@@ -18,11 +18,26 @@ import type {
 } from "./contracts";
 import { sanitizeNativePreview } from "./preview-safety";
 import { isInQuietHours } from "./quiet-hours";
+import { KIND_SPECS, asSeverity, kindOfEventType } from "./event-kinds";
+import { resolveLiveEventState, type LiveEventState } from "./live-state";
+import { planDigest } from "./quiet-digest";
+import { sweepOrdersToConfirm } from "./to-confirm-sweep";
 
 const PROJECTION_BATCH = 500;
 const NATIVE_LEASE_MS = 2 * 60_000;
 const MAX_NATIVE_RETRIES = 3;
-const ALLOWED_EVENT_ACTIONS = new Set<Phase2Action>(["conversations.read"]);
+const ALLOWED_EVENT_ACTIONS = new Set<Phase2Action>([
+  "conversations.read",
+  "orders.read",
+  "settings.read",
+]);
+
+/** Each kind speaks in its own words; rows from before the kinds keep the old pair. */
+function wordingFor(eventType: string): { titleKey: string; bodyKey: string } {
+  const kind = kindOfEventType(eventType);
+  if (!kind) return { titleKey: "notifications.inbox.title", bodyKey: "notifications.inbox.body" };
+  return { titleKey: KIND_SPECS[kind].titleKey, bodyKey: KIND_SPECS[kind].bodyKey };
+}
 
 export function notificationRecipientId(context: TrustedActorContext): string {
   if (context.actor.kind !== "person") {
@@ -150,8 +165,17 @@ export async function synchronizeNotifications(
     return { projected: 0 };
   }
   const resource: AuthorizationResource = { shopId: context.shop.shopId };
-  if (!trustedActionAllowed(context, "conversations.read", resource)) {
-    return { projected: 0 };
+  const allowedActions = [...ALLOWED_EVENT_ACTIONS].filter((action) =>
+    trustedActionAllowed(context, action, resource),
+  );
+  if (allowedActions.length === 0) return { projected: 0 };
+  if (allowedActions.includes("orders.read")) {
+    try {
+      const window = preference ?? { quietStartMinute: null, quietEndMinute: null };
+      await sweepOrdersToConfirm(db, { now, window, shopId: context.shop.shopId });
+    } catch {
+      // A failed sweep must never stop the centre from projecting what is already there.
+    }
   }
   let projected = 0;
 
@@ -161,8 +185,7 @@ export async function synchronizeNotifications(
     const events = await db.notificationEvent.findMany({
       where: {
         category: "inbox",
-        requiredAction: "conversations.read",
-        occurredAt: { gte: retentionFloor },
+        requiredAction: { in: allowedActions }, occurredAt: { gte: retentionFloor },
         expiresAt: { gt: now },
         notifications: { none: { recipientMemberId } },
       },
@@ -195,8 +218,7 @@ export async function synchronizeNotifications(
             recipientMemberId,
             category: event.category,
             severity: event.severity,
-            titleKey: "notifications.inbox.title",
-            bodyKey: "notifications.inbox.body",
+            titleKey: wordingFor(event.eventType).titleKey, bodyKey: wordingFor(event.eventType).bodyKey,
             link: event.link,
             createdAt: event.occurredAt,
           },
@@ -275,8 +297,7 @@ export async function listNotifications(
     where,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: query.limit + 1,
-    include: {
-      deliveries: {
+    include: { event: { select: { eventType: true, severity: true, occurredAt: true, targetId: true } }, deliveries: {
         where: { channel: "native" },
         orderBy: { attemptedAt: "desc" },
         take: 1,
@@ -290,29 +311,60 @@ export async function listNotifications(
     where: { recipientMemberId, readAt: null, archivedAt: null },
   });
   const preference = await getNotificationPreference(context);
-
+  const now = new Date();
+  // The number in a sentence is counted now, not frozen when the marker was written.
+  const liveById = new Map<string, LiveEventState>(
+    await Promise.all(
+      page.map(async (row): Promise<[string, LiveEventState]> => {
+        try {
+          return [row.id, await resolveLiveEventState(db, row.event, now)];
+        } catch {
+          return [row.id, { kind: kindOfEventType(row.event.eventType), count: null, severity: asSeverity(row.severity), stillTrue: true }];
+        }
+      }),
+    ),
+  );
+  const nativeOpen = (row: (typeof page)[number]) =>
+    preference.nativeEnabled && preference.inboxEnabled && row.readAt === null && row.archivedAt === null;
+  const nativeState = (row: (typeof page)[number]) => row.deliveries[0]?.state;
+  const nativePendingIds = new Set<string>(
+    page
+      .filter(
+        (row) =>
+          nativeOpen(row) &&
+          nativeState(row) !== "sent" &&
+          nativeState(row) !== "denied" &&
+          nativeState(row) !== "suppressed" &&
+          nativeState(row) !== "held" &&
+          row.createdAt.getTime() > now.getTime() - 5 * 60_000,
+      )
+      .map((row) => row.id),
+  );
+  // Rows held by quiet hours: when the window is over, ONE of them speaks for all.
+  const digestPlan = planDigest({
+    window: preference,
+    now,
+    heldIds: page.filter((row) => nativeOpen(row) && nativeState(row) === "held").map((row) => row.id),
+    stillTrue: (id) => liveById.get(id)?.stillTrue ?? true,
+  });
+  if (digestPlan.representativeId) nativePendingIds.add(digestPlan.representativeId);
   return {
     notifications: page.map((row) => ({
       id: row.id,
       durable: true,
+      kind: liveById.get(row.id)?.kind ?? null,
+      count: liveById.get(row.id)?.count ?? null,
+      digestCount: digestPlan.representativeId === row.id && digestPlan.summary ? digestPlan.count : null,
       type: row.category === "inbox" ? "info" : row.category,
       category: row.category,
-      severity: row.severity,
+      severity: liveById.get(row.id)?.severity ?? row.severity,
       titleKey: row.titleKey,
       bodyKey: row.bodyKey,
       link: row.link,
       read: row.readAt !== null,
       archived: row.archivedAt !== null,
       createdAt: row.createdAt.toISOString(),
-      nativePending:
-        preference.nativeEnabled &&
-        preference.inboxEnabled &&
-        row.readAt === null &&
-        row.archivedAt === null &&
-        row.deliveries[0]?.state !== "sent" &&
-        row.deliveries[0]?.state !== "denied" &&
-        row.deliveries[0]?.state !== "suppressed" &&
-        row.createdAt.getTime() > Date.now() - 5 * 60_000,
+      nativePending: nativePendingIds.has(row.id),
     })),
     unreadCount,
     nextCursor:
@@ -335,12 +387,12 @@ async function ownedNotification(context: TrustedActorContext, id: string) {
   if (!notification) {
     throw new SahelFlowError("Notification not found", "NOT_FOUND", 404);
   }
-  if (notification.event.requiredAction === "conversations.read") {
-    if (!trustedActionAllowed(context, "conversations.read", { shopId: context.shop.shopId })) {
-      throw new SahelFlowError("Notification not found", "NOT_FOUND", 404);
-    }
-  } else {
+  const requiredAction = notification.event.requiredAction as Phase2Action;
+  if (!ALLOWED_EVENT_ACTIONS.has(requiredAction)) {
     throw new SahelFlowError("Notification authority is unavailable", "NOTIFICATION_AUTHORITY_INVALID", 503);
+  }
+  if (!trustedActionAllowed(context, requiredAction, { shopId: context.shop.shopId })) {
+    throw new SahelFlowError("Notification not found", "NOT_FOUND", 404);
   }
   return notification;
 }
@@ -390,11 +442,22 @@ export async function claimNativeDelivery(
   context: TrustedActorContext,
   id: string,
 ) {
-  const notification = await ownedNotification(context, id);
+  let notification: Awaited<ReturnType<typeof ownedNotification>>;
+  try {
+    notification = await ownedNotification(context, id);
+  } catch (error) {
+    // A row that is gone (retention, or never this person's) is no error for a poll.
+    if (error instanceof SahelFlowError && error.code === "NOT_FOUND") {
+      return { deliver: false, reasonCode: "not-found" };
+    }
+    throw error;
+  }
   const recipientMemberId = notificationRecipientId(context);
-  const preference = await db.notificationPreference.findUniqueOrThrow({
+  const preference = await db.notificationPreference.findUnique({
     where: { recipientMemberId },
   });
+  // No preference row yet means native alerts were never switched on.
+  if (!preference) return { deliver: false, reasonCode: "disabled" };
   const now = new Date();
   const suppressed = quietReason(preference, now);
   const attemptKey = `${notification.id}:native:v1`;
@@ -402,6 +465,22 @@ export async function claimNativeDelivery(
     where: { attemptKey },
   });
 
+  if (suppressed === "quiet-hours") {
+    // Held, not closed: one summary goes out when the window ends (quiet-digest.ts).
+    await db.notificationDeliveryAttempt.upsert({
+      where: { attemptKey },
+      create: {
+        id: stableId("delivery", attemptKey),
+        attemptKey,
+        notificationId: notification.id,
+        channel: "native",
+        state: "held",
+        reasonCode: "quiet-hours",
+      },
+      update: { state: "held", reasonCode: "quiet-hours" },
+    });
+    return { deliver: false, reasonCode: "quiet-hours" };
+  }
   if (suppressed) {
     await db.notificationDeliveryAttempt.upsert({
       where: { attemptKey },
@@ -431,6 +510,40 @@ export async function claimNativeDelivery(
     return { deliver: false, reasonCode: existing.reasonCode };
   }
 
+  let digestCount: number | null = null;
+  if (existing?.state === "held") {
+    const held = await db.notificationDeliveryAttempt.findMany({
+      where: {
+        channel: "native",
+        state: "held",
+        notification: { recipientMemberId, readAt: null, archivedAt: null },
+      },
+      orderBy: [{ attemptedAt: "desc" }],
+      take: 200,
+      select: {
+        notificationId: true,
+        notification: { select: { event: { select: { eventType: true, severity: true, occurredAt: true, targetId: true } } } },
+      },
+    });
+    const live = new Map<string, boolean>();
+    for (const row of held) {
+      live.set(row.notificationId, (await resolveLiveEventState(db, row.notification.event, now)).stillTrue);
+    }
+    const plan = planDigest({
+      window: preference,
+      now,
+      heldIds: held.map((row) => row.notificationId),
+      stillTrue: (id) => live.get(id) ?? true,
+    });
+    if (plan.coveredIds.length > 0) {
+      await db.notificationDeliveryAttempt.updateMany({
+        where: { channel: "native", state: "held", notificationId: { in: plan.coveredIds } },
+        data: { state: "suppressed", reasonCode: "digest", completedAt: now },
+      });
+    }
+    if (plan.representativeId !== notification.id) return { deliver: false, reasonCode: "digest" };
+    digestCount = plan.summary ? plan.count : null;
+  }
   await db.notificationDeliveryAttempt.upsert({
     where: { attemptKey },
     create: {
@@ -453,6 +566,7 @@ export async function claimNativeDelivery(
   let preview: { contactName: string; body: string } | null = null;
   if (
     preference.previewEnabled &&
+    digestCount === null &&
     trustedActionAllowed(context, "customers.contact.read", { shopId: context.shop.shopId })
   ) {
     const message = await db.message.findUnique({
@@ -470,6 +584,7 @@ export async function claimNativeDelivery(
     deliver: true,
     preview,
     soundEnabled: preference.soundEnabled,
+    digestCount,
     link: notification.link,
   };
 }

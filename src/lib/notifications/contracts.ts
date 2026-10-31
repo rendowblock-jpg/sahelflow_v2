@@ -57,6 +57,8 @@ export const nativeDeliverySchema = z.discriminatedUnion("action", [
           "quiet-hours",
           "muted",
           "disabled",
+          "burst",
+          "digest",
         ])
         .nullable()
         .default(null),
