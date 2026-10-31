@@ -312,9 +312,11 @@ html[lang=ar] .sf-pname{font-size:clamp(30px,8.4vw,38px)}
 .sf-opt{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px 12px;min-height:48px;padding:8px 14px;border-inline-start:4px solid transparent;cursor:pointer}
 .sf-opt+.sf-opt{border-block-start:1px solid var(--input)}
 .sf-opt-name{font-weight:700;overflow-wrap:anywhere}
-.sf-opt-where{font-size:14px;color:var(--muted-foreground)}
+.sf-opt-where,.sf-opt-from,.sf-opt-off{font-size:14px;color:var(--muted-foreground)}
 .sf-opt.is-active{border-inline-start-color:var(--ring);outline:2px solid var(--ring);outline-offset:-2px}
-@supports (background:color-mix(in srgb,red,blue)){.sf-opt:hover,.sf-opt.is-active{background:color-mix(in srgb,var(--foreground) 8%,var(--background))}}
+.sf-opt-from,.sf-opt-off{width:100%}
+.is-off{color:var(--muted-foreground)}
+@supports (background:color-mix(in srgb,red,blue)){.sf-opt:not(.is-off):hover,.sf-opt.is-active{background:color-mix(in srgb,var(--foreground) 8%,var(--background))}}
 .sf-modes{border:0;margin:0;padding:0}
 .sf-modes-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .sf-mode{position:relative;display:block}

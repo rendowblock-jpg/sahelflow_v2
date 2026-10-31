@@ -7,7 +7,7 @@
  * ARIA 1.2 combobox, list autocomplete, focus stays in the input and aria-activedescendant names the highlighted row.
  * The listbox is in the server markup (hidden), so aria-controls always points at an element that exists.
  */
-import { searchCommunes, type CommuneIndexRow, type CommuneMatch } from "./communes";
+import { findCommunes, type CommuneHit, type CommuneIndexRow, type Reform } from "./communes";
 
 export type CommuneSearchParts = {
   box: HTMLInputElement;
@@ -23,11 +23,14 @@ export type CommuneSearchParts = {
 export type CommuneSearchOptions = {
   /** Where the index lives: public/_sf/c.<hash>/all.json. */
   url: string;
+  /** Where the old-wilaya and alias data lives: public/_sf/c.<hash>/reform.json. Without it the search has no hint and no alias. */
+  reformUrl: string;
   /** The page is Arabic: a row shows the Arabic name when it has one. */
   arabic: boolean;
   /** The fee table the checkout already reads; its keys are the wilayas the shop delivers to. */
   fees: Record<string, unknown>;
-  text: { none: string; failed: string; count: string };
+  /** formerly / noDelivery carry a {{wilaya}} that is replaced by text (never markup). */
+  text: { none: string; failed: string; count: string; formerly: string; noDelivery: string };
   /** The promise of the commune-list load the wilaya `change` handler started last. */
   communesLoaded: () => Promise<void>;
 };
@@ -36,11 +39,17 @@ function validIndex(json: unknown): json is CommuneIndexRow[] {
   return Array.isArray(json) && json.every((row) => Array.isArray(row) && row.length === 3 && row.every((cell) => typeof cell === "string"));
 }
 
+function validReform(json: unknown): json is Reform {
+  const r = json as Reform | null;
+  return !!r && Array.isArray(r.aliases) && !!r.moved && typeof r.moved === "object";
+}
+
 export function setupCommuneSearch(parts: CommuneSearchParts, options: CommuneSearchOptions): void {
   const { box, list, note, count, wilaya, commune } = parts;
   let index: Promise<CommuneIndexRow[] | null> | null = null;
   let failed = false;
-  let shown: CommuneMatch[] = [];
+  let reform: Reform | null = null;
+  let shown: CommuneHit[] = [];
   let active = -1;
   // An answer that arrives after a newer keystroke, pick or clear finds an older number here and is dropped.
   let queryNumber = 0;
@@ -51,11 +60,14 @@ export function setupCommuneSearch(parts: CommuneSearchParts, options: CommuneSe
   function loadIndex(again = false): Promise<CommuneIndexRow[] | null> {
     if (index && !(again && failed)) return index;
     failed = false;
+    const extra = fetch(options.reformUrl).then((r) => (r.ok ? r.json() : null), () => null).catch(() => null);
     const attempt = (async () => {
       try {
         const response = await fetch(options.url);
         if (!response.ok) return null;
         const json: unknown = await response.json();
+        const more: unknown = await extra;
+        reform = validReform(more) ? more : null;
         return validIndex(json) ? json : null;
       } catch {
         return null;
@@ -74,7 +86,7 @@ export function setupCommuneSearch(parts: CommuneSearchParts, options: CommuneSe
     return label ? (label.textContent || "").replace(/^\s*\d+\s*·\s*/, "").trim() : "";
   };
   const allowed = (): string[] => Array.from(wilaya.options).map((option) => option.value).filter((code) => code !== "" && options.fees[code] !== undefined);
-  const nameOf = (row: CommuneMatch): string => (options.arabic && row.arabic ? row.arabic : row.latin);
+  const nameOf = (row: CommuneHit): string => (options.arabic && row.arabic ? row.arabic : row.latin);
 
   function setActive(next: number): void {
     active = next;
@@ -91,6 +103,17 @@ export function setupCommuneSearch(parts: CommuneSearchParts, options: CommuneSe
     }
   }
 
+  /** The next row the buyer can pick in that direction (rows the shop does not deliver to are skipped), wrapping round; -1 when there is none. */
+  function step(from: number, direction: 1 | -1): number {
+    const size = shown.length;
+    const base = from < 0 && direction < 0 ? 0 : from;
+    for (let turn = 1; turn <= size; turn++) {
+      const at = (((base + direction * turn) % size) + size) % size;
+      if ((shown[at] as CommuneHit).delivers) return at;
+    }
+    return -1;
+  }
+
   function close(): void {
     shown = [];
     list.textContent = "";
@@ -100,7 +123,7 @@ export function setupCommuneSearch(parts: CommuneSearchParts, options: CommuneSe
     count.textContent = "";
   }
 
-  function rowFor(row: CommuneMatch, at: number): HTMLElement {
+  function rowFor(row: CommuneHit, at: number): HTMLElement {
     const item = document.createElement("li");
     item.id = `sf-opt-${at}`;
     item.className = "sf-opt";
@@ -119,10 +142,26 @@ export function setupCommuneSearch(parts: CommuneSearchParts, options: CommuneSe
     code.textContent = row.wilayaCode;
     where.append(code, ` ${wilayaName(row.wilayaCode)}`);
     item.append(name, " ", where);
+    if (row.former) {
+      // "formerly Batna": only for a commune the 2025 reform moved
+      const from = document.createElement("span");
+      from.className = "sf-opt-from";
+      from.textContent = options.text.formerly.replace("{{wilaya}}", options.arabic ? row.former.arabic : row.former.latin);
+      item.append(from);
+    }
+    if (!row.delivers) {
+      // shown so the buyer is not left wondering, but it cannot be picked
+      item.classList.add("is-off");
+      item.setAttribute("aria-disabled", "true");
+      const off = document.createElement("span");
+      off.className = "sf-opt-off";
+      off.textContent = options.text.noDelivery.replace("{{wilaya}}", row.wilayaCode);
+      item.append(off);
+    }
     return item;
   }
 
-  function show(rows: CommuneMatch[]): void {
+  function show(rows: CommuneHit[]): void {
     shown = rows;
     list.textContent = "";
     rows.forEach((row, at) => list.appendChild(rowFor(row, at)));
@@ -150,11 +189,12 @@ export function setupCommuneSearch(parts: CommuneSearchParts, options: CommuneSe
       note.textContent = options.text.failed;
       return false;
     }
-    show(searchCommunes(rows, text, allowed()));
+    show(findCommunes(rows, text, allowed(), 8, reform));
     return shown.length > 0;
   }
 
-  async function pick(row: CommuneMatch): Promise<void> {
+  async function pick(row: CommuneHit): Promise<void> {
+    if (!row.delivers) return;
     const mine = ++pickNumber;
     queryNumber += 1;
     close();
@@ -189,19 +229,17 @@ export function setupCommuneSearch(parts: CommuneSearchParts, options: CommuneSe
         if (event.key === "ArrowDown" && box.value.trim()) {
           event.preventDefault();
           void query().then((drawn) => {
-            if (drawn) setActive(0);
+            if (drawn) setActive(step(-1, 1));
           });
         }
         return;
       }
       event.preventDefault();
-      const last = shown.length - 1;
-      if (event.key === "ArrowDown") setActive(active >= last ? 0 : active + 1);
-      else setActive(active <= 0 ? last : active - 1);
+      setActive(step(active, event.key === "ArrowDown" ? 1 : -1));
     } else if (event.key === "Enter") {
       // Enter in this box must never send the order form; it only picks the highlighted row
       event.preventDefault();
-      if (!list.hidden && active >= 0) void pick(shown[active] as CommuneMatch);
+      if (!list.hidden && active >= 0) void pick(shown[active] as CommuneHit);
     } else if (event.key === "Escape" && !list.hidden) {
       event.preventDefault();
       close();
@@ -215,7 +253,7 @@ export function setupCommuneSearch(parts: CommuneSearchParts, options: CommuneSe
   list.addEventListener("mousedown", (event) => event.preventDefault());
   list.addEventListener("click", (event) => {
     const item = (event.target as Element).closest('[role="option"]');
-    if (item) void pick(shown[Array.prototype.indexOf.call(list.children, item) as number] as CommuneMatch);
+    if (item) void pick(shown[Array.prototype.indexOf.call(list.children, item) as number] as CommuneHit);
   });
   // A wilaya chosen by hand starts over; the pick above fires the same event, so it is told apart by `picking`.
   wilaya.addEventListener("change", () => {

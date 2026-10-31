@@ -263,9 +263,16 @@ function boot(): void {
       { box: search.box, list: search.list, note: search.note, count: search.count, wilaya: els.wilaya, commune: els.commune },
       {
         url: `${d.cdir}/all.json`,
+        reformUrl: `${d.cdir}/reform.json`,
         arabic: d.locale === "ar",
         fees: d.fees,
-        text: { none: d.i.communeNone as string, failed: d.i.communeFailed as string, count: d.i.communeCount as string },
+        text: {
+          none: d.i.communeNone as string,
+          failed: d.i.communeFailed as string,
+          count: d.i.communeCount as string,
+          formerly: d.i.communeFormerly as string,
+          noDelivery: d.i.communeNoDelivery as string,
+        },
         communesLoaded: () => communesLoaded,
       },
     );

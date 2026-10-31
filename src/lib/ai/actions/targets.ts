@@ -116,6 +116,12 @@ export async function buildAiActionTargetSnapshot(
           quantity: item.quantity,
         };
       });
+      const lines = selected.map((entry) => ({
+        name: entry.productName,
+        variantName: entry.productVariantName,
+        quantity: entry.quantity,
+        unitPrice: entry.variantPrice ?? entry.productPrice,
+      }));
       return {
         targetBinding: {
           customer: {
@@ -129,6 +135,19 @@ export async function buildAiActionTargetSnapshot(
           itemCount: items.length,
           totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
           wilaya: args.wilaya,
+          customerPhone: String(args.phone),
+          commune: args.commune,
+          address: args.address,
+          ...(typeof args.notes === "string" && args.notes.length > 0
+            ? { notes: args.notes }
+            : {}),
+          // The exact lines the executor prices: the variant price when the
+          // variant has one, else the product price (same rule as createOrder).
+          lines,
+          orderTotal: lines.reduce(
+            (sum, line) => sum + line.quantity * line.unitPrice,
+            0,
+          ),
         },
       };
     }

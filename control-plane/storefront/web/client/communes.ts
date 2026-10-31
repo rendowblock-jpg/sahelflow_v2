@@ -8,6 +8,43 @@
  */
 export type CommuneIndexRow = readonly [latin: string, arabic: string, wilayaCode: string];
 export type CommuneMatch = { latin: string; arabic: string; wilayaCode: string };
+/** A search result: the commune, whether the shop delivers to its wilaya, and the wilaya it belonged to before the 2025 reform (null when it did not move). */
+export type CommuneHit = CommuneMatch & { delivers: boolean; former: FormerWilaya | null };
+export type FormerWilaya = { code: string; latin: string; arabic: string };
+
+/**
+ * The data the checkout fetches next to the index (public/_sf/c.<hash>/reform.json, built by commune-reform.ts): the spellings
+ * buyers type for a commune, and for each of the eleven wilayas created in 2025 (59..69) the wilaya its communes came from.
+ * It is data, not code, so the page script stays small; without it the search still works, with no alias and no "formerly".
+ */
+export type Reform = {
+  aliases: ReadonlyArray<readonly [latin: string, wilayaCode: string, aliases: string]>;
+  moved: Readonly<Record<string, readonly [code: string, latin: string, arabic: string]>>;
+};
+export type AliasTarget = { latin: string; wilayaCode: string; exact: boolean };
+
+/** The wilaya a commune of this wilaya code belonged to before the 2025 reform, or null (not a new wilaya, or no reform data). */
+export function formerWilayaOf(reform: Reform | null | undefined, wilayaCode: string): FormerWilaya | null {
+  const moved = reform?.moved;
+  if (!moved || !Object.hasOwn(moved, wilayaCode)) return null;
+  const [code, latin, arabic] = moved[wilayaCode] as readonly [string, string, string];
+  return { code, latin, arabic };
+}
+
+// From four letters a typed start counts ("berik" finds Barika), never from three: "bou" must not pull Bougie in
+// front of every real commune that starts with it.
+const MIN_START = 4;
+
+/** The commune rows an already-folded query stands for: the whole alias (exact) or, from four letters, the start of one. */
+export function aliasTargets(aliases: Reform["aliases"], folded: string): AliasTarget[] {
+  const out: AliasTarget[] = [];
+  for (const [latin, wilayaCode, list] of aliases) {
+    const keys = list.split(",");
+    const exact = keys.includes(folded);
+    if (exact || (folded.length >= MIN_START && keys.some((key) => key.startsWith(folded)))) out.push({ latin, wilayaCode, exact });
+  }
+  return out;
+}
 
 // Same key as src/lib/ai/location-authority.ts (normalizeLocationKey): the Worker bundle cannot import that
 // file (it pulls in the whole commune list), so the rule is repeated here and a test keeps the two in step.
@@ -89,25 +126,55 @@ function rank(target: Folded, query: string): number {
 const ARABIC_LETTERS = /[\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff\ufe70-\ufeff]/;
 const MAX_QUERY = 60;
 
+type Hit = { rank: number; at: number; row: CommuneIndexRow };
+
+/** Every row that matches the text (whole index, no filter, no cap), with its rank. An alias raises its commune to "whole name" (exact) or "start of the name". */
+function ranked(index: readonly CommuneIndexRow[], text: string, reform?: Reform | null): Hit[] {
+  const arabic = ARABIC_LETTERS.test(text);
+  const wanted = arabic ? foldArabic(text) : foldLatin(text);
+  if (!wanted) return [];
+  const boost = new Map<string, number>();
+  if (!arabic && reform) for (const target of aliasTargets(reform.aliases, wanted)) boost.set(`${target.latin}|${target.wilayaCode}`, target.exact ? 0 : 1);
+  const hits: Hit[] = [];
+  prepare(index).forEach((entry, at) => {
+    const found = rank(arabic ? entry.arabic : entry.latin, wanted);
+    const alias = boost.size ? boost.get(`${entry.row[0]}|${entry.row[2]}`) : undefined;
+    const best = alias === undefined ? found : found < 0 ? alias : Math.min(found, alias);
+    if (best >= 0) hits.push({ rank: best, at, row: entry.row });
+  });
+  return hits;
+}
+
+function limitOf(limit: number): number {
+  return Number.isFinite(limit) ? Math.floor(limit) : 8;
+}
+
 /**
  * The communes whose Latin name (or Arabic name, when the query has Arabic letters) matches the text, best first:
  * whole name, then start of the name, then start of a later word, then anywhere inside. Equal ranks keep the order
  * of the index. Only the wilayas in `allowedWilayaCodes` (the ones the seller prices) are searched. At most `limit` rows.
  */
-export function searchCommunes(index: readonly CommuneIndexRow[], query: string, allowedWilayaCodes: Iterable<string>, limit = 8): CommuneMatch[] {
+export function searchCommunes(index: readonly CommuneIndexRow[], query: string, allowedWilayaCodes: Iterable<string>, limit = 8, reform?: Reform | null): CommuneMatch[] {
   const text = query.trim().slice(0, MAX_QUERY);
-  const size = Number.isFinite(limit) ? Math.floor(limit) : 8;
+  const size = limitOf(limit);
   if (!text || size <= 0) return [];
-  const arabic = ARABIC_LETTERS.test(text);
-  const wanted = arabic ? foldArabic(text) : foldLatin(text);
-  if (!wanted) return [];
   const allowed = new Set(allowedWilayaCodes);
-  const hits: Array<{ rank: number; at: number; row: CommuneIndexRow }> = [];
-  prepare(index).forEach((entry, at) => {
-    if (!allowed.has(entry.row[2])) return;
-    const found = rank(arabic ? entry.arabic : entry.latin, wanted);
-    if (found >= 0) hits.push({ rank: found, at, row: entry.row });
-  });
+  const hits = ranked(index, text, reform).filter((hit) => allowed.has(hit.row[2]));
   hits.sort((a, b) => a.rank - b.rank || a.at - b.at);
   return hits.slice(0, size).map(({ row }) => ({ latin: row[0], arabic: row[1], wilayaCode: row[2] }));
+}
+
+/**
+ * Like searchCommunes, but a commune of a wilaya the shop does not deliver to is kept and marked `delivers: false` (the page
+ * greys it and says why) instead of being dropped; at equal rank the rows the shop delivers to come first. Each row also says
+ * which wilaya it belonged to before the 2025 reform, when it moved.
+ */
+export function findCommunes(index: readonly CommuneIndexRow[], query: string, deliversTo: Iterable<string>, limit = 8, reform?: Reform | null): CommuneHit[] {
+  const text = query.trim().slice(0, MAX_QUERY);
+  const size = limitOf(limit);
+  if (!text || size <= 0) return [];
+  const delivered = new Set(deliversTo);
+  const hits = ranked(index, text, reform).map((hit) => ({ ...hit, delivers: delivered.has(hit.row[2]) }));
+  hits.sort((a, b) => a.rank - b.rank || Number(b.delivers) - Number(a.delivers) || a.at - b.at);
+  return hits.slice(0, size).map(({ row, delivers }) => ({ latin: row[0], arabic: row[1], wilayaCode: row[2], delivers, former: formerWilayaOf(reform, row[2]) }));
 }
