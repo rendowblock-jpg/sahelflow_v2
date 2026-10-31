@@ -176,8 +176,8 @@ export function formatFieldLine(field: string, t: Tally): string {
   return `${head} | ${middle} | spurious ${t.spurious}/${t.unstated}`;
 }
 
-export function formatReport(score: HeldoutScore): string {
-  const lines: string[] = [`HELD-OUT SET: ${score.entries} messages`];
+export function formatReport(score: HeldoutScore, label = "HELD-OUT SET"): string {
+  const lines: string[] = [`${label}: ${score.entries} messages`];
   for (const field of HELDOUT_FIELDS) lines.push(formatFieldLine(field, score.tallies[field]));
   lines.push(formatFieldLine("isOrder(detect)", score.detection));
   const clean = messagesNeededForClaim(CLAIM_TARGET, 1);
@@ -188,4 +188,33 @@ export function formatReport(score: HeldoutScore): string {
     lines.push(`  ${field}: ${n === null ? "not reachable at the observed accuracy" : `${n} messages at the observed accuracy`}`);
   }
   return lines.join("\n");
+}
+
+/**
+ * Running number = position in the array, starting at 1. Odd = DIAG (the half
+ * a failure may be read from), even = SEALED (the half the claim rests on).
+ */
+export function splitHeldout(entries: readonly HeldoutEntry[]): { diag: HeldoutEntry[]; sealed: HeldoutEntry[] } {
+  const diag: HeldoutEntry[] = [];
+  const sealed: HeldoutEntry[] = [];
+  entries.forEach((entry, index) => {
+    if ((index + 1) % 2 === 1) diag.push(entry);
+    else sealed.push(entry);
+  });
+  return { diag, sealed };
+}
+
+/** Per-field report of each half. Only the DIAG failures are handed out. */
+export function splitReports(
+  entries: readonly HeldoutEntry[],
+  read: (text: string) => Reading,
+): { diag: string; sealed: string; diagFailures: HeldoutFailure[] } {
+  const { diag, sealed } = splitHeldout(entries);
+  const diagScore = scoreHeldout(diag, read);
+  const sealedScore = scoreHeldout(sealed, read);
+  return {
+    diag: formatReport(diagScore, "DIAG half (odd running numbers)"),
+    sealed: formatReport(sealedScore, "SEALED half (even running numbers)"),
+    diagFailures: diagScore.failures,
+  };
 }
