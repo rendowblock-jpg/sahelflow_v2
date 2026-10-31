@@ -33,11 +33,12 @@
       $("[data-theme-state]", themeBtn).textContent = name;
       themeBtn.setAttribute("aria-label", `${themeBtn.dataset.group}: ${name}`);
     };
-    themeBtn.addEventListener("click", () => {
+    const swap = () => {
       const next = states[(states.indexOf(current()) + 1) % states.length];
       if (next === "auto") { delete root.dataset.theme; store.del("sf-theme"); } else { root.dataset.theme = next; store.set("sf-theme", next); }
       paint();
-    });
+    };
+    themeBtn.addEventListener("click", () => (!reduced && doc.startViewTransition ? doc.startViewTransition(swap) : swap()));
     paint();
   }
 
@@ -84,6 +85,21 @@
     }, { threshold: 0.6 });
     counts.forEach((el) => io.observe(el));
   }
+
+  /* motion:start */
+  /* Without native scroll timelines (Firefox): show each block once by adding a class. */
+  if ("IntersectionObserver" in window && root.classList.contains("js-motion") && !CSS.supports("animation-timeline", "view()")) {
+    const RV = ".sec:not(.hero)>h2,.sec:not(.hero)>.lead,.sheet-sec h2,.faq,.incl,.plate,.notice";
+    const seen = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        e.target.classList.add("in");
+        seen.unobserve(e.target);
+      }
+    }, { rootMargin: "0px 0px -8% 0px" });
+    $$(RV).forEach((el) => seen.observe(el));
+  }
+  /* motion:end */
 
   /* ── help centre search ── */
   const helpSearch = $("[data-help-search]");
