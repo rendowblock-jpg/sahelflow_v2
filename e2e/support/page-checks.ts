@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { runAxe, settleMotion, type AxeViolation } from "./axe";
+import { runAxe, settleLoading, settleMotion, type AxeViolation } from "./axe";
 import {
   TEXT200_BROWSER_FONT_PX,
   cellVerdict,
@@ -219,6 +219,8 @@ export type GateResult = {
   violations: ViolationSummary[];
   failures: string[];
   settled: boolean;
+  /** false when a loading placeholder was still drawn after the limit, so axe looked at a page that had not finished loading */
+  loaded: boolean;
 };
 
 /**
@@ -238,6 +240,9 @@ export async function gateCell(
   cell: Cell,
   options: { reportOnly: boolean; failures: readonly string[] },
 ): Promise<GateResult> {
+  // Loading first, then motion: content that has just arrived may still fade in. Neither wait hides anything from axe,
+  // which still runs strict afterwards; both only keep it from judging a placeholder or a half-drawn card as the page.
+  const loaded = await settleLoading(page);
   const settled = await settleMotion(page);
   const violations = violationsForMode(await runAxe(page), cell.mode);
   const verdict = cellVerdict({
@@ -246,6 +251,7 @@ export async function gateCell(
     failures: options.failures,
     reportOnly: options.reportOnly,
     settled,
+    loaded,
   });
   return {
     status: verdict.status,
@@ -254,6 +260,7 @@ export async function gateCell(
     violations: summarizeViolations(violations),
     failures: [...options.failures],
     settled,
+    loaded,
   };
 }
 
