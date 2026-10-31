@@ -36,7 +36,7 @@ const translations: Record<Locale, Record<string, string>> = {
   },
   ar: {
     "ai.approvalArgs.title": "تفاصيل الطلب بالضبط التي توافق عليها",
-    "ai.approvalArgs.customer": "الزبون",
+    "ai.approvalArgs.customer": "العميل",
     "ai.approvalArgs.phone": "الهاتف",
     "ai.approvalArgs.wilayaCommune": "الولاية / البلدية",
     "ai.approvalArgs.address": "العنوان",

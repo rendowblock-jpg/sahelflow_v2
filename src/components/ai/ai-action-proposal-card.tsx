@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { AiApprovalOrderArgs } from "@/components/ai/ai-approval-order-args";
 import type { AiActionProposalHandle } from "@/components/ai/ai-workspace-types";
 import { TechnicalValue } from "@/components/i18n/technical-value";
 import { Badge } from "@/components/ui/badge";
@@ -251,6 +252,7 @@ export function AiActionProposalCard({
       </p>
 
       <div className="space-y-3.5 p-4">
+        <AiApprovalOrderArgs summary={proposal.summary} locale={locale} t={t} />
         {summary.length > 0 ? (
           <dl className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
             {(fieldsExpanded ? summary : summary.slice(0, 8)).map((field) => (

@@ -37,6 +37,7 @@ import {
   SahelFlowError,
   ValidationError,
 } from "@/types/errors";
+import { describeStockHolders } from "@/lib/data/product-service";
 import { aiActionHash, parseSensitiveAiToolArgs } from "./contracts";
 import {
   assertAiActionExecutionAuthority,
@@ -188,7 +189,7 @@ async function assertExactTarget(
   }
 }
 
-async function assertCatalogStockMutationAllowed(
+export async function assertCatalogStockMutationAllowed(
   tx: BusinessTransaction,
   productId: string,
 ): Promise<void> {
@@ -201,7 +202,7 @@ async function assertCatalogStockMutationAllowed(
   `;
   if (activeReservations.length > 0) {
     throw new SahelFlowError(
-      "Product stock is governed by an active inventory reservation",
+      `Product stock is governed by an active inventory reservation${await describeStockHolders(tx, productId)}`,
       "CANONICAL_STOCK_ADJUSTMENT_REQUIRED",
       409,
     );
