@@ -109,6 +109,12 @@ export async function handleStorefrontRequest(
       ? servePublicStorePage(request, environment, productMatch[1], context, productMatch[2] ?? null)
       : servePublicStorePage(request, environment, pageMatch?.[1] as string, context);
   }
+  // The store's legal pages: GET /<slug>/legal/<kind>. Any lowercase kind is routed so an unknown one gets the store's own calm notice, not bare JSON.
+  const legalMatch = /^\/([a-z0-9][a-z0-9-]{2,62})\/legal\/([a-z]{1,24})\/?$/.exec(url.pathname);
+  if ((request.method === "GET" || request.method === "HEAD") && legalMatch?.[1] && legalMatch[2]) {
+    const { servePublicStorePage } = await import("./web/serve-page");
+    return servePublicStorePage(request, environment, legalMatch[1], context, null, legalMatch[2]);
+  }
   return json({ error: "not_found" }, 404);
 }
 

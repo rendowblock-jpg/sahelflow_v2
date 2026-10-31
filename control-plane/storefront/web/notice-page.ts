@@ -3,13 +3,14 @@ import { directionOf, type PublicLocale } from "./locale";
 import { productHref } from "./shop/ui";
 import { createPublicTranslator } from "./translator";
 
-export type NoticeKind = "notFound" | "productNotFound" | "paused" | "error";
+export type NoticeKind = "notFound" | "productNotFound" | "legalNotFound" | "paused" | "error";
 
 // Literal keys on purpose: scripts/storefront-public-build.ts finds the messages
 // the page needs by scanning for them.
 const COPY: Record<NoticeKind, { title: string; body: string; exit: string }> = {
   notFound: { title: "storefront.public.notFoundTitle", body: "storefront.public.notFoundBody", exit: "storefront.public.exitProducts" },
   productNotFound: { title: "storefront.public.productNotFoundTitle", body: "storefront.public.productNotFoundBody", exit: "storefront.public.exitProducts" },
+  legalNotFound: { title: "storefront.public.legalNotFoundTitle", body: "storefront.public.legalNotFoundBody", exit: "storefront.public.exitProducts" },
   paused: { title: "storefront.public.pausedTitle", body: "storefront.public.pausedBody", exit: "storefront.public.exitRecheck" },
   error: { title: "storefront.public.errorTitle", body: "storefront.public.errorBody", exit: "storefront.public.exitReload" },
 };
@@ -19,9 +20,10 @@ const COPY: Record<NoticeKind, { title: string; body: string; exit: string }> = 
  * a failed page reloads itself. A store that does not exist has none: the Worker has no marketing-site address in its
  * configuration, and one is not invented here.
  */
-export function noticeExit(kind: NoticeKind, slug: string | null, productId: string | null, lang: PublicLocale | null): string | null {
+export function noticeExit(kind: NoticeKind, slug: string | null, productId: string | null, lang: PublicLocale | null, legalKind: string | null = null): string | null {
   if (kind === "notFound" || !slug) return null;
   const query = lang ? `?lang=${lang}` : "";
+  if (kind === "error" && legalKind) return `/${encodeURIComponent(slug)}/legal/${encodeURIComponent(legalKind)}${query}`;
   if (kind === "error" && productId) return `${productHref(slug, productId)}${query}`;
   return `/${encodeURIComponent(slug)}${query}`;
 }
