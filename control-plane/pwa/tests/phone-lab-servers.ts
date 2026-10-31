@@ -24,7 +24,7 @@ export function bridge(base: string, handle: (r: Request) => Promise<Response>):
       const headers = new Headers();
       for (const [k, v] of Object.entries(req.headers)) if (!SKIP.has(k) && v !== undefined) headers.set(k, Array.isArray(v) ? v.join(", ") : v);
       const body = req.method === "GET" || req.method === "HEAD" ? undefined : await bodyOf(req);
-      const out = await handle(new Request(`${base}${req.url ?? "/"}`, { method: req.method ?? "GET", headers, ...(body ? { body } : {}) }));
+      const out = await handle(new Request(`${base}${req.url ?? "/"}`, { method: req.method ?? "GET", headers, ...(body ? { body: body as unknown as BodyInit } : {}) }));
       const h: Record<string, string> = {};
       out.headers.forEach((v, k) => { h[k] = v; });
       res.writeHead(out.status, h); res.end(Buffer.from(await out.arrayBuffer()));

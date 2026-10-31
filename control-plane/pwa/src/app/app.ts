@@ -9,7 +9,6 @@ import { readResume, savePairingRecord } from "../pair/resume";
 import { createFetchTransport } from "../pair/transport";
 import { openDb, saveDeviceKeys, type Db } from "../storage/idb";
 import { isOpen } from "../outbox/state";
-import type { EnqueueInput } from "../outbox/outbox";
 import { createVault, purgeOld } from "../storage/sealed";
 import { wipeAll } from "../storage/wipe";
 import { createSync } from "../sync/engine";
@@ -23,6 +22,7 @@ import { freshness, type Projection, type ProjectionSource } from "../today/proj
 import { effectiveScreen, isLazyScreen, renderApp, type ScreenId, type Theme, type View } from "../views/view";
 import { createInboxHost } from "../views/inbox/host";
 import { createCommandStack, type CommandStack } from "./commands";
+import { createCommandFollow } from "./command-follow";
 import { createInboxMount } from "./inbox-mount";
 import { createOrdersHost, ORDERS_VAULT_KEY, type OrdersHostHandle } from "./orders-host";
 import { createSettingsHost, type SettingsHostHandle } from "./settings-host";
@@ -76,6 +76,9 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   const vault = createVault();
   // W3b F6a: every direct poll (inbox, orders) acts on a revoked answer at once (one tested function, direct-poll.ts).
   const directPoll = createDirectPoll({ poll: (k) => relay.poll(k), wipe, onRevoked: showRevoked });
+  // W3b W196: what happened to a tap. ONE emitter (command-follow.ts, own tests) tells the orders host and the inbox screen after a flush and after a status poll that changed a record.
+  const follow = createCommandFollow({ commandSent: () => sync.commandSent() });
+  follow.subscribe(() => ordersHost?.notify());
   // The lazy screens (orders, inbox, devices, install) are drawn into <main> by ONE mounter (screen-mount.ts, own tests): skeleton, render, bind, Retry.
   const screenMount = createScreenMount({ load: loadScreen, ctx: () => ({ view, go: (x) => go(x) }), root: () => root.querySelector<HTMLElement>("#main") });
   // Lock / hidden >= 5 min / unlock / wipe on the vault: one tested module. `wake`: the orders screen redraws from what is left and reloads if it was emptied.
@@ -221,8 +224,8 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     stack = await createCommandStack({ db: await getDb(), relayBase: __RELAY_URL__, fetch: (input, init) => fetch(input, init), now: Date.now });
     return stack;
   }
-  // ONE flush wrapper for both hosts: an accepted command goes to the relay at once; the outbox keeps it when that fails.
-  const flushingOutbox = (s: CommandStack) => ({ list: s.outbox.list, enqueue: async (i: EnqueueInput) => { const r = await s.outbox.enqueue(i); if (r.ok) void s.outbox.flush().catch(() => undefined); return r; } });
+  // ONE flush wrapper for both hosts: an accepted command goes to the relay at once (the outbox keeps it when that fails), then the screens are told and the status poll is armed.
+  const flushingOutbox = (s: CommandStack) => follow.wrap(s.outbox);
   // Mounts the orders screen on a real host (own file, own tests).
   async function attachOrders(): Promise<void> {
     if (ordersHost) return;
@@ -266,7 +269,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
       }),
       openConversations: s.openConversations,
       poll: async () => { await directPoll("conversations"); await s.refresh(); },
-      subscribeAll: () => () => undefined,
+      subscribeAll: follow.subscribe,
     });
     await inboxMount.visit(screen);
   }
@@ -288,8 +291,10 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     fetchKind: (kind) => relay.poll(kind),
     pollCommands: async () => {
       const s = await getStack().catch(() => null); if (!s) return false;
-      await s.outbox.flush(); await s.outbox.refresh();
-      return (await s.outbox.list()).some((r) => isOpen(r.state));
+      return follow.polled(s.outbox, async () => {
+        await s.outbox.flush(); await s.outbox.refresh();
+        return (await s.outbox.list()).some((r) => isOpen(r.state));
+      });
     },
     loadBudget: async () => (await (await getDb()).get<Budget>("settings", "pollBudget")) ?? null,
     saveBudget: async (b) => { await (await getDb()).put("settings", "pollBudget", b); },
