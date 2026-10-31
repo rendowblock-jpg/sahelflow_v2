@@ -28,10 +28,7 @@ export const POST = withErrorHandler(async (_request: NextRequest, { params }: R
   let alreadyRevoked = false;
   try {
     const listed = await runtime.client.listDevices(workspaceId);
-    const row = listed.devices.find(
-      (value): value is Record<string, unknown> =>
-        !!value && typeof value === "object" && (value as Record<string, unknown>).device_id === deviceId,
-    );
+    const row = listed.devices.find((value) => value.device_id === deviceId);
     const epoch = typeof row?.revocation_epoch === "number" ? row.revocation_epoch : null;
     if (!row || epoch === null) {
       alreadyRevoked = true;

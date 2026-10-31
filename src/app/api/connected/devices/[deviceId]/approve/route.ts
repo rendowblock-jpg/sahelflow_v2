@@ -28,10 +28,7 @@ export const POST = withErrorHandler(async (_request: NextRequest, { params }: R
   } catch (error) {
     throw relayFailure(error);
   }
-  const row = listed.devices.find(
-    (value): value is Record<string, unknown> =>
-      !!value && typeof value === "object" && (value as Record<string, unknown>).device_id === deviceId,
-  );
+  const row = listed.devices.find((value) => value.device_id === deviceId);
   if (!row) throw phoneNotFound();
   if (typeof row.revoked_at === "string" && row.revoked_at.length > 0) {
     throw new SahelFlowError("This phone was removed and cannot be approved", "PHONE_REVOKED", 409);
