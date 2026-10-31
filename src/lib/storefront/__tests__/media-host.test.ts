@@ -14,7 +14,7 @@ import {
 } from "../media-host";
 
 // Noise does not compress: it is the worst case for the size caps.
-async function noiseJpeg(width: number, height: number, extra?: (s: sharp.Sharp) => sharp.Sharp) {
+async function noiseJpeg(width: number, height: number, extra?: (s: ReturnType<typeof sharp>) => ReturnType<typeof sharp>) {
   const raw = randomBytes(width * height * 3);
   const base = sharp(raw, { raw: { width, height, channels: 3 } });
   return (extra ? extra(base) : base).jpeg({ quality: 90 }).toBuffer();

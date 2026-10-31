@@ -47,7 +47,7 @@ async function publish(images: string | null, media: { checkError?: unknown; put
   const client = {
     createStorefront: vi.fn(async () => ({ storefrontId: STOREFRONT, status: "active" })),
     listStorefrontReleases: vi.fn(async () => ({ storefrontId: STOREFRONT, releases: [], activeAllocations: [] })),
-    checkStorefrontMedia: vi.fn(async (_id: string, input: { hashes: string[] }) => {
+    checkStorefrontMedia: vi.fn(async (_id: string, _input: { hashes: string[] }) => {
       if (media.checkError) throw media.checkError;
       return { origin: "https://media.example.test", widths: [640, 1280], present: [] as string[] };
     }),

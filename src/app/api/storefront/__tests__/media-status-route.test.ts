@@ -31,7 +31,7 @@ mkdirSync(join(cwd, "public", "uploads", "shop_1"), { recursive: true });
 writeFileSync(join(cwd, "public", "uploads", "shop_1", "a.webp"), "route-photo");
 afterAll(() => rmSync(cwd, { recursive: true, force: true }));
 
-const call = (query: string) => GET(new NextRequest(`http://localhost/api/storefront/media/status${query}`), { params: Promise.resolve({}) } as never);
+const call = (query: string) => GET(new NextRequest(`http://localhost/api/storefront/media/status${query}`));
 
 beforeEach(() => {
   vi.spyOn(process, "cwd").mockReturnValue(cwd);
