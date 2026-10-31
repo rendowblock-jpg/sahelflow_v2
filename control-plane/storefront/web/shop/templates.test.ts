@@ -19,12 +19,12 @@ const scripts = (html: string) => [...html.matchAll(/<script src="([^"]+)"/g)].m
 const preloads = (html: string) => [...html.matchAll(/<link rel="preload" as="font"[^>]*href="([^"]+)"/g)].map((m) => m[1]);
 
 describe("the three newer templates are drawn as themselves", () => {
-  it.each(NEW)("%s: its own voice, its own stylesheet after the shared one, no script on the home", async (template) => {
+  it.each(NEW)("%s: its own voice, its own stylesheet after the shared one, and the home runs only the tiny photo script", async (template) => {
     const store = await publishTestStore({ template });
     const html = page(store);
     expect(html).toContain(`data-voice="${template}"`);
     expect(links(html)).toEqual(["/_sf/shop.test.css", `/_sf/${template}.test.css`]);
-    expect(scripts(html)).toEqual([]);
+    expect(scripts(html)).toEqual(["/_sf/photos.test.js"]); // exactly one script: the photo fallback, no order script, no skin script
     store.database.close();
   });
 

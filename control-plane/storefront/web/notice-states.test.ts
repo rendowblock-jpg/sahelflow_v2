@@ -71,3 +71,51 @@ describe("where each notice sends the buyer", () => {
     }
   });
 });
+
+describe("noticeExit, every row of the table", () => {
+  const SHOP = "atlas-shop";
+  const PRODUCT = "product_00000001";
+  it("has no exit without a shop to point at, in any kind or language", () => {
+    for (const kind of KINDS) for (const lang of [...LOCALES, null]) expect(noticeExit(kind, null, PRODUCT, lang)).toBeNull();
+    expect(noticeExit("paused", "", null, "fr")).toBeNull();
+  });
+  it("never links a store that does not exist, even when a shop name is given", () => {
+    for (const lang of [...LOCALES, null]) expect(noticeExit("notFound", SHOP, PRODUCT, lang)).toBeNull();
+  });
+  it("keeps the asked language on every exit, and adds none when none was asked", () => {
+    for (const lang of LOCALES) {
+      expect(noticeExit("paused", SHOP, null, lang)).toBe(`/${SHOP}?lang=${lang}`);
+      expect(noticeExit("productNotFound", SHOP, PRODUCT, lang)).toBe(`/${SHOP}?lang=${lang}`);
+      expect(noticeExit("error", SHOP, null, lang)).toBe(`/${SHOP}?lang=${lang}`);
+      expect(noticeExit("error", SHOP, PRODUCT, lang)).toBe(`${productHref(SHOP, PRODUCT)}?lang=${lang}`);
+    }
+    expect(noticeExit("paused", SHOP, null, null)).toBe(`/${SHOP}`);
+    expect(noticeExit("productNotFound", SHOP, PRODUCT, null)).toBe(`/${SHOP}`);
+    expect(noticeExit("error", SHOP, null, null)).toBe(`/${SHOP}`);
+    expect(noticeExit("error", SHOP, PRODUCT, null)).toBe(productHref(SHOP, PRODUCT));
+  });
+  it("sends a paused store and a missing product to the shop home, even when a product id is known", () => {
+    expect(noticeExit("paused", SHOP, PRODUCT, "en")).toBe(`/${SHOP}?lang=en`);
+    expect(noticeExit("productNotFound", SHOP, PRODUCT, "en")).toBe(`/${SHOP}?lang=en`);
+  });
+  it("encodes the shop name as one path segment", () => {
+    expect(noticeExit("paused", "a b/c?d", null, null)).toBe("/a%20b%2Fc%3Fd");
+  });
+});
+
+describe("the notice page prints its exit", () => {
+  it("escapes the address and prints no link when there is none", () => {
+    const html = renderNoticePage({ locale: "en", kind: "paused", cssPath: "/c.css", exitHref: '/a?x=1&lang="><i>' });
+    expect(html).toContain('href="/a?x=1&amp;lang=&quot;&gt;&lt;i&gt;"');
+    expect(html).not.toContain("<i>");
+    for (const exitHref of [null, undefined, ""]) expect(renderNoticePage({ locale: "en", kind: "paused", cssPath: "/c.css", exitHref })).not.toContain("<a ");
+  });
+  it("each kind names its exit in its own words (recheck, shop, reload)", () => {
+    for (const locale of LOCALES) {
+      const label = (kind: NoticeKind) => textOf(renderNoticePage({ locale, kind, cssPath: "/c.css", exitHref: "/x" }), "a");
+      expect(label("paused")).not.toBe(label("error"));
+      expect(label("paused")).not.toBe(label("productNotFound"));
+      expect(label("error")).not.toBe(label("productNotFound"));
+    }
+  });
+});
