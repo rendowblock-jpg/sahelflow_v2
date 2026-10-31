@@ -164,3 +164,82 @@ export async function verifyDesktopEncryptionKey(input: VerifyDesktopKeyInput, o
     return { ok: false, reason: "unavailable" };
   }
 }
+
+// ---------------------------------------------------------------------------
+// The proof as it travels through the relay: ONE string "<signature>.<context>".
+// The relay (control-plane/connected/key-proof.ts) checks only this FORMAT and
+// stores it next to the pairing; the phone judges it. The same shape is
+// enforced on both sides so a proof the relay accepts is a proof the phone can
+// parse, and a missing proof is its own typed refusal (an old desktop, or a
+// relay that strips it, must never look like "all good").
+// ---------------------------------------------------------------------------
+
+/** Longest proof string the relay accepts (mirrors MAX_KEY_PROOF_CHARS there). */
+export const MAX_DESKTOP_KEY_PROOF_CHARS = 512;
+// Signature: base64 or base64url (no "."), then "." and the context (letters, digits, "." "_" "-").
+const DESKTOP_KEY_PROOF = /^[A-Za-z0-9+/_-]{16,500}={0,2}\.[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
+
+export type DesktopKeyProofParts = Readonly<{ signature: string; context: string }>;
+
+/** "<signature>.<context>", or null when the pieces would not survive the relay's format check. */
+export function encodeDesktopKeyProof(signature: unknown, context: unknown): string | null {
+  if (typeof signature !== "string" || typeof context !== "string") return null;
+  const proof = `${signature}.${context}`;
+  return parseDesktopKeyProof(proof) ? proof : null;
+}
+
+/** Splits a proof at its first "." (a signature never holds one, a context may). Null when malformed. */
+export function parseDesktopKeyProof(value: unknown): DesktopKeyProofParts | null {
+  if (typeof value !== "string" || value.length > MAX_DESKTOP_KEY_PROOF_CHARS || !DESKTOP_KEY_PROOF.test(value)) {
+    return null;
+  }
+  const dot = value.indexOf(".");
+  return { signature: value.slice(0, dot), context: value.slice(dot + 1) };
+}
+
+export type VerifyDesktopKeyProofReason = VerifyDesktopKeyReason | "proof_missing";
+
+export type VerifyDesktopKeyProofResult =
+  | Extract<VerifyDesktopKeyResult, { ok: true }>
+  | Readonly<{ ok: false; reason: VerifyDesktopKeyProofReason }>;
+
+export type VerifyDesktopKeyProofInput = Readonly<{
+  /** The RSA key exactly as the relay handed it over. */
+  rsaPublicJwk: string;
+  /** The proof string from the exchange response: null/undefined/"" when the desktop sent none or the relay stripped it. */
+  desktopKeyProof: string | null | undefined;
+  /** Raw 32-byte Ed25519 key in base64, as the relay handed it over. */
+  desktopSigningPublicKey: string;
+  /** "A1B2-C3D4-E5F6-7788" from the link fragment. */
+  pinnedFingerprint: string;
+}>;
+
+/**
+ * What the phone calls after the exchange. proof_missing comes first (nothing to judge), then malformed, then the
+ * checks of verifyDesktopEncryptionKey in their fixed order: wrong_context, key_mismatch_with_pin, bad_signature.
+ * Never throws.
+ */
+export async function verifyDesktopKeyProof(
+  input: VerifyDesktopKeyProofInput,
+  options: Options = {},
+): Promise<VerifyDesktopKeyProofResult> {
+  try {
+    if (!input || typeof input !== "object") return { ok: false, reason: "malformed" };
+    const proof = input.desktopKeyProof;
+    if (proof === null || proof === undefined || proof === "") return { ok: false, reason: "proof_missing" };
+    const parts = parseDesktopKeyProof(proof);
+    if (!parts) return { ok: false, reason: "malformed" };
+    return await verifyDesktopEncryptionKey(
+      {
+        rsaPublicJwk: input.rsaPublicJwk,
+        signature: parts.signature,
+        context: parts.context,
+        desktopSigningPublicKey: input.desktopSigningPublicKey,
+        pinnedFingerprint: input.pinnedFingerprint,
+      },
+      options,
+    );
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+}

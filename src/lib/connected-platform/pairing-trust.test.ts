@@ -3,9 +3,12 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   DESKTOP_KEY_CONTEXT,
   canonicalRsaJwkBytes,
+  encodeDesktopKeyProof,
   importDesktopSigningPrivateKey,
+  parseDesktopKeyProof,
   signDesktopEncryptionKey,
   verifyDesktopEncryptionKey,
+  verifyDesktopKeyProof,
   type VerifyDesktopKeyInput,
 } from "./pairing-trust";
 import { base64Decode, base64Encode } from "./web/bytes";
@@ -197,5 +200,66 @@ describe("verifyDesktopEncryptionKey", () => {
     const broken = { importKey: async () => { throw new Error("no ed25519"); } } as unknown as SubtleCrypto;
     expect(await verifyDesktopEncryptionKey(input(), { subtle: broken })).toEqual({ ok: false, reason: "unavailable" });
     expect(await verifyDesktopEncryptionKey(input(), { subtle: null })).toEqual({ ok: false, reason: "unavailable" });
+  });
+});
+
+describe("desktop key proof as one string (what travels through the relay)", () => {
+  const proofInput = (over: Record<string, unknown> = {}) => ({
+    rsaPublicJwk: published.rsaPublicJwk,
+    desktopKeyProof: encodeDesktopKeyProof(published.signature, published.context),
+    desktopSigningPublicKey: desktop.raw,
+    pinnedFingerprint: desktop.fp,
+    ...over,
+  });
+  const verdict = async (over: Record<string, unknown> = {}) => {
+    const result = await verifyDesktopKeyProof(proofInput(over) as Parameters<typeof verifyDesktopKeyProof>[0]);
+    return result.ok ? "ok" : result.reason;
+  };
+
+  it("encodes <signature>.<context> and parses it back at the first dot", () => {
+    const proof = encodeDesktopKeyProof(published.signature, published.context);
+    expect(proof).toBe(`${published.signature}.${published.context}`);
+    expect(parseDesktopKeyProof(proof)).toEqual({ signature: published.signature, context: published.context });
+  });
+
+  it("refuses to encode or parse what the relay would refuse", () => {
+    expect(encodeDesktopKeyProof("short", published.context)).toBeNull();
+    expect(encodeDesktopKeyProof(published.signature, "")).toBeNull();
+    expect(encodeDesktopKeyProof(published.signature, "bad context")).toBeNull();
+    expect(encodeDesktopKeyProof(null, published.context)).toBeNull();
+    expect(parseDesktopKeyProof(undefined)).toBeNull();
+    expect(parseDesktopKeyProof("no-dot-at-all-but-long-enough-xx")).toBeNull();
+    expect(parseDesktopKeyProof(`${published.signature}.${published.context}`.padEnd(513, "x"))).toBeNull();
+  });
+
+  it("accepts the genuine proof", async () => {
+    expect(await verifyDesktopKeyProof(proofInput() as Parameters<typeof verifyDesktopKeyProof>[0])).toMatchObject({
+      ok: true,
+      signingFingerprint: desktop.fp,
+    });
+  });
+
+  it("proof_missing for null, undefined and empty: an old desktop or a stripping relay never looks fine", async () => {
+    expect(await verdict({ desktopKeyProof: null })).toBe("proof_missing");
+    expect(await verdict({ desktopKeyProof: undefined })).toBe("proof_missing");
+    expect(await verdict({ desktopKeyProof: "" })).toBe("proof_missing");
+  });
+
+  it("malformed for a proof string that is not <signature>.<context>", async () => {
+    expect(await verdict({ desktopKeyProof: "garbage" })).toBe("malformed");
+    expect(await verdict({ desktopKeyProof: 42 })).toBe("malformed");
+  });
+
+  it("keeps the order of the underlying checks: context, then pin, then signature", async () => {
+    expect(await verdict({ desktopKeyProof: `${published.signature}.other.context.v1` })).toBe("wrong_context");
+    expect(await verdict({ desktopSigningPublicKey: relay.raw })).toBe("key_mismatch_with_pin");
+    expect(await verdict({ rsaPublicJwk: otherRsa })).toBe("bad_signature");
+  });
+
+  it("never throws on a hostile input", async () => {
+    expect(await verifyDesktopKeyProof(null as unknown as Parameters<typeof verifyDesktopKeyProof>[0])).toEqual({
+      ok: false,
+      reason: "malformed",
+    });
   });
 });
