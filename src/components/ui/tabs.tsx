@@ -77,16 +77,50 @@ const tabsListVariants = cva(
   }
 )
 
+/**
+ * Moves a sideways-scrolling tab list so the ACTIVE tab is inside it. Without this a phone opened on
+ * /orders?status=cancelled showed the first tabs and the filter that was on sat off screen. Only the list
+ * itself moves (never the page), nothing happens when the tab is already fully in view, and the step is
+ * a plain signed distance, so it is the same line in a right-to-left page.
+ */
+function revealActiveTab(list: HTMLElement) {
+  const tab = list.querySelector<HTMLElement>('[role="tab"][data-state="active"]')
+  if (!tab) return
+  const box = list.getBoundingClientRect()
+  const at = tab.getBoundingClientRect()
+  if (at.left >= box.left && at.right <= box.right) return
+  list.scrollBy({ left: at.left + at.width / 2 - (box.left + box.width / 2) })
+}
+
 function TabsList({
   className,
   variant = "default",
   wrap = false,
   scroll = false,
+  ref,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> &
   VariantProps<typeof tabsListVariants>) {
+  const listRef = React.useRef<HTMLDivElement | null>(null)
+  const setRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      listRef.current = node
+      if (typeof ref === "function") ref(node)
+      else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node
+    },
+    [ref]
+  )
+  React.useEffect(() => {
+    const list = listRef.current
+    if (!scroll || !list) return
+    revealActiveTab(list)
+    const watch = new MutationObserver(() => revealActiveTab(list))
+    watch.observe(list, { subtree: true, attributes: true, attributeFilter: ["data-state"] })
+    return () => watch.disconnect()
+  }, [scroll])
   return (
     <TabsPrimitive.List
+      ref={setRef}
       data-slot="tabs-list"
       data-variant={variant}
       data-wrap={wrap ? "true" : undefined}
