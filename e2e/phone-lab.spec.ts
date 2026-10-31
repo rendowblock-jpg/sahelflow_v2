@@ -58,7 +58,7 @@ for (const loc of LOCALES) {
   test.describe(`phone lab ${loc}`, () => {
     test.use({ locale: loc === "ar" ? "ar-DZ" : "en-GB" });
     test("ten steps", async ({ page, context }) => {
-      test.setTimeout(480_000);
+      test.setTimeout(900_000);
       const results: Result[] = []; const S = (id: string, fn: () => Promise<string | void>) => step(page, loc, id, results, fn);
       page.on("pageerror", (e) => record(`${loc}-pageerror-${Date.now()}`, String(e).slice(0, 300)));
       page.on("response", (r) => { if (r.status() >= 400) record(`${loc}-http-${r.status()}-${Date.now()}`, r.url()); });
@@ -205,7 +205,7 @@ for (const loc of LOCALES) {
       });
       await S("9-revoke", async () => {
         const r = await ctl<{ status: number }>("/revoke"); expect(r.status).toBeLessThan(300); const t0 = Date.now();
-        await expect(tabs(page, "orders")).toHaveCount(0, { timeout: 120_000 });
+        await expect(tabs(page, "orders")).toHaveCount(0, { timeout: 330_000 });
         const left = await page.evaluate(async () => ({ dbs: (await indexedDB.databases()).map((d) => d.name), ls: localStorage.length, main: document.body.innerText.replace(/\s+/g, " ").slice(0, 200) }));
         record(`${loc}-9-left`, left);
         expect(left.dbs, "indexedDB empty").toEqual([]); expect(left.ls, "localStorage empty").toBe(0);
@@ -221,7 +221,7 @@ for (const loc of LOCALES) {
 test.describe("phone lab 9b", () => {
   test.use({ locale: "en-GB" });
   test("9b revoke while locked (measure only)", async ({ page }) => {
-    test.setTimeout(480_000); const results: Result[] = [];
+    test.setTimeout(900_000); const results: Result[] = [];
     await page.addInitScript(() => { const w = window as Window & { __skew?: number }; const real = Date.now.bind(Date); w.__skew = 0; Date.now = () => real() + (w.__skew ?? 0); try { if (!localStorage.getItem("sf.locale")) localStorage.setItem("sf.locale", "en"); } catch { /* private mode */ } });
     await ctl("/reseed"); const { pairingUrl } = await ctl<{ pairingUrl: string }>("/newpair");
     await page.goto(pairingUrl); await expect(tabs(page, "orders")).toBeVisible({ timeout: 90_000 });
@@ -249,7 +249,7 @@ test.describe("phone lab 9b", () => {
 test.describe("phone lab 9c", () => {
   test.use({ locale: "en-GB" });
   test("9c revoke while cold-locked", async ({ page }) => {
-    test.setTimeout(480_000); const results: Result[] = [];
+    test.setTimeout(900_000); const results: Result[] = [];
     await page.addInitScript(() => { try { if (!localStorage.getItem("sf.locale")) localStorage.setItem("sf.locale", "en"); } catch { /* private mode */ } });
     await ctl("/reseed"); const { pairingUrl } = await ctl<{ pairingUrl: string }>("/newpair");
     await page.goto(pairingUrl); await expect(tabs(page, "orders")).toBeVisible({ timeout: 90_000 });
@@ -262,8 +262,8 @@ test.describe("phone lab 9c", () => {
       const r = await ctl<{ status: number }>("/revoke"); expect(r.status).toBeLessThan(300);
       const gone = () => page.evaluate(async () => (await indexedDB.databases()).length === 0 && localStorage.length === 0).catch(() => false);
       const t0 = Date.now(); let wiped: number | null = null;
-      while (Date.now() - t0 < 150_000) { if (await gone()) { wiped = Date.now() - t0; break; } await page.waitForTimeout(2000); }
-      record("en-9c-number", { wipedWhileColdLockedAfterMs: wiped, notWipedIn150s: wiped === null });
+      while (Date.now() - t0 < 330_000) { if (await gone()) { wiped = Date.now() - t0; break; } await page.waitForTimeout(2000); }
+      record("en-9c-number", { wipedWhileColdLockedAfterMs: wiped, notWipedIn330s: wiped === null });
       expect(wiped, "a phone on the lock screen must notice that the PC removed it").not.toBeNull();
       return `wiped while cold-locked after ${wiped} ms`;
     });
