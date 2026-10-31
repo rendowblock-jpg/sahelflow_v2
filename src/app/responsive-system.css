@@ -5,25 +5,30 @@
  * intermediate counts (for example a four-KPI surface becoming 3 + 1). Keep
  * cardinality deterministic at each product breakpoint while preserving the
  * existing shared gap/density authority from phase5.css.
+ *
+ * The breakpoints are in rem, not px. A rem in a media query is the browser's own default font size, so at the
+ * default 16 px they are exactly 640 / 1024 / 1280 px, and for a person who raises the default font size they move
+ * with the text like Tailwind's sm: / lg: / xl: do. In px they stayed put: at twice the font size a 1366 px window
+ * still got four columns of cards that were twice as large, and a card label was squeezed to no width.
  */
 
 [data-sahelflow-shell="desktop"] :is(.card-grid-2, .card-grid-3, .card-grid-4) {
   grid-template-columns: minmax(0, 1fr);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 40rem) {
   [data-sahelflow-shell="desktop"] :is(.card-grid-2, .card-grid-3, .card-grid-4) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 64rem) {
   [data-sahelflow-shell="desktop"] .card-grid-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 80rem) {
   [data-sahelflow-shell="desktop"] .card-grid-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }

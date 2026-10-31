@@ -51,7 +51,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex min-w-0 flex-col text-start sm:flex-row sm:justify-between",
+        "flex min-w-0 flex-col text-start sm:flex-row sm:flex-wrap sm:justify-between",
         workspace
           ? "shrink-0 items-start gap-3 border-b border-border/80 px-4 py-3 sm:items-start sm:gap-6"
           : "gap-4 border-b border-border/70 pb-4 sm:items-end",
@@ -60,7 +60,12 @@ export function PageHeader({
       data-slot="page-header"
       data-page-header-variant={variant}
     >
-      <div className="flex min-w-0 items-start gap-3">
+      {/* The title block keeps a floor and takes the free space. Everything in the header is sized in rem and grows with
+          the text. At 200% text a 1366 px window is still wider than sm: (40rem = 1280 px), so the header stayed a row, the
+          action group could neither shrink nor wrap and took the whole row, and the title and its description measured
+          0 px wide. With a floor under the title block the header wraps and the actions drop under the title instead.
+          Below sm: the header is a column and none of this applies. */}
+      <div className="flex min-w-0 items-start gap-3 sm:min-w-[min(100%,12rem)] sm:flex-1 sm:basis-0">
         {Icon ? (
           <IconTile
             icon={Icon}
@@ -98,7 +103,7 @@ export function PageHeader({
 
       {actions ? (
         <div
-          className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end"
+          className="flex max-w-full shrink-0 flex-wrap items-center gap-2 sm:ms-auto sm:justify-end"
           data-slot="page-actions"
         >
           {actions}
