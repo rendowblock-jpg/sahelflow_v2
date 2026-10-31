@@ -34,13 +34,14 @@ describe("the phone lab: a real browser against the real relay and a real SQLite
     hoisted.trusted.mockImplementation(async () => hoisted.actor);
     hoisted.queue.mockImplementation(async (_c: unknown, input: { text: string; conversationId: string }) => {
       await db.message.create({ data: { conversationId: input.conversationId, body: input.text, direction: "outbound", timestamp: new Date() } });
-      const n = hoisted.queue.mock.calls.length; return { messageId: `msg-lab-${n}`, effectKey: `effect-lab-${n}`, replayed: false };
+      const n = ++sendSeq; return { messageId: `msg-lab-${n}`, effectKey: `effect-lab-${n}`, replayed: false };
     });
-    let count = 0; const nextDevice = (): string => `phone_lab_${String(++count + 1).padStart(4, "0")}`;
+    let sendSeq = 0; let count = 0; const nextDevice = (): string => `phone_lab_${String(++count + 1).padStart(4, "0")}`;
     let device = nextDevice(); hoisted.actor = actorFor(device);
     const rig = await buildRig("phone_rt_0001");
     (rig.world.env as { PWA_ORIGINS?: string }).PWA_ORIGINS = PWA;
-    const seeded = await seedWorld(Date.now());
+    rig.world.d1.sqlite.prepare("UPDATE connected_workspace SET device_limit = 8, member_limit = 8").run(); // a lab session pairs several browsers
+    let seeded = await seedWorld(Date.now());
     const signer = await importDesktopSigningPrivateKey(rig.desktop.signingPrivateKeyPkcs8); if (!signer) throw new Error("lab: signer");
     const newPairing = async (id: string): Promise<string> => {
       const signed = await signDesktopEncryptionKey(rig.desktop.encryptionPublicKeyJwk, signer); if (!signed.ok) throw new Error("lab: sign");
@@ -54,9 +55,13 @@ describe("the phone lab: a real browser against the real relay and a real SQLite
     let frozen = false; let dirty = true; let lastPub = 0; let lastSig = ""; let chain: Promise<unknown> = Promise.resolve();
     const serial = <T,>(fn: () => Promise<T>): Promise<T> => { const run = chain.then(fn, fn); chain = run.catch(() => undefined); return run; };
     const publishAll = async (): Promise<void> => {
+      // Each projection on its own: one failure (a device that is mid-pairing is not enrolled yet) never skips the others, and the log names it.
       const base = { client: rig.client, desktopKeys: rig.desktop, actorContext: actorFor(device), deviceId: device };
-      await publishRemoteDashboardProjection(base); await publishRemoteOrdersProjection({ ...base, now: new Date() });
-      if (!frozen) await publishRemoteConversationsProjection({ ...base, now: new Date() });
+      const each = async (name: string, run: () => Promise<unknown>): Promise<void> => { try { await run(); } catch (e) { log(`publish ${name} (${device}): ${e instanceof Error ? e.message : String(e)}`); failed = true; } };
+      let failed = false;
+      await each("dashboard", () => publishRemoteDashboardProjection(base)); await each("orders", () => publishRemoteOrdersProjection({ ...base, now: new Date() }));
+      if (!frozen) await each("conversations", () => publishRemoteConversationsProjection({ ...base, now: new Date() }));
+      if (failed) throw new Error("a projection failed");
     };
     const tick = (): Promise<void> => serial(async () => {
       const out = await rig.runDesktop().catch((e: unknown) => { log(`desktop: ${e instanceof Error ? e.message : String(e)}`); return null; });
@@ -72,10 +77,12 @@ describe("the phone lab: a real browser against the real relay and a real SQLite
       await listen(bridge(RELAY_URL, (r) => import("../../connected/worker").then((m) => m.default.fetch(r, rig.world.env))), 4581),
       await listen(control(async (path, q) => {
         if (path === "/orders") return Promise.all(seeded.map(async (o) => ({ ...o, status: (await order(o.id)).status })));
+        if (path === "/projections") return { device, rows: rig.world.d1.sqlite.prepare("SELECT * FROM connected_projection").all().map((r) => ({ type: (r as Record<string, unknown>).projection_type ?? (r as Record<string, unknown>).type ?? null, device: (r as Record<string, unknown>).device_id ?? null, seq: (r as Record<string, unknown>).sequence ?? null })) };
         if (path === "/order") return order(q.get("id") ?? "");
         if (path === "/sends") return { count: hoisted.queue.mock.calls.length, texts: hoisted.queue.mock.calls.map((c) => (c[1] as { text: string }).text) };
         if (path === "/newpair") { device = nextDevice(); hoisted.actor = actorFor(device); frozen = false; dirty = true; return { device, pairingUrl: await newPairing(device) }; }
         if (path === "/revoke") { const r = await rig.world.call(`/v1/desktop/devices/${device}/revoke`, { method: "POST", token: rig.world.desktopToken, body: { workspaceId: relayShop.workspaceId, revocationEpoch: 1 } }); return { device, status: r.status }; }
+        if (path === "/reseed") return serial(async () => { frozen = false; sendSeq = 0; hoisted.queue.mockClear(); seeded = await seedWorld(Date.now()); dirty = true; await publishAll().then(() => { dirty = false; lastPub = Date.now(); }, () => undefined); return { reseeded: seeded.length, orders: seeded }; });
         if (path === "/freeze") { frozen = true; return { frozen }; }
         if (path === "/republish") { frozen = false; dirty = true; await tick(); return { frozen, dirty }; }
         return { ok: true, device, frozen, orders: seeded.length };
@@ -83,8 +90,8 @@ describe("the phone lab: a real browser against the real relay and a real SQLite
     ];
     try {
       writeFileSync(INFO, JSON.stringify({ pwa: PWA, relay: RELAY_URL, labCtl: CTL, device, pairingUrl: await newPairing(device), orders: seeded }, null, 2));
-      const deadline = Date.now() + 14 * 60_000;
+      const deadline = Date.now() + 40 * 60_000;
       while (!existsSync(STOP) && Date.now() < deadline) { await tick(); await new Promise((r) => setTimeout(r, 1500)); }
     } finally { await closeAll(servers); rmSync(outDir, { recursive: true, force: true }); rmSync(INFO, { force: true }); }
-  }, 15 * 60_000);
+  }, 42 * 60_000);
 });
