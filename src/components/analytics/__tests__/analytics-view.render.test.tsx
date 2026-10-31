@@ -145,3 +145,39 @@ describe("analytics charts have a text alternative with a table toggle", () => {
     expect(container.querySelectorAll("[data-chart-card] button[aria-pressed][aria-controls]")).toHaveLength(9);
   });
 });
+
+describe("money names on the analytics page", () => {
+  const NAMES = {
+    en: { orders: "Orders value", delivered: "Revenue delivered", net: "Net revenue", trend: "Orders value trend" },
+    fr: { orders: "Valeur des commandes", delivered: "Revenu livré", net: "Revenu net", trend: "Évolution de la valeur des commandes" },
+    ar: { orders: "قيمة الطلبات", delivered: "الإيراد المسلَّم", net: "صافي الإيرادات", trend: "تطور قيمة الطلبات" },
+  } as const;
+  const BARE = ["Revenue", "Revenu", "Chiffre d'affaires", "الإيراد", "الإيرادات"];
+  const leaves = (root: ParentNode) =>
+    Array.from(root.querySelectorAll("*")).filter((el) => el.children.length === 0).map((el) => (el.textContent ?? "").trim());
+  for (const locale of ["en", "fr", "ar"] as const) {
+    it(`${locale}: KPI and trend say Orders value, the comparison says Revenue delivered, no bare Revenue`, () => {
+      const { container } = render(<TooltipProvider><AnalyticsView {...props(locale)} /></TooltipProvider>);
+      const n = NAMES[locale];
+      const score = container.querySelector('[data-analytics-section="scorecard"]');
+      expect(leaves(score as ParentNode)).toContain(n.orders);
+      expect(cardOf(container, n.trend)).toBeTruthy();
+      expect(leaves(container)).toContain(n.delivered);
+      expect(leaves(container).filter((text) => BARE.includes(text))).toEqual([]);
+    });
+    it(`${locale}: the SKU column is Net revenue (refunds are taken off)`, () => {
+      const p = props(locale);
+      p.skuProjection = {
+        fieldAccess: { cost: false },
+        rows: [{ sku: "SKU-1", revenue: 90000, cost: null, margin: null, marginPct: null, quantity: 3, qty: 3, units: 3, orders: 2 }],
+      } as unknown as AnalyticsViewProps["skuProjection"];
+      const { container } = render(<TooltipProvider><AnalyticsView {...p} /></TooltipProvider>);
+      expect(leaves(container)).toContain(NAMES[locale].net);
+    });
+  }
+  it("en: the KPI tooltip says what Orders value counts and points to Revenue delivered", () => {
+    const tip = makeT("en")("analytics.revenueDefinition");
+    expect(tip).toContain("Orders value");
+    expect(tip).toContain("Revenue delivered");
+  });
+});
