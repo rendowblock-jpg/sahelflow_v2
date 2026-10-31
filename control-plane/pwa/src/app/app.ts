@@ -271,7 +271,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
       poll: async () => { await directPoll("conversations"); await s.refresh(); },
       subscribeAll: follow.subscribe,
     });
-    await inboxMount.visit(screen);
+    await inboxMount.open(screen);
   }
   // A lazy screen draws nothing real until its host exists: attach once (first visit), then draw it again. Orders and Inbox need the paired stack; Settings does not.
   const attachFor = (): void => {

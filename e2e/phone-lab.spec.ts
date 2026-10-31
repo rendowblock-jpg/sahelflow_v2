@@ -23,6 +23,25 @@ const trace = (p: Page) => p.evaluate(() => {
 });
 const readTrace = (p: Page) => p.evaluate(() => (window as unknown as { __tr: { t: number; s: string }[] }).__tr);
 
+// A clock the test can push: the app counts the minutes it was hidden with Date.now(). Hide FIRST, then skew, then show.
+const hide = (p: Page, hidden: boolean, skewMinutes = 0): Promise<void> => p.evaluate(([h, m]) => {
+  const w = window as Window & { __skew?: number }; w.__skew = (w.__skew ?? 0) + (m as number) * 60_000;
+  Object.defineProperty(document, "hidden", { configurable: true, get: () => h });
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => (h ? "hidden" : "visible") });
+  document.dispatchEvent(new Event("visibilitychange"));
+}, [hidden, skewMinutes] as const);
+/** Settings -> set an 8-digit code (type it, wait for the confirm step, type it again) -> back on Settings with the lock on. */
+async function setPin(p: Page, loc: string): Promise<string> {
+  await p.locator('[data-act="s-lock-set"],[data-act="lock-set"]').first().click();
+  const pin = p.locator("#pin"); await expect(pin).toBeVisible();
+  await pin.fill(PIN); await pin.press("Enter");
+  await expect(p.locator("#main h1").first()).toHaveText(phrase(loc, "Type the code again"), { timeout: 15_000 });
+  await p.locator("#pin").fill(PIN); await p.locator("#pin").press("Enter");
+  await expect(p.locator('[data-screen="settings"]')).toBeVisible({ timeout: 30_000 });
+  return (await p.locator("#main").innerText()).replace(/\s+/g, " ").slice(0, 120);
+}
+async function lockNow(p: Page): Promise<void> { await hide(p, true); await hide(p, false, 6); await expect(p.locator("#pin")).toBeVisible({ timeout: 15_000 }); }
+
 for (const loc of LOCALES) {
   test.describe(`phone lab ${loc}`, () => {
     test.use({ locale: loc === "ar" ? "ar-DZ" : "en-GB" });
@@ -36,6 +55,9 @@ for (const loc of LOCALES) {
         const w = window as Window & { __skew?: number }; const real = Date.now.bind(Date); w.__skew = 0; Date.now = () => real() + (w.__skew ?? 0);
         try { if (!localStorage.getItem("sf.locale")) localStorage.setItem("sf.locale", l); } catch { /* private mode */ }
       }, loc);
+      const projLog: string[] = []; const t00 = Date.now();
+      page.on("response", (r) => { const u = r.url(); if (u.includes("/v1/projections")) projLog.push(`${Math.round((Date.now() - t00) / 1000)}s ${/type=(\w+)/.exec(u)?.[1] ?? "?"} ${r.status()}`); });
+      await ctl("/reseed");
       const orders = await ctl<Order[]>("/orders"); const byName = (n: string) => orders.find((o) => o.name.includes(n)) as Order;
       const arabic = byName("فاطمة"); const latin = byName("Maximilian");
 
@@ -117,7 +139,15 @@ for (const loc of LOCALES) {
       });
       await S("6-inbox-reply", async () => {
         await tabs(page, "inbox").click(); await expect(page.locator('[data-screen="inbox"]')).toBeVisible();
-        const rows = page.locator('[data-act="open-chat"]'); await expect(rows.first()).toBeVisible();
+        const rows = page.locator('[data-act="open-chat"]'); const t0 = Date.now(); let stuck = "";
+        if (!(await rows.first().waitFor({ timeout: 45_000 }).then(() => true, () => false))) {
+          stuck = `Chats stayed on "${(await page.locator("#main").innerText()).replace(/\s+/g, " ").slice(0, 60)}" for 45 s; projections: ${projLog.filter((x) => x.includes("conversations")).join(", ") || "no conversations request at all"}`;
+          record(`${loc}-6-stuck`, { stuck, projLog: projLog.slice(-20) });
+          await tabs(page, "today").click(); await tabs(page, "inbox").click();
+          stuck += (await rows.first().waitFor({ timeout: 15_000 }).then(() => true, () => false)) ? " | after leaving and coming back the rows are there" : " | still no rows after leaving and coming back";
+          await expect(rows.first()).toBeVisible({ timeout: 5_000 });
+        }
+        const loadedMs = Date.now() - t0;
         const first = (await rows.first().innerText()).replace(/\s+/g, " "); expect(first).toContain("Held Hana");
         await rows.first().click(); const held = (await page.locator("#main").innerText()).replace(/\s+/g, " ");
         expect(held).toContain(phrase(loc, "Held on your PC"));
@@ -135,7 +165,7 @@ for (const loc of LOCALES) {
         await page.waitForTimeout(6000); const sends = (await ctl<{ count: number }>("/sends")).count;
         await ctl("/republish");
         expect(sends, "no second send").toBe(1);
-        return `first row=${first.slice(0, 80)} | held buttons=${JSON.stringify(buttons)} | second send enabled=${enabled} sends=${sends}`;
+        return `rows after ${loadedMs} ms${stuck ? ` (${stuck})` : ""} | first row=${first.slice(0, 80)} | held buttons=${JSON.stringify(buttons)} | second send enabled=${enabled} sends=${sends}`;
       });
       await S("7-settings", async () => {
         await tabs(page, "settings").click(); await expect(page.locator('[data-screen="settings"]')).toBeVisible();
@@ -150,29 +180,53 @@ for (const loc of LOCALES) {
         await expect(dlg).toBeHidden(); return `pin line=${pin.slice(0, 120)}`;
       });
       await S("8-lock", async () => {
-        await page.locator('[data-act="s-lock-set"],[data-act="lock-set"]').first().click();
-        await page.locator("#pin").fill(PIN); await page.locator("#pin").press("Enter"); await page.locator("#pin").fill(PIN); await page.locator("#pin").press("Enter");
-        await expect(page.locator("#pin")).toHaveCount(0);
-        await page.evaluate(() => { const w = window as Window & { __skew?: number }; w.__skew = (w.__skew ?? 0) + 6 * 60_000;
-          Object.defineProperty(document, "hidden", { configurable: true, get: () => true }); Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" }); document.dispatchEvent(new Event("visibilitychange"));
-          Object.defineProperty(document, "hidden", { configurable: true, get: () => false }); Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" }); document.dispatchEvent(new Event("visibilitychange")); });
-        await expect(page.locator("#pin")).toBeVisible(); await page.screenshot({ path: `/opt/agent-sandbox/workspace/audit/waves/shots/pwa-lab/${loc}-8a-locked.png` });
+        const after = await setPin(page, loc);
+        await lockNow(page); await page.screenshot({ path: `/opt/agent-sandbox/workspace/audit/waves/shots/pwa-lab/${loc}-8a-locked.png` });
         const dom = await page.evaluate(() => document.documentElement.outerHTML);
-        for (const n of ["فاطمة", "Maximilian", "Karim", "Yasmine", "Unread Ulla", "Held Hana"]) expect(dom, `locked DOM has ${n}`).not.toContain(n);
-        await page.locator("#pin").fill(PIN); await page.locator("#pin").press("Enter"); await expect(page.locator("#pin")).toHaveCount(0);
+        for (const n of ["فاطمة", "Maximilian", "Karim", "Yasmine", "Unread Ulla", "Held Hana", "Plain Pat", "ORD-000"]) expect(dom, `locked DOM has ${n}`).not.toContain(n);
+        await page.locator("#pin").fill(PIN); await page.locator("#pin").press("Enter"); await expect(page.locator("#pin")).toHaveCount(0, { timeout: 30_000 });
         await tabs(page, "orders").click(); await expect(page.locator('[data-act="open-order"]').first()).toBeVisible({ timeout: 30_000 });
-        return "locked DOM clean; data back after unlock";
+        const back = await page.locator('[data-act="open-order"]').count();
+        await tabs(page, "settings").click(); await expect(page.locator('[data-screen="settings"]')).toBeVisible();
+        return `lock set (${after.slice(0, 50)}); locked DOM clean; ${back} orders back after unlock; left unlocked on Settings`;
       });
       await S("9-revoke", async () => {
-        const r = await ctl<{ status: number }>("/revoke"); expect(r.status).toBeLessThan(300);
+        const r = await ctl<{ status: number }>("/revoke"); expect(r.status).toBeLessThan(300); const t0 = Date.now();
         await expect(tabs(page, "orders")).toHaveCount(0, { timeout: 120_000 });
         const left = await page.evaluate(async () => ({ dbs: (await indexedDB.databases()).map((d) => d.name), ls: localStorage.length, main: document.body.innerText.replace(/\s+/g, " ").slice(0, 200) }));
         record(`${loc}-9-left`, left);
         expect(left.dbs, "indexedDB empty").toEqual([]); expect(left.ls, "localStorage empty").toBe(0);
-        return JSON.stringify(left);
+        return `wiped after ${Date.now() - t0} ms; ${JSON.stringify(left)}`;
       });
       record(`${loc}-summary`, results);
       expect(results.filter((r) => r.status === "fail").map((r) => r.id)).toEqual([]);
     });
   });
 }
+
+// 9b: MEASURE ONLY. A phone that is on the lock screen when the PC removes it: does it find out? (sync/schedule.ts has no interval for "lock".)
+test.describe("phone lab 9b", () => {
+  test.use({ locale: "en-GB" });
+  test("9b revoke while locked (measure only)", async ({ page }) => {
+    test.setTimeout(480_000); const results: Result[] = [];
+    await page.addInitScript(() => { const w = window as Window & { __skew?: number }; const real = Date.now.bind(Date); w.__skew = 0; Date.now = () => real() + (w.__skew ?? 0); try { if (!localStorage.getItem("sf.locale")) localStorage.setItem("sf.locale", "en"); } catch { /* private mode */ } });
+    await ctl("/reseed"); const { pairingUrl } = await ctl<{ pairingUrl: string }>("/newpair");
+    await page.goto(pairingUrl); await expect(tabs(page, "orders")).toBeVisible({ timeout: 90_000 });
+    await tabs(page, "settings").click(); await expect(page.locator('[data-screen="settings"]')).toBeVisible();
+    await step(page, "en", "9b-revoke-locked", results, async () => {
+      await setPin(page, "en"); await lockNow(page);
+      const r = await ctl<{ status: number }>("/revoke"); expect(r.status).toBeLessThan(300);
+      const gone = () => page.evaluate(async () => (await indexedDB.databases()).length === 0 && localStorage.length === 0).catch(() => false);
+      const t0 = Date.now(); let wiped: number | null = null;
+      while (Date.now() - t0 < 100_000) { if (await gone()) { wiped = Date.now() - t0; break; } await page.waitForTimeout(2000); }
+      const main = (await page.locator("body").innerText().catch(() => "")).replace(/\s+/g, " ").slice(0, 120);
+      let afterUnlock: number | null = null;
+      if (wiped === null) {
+        await page.locator("#pin").fill(PIN).catch(() => undefined); await page.locator("#pin").press("Enter").catch(() => undefined); const t1 = Date.now();
+        while (Date.now() - t1 < 60_000) { if (await gone()) { afterUnlock = Date.now() - t1; break; } await page.waitForTimeout(2000); }
+      }
+      record("en-9b-number", { wipedWhileLockedAfterMs: wiped, notWipedIn100s: wiped === null, wipedAfterUnlockMs: afterUnlock });
+      return wiped === null ? `NOT wiped in 100 s while locked (screen: ${main}); after the PIN: ${afterUnlock === null ? "not wiped in 60 s either" : `wiped ${afterUnlock} ms later`}` : `wiped while locked after ${wiped} ms`;
+    });
+  });
+});
