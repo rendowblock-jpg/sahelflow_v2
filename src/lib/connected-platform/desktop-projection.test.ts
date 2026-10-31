@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   read: vi.fn(),
+  keys: [] as string[],
   stats: vi.fn(),
   recent: vi.fn(),
   analytics: vi.fn(),
@@ -24,7 +25,10 @@ vi.mock("@/lib/db", async (importOriginal) => {
       $transaction: async (run: (tx: unknown) => Promise<unknown>) =>
         run({
           setting: {
-            findUnique: async () => null,
+            findUnique: async ({ where }: { where: { key: string } }) => {
+              h.keys.push(where.key);
+              return null;
+            },
             upsert: async () => ({}),
           },
         }),
@@ -38,7 +42,7 @@ vi.mock("@/lib/identity/trusted-actor", async (importOriginal) => {
 
 import type { Phase2Action } from "@/lib/identity/permissions";
 import type { TrustedActorContext } from "@/lib/identity/trusted-actor";
-import { publishRemoteDashboardProjection } from "./desktop-projection";
+import { projectionSequenceKey, publishRemoteDashboardProjection } from "./desktop-projection";
 import { openConnectedEnvelope } from "./envelope";
 import type { ConnectedEnvelope } from "./protocol";
 import { generateConnectedKeyPair } from "./payload-crypto";
@@ -255,5 +259,16 @@ describe("desktop dashboard projection carries the exact today numbers", () => {
     expect(added).toBeLessThan(200);
     // a full projection (8 orders, 30 days) is a few KB: under one sixteenth of the cap
     expect(withCounts.envelope.ciphertext.length).toBeLessThan(RELAY_CIPHERTEXT_CAP / 16);
+  });
+});
+
+describe("projection sequence keys", () => {
+  it("keeps the dashboard key byte-identical and gives each kind its own", async () => {
+    h.keys.length = 0;
+    await publish(actor("owner"), ALL);
+    expect(h.keys).toEqual([`connected.projection.dashboard.${DEVICE_ID}.sequence`]);
+    expect(projectionSequenceKey("dashboard", DEVICE_ID)).toBe(`connected.projection.dashboard.${DEVICE_ID}.sequence`);
+    expect(projectionSequenceKey("orders", DEVICE_ID)).toBe(`connected.projection.orders.${DEVICE_ID}.sequence`);
+    expect(projectionSequenceKey("conversations", DEVICE_ID)).toBe(`connected.projection.conversations.${DEVICE_ID}.sequence`);
   });
 });
