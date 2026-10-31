@@ -259,6 +259,8 @@ const BANNED: Record<string, RegExp[]> = {
     /no sahelflow server holds your customers/i,
     /your team keeps confirming/i,
     /see my orders\?\s*no\./i,
+    // The site offers no phone app and no remote team seats: the team works from the PC (the "You only work from a phone" answer).
+    /phones or other pcs|from a phone or browser|from phones or other/i,
   ],
   fr: [
     /\bsign(?:é|ée|és|ées)(?![a-zà-ÿ])/i,
@@ -289,6 +291,7 @@ const BANNED: Record<string, RegExp[]> = {
     /aucun serveur sahelflow ne détient vos clients/i,
     /votre équipe continue de confirmer/i,
     /voir mes commandes \?\s*non\./i,
+    /sur téléphone ou sur un autre pc|depuis un téléphone ou un navigateur|depuis un téléphone ou un autre pc/i,
   ],
   ar: [
     // JS \b only sees ASCII letters, so no \b next to an Arabic or accented letter below.
@@ -321,6 +324,7 @@ const BANNED: Record<string, RegExp[]> = {
     /لا يحتفظ أي خادم لـ SahelFlow بزبائنك/,
     /يواصل فريقك التأكيد/,
     /هل يرى SahelFlow طلبياتي؟\s*لا\./,
+    /على الهواتف أو حواسيب أخرى|من هاتف أو متصفح|من هاتف أو حاسوب آخر/,
   ],
 };
 
@@ -686,16 +690,16 @@ const TRUTHFUL: Array<{ rule: string; page: string } & Words> = [
     ar: "الولايات الـ 11 الجديدة تأخذ حالياً سعر ولايتها القديمة" },
   { rule: "wilayas: the 69 is the address list", page: "product",
     en: "addresses for 69 wilayas", fr: "adresses des 69 wilayas", ar: "عناوين 69 ولاية" },
-  { rule: "offline: the team needs internet", page: "why",
-    en: "Team members on phones or other PCs, WhatsApp and couriers need the internet.",
-    fr: "Les membres sur téléphone ou sur un autre PC, WhatsApp et les livreurs ont besoin d'internet.",
-    ar: "أعضاء الفريق على الهواتف أو حواسيب أخرى، وواتساب وشركات التوصيل، تحتاج كلها إلى الإنترنت." },
+  { rule: "offline: the PC works offline, what needs the internet", page: "why",
+    en: "The PC keeps working offline. WhatsApp, couriers and activation need the internet.",
+    fr: "Le PC continue de fonctionner hors ligne. WhatsApp, les livreurs et l'activation ont besoin d'internet.",
+    ar: "الحاسوب يواصل العمل دون إنترنت. واتساب وشركات التوصيل والتفعيل تحتاج إلى الإنترنت." },
   { rule: "offline: the table cell is about the PC", page: "why",
     en: "Yes, on your PC", fr: "Oui, sur votre PC", ar: "نعم، على حاسوبك" },
-  { rule: "offline: the FAQ lists team members", page: "help",
-    en: "team members connecting from phones or other PCs",
-    fr: "membres de l'équipe qui se connectent depuis un téléphone ou un autre PC",
-    ar: "أعضاء الفريق الذين يتصلون من هاتف أو حاسوب آخر" },
+  { rule: "offline: the FAQ lists what uses the internet", page: "help",
+    en: "The internet is used for WhatsApp, couriers, the storefront and activation.",
+    fr: "Internet sert à WhatsApp, aux livreurs, à la boutique et à l'activation.",
+    ar: "الإنترنت يُستعمل لواتساب، شركات التوصيل، المتجر الإلكتروني والتفعيل." },
   { rule: "encryption: the database claim is about fields", page: "product",
     en: "Your database lives on your PC; customer names, phones, addresses and keys are encrypted.",
     fr: "Votre base vit sur votre PC ; noms, téléphones, adresses et clés des clients sont chiffrés.",
@@ -705,7 +709,7 @@ const TRUTHFUL: Array<{ rule: string; page: string } & Words> = [
     fr: "Les noms, téléphones, adresses, conversations et clés des clients y sont chiffrés.",
     ar: "أسماء الزبائن وهواتفهم وعناوينهم ومحادثاتهم والمفاتيح مشفّرة فيه." },
   { rule: "relay: SahelFlow says what passes through Cloudflare", page: "security",
-    en: "pass through our Cloudflare servers encrypted",
+    en: "pass through our Cloudflare servers, encrypted",
     fr: "transitent chiffrées par nos serveurs Cloudflare",
     ar: "فتمرّ مشفّرة عبر خوادم Cloudflare لدينا" },
   { rule: "fees: per-order fee is tied to this licence", page: "why",

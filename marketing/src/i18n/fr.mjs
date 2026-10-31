@@ -423,7 +423,7 @@ export default {
       ["Payez une fois, gardez-le", "Un seul paiement pour une licence permanente avec cinq ans de mises à jour. Pas de facture mensuelle, pas de pression au renouvellement."],
       ["Aucun plafond de commandes", "50 commandes par mois ou 5 000 — le prix est le même. Aucun frais par commande avec cette licence."],
       ["Vos données, votre PC", "Votre base de données est un fichier sur votre propre ordinateur. Nous n'en gardons aucune copie."],
-      ["Votre PC fonctionne hors ligne", "Le PC continue de fonctionner hors ligne. Les membres sur téléphone ou sur un autre PC, WhatsApp et les livreurs ont besoin d'internet."],
+      ["Votre PC fonctionne hors ligne", "Le PC continue de fonctionner hors ligne. WhatsApp, les livreurs et l'activation ont besoin d'internet."],
     ],
     tableTitle: "SahelFlow face à un abonnement mensuel en ligne",
     tableLead: "Deux façons de tenir les commandes d'une boutique, côte à côte : une base de données sur votre propre PC, payée une fois, ou un abonnement mensuel en ligne. Aucun concurrent n'est nommé ni mesuré ici.",
@@ -585,7 +585,7 @@ export default {
       ["Votre boutique", "uniquement ce que vous publiez"],
     ],
     faq: [
-      ["SahelFlow peut-il voir mes commandes ?", "Votre base reste sur votre PC ; nous n'en avons ni copie ni accès. Les commandes de votre boutique en ligne, et ce que votre équipe voit ou envoie depuis un téléphone ou un navigateur, transitent chiffrées par nos serveurs Cloudflare."],
+      ["SahelFlow peut-il voir mes commandes ?", "Votre base reste sur votre PC ; nous n'en avons ni copie ni accès. Les commandes de votre boutique en ligne transitent chiffrées par nos serveurs Cloudflare."],
       ["Et si mon PC tombe en panne ?", "Écrivez-nous et nous transférons votre licence. Faites d'abord une sauvegarde chiffrée et gardez-en une copie ; la restauration sur un nouveau PC est encore en test."],
       ["Qui peut changer les prix ou annuler des commandes ?", "Seules les personnes dont le rôle le permet — et chaque changement enregistre son auteur."],
     ],
@@ -617,7 +617,7 @@ export default {
       start: ["Bien démarrer", "Installation, essai et premiers pas", [
         ["Quelle version de Windows faut-il ?", "Windows 10 ou Windows 11, 64 bits. 8 Go de mémoire sont recommandés."],
         ["Comment marche l'essai gratuit ?", "Téléchargez l'app et activez l'essai : tous les modules pendant 7 jours. Ensuite, achetez une licence et gardez toutes vos données."],
-        ["Faut-il Internet en permanence ?", "Non. SahelFlow tourne sur votre PC. Internet sert à WhatsApp, aux livreurs, à la boutique, à l'activation et aux membres de l'équipe qui se connectent depuis un téléphone ou un autre PC."],
+        ["Faut-il Internet en permanence ?", "Non. SahelFlow tourne sur votre PC. Internet sert à WhatsApp, aux livreurs, à la boutique et à l'activation."],
         ["Comment démarrer vite ?", "Reliez WhatsApp, ajoutez votre livreur et vos produits — ou importez-les depuis Excel."],
       ]],
       whatsapp: ["WhatsApp et boîte", "Liaison, envoi et IA", [

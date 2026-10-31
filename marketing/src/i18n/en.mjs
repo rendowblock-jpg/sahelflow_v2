@@ -423,7 +423,7 @@ export default {
       ["Pay once, keep it", "One payment for a permanent licence with five years of updates. No monthly bill, no renewal pressure."],
       ["No order caps", "Ship 50 orders a month or 5,000 — the price is the same. No per-order fee with this licence."],
       ["Your data, your PC", "Your database is a file on your own computer. We keep no copy of it."],
-      ["Your PC works offline", "The PC keeps working offline. Team members on phones or other PCs, WhatsApp and couriers need the internet."],
+      ["Your PC works offline", "The PC keeps working offline. WhatsApp, couriers and activation need the internet."],
     ],
     tableTitle: "SahelFlow against a monthly online subscription",
     tableLead: "Two ways to run a shop's orders, side by side: a database on your own PC that you pay for once, or a monthly online subscription. No competitor is named or measured here.",
@@ -585,7 +585,7 @@ export default {
       ["Your storefront", "only what you publish"],
     ],
     faq: [
-      ["Can SahelFlow see my orders?", "Your database stays on your PC; we have no copy and no access to it. Orders from your online store, and what your team sees or sends from a phone or browser, pass through our Cloudflare servers encrypted."],
+      ["Can SahelFlow see my orders?", "Your database stays on your PC; we have no copy and no access to it. Orders from your online store pass through our Cloudflare servers, encrypted."],
       ["What if my PC breaks?", "Write to us and we move your licence. Make an encrypted backup first and keep a copy; restoring it on a new PC is still being tested."],
       ["Who can change prices or cancel orders?", "Only the people whose role allows it — and every change records who made it."],
     ],
@@ -617,7 +617,7 @@ export default {
       start: ["Getting started", "Install, trial and first steps", [
         ["Which Windows version do I need?", "Windows 10 or Windows 11, 64-bit. 8 GB of memory is recommended."],
         ["How does the free trial work?", "Download the app and activate the trial: every module for 7 days. Then buy a licence and keep all your data."],
-        ["Do I need the internet all the time?", "No. SahelFlow runs on your PC. The internet is used for WhatsApp, couriers, the storefront, activation, and team members connecting from phones or other PCs."],
+        ["Do I need the internet all the time?", "No. SahelFlow runs on your PC. The internet is used for WhatsApp, couriers, the storefront and activation."],
         ["How do I start quickly?", "Link WhatsApp, add your courier and your products — or import them from Excel."],
       ]],
       whatsapp: ["WhatsApp & inbox", "Linking, sending and AI", [
