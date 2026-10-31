@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS connected_pairing (
   token_hash TEXT UNIQUE NOT NULL,
   expires_at TEXT NOT NULL,
   consumed_at TEXT,
+  desktop_key_proof TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(workspace_id) REFERENCES connected_workspace(workspace_id) ON DELETE CASCADE
 );

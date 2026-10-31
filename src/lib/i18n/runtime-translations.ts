@@ -32,6 +32,7 @@ import { getOrderFormRuntimeTranslation } from "@/lib/i18n/order-form-runtime";
 import { getOrderLifecycleRuntimeTranslation } from "@/lib/i18n/order-lifecycle-runtime";
 import { getOrdersWorkspaceTranslation } from "@/lib/i18n/orders-workspace";
 import { getPhase5RuntimeTranslation } from "@/lib/i18n/phase5-runtime";
+import { getPhonePairingRuntimeTranslation } from "@/lib/i18n/phone-pairing-runtime";
 import { getPluralsRuntimeTranslation } from "@/lib/i18n/plurals-runtime";
 import { getSecurityRuntimeTranslation } from "@/lib/i18n/security-runtime";
 import { getStorefrontRuntimeTranslation } from "@/lib/i18n/storefront-runtime";
@@ -190,6 +191,7 @@ export function getRuntimeTranslation(
     getOrdersWorkspaceTranslation(locale, key) ??
     getFirstRunStatesRuntimeTranslation(locale, key) ??
     getPhase5RuntimeTranslation(locale, key) ??
+    getPhonePairingRuntimeTranslation(locale, key) ??
     getSecurityRuntimeTranslation(locale, key) ??
     getStorefrontRuntimeTranslation(locale, key) ??
     getWhatsAppRecoveryTranslation(locale, key) ??
