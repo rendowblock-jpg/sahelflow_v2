@@ -47,7 +47,7 @@ describe("transition table", () => {
 });
 
 describe("result codes", () => {
-  it.each([["ORDER_ALREADY_CONFIRMED", "done"], ["ORDER_ALREADY_CANCELLED", "done"], ["ORDER_CHANGED", "review"], ["ALREADY_ANSWERED", "send_anyway"], ["REMOTE_POLICY_STALE", "resync"], ["EXPIRED", "expired"], ["SOMETHING_ELSE", "failed"]])("%s -> %s", (code, ui) => { expect(mapResultCode(code)).toBe(ui); });
+  it.each([["ORDER_ALREADY_CONFIRMED", "done"], ["ORDER_ALREADY_CANCELLED", "done"], ["ORDER_CHANGED", "review"], ["ALREADY_ANSWERED", "answered"], ["REMOTE_POLICY_STALE", "resync"], ["EXPIRED", "expired"], ["SOMETHING_ELSE", "failed"]])("%s -> %s", (code, ui) => { expect(mapResultCode(code)).toBe(ui); });
 });
 
 function memDb(): Db {

@@ -30,6 +30,7 @@ export const shellEn: Catalog = {
   "cmd.composer.reply": "Your reply",
   "cmd.composer.note": "Your note",
   "cmd.already": "Already handled on your PC.",
-  "cmd.answered": "Someone already answered this chat on your PC.",
+  "cmd.answered": "Already answered (from your PC or an earlier send)",
+  "cmd.guarded": "Handed to WhatsApp on your PC, checked first.",
   "cmd.resync": "Your PC needs to refresh first. Try again in a moment.",
 };

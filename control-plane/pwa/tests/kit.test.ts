@@ -37,7 +37,7 @@ describe("command chip", () => {
     expect(renderChip({ record: { ...base, state: "queued", lastError: "waiting_pc" }, locale: "en", now: 0, authorityExpiresAt: Date.UTC(2026, 9, 31, 7, 42), timeZone: "UTC" })).toContain(t("en", "cmd.waitpc", { time: "07:42" }));
     expect(renderChip({ record: { ...base, state: "failed", resultCode: "ORDER_CHANGED" }, locale: "en", now: 0 })).toContain(t("en", "cmd.review"));
     const reply = renderChip({ record: { ...base, kind: "command.messages.reply", state: "failed", resultCode: "ALREADY_ANSWERED" }, locale: "en", now: 0 });
-    expect(reply).toContain(t("en", "cmd.sendAnyway")); expect(reply).toContain('data-act="send-anyway"');
+    expect(reply).toContain(t("en", "cmd.answered")); expect(reply).not.toContain("<button"); // a retry could answer twice: no "send anyway"
   });
 });
 describe("confirm sheet, composer, blocks", () => {

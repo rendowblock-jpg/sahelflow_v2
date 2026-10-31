@@ -3,7 +3,7 @@ import { executeInternalComment } from "@/lib/collaboration/comments";
 import { assertCommandPermission, authorizeRemoteCommand } from "./common";
 import type { CommandHandler } from "./types";
 
-const commentPayload = z.object({
+export const commentPayload = z.object({
   entityType: z.enum(["conversation", "order", "confirmation"]),
   entityId: z.string().trim().min(1).max(256),
   body: z.string().trim().min(1).max(4000),

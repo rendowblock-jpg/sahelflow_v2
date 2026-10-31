@@ -30,6 +30,7 @@ export const shellFr: Catalog = {
   "cmd.composer.reply": "Votre réponse",
   "cmd.composer.note": "Votre note",
   "cmd.already": "Déjà traité sur votre PC.",
-  "cmd.answered": "Quelqu'un a déjà répondu à cette conversation sur votre PC.",
+  "cmd.answered": "Déjà répondu (depuis votre PC ou un envoi précédent)",
+  "cmd.guarded": "Confié à WhatsApp sur votre PC, après vérification.",
   "cmd.resync": "Votre PC doit d'abord se mettre à jour. Réessayez dans un instant.",
 };

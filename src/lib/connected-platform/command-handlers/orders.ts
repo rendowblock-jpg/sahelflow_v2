@@ -4,12 +4,12 @@ import { REJECT_REASON_KEYS } from "../contracts";
 import { authorizeRemoteCommand } from "./common";
 import type { CommandHandler, CommandHandlerInput } from "./types";
 
-const confirmPayload = z.object({
+export const confirmPayload = z.object({
   orderId: z.string().trim().min(1).max(128),
   expectedVersion: z.number().int().positive().safe(),
 }).strict();
 
-const rejectPayload = confirmPayload.extend({
+export const rejectPayload = confirmPayload.extend({
   reasonKey: z.enum(REJECT_REASON_KEYS),
 }).strict();
 
