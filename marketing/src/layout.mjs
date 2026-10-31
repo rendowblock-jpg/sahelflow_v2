@@ -6,7 +6,7 @@ import { COPY } from "./i18n/index.mjs";
 import { BRAND_NAMES, MODULES, PACKAGE, SOLUTIONS } from "./model.mjs";
 
 /** The one inline script: no-js flag + the saved theme before first paint (its CSP hash is in static/_headers). */
-export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classList.replace("no-js","js");try{var t=localStorage.getItem("sf-theme");if(t==="dark"||t==="light")d.dataset.theme=t}catch(e){}})()`;
+export const HEAD_SCRIPT = `(function(){var d=document.documentElement;d.classList.replace("no-js","js");try{var t=localStorage.getItem("sf-theme");if(t==="dark"||t==="light")d.dataset.theme=t}catch(e){}try{if(window.IntersectionObserver&&!matchMedia("(prefers-reduced-motion: reduce)").matches)d.classList.add("js-motion")}catch(e){}})()`;
 import { esc, href, phoneDisplay, whatsappHref } from "./ui.mjs";
 
 const FONT_PRELOAD = { ar: ["plex-ar-400", "naskh-ar"], fr: ["plex-lat-400"], en: ["plex-lat-400"] };
