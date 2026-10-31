@@ -13,7 +13,7 @@ export const SHOP_ID = "shop_0001";
 export const INSTALLATION_ID = "0123456789abcdef0123456789abcdef";
 export const RELAY = "https://relay.test";
 export const PWA_ORIGIN = "https://app.sahelflow.example";
-const RSA_JWK = JSON.stringify({ kty: "RSA", n: "x".repeat(64), e: "AQAB" });
+export const RSA_JWK = JSON.stringify({ kty: "RSA", n: "x".repeat(64), e: "AQAB" });
 
 type SigningKey = { privateKey: CryptoKey; publicKeyBase64: string };
 
@@ -42,6 +42,8 @@ export type WorldOptions = {
   memberLimit?: number;
   yieldBetween?: boolean;
   pwaOrigins?: string | undefined;
+  /** Real desktop keys for the workspace row (default: a random signing key and a fake RSA key). */
+  desktop?: { signingPublicKeyBase64: string; encryptionPublicKeyJwk: string };
 };
 
 let counter = 0;
@@ -67,8 +69,8 @@ export async function createWorld(options: WorldOptions = {}) {
     options.deviceLimit ?? 3,
     JSON.stringify(["sahelflow.connected"]),
     createHash("sha256").update(desktopToken).digest("hex"),
-    desktopKey.publicKeyBase64,
-    RSA_JWK,
+    options.desktop?.signingPublicKeyBase64 ?? desktopKey.publicKeyBase64,
+    options.desktop?.encryptionPublicKeyJwk ?? RSA_JWK,
   );
 
   const env: ConnectedWorkerEnvironment = {
@@ -93,11 +95,11 @@ export async function createWorld(options: WorldOptions = {}) {
     );
   }
 
-  async function createPairing(deviceId: string, memberId: string) {
+  async function createPairing(deviceId: string, memberId: string, extra: Record<string, unknown> = {}) {
     const response = await call("/v1/desktop/pairings", {
       method: "POST",
       token: desktopToken,
-      body: { workspaceId: WORKSPACE_ID, memberId, deviceId },
+      body: { workspaceId: WORKSPACE_ID, memberId, deviceId, ...extra },
     });
     return { response, body: (await response.json()) as Record<string, string> };
   }
