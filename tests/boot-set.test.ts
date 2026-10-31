@@ -57,6 +57,7 @@ describe("parseStrace", () => {
     const text = [
       open("/usr/lib/x86_64-linux-gnu/libc.so.6"),
       open("/srv/app/standalone-other/server.js"),
+      open(`${ROOT}Xpublic/logo.svg`), // shares the prefix, is not inside the tree
       open(`${ROOT}/server.js`),
     ].join("\n");
     expect(parseStrace(text, ROOT, TREE).entries.map((e) => e.path)).toEqual(["server.js"]);
