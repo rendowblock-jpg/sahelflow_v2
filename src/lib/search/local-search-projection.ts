@@ -66,6 +66,9 @@ interface SearchIndex {
   exactKeys: Map<string, Set<string>>;
   primaryExactKeys: Map<string, Set<string>>;
   byCustomerId: Map<string, Set<string>>;
+  /** candidate id -> fingerprint of the row as indexed; a patch re-reads only the ids whose fingerprint moved. */
+  fingerprints: Map<string, string>;
+  builtAt: number;
 }
 
 type ProjectionSlot = "product" | "delivery" | "return" | "conversation";
@@ -137,6 +140,33 @@ function assertBoundShop(shopId: string): void {
   }
 }
 
+/** How often each palette index was built from scratch and how many single rows were patched in place (tests read it). */
+const buildStats: Record<ProjectionSlot, { full: number; patchedRows: number }> = {
+  product: { full: 0, patchedRows: 0 },
+  delivery: { full: 0, patchedRows: 0 },
+  return: { full: 0, patchedRows: 0 },
+  conversation: { full: 0, patchedRows: 0 },
+};
+
+export function projectionBuildStats(): Record<ProjectionSlot, { full: number; patchedRows: number }> {
+  return buildStats;
+}
+
+/**
+ * Every filed key of a cached palette index as sorted "map|key|ids" lines (tests only): an index that was patched
+ * must equal, key for key, the one a from-scratch build makes, so a stale key or a left-over id shows as a diff.
+ */
+export async function projectionIndexShape(shopId: string, slot: ProjectionSlot): Promise<string[]> {
+  const entry = shopCache(shopId)[slot];
+  if (!entry) return [];
+  const index = await entry.promise;
+  const lines: string[] = [...index.records.keys()].map((id) => `record|${id}`);
+  for (const name of ["keys", "exactKeys", "primaryExactKeys", "byCustomerId"] as const) {
+    for (const [key, ids] of index[name]) lines.push(`${name}|${key}|${[...ids].sort().join(",")}`);
+  }
+  return lines.sort();
+}
+
 async function committedRevision(slot: ProjectionSlot): Promise<number> {
   const row = await db.searchProjectionRevision.findUnique({
     where: { id: slot },
@@ -154,6 +184,7 @@ async function buildStableProjection(
 ): Promise<{ index: SearchIndex; revision: number }> {
   for (let attempt = 0; attempt < STABLE_BUILD_ATTEMPTS; attempt += 1) {
     const before = await committedRevision(slot);
+    buildStats[slot].full += 1;
     const index = await build();
     const after = await committedRevision(slot);
     if (before === after) return { index, revision: after };
@@ -168,6 +199,8 @@ function emptyIndex(): SearchIndex {
     exactKeys: new Map(),
     primaryExactKeys: new Map(),
     byCustomerId: new Map(),
+    fingerprints: new Map(),
+    builtAt: Date.now(),
   };
 }
 
@@ -769,9 +802,10 @@ async function refreshOrderProjectionBatch(
  * writer: a busy database ends in a socket timeout) is tried again a few times
  * before the warm-up gives up, so one slow moment does not leave thousands of rows.
  */
-async function drainDirtyRows(
+export async function drainDirtyRows(
   refresh: () => Promise<boolean>,
   batchLimit: number,
+  family = "projection",
 ): Promise<void> {
   let failures = 0;
   for (let batch = 0; batch < batchLimit; ) {
@@ -784,14 +818,16 @@ async function drainDirtyRows(
       if (failures >= WARM_BATCH_ATTEMPTS) throw error;
     }
   }
+  // The cap is a stop, not a finish: the rest stays dirty (searches refresh a few rows each) and the log says so.
+  logger.warn("search.projection.warm-capped", { family, batches: batchLimit });
 }
 
 async function warmCustomerProjection(): Promise<void> {
-  await drainDirtyRows(() => refreshCustomerProjectionBatch(), CUSTOMER_WARM_BATCH_LIMIT);
+  await drainDirtyRows(() => refreshCustomerProjectionBatch(), CUSTOMER_WARM_BATCH_LIMIT, "customer");
 }
 
 async function warmOrderProjection(): Promise<void> {
-  await drainDirtyRows(() => refreshOrderProjectionBatch(), ORDER_WARM_BATCH_LIMIT);
+  await drainDirtyRows(() => refreshOrderProjectionBatch(), ORDER_WARM_BATCH_LIMIT, "order");
 }
 
 async function queryPersistedCustomers(
@@ -873,12 +909,14 @@ async function queryPersistedOrders(
   );
 }
 
-async function buildConversationIndex(): Promise<SearchIndex> {
-  const index = emptyIndex();
+async function conversationRows(ids?: readonly string[]): Promise<ProjectedCandidate[]> {
+  const out: ProjectedCandidate[] = [];
+  const where = ids ? { id: { in: ids.map((id) => id.slice(CONVERSATION_ID_PREFIX.length)) } } : undefined;
   let cursor: string | undefined;
 
   while (true) {
     const rows = await db.conversation.findMany({
+      ...(where ? { where } : {}),
       select: {
         id: true,
         channel: true,
@@ -893,8 +931,8 @@ async function buildConversationIndex(): Promise<SearchIndex> {
     });
 
     for (const conversation of rows) {
-      addCandidate(index, {
-        id: `conversation:${conversation.id}`,
+      out.push({
+        id: `${CONVERSATION_ID_PREFIX}${conversation.id}`,
         entityId: conversation.id,
         kind: "conversation",
         label:
@@ -913,16 +951,34 @@ async function buildConversationIndex(): Promise<SearchIndex> {
     if (!cursor) break;
   }
 
-  return index;
+  return out;
 }
 
-async function buildProductIndex(): Promise<SearchIndex> {
+/** Ids and change marks only: no contact field is opened, so listing every conversation stays cheap. */
+async function conversationStamps(): Promise<Map<string, string>> {
+  const rows = await db.conversation.findMany({
+    select: { id: true, channel: true, lastMessageAt: true, updatedAt: true },
+  });
+  return new Map(
+    rows.map((row) => [
+      `${CONVERSATION_ID_PREFIX}${row.id}`,
+      `${row.updatedAt.getTime()}|${row.lastMessageAt?.getTime() ?? ""}|${row.channel}`,
+    ]),
+  );
+}
+
+const conversationSource: ProjectionSource = {
+  all: () => conversationRows(),
+  stamps: conversationStamps,
+  some: (ids) => conversationRows(ids),
+};
+
+async function productRows(): Promise<ProjectedCandidate[]> {
   const rows = await db.product.findMany({
     where: { deletedAt: null },
     select: { id: true, name: true, sku: true, updatedAt: true },
   });
-  return createIndex(
-    rows.map((product) => ({
+  return rows.map((product) => ({
       id: `product:${product.id}`,
       entityId: product.id,
       kind: "product" as const,
@@ -930,11 +986,12 @@ async function buildProductIndex(): Promise<SearchIndex> {
       sublabel: product.sku ?? undefined,
       href: `/products/${product.id}`,
       updatedAt: product.updatedAt,
-    })),
-  );
+  }));
 }
 
-async function buildDeliveryIndex(): Promise<SearchIndex> {
+const productSource: ProjectionSource = { all: productRows };
+
+async function deliveryRows(): Promise<ProjectedCandidate[]> {
   const rows = await db.delivery.findMany({
     where: { deletedAt: null },
     select: {
@@ -945,8 +1002,7 @@ async function buildDeliveryIndex(): Promise<SearchIndex> {
       order: { select: { orderNumber: true } },
     },
   });
-  return createIndex(
-    rows.map((delivery) => ({
+  return rows.map((delivery) => ({
       id: `delivery:${delivery.id}`,
       entityId: delivery.id,
       kind: "delivery" as const,
@@ -960,11 +1016,12 @@ async function buildDeliveryIndex(): Promise<SearchIndex> {
       keywords: [delivery.order.orderNumber ?? ""],
       href: `/deliveries/${delivery.id}`,
       updatedAt: delivery.updatedAt,
-    })),
-  );
+  }));
 }
 
-async function buildReturnIndex(): Promise<SearchIndex> {
+const deliverySource: ProjectionSource = { all: deliveryRows };
+
+async function returnRows(): Promise<ProjectedCandidate[]> {
   const rows = await db.return.findMany({
     where: { deletedAt: null },
     select: {
@@ -975,8 +1032,7 @@ async function buildReturnIndex(): Promise<SearchIndex> {
       order: { select: { orderNumber: true } },
     },
   });
-  return createIndex(
-    rows.map((returnRecord) => ({
+  return rows.map((returnRecord) => ({
       id: `return:${returnRecord.id}`,
       entityId: returnRecord.id,
       kind: "return" as const,
@@ -984,21 +1040,117 @@ async function buildReturnIndex(): Promise<SearchIndex> {
       sublabel: `${returnRecord.type} · ${returnRecord.status}`,
       href: `/returns/${returnRecord.id}`,
       updatedAt: returnRecord.updatedAt,
-    })),
-  );
+  }));
+}
+
+const returnSource: ProjectionSource = { all: returnRows };
+
+const CONVERSATION_ID_PREFIX = "conversation:";
+/** More changed rows than this and one full build is cheaper than patching them one by one. */
+const PATCH_ROW_LIMIT = 256;
+/** Safety net for a column written without a change mark (raw SQL): the index is rebuilt in full at least this often. */
+const FULL_REBUILD_MAX_AGE_MS = 10 * 60_000;
+
+interface ProjectionSource {
+  /** Every current row as the index holds it. */
+  all(): Promise<ProjectedCandidate[]>;
+  /** id -> change mark without opening sealed fields; when absent the marks come from all(). */
+  stamps?(): Promise<Map<string, string>>;
+  /** Only these candidate ids (needs stamps). */
+  some?(ids: readonly string[]): Promise<ProjectedCandidate[]>;
+}
+
+function candidateFingerprint(row: ProjectedCandidate): string {
+  return JSON.stringify(row);
+}
+
+async function buildFromSource(source: ProjectionSource): Promise<SearchIndex> {
+  const stamps = source.stamps ? await source.stamps() : undefined;
+  const rows = await source.all();
+  const index = createIndex(rows);
+  index.fingerprints = stamps ?? new Map(rows.map((row) => [row.id, candidateFingerprint(row)] as const));
+  return index;
+}
+
+/** Take one row out of every key bucket it was filed under (the keys are derived the same way they were added). */
+function removeCandidate(index: SearchIndex, id: string): void {
+  const old = index.records.get(id);
+  if (!old) return;
+  const scratch = emptyIndex();
+  addCandidate(scratch, old);
+  for (const name of ["keys", "exactKeys", "primaryExactKeys", "byCustomerId"] as const) {
+    for (const key of scratch[name].keys()) {
+      const bucket = index[name].get(key);
+      if (!bucket) continue;
+      bucket.delete(id);
+      if (bucket.size === 0) index[name].delete(key);
+    }
+  }
+  index.records.delete(id);
+}
+
+/**
+ * A write moves the slot revision; instead of rebuilding the whole index, only the rows whose mark moved are read and
+ * re-filed. Returns null when a full build is the better answer (too many changes, or the index is old).
+ */
+async function patchProjection(
+  slot: ProjectionSlot,
+  source: ProjectionSource,
+  base: SearchIndex,
+): Promise<{ index: SearchIndex; revision: number } | null> {
+  if (Date.now() - base.builtAt > FULL_REBUILD_MAX_AGE_MS) return null;
+  // Read BEFORE the rows: a write that lands meanwhile only makes the next call patch once more.
+  const revision = await committedRevision(slot);
+  let loaded: Map<string, ProjectedCandidate> | undefined;
+  let wanted: Map<string, string>;
+  if (source.stamps) {
+    wanted = await source.stamps();
+  } else {
+    const rows = await source.all();
+    loaded = new Map(rows.map((row) => [row.id, row] as const));
+    wanted = new Map(rows.map((row) => [row.id, candidateFingerprint(row)] as const));
+  }
+  const changed: string[] = [];
+  for (const [id, mark] of wanted) if (base.fingerprints.get(id) !== mark) changed.push(id);
+  const removed: string[] = [];
+  for (const id of base.fingerprints.keys()) if (!wanted.has(id)) removed.push(id);
+  if (changed.length + removed.length > PATCH_ROW_LIMIT) return null;
+  const rows = loaded
+    ? changed.map((id) => loaded.get(id)!)
+    : changed.length > 0 && source.some
+      ? await source.some(changed)
+      : [];
+  const found = new Set<string>();
+  for (const row of rows) {
+    removeCandidate(base, row.id);
+    addCandidate(base, row);
+    base.fingerprints.set(row.id, wanted.get(row.id) ?? candidateFingerprint(row));
+    found.add(row.id);
+  }
+  for (const id of [...removed, ...changed.filter((candidate) => !found.has(candidate))]) {
+    removeCandidate(base, id);
+    base.fingerprints.delete(id);
+  }
+  buildStats[slot].patchedRows += changed.length + removed.length;
+  return { index: base, revision };
 }
 
 async function cached(
   shopId: string,
   slot: ProjectionSlot,
-  build: () => Promise<SearchIndex>,
+  source: ProjectionSource,
 ): Promise<SearchIndex> {
   const cache = shopCache(shopId);
   const revision = await committedRevision(slot);
   const existing = cache[slot];
   if (existing?.revision === revision) return existing.promise;
 
-  const pending: Promise<SearchIndex> = buildStableProjection(slot, build)
+  const previous = existing?.promise;
+  const pending: Promise<SearchIndex> = (async () => {
+    const base = previous ? await previous.catch(() => undefined) : undefined;
+    const patched = base ? await patchProjection(slot, source, base) : null;
+    return patched ?? buildStableProjection(slot, () => buildFromSource(source));
+  })()
     .then(({ index, revision: stableRevision }) => {
       const current = cache[slot];
       if (current?.promise === pending) current.revision = stableRevision;
@@ -1028,7 +1180,7 @@ export async function searchProjectedConversations(
   limit?: number,
 ) {
   return queryIndex(
-    await cached(shopId, "conversation", buildConversationIndex),
+    await cached(shopId, "conversation", conversationSource),
     query,
     limit,
   );
@@ -1040,7 +1192,7 @@ export async function searchProjectedProducts(
   limit?: number,
 ) {
   return queryIndex(
-    await cached(shopId, "product", buildProductIndex),
+    await cached(shopId, "product", productSource),
     query,
     limit,
   );
@@ -1067,7 +1219,7 @@ export async function projectedConversationContacts(
 ): Promise<Map<string, { label: string; sublabel?: string }>> {
   const contacts = new Map<string, { label: string; sublabel?: string }>();
   if (conversationIds.length === 0) return contacts;
-  const index = await cached(shopId, "conversation", buildConversationIndex);
+  const index = await cached(shopId, "conversation", conversationSource);
   for (const id of new Set(conversationIds)) {
     const row = index.records.get(`conversation:${id}`);
     if (row) contacts.set(id, { label: row.label, sublabel: row.sublabel });
@@ -1131,7 +1283,7 @@ export async function searchProjectedDeliveries(
   limit?: number,
 ) {
   return queryIndex(
-    await cached(shopId, "delivery", buildDeliveryIndex),
+    await cached(shopId, "delivery", deliverySource),
     query,
     limit,
   );
@@ -1143,7 +1295,7 @@ export async function searchProjectedReturns(
   limit?: number,
 ) {
   return queryIndex(
-    await cached(shopId, "return", buildReturnIndex),
+    await cached(shopId, "return", returnSource),
     query,
     limit,
   );
@@ -1184,11 +1336,11 @@ export async function warmLocalSearchProjection(
     );
   }
   if (scope.conversation) {
-    work.push(track("conversation", () => cached(shopId, "conversation", buildConversationIndex)));
+    work.push(track("conversation", () => cached(shopId, "conversation", conversationSource)));
   }
-  if (scope.product) work.push(track("product", () => cached(shopId, "product", buildProductIndex)));
-  if (scope.delivery) work.push(track("delivery", () => cached(shopId, "delivery", buildDeliveryIndex)));
-  if (scope.return) work.push(track("return", () => cached(shopId, "return", buildReturnIndex)));
+  if (scope.product) work.push(track("product", () => cached(shopId, "product", productSource)));
+  if (scope.delivery) work.push(track("delivery", () => cached(shopId, "delivery", deliverySource)));
+  if (scope.return) work.push(track("return", () => cached(shopId, "return", returnSource)));
   // Every branch runs to its end first; a failed one is then reported, not hidden.
   await Promise.all(work);
   if (failed.length === 0) return;

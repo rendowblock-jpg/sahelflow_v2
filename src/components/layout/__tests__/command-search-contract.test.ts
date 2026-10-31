@@ -110,7 +110,7 @@ describe("universal command search contract", () => {
     const projection = source("../../../lib/search/local-search-projection.ts");
     const server = source("../../../lib/search/universal-search-server.ts");
 
-    expect(projection).toContain("buildConversationIndex");
+    expect(projection).toContain("conversationRows");
     expect(projection).toContain("contactName: true");
     expect(projection).toContain("contactPhone: true");
     expect(projection).toContain("take: PROJECTION_PAGE_SIZE");
@@ -133,13 +133,13 @@ describe("universal command search contract", () => {
     expect(projection).toContain("primaryExactKeys");
     expect(projection).toContain("appendBounded(selected, index.primaryExactKeys");
     expect(projection).toContain("appendBounded(selected, index.exactKeys");
-    expect(projection).toContain("buildProductIndex");
+    expect(projection).toContain("productRows");
     expect(projection).not.toContain("buildOrderIndex");
     expect(projection).toContain("ORDER_DIRTY_BATCH_SIZE = 64");
     expect(projection).toContain("refreshOrderProjectionBatch");
     expect(projection).toContain("queryPersistedOrders");
     expect(projection).toContain('ORDER_TOKEN_FAMILY = "order"');
-    expect(projection).toContain("buildDeliveryIndex");
+    expect(projection).toContain("deliveryRows");
     expect(migration).toContain("SELECT 'order', \"id\", 0 FROM \"Order\"");
     expect(migration.replace(/\r\n/g, "\n")).toContain("'order',\n    NEW.\"id\"");
   });
