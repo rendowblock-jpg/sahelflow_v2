@@ -57,7 +57,7 @@ export type ShippingRow = { wilayaCode: string; mode: "home" | "desk"; feeDzd: n
 
 /** Built, hashed files. `skins` holds the extra stylesheet (and, for Reel, script) of the newer templates; the first three need none. */
 export type Skin = { css: string; js?: string };
-export type Assets = { css: string; js: string; communes: string; fonts: Record<string, string>; skins: Record<string, Skin> };
+export type Assets = { css: string; js: string; /** The home page's tiny photo-fallback script (a product page already has it inside `js`). */ photos?: string; communes: string; fonts: Record<string, string>; skins: Record<string, Skin> };
 
 /** Everything a render function needs; built once per page. */
 export type Ctx = {

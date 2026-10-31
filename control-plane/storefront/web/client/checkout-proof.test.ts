@@ -197,6 +197,49 @@ describe("order button", () => {
     expect(loud).toHaveLength(1);
   });
 
+  it("the failure line can take focus (tabindex -1) and the button names it", async () => {
+    const c = await mount();
+    await c.fill();
+    c.net.replies.push({ status: 500, body: { error: "x" } });
+    c.tap();
+    await until(() => !c.status.hidden && !c.submit.disabled);
+    expect(c.status.tabIndex).toBe(-1);
+    expect(c.submit.getAttribute("aria-describedby")).toContain("sf-status");
+  });
+
+  it("a failure while sealing the order is announced the same way: alert, focus, one calm sentence, nothing sent", async () => {
+    const c = await mount();
+    await c.fill();
+    vi.stubGlobal("crypto", {
+      randomUUID: () => webcrypto.randomUUID(),
+      getRandomValues: (array: Uint8Array) => webcrypto.getRandomValues(array),
+      get subtle(): SubtleCrypto {
+        throw new Error("no crypto here");
+      },
+    });
+    c.tap();
+    await until(() => !c.status.hidden && !c.submit.disabled);
+    expect(c.net.posts).toHaveLength(0);
+    expect(c.status.getAttribute("role")).toBe("alert");
+    expect(document.activeElement).toBe(c.status);
+    expect(c.status.textContent?.trim().length).toBeGreaterThan(8);
+    expect(c.status.textContent).not.toMatch(/no crypto here/);
+  });
+
+  it("a later good order puts the line away: hidden, empty, and back to a quiet status", async () => {
+    const c = await mount();
+    await c.fill();
+    c.net.replies.push({ status: 500, body: { error: "x" } });
+    c.tap();
+    await until(() => !c.status.hidden && !c.submit.disabled);
+    expect(c.status.getAttribute("role")).toBe("alert");
+    c.tap();
+    await until(() => !c.q<HTMLElement>("#sf-thanks").hidden);
+    expect(c.status.hidden).toBe(true);
+    expect(c.status.getAttribute("role")).toBe("status");
+    expect(c.status.textContent).toBe("");
+  });
+
   it("an empty form sends nothing and puts focus on the first field that has its own error", async () => {
     const c = await mount();
     c.tap(); // empty form: field errors

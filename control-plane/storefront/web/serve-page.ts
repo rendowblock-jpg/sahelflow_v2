@@ -1,7 +1,18 @@
 import manifest from "./asset-manifest.generated.json";
 import { servePublicStorePage as route, type CacheLike, type PageContext } from "./page-route";
 import { renderStorePage } from "./shop";
+import type { Assets } from "./shop/ui";
 import type { StorefrontWorkerEnvironment } from "../types";
+
+/**
+ * The files the build wrote (css, scripts, communes, fonts, skins), exactly as the manifest lists them. They are
+ * passed whole on purpose: this list was once written out by hand and lacked `photos`, so the home page of a store
+ * never received its photo-fallback script in production while every test, which hands over its own assets, stayed
+ * green. serve-page.test.ts pins that this equals the manifest.
+ */
+export function storeAssets(source: typeof manifest = manifest): Assets {
+  return { ...source };
+}
 
 function edgeCache(): CacheLike | null {
   const storage = (globalThis as { caches?: { default?: CacheLike } }).caches;
@@ -24,7 +35,7 @@ export function servePublicStorePage(
     environment,
     slug,
     context,
-    { render: renderStorePage, assets: { css: manifest.css, js: manifest.js, communes: manifest.communes, fonts: manifest.fonts, skins: manifest.skins }, cache: edgeCache() },
+    { render: renderStorePage, assets: storeAssets(), cache: edgeCache() },
     productId,
   );
 }

@@ -47,7 +47,8 @@ describe("store home", () => {
     expect(html).toContain('<a class="sf-skip" href="#main">');
     expect(html.indexOf("<header")).toBeLessThan(html.indexOf("<main"));
     expect(html.indexOf("</main>")).toBeLessThan(html.indexOf("<footer"));
-    expect(html).not.toContain("<script src="); // the home needs no script
+    // the home runs exactly ONE script: the tiny photo fallback (no order script)
+    expect(html.match(/<script src="[^"]+"/g)).toEqual(['<script src="/_sf/photos.test.js"']);
     expect(html).toContain('<link rel="stylesheet" href="/_sf/shop.test.css">');
     store.database.close();
   });
@@ -296,8 +297,8 @@ describe("seller text is data, never markup", () => {
         expect(html).not.toContain("<script>alert");
         expect(html).not.toMatch(/(?:href|src|action)\s*=\s*["']?\s*javascript:/i);
         expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
-        // exactly: json-ld, plus the data block and the script tag on a product page
-        expect(count(html, /<\/script>/g)).toBe(productId ? 3 : 1);
+        // exactly: json-ld, plus the photo script on the home; json-ld, the data block and the order script on a product page
+        expect(count(html, /<\/script>/g)).toBe(productId ? 3 : 2);
         if (productId) expect(JSON.parse(/id="sf-data">([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "").name).toBeTypeOf("string");
       }
     }

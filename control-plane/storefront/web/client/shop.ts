@@ -12,6 +12,7 @@
 import { encryptStorefrontCustomer } from "@/lib/storefront/hosted-checkout-crypto";
 
 import { setupCommuneSearch } from "./commune-search";
+import { watchPhotos } from "./photos";
 import {
   availableModes,
   clampQuantity,
@@ -487,25 +488,8 @@ function boot(): void {
     form.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   });
 
-  // A photo that fails to load is replaced by a placeholder element with the alt text: a DOM probe cannot see the img::before fallback. The sticky bar's thumbnail keeps that one.
-  const photoMissing = (img: HTMLImageElement): void => {
-    const frame = img.parentElement;
-    if (img.dataset.broken || !frame || img.classList.contains("sf-sticky-thumb")) return;
-    img.dataset.broken = "1";
-    img.style.display = "none";
-    if (!["relative", "absolute", "fixed", "sticky"].includes(getComputedStyle(frame).position)) frame.style.position = "relative";
-    const slot = document.createElement("span");
-    slot.className = "sf-ph";
-    slot.dataset.sf = "photo-missing";
-    if (img.alt) {
-      slot.setAttribute("role", "img");
-      slot.setAttribute("aria-label", img.alt);
-      slot.textContent = Array.from(img.alt.trim())[0] ?? "";
-    } else slot.setAttribute("aria-hidden", "true");
-    img.after(slot);
-  };
-  document.addEventListener("error", (event) => { if (event.target instanceof HTMLImageElement) photoMissing(event.target); }, true);
-  for (const img of Array.from(document.querySelectorAll<HTMLImageElement>("img"))) if (img.complete && img.naturalWidth === 0 && img.getAttribute("src")) photoMissing(img);
+  // A photo that fails to load becomes a placeholder element (client/photos.ts, shared with the home page).
+  watchPhotos();
 
   refresh();
   requestAnimationFrame(() => { animate = true; });
