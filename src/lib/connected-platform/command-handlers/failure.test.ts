@@ -6,7 +6,7 @@ import { commandFailure } from "./failure";
 
 describe("commandFailure: every error becomes one code from the closed list", () => {
   it("maps the known ones", () => {
-    const zodError = (() => { try { z.object({ a: z.string() }).parse({}); } catch (e) { return e; } })();
+    const zodError = z.object({ a: z.string() }).safeParse({}).error;
     expect(commandFailure(zodError)).toEqual({ state: "rejected", result: { code: "INVALID_PAYLOAD" } });
     expect(commandFailure(new NotFoundError("Order", "x"))).toEqual({ state: "rejected", result: { code: "NOT_FOUND" } });
     expect(commandFailure(new ConflictError("version"))).toEqual({ state: "conflict", result: { code: "ENTITY_CHANGED" } });

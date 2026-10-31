@@ -20,16 +20,26 @@ async function decide(
   const { context, envelope } = input;
   const actorContext = await authorizeRemoteCommand(kind, input);
   const decision = kind === "command.orders.confirm" ? "confirm" : "reject";
-  const data = decision === "confirm"
-    ? confirmPayload.parse(input.payload)
-    : rejectPayload.parse(input.payload);
+  let orderId: string;
+  let expectedVersion: number;
+  let reasonKey: string | undefined;
+  if (decision === "confirm") {
+    const data = confirmPayload.parse(input.payload);
+    orderId = data.orderId;
+    expectedVersion = data.expectedVersion;
+  } else {
+    const data = rejectPayload.parse(input.payload);
+    orderId = data.orderId;
+    expectedVersion = data.expectedVersion;
+    reasonKey = data.reasonKey;
+  }
   const outcome = await decideOrderForActor(context, actorContext, {
-    orderId: data.orderId,
+    orderId,
     decision,
-    expectedVersion: data.expectedVersion,
+    expectedVersion,
     idempotencyKey: `connected:${envelope.idempotencyKey}`,
     correlationId: envelope.envelopeId,
-    ...("reasonKey" in data ? { reasonKey: data.reasonKey } : {}),
+    ...(reasonKey ? { reasonKey } : {}),
   });
   return {
     orderId: outcome.orderId,
