@@ -190,7 +190,7 @@ describe("product page", () => {
       expect(form, field).toContain(`id="f-${field}"`);
       expect(form, field).toContain(`id="e-${field}"`);
     }
-    expect(form).toContain('type="tel" inputmode="tel" autocomplete="tel-national"');
+    expect(form).toContain('type="tel" inputmode="tel" enterkeyhint="next" autocomplete="tel-national"');
     expect(form).toContain('autocomplete="name"');
     expect(form).toContain('autocomplete="street-address"');
     expect(form).toContain('<form id="order" class="sf-form" novalidate');
