@@ -85,7 +85,7 @@ export async function buildPwa({ outDir = join(HERE, "dist"), relayUrl = "https:
   const version = sha(JSON.stringify(precache)).slice(0, 10);
   await writeFile(join(outDir, "sw.js"), await js("src/sw/sw.ts", { format: "iife", define: { __PRECACHE__: JSON.stringify(precache), __VERSION__: JSON.stringify(version) } }));
   await writeFile(join(outDir, "asset-manifest.json"), JSON.stringify({ version, assets, precache }, null, 2));
-  await writeFile(join(outDir, "_headers"), `/*\n  Content-Security-Policy: ${CSP}\n  Referrer-Policy: no-referrer\n  X-Content-Type-Options: nosniff\n  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n/sw.js\n  Cache-Control: no-cache\n/index.html\n  Cache-Control: no-cache\n/offline.html\n  Cache-Control: no-cache\n/manifest.webmanifest\n  Cache-Control: no-cache\n`);
+  await writeFile(join(outDir, "_headers"), `/*\n  Content-Security-Policy: ${CSP}\n  Referrer-Policy: no-referrer\n  X-Content-Type-Options: nosniff\n  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n/sw.js\n  Cache-Control: no-cache\n/\n  Cache-Control: no-cache\n/index.html\n  Cache-Control: no-cache\n/offline.html\n  Cache-Control: no-cache\n/manifest.webmanifest\n  Cache-Control: no-cache\n/asset-manifest.json\n  Cache-Control: no-cache\n`);
   return { outDir, version, precache, assets };
 }
 
