@@ -212,7 +212,7 @@ export async function runGroqAgent(input: GroqAgentInput): Promise<GroqAgentResu
       if (!(error instanceof GroqProviderError)) throw error;
       // Not retried here (requestGroq never retries a 429). A quota answer pauses Groq in the shared ledger.
       if (error.code === "GROQ_QUOTA_EXHAUSTED") {
-        ledger.recordQuotaHit("groq", error.retryAfterSeconds ?? null, now());
+        ledger.recordQuotaHit("groq", error.retryAfterSeconds ?? null, now(), { retryAtKnown: error.retryAfterSeconds != null });
       }
       return finish("error", buffered, {
         code: error.code,

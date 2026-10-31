@@ -11,6 +11,7 @@ import { getAnalyticsRuntimeTranslation } from "@/lib/i18n/analytics-runtime";
 import { getAutomationRuntimeTranslation } from "@/lib/i18n/automation-runtime";
 import { getCodRuntimeTranslation } from "@/lib/i18n/cod-runtime";
 import { getDashboardStatesRuntimeTranslation } from "@/lib/i18n/dashboard-states-runtime";
+import { getAiQuotaRuntimeTranslation } from "@/lib/i18n/ai-quota-runtime";
 import { getCommerceRuntimeTranslation } from "@/lib/i18n/commerce-runtime";
 import { getConfirmationQueueRuntimeTranslation } from "@/lib/i18n/confirmation-runtime";
 import { getDataTableRuntimeTranslation } from "@/lib/i18n/data-table-runtime";
@@ -177,6 +178,7 @@ export function getRuntimeTranslation(
     getCommerceRuntimeTranslation(locale, key) ??
     getConfirmationQueueRuntimeTranslation(locale, key) ??
     getDashboardStatesRuntimeTranslation(locale, key) ??
+    getAiQuotaRuntimeTranslation(locale, key) ??
     getDataTableRuntimeTranslation(locale, key) ??
     getCustomersProductsStatesRuntimeTranslation(locale, key) ??
     getDeliveriesRuntimeTranslation(locale, key) ??

@@ -4,6 +4,7 @@
  */
 import { getSetting, setSetting } from "@/lib/settings";
 import type { ServiceContext } from "@/lib/data/service-base";
+import { flushRequestCounts } from "./quota-counter";
 import { AI_PROVIDER_IDS, quotaLedger, type AiProviderId, type QuotaLedger } from "./quota-ledger";
 
 const pauseKey = (provider: AiProviderId) => `ai_quota_pause_until_${provider}`;
@@ -49,4 +50,6 @@ export async function saveQuotaLedger(
       // not persisted: the in-memory pause still protects this run
     }
   }
+  // The shared ledger's provider requests are counted per day in the same table.
+  if (ledger === quotaLedger) await flushRequestCounts(context);
 }

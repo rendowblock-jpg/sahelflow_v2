@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
+  Clock,
   Loader2,
   RefreshCw,
   Settings2,
@@ -13,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import type { AiWorkspaceError } from "@/components/ai/ai-workspace-types";
 import type { useAiWorkspace } from "@/hooks/use-ai-workspace";
 import { getAiDecisionCopy } from "@/lib/i18n/ai-decision-workspace";
+import { getAiQuotaRuntimeTranslation } from "@/lib/i18n/ai-quota-runtime";
+import type { Locale } from "@/lib/i18n";
+import type { QuotaStateWire } from "@/lib/ai/providers/quota-state";
 
 /**
  * The three canvas notices — setup, failure and the shop-wide approval loop.
@@ -59,13 +64,124 @@ function errorMessage(
   }
 }
 
+/**
+ * The free-limit notice. The status route sends `quota`; the setup type in
+ * ai-workspace-types.ts does not name it yet, so it is read defensively here.
+ */
+export function quotaOf(setup: unknown): QuotaStateWire | undefined {
+  const quota = (setup as { quota?: QuotaStateWire } | null | undefined)?.quota;
+  return quota && typeof quota === "object" && typeof quota.kind === "string" ? quota : undefined;
+}
+
+function formatResetTime(at: string, locale: Locale, now: Date): string {
+  const date = new Date(at);
+  if (!Number.isFinite(date.getTime())) return "";
+  const tag = locale === "ar" ? "ar-DZ-u-nu-latn" : locale === "fr" ? "fr-FR" : "en-GB";
+  const sameDay = date.toDateString() === now.toDateString();
+  return new Intl.DateTimeFormat(tag, {
+    ...(sameDay ? {} : { day: "numeric", month: "short" }),
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(date);
+}
+
+/** One calm sentence for a paused or nearly used free limit; null when there is nothing to say. */
+export function quotaNoticeText(quota: QuotaStateWire | undefined, locale: Locale, now: Date = new Date()): string | null {
+  if (!quota) return null;
+  const say = (key: string, params: Record<string, string>) => {
+    const template = getAiQuotaRuntimeTranslation(locale, key) ?? "";
+    return Object.entries(params).reduce((text, [name, value]) => text.split(`{{${name}}}`).join(value), template);
+  };
+  if (quota.kind === "paused") {
+    const time = formatResetTime(quota.until, locale, now);
+    return time ? say(quota.untilKnown ? "aiQuota.paused" : "aiQuota.pausedApprox", { time }) : null;
+  }
+  if (quota.kind === "all_paused") {
+    const time = formatResetTime(quota.resumeAt, locale, now);
+    return time ? say(quota.resumeKnown ? "aiQuota.paused" : "aiQuota.pausedApprox", { time }) : null;
+  }
+  if (quota.kind === "low") return say("aiQuota.low", { left: String(quota.left) });
+  return null;
+}
+
+export function QuotaNotice({
+  quota,
+  locale,
+  action,
+  now,
+}: {
+  quota: QuotaStateWire | undefined;
+  locale: Locale;
+  action?: ReactNode;
+  now?: Date;
+}) {
+  const text = quotaNoticeText(quota, locale, now);
+  if (!text) return null;
+  return (
+    <div
+      role="status"
+      data-ai-quota-notice={quota?.kind}
+      dir={locale === "ar" ? "rtl" : "ltr"}
+      className="flex flex-wrap items-center justify-between gap-3 rounded-surface border border-border bg-muted/40 px-3.5 py-2.5"
+    >
+      <div className="flex min-w-0 items-start gap-2.5">
+        <Clock className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <p className="min-w-0 text-body-sm">{text}</p>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/** For settings: asks the status route itself and shows nothing when it cannot be read. */
+export function QuotaNoticeFromStatus({ locale }: { locale: Locale }) {
+  const [quota, setQuota] = useState<QuotaStateWire | undefined>(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch("/api/ai/status", { cache: "no-store" });
+        if (!response.ok) return;
+        const found = quotaOf(await response.json());
+        if (!cancelled) setQuota(found);
+      } catch {
+        // no notice rather than a guessed one
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return <QuotaNotice quota={quota} locale={locale} />;
+}
+
 function SetupNotice({
   workspace,
 }: {
   workspace: ReturnType<typeof useAiWorkspace>;
 }) {
   const { setup, setupError, refreshSetup, locale } = workspace;
-  if (setup?.ready === true) return null;
+  if (setup?.ready === true) {
+    const quota = quotaOf(setup);
+    if (!quotaNoticeText(quota, locale)) return null;
+    return (
+      <div className="sf-ai-column pt-3">
+        <QuotaNotice
+          quota={quota}
+          locale={locale}
+          action={
+            <Button asChild variant="outline" size="sm" className="bg-card">
+              <Link href="/settings?group=intelligence">
+                <Settings2 className="size-4" aria-hidden="true" />
+                {workspace.copy("openSettings")}
+              </Link>
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   if (!setup && !setupError) {
     return (
@@ -122,8 +238,14 @@ function ErrorNotice({
 }: {
   workspace: ReturnType<typeof useAiWorkspace>;
 }) {
-  const { error, retry } = workspace;
+  const { error, retry, setup, refreshSetup, locale } = workspace;
+  const providerFailure = error?.code === "AI_PROVIDER_REPORTED" || error?.code === "AI_PROVIDER_UNAVAILABLE";
+  // A provider failure may be a quota stop: ask the status again, and let the calm notice speak if it is.
+  useEffect(() => {
+    if (providerFailure) void refreshSetup?.();
+  }, [providerFailure, error, refreshSetup]);
   if (!error) return null;
+  if (providerFailure && quotaNoticeText(quotaOf(setup), locale) !== null && quotaOf(setup)?.kind !== "low") return null;
   const persistenceOnly = error.code === "AI_RESPONSE_NOT_PERSISTED";
 
   return (

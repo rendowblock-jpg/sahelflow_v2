@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 
+import { QuotaNoticeFromStatus } from "@/components/ai/ai-canvas-notices";
 import { StateView } from "@/components/shared/state-view";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/hooks/use-i18n";
@@ -21,7 +22,7 @@ const CHOICES: ReadonlyArray<{ value: AiProviderOrderSetting; label: string }> =
 
 /** Which AI the order reader tries first. Saved on change; only integrations.manage may change it. */
 export function AiProviderOrderCard({ canManage }: { canManage: boolean }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [order, setOrder] = useState<AiProviderOrderSetting | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -108,6 +109,7 @@ export function AiProviderOrderCard({ canManage }: { canManage: boolean }) {
         <CardDescription>{t("aiKey.order.help")}</CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="mb-3 empty:hidden"><QuotaNoticeFromStatus locale={locale} /></div>
         {loadState === "loading" ? (
           <PanelSkeleton rows={3} label={t("settings.panelState.loading")} testId="ai-order-skeleton" />
         ) : loadState === "failed" || order === null ? (
