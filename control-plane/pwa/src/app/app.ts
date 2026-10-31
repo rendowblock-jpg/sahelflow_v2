@@ -23,6 +23,8 @@ import { createCommandStack } from "./commands";
 import { createOrdersHost, ORDERS_VAULT_KEY, type OrdersHostHandle } from "./orders-host";
 import { applyPreview } from "./preview";
 import { GROUP_OF } from "./registry";
+import { withShellStrip } from "./shell-strip";
+import { createVaultWiring } from "./vault-wiring";
 
 declare const __APP_VERSION__: string;
 declare const __RELAY_URL__: string;
@@ -65,6 +67,11 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   // The command stack (outbox on the real transport) exists once the phone is paired; decrypted orders live only in the vault.
   let stack: Awaited<ReturnType<typeof createCommandStack>> = null; let ordersHost: OrdersHostHandle | null = null;
   const vault = createVault();
+  // Lock / hidden >= 5 min / unlock / wipe on the vault: one tested module. `wake`: the orders screen redraws from what is left and reloads if it was emptied.
+  const vaultWiring = createVaultWiring({
+    vault, key: ORDERS_VAULT_KEY,
+    wake: (emptied) => { const h = ordersHost; if (!h) return; h.notify(); if (emptied && lockState.phase !== "locked") void h.reload().catch(() => undefined); },
+  });
 
   const derive = (v: View): View => {
     if (v.screen !== "today") return v;
@@ -78,7 +85,8 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     const v = previewOn ? applyPreview(view, location.search) : derive(view);
     document.documentElement.lang = v.locale; document.documentElement.dir = dirOf(v.locale);
     document.documentElement.dataset.theme = v.theme === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : v.theme;
-    root.innerHTML = renderApp(v);
+    // "Your PC is off" on every screen that shows shop data (Today and Orders draw their own strip; this one is added once, only when none is there).
+    root.innerHTML = withShellStrip(renderApp(v), { screen: v.screen, pcoff: v.pcoff === true, asOf: v.projection?.generatedAt ?? null, locale: v.locale });
     if (v.screen === "lock") root.querySelector<HTMLInputElement>("#pin")?.focus();
   };
   const set = (patch: Partial<View>, focusMain = false): void => {
@@ -153,7 +161,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     set({ lockNotice: { kind: "checking" } });
     const ok = isValidPin(pin) && (await verifyPin(pin, lockRow.pin));
     lockState = afterAttempt(lockState, ok, Date.now());
-    if (lockState.phase === "unlocked") { wakeOrders(); return set({ screen: returnTo, lockNotice: null }, true); }
+    if (lockState.phase === "unlocked") { vaultWiring.unlocked(); return set({ screen: returnTo, lockNotice: null }, true); }
     if (lockState.phase !== "locked") return;
     lockRow = { pin: lockRow.pin, failures: lockState.failures, waitUntil: lockState.waitUntil };
     await (await getDb()).put("settings", "lock", lockRow);
@@ -178,7 +186,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     });
   }
   async function wipe(): ReturnType<typeof wipeAll> {
-    watcher?.stop(); watcher = null; vault.lock(); stack = null; ordersHost = null;
+    watcher?.stop(); watcher = null; vaultWiring.wipe(); stack = null; ordersHost = null;
     const db = await getDb().catch(() => null); dbPromise = null;
     return wipeAll({
       db, factory: indexedDB, caches: typeof caches === "undefined" ? null : caches,
@@ -205,14 +213,9 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     const h = createOrdersHost({
       now: Date.now, locale: () => view.locale, online: () => navigator.onLine, pcOff: () => view.pcoff === true,
       fetchOrders: async () => { await relay.poll("orders"); await s.refresh(); }, openOrders: s.openOrders,
-      vault, outbox, drafts: s.drafts, authorityExpiresAt: () => undefined, go: (x) => go(x),
+      vault, outbox, drafts: s.drafts, authorityExpiresAt: s.authorityExpiresAt, go: (x) => go(x),
     });
     ordersHost = h; mod.attachOrdersHost(h); await h.reload();
-  }
-  // After a lock, an unlock or coming back from the background: the screen redraws from the (maybe emptied) vault and reloads if it is empty.
-  function wakeOrders(): void {
-    const h = ordersHost; if (!h) return;
-    h.notify(); if (lockState.phase !== "locked" && vault.get(ORDERS_VAULT_KEY) === null) void h.reload().catch(() => undefined);
   }
   // Polling budget: fetch on open/visible/online/Refresh, 30 s on Orders and Inbox, 60 s elsewhere, nothing while hidden, 600 a day.
   const sync = createSync({
@@ -259,9 +262,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   window.addEventListener("popstate", () => { const s = SCREENS.find((x) => x === new URLSearchParams(location.search).get("screen")); set({ screen: s ?? "welcome" }); });
   document.addEventListener("visibilitychange", () => {
     lockState = document.hidden ? onHidden(lockState, Date.now()) : onVisible(lockState, Date.now());
-    if (document.hidden) vault.hide(Date.now()); else vault.show(Date.now()); // hidden for 5 minutes or more: the decrypted copies are dropped
-    if (lockState.phase === "locked") vault.lock();
-    wakeOrders();
+    vaultWiring.visibility({ hidden: document.hidden, phase: lockState.phase, now: Date.now() }); // hidden for 5 minutes or more, or locked: the decrypted copies are dropped
     if (document.hidden) sync.onHidden(); else sync.onVisible();
     if (!document.hidden && lockState.phase === "locked" && view.screen !== "lock") { returnTo = view.screen; set({ screen: "lock", lockMode: "enter", lockNotice: null }); }
   });
@@ -271,7 +272,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
   paint();
   void getDb().then((db) => db.get<LockRow>("settings", "lock")).then((row) => {
     if (!row) return;
-    lockRow = row; lockState = initialState(true, row); returnTo = view.screen === "lock" ? "welcome" : view.screen;
+    lockRow = row; lockState = initialState(true, row); vaultWiring.locked(); returnTo = view.screen === "lock" ? "welcome" : view.screen;
     set({ hasLock: true, screen: "lock", lockMode: "enter", lockNotice: null });
   }).catch(() => undefined);
   // A reload while the PC has not approved yet: back to the waiting screen, polling from the start of the backoff.
