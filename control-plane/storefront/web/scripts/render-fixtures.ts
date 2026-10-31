@@ -12,6 +12,7 @@ import type { StorefrontReleaseProduct } from "../../../../src/lib/storefront/re
 import manifest from "../asset-manifest.generated.json";
 import { renderNoticePage, type NoticeKind } from "../notice-page";
 import { servePublicStorePage, type PageDeps } from "../page-route";
+import { storeAssets } from "../serve-page";
 import { renderStorePage } from "../shop";
 import { productHref } from "../shop/ui";
 import { SAMPLE_PRODUCTS, publishTestStore } from "../test-support";
@@ -35,7 +36,8 @@ const PAGES = ["home", "product1", "product2", "product3", "product4"] as const;
 
 const deps: PageDeps = {
   render: renderStorePage,
-  assets: { css: manifest.css, js: manifest.js, communes: manifest.communes, fonts: manifest.fonts, skins: manifest.skins },
+  // The same function the Worker calls, so the fixtures carry what production carries (the hand-written list here once lacked `photos`).
+  assets: storeAssets(),
   cache: null,
 };
 
