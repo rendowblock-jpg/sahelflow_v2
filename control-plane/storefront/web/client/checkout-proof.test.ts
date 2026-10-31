@@ -200,10 +200,13 @@ describe("order button", () => {
   it("the failure line can take focus (tabindex -1) and the button names it", async () => {
     const c = await mount();
     await c.fill();
+    // happy-dom (like a browser) answers tabIndex -1 for ANY plain div and does not write an attribute for it, so the value read back proves nothing: record what the script assigns.
+    const tabIndexWrites: number[] = [];
+    Object.defineProperty(c.status, "tabIndex", { configurable: true, get: () => -1, set: (value: number) => { tabIndexWrites.push(value); } });
     c.net.replies.push({ status: 500, body: { error: "x" } });
     c.tap();
     await until(() => !c.status.hidden && !c.submit.disabled);
-    expect(c.status.tabIndex).toBe(-1);
+    expect(tabIndexWrites).toContain(-1);
     expect(c.submit.getAttribute("aria-describedby")).toContain("sf-status");
   });
 

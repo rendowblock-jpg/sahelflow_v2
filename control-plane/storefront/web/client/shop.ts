@@ -53,6 +53,8 @@ function must<T extends Element>(root: ParentNode, selector: string): T {
 }
 
 function boot(): void {
+  // First, before any early return: a sold-out product page has no order form, and a failed photo there needs the placeholder too (client/photos.ts).
+  watchPhotos();
   const dataNode = document.getElementById("sf-data");
   if (!dataNode) return;
   const d = JSON.parse(dataNode.textContent || "{}") as Data;
@@ -487,9 +489,6 @@ function boot(): void {
     refresh();
     form.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   });
-
-  // A photo that fails to load becomes a placeholder element (client/photos.ts, shared with the home page).
-  watchPhotos();
 
   refresh();
   requestAnimationFrame(() => { animate = true; });

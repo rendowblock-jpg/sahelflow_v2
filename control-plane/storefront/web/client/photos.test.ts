@@ -128,3 +128,29 @@ describe("the home page's own tiny script (client/home-photos.ts)", () => {
     expect(late.nextElementSibling?.getAttribute("data-sf")).toBe("photo-missing");
   });
 });
+
+// A sold-out product page has no order form, so the order script (shop.ts) used to return before it ever started the photo watcher:
+// a photo that failed there kept the browser's broken-image icon (seen on the fixtures' product2 pages, 31 Oct).
+describe("the order script on a product page with no order form", () => {
+  const failedPhoto = (extra = ""): HTMLImageElement => {
+    document.body.innerHTML = `${extra}<div id="frame"><img src="/lampe.jpg" alt="Lampe en laiton"></div>`;
+    const img = document.querySelector<HTMLImageElement>("img");
+    if (!img) throw new Error("fixture has no image");
+    state(img, true, 0);
+    return img;
+  };
+
+  it("still swaps a photo that failed for the placeholder when the page has no order data at all", async () => {
+    const img = failedPhoto();
+    await import("./shop");
+    expect(img.nextElementSibling?.getAttribute("data-sf")).toBe("photo-missing");
+    expect(img.style.display).toBe("none");
+  });
+
+  it("and when it has order data but no #order form (a sold-out product)", async () => {
+    const img = failedPhoto('<script id="sf-data" type="application/json">{}</script>');
+    await import("./shop");
+    expect(img.nextElementSibling?.getAttribute("data-sf")).toBe("photo-missing");
+  });
+
+});
