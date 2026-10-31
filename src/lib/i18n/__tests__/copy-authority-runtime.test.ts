@@ -316,9 +316,12 @@ describe("migrated components no longer ship an inline copy authority", () => {
       "src/components/storefront/studio/storefront-release-history.tsx",
     );
     expect(src).not.toContain("const COPY");
-    expect(src).toContain('const { t, locale, dir } = useI18n();');
+    // The section no longer sets dir itself: the page shell owns the direction (G3b 587589e3). The point of this test is t().
+    expect(src).toContain('const { t, locale } = useI18n();');
     expect(src).toContain('t("storefront.releaseHistory.title")');
-    expect(src).toContain('t("storefront.releaseHistory.confirm")');
+    // The rollback confirmation moved into the shared ConfirmDialog (G3b); its label is a states-prefix key.
+    expect(src).toContain("<ConfirmDialog");
+    expect(src).toContain("rollbackConfirm");
   });
 
   it("inbox-customer-work-panel localizes order statuses through t()", () => {

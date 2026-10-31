@@ -112,10 +112,15 @@ describe("Founder Storefront V2 acceptance repair", () => {
   it("exposes active/pause intent in Studio and never reports a pause as published", () => {
     const studio = readStudio();
     expect(studio).toContain("checked={draft.isActive}");
-    expect(studio).toContain('t("storefront.active")');
+    // The switch is labelled on/off by the redesigned top bar (G3b); the pause line is storefront.inactive.
+    expect(studio).toContain('t("storefront.studioStates.toggle.on")');
+    expect(studio).toContain('t("storefront.studioStates.toggle.off")');
     expect(studio).toContain('t("storefront.inactive")');
-    expect(studio).toContain('t("storefront.studio.published")');
-    expect(studio.indexOf('t("storefront.studio.published")')).toBeLessThan(
+    // "Published" is said only when the hosted service answered "published"; anything else shows the inactive line,
+    // and the published text must come first in the ternary (a swapped ternary would put the pause line first).
+    expect(studio).toContain('hostedStatus === "published"');
+    expect(studio).toContain('t("storefront.studioStates.publish.published"');
+    expect(studio.indexOf('t("storefront.studioStates.publish.published"')).toBeLessThan(
       studio.lastIndexOf('t("storefront.inactive")'),
     );
   });
