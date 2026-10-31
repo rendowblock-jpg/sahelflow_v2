@@ -76,13 +76,14 @@ describe("A2 the reply payload is the desktop's own shape; ids are UUIDs", () =>
   });
   it("the v4 builder: fixed bytes give one literal string, version and variant bits are set; no Math.random anywhere", () => {
     const bytes = (a: Uint8Array): Uint8Array => { for (let i = 0; i < 16; i += 1) a[i] = i; return a; };
+    const asSource = (fill: (b: Uint8Array) => Uint8Array) => <T extends ArrayBufferView | null>(array: T): T => { fill(array as unknown as Uint8Array); return array; };
     expect(uuidV4FromRandom(bytes)).toBe("00010203-0405-4607-8809-0a0b0c0d0e0f");
     const allFf = (a: Uint8Array): Uint8Array => { a.fill(255); return a; };
     expect(uuidV4FromRandom(allFf)).toBe("ffffffff-ffff-4fff-bfff-ffffffffffff");
     const spy = vi.spyOn(Math, "random").mockImplementation(() => { throw new Error("Math.random used"); });
     try {
-      expect(newCommandId({ getRandomValues: bytes })).toBe("00010203-0405-4607-8809-0a0b0c0d0e0f");
-      expect(newCommandId({ randomUUID: () => "11111111-2222-4333-8444-555555555555", getRandomValues: bytes })).toBe("11111111-2222-4333-8444-555555555555");
+      expect(newCommandId({ getRandomValues: asSource(bytes) })).toBe("00010203-0405-4607-8809-0a0b0c0d0e0f");
+      expect(newCommandId({ randomUUID: () => "11111111-2222-4333-8444-555555555555", getRandomValues: asSource(bytes) })).toBe("11111111-2222-4333-8444-555555555555");
     } finally { spy.mockRestore(); }
   });
 });
