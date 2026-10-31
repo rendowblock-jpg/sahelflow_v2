@@ -119,6 +119,12 @@ describe("sync engine", () => {
     s.sync.start(false); s.st.screen = "pair"; await s.advance(60_000); s.sync.stop(); s.st.screen = "settings"; await s.advance(600_000);
     expect(s.calls).toHaveLength(0);
   });
+  it("W198 A a manual Refresh on a screen with no interval does not move the running timer", async () => {
+    const w = world({ screen: "settings" }, [stored(1)]);
+    w.sync.start(false); await w.advance(30_000); w.st.screen = "welcome"; await w.sync.refresh(); w.st.screen = "settings";
+    await w.advance(29_000); expect(w.calls).toHaveLength(0);
+    await w.advance(1_000); expect(times(w)).toEqual([60]); // the timer armed at 0 still fires at 60, not 30 s after the Refresh
+  });
   it("W198 B a locked phone checks too: one 'dashboard' fetch per cycle every 60 s, counted against the daily cap, nothing while hidden", async () => {
     const w = world({ screen: "lock" }, [stored(1), stored(2), stored(3), stored(4)]);
     w.sync.start(); await settle(); await w.advance(125_000);
