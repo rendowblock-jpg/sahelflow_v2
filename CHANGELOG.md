@@ -68,14 +68,14 @@ Source and automated-test evidence only. None of it is in a signed build and non
 ### 2026-10-19 — FD-073 adopts the Internal.45 release authority
 
 - FD-073 authorizes one signed successor: app `1.0.0-internal.45` / MSI `1.0.0.45`, channel `internal`, mode `customer-online`, owned host `sahelflow.com`, built from the exact `main` tip. Content merged after Internal.44 (`c1a66d9b…`):
-  - **WhatsApp:** #536 one inbound record that stayed stuck and was retried every ~5 minutes is fixed (the messages SahelFlow sends itself came back with an empty `participant` that the app's strict schema refused; the sidecar now conforms three fields, and every refusal logs the field paths and codes, never values); #537 messages that arrived while SahelFlow was closed are kept (they were discarded until the connection reported `open`; messages the old gate already dropped cannot be recovered by SahelFlow and remain on the phone; new diagnostics `inbound.early`, `offline.preview`, `offline.done`).
+  - **WhatsApp:** #536 one inbound record stuck and retried every ~5 minutes is fixed (the messages SahelFlow sends itself came back with an empty `participant` that the app's strict schema refused; the sidecar now conforms three fields, and each refusal logs field paths and codes, never values); #537 messages that arrived while SahelFlow was closed are kept (they were discarded until the connection reported `open`; messages the old gate already dropped cannot be recovered by SahelFlow and remain on the phone; new diagnostics `inbound.early`, `offline.preview`, `offline.done`).
   - **Startup, workspace and updates:** #539 the startup card is redesigned (theme-aware, Minimize and Close, follows the colour mode and the four presets; the "taking longer than usual" hint moves from 15 s to 45 s); #510 the workspace paints from the server's licence check instead of a second client fetch; #540 updates are quiet (a chip in the top bar, a download only on click, then "Restart to update") and the desktop stops its servers and the WhatsApp sidecar through the normal teardown before the installer starts. Windows still asks for one administrator confirmation (per-machine install).
   - **Notifications and interface:** #538 cleared notifications stay cleared after SahelFlow is reopened (kept per member, capped at 200 entries, no customer text); #534 the AI page renders one `main` landmark.
   - **Cloud backup and relay:** #543 the app's cloud backup upload is now accepted by the Worker (the app sent no `X-SahelFlow-SHA256`, so every upload was refused), a late upload to a failed reservation is refused, and a trial seller keeps one rolling point; #545 interrupted uploads resume, an 8th daily backup rotates the oldest out instead of being refused, verify checks every chunk, a licence with an unreadable expiry is refused, an hourly job purges expired trial data 30 days after expiry, and the desktop retries a transient failure twice; #544 the background workers call the cloud only while something is happening (the PR estimates about 144 calls a day per install with no phone paired, down from about 35,000), so a few installs cannot exhaust the account's request allowance.
   - **Hosted storefront stock:** #546 an item paused and then published again, or sold out and then restocked, is offered with its stock again instead of 0.
   - **Documents:** #535 and #541 record Internal.44 and the post-Internal.44 merges.
   - **Left out on purpose:** #547 (the public store page at `shop.sahelflow.com/<slug>`, a draft) and the findings in the transformation register's "Not in the next release" table.
-  - **Measured and not measured:** the startup card and the update chip have never been drawn or run on a real Windows screen or with a real installer; the WhatsApp offline catch-up was tested in CI, not on a device; the desktop backup retry has not run against a real network or an installed app; the startup gain is still a projection, palette latency is unmeasured and the Inbox cause is not established; none of this is Founder-installed until it is installed and observed.
+  - **Measured and not measured:** the startup card and update chip have never run on a real Windows screen or with a real installer; the WhatsApp offline catch-up was tested in CI, not on a device; the desktop backup retry has not run on a real network or an installed app; the startup gain is a projection, palette latency is unmeasured and the Inbox cause is not established; none of this is Founder-installed until installed and observed.
 - The tag, digests and publish time are recorded after the signed run succeeds. Published is not installed: no ledger row converts.
 
 ### 2026-10-18 — documentation reconciled to Internal.44
@@ -84,13 +84,14 @@ Source and automated-test evidence only. None of it is in a signed build and non
 
 ### 2026-10-18 — after Internal.44 (merged to `main`, not published)
 
-- #540 (`1f8d8cc3`): quiet updates. A top-bar chip offers the update, the download starts only on a click, "Restart to update" follows; no dialog and no 30-minute nagging. The desktop shell stops the contained servers and the WhatsApp sidecar through the normal-close teardown before the installer starts. Not run with a real installer; the Windows administrator confirmation remains.
+- #540 (`1f8d8cc3`): quiet updates. A top-bar chip offers the update, the download starts only on a click, "Restart to update" follows; no dialog and no 30-minute nagging; the contained servers and the WhatsApp sidecar are stopped through the normal-close teardown before the installer starts. Not run with a real installer; the Windows administrator confirmation remains.
 - #539 (`fe0dcdf4`): premium startup card that follows the colour mode and preset, with Minimize and Close, a draggable card, a single progress group and a hint at 45 s instead of 15 s. Compiled and tested for Windows in CI; not drawn on a Windows screen.
 - #538 (`9184f760`): cleared notifications stay cleared after SahelFlow is reopened (kept per member in the `Setting` table instead of the WebView's per-launch `localStorage`).
-- #537 (`8c4c0b79`): WhatsApp messages that arrive while SahelFlow is closed are kept (the inbound gate no longer waits for `open`); new diagnostics `inbound.early`, `offline.preview`, `offline.done`.
-- #536 (`49441056`): the stuck inbound WhatsApp record (own-message echoes carried an empty participant) is accepted; refusals now log field paths.
+- #537 (`8c4c0b79`): messages that arrive while SahelFlow is closed are kept (the inbound gate no longer waits for `open`); new diagnostics `inbound.early`, `offline.preview`, `offline.done`.
+- #536 (`49441056`): the stuck inbound record (own-message echoes carried an empty participant) is accepted; refusals now log field paths.
 - #510 (`64282a8f`): the workspace paints from the server's licence check; hydration mismatch fixed with `useSyncExternalStore`.
-- #534: `/agents` had two `main` landmarks on desktop; the AI canvas root is now a `div`, so the page has one. The change is two lines (a tag), measured by reading the rendered page's accessibility tree on a local dev server; the Playwright specs that touch the page run in CI.
+- #534: `/agents` had two `main` landmarks on desktop; the AI canvas root is now a `div`. Measured by reading the rendered page's accessibility tree on a local dev server; the Playwright specs that touch the page run in CI.
+- The PR texts are in the FD-073 entry above.
 
 ### 2026-10-18 — signed Internal.44 publication (FD-072)
 
@@ -107,13 +108,13 @@ Source and automated-test evidence only. None of it is in a signed build and non
   - **Whole-app audit repairs, WhatsApp, search and interface:** #514 WhatsApp inbound ignores undecryptable stubs and reactions and brings an archived thread back; #522 one unreadable inbound-spool record is set aside instead of stopping the sidecar, and the protected key is unlocked once per process; #513 the palette's server search stops when the browser cancels it; #530 typo search always tries one shorter spelling (on a slow PC a search that finds nothing is about twice as slow; unmeasured), the Inbox fallback poll backs off from 3 s to 15 s, and the sign-in, setup, join and licence pages get a skip link.
   - **Release mechanics, tests and documents:** #501 a signed build's source must be the current tip of `main`; #502 the documentation archive is retired; #520 and #529 test-only (the Settings window test waits for its open animation; three script contract tests join the vitest lane); the audit register and the merged-not-published record.
   - **Left out on purpose:** #510 (licence-boundary seed, draft: it failed two required browser tests) and the findings in the transformation register's "Not in the next release" table (each needs a Founder decision, a database migration or a Windows test).
-  - **Measured and not measured:** the startup gain is a projection from two Founder traces, not a measurement of this build; palette latency is unmeasured; the Inbox cause is not established and needs the diagnostics from this build; the WhatsApp sidecar fix was tested in CI, not on a device; none of this is Founder-installed until it is installed and observed.
+  - **Measured and not measured:** the startup gain is a projection from two Founder traces, not a measurement of this build; palette latency is unmeasured; the Inbox cause is not established and needs this build's diagnostics; the WhatsApp sidecar fix was tested in CI, not on a device; none of this is Founder-installed until installed and observed.
 - The tag, digests and publish time are recorded in the publication entry above. Published is not installed: no ledger row converts.
 
 ### 2026-10-17 — documentation reconciled to Internal.43
 
-- Retired `documentation/archive` (14 superseded files deleted; the four live Phase 4 evidence documents moved to `documentation/security/`). Superseded documentation is deleted, not archived; git history is the record.
-- `WORKING_MEMORY.md` reduced from a dated diary to a compact resumable handoff; `CURRENT_STATE.md` now holds the release facts once, including a release ledger generated from GitHub; the README files, `AGENTS.md`, `ROADMAP.md` and `WORKFLOW.md` point to them instead of repeating release snapshots. The release process and the sandbox workflow are documented in `WORKFLOW.md` §11 and `AGENTS.md`. `DECISIONS.md` gained a header correction, an index and the FD-071 execution record; no decision changed.
+- Retired `documentation/archive` (14 superseded files deleted; the four live Phase 4 evidence documents moved to `documentation/security/`).
+- `WORKING_MEMORY.md` became a compact resumable handoff instead of a dated diary; `CURRENT_STATE.md` holds the release facts once (with a release ledger generated from GitHub) and the README files, `AGENTS.md`, `ROADMAP.md` and `WORKFLOW.md` point to it. The release process and sandbox workflow are in `WORKFLOW.md` §11 and `AGENTS.md`. `DECISIONS.md` gained a header correction, an index and the FD-071 execution record; no decision changed.
 
 ### 2026-10-17 — signed Internal.43 publication (FD-071)
 
@@ -121,7 +122,7 @@ Source and automated-test evidence only. None of it is in a signed build and non
 - First release to ship the per-machine `SahelFlow-Setup.exe` beside the MSI (#493).
 - Content: #490 (installed Internal.42 audit repairs across orders, couriers, storefront, WhatsApp, AI, team login, startup card and search), #492 (messy-order extraction repair; the inbox shows whether Gemini ran), #493, #498 (the workspace window is no longer created maximized before the authenticated UI is ready), plus the installed-UI evidence harness repairs (#494, #496), the CI failure digest workflow (#497) and the Setup.exe manifest signature fix (#500). Release authority: #491 and #495.
 - Release record: three signed attempts failed first — the manifest signature (fixed by #500), then two draft-release `403`s because protected `main` had moved past the source commit. The release was built from the `main` tip; `release.yml` now refuses any other source (#501). Details in `documentation/system/CURRENT_STATE.md` §1.
-- Published is not installed: no ledger row converts, and installation by the Founder is the next gate.
+- Published is not installed: no ledger row converts.
 
 ### 2026-10-09 — FD-070 adopts the Internal.42 release authority
 
@@ -168,7 +169,7 @@ Source and automated-test evidence only. None of it is in a signed build and non
 - The Founder's 2026-09-16 directive ("let's complete all the work and make the next signed release") adopts **FD-062** (`documentation/product/DECISIONS.md`): one signed successor, app `1.0.0-internal.38` / MSI `1.0.0.38`, packaging the protected-main frontier #424–#450 since Internal.37 (release source `cd1114de…`).
 - The packaged line: #424 Internal.37 Founder visual repair (F-14 inbox, F-15 canvas-first Agents — the source repair for the recorded 2026-09-11 installed rejection); #425 canonical money/phone formatters + change-pin/shop-lifecycle Settings authority; #426/#427/#450 STR-01 `inbox-v3-thread` seams 1–3 (message bubble 559 lines, view-state hook 229 lines, thread header cluster 332 lines — thread 2,238 → 1,283); #429–#449 the complete FD-061 CodFlow extraction register (EX-1 Yalidine 36-status truth, EX-2 ZR Express + EcoTrack, EX-3 Meta Pixel + Conversions API engine, EX-4 storefront slices 1–6 — abandoned-cart recovery, order-verified reviews, quantity-tier offers, WebP pipeline, per-product landing pages, Turnstile + WhatsApp OTP checkout gates — EX-5 MCP study, EX-6 control-plane deployment playbook).
 - Sequencing per FD-062: the FD-058 combined campaign executes once on the installed Internal.38 candidate (supersedes FD-060's candidate choice only); ledger rows convert only on that installed observation; the retained #306 logout row executes LAST; the chat-transited GitHub PAT rotates after the merge window. No customer-online, Beta, Stable or paid-deployment authority is created.
-- Publication: release PR #451 merged by expected-head squash `9bf89927…` after its head passed the FULL release battery (21 checks / 0 failed incl. installed-MSI evidence); certification cited product head `faf7f184…` (tree `be712df9…` tree-identical to the reviewed #450 head; CI `35133829685`, Phase 5 `35133829343`, Phase 6-7 `35133829347`); signed build run `35141403431` success (attempt 2; the recorded attempt-1 transient was an EBUSY temp-dir cleanup race in the staged-runtime smoke AFTER all readiness verifications passed — failed-jobs-only re-run, evidence recorded first); tag `sahelflow-v1.0.0-internal.38-9bf899274074f6f20935d224b96e8b1d14fc9690`; published 2026-09-16T20:25:03Z; updater `latest.json` serves `1.0.0-internal.38` to the installed Internal.37.
+- Publication: release PR #451 merged by expected-head squash `9bf89927…` after its head passed the FULL release battery (21 checks / 0 failed incl. installed-MSI evidence); certification cited product head `faf7f184…` (tree `be712df9…` tree-identical to the reviewed #450 head; CI `35133829685`, Phase 5 `35133829343`, Phase 6-7 `35133829347`); signed build run `35141403431` success (attempt 2; attempt 1 hit an EBUSY temp-dir cleanup race in the staged-runtime smoke after all readiness verifications passed; failed-jobs-only re-run, evidence recorded first); tag `sahelflow-v1.0.0-internal.38-9bf899274074f6f20935d224b96e8b1d14fc9690`; published 2026-09-16T20:25:03Z; updater `latest.json` serves `1.0.0-internal.38` to the installed Internal.37.
 
 ### 2026-08-31 — signed Internal.31 publication (FD-053)
 
@@ -183,14 +184,13 @@ Source and automated-test evidence only. None of it is in a signed build and non
 - R3/R4/R5/R6 reproduced and were root-caused, repaired per one-bounded-root discipline and merged with expected-head discipline (each head green on the full Required battery): #362 `f39ad836…` (B3 — sidecar Bun multipart dropped part Content-Type for all outbound media; explicit allowlist-validated `mimeType` form field on all four senders), #363 `60bfba65…` (D1 — `verifyGeminiKey` accepts the new Google AI Studio key format alongside legacy `AIza`; live probe stays the validator; `GEMINI_LOCATION_UNSUPPORTED` per-network mapping), #364 `5f00c54…` (B5 — coded `INVALID_DELETE_REQUEST` + PII-free shape logging + `@lid` test), #365 `851b94d…` (B4 — microphone failures mapped to three distinct localized causes + `DOMException.name` logging), #366 `f0fca29…` (FD-052 option A — demo data coexists with real operations; blanket read-only freeze removed; courier boundary narrowed to `assertNonDemoCourierIdentity`). Protected main: `f0fca29…`.
 - FD-052 recorded in `documentation/product/DECISIONS.md` (Founder option A: demo rows mix into stats/reports until removed; one-way door on removal). D2 (governed Confirm single-click) acknowledged-by-directive.
 - D1 evidence correction: Algeria IS on Google's official Gemini API available-regions list (live page fetch); the earlier "User location is not supported" verdict came from the probe sandbox's own egress. Region-relay options parked; the runtime region-block mapping remains the per-network safety net. Exact rows and correction: the Internal.30 campaign reconciliation ledger (since removed; see git history).
-- Two CI-latency test repairs rode affected heads (no product change): governed-confirm e2e asserts the action contract (`not.toBeEnabled()`) instead of refresh-latency-coupled `toBeHidden()`; the demo clock-normalizer rebase test received an explicit 90s budget after its second documented 15s timeout.
-- Next: signed Internal.31 under FD-053 packages the repair line + the #359 six-wave delta; its installed campaign re-verifies R3–R6, R11 (FRC-2 key lifecycle) and D3, with logout last.
+- Two CI-latency test repairs rode affected heads (no product change): the governed-confirm e2e asserts `not.toBeEnabled()` instead of the latency-coupled `toBeHidden()`; the demo clock-normalizer rebase test got a 90s budget after its second 15s timeout.
 
 ### 2026-08-31 — PR #359 frontend Class-AAA remediation merged to protected main (Founder option-B directive)
 
 - PR #359 (frontend Class-AAA remediation, six waves) merged to protected `main` at `324719ff999565967e2939a5eacc82539ae86cbc` (squash of branch head `e468adca11df286907bf3b54895e657a213d6e2c`, 21/21 checks green including installed-MSI lanes and both Required gates; source diagnostics tsc/ESLint/Vitest 3482/3482). Wave 1: phone-number bidi isolation, CSS token authority, notification-center refactor and ~5,000-line dead-code removal (11 files). Wave 2: URL-persisted list filters, CSV export with formula-injection guard/RFC4180/BOM/server-side ≤5k cap, confirmation queue, async combobox. Wave 3: single order lifecycle rail (governed Confirm became single-click with direct stock deduction), A5 delivery note, wa.me deep links. Wave 4: onboarding wizard and keyboard command palette. Wave 5: `e.code` shortcuts, WCAG AA contrast contract tests, server-locale truth, voice-note player. Wave 6: hover tokens and feedback semantics.
-- Two PR-authored gate blockers repaired in-branch before merge: the installed server-locale proof moved behind the runtime-session boundary (`Assert-InstalledServerLocaleDictionaries`, filesystem-backed at the exact standalone runtime path), and the governed-confirm browser evidence aligned to the rail authority model. One documented CI flake (Quality Gate re-run attempt 2) after a 15s Vitest timeout in an untouched demo-clock test; it did not reproduce.
-- This content is NOT inside published Internal.30 (source `2eb8a337…`); it rides protected `main` ahead of the next signed package. Exact delta, gate-repair detail and campaign rows: the Internal.30 campaign reconciliation ledger (since removed; see git history). The FD-051 installed Founder campaign on the published Internal.30 package is unchanged and remains the next evidence action; FRC-3 still waits on it.
+- Two gate blockers were repaired in-branch before merge: the installed server-locale proof moved behind the runtime-session boundary (`Assert-InstalledServerLocaleDictionaries`, filesystem-backed at the exact standalone runtime path), and the governed-confirm browser evidence was aligned to the rail authority model. One CI flake (Quality Gate re-run attempt 2: a 15s Vitest timeout in an untouched demo-clock test) did not reproduce.
+- This content is NOT inside published Internal.30 (source `2eb8a337…`); it rides protected `main` ahead of the next signed package (exact delta, gate-repair detail and campaign rows: the Internal.30 campaign reconciliation ledger, since removed; see git history). The FD-051 installed campaign on Internal.30 remains the next evidence action; FRC-3 waits on it.
 
 ### 2026-08-28 — #316/#317 source completion and signed Internal.28 publication (FD-049)
 
@@ -210,10 +210,8 @@ Source and automated-test evidence only. None of it is in a signed build and non
 - PR #282 rebuilt Inbox V3 and hardened WhatsApp pairing/recovery behavior. Source/browser certification is complete; real-phone QR/link/reopen/outbound/inbound evidence remains a separate installed/provider observation.
 - PR #283 rebuilt Universal Search / Command Center. Exact certified product head `fa77ae32dc680f0d2854d10363dcaf06ba4e5229` passed Phase 5 `32200539921`, Phase 6-7 `32200539919` and CI `32200540092`, including exact-head Windows installed closure.
 - PR #284 promoted that certified product state to **Internal.22**: `1.0.0-internal.22`, MSI `1.0.0.22`, FD-041, `founder-offline-only`, protected release source `e1199a8e63af7e04d3ef3cf8f3e705dbfb0ea348`.
-- Signed updater run `32205843573` completed successfully on the exact protected source and proved source/review binding, signing authority, signed MSI/updater build, staged runtime readiness, signature verification, signed install/reopen, authenticated hydrated WebView UI twice, deterministic source rewrites, evidence manifest, `latest.json`, exact tag/publication target and final publication.
-- Issue #221 remains open for Founder-installed whole-product visual/interaction acceptance of Internal.22. Hosted Windows/CI installed evidence does not substitute for the Founder’s human product verdict.
-- Issue #226 is closed/completed; its performance budgets remain regression criteria rather than an active blocker.
-- Issue #230 remains open P1 and blocks customer-online/public-trial readiness.
+- Signed updater run `32205843573` succeeded on the exact protected source and proved source/review binding, signing authority, signed MSI/updater build, staged runtime readiness, signature verification, signed install/reopen, authenticated hydrated WebView UI twice, deterministic source rewrites, evidence manifest, `latest.json`, exact tag/publication target and final publication.
+- Issue #221 remains open for Founder-installed whole-product visual/interaction acceptance of Internal.22; hosted Windows/CI installed evidence does not substitute for the Founder’s human product verdict. Issue #226 is closed/completed (its performance budgets remain regression criteria). Issue #230 remains open P1 and blocks customer-online/public-trial readiness.
 - Customer-online, Beta and Stable remain unauthorized. No Internal.23 follows automatically from publication or documentation reconciliation.
 
 > Entries below retain milestone-time chronology. “Latest published”, “release pending” and similar statements describe the repository state when that entry was written, not the current frontier above.
@@ -231,136 +229,64 @@ Source and automated-test evidence only. None of it is in a signed build and non
 - Active execution is now **design-first Phase 6**: establish Founder-approved English + Arabic targets for global shell/true RTL, Inbox, AI Agents and Settings before another broad production UI wave. No Internal.21 release is authorized merely by this rollback.
 - Customer-online, Beta and Stable remain unauthorized; issues #221, #226 and #230 retain their independent acceptance/performance/network obligations.
 
-> Older `Unreleased` entries below are retained as milestone-time chronology. Statements such as “latest published” or “release pending” inside those historical entries describe the repository state when that entry was written, not the current frontier above.
-
 ### Internal.14 Phase 5–6 installed checkpoint candidate request
 
-- Requests one unique `1.0.0-internal.14` / MSI `1.0.0.14` milestone from the protected Phase 6 source/browser baseline.
-- Includes Phase 5 whole-product experience closure through PR #220 and Phase 6 Arabic/RTL/accessibility plus controlled Phase 7 measurement infrastructure through PR #223.
-- Intended evidence: protected signed MSI, install/reopen and hydrated UI proof, followed by Founder-installed Phase 5–6 visual/accessibility observation and later Phase 7 hardware certification.
-- This source version is a release request only until the exact protected-main signed workflow passes and publishes it; it is not Beta, Stable or Founder acceptance.
+- Requests one unique `1.0.0-internal.14` / MSI `1.0.0.14` milestone from the protected Phase 6 source/browser baseline: Phase 5 whole-product experience closure through PR #220 and Phase 6 Arabic/RTL/accessibility plus controlled Phase 7 measurement infrastructure through PR #223.
+- Intended evidence: protected signed MSI, install/reopen and hydrated UI proof, then Founder-installed Phase 5–6 visual/accessibility observation and later Phase 7 hardware certification.
+- A release request only until the exact protected-main signed workflow passes and publishes it; not Beta, Stable or Founder acceptance.
 
 ### Phase 3 protected-source closure
 
-- Merged PR #203 through squash commit `aa4ca0758fd696f4b02fc1975629ac698f9349c3` from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`.
-- Integrated durable inbound WhatsApp, database-authoritative inbox, truthful
-  automations, proposal-bound sensitive AI, durable commerce and one canonical
-  courier facade.
-- Closed post-review findings in storefront trigger replay, POSIX spool rename
-  durability, conversation timestamp monotonicity, automation catalogs and
-  commerce page-budget continuation.
-- Final required CI `30901725446` passed TypeScript, ESLint, the complete Vitest
-  suite, Prisma migration status, 80%+ coverage and production dependency audit.
-- Updated Hono/PostCSS/brace-expansion resolutions to clear newly published
-  advisories while preserving ESLint/minimatch compatibility; production audit
-  returned zero vulnerabilities.
-- Closed issue #202 with no known Phase 3 P0/P1.
-- FD-030 retains real provider certification for Phase 9 representative beta and
-  issue #201 for the applicable Level 3/installed evidence gate.
+- Merged PR #203 through squash commit `aa4ca0758fd696f4b02fc1975629ac698f9349c3` from validated head `f0db4116874238d0c415b4725cd2c5f3ef6201da`: durable inbound WhatsApp, database-authoritative inbox, truthful automations, proposal-bound sensitive AI, durable commerce and one canonical courier facade.
+- Closed post-review findings in storefront trigger replay, POSIX spool rename durability, conversation timestamp monotonicity, automation catalogs and commerce page-budget continuation.
+- Final required CI `30901725446` passed TypeScript, ESLint, the complete Vitest suite, Prisma migration status, 80%+ coverage and production dependency audit. Hono/PostCSS/brace-expansion resolutions were updated for newly published advisories (ESLint/minimatch compatibility kept); the production audit returned zero vulnerabilities.
+- Closed issue #202 with no known Phase 3 P0/P1. FD-030 retains real provider certification for Phase 9 representative beta and issue #201 for the applicable Level 3/installed evidence gate.
 - No version bump, MSI, Founder acceptance, Beta or Stable claim accompanied the merge.
 
 ### Phase 4 audit frontier
 
-- Opened issue #204 for exhaustive data/key/backup/migration/recovery/security/privacy
-  reconnaissance, primary-source research, one Problem Register and shared
-  contract freeze before production implementation.
+- Opened issue #204 for exhaustive data/key/backup/migration/recovery/security/privacy reconnaissance, primary-source research, one Problem Register and shared contract freeze before production implementation.
 
 ### Phase 2 protected-source closure
 
-- Merged PR #197 with signed installation-level trial/permanent licensing,
-  protected clock/recovery floors, transfer/recovery/revocation and complete
-  data-preserving lockout.
-- Merged PR #200 at
-  `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`, making the Tauri host the sole
-  authority for create, rename, switch, archive, recover and delete.
-- Bound native lifecycle operations to exact registry revision, workspace,
-  installation, person/member/device/session, policy/revocation, signed
-  entitlement/slots, migration set and shop incarnation authority.
-- Added one journaled lifecycle with quiescence, database/registry mutation,
-  runtime restart, authenticated readiness, compensation and startup
-  reconciliation.
-- Removed browser registry mutation and generic process-relaunch authority.
-- Passed source, database, Rust, Tauri, Windows runtime, containment and MSI
-  build/install/launch/close/reopen evidence.
-- Retained one explicit limitation in issue #201: the ephemeral runner did not
-  observe the installed authenticated hydrated-WebView receipt twice. The Founder
-  authorized merge with that single limitation; it is not passing installed-UI
-  evidence and does not reopen native lifecycle authority.
-- No version bump, new signed release, Founder acceptance or Stable claim
-  accompanied the Phase 2 protected-source closure.
+- Merged PR #197 with signed installation-level trial/permanent licensing, protected clock/recovery floors, transfer/recovery/revocation and complete data-preserving lockout.
+- Merged PR #200 at `e9c92f08f39e8d87ddfd72d2e698418ae81fc084`, making the Tauri host the sole authority for create, rename, switch, archive, recover and delete. Native lifecycle operations are bound to the exact registry revision, workspace, installation, person/member/device/session, policy/revocation, signed entitlement/slots, migration set and shop incarnation; one journaled lifecycle covers quiescence, database/registry mutation, runtime restart, authenticated readiness, compensation and startup reconciliation. Browser registry mutation and generic process-relaunch authority were removed.
+- Passed source, database, Rust, Tauri, Windows runtime, containment and MSI build/install/launch/close/reopen evidence.
+- One explicit limitation is retained in issue #201: the ephemeral runner did not observe the installed authenticated hydrated-WebView receipt twice. The Founder authorized merge with it; it is not passing installed-UI evidence and does not reopen native lifecycle authority.
+- No version bump, new signed release, Founder acceptance or Stable claim accompanied the closure.
 
 ### Canonical Golden COD and Windows authority adoption
 
-- Merged PR #190 with trusted manual intake, canonical confirmation/rejection,
-  exact optimistic version and idempotency, exact product-or-variant stock
-  reservation, inventory movement and complete AR/FR/EN decision states.
-- Merged PR #192 with governed packing, manual shipment, reservation consumption,
-  outbound inventory, delivery, customer delivery facts and creation of a DZD COD
-  receivable.
-- Merged PR #195 with repaired canonical settlement, return/refund/compensation,
-  replay and authorization boundaries together with durable identity, Teams and
-  permissions.
-- Merged PR #184 with a Windows DPAPI-protected installation root, exact existing-
-  root import, current/candidate/backup authority, resumable native rotation and
-  recovery journaling.
-- Kept ordinary source packages version-neutral. Internal.13 remains the
-  published and Founder-installed release; a new signed Internal milestone has
-  not yet been cut.
+- Merged PR #190 with trusted manual intake, canonical confirmation/rejection, exact optimistic version and idempotency, exact product-or-variant stock reservation, inventory movement and complete AR/FR/EN decision states.
+- Merged PR #192 with governed packing, manual shipment, reservation consumption, outbound inventory, delivery, customer delivery facts and creation of a DZD COD receivable.
+- Merged PR #195 with repaired canonical settlement, return/refund/compensation, replay and authorization boundaries together with durable identity, Teams and permissions.
+- Merged PR #184 with a Windows DPAPI-protected installation root, exact existing- root import, current/candidate/backup authority, resumable native rotation and recovery journaling.
+- Kept ordinary source packages version-neutral. Internal.13 remains the published and Founder-installed release; a new signed Internal milestone has not yet been cut.
 
 ### Final Completion Program and Research-First Quality Protocol
 
 - Added Founder decisions FD-028 and FD-029.
-- Replaced obsolete session overlays with one final Phase 0–9 dependency and
-  completion program.
-- Preserved milestone-based Internal releases, one active agent, complete
-  reconnaissance, one Problem Register, batch remediation, P0/P1 blocking,
-  exact-source evidence and continuous Arabic/RTL, accessibility, recovery and
-  performance quality.
-- Made current primary-source research mandatory before every major phase,
-  durable contract and material implementation.
-- Required complete observable vertical outcomes and removal of competing legacy
-  mutation/effect paths after canonical adoption and recovery proof.
-- Converted issue #164 into the live Phase 0–9 execution dashboard without making
-  it an additional documentation authority.
+- Replaced obsolete session overlays with one final Phase 0–9 dependency and completion program.
+- Preserved milestone-based Internal releases, one active agent, complete reconnaissance, one Problem Register, batch remediation, P0/P1 blocking, exact-source evidence and continuous Arabic/RTL, accessibility, recovery and performance quality.
+- Made current primary-source research mandatory before every major phase, durable contract and material implementation.
+- Required complete observable vertical outcomes and removal of competing legacy mutation/effect paths after canonical adoption and recovery proof.
+- Converted issue #164 into the live Phase 0–9 execution dashboard without making it an additional documentation authority.
 
 ### Internal.13 published milestone
 
-- Grouped the Session 1 foundations and Session 2 business-truth foundation into
-  exact executable source `fb32faedc5ecfc1718e395824f437b805cbb9ef2`.
-- Added independent order, confirmation, fulfillment, delivery, inventory, COD,
-  return and refund contracts.
-- Added aggregate versions, exact idempotent commands, trusted principals,
-  encrypted command replay, domain events, outbox intents, reservations,
-  inventory and financial movements, projection invalidations and compensation
-  facts.
-- Added compatible workspace, installation, shop-incarnation and exact process
-  `ShopContext` authority.
-- Added crash-recoverable multi-shop key rotation, migration-authoritative reset,
-  fail-closed audit persistence and evidence-based legacy projections.
-- Added shared Arabic typography, bidi, shell, table, dialog, chart and
-  operational-state foundations plus generated route-risk inventory.
-- Protected run `30366866703` passed exact-source authority, signed build, staged
-  readiness, MSI/signature verification, installed launch/reopen, authenticated
-  hydrated UI twice, deterministic evidence, exact release-asset comparison,
-  source-bound tag verification and automatic publication.
-- Published `1.0.0-internal.13` with the signed MSI, detached signature and public
-  updater metadata.
-- Confirmed the Founder-installed Internal.13 executable and preserved T470
-  AppData/database identity. Startup remained over budget at 68.863 seconds from
-  a stopped process and 31.834 seconds on immediate reopen; Arabic chart visual
-  behavior and explicit Founder acceptance remain open.
+- Grouped the Session 1 foundations and Session 2 business-truth foundation into exact executable source `fb32faedc5ecfc1718e395824f437b805cbb9ef2`: independent order, confirmation, fulfillment, delivery, inventory, COD, return and refund contracts; aggregate versions, exact idempotent commands, trusted principals, encrypted command replay, domain events, outbox intents, reservations, inventory and financial movements, projection invalidations and compensation facts; compatible workspace, installation, shop-incarnation and exact process `ShopContext` authority.
+- Added crash-recoverable multi-shop key rotation, migration-authoritative reset, fail-closed audit persistence and evidence-based legacy projections, plus shared Arabic typography, bidi, shell, table, dialog, chart and operational-state foundations and a generated route-risk inventory.
+- Protected run `30366866703` passed exact-source authority, signed build, staged readiness, MSI/signature verification, installed launch/reopen, authenticated hydrated UI twice, deterministic evidence, exact release-asset comparison, source-bound tag verification and automatic publication; it published `1.0.0-internal.13` with the signed MSI, detached signature and public updater metadata.
+- Confirmed the Founder-installed Internal.13 executable and preserved T470 AppData/database identity. Startup remained over budget at 68.863 seconds from a stopped process and 31.834 seconds on immediate reopen; Arabic chart visual behavior and explicit Founder acceptance remain open.
 
 ### Documentation truth reset
 
 - Consolidated active documentation into ten authoritative documents in PR #154.
-- Replaced duplicate product, experience, architecture, gap, roadmap, prompt,
-  wave and history documents.
+- Replaced duplicate product, experience, architecture, gap, roadmap, prompt, wave and history documents.
 - Preserved detailed research as non-authoritative archive evidence.
 - Established Web/Desktop agents with GitHub as durable truth.
-- Removed GLM, Codex Cloud, MAWS and legacy handoff systems from active
-  coordination.
-- Established the source → signed artifact → Founder-observed → Stable evidence
-  ladder.
+- Removed GLM, Codex Cloud, MAWS and legacy handoff systems from active coordination.
+- Established the source → signed artifact → Founder-observed → Stable evidence ladder.
 
 ## Earlier internal history
 
