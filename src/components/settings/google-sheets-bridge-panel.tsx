@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { BrandLogo } from "@/components/brand/brand-icons";
+import { TestingBadge } from "@/components/integrations/testing-badge";
 import { Panel, PanelDescription, PanelHeader, PanelTitle } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -307,7 +308,10 @@ export function GoogleSheetsBridgePanel({ canManage }: { canManage: boolean }) {
         <div className="flex min-w-0 items-start gap-3">
           <BrandLogo id="google_sheets" size="md" />
           <div className="min-w-0">
-            <PanelTitle>{copy.title}</PanelTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <PanelTitle>{copy.title}</PanelTitle>
+              <TestingBadge integration="sheets" />
+            </div>
             <PanelDescription>{copy.description}</PanelDescription>
           </div>
         </div>
