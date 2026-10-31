@@ -338,7 +338,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           className={cn(
             "flex h-8 min-h-(--sf-touch-target) items-center gap-2 rounded-surface border px-2.5 transition-[background-color,border-color,box-shadow]",
             open
-              ? "border-primary/40 bg-popover shadow-(--elevation-1) ring-3 ring-primary/10"
+              ? "border-ring bg-popover shadow-(--elevation-1) ring-3 ring-ring/50"
               : "border-border/80 bg-muted/30 hover:border-border hover:bg-muted/55",
           )}
         >

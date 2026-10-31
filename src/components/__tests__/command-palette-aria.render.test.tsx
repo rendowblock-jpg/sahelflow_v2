@@ -91,3 +91,66 @@ describe("CommandPalette ARIA references", () => {
     expect(danglingIds(container)).toEqual([]);
   });
 });
+
+/**
+ * Found by the keyboard-mode accessibility run (open search list, every page): cmdk draws each group as
+ * role="presentation", and a presentational element that carries a global ARIA attribute (here aria-description)
+ * loses that role, so the listbox then has a child that is not an option or a group (axe aria-required-children,
+ * critical). The hint must therefore reach screen readers through the group's heading, not through an attribute
+ * on the presentational wrapper.
+ */
+describe("CommandPalette results list ARIA structure", () => {
+  it("open: no presentational element inside the list carries an ARIA attribute", () => {
+    const { container } = renderPalette(true);
+    const list = container.querySelector<HTMLElement>('[role="listbox"]');
+    if (!list) throw new Error("the open palette has no results list");
+    const offenders: string[] = [];
+    for (const element of list.querySelectorAll('[role="presentation"], [role="none"]')) {
+      for (const attribute of Array.from(element.attributes)) {
+        if (attribute.name.startsWith("aria-")) offenders.push(`${attribute.name} on <${element.tagName.toLowerCase()}>`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("open: the quick-access hint is still read, as part of the group's label", () => {
+    const { container } = renderPalette(true);
+    const group = Array.from(container.querySelectorAll<HTMLElement>('[role="group"][aria-labelledby]')).find((element) =>
+      (document.getElementById(element.getAttribute("aria-labelledby") ?? "")?.textContent ?? "").includes(
+        "Jump straight to a workspace",
+      ),
+    );
+    if (!group) throw new Error("no labelled group holds the quick-access hint");
+    const label = document.getElementById(group.getAttribute("aria-labelledby") ?? "");
+    expect(label?.textContent ?? "").toContain("Quick access");
+  });
+});
+
+/**
+ * The cue that the search field has focus lives on its bordered frame (the input itself has no outline). It used to be
+ * a 40% border and a 10% ring, about 2.4:1 against the page; the house Input draws a full-strength border and a 50% ring,
+ * and the search field now does the same.
+ */
+describe("CommandPalette focus frame", () => {
+  const frameOf = (container: HTMLElement): HTMLElement => {
+    const frame = container.querySelector<HTMLElement>('[data-search-field="true"]');
+    if (!frame) throw new Error("the search field has no frame");
+    return frame;
+  };
+
+  it("open: the frame uses the same border and ring as every other field", () => {
+    const { container } = renderPalette(true);
+    const classes = frameOf(container).className.split(/\s+/);
+    expect(classes).toContain("border-ring");
+    expect(classes).toContain("ring-ring/50");
+    expect(classes).not.toContain("ring-primary/10");
+    expect(classes).not.toContain("border-primary/40");
+  });
+
+  it("closed: the frame keeps its quiet resting look", () => {
+    const { container } = renderPalette(false);
+    const classes = frameOf(container).className.split(/\s+/);
+    expect(classes).not.toContain("border-ring");
+    expect(classes).not.toContain("ring-ring/50");
+  });
+});
