@@ -203,11 +203,11 @@ export function CustomerRiskCard({
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-control border px-2 py-0.5 text-xs font-medium",
                     signalsLevel === "high" &&
-                      "border-destructive/25 bg-destructive-soft text-destructive",
+                      "border-destructive/25 bg-destructive-soft text-destructive-ink",
                     signalsLevel === "medium" &&
-                      "border-warning/25 bg-warning-soft text-warning",
+                      "border-warning/25 bg-warning-soft text-warning-ink",
                     signalsLevel === "low" &&
-                      "border-success/25 bg-success-soft text-success",
+                      "border-success/25 bg-success-soft text-success-ink",
                   )}
                 >
                   <span className="size-1.5 rounded-full bg-current opacity-70" />

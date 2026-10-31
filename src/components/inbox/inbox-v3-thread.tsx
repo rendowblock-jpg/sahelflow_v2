@@ -1016,7 +1016,7 @@ export function InboxV3Thread({
                         data-inbox-voice-cancel="true"
                         className={cn(
                           slideArmed &&
-                            "bg-destructive-strong text-destructive hover:bg-destructive/20 hover:text-destructive",
+                            "bg-destructive-strong text-destructive-ink hover:bg-destructive/20 hover:text-destructive",
                         )}
                         onClick={voiceRecorder.cancel}
                       >

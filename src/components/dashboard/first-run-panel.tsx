@@ -117,7 +117,7 @@ export function FirstRunPanel({ counts, deliveryPricesSet, now }: FirstRunPanelP
                 className={cn(
                   "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums",
                   step.done
-                    ? "border-success/25 bg-success-soft text-success"
+                    ? "border-success/25 bg-success-soft text-success-ink"
                     : "border-border bg-muted text-muted-foreground",
                 )}
               >

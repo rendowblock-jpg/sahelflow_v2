@@ -166,7 +166,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <span>{t("import.totalLabel")} <strong>{preview.totalRows}</strong></span>
-                <Badge className="gap-1 border-success/20 bg-success-soft text-success">
+                <Badge className="gap-1 border-success/20 bg-success-soft text-success-ink">
                   <CheckCircle2 className="size-3" aria-hidden="true" />
                   {preview.validCount} {t("import.valid")}
                 </Badge>
@@ -256,7 +256,7 @@ export function ImportPanel({ entity, title, description }: ImportPanelProps) {
         ) : null}
 
         {error ? (
-          <div className="flex items-start gap-2 rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive" role="alert">
+          <div className="flex items-start gap-2 rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-sm text-destructive-ink" role="alert">
             <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>

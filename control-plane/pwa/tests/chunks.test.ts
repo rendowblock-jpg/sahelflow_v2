@@ -48,7 +48,10 @@ describe("lazy screen chunks", () => {
     const src = fileURLToPath(new URL("../src", import.meta.url));
     const dir2 = mkdtempSync(join(tmpdir(), "sfpwa-chunks2-"));
     const entry = join(dir2, "entry.ts");
-    writeFileSync(entry, `import ${JSON.stringify(join(src, "main.ts"))};\nvoid import(${JSON.stringify(join(src, "views/install/screen.ts"))});\n`);
+    // A screen nobody has mounted yet. Every real screen is mounted by now (orders, inbox, install), so the "later" screen is a stand-in module.
+    const late = join(dir2, "late-screen.ts");
+    writeFileSync(late, `export const lateScreen = (): string => "late-screen-marker-" + String(Date.now());\n`);
+    writeFileSync(entry, `import ${JSON.stringify(join(src, "main.ts"))};\nvoid import(${JSON.stringify(late)});\n`);
     const out2 = await buildPwa({ outDir: join(dir2, "dist"), entry });
     const names = Object.entries(out2.assets).filter(([k]) => k.startsWith("chunk-")).map(([, v]) => v);
     expect(names.length).toBe(chunks().length + 1);

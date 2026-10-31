@@ -201,7 +201,7 @@ export function AiSessionRow({
           </span>
         </span>
         {session.reviewCount > 0 ? (
-          <span className="shrink-0 rounded-full bg-warning-soft px-1.5 text-caption font-semibold tabular-nums text-warning group-hover/session:hidden">
+          <span className="shrink-0 rounded-full bg-warning-soft px-1.5 text-caption font-semibold tabular-nums text-warning-ink group-hover/session:hidden">
             <span className="sr-only">
               {`${getAiDecisionCopy(locale, "needsReview")}: `}
             </span>

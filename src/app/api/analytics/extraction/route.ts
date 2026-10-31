@@ -1,3 +1,4 @@
+import { summariseMetricRows } from "@/lib/ai/extraction/metric-summary";
 /**
  * GET /api/analytics/extraction — AI extraction accuracy metrics (Phase 5 moat).
  *
@@ -20,14 +21,6 @@ export const GET = withErrorHandler(async () => {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  // Total by method
-  const byMethod = await db.extractionMetric.groupBy({
-    by: ["method"],
-    where: { createdAt: { gte: thirtyDaysAgo } },
-    _count: { _all: true },
-    _avg: { confidence: true, latencyMs: true },
-  });
-
   // Completion rate
   const total = await db.extractionMetric.count({
     where: { createdAt: { gte: thirtyDaysAgo } },
@@ -39,34 +32,16 @@ export const GET = withErrorHandler(async () => {
   // Daily trend (last 30 days)
   const daily = await db.extractionMetric.findMany({
     where: { createdAt: { gte: thirtyDaysAgo } },
-    select: { method: true, confidence: true, isComplete: true, createdAt: true },
+    select: { method: true, confidence: true, latencyMs: true, isComplete: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
 
-  // Group by day
-  const byDay: Record<string, { date: string; count: number; avgConfidence: number; completeRate: number }> = {};
-  for (const m of daily) {
-    const day = m.createdAt.toISOString().slice(0, 10);
-    if (!byDay[day]) byDay[day] = { date: day, count: 0, avgConfidence: 0, completeRate: 0 };
-    byDay[day]!.count++;
-    byDay[day]!.avgConfidence += m.confidence;
-    if (m.isComplete) byDay[day]!.completeRate++;
-  }
-  const trend = Object.values(byDay).map((d) => ({
-    ...d,
-    avgConfidence: d.count > 0 ? d.avgConfidence / d.count : 0,
-    completeRate: d.count > 0 ? d.completeRate / d.count : 0,
-  }));
+  const { trend, byMethod } = summariseMetricRows(daily);
 
   return NextResponse.json({
     total,
     completionRate: total > 0 ? complete / total : 0,
-    byMethod: byMethod.map((m) => ({
-      method: m.method,
-      count: m._count._all,
-      avgConfidence: m._avg.confidence ?? 0,
-      avgLatencyMs: m._avg.latencyMs ?? 0,
-    })),
+    byMethod,
     trend,
   });
 }, "GET /api/analytics/extraction");

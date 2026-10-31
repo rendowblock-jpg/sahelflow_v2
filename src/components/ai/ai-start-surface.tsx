@@ -33,7 +33,7 @@ function SetupStep({ done, label }: { done: boolean; label: string }) {
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-caption font-medium",
-        done ? "bg-success-soft text-success" : "bg-muted text-muted-foreground",
+        done ? "bg-success-soft text-success-ink" : "bg-muted text-muted-foreground",
       )}
     >
       {done ? (
@@ -60,7 +60,7 @@ function SetupPanel({ workspace }: { workspace: ReturnType<typeof useAiWorkspace
       className="rounded-surface border border-border bg-card p-4"
     >
       <div className="flex flex-wrap items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-warning-soft text-warning">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-warning-soft text-warning-ink">
           <CircleAlert className="size-4" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
@@ -214,7 +214,7 @@ function StartSurface({
               </button>
             ))}
             {(pendingApprovals ?? 0) > 0 ? (
-              <span className="inline-flex items-center gap-2 rounded-full bg-warning-soft px-3 py-1.5 text-body-sm text-warning">
+              <span className="inline-flex items-center gap-2 rounded-full bg-warning-soft px-3 py-1.5 text-body-sm text-warning-ink">
                 <ShieldCheck className="size-3.5" aria-hidden="true" />
                 <span className="font-semibold tabular-nums">{pendingApprovals}</span>
                 {getAiDecisionCopy(locale, "briefingApprovals")}

@@ -421,7 +421,7 @@ export function BackupRestorePanel({
                   role="alert"
                   className="space-y-3 rounded-surface border border-destructive/30 bg-destructive-subtle p-4 text-sm"
                 >
-                  <p className="font-medium text-destructive">
+                  <p className="font-medium text-destructive-ink">
                     {workspaceCopy("unavailable")}
                   </p>
                   <p className="text-muted-foreground">

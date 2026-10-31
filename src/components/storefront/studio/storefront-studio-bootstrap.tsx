@@ -415,7 +415,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
               ) : null}
 
               {shownError ? (
-                <p id="wizard-step-error" role="alert" className="rounded-control border border-destructive/30 bg-destructive-soft px-3 py-2 text-body-sm text-destructive">
+                <p id="wizard-step-error" role="alert" className="rounded-control border border-destructive/30 bg-destructive-soft px-3 py-2 text-body-sm text-destructive-ink">
                   {shownError}
                 </p>
               ) : null}
@@ -423,7 +423,7 @@ export function StorefrontStudioBootstrap({ products }: Props) {
                 <p
                   role="alert"
                   data-testid="wizard-submit-error"
-                  className="rounded-control border border-destructive/30 bg-destructive-soft px-3 py-2 text-body-sm text-destructive"
+                  className="rounded-control border border-destructive/30 bg-destructive-soft px-3 py-2 text-body-sm text-destructive-ink"
                 >
                   {submitError}
                 </p>

@@ -13,14 +13,14 @@ import { ActionGlyph, useAutomationCopy } from "./flow-visuals";
 
 const QUEUED_LOOK = { icon: CircleDashed, tone: "text-muted-foreground bg-muted" };
 const STATUS_LOOK: Record<string, { icon: LucideIcon; tone: string }> = {
-  succeeded: { icon: CheckCircle2, tone: "text-success bg-success-soft" },
-  partially_completed: { icon: MinusCircle, tone: "text-warning bg-warning-soft" },
-  failed: { icon: XCircle, tone: "text-destructive bg-destructive-soft" },
-  dead_letter: { icon: XCircle, tone: "text-destructive bg-destructive-soft" },
-  ambiguous: { icon: MinusCircle, tone: "text-warning bg-warning-soft" },
+  succeeded: { icon: CheckCircle2, tone: "text-success-ink bg-success-soft" },
+  partially_completed: { icon: MinusCircle, tone: "text-warning-ink bg-warning-soft" },
+  failed: { icon: XCircle, tone: "text-destructive-ink bg-destructive-soft" },
+  dead_letter: { icon: XCircle, tone: "text-destructive-ink bg-destructive-soft" },
+  ambiguous: { icon: MinusCircle, tone: "text-warning-ink bg-warning-soft" },
   skipped: { icon: MinusCircle, tone: "text-muted-foreground bg-muted" },
-  dry_run: { icon: CircleDashed, tone: "text-info bg-info-soft" },
-  waiting: { icon: Clock, tone: "text-info bg-info-soft" },
+  dry_run: { icon: CircleDashed, tone: "text-info-ink bg-info-soft" },
+  waiting: { icon: Clock, tone: "text-info-ink bg-info-soft" },
   queued: { icon: CircleDashed, tone: "text-muted-foreground bg-muted" },
   running: { icon: CircleDashed, tone: "text-primary bg-primary-soft" },
 };

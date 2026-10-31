@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
+import type { AxeViolation } from "../e2e/support/axe";
 import {
   focusIndicatorVisible,
+  frameIndicatorVisible,
   isTrapped,
   judgeKeyboardTour,
   judgePageFacts,
+  violationsForMode,
   type FocusStyle,
   type PageFacts,
   type TabStop,
@@ -227,5 +230,46 @@ describe("judgePageFacts", () => {
     const r = { locale: "ar", viewport: "desktop", mode: "reducedMotion" } as const;
     expect(judgePageFacts(facts({ reducedMotionActive: true }), r)).toEqual([]);
     expect(judgePageFacts(facts({ reducedMotionActive: false }), r)).toEqual(["prefers-reduced-motion was not active (the emulation did not apply)"]);
+  });
+});
+
+describe("a field whose bordered frame draws the focus cue", () => {
+  const ring = { ...plain, boxShadow: "rgb(10, 10, 10) 0px 0px 0px 3px", borderColor: "rgb(20, 20, 20)" };
+  const fieldWithFrame = (beforeFrame: FocusStyle | null, afterFrame: FocusStyle | null) =>
+    stop("input#search", { after: plain, beforeFrame, afterFrame });
+
+  it("counts the frame's change as the indicator", () => {
+    expect(frameIndicatorVisible({ beforeFrame: plain, afterFrame: ring })).toBe(true);
+    expect(judgeKeyboardTour(tour({ stops: [fieldWithFrame(plain, ring)] }))).toEqual([]);
+  });
+
+  it("still fails when neither the field nor its frame changed", () => {
+    expect(frameIndicatorVisible({ beforeFrame: plain, afterFrame: plain })).toBe(false);
+    expect(judgeKeyboardTour(tour({ stops: [fieldWithFrame(plain, plain)] }))).toEqual([
+      "Tab stop input#search has no visible focus indicator",
+    ]);
+  });
+
+  it("still fails when there is no frame to look at", () => {
+    expect(frameIndicatorVisible({ beforeFrame: null, afterFrame: null })).toBe(false);
+    expect(frameIndicatorVisible({})).toBe(false);
+    expect(judgeKeyboardTour(tour({ stops: [fieldWithFrame(null, null)] }))).toEqual([
+      "Tab stop input#search has no visible focus indicator",
+    ]);
+  });
+});
+
+describe("violationsForMode", () => {
+  const violation = (id: string): AxeViolation => ({ id, impact: "serious", help: id, helpUrl: "", nodes: [] });
+  const both = [violation("color-contrast"), violation("aria-required-children")];
+
+  it("forced colours: colour-contrast is not applied, every other rule is", () => {
+    expect(violationsForMode(both, "forced").map((v) => v.id)).toEqual(["aria-required-children"]);
+  });
+
+  it("every other mode keeps every rule", () => {
+    for (const mode of ["normal", "reflow320", "text200", "spacing", "reducedMotion", "keyboard"] as const) {
+      expect(violationsForMode(both, mode).map((v) => v.id)).toEqual(["color-contrast", "aria-required-children"]);
+    }
   });
 });

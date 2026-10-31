@@ -284,8 +284,8 @@ export function ConnectAgentDialog({
                                   className={cn(
                                     "shrink-0 rounded-full px-1.5 py-0.5 text-2xs font-medium",
                                     badge === "badgeApproval"
-                                      ? "bg-warning-subtle text-warning"
-                                      : "bg-info-subtle text-info",
+                                      ? "bg-warning-subtle text-warning-ink"
+                                      : "bg-info-subtle text-info-ink",
                                   )}
                                 >
                                   {copy(badge)}

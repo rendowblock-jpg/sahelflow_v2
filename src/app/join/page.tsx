@@ -108,13 +108,13 @@ export default function JoinPage() {
         </div>
 
         {failure ? (
-          <div id={FORM_ERROR_ID} role="alert" className="space-y-1 rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive">
+          <div id={FORM_ERROR_ID} role="alert" className="space-y-1 rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive-ink">
             {failure.title ? <p className="font-medium">{failure.title}</p> : null}
             <p>{failure.message}</p>
             {failure.hint ? <p className="text-foreground">{failure.hint}</p> : null}
           </div>
         ) : null}
-        {success ? <p role="status" className="rounded-control border border-success/25 bg-success-subtle p-3 text-body-sm text-success">{t("phase5.join.success")}</p> : null}
+        {success ? <p role="status" className="rounded-control border border-success/25 bg-success-subtle p-3 text-body-sm text-success-ink">{t("phase5.join.success")}</p> : null}
 
         <Button type="submit" size="lg" className="w-full" disabled={loading || success || !token.trim() || !displayName.trim() || loginId.length < 3 || pin.length < 8 || confirmation.length < 8}>
           {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <><KeyRound className="me-2 size-4" aria-hidden="true" />{t("phase5.join.submit")}<ArrowRight className="ms-2 size-4 rtl:rotate-180" aria-hidden="true" /></>}

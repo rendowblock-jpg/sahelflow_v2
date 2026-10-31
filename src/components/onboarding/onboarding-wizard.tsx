@@ -679,7 +679,7 @@ export function OnboardingWizard({ access }: OnboardingWizardProps) {
                       >
                         <span className="flex min-w-0 items-center gap-3">
                           {row.done ? (
-                            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success-soft text-success">
+                            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success-soft text-success-ink">
                               <CheckCircle2 className="size-4" aria-hidden="true" />
                             </span>
                           ) : (

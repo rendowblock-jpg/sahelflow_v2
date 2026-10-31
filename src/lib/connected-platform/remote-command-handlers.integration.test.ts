@@ -424,3 +424,43 @@ describe("routes and phone share one function", () => {
     expect(status).not.toContain("fireCapiStageForOrder(");
   });
 });
+
+// W3b SEC3 (c): a note needs comments.write AND the read right of ITS entity (orders.read for an order or a confirmation,
+// conversations.read for a conversation). Every combination, with real SQLite; allowed notes are written, the rest change nothing.
+describe("note from the phone: comments.write plus the read right of its own entity", () => {
+  const sets: Array<[string, string[]]> = [
+    ["nothing", []],
+    ["write only", ["comments.write"]],
+    ["write + orders.read", ["comments.write", "orders.read"]],
+    ["write + conversations.read", ["comments.write", "conversations.read"]],
+    ["both reads, no write", ["orders.read", "conversations.read"]],
+    ["write + both reads", ["comments.write", "orders.read", "conversations.read"]],
+  ];
+  it("refuses every combination that lacks one of the two, and writes exactly the allowed ones", async () => {
+    let written = 0;
+    let n = 0;
+    const customer = await seedCustomer(raw);
+    const product = await seedProduct(raw, { stock: 7, lowStockThreshold: 5 });
+    for (const [label, permissions] of sets) {
+      for (const entityType of ["order", "conversation", "confirmation"] as const) {
+        n += 1;
+        const order = await seedOrder(raw, { status: "pending", customerId: customer.id, productId: product.id });
+        const phoneNo = `2136612340${String(n).padStart(2, "0")}`;
+        const conv = await db.conversation.create({ data: { channel: "whatsapp", contactName: "S", contactPhone: phoneNo, sourceId: `${phoneNo}@s.whatsapp.net` } });
+        const entityId = entityType === "conversation" ? conv.id : order.id;
+        hoisted.actor = actor(permissions);
+        const { done } = await run([sealed("command.comments.write", { entityType, entityId, body: "private note", expectedVersion: 0 })]);
+        const key = `${label} / ${entityType}`;
+        const readOk = permissions.includes(entityType === "conversation" ? "conversations.read" : "orders.read");
+        if (!permissions.includes("comments.write") || !readOk) {
+          expect(done[0], key).toMatchObject({ state: "rejected", code: "PERMISSION_DENIED" });
+        } else {
+          expect(done[0], key).toMatchObject({ state: "committed" });
+          written += 1;
+        }
+      }
+    }
+    expect(written).toBe(6); // order x2, conversation x2, confirmation x2 (a confirmation is an order's, so it asks orders.read)
+    expect(await db.collaborationComment.count()).toBe(6);
+  });
+});

@@ -49,7 +49,7 @@ function AbilityGroupCard({
               className={cn(
                 "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-caption font-medium",
                 sensitive
-                  ? "bg-warning-soft text-warning"
+                  ? "bg-warning-soft text-warning-ink"
                   : "bg-muted text-foreground",
               )}
             >

@@ -78,7 +78,7 @@ export function CheckBeforeShipping({
       data-risk-check-queue="true"
       action={
         report.openRiskyCount > 0 ? (
-          <span className="rounded-full bg-destructive-soft px-2.5 py-0.5 text-caption font-semibold tabular-nums text-destructive">
+          <span className="rounded-full bg-destructive-soft px-2.5 py-0.5 text-caption font-semibold tabular-nums text-destructive-ink">
             {format.int(report.openRiskyCount)}
           </span>
         ) : null
@@ -272,7 +272,7 @@ export function WhereYouLoseMoney({
                     </p>
                   </div>
                   {customer.isBlacklisted ? (
-                    <span className="shrink-0 rounded-full bg-destructive-soft px-2 py-0.5 text-caption font-medium text-destructive">{copy("blacklisted")}</span>
+                    <span className="shrink-0 rounded-full bg-destructive-soft px-2 py-0.5 text-caption font-medium text-destructive-ink">{copy("blacklisted")}</span>
                   ) : (
                     <Link
                       href={`/customers/${encodeURIComponent(customer.customerId)}`}
@@ -303,7 +303,7 @@ export function WhereYouLoseMoney({
                 <span
                   className={cn(
                     "shrink-0 rounded-full px-2 py-0.5 text-caption font-semibold tabular-nums",
-                    sign.lift >= 1.5 ? "bg-destructive-soft text-destructive" : sign.lift > 1 ? "bg-warning-soft text-warning" : "bg-muted text-muted-foreground",
+                    sign.lift >= 1.5 ? "bg-destructive-soft text-destructive-ink" : sign.lift > 1 ? "bg-warning-soft text-warning-ink" : "bg-muted text-muted-foreground",
                   )}
                 >
                   {copy("signLift", { lift: format.dec(sign.lift) })}

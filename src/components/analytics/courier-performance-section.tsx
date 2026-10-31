@@ -54,9 +54,9 @@ const WILAYA_CODE_BY_NAME = new Map<string, number>(
 );
 
 const CELL_TONE_CLASSES = {
-  success: "bg-success-strong text-success",
-  warning: "bg-warning-strong text-warning",
-  danger: "bg-destructive-soft text-destructive",
+  success: "bg-success-strong text-success-ink",
+  warning: "bg-warning-strong text-warning-ink",
+  danger: "bg-destructive-soft text-destructive-ink",
 } as const;
 
 const RATE_TONE_CLASSES = {

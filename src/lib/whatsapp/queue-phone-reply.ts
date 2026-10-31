@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { HELD_MESSAGES_MAX, readHeldMessageIds, type HeldLookupClient } from "@/lib/connected-platform/held-messages";
 import { processWhatsAppEffect, queueWhatsAppText } from "@/lib/whatsapp/durable-send";
 import { NotFoundError, SahelFlowError } from "@/types/errors";
 
@@ -34,7 +35,14 @@ export async function queuePhoneReply(
   if (!conversation || !conversation.sourceId) {
     throw new NotFoundError("Conversation", data.conversationId);
   }
-  if (data.lastSeenMessageId && data.force !== true) {
+  // A replay (the PC ran this reply, the answer to the relay was lost, the relay offers the command again) has its own first
+  // outbound row, which would count as "newer than the seen message". The message id IS the clientMessageId, so a row with that id
+  // in this chat means "already queued by this very command": skip the answer check and let queueWhatsAppText return the stored result.
+  const replayOfThisCommand = await context.prisma.message.findFirst({
+    where: { id: clientMessageId, conversationId: conversation.id },
+    select: { id: true },
+  });
+  if (data.lastSeenMessageId && data.force !== true && !replayOfThisCommand) {
     const seen = await context.prisma.message.findFirst({
       where: { id: data.lastSeenMessageId, conversationId: conversation.id },
       select: { timestamp: true },
@@ -42,16 +50,23 @@ export async function queuePhoneReply(
     if (!seen) {
       throw new SahelFlowError("The conversation changed on this computer", "ENTITY_CHANGED", 409);
     }
-    const newer = await context.prisma.message.findFirst({
+    const newer = await context.prisma.message.findMany({
       where: {
         conversationId: conversation.id,
         direction: "outbound",
         timestamp: { gt: seen.timestamp },
       },
       select: { id: true },
+      // More than the held lookup can name means at least one of them is not held.
+      take: HELD_MESSAGES_MAX + 1,
     });
-    if (newer) {
-      throw new SahelFlowError("Already answered from this computer", "ALREADY_ANSWERED", 409);
+    if (newer.length > 0) {
+      // A HELD message (the send guard waits for the owner's OK on this computer) was NOT sent: it answers nobody.
+      // Only a message that went out, or is going out, makes this reply "already answered"; a reply behind a held one is queued.
+      const heldIds = (await readHeldMessageIds(context.prisma as unknown as HeldLookupClient, [conversation.id])).byMessageId;
+      if (newer.some((message) => !heldIds.has(message.id))) {
+        throw new SahelFlowError("Already answered from this computer", "ALREADY_ANSWERED", 409);
+      }
     }
   }
   const queued = await queueWhatsAppText(context, {

@@ -31,6 +31,9 @@ export const ORDER_INTENTS = [
   "ابعثوا ليا", "ابعثو ليا", "ابعتو ليا", "ارغب في", "ارغب", "ارجو تزويدي",
   "donnez-moi", "donnez moi", "envoyez-moi", "envoyez moi", "envoie-moi", "envoie moi",
   "send me", "give me",
+  // More ways to ask: need, bring, make me, "can you send me".
+  "نحتاج", "نحتاجو", "نجيب", "حابب", "حابين", "دير لي", "ديرلي", "ارسلولي", "ارسل لي",
+  "pouvez-vous m'envoyer", "pouvez vous m'envoyer", "pourriez-vous m'envoyer", "m'envoyer",
 ];
 
 /** Exchange requests: the item wanted comes after "b / par / with". */
@@ -58,10 +61,14 @@ export const FILLERS = [
   // "only" and "understood": they confirm a number or a price, they are not a product.
   "bark", "berk", "برك", "seulement", "uniquement", "juste", "only", "فقط",
   "mafhoum", "مفهوم", "d'accord", "dac", "dacc", "wakha", "واخا", "tamam", "تمام",
+  // Spelling variant of "please", and "I am in <wilaya>" lead-ins.
+  "عفاك", "rani f", "rani fi", "rani", "ana f", "ana fi",
 ];
 
 /** Words that may sit at a product-name edge but never alone. */
 export const EDGE_STOPWORDS = [
+  // A connector or a trailing "one" glued behind a product.
+  "على", "الى", "إلى", "واحد", "واحدة", "wahed", "wahda",
   "de", "du", "des", "d'", "la", "le", "les", "l'", "un", "une", "of", "the",
   "a", "an", "for", "pour", "à", "au", "aux", "en", "من", "ب", "في", "ف", "f",
   "fi", "b", "l", "dial", "dyal", "diel", "ta3", "mta3", "nta3", "نتاع", "ديال",
@@ -149,6 +156,7 @@ export const NUMBER_WORDS: Record<string, number> = {
   seb3a: 7, sab3a: 7, "سبعه": 7, sept: 7, seven: 7,
   tmanya: 8, thmanya: 8, "ثمانيه": 8, "تمنيه": 8, huit: 8, eight: 8,
   tes3a: 9, tas3a: 9, "تسعه": 9, neuf: 9, nine: 9,
+  ts3a: 9, tis3a: 9, arb3a: 4,
   "3achra": 10, achra: 10, "عشره": 10, dix: 10, ten: 10,
 };
 

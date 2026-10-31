@@ -42,18 +42,18 @@ const TONE_CLASSES: Record<IconTileTone, { tinted: string; bordered: string }> =
       bordered: "border-primary/20",
     },
     success: {
-      tinted: "bg-success-soft text-success",
+      tinted: "bg-success-soft text-success-ink",
       bordered: "border-success/20",
     },
     warning: {
-      tinted: "bg-warning-soft text-warning",
+      tinted: "bg-warning-soft text-warning-ink",
       bordered: "border-warning/25",
     },
     danger: {
-      tinted: "bg-destructive-soft text-destructive",
+      tinted: "bg-destructive-soft text-destructive-ink",
       bordered: "border-destructive/20",
     },
-    info: { tinted: "bg-info-soft text-info", bordered: "border-info/20" },
+    info: { tinted: "bg-info-soft text-info-ink", bordered: "border-info/20" },
   };
 
 /**

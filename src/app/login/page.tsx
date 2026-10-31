@@ -135,7 +135,7 @@ export default function LoginPage() {
         </div>
 
         {failure ? (
-          <p id={FORM_ERROR_ID} className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive" role="alert">{failure.message}</p>
+          <p id={FORM_ERROR_ID} className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive-ink" role="alert">{failure.message}</p>
         ) : null}
 
         <Button type="submit" size="lg" className="w-full" disabled={loading || pin.length < 8 || (mode === "member" && loginId.length < 3)}>

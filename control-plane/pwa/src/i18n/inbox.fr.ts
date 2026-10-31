@@ -41,6 +41,7 @@ export const inboxFr: Catalog = {
   "inbox.reply.readonly": "Cette copie est trop ancienne pour répondre. Ouvrez l'app quand votre PC est allumé.",
   "inbox.reply.expired": "Votre PC ne l'a pas pris à temps : rien n'a été envoyé.",
   "inbox.reply.guarded": "Passé à WhatsApp sur votre PC. Sa vérification de sécurité peut le retarder.",
+  "inbox.reply.behindheld": "Votre message précédent attend votre accord sur votre PC.",
   "inbox.outcome.answered.notime": "Déjà répondu (depuis votre PC ou un envoi précédent).",
   "inbox.outcome.guard": "Limite de sécurité WhatsApp atteinte sur votre PC. Attendez, puis réessayez plus tard.",
   "inbox.outcome.expired": "Trop tard : ce message n'a pas été envoyé. Renvoyez-le si vous le voulez encore.",
