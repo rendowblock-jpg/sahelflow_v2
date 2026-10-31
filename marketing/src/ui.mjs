@@ -60,13 +60,14 @@ export function screenImg(key, locale, { alt, lazy = true, high = false, sizes =
   return `<img src="${shotUrl(key, locale)}" srcset="${set}" sizes="${esc(sizes)}" width="800" height="500" alt="${esc(alt)}"${high ? ' fetchpriority="high"' : ""}${lazy ? ' loading="lazy"' : ""} decoding="async">`;
 }
 
-/** A real screenshot of the app, framed as a desktop window. */
+/** A screenshot of the app on sample data, framed as a desktop window. The caption says so in plain sight. */
 export function appWindow(key, locale, { eager = false, cls = "", label } = {}) {
   const t = COPY[locale];
   const alt = label ?? t.common.realScreenshot;
   return `<figure class="app-window ${cls}">
   <div class="app-window-bar" aria-hidden="true"><i></i><i></i><i></i><span>SahelFlow</span></div>
   ${screenImg(key, locale, { alt, lazy: !eager, high: eager })}
+  <figcaption class="app-window-note">${esc(t.common.demoData)}</figcaption>
 </figure>`;
 }
 
