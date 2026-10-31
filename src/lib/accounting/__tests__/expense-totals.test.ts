@@ -85,10 +85,10 @@ describe("Accounting page uses one Expenses definition (MNY-06)", () => {
   });
 
   it("captions the chart with the totals of the months it plots, not the card value", () => {
-    expect(page).toContain("sumMonthlyTotals(monthlyData)");
-    expect(page).toMatch(
-      /summary=\{`[^`]*chartTotals\.revenue[^`]*chartTotals\.expenses[^`]*`\}/,
-    );
-    expect(page).not.toMatch(/summary=\{`[^`]*totalExpenses/);
+    // The page plots `monthly` and sums that same array; AccountingView builds the caption from those sums.
+    expect(page).toMatch(/monthly=\{(\w+)\}\s+chartTotals=\{sumMonthlyTotals\(\1\)\}/);
+    const view = readFileSync(join(process.cwd(), "src/components/accounting/accounting-view.tsx"), "utf8");
+    expect(view).toMatch(/chartSummary = `[^`]*chartTotals\.revenue[^`]*chartTotals\.expenses[^`]*`/);
+    expect(view).not.toMatch(/chartSummary = `[^`]*totalExpenses/);
   });
 });
