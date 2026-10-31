@@ -29,4 +29,7 @@ export const shellFr: Catalog = {
   "cmd.reason.postponed": "Reporté",
   "cmd.composer.reply": "Votre réponse",
   "cmd.composer.note": "Votre note",
+  "cmd.already": "Déjà traité sur votre PC.",
+  "cmd.answered": "Quelqu'un a déjà répondu à cette conversation sur votre PC.",
+  "cmd.resync": "Votre PC doit d'abord se mettre à jour. Réessayez dans un instant.",
 };

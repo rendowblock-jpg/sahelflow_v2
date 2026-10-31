@@ -29,4 +29,7 @@ export const shellEn: Catalog = {
   "cmd.reason.postponed": "Postponed",
   "cmd.composer.reply": "Your reply",
   "cmd.composer.note": "Your note",
+  "cmd.already": "Already handled on your PC.",
+  "cmd.answered": "Someone already answered this chat on your PC.",
+  "cmd.resync": "Your PC needs to refresh first. Try again in a moment.",
 };

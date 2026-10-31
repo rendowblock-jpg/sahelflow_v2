@@ -2,7 +2,7 @@ import { dirOf, formatDzd, formatNumber, formatTime, formatWeekday, t, type Loca
 import type { PairFailure, PairStep } from "../pair/flow";
 import type { Projection } from "../today/projection";
 
-export type ScreenId = "welcome" | "pair" | "today" | "settings" | "lock";
+export type ScreenId = "welcome" | "pair" | "today" | "settings" | "lock" | "orders" | "order" | "inbox" | "conversation" | "install" | "devices";
 export type ViewState = "loading" | "empty" | "error" | "stale" | "offline" | "ready" | "expired" | "keygen" | "waiting" | "pcoff";
 export type Theme = "light" | "dark" | "system";
 export type LockNotice = null | Readonly<{ kind: "wrong"; left: number }> | Readonly<{ kind: "wait"; seconds: number }> | Readonly<{ kind: "mismatch" | "invalid" | "checking" }>;

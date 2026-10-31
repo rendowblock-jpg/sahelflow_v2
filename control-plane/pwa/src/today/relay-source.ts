@@ -1,4 +1,6 @@
+import { projectionMessageType, type ProjectionKind } from "../../../../src/lib/connected-platform/contracts";
 import { openEnvelopeWeb } from "../../../../src/lib/connected-platform/web";
+import { getSealed, putSealed } from "../storage/sealed";
 import type { PairingIdentity, TrustedDesktop } from "../pair/pinned";
 import { loadDeviceKeys, type Db } from "../storage/idb";
 import type { DayCount, Projection, ProjectionResult, ProjectionSource } from "./projection";
@@ -6,6 +8,7 @@ import type { DayCount, Projection, ProjectionResult, ProjectionSource } from ".
 export type Snapshot = Readonly<{ sequence: number; receivedAt: number; shopId?: string; projection: Projection }>;
 export type RelayPoll =
   | Readonly<{ kind: "updated"; snapshot: Snapshot }>
+  | Readonly<{ kind: "stored"; sequence: number }>
   | Readonly<{ kind: "unchanged" }>
   | Readonly<{ kind: "pending" }>
   | Readonly<{ kind: "revoked" }>
@@ -55,29 +58,30 @@ async function firstListedShop(res: Response): Promise<string | null> {
   return validShopId(first) ? first : null;
 }
 
+const isSealedBaseline = (v: unknown): v is Pick<Snapshot, "sequence" | "shopId"> => { const s = obj(v); return !!s && typeof s.sequence === "number" && typeof s.receivedAt === "number"; };
 const isSnapshot = (v: unknown): v is Snapshot => {
   const s = obj(v); const p = obj(s?.projection);
   return !!s && !!p && typeof s.sequence === "number" && typeof s.receivedAt === "number" && typeof p.generatedAt === "number";
 };
 
-export function createRelayClient(options: Readonly<{ baseUrl: string; getDb: () => Promise<Db>; fetchImpl?: typeof fetch; now?: () => number }>): Readonly<{ poll(): Promise<RelayPoll>; source: ProjectionSource }> {
+export function createRelayClient(options: Readonly<{ baseUrl: string; getDb: () => Promise<Db>; fetchImpl?: typeof fetch; now?: () => number }>): Readonly<{ poll(kind?: ProjectionKind): Promise<RelayPoll>; source: ProjectionSource }> {
   const base = options.baseUrl.replace(/\/+$/, ""); const clock = options.now ?? Date.now;
-  async function poll(): Promise<RelayPoll> {
+  async function poll(kind: ProjectionKind = "dashboard"): Promise<RelayPoll> {
     let db: Db;
     try { db = await options.getDb(); } catch { return { kind: "not_paired" }; }
     let identity: PairingIdentity | undefined; let trusted: TrustedDesktop | undefined; let last: unknown; let keys: Awaited<ReturnType<typeof loadDeviceKeys>>;
     try {
       identity = await db.get<PairingIdentity>("keys", "credentials"); trusted = await db.get<TrustedDesktop>("keys", "desktop");
-      last = await db.get<Snapshot>("projections", "last"); keys = await loadDeviceKeys(db);
+      last = kind === "dashboard" ? await db.get<Snapshot>("projections", "last") : await getSealed(db, kind); keys = await loadDeviceKeys(db);
     } catch { return { kind: "not_paired" }; }
     if (!identity || !trusted || !keys) return { kind: "not_paired" };
-    const me: PairingIdentity = identity; const pinned: TrustedDesktop = trusted; const stored = me.shopId; const lastSnap = isSnapshot(last) ? last : null;
+    const me: PairingIdentity = identity; const pinned: TrustedDesktop = trusted; const stored = me.shopId; const lastSnap: Pick<Snapshot, "sequence" | "shopId"> | null = kind === "dashboard" ? (isSnapshot(last) ? last : null) : (isSealedBaseline(last) ? last : null);
     // The replay baseline belongs to ONE shop: another shop starts again from its own sequence.
     const baseline = (shop: string): number => (lastSnap && (lastSnap.shopId === undefined || lastSnap.shopId === shop) ? lastSnap.sequence : 0);
     // sinceSequence (not If-None-Match: the CORS allow-list omits it) -> 304 when nothing is newer.
     // Without a stored shop the phone asks for everything (since 0) so the answer can be verified and the shop learned from it.
     const ask = async (shop: string | null, since: number): Promise<Response | null> => {
-      const query = new URLSearchParams({ workspaceId: me.workspaceId, deviceId: me.deviceId, type: "dashboard", sinceSequence: String(since) });
+      const query = new URLSearchParams({ workspaceId: me.workspaceId, deviceId: me.deviceId, type: kind, sinceSequence: String(since) });
       if (shop) query.set("shopId", shop);
       try {
         return await (options.fetchImpl ?? fetch)(`${base}/v1/projections?${query.toString()}`, {
@@ -113,11 +117,17 @@ export function createRelayClient(options: Readonly<{ baseUrl: string; getDb: ()
     const env = opened.envelope;
     // The shop is the stored one, or the one the relay listed; with neither, the verified envelope names it.
     if (env.workspaceId !== me.workspaceId || env.memberId !== me.memberId || !validShopId(env.shopId) || (asked !== null && env.shopId !== asked)) return { kind: "refused", reason: "wrong_scope" };
+    if (kind !== "dashboard" && env.messageType !== projectionMessageType(kind)) return { kind: "refused", reason: "wrong_scope" };
     const discovering = stored === null; const known = baseline(env.shopId);
     if (discovering && env.sequence < known) return { kind: "refused", reason: "stale_sequence" };
     if (discovering) {
       try { await db.put("keys", "credentials", { ...me, shopId: env.shopId }); } catch { return { kind: "refused", reason: "storage" }; }
       if (env.sequence === known && known > 0) return { kind: "unchanged" };
+    }
+    if (kind !== "dashboard") {
+      // Orders and chats are kept as the envelope arrived (still encrypted to this phone); the plaintext is never written.
+      try { await putSealed(db, { kind, envelope: body, sequence: env.sequence, receivedAt: now, shopId: env.shopId }); } catch { return { kind: "refused", reason: "storage" }; }
+      return { kind: "stored", sequence: env.sequence };
     }
     const projection = parseDashboard(opened.payload, Date.parse(env.issuedAt));
     if (!projection) return { kind: "refused", reason: "payload" };

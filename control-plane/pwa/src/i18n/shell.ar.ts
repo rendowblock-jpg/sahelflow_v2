@@ -29,4 +29,7 @@ export const shellAr: Catalog = {
   "cmd.reason.postponed": "مؤجّل",
   "cmd.composer.reply": "ردّك",
   "cmd.composer.note": "ملاحظتك",
+  "cmd.already": "سبق التعامل مع هذا الطلب على حاسوبك.",
+  "cmd.answered": "تم الرد على هذه المحادثة على حاسوبك.",
+  "cmd.resync": "يحتاج حاسوبك إلى التحديث أولًا. أعد المحاولة بعد لحظة.",
 };
