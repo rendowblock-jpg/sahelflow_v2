@@ -4,7 +4,8 @@ import type { Locale } from "@/lib/i18n";
  * Runtime copy for the "connected but silent" parts of the inbox (w211):
  * the grey last-message note, the stalled notice with its Reconnect button,
  * and the OK on the red notice. Plain and short, the same meaning in all three.
- * {{hours}} and {{days}} are whole numbers.
+ * {{hours}} and {{days}} are whole numbers. Arabic also has `_two`, `_few`,
+ * `_many` and `_other` forms of the two note keys (see silent-note-text.ts).
  */
 const translations: Record<Locale, Record<string, string>> = {
   en: {
@@ -27,7 +28,14 @@ const translations: Record<Locale, Record<string, string>> = {
   },
   ar: {
     "inboxHealth.silent.hours": "آخر رسالة من زبون: قبل {{hours}} ساعة",
-    "inboxHealth.silent.days": "آخر رسالة من زبون: قبل {{days}} يوم",
+    "inboxHealth.silent.hours_few": "آخر رسالة من زبون: قبل {{hours}} ساعات",
+    "inboxHealth.silent.hours_many": "آخر رسالة من زبون: قبل {{hours}} ساعة",
+    "inboxHealth.silent.hours_other": "آخر رسالة من زبون: قبل {{hours}} ساعة",
+    "inboxHealth.silent.days": "آخر رسالة من زبون: قبل {{days}} يوماً",
+    "inboxHealth.silent.days_two": "آخر رسالة من زبون: قبل يومين",
+    "inboxHealth.silent.days_few": "آخر رسالة من زبون: قبل {{days}} أيام",
+    "inboxHealth.silent.days_many": "آخر رسالة من زبون: قبل {{days}} يوماً",
+    "inboxHealth.silent.days_other": "آخر رسالة من زبون: قبل {{days}} يوماً",
     "inboxHealth.stalled.title": "قد لا تصل الرسائل",
     "inboxHealth.stalled.hint":
       "يبدو واتساب متصلاً، لكن رسائل عالقة على هذا الحاسوب ولا تصل إلى الصندوق. اضغط «إعادة الاتصال» للمحاولة من جديد.",

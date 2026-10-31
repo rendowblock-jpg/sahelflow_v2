@@ -45,6 +45,12 @@ describe("money names catalog", () => {
     expect(keys("ar")).toEqual(keys("en"));
   });
 
+  it("names the top-products chart by orders value in all three languages", () => {
+    expect(MONEY_NAMES_RUNTIME.en["money.topProductsByOrdersValue"]).toBe("Top products (by orders value)");
+    expect(MONEY_NAMES_RUNTIME.fr["money.topProductsByOrdersValue"]).toBe("Top produits (par valeur des commandes)");
+    expect(MONEY_NAMES_RUNTIME.ar["money.topProductsByOrdersValue"]).toBe("أفضل المنتجات (حسب قيمة الطلبات)");
+  });
+
   it("names the figures as decided", () => {
     const name = (locale: (typeof LOCALES)[number], basis: (typeof MONEY_BASES)[number]) =>
       MONEY_NAMES_RUNTIME[locale][moneyNameKey(basis)];
@@ -84,9 +90,11 @@ describe("no component labels an orders-value number with the bare word", () => 
     });
   }
 
-  it("analytics-view keeps the bare revenueLabel for the top-products column only", () => {
-    const uses = read("src/components/analytics/analytics-view.tsx").split('t("analytics.revenueLabel")').length - 1;
-    expect(uses).toBe(1);
+  it("analytics-view has no bare revenueLabel left: the top-products chart is titled and tabled by orders value", () => {
+    const source = read("src/components/analytics/analytics-view.tsx");
+    expect(source.split('t("analytics.revenueLabel")').length - 1).toBe(0);
+    expect(source.includes('"analytics.topProductsByRevenue"')).toBe(false);
+    expect(source.split('t("money.topProductsByOrdersValue")').length - 1).toBe(2);
   });
 });
 

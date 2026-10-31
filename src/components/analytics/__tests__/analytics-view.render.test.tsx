@@ -110,7 +110,7 @@ function cardOf(container: HTMLElement, title: string): HTMLElement {
 
 const FAMILIES: ReadonlyArray<{ family: string; titleKey: string; cells: readonly string[] }> = [
   { family: "status", titleKey: "analytics.ordersByStatus", cells: ["29", "6", "4"] },
-  { family: "products", titleKey: "analytics.topProductsByRevenue", cells: ["فستان قبائلي", "صابون حلب"] },
+  { family: "products", titleKey: "money.topProductsByOrdersValue", cells: ["فستان قبائلي", "صابون حلب"] },
   { family: "wilayas", titleKey: "analytics.topWilayas", cells: ["الجزائر", "وهران", "14", "9"] },
   { family: "hour", titleKey: "analytics.salesByHour", cells: ["10:00", "21:00", "9"] },
   { family: "average order value", titleKey: "analytics.aovTrend", cells: ["4727", "4357", "4437"] },
@@ -164,6 +164,21 @@ describe("money names on the analytics page", () => {
       expect(cardOf(container, n.trend)).toBeTruthy();
       expect(leaves(container)).toContain(n.delivered);
       expect(leaves(container).filter((text) => BARE.includes(text))).toEqual([]);
+    });
+    it(`${locale}: the top-products chart is titled by orders value and its table column is Orders value`, () => {
+      const titles = {
+        en: "Top products (by orders value)",
+        fr: "Top produits (par valeur des commandes)",
+        ar: "أفضل المنتجات (حسب قيمة الطلبات)",
+      } as const;
+      const { container } = render(<TooltipProvider><AnalyticsView {...props(locale)} /></TooltipProvider>);
+      const card = cardOf(container, titles[locale]);
+      const toggle = card.querySelector<HTMLButtonElement>("button[aria-pressed]");
+      if (!toggle) throw new Error("the top-products card has no table toggle");
+      fireEvent.click(toggle);
+      const headers = Array.from(card.querySelectorAll("th")).map((th) => (th.textContent ?? "").trim());
+      expect(headers).toContain(NAMES[locale].orders);
+      expect(headers.filter((text) => BARE.includes(text))).toEqual([]);
     });
     it(`${locale}: the SKU column is Net revenue (refunds are taken off)`, () => {
       const p = props(locale);

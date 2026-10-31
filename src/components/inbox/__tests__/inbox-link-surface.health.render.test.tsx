@@ -153,7 +153,7 @@ describe("grey note on the connection chip (Q4)", () => {
     harness.locale = "ar";
     render(surface("connected", true).ui);
     await showAll();
-    expect(note()?.textContent).toBe("آخر رسالة من زبون: قبل 7 ساعة");
+    expect(note()?.textContent).toBe("آخر رسالة من زبون: قبل 7 ساعات");
   });
 });
 
