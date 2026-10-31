@@ -24,7 +24,11 @@ export type View = Readonly<{
 type Params = Readonly<Record<string, string | number>>;
 type Tr = (key: string, params?: Params) => string;
 
-export const esc = (s: string): string => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
+// The one HTML escaper of the phone. It also removes the explicit directional formatting characters (U+202A..U+202E, U+2066..U+2069):
+// a customer name with U+202E would reorder the text drawn after it. U+200E, U+200F and U+061C (marks that real Arabic text uses) stay.
+export const esc = (s: string): string => s.replace(/[\u202A-\u202E\u2066-\u2069]/g, "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
+// A number that is drawn into markup. A value of any other type (a string that arrived where a count belongs) becomes "", never markup.
+export const numText = (n: unknown): string => (typeof n === "number" && Number.isFinite(n) ? String(n) : "");
 const STEPS: readonly PairStep[] = ["signing", "encryption", "send"];
 const FAILURE_KEY: Readonly<Record<PairFailure, string>> = {
   invalid_link: "pair.error.invalid", unsupported: "pair.error.unsupported", keygen_failed: "pair.error.keygen", storage_failed: "pair.error.storage",

@@ -39,6 +39,11 @@ export type CmdGroup = "decision" | "note" | "reply";
 // One open command per (target type, target id, group): Confirm and Reject block each other, a note blocks neither.
 export const groupOf = (kind: CommandKind): CmdGroup => (kind === "command.comments.write" ? "note" : kind === "command.messages.reply" ? "reply" : "decision");
 
+// Only a decision keeps its label on disk (an order number such as SF-1042). A reply's label is a contact name and a note's is its own text:
+// that is customer data and nothing reads it back, so every other kind stores "".
+const LABEL_KINDS: readonly CommandKind[] = ["command.orders.confirm", "command.orders.reject"];
+export const storedLabel = (kind: CommandKind, label: string): string => (LABEL_KINDS.includes(kind) ? label.slice(0, 80) : "");
+
 export function createOutbox(d: OutboxDeps) {
   const save = (r: OutboxRecord): Promise<void> => d.db.put("outbox", r.commandId, r);
   async function list(): Promise<OutboxRecord[]> {
@@ -57,7 +62,7 @@ export function createOutbox(d: OutboxDeps) {
     const now = d.now(); const commandId = d.newId(); const idempotencyKey = d.newId(); const expiresAt = now + COMMAND_EXPIRY_MS[i.kind];
     const extra: CmdExtra = i.extra ?? {}; const draft = { kind: i.kind, target: i.target, draftText: i.draftText, extra };
     const sealedEnvelopeJson = await d.seal({ commandId, idempotencyKey, kind: i.kind, payload: payloadOf(draft), policyVersion, expiresAt });
-    const record: OutboxRecord = { commandId, idempotencyKey, kind: i.kind, target: i.target, labelForUi: i.labelForUi.slice(0, 80), draftText: i.draftText, sealedEnvelopeJson, state: "queued", createdAt: now, expiresAt, attempts: 0, nextTryAt: now, lastError: null, relaySequence: null, policyVersion, extra };
+    const record: OutboxRecord = { commandId, idempotencyKey, kind: i.kind, target: i.target, labelForUi: storedLabel(i.kind, i.labelForUi), draftText: i.draftText, sealedEnvelopeJson, state: "queued", createdAt: now, expiresAt, attempts: 0, nextTryAt: now, lastError: null, relaySequence: null, policyVersion, extra };
     await save(record); return { ok: true, record };
   }
   // Ask the relay what it stored. committed needs the relay AND a result that opens, verifies and names THIS device and THIS command.
