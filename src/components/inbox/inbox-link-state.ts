@@ -115,3 +115,20 @@ export function deriveInboxLinkState(inputs: InboxLinkInputs): InboxLinkState {
   }
   return make(inputs, "connecting", "ring", "checking", true, null, false);
 }
+
+/**
+ * Where the "Connect WhatsApp" button lives, so one problem has one action.
+ *  - "banner": the link is waiting for a scan, the banner owns the button.
+ *  - "none": the app cannot reach the WhatsApp service at all. Connecting cannot
+ *    help there (no code can be made); the banner offers Retry and only that.
+ *  - "header": every other case, the header keeps its button.
+ */
+export function pairingButtonPlacement(input: {
+  status: WhatsAppStatus | null;
+  reachable: boolean | null;
+  canManage: boolean;
+}): "banner" | "header" | "none" {
+  if (input.reachable === false) return "none";
+  if (input.status === "qr" && input.canManage) return "banner";
+  return "header";
+}
