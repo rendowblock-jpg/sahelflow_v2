@@ -20,11 +20,11 @@
   },
   "firstLoadJsGzKb": {
     "max": 25,
-    "measured": 2.9
+    "measured": 2.1
   },
   "cssGzKb": {
     "max": 40,
-    "measured": 12.4
+    "measured": 10.6
   },
   "pageHeightPx": {
     "viewport": "360x732",

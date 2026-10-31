@@ -29,7 +29,7 @@
   /* Scroll-driven path (Chromium, Safari): no JavaScript needed. */
   @supports (animation-timeline:view()){
     .dayline{animation:ink-in linear both;animation-timeline:view();animation-range:entry 10% cover 40%}
-    .js-motion :is(.sec:not(.hero)>h2,.sec:not(.hero)>.lead,.sheet-sec h2,.faq,.incl){animation:sf-rise linear both;animation-timeline:view();animation-range:entry 0% entry 45%}
+    .js-motion :is(.sec:not(.hero)>h2,.sec:not(.hero)>.lead,.sheet-sec h2,.faq,.incl){animation:sf-rise linear both;animation-timeline:view();animation-range:entry 0px entry 160px}
     .js-motion .plate{animation:sf-stamp linear both;animation-timeline:view();animation-range:entry 10% entry 60%}
     .js-motion .notice::before{animation:sf-margin linear both;animation-timeline:view();animation-range:entry 10% entry 90%}
     .js-motion .num[data-count-to]{animation:sf-tick linear both;animation-timeline:view();animation-range:entry 20% entry 100%}
