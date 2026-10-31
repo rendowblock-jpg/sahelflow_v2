@@ -23,6 +23,7 @@ import { createInboxHost } from "../views/inbox/host";
 import { createCommandStack, type CommandStack } from "./commands";
 import { createInboxMount } from "./inbox-mount";
 import { createOrdersHost, ORDERS_VAULT_KEY, type OrdersHostHandle } from "./orders-host";
+import { createSettingsHost, type SettingsHostHandle } from "./settings-host";
 import { applyPreview } from "./preview";
 import { GROUP_OF } from "./registry";
 import { withShellStrip } from "./shell-strip";
@@ -104,6 +105,7 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
     history.pushState(null, "", `/?screen=${screen}`);
     set({ screen, state: screen === "today" ? "empty" : "empty", confirmRemove: false, removed: false, removeError: null, ...patch }, true);
     if (GROUP_OF[screen] === "orders") void attachOrders().catch(() => undefined);
+    if (GROUP_OF[screen] === "settings") void attachSettings().catch(() => undefined);
     if (screen === "inbox" || screen === "conversation") void attachInbox(screen).catch(() => undefined);
     if (screen === "today") void loadToday(); else sync.onScreen();
   };
@@ -225,6 +227,24 @@ export function startApp(root: HTMLElement, options: AppOptions = {}): Readonly<
       vault, outbox, drafts: s.drafts, authorityExpiresAt: s.authorityExpiresAt, go: (x) => go(x),
     });
     ordersHost = h; mod.attachOrdersHost(h); await h.reload();
+  }
+  // Mounts the settings / devices screen (own files settings-host.ts and views/settings, own chunk, own tests). Needs no pairing: lock, language and remove work offline.
+  let settingsHost: SettingsHostHandle | null = null;
+  async function attachSettings(): Promise<void> {
+    if (settingsHost) return;
+    const mod = await import("../views/settings/screen"); if (settingsHost) return;
+    const s = await getStack().catch(() => null);
+    const h = createSettingsHost({
+      now: Date.now, locale: () => view.locale, online: () => navigator.onLine, theme: () => view.theme, hasLock: () => view.hasLock, revoked: () => view.revoked === true,
+      projectionAt: () => view.projection?.generatedAt ?? null,
+      pairedAt: async () => { const r = await readResume(await getDb(), Date.now()); return r.kind === "none" ? null : r.pairedAt; },
+      db: getDb, flush: async () => { await s?.outbox.flush(); }, refresh: async () => { await s?.outbox.refresh(); },
+      setLocale: (l) => { store.set("sf.locale", l); previewOn = false; set({ locale: l }); },
+      setTheme: (x) => { store.set("sf.theme", x); previewOn = false; set({ theme: x }); },
+      startLockSetup: () => { returnTo = "settings"; set({ screen: "lock", lockMode: "set", lockNotice: null }); },
+      wipe: async () => { const r = await wipe(); settingsHost?.notify(); return { ok: r.ok }; },
+    });
+    settingsHost = h; mod.attachSettingsHost(h); await h.reload();
   }
   // Mounts the inbox (own file inbox-mount.ts, own tests): the screen chunk loads once, the host reads ONLY the vault, a reply goes through the real outbox.
   async function attachInbox(screen: "inbox" | "conversation"): Promise<void> {

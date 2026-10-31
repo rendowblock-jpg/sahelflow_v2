@@ -78,6 +78,17 @@ function Stamp({ status }: { status: DeviceStatus }) {
   );
 }
 
+// The phone app is still in testing: this label and sentence sit next to the card title and in front of the pairing link.
+function TestingNote() {
+  const { t } = useI18n();
+  return (
+    <p data-testid="phone-pairing-testing" className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+      <span data-testid="phone-pairing-testing-label" className="inline-flex items-center rounded-md border border-border px-2 py-1 font-medium text-foreground">{t("phones.testing.label")}</span>
+      <span>{t("phones.testing.note")}</span>
+    </p>
+  );
+}
+
 export function PhonePairingCard() {
   const { t, locale } = useI18n();
   const [load, setLoad] = React.useState<Load>({ kind: "loading" });
@@ -136,6 +147,7 @@ export function PhonePairingCard() {
             {t("phones.title")}
           </CardTitle>
           <CardDescription>{t("phones.description")}</CardDescription>
+          <TestingNote />
         </div>
         {load.kind === "ready" || load.kind === "offline" ? (
           <Button type="button" className={TARGET} onClick={() => setPairOpen(true)} disabled={load.kind === "offline"}>
@@ -300,6 +312,7 @@ function PairSession(props: {
         {pairing && countdown ? (
           <div className="space-y-3">
             <div className="space-y-1">
+              <TestingNote />
               <p className="text-sm font-medium">{t("phones.dialog.link")}</p>
               <p dir="ltr" data-testid="pairing-link" className="break-all rounded-md border border-border bg-muted p-2 text-start font-mono text-xs">{pairing.link}</p>
               <Button type="button" variant="outline" className={TARGET} disabled={countdown.expired}
