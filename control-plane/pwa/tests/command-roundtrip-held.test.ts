@@ -81,6 +81,12 @@ describe("reply behind a HELD message: what the PC answers (phone -> relay -> ex
     expect(await replyAfter(inbound.id, conversation.id)).toMatchObject({ state: "failed", resultCode: "ALREADY_ANSWERED" });
     expect(hoisted.queue).not.toHaveBeenCalled();
   });
+  it("(e2) a plain sent one FIRST and a held message after it (the other order of (e)): still ALREADY_ANSWERED, whatever order the rows are read in", async () => {
+    // Pins the whole window of newer messages: a lookup that looked at one row only would be fooled by one of the two orders ((e) or this one).
+    const { conversation, inbound } = await chat(); await out(conversation.id, 90); await held(conversation.id, 30);
+    expect(await replyAfter(inbound.id, conversation.id)).toMatchObject({ state: "failed", resultCode: "ALREADY_ANSWERED" });
+    expect(hoisted.queue).not.toHaveBeenCalled();
+  });
   it("(f) two held messages after the id: queued", async () => {
     const { conversation, inbound } = await chat(); await held(conversation.id, 90); await held(conversation.id, 30);
     const rec = await replyAfter(inbound.id, conversation.id);
