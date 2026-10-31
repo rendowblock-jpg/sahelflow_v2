@@ -223,6 +223,26 @@ describe("confirm from the phone", () => {
   });
 });
 
+describe("confirm from the phone: more rules", () => {
+  it("a legacy order that is no longer pending says what it is", async () => {
+    const customer = await seedCustomer(raw);
+    const product = await seedProduct(raw);
+    const order = await seedOrder(raw, { status: "confirmed", customerId: customer.id, productId: product.id });
+    const { done } = await run([sealed("command.orders.confirm", { orderId: order.id, expectedVersion: order.version })]);
+    expect(done[0]).toMatchObject({ state: "conflict", code: "ORDER_ALREADY_CONFIRMED" });
+    expect(hoisted.capi).not.toHaveBeenCalled();
+  });
+
+  it("the phone's idempotency key lives in its own key space: the desktop's plain key never replays it", async () => {
+    const { order } = await canonicalOrder();
+    const envelope = sealed("command.orders.confirm", { orderId: order.id, expectedVersion: order.version });
+    expect((await run([envelope])).done[0]).toMatchObject({ state: "committed" });
+    await expect(decideOrderForActor({ prisma: db, shop: SHOP } as never, actor(), {
+      orderId: order.id, decision: "confirm", expectedVersion: order.version, idempotencyKey: envelope.idempotencyKey,
+    })).rejects.toMatchObject({ code: "ORDER_ALREADY_CONFIRMED" });
+  });
+});
+
 describe("reject from the phone", () => {
   it("needs a reason KEY: no reason or free text is INVALID_PAYLOAD and the order stays pending", async () => {
     const { order } = await canonicalOrder();
