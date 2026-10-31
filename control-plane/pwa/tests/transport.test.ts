@@ -67,6 +67,15 @@ describe("seal: phone -> desktop, opened by the desktop's own opener", () => {
     await expect(make({ scope: () => null }).t.seal(seal("command.orders.confirm", {}, NOW + H))).rejects.toThrow("no_scope");
     const { t } = createNoShop(); await expect(t.seal(seal("command.orders.confirm", {}, NOW + H))).rejects.toThrow("no_shop");
   });
+  it("reads the shop id at every seal: a shop learned after the transport was built is used", async () => {
+    let shop: string | null = null;
+    const t = createPhoneTransport({ relayBase: RELAY, keys: phoneKeys, pinned: pinnedOf(desktop), identity: { ...ID, shopId: null }, shopId: () => shop, scope: () => ({ installationId: INSTALLATION, revocationEpoch: 2 }), fetch: async () => new Response("{}"), now: () => NOW });
+    await expect(t.seal(seal("command.orders.confirm", {}, NOW + H))).rejects.toThrow("no_shop");
+    shop = "shop_learned_01";
+    expect(open(await t.seal(seal("command.orders.confirm", { orderId: "o1", expectedVersion: 3 }, NOW + H))).envelope.shopId).toBe("shop_learned_01");
+    shop = "shop_changed_02";
+    expect(open(await t.seal(seal("command.orders.confirm", { orderId: "o1", expectedVersion: 3 }, NOW + H))).envelope.shopId).toBe("shop_changed_02");
+  });
   it("a re-seal after a policy change moves issuedAt but never makes the command live longer", async () => {
     const { t } = make({ now: () => NOW + 2 * H }); const e = open(await t.seal(seal("command.orders.confirm", { orderId: "o1", expectedVersion: 3 }, NOW + 12 * H)), { now: NOW + 2 * H }).envelope;
     expect(Date.parse(e.expiresAt)).toBe(NOW + 12 * H); expect(Date.parse(e.expiresAt) - Date.parse(e.issuedAt)).toBeLessThanOrEqual(12 * H);

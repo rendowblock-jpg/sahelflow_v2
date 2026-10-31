@@ -77,6 +77,32 @@ describe("phone -> real relay worker -> desktop executor on real SQLite -> resul
     expect(record?.state).not.toBe("committed"); expect(record?.state).toBe("expired");
   });
 
+  it("the late look: the PC confirmed in time, the phone looks after the deadline: committed, never expired", async () => {
+    const { rig, phone } = await start(); const order = await pendingOrder();
+    clock.t = Date.now() + 20_000 - 12 * 3_600_000; // dies 20 s from now
+    await phone.outbox.enqueue({ kind: "command.orders.confirm", target: { type: "order", id: order.id, expectedVersion: order.version }, labelForUi: "Order", draftText: "" });
+    await phone.outbox.flush(); clock.t = Date.now();
+    expect(await rig.runDesktop()).toMatchObject({ completed: 1 }); expect(await status(order.id)).toBe("confirmed");
+    clock.t = Date.now() + 25_000; // the phone looks AFTER its own deadline
+    await phone.outbox.refresh();
+    expect(await phone.only()).toMatchObject({ state: "committed", lastError: null });
+  });
+
+  it("the late look with the relay down: unknown (never expired or failed), committed once the relay answers", async () => {
+    let down = false; clock.t = Date.now(); hoisted.actor = actorFor(DEVICE);
+    const rig = await buildRig(DEVICE); await rig.publish();
+    const phone = await phoneOf(rig, clock, (async (input: RequestInfo | URL, init?: RequestInit) => { if (down) throw new TypeError("offline"); return rig.relayFetch(input, init); }) as typeof fetch);
+    const order = await pendingOrder();
+    clock.t = Date.now() + 20_000 - 12 * 3_600_000;
+    await phone.outbox.enqueue({ kind: "command.orders.confirm", target: { type: "order", id: order.id, expectedVersion: order.version }, labelForUi: "Order", draftText: "" });
+    await phone.outbox.flush(); clock.t = Date.now();
+    expect(await rig.runDesktop()).toMatchObject({ completed: 1 }); expect(await status(order.id)).toBe("confirmed");
+    clock.t = Date.now() + 25_000; down = true; await phone.outbox.refresh();
+    expect(await phone.only()).toMatchObject({ state: "unknown", lastError: "deadline_unsure" });
+    down = false; await phone.outbox.refresh();
+    expect(await phone.only()).toMatchObject({ state: "committed" });
+  });
+
   it("a revoked device: the relay refuses its command, nothing reaches the PC, the poll says revoked", async () => {
     const { rig, phone } = await start(); const order = await pendingOrder();
     expect((await rig.revoke()).status).toBe(200);

@@ -24,6 +24,9 @@ export type CmdEvent =
   // The relay has no record of a command this phone sent: we do not know what happened, so unknown (never failed).
   | Readonly<{ type: "relay_missing"; at: number }>
   | Readonly<{ type: "tick"; at: number }>
+  // Past the deadline the phone asked the relay once: it still holds the command unexecuted (late_queued), or it could not be asked / settled nothing (late_unsure).
+  | Readonly<{ type: "late_queued"; at: number }>
+  | Readonly<{ type: "late_unsure"; at: number }>
   | Readonly<{ type: "reread"; at: number; executed: boolean }>;
 
 const FINAL: readonly CmdState[] = ["committed", "failed", "expired"];
@@ -42,7 +45,10 @@ export function transition(r: OutboxRecord, e: CmdEvent): OutboxRecord {
     case "result": return { ...r, state: e.outcome, lastError: null, ...(e.code === undefined ? {} : { resultCode: e.code }), ...(e.guarded === true ? { resultGuarded: true } : {}) };
     // An expired RESULT envelope means the PC already answered: unknown (re-read the projection), never failed.
     case "result_unreadable": return e.reason === "expired" ? { ...r, state: "unknown", lastError: "result_expired" } : { ...r, lastError: `result_${e.reason}` };
-    case "tick": return (r.state === "queued" || r.state === "sent") && e.at >= r.expiresAt ? { ...r, state: "expired", lastError: "deadline" } : r;
+    // The clock alone expires only a command that was never sent. A SENT one may have been confirmed by the PC in time: it needs the relay's word.
+    case "tick": return r.state === "queued" && e.at >= r.expiresAt ? { ...r, state: "expired", lastError: "deadline" } : r;
+    case "late_queued": return r.state === "sent" && e.at >= r.expiresAt ? { ...r, state: "expired", lastError: "deadline" } : r;
+    case "late_unsure": return r.state === "sent" && e.at >= r.expiresAt ? { ...r, state: "unknown", lastError: "deadline_unsure" } : r;
     case "relay_missing": return r.state === "sent" ? { ...r, state: "unknown", lastError: "relay_404" } : r;
     case "reread": return r.state === "unknown" && e.executed ? { ...r, state: "committed" } : r;
     case "send_failed": {

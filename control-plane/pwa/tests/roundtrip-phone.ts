@@ -8,9 +8,9 @@ import { createRelayClient } from "../src/today/relay-source";
 import { RELAY, type buildRig } from "./roundtrip-world";
 
 export type Rig = Awaited<ReturnType<typeof buildRig>>;
-export async function phoneOf(rig: Rig, clock: { t: number }) {
+export async function phoneOf(rig: Rig, clock: { t: number }, fetchImpl: typeof fetch = rig.relayFetch) {
   const now = (): number => clock.t;
-  const relay = createRelayClient({ baseUrl: RELAY, fetchImpl: rig.relayFetch, getDb: async () => rig.db, now });
+  const relay = createRelayClient({ baseUrl: RELAY, fetchImpl, getDb: async () => rig.db, now });
   const authority = createAuthority(rig.db);
   const polled = await relay.poll();
   await authority.load();

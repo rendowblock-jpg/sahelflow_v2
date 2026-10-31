@@ -12,6 +12,8 @@ export type PhoneTransportOptions = Readonly<{
   relayBase: string; keys: DeviceKeys; pinned: TrustedDesktop; identity: PairingIdentity;
   /** The PC's installation id and this member's revocation epoch, as the last verified projection / command authority named them. */
   scope(): PhoneScope | null;
+  /** The shop id, read at every seal: the poll learns it AFTER the transport is built. Without it identity.shopId is used (a snapshot). */
+  shopId?(): string | null;
   fetch: typeof fetch; now(): number;
 }>;
 type Metadata = Parameters<typeof sealEnvelopeWeb>[0];
@@ -29,7 +31,7 @@ export function createPhoneTransport(o: PhoneTransportOptions) {
   return {
     async seal(i: SealInput): Promise<string> {
       const scope = o.scope(); if (!scope) throw new Error("no_scope");
-      const shopId = o.identity.shopId; if (!shopId) throw new Error("no_shop");
+      const shopId = o.shopId ? o.shopId() : o.identity.shopId; if (!shopId) throw new Error("no_shop");
       // issuedAt is never earlier than expiresAt - the kind's lifetime: the PC refuses a command that lives longer than its kind allows.
       const issuedAt = Math.max(o.now(), i.expiresAt - COMMAND_EXPIRY_MS[i.kind]);
       const metadata: Metadata = {
