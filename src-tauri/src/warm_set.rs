@@ -123,10 +123,15 @@ mod tests {
     use std::cell::RefCell;
 
     fn manifest(version: &str, entries: &str) -> String {
-        format!(r#"{{"formatVersion":{version},"fileCount":0,"totalBytes":0,"entries":[{entries}]}}"#)
+        format!(
+            r#"{{"formatVersion":{version},"fileCount":0,"totalBytes":0,"entries":[{entries}]}}"#
+        )
     }
     fn entry(path: &str, native: bool) -> BootEntry {
-        BootEntry { path: path.to_string(), native }
+        BootEntry {
+            path: path.to_string(),
+            native,
+        }
     }
     fn paths(entries: &[BootEntry]) -> Vec<&str> {
         entries.iter().map(|e| e.path.as_str()).collect()
@@ -139,8 +144,14 @@ mod tests {
             r#"{"path":"server.js","size":5},{"path":"node_modules/a/b.js","size":1},{"path":"node_modules/x/e.node","size":9,"native":true}"#,
         );
         let entries = parse_boot_set(&json).expect("valid manifest");
-        assert_eq!(paths(&entries), ["server.js", "node_modules/a/b.js", "node_modules/x/e.node"]);
-        assert_eq!(entries.iter().map(|e| e.native).collect::<Vec<_>>(), [false, false, true]);
+        assert_eq!(
+            paths(&entries),
+            ["server.js", "node_modules/a/b.js", "node_modules/x/e.node"]
+        );
+        assert_eq!(
+            entries.iter().map(|e| e.native).collect::<Vec<_>>(),
+            [false, false, true]
+        );
     }
 
     #[test]
@@ -152,18 +163,42 @@ mod tests {
         assert!(parse_boot_set(&manifest("1", "")).is_none(), "empty list");
         assert!(parse_boot_set("").is_none());
         assert!(parse_boot_set("not json").is_none());
-        assert!(parse_boot_set(r#"{"entries":[{"path":"server.js"}]}"#).is_none(), "no version");
-        assert!(parse_boot_set(r#"{"formatVersion":1}"#).is_none(), "no entries");
-        assert!(parse_boot_set(&manifest("1", r#"{"size":5}"#)).is_none(), "entry without path");
+        assert!(
+            parse_boot_set(r#"{"entries":[{"path":"server.js"}]}"#).is_none(),
+            "no version"
+        );
+        assert!(
+            parse_boot_set(r#"{"formatVersion":1}"#).is_none(),
+            "no entries"
+        );
+        assert!(
+            parse_boot_set(&manifest("1", r#"{"size":5}"#)).is_none(),
+            "entry without path"
+        );
     }
 
     #[test]
     fn parse_refuses_unsafe_paths() {
         for bad in [
-            "../server.js", "a/../b.js", "/etc/passwd", "C:\\x\\y.js", "C:/x/y.js", "c:y.js",
-            "a\\b.js", "a//b.js", "./a.js", "a/./b.js", "a/b.js/", "", "a/b.js:stream", "a\u{0}b",
+            "../server.js",
+            "a/../b.js",
+            "/etc/passwd",
+            "C:\\x\\y.js",
+            "C:/x/y.js",
+            "c:y.js",
+            "a\\b.js",
+            "a//b.js",
+            "./a.js",
+            "a/./b.js",
+            "a/b.js/",
+            "",
+            "a/b.js:stream",
+            "a\u{0}b",
         ] {
-            let json = manifest("1", &format!(r#"{{"path":{}}}"#, serde_json::to_string(bad).unwrap()));
+            let json = manifest(
+                "1",
+                &format!(r#"{{"path":{}}}"#, serde_json::to_string(bad).unwrap()),
+            );
             assert!(parse_boot_set(&json).is_none(), "accepted {bad:?}");
         }
     }
@@ -183,13 +218,20 @@ mod tests {
     #[test]
     fn plan_keeps_manifest_order_and_joins_each_part_under_the_root() {
         let root = Path::new("standalone");
-        let entries = [entry("server.js", false), entry(".next/server/app/page.js", false), entry("a/b/c.js", false)];
+        let entries = [
+            entry("server.js", false),
+            entry(".next/server/app/page.js", false),
+            entry("a/b/c.js", false),
+        ];
         let plan = warm_plan(root, &entries, |_| true).expect("plan");
         assert_eq!(
             plan,
             [
                 root.join("server.js"),
-                root.join(".next").join("server").join("app").join("page.js"),
+                root.join(".next")
+                    .join("server")
+                    .join("app")
+                    .join("page.js"),
                 root.join("a").join("b").join("c.js"),
             ]
         );
@@ -198,7 +240,11 @@ mod tests {
     #[test]
     fn plan_is_none_when_a_normal_file_is_missing() {
         let root = Path::new("standalone");
-        let entries = [entry("server.js", false), entry("gone.js", false), entry("c.js", false)];
+        let entries = [
+            entry("server.js", false),
+            entry("gone.js", false),
+            entry("c.js", false),
+        ];
         let present = [root.join("server.js"), root.join("c.js")];
         assert!(warm_plan(root, &entries, |p| present.iter().any(|q| q == p)).is_none());
     }
@@ -206,7 +252,11 @@ mod tests {
     #[test]
     fn plan_skips_a_missing_native_file_of_another_platform() {
         let root = Path::new("standalone");
-        let entries = [entry("server.js", false), entry("lib/engine.so.node", true), entry("c.js", false)];
+        let entries = [
+            entry("server.js", false),
+            entry("lib/engine.so.node", true),
+            entry("c.js", false),
+        ];
         let present = [root.join("server.js"), root.join("c.js")];
         let plan = warm_plan(root, &entries, |p| present.iter().any(|q| q == p)).expect("plan");
         assert_eq!(plan, [root.join("server.js"), root.join("c.js")]);
@@ -238,7 +288,11 @@ mod tests {
     fn plan_asks_about_exactly_the_listed_files_and_stops_at_the_first_stale_one() {
         let root = Path::new("standalone");
         let asked = RefCell::new(Vec::new());
-        let entries = [entry("a.js", false), entry("b.js", false), entry("c.js", false)];
+        let entries = [
+            entry("a.js", false),
+            entry("b.js", false),
+            entry("c.js", false),
+        ];
         let plan = warm_plan(root, &entries, |p| {
             asked.borrow_mut().push(p.to_path_buf());
             p != root.join("b.js")
