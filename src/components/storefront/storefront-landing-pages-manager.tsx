@@ -27,6 +27,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import {
+  MANAGER_TOUCH,
+  ManagerEmpty,
+  ManagerSaveLine,
+  settleResponse,
+  useManagerAction,
+} from "@/components/storefront/studio/manager-states";
 import { toast } from "@/lib/toast";
 import { formatDZD } from "@/lib/utils";
 
@@ -86,7 +94,8 @@ const STATUS_STYLES: Record<string, string> = {
 export function StorefrontLandingPagesManager({ pages, storefronts, products, canManage }: Props) {
   const { t, locale } = useI18n();
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const { state: actionState, busy, run } = useManagerAction(canManage);
+  const [pendingDelete, setPendingDelete] = useState<LandingPageRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // FD-061 EX-4: sibling comparison — per-product grouping of every page
@@ -107,9 +116,7 @@ export function StorefrontLandingPagesManager({ pages, storefronts, products, ca
 
   async function createPage(event: React.FormEvent): Promise<void> {
     event.preventDefault();
-    if (!canManage || busy) return;
-    setBusy(true);
-    try {
+    await run(async () => {
       const response = await fetch("/api/storefront/landing-pages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -121,26 +128,18 @@ export function StorefrontLandingPagesManager({ pages, storefronts, products, ca
           imageGap: Number(form.imageGap) || 0,
         }),
       });
-      const data = (await response.json().catch(() => ({}))) as ApiPayload;
-      if (!response.ok) {
-        toast.error(data.error ?? t("storefronts.landing.error"));
-        return;
-      }
+      const result = await settleResponse<ApiPayload>(response, t);
+      if (!result.ok) return result;
       toast.success(t("storefronts.landing.createdToast"));
       setCreating(false);
       setForm((current) => ({ ...current, name: "", pageSlug: "" }));
       router.refresh();
-    } catch {
-      toast.error(t("storefronts.landing.error"));
-    } finally {
-      setBusy(false);
-    }
+      return { ok: true };
+    });
   }
 
   async function mutate(id: string, action: "publish" | "unpublish" | "archive" | "duplicate" | "delete"): Promise<void> {
-    if (!canManage || busy) return;
-    setBusy(true);
-    try {
+    await run(async () => {
       const response =
         action === "delete"
           ? await fetch(`/api/storefront/landing-pages/${encodeURIComponent(id)}`, { method: "DELETE" })
@@ -151,18 +150,12 @@ export function StorefrontLandingPagesManager({ pages, storefronts, products, ca
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ action }),
               });
-      const data = (await response.json().catch(() => ({}))) as ApiPayload;
-      if (!response.ok) {
-        toast.error(data.error ?? t("storefronts.landing.error"));
-        return;
-      }
+      const result = await settleResponse<ApiPayload>(response, t);
+      if (!result.ok) return result;
       toast.success(t(`storefronts.landing.${action}Toast`));
       router.refresh();
-    } catch {
-      toast.error(t("storefronts.landing.error"));
-    } finally {
-      setBusy(false);
-    }
+      return { ok: true };
+    });
   }
 
   return (
@@ -181,7 +174,7 @@ export function StorefrontLandingPagesManager({ pages, storefronts, products, ca
             >
               {t("storefronts.landing.compareToggle")}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setCreating((value) => !value)}>
+            <Button size="sm" variant="outline" className={MANAGER_TOUCH} onClick={() => setCreating((value) => !value)}>
               <Plus className="size-4" aria-hidden="true" />
               {t("storefronts.landing.create")}
             </Button>
@@ -272,7 +265,10 @@ export function StorefrontLandingPagesManager({ pages, storefronts, products, ca
         ) : null}
 
         {pages.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">{t("storefronts.landing.empty")}</p>
+          <ManagerEmpty
+            title={t("storefront.studioStates.manager.landingEmptyTitle")}
+            body={t("storefronts.landing.empty")}
+          />
         ) : grouped ? (
           <div className="space-y-4">
             {[...new Set(pages.map((page) => page.productId))].map((productId) => {
@@ -335,7 +331,7 @@ export function StorefrontLandingPagesManager({ pages, storefronts, products, ca
                     <td className="py-2.5 tabular-nums">{formatPercent(page.stats.conversionRate)}</td>
                     <td className="py-2.5 tabular-nums">{formatDZD(page.stats.revenue, locale)}</td>
                     <td className="py-2.5">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex flex-wrap items-center justify-end gap-1">
                         {page.status === "published" ? (
                           <Button
                             size="sm"
@@ -355,27 +351,27 @@ export function StorefrontLandingPagesManager({ pages, storefronts, products, ca
                         {canManage ? (
                           <>
                             {page.status === "published" ? (
-                              <Button size="sm" variant="ghost" disabled={busy} onClick={() => void mutate(page.id, "unpublish")}>
+                              <Button size="sm" variant="ghost" className="min-h-9 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" disabled={busy} onClick={() => void mutate(page.id, "unpublish")}>
                                 {t("storefronts.landing.unpublish")}
                               </Button>
                             ) : (
-                              <Button size="sm" variant="ghost" disabled={busy} onClick={() => void mutate(page.id, "publish")}>
+                              <Button size="sm" variant="ghost" className="min-h-9 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" disabled={busy} onClick={() => void mutate(page.id, "publish")}>
                                 {t("storefronts.landing.publish")}
                               </Button>
                             )}
                             {page.status !== "archived" ? (
-                              <Button size="sm" variant="ghost" disabled={busy} onClick={() => void mutate(page.id, "archive")} aria-label={t("storefronts.landing.archive")}>
+                              <Button size="sm" variant="ghost" className="min-h-9 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" disabled={busy} onClick={() => void mutate(page.id, "archive")} aria-label={t("storefronts.landing.archive")}>
                                 <Archive className="size-4" aria-hidden="true" />
                               </Button>
                             ) : null}
-                            <Button size="sm" variant="ghost" disabled={busy} onClick={() => void mutate(page.id, "duplicate")} aria-label={t("storefronts.landing.duplicate")}>
+                            <Button size="sm" variant="ghost" className="min-h-9 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" disabled={busy} onClick={() => void mutate(page.id, "duplicate")} aria-label={t("storefronts.landing.duplicate")}>
                               <Copy className="size-4" aria-hidden="true" />
                             </Button>
-                            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setExpandedId((current) => (current === page.id ? null : page.id))} aria-label={t("storefronts.landing.manageImages")}>
+                            <Button size="sm" variant="ghost" className="min-h-9 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" disabled={busy} onClick={() => setExpandedId((current) => (current === page.id ? null : page.id))} aria-label={t("storefronts.landing.manageImages")}>
                               <FileStack className="size-4" aria-hidden="true" />
                               <span className="ms-1 tabular-nums">{page.imageCount}</span>
                             </Button>
-                            <Button size="sm" variant="ghost" disabled={busy} onClick={() => void mutate(page.id, "delete")} aria-label={t("storefronts.landing.delete")}>
+                            <Button size="sm" variant="ghost" className="min-h-9 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" disabled={busy} onClick={() => setPendingDelete(page)} aria-label={t("storefronts.landing.delete")}>
                               <Trash2 className="size-4 text-destructive" aria-hidden="true" />
                             </Button>
                           </>
@@ -389,6 +385,23 @@ export function StorefrontLandingPagesManager({ pages, storefronts, products, ca
           </div>
         )}
 
+        <ManagerSaveLine state={actionState} verb="change" />
+        {pendingDelete ? (
+          <ConfirmDialog
+            open
+            onOpenChange={(open) => {
+              if (!open) setPendingDelete(null);
+            }}
+            destructive
+            title={t("storefront.studioStates.manager.landingDeleteTitle")}
+            description={t("storefront.studioStates.manager.landingDeleteBody", {
+              name: pendingDelete.name,
+              count: pendingDelete.imageCount,
+            })}
+            confirmLabel={t("storefront.studioStates.manager.landingDeleteConfirm")}
+            onConfirm={() => mutate(pendingDelete.id, "delete")}
+          />
+        ) : null}
         {expandedId ? (
           <LandingPageImageEditor
             page={pages.find((candidate) => candidate.id === expandedId) ?? null}
@@ -577,7 +590,7 @@ function LandingPageImageEditor({
                   <Button size="sm" variant="ghost" disabled={busy || index === images.length - 1} onClick={() => void moveImage(index, 1)} aria-label={t("storefronts.landing.moveDown")}>
                     <ArrowDown className="size-4" aria-hidden="true" />
                   </Button>
-                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => void removeImage(image.id)} aria-label={t("storefronts.landing.deleteImage")}>
+                  <Button size="sm" variant="ghost" className="min-h-9 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11" disabled={busy} onClick={() => void removeImage(image.id)} aria-label={t("storefronts.landing.deleteImage")}>
                     <Trash2 className="size-4 text-destructive" aria-hidden="true" />
                   </Button>
                 </div>

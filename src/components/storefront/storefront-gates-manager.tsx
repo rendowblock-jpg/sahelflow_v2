@@ -16,6 +16,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/hooks/use-i18n";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import {
+  MANAGER_TOUCH,
+  ManagerLoadError,
+  ManagerNoStore,
+  ManagerSaveLine,
+  ManagerSkeleton,
+  settleResponse,
+  useManagerAction,
+} from "@/components/storefront/studio/manager-states";
+import { gateRemovals } from "@/components/storefront/studio/manager-feedback";
 import { toast } from "@/lib/toast";
 
 export interface GatesConfigRow {
@@ -44,7 +55,10 @@ type ApiPayload = { error?: string; code?: string; config?: GatesConfigRow };
 export function StorefrontGatesManager({ storefronts, canManage }: Props) {
   const { t } = useI18n();
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [reload, setReload] = useState(0);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const { state: actionState, busy, run } = useManagerAction(canManage);
   const [slug, setSlug] = useState(storefronts[0]?.slug ?? "");
   const [config, setConfig] = useState<GatesConfigRow | null>(null);
   const [form, setForm] = useState({
@@ -61,13 +75,18 @@ export function StorefrontGatesManager({ storefronts, canManage }: Props) {
     void (async () => {
       if (!slug) return;
       setConfig(null);
+      setLoadState("loading");
       try {
         const response = await fetch(
           `/api/storefront/gates?slug=${encodeURIComponent(slug)}`,
         );
-        if (!response.ok) return;
+        if (!response.ok) {
+          if (!cancelled) setLoadState("error");
+          return;
+        }
         const data = (await response.json()) as { config?: GatesConfigRow | null };
         if (cancelled) return;
+        setLoadState("ready");
         setConfig(data.config ?? null);
         setForm({
           otpEnabled: data.config?.otpEnabled ?? false,
@@ -78,20 +97,18 @@ export function StorefrontGatesManager({ storefronts, canManage }: Props) {
           turnstileSecretKey: "",
         });
       } catch {
-        // The probe failing leaves the form inert; a save attempt surfaces
-        // the error.
+        if (!cancelled) setLoadState("error");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, reload]);
 
-  async function save(event: React.FormEvent): Promise<void> {
-    event.preventDefault();
-    if (!canManage || busy) return;
-    setBusy(true);
-    try {
+  const losses = gateRemovals({ config, form });
+
+  async function persistGates(): Promise<void> {
+    await run(async () => {
       const response = await fetch("/api/storefront/gates", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -106,23 +123,30 @@ export function StorefrontGatesManager({ storefronts, canManage }: Props) {
           turnstileSecretKey: form.turnstileSecretKey,
         }),
       });
-      const data = (await response.json().catch(() => ({}))) as ApiPayload;
-      if (!response.ok) {
-        toast.error(data.error ?? t("storefronts.gates.error"));
-        return;
-      }
+      const result = await settleResponse<ApiPayload>(response, t);
+      if (!result.ok) return result;
       toast.success(t("storefronts.gates.savedToast"));
-      setConfig(data.config ?? null);
+      setConfig(result.data.config ?? null);
       setForm((current) => ({ ...current, dzverifyApiKey: "", turnstileSecretKey: "" }));
       router.refresh();
-    } catch {
-      toast.error(t("storefronts.gates.error"));
-    } finally {
-      setBusy(false);
-    }
+      return { ok: true };
+    });
   }
 
-  if (storefronts.length === 0) return null;
+  function requestSave(event: React.FormEvent): void {
+    event.preventDefault();
+    if (!canManage || busy) return;
+    // Switching a gate off or erasing a key is confirmed first, naming what is lost.
+    if (losses.length > 0) {
+      setConfirmOpen(true);
+      return;
+    }
+    void persistGates();
+  }
+
+  if (storefronts.length === 0) return <ManagerNoStore />;
+  if (loadState === "loading") return <ManagerSkeleton testId="gates-loading" />;
+  if (loadState === "error") return <ManagerLoadError onRetry={() => setReload((n) => n + 1)} />;
 
   return (
     <Card>
@@ -147,14 +171,14 @@ export function StorefrontGatesManager({ storefronts, canManage }: Props) {
         ) : null}
       </CardHeader>
       <CardContent>
-        <form onSubmit={save} className="space-y-4">
+        <form onSubmit={requestSave} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3 rounded-control border p-3">
               <div className="flex items-center justify-between">
                 <Label htmlFor="gates-otp" className="text-sm font-medium">
                   {t("storefronts.gates.otpTitle")}
                 </Label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <label className="flex min-h-9 cursor-pointer items-center gap-2 text-sm [@media(pointer:coarse)]:min-h-11">
                   <input
                     id="gates-otp"
                     type="checkbox"
@@ -174,7 +198,7 @@ export function StorefrontGatesManager({ storefronts, canManage }: Props) {
                 </label>
               </div>
               <p className="text-xs text-muted-foreground">{t("storefronts.gates.otpDescription")}</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="gates-otp-lang">{t("storefronts.gates.otpLanguage")}</Label>
                   <select
@@ -220,7 +244,7 @@ export function StorefrontGatesManager({ storefronts, canManage }: Props) {
                 <Label htmlFor="gates-turnstile" className="text-sm font-medium">
                   {t("storefronts.gates.turnstileTitle")}
                 </Label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <label className="flex min-h-9 cursor-pointer items-center gap-2 text-sm [@media(pointer:coarse)]:min-h-11">
                   <input
                     id="gates-turnstile"
                     type="checkbox"
@@ -240,7 +264,7 @@ export function StorefrontGatesManager({ storefronts, canManage }: Props) {
                 </label>
               </div>
               <p className="text-xs text-muted-foreground">{t("storefronts.gates.turnstileDescription")}</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="gates-turnstile-site">{t("storefronts.gates.turnstileSiteKey")}</Label>
                   <Input
@@ -278,15 +302,36 @@ export function StorefrontGatesManager({ storefronts, canManage }: Props) {
           </div>
 
           {canManage ? (
-            <Button type="submit" size="sm" disabled={busy}>
-              {busy ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <ShieldCheck className="size-4" aria-hidden="true" />
-              )}
-              {t("storefronts.gates.save")}
-            </Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="submit" size="sm" className={MANAGER_TOUCH} disabled={busy}>
+                {busy ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <ShieldCheck className="size-4" aria-hidden="true" />
+                )}
+                {t("storefronts.gates.save")}
+              </Button>
+              <ManagerSaveLine state={actionState} verb="save" />
+            </div>
           ) : null}
+          <ConfirmDialog
+            open={confirmOpen}
+            onOpenChange={setConfirmOpen}
+            destructive
+            title={t("storefront.studioStates.manager.gatesConfirmTitle")}
+            description={
+              <span className="block space-y-1">
+                <span className="block">{t("storefront.studioStates.manager.gatesConfirmBody")}</span>
+                {losses.map((loss) => (
+                  <span key={loss} className="block">
+                    • {t(`storefront.studioStates.manager.gatesLoss.${loss}`)}
+                  </span>
+                ))}
+              </span>
+            }
+            confirmLabel={t("storefront.studioStates.manager.gatesConfirmAction")}
+            onConfirm={persistGates}
+          />
         </form>
       </CardContent>
     </Card>
