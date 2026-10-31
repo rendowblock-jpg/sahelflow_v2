@@ -17,7 +17,7 @@ export type Projection = Readonly<{
   // Held WhatsApp messages: shown only when the desktop publishes the count.
   whatsappHeld?: number | null;
   // From connectedCommandAuthority: the policy version commands are sealed with, and when that authority ends (the PC's last word).
-  authority?: Readonly<{ policyVersion: number; expiresAt: number }>;
+  authority?: Readonly<{ policyVersion: number; expiresAt: number; memberRevocationEpoch?: number; installationId?: string }>;
 }>;
 export type ProjectionResult =
   | Readonly<{ ok: true; projection: Projection }>

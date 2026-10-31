@@ -25,7 +25,7 @@ const count = (v: unknown): number | null => (typeof v === "number" && Number.is
 // The desktop's dashboard payload -> what Today shows. Orders waiting: stats.ordersWaiting when the desktop sends the
 // exact total; else a FLOOR counted from the few recent orders (status is a plain string on the desktop, "pending" = waiting
 // for confirmation, matched exactly) and flagged so the view says "at least". whatsappHeld / codToCollectDzd: only when sent.
-export function parseDashboard(payload: unknown, generatedAt: number): Projection | null {
+export function parseDashboard(payload: unknown, generatedAt: number, installationId?: string): Projection | null {
   const root = obj(payload); const stats = obj(root?.stats);
   if (!root || !stats || !Number.isFinite(generatedAt)) return null;
   const newOrders = count(stats.ordersToday);
@@ -43,7 +43,9 @@ export function parseDashboard(payload: unknown, generatedAt: number): Projectio
   // Cash to collect is whole DZD; absent or unusable = NaN, which the view prints as a dash.
   // The command authority the desktop published with it: which policy version a command must be sealed with, and until when it holds.
   const auth = obj(root.connectedCommandAuthority); const policyVersion = count(auth?.policyVersion); const authUntil = typeof auth?.expiresAt === "string" ? Date.parse(auth.expiresAt) : Number.NaN;
-  const authority = policyVersion !== null && Number.isFinite(authUntil) ? { authority: { policyVersion, expiresAt: authUntil } } : {};
+  // A command is sealed for one PC (installationId, from the verified envelope) and one member epoch (memberRevocationEpoch, from the authority): the relay compares both.
+  const epoch = count(auth?.memberRevocationEpoch);
+  const authority = policyVersion !== null && Number.isFinite(authUntil) ? { authority: { policyVersion, expiresAt: authUntil, ...(epoch === null ? {} : { memberRevocationEpoch: epoch }), ...(installationId === undefined ? {} : { installationId }) } } : {};
   return { ...authority, generatedAt, newOrders, toConfirm, toConfirmIsFloor: exact === null, inDelivery: count(stats.pendingDeliveries) ?? 0, codToCollectDzd: count(stats.codToCollectDzd) ?? Number.NaN, week, whatsappHeld: count(stats.whatsappHeld) };
 }
 
@@ -129,7 +131,7 @@ export function createRelayClient(options: Readonly<{ baseUrl: string; getDb: ()
       try { await putSealed(db, { kind, envelope: body, sequence: env.sequence, receivedAt: now, shopId: env.shopId }); } catch { return { kind: "refused", reason: "storage" }; }
       return { kind: "stored", sequence: env.sequence };
     }
-    const projection = parseDashboard(opened.payload, Date.parse(env.issuedAt));
+    const projection = parseDashboard(opened.payload, Date.parse(env.issuedAt), env.installationId);
     if (!projection) return { kind: "refused", reason: "payload" };
     const snapshot: Snapshot = { sequence: env.sequence, receivedAt: now, shopId: env.shopId, projection };
     try { await db.put("projections", "last", snapshot); } catch { return { kind: "refused", reason: "storage" }; }
