@@ -132,15 +132,15 @@ const toneClasses: Record<
   },
   success: {
     surface: "border-success/20 bg-success-subtle",
-    icon: "border-success/20 bg-success-soft text-success",
+    icon: "border-success/20 bg-success-soft text-success-ink",
   },
   warning: {
     surface: "border-warning/25 bg-warning-subtle",
-    icon: "border-warning/25 bg-warning-soft text-warning",
+    icon: "border-warning/25 bg-warning-soft text-warning-ink",
   },
   danger: {
     surface: "border-destructive/20 bg-destructive-subtle",
-    icon: "border-destructive/20 bg-destructive-soft text-destructive",
+    icon: "border-destructive/20 bg-destructive-soft text-destructive-ink",
   },
 };
 

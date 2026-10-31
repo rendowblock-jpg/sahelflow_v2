@@ -11,13 +11,13 @@ import {
 import { getAiToolLabel } from "@/lib/i18n/ai-tool-labels";
 import { cn, formatRelative } from "@/lib/utils";
 
-const FAILED = { key: "outcomeFailed", tone: "bg-destructive-subtle text-destructive" } as const;
+const FAILED = { key: "outcomeFailed", tone: "bg-destructive-subtle text-destructive-ink" } as const;
 
 const OUTCOME: Record<string, { key: ConnectedAgentsCopyKey; tone: string }> = {
-  succeeded: { key: "outcomeSucceeded", tone: "bg-success-subtle text-success" },
-  proposed: { key: "outcomeProposed", tone: "bg-warning-subtle text-warning" },
+  succeeded: { key: "outcomeSucceeded", tone: "bg-success-subtle text-success-ink" },
+  proposed: { key: "outcomeProposed", tone: "bg-warning-subtle text-warning-ink" },
   failed: FAILED,
-  denied: { key: "outcomeDenied", tone: "bg-destructive-subtle text-destructive" },
+  denied: { key: "outcomeDenied", tone: "bg-destructive-subtle text-destructive-ink" },
   rate_limited: { key: "outcomeRateLimited", tone: "bg-muted text-muted-foreground" },
 };
 

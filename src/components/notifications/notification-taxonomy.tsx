@@ -40,22 +40,22 @@ const TYPE_PRESENTATION: Record<
   },
   delivery: {
     icon: Truck,
-    className: "bg-info-soft text-info",
+    className: "bg-info-soft text-info-ink",
     labelKey: "notifications.type.delivery",
   },
   stock: {
     icon: Package,
-    className: "bg-warning-soft text-warning",
+    className: "bg-warning-soft text-warning-ink",
     labelKey: "notifications.type.stock",
   },
   return: {
     icon: Undo2,
-    className: "bg-warning-soft text-warning",
+    className: "bg-warning-soft text-warning-ink",
     labelKey: "notifications.type.return",
   },
   alert: {
     icon: ShieldAlert,
-    className: "bg-destructive-soft text-destructive",
+    className: "bg-destructive-soft text-destructive-ink",
     labelKey: "notifications.type.alert",
   },
   info: {

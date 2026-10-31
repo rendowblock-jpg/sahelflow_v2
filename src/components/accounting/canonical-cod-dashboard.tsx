@@ -422,10 +422,10 @@ export function CanonicalCodDashboard({
       </div>
 
       {notice ? (
-        <p role="status" className="rounded-control border border-success/30 bg-success-soft p-3 text-sm text-success">{notice}</p>
+        <p role="status" className="rounded-control border border-success/30 bg-success-soft p-3 text-sm text-success-ink">{notice}</p>
       ) : null}
       {error ? (
-        <p role="alert" className="rounded-control border border-destructive/30 bg-destructive-soft p-3 text-sm text-destructive">{error}</p>
+        <p role="alert" className="rounded-control border border-destructive/30 bg-destructive-soft p-3 text-sm text-destructive-ink">{error}</p>
       ) : null}
 
       <Card>

@@ -296,7 +296,7 @@ export function AutomationBuilder({
         }} />
 
         {flow.dryRun ? (
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-info-soft px-2 py-1 text-caption font-medium text-info max-lg:hidden">
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-info-soft px-2 py-1 text-caption font-medium text-info-ink max-lg:hidden">
             <FlaskConical className="size-3.5" aria-hidden="true" />
             {c("workspace.dryRun")}
           </span>
@@ -422,7 +422,7 @@ export function AutomationBuilder({
             {selectedIssues.length > 0 ? (
               <ul className="space-y-1.5 rounded-control border border-destructive/30 bg-destructive-subtle p-3">
                 {selectedIssues.map((issue) => (
-                  <li key={`${issue.target}-${issue.code}`} className="flex items-start gap-2 text-caption text-destructive">
+                  <li key={`${issue.target}-${issue.code}`} className="flex items-start gap-2 text-caption text-destructive-ink">
                     <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden="true" />
                     {c(`flow.issue.${issue.code}`)}
                   </li>
@@ -543,7 +543,7 @@ function IssuesStatus({
   const c = useAutomationCopy();
   if (issues.length === 0 && !legacyInvalid) {
     return (
-      <span className="flex shrink-0 items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-caption font-medium text-success">
+      <span className="flex shrink-0 items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-caption font-medium text-success-ink">
         <CheckCircle2 className="size-3.5" aria-hidden="true" />
         <span className="max-sm:sr-only">{c("flow.ready")}</span>
       </span>
@@ -555,7 +555,7 @@ function IssuesStatus({
         <button
           type="button"
           data-automation-issues={issues.length}
-          className="flex shrink-0 items-center gap-1 rounded-full bg-destructive-soft px-2 py-1 text-caption font-medium text-destructive outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex shrink-0 items-center gap-1 rounded-full bg-destructive-subtle px-2 py-1 text-caption font-medium text-destructive-ink outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <AlertCircle className="size-3.5" aria-hidden="true" />
           {c("flow.issues", { count: issues.length + (legacyInvalid ? 1 : 0) })}

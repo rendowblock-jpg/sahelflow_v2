@@ -122,7 +122,7 @@ export default function SetupPage() {
         </ul>
 
         {failure ? (
-          <p id={FORM_ERROR_ID} className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive" role="alert">
+          <p id={FORM_ERROR_ID} className="rounded-control border border-destructive/25 bg-destructive-subtle p-3 text-body-sm text-destructive-ink" role="alert">
             {failure.message}
           </p>
         ) : null}

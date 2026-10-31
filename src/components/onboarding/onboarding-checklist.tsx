@@ -86,7 +86,7 @@ function StepMarker({
     <span
       className={cn(
         "flex size-8 shrink-0 items-center justify-center rounded-full border text-caption font-semibold transition-colors",
-        state === "done" && "border-success/40 bg-success-soft text-success",
+        state === "done" && "border-success/40 bg-success-soft text-success-ink",
         state === "current" && "border-primary bg-primary text-primary-foreground",
         state === "todo" && "border-border bg-surface-1 text-muted-foreground",
       )}

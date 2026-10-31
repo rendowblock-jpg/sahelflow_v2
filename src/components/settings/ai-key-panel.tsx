@@ -572,8 +572,8 @@ export function AiKeyPanel({
                   role={result.ok ? "status" : "alert"}
                   className={`flex items-start gap-2 rounded-control p-3 text-sm ${
                     result.ok
-                      ? "bg-success-soft text-success dark:bg-success-strong"
-                      : "bg-destructive-soft text-destructive"
+                      ? "bg-success-soft text-success-ink dark:bg-success-strong"
+                      : "bg-destructive-soft text-destructive-ink"
                   }`}
                 >
                   {result.ok ? (

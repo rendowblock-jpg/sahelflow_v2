@@ -150,7 +150,7 @@ export function RailButton({
             className="absolute end-1.5 top-1.5 size-2 rounded-full bg-warning ring-2 ring-sidebar"
           />
         ) : (
-          <span className="shrink-0 rounded-full bg-warning-soft px-1.5 text-caption font-semibold tabular-nums text-warning">
+          <span className="shrink-0 rounded-full bg-warning-soft px-1.5 text-caption font-semibold tabular-nums text-warning-ink">
             {badge}
           </span>
         )
