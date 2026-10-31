@@ -393,9 +393,8 @@ export function useInboxOutbox({
         return;
       }
       setHeldDiscardStatus(null);
-      // "discarded" is the state the history route reports for this row; the
-      // message type learns the word when the thread is wired.
-      const discardedState = "discarded" as unknown as NonNullable<InboxMessage["outboxState"]>;
+      // "discarded" is the state the history route reports for this row.
+      const discardedState = "discarded" as const;
       mutateMessages(conversationId, (current) =>
         current.map((entry) =>
           entry.id === message.id ? { ...entry, outboxState: discardedState } : entry,
