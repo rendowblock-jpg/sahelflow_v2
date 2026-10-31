@@ -18,6 +18,7 @@ import {
   resultLine,
   routeAuth,
   summarize,
+  text200Method,
   themeStorage,
   cellId,
   type Build,
@@ -70,7 +71,7 @@ function ownerStorageState(): string {
 }
 
 async function newCellPage(browser: Browser, cell: Cell) {
-  const setup = modeSetup(cell.mode, cell.locale);
+  const setup = modeSetup(cell.mode, cell.locale, text200Method(process.env));
   const storage = themeStorage(cell.theme, cell.locale);
   const context = await browser.newContext({
     baseURL: BASE,
@@ -91,6 +92,17 @@ async function newCellPage(browser: Browser, cell: Cell) {
   }, storage);
   const page = await context.newPage();
   await page.emulateMedia({ forcedColors: setup.forcedColors, reducedMotion: setup.reducedMotion, colorScheme: cell.theme });
+  if (setup.browserFontPx !== null) {
+    // The browser's own default font size, set through the DevTools protocol before the page loads: what a person gets who
+    // raises it in the browser settings. Unlike a CSS override on <html> it also moves every rem media query, so the layout
+    // reflows for them. If this call fails the root font stays at 16 px and judgePageFacts reports the cell (rootFontPx).
+    const cdp = await context.newCDPSession(page);
+    await cdp
+      .send("Page.setFontSizes" as never, {
+        fontSizes: { standard: setup.browserFontPx, fixed: Math.round((setup.browserFontPx * 13) / 16) },
+      } as never)
+      .catch(() => undefined);
+  }
   return { context, page, setup };
 }
 
@@ -169,6 +181,7 @@ test.describe("a11y matrix", () => {
       );
     }
 
+    say(`a11y matrix: text200 method=${text200Method(process.env)}`);
     const messages: string[] = [];
     for (const cell of todo) {
       const started = Date.now();

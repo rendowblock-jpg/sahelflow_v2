@@ -380,15 +380,40 @@ export const DEFAULT_RESULTS_PATH = "audit/waves/W3-H2-results.jsonl";
 // ---------------------------------------------------------------------------------------------------------------
 // Mode setup and the theme/locale state the product reads
 
+/**
+ * How the text200 mode doubles the text.
+ *   browser (default): the browser's own default font size is doubled through the DevTools protocol before the page loads
+ *     (16 px to 32 px). This is what a person gets who raises the font size in the browser settings, and it also moves every
+ *     rem media query (Tailwind's sm:, md:, xl: breakpoints), so the layout reflows for them as it does in the browser.
+ *   css (A11Y_TEXT200=css): `html { font-size: 200% }` is forced by a style rule. The content doubles but the rem media
+ *     queries stay at their 100% pixel widths, so every layout keeps its desktop columns with twice-as-large content. Nobody
+ *     gets this from a setting; it is kept as a harsher stress variant and its findings are not defects for a person who
+ *     changes the browser's font size (measured in a real browser, 31 Oct 2026: 13 squeezed-text cells in the css variant,
+ *     one label in the browser variant).
+ */
+export type Text200Method = "browser" | "css";
+
+/** The default font size the browser is given in text200 mode: twice the 16 px default. */
+export const TEXT200_BROWSER_FONT_PX = 32;
+
+export function text200Method(env: PlanEnv): Text200Method {
+  const value = env.A11Y_TEXT200?.trim();
+  if (!value) return "browser";
+  if (value === "browser" || value === "css") return value;
+  throw new Error(`A11Y_TEXT200: "${value}" is not "browser" or "css"`);
+}
+
 export type ModeSetup = {
   css: string;
   forcedColors: "none" | "active";
   reducedMotion: "no-preference" | "reduce";
+  /** The browser default font size to set before the page loads, or null when the mode does not set one. */
+  browserFontPx: number | null;
 };
 
-export function modeSetup(mode: Mode, locale: Locale): ModeSetup {
+export function modeSetup(mode: Mode, locale: Locale, method: Text200Method = "browser"): ModeSetup {
   let css = "";
-  if (mode === "text200") css = "html{font-size:200% !important}";
+  if (mode === "text200" && method === "css") css = "html{font-size:200% !important}";
   if (mode === "spacing") {
     // WCAG 1.4.12 values. Letter-spacing is left out for Arabic: joined script does not take it, and the criterion exempts it.
     const letter = locale === "ar" ? "" : "letter-spacing:0.12em !important;";
@@ -398,6 +423,7 @@ export function modeSetup(mode: Mode, locale: Locale): ModeSetup {
     css,
     forcedColors: mode === "forced" ? "active" : "none",
     reducedMotion: mode === "reducedMotion" ? "reduce" : "no-preference",
+    browserFontPx: mode === "text200" && method === "browser" ? TEXT200_BROWSER_FONT_PX : null,
   };
 }
 

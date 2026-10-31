@@ -7,6 +7,7 @@ import {
   MODES,
   MODE_PLAN,
   ROUTES,
+  TEXT200_BROWSER_FONT_PX,
   THEMES,
   VIEWPORTS,
   assertPlanTables,
@@ -30,6 +31,7 @@ import {
   routeAuth,
   summarize,
   summarizeViolations,
+  text200Method,
   themeStorage,
   type Cell,
   type ResultRecord,
@@ -256,11 +258,39 @@ describe("shards", () => {
 
 describe("modeSetup", () => {
   it("normal changes nothing", () => {
-    expect(modeSetup("normal", "fr")).toEqual({ css: "", forcedColors: "none", reducedMotion: "no-preference" });
+    expect(modeSetup("normal", "fr")).toEqual({
+      css: "",
+      forcedColors: "none",
+      reducedMotion: "no-preference",
+      browserFontPx: null,
+    });
   });
 
-  it("text200 doubles the root font", () => {
-    expect(modeSetup("text200", "en").css).toBe("html{font-size:200% !important}");
+  it("text200 asks the browser for a doubled default font size by default, and adds no CSS", () => {
+    expect(TEXT200_BROWSER_FONT_PX).toBe(32);
+    expect(modeSetup("text200", "en")).toEqual({
+      css: "",
+      forcedColors: "none",
+      reducedMotion: "no-preference",
+      browserFontPx: TEXT200_BROWSER_FONT_PX,
+    });
+  });
+
+  it("text200 with the css method doubles the root font by CSS (the stress variant) and asks the browser for nothing", () => {
+    expect(modeSetup("text200", "en", "css")).toEqual({
+      css: "html{font-size:200% !important}",
+      forcedColors: "none",
+      reducedMotion: "no-preference",
+      browserFontPx: null,
+    });
+  });
+
+  it("no other mode asks the browser for a font size, whichever method is chosen", () => {
+    for (const mode of MODES) {
+      if (mode === "text200") continue;
+      expect(modeSetup(mode, "en").browserFontPx).toBeNull();
+      expect(modeSetup(mode, "en", "css").browserFontPx).toBeNull();
+    }
   });
 
   it("spacing uses the WCAG 1.4.12 values and leaves letter-spacing off for Arabic", () => {
@@ -282,6 +312,20 @@ describe("modeSetup", () => {
       if (mode !== "forced") expect(modeSetup(mode, "en").forcedColors).toBe("none");
       if (mode !== "reducedMotion") expect(modeSetup(mode, "en").reducedMotion).toBe("no-preference");
     }
+  });
+});
+
+describe("text200Method", () => {
+  it("is the browser method unless A11Y_TEXT200 says otherwise", () => {
+    expect(text200Method({})).toBe("browser");
+    expect(text200Method({ A11Y_TEXT200: "" })).toBe("browser");
+    expect(text200Method({ A11Y_TEXT200: "browser" })).toBe("browser");
+    expect(text200Method({ A11Y_TEXT200: " css " })).toBe("css");
+  });
+
+  it("throws on a mistyped value instead of silently running the wrong method", () => {
+    expect(() => text200Method({ A11Y_TEXT200: "zoom" })).toThrow(/A11Y_TEXT200/);
+    expect(() => text200Method({ A11Y_TEXT200: "CSS" })).toThrow(/A11Y_TEXT200/);
   });
 });
 

@@ -166,6 +166,7 @@ const facts = (over: Partial<PageFacts> = {}): PageFacts => ({
   reducedMotionActive: false,
   forcedInvisible: [],
   collapsedText: [],
+  rootFontPx: 16,
   ...over,
 });
 
@@ -200,7 +201,7 @@ describe("judgePageFacts", () => {
       judgePageFacts(facts({ innerWidth: 320, scrollWidth: 330 }), { locale: "ar", viewport: "tiny", mode: "reflow320" }),
     ).toEqual(["sideways scroll: content is 330 px wide in a 320 px window"]);
     expect(judgePageFacts(facts({ innerWidth: 1366, scrollWidth: 1500 }), { locale: "ar", viewport: "desktop", mode: "normal" })).toEqual([]);
-    expect(judgePageFacts(facts({ innerWidth: 1366, scrollWidth: 1500 }), { locale: "ar", viewport: "desktop", mode: "text200" })).toEqual([]);
+    expect(judgePageFacts(facts({ innerWidth: 1366, scrollWidth: 1500, rootFontPx: 32 }), { locale: "ar", viewport: "desktop", mode: "text200" })).toEqual([]);
   });
 
   it("fails letter-spacing on Arabic text only", () => {
@@ -210,20 +211,20 @@ describe("judgePageFacts", () => {
 
   it("text200: the primary action must stay reachable (unknown is not a failure)", () => {
     const t = { locale: "ar", viewport: "desktop", mode: "text200" } as const;
-    expect(judgePageFacts(facts({ primaryActionReachable: false, innerWidth: 1366, scrollWidth: 1366 }), t)).toEqual([
+    expect(judgePageFacts(facts({ primaryActionReachable: false, innerWidth: 1366, scrollWidth: 1366, rootFontPx: 32 }), t)).toEqual([
       "at 200% text size the primary action is not reachable",
     ]);
-    expect(judgePageFacts(facts({ primaryActionReachable: true }), t)).toEqual([]);
-    expect(judgePageFacts(facts({ primaryActionReachable: null }), t)).toEqual([]);
+    expect(judgePageFacts(facts({ primaryActionReachable: true, rootFontPx: 32 }), t)).toEqual([]);
+    expect(judgePageFacts(facts({ primaryActionReachable: null, rootFontPx: 32 }), t)).toEqual([]);
     expect(judgePageFacts(facts({ primaryActionReachable: false }), ar)).toEqual([]);
   });
 
   it("text200: text squeezed to no width is a failure, and only that mode looks", () => {
     const t = { locale: "en", viewport: "desktop", mode: "text200" } as const;
-    expect(judgePageFacts(facts({ htmlDir: "ltr", htmlLang: "en", collapsedText: [] }), t)).toEqual([]);
+    expect(judgePageFacts(facts({ htmlDir: "ltr", htmlLang: "en", collapsedText: [], rootFontPx: 32 }), t)).toEqual([]);
     expect(
       judgePageFacts(
-        facts({ htmlDir: "ltr", htmlLang: "en", collapsedText: ["span.line-clamp-2: Revenue", "p.title: Orders"] }),
+        facts({ htmlDir: "ltr", htmlLang: "en", collapsedText: ["span.line-clamp-2: Revenue", "p.title: Orders"], rootFontPx: 32 }),
         t,
       ),
     ).toEqual(["at 200% text size 2 text elements collapse to no width: span.line-clamp-2: Revenue, p.title: Orders"]);
@@ -234,6 +235,20 @@ describe("judgePageFacts", () => {
         mode: "normal",
       }),
     ).toEqual([]);
+  });
+
+  it("text200: the page must really be at the doubled size, or the cell proves nothing", () => {
+    const t = { locale: "en", viewport: "desktop", mode: "text200" } as const;
+    const en = { htmlDir: "ltr", htmlLang: "en" } as const;
+    expect(judgePageFacts(facts({ ...en, rootFontPx: 32 }), t)).toEqual([]);
+    expect(judgePageFacts(facts({ ...en, rootFontPx: 16 }), t)).toEqual([
+      "at 200% text size the root font is 16 px, not 32 px: the setting did not apply",
+    ]);
+    expect(judgePageFacts(facts({ ...en, rootFontPx: 0 }), t)).toEqual([
+      "at 200% text size the root font is 0 px, not 32 px: the setting did not apply",
+    ]);
+    // other modes are not judged on the root font
+    expect(judgePageFacts(facts({ ...en, rootFontPx: 16 }), { locale: "en", viewport: "desktop", mode: "normal" })).toEqual([]);
   });
 
   it("forced: forced colours must be active and no control may vanish", () => {

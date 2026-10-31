@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { runAxe, settleMotion, type AxeViolation } from "./axe";
 import {
+  TEXT200_BROWSER_FONT_PX,
   cellVerdict,
   summarizeViolations,
   type Cell,
@@ -148,6 +149,8 @@ export type PageFacts = {
   forcedInvisible: string[];
   /** Only measured in text200 mode: elements that hold text but were squeezed to no width ("tag.class: text"). */
   collapsedText: string[];
+  /** The computed font size of the root element, in px (0 when it could not be read). text200 expects the doubled size. */
+  rootFontPx: number;
 };
 
 /** Sideways scroll beyond this many pixels is a failure on phone and tiny windows. */
@@ -180,6 +183,12 @@ export function judgePageFacts(
   }
   if (cell.mode === "text200" && facts.primaryActionReachable === false) {
     failures.push("at 200% text size the primary action is not reachable");
+  }
+  if (cell.mode === "text200" && facts.rootFontPx < TEXT200_BROWSER_FONT_PX - 0.5) {
+    // A text200 cell on a page that is still at its normal size would pass for the wrong reason.
+    failures.push(
+      `at 200% text size the root font is ${facts.rootFontPx} px, not ${TEXT200_BROWSER_FONT_PX} px: the setting did not apply`,
+    );
   }
   if (cell.mode === "text200" && facts.collapsedText.length > 0) {
     failures.push(
@@ -382,6 +391,7 @@ export async function collectPageFacts(page: Page, mode: Mode): Promise<PageFact
       reducedMotionActive: matchMedia("(prefers-reduced-motion: reduce)").matches,
       forcedInvisible,
       collapsedText,
+      rootFontPx: Number.parseFloat(getComputedStyle(de).fontSize) || 0,
     };
   }, mode);
 }
