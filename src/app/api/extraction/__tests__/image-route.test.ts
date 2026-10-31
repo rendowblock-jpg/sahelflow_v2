@@ -805,7 +805,8 @@ describe("POST /api/extraction/image: the metric", () => {
     const [context, metric] = firstCall(h.metric) as [{ prisma: unknown; shop: unknown }, Record<string, unknown>];
     expect(context.prisma).toBe(db);
     expect(context.shop).toBe(shopContext);
-    expect(metric).toMatchObject({ method: "gemini", confidence: 0.9, isComplete: false, missingFields: ["address"] });
+    // A model's own number is its claim, not a measurement: the row says "not measured" (-1) instead of the 0.9 the model reported.
+    expect(metric).toMatchObject({ method: "gemini", confidence: -1, isComplete: false, missingFields: ["address"] });
   });
 
   it("holds nothing about the picture or the customer: only the six metric fields", async () => {
@@ -845,10 +846,16 @@ describe("POST /api/extraction/image: the metric", () => {
     expect(metric.modelVersion).toBeUndefined();
   });
 
-  it("passes the confidence of the result on, whatever it is", async () => {
-    h.extract.mockResolvedValue({ ...RESULT, confidence: 0.35 });
+  it("passes on the confidence of a result the offline reader produced by rule, whatever it is", async () => {
+    h.extract.mockResolvedValue({ ...RESULT, method: "regex", confidence: 0.35 });
     await call();
     expect((firstCall(h.metric)[1] as { confidence: number }).confidence).toBe(0.35);
+  });
+
+  it("never stores a model's own confidence as if it were measured", async () => {
+    h.extract.mockResolvedValue({ ...RESULT, method: "gemini", confidence: 0.35 });
+    await call();
+    expect((firstCall(h.metric)[1] as { confidence: number }).confidence).toBe(-1);
   });
 
   it("passes the missing fields as the extractor gave them, including none", async () => {

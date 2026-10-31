@@ -39,14 +39,18 @@ export function metricConfidence(result: Pick<ExtractionResult, "method" | "conf
   return { value: basis === "rule" ? result.confidence : UNKNOWN_CONFIDENCE, basis };
 }
 
-export function summariseConfidence(method: string, values: readonly number[]): { avgConfidence: number | null; basis: ConfidenceBasis; unknownCount: number } {
-  const known = values.filter((v) => v >= 0);
-  const unknownCount = values.length - known.length;
-  const basis = confidenceBasisOf(method);
-  if (known.length === 0) return { avgConfidence: null, basis: basis === "rule" ? "rule" : "unknown", unknownCount };
+export function averageKnown(values: readonly number[]): { avg: number | null; unknownCount: number } {
   let sum = 0;
-  for (const v of known) sum += v;
-  return { avgConfidence: sum / known.length, basis, unknownCount };
+  let known = 0;
+  for (const v of values) if (Number.isFinite(v) && v >= 0) { sum += v; known += 1; }
+  return { avg: known > 0 ? sum / known : null, unknownCount: values.length - known };
+}
+
+export function summariseConfidence(method: string, values: readonly number[]): { avgConfidence: number | null; basis: ConfidenceBasis; unknownCount: number } {
+  const { avg, unknownCount } = averageKnown(values);
+  const basis = confidenceBasisOf(method);
+  if (avg === null) return { avgConfidence: null, basis: basis === "rule" ? "rule" : "unknown", unknownCount };
+  return { avgConfidence: avg, basis, unknownCount };
 }
 
 export interface ConfirmedDraft {

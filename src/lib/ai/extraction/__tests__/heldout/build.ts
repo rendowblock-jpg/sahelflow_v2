@@ -14,7 +14,7 @@
  * - total: only a figure the customer calls the total (total, le tout,
  *   المجموع, ensemble, kamlin). A unit price is not a total.
  */
-import type { HeldoutEntry } from "../scorer";
+import type { HeldoutEntry } from "./scorer";
 
 export interface Spec {
   p?: string;

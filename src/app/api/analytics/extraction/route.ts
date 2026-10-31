@@ -1,4 +1,4 @@
-import { summariseConfidence } from "@/lib/ai/extraction/draft-feedback";
+import { summariseMetricRows } from "@/lib/ai/extraction/metric-summary";
 /**
  * GET /api/analytics/extraction — AI extraction accuracy metrics (Phase 5 moat).
  *
@@ -36,46 +36,12 @@ export const GET = withErrorHandler(async () => {
     orderBy: { createdAt: "asc" },
   });
 
-  // Group by day
-  // S06b-11: a confidence of -1 is "not measured" (a model's own claim is no
-  // longer stored as a measurement); it never enters an average.
-  const byDay: Record<string, { date: string; count: number; known: number; confidenceSum: number; completeRate: number }> = {};
-  const methodRows: Record<string, { count: number; latency: number; values: number[] }> = {};
-  for (const m of daily) {
-    const day = m.createdAt.toISOString().slice(0, 10);
-    if (!byDay[day]) byDay[day] = { date: day, count: 0, known: 0, confidenceSum: 0, completeRate: 0 };
-    byDay[day]!.count++;
-    if (m.confidence >= 0) {
-      byDay[day]!.known++;
-      byDay[day]!.confidenceSum += m.confidence;
-    }
-    if (m.isComplete) byDay[day]!.completeRate++;
-    const bucket = (methodRows[m.method] ??= { count: 0, latency: 0, values: [] });
-    bucket.count++;
-    bucket.latency += m.latencyMs;
-    bucket.values.push(m.confidence);
-  }
-  const trend = Object.values(byDay).map((d) => ({
-    date: d.date,
-    count: d.count,
-    avgConfidence: d.known > 0 ? d.confidenceSum / d.known : null,
-    completeRate: d.count > 0 ? d.completeRate / d.count : 0,
-  }));
+  const { trend, byMethod } = summariseMetricRows(daily);
 
   return NextResponse.json({
     total,
     completionRate: total > 0 ? complete / total : 0,
-    byMethod: Object.entries(methodRows).map(([method, rows]) => {
-      const summary = summariseConfidence(method, rows.values);
-      return {
-        method,
-        count: rows.count,
-        avgConfidence: summary.avgConfidence,
-        confidenceBasis: summary.basis,
-        unknownConfidenceCount: summary.unknownCount,
-        avgLatencyMs: rows.count > 0 ? rows.latency / rows.count : 0,
-      };
-    }),
+    byMethod,
     trend,
   });
 }, "GET /api/analytics/extraction");
