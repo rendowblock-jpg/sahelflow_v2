@@ -57,3 +57,21 @@ export function publishStatusView(
       return { text: state.text, role: "alert" };
   }
 }
+
+/**
+ * What the online store is known to show. The Studio's config is the private
+ * draft's view: with no saved draft it equals the live store, otherwise the live
+ * state is not known here (null), because autosave never touches the live store.
+ */
+export function publishedActiveBaseline(
+  input: Readonly<{ hasSavedDraft: boolean; isActive: boolean }>,
+): boolean | null {
+  return input.hasSavedDraft ? null : input.isActive;
+}
+
+/** The active/paused switch only changes the online store at the next Publish. */
+export function activeWaitsForPublish(
+  input: Readonly<{ published: boolean | null; current: boolean }>,
+): boolean {
+  return input.published === null || input.published !== input.current;
+}
