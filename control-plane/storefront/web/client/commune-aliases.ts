@@ -1,0 +1,57 @@
+/**
+ * Spellings a buyer really types for a commune that the list writes another way: "Berika" for Barika, "Bone" for
+ * Annaba, "Wahran" for Oran. Pure data, no import and no code: the page does not carry it, it fetches it as reform.json (commune-reform.ts builds that file). Every alias is stored ALREADY FOLDED (lower case, no accents, no
+ * spaces or hyphens: the same key foldLatin gives) and points to ONE real row: the commune name exactly as written in
+ * data/communes.json and its two-digit wilaya code. Where two communes share a name the code says which one; nothing
+ * here guesses. communes-reform.test.ts walks the whole list against data/: a target that does not exist, an alias that
+ * is already a real name (it would need no alias) and a repeated alias all fail the build.
+ */
+export const COMMUNE_ALIAS_ROWS: ReadonlyArray<readonly [latin: string, wilayaCode: string, aliases: string]> = [
+  ["Barika", "60", "berika,beriqa"],
+  ["Annaba", "23", "bone,anaba"],
+  ["Alger Centre", "16", "algiers,dzayer,djazair,eldjazair,aljazair"],
+  ["Oran", "31", "wahran"],
+  ["Constantine", "25", "qacentina,qsentina,kasantina"],
+  ["Tamanrasset", "11", "tamanghasset,tamenrasset,tamenghasset"],
+  ["Bejaia", "06", "bgayet,bgayeth,bejaya,bougie"],
+  ["Tlemcen", "13", "tilimsen,tlemcan"],
+  ["Mostaganem", "27", "mestghanem"],
+  ["Ouargla", "30", "wargla"],
+  ["Ghardaia", "47", "ghardaya,taghardayt"],
+  ["Medea", "26", "lemdiyya"],
+  ["Tizi Ouzou", "15", "tizouzou,tiziwezzu"],
+  ["Sidi Bel Abbes", "22", "sba,sidibelabes"],
+  ["Bordj Bou Arreridj", "34", "bba,bordjbouarriridj"],
+  ["Oum El Bouaghi", "04", "oeb,oumbouaghi"],
+  ["Souk Ahras", "41", "souqahras"],
+  ["Tebessa", "12", "tbessa"],
+  ["Boumerdes", "35", "boumerdas"],
+  ["Tipaza", "42", "tipasa"],
+  ["Chlef", "02", "chelf,echlef"],
+  ["Laghouat", "03", "laghwat,lagouat"],
+  ["Djelfa", "17", "jelfa"],
+  ["Jijel", "18", "djidjelli,djidjel"],
+  ["Mascara", "29", "muaskar,mouaskar"],
+  ["Relizane", "48", "ghilizane"],
+  ["Bechar", "08", "bachar"],
+  ["Biskra", "07", "beskra"],
+  ["Guelma", "24", "qalma"],
+  ["Khenchela", "40", "khenchla"],
+  ["El Oued", "39", "ouedsouf"],
+  ["Ain Temouchent", "46", "aintmouchent"],
+  ["Ain Defla", "44", "aindafla"],
+  ["Blida", "09", "boulaida"],
+  ["Tindouf", "37", "tinduf"],
+  ["Illizi", "33", "ilizi"],
+  ["Touggourt", "55", "tougourt,tuggurt"],
+  ["Djanet", "56", "janet"],
+  ["Timimoun", "49", "timimoune"],
+  ["Aflou", "59", "afflou"],
+  ["Bou Saada", "68", "bousada"],
+  ["Ouled Djellal", "51", "ouledjellal"],
+  ["Beni Abbes", "52", "beniabbas"],
+  ["El Kantara", "61", "kantara"],
+  ["El Meniaa", "58", "elmenia,elgolea"],
+  ["In Salah", "53", "ainsalah"],
+  ["El M'ghair", "57", "elmeghaier"],
+];

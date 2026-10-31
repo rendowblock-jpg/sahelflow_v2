@@ -86,7 +86,10 @@ describe("generated page files", () => {
     console.warn(`[weight] js ${js.length} bytes, ${gzipSync(js).length} gzip`);
     // Was 7,000 (about 5,100 used). The commune search box (client/commune-search.ts) costs about 2,000 bytes gzip, so the ceiling moved to 7,300.
     // The failed-order alert with focus and the missing-photo slot cost about 300 bytes gzip more: 7,600.
-    expect(gzipSync(js).length).toBeLessThan(7_600);
+    // 31 Oct 2026, STORE-WILAYA69 slice 2: the "formerly <wilaya>" line, the greyed row for a wilaya the shop does not deliver to, the
+    // alias ranking and the reform.json fetch cost 546 bytes gzip more than 7,456 (the alias list and the old-wilaya names are DATA in
+    // c.<hash>/reform.json, not in this script; they cost 1,043 more when they were): 8002.
+    expect(gzipSync(js).length).toBeLessThan(8_010);
     expect(js).not.toMatch(/\beval\(|new Function\(|document\.write|innerHTML\s*=\s*[^"'`]/);
     expect(js).not.toMatch(/https?:\/\/(?!wa\.me)/);
     expect(js).toContain("/v1/storefront/");
@@ -118,11 +121,12 @@ describe("the commune index (all.json) next to the per-wilaya lists", () => {
     expect(index).toEqual(expected);
   });
 
-  it("is part of the folder name: the name is the hash of the 69 lists and the index together", async () => {
-    const parts = [...perWilaya().map((file) => [file.slice(0, 2), readFileSync(join(dir, file), "utf8")]), ["all", readFileSync(join(dir, "all.json"), "utf8")]];
+  it("is part of the folder name: the name is the hash of the 69 lists, the index and reform.json together", async () => {
+    const parts = [...perWilaya().map((file) => [file.slice(0, 2), readFileSync(join(dir, file), "utf8")]), ["all", readFileSync(join(dir, "all.json"), "utf8")], ["reform", readFileSync(join(dir, "reform.json"), "utf8")]];
     const hash = (list: string[][]) => createHash("sha256").update(list.map(([name, json]) => `${name}${json}`).join("\n")).digest("hex").slice(0, 10);
     expect(manifest.communes).toBe(`/_sf/c.${hash(parts)}`);
     expect(hash(parts.slice(0, -1))).not.toBe(hash(parts));
+    expect(hash(parts.filter(([name]) => name !== "reform"))).not.toBe(hash(parts));
     const changed = new Map(await buildStorefrontPublic());
     const path = `control-plane/storefront/public${manifest.communes}/all.json`;
     expect(changed.has(path)).toBe(true);

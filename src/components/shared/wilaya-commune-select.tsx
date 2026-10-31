@@ -32,6 +32,7 @@ import {
   type StorefrontTranslator,
 } from "@/lib/i18n/storefront-locale";
 import wilayasData from "../../../data/wilayas.json";
+import { CommuneSearchBox } from "./commune-search-box";
 
 interface Wilaya {
   code: number;
@@ -73,6 +74,11 @@ interface WilayaCommuneSelectProps {
   wilayaAriaDescribedby?: string;
   /** aria-describedby for the commune trigger (e.g. a parent-rendered field error id) */
   communeAriaDescribedby?: string;
+  /**
+   * Show a type-to-find commune box above the two selects (old names and aliases such as "Berika" find Barika). Off by
+   * default: it is a second role=combobox on the page, so a form opts in. The selects stay as the fallback.
+   */
+  search?: boolean;
   /** Size variant — default matches order form */
   size?: "default" | "sm";
   /**
@@ -136,6 +142,7 @@ function WilayaCommuneSelectCore({
   wilayaAriaDescribedby,
   communeAriaDescribedby,
   size = "default",
+  search = false,
   t,
   locale,
 }: WilayaCommuneSelectCoreProps) {
@@ -191,6 +198,14 @@ function WilayaCommuneSelectCore({
     setCommunes([]);
   }
 
+  function handleSearchPick(wilayaName: string, communeName: string) {
+    setCommunes([]);
+    onWilayaChange(wilayaName);
+    onCommuneChange(communeName);
+  }
+  const wilayaNameOf = (code: string) =>
+    wilayas.find((w) => String(w.code).padStart(2, "0") === code)?.name ?? "";
+
   const containerClass = layout === "grid"
     ? "grid grid-cols-2 gap-3"
     : "flex flex-col gap-3";
@@ -201,6 +216,16 @@ function WilayaCommuneSelectCore({
 
   return (
     <div className={containerClass}>
+      {search && (
+        <div className={layout === "grid" ? "col-span-2" : undefined}>
+          <CommuneSearchBox
+            locale={locale}
+            disabled={disabled}
+            wilayaName={wilayaNameOf}
+            onPick={handleSearchPick}
+          />
+        </div>
+      )}
       <div className="space-y-1.5">
         {showLabels && (
           <Label className={labelClass} htmlFor={wilayaTriggerId}>
