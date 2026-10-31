@@ -145,6 +145,8 @@ export function documentShell(ctx: Ctx, page: PageParts): string {
   const head = [
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
+    // The pages are light only: say so, so a phone's forced dark mode does not invert them unpredictably.
+    '<meta name="color-scheme" content="light">',
     `<title>${esc(page.title)}</title>`,
     `<meta name="description" content="${esc(page.description)}">`,
     `<meta name="robots" content="${page.robots}">`,
@@ -196,7 +198,7 @@ ${page.bar ?? ""}
 </main>
 ${renderFooter(ctx, page.tagline)}
 ${page.tabs ?? ""}
-${page.script ? `<script src="${esc(assets.js)}" defer></script>` : ""}${(page.script || page.fx) && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}
+${page.script ? `<script src="${esc(assets.js)}" defer></script>` : assets.photos ? `<script src="${esc(assets.photos)}" defer></script>` : ""}${(page.script || page.fx) && skin?.js ? `<script src="${esc(skin.js)}" defer></script>` : ""}
 </body>
 </html>`;
 }

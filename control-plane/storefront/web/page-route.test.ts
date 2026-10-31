@@ -205,6 +205,15 @@ describe("GET /<slug> (page route)", () => {
     store.database.close();
   });
 
+  it("a paused store offers one way out: its own home, in the language that was asked for", async () => {
+    const store = await publishTestStore({ paused: true });
+    const asked = await (await servePublicStorePage(get("/sahel-store?lang=fr"), store.env, "sahel-store", undefined, deps(null))).text();
+    expect(asked).toContain('<a class="sf-notice-link" href="/sahel-store?lang=fr">');
+    const plain = await (await servePublicStorePage(get("/sahel-store"), store.env, "sahel-store", undefined, deps(null))).text();
+    expect(plain).toContain('<a class="sf-notice-link" href="/sahel-store">');
+    store.database.close();
+  });
+
   it("does not remember a failure: unreadable artifact, database error, renderer crash", async () => {
     const corrupt = await publishTestStore();
     corrupt.database.exec("UPDATE storefront_release SET artifact_json = '{\"schemaVersion\":1}'");

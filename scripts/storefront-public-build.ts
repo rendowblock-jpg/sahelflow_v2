@@ -189,6 +189,8 @@ export async function buildStorefrontPublic(): Promise<StorefrontPublicFiles> {
   const communes = buildCommunes();
   const cssPath = `/_sf/shop.${short(css)}.css`;
   const jsPath = `/_sf/shop.${short(js)}.js`;
+  const photosJs = await buildScript("client/home-photos.ts");
+  const photosPath = `/_sf/photos.${short(photosJs)}.js`;
   const skinFiles = new Map<string, string>();
   const skins: Record<string, { css: string; js?: string }> = {};
   for (const id of SKINS) {
@@ -205,10 +207,11 @@ export async function buildStorefrontPublic(): Promise<StorefrontPublicFiles> {
     ["control-plane/storefront/web/messages.generated.json", buildMessages()],
     [
       "control-plane/storefront/web/asset-manifest.generated.json",
-      `${JSON.stringify({ css: cssPath, js: jsPath, communes: `/_sf/c.${communes.hash}`, fonts: fonts.paths, skins }, null, 2)}\n`,
+      `${JSON.stringify({ css: cssPath, js: jsPath, photos: photosPath, communes: `/_sf/c.${communes.hash}`, fonts: fonts.paths, skins }, null, 2)}\n`,
     ],
     [`${REL_PUBLIC}${cssPath}`, css],
     [`${REL_PUBLIC}${jsPath}`, js],
+    [`${REL_PUBLIC}${photosPath}`, photosJs],
     [
       `${REL_PUBLIC}/_headers`,
       "/_sf/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n",

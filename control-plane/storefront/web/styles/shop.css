@@ -10,6 +10,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-padding-block-st
 @font-face{font-family:"SF Kufi";src:url(__SF_FONT_kufi-bold__) format("woff2");font-weight:700;font-display:swap;unicode-range:U+0600-06FF,U+200C-200F,U+2066-2069}
 @font-face{font-family:"SF Kufi";src:url(__SF_FONT_kufi-regular__) format("woff2");font-weight:400;font-display:swap;unicode-range:U+0600-06FF,U+200C-200F,U+2066-2069}
 :root{
+  color-scheme:light;
   --sf-font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --sf-display:var(--sf-font);
   --sf-max:1180px;--sf-pad:clamp(18px,5vw,40px);

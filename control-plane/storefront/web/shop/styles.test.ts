@@ -77,7 +77,7 @@ describe("each style is drawn as itself", () => {
 
   it("Noir's script also loads on a store's catalogue page, which has no order script", async () => {
     const store = await publish("noir", { mode: "store" });
-    expect(scripts(page(store))).toEqual(["/_sf/noir.test.js"]);
+    expect(scripts(page(store))).toEqual(["/_sf/photos.test.js", "/_sf/noir.test.js"]); // no order script: the photo fallback, then Noir's own
     store.database.close();
   });
 });
