@@ -18,6 +18,7 @@ import {
   whatsappSendFailureCopy,
 } from "./inbox-workspace-shared";
 import { postHeldApproval } from "./held-send-client";
+import { postHeldDiscard, type HeldDiscardUiStatus } from "./held-discard-client";
 import type { InboxSharedRefs } from "./use-inbox-shared-refs";
 
 export function quoteRejectionMayRetry(
@@ -146,6 +147,10 @@ export function useInboxOutbox({
   // The owner's "Send anyway" on a held send is a deliberate decision too.
   const [heldApproveMessage, setHeldApproveMessage] = useState<InboxMessage | null>(null);
   const heldApproveResolveRef = useRef<((confirmed: boolean) => void) | null>(null);
+  // "Discard" is a decision too: one dialog, then one request, with its progress shown in the box.
+  const [heldDiscardMessage, setHeldDiscardMessage] = useState<InboxMessage | null>(null);
+  const heldDiscardResolveRef = useRef<((confirmed: boolean) => void) | null>(null);
+  const [heldDiscardStatus, setHeldDiscardStatus] = useState<HeldDiscardUiStatus | null>(null);
 
   const markUploadProgress = useCallback(
     (messageId: string, progress: number) => {
@@ -348,6 +353,56 @@ export function useInboxOutbox({
       void monitorWhatsAppEffect(conversationId, message.outboxEffectKey, message.id);
     },
     [activeChatRef, loadMessages, monitorWhatsAppEffect, mutateMessages, setSendError, t],
+  );
+
+  const resolveHeldDiscard = useCallback((confirmed: boolean) => {
+    setHeldDiscardMessage(null);
+    heldDiscardResolveRef.current?.(confirmed);
+    heldDiscardResolveRef.current = null;
+  }, []);
+
+  const discardHeldMessage = useCallback(
+    async (message: InboxMessage) => {
+      const conversationId = activeChatRef.current?.conversationId;
+      const effectKey = message.outboxEffectKey;
+      if (!effectKey || !conversationId) return;
+      if (heldDiscardResolveRef.current) return;
+      const confirmed = await new Promise<boolean>((resolve) => {
+        heldDiscardResolveRef.current = resolve;
+        setHeldDiscardMessage(message);
+      });
+      if (!confirmed) return;
+      setHeldDiscardStatus({ effectKey, status: "discarding" });
+      const result = await postHeldDiscard(effectKey);
+      if (!result.ok) {
+        // 409: it was released or changed first; show the real state.
+        const active = activeChatRef.current;
+        if (result.status === 409 && active?.conversationId === conversationId) {
+          void loadMessages(active, { background: true });
+        }
+        setHeldDiscardStatus({
+          effectKey,
+          status: "failed",
+          reason:
+            result.code === "HELD_SEND_OWNER_ONLY"
+              ? t("whatsapp.heldSend.discardOwnerOnly")
+              : result.status === 409
+                ? t("whatsapp.heldSend.discardTooLate")
+                : t("whatsapp.heldSend.discardFailed"),
+        });
+        return;
+      }
+      setHeldDiscardStatus(null);
+      // "discarded" is the state the history route reports for this row; the
+      // message type learns the word when the thread is wired.
+      const discardedState = "discarded" as unknown as NonNullable<InboxMessage["outboxState"]>;
+      mutateMessages(conversationId, (current) =>
+        current.map((entry) =>
+          entry.id === message.id ? { ...entry, outboxState: discardedState } : entry,
+        ),
+      );
+    },
+    [activeChatRef, loadMessages, mutateMessages, t],
   );
 
   const retryFailedMessage = useCallback(
@@ -919,6 +974,10 @@ export function useInboxOutbox({
     heldApproveMessage,
     resolveHeldApprove,
     approveHeldMessage,
+    heldDiscardMessage,
+    resolveHeldDiscard,
+    discardHeldMessage,
+    heldDiscardStatus,
     retryFailedMessage,
     sendReply,
     sendImage,

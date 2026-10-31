@@ -4,6 +4,7 @@ import { getNavigationGroupsRuntimeTranslation } from "@/lib/i18n/navigation-gro
 import { getAiCanvasRuntimeTranslation } from "@/lib/i18n/ai-canvas-runtime";
 import { getWhatsAppSendGuardRuntimeTranslation } from "@/lib/i18n/whatsapp-send-guard-runtime";
 import { getHeldSendRuntimeTranslation } from "@/lib/i18n/held-send-runtime";
+import { getHeldSendDiscardRuntimeTranslation } from "@/lib/i18n/held-send-discard-runtime";
 import { getPreUpdateBackupRuntimeTranslation } from "@/lib/i18n/pre-update-backup-runtime";
 import { getStorefrontStudioStatesRuntimeTranslation } from "@/lib/i18n/storefront-studio-states-runtime";
 import { getStorefrontPublicStatesRuntimeTranslation } from "@/lib/i18n/storefront-public-states-runtime";
@@ -166,6 +167,7 @@ export function getRuntimeTranslation(
     getAiCanvasRuntimeTranslation(locale, key) ??
     getWhatsAppSendGuardRuntimeTranslation(locale, key) ??
     getHeldSendRuntimeTranslation(locale, key) ??
+    getHeldSendDiscardRuntimeTranslation(locale, key) ??
     getPreUpdateBackupRuntimeTranslation(locale, key) ??
     getStorefrontStudioStatesRuntimeTranslation(locale, key) ??
     getStorefrontPublicStatesRuntimeTranslation(locale, key) ??
