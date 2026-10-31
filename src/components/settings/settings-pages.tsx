@@ -42,6 +42,7 @@ import { DeliveryCredentialsPanel } from "@/components/settings/delivery-credent
 import { DemoDataPanel } from "@/components/settings/demo-data-panel";
 import { LicensePanel } from "@/components/settings/license-panel";
 import { PhonePairingCard } from "@/components/settings/phone-pairing-card";
+import { PHONE_PAIRING_AVAILABLE } from "@/lib/connected-platform/pairing-link";
 import { MetaPixelPanel } from "@/components/settings/meta-pixel-panel";
 import { PhoneReputationPanel } from "@/components/settings/phone-reputation-panel";
 import { SecurityAuthorityPanel } from "@/components/settings/security-authority-panel";
@@ -204,7 +205,7 @@ export const SETTINGS_PAGES: readonly SettingsPage[] = [
     render: () => (
       <>
         <LicensePanel />
-        <PhonePairingCard />
+        {PHONE_PAIRING_AVAILABLE ? <PhonePairingCard /> : null}
       </>
     ),
   },

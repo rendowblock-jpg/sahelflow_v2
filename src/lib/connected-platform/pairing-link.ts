@@ -8,6 +8,12 @@ import { deviceFingerprint, parsePairingLink } from "./web/fingerprint";
  * a server, so changing this constant later does not change the secrets.
  */
 export const PHONE_APP_ORIGIN = "https://app.sahelflow.com";
+/**
+ * The "Your phone" card in Settings is shown only when this is true. It stays false until the phone app has a real home:
+ * the host above exists, PWA_ORIGINS is set on the relay and the relay database migrations 0002 and 0003 are applied.
+ * All of that is the Founder's word. Until then a seller would be offered a link that opens nothing.
+ */
+export const PHONE_PAIRING_AVAILABLE = false;
 export const PAIRING_TTL_MS = 10 * 60 * 1000;
 
 const ORIGIN = /^https:\/\/[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{1,5})?$/;
