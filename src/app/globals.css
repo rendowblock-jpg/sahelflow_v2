@@ -341,9 +341,16 @@
   /* Touch target safety — ensure interactive elements are >=44px on touch */
   @media (pointer: coarse) {
     button:not([data-size]),
-    [role="button"]:not([data-size]) {
+    [role="button"]:not([data-size]),
+    a[role="tab"] {
       min-height: var(--touch-target);
     }
+  }
+
+  /* A placeholder longer than its field ends in an ellipsis, not a cut letter. The property must sit on the input itself:
+     Chromium ignores text-overflow written inside ::placeholder. :placeholder-shown leaves a typed value alone. */
+  input:placeholder-shown {
+    text-overflow: ellipsis;
   }
 
   /* Tabular numerals for stats & prices (Stripe pattern) */

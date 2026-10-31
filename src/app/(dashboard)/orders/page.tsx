@@ -16,7 +16,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OrdersStatusTabsList } from "@/components/orders/orders-status-tabs-list";
+import { Tabs, TabsTrigger } from "@/components/ui/tabs";
 import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n-server";
 import {
@@ -355,7 +356,7 @@ export default async function OrdersPage({
 
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 lg:flex-nowrap">
         <Tabs defaultValue={statusFilter ?? "all"} className="min-w-0 flex-1">
-          <TabsList wrap className="w-fit max-w-full min-w-0 justify-start">
+          <OrdersStatusTabsList className="w-fit max-w-full min-w-0 justify-start">
             {STATUS_FILTERS.map((filter) => (
               // The tabs are links to a re-rendered page, so no panel with the
               // generated id exists; see TabsTrigger for why this is a prop.
@@ -378,7 +379,7 @@ export default async function OrdersPage({
                 </Link>
               </TabsTrigger>
             ))}
-          </TabsList>
+          </OrdersStatusTabsList>
         </Tabs>
 
         {fallback.fieldAccess.risk ? (
