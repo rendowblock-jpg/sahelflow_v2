@@ -65,8 +65,12 @@ describe("connected entitlement and quota boundaries", () => {
     const executor = source("src/lib/connected-platform/remote-command-executor.ts");
     const worker = source("src/lib/connected-platform/remote-command-worker.ts");
     const instrumentation = source("src/instrumentation.ts");
-    expect(executor).toContain("trustedActorForRemoteCommand");
-    expect(executor).toContain("executeInternalComment");
+    // The executor opens the envelope and dispatches; every handler re-reads the member (common.ts).
+    const handlers = source("src/lib/connected-platform/command-handlers/common.ts");
+    const notes = source("src/lib/connected-platform/command-handlers/notes.ts");
+    expect(executor).toContain("HANDLERS[envelope.messageType]");
+    expect(handlers).toContain("trustedActorForRemoteCommand");
+    expect(notes).toContain("executeInternalComment");
     expect(executor).toContain("completeCommand");
     expect(worker).toContain("executeQueuedRemoteCommands");
     expect(worker).toContain("${CURSOR_KEY_PREFIX}.${shopContext.shopId}");
