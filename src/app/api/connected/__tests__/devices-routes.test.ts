@@ -157,12 +157,14 @@ describe("POST /api/connected/devices/pairing", () => {
     expect(link.split("#")).toHaveLength(2);
     const fragment = parseDesktopPairingHash(`#${link.split("#")[1]}`);
     expect(fragment?.pairingToken).toBe(TOKEN);
-    expect(body.desktopFingerprint).toBe(await deviceFingerprint(h.desktopKeys.signingPublicKey));
+    const desktopSigningKey = h.desktopKeys.signingPublicKey;
+    if (!desktopSigningKey) throw new Error("the harness has no desktop signing key");
+    expect(body.desktopFingerprint).toBe(await deviceFingerprint(desktopSigningKey));
     expect(fragment?.pin).toBe(body.desktopFingerprint);
     expect(body.expiresAt).toBe("2026-10-30T23:59:00.000Z");
     expect(String(body.code).split(" / ")).toHaveLength(3);
     const proof = body.desktopKeyProof as { rsaPublicJwk: string; signature: string; context: string };
-    expect(await verifyDesktopEncryptionKey({ ...proof, desktopSigningPublicKey: h.desktopKeys.signingPublicKey, pinnedFingerprint: String(body.desktopFingerprint) }))
+    expect(await verifyDesktopEncryptionKey({ ...proof, desktopSigningPublicKey: desktopSigningKey, pinnedFingerprint: String(body.desktopFingerprint) }))
       .toMatchObject({ ok: true });
   });
   it("hands the relay the same signed key it shows, in the shape the relay accepts", async () => {
