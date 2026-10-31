@@ -8,6 +8,7 @@
  * palette is open, so a closed palette left a dangling id (axe
  * `aria-valid-attr-value`, critical, on every desktop screen).
  */
+import { act } from "@testing-library/react";
 import { render } from "@/test-utils/render";
 import { describe, expect, it, vi } from "vitest";
 
@@ -152,5 +153,58 @@ describe("CommandPalette focus frame", () => {
     const classes = frameOf(container).className.split(/\s+/);
     expect(classes).not.toContain("border-ring");
     expect(classes).not.toContain("ring-ring/50");
+  });
+});
+
+/**
+ * Found by the keyboard-mode run: the results stay open when Tab moves focus to another control, and nothing the
+ * keyboard user can reach closes them (Escape is handled inside the field only). The field now closes its results
+ * when focus moves to a control outside it, as a combobox does. A press on a result or a switch of window gives a
+ * focus change with no target, and must not close them: the click that follows the press still has to land.
+ */
+describe("CommandPalette focus leaving", () => {
+  function renderWithSpy(open: boolean) {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
+    const onOpenChange = vi.fn();
+    const outside = document.createElement("button");
+    outside.textContent = "language";
+    document.body.appendChild(outside);
+    const utils = render(<CommandPalette open={open} onOpenChange={onOpenChange} />);
+    const input = utils.container.querySelector<HTMLInputElement>('input[role="combobox"]');
+    if (!input) throw new Error("no search input");
+    const leave = (relatedTarget: EventTarget | null) =>
+      act(() => {
+        input.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget }));
+      });
+    return { ...utils, input, outside, onOpenChange, leave };
+  }
+
+  it("open: focus moving to a control outside the search closes the results", () => {
+    const { outside, onOpenChange, leave } = renderWithSpy(true);
+    leave(outside);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    outside.remove();
+  });
+
+  it("open: focus moving to something inside the search keeps the results", () => {
+    const { container, onOpenChange, leave } = renderWithSpy(true);
+    const inside = container.querySelector<HTMLElement>('[cmdk-list]');
+    if (!inside) throw new Error("the open palette has no results list");
+    leave(inside);
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it("open: a focus change with no target (a press on a result, another window) keeps the results", () => {
+    const { outside, onOpenChange, leave } = renderWithSpy(true);
+    leave(null);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    outside.remove();
+  });
+
+  it("closed: focus leaving does not report a close that already happened", () => {
+    const { outside, onOpenChange, leave } = renderWithSpy(false);
+    leave(outside);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    outside.remove();
   });
 });

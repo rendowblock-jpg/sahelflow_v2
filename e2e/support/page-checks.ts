@@ -374,6 +374,11 @@ export async function runKeyboardTour(page: Page, maxTabs = 60): Promise<TourFac
     }).length;
   }, FOCUSABLE_SELECTOR);
 
+  // Transitions off while the tour measures: a frame or ring that closes with a 150 ms transition would still show its
+  // old look when it is read in the same frame, and the stop would be judged as having no indicator. Only the timing
+  // changes; every final value stays as the product draws it.
+  await page.addStyleTag({ content: "*,*::before,*::after{transition:none !important}" });
+
   await page.evaluate(() => {
     (document.activeElement as HTMLElement | null)?.blur();
     window.scrollTo(0, 0);
