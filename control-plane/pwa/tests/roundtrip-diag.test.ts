@@ -1,10 +1,9 @@
 process.env.SF_MASTER_KEY = process.env.SF_MASTER_KEY ?? "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-const hoisted = vi.hoisted(() => ({ actor: null as unknown, trusted: vi.fn(), dispatch: vi.fn(async () => undefined), capi: vi.fn(async () => undefined) }));
+const hoisted = vi.hoisted(() => { process.env.SF_ACTIVE_SHOP_ID = "testshop0001"; return { actor: null as unknown, trusted: vi.fn(), dispatch: vi.fn(async () => undefined), capi: vi.fn(async () => undefined)  }; });
 vi.mock("@/lib/identity/trusted-actor", async (o) => ({ ...(await o<typeof import("@/lib/identity/trusted-actor")>()), isTrustedActorContext: vi.fn(() => true), trustedActorForRemoteCommand: (...a: unknown[]) => hoisted.trusted(...a) }));
 vi.mock("@/lib/automations/engine", async (o) => ({ ...(await o<typeof import("@/lib/automations/engine")>()), dispatchTrigger: hoisted.dispatch }));
 vi.mock("@/lib/meta/capi-triggers", async (o) => ({ ...(await o<typeof import("@/lib/meta/capi-triggers")>()), fireCapiStageForOrder: hoisted.capi }));
 
-vi.mock("@/lib/connected-platform/protocol", async (o) => { const a = await o<typeof import("@/lib/connected-platform/protocol")>(); return { ...a, isConnectedEnvelope: (v: unknown) => a.isConnectedEnvelope(v) || (typeof v === "object" && v !== null && (v as { shopId?: unknown }).shopId === "test" && a.isConnectedEnvelope({ ...(v as object), shopId: "testshop0001" })) }; });
 import type { PrismaClient } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanDb, seedCustomer, seedOrder, seedProduct } from "@/lib/data/__tests__/helpers";

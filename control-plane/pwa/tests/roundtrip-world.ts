@@ -19,10 +19,10 @@ import type { PairingIdentity, TrustedDesktop } from "../src/pair/pinned";
 
 export { RELAY };
 export const MEMBER = "a".repeat(32);
-// The desktop database is bound to ONE shop identity (32-hex workspace, protected keys): the relay world takes THAT identity.
-// The relay refuses a shop id under 8 characters (validIdentity in connected/worker.ts: HEX_ID or OPAQUE_ID); the desktop test shop
-// id is "test", so the rig uses the same shop with a valid opaque id (the old isConnectedEnvelope mock is no longer needed).
-export const relayShop = { ...shopContext, shopId: "testshop0001" };
+// The desktop database is bound to ONE shop identity. The relay refuses a shop id under 8 characters (validIdentity in
+// connected/worker.ts), so every round-trip test file sets SF_ACTIVE_SHOP_ID = "testshop0001" inside vi.hoisted (before @/lib/db is
+// imported): shopContext itself is valid, and the relay world, the executor and the db client all see the SAME shop.
+export const relayShop = shopContext;
 
 export function memoryDb(): Db {
   const stores = new Map<string, Map<string, unknown>>();
