@@ -1,5 +1,10 @@
-import { FormLoading } from "@/components/shared/page-loading";
+import { CardGridSkeleton, PageHeaderSkeleton } from "@/components/shared/state-skeletons";
 
 export default function Loading() {
-  return <FormLoading />;
+  return (
+    <div className="app-content page-sections">
+      <PageHeaderSkeleton />
+      <CardGridSkeleton cards={3} columns={3} />
+    </div>
+  );
 }

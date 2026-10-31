@@ -31,6 +31,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { saveStatusText } from "@/components/storefront/studio/studio-feedback";
 import { useI18n } from "@/hooks/use-i18n";
 import type { StorefrontStudioDraft } from "@/lib/storefront/studio-draft";
 import { cn, DZ_CLOCK, intlLocale } from "@/lib/utils";
@@ -60,6 +61,7 @@ export function StudioTopBar({
   onUndo,
   onRedo,
   saveState,
+  saveReason = null,
   dirty,
   savedAt,
   onActiveChange,
@@ -78,6 +80,7 @@ export function StudioTopBar({
   onUndo: () => void;
   onRedo: () => void;
   saveState: StudioSaveState;
+  saveReason?: string | null;
   dirty: boolean;
   savedAt: Date | null;
   onActiveChange: (active: boolean) => void;
@@ -117,7 +120,7 @@ export function StudioTopBar({
             aria-hidden="true"
           />
           <span className="shrink-0">
-            {draft.isActive ? t("storefront.active") : t("storefront.inactive")}
+            {draft.isActive ? t("storefront.studioStates.toggle.on") : t("storefront.studioStates.toggle.off")}
           </span>
           <span className="truncate max-sm:hidden" dir="ltr">
             /storefront/{draft.slug}
@@ -164,7 +167,7 @@ export function StudioTopBar({
           </IconAction>
         </div>
 
-        <SaveStatus state={saveState} dirty={dirty} savedAt={savedAt} onRetry={onSave} />
+        <SaveStatus state={saveState} dirty={dirty} savedAt={savedAt} reason={saveReason} onRetry={onSave} />
 
         <label className="flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-control border px-2.5 text-caption font-medium max-lg:hidden">
           <Switch
@@ -275,11 +278,13 @@ function SaveStatus({
   state,
   dirty,
   savedAt,
+  reason,
   onRetry,
 }: {
   state: StudioSaveState;
   dirty: boolean;
   savedAt: Date | null;
+  reason: string | null;
   onRetry: () => void;
 }) {
   const { t, locale } = useI18n();
@@ -289,18 +294,7 @@ function SaveStatus({
     ...DZ_CLOCK,
   });
   const failed = state === "error" || state === "conflict";
-  const label =
-    state === "saving"
-      ? t("storefront.studio.saving")
-      : state === "conflict"
-        ? t("storefront.studio.conflict")
-        : state === "error"
-          ? t("storefront.studio.saveFailed")
-          : dirty
-            ? t("storefront.studio.unsaved")
-            : time
-              ? t("storefront.studio.savedAt", { time })
-              : t("storefront.studio.saved");
+  const label = saveStatusText({ state, dirty, time, reason }, t);
   const Icon = state === "saving" || (dirty && !failed) ? Loader2 : failed ? AlertCircle : CheckCircle2;
 
   const content = (
@@ -309,7 +303,7 @@ function SaveStatus({
         className={cn("size-3.5 shrink-0", (state === "saving" || (dirty && !failed)) && "animate-spin")}
         aria-hidden="true"
       />
-      <span className="truncate max-sm:sr-only">{label}</span>
+      <span className="truncate max-sm:max-w-24">{label}</span>
     </>
   );
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Package, Search } from "lucide-react";
+import { Check, Search } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { cn, formatDZD } from "@/lib/utils";
 import { ColorField, PanelHeader, SegmentedField, TextAreaField, TextField } from "./studio-controls";
 import { TemplateGallery } from "./template-gallery";
 import { studioImageUrl, type StorefrontStudioProduct } from "./studio-types";
+import { ProductThumb } from "./product-thumb";
 
 type Commit = (draft: StorefrontStudioDraft) => void;
 
@@ -186,6 +187,9 @@ export function ProductsPanel({
           </button>
         </span>
       </div>
+      <p data-testid="products-photo-note" className="text-caption leading-5 text-muted-foreground">
+        {t("storefront.studioStates.photos.notHosted")}
+      </p>
       {visible.length === 0 ? (
         <p className="py-6 text-center text-body-sm text-muted-foreground">{t("storefront.studio.noProductMatch")}</p>
       ) : (
@@ -197,14 +201,7 @@ export function ProductsPanel({
               <li key={product.id}>
                 <label className={cn("flex cursor-pointer items-center gap-3 rounded-control p-1.5 transition-colors hover:bg-muted", checked && "bg-primary-subtle")}>
                   <Checkbox checked={checked} onCheckedChange={(value) => onChange(product.id, value === true)} aria-label={product.name} />
-                  <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-control border bg-muted text-muted-foreground">
-                    {image ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- seller product media
-                      <img src={image} alt="" className="absolute inset-0 size-full object-cover" />
-                    ) : (
-                      <Package className="size-4" aria-hidden="true" />
-                    )}
-                  </span>
+                  <ProductThumb image={image} />
                   <span className="min-w-0 flex-1">
                     <span dir="auto" className="block truncate text-body-sm font-medium">{product.name}</span>
                     <span className="block text-caption text-muted-foreground">

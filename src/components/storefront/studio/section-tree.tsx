@@ -104,12 +104,35 @@ export function SectionTree({
     setDropIndex(null);
   };
 
+  // Tree pattern: one tab stop (the selected row, else the first); arrows move between rows.
+  const focusableId = sections.some((section) => section.id === selected)
+    ? selected
+    : (sections[0]?.id ?? null);
+
+  function moveTreeFocus(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || !target.hasAttribute("data-section-select")) return;
+    const items = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("[data-section-select]"));
+    const at = items.indexOf(target);
+    let nextIndex = at;
+    if (event.key === "ArrowDown") nextIndex = Math.min(items.length - 1, at + 1);
+    else if (event.key === "ArrowUp") nextIndex = Math.max(0, at - 1);
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = items.length - 1;
+    else return;
+    event.preventDefault();
+    items[nextIndex]?.focus();
+  }
+
   return (
     <div className="space-y-2.5">
       <div
         className="space-y-0.5"
-        role="list"
+        role="tree"
+        aria-orientation="vertical"
         aria-label={t("storefront.studio.sectionsLabel")}
+        onKeyDown={moveTreeFocus}
       >
         {sections.map((section, index) => {
           const active = selected === section.id;
@@ -120,7 +143,9 @@ export function SectionTree({
           return (
             <div
               key={section.id}
-              role="listitem"
+              role="treeitem"
+              aria-level={1}
+              aria-selected={active}
               draggable
               data-storefront-section-row={section.id}
               data-storefront-section-type={section.type}
@@ -172,6 +197,8 @@ export function SectionTree({
 
                 <button
                   type="button"
+                  data-section-select={section.id}
+                  tabIndex={section.id === focusableId ? 0 : -1}
                   onClick={() => onSelect(section.id)}
                   onKeyDown={(event) => {
                     if (!event.altKey) return;
